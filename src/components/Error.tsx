@@ -1,6 +1,14 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { locales } from '@/lib/i18n/routing';
+
+const getLocalePrefix = () => {
+  if (typeof window === 'undefined') return '';
+  const segments = window.location.pathname.split('/').filter(Boolean);
+  const locale = segments[0];
+  return locales.includes(locale as typeof locales[number]) ? `/${locale}` : '';
+};
 
 export default function Error({
   reset,
@@ -25,7 +33,7 @@ export default function Error({
             variant="outline"
             className="border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:text-white"
             onClick={() => {
-              window.location.href = "/dashboard";
+              window.location.href = `${getLocalePrefix()}/dashboard`;
             }}
           >
             Voltar ao painel

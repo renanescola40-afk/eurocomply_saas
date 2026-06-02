@@ -127,9 +127,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      window.location.href = '/';
+      window.location.href = `/${locale}`;
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, locale]);
 
   useEffect(() => {
     if (user) {
@@ -243,7 +243,7 @@ export default function DashboardPage() {
 
   const handleSignOut = async () => {
     await signOut();
-    window.location.href = '/';
+    window.location.href = `/${locale}`;
   };
 
   const handleCreateTool = async (e: React.FormEvent) => {

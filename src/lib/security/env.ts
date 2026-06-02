@@ -65,10 +65,27 @@ const envSchema = z.object({
 // Parsing — acontece SÓ uma vez, na primeira vez que se importa este módulo
 // ─────────────────────────────────────────────────────────────────────────────
 
+const resolvedEnv = {
+  ...process.env,
+  NEXT_PUBLIC_DATABASE_URL:
+    process.env.NEXT_PUBLIC_DATABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    '',
+  NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY:
+    process.env.NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.SUPABASE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    '',
+};
+
 /** O objeto parsed. Accessível em toda a app como: env.STRIPE_SECRET_KEY */
 export const env = (() => {
   // Tenta fazer parse; se falhar, a app morre com erro claro
-  const result = envSchema.safeParse(process.env);
+  const result = envSchema.safeParse(resolvedEnv);
 
   if (!result.success) {
     const errors = result.error.errors
@@ -127,6 +144,8 @@ export function generateEnvExample(): string {
 NEXT_PUBLIC_DATABASE_URL=https://xxxxx.supabase.co
 
 # Chave publishable do Supabase ( pública — não é sensível)
+# O Vercel/Supabase pode também expor este valor como NEXT_PUBLIC_SUPABASE_KEY,
+# SUPABASE_KEY ou SUPABASE_ANON_KEY.
 NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY=eyJhbGc...
 
 # ── Stripe ────────────────────────────────────────────────────────

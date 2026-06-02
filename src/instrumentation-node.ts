@@ -42,7 +42,13 @@ const mapFallbacks: Record<string, string[]> = {
   // public client URL for client-side supabase
   NEXT_PUBLIC_DATABASE_URL: [process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', process.env.SUPABASE_URL ?? ''],
   // public publishable key
-  NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY: [process.env.SUPABASE_PUBLISHABLE_KEY ?? '', process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''],
+  NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY: [
+    process.env.NEXT_PUBLIC_SUPABASE_KEY ?? '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    process.env.SUPABASE_PUBLISHABLE_KEY ?? '',
+    process.env.SUPABASE_KEY ?? '',
+    process.env.SUPABASE_ANON_KEY ?? '',
+  ],
   // postgrest compatibility
   POSTGREST_API_KEY: [process.env.POSTGREST_API_KEY ?? '', process.env.SUPABASE_JWT_SECRET ?? ''],
   // stripe placeholders left to the user — do not auto-map sensitive keys

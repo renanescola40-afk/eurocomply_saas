@@ -98,6 +98,18 @@ export default function middleware(req: NextRequest) {
 
   // Sem locale — detetar e redirecionar
   const detected = detectLocale(req);
+  // If routing uses "as-needed" (no prefix for defaultLocale), avoid
+  // redirecting / -> /en when the detected locale is the default.
+  if (routing.localePrefix === 'as-needed' && detected === defaultLocale) {
+    const response = NextResponse.next();
+    response.cookies.set(LOCALE_COOKIE, detected, {
+      maxAge: 60 * 60 * 24 * 365,
+      path: '/',
+      sameSite: 'lax',
+    });
+    return response;
+  }
+
   const redirectUrl = new URL(`/${detected}${pathname}`, req.url);
   redirectUrl.search = req.nextUrl.search;
 

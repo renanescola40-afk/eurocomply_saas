@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { locales, type Locale } from '@/lib/i18n/routing';
 import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -44,6 +45,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const getCurrentLocalePrefix = () => {
+    if (typeof window === 'undefined') return '';
+    const segments = window.location.pathname.split('/').filter(Boolean);
+    const currentLocale = segments[0] as Locale | undefined;
+    return locales.includes(currentLocale as Locale) ? `/${currentLocale}` : '';
+  };
+
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -55,12 +63,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUpWithEmail = useCallback(async (email: string, password: string, metadata?: { name?: string; company_name?: string }) => {
     try {
+      const localePrefix = getCurrentLocalePrefix();
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: metadata,
-          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : undefined,
+          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}${localePrefix}/dashboard` : undefined,
         },
       });
       return { error: error as Error | null };
@@ -71,13 +80,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     try {
+      const localePrefix = getCurrentLocalePrefix();
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           queryParams: {
             prompt: 'select_account',
           },
-          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : undefined,
+          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}${localePrefix}/dashboard` : undefined,
           skipBrowserRedirect: true,
         },
       });
@@ -90,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (event === 'SIGNED_IN' && session) {
             popupWindow?.close();
             listener.subscription.unsubscribe();
-            window.location.href = '/dashboard';
+            window.location.href = `${window.location.origin}${localePrefix}/dashboard`;
           }
         });
       }
