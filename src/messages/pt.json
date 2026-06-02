@@ -1,0 +1,203 @@
+{
+  "landing": {
+    "badge": "Pronto para o AI Act",
+    "heroTitle": "Governança de IA completa para empresas europeias",
+    "heroSubtitle": "Simplifique a conformidade, monitore riscos e gere relatórios em uma única plataforma segura.",
+    "cta": {
+      "start": "Comece grátis",
+      "demo": "Ver demonstração"
+    },
+    "badges": {
+      "gdpr": "GDPR",
+      "euHost": "Hospedado na UE",
+      "auditLogs": "Logs de auditoria",
+      "soc": "SOC 2"
+    },
+    "console": {
+      "title": "Painel de conformidade",
+      "readiness": "Pronto para auditoria",
+      "impactMap": "Mapa de impacto",
+      "updated": "Atualizado agora",
+      "row1": "Avaliação de risco ao vivo",
+      "row2": "Inventário de sistemas",
+      "row3": "Relatórios de conformidade",
+      "row4": "Ações recomendadas",
+      "risk": "Risco",
+      "high": "Alto",
+      "limited": "Limitado",
+      "minimal": "Mínimo"
+    },
+    "modules": {
+      "compliance": "Conformidade",
+      "complianceDetail": "Conformidade de políticas em tempo real",
+      "systems": "Sistemas",
+      "systemsDetail": "Inventário e status dos sistemas de IA",
+      "documents": "Documentos",
+      "documentsDetail": "Relatórios e políticas gerados",
+      "signals": "Sinais",
+      "signalsDetail": "Alertas de monitoramento contínuo"
+    },
+    "tracker": {
+      "badge": "Rastreamento regulatório",
+      "text": "Monitore atualizações do AI Act e receba alertas práticos."
+    },
+    "procurement": {
+      "badge": "Procurement AI",
+      "text": "Documente requisitos de fornecedores e avalie riscos de parceiros."
+    },
+    "socialProof": {
+      "title": "Empresas que confiam na EuroComply AI"
+    },
+    "platform": {
+      "badge": "Plataforma",
+      "title": "Tudo que sua equipe de compliance precisa",
+      "subtitle": "Gerencie governança, inventário, relatórios e monitoramento em um só lugar."
+    },
+    "capRows": {
+      "eaiAct": {
+        "title": "Conformidade com o AI Act",
+        "text": "Acompanhe exigências regulatórias e mantenha-se alinhado aos padrões do setor."
+      },
+      "policy": {
+        "title": "Políticas corporativas",
+        "text": "Crie, revise e publique políticas internas automaticamente."
+      },
+      "registry": {
+        "title": "Registro de sistemas",
+        "text": "Mantenha um inventário atualizado de suas soluções de IA."
+      },
+      "procurement": {
+        "title": "Processos de compra",
+        "text": "Avalie fornecedores com dados de conformidade padronizados."
+      }
+    },
+    "monitoring": {
+      "badge": "Monitoramento",
+      "title": "Monitore riscos de IA em tempo real",
+      "subtitle": "Defina alertas e mantenha visibilidade sobre segurança, privacidade e compliance.",
+      "bullet1": "Detecção de violação de políticas",
+      "bullet2": "Alertas de mudanças regulatórias",
+      "bullet3": "Relatórios contínuos de riscos"
+    },
+    "engine": {
+      "title": "Motor de classificação de risco",
+      "row1": {
+        "label": "Impacto ético",
+        "weight": "40%",
+        "value": "72"
+      },
+      "row2": {
+        "label": "Sensibilidade de dados",
+        "weight": "30%",
+        "value": "48"
+      },
+      "row3": {
+        "label": "Maturidade do modelo",
+        "weight": "20%",
+        "value": "34"
+      }
+    },
+    "pricing": {
+      "badge": "Preços",
+      "title": "Planos para equipes em crescimento",
+      "starter": {
+        "name": "Starter",
+        "description": "Para pequenas equipes que começam a governar IA.",
+        "features": [
+          "Até 5 sistemas monitorados",
+          "Documentação básica de compliance",
+          "Relatórios de auditoria mensais",
+          "Suporte por e-mail",
+          "Acesso ao painel de conformidade"
+        ],
+        "cta": "Comece agora"
+      },
+      "growth": {
+        "name": "Growth",
+        "description": "Para times que precisam de automação e monitoramento avançado.",
+        "features": [
+          "Monitoramento contínuo",
+          "Avaliação de risco automatizada",
+          "Gestão de políticas",
+          "Relatórios personalizáveis",
+          "Suporte prioritário"
+        ],
+        "cta": "Escolha Growth"
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "description": "Solução completa para organizações reguladas.",
+        "features": [
+          "Governança multi-equipe",
+          "Workspaces privados",
+          "Integração de fornecedores",
+          "Relatórios avançados",
+          "SLA e suporte dedicado"
+        ],
+        "cta": "Fale com vendas"
+      },
+      "popular": "Mais popular",
+      "perMonth": "por mês"
+    },
+    "finalCta": {
+      "title": "Comece a proteger sua IA hoje",
+      "subtitle": "Acelere a conformidade com uma plataforma feita para equipes europeias."
+    },
+    "footer": {
+      "tagline": "Sua jornada de governança de IA começa aqui",
+      "badges": "GDPR · AI Act · SOC 2"
+    },
+    "nav": {
+      "platform": "Plataforma",
+      "governance": "Governança",
+      "pricing": "Preços",
+      "login": "Entrar",
+      "cta": "Crie sua conta"
+    }
+  },
+  "auth": {
+    "secure": "Acesso seguro",
+    "loginTitle": "Entre na sua conta",
+    "registerTitle": "Crie uma nova conta",
+    "subtitle": "Comece a proteger seus sistemas de IA com segurança e compliance.",
+    "continueWithGoogle": "Continuar com Google",
+    "fullName": "Nome completo",
+    "companyName": "Nome da empresa",
+    "email": "E-mail",
+    "password": "Senha",
+    "loggingIn": "Entrando...",
+    "creating": "Criando conta...",
+    "loginBtn": "Entrar",
+    "registerBtn": "Criar conta",
+    "noAccount": "Ainda não tem conta? Crie uma.",
+    "hasAccount": "Já tem conta? Faça login.",
+    "successWorkspace": "Workspace criado com sucesso!",
+    "errorOnboarding": "Erro ao finalizar o onboarding.",
+    "errorCreating": "Não foi possível criar seu workspace."
+  },
+  "onboarding": {
+    "badge": "Detalhes da empresa",
+    "title": "Conte-nos sobre sua equipe",
+    "fullName": "Nome completo",
+    "companyName": "Nome da empresa",
+    "companySize": {
+      "label": "Tamanho da empresa",
+      "s1": "1-10 colaboradores",
+      "s2": "11-50 colaboradores",
+      "s3": "51-200 colaboradores",
+      "s4": "201-1000 colaboradores",
+      "s5": "Mais de 1000 colaboradores"
+    },
+    "industry": {
+      "label": "Setor",
+      "tech": "Tecnologia",
+      "finance": "Finanças",
+      "healthcare": "Saúde",
+      "retail": "Varejo",
+      "manufacturing": "Manufatura",
+      "other": "Outro"
+    },
+    "loading": "Carregando...",
+    "cta": "Finalizar"
+  }
+}

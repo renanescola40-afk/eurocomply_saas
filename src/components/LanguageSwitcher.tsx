@@ -1,6 +1,6 @@
 'use client';
 
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import { locales, LOCALE_META, type Locale } from '@/lib/i18n/routing';
@@ -16,7 +16,6 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
   const locale = useLocale() as Locale;
   const router = useRouter();
   const pathname = usePathname();
-  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
