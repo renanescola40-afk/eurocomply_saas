@@ -1,0 +1,88 @@
+{
+  "compilerOptions": {
+    /* ─── Caminho de migração gradual ─────────────────────────────── */
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+
+    /* Permite importar ficheiros .js sem os tipar imediatamente */
+    "allowJs": true,
+
+    /* NÃO verifica tipos em ficheiros .js — só no .ts */
+    "checkJs": false,
+
+    /* Pula verificação de types em node_modules (acelera build) */
+    "skipLibCheck": true,
+
+    /* ─── Strictness progressiva — comece aqui ────────────────────── */
+    "strict": true,
+
+    /* Exige que todo return tenha tipo ou seja anotado */
+    "noImplicitReturns": false,
+
+    /* Variáveis usadas antes de declaradas = erro */
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+
+    /* Gera melhores mensagens de erro em undefined */
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+
+    /* Não permite `any` implícito (mas allowAny na config eslint) */
+    "noImplicitAny": true,
+
+    /* Erro se this for any */
+    "noImplicitThis": true,
+
+    /* ─── Módulos ───────────────────────────────────────────────── */
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+
+    /* Suporta import/export entre CommonJS e ESM */
+    "allowSyntheticDefaultImports": true,
+
+    /* ─── JSX ─────────────────────────────────────────────────── */
+    "jsx": "preserve",
+
+    /* ─── Build ────────────────────────────────────────────────── */
+    "noEmit": true,
+    "incremental": true,
+
+    /* ─── Paths (mesmo do Next.js) ─────────────────────────────── */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    /* ─── Plugins ──────────────────────────────────────────────── */
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+
+    /* ─── Decorators (para bibliotecas que usam) ───────────────── */
+    "experimentalDecorators": false,
+    "emitDecoratorMetadata": false
+  },
+
+  /* Ficheiros que o compilador vigia */
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+
+  /* Pastas ignoradas */
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "build",
+    "coverage"
+  ]
+}
