@@ -24,24 +24,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    }).catch(() => {
-      setLoading(false);
-    });
+    async function loadSession() {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session = data.session;
+        setSession(session);
+        setUser(session?.user ?? null);
+      } catch (e) {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    loadSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event: unknown, session: Session | null) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     return () => {
-      subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
@@ -81,33 +86,116 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = useCallback(async () => {
     try {
       const localePrefix = getCurrentLocalePrefix();
+      const redirectUrl = typeof window !== 'undefined' 
+        ? `${window.location.origin}${localePrefix}/dashboard` 
+        : undefined;
+
+      // Validação de redirect URL
+      if (!redirectUrl) {
+        throw new Error('Redirect URL não disponível');
+      }
+
+      // Log para debug
+      console.info('[OAuth] Iniciando login com Google', {
+        redirectUrl,
+        timestamp: new Date().toISOString(),
+      });
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           queryParams: {
             prompt: 'select_account',
           },
-          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}${localePrefix}/dashboard` : undefined,
+          redirectTo: redirectUrl,
           skipBrowserRedirect: true,
         },
       });
 
-      if (error) return { error: error as Error | null };
+      // ==========================================
+      // TRATAMENTO DE ERROS ESPECÍFICOS DO OAUTH
+      // ==========================================
+      if (error) {
+        const errorCode = (error as any)?.error_code || error.message;
+        const isProviderDisabled = error.message?.includes('provider is not enabled') 
+          || error.message?.includes('Unsupported provider')
+          || errorCode === 'validation_failed';
+        
+        const isRedirectMismatch = error.message?.includes('redirect') 
+          || error.message?.includes('callback')
+          || errorCode === 'invalid_redirect_uri';
+
+        console.error('[OAuth] Erro ao tentar login:', {
+          message: error.message,
+          errorCode,
+          isProviderDisabled,
+          isRedirectMismatch,
+          fullError: error,
+        });
+
+        if (isProviderDisabled) {
+          return {
+            error: new Error(
+              '❌ Google OAuth ainda não está ativado no Supabase. ' +
+              'Entre em contato com o administrador para ativar o provider.'
+            ) as Error,
+          };
+        }
+
+        if (isRedirectMismatch) {
+          return {
+            error: new Error(
+              '❌ Erro de configuração: O redirect URI não coincide com o configurado no Google Console. ' +
+              `URL esperada: ${redirectUrl}`
+            ) as Error,
+          };
+        }
+
+        return { error: error as Error | null };
+      }
 
       if (data?.url && typeof window !== 'undefined') {
+        console.info('[OAuth] URL de autorização recebida, abrindo popup');
         const popupWindow = window.open(data.url, 'google-login', 'width=500,height=650');
-        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+        
+        if (!popupWindow) {
+          throw new Error('Não foi possível abrir o popup de login. Verifique se pop-ups estão bloqueados.');
+        }
+
+        // Listener com timeout para fechar popup automáticamente
+        const listeners: any[] = [];
+        const timeoutId = setTimeout(() => {
+          popupWindow.close();
+          listeners.forEach(l => l.subscription.unsubscribe());
+          console.warn('[OAuth] Popup fechado por timeout');
+        }, 5 * 60 * 1000); // 5 minutos
+
+        const { data: listener } = supabase.auth.onAuthStateChange((event: unknown, session: Session | null) => {
+          console.info('[OAuth] Auth state mudou:', event);
+          
           if (event === 'SIGNED_IN' && session) {
+            clearTimeout(timeoutId);
             popupWindow?.close();
             listener.subscription.unsubscribe();
-            window.location.href = `${window.location.origin}${localePrefix}/dashboard`;
+            console.info('[OAuth] Login bem-sucedido, redirecionando');
+            window.location.href = redirectUrl;
+          } else if (event === 'USER_UPDATED') {
+            // Usuário foi criado/atualizado
+            console.info('[OAuth] Usuário atualizado, aguardando confirmação');
           }
         });
+
+        listeners.push({ subscription: listener.subscription });
       }
 
       return { error: null };
     } catch (e) {
-      return { error: e as Error };
+      const error = e as Error;
+      console.error('[OAuth] Erro não tratado:', {
+        message: error.message,
+        stack: error.stack,
+      });
+      return { error };
     }
   }, []);
 
