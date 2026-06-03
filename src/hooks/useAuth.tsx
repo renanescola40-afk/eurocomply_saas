@@ -10,7 +10,11 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUpWithEmail: (email: string, password: string, metadata?: { name?: string; company_name?: string }) => Promise<{ error: Error | null }>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+    metadata?: { name?: string; company_name?: string }
+  ) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -24,25 +28,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-    }).catch(() => {
-      setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const getCurrentLocalePrefix = () => {
@@ -52,65 +50,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return locales.includes(currentLocale as Locale) ? `/${currentLocale}` : '';
   };
 
+  // EMAIL LOGIN
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error: error as Error | null };
-    } catch (e) {
-      return { error: e as Error };
-    }
-  }, []);
-
-  const signUpWithEmail = useCallback(async (email: string, password: string, metadata?: { name?: string; company_name?: string }) => {
-    try {
-      const localePrefix = getCurrentLocalePrefix();
-      const { error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: {
-          data: metadata,
-          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}${localePrefix}/dashboard` : undefined,
-        },
       });
+
       return { error: error as Error | null };
     } catch (e) {
       return { error: e as Error };
     }
   }, []);
 
+  // SIGN UP
+  const signUpWithEmail = useCallback(
+    async (
+      email: string,
+      password: string,
+      metadata?: { name?: string; company_name?: string }
+    ) => {
+      try {
+        const localePrefix = getCurrentLocalePrefix();
+
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: metadata,
+            emailRedirectTo:
+              typeof window !== 'undefined'
+                ? `${window.location.origin}${localePrefix}/dashboard`
+                : undefined,
+          },
+        });
+
+        return { error: error as Error | null };
+      } catch (e) {
+        return { error: e as Error };
+      }
+    },
+    []
+  );
+
+  // GOOGLE LOGIN (VERSÃO CORRIGIDA)
   const signInWithGoogle = useCallback(async () => {
     try {
       const localePrefix = getCurrentLocalePrefix();
-      const { data, error } = await supabase.auth.signInWithOAuth({
+
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           queryParams: {
             prompt: 'select_account',
           },
-          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}${localePrefix}/dashboard` : undefined,
-          skipBrowserRedirect: true,
+          redirectTo:
+            typeof window !== 'undefined'
+              ? `${window.location.origin}${localePrefix}/dashboard`
+              : undefined,
         },
       });
 
-      if (error) return { error: error as Error | null };
-
-      if (data?.url && typeof window !== 'undefined') {
-        const popupWindow = window.open(data.url, 'google-login', 'width=500,height=650');
-        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-          if (event === 'SIGNED_IN' && session) {
-            popupWindow?.close();
-            listener.subscription.unsubscribe();
-            window.location.href = `${window.location.origin}${localePrefix}/dashboard`;
-          }
-        });
-      }
-
-      return { error: null };
+      return { error: error as Error | null };
     } catch (e) {
       return { error: e as Error };
     }
   }, []);
 
+  // SIGN OUT
   const signOut = useCallback(async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -120,18 +128,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // RESET PASSWORD
   const resetPassword = useCallback(async (email: string) => {
     try {
+      const localePrefix = getCurrentLocalePrefix();
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
+        redirectTo:
+          typeof window !== 'undefined'
+            ? `${window.location.origin}${localePrefix}/auth/callback`
+            : undefined,
       });
+
       return { error: error as Error | null };
     } catch (e) {
       return { error: e as Error };
     }
   }, []);
 
-  const value = {
+  const value: AuthContextType = {
     user,
     session,
     loading,
@@ -142,17 +157,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetPassword,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
+
   return context;
 }
