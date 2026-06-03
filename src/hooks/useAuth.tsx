@@ -10,7 +10,11 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUpWithEmail: (email: string, password: string, metadata?: { name?: string; company_name?: string }) => Promise<{ error: Error | null }>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+    metadata?: { name?: string; company_name?: string }
+  ) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -57,37 +61,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return locales.includes(currentLocale as Locale) ? `/${currentLocale}` : '';
   };
 
+  // EMAIL LOGIN
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error: error as Error | null };
-    } catch (e) {
-      return { error: e as Error };
-    }
-  }, []);
-
-  const signUpWithEmail = useCallback(async (email: string, password: string, metadata?: { name?: string; company_name?: string }) => {
-    try {
-      const localePrefix = getCurrentLocalePrefix();
-      const { error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: {
-          data: metadata,
-          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}${localePrefix}/dashboard` : undefined,
-        },
       });
+
       return { error: error as Error | null };
     } catch (e) {
       return { error: e as Error };
     }
   }, []);
 
+  // SIGN UP
+  const signUpWithEmail = useCallback(
+    async (
+      email: string,
+      password: string,
+      metadata?: { name?: string; company_name?: string }
+    ) => {
+      try {
+        const localePrefix = getCurrentLocalePrefix();
+
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: metadata,
+            emailRedirectTo:
+              typeof window !== 'undefined'
+                ? `${window.location.origin}${localePrefix}/dashboard`
+                : undefined,
+          },
+        });
+
+        return { error: error as Error | null };
+      } catch (e) {
+        return { error: e as Error };
+      }
+    },
+    []
+  );
+
+  // GOOGLE LOGIN (VERSÃO CORRIGIDA)
   const signInWithGoogle = useCallback(async () => {
     try {
       const localePrefix = getCurrentLocalePrefix();
-      const redirectUrl = typeof window !== 'undefined' 
-        ? `${window.location.origin}${localePrefix}/dashboard` 
+      const redirectUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}${localePrefix}/dashboard`
         : undefined;
 
       // Validação de redirect URL
@@ -117,11 +140,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ==========================================
       if (error) {
         const errorCode = (error as any)?.error_code || error.message;
-        const isProviderDisabled = error.message?.includes('provider is not enabled') 
+        const isProviderDisabled = error.message?.includes('provider is not enabled')
           || error.message?.includes('Unsupported provider')
           || errorCode === 'validation_failed';
-        
-        const isRedirectMismatch = error.message?.includes('redirect') 
+
+        const isRedirectMismatch = error.message?.includes('redirect')
           || error.message?.includes('callback')
           || errorCode === 'invalid_redirect_uri';
 
@@ -157,7 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data?.url && typeof window !== 'undefined') {
         console.info('[OAuth] URL de autorização recebida, abrindo popup');
         const popupWindow = window.open(data.url, 'google-login', 'width=500,height=650');
-        
+
         if (!popupWindow) {
           throw new Error('Não foi possível abrir o popup de login. Verifique se pop-ups estão bloqueados.');
         }
@@ -172,7 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const { data: listener } = supabase.auth.onAuthStateChange((event: unknown, session: Session | null) => {
           console.info('[OAuth] Auth state mudou:', event);
-          
+
           if (event === 'SIGNED_IN' && session) {
             clearTimeout(timeoutId);
             popupWindow?.close();
@@ -199,6 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // SIGN OUT
   const signOut = useCallback(async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -208,18 +232,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // RESET PASSWORD
   const resetPassword = useCallback(async (email: string) => {
     try {
+      const localePrefix = getCurrentLocalePrefix();
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
+        redirectTo:
+          typeof window !== 'undefined'
+            ? `${window.location.origin}${localePrefix}/auth/callback`
+            : undefined,
       });
+
       return { error: error as Error | null };
     } catch (e) {
       return { error: e as Error };
     }
   }, []);
 
-  const value = {
+  const value: AuthContextType = {
     user,
     session,
     loading,
@@ -230,17 +261,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetPassword,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
+
   return context;
 }
