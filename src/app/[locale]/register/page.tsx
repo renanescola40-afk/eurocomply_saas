@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/integrations/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -50,19 +51,19 @@ export default function RegisterPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow p-8">
         <h1 className="text-2xl font-bold text-center mb-2">Criar Conta</h1>
         <p className="text-center text-gray-600 mb-6">Preencha os dados abaixo</p>
-        
+
         {error && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">
             {error}
           </div>
         )}
-        
+
         {success && (
           <div className="mb-4 p-3 bg-green-100 text-green-700 rounded text-sm">
             {success}
           </div>
         )}
-        
+
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Nome completo *</label>
@@ -74,7 +75,7 @@ export default function RegisterPage() {
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-1">Email *</label>
             <input
@@ -85,7 +86,7 @@ export default function RegisterPage() {
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-1">Senha *</label>
             <input
@@ -98,7 +99,7 @@ export default function RegisterPage() {
             />
             <p className="text-xs text-gray-500 mt-1">Mínimo de 6 caracteres</p>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-1">Nome da empresa</label>
             <input
@@ -109,7 +110,7 @@ export default function RegisterPage() {
               placeholder="Ex: Soltem Store"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-1">Colaboradores</label>
             <select
@@ -124,7 +125,7 @@ export default function RegisterPage() {
               <option value="201+">201+ colaboradores</option>
             </select>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-1">Setor</label>
             <select
@@ -141,7 +142,7 @@ export default function RegisterPage() {
               <option value="Outros">Outros</option>
             </select>
           </div>
-          
+
           <button
             type="submit"
             disabled={loading}
@@ -150,12 +151,12 @@ export default function RegisterPage() {
             {loading ? 'Criando conta...' : 'Finalizar cadastro'}
           </button>
         </form>
-        
+
         <p className="text-center mt-4 text-sm text-gray-600">
           Já tem uma conta?{' '}
-          <a href="/pt/login" className="text-blue-600 hover:underline">
+          <Link href="/pt/login" className="text-blue-600 hover:underline">
             Entrar
-          </a>
+          </Link>
         </p>
       </div>
     </div>
