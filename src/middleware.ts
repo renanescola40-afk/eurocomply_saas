@@ -15,6 +15,7 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 const PUBLIC_ROUTES = [
   '/',           // página inicial
   '/login',      // login
+  '/register',   // cadastro
   '/auth',       // callbacks auth
   '/recuperar-senha',
   '/atualizar-senha',
