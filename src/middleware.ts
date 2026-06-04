@@ -1,6 +1,6 @@
 // middleware.ts - Versão COMBINADA (i18n + Auth)
 
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import createIntlMiddleware from 'next-intl/middleware';
 import { NextRequest, NextResponse } from 'next/server';
 import { routing, locales, defaultLocale, COUNTRY_TO_LOCALE } from '@/lib/i18n/routing';
@@ -29,9 +29,9 @@ function isPublicRoute(pathname: string, locale: string): boolean {
   if (locales.includes(locale as 'en') && pathname.startsWith(`/${locale}`)) {
     path = pathname.replace(`/${locale}`, '') || '/';
   }
-  
-  return PUBLIC_ROUTES.some(route => 
-    path === route || 
+
+  return PUBLIC_ROUTES.some(route =>
+    path === route ||
     path.startsWith('/auth/') ||
     path.startsWith('/api/auth/')
   );
@@ -97,13 +97,36 @@ export default async function middleware(req: NextRequest) {
   }
 
   // ==================== PARTE 1: AUTENTICAÇÃO ====================
-  // Criar cliente Supabase para verificar sessão
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
-  const { data: { session } } = await supabase.auth.getSession();
+  // Criar cliente Supabase para verificar sessão usando @supabase/ssr.
+  let supabaseResponse = NextResponse.next({ request: req });
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  let session = null;
+
+  if (supabaseUrl && supabaseAnonKey) {
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({ request: req });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    });
+
+    const { data } = await supabase.auth.getSession();
+    session = data.session;
+  }
 
   // ==================== PARTE 2: I18N (lógica existente) ====================
-  
+
   // Rotas que já são /[locale]/... passam pelo next-intl normalmente
   const pathnameHasLocale = locales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
@@ -112,22 +135,22 @@ export default async function middleware(req: NextRequest) {
   if (pathnameHasLocale) {
     // Pega o locale da URL
     const locale = pathname.split('/')[1];
-    
+
     // Verifica se a rota é pública
     const isPublic = isPublicRoute(pathname, locale);
-    
+
     // Se NÃO está logado E rota NÃO é pública → redireciona para login
     if (!session && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
       return NextResponse.redirect(loginUrl);
     }
-    
+
     // Se está logado E tentou acessar login → redireciona para dashboard
     if (session && (pathname === `/${locale}/login` || pathname === `/${locale}/auth/callback`)) {
       const dashboardUrl = new URL(`/${locale}/dashboard`, req.url);
       return NextResponse.redirect(dashboardUrl);
     }
-    
+
     // Detetar país e guardar cookie para uso futuro
     const country =
       req.headers.get('CF-IPCountry') ??
@@ -138,7 +161,7 @@ export default async function middleware(req: NextRequest) {
 
     const hasCookie = req.cookies.get(LOCALE_COOKIE)?.value;
     const response = intlMiddleware(req);
-    
+
     if (!hasCookie && detectedLocale !== defaultLocale) {
       response.cookies.set(LOCALE_COOKIE, detectedLocale, {
         maxAge: 60 * 60 * 24 * 365,
@@ -146,12 +169,17 @@ export default async function middleware(req: NextRequest) {
         sameSite: 'lax',
       });
     }
+
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      response.cookies.set(cookie.name, cookie.value, cookie);
+    });
+
     return response;
   }
 
   // Sem locale — detetar e redirecionar
   const detected = detectLocale(req);
-  
+
   if (routing.localePrefix === 'as-needed' && detected === defaultLocale) {
     const response = NextResponse.next();
     response.cookies.set(LOCALE_COOKIE, detected, {
@@ -159,6 +187,11 @@ export default async function middleware(req: NextRequest) {
       path: '/',
       sameSite: 'lax',
     });
+
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      response.cookies.set(cookie.name, cookie.value, cookie);
+    });
+
     return response;
   }
 
@@ -170,6 +203,10 @@ export default async function middleware(req: NextRequest) {
     maxAge: 60 * 60 * 24 * 365,
     path: '/',
     sameSite: 'lax',
+  });
+
+  supabaseResponse.cookies.getAll().forEach((cookie) => {
+    response.cookies.set(cookie.name, cookie.value, cookie);
   });
 
   return response;
