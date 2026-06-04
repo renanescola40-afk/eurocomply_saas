@@ -1,0 +1,43 @@
+name: Codex Auto-Fix on Failure
+
+on:
+  workflow_run:
+    workflows: ["CI"]  # ou o nome do seu workflow de build
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-fix:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - name: Checkout Failing Ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm ci
+          
+      - name: Run Codex to fix
+        uses: openai/codex-action@main
+        with:
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          prompt: "Fix the build error. Add any missing dependencies. Make minimal changes."
+          
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "fix: auto-resolve build failure via Codex"
+          branch: codex/auto-fix
+          title: "Auto-fix: Build failure resolved"
