@@ -1,8 +1,8 @@
 'use client';
 
 import { useLocale } from 'next-intl';
-import { usePathname, useRouter } from 'next/navigation';
-import { useState, useRef, useEffect } from 'react';
+import { useRouter, usePathname } from '@/lib/i18n/navigation';
+import { useState, useRef, useEffect, useTransition } from 'react';
 import { locales, LOCALE_META, type Locale } from '@/lib/i18n/routing';
 
 const COOKIE_NAME = 'NEXT_LOCALE';
@@ -16,6 +16,7 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
   const locale = useLocale() as Locale;
   const router = useRouter();
   const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -35,10 +36,12 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
   const switchLocale = (newLocale: Locale) => {
     // Guardar cookie por 1 ano
     document.cookie = `${COOKIE_NAME}=${newLocale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
-    // Trocar locale na rota atual
-    const segments = pathname.split('/');
-    segments[1] = newLocale;
-    router.push(segments.join('/'));
+    
+    // Usar o router do next-intl para navegação com locale
+    startTransition(() => {
+      router.replace(pathname, { locale: newLocale });
+    });
+    
     setOpen(false);
   };
 
@@ -52,12 +55,13 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
             <button
               key={loc}
               onClick={() => switchLocale(loc)}
+              disabled={isPending}
               title={meta.nativeName}
               className={`w-8 h-8 rounded text-xs font-medium transition-colors ${
                 isActive
                   ? 'bg-white/20 text-white'
                   : 'text-white/60 hover:text-white hover:bg-white/10'
-              }`}
+              } ${isPending ? 'opacity-50 cursor-wait' : ''}`}
             >
               {loc.toUpperCase()}
             </button>
@@ -71,7 +75,8 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
     <div ref={ref} className={`relative ${className}`}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 py-2 rounded-md bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors text-sm"
+        disabled={isPending}
+        className={`flex items-center gap-2 px-3 py-2 rounded-md bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors text-sm ${isPending ? 'opacity-50 cursor-wait' : ''}`}
         aria-label="Select language"
       >
         <span className="text-base">{currentMeta.flag}</span>
@@ -90,11 +95,12 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
               <button
                 key={loc}
                 onClick={() => switchLocale(loc)}
+                disabled={isPending}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
                   isActive
                     ? 'bg-white/10 text-white'
                     : 'text-white/70 hover:bg-white/5 hover:text-white'
-                }`}
+                } ${isPending ? 'opacity-50 cursor-wait' : ''}`}
               >
                 <span className="text-lg">{meta.flag}</span>
                 <span className="flex-1 text-left">{meta.nativeName}</span>
