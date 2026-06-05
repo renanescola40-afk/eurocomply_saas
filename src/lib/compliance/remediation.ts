@@ -11,7 +11,7 @@ export type ComplianceActionInput = {
 };
 
 export type CreateRemediationInput = {
-  workspaceId: string;
+  workspaceId?: string | null;
   userId: string;
   assessmentId?: string | null;
   actions: ComplianceActionInput[];
@@ -67,7 +67,7 @@ export async function createFindingsAndTasks(input: CreateRemediationInput) {
   }
 
   const findingRows = actions.map((action) => ({
-    workspace_id: input.workspaceId,
+    workspace_id: input.workspaceId || null,
     assessment_id: input.assessmentId || null,
     user_id: input.userId,
     article: action.article,
@@ -91,7 +91,7 @@ export async function createFindingsAndTasks(input: CreateRemediationInput) {
   const taskRows = (findings || []).map((finding, index) => {
     const action = actions[index];
     return {
-      workspace_id: input.workspaceId,
+      workspace_id: input.workspaceId || null,
       finding_id: finding.id,
       user_id: input.userId,
       title: buildTaskTitle(action),
@@ -131,20 +131,32 @@ export async function tryCreateFindingsAndTasks(input: CreateRemediationInput): 
   }
 }
 
-export async function loadOpenComplianceWork(workspaceId: string) {
+export async function loadOpenComplianceWork(params: { workspaceId?: string | null; userId?: string | null }) {
+  let findingsQuery = supabase
+    .from('compliance_findings')
+    .select('id, article, title, severity, status, due_date, created_at')
+    .in('status', ['open', 'in_progress'])
+    .order('created_at', { ascending: false });
+
+  let tasksQuery = supabase
+    .from('compliance_tasks')
+    .select('id, title, priority, status, due_date, created_at')
+    .in('status', ['open', 'in_progress', 'blocked'])
+    .order('created_at', { ascending: false });
+
+  if (params.workspaceId) {
+    findingsQuery = findingsQuery.eq('workspace_id', params.workspaceId);
+    tasksQuery = tasksQuery.eq('workspace_id', params.workspaceId);
+  } else if (params.userId) {
+    findingsQuery = findingsQuery.eq('user_id', params.userId);
+    tasksQuery = tasksQuery.eq('user_id', params.userId);
+  } else {
+    return { findings: [], tasks: [] };
+  }
+
   const [{ data: findings, error: findingsError }, { data: tasks, error: tasksError }] = await Promise.all([
-    supabase
-      .from('compliance_findings')
-      .select('id, article, title, severity, status, due_date, created_at')
-      .eq('workspace_id', workspaceId)
-      .in('status', ['open', 'in_progress'])
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('compliance_tasks')
-      .select('id, title, priority, status, due_date, created_at')
-      .eq('workspace_id', workspaceId)
-      .in('status', ['open', 'in_progress', 'blocked'])
-      .order('created_at', { ascending: false }),
+    findingsQuery,
+    tasksQuery,
   ]);
 
   if (findingsError) throw findingsError;
@@ -156,9 +168,9 @@ export async function loadOpenComplianceWork(workspaceId: string) {
   };
 }
 
-export async function tryLoadOpenComplianceWork(workspaceId: string) {
+export async function tryLoadOpenComplianceWork(params: { workspaceId?: string | null; userId?: string | null }) {
   try {
-    return await loadOpenComplianceWork(workspaceId);
+    return await loadOpenComplianceWork(params);
   } catch {
     return { findings: [], tasks: [] };
   }
