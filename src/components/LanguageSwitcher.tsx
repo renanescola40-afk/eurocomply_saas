@@ -3,7 +3,7 @@
 import { useLocale } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
-import { locales, LOCALE_META, defaultLocale, type Locale } from '@/lib/i18n/routing';
+import { locales, LOCALE_META, type Locale } from '@/lib/i18n/routing';
 
 const COOKIE_NAME = 'NEXT_LOCALE';
 
@@ -17,7 +17,8 @@ function stripLocaleFromPath(pathname: string) {
   const firstSegment = segments[0];
 
   if (locales.includes(firstSegment as Locale)) {
-    return `/${segments.slice(1).join('/')}` || '/';
+    const rest = segments.slice(1).join('/');
+    return rest ? `/${rest}` : '/';
   }
 
   return pathname || '/';
@@ -26,10 +27,8 @@ function stripLocaleFromPath(pathname: string) {
 function buildLocalizedPath(pathname: string, newLocale: Locale) {
   const pathWithoutLocale = stripLocaleFromPath(pathname);
 
-  if (newLocale === defaultLocale) {
-    return pathWithoutLocale;
-  }
-
+  // routing.localePrefix is set to "always", so even the default language must
+  // keep an explicit prefix. English must be /en, not /.
   if (pathWithoutLocale === '/') {
     return `/${newLocale}`;
   }
