@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
+import { CreateOrganizationForm } from '@/components/onboarding/create-organization-form';
 import { OnboardingProgressCard } from '@/components/onboarding/onboarding-progress-card';
+import { createOrganization } from '@/server/actions/organizations';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
@@ -16,6 +18,19 @@ export default async function OnboardingPage() {
     redirect('/dashboard/organizations');
   }
 
+  async function createOrganizationFromOnboarding(input: { name: string; slug: string }) {
+    'use server';
+
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      redirect('/login');
+    }
+
+    await createOrganization(input, currentUser.id);
+    redirect('/dashboard/organizations');
+  }
+
   return (
     <main className="min-h-screen bg-background px-6 py-8">
       <div className="mx-auto max-w-4xl space-y-8">
@@ -26,6 +41,8 @@ export default async function OnboardingPage() {
             Start by creating an organization. After that, invite your team and add your first compliance tasks, documents and vendors.
           </p>
         </div>
+
+        <CreateOrganizationForm onCreate={createOrganizationFromOnboarding} />
 
         <OnboardingProgressCard
           state={{
