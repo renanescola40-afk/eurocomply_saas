@@ -76,9 +76,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function loadSession() {
       try {
         const { data } = await supabase.auth.getSession();
-        const session = data.session;
-        setSession(session);
-        setUser(session?.user ?? null);
+        const currentSession = data.session;
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
       } catch (e) {
         setSession(null);
         setUser(null);
@@ -89,9 +89,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     loadSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event: unknown, session: Session | null) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event: unknown, currentSession: Session | null) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
       setLoading(false);
     });
 
@@ -143,9 +143,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         provider: 'google',
         options: {
           redirectTo,
-          queryParams: {
-            prompt: 'select_account',
-          },
         },
       });
 
@@ -196,7 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = useCallback(async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: getAuthCallbackUrl(getLocalizedPath('/auth/callback')),
+        redirectTo: getAuthCallbackUrl(getLocalizedPath('/atualizar-senha')),
       });
 
       return { error: error as Error | null };
