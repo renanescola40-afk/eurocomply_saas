@@ -7,12 +7,64 @@ import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 
+const loginCopy: Record<string, {
+  errorTitle: string;
+  redirectTitle: string;
+  errorSubtitle: string;
+  redirectSubtitle: string;
+  retryGoogle: string;
+}> = {
+  en: {
+    errorTitle: 'Could not complete sign-in',
+    redirectTitle: 'Redirecting to Google',
+    errorSubtitle: 'Review the message below and try again.',
+    redirectSubtitle: 'You will be taken to secure Google sign-in.',
+    retryGoogle: 'Try again with Google',
+  },
+  pt: {
+    errorTitle: 'Não foi possível concluir o login',
+    redirectTitle: 'Redirecionando para o Google',
+    errorSubtitle: 'Revise a mensagem abaixo e tente novamente.',
+    redirectSubtitle: 'Você será levado diretamente para o login seguro do Google.',
+    retryGoogle: 'Tentar novamente com Google',
+  },
+  es: {
+    errorTitle: 'No se pudo completar el inicio de sesión',
+    redirectTitle: 'Redirigiendo a Google',
+    errorSubtitle: 'Revisa el mensaje abajo e inténtalo de nuevo.',
+    redirectSubtitle: 'Serás enviado al inicio de sesión seguro de Google.',
+    retryGoogle: 'Intentar de nuevo con Google',
+  },
+  fr: {
+    errorTitle: 'Impossible de terminer la connexion',
+    redirectTitle: 'Redirection vers Google',
+    errorSubtitle: 'Vérifiez le message ci-dessous et réessayez.',
+    redirectSubtitle: 'Vous allez être redirigé vers la connexion sécurisée Google.',
+    retryGoogle: 'Réessayer avec Google',
+  },
+  it: {
+    errorTitle: 'Impossibile completare l’accesso',
+    redirectTitle: 'Reindirizzamento a Google',
+    errorSubtitle: 'Controlla il messaggio qui sotto e riprova.',
+    redirectSubtitle: 'Verrai portato al login sicuro di Google.',
+    retryGoogle: 'Riprova con Google',
+  },
+  de: {
+    errorTitle: 'Anmeldung konnte nicht abgeschlossen werden',
+    redirectTitle: 'Weiterleitung zu Google',
+    errorSubtitle: 'Prüfen Sie die Meldung unten und versuchen Sie es erneut.',
+    redirectSubtitle: 'Sie werden zur sicheren Google-Anmeldung weitergeleitet.',
+    retryGoogle: 'Erneut mit Google versuchen',
+  },
+};
+
 export default function LoginPage() {
   const t = useTranslations('auth');
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const locale = (params.locale as string) || 'pt';
+  const copy = loginCopy[locale] ?? loginCopy.en;
   const urlError = searchParams.get('error');
   const { user, signInWithGoogle, loading: authLoading } = useAuth();
   const [error, setError] = useState(urlError ? decodeURIComponent(urlError) : '');
@@ -65,10 +117,10 @@ export default function LoginPage() {
 
           <p className="text-xs uppercase tracking-[0.28em] text-white/36">{t('secure')}</p>
           <h1 className="mt-2 text-2xl font-semibold">
-            {error ? t('loginErrorTitle') : t('redirectingGoogleTitle')}
+            {error ? copy.errorTitle : copy.redirectTitle}
           </h1>
           <p className="mt-2 text-sm text-white/50">
-            {error ? t('loginErrorSubtitle') : t('redirectingGoogleSubtitle')}
+            {error ? copy.errorSubtitle : copy.redirectSubtitle}
           </p>
 
           {error && (
@@ -79,7 +131,7 @@ export default function LoginPage() {
                 className="mt-4 w-full bg-white text-black hover:bg-white/90"
                 onClick={retryGoogleLogin}
               >
-                {t('retryGoogle')}
+                {copy.retryGoogle}
               </Button>
             </div>
           )}
