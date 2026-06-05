@@ -1,203 +1,203 @@
 {
   "landing": {
-    "badge": "EU AI Act Ready",
-    "heroTitle": "Complete AI governance for European enterprises",
-    "heroSubtitle": "Simplify compliance, monitor risk, and generate reports from a single secure platform.",
+    "badge": "Listo para la Ley de IA de la UE",
+    "heroTitle": "Gobernanza completa de IA para empresas europeas",
+    "heroSubtitle": "Simplifica el cumplimiento, monitoriza riesgos y genera informes desde una única plataforma segura.",
     "cta": {
-      "start": "Get started",
-      "demo": "View demo"
+      "start": "Empezar",
+      "demo": "Ver demo"
     },
     "badges": {
-      "gdpr": "GDPR",
-      "euHost": "EU-hosted",
-      "auditLogs": "Audit logs",
+      "gdpr": "RGPD",
+      "euHost": "Alojado en la UE",
+      "auditLogs": "Registros de auditoría",
       "soc": "SOC 2"
     },
     "console": {
-      "title": "Compliance dashboard",
-      "readiness": "Audit-ready status",
-      "impactMap": "Impact map",
-      "updated": "Updated now",
-      "row1": "Live risk assessment",
-      "row2": "System inventory",
-      "row3": "Compliance reporting",
-      "row4": "Recommended actions",
-      "risk": "Risk",
-      "high": "High",
-      "limited": "Limited",
-      "minimal": "Minimal"
+      "title": "Panel de cumplimiento",
+      "readiness": "Estado listo para auditoría",
+      "impactMap": "Mapa de impacto",
+      "updated": "Actualizado ahora",
+      "row1": "Evaluación de riesgo en vivo",
+      "row2": "Inventario de sistemas",
+      "row3": "Informes de cumplimiento",
+      "row4": "Acciones recomendadas",
+      "risk": "Riesgo",
+      "high": "Alto",
+      "limited": "Limitado",
+      "minimal": "Mínimo"
     },
     "modules": {
-      "compliance": "Compliance",
-      "complianceDetail": "Policy compliance in real time",
-      "systems": "Systems",
-      "systemsDetail": "AI inventory and system health",
-      "documents": "Documents",
-      "documentsDetail": "Generated reports and policies",
-      "signals": "Signals",
-      "signalsDetail": "Continuous monitoring alerts"
+      "compliance": "Cumplimiento",
+      "complianceDetail": "Cumplimiento de políticas en tiempo real",
+      "systems": "Sistemas",
+      "systemsDetail": "Inventario de IA y estado de sistemas",
+      "documents": "Documentos",
+      "documentsDetail": "Informes y políticas generados",
+      "signals": "Señales",
+      "signalsDetail": "Alertas de monitorización continua"
     },
     "tracker": {
-      "badge": "Regulatory tracking",
-      "text": "Monitor AI Act updates and receive practical alerts."
+      "badge": "Seguimiento regulatorio",
+      "text": "Monitoriza actualizaciones de la Ley de IA y recibe alertas prácticas."
     },
     "procurement": {
-      "badge": "Procurement AI",
-      "text": "Document supplier requirements and assess vendor risk."
+      "badge": "Compras de IA",
+      "text": "Documenta requisitos de proveedores y evalúa riesgos de terceros."
     },
     "socialProof": {
-      "title": "Companies trusting EuroComply AI"
+      "title": "Empresas que confían en EuroComply AI"
     },
     "platform": {
-      "badge": "Platform",
-      "title": "Everything your compliance team needs",
-      "subtitle": "Manage governance, inventory, reporting, and monitoring in one place."
+      "badge": "Plataforma",
+      "title": "Todo lo que tu equipo de cumplimiento necesita",
+      "subtitle": "Gestiona gobernanza, inventario, informes y monitorización en un solo lugar."
     },
     "capRows": {
       "eaiAct": {
-        "title": "EU AI Act compliance",
-        "text": "Track regulatory requirements and stay aligned with industry standards."
+        "title": "Cumplimiento de la Ley de IA de la UE",
+        "text": "Sigue los requisitos regulatorios y mantente alineado con los estándares del sector."
       },
       "policy": {
-        "title": "Corporate policies",
-        "text": "Create, review, and publish internal policies automatically."
+        "title": "Políticas corporativas",
+        "text": "Crea, revisa y publica políticas internas automáticamente."
       },
       "registry": {
-        "title": "System registry",
-        "text": "Maintain an up-to-date inventory of your AI solutions."
+        "title": "Registro de sistemas",
+        "text": "Mantén un inventario actualizado de tus soluciones de IA."
       },
       "procurement": {
-        "title": "Procurement workflows",
-        "text": "Evaluate suppliers with standardized compliance data."
+        "title": "Flujos de compras",
+        "text": "Evalúa proveedores con datos de cumplimiento estandarizados."
       }
     },
     "monitoring": {
-      "badge": "Monitoring",
-      "title": "Monitor AI risk in real time",
-      "subtitle": "Set alerts and keep visibility on safety, privacy, and compliance.",
-      "bullet1": "Policy violation detection",
-      "bullet2": "Regulatory change alerts",
-      "bullet3": "Continuous risk reporting"
+      "badge": "Monitorización",
+      "title": "Monitoriza el riesgo de IA en tiempo real",
+      "subtitle": "Configura alertas y mantén visibilidad sobre seguridad, privacidad y cumplimiento.",
+      "bullet1": "Detección de infracciones de políticas",
+      "bullet2": "Alertas de cambios regulatorios",
+      "bullet3": "Informes continuos de riesgo"
     },
     "engine": {
-      "title": "Risk classification engine",
+      "title": "Motor de clasificación de riesgo",
       "row1": {
-        "label": "Ethical impact",
+        "label": "Impacto ético",
         "weight": "40%",
         "value": "72"
       },
       "row2": {
-        "label": "Data sensitivity",
+        "label": "Sensibilidad de datos",
         "weight": "30%",
         "value": "48"
       },
       "row3": {
-        "label": "Model maturity",
+        "label": "Madurez del modelo",
         "weight": "20%",
         "value": "34"
       }
     },
     "pricing": {
-      "badge": "Pricing",
-      "title": "Plans for growing teams",
+      "badge": "Precios",
+      "title": "Planes para equipos en crecimiento",
       "starter": {
         "name": "Starter",
-        "description": "For small teams beginning AI governance.",
+        "description": "Para equipos pequeños que empiezan con la gobernanza de IA.",
         "features": [
-          "Up to 5 monitored systems",
-          "Basic compliance documentation",
-          "Monthly audit reports",
-          "Email support",
-          "Compliance dashboard access"
+          "Hasta 5 sistemas monitorizados",
+          "Documentación básica de cumplimiento",
+          "Informes mensuales de auditoría",
+          "Soporte por email",
+          "Acceso al panel de cumplimiento"
         ],
-        "cta": "Start now"
+        "cta": "Empezar ahora"
       },
       "growth": {
         "name": "Growth",
-        "description": "For teams that need advanced automation and monitoring.",
+        "description": "Para equipos que necesitan automatización y monitorización avanzadas.",
         "features": [
-          "Continuous monitoring",
-          "Automated risk assessment",
-          "Policy management",
-          "Customizable reports",
-          "Priority support"
+          "Monitorización continua",
+          "Evaluación automatizada de riesgos",
+          "Gestión de políticas",
+          "Informes personalizables",
+          "Soporte prioritario"
         ],
-        "cta": "Choose Growth"
+        "cta": "Elegir Growth"
       },
       "enterprise": {
         "name": "Enterprise",
-        "description": "Complete solution for regulated organizations.",
+        "description": "Solución completa para organizaciones reguladas.",
         "features": [
-          "Multi-team governance",
-          "Private workspaces",
-          "Vendor compliance integration",
-          "Advanced reporting",
-          "SLA and dedicated support"
+          "Gobernanza multi-equipo",
+          "Workspaces privados",
+          "Integración de cumplimiento de proveedores",
+          "Informes avanzados",
+          "SLA y soporte dedicado"
         ],
-        "cta": "Contact sales"
+        "cta": "Contactar ventas"
       },
-      "popular": "Most popular",
-      "perMonth": "per month"
+      "popular": "Más popular",
+      "perMonth": "al mes"
     },
     "finalCta": {
-      "title": "Start protecting your AI today",
-      "subtitle": "Accelerate compliance with a platform built for European teams."
+      "title": "Empieza a proteger tu IA hoy",
+      "subtitle": "Acelera el cumplimiento con una plataforma creada para equipos europeos."
     },
     "footer": {
-      "tagline": "Your AI governance journey begins here",
-      "badges": "GDPR · AI Act · SOC 2"
+      "tagline": "Tu camino hacia la gobernanza de IA empieza aquí",
+      "badges": "RGPD · Ley de IA · SOC 2"
     },
     "nav": {
-      "platform": "Platform",
-      "governance": "Governance",
-      "pricing": "Pricing",
-      "login": "Log in",
-      "cta": "Create account"
+      "platform": "Plataforma",
+      "governance": "Gobernanza",
+      "pricing": "Precios",
+      "login": "Entrar",
+      "cta": "Crear cuenta"
     }
   },
   "auth": {
-    "secure": "Secure sign-in",
-    "loginTitle": "Sign in to your account",
-    "registerTitle": "Create a new account",
-    "subtitle": "Start protecting your AI systems with security and compliance.",
-    "continueWithGoogle": "Continue with Google",
-    "fullName": "Full name",
-    "companyName": "Company name",
+    "secure": "Inicio de sesión seguro",
+    "loginTitle": "Entra en tu cuenta",
+    "registerTitle": "Crea una nueva cuenta",
+    "subtitle": "Empieza a proteger tus sistemas de IA con seguridad y cumplimiento.",
+    "continueWithGoogle": "Continuar con Google",
+    "fullName": "Nombre completo",
+    "companyName": "Nombre de la empresa",
     "email": "Email",
-    "password": "Password",
-    "loggingIn": "Signing in...",
-    "creating": "Creating account...",
-    "loginBtn": "Log in",
-    "registerBtn": "Create account",
-    "noAccount": "Don’t have an account? Create one.",
-    "hasAccount": "Already have an account? Sign in.",
-    "successWorkspace": "Workspace created successfully!",
-    "errorOnboarding": "Unable to complete onboarding.",
-    "errorCreating": "Could not create your workspace."
+    "password": "Contraseña",
+    "loggingIn": "Entrando...",
+    "creating": "Creando cuenta...",
+    "loginBtn": "Entrar",
+    "registerBtn": "Crear cuenta",
+    "noAccount": "¿No tienes cuenta? Crea una.",
+    "hasAccount": "¿Ya tienes cuenta? Inicia sesión.",
+    "successWorkspace": "Workspace creado correctamente.",
+    "errorOnboarding": "No se pudo completar el onboarding.",
+    "errorCreating": "No se pudo crear tu workspace."
   },
   "onboarding": {
-    "badge": "Company details",
-    "title": "Tell us about your team",
-    "fullName": "Full name",
-    "companyName": "Company name",
+    "badge": "Datos de la empresa",
+    "title": "Cuéntanos sobre tu equipo",
+    "fullName": "Nombre completo",
+    "companyName": "Nombre de la empresa",
     "companySize": {
-      "label": "Company size",
-      "s1": "1-10 employees",
-      "s2": "11-50 employees",
-      "s3": "51-200 employees",
-      "s4": "201-1000 employees",
-      "s5": "1000+ employees"
+      "label": "Tamaño de la empresa",
+      "s1": "1-10 empleados",
+      "s2": "11-50 empleados",
+      "s3": "51-200 empleados",
+      "s4": "201-1000 empleados",
+      "s5": "Más de 1000 empleados"
     },
     "industry": {
-      "label": "Industry",
-      "tech": "Technology",
-      "finance": "Finance",
-      "healthcare": "Healthcare",
+      "label": "Sector",
+      "tech": "Tecnología",
+      "finance": "Finanzas",
+      "healthcare": "Salud",
       "retail": "Retail",
-      "manufacturing": "Manufacturing",
-      "other": "Other"
+      "manufacturing": "Manufactura",
+      "other": "Otro"
     },
-    "loading": "Loading...",
-    "cta": "Complete profile"
+    "loading": "Cargando...",
+    "cta": "Completar perfil"
   }
 }
