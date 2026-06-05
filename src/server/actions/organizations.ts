@@ -1,9 +1,10 @@
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createOrganizationSchema, type CreateOrganizationInput } from '@/lib/validation/organization';
-import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { logAuditEvent } from './audit';
 
 export async function createOrganization(input: CreateOrganizationInput, userId: string) {
   const payload = createOrganizationSchema.parse(input);
-  const supabase = createSupabaseAdminClient();
+  const supabase = createAdminClient();
 
   const { data: organization, error } = await supabase
     .from('organizations')
@@ -21,12 +22,12 @@ export async function createOrganization(input: CreateOrganizationInput, userId:
 
   if (memberError) throw memberError;
 
-  await supabase.from('audit_logs').insert({
-    organization_id: organization.id,
-    actor_user_id: userId,
+  await logAuditEvent({
+    organizationId: organization.id,
+    actorUserId: userId,
     action: 'organization.created',
-    entity_type: 'organization',
-    entity_id: organization.id,
+    entityType: 'organization',
+    entityId: organization.id,
     metadata: { slug: payload.slug },
   });
 
