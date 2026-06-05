@@ -5,6 +5,21 @@ import { getStripeClient } from '@/lib/billing/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 
+async function requireBillingManager(supabase: ReturnType<typeof createAdminClient>, organizationId: string, userId: string) {
+  const { data: membership, error: membershipError } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('organization_id', organizationId)
+    .eq('user_id', userId)
+    .single();
+
+  if (membershipError || !membership || !['owner', 'admin'].includes(membership.role)) {
+    throw new Error('Only organization owners and admins can manage billing');
+  }
+
+  return membership;
+}
+
 export async function createCheckoutSession(input: {
   organizationId: string;
   planId: string;
@@ -32,16 +47,7 @@ export async function createCheckoutSession(input: {
 
   const supabase = createAdminClient();
 
-  const { data: membership, error: membershipError } = await supabase
-    .from('organization_members')
-    .select('role')
-    .eq('organization_id', input.organizationId)
-    .eq('user_id', input.userId)
-    .single();
-
-  if (membershipError || !membership || !['owner', 'admin'].includes(membership.role)) {
-    throw new Error('Only organization owners and admins can manage billing');
-  }
+  await requireBillingManager(supabase, input.organizationId, input.userId);
 
   const stripe = getStripeClient();
 
@@ -75,6 +81,53 @@ export async function createCheckoutSession(input: {
   if (!session.url) {
     throw new Error('Stripe did not return a checkout URL');
   }
+
+  return session.url;
+}
+
+export async function createCustomerPortalSession(input: {
+  organizationId: string;
+  userId: string;
+  returnPath?: string;
+}) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+  if (!appUrl) {
+    throw new Error('NEXT_PUBLIC_APP_URL is required');
+  }
+
+  const supabase = createAdminClient();
+
+  await requireBillingManager(supabase, input.organizationId, input.userId);
+
+  const { data: subscription, error: subscriptionError } = await supabase
+    .from('subscriptions')
+    .select('stripe_customer_id')
+    .eq('organization_id', input.organizationId)
+    .maybeSingle();
+
+  if (subscriptionError) {
+    throw subscriptionError;
+  }
+
+  if (!subscription?.stripe_customer_id) {
+    throw new Error('Organization does not have a Stripe customer yet');
+  }
+
+  const stripe = getStripeClient();
+
+  const session = await stripe.billingPortal.sessions.create({
+    customer: subscription.stripe_customer_id,
+    return_url: `${appUrl}${input.returnPath ?? '/dashboard/organizations/billing'}`,
+  });
+
+  await logAuditEvent({
+    organizationId: input.organizationId,
+    actorUserId: input.userId,
+    action: 'billing.customer_portal_opened',
+    entityType: 'subscription',
+    metadata: {},
+  });
 
   return session.url;
 }
