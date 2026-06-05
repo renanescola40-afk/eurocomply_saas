@@ -1,203 +1,24 @@
 {
   "landing": {
-    "badge": "EU AI Act Ready",
-    "heroTitle": "Complete AI governance for European enterprises",
-    "heroSubtitle": "Simplify compliance, monitor risk, and generate reports from a single secure platform.",
-    "cta": {
-      "start": "Get started",
-      "demo": "View demo"
-    },
-    "badges": {
-      "gdpr": "GDPR",
-      "euHost": "EU-hosted",
-      "auditLogs": "Audit logs",
-      "soc": "SOC 2"
-    },
-    "console": {
-      "title": "Compliance dashboard",
-      "readiness": "Audit-ready status",
-      "impactMap": "Impact map",
-      "updated": "Updated now",
-      "row1": "Live risk assessment",
-      "row2": "System inventory",
-      "row3": "Compliance reporting",
-      "row4": "Recommended actions",
-      "risk": "Risk",
-      "high": "High",
-      "limited": "Limited",
-      "minimal": "Minimal"
-    },
-    "modules": {
-      "compliance": "Compliance",
-      "complianceDetail": "Policy compliance in real time",
-      "systems": "Systems",
-      "systemsDetail": "AI inventory and system health",
-      "documents": "Documents",
-      "documentsDetail": "Generated reports and policies",
-      "signals": "Signals",
-      "signalsDetail": "Continuous monitoring alerts"
-    },
-    "tracker": {
-      "badge": "Regulatory tracking",
-      "text": "Monitor AI Act updates and receive practical alerts."
-    },
-    "procurement": {
-      "badge": "Procurement AI",
-      "text": "Document supplier requirements and assess vendor risk."
-    },
-    "socialProof": {
-      "title": "Companies trusting EuroComply AI"
-    },
-    "platform": {
-      "badge": "Platform",
-      "title": "Everything your compliance team needs",
-      "subtitle": "Manage governance, inventory, reporting, and monitoring in one place."
-    },
-    "capRows": {
-      "eaiAct": {
-        "title": "EU AI Act compliance",
-        "text": "Track regulatory requirements and stay aligned with industry standards."
-      },
-      "policy": {
-        "title": "Corporate policies",
-        "text": "Create, review, and publish internal policies automatically."
-      },
-      "registry": {
-        "title": "System registry",
-        "text": "Maintain an up-to-date inventory of your AI solutions."
-      },
-      "procurement": {
-        "title": "Procurement workflows",
-        "text": "Evaluate suppliers with standardized compliance data."
-      }
-    },
-    "monitoring": {
-      "badge": "Monitoring",
-      "title": "Monitor AI risk in real time",
-      "subtitle": "Set alerts and keep visibility on safety, privacy, and compliance.",
-      "bullet1": "Policy violation detection",
-      "bullet2": "Regulatory change alerts",
-      "bullet3": "Continuous risk reporting"
-    },
-    "engine": {
-      "title": "Risk classification engine",
-      "row1": {
-        "label": "Ethical impact",
-        "weight": "40%",
-        "value": "72"
-      },
-      "row2": {
-        "label": "Data sensitivity",
-        "weight": "30%",
-        "value": "48"
-      },
-      "row3": {
-        "label": "Model maturity",
-        "weight": "20%",
-        "value": "34"
-      }
-    },
-    "pricing": {
-      "badge": "Pricing",
-      "title": "Plans for growing teams",
-      "starter": {
-        "name": "Starter",
-        "description": "For small teams beginning AI governance.",
-        "features": [
-          "Up to 5 monitored systems",
-          "Basic compliance documentation",
-          "Monthly audit reports",
-          "Email support",
-          "Compliance dashboard access"
-        ],
-        "cta": "Start now"
-      },
-      "growth": {
-        "name": "Growth",
-        "description": "For teams that need advanced automation and monitoring.",
-        "features": [
-          "Continuous monitoring",
-          "Automated risk assessment",
-          "Policy management",
-          "Customizable reports",
-          "Priority support"
-        ],
-        "cta": "Choose Growth"
-      },
-      "enterprise": {
-        "name": "Enterprise",
-        "description": "Complete solution for regulated organizations.",
-        "features": [
-          "Multi-team governance",
-          "Private workspaces",
-          "Vendor compliance integration",
-          "Advanced reporting",
-          "SLA and dedicated support"
-        ],
-        "cta": "Contact sales"
-      },
-      "popular": "Most popular",
-      "perMonth": "per month"
-    },
-    "finalCta": {
-      "title": "Start protecting your AI today",
-      "subtitle": "Accelerate compliance with a platform built for European teams."
-    },
-    "footer": {
-      "tagline": "Your AI governance journey begins here",
-      "badges": "GDPR · AI Act · SOC 2"
-    },
-    "nav": {
-      "platform": "Platform",
-      "governance": "Governance",
-      "pricing": "Pricing",
-      "login": "Log in",
-      "cta": "Create account"
-    }
+    "badge": "Bereit fuer den EU AI Act",
+    "heroTitle": "KI-Governance fuer europaeische Unternehmen",
+    "heroSubtitle": "Vereinfachen Sie Compliance, ueberwachen Sie Risiken und erstellen Sie Berichte auf einer sicheren Plattform.",
+    "cta": { "start": "Loslegen", "demo": "Demo ansehen" },
+    "badges": { "gdpr": "DSGVO", "euHost": "In der EU gehostet", "auditLogs": "Audit-Logs", "soc": "SOC 2" },
+    "console": { "title": "Compliance-Dashboard", "readiness": "Auditbereit", "impactMap": "Auswirkungskarte", "updated": "Aktualisiert", "row1": "Live-Risikobewertung", "row2": "Systeminventar", "row3": "Compliance-Berichte", "row4": "Empfohlene Aktionen", "risk": "Risiko", "high": "Hoch", "limited": "Begrenzt", "minimal": "Minimal" },
+    "modules": { "compliance": "Compliance", "complianceDetail": "Richtlinien-Compliance in Echtzeit", "systems": "Systeme", "systemsDetail": "KI-Inventar und Systemstatus", "documents": "Dokumente", "documentsDetail": "Generierte Berichte und Richtlinien", "signals": "Signale", "signalsDetail": "Kontinuierliche Warnungen" },
+    "tracker": { "badge": "Regulatorisches Tracking", "text": "Verfolgen Sie AI-Act-Updates und erhalten Sie praktische Warnungen." },
+    "procurement": { "badge": "KI-Beschaffung", "text": "Dokumentieren Sie Lieferantenanforderungen und bewerten Sie Partnerrisiken." },
+    "socialProof": { "title": "Unternehmen, die EuroComply AI vertrauen" },
+    "platform": { "badge": "Plattform", "title": "Alles, was Ihr Compliance-Team braucht", "subtitle": "Verwalten Sie Governance, Inventar, Berichte und Monitoring an einem Ort." },
+    "capRows": { "eaiAct": { "title": "EU AI Act Compliance", "text": "Verfolgen Sie regulatorische Anforderungen und bleiben Sie mit Standards im Einklang." }, "policy": { "title": "Unternehmensrichtlinien", "text": "Erstellen, pruefen und veroeffentlichen Sie interne Richtlinien automatisch." }, "registry": { "title": "Systemregister", "text": "Pflegen Sie ein aktuelles Inventar Ihrer KI-Loesungen." }, "procurement": { "title": "Beschaffungsprozesse", "text": "Bewerten Sie Lieferanten mit standardisierten Compliance-Daten." } },
+    "monitoring": { "badge": "Monitoring", "title": "KI-Risiken in Echtzeit ueberwachen", "subtitle": "Richten Sie Warnungen ein und behalten Sie Sicherheit, Datenschutz und Compliance im Blick.", "bullet1": "Erkennung von Richtlinienverstoessen", "bullet2": "Warnungen zu regulatorischen Aenderungen", "bullet3": "Kontinuierliche Risikoberichte" },
+    "engine": { "title": "Risikoklassifizierungs-Engine", "row1": { "label": "Ethische Auswirkung", "weight": "40%", "value": "72" }, "row2": { "label": "Datensensibilitaet", "weight": "30%", "value": "48" }, "row3": { "label": "Modellreife", "weight": "20%", "value": "34" } },
+    "pricing": { "badge": "Preise", "title": "Plaene fuer wachsende Teams", "starter": { "name": "Starter", "description": "Fuer kleine Teams, die mit KI-Governance beginnen.", "features": ["Bis zu 5 ueberwachte Systeme", "Basis-Compliance-Dokumentation", "Monatliche Audit-Berichte", "E-Mail-Support", "Zugang zum Compliance-Dashboard"], "cta": "Jetzt starten" }, "growth": { "name": "Growth", "description": "Fuer Teams mit Automatisierung und Monitoring.", "features": ["Kontinuierliches Monitoring", "Automatisierte Risikobewertung", "Richtlinienmanagement", "Anpassbare Berichte", "Priorisierter Support"], "cta": "Growth waehlen" }, "enterprise": { "name": "Enterprise", "description": "Komplettloesung fuer regulierte Organisationen.", "features": ["Multi-Team-Governance", "Private Workspaces", "Lieferanten-Compliance", "Erweiterte Berichte", "SLA und dedizierter Support"], "cta": "Kontakt aufnehmen" }, "popular": "Am beliebtesten", "perMonth": "pro Monat" },
+    "finalCta": { "title": "Beginnen Sie heute, Ihre KI zu schuetzen", "subtitle": "Beschleunigen Sie Compliance mit einer Plattform fuer europaeische Teams." },
+    "footer": { "tagline": "Ihre KI-Governance-Reise beginnt hier", "badges": "DSGVO · AI Act · SOC 2" },
+    "nav": { "platform": "Plattform", "governance": "Governance", "pricing": "Preise", "login": "Einloggen", "cta": "Konto erstellen" }
   },
-  "auth": {
-    "secure": "Secure sign-in",
-    "loginTitle": "Sign in to your account",
-    "registerTitle": "Create a new account",
-    "subtitle": "Start protecting your AI systems with security and compliance.",
-    "continueWithGoogle": "Continue with Google",
-    "fullName": "Full name",
-    "companyName": "Company name",
-    "email": "Email",
-    "password": "Password",
-    "loggingIn": "Signing in...",
-    "creating": "Creating account...",
-    "loginBtn": "Log in",
-    "registerBtn": "Create account",
-    "noAccount": "Don’t have an account? Create one.",
-    "hasAccount": "Already have an account? Sign in.",
-    "successWorkspace": "Workspace created successfully!",
-    "errorOnboarding": "Unable to complete onboarding.",
-    "errorCreating": "Could not create your workspace."
-  },
-  "onboarding": {
-    "badge": "Company details",
-    "title": "Tell us about your team",
-    "fullName": "Full name",
-    "companyName": "Company name",
-    "companySize": {
-      "label": "Company size",
-      "s1": "1-10 employees",
-      "s2": "11-50 employees",
-      "s3": "51-200 employees",
-      "s4": "201-1000 employees",
-      "s5": "1000+ employees"
-    },
-    "industry": {
-      "label": "Industry",
-      "tech": "Technology",
-      "finance": "Finance",
-      "healthcare": "Healthcare",
-      "retail": "Retail",
-      "manufacturing": "Manufacturing",
-      "other": "Other"
-    },
-    "loading": "Loading...",
-    "cta": "Complete profile"
-  }
+  "auth": { "secure": "Sichere Anmeldung", "loginTitle": "Bei Ihrem Konto anmelden", "registerTitle": "Neues Konto erstellen", "subtitle": "Schuetzen Sie Ihre KI-Systeme mit Sicherheit und Compliance.", "continueWithGoogle": "Mit Google fortfahren", "fullName": "Vollstaendiger Name", "companyName": "Unternehmensname", "email": "E-Mail", "password": "Passwort", "loggingIn": "Anmeldung laeuft...", "creating": "Konto wird erstellt...", "loginBtn": "Einloggen", "registerBtn": "Konto erstellen", "noAccount": "Noch kein Konto? Erstellen Sie eines.", "hasAccount": "Bereits ein Konto? Einloggen.", "successWorkspace": "Workspace erfolgreich erstellt!", "errorOnboarding": "Onboarding konnte nicht abgeschlossen werden.", "errorCreating": "Workspace konnte nicht erstellt werden." },
+  "onboarding": { "badge": "Unternehmensdetails", "title": "Erzaehlen Sie uns von Ihrem Team", "fullName": "Vollstaendiger Name", "companyName": "Unternehmensname", "companySize": { "label": "Unternehmensgroesse", "s1": "1-10 Mitarbeitende", "s2": "11-50 Mitarbeitende", "s3": "51-200 Mitarbeitende", "s4": "201-1000 Mitarbeitende", "s5": "Mehr als 1000 Mitarbeitende" }, "industry": { "label": "Branche", "tech": "Technologie", "finance": "Finanzen", "healthcare": "Gesundheit", "retail": "Handel", "manufacturing": "Fertigung", "other": "Andere" }, "loading": "Laden...", "cta": "Profil abschliessen" }
 }
