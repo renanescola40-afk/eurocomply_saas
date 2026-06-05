@@ -38,8 +38,6 @@ function getAppOrigin() {
   const currentOrigin = window.location.origin;
   const currentHost = window.location.hostname;
 
-  // Vercel preview/deployment URLs change on each deploy. Auth should always
-  // return to the stable production URL configured in Supabase.
   if (
     currentHost.endsWith('.vercel.app') &&
     currentHost !== 'eurocomply-saas.vercel.app'
@@ -48,6 +46,25 @@ function getAppOrigin() {
   }
 
   return currentOrigin;
+}
+
+function getCurrentLocalePrefix() {
+  if (typeof window === 'undefined') return '/pt';
+  const segments = window.location.pathname.split('/').filter(Boolean);
+  const currentLocale = segments[0] as Locale | undefined;
+  return locales.includes(currentLocale as Locale) ? `/${currentLocale}` : '/pt';
+}
+
+function getAuthCallbackUrl(nextPath = '/pt/dashboard') {
+  const origin = getAppOrigin();
+  const callbackUrl = new URL('/auth/callback', origin);
+  callbackUrl.searchParams.set('next', nextPath);
+  return callbackUrl.toString();
+}
+
+function getLocalizedPath(path: string) {
+  const localePrefix = getCurrentLocalePrefix();
+  return `${localePrefix}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -63,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
       } catch (e) {
+        setSession(null);
         setUser(null);
       } finally {
         setLoading(false);
@@ -82,33 +100,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const getCurrentLocalePrefix = () => {
-    if (typeof window === 'undefined') return '/pt';
-    const segments = window.location.pathname.split('/').filter(Boolean);
-    const currentLocale = segments[0] as Locale | undefined;
-    return locales.includes(currentLocale as Locale) ? `/${currentLocale}` : '/pt';
-  };
-
-  const getRedirectUrl = (path: string) => {
-    const localePrefix = getCurrentLocalePrefix();
-    return `${getAppOrigin()}${localePrefix}${path.startsWith('/') ? path : `/${path}`}`;
-  };
-
-  // EMAIL LOGIN
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       return { error: error as Error | null };
     } catch (e) {
       return { error: e as Error };
     }
   }, []);
 
-  // SIGN UP
   const signUpWithEmail = useCallback(
     async (
       email: string,
@@ -116,12 +116,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       metadata?: { name?: string; company_name?: string }
     ) => {
       try {
+        const nextPath = getLocalizedPath('/dashboard');
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: metadata,
-            emailRedirectTo: getRedirectUrl('/dashboard'),
+            emailRedirectTo: getAuthCallbackUrl(nextPath),
           },
         });
 
@@ -133,18 +134,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  // GOOGLE LOGIN
   const signInWithGoogle = useCallback(async () => {
     try {
-      const redirectUrl = getRedirectUrl('/dashboard');
+      const nextPath = getLocalizedPath('/dashboard');
+      const redirectTo = getAuthCallbackUrl(nextPath);
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
+          redirectTo,
           queryParams: {
             prompt: 'select_account',
           },
-          redirectTo: redirectUrl,
         },
       });
 
@@ -169,7 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isRedirectMismatch) {
           return {
             error: new Error(
-              `Erro de configuração: adicione esta URL nos Redirect URLs do Supabase: ${redirectUrl}`
+              `Erro de configuração: adicione esta URL nos Redirect URLs do Supabase: ${redirectTo}`
             ) as Error,
           };
         }
@@ -183,7 +184,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // SIGN OUT
   const signOut = useCallback(async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -193,11 +193,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // RESET PASSWORD
   const resetPassword = useCallback(async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: getRedirectUrl('/auth/callback'),
+        redirectTo: getAuthCallbackUrl(getLocalizedPath('/auth/callback')),
       });
 
       return { error: error as Error | null };
