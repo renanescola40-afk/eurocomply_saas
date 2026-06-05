@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocale } from 'next-intl';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import { locales, LOCALE_META, type Locale } from '@/lib/i18n/routing';
 
@@ -27,8 +27,6 @@ function stripLocaleFromPath(pathname: string) {
 function buildLocalizedPath(pathname: string, newLocale: Locale) {
   const pathWithoutLocale = stripLocaleFromPath(pathname);
 
-  // routing.localePrefix is set to "always", so even the default language must
-  // keep an explicit prefix. English must be /en, not /.
   if (pathWithoutLocale === '/') {
     return `/${newLocale}`;
   }
@@ -38,7 +36,6 @@ function buildLocalizedPath(pathname: string, newLocale: Locale) {
 
 export default function LanguageSwitcher({ variant = 'dropdown', className = '' }: LanguageSwitcherProps) {
   const locale = useLocale() as Locale;
-  const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -57,10 +54,13 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
   }, []);
 
   const switchLocale = (newLocale: Locale) => {
+    const targetPath = buildLocalizedPath(pathname, newLocale);
     document.cookie = `${COOKIE_NAME}=${newLocale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
-    router.push(buildLocalizedPath(pathname, newLocale));
-    router.refresh();
     setOpen(false);
+
+    // Use a full navigation instead of router.push so the server reloads the
+    // right locale messages and avoids stale client-side i18n cache.
+    window.location.assign(targetPath);
   };
 
   if (variant === 'inline') {
@@ -75,6 +75,7 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
               type="button"
               onClick={() => switchLocale(loc)}
               title={meta.nativeName}
+              aria-current={isActive ? 'true' : undefined}
               className={`h-8 rounded px-2 text-xs font-medium transition-colors ${
                 isActive
                   ? 'bg-white/20 text-white'
@@ -114,6 +115,7 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
                 key={loc}
                 type="button"
                 onClick={() => switchLocale(loc)}
+                aria-current={isActive ? 'true' : undefined}
                 className={`flex w-full items-center gap-3 px-4 py-3 text-sm transition-colors ${
                   isActive
                     ? 'bg-white/10 text-white'
