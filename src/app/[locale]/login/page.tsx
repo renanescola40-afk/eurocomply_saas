@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Fingerprint } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 
 export default function LoginPage() {
+  const t = useTranslations('auth');
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -24,8 +26,6 @@ export default function LoginPage() {
       return;
     }
 
-    // If Supabase returned an error to /pt/login?error=..., do not immediately
-    // start OAuth again. That creates an infinite Google/Supabase loop.
     if (urlError) {
       setError(decodeURIComponent(urlError));
       return;
@@ -63,14 +63,12 @@ export default function LoginPage() {
             <Fingerprint className="h-6 w-6" />
           </div>
 
-          <p className="text-xs uppercase tracking-[0.28em] text-white/36">Acesso seguro</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-white/36">{t('secure')}</p>
           <h1 className="mt-2 text-2xl font-semibold">
-            {error ? 'Não foi possível concluir o login' : 'Redirecionando para o Google'}
+            {error ? t('loginErrorTitle') : t('redirectingGoogleTitle')}
           </h1>
           <p className="mt-2 text-sm text-white/50">
-            {error
-              ? 'Revise a mensagem abaixo e tente novamente.'
-              : 'Você será levado diretamente para o login seguro do Google.'}
+            {error ? t('loginErrorSubtitle') : t('redirectingGoogleSubtitle')}
           </p>
 
           {error && (
@@ -81,7 +79,7 @@ export default function LoginPage() {
                 className="mt-4 w-full bg-white text-black hover:bg-white/90"
                 onClick={retryGoogleLogin}
               >
-                Tentar novamente com Google
+                {t('retryGoogle')}
               </Button>
             </div>
           )}
