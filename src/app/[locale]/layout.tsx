@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffects from '@/components/GlobalClientEffects';
 import DashboardI18nRuntime from '@/components/DashboardI18nRuntime';
+import DashboardChildI18nRuntime from '@/components/DashboardChildI18nRuntime';
 import { AuthProvider } from '@/hooks/useAuth';
 import { routing } from '@/lib/i18n/routing';
 
@@ -42,11 +43,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: 'Automatiza documentación, gobernanza y cumplimiento de IA en minutos.',
     },
     fr: {
-      title: 'EuroComply AI - Plateforme de Conformité IA pour l\'Europe',
+      title: 'EuroComply AI - Plateforme de Conformité IA pour Europe',
       description: 'Automatisez documentation, gouvernance et conformité IA en minutes.',
     },
     it: {
-      title: 'EuroComply AI - Piattaforma di Conformità IA per l\'Europa',
+      title: 'EuroComply AI - Piattaforma di Conformità IA per Europa',
       description: 'Automatizza documentazione, governance e conformità IA in pochi minuti.',
     },
     de: {
@@ -60,14 +61,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: meta.title,
     description: meta.description,
-    icons: {
-      icon: [
-        {
-          url: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230F172A' rx='15' width='100' height='100'/><text y='70' x='50' text-anchor='middle' font-size='60' fill='white' font-family='system-ui'>EC</text></svg>",
-          type: 'image/svg+xml',
-        },
-      ],
-    },
   };
 }
 
@@ -87,6 +80,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           <AuthProvider>
             {children}
             <DashboardI18nRuntime />
+            <DashboardChildI18nRuntime />
             <GlobalClientEffects />
             <Toaster />
             <ThemeProvider
