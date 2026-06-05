@@ -1,9 +1,11 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { PlanGate } from '@/components/billing/plan-gate';
 import { CreateRiskForm, type CreateRiskFormInput } from '@/components/risks/create-risk-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createRisk } from '@/server/actions/risks';
 import { getCurrentUser } from '@/server/queries/auth';
+import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { listRisks } from '@/server/queries/risks';
 
@@ -20,7 +22,10 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
     redirect(`/${params.locale}/onboarding`);
   }
 
-  const risks = await listRisks(organization.id);
+  const [risks, billing] = await Promise.all([
+    listRisks(organization.id),
+    getOrganizationBillingContext(organization.id),
+  ]);
 
   async function createRiskAction(input: CreateRiskFormInput) {
     'use server';
@@ -45,7 +50,9 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
         <p className="mt-2 text-muted-foreground">Prioritize compliance and operational risk by likelihood and impact.</p>
       </div>
 
-      <CreateRiskForm onSubmit={createRiskAction} />
+      <PlanGate planId={billing.plan} metric="risks" currentUsage={billing.usage.risks}>
+        <CreateRiskForm onSubmit={createRiskAction} />
+      </PlanGate>
 
       <Card>
         <CardHeader>
