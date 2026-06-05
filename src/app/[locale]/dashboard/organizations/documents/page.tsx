@@ -1,10 +1,12 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { PlanGate } from '@/components/billing/plan-gate';
 import { CreateDocumentForm, type UploadDocumentFormInput } from '@/components/documents/create-document-form';
 import { DocumentDownloadButton } from '@/components/documents/document-download-button';
 import { createDocumentSignedDownloadUrl } from '@/server/actions/document-downloads';
 import { uploadDocument } from '@/server/actions/documents';
 import { getCurrentUser } from '@/server/queries/auth';
+import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { listDocuments } from '@/server/queries/documents';
 
@@ -22,6 +24,7 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
   }
 
   const documents = await listDocuments(currentOrganization.organization.id);
+  const billing = await getOrganizationBillingContext(currentOrganization.organization.id);
 
   async function uploadDocumentAction(input: UploadDocumentFormInput) {
     'use server';
@@ -82,7 +85,9 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
           </p>
         </header>
 
-        <CreateDocumentForm onSubmit={uploadDocumentAction} />
+        <PlanGate planId={billing.plan} metric="documents" currentUsage={billing.usage.documents}>
+          <CreateDocumentForm onSubmit={uploadDocumentAction} />
+        </PlanGate>
 
         <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
           <div className="mb-4 flex items-center justify-between gap-4">
