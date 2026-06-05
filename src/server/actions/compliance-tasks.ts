@@ -1,9 +1,10 @@
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createComplianceTaskSchema, updateComplianceTaskSchema, type CreateComplianceTaskInput, type UpdateComplianceTaskInput } from '@/lib/validation/compliance';
-import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { logAuditEvent } from './audit';
 
 export async function createComplianceTask(input: CreateComplianceTaskInput, userId: string) {
   const payload = createComplianceTaskSchema.parse(input);
-  const supabase = createSupabaseAdminClient();
+  const supabase = createAdminClient();
 
   const { data: task, error } = await supabase
     .from('compliance_tasks')
@@ -22,12 +23,12 @@ export async function createComplianceTask(input: CreateComplianceTaskInput, use
 
   if (error) throw error;
 
-  await supabase.from('audit_logs').insert({
-    organization_id: payload.organizationId,
-    actor_user_id: userId,
+  await logAuditEvent({
+    organizationId: payload.organizationId,
+    actorUserId: userId,
     action: 'compliance_task.created',
-    entity_type: 'compliance_task',
-    entity_id: task.id,
+    entityType: 'compliance_task',
+    entityId: task.id,
     metadata: { title: payload.title },
   });
 
@@ -36,7 +37,7 @@ export async function createComplianceTask(input: CreateComplianceTaskInput, use
 
 export async function updateComplianceTask(taskId: string, organizationId: string, input: UpdateComplianceTaskInput, userId: string) {
   const payload = updateComplianceTaskSchema.parse(input);
-  const supabase = createSupabaseAdminClient();
+  const supabase = createAdminClient();
 
   const { data: task, error } = await supabase
     .from('compliance_tasks')
@@ -57,12 +58,12 @@ export async function updateComplianceTask(taskId: string, organizationId: strin
 
   if (error) throw error;
 
-  await supabase.from('audit_logs').insert({
-    organization_id: organizationId,
-    actor_user_id: userId,
+  await logAuditEvent({
+    organizationId,
+    actorUserId: userId,
     action: 'compliance_task.updated',
-    entity_type: 'compliance_task',
-    entity_id: taskId,
+    entityType: 'compliance_task',
+    entityId: taskId,
     metadata: payload,
   });
 
