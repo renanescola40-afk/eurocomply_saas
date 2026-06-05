@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffects from '@/components/GlobalClientEffects';
 import DashboardI18nRuntime from '@/components/DashboardI18nRuntime';
 import DashboardChildI18nRuntime from '@/components/DashboardChildI18nRuntime';
+import GapAnalysisShortcut from '@/components/GapAnalysisShortcut';
 import { AuthProvider } from '@/hooks/useAuth';
 import { routing } from '@/lib/i18n/routing';
 
@@ -79,6 +80,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
             {children}
+            <GapAnalysisShortcut />
             <DashboardI18nRuntime />
             <DashboardChildI18nRuntime />
             <GlobalClientEffects />
