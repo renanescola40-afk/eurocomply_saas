@@ -1,4 +1,7 @@
+import { redirect } from 'next/navigation';
 import { AcceptInvitationCard } from '@/components/team/accept-invitation-card';
+import { acceptInvitation } from '@/server/actions/invitations';
+import { getCurrentUser } from '@/server/queries/auth';
 import { canAcceptInvitation, getInvitationByToken } from '@/server/queries/invitations';
 
 interface AcceptInvitationPageProps {
@@ -10,17 +13,38 @@ interface AcceptInvitationPageProps {
 export default async function AcceptInvitationPage({ params }: AcceptInvitationPageProps) {
   const invitation = await getInvitationByToken(params.token);
   const canAccept = canAcceptInvitation(invitation);
+  const user = await getCurrentUser();
+
+  async function acceptCurrentInvitation() {
+    'use server';
+
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser?.email) {
+      redirect(`/login?redirectedFrom=/invite/${params.token}`);
+    }
+
+    await acceptInvitation(
+      { token: params.token },
+      currentUser.id,
+      currentUser.email,
+    );
+
+    redirect('/dashboard/organizations');
+  }
+
+  if (!user && canAccept) {
+    redirect(`/login?redirectedFrom=/invite/${params.token}`);
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 py-12 text-white">
       <div className="w-full max-w-lg">
         <AcceptInvitationCard
           email={invitation?.email ?? 'Unknown invitee'}
-          organizationName={invitation?.organizations?.name ?? 'EuroComply workspace'}
+          organizationName={invitation?.organizations?.name ?? 'EuroComply organization'}
           disabled={!canAccept}
-          onAccept={async () => {
-            'use server';
-          }}
+          onAccept={acceptCurrentInvitation}
         />
         {!canAccept && (
           <p className="mt-4 text-center text-sm text-slate-400">
