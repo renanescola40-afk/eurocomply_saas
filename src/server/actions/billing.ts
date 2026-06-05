@@ -2,6 +2,7 @@
 
 import { getBillingPlan, getStripePriceId } from '@/lib/billing/plans';
 import { getStripeClient } from '@/lib/billing/stripe';
+import { checkRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 
@@ -27,6 +28,16 @@ export async function createCheckoutSession(input: {
   successPath?: string;
   cancelPath?: string;
 }) {
+  const rateLimit = checkRateLimit({
+    key: `checkout:${input.organizationId}:${input.userId}`,
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    throw new Error('Too many checkout attempts. Please try again later.');
+  }
+
   const plan = getBillingPlan(input.planId);
 
   if (!plan) {
@@ -90,6 +101,16 @@ export async function createCustomerPortalSession(input: {
   userId: string;
   returnPath?: string;
 }) {
+  const rateLimit = checkRateLimit({
+    key: `customer_portal:${input.organizationId}:${input.userId}`,
+    limit: 10,
+    windowMs: 60 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    throw new Error('Too many billing portal attempts. Please try again later.');
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
   if (!appUrl) {
