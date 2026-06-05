@@ -5,9 +5,9 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffects from '@/components/GlobalClientEffects';
+import DashboardI18nRuntime from '@/components/DashboardI18nRuntime';
 import { AuthProvider } from '@/hooks/useAuth';
 import { routing } from '@/lib/i18n/routing';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 import '../globals.css';
 
@@ -86,6 +86,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
             {children}
+            <DashboardI18nRuntime />
             <GlobalClientEffects />
             <Toaster />
             <ThemeProvider
