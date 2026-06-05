@@ -1,32 +1,31 @@
-'use client'
+'use client';
 
-import { supabase } from '@/lib/supabase/client' // ajuste o caminho
+import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
 export function GoogleLoginButton() {
-  const handleGoogleLogin = async () => {
-    try {
-      // Primeiro, busca a URL de autenticação do Supabase
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
+  const { signInWithGoogle } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-      if (error) throw error
-      
-      // Redireciona para a página de login do Google
-      if (data?.url) {
-        window.location.href = data.url
-      }
-    } catch (error) {
-      console.error('Erro no login:', error)
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError('');
+
+    const result = await signInWithGoogle();
+
+    if (result.error) {
+      setError(result.error.message);
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <button onClick={handleGoogleLogin}>
-      Entrar com Google
-    </button>
-  )
+    <div>
+      <button type="button" onClick={handleGoogleLogin} disabled={loading}>
+        {loading ? 'Redirecionando...' : 'Entrar com Google'}
+      </button>
+      {error && <p>{error}</p>}
+    </div>
+  );
 }
