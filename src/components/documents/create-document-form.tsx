@@ -5,43 +5,46 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export type CreateDocumentFormInput = {
+export type UploadDocumentFormInput = {
   name: string;
   category: string;
-  storagePath: string;
-  mimeType?: string | null;
   expiresAt?: string | null;
+  file: File;
 };
 
-export function CreateDocumentForm({ onSubmit }: { onSubmit: (input: CreateDocumentFormInput) => Promise<void> }) {
+export function CreateDocumentForm({ onSubmit }: { onSubmit: (input: UploadDocumentFormInput) => Promise<void> }) {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('general');
-  const [storagePath, setStoragePath] = useState('manual-entry');
-  const [mimeType, setMimeType] = useState('application/pdf');
   const [expiresAt, setExpiresAt] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (!file) {
+      setError('Select a document file to upload.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       await onSubmit({
         name,
         category,
-        storagePath,
-        mimeType: mimeType || null,
         expiresAt: expiresAt || null,
+        file,
       });
       setName('');
       setCategory('general');
-      setStoragePath('manual-entry');
-      setMimeType('application/pdf');
       setExpiresAt('');
+      setFile(null);
+      event.currentTarget.reset();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to create document');
+      setError(err instanceof Error ? err.message : 'Unable to upload document');
     } finally {
       setLoading(false);
     }
@@ -50,8 +53,8 @@ export function CreateDocumentForm({ onSubmit }: { onSubmit: (input: CreateDocum
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
       <div>
-        <h2 className="text-lg font-semibold text-white">Add compliance document</h2>
-        <p className="mt-1 text-sm text-white/55">Register a document record. Secure file upload should be enabled next.</p>
+        <h2 className="text-lg font-semibold text-white">Upload compliance document</h2>
+        <p className="mt-1 text-sm text-white/55">Store evidence in a private organization-scoped bucket.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -64,12 +67,15 @@ export function CreateDocumentForm({ onSubmit }: { onSubmit: (input: CreateDocum
           <Input id="document-category" value={category} onChange={(event) => setCategory(event.target.value)} placeholder="DPIA" required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="document-storage-path">Storage path</Label>
-          <Input id="document-storage-path" value={storagePath} onChange={(event) => setStoragePath(event.target.value)} placeholder="documents/privacy-policy.pdf" required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="document-mime-type">MIME type</Label>
-          <Input id="document-mime-type" value={mimeType} onChange={(event) => setMimeType(event.target.value)} placeholder="application/pdf" />
+          <Label htmlFor="document-file">File</Label>
+          <Input
+            id="document-file"
+            type="file"
+            accept="application/pdf,image/png,image/jpeg,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            required
+          />
+          <p className="text-xs text-white/45">PDF, PNG, JPG, TXT or DOCX. Max 10MB.</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="document-expires-at">Expiration date</Label>
@@ -79,8 +85,8 @@ export function CreateDocumentForm({ onSubmit }: { onSubmit: (input: CreateDocum
 
       {error && <p className="text-sm text-red-300">{error}</p>}
 
-      <Button type="submit" disabled={loading || !name || !category || !storagePath}>
-        {loading ? 'Adding...' : 'Add document'}
+      <Button type="submit" disabled={loading || !name || !category || !file}>
+        {loading ? 'Uploading...' : 'Upload document'}
       </Button>
     </form>
   );

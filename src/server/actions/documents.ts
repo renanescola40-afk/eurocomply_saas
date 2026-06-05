@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DOCUMENT_BUCKET, buildDocumentStoragePath, validateDocumentFile } from '@/lib/documents/upload';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 
@@ -12,7 +13,15 @@ const createDocumentSchema = z.object({
   expiresAt: z.string().optional().nullable(),
 });
 
+const uploadDocumentSchema = z.object({
+  organizationId: z.string().uuid(),
+  name: z.string().min(2).max(160),
+  category: z.string().min(2).max(80).default('general'),
+  expiresAt: z.string().optional().nullable(),
+});
+
 export type CreateDocumentInput = z.input<typeof createDocumentSchema>;
+export type UploadDocumentInput = z.input<typeof uploadDocumentSchema>;
 
 export async function createDocument(input: CreateDocumentInput, userId: string) {
   const payload = createDocumentSchema.parse(input);
@@ -45,4 +54,45 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
   });
 
   return data;
+}
+
+export async function uploadDocument(input: UploadDocumentInput, file: File, userId: string) {
+  const payload = uploadDocumentSchema.parse(input);
+  const validationError = validateDocumentFile(file);
+
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  const supabase = createAdminClient();
+  const storagePath = buildDocumentStoragePath({
+    organizationId: payload.organizationId,
+    userId,
+    fileName: file.name,
+  });
+
+  const { error: uploadError } = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, file, {
+    contentType: file.type,
+    upsert: false,
+  });
+
+  if (uploadError) throw uploadError;
+
+  try {
+    return await createDocument(
+      {
+        organizationId: payload.organizationId,
+        name: payload.name,
+        category: payload.category,
+        storagePath,
+        mimeType: file.type,
+        sizeBytes: file.size,
+        expiresAt: payload.expiresAt ?? null,
+      },
+      userId,
+    );
+  } catch (error) {
+    await supabase.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
+    throw error;
+  }
 }
