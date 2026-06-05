@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import GapActionCenter from '@/components/GapActionCenter';
 
 type Locale = 'en' | 'pt' | 'es' | 'fr' | 'it' | 'de';
 type Answer = 'yes' | 'partial' | 'no' | '';
@@ -140,7 +141,13 @@ export default function GapAnalysisPage() {
       acc[q.article].total = Math.round(acc[q.article].score / acc[q.article].count);
       return acc;
     }, {});
-    const actions = questions.filter((q) => answers[q.id] === 'no' || answers[q.id] === 'partial').map((q) => ({ article: q.article, text: q.recommendation[locale], severity: answers[q.id] === 'no' ? 'high' : 'medium' }));
+    const actions = questions
+      .filter((q) => answers[q.id] === 'no' || answers[q.id] === 'partial')
+      .map((q) => ({
+        article: q.article,
+        recommendation: q.recommendation[locale],
+        severity: answers[q.id] === 'no' ? 'critical' as const : 'medium' as const,
+      }));
     return { completed, total, score, byArticle, actions };
   }, [answers, locale]);
 
@@ -157,7 +164,7 @@ export default function GapAnalysisPage() {
       ...Object.entries(result.byArticle).map(([article, item]) => `${article}: ${item.total}%`),
       '',
       t.actionPlan,
-      ...(result.actions.length ? result.actions.map((a) => `${a.article}: ${a.text}`) : [t.noActions]),
+      ...(result.actions.length ? result.actions.map((a) => `${a.article}: ${a.recommendation}`) : [t.noActions]),
     ];
     const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -228,6 +235,8 @@ export default function GapAnalysisPage() {
           </section>
 
           <aside className="space-y-6">
+            <GapActionCenter actions={result.actions} score={result.score} locale={locale} />
+
             <Card className="border-white/10 bg-white/[0.045] text-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" />{t.articleBreakdown}</CardTitle>
@@ -255,8 +264,8 @@ export default function GapAnalysisPage() {
                   <p className="text-sm text-white/55">{t.noActions}</p>
                 ) : result.actions.map((action, index) => (
                   <div key={`${action.article}-${index}`} className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm">
-                    <Badge className={action.severity === 'high' ? 'mb-2 border-red-400/20 bg-red-500/10 text-red-200' : 'mb-2 border-amber-400/20 bg-amber-500/10 text-amber-200'}>{action.article}</Badge>
-                    <p className="text-white/70">{action.text}</p>
+                    <Badge className={action.severity === 'critical' ? 'mb-2 border-red-400/20 bg-red-500/10 text-red-200' : 'mb-2 border-amber-400/20 bg-amber-500/10 text-amber-200'}>{action.article}</Badge>
+                    <p className="text-white/70">{action.recommendation}</p>
                   </div>
                 ))}
                 <Button onClick={generateReport} className="mt-4 w-full bg-white text-black hover:bg-white/90">
