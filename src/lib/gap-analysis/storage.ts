@@ -12,7 +12,7 @@ export type GapAnswerInput = {
 };
 
 export type GapAssessmentInput = {
-  workspaceId: string;
+  workspaceId?: string | null;
   userId: string;
   locale: string;
   score: number;
@@ -45,7 +45,7 @@ export async function saveGapAssessment(input: GapAssessmentInput) {
   const { data: assessment, error: assessmentError } = await supabase
     .from('gap_assessments')
     .insert({
-      workspace_id: input.workspaceId,
+      workspace_id: input.workspaceId || null,
       user_id: input.userId,
       locale: input.locale,
       score: input.score,
@@ -64,7 +64,7 @@ export async function saveGapAssessment(input: GapAssessmentInput) {
       .insert(
         input.answers.map((answer) => ({
           assessment_id: assessment.id,
-          workspace_id: input.workspaceId,
+          workspace_id: input.workspaceId || null,
           ...answer,
         }))
       );
@@ -89,42 +89,59 @@ export async function trySaveGapAssessment(input: GapAssessmentInput): Promise<G
   }
 }
 
-export async function loadLatestGapAssessment(workspaceId: string) {
-  const { data, error } = await supabase
+export async function loadLatestGapAssessment(params: { workspaceId?: string | null; userId?: string | null }) {
+  let query = supabase
     .from('gap_assessments')
     .select('id, score, status, locale, summary, created_at')
-    .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  if (params.workspaceId) {
+    query = query.eq('workspace_id', params.workspaceId);
+  } else if (params.userId) {
+    query = query.eq('user_id', params.userId);
+  } else {
+    return null;
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) throw error;
   return data;
 }
 
-export async function tryLoadLatestGapAssessment(workspaceId: string) {
+export async function tryLoadLatestGapAssessment(params: { workspaceId?: string | null; userId?: string | null }) {
   try {
-    return await loadLatestGapAssessment(workspaceId);
+    return await loadLatestGapAssessment(params);
   } catch {
     return null;
   }
 }
 
-export async function loadGapAssessmentHistory(workspaceId: string, limit = 10) {
-  const { data, error } = await supabase
+export async function loadGapAssessmentHistory(params: { workspaceId?: string | null; userId?: string | null; limit?: number }) {
+  let query = supabase
     .from('gap_assessments')
     .select('id, score, status, locale, summary, created_at')
-    .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .limit(params.limit ?? 10);
+
+  if (params.workspaceId) {
+    query = query.eq('workspace_id', params.workspaceId);
+  } else if (params.userId) {
+    query = query.eq('user_id', params.userId);
+  } else {
+    return [];
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
 }
 
-export async function tryLoadGapAssessmentHistory(workspaceId: string, limit = 10) {
+export async function tryLoadGapAssessmentHistory(params: { workspaceId?: string | null; userId?: string | null; limit?: number }) {
   try {
-    return await loadGapAssessmentHistory(workspaceId, limit);
+    return await loadGapAssessmentHistory(params);
   } catch {
     return [];
   }
