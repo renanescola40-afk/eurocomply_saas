@@ -55,7 +55,9 @@ export const COUNTRY_TO_LOCALE: Record<string, Locale> = {
 export const routing = defineRouting({
   locales,
   defaultLocale,
-  localePrefix: 'as-needed',
+  // Always use explicit locale prefixes for predictable SaaS routing and SEO:
+  // /en, /pt, /es, /fr, /it, /de
+  localePrefix: 'always',
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
