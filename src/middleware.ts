@@ -5,13 +5,9 @@ import createIntlMiddleware from 'next-intl/middleware';
 import { NextRequest, NextResponse } from 'next/server';
 import { routing, locales, defaultLocale, COUNTRY_TO_LOCALE } from '@/lib/i18n/routing';
 
-// Configuração do i18n
 const intlMiddleware = createIntlMiddleware(routing);
-
-// Chave do cookie para persistir escolha do utilizador
 const LOCALE_COOKIE = 'NEXT_LOCALE';
 
-// Rotas públicas (não exigem login)
 const PUBLIC_ROUTES = [
   '/',
   '/login',
@@ -23,7 +19,6 @@ const PUBLIC_ROUTES = [
   '/termos-servico'
 ];
 
-// Verifica se a rota é pública (não precisa de autenticação)
 function isPublicRoute(pathname: string, locale: string): boolean {
   let path = pathname;
   if (locales.includes(locale as 'en') && pathname.startsWith(`/${locale}`)) {
@@ -37,13 +32,6 @@ function isPublicRoute(pathname: string, locale: string): boolean {
   );
 }
 
-/**
- * Determina o idioma com base em:
- * 1. Preferencia salva em cookie (prioridade máxima)
- * 2. Header de pais (Cloudflare/Vercel)
- * 3. Header Accept-Language do browser
- * 4. Fallback para EN
- */
 function detectLocale(req: NextRequest): string {
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
   if (cookieLocale && locales.includes(cookieLocale as 'en')) {
@@ -82,8 +70,6 @@ function detectLocale(req: NextRequest): string {
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
-  // Pular assets estáticos, APIs internas e callbacks de autenticação.
-  // /auth/callback NÃO deve receber prefixo de locale, porque o Supabase volta exatamente para essa URL.
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
@@ -96,10 +82,8 @@ export default async function middleware(req: NextRequest) {
   }
 
   let supabaseResponse = NextResponse.next({ request: req });
-
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
   let session = null;
 
   if (supabaseUrl && supabaseAnonKey) {
@@ -140,36 +124,11 @@ export default async function middleware(req: NextRequest) {
       return NextResponse.redirect(dashboardUrl);
     }
 
-    const country =
-      req.headers.get('CF-IPCountry') ??
-      req.headers.get('x-vercel-ip-country') ??
-      req.headers.get('cf-ipcountry') ??
-      '';
-    const detectedLocale = COUNTRY_TO_LOCALE[country] ?? defaultLocale;
-
-    const hasCookie = req.cookies.get(LOCALE_COOKIE)?.value;
     const response = intlMiddleware(req);
 
-    if (!hasCookie && detectedLocale !== defaultLocale) {
-      response.cookies.set(LOCALE_COOKIE, detectedLocale, {
-        maxAge: 60 * 60 * 24 * 365,
-        path: '/',
-        sameSite: 'lax',
-      });
-    }
-
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      response.cookies.set(cookie.name, cookie.value, cookie);
-    });
-
-    return response;
-  }
-
-  const detected = detectLocale(req);
-
-  if (routing.localePrefix === 'as-needed' && detected === defaultLocale) {
-    const response = NextResponse.next();
-    response.cookies.set(LOCALE_COOKIE, detected, {
+    // Explicit URL locale must always win. If the user opens /en, store en.
+    // Never overwrite it with country detection such as PT/BR -> pt.
+    response.cookies.set(LOCALE_COOKIE, locale, {
       maxAge: 60 * 60 * 24 * 365,
       path: '/',
       sameSite: 'lax',
@@ -182,6 +141,7 @@ export default async function middleware(req: NextRequest) {
     return response;
   }
 
+  const detected = detectLocale(req);
   const redirectUrl = new URL(`/${detected}${pathname}`, req.url);
   redirectUrl.search = req.nextUrl.search;
 
