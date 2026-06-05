@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Fingerprint } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,11 @@ import { Button } from '@/components/ui/button';
 export default function LoginPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const locale = (params.locale as string) || 'pt';
+  const urlError = searchParams.get('error');
   const { user, signInWithGoogle, loading: authLoading } = useAuth();
-  const [error, setError] = useState('');
+  const [error, setError] = useState(urlError ? decodeURIComponent(urlError) : '');
   const startedGoogleLogin = useRef(false);
 
   useEffect(() => {
@@ -19,6 +21,13 @@ export default function LoginPage() {
 
     if (user) {
       router.replace(`/${locale}/dashboard`);
+      return;
+    }
+
+    // If Supabase returned an error to /pt/login?error=..., do not immediately
+    // start OAuth again. That creates an infinite Google/Supabase loop.
+    if (urlError) {
+      setError(decodeURIComponent(urlError));
       return;
     }
 
@@ -30,7 +39,19 @@ export default function LoginPage() {
         startedGoogleLogin.current = false;
       }
     });
-  }, [authLoading, locale, router, signInWithGoogle, user]);
+  }, [authLoading, locale, router, signInWithGoogle, urlError, user]);
+
+  const retryGoogleLogin = () => {
+    setError('');
+    startedGoogleLogin.current = true;
+    router.replace(`/${locale}/login`);
+    signInWithGoogle().then((result) => {
+      if (result.error) {
+        setError(result.error.message);
+        startedGoogleLogin.current = false;
+      }
+    });
+  };
 
   return (
     <main className="min-h-screen bg-[#050505] text-white">
@@ -43,22 +64,22 @@ export default function LoginPage() {
           </div>
 
           <p className="text-xs uppercase tracking-[0.28em] text-white/36">Acesso seguro</p>
-          <h1 className="mt-2 text-2xl font-semibold">Redirecionando para o Google</h1>
-          <p className="mt-2 text-sm text-white/50">Você será levado diretamente para o login seguro do Google.</p>
+          <h1 className="mt-2 text-2xl font-semibold">
+            {error ? 'Não foi possível concluir o login' : 'Redirecionando para o Google'}
+          </h1>
+          <p className="mt-2 text-sm text-white/50">
+            {error
+              ? 'Revise a mensagem abaixo e tente novamente.'
+              : 'Você será levado diretamente para o login seguro do Google.'}
+          </p>
 
           {error && (
             <div className="mt-6 rounded-xl border border-red-400/20 bg-red-500/10 p-4 text-left text-sm text-red-200">
-              <p>{error}</p>
+              <p className="break-words">{error}</p>
               <Button
                 type="button"
                 className="mt-4 w-full bg-white text-black hover:bg-white/90"
-                onClick={() => {
-                  setError('');
-                  startedGoogleLogin.current = false;
-                  signInWithGoogle().then((result) => {
-                    if (result.error) setError(result.error.message);
-                  });
-                }}
+                onClick={retryGoogleLogin}
               >
                 Tentar novamente com Google
               </Button>
