@@ -8,6 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import GapActionCenter from '@/components/GapActionCenter';
+import { useAuth } from '@/hooks/useAuth';
+import { trySaveGapAssessment } from '@/lib/gap-analysis/storage';
+import { tryCreateFindingsAndTasks } from '@/lib/compliance/remediation';
 
 type Locale = 'en' | 'pt' | 'es' | 'fr' | 'it' | 'de';
 type Answer = 'yes' | 'partial' | 'no' | '';
@@ -44,24 +47,28 @@ const copy: Record<Locale, {
   articleBreakdown: string;
   export: string;
   saveNote: string;
+  saving: string;
+  saved: string;
+  localOnly: string;
+  loginRequired: string;
 }> = {
   en: {
-    back: 'Back to dashboard', badge: 'EU AI Act Gap Analysis', title: 'Measure your compliance readiness', subtitle: 'Answer a focused questionnaire mapped to the main EU AI Act obligations for high-risk AI systems.', yes: 'Yes', partial: 'Partial', no: 'No', unanswered: 'Unanswered', score: 'Compliance Score', readiness: 'Readiness', critical: 'Critical gaps', attention: 'Needs attention', ready: 'Ready', questions: 'Questions', completed: 'completed', actionPlan: 'Action plan', actionSubtitle: 'Recommended actions generated from your answers.', noActions: 'No critical gaps found yet. Keep your evidence updated.', articleBreakdown: 'Article breakdown', export: 'Generate report', saveNote: 'MVP mode: results are calculated locally. Database persistence comes next.',
+    back: 'Back to dashboard', badge: 'EU AI Act Gap Analysis', title: 'Measure your compliance readiness', subtitle: 'Answer a focused questionnaire mapped to the main EU AI Act obligations for high-risk AI systems.', yes: 'Yes', partial: 'Partial', no: 'No', unanswered: 'Unanswered', score: 'Compliance Score', readiness: 'Readiness', critical: 'Critical gaps', attention: 'Needs attention', ready: 'Ready', questions: 'Questions', completed: 'completed', actionPlan: 'Action plan', actionSubtitle: 'Recommended actions generated from your answers.', noActions: 'No critical gaps found yet. Keep your evidence updated.', articleBreakdown: 'Article breakdown', export: 'Save & generate report', saveNote: 'Saves your assessment and creates remediation work when persistence is available.', saving: 'Saving assessment...', saved: 'Assessment saved. Findings and tasks were generated.', localOnly: 'Report generated. Database persistence is not available yet.', loginRequired: 'Sign in to save this assessment.',
   },
   pt: {
-    back: 'Voltar ao dashboard', badge: 'Gap Analysis EU AI Act', title: 'Meça sua prontidão de compliance', subtitle: 'Responda um questionário focado nas principais obrigações do EU AI Act para sistemas de IA de alto risco.', yes: 'Sim', partial: 'Parcial', no: 'Não', unanswered: 'Sem resposta', score: 'Score de Compliance', readiness: 'Prontidão', critical: 'Lacunas críticas', attention: 'Precisa atenção', ready: 'Pronto', questions: 'Perguntas', completed: 'respondidas', actionPlan: 'Plano de ação', actionSubtitle: 'Ações recomendadas geradas a partir das suas respostas.', noActions: 'Nenhuma lacuna crítica encontrada ainda. Mantenha as evidências atualizadas.', articleBreakdown: 'Resumo por artigo', export: 'Gerar relatório', saveNote: 'Modo MVP: resultados calculados localmente. Persistência no banco vem a seguir.',
+    back: 'Voltar ao dashboard', badge: 'Gap Analysis EU AI Act', title: 'Meça sua prontidão de compliance', subtitle: 'Responda um questionário focado nas principais obrigações do EU AI Act para sistemas de IA de alto risco.', yes: 'Sim', partial: 'Parcial', no: 'Não', unanswered: 'Sem resposta', score: 'Score de Compliance', readiness: 'Prontidão', critical: 'Lacunas críticas', attention: 'Precisa atenção', ready: 'Pronto', questions: 'Perguntas', completed: 'respondidas', actionPlan: 'Plano de ação', actionSubtitle: 'Ações recomendadas geradas a partir das suas respostas.', noActions: 'Nenhuma lacuna crítica encontrada ainda. Mantenha as evidências atualizadas.', articleBreakdown: 'Resumo por artigo', export: 'Salvar e gerar relatório', saveNote: 'Salva sua avaliação e cria tarefas de correção quando a persistência estiver disponível.', saving: 'Salvando avaliação...', saved: 'Avaliação salva. Findings e tarefas foram gerados.', localOnly: 'Relatório gerado. Persistência no banco ainda não disponível.', loginRequired: 'Entre na conta para salvar esta avaliação.',
   },
   es: {
-    back: 'Volver al panel', badge: 'Gap Analysis EU AI Act', title: 'Mide tu preparación de cumplimiento', subtitle: 'Responde un cuestionario enfocado en las principales obligaciones del EU AI Act para sistemas de IA de alto riesgo.', yes: 'Sí', partial: 'Parcial', no: 'No', unanswered: 'Sin respuesta', score: 'Puntuación de cumplimiento', readiness: 'Preparación', critical: 'Brechas críticas', attention: 'Requiere atención', ready: 'Listo', questions: 'Preguntas', completed: 'respondidas', actionPlan: 'Plan de acción', actionSubtitle: 'Acciones recomendadas generadas a partir de tus respuestas.', noActions: 'No se encontraron brechas críticas aún. Mantén tus evidencias actualizadas.', articleBreakdown: 'Resumen por artículo', export: 'Generar informe', saveNote: 'Modo MVP: los resultados se calculan localmente. La persistencia en base de datos viene después.',
+    back: 'Volver al panel', badge: 'Gap Analysis EU AI Act', title: 'Mide tu preparación de cumplimiento', subtitle: 'Responde un cuestionario enfocado en las principales obligaciones del EU AI Act para sistemas de IA de alto riesgo.', yes: 'Sí', partial: 'Parcial', no: 'No', unanswered: 'Sin respuesta', score: 'Puntuación de cumplimiento', readiness: 'Preparación', critical: 'Brechas críticas', attention: 'Requiere atención', ready: 'Listo', questions: 'Preguntas', completed: 'respondidas', actionPlan: 'Plan de acción', actionSubtitle: 'Acciones recomendadas generadas a partir de tus respuestas.', noActions: 'No se encontraron brechas críticas aún. Mantén tus evidencias actualizadas.', articleBreakdown: 'Resumen por artículo', export: 'Guardar y generar informe', saveNote: 'Guarda tu evaluación y crea trabajo de remediación cuando la persistencia esté disponible.', saving: 'Guardando evaluación...', saved: 'Evaluación guardada. Se generaron hallazgos y tareas.', localOnly: 'Informe generado. La persistencia en base de datos aún no está disponible.', loginRequired: 'Inicia sesión para guardar esta evaluación.',
   },
   fr: {
-    back: 'Retour au tableau de bord', badge: 'Gap Analysis EU AI Act', title: 'Mesurez votre préparation conformité', subtitle: 'Répondez à un questionnaire ciblé sur les principales obligations de l’EU AI Act pour les systèmes IA à haut risque.', yes: 'Oui', partial: 'Partiel', no: 'Non', unanswered: 'Sans réponse', score: 'Score de conformité', readiness: 'Préparation', critical: 'Écarts critiques', attention: 'À surveiller', ready: 'Prêt', questions: 'Questions', completed: 'répondues', actionPlan: 'Plan d’action', actionSubtitle: 'Actions recommandées générées à partir de vos réponses.', noActions: 'Aucun écart critique trouvé pour le moment. Gardez vos preuves à jour.', articleBreakdown: 'Résumé par article', export: 'Générer le rapport', saveNote: 'Mode MVP : résultats calculés localement. La persistance en base de données arrive ensuite.',
+    back: 'Retour au tableau de bord', badge: 'Gap Analysis EU AI Act', title: 'Mesurez votre préparation conformité', subtitle: 'Répondez à un questionnaire ciblé sur les principales obligations de l’EU AI Act pour les systèmes IA à haut risque.', yes: 'Oui', partial: 'Partiel', no: 'Non', unanswered: 'Sans réponse', score: 'Score de conformité', readiness: 'Préparation', critical: 'Écarts critiques', attention: 'À surveiller', ready: 'Prêt', questions: 'Questions', completed: 'répondues', actionPlan: 'Plan d’action', actionSubtitle: 'Actions recommandées générées à partir de vos réponses.', noActions: 'Aucun écart critique trouvé pour le moment. Gardez vos preuves à jour.', articleBreakdown: 'Résumé par article', export: 'Enregistrer et générer le rapport', saveNote: 'Enregistre votre évaluation et crée le travail de remédiation lorsque la persistance est disponible.', saving: 'Enregistrement de l’évaluation...', saved: 'Évaluation enregistrée. Les écarts et tâches ont été générés.', localOnly: 'Rapport généré. La persistance en base de données n’est pas encore disponible.', loginRequired: 'Connectez-vous pour enregistrer cette évaluation.',
   },
   it: {
-    back: 'Torna alla dashboard', badge: 'Gap Analysis EU AI Act', title: 'Misura la tua prontezza compliance', subtitle: 'Rispondi a un questionario focalizzato sui principali obblighi dell’EU AI Act per sistemi IA ad alto rischio.', yes: 'Sì', partial: 'Parziale', no: 'No', unanswered: 'Senza risposta', score: 'Punteggio compliance', readiness: 'Prontezza', critical: 'Gap critici', attention: 'Richiede attenzione', ready: 'Pronto', questions: 'Domande', completed: 'risposte', actionPlan: 'Piano d’azione', actionSubtitle: 'Azioni consigliate generate dalle tue risposte.', noActions: 'Nessun gap critico trovato. Mantieni aggiornate le evidenze.', articleBreakdown: 'Sintesi per articolo', export: 'Genera report', saveNote: 'Modalità MVP: risultati calcolati localmente. La persistenza nel database arriva dopo.',
+    back: 'Torna alla dashboard', badge: 'Gap Analysis EU AI Act', title: 'Misura la tua prontezza compliance', subtitle: 'Rispondi a un questionario focalizzato sui principali obblighi dell’EU AI Act per sistemi IA ad alto rischio.', yes: 'Sì', partial: 'Parziale', no: 'No', unanswered: 'Senza risposta', score: 'Punteggio compliance', readiness: 'Prontezza', critical: 'Gap critici', attention: 'Richiede attenzione', ready: 'Pronto', questions: 'Domande', completed: 'risposte', actionPlan: 'Piano d’azione', actionSubtitle: 'Azioni consigliate generate dalle tue risposte.', noActions: 'Nessun gap critico trovato. Mantieni aggiornate le evidenze.', articleBreakdown: 'Sintesi per articolo', export: 'Salva e genera report', saveNote: 'Salva la valutazione e crea attività di remediation quando la persistenza è disponibile.', saving: 'Salvataggio valutazione...', saved: 'Valutazione salvata. Findings e attività sono stati generati.', localOnly: 'Report generato. La persistenza nel database non è ancora disponibile.', loginRequired: 'Accedi per salvare questa valutazione.',
   },
   de: {
-    back: 'Zurück zum Dashboard', badge: 'EU AI Act Gap Analysis', title: 'Messen Sie Ihre Compliance-Bereitschaft', subtitle: 'Beantworten Sie einen fokussierten Fragebogen zu den wichtigsten EU-AI-Act-Pflichten für Hochrisiko-KI-Systeme.', yes: 'Ja', partial: 'Teilweise', no: 'Nein', unanswered: 'Unbeantwortet', score: 'Compliance-Score', readiness: 'Bereitschaft', critical: 'Kritische Lücken', attention: 'Benötigt Aufmerksamkeit', ready: 'Bereit', questions: 'Fragen', completed: 'beantwortet', actionPlan: 'Aktionsplan', actionSubtitle: 'Empfohlene Maßnahmen basierend auf Ihren Antworten.', noActions: 'Noch keine kritischen Lücken gefunden. Halten Sie Ihre Nachweise aktuell.', articleBreakdown: 'Übersicht nach Artikel', export: 'Bericht erstellen', saveNote: 'MVP-Modus: Ergebnisse werden lokal berechnet. Datenbankpersistenz folgt als Nächstes.',
+    back: 'Zurück zum Dashboard', badge: 'EU AI Act Gap Analysis', title: 'Messen Sie Ihre Compliance-Bereitschaft', subtitle: 'Beantworten Sie einen fokussierten Fragebogen zu den wichtigsten EU-AI-Act-Pflichten für Hochrisiko-KI-Systeme.', yes: 'Ja', partial: 'Teilweise', no: 'Nein', unanswered: 'Unbeantwortet', score: 'Compliance-Score', readiness: 'Bereitschaft', critical: 'Kritische Lücken', attention: 'Benötigt Aufmerksamkeit', ready: 'Bereit', questions: 'Fragen', completed: 'beantwortet', actionPlan: 'Aktionsplan', actionSubtitle: 'Empfohlene Maßnahmen basierend auf Ihren Antworten.', noActions: 'Noch keine kritischen Lücken gefunden. Halten Sie Ihre Nachweise aktuell.', articleBreakdown: 'Übersicht nach Artikel', export: 'Speichern und Bericht erstellen', saveNote: 'Speichert die Bewertung und erstellt Remediation-Arbeit, sobald Persistenz verfügbar ist.', saving: 'Bewertung wird gespeichert...', saved: 'Bewertung gespeichert. Findings und Aufgaben wurden erstellt.', localOnly: 'Bericht erstellt. Datenbankpersistenz ist noch nicht verfügbar.', loginRequired: 'Melden Sie sich an, um diese Bewertung zu speichern.',
   },
 };
 
@@ -105,7 +112,7 @@ const questions: Question[] = [
   {
     id: 'art15-robustness', article: 'Article 15',
     category: { en: 'Robustness', pt: 'Robustez', es: 'Robustez', fr: 'Robustesse', it: 'Robustezza', de: 'Robustheit' },
-    text: { en: 'Are robustness, cybersecurity and incident procedures tested?', pt: 'Robustez, cibersegurança e incidentes são testados?', es: '¿Se prueban robustez, ciberseguridad y procedimientos de incidentes?', fr: 'La robustesse, cybersécurité et procédures d’incident sont-elles testées ?', it: 'Robustezza, cybersecurity e procedure di incidente sono testate?', de: 'Werden Robustheit, Cybersicherheit und Incident-Prozesse getestet?' },
+    text: { en: 'Are robustness, cybersecurity and incident procedures tested?', pt: 'Robustez, cibersegurança e incidentes são testados?', es: '¿Se prueban robustez, ciberseguridad y procedimientos de incidentes?', fr: 'La robustesse, cybersécurité et procédures d’incident sont-elles testées ?', it: 'Robustezza, cybersecurity e procedure di incidente sono testate?', de: 'Werden Robustheit, Cybersicherheit und Incident Response getestet?' },
     recommendation: { en: 'Set recurring tests for robustness, cybersecurity and incident response.', pt: 'Defina testes recorrentes de robustez, cibersegurança e resposta a incidentes.', es: 'Define pruebas recurrentes de robustez, ciberseguridad y respuesta a incidentes.', fr: 'Mettez en place des tests récurrents de robustesse, cybersécurité et réponse incident.', it: 'Imposta test ricorrenti per robustezza, cybersecurity e risposta agli incidenti.', de: 'Führen Sie regelmäßige Tests für Robustheit, Cybersicherheit und Incident Response ein.' },
   },
 ];
@@ -126,9 +133,12 @@ function statusForScore(score: number, t: typeof copy.en) {
 export default function GapAnalysisPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const locale = locales.includes(params.locale as Locale) ? (params.locale as Locale) : 'en';
   const t = copy[locale];
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const result = useMemo(() => {
     const completed = questions.filter((q) => answers[q.id]).length;
@@ -148,13 +158,26 @@ export default function GapAnalysisPage() {
         recommendation: q.recommendation[locale],
         severity: answers[q.id] === 'no' ? 'critical' as const : 'medium' as const,
       }));
-    return { completed, total, score, byArticle, actions };
+    const persistedAnswers = questions
+      .filter((q) => answers[q.id] === 'yes' || answers[q.id] === 'partial' || answers[q.id] === 'no')
+      .map((q) => {
+        const answer = answers[q.id] as 'yes' | 'partial' | 'no';
+        return {
+          question_id: q.id,
+          article: q.article,
+          category: q.category[locale],
+          answer,
+          score: answerScore(answer) as 0 | 50 | 100,
+          recommendation: q.recommendation[locale],
+        };
+      });
+    return { completed, total, score, byArticle, actions, persistedAnswers };
   }, [answers, locale]);
 
   const status = statusForScore(result.score, t);
   const StatusIcon = status.icon;
 
-  const generateReport = () => {
+  const downloadReport = () => {
     const lines = [
       'EuroComply AI - EU AI Act Gap Analysis',
       `${t.score}: ${result.score}%`,
@@ -173,6 +196,49 @@ export default function GapAnalysisPage() {
     link.download = 'eurocomply-gap-analysis.txt';
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const generateReport = async () => {
+    setSaveMessage(null);
+
+    if (!user?.id) {
+      setSaveMessage(t.loginRequired);
+      downloadReport();
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const assessmentResult = await trySaveGapAssessment({
+        workspaceId: null,
+        userId: user.id,
+        locale,
+        score: result.score,
+        summary: {
+          completed: result.completed,
+          total: result.total,
+          byArticle: result.byArticle,
+          openActions: result.actions.length,
+        },
+        answers: result.persistedAnswers,
+      });
+
+      if (assessmentResult.ok) {
+        await tryCreateFindingsAndTasks({
+          workspaceId: null,
+          userId: user.id,
+          assessmentId: assessmentResult.assessmentId,
+          actions: result.actions,
+        });
+        setSaveMessage(t.saved);
+      } else {
+        setSaveMessage(t.localOnly);
+      }
+    } finally {
+      setSaving(false);
+      downloadReport();
+    }
   };
 
   return (
@@ -268,9 +334,10 @@ export default function GapAnalysisPage() {
                     <p className="text-white/70">{action.recommendation}</p>
                   </div>
                 ))}
-                <Button onClick={generateReport} className="mt-4 w-full bg-white text-black hover:bg-white/90">
-                  <Download className="mr-2 h-4 w-4" /> {t.export}
+                <Button onClick={generateReport} disabled={saving} className="mt-4 w-full bg-white text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60">
+                  <Download className="mr-2 h-4 w-4" /> {saving ? t.saving : t.export}
                 </Button>
+                {saveMessage && <p className="text-xs text-white/60">{saveMessage}</p>}
                 <p className="text-xs text-white/38">{t.saveNote}</p>
               </CardContent>
             </Card>
