@@ -20,6 +20,27 @@ export type GapAssessmentInput = {
   answers: GapAnswerInput[];
 };
 
+export type GapPersistenceResult =
+  | { ok: true; assessmentId: string }
+  | { ok: false; error: string; recoverable: boolean };
+
+function normalizePersistenceError(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'Unknown persistence error';
+}
+
+function isRecoverablePersistenceError(message: string) {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('gap_assessments') ||
+    lower.includes('gap_answers') ||
+    lower.includes('does not exist') ||
+    lower.includes('schema cache') ||
+    lower.includes('permission denied')
+  );
+}
+
 export async function saveGapAssessment(input: GapAssessmentInput) {
   const { data: assessment, error: assessmentError } = await supabase
     .from('gap_assessments')
@@ -54,6 +75,20 @@ export async function saveGapAssessment(input: GapAssessmentInput) {
   return assessment.id as string;
 }
 
+export async function trySaveGapAssessment(input: GapAssessmentInput): Promise<GapPersistenceResult> {
+  try {
+    const assessmentId = await saveGapAssessment(input);
+    return { ok: true, assessmentId };
+  } catch (error) {
+    const message = normalizePersistenceError(error);
+    return {
+      ok: false,
+      error: message,
+      recoverable: isRecoverablePersistenceError(message),
+    };
+  }
+}
+
 export async function loadLatestGapAssessment(workspaceId: string) {
   const { data, error } = await supabase
     .from('gap_assessments')
@@ -67,6 +102,14 @@ export async function loadLatestGapAssessment(workspaceId: string) {
   return data;
 }
 
+export async function tryLoadLatestGapAssessment(workspaceId: string) {
+  try {
+    return await loadLatestGapAssessment(workspaceId);
+  } catch {
+    return null;
+  }
+}
+
 export async function loadGapAssessmentHistory(workspaceId: string, limit = 10) {
   const { data, error } = await supabase
     .from('gap_assessments')
@@ -77,4 +120,12 @@ export async function loadGapAssessmentHistory(workspaceId: string, limit = 10) 
 
   if (error) throw error;
   return data || [];
+}
+
+export async function tryLoadGapAssessmentHistory(workspaceId: string, limit = 10) {
+  try {
+    return await loadGapAssessmentHistory(workspaceId, limit);
+  } catch {
+    return [];
+  }
 }
