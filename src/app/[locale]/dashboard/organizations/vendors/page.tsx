@@ -1,9 +1,11 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { PlanGate } from '@/components/billing/plan-gate';
 import { CreateVendorForm, type CreateVendorFormInput } from '@/components/vendors/create-vendor-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { getCurrentUser } from '@/server/queries/auth';
+import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { listVendors } from '@/server/queries/vendors';
 import { createVendor } from '@/server/actions/vendors';
 
@@ -20,7 +22,10 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
     redirect(`/${params.locale}/onboarding`);
   }
 
-  const vendors = await listVendors(current.organization.id);
+  const [vendors, billing] = await Promise.all([
+    listVendors(current.organization.id),
+    getOrganizationBillingContext(current.organization.id),
+  ]);
 
   async function handleCreateVendor(input: CreateVendorFormInput) {
     'use server';
@@ -46,7 +51,9 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
           <p className="mt-3 max-w-2xl text-white/55">Manage suppliers, subprocessors and third parties that touch compliance-sensitive data.</p>
         </div>
 
-        <CreateVendorForm onCreate={handleCreateVendor} />
+        <PlanGate planId={billing.plan} metric="vendors" currentUsage={billing.usage.vendors}>
+          <CreateVendorForm onCreate={handleCreateVendor} />
+        </PlanGate>
 
         <Card className="border-white/10 bg-white/[0.03] text-white">
           <CardHeader>
