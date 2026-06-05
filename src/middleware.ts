@@ -13,10 +13,10 @@ const LOCALE_COOKIE = 'NEXT_LOCALE';
 
 // Rotas públicas (não exigem login)
 const PUBLIC_ROUTES = [
-  '/',           // página inicial
-  '/login',      // login
-  '/register',   // cadastro
-  '/auth',       // callbacks auth
+  '/',
+  '/login',
+  '/register',
+  '/auth',
   '/recuperar-senha',
   '/atualizar-senha',
   '/politica-privacidade',
@@ -25,7 +25,6 @@ const PUBLIC_ROUTES = [
 
 // Verifica se a rota é pública (não precisa de autenticação)
 function isPublicRoute(pathname: string, locale: string): boolean {
-  // Remove o locale do caminho se existir
   let path = pathname;
   if (locales.includes(locale as 'en') && pathname.startsWith(`/${locale}`)) {
     path = pathname.replace(`/${locale}`, '') || '/';
@@ -46,13 +45,11 @@ function isPublicRoute(pathname: string, locale: string): boolean {
  * 4. Fallback para EN
  */
 function detectLocale(req: NextRequest): string {
-  // 1. Cookie salvo pelo utilizador
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
   if (cookieLocale && locales.includes(cookieLocale as 'en')) {
     return cookieLocale;
   }
 
-  // 2. País via header (Cloudflare: CF-IPCountry, Vercel: x-vercel-ip-country)
   const country =
     req.headers.get('CF-IPCountry') ??
     req.headers.get('x-vercel-ip-country') ??
@@ -63,7 +60,6 @@ function detectLocale(req: NextRequest): string {
     return COUNTRY_TO_LOCALE[country];
   }
 
-  // 3. Accept-Language do browser
   const acceptLanguage = req.headers.get('Accept-Language') ?? '';
   const browserLocales = acceptLanguage
     .split(',')
@@ -86,10 +82,12 @@ function detectLocale(req: NextRequest): string {
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
-  // Pular assets estáticos e rotas API
+  // Pular assets estáticos, APIs internas e callbacks de autenticação.
+  // /auth/callback NÃO deve receber prefixo de locale, porque o Supabase volta exatamente para essa URL.
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
+    pathname.startsWith('/auth') ||
     pathname.startsWith('/next_api') ||
     pathname.startsWith('/zoer_proxy') ||
     pathname.includes('.')
@@ -97,8 +95,6 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // ==================== PARTE 1: AUTENTICAÇÃO ====================
-  // Criar cliente Supabase para verificar sessão usando @supabase/ssr.
   let supabaseResponse = NextResponse.next({ request: req });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -126,33 +122,24 @@ export default async function middleware(req: NextRequest) {
     session = data.session;
   }
 
-  // ==================== PARTE 2: I18N (lógica existente) ====================
-
-  // Rotas que já são /[locale]/... passam pelo next-intl normalmente
   const pathnameHasLocale = locales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
   );
 
   if (pathnameHasLocale) {
-    // Pega o locale da URL
     const locale = pathname.split('/')[1];
-
-    // Verifica se a rota é pública
     const isPublic = isPublicRoute(pathname, locale);
 
-    // Se NÃO está logado E rota NÃO é pública → redireciona para login
     if (!session && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
       return NextResponse.redirect(loginUrl);
     }
 
-    // Se está logado E tentou acessar login → redireciona para dashboard
-    if (session && (pathname === `/${locale}/login` || pathname === `/${locale}/auth/callback`)) {
+    if (session && pathname === `/${locale}/login`) {
       const dashboardUrl = new URL(`/${locale}/dashboard`, req.url);
       return NextResponse.redirect(dashboardUrl);
     }
 
-    // Detetar país e guardar cookie para uso futuro
     const country =
       req.headers.get('CF-IPCountry') ??
       req.headers.get('x-vercel-ip-country') ??
@@ -178,7 +165,6 @@ export default async function middleware(req: NextRequest) {
     return response;
   }
 
-  // Sem locale — detetar e redirecionar
   const detected = detectLocale(req);
 
   if (routing.localePrefix === 'as-needed' && detected === defaultLocale) {
