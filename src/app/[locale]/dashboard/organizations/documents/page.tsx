@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PlanGate } from '@/components/billing/plan-gate';
@@ -24,8 +25,8 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
     redirect(`/${params.locale}/onboarding`);
   }
 
-  const documents = await listDocuments(currentOrganization.organization.id);
-  const billing = await getOrganizationBillingContext(currentOrganization.organization.id);
+  const documents = await listDocuments(currentOrganization.id);
+  const billing = await getOrganizationBillingContext(currentOrganization.id);
 
   async function uploadDocumentAction(input: UploadDocumentFormInput) {
     'use server';
@@ -44,7 +45,7 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
 
     await uploadDocument(
       {
-        organizationId: currentOrganization.organization.id,
+        organizationId: currentOrganization.id,
         name: input.name,
         category: input.category,
         expiresAt: input.expiresAt,
@@ -72,7 +73,7 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
       redirect(`/${params.locale}/onboarding`);
     }
 
-    return createDocumentSignedDownloadUrl(documentId, currentOrganization.organization.id, user.id);
+    return createDocumentSignedDownloadUrl(documentId, currentOrganization.id, user.id);
   }
 
   async function deleteDocumentAction(documentId: string) {
@@ -90,7 +91,7 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
       redirect(`/${params.locale}/onboarding`);
     }
 
-    await deleteDocument(documentId, currentOrganization.organization.id, user.id);
+    await deleteDocument(documentId, currentOrganization.id, user.id);
     revalidatePath(`/${params.locale}/dashboard/organizations/documents`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
   }
@@ -98,12 +99,17 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
   return (
     <main className="min-h-screen bg-[#050505] px-5 py-8 text-white lg:px-8">
       <div className="mx-auto max-w-6xl space-y-8">
-        <header>
-          <p className="text-sm uppercase tracking-[0.3em] text-white/40">Documents</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">Compliance documents</h1>
-          <p className="mt-4 max-w-2xl text-white/58">
-            Track policies, DPIAs, vendor agreements and audit evidence files for {currentOrganization.organization.name}.
-          </p>
+        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.3em] text-white/40">Documents</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">Compliance documents</h1>
+            <p className="mt-4 max-w-2xl text-white/58">
+              Track policies, DPIAs, vendor agreements and audit evidence files for {currentOrganization.name}.
+            </p>
+          </div>
+          <Link href="/api/reports/documents.csv" className="inline-flex h-10 items-center justify-center rounded-md border border-white/15 px-4 text-sm font-medium hover:bg-white/10">
+            Export CSV
+          </Link>
         </header>
 
         <PlanGate planId={billing.plan} metric="documents" currentUsage={billing.usage.documents}>
