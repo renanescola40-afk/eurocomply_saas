@@ -3,9 +3,9 @@ import { csvDownloadResponse } from '@/lib/exports/csv';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
-import { getCurrentUser } from '@/server/auth/user';
+import { getCurrentUser } from '@/server/queries/auth';
 import { getDashboardSummary } from '@/server/queries/dashboard';
-import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
 export async function GET() {
   const user = await getCurrentUser();
