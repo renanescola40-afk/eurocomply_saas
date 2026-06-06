@@ -8,7 +8,7 @@
     "dev:debug": "NODE_OPTIONS='--inspect' next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
