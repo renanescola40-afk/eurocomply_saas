@@ -114,11 +114,23 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
   async function startCheckout(formData: FormData) {
     'use server';
 
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      redirect(`/${params.locale}/login`);
+    }
+
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+
+    if (!currentOrganization) {
+      redirect(`/${params.locale}/onboarding`);
+    }
+
     const planId = String(formData.get('planId') ?? '');
     const url = await createCheckoutSession({
-      organizationId: organization.id,
+      organizationId: currentOrganization.id,
       planId,
-      userId: user.id,
+      userId: currentUser.id,
       successPath: `/${params.locale}/dashboard/organizations/billing?checkout=success`,
       cancelPath: `/${params.locale}/dashboard/organizations/billing?checkout=cancelled`,
     });
@@ -130,9 +142,21 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
   async function openCustomerPortal() {
     'use server';
 
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      redirect(`/${params.locale}/login`);
+    }
+
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+
+    if (!currentOrganization) {
+      redirect(`/${params.locale}/onboarding`);
+    }
+
     const url = await createCustomerPortalSession({
-      organizationId: organization.id,
-      userId: user.id,
+      organizationId: currentOrganization.id,
+      userId: currentUser.id,
       returnPath: `/${params.locale}/dashboard/organizations/billing`,
     });
 
@@ -223,12 +247,20 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
                     <li key={feature}>• {feature}</li>
                   ))}
                 </ul>
-                <form action={startCheckout}>
-                  <input type="hidden" name="planId" value={plan.id} />
-                  <Button type="submit" className="w-full" variant={isCurrent ? 'outline' : 'default'}>
-                    {isCurrent ? 'Restart checkout' : isUpgrade ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`}
-                  </Button>
-                </form>
+                {isCurrent ? (
+                  <form action={openCustomerPortal}>
+                    <Button type="submit" className="w-full" variant="outline">
+                      Manage current plan
+                    </Button>
+                  </form>
+                ) : (
+                  <form action={startCheckout}>
+                    <input type="hidden" name="planId" value={plan.id} />
+                    <Button type="submit" className="w-full">
+                      {isUpgrade ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`}
+                    </Button>
+                  </form>
+                )}
               </CardContent>
             </Card>
           );
