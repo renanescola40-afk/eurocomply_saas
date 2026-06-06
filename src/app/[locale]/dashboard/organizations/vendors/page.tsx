@@ -1,13 +1,14 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PlanGate } from '@/components/billing/plan-gate';
+import { DeleteRecordButton } from '@/components/shared/delete-record-button';
 import { CreateVendorForm, type CreateVendorFormInput } from '@/components/vendors/create-vendor-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { listVendors } from '@/server/queries/vendors';
-import { createVendor } from '@/server/actions/vendors';
+import { createVendor, deleteVendor } from '@/server/actions/vendors';
 
 export default async function OrganizationVendorsPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
@@ -42,6 +43,21 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
     revalidatePath(`/${params.locale}/dashboard/organizations`);
   }
 
+  async function handleDeleteVendor(vendorId: string) {
+    'use server';
+
+    const user = await getCurrentUser();
+    if (!user) redirect(`/${params.locale}/login`);
+
+    const current = await getCurrentOrganizationForUser(user.id);
+    if (!current) redirect(`/${params.locale}/onboarding`);
+
+    await deleteVendor(vendorId, current.organization.id, user.id);
+
+    revalidatePath(`/${params.locale}/dashboard/organizations/vendors`);
+    revalidatePath(`/${params.locale}/dashboard/organizations`);
+  }
+
   return (
     <main className="min-h-screen bg-[#050505] px-5 py-8 text-white lg:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
@@ -65,14 +81,17 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
             ) : (
               vendors.map((vendor: any) => (
                 <div key={vendor.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
-                  <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <h2 className="font-medium text-white">{vendor.name}</h2>
                       <p className="text-sm text-white/50">{vendor.category ?? 'Uncategorized'} · {vendor.country ?? 'No country'}</p>
                     </div>
-                    <div className="flex gap-2 text-xs uppercase tracking-wide text-white/65">
-                      <span className="rounded-full border border-white/10 px-2 py-1">{vendor.risk_level ?? 'medium'} risk</span>
-                      <span className="rounded-full border border-white/10 px-2 py-1">{vendor.review_status ?? 'pending'}</span>
+                    <div className="flex flex-col items-start gap-2 md:items-end">
+                      <div className="flex gap-2 text-xs uppercase tracking-wide text-white/65">
+                        <span className="rounded-full border border-white/10 px-2 py-1">{vendor.risk_level ?? 'medium'} risk</span>
+                        <span className="rounded-full border border-white/10 px-2 py-1">{vendor.review_status ?? 'pending'}</span>
+                      </div>
+                      <DeleteRecordButton id={vendor.id} label={vendor.name} resourceName="vendor" onDelete={handleDeleteVendor} />
                     </div>
                   </div>
                   {vendor.website && <p className="mt-3 text-sm text-white/45">{vendor.website}</p>}
