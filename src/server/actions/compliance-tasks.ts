@@ -1,9 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createComplianceTaskSchema, updateComplianceTaskSchema, type CreateComplianceTaskInput, type UpdateComplianceTaskInput } from '@/lib/validation/compliance';
+import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { logAuditEvent } from './audit';
 
 export async function createComplianceTask(input: CreateComplianceTaskInput, userId: string) {
   const payload = createComplianceTaskSchema.parse(input);
+  await assertCurrentUserCan(payload.organizationId, userId, 'tasks:write');
+
   const supabase = createAdminClient();
 
   const { data: task, error } = await supabase
@@ -37,6 +40,8 @@ export async function createComplianceTask(input: CreateComplianceTaskInput, use
 
 export async function updateComplianceTask(taskId: string, organizationId: string, input: UpdateComplianceTaskInput, userId: string) {
   const payload = updateComplianceTaskSchema.parse(input);
+  await assertCurrentUserCan(organizationId, userId, 'tasks:write');
+
   const supabase = createAdminClient();
 
   const { data: task, error } = await supabase
