@@ -71,7 +71,7 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
       redirect(`/${params.locale}/onboarding`);
     }
 
-    return createDocumentSignedDownloadUrl(documentId, currentOrganization.organization.id);
+    return createDocumentSignedDownloadUrl(documentId, currentOrganization.organization.id, user.id);
   }
 
   return (
