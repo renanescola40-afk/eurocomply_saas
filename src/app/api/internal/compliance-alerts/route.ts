@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email/client';
 import { documentExpiringEmail, vendorReviewEmail } from '@/lib/email/templates';
 import { reportError } from '@/lib/observability/report-error';
+import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -10,24 +11,6 @@ const DOCUMENT_EXPIRY_LOOKAHEAD_DAYS = 30;
 
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
-}
-
-function getExpectedSecrets() {
-  return [process.env.CRON_SECRET, process.env.INTERNAL_CRON_SECRET].filter(Boolean);
-}
-
-function isAuthorized(request: Request) {
-  const expectedSecrets = getExpectedSecrets();
-
-  if (expectedSecrets.length === 0) {
-    return false;
-  }
-
-  const authHeader = request.headers.get('authorization');
-  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;
-  const headerSecret = request.headers.get('x-internal-cron-secret');
-
-  return expectedSecrets.some((secret) => bearerToken === secret || headerSecret === secret);
 }
 
 function addDays(days: number) {
@@ -240,7 +223,7 @@ async function sendVendorReviewAlerts() {
 }
 
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isAuthorizedInternalCronRequest(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
