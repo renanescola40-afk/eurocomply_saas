@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getCurrentUser } from '@/server/auth/user';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -33,6 +34,7 @@ export async function GET() {
     .order('created_at', { ascending: false });
 
   if (error) {
+    reportError(error, { area: 'tasks_csv_export', organizationId: organization.id, userId: user.id });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
