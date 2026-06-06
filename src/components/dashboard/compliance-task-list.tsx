@@ -1,3 +1,4 @@
+import { DeleteRecordButton } from '@/components/shared/delete-record-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 type ComplianceTask = {
@@ -10,6 +11,7 @@ type ComplianceTask = {
 
 type ComplianceTaskListProps = {
   tasks: ComplianceTask[];
+  onDelete?: (taskId: string) => Promise<void>;
 };
 
 function formatDueDate(value?: string | null) {
@@ -22,7 +24,7 @@ function formatDueDate(value?: string | null) {
   }).format(new Date(value));
 }
 
-export function ComplianceTaskList({ tasks }: ComplianceTaskListProps) {
+export function ComplianceTaskList({ tasks, onDelete }: ComplianceTaskListProps) {
   return (
     <Card>
       <CardHeader>
@@ -40,9 +42,12 @@ export function ComplianceTaskList({ tasks }: ComplianceTaskListProps) {
                     <p className="font-medium">{task.title}</p>
                     <p className="text-sm text-muted-foreground">Due {formatDueDate(task.due_date)}</p>
                   </div>
-                  <div className="text-right text-xs uppercase tracking-wide text-muted-foreground">
-                    <p>{task.priority ?? 'normal'}</p>
-                    <p>{task.status ?? 'open'}</p>
+                  <div className="flex flex-col items-end gap-2 text-right text-xs uppercase tracking-wide text-muted-foreground">
+                    <div>
+                      <p>{task.priority ?? 'normal'}</p>
+                      <p>{task.status ?? 'open'}</p>
+                    </div>
+                    {onDelete ? <DeleteRecordButton id={task.id} label={task.title} resourceName="task" onDelete={onDelete} /> : null}
                   </div>
                 </div>
               </div>
