@@ -170,6 +170,41 @@
   }
 }
 
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  body {
+    min-height: auto;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .print-report {
+    width: 100%;
+  }
+
+  .print-report section,
+  .print-report article,
+  .print-report table,
+  .print-report tr,
+  .print-report footer {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
 @keyframes float-slow {
   0%, 100% { transform: translate3d(0, 0, 0); }
   50% { transform: translate3d(0, -14px, 0); }
