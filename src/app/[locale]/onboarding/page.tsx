@@ -27,7 +27,7 @@ export default async function OnboardingPage() {
       redirect('/login');
     }
 
-    await createOrganization(input, currentUser.id);
+    await createOrganization(input, currentUser.id, currentUser.email);
     redirect('/dashboard/organizations');
   }
 
