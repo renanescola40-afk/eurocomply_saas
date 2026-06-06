@@ -7,6 +7,7 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { inviteMemberSchema, type InviteMemberInput } from '@/lib/validation/organization';
 import { logAuditEvent } from '@/server/actions/audit';
+import { assertCurrentUserCan } from '@/server/auth/permissions';
 
 const INVITE_LIMIT = 10;
 const INVITE_WINDOW_MS = 60 * 60 * 1000;
@@ -18,6 +19,9 @@ function getAppUrl() {
 export async function inviteOrganizationMember(input: InviteMemberInput, invitedByUserId: string) {
   const payload = inviteMemberSchema.parse(input);
   const context = { area: 'member_invitation', organizationId: payload.organizationId, userId: invitedByUserId };
+
+  await assertCurrentUserCan(payload.organizationId, invitedByUserId, 'team:invite');
+
   const rateLimit = await checkDistributedRateLimit({
     key: `invite:${payload.organizationId}:${invitedByUserId}`,
     limit: INVITE_LIMIT,
