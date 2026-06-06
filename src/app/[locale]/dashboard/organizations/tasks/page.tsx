@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { CreateComplianceTaskForm, type CreateComplianceTaskFormInput } from '@/components/compliance/create-compliance-task-form';
 import { ComplianceTaskList } from '@/components/dashboard/compliance-task-list';
-import { createComplianceTask } from '@/server/actions/compliance-tasks';
+import { createComplianceTask, deleteComplianceTask } from '@/server/actions/compliance-tasks';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { getCurrentUser } from '@/server/queries/auth';
 import { listComplianceTasks } from '@/server/queries/compliance-tasks';
@@ -54,6 +54,26 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
     revalidatePath(`/${params.locale}/dashboard/organizations`);
   }
 
+  async function handleDeleteTask(taskId: string) {
+    'use server';
+
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      redirect(`/${params.locale}/login`);
+    }
+
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+
+    if (!currentOrganization) {
+      redirect(`/${params.locale}/onboarding`);
+    }
+
+    await deleteComplianceTask(taskId, currentOrganization.id, currentUser.id);
+    revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
+    revalidatePath(`/${params.locale}/dashboard/organizations`);
+  }
+
   return (
     <main className="min-h-screen bg-[#050505] px-5 py-8 text-white lg:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
@@ -64,7 +84,7 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
         </div>
 
         <CreateComplianceTaskForm onSubmit={handleCreateTask} />
-        <ComplianceTaskList tasks={tasks} />
+        <ComplianceTaskList tasks={tasks} onDelete={handleDeleteTask} />
       </div>
     </main>
   );
