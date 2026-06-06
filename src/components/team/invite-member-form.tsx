@@ -7,13 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const roles = ['admin', 'compliance_manager', 'member', 'viewer'] as const;
+const roles = ['admin', 'member'] as const;
 
 type Role = (typeof roles)[number];
+
+const roleLabels: Record<Role, string> = {
+  admin: 'Admin',
+  member: 'Member',
+};
 
 type InviteMemberFormProps = {
   onSubmit: (input: { email: string; role: Role }) => Promise<void> | void;
 };
+
+export type InviteMemberInput = { email: string; role: Role };
 
 export function InviteMemberForm({ onSubmit }: InviteMemberFormProps) {
   const [email, setEmail] = useState('');
@@ -62,7 +69,7 @@ export function InviteMemberForm({ onSubmit }: InviteMemberFormProps) {
               <SelectContent>
                 {roles.map((item) => (
                   <SelectItem key={item} value={item}>
-                    {item.replace('_', ' ')}
+                    {roleLabels[item]}
                   </SelectItem>
                 ))}
               </SelectContent>
