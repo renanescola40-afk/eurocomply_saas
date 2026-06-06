@@ -51,3 +51,29 @@ export async function createVendor(input: unknown, userId: string) {
 
   return data;
 }
+
+export async function deleteVendor(vendorId: string, organizationId: string, userId: string) {
+  await assertCurrentUserCan(organizationId, userId, 'vendors:delete');
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('vendors')
+    .delete()
+    .eq('id', vendorId)
+    .eq('organization_id', organizationId)
+    .select('id,name,risk_level')
+    .single();
+
+  if (error) throw error;
+
+  await logAuditEvent({
+    organizationId,
+    actorUserId: userId,
+    action: 'vendor.deleted',
+    entityType: 'vendor',
+    entityId: vendorId,
+    metadata: { name: data.name, riskLevel: data.risk_level },
+  });
+
+  return data;
+}
