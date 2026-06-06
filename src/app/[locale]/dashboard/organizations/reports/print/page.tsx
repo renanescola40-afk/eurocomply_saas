@@ -2,9 +2,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { PrintReportButton } from '@/components/reports/print-report-button';
 import { buildBoardCommentary, buildNextBestActions, buildRecommendations, buildScorecards, getComplianceMaturity } from '@/lib/reports/recommendations';
-import { getCurrentUser } from '@/server/auth/user';
+import { getCurrentUser } from '@/server/queries/auth';
 import { getDashboardSummary } from '@/server/queries/dashboard';
-import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
 function getScoreLabel(score: number) {
   if (score >= 85) return 'Strong';
