@@ -5,10 +5,14 @@ import { getDashboardSummary, recordDashboardMetricSnapshot } from '@/server/que
 
 export const runtime = 'nodejs';
 
-function isAuthorized(request: Request) {
-  const expectedSecret = process.env.INTERNAL_CRON_SECRET;
+function getExpectedSecrets() {
+  return [process.env.CRON_SECRET, process.env.INTERNAL_CRON_SECRET].filter(Boolean);
+}
 
-  if (!expectedSecret) {
+function isAuthorized(request: Request) {
+  const expectedSecrets = getExpectedSecrets();
+
+  if (expectedSecrets.length === 0) {
     return false;
   }
 
@@ -16,7 +20,7 @@ function isAuthorized(request: Request) {
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;
   const headerSecret = request.headers.get('x-internal-cron-secret');
 
-  return bearerToken === expectedSecret || headerSecret === expectedSecret;
+  return expectedSecrets.some((secret) => bearerToken === secret || headerSecret === secret);
 }
 
 export async function POST(request: Request) {
