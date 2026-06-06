@@ -49,7 +49,15 @@ export default async function OrganizationDashboardPage() {
           </nav>
         </div>
 
-        <DashboardOverview summary={data.summary} tasks={data.tasks} />
+        <DashboardOverview
+          summary={data.summary}
+          tasks={data.tasks}
+          trendHistory={data.trendHistory}
+          trendComparison={data.trendComparison}
+          topRisks={data.topRisks}
+          vendorsRequiringReview={data.vendorsRequiringReview}
+          documentsExpiringSoon={data.documentsExpiringSoon}
+        />
       </div>
     </main>
   );
