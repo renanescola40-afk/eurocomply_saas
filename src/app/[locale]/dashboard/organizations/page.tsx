@@ -15,17 +15,17 @@ const quickLinks = [
   { href: '/dashboard/organizations/billing', label: 'Billing' },
 ];
 
-export default async function OrganizationDashboardPage() {
+export default async function OrganizationDashboardPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect('/login');
+    redirect(`/${params.locale}/login`);
   }
 
   const data = await getOrganizationDashboardData(user.id);
 
   if (!data) {
-    redirect('/onboarding');
+    redirect(`/${params.locale}/onboarding`);
   }
 
   return (
@@ -42,7 +42,7 @@ export default async function OrganizationDashboardPage() {
 
           <nav className="flex flex-wrap gap-2 text-sm">
             {quickLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="rounded-md border px-3 py-2 font-medium hover:bg-muted">
+              <Link key={link.href} href={`/${params.locale}${link.href}`} className="rounded-md border px-3 py-2 font-medium hover:bg-muted">
                 {link.label}
               </Link>
             ))}
