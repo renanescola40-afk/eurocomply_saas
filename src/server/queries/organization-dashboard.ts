@@ -1,5 +1,5 @@
 import { getCurrentOrganizationForUser } from './current-organization';
-import { getDashboardSummary } from './dashboard';
+import { getDashboardSummary, getDashboardTrendComparison, getDashboardTrendHistory, recordDashboardMetricSnapshot } from './dashboard';
 import { listComplianceTasks } from './compliance-tasks';
 import { normalizeOrganization } from '@/lib/dashboard/organization-adapter';
 
@@ -15,9 +15,16 @@ export async function getOrganizationDashboardData(userId: string, organizationS
     listComplianceTasks(organization.id),
   ]);
 
+  await recordDashboardMetricSnapshot(organization.id, summary);
+
+  const trendHistory = await getDashboardTrendHistory(organization.id);
+  const trendComparison = getDashboardTrendComparison(trendHistory);
+
   return {
     organization: normalizeOrganization(organization),
     summary,
     tasks,
+    trendHistory,
+    trendComparison,
   };
 }
