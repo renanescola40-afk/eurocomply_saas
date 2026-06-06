@@ -10,6 +10,7 @@ const quickLinks = [
   { href: '/dashboard/organizations/vendors', label: 'Vendors' },
   { href: '/dashboard/organizations/risks', label: 'Risks' },
   { href: '/dashboard/organizations/templates', label: 'Templates' },
+  { href: '/dashboard/organizations/reports', label: 'Reports' },
   { href: '/dashboard/organizations/team', label: 'Team' },
   { href: '/dashboard/organizations/billing', label: 'Billing' },
 ];
