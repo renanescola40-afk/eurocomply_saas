@@ -4,8 +4,8 @@ import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getCurrentUser } from '@/server/auth/user';
-import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { getCurrentUser } from '@/server/queries/auth';
+import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
 export async function GET() {
   const user = await getCurrentUser();
