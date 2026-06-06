@@ -21,10 +21,13 @@ type PendingInvitation = {
 type TeamSettingsSectionProps = {
   members: TeamMember[];
   invitations: PendingInvitation[];
+  currentUserId?: string;
   onInvite: (input: InviteMemberInput) => Promise<void> | void;
+  onRemoveMember?: (formData: FormData) => Promise<void> | void;
+  onCancelInvitation?: (formData: FormData) => Promise<void> | void;
 };
 
-export function TeamSettingsSection({ members, invitations, onInvite }: TeamSettingsSectionProps) {
+export function TeamSettingsSection({ members, invitations, currentUserId, onInvite, onRemoveMember, onCancelInvitation }: TeamSettingsSectionProps) {
   return (
     <section className="space-y-6">
       <div>
@@ -36,7 +39,13 @@ export function TeamSettingsSection({ members, invitations, onInvite }: TeamSett
       </div>
 
       <InviteMemberForm onSubmit={onInvite} />
-      <TeamManagementCard members={members} invitations={invitations} />
+      <TeamManagementCard
+        members={members}
+        invitations={invitations}
+        currentUserId={currentUserId}
+        onRemoveMember={onRemoveMember}
+        onCancelInvitation={onCancelInvitation}
+      />
     </section>
   );
 }
