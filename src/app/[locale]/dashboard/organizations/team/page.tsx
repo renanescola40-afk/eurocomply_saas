@@ -12,6 +12,8 @@ type TeamPageProps = {
   params: Promise<{ locale: string }>;
 };
 
+type InviteRole = 'admin' | 'member';
+
 export default async function OrganizationTeamPage({ params }: TeamPageProps) {
   const { locale } = await params;
   const user = await getCurrentUser();
@@ -32,7 +34,7 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
     getOrganizationBillingContext(organization.id),
   ]);
 
-  async function inviteMember(input: { email: string; role: 'admin' | 'compliance_manager' | 'member' | 'viewer' }) {
+  async function inviteMember(input: { email: string; role: InviteRole }) {
     'use server';
 
     const currentUser = await getCurrentUser();
@@ -41,9 +43,15 @@ export default async function OrganizationTeamPage({ params }: TeamPageProps) {
       redirect(`/${locale}/login`);
     }
 
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+
+    if (!currentOrganization) {
+      redirect(`/${locale}/onboarding`);
+    }
+
     await inviteOrganizationMember(
       {
-        organizationId: organization.id,
+        organizationId: currentOrganization.id,
         email: input.email,
         role: input.role,
       },
