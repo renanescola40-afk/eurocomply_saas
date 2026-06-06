@@ -3,6 +3,7 @@ import { getComplianceTemplate } from '@/lib/compliance/templates';
 import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createDocument } from '@/server/actions/documents';
+import { assertCurrentUserCan } from '@/server/auth/permissions';
 
 type TemplateDocumentInput = {
   organizationId: string;
@@ -88,6 +89,8 @@ export async function createDocumentFromTemplate(input: TemplateDocumentInput, u
     reportError(error, context);
     throw error;
   }
+
+  await assertCurrentUserCan(input.organizationId, userId, 'documents:write');
 
   const title = normalizeOptionalText(input.title) ?? template.title;
   const category = normalizeOptionalText(input.category) ?? template.category;
