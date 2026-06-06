@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { reportError } from '@/lib/observability/report-error';
 import { getCurrentUser } from '@/server/auth/user';
 import { getDashboardSummary } from '@/server/queries/dashboard';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -25,29 +26,34 @@ export async function GET() {
     return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
   }
 
-  const summary = await getDashboardSummary(organization.id);
-  const rows = [
-    ['Metric', 'Value'],
-    ['Organization', organization.name],
-    ['Compliance score', `${summary.complianceScore}%`],
-    ['Open tasks', summary.openTasks],
-    ['Total tasks', summary.totals.tasks],
-    ['Open risks', summary.openRisks],
-    ['Critical risks', summary.criticalRisks],
-    ['Total risks', summary.totals.risks],
-    ['High-risk vendors', summary.highRiskVendors],
-    ['Total vendors', summary.totals.vendors],
-    ['Missing documents', summary.missingDocuments],
-    ['Total documents', summary.totals.documents],
-    ['Generated at', new Date().toISOString()],
-  ];
+  try {
+    const summary = await getDashboardSummary(organization.id);
+    const rows = [
+      ['Metric', 'Value'],
+      ['Organization', organization.name],
+      ['Compliance score', `${summary.complianceScore}%`],
+      ['Open tasks', summary.openTasks],
+      ['Total tasks', summary.totals.tasks],
+      ['Open risks', summary.openRisks],
+      ['Critical risks', summary.criticalRisks],
+      ['Total risks', summary.totals.risks],
+      ['High-risk vendors', summary.highRiskVendors],
+      ['Total vendors', summary.totals.vendors],
+      ['Missing documents', summary.missingDocuments],
+      ['Total documents', summary.totals.documents],
+      ['Generated at', new Date().toISOString()],
+    ];
 
-  const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+    const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
 
-  return new Response(csv, {
-    headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': 'attachment; filename="executive-report.csv"',
-    },
-  });
+    return new Response(csv, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="executive-report.csv"',
+      },
+    });
+  } catch (error) {
+    reportError(error, { area: 'executive_csv_export', organizationId: organization.id, userId: user.id });
+    return NextResponse.json({ error: 'Unable to export executive report' }, { status: 500 });
+  }
 }
