@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DOCUMENT_BUCKET, buildDocumentStoragePath, validateDocumentFile } from '@/lib/documents/upload';
+import { checkRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 
@@ -58,6 +59,16 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
 
 export async function uploadDocument(input: UploadDocumentInput, file: File, userId: string) {
   const payload = uploadDocumentSchema.parse(input);
+  const rateLimit = checkRateLimit({
+    key: `document_upload:${payload.organizationId}:${userId}`,
+    limit: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    throw new Error('Too many document uploads. Please try again later.');
+  }
+
   const validationError = validateDocumentFile(file);
 
   if (validationError) {
