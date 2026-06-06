@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DashboardSummary, DashboardTrendComparison, DashboardTrendSnapshot } from '@/server/queries/dashboard';
 
@@ -12,6 +13,7 @@ type DashboardOverviewProps = {
   }>;
   trendHistory?: DashboardTrendSnapshot[];
   trendComparison?: DashboardTrendComparison;
+  basePath?: string;
   topRisks?: Array<{
     id: string;
     title?: string | null;
@@ -94,11 +96,17 @@ function TrendBars({
   );
 }
 
+function getDashboardHref(basePath: string, target: 'dashboard' | 'tasks' | 'risks' | 'vendors' | 'documents' | 'reports') {
+  if (target === 'dashboard') return basePath;
+  return `${basePath}/${target}`;
+}
+
 export function DashboardOverview({
   summary,
   tasks,
   trendHistory = [],
   trendComparison,
+  basePath = '/dashboard/organizations',
   topRisks = [],
   vendorsRequiringReview = [],
   documentsExpiringSoon = [],
@@ -114,36 +122,42 @@ export function DashboardOverview({
       value: `${summary.complianceScore}%`,
       detail: formatDelta(trendComparison?.complianceScoreDelta, ' pts'),
       tone: getDeltaTone(trendComparison?.complianceScoreDelta, false),
+      href: getDashboardHref(basePath, 'reports'),
     },
     {
       label: 'Open tasks',
       value: summary.openTasks,
       detail: formatDelta(trendComparison?.openTasksDelta),
       tone: getDeltaTone(trendComparison?.openTasksDelta),
+      href: getDashboardHref(basePath, 'tasks'),
     },
     {
       label: 'Open risks',
       value: summary.openRisks,
       detail: formatDelta(trendComparison?.openRisksDelta),
       tone: getDeltaTone(trendComparison?.openRisksDelta),
+      href: getDashboardHref(basePath, 'risks'),
     },
     {
       label: 'Critical risks',
       value: summary.criticalRisks,
       detail: formatDelta(trendComparison?.criticalRisksDelta),
       tone: getDeltaTone(trendComparison?.criticalRisksDelta),
+      href: getDashboardHref(basePath, 'risks'),
     },
     {
       label: 'High-risk vendors',
       value: summary.highRiskVendors,
       detail: formatDelta(trendComparison?.highRiskVendorsDelta),
       tone: getDeltaTone(trendComparison?.highRiskVendorsDelta),
+      href: getDashboardHref(basePath, 'vendors'),
     },
     {
       label: 'Missing documents',
       value: summary.missingDocuments,
       detail: formatDelta(trendComparison?.missingDocumentsDelta),
       tone: getDeltaTone(trendComparison?.missingDocumentsDelta),
+      href: getDashboardHref(basePath, 'documents'),
     },
   ];
 
@@ -159,15 +173,18 @@ export function DashboardOverview({
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {metricCards.map((metric) => (
-          <Card key={metric.label}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{metric.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{metric.value}</p>
-              <p className={`mt-2 text-sm ${metric.tone}`}>{metric.detail} vs previous snapshot</p>
-            </CardContent>
-          </Card>
+          <Link key={metric.label} href={metric.href} className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
+            <Card className="h-full transition hover:border-primary/50 hover:bg-muted/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{metric.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">{metric.value}</p>
+                <p className={`mt-2 text-sm ${metric.tone}`}>{metric.detail} vs previous snapshot</p>
+                <p className="mt-3 text-xs text-muted-foreground">Open details →</p>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </section>
 
@@ -238,7 +255,7 @@ export function DashboardOverview({
             ) : (
               <div className="space-y-3">
                 {topRisks.map((risk) => (
-                  <div key={risk.id} className="rounded-lg border p-3 text-sm">
+                  <Link key={risk.id} href={getDashboardHref(basePath, 'risks')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium">{risk.title ?? 'Untitled risk'}</p>
@@ -246,7 +263,7 @@ export function DashboardOverview({
                       </div>
                       <p className={`font-semibold ${getRiskTone(risk.risk_score)}`}>{Number(risk.risk_score ?? 0)}</p>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -263,7 +280,7 @@ export function DashboardOverview({
             ) : (
               <div className="space-y-3">
                 {vendorsRequiringReview.map((vendor) => (
-                  <div key={vendor.id} className="rounded-lg border p-3 text-sm">
+                  <Link key={vendor.id} href={getDashboardHref(basePath, 'vendors')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium">{vendor.name ?? 'Unnamed vendor'}</p>
@@ -274,7 +291,7 @@ export function DashboardOverview({
                         <p>{vendor.review_status ?? 'pending'}</p>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -291,7 +308,7 @@ export function DashboardOverview({
             ) : (
               <div className="space-y-3">
                 {documentsExpiringSoon.map((document) => (
-                  <div key={document.id} className="rounded-lg border p-3 text-sm">
+                  <Link key={document.id} href={getDashboardHref(basePath, 'documents')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium">{document.title ?? document.name ?? 'Untitled document'}</p>
@@ -299,7 +316,7 @@ export function DashboardOverview({
                       </div>
                       <p className="text-right text-xs font-semibold uppercase tracking-wide text-amber-300">{formatShortDate(document.expires_at)}</p>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -317,7 +334,7 @@ export function DashboardOverview({
           ) : (
             <div className="space-y-3">
               {openTasks.map((task) => (
-                <div key={task.id} className="flex items-center justify-between gap-4 rounded-lg border p-3 text-sm">
+                <Link key={task.id} href={getDashboardHref(basePath, 'tasks')} className="flex items-center justify-between gap-4 rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
                   <div>
                     <p className="font-medium">{task.title ?? 'Untitled task'}</p>
                     <p className="text-muted-foreground">Due {formatShortDate(task.due_date)}</p>
@@ -326,7 +343,7 @@ export function DashboardOverview({
                     <p>{task.priority ?? 'normal'}</p>
                     <p>{task.status ?? 'open'}</p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
