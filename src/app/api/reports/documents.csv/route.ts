@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { reportError } from '@/lib/observability/report-error';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getCurrentUser } from '@/server/auth/user';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -24,6 +26,17 @@ export async function GET() {
 
   if (!organization) {
     return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+  }
+
+  const rateLimit = await checkDistributedRateLimit({
+    key: `export:documents:${organization.id}:${user.id}`,
+    limit: 10,
+    windowMs: 60_000,
+  });
+
+  if (!rateLimit.allowed) {
+    reportError(new Error('Documents CSV export rate limit exceeded'), { area: 'documents_csv_export_rate_limit', organizationId: organization.id, userId: user.id });
+    return rateLimitResponse(rateLimit);
   }
 
   const supabase = createAdminClient();
