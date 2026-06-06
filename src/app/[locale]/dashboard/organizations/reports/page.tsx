@@ -36,6 +36,7 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
   ];
 
   const exportLinks = [
+    { href: `/${params.locale}/dashboard/organizations/reports/print`, label: 'Printable report / save PDF' },
     { href: '/api/reports/executive.csv', label: 'Export executive CSV' },
     { href: '/api/reports/tasks.csv', label: 'Export tasks CSV' },
     { href: '/api/reports/risks.csv', label: 'Export risks CSV' },
@@ -99,7 +100,7 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
         <article className="rounded-2xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Next report upgrades</h2>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li>• PDF export</li>
+            <li>• Native PDF generation</li>
             <li>• Trend comparison</li>
             <li>• Board-ready commentary</li>
           </ul>
