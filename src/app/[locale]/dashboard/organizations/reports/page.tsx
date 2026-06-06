@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/server/auth/user';
 import { getDashboardSummary } from '@/server/queries/dashboard';
@@ -43,6 +44,12 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
           <p className="mt-3 max-w-3xl text-muted-foreground">
             Snapshot generated on {reportDate}. Use this summary to brief leadership on compliance workload, vendor exposure, risk posture and evidence readiness.
           </p>
+          <Link
+            href="/api/reports/executive.csv"
+            className="mt-5 inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted"
+          >
+            Export CSV
+          </Link>
         </div>
         <div className="rounded-2xl border bg-card p-5 text-center shadow-sm">
           <p className="text-sm text-muted-foreground">Overall readiness</p>
