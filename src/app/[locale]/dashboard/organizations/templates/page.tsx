@@ -1,0 +1,56 @@
+import { redirect } from 'next/navigation';
+import { COMPLIANCE_TEMPLATES } from '@/lib/compliance/templates';
+import { getCurrentUser } from '@/server/auth/user';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+
+export default async function ComplianceTemplatesPage({ params }: { params: { locale: string } }) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect(`/${params.locale}/login`);
+  }
+
+  const organization = await getCurrentOrganizationForUser(user.id);
+
+  if (!organization) {
+    redirect(`/${params.locale}/onboarding`);
+  }
+
+  return (
+    <main className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10">
+      <section>
+        <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Templates</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight">Compliance template library</h1>
+        <p className="mt-3 max-w-3xl text-muted-foreground">
+          Start faster with reusable GDPR, vendor, risk, incident and security evidence templates. These templates are operational starting points, not legal advice.
+        </p>
+      </section>
+
+      <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        {COMPLIANCE_TEMPLATES.map((template) => (
+          <article key={template.id} className="flex flex-col rounded-2xl border bg-card p-6 shadow-sm">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{template.category}</p>
+              <h2 className="mt-2 text-xl font-semibold">{template.title}</h2>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{template.description}</p>
+            </div>
+
+            <div className="mt-5 rounded-xl bg-muted/40 p-4">
+              <p className="text-sm font-medium">Recommended owner</p>
+              <p className="mt-1 text-sm text-muted-foreground">{template.recommendedOwner}</p>
+            </div>
+
+            <div className="mt-5">
+              <p className="text-sm font-medium">Sections</p>
+              <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                {template.sections.map((section) => (
+                  <li key={section}>• {section}</li>
+                ))}
+              </ul>
+            </div>
+          </article>
+        ))}
+      </section>
+    </main>
+  );
+}
