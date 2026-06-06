@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { logAuditEvent } from './audit';
 
 const vendorSchema = z.object({
@@ -16,6 +17,8 @@ const vendorSchema = z.object({
 
 export async function createVendor(input: unknown, userId: string) {
   const payload = vendorSchema.parse(input);
+  await assertCurrentUserCan(payload.organizationId, userId, 'vendors:write');
+
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
