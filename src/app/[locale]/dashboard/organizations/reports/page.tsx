@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { buildBoardCommentary, buildNextBestActions, buildRecommendations, buildScorecards, getComplianceMaturity } from '@/lib/reports/recommendations';
 import { getCurrentUser } from '@/server/auth/user';
 import { getDashboardSummary } from '@/server/queries/dashboard';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -25,10 +26,16 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
 
   const summary = await getDashboardSummary(organization.id);
   const scoreLabel = getScoreLabel(summary.complianceScore);
+  const maturity = getComplianceMaturity(summary.complianceScore);
+  const scorecards = buildScorecards(summary);
+  const commentary = buildBoardCommentary(summary);
+  const nextBestActions = buildNextBestActions(summary);
+  const recommendations = buildRecommendations(summary);
   const reportDate = new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date());
 
   const cards = [
     { label: 'Compliance score', value: `${summary.complianceScore}%`, detail: scoreLabel },
+    { label: 'Maturity', value: maturity.level, detail: 'Board readiness level' },
     { label: 'Open tasks', value: summary.openTasks, detail: `${summary.totals.tasks} total tasks` },
     { label: 'Open risks', value: summary.openRisks, detail: `${summary.criticalRisks} critical risks` },
     { label: 'High-risk vendors', value: summary.highRiskVendors, detail: `${summary.totals.vendors} total vendors` },
@@ -72,7 +79,7 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
         </div>
       </section>
 
-      <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-5">
+      <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-6">
         {cards.map((card) => (
           <article key={card.label} className="rounded-2xl border bg-card p-5 shadow-sm">
             <p className="text-sm text-muted-foreground">{card.label}</p>
@@ -82,27 +89,49 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
         ))}
       </section>
 
+      <section className="rounded-2xl border bg-card p-6 shadow-sm">
+        <h2 className="text-xl font-semibold">Board-ready commentary</h2>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <p className="text-sm leading-6 text-muted-foreground">{commentary.posture}</p>
+          <p className="text-sm leading-6 text-muted-foreground">{commentary.exposure}</p>
+          <p className="text-sm leading-6 text-muted-foreground">{commentary.operatingFocus}</p>
+        </div>
+      </section>
+
+      <section className="grid gap-6 md:grid-cols-4">
+        {scorecards.map((scorecard) => (
+          <article key={scorecard.area} className="rounded-2xl border bg-card p-6 shadow-sm">
+            <p className="text-sm text-muted-foreground">{scorecard.area}</p>
+            <p className="mt-2 text-4xl font-bold">{scorecard.score}%</p>
+            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+              {scorecard.metrics.map((metric) => (
+                <li key={metric}>• {metric}</li>
+              ))}
+            </ul>
+          </article>
+        ))}
+      </section>
+
       <section className="grid gap-6 md:grid-cols-3">
-        <article className="rounded-2xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Leadership summary</h2>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            The current compliance score is {summary.complianceScore}%. Focus should remain on reducing open tasks, closing critical risks and completing missing evidence.
-          </p>
+        <article className="rounded-2xl border bg-card p-6 shadow-sm md:col-span-1">
+          <h2 className="text-lg font-semibold">Maturity score</h2>
+          <p className="mt-3 text-3xl font-bold">{maturity.level}</p>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">{maturity.description}</p>
         </article>
         <article className="rounded-2xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Top priorities</h2>
+          <h2 className="text-lg font-semibold">Next best actions</h2>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li>• Close {summary.criticalRisks} critical risks</li>
-            <li>• Review {summary.highRiskVendors} high-risk vendors</li>
-            <li>• Complete {summary.missingDocuments} missing document approvals</li>
+            {nextBestActions.map((action) => (
+              <li key={action}>• {action}</li>
+            ))}
           </ul>
         </article>
         <article className="rounded-2xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Next report upgrades</h2>
+          <h2 className="text-lg font-semibold">Recommendations</h2>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li>• Native PDF generation</li>
-            <li>• Trend comparison</li>
-            <li>• Board-ready commentary</li>
+            {recommendations.map((recommendation) => (
+              <li key={recommendation}>• {recommendation}</li>
+            ))}
           </ul>
         </article>
       </section>
