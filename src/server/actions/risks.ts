@@ -53,3 +53,29 @@ export async function createRisk(input: unknown, userId: string) {
 
   return data;
 }
+
+export async function deleteRisk(riskId: string, organizationId: string, userId: string) {
+  await assertCurrentUserCan(organizationId, userId, 'risks:delete');
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('risks')
+    .delete()
+    .eq('id', riskId)
+    .eq('organization_id', organizationId)
+    .select('id,title,likelihood,impact')
+    .single();
+
+  if (error) throw error;
+
+  await logAuditEvent({
+    organizationId,
+    actorUserId: userId,
+    action: 'risk.deleted',
+    entityType: 'risk',
+    entityId: riskId,
+    metadata: { title: data.title, likelihood: data.likelihood, impact: data.impact },
+  });
+
+  return data;
+}
