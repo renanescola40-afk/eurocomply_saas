@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PlanGate } from '@/components/billing/plan-gate';
@@ -78,10 +79,15 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
 
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10">
-      <div>
-        <p className="text-sm text-muted-foreground">{organization.name}</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Risk register</h1>
-        <p className="mt-2 text-muted-foreground">Prioritize compliance and operational risk by likelihood and impact.</p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">{organization.name}</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Risk register</h1>
+          <p className="mt-2 text-muted-foreground">Prioritize compliance and operational risk by likelihood and impact.</p>
+        </div>
+        <Link href="/api/reports/risks.csv" className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted">
+          Export CSV
+        </Link>
       </div>
 
       <PlanGate planId={billing.plan} metric="risks" currentUsage={billing.usage.risks}>
