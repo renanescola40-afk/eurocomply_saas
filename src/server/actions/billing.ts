@@ -2,6 +2,7 @@
 
 import { getBillingPlan, getStripePriceId } from '@/lib/billing/plans';
 import { getStripeClient } from '@/lib/billing/stripe';
+import { reportError } from '@/lib/observability/report-error';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
@@ -28,6 +29,7 @@ export async function createCheckoutSession(input: {
   successPath?: string;
   cancelPath?: string;
 }) {
+  const context = { area: 'billing_checkout', organizationId: input.organizationId, userId: input.userId, planId: input.planId };
   const rateLimit = checkRateLimit({
     key: `checkout:${input.organizationId}:${input.userId}`,
     limit: 5,
@@ -35,65 +37,72 @@ export async function createCheckoutSession(input: {
   });
 
   if (!rateLimit.allowed) {
-    throw new Error('Too many checkout attempts. Please try again later.');
+    const error = new Error('Too many checkout attempts. Please try again later.');
+    reportError(error, context);
+    throw error;
   }
 
-  const plan = getBillingPlan(input.planId);
+  try {
+    const plan = getBillingPlan(input.planId);
 
-  if (!plan) {
-    throw new Error('Invalid billing plan');
-  }
+    if (!plan) {
+      throw new Error('Invalid billing plan');
+    }
 
-  const priceId = getStripePriceId(plan);
+    const priceId = getStripePriceId(plan);
 
-  if (!priceId) {
-    throw new Error(`${plan.stripePriceEnvKey} is required`);
-  }
+    if (!priceId) {
+      throw new Error(`${plan.stripePriceEnvKey} is required`);
+    }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
-  if (!appUrl) {
-    throw new Error('NEXT_PUBLIC_APP_URL is required');
-  }
+    if (!appUrl) {
+      throw new Error('NEXT_PUBLIC_APP_URL is required');
+    }
 
-  const supabase = createAdminClient();
+    const supabase = createAdminClient();
 
-  await requireBillingManager(supabase, input.organizationId, input.userId);
+    await requireBillingManager(supabase, input.organizationId, input.userId);
 
-  const stripe = getStripeClient();
+    const stripe = getStripeClient();
 
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}${input.successPath ?? '/dashboard/organizations/billing?checkout=success'}`,
-    cancel_url: `${appUrl}${input.cancelPath ?? '/dashboard/organizations/billing?checkout=cancelled'}`,
-    metadata: {
-      organizationId: input.organizationId,
-      planId: plan.id,
-      userId: input.userId,
-    },
-    subscription_data: {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${appUrl}${input.successPath ?? '/dashboard/organizations/billing?checkout=success'}`,
+      cancel_url: `${appUrl}${input.cancelPath ?? '/dashboard/organizations/billing?checkout=cancelled'}`,
       metadata: {
         organizationId: input.organizationId,
         planId: plan.id,
+        userId: input.userId,
       },
-    },
-  });
+      subscription_data: {
+        metadata: {
+          organizationId: input.organizationId,
+          planId: plan.id,
+        },
+      },
+    });
 
-  await logAuditEvent({
-    organizationId: input.organizationId,
-    actorUserId: input.userId,
-    action: 'billing.checkout_created',
-    entityType: 'subscription',
-    entityId: session.id,
-    metadata: { planId: plan.id },
-  });
+    await logAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.userId,
+      action: 'billing.checkout_created',
+      entityType: 'subscription',
+      entityId: session.id,
+      metadata: { planId: plan.id },
+    });
 
-  if (!session.url) {
-    throw new Error('Stripe did not return a checkout URL');
+    if (!session.url) {
+      throw new Error('Stripe did not return a checkout URL');
+    }
+
+    return session.url;
+  } catch (error) {
+    reportError(error, context);
+    throw error;
   }
-
-  return session.url;
 }
 
 export async function createCustomerPortalSession(input: {
@@ -101,6 +110,7 @@ export async function createCustomerPortalSession(input: {
   userId: string;
   returnPath?: string;
 }) {
+  const context = { area: 'billing_customer_portal', organizationId: input.organizationId, userId: input.userId };
   const rateLimit = checkRateLimit({
     key: `customer_portal:${input.organizationId}:${input.userId}`,
     limit: 10,
@@ -108,47 +118,54 @@ export async function createCustomerPortalSession(input: {
   });
 
   if (!rateLimit.allowed) {
-    throw new Error('Too many billing portal attempts. Please try again later.');
+    const error = new Error('Too many billing portal attempts. Please try again later.');
+    reportError(error, context);
+    throw error;
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
-  if (!appUrl) {
-    throw new Error('NEXT_PUBLIC_APP_URL is required');
+    if (!appUrl) {
+      throw new Error('NEXT_PUBLIC_APP_URL is required');
+    }
+
+    const supabase = createAdminClient();
+
+    await requireBillingManager(supabase, input.organizationId, input.userId);
+
+    const { data: subscription, error: subscriptionError } = await supabase
+      .from('subscriptions')
+      .select('stripe_customer_id')
+      .eq('organization_id', input.organizationId)
+      .maybeSingle();
+
+    if (subscriptionError) {
+      throw subscriptionError;
+    }
+
+    if (!subscription?.stripe_customer_id) {
+      throw new Error('Organization does not have a Stripe customer yet');
+    }
+
+    const stripe = getStripeClient();
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: subscription.stripe_customer_id,
+      return_url: `${appUrl}${input.returnPath ?? '/dashboard/organizations/billing'}`,
+    });
+
+    await logAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.userId,
+      action: 'billing.customer_portal_opened',
+      entityType: 'subscription',
+      metadata: {},
+    });
+
+    return session.url;
+  } catch (error) {
+    reportError(error, context);
+    throw error;
   }
-
-  const supabase = createAdminClient();
-
-  await requireBillingManager(supabase, input.organizationId, input.userId);
-
-  const { data: subscription, error: subscriptionError } = await supabase
-    .from('subscriptions')
-    .select('stripe_customer_id')
-    .eq('organization_id', input.organizationId)
-    .maybeSingle();
-
-  if (subscriptionError) {
-    throw subscriptionError;
-  }
-
-  if (!subscription?.stripe_customer_id) {
-    throw new Error('Organization does not have a Stripe customer yet');
-  }
-
-  const stripe = getStripeClient();
-
-  const session = await stripe.billingPortal.sessions.create({
-    customer: subscription.stripe_customer_id,
-    return_url: `${appUrl}${input.returnPath ?? '/dashboard/organizations/billing'}`,
-  });
-
-  await logAuditEvent({
-    organizationId: input.organizationId,
-    actorUserId: input.userId,
-    action: 'billing.customer_portal_opened',
-    entityType: 'subscription',
-    metadata: {},
-  });
-
-  return session.url;
 }
