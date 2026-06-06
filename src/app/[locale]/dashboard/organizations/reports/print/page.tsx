@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { PrintReportButton } from '@/components/reports/print-report-button';
+import { buildBoardCommentary, buildNextBestActions, buildRecommendations, buildScorecards, getComplianceMaturity } from '@/lib/reports/recommendations';
 import { getCurrentUser } from '@/server/auth/user';
 import { getDashboardSummary } from '@/server/queries/dashboard';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -26,11 +27,17 @@ export default async function PrintableExecutiveReportPage({ params }: { params:
 
   const summary = await getDashboardSummary(organization.id);
   const scoreLabel = getScoreLabel(summary.complianceScore);
+  const maturity = getComplianceMaturity(summary.complianceScore);
+  const commentary = buildBoardCommentary(summary);
+  const scorecards = buildScorecards(summary);
+  const nextBestActions = buildNextBestActions(summary);
+  const recommendations = buildRecommendations(summary);
   const generatedAt = new Intl.DateTimeFormat('en', { dateStyle: 'long', timeStyle: 'short' }).format(new Date());
 
   const metrics = [
     ['Compliance score', `${summary.complianceScore}%`],
     ['Readiness label', scoreLabel],
+    ['Maturity level', maturity.level],
     ['Open tasks', summary.openTasks],
     ['Total tasks', summary.totals.tasks],
     ['Open risks', summary.openRisks],
@@ -63,6 +70,7 @@ export default async function PrintableExecutiveReportPage({ params }: { params:
           <div className="hidden rounded-xl border px-4 py-3 text-right print:block">
             <p className="text-xs uppercase tracking-wide text-slate-500">Readiness</p>
             <p className="text-2xl font-bold">{summary.complianceScore}%</p>
+            <p className="text-xs text-slate-500">{maturity.level}</p>
           </div>
         </div>
       </section>
@@ -74,12 +82,19 @@ export default async function PrintableExecutiveReportPage({ params }: { params:
           <p className="mt-2 font-medium">{scoreLabel}</p>
         </article>
         <article className="rounded-2xl border p-6 print:rounded-lg print:p-4">
-          <p className="text-sm text-slate-500">Top focus</p>
-          <p className="mt-2 text-2xl font-bold">Reduce unresolved exposure</p>
-          <p className="mt-2 text-sm text-slate-600">
-            Prioritize critical risks, high-risk vendors and missing document approvals.
-          </p>
+          <p className="text-sm text-slate-500">Maturity</p>
+          <p className="mt-2 text-2xl font-bold">{maturity.level}</p>
+          <p className="mt-2 text-sm text-slate-600">{maturity.description}</p>
         </article>
+      </section>
+
+      <section className="break-inside-avoid py-4">
+        <h2 className="text-2xl font-bold">Board-ready commentary</h2>
+        <div className="mt-4 grid grid-cols-3 gap-4 text-sm leading-6 text-slate-600 print:gap-3">
+          <p>{commentary.posture}</p>
+          <p>{commentary.exposure}</p>
+          <p>{commentary.operatingFocus}</p>
+        </div>
       </section>
 
       <section className="break-inside-avoid py-4">
@@ -96,19 +111,38 @@ export default async function PrintableExecutiveReportPage({ params }: { params:
         </table>
       </section>
 
+      <section className="break-inside-avoid py-6">
+        <h2 className="text-2xl font-bold">Scorecards by area</h2>
+        <div className="mt-4 grid grid-cols-4 gap-3">
+          {scorecards.map((scorecard) => (
+            <article key={scorecard.area} className="rounded-lg border p-3">
+              <p className="text-sm text-slate-500">{scorecard.area}</p>
+              <p className="mt-1 text-2xl font-bold">{scorecard.score}%</p>
+              <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                {scorecard.metrics.map((metric) => (
+                  <li key={metric}>{metric}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="grid break-inside-avoid grid-cols-2 gap-6 py-8 print:gap-4">
         <article>
-          <h2 className="text-xl font-bold">Leadership summary</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            The current compliance score is {summary.complianceScore}%. Leadership should monitor open tasks, critical risks, vendor risk and document evidence gaps.
-          </p>
+          <h2 className="text-xl font-bold">Next best actions</h2>
+          <ul className="mt-3 space-y-2 text-sm text-slate-600">
+            {nextBestActions.map((action) => (
+              <li key={action}>{action}</li>
+            ))}
+          </ul>
         </article>
         <article>
-          <h2 className="text-xl font-bold">Recommended priorities</h2>
+          <h2 className="text-xl font-bold">Recommendations</h2>
           <ul className="mt-3 space-y-2 text-sm text-slate-600">
-            <li>Close {summary.criticalRisks} critical risks.</li>
-            <li>Review {summary.highRiskVendors} high-risk vendors.</li>
-            <li>Complete {summary.missingDocuments} missing document approvals.</li>
+            {recommendations.map((recommendation) => (
+              <li key={recommendation}>{recommendation}</li>
+            ))}
           </ul>
         </article>
       </section>
