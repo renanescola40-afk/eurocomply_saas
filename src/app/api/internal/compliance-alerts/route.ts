@@ -48,6 +48,55 @@ async function getOrganizationOwnerEmail(userId: string) {
   return data.user?.email ?? null;
 }
 
+async function hasNotificationBeenSent(input: {
+  organizationId: string;
+  eventType: string;
+  entityType: string;
+  entityId: string;
+  recipientEmail: string;
+}) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('email_notification_events')
+    .select('id')
+    .eq('organization_id', input.organizationId)
+    .eq('event_type', input.eventType)
+    .eq('entity_type', input.entityType)
+    .eq('entity_id', input.entityId)
+    .eq('recipient_email', input.recipientEmail)
+    .maybeSingle();
+
+  if (error) {
+    reportError(error, { area: 'email_notification_dedupe_lookup', ...input });
+    return false;
+  }
+
+  return Boolean(data?.id);
+}
+
+async function recordNotificationSent(input: {
+  organizationId: string;
+  eventType: string;
+  entityType: string;
+  entityId: string;
+  recipientEmail: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from('email_notification_events').insert({
+    organization_id: input.organizationId,
+    event_type: input.eventType,
+    entity_type: input.entityType,
+    entity_id: input.entityId,
+    recipient_email: input.recipientEmail,
+    metadata: input.metadata ?? {},
+  });
+
+  if (error) {
+    reportError(error, { area: 'email_notification_dedupe_record', ...input });
+  }
+}
+
 async function sendDocumentExpiryAlerts() {
   const supabase = createAdminClient();
   const appUrl = getAppUrl();
@@ -69,6 +118,7 @@ async function sendDocumentExpiryAlerts() {
   }
 
   let sent = 0;
+  let skipped = 0;
 
   for (const document of documents ?? []) {
     const organization = Array.isArray(document.organizations) ? document.organizations[0] : document.organizations;
@@ -80,6 +130,19 @@ async function sendDocumentExpiryAlerts() {
     const emailAddress = await getOrganizationOwnerEmail(organization.created_by);
 
     if (!emailAddress) {
+      continue;
+    }
+
+    const dedupe = {
+      organizationId: document.organization_id,
+      eventType: 'document.expiring',
+      entityType: 'document',
+      entityId: document.id,
+      recipientEmail: emailAddress,
+    };
+
+    if (await hasNotificationBeenSent(dedupe)) {
+      skipped += 1;
       continue;
     }
 
@@ -97,13 +160,14 @@ async function sendDocumentExpiryAlerts() {
         html: email.html,
         text: email.text,
       });
+      await recordNotificationSent({ ...dedupe, metadata: { expiresAt: document.expires_at } });
       sent += 1;
     } catch (emailError) {
       reportError(emailError, { area: 'document_expiry_alert_email', documentId: document.id, organizationId: document.organization_id });
     }
   }
 
-  return sent;
+  return { sent, skipped };
 }
 
 async function sendVendorReviewAlerts() {
@@ -123,6 +187,7 @@ async function sendVendorReviewAlerts() {
   }
 
   let sent = 0;
+  let skipped = 0;
 
   for (const vendor of vendors ?? []) {
     const organization = Array.isArray(vendor.organizations) ? vendor.organizations[0] : vendor.organizations;
@@ -134,6 +199,19 @@ async function sendVendorReviewAlerts() {
     const emailAddress = await getOrganizationOwnerEmail(organization.created_by);
 
     if (!emailAddress) {
+      continue;
+    }
+
+    const dedupe = {
+      organizationId: vendor.organization_id,
+      eventType: 'vendor.review_pending',
+      entityType: 'vendor',
+      entityId: vendor.id,
+      recipientEmail: emailAddress,
+    };
+
+    if (await hasNotificationBeenSent(dedupe)) {
+      skipped += 1;
       continue;
     }
 
@@ -151,13 +229,14 @@ async function sendVendorReviewAlerts() {
         html: email.html,
         text: email.text,
       });
+      await recordNotificationSent({ ...dedupe, metadata: { reviewDueAt: vendor.next_review_at } });
       sent += 1;
     } catch (emailError) {
       reportError(emailError, { area: 'vendor_review_alert_email', vendorId: vendor.id, organizationId: vendor.organization_id });
     }
   }
 
-  return sent;
+  return { sent, skipped };
 }
 
 export async function POST(request: Request) {
@@ -166,15 +245,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [documentAlertsSent, vendorAlertsSent] = await Promise.all([
+    const [documentAlerts, vendorAlerts] = await Promise.all([
       sendDocumentExpiryAlerts(),
       sendVendorReviewAlerts(),
     ]);
 
     return NextResponse.json({
       ok: true,
-      documentAlertsSent,
-      vendorAlertsSent,
+      documentAlerts,
+      vendorAlerts,
     });
   } catch (error) {
     reportError(error, { area: 'compliance_alert_job' });
