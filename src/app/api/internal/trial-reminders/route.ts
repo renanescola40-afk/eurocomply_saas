@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email/client';
 import { trialUpgradeEmail } from '@/lib/email/templates';
 import { reportError } from '@/lib/observability/report-error';
+import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -10,14 +11,6 @@ const TRIAL_REMINDER_DAYS = 3;
 
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
-}
-
-function isAuthorized(request: Request) {
-  const secrets = [process.env.CRON_SECRET, process.env.INTERNAL_CRON_SECRET].filter(Boolean);
-  const authorization = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-  const internalHeader = request.headers.get('x-internal-cron-secret');
-
-  return secrets.length > 0 && secrets.some((secret) => secret === authorization || secret === internalHeader);
 }
 
 function addDays(days: number) {
@@ -134,7 +127,7 @@ async function sendTrialReminders() {
 }
 
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isAuthorizedInternalCronRequest(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
