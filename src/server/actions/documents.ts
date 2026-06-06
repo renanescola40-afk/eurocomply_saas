@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { DOCUMENT_BUCKET, buildDocumentStoragePath, validateDocumentFile } from '@/lib/documents/upload';
 import { reportError } from '@/lib/observability/report-error';
-import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 
@@ -13,6 +13,7 @@ const createDocumentSchema = z.object({
   mimeType: z.string().max(120).optional().nullable(),
   sizeBytes: z.number().int().nonnegative().optional().nullable(),
   expiresAt: z.string().optional().nullable(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 const uploadDocumentSchema = z.object({
@@ -52,7 +53,7 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
     action: 'document.created',
     entityType: 'document',
     entityId: data.id,
-    metadata: { name: payload.name, category: payload.category },
+    metadata: { name: payload.name, category: payload.category, ...(payload.metadata ?? {}) },
   });
 
   return data;
@@ -61,7 +62,7 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
 export async function uploadDocument(input: UploadDocumentInput, file: File, userId: string) {
   const payload = uploadDocumentSchema.parse(input);
   const context = { area: 'document_upload', organizationId: payload.organizationId, userId };
-  const rateLimit = checkRateLimit({
+  const rateLimit = await checkDistributedRateLimit({
     key: `document_upload:${payload.organizationId}:${userId}`,
     limit: 20,
     windowMs: 60 * 60 * 1000,
