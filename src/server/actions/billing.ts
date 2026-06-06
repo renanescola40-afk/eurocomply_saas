@@ -3,7 +3,7 @@
 import { getBillingPlan, getStripePriceId } from '@/lib/billing/plans';
 import { getStripeClient } from '@/lib/billing/stripe';
 import { reportError } from '@/lib/observability/report-error';
-import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 
@@ -30,7 +30,7 @@ export async function createCheckoutSession(input: {
   cancelPath?: string;
 }) {
   const context = { area: 'billing_checkout', organizationId: input.organizationId, userId: input.userId, planId: input.planId };
-  const rateLimit = checkRateLimit({
+  const rateLimit = await checkDistributedRateLimit({
     key: `checkout:${input.organizationId}:${input.userId}`,
     limit: 5,
     windowMs: 60 * 60 * 1000,
@@ -111,7 +111,7 @@ export async function createCustomerPortalSession(input: {
   returnPath?: string;
 }) {
   const context = { area: 'billing_customer_portal', organizationId: input.organizationId, userId: input.userId };
-  const rateLimit = checkRateLimit({
+  const rateLimit = await checkDistributedRateLimit({
     key: `customer_portal:${input.organizationId}:${input.userId}`,
     limit: 10,
     windowMs: 60 * 60 * 1000,
