@@ -13,6 +13,7 @@ Use Sentry as the primary error inbox for application exceptions. Configure proj
 - Document upload failures.
 - Billing/customer portal failures.
 - Excessive rate-limit events.
+- Metric snapshot job failures.
 
 ## Required environment variables
 
@@ -41,7 +42,45 @@ Rate limiting:
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
 
+Internal jobs:
+
+- Configure a private internal cron token in production.
+- Use it to call `POST /api/internal/metric-snapshots` with an `Authorization: Bearer <token>` header.
+
 If the Upstash variables are empty or unavailable, EuroComply falls back to local in-memory rate limiting. That fallback is acceptable for local development and tests only, not for multi-instance production traffic.
+
+## Scheduled jobs
+
+### Metric snapshots
+
+Purpose: record daily historical compliance metrics for dashboard trends.
+
+Recommended cadence: daily.
+
+Endpoint:
+
+```bash
+curl -X POST "$APP_URL/api/internal/metric-snapshots" \
+  -H "Authorization: Bearer $INTERNAL_JOB_TOKEN"
+```
+
+Expected result:
+
+```json
+{
+  "ok": true,
+  "processed": 1,
+  "failed": 0,
+  "failures": []
+}
+```
+
+Immediate checks if it fails:
+
+- Confirm the internal job token configured in Vercel matches the value used by the scheduler.
+- Confirm `SUPABASE_SERVICE_ROLE_KEY` is present.
+- Confirm the `compliance_metric_snapshots` migration has been applied.
+- Check Sentry for `metric_snapshot_job` errors.
 
 ## Incident response checklist
 
@@ -136,9 +175,12 @@ Current distributed coverage:
 - Risks CSV export.
 - Vendors CSV export.
 - Documents CSV export.
+- Invitations.
+- Checkout.
+- Customer portal.
+- Document upload.
 
 Follow-up:
 
-- Apply the distributed helper to invitations, checkout, customer portal, and document upload routes.
 - Add structured logging for limit hits.
 - Add tests around Upstash fallback behavior.
