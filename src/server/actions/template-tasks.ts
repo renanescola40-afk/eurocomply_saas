@@ -15,8 +15,6 @@ export async function createTaskFromTemplate(input: { organizationId: string; te
       description: `${template.description}\n\nRecommended owner: ${template.recommendedOwner}\n\nSections:\n${template.sections.map((section) => `- ${section}`).join('\n')}`,
       category: template.category,
       priority: 'medium',
-      dueDate: null,
-      assigneeId: null,
     },
     userId,
   );
