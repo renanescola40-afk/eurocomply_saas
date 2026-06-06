@@ -1,30 +1,13 @@
 import { NextResponse } from 'next/server';
 import { reportError } from '@/lib/observability/report-error';
+import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getDashboardSummary, recordDashboardMetricSnapshot } from '@/server/queries/dashboard';
 
 export const runtime = 'nodejs';
 
-function getExpectedSecrets() {
-  return [process.env.CRON_SECRET, process.env.INTERNAL_CRON_SECRET].filter(Boolean);
-}
-
-function isAuthorized(request: Request) {
-  const expectedSecrets = getExpectedSecrets();
-
-  if (expectedSecrets.length === 0) {
-    return false;
-  }
-
-  const authHeader = request.headers.get('authorization');
-  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;
-  const headerSecret = request.headers.get('x-internal-cron-secret');
-
-  return expectedSecrets.some((secret) => bearerToken === secret || headerSecret === secret);
-}
-
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isAuthorizedInternalCronRequest(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
