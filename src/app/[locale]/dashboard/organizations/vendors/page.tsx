@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PlanGate } from '@/components/billing/plan-gate';
@@ -24,8 +25,8 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
   }
 
   const [vendors, billing] = await Promise.all([
-    listVendors(current.organization.id),
-    getOrganizationBillingContext(current.organization.id),
+    listVendors(current.id),
+    getOrganizationBillingContext(current.id),
   ]);
 
   async function handleCreateVendor(input: CreateVendorFormInput) {
@@ -37,7 +38,7 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
     const current = await getCurrentOrganizationForUser(user.id);
     if (!current) redirect(`/${params.locale}/onboarding`);
 
-    await createVendor({ organizationId: current.organization.id, ...input }, user.id);
+    await createVendor({ organizationId: current.id, ...input }, user.id);
 
     revalidatePath(`/${params.locale}/dashboard/organizations/vendors`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
@@ -52,7 +53,7 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
     const current = await getCurrentOrganizationForUser(user.id);
     if (!current) redirect(`/${params.locale}/onboarding`);
 
-    await deleteVendor(vendorId, current.organization.id, user.id);
+    await deleteVendor(vendorId, current.id, user.id);
 
     revalidatePath(`/${params.locale}/dashboard/organizations/vendors`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
@@ -61,10 +62,15 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
   return (
     <main className="min-h-screen bg-[#050505] px-5 py-8 text-white lg:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-white/40">Third-party risk</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-5xl">Vendors</h1>
-          <p className="mt-3 max-w-2xl text-white/55">Manage suppliers, subprocessors and third parties that touch compliance-sensitive data.</p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.3em] text-white/40">Third-party risk</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-5xl">Vendors</h1>
+            <p className="mt-3 max-w-2xl text-white/55">Manage suppliers, subprocessors and third parties that touch compliance-sensitive data.</p>
+          </div>
+          <Link href="/api/reports/vendors.csv" className="inline-flex h-10 items-center justify-center rounded-md border border-white/15 px-4 text-sm font-medium hover:bg-white/10">
+            Export CSV
+          </Link>
         </div>
 
         <PlanGate planId={billing.plan} metric="vendors" currentUsage={billing.usage.vendors}>
@@ -79,7 +85,7 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
             {vendors.length === 0 ? (
               <p className="text-sm text-white/55">No vendors yet. Add the first vendor to start tracking third-party risk.</p>
             ) : (
-              vendors.map((vendor: any) => (
+              vendors.map((vendor) => (
                 <div key={vendor.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
