@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { logAuditEvent } from './audit';
 
 const riskSchema = z.object({
@@ -17,6 +18,8 @@ const riskSchema = z.object({
 
 export async function createRisk(input: unknown, userId: string) {
   const payload = riskSchema.parse(input);
+  await assertCurrentUserCan(payload.organizationId, userId, 'risks:write');
+
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
