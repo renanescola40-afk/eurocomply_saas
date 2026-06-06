@@ -4,6 +4,16 @@ import { DashboardOverview } from '@/components/dashboard/dashboard-overview';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
 
+const quickLinks = [
+  { href: '/dashboard/organizations/tasks', label: 'Tasks' },
+  { href: '/dashboard/organizations/documents', label: 'Documents' },
+  { href: '/dashboard/organizations/vendors', label: 'Vendors' },
+  { href: '/dashboard/organizations/risks', label: 'Risks' },
+  { href: '/dashboard/organizations/templates', label: 'Templates' },
+  { href: '/dashboard/organizations/team', label: 'Team' },
+  { href: '/dashboard/organizations/billing', label: 'Billing' },
+];
+
 export default async function OrganizationDashboardPage() {
   const user = await getCurrentUser();
 
@@ -30,18 +40,11 @@ export default async function OrganizationDashboardPage() {
           </div>
 
           <nav className="flex flex-wrap gap-2 text-sm">
-            <Link
-              href="/dashboard/organizations/team"
-              className="rounded-md border px-3 py-2 font-medium hover:bg-muted"
-            >
-              Manage team
-            </Link>
-            <Link
-              href="/onboarding"
-              className="rounded-md border px-3 py-2 font-medium hover:bg-muted"
-            >
-              Onboarding
-            </Link>
+            {quickLinks.map((link) => (
+              <Link key={link.href} href={link.href} className="rounded-md border px-3 py-2 font-medium hover:bg-muted">
+                {link.label}
+              </Link>
+            ))}
           </nav>
         </div>
 
