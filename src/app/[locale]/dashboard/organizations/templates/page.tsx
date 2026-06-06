@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { COMPLIANCE_TEMPLATES } from '@/lib/compliance/templates';
 import { getCurrentUser } from '@/server/auth/user';
+import { createDocumentFromTemplate } from '@/server/actions/template-documents';
 import { createTaskFromTemplate } from '@/server/actions/template-tasks';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 
@@ -24,6 +25,15 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
     const templateId = String(formData.get('templateId') ?? '');
     await createTaskFromTemplate({ organizationId: organization.id, templateId }, user.id);
     revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
+    revalidatePath(`/${params.locale}/dashboard/organizations/templates`);
+  }
+
+  async function createTemplateDocument(formData: FormData) {
+    'use server';
+
+    const templateId = String(formData.get('templateId') ?? '');
+    await createDocumentFromTemplate({ organizationId: organization.id, templateId }, user.id);
+    revalidatePath(`/${params.locale}/dashboard/organizations/documents`);
     revalidatePath(`/${params.locale}/dashboard/organizations/templates`);
   }
 
@@ -60,15 +70,26 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
               </ul>
             </div>
 
-            <form action={createTemplateTask} className="mt-6">
-              <input type="hidden" name="templateId" value={template.id} />
-              <button
-                type="submit"
-                className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              >
-                Create compliance task
-              </button>
-            </form>
+            <div className="mt-6 grid gap-2">
+              <form action={createTemplateTask}>
+                <input type="hidden" name="templateId" value={template.id} />
+                <button
+                  type="submit"
+                  className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  Create compliance task
+                </button>
+              </form>
+              <form action={createTemplateDocument}>
+                <input type="hidden" name="templateId" value={template.id} />
+                <button
+                  type="submit"
+                  className="inline-flex h-10 w-full items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted"
+                >
+                  Generate document
+                </button>
+              </form>
+            </div>
           </article>
         ))}
       </section>
