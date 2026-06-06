@@ -1,0 +1,53 @@
+import { NextResponse } from 'next/server';
+import { getCurrentUser } from '@/server/auth/user';
+import { getDashboardSummary } from '@/server/queries/dashboard';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+
+function csvEscape(value: string | number) {
+  const stringValue = String(value);
+  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+    return `"${stringValue.replaceAll('"', '""')}"`;
+  }
+
+  return stringValue;
+}
+
+export async function GET() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const organization = await getCurrentOrganizationForUser(user.id);
+
+  if (!organization) {
+    return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+  }
+
+  const summary = await getDashboardSummary(organization.id);
+  const rows = [
+    ['Metric', 'Value'],
+    ['Organization', organization.name],
+    ['Compliance score', `${summary.complianceScore}%`],
+    ['Open tasks', summary.openTasks],
+    ['Total tasks', summary.totals.tasks],
+    ['Open risks', summary.openRisks],
+    ['Critical risks', summary.criticalRisks],
+    ['Total risks', summary.totals.risks],
+    ['High-risk vendors', summary.highRiskVendors],
+    ['Total vendors', summary.totals.vendors],
+    ['Missing documents', summary.missingDocuments],
+    ['Total documents', summary.totals.documents],
+    ['Generated at', new Date().toISOString()],
+  ];
+
+  const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+
+  return new Response(csv, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="executive-report.csv"',
+    },
+  });
+}
