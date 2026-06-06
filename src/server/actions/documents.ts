@@ -123,3 +123,61 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
     throw error;
   }
 }
+
+export async function deleteDocument(documentId: string, organizationId: string, userId: string) {
+  await assertCurrentUserCan(organizationId, userId, 'documents:delete');
+
+  const context = { area: 'document_delete', organizationId, documentId, userId };
+  const supabase = createAdminClient();
+
+  const { data: document, error: findError } = await supabase
+    .from('documents')
+    .select('id,name,category,storage_path')
+    .eq('id', documentId)
+    .eq('organization_id', organizationId)
+    .single();
+
+  if (findError || !document) {
+    reportError(findError ?? new Error('Document not found'), context);
+    throw new Error('Document not found');
+  }
+
+  if (document.storage_path && !document.storage_path.startsWith(`${organizationId}/`)) {
+    const error = new Error('Document storage path does not match organization scope');
+    reportError(error, { ...context, storagePath: document.storage_path });
+    throw error;
+  }
+
+  if (document.storage_path) {
+    const { error: storageError } = await supabase.storage.from(DOCUMENT_BUCKET).remove([document.storage_path]);
+
+    if (storageError) {
+      reportError(storageError, context);
+      throw storageError;
+    }
+  }
+
+  const { data: deletedDocument, error: deleteError } = await supabase
+    .from('documents')
+    .delete()
+    .eq('id', documentId)
+    .eq('organization_id', organizationId)
+    .select('id,name,category')
+    .single();
+
+  if (deleteError) {
+    reportError(deleteError, context);
+    throw deleteError;
+  }
+
+  await logAuditEvent({
+    organizationId,
+    actorUserId: userId,
+    action: 'document.deleted',
+    entityType: 'document',
+    entityId: documentId,
+    metadata: { name: deletedDocument.name, category: deletedDocument.category },
+  });
+
+  return deletedDocument;
+}
