@@ -1,19 +1,11 @@
 import { NextResponse } from 'next/server';
+import { csvDownloadResponse } from '@/lib/exports/csv';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getCurrentUser } from '@/server/auth/user';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-
-function csvEscape(value: string | number | null | undefined) {
-  const stringValue = String(value ?? '');
-  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-    return `"${stringValue.replaceAll('"', '""')}"`;
-  }
-
-  return stringValue;
-}
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -56,12 +48,5 @@ export async function GET() {
     ...((data ?? []).map((risk) => [risk.title, risk.status, risk.risk_score, risk.likelihood, risk.impact, risk.created_at, risk.updated_at])),
   ];
 
-  const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
-
-  return new Response(csv, {
-    headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': 'attachment; filename="risks-report.csv"',
-    },
-  });
+  return csvDownloadResponse(rows, 'risks-report.csv');
 }
