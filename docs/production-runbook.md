@@ -36,6 +36,13 @@ Supabase:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+Rate limiting:
+
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+
+If the Upstash variables are empty or unavailable, EuroComply falls back to local in-memory rate limiting. That fallback is acceptable for local development and tests only, not for multi-instance production traffic.
+
 ## Incident response checklist
 
 1. Confirm the impacted environment and deployment SHA.
@@ -117,9 +124,21 @@ Immediate checks:
 
 - Identify route and identifier being limited.
 - Check whether traffic is abusive, replayed, or legitimate.
+- Confirm Upstash is healthy and the REST token is valid.
+- Inspect `Retry-After`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` response headers.
 - Temporarily adjust route-specific thresholds only if customer impact is confirmed.
+
+Current distributed coverage:
+
+- Stripe webhook route.
+- Executive CSV export.
+- Tasks CSV export.
+- Risks CSV export.
+- Vendors CSV export.
+- Documents CSV export.
 
 Follow-up:
 
-- Move rate limiting from memory to Redis/Upstash.
+- Apply the distributed helper to invitations, checkout, customer portal, and document upload routes.
 - Add structured logging for limit hits.
+- Add tests around Upstash fallback behavior.
