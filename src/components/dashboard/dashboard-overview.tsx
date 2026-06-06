@@ -60,6 +60,40 @@ function getRiskTone(score?: number | string | null) {
   return 'text-muted-foreground';
 }
 
+function getSnapshotValue(snapshot: DashboardTrendSnapshot, metric: keyof DashboardTrendSnapshot) {
+  const value = snapshot[metric];
+  return typeof value === 'number' ? value : 0;
+}
+
+function TrendBars({
+  history,
+  metric,
+  maxHeight = 72,
+}: {
+  history: DashboardTrendSnapshot[];
+  metric: keyof DashboardTrendSnapshot;
+  maxHeight?: number;
+}) {
+  const values = history.map((snapshot) => getSnapshotValue(snapshot, metric));
+  const max = Math.max(...values, 1);
+
+  return (
+    <div className="flex items-end gap-2 border-b border-white/10 pb-2">
+      {history.map((snapshot) => {
+        const value = getSnapshotValue(snapshot, metric);
+        const height = Math.max(6, Math.round((value / max) * maxHeight));
+
+        return (
+          <div key={`${snapshot.snapshotDate}-${String(metric)}`} className="flex flex-1 flex-col items-center gap-2">
+            <div className="w-full rounded-t bg-primary/70" style={{ height: `${height}px` }} title={`${value}`} />
+            <span className="text-[10px] text-muted-foreground">{formatShortDate(snapshot.snapshotDate)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function DashboardOverview({
   summary,
   tasks,
@@ -113,6 +147,14 @@ export function DashboardOverview({
     },
   ];
 
+  const operationalTrends = [
+    { label: 'Open tasks', metric: 'openTasks' as const, delta: trendComparison?.openTasksDelta },
+    { label: 'Open risks', metric: 'openRisks' as const, delta: trendComparison?.openRisksDelta },
+    { label: 'Critical risks', metric: 'criticalRisks' as const, delta: trendComparison?.criticalRisksDelta },
+    { label: 'High-risk vendors', metric: 'highRiskVendors' as const, delta: trendComparison?.highRiskVendorsDelta },
+    { label: 'Missing documents', metric: 'missingDocuments' as const, delta: trendComparison?.missingDocumentsDelta },
+  ];
+
   return (
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -146,14 +188,7 @@ export function DashboardOverview({
                   </div>
                   <p className={getDeltaTone(scoreMovement, false)}>{formatDelta(scoreMovement, ' pts')} across visible history</p>
                 </div>
-                <div className="flex items-end gap-2 border-b border-white/10 pb-2">
-                  {trendHistory.map((snapshot) => (
-                    <div key={snapshot.snapshotDate} className="flex flex-1 flex-col items-center gap-2">
-                      <div className="w-full rounded-t bg-primary/70" style={{ height: `${Math.max(snapshot.complianceScore, 4)}px` }} />
-                      <span className="text-[10px] text-muted-foreground">{formatShortDate(snapshot.snapshotDate)}</span>
-                    </div>
-                  ))}
-                </div>
+                <TrendBars history={trendHistory} metric="complianceScore" maxHeight={100} />
               </div>
             )}
           </CardContent>
@@ -172,6 +207,24 @@ export function DashboardOverview({
             </ul>
           </CardContent>
         </Card>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {operationalTrends.map((trend) => (
+          <Card key={trend.label}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{trend.label} trend</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {trendHistory.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No trend history yet.</p>
+              ) : (
+                <TrendBars history={trendHistory} metric={trend.metric} maxHeight={52} />
+              )}
+              <p className={`text-xs ${getDeltaTone(trend.delta)}`}>{formatDelta(trend.delta)} vs previous snapshot</p>
+            </CardContent>
+          </Card>
+        ))}
       </section>
 
       <section className="grid gap-6 xl:grid-cols-3">
