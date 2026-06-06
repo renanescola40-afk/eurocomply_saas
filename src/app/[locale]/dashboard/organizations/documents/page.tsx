@@ -2,9 +2,10 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PlanGate } from '@/components/billing/plan-gate';
 import { CreateDocumentForm, type UploadDocumentFormInput } from '@/components/documents/create-document-form';
+import { DocumentDeleteButton } from '@/components/documents/document-delete-button';
 import { DocumentDownloadButton } from '@/components/documents/document-download-button';
 import { createDocumentSignedDownloadUrl } from '@/server/actions/document-downloads';
-import { uploadDocument } from '@/server/actions/documents';
+import { deleteDocument, uploadDocument } from '@/server/actions/documents';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
@@ -74,6 +75,26 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
     return createDocumentSignedDownloadUrl(documentId, currentOrganization.organization.id, user.id);
   }
 
+  async function deleteDocumentAction(documentId: string) {
+    'use server';
+
+    const user = await getCurrentUser();
+
+    if (!user) {
+      redirect(`/${params.locale}/login`);
+    }
+
+    const currentOrganization = await getCurrentOrganizationForUser(user.id);
+
+    if (!currentOrganization) {
+      redirect(`/${params.locale}/onboarding`);
+    }
+
+    await deleteDocument(documentId, currentOrganization.organization.id, user.id);
+    revalidatePath(`/${params.locale}/dashboard/organizations/documents`);
+    revalidatePath(`/${params.locale}/dashboard/organizations`);
+  }
+
   return (
     <main className="min-h-screen bg-[#050505] px-5 py-8 text-white lg:px-8">
       <div className="mx-auto max-w-6xl space-y-8">
@@ -117,7 +138,10 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
                           Expires {document.expires_at}
                         </span>
                       )}
-                      <DocumentDownloadButton documentId={document.id} onCreateSignedUrl={createDownloadUrlAction} />
+                      <div className="flex flex-wrap gap-2 md:justify-end">
+                        <DocumentDownloadButton documentId={document.id} onCreateSignedUrl={createDownloadUrlAction} />
+                        <DocumentDeleteButton documentId={document.id} documentName={document.name} onDelete={deleteDocumentAction} />
+                      </div>
                     </div>
                   </div>
                 </article>
