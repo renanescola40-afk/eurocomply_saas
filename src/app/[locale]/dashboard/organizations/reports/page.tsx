@@ -35,6 +35,12 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
     { label: 'Missing documents', value: summary.missingDocuments, detail: `${summary.totals.documents} total documents` },
   ];
 
+  const exportLinks = [
+    { href: '/api/reports/executive.csv', label: 'Export executive CSV' },
+    { href: '/api/reports/risks.csv', label: 'Export risks CSV' },
+    { href: '/api/reports/vendors.csv', label: 'Export vendors CSV' },
+  ];
+
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10">
       <section className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -44,12 +50,17 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
           <p className="mt-3 max-w-3xl text-muted-foreground">
             Snapshot generated on {reportDate}. Use this summary to brief leadership on compliance workload, vendor exposure, risk posture and evidence readiness.
           </p>
-          <Link
-            href="/api/reports/executive.csv"
-            className="mt-5 inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted"
-          >
-            Export CSV
-          </Link>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {exportLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
         </div>
         <div className="rounded-2xl border bg-card p-5 text-center shadow-sm">
           <p className="text-sm text-muted-foreground">Overall readiness</p>
