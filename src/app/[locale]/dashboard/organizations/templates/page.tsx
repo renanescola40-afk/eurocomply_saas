@@ -1,10 +1,10 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { COMPLIANCE_TEMPLATES } from '@/lib/compliance/templates';
-import { getCurrentUser } from '@/server/auth/user';
 import { createDocumentFromTemplate } from '@/server/actions/template-documents';
 import { createTaskFromTemplate } from '@/server/actions/template-tasks';
-import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { getCurrentUser } from '@/server/queries/auth';
+import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
 const categoryOptions = ['gdpr', 'risk', 'vendor', 'security', 'incident', 'general'];
 
@@ -24,14 +24,39 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
   async function createTemplateTask(formData: FormData) {
     'use server';
 
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      redirect(`/${params.locale}/login`);
+    }
+
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+
+    if (!currentOrganization) {
+      redirect(`/${params.locale}/onboarding`);
+    }
+
     const templateId = String(formData.get('templateId') ?? '');
-    await createTaskFromTemplate({ organizationId: organization.id, templateId }, user.id);
+    await createTaskFromTemplate({ organizationId: currentOrganization.id, templateId }, currentUser.id);
     revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
     revalidatePath(`/${params.locale}/dashboard/organizations/templates`);
+    redirect(`/${params.locale}/dashboard/organizations/tasks`);
   }
 
   async function createTemplateDocument(formData: FormData) {
     'use server';
+
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      redirect(`/${params.locale}/login`);
+    }
+
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+
+    if (!currentOrganization) {
+      redirect(`/${params.locale}/onboarding`);
+    }
 
     const templateId = String(formData.get('templateId') ?? '');
     const title = String(formData.get('title') ?? '');
@@ -41,17 +66,18 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
 
     await createDocumentFromTemplate(
       {
-        organizationId: organization.id,
+        organizationId: currentOrganization.id,
         templateId,
         title,
         category,
         owner,
         expiresAt: expiresAt || null,
       },
-      user.id,
+      currentUser.id,
     );
     revalidatePath(`/${params.locale}/dashboard/organizations/documents`);
     revalidatePath(`/${params.locale}/dashboard/organizations/templates`);
+    redirect(`/${params.locale}/dashboard/organizations/documents`);
   }
 
   return (
