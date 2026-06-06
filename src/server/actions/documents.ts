@@ -4,6 +4,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
+import { assertCurrentUserCan } from '@/server/auth/permissions';
 
 const createDocumentSchema = z.object({
   organizationId: z.string().uuid(),
@@ -28,6 +29,8 @@ export type UploadDocumentInput = z.input<typeof uploadDocumentSchema>;
 
 export async function createDocument(input: CreateDocumentInput, userId: string) {
   const payload = createDocumentSchema.parse(input);
+  await assertCurrentUserCan(payload.organizationId, userId, 'documents:write');
+
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
@@ -61,6 +64,8 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
 
 export async function uploadDocument(input: UploadDocumentInput, file: File, userId: string) {
   const payload = uploadDocumentSchema.parse(input);
+  await assertCurrentUserCan(payload.organizationId, userId, 'documents:write');
+
   const context = { area: 'document_upload', organizationId: payload.organizationId, userId };
   const rateLimit = await checkDistributedRateLimit({
     key: `document_upload:${payload.organizationId}:${userId}`,
