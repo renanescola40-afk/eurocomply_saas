@@ -7,6 +7,9 @@ const protectedRoutes = [
   '/en/dashboard/organizations/documents',
   '/en/dashboard/organizations/vendors',
   '/en/dashboard/organizations/risks',
+  '/en/dashboard/organizations/templates',
+  '/en/dashboard/organizations/reports',
+  '/en/dashboard/organizations/reports/print',
   '/en/dashboard/organizations/billing',
 ];
 
