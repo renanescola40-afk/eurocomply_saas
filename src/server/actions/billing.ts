@@ -6,21 +6,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
-
-async function requireBillingManager(supabase: ReturnType<typeof createAdminClient>, organizationId: string, userId: string) {
-  const { data: membership, error: membershipError } = await supabase
-    .from('organization_members')
-    .select('role')
-    .eq('organization_id', organizationId)
-    .eq('user_id', userId)
-    .single();
-
-  if (membershipError || !membership || !['owner', 'admin'].includes(membership.role)) {
-    throw new Error('Only organization owners and admins can manage billing');
-  }
-
-  return membership;
-}
+import { assertCurrentUserCan } from '@/server/auth/permissions';
 
 export async function createCheckoutSession(input: {
   organizationId: string;
@@ -61,9 +47,7 @@ export async function createCheckoutSession(input: {
       throw new Error('NEXT_PUBLIC_APP_URL is required');
     }
 
-    const supabase = createAdminClient();
-
-    await requireBillingManager(supabase, input.organizationId, input.userId);
+    await assertCurrentUserCan(input.organizationId, input.userId, 'billing:manage');
 
     const stripe = getStripeClient();
 
@@ -130,9 +114,9 @@ export async function createCustomerPortalSession(input: {
       throw new Error('NEXT_PUBLIC_APP_URL is required');
     }
 
-    const supabase = createAdminClient();
+    await assertCurrentUserCan(input.organizationId, input.userId, 'billing:manage');
 
-    await requireBillingManager(supabase, input.organizationId, input.userId);
+    const supabase = createAdminClient();
 
     const { data: subscription, error: subscriptionError } = await supabase
       .from('subscriptions')
