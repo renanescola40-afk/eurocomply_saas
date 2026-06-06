@@ -69,7 +69,7 @@ function localRateLimit(options: RateLimitOptions): RateLimitResult {
   };
 }
 
-async function upstashRateLimit(options: RateLimitOptions): Promise<RateLimitResult> {
+export async function checkDistributedRateLimit(options: RateLimitOptions): Promise<RateLimitResult> {
   const config = getRedisConfig();
 
   if (!config) {
@@ -80,42 +80,43 @@ async function upstashRateLimit(options: RateLimitOptions): Promise<RateLimitRes
   const redisKey = normalizeKey(options.key);
   const windowSeconds = Math.max(1, Math.ceil(options.windowMs / 1000));
 
-  const response = await fetch(`${config.url}/pipeline`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${config.token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify([
-      ['INCR', redisKey],
-      ['EXPIRE', redisKey, windowSeconds, 'NX'],
-      ['TTL', redisKey],
-    ]),
-    cache: 'no-store',
-  });
+  try {
+    const response = await fetch(`${config.url}/pipeline`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify([
+        ['INCR', redisKey],
+        ['EXPIRE', redisKey, windowSeconds, 'NX'],
+        ['TTL', redisKey],
+      ]),
+      cache: 'no-store',
+    });
 
-  if (!response.ok) {
-    console.error('Upstash rate limit request failed', response.status);
+    if (!response.ok) {
+      console.error('Upstash rate limit request failed', response.status);
+      return localRateLimit(options);
+    }
+
+    const results = (await response.json()) as UpstashPipelineResponse;
+    const count = Number(results[0]?.[1] ?? 1);
+    const ttlSeconds = Number(results[2]?.[1] ?? windowSeconds);
+    const resetAt = now + Math.max(ttlSeconds, 0) * 1000;
+
+    return {
+      allowed: count <= options.limit,
+      remaining: Math.max(options.limit - count, 0),
+      resetAt,
+    };
+  } catch (error) {
+    console.error('Upstash rate limit fallback triggered', error);
     return localRateLimit(options);
   }
-
-  const results = (await response.json()) as UpstashPipelineResponse;
-  const count = Number(results[0]?.[1] ?? 1);
-  const ttlSeconds = Number(results[2]?.[1] ?? windowSeconds);
-  const resetAt = now + Math.max(ttlSeconds, 0) * 1000;
-
-  return {
-    allowed: count <= options.limit,
-    remaining: Math.max(options.limit - count, 0),
-    resetAt,
-  };
 }
 
-export function checkRateLimit(options: RateLimitOptions): Promise<RateLimitResult> {
-  return upstashRateLimit(options);
-}
-
-export function checkLocalRateLimit(options: RateLimitOptions): RateLimitResult {
+export function checkRateLimit(options: RateLimitOptions): RateLimitResult {
   return localRateLimit(options);
 }
 
