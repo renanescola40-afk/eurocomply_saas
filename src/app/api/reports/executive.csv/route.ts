@@ -1,19 +1,11 @@
 import { NextResponse } from 'next/server';
+import { csvDownloadResponse } from '@/lib/exports/csv';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getCurrentUser } from '@/server/auth/user';
 import { getDashboardSummary } from '@/server/queries/dashboard';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-
-function csvEscape(value: string | number) {
-  const stringValue = String(value);
-  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-    return `"${stringValue.replaceAll('"', '""')}"`;
-  }
-
-  return stringValue;
-}
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -57,14 +49,7 @@ export async function GET() {
       ['Generated at', new Date().toISOString()],
     ];
 
-    const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
-
-    return new Response(csv, {
-      headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="executive-report.csv"',
-      },
-    });
+    return csvDownloadResponse(rows, 'executive-report.csv');
   } catch (error) {
     reportError(error, { area: 'executive_csv_export', organizationId: organization.id, userId: user.id });
     return NextResponse.json({ error: 'Unable to export executive report' }, { status: 500 });
