@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ComplianceCalendarPreview } from '@/components/dashboard/compliance-calendar-preview';
 import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
 import { NextBestActions } from '@/components/dashboard/next-best-actions';
@@ -177,6 +178,7 @@ export function DashboardOverview({
       <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
       <DomainScorecards summary={summary} basePath={basePath} />
       <NextBestActions summary={summary} basePath={basePath} />
+      <ComplianceCalendarPreview tasks={openTasks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {metricCards.map((metric) => (
