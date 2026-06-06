@@ -6,6 +6,8 @@ import { createDocumentFromTemplate } from '@/server/actions/template-documents'
 import { createTaskFromTemplate } from '@/server/actions/template-tasks';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 
+const categoryOptions = ['gdpr', 'risk', 'vendor', 'security', 'incident', 'general'];
+
 export default async function ComplianceTemplatesPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
 
@@ -32,7 +34,22 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
     'use server';
 
     const templateId = String(formData.get('templateId') ?? '');
-    await createDocumentFromTemplate({ organizationId: organization.id, templateId }, user.id);
+    const title = String(formData.get('title') ?? '');
+    const category = String(formData.get('category') ?? '');
+    const owner = String(formData.get('owner') ?? '');
+    const expiresAt = String(formData.get('expiresAt') ?? '');
+
+    await createDocumentFromTemplate(
+      {
+        organizationId: organization.id,
+        templateId,
+        title,
+        category,
+        owner,
+        expiresAt: expiresAt || null,
+      },
+      user.id,
+    );
     revalidatePath(`/${params.locale}/dashboard/organizations/documents`);
     revalidatePath(`/${params.locale}/dashboard/organizations/templates`);
   }
@@ -61,6 +78,20 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
               <p className="mt-1 text-sm text-muted-foreground">{template.recommendedOwner}</p>
             </div>
 
+            <details className="mt-5 rounded-xl border p-4 open:bg-muted/20">
+              <summary className="cursor-pointer text-sm font-medium">Preview generated document</summary>
+              <div className="mt-4 space-y-3 text-sm text-muted-foreground">
+                <p>The generated Markdown document includes:</p>
+                <ul className="space-y-2">
+                  <li>• Document metadata and source template tracking</li>
+                  <li>• Purpose, scope, approval and change history sections</li>
+                  {template.sections.map((section) => (
+                    <li key={section}>• {section}</li>
+                  ))}
+                </ul>
+              </div>
+            </details>
+
             <div className="mt-5">
               <p className="text-sm font-medium">Sections</p>
               <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
@@ -70,7 +101,7 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
               </ul>
             </div>
 
-            <div className="mt-6 grid gap-2">
+            <div className="mt-6 grid gap-3">
               <form action={createTemplateTask}>
                 <input type="hidden" name="templateId" value={template.id} />
                 <button
@@ -80,8 +111,29 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
                   Create compliance task
                 </button>
               </form>
-              <form action={createTemplateDocument}>
+
+              <form action={createTemplateDocument} className="grid gap-3 rounded-xl border p-3">
                 <input type="hidden" name="templateId" value={template.id} />
+                <label className="grid gap-1 text-sm">
+                  <span className="font-medium">Document title</span>
+                  <input name="title" defaultValue={template.title} className="h-10 rounded-md border bg-background px-3 text-sm" />
+                </label>
+                <label className="grid gap-1 text-sm">
+                  <span className="font-medium">Category</span>
+                  <select name="category" defaultValue={template.category} className="h-10 rounded-md border bg-background px-3 text-sm">
+                    {categoryOptions.map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1 text-sm">
+                  <span className="font-medium">Owner</span>
+                  <input name="owner" defaultValue={template.recommendedOwner} className="h-10 rounded-md border bg-background px-3 text-sm" />
+                </label>
+                <label className="grid gap-1 text-sm">
+                  <span className="font-medium">Review / expiry date</span>
+                  <input name="expiresAt" type="date" className="h-10 rounded-md border bg-background px-3 text-sm" />
+                </label>
                 <button
                   type="submit"
                   className="inline-flex h-10 w-full items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted"
