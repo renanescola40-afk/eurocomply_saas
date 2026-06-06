@@ -1,0 +1,152 @@
+import { NextResponse } from 'next/server';
+import { sendEmail } from '@/lib/email/client';
+import { trialUpgradeEmail } from '@/lib/email/templates';
+import { reportError } from '@/lib/observability/report-error';
+import { createAdminClient } from '@/lib/supabase/admin';
+
+export const runtime = 'nodejs';
+
+const TRIAL_REMINDER_DAYS = 3;
+
+function getAppUrl() {
+  return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+}
+
+function isAuthorized(request: Request) {
+  const secrets = [process.env.CRON_SECRET, process.env.INTERNAL_CRON_SECRET].filter(Boolean);
+  const authorization = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+  const internalHeader = request.headers.get('x-internal-cron-secret');
+
+  return secrets.length > 0 && secrets.some((secret) => secret === authorization || secret === internalHeader);
+}
+
+function addDays(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function daysUntil(value: string) {
+  return Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+}
+
+async function getOwnerEmail(userId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.auth.admin.getUserById(userId);
+
+  if (error) {
+    reportError(error, { area: 'trial_reminder_owner_lookup', userId });
+    return null;
+  }
+
+  return data.user?.email ?? null;
+}
+
+async function hasReminderBeenSent(organizationId: string, subscriptionId: string, recipientEmail: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('email_notification_events')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('event_type', 'billing.trial_ending')
+    .eq('entity_type', 'subscription')
+    .eq('entity_id', subscriptionId)
+    .eq('recipient_email', recipientEmail)
+    .maybeSingle();
+
+  if (error) {
+    reportError(error, { area: 'trial_reminder_dedupe_lookup', organizationId, subscriptionId });
+    return false;
+  }
+
+  return Boolean(data?.id);
+}
+
+async function recordReminderSent(organizationId: string, subscriptionId: string, recipientEmail: string, currentPeriodEnd: string) {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from('email_notification_events').insert({
+    organization_id: organizationId,
+    event_type: 'billing.trial_ending',
+    entity_type: 'subscription',
+    entity_id: subscriptionId,
+    recipient_email: recipientEmail,
+    metadata: { currentPeriodEnd },
+  });
+
+  if (error) {
+    reportError(error, { area: 'trial_reminder_dedupe_record', organizationId, subscriptionId });
+  }
+}
+
+async function sendTrialReminders() {
+  const supabase = createAdminClient();
+  const today = new Date().toISOString().slice(0, 10);
+  const reminderDate = addDays(TRIAL_REMINDER_DAYS);
+  const billingUrl = `${getAppUrl()}/dashboard/organizations/billing`;
+
+  const { data: subscriptions, error } = await supabase
+    .from('subscriptions')
+    .select('id,organization_id,current_period_end,organizations(id,name,created_by)')
+    .eq('status', 'trialing')
+    .not('current_period_end', 'is', null)
+    .gte('current_period_end', today)
+    .lte('current_period_end', reminderDate)
+    .order('current_period_end', { ascending: true });
+
+  if (error) {
+    reportError(error, { area: 'trial_reminder_job' });
+    throw error;
+  }
+
+  let sent = 0;
+  let skipped = 0;
+
+  for (const subscription of subscriptions ?? []) {
+    const organization = Array.isArray(subscription.organizations) ? subscription.organizations[0] : subscription.organizations;
+
+    if (!organization?.created_by || !subscription.current_period_end) continue;
+
+    const recipientEmail = await getOwnerEmail(organization.created_by);
+
+    if (!recipientEmail) continue;
+
+    if (await hasReminderBeenSent(subscription.organization_id, subscription.id, recipientEmail)) {
+      skipped += 1;
+      continue;
+    }
+
+    const email = trialUpgradeEmail({
+      organizationName: organization.name,
+      billingUrl,
+      daysRemaining: daysUntil(subscription.current_period_end),
+    });
+
+    try {
+      await sendEmail({ to: recipientEmail, subject: email.subject, html: email.html, text: email.text });
+      await recordReminderSent(subscription.organization_id, subscription.id, recipientEmail, subscription.current_period_end);
+      sent += 1;
+    } catch (error) {
+      reportError(error, { area: 'trial_reminder_email', subscriptionId: subscription.id, organizationId: subscription.organization_id });
+    }
+  }
+
+  return { sent, skipped };
+}
+
+export async function POST(request: Request) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const reminders = await sendTrialReminders();
+    return NextResponse.json({ ok: true, reminders });
+  } catch (error) {
+    reportError(error, { area: 'trial_reminder_job' });
+    return NextResponse.json({ error: 'Unable to send trial reminders' }, { status: 500 });
+  }
+}
+
+export async function GET(request: Request) {
+  return POST(request);
+}
