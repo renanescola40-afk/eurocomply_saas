@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TeamActionButton } from './team-action-button';
 
 export type TeamMemberItem = {
   id: string;
@@ -42,19 +42,20 @@ export function TeamManagementCard({ members, invitations, currentUserId, onRemo
               members.map((member) => {
                 const isCurrentUser = member.user_id === currentUserId;
                 const canRemove = Boolean(onRemoveMember) && !isCurrentUser;
+                const displayName = member.profiles?.full_name || (isCurrentUser ? 'You' : 'Team member');
 
                 return (
                   <div key={member.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
                     <div>
-                      <p className="text-sm font-medium">{member.profiles?.full_name || (isCurrentUser ? 'You' : 'Team member')}</p>
+                      <p className="text-sm font-medium">{displayName}</p>
                       <p className="text-xs text-muted-foreground">Role: {member.role}</p>
                     </div>
                     {canRemove && (
                       <form action={onRemoveMember}>
                         <input type="hidden" name="memberId" value={member.id} />
-                        <Button type="submit" variant="outline" size="sm">
+                        <TeamActionButton message={`Remove ${displayName} from this organization?`}>
                           Remove
-                        </Button>
+                        </TeamActionButton>
                       </form>
                     )}
                   </div>
@@ -79,9 +80,9 @@ export function TeamManagementCard({ members, invitations, currentUserId, onRemo
                   {onCancelInvitation && (
                     <form action={onCancelInvitation}>
                       <input type="hidden" name="invitationId" value={invitation.id} />
-                      <Button type="submit" variant="outline" size="sm">
+                      <TeamActionButton message={`Cancel the invitation for ${invitation.email}?`}>
                         Cancel
-                      </Button>
+                      </TeamActionButton>
                     </form>
                   )}
                 </div>
