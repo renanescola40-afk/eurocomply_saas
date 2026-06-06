@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DashboardSummary, DashboardTrendComparison, DashboardTrendSnapshot } from '@/server/queries/dashboard';
@@ -173,6 +174,7 @@ export function DashboardOverview({
   return (
     <div className="space-y-6">
       <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
+      <DomainScorecards summary={summary} basePath={basePath} />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {metricCards.map((metric) => (
