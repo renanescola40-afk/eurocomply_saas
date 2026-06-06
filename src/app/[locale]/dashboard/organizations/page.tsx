@@ -28,6 +28,8 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
     redirect(`/${params.locale}/onboarding`);
   }
 
+  const dashboardBasePath = `/${params.locale}/dashboard/organizations`;
+
   return (
     <main className="min-h-screen bg-background px-6 py-8">
       <div className="mx-auto max-w-7xl space-y-8">
@@ -54,6 +56,7 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
           tasks={data.tasks}
           trendHistory={data.trendHistory}
           trendComparison={data.trendComparison}
+          basePath={dashboardBasePath}
           topRisks={data.topRisks}
           vendorsRequiringReview={data.vendorsRequiringReview}
           documentsExpiringSoon={data.documentsExpiringSoon}
