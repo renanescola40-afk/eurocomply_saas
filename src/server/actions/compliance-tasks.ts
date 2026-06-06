@@ -74,3 +74,29 @@ export async function updateComplianceTask(taskId: string, organizationId: strin
 
   return task;
 }
+
+export async function deleteComplianceTask(taskId: string, organizationId: string, userId: string) {
+  await assertCurrentUserCan(organizationId, userId, 'tasks:delete');
+
+  const supabase = createAdminClient();
+  const { data: task, error } = await supabase
+    .from('compliance_tasks')
+    .delete()
+    .eq('id', taskId)
+    .eq('organization_id', organizationId)
+    .select('id,title')
+    .single();
+
+  if (error) throw error;
+
+  await logAuditEvent({
+    organizationId,
+    actorUserId: userId,
+    action: 'compliance_task.deleted',
+    entityType: 'compliance_task',
+    entityId: taskId,
+    metadata: { title: task.title },
+  });
+
+  return task;
+}
