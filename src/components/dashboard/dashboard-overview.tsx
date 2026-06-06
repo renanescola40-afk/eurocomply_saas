@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DashboardSummary, DashboardTrendComparison, DashboardTrendSnapshot } from '@/server/queries/dashboard';
 
@@ -171,6 +172,8 @@ export function DashboardOverview({
 
   return (
     <div className="space-y-6">
+      <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {metricCards.map((metric) => (
           <Link key={metric.label} href={metric.href} className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
