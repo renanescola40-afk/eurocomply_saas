@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from '@sentry/nextjs';
 import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n.ts');
@@ -12,7 +13,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://images.pexels.com https://images.unsplash.com https://chat2db-cdn.oss-us-west-1.aliyuncs.com https://cdn.chat2db-ai.com",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co https://api.stripe.com https://checkout.stripe.com",
+      "connect-src 'self' https://*.supabase.co https://api.stripe.com https://checkout.stripe.com https://*.sentry.io https://*.ingest.sentry.io",
       "frame-src https://js.stripe.com https://checkout.stripe.com",
       "object-src 'none'",
       "base-uri 'self'",
@@ -53,4 +54,14 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+const nextIntlConfig = withNextIntl(nextConfig);
+
+export default withSentryConfig(nextIntlConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  tunnelRoute: '/monitoring',
+  disableLogger: true,
+});
