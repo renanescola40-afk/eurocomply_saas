@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
+import { NextBestActions } from '@/components/dashboard/next-best-actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DashboardSummary, DashboardTrendComparison, DashboardTrendSnapshot } from '@/server/queries/dashboard';
 
@@ -175,6 +176,7 @@ export function DashboardOverview({
     <div className="space-y-6">
       <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
       <DomainScorecards summary={summary} basePath={basePath} />
+      <NextBestActions summary={summary} basePath={basePath} />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {metricCards.map((metric) => (
@@ -193,7 +195,7 @@ export function DashboardOverview({
         ))}
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <section>
         <Card>
           <CardHeader>
             <CardTitle>Compliance score trend</CardTitle>
@@ -213,20 +215,6 @@ export function DashboardOverview({
                 <TrendBars history={trendHistory} metric="complianceScore" maxHeight={100} />
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Operational recommendations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li>Prioritize {summary.criticalRisks} critical risks before adding new compliance work.</li>
-              <li>Review {summary.highRiskVendors} high-risk vendors and collect missing DPA/security evidence.</li>
-              <li>Close or reassign the oldest open tasks to improve execution velocity.</li>
-              <li>Complete {summary.missingDocuments} missing document approvals to improve evidence readiness.</li>
-            </ul>
           </CardContent>
         </Card>
       </section>
