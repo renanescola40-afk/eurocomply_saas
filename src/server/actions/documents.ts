@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DOCUMENT_BUCKET, buildDocumentStoragePath, validateDocumentFile } from '@/lib/documents/upload';
+import { reportError } from '@/lib/observability/report-error';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
@@ -59,6 +60,7 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
 
 export async function uploadDocument(input: UploadDocumentInput, file: File, userId: string) {
   const payload = uploadDocumentSchema.parse(input);
+  const context = { area: 'document_upload', organizationId: payload.organizationId, userId };
   const rateLimit = checkRateLimit({
     key: `document_upload:${payload.organizationId}:${userId}`,
     limit: 20,
@@ -66,13 +68,17 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
   });
 
   if (!rateLimit.allowed) {
-    throw new Error('Too many document uploads. Please try again later.');
+    const error = new Error('Too many document uploads. Please try again later.');
+    reportError(error, context);
+    throw error;
   }
 
   const validationError = validateDocumentFile(file);
 
   if (validationError) {
-    throw new Error(validationError);
+    const error = new Error(validationError);
+    reportError(error, { ...context, fileType: file.type, fileSize: file.size });
+    throw error;
   }
 
   const supabase = createAdminClient();
@@ -87,7 +93,10 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
     upsert: false,
   });
 
-  if (uploadError) throw uploadError;
+  if (uploadError) {
+    reportError(uploadError, { ...context, fileType: file.type, fileSize: file.size });
+    throw uploadError;
+  }
 
   try {
     return await createDocument(
@@ -103,6 +112,7 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
       userId,
     );
   } catch (error) {
+    reportError(error, { ...context, fileType: file.type, fileSize: file.size });
     await supabase.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
     throw error;
   }
