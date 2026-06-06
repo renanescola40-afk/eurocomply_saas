@@ -12,6 +12,28 @@ type DashboardOverviewProps = {
   }>;
   trendHistory?: DashboardTrendSnapshot[];
   trendComparison?: DashboardTrendComparison;
+  topRisks?: Array<{
+    id: string;
+    title?: string | null;
+    status?: string | null;
+    risk_score?: number | string | null;
+    category?: string | null;
+  }>;
+  vendorsRequiringReview?: Array<{
+    id: string;
+    name?: string | null;
+    risk_level?: string | null;
+    review_status?: string | null;
+    next_review_at?: string | null;
+  }>;
+  documentsExpiringSoon?: Array<{
+    id: string;
+    title?: string | null;
+    name?: string | null;
+    status?: string | null;
+    expires_at?: string | null;
+    category?: string | null;
+  }>;
 };
 
 function formatDelta(value: number | null | undefined, suffix = '') {
@@ -26,11 +48,27 @@ function getDeltaTone(value: number | null | undefined, lowerIsBetter = true) {
   return isGood ? 'text-emerald-400' : 'text-red-400';
 }
 
-function formatSnapshotDate(value: string) {
+function formatShortDate(value?: string | null) {
+  if (!value) return 'not set';
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(new Date(value));
 }
 
-export function DashboardOverview({ summary, tasks, trendHistory = [], trendComparison }: DashboardOverviewProps) {
+function getRiskTone(score?: number | string | null) {
+  const value = Number(score ?? 0);
+  if (value >= 16) return 'text-red-400';
+  if (value >= 9) return 'text-amber-300';
+  return 'text-muted-foreground';
+}
+
+export function DashboardOverview({
+  summary,
+  tasks,
+  trendHistory = [],
+  trendComparison,
+  topRisks = [],
+  vendorsRequiringReview = [],
+  documentsExpiringSoon = [],
+}: DashboardOverviewProps) {
   const openTasks = tasks.filter((task) => task.status !== 'done').slice(0, 5);
   const latestScore = trendHistory.at(-1)?.complianceScore ?? summary.complianceScore;
   const firstScore = trendHistory.at(0)?.complianceScore ?? latestScore;
@@ -112,7 +150,7 @@ export function DashboardOverview({ summary, tasks, trendHistory = [], trendComp
                   {trendHistory.map((snapshot) => (
                     <div key={snapshot.snapshotDate} className="flex flex-1 flex-col items-center gap-2">
                       <div className="w-full rounded-t bg-primary/70" style={{ height: `${Math.max(snapshot.complianceScore, 4)}px` }} />
-                      <span className="text-[10px] text-muted-foreground">{formatSnapshotDate(snapshot.snapshotDate)}</span>
+                      <span className="text-[10px] text-muted-foreground">{formatShortDate(snapshot.snapshotDate)}</span>
                     </div>
                   ))}
                 </div>
@@ -136,6 +174,86 @@ export function DashboardOverview({ summary, tasks, trendHistory = [], trendComp
         </Card>
       </section>
 
+      <section className="grid gap-6 xl:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Top risks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topRisks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No open risks requiring executive attention.</p>
+            ) : (
+              <div className="space-y-3">
+                {topRisks.map((risk) => (
+                  <div key={risk.id} className="rounded-lg border p-3 text-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{risk.title ?? 'Untitled risk'}</p>
+                        <p className="text-muted-foreground">{risk.category ?? 'General'} · {risk.status ?? 'open'}</p>
+                      </div>
+                      <p className={`font-semibold ${getRiskTone(risk.risk_score)}`}>{Number(risk.risk_score ?? 0)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Vendors requiring review</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {vendorsRequiringReview.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No vendor reviews currently require attention.</p>
+            ) : (
+              <div className="space-y-3">
+                {vendorsRequiringReview.map((vendor) => (
+                  <div key={vendor.id} className="rounded-lg border p-3 text-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{vendor.name ?? 'Unnamed vendor'}</p>
+                        <p className="text-muted-foreground">Review {formatShortDate(vendor.next_review_at)}</p>
+                      </div>
+                      <div className="text-right text-xs uppercase tracking-wide text-muted-foreground">
+                        <p>{vendor.risk_level ?? 'unknown'}</p>
+                        <p>{vendor.review_status ?? 'pending'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Documents expiring soon</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {documentsExpiringSoon.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No upcoming document expirations found.</p>
+            ) : (
+              <div className="space-y-3">
+                {documentsExpiringSoon.map((document) => (
+                  <div key={document.id} className="rounded-lg border p-3 text-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{document.title ?? document.name ?? 'Untitled document'}</p>
+                        <p className="text-muted-foreground">{document.category ?? 'General'} · {document.status ?? 'draft'}</p>
+                      </div>
+                      <p className="text-right text-xs font-semibold uppercase tracking-wide text-amber-300">{formatShortDate(document.expires_at)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
       <Card>
         <CardHeader>
           <CardTitle>Open task focus</CardTitle>
@@ -149,7 +267,7 @@ export function DashboardOverview({ summary, tasks, trendHistory = [], trendComp
                 <div key={task.id} className="flex items-center justify-between gap-4 rounded-lg border p-3 text-sm">
                   <div>
                     <p className="font-medium">{task.title ?? 'Untitled task'}</p>
-                    <p className="text-muted-foreground">Due {task.due_date ? formatSnapshotDate(task.due_date) : 'not set'}</p>
+                    <p className="text-muted-foreground">Due {formatShortDate(task.due_date)}</p>
                   </div>
                   <div className="text-right text-xs uppercase tracking-wide text-muted-foreground">
                     <p>{task.priority ?? 'normal'}</p>
