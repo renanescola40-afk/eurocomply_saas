@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PublicFooter } from '@/components/marketing/public-footer';
 
 const features = [
   {
@@ -131,12 +132,13 @@ export default function HomePage({ params }: { params: { locale: string } }) {
               </article>
             ))}
           </div>
+          <Link href={`/${params.locale}/faq`} className="mt-8 inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted">
+            Read full FAQ
+          </Link>
         </div>
       </section>
 
-      <section className="border-t px-6 py-10 text-center text-sm text-muted-foreground">
-        <p>EuroComply — compliance evidence, risk and vendor operations for modern teams.</p>
-      </section>
+      <PublicFooter locale={params.locale} />
     </main>
   );
 }
