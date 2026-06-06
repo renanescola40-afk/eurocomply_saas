@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -77,10 +78,15 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
   return (
     <main className="min-h-screen bg-[#050505] px-5 py-8 text-white lg:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-col gap-2">
-          <p className="text-sm uppercase tracking-[0.24em] text-white/40">{organization.name}</p>
-          <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Compliance tasks</h1>
-          <p className="max-w-2xl text-white/55">Track requirements, owners, priorities and deadlines for your compliance program.</p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.24em] text-white/40">{organization.name}</p>
+            <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Compliance tasks</h1>
+            <p className="max-w-2xl text-white/55">Track requirements, owners, priorities and deadlines for your compliance program.</p>
+          </div>
+          <Link href="/api/reports/tasks.csv" className="inline-flex h-10 items-center justify-center rounded-md border border-white/15 px-4 text-sm font-medium hover:bg-white/10">
+            Export CSV
+          </Link>
         </div>
 
         <CreateComplianceTaskForm onSubmit={handleCreateTask} />
