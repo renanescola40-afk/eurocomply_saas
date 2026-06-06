@@ -37,6 +37,7 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
 
   const exportLinks = [
     { href: '/api/reports/executive.csv', label: 'Export executive CSV' },
+    { href: '/api/reports/tasks.csv', label: 'Export tasks CSV' },
     { href: '/api/reports/risks.csv', label: 'Export risks CSV' },
     { href: '/api/reports/vendors.csv', label: 'Export vendors CSV' },
     { href: '/api/reports/documents.csv', label: 'Export documents CSV' },
