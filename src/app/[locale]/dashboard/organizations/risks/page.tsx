@@ -2,8 +2,9 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PlanGate } from '@/components/billing/plan-gate';
 import { CreateRiskForm, type CreateRiskFormInput } from '@/components/risks/create-risk-form';
+import { DeleteRecordButton } from '@/components/shared/delete-record-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { createRisk } from '@/server/actions/risks';
+import { createRisk, deleteRisk } from '@/server/actions/risks';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
@@ -30,13 +31,46 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
   async function createRiskAction(input: CreateRiskFormInput) {
     'use server';
 
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      redirect(`/${params.locale}/login`);
+    }
+
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+
+    if (!currentOrganization) {
+      redirect(`/${params.locale}/onboarding`);
+    }
+
     await createRisk(
       {
         ...input,
-        organizationId: organization!.id,
+        organizationId: currentOrganization.id,
       },
-      user!.id,
+      currentUser.id,
     );
+
+    revalidatePath(`/${params.locale}/dashboard/organizations/risks`);
+    revalidatePath(`/${params.locale}/dashboard/organizations`);
+  }
+
+  async function deleteRiskAction(riskId: string) {
+    'use server';
+
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      redirect(`/${params.locale}/login`);
+    }
+
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+
+    if (!currentOrganization) {
+      redirect(`/${params.locale}/onboarding`);
+    }
+
+    await deleteRisk(riskId, currentOrganization.id, currentUser.id);
 
     revalidatePath(`/${params.locale}/dashboard/organizations/risks`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
@@ -66,15 +100,18 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
             <div className="space-y-3">
               {risks.map((risk) => (
                 <div key={risk.id} className="rounded-lg border p-4">
-                  <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <h2 className="font-medium">{risk.title}</h2>
                       {risk.description && <p className="mt-1 text-sm text-muted-foreground">{risk.description}</p>}
                       {risk.category && <p className="mt-1 text-xs text-muted-foreground">Category: {risk.category}</p>}
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      <p>Score: {risk.risk_score ?? risk.likelihood * risk.impact}</p>
-                      <p>Status: {risk.status}</p>
+                    <div className="flex flex-col items-start gap-2 text-sm text-muted-foreground md:items-end">
+                      <div className="text-right">
+                        <p>Score: {risk.risk_score ?? risk.likelihood * risk.impact}</p>
+                        <p>Status: {risk.status}</p>
+                      </div>
+                      <DeleteRecordButton id={risk.id} label={risk.title} resourceName="risk" onDelete={deleteRiskAction} />
                     </div>
                   </div>
                 </div>
