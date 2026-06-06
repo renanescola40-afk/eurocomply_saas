@@ -1,7 +1,9 @@
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export type TeamMemberItem = {
   id: string;
+  user_id?: string | null;
   role: string;
   created_at?: string | null;
   profiles?: {
@@ -19,9 +21,12 @@ export type PendingInvitationItem = {
 type TeamManagementCardProps = {
   members: TeamMemberItem[];
   invitations: PendingInvitationItem[];
+  currentUserId?: string;
+  onRemoveMember?: (formData: FormData) => Promise<void> | void;
+  onCancelInvitation?: (formData: FormData) => Promise<void> | void;
 };
 
-export function TeamManagementCard({ members, invitations }: TeamManagementCardProps) {
+export function TeamManagementCard({ members, invitations, currentUserId, onRemoveMember, onCancelInvitation }: TeamManagementCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -34,14 +39,27 @@ export function TeamManagementCard({ members, invitations }: TeamManagementCardP
             {members.length === 0 ? (
               <p className="text-sm text-muted-foreground">No team members found.</p>
             ) : (
-              members.map((member) => (
-                <div key={member.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <div>
-                    <p className="text-sm font-medium">{member.profiles?.full_name || 'Team member'}</p>
-                    <p className="text-xs text-muted-foreground">Role: {member.role}</p>
+              members.map((member) => {
+                const isCurrentUser = member.user_id === currentUserId;
+                const canRemove = Boolean(onRemoveMember) && !isCurrentUser;
+
+                return (
+                  <div key={member.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                    <div>
+                      <p className="text-sm font-medium">{member.profiles?.full_name || (isCurrentUser ? 'You' : 'Team member')}</p>
+                      <p className="text-xs text-muted-foreground">Role: {member.role}</p>
+                    </div>
+                    {canRemove && (
+                      <form action={onRemoveMember}>
+                        <input type="hidden" name="memberId" value={member.id} />
+                        <Button type="submit" variant="outline" size="sm">
+                          Remove
+                        </Button>
+                      </form>
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </section>
@@ -53,11 +71,19 @@ export function TeamManagementCard({ members, invitations }: TeamManagementCardP
               <p className="text-sm text-muted-foreground">No pending invitations.</p>
             ) : (
               invitations.map((invitation) => (
-                <div key={invitation.id} className="flex items-center justify-between rounded-lg border p-3">
+                <div key={invitation.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
                   <div>
                     <p className="text-sm font-medium">{invitation.email}</p>
                     <p className="text-xs text-muted-foreground">Role: {invitation.role}</p>
                   </div>
+                  {onCancelInvitation && (
+                    <form action={onCancelInvitation}>
+                      <input type="hidden" name="invitationId" value={invitation.id} />
+                      <Button type="submit" variant="outline" size="sm">
+                        Cancel
+                      </Button>
+                    </form>
+                  )}
                 </div>
               ))
             )}
