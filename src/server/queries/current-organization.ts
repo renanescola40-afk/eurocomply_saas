@@ -1,5 +1,58 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 
+type RawOrganizationMembership = {
+  organization_id: string;
+  role: string;
+  organizations:
+    | {
+        id: string;
+        name: string;
+        slug: string | null;
+      }
+    | Array<{
+        id: string;
+        name: string;
+        slug: string | null;
+      }>
+    | null;
+};
+
+export type CurrentOrganizationMembership = {
+  organization_id: string;
+  id: string;
+  role: string;
+  name: string;
+  slug: string | null;
+  organization: {
+    id: string;
+    name: string;
+    slug: string | null;
+  };
+  organizations: {
+    id: string;
+    name: string;
+    slug: string | null;
+  };
+};
+
+function normalizeMembership(membership: RawOrganizationMembership): CurrentOrganizationMembership | null {
+  const organization = Array.isArray(membership.organizations) ? membership.organizations[0] : membership.organizations;
+
+  if (!organization) {
+    return null;
+  }
+
+  return {
+    organization_id: membership.organization_id,
+    id: organization.id,
+    role: membership.role,
+    name: organization.name,
+    slug: organization.slug,
+    organization,
+    organizations: organization,
+  };
+}
+
 export async function getUserOrganizationMemberships(userId: string) {
   const supabase = createAdminClient();
 
@@ -13,20 +66,16 @@ export async function getUserOrganizationMemberships(userId: string) {
     throw error;
   }
 
-  return data ?? [];
+  return ((data ?? []) as RawOrganizationMembership[])
+    .map(normalizeMembership)
+    .filter((membership): membership is CurrentOrganizationMembership => Boolean(membership));
 }
 
 export async function getCurrentOrganizationForUser(userId: string, slug?: string) {
   const memberships = await getUserOrganizationMemberships(userId);
 
   if (slug) {
-    return memberships.find((membership) => {
-      const organization = Array.isArray(membership.organizations)
-        ? membership.organizations[0]
-        : membership.organizations;
-
-      return organization?.slug === slug;
-    }) ?? null;
+    return memberships.find((membership) => membership.slug === slug) ?? null;
   }
 
   return memberships[0] ?? null;
