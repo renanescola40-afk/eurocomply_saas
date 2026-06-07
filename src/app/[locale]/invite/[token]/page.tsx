@@ -14,6 +14,10 @@ export default async function AcceptInvitationPage({ params }: AcceptInvitationP
   const invitation = await getInvitationByToken(params.token);
   const canAccept = canAcceptInvitation(invitation);
   const user = await getCurrentUser();
+  const organization = Array.isArray(invitation?.organizations)
+    ? invitation?.organizations[0]
+    : invitation?.organizations;
+  const organizationName = organization?.name ?? 'EuroComply organization';
 
   async function acceptCurrentInvitation() {
     'use server';
@@ -42,7 +46,7 @@ export default async function AcceptInvitationPage({ params }: AcceptInvitationP
       <div className="w-full max-w-lg">
         <AcceptInvitationCard
           email={invitation?.email ?? 'Unknown invitee'}
-          organizationName={invitation?.organizations?.name ?? 'EuroComply organization'}
+          organizationName={organizationName}
           disabled={!canAccept}
           onAccept={acceptCurrentInvitation}
         />
