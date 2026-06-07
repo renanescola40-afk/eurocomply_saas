@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Download, FileArchive, FileText, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, FileArchive, FileCheck2, FileText, PackageCheck, ShieldCheck, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -151,60 +151,82 @@ export default function AuditPackPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.24),transparent_34rem)]" />
+    <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(37,99,235,0.28),transparent_34rem),radial-gradient(circle_at_90%_15%,rgba(16,185,129,0.12),transparent_24rem)]" />
       <div className="relative mx-auto max-w-7xl px-5 py-8 lg:px-8">
-        <Button variant="ghost" onClick={() => router.push(`/${locale}/dashboard`)} className="mb-6 text-white/70 hover:text-white">
+        <Button variant="ghost" onClick={() => router.push(`/${locale}/dashboard`)} className="mb-6 text-white/70 hover:bg-white/5 hover:text-white">
           <ArrowLeft className="mr-2 h-4 w-4" /> {t.back}
         </Button>
 
-        <section className="mb-8 rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-7 shadow-2xl shadow-blue-950/20">
-          <Badge className="mb-4 border-white/10 bg-white/[0.06] text-white/70">{t.badge}</Badge>
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <section className="mb-8 overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-2xl shadow-blue-950/20 backdrop-blur">
+          <div className="grid gap-8 p-7 lg:grid-cols-[1.2fr_0.8fr] lg:p-9">
             <div>
+              <Badge className="mb-5 border-white/10 bg-white/[0.06] text-white/70">
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" /> {t.badge}
+              </Badge>
               <h1 className="max-w-4xl text-4xl font-semibold tracking-tight md:text-6xl">{t.title}</h1>
-              <p className="mt-4 max-w-2xl text-lg leading-8 text-white/58">{t.subtitle}</p>
+              <p className="mt-5 max-w-2xl text-lg leading-8 text-white/58">{t.subtitle}</p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Button onClick={generatePack} disabled={loading} className="bg-white text-black hover:bg-white/90 disabled:opacity-60">
+                  <FileArchive className="mr-2 h-4 w-4" /> {loading ? '...' : t.generate}
+                </Button>
+                <Button onClick={exportPack} disabled={!data} variant="outline" className="border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white disabled:opacity-60">
+                  <Download className="mr-2 h-4 w-4" /> {t.export}
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <Button onClick={generatePack} disabled={loading} className="bg-white text-black hover:bg-white/90 disabled:opacity-60">
-                <FileArchive className="mr-2 h-4 w-4" /> {loading ? '...' : t.generate}
-              </Button>
-              <Button onClick={exportPack} disabled={!data} variant="outline" className="border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:text-white disabled:opacity-60">
-                <Download className="mr-2 h-4 w-4" /> {t.export}
-              </Button>
-            </div>
+
+            <Card className="border-white/10 bg-black/20 text-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl"><PackageCheck className="h-5 w-5 text-blue-200" /> Audit packet status</CardTitle>
+                <CardDescription className="text-white/50">Board-ready export assembled from live compliance evidence.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-3 gap-3">
+                <MiniSignal label={t.score} value={data ? `${data.complianceScore}%` : '--'} />
+                <MiniSignal label={t.readiness} value={data ? `${data.auditReadiness}%` : '--'} />
+                <MiniSignal label={t.evidence} value={data ? `${data.evidenceCoverage}%` : '--'} />
+              </CardContent>
+            </Card>
           </div>
         </section>
 
         {!data ? (
           <Card className="border-white/10 bg-white/[0.045] text-white">
-            <CardContent className="py-12 text-center text-white/48">{t.empty}</CardContent>
+            <CardContent className="py-14 text-center">
+              <FileArchive className="mx-auto h-10 w-10 text-white/35" />
+              <p className="mt-4 text-white/55">{t.empty}</p>
+            </CardContent>
           </Card>
         ) : (
           <>
             <div className="grid gap-4 md:grid-cols-5">
-              <MetricCard label={t.score} value={`${data.complianceScore}%`} icon={<ShieldCheck className="h-4 w-4" />} progress={data.complianceScore} />
-              <MetricCard label={t.readiness} value={`${data.auditReadiness}%`} icon={<ShieldCheck className="h-4 w-4" />} progress={data.auditReadiness} />
-              <MetricCard label={t.findings} value={data.criticalFindings} icon={<FileText className="h-4 w-4" />} />
-              <MetricCard label={t.tasks} value={data.openTasks} icon={<FileText className="h-4 w-4" />} />
-              <MetricCard label={t.evidence} value={`${data.evidenceCoverage}%`} icon={<FileText className="h-4 w-4" />} progress={data.evidenceCoverage} />
+              <MetricCard label={t.score} value={`${data.complianceScore}%`} icon={<ShieldCheck className="h-4 w-4" />} progress={data.complianceScore} tone="blue" />
+              <MetricCard label={t.readiness} value={`${data.auditReadiness}%`} icon={<PackageCheck className="h-4 w-4" />} progress={data.auditReadiness} tone="emerald" />
+              <MetricCard label={t.findings} value={data.criticalFindings} icon={<FileText className="h-4 w-4" />} tone="red" />
+              <MetricCard label={t.tasks} value={data.openTasks} icon={<FileCheck2 className="h-4 w-4" />} tone="amber" />
+              <MetricCard label={t.evidence} value={`${data.evidenceCoverage}%`} icon={<ShieldCheck className="h-4 w-4" />} progress={data.evidenceCoverage} tone="violet" />
             </div>
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
               <AuditList title={t.openFindings} items={data.findings.map((finding) => `${finding.article} • ${finding.severity} • ${finding.title}`)} />
               <AuditList title={t.openTasks} items={data.tasks.map((task) => `${task.priority} • ${task.status} • ${task.title}`)} />
             </div>
 
-            <Card className="mt-6 border-white/10 bg-white/[0.045] text-white">
-              <CardHeader>
-                <CardTitle>{t.register}</CardTitle>
-                <CardDescription className="text-white/48">{data.evidenceTotal} evidence items • {data.evidenceValid} valid</CardDescription>
+            <Card className="mt-6 overflow-hidden border-white/10 bg-white/[0.045] text-white">
+              <CardHeader className="flex flex-col gap-3 border-b border-white/10 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle>{t.register}</CardTitle>
+                  <CardDescription className="mt-1 text-white/48">{data.evidenceTotal} evidence items • {data.evidenceValid} valid</CardDescription>
+                </div>
+                <Button onClick={exportPack} disabled={!data} className="bg-white text-black hover:bg-white/90 disabled:opacity-60">
+                  <Download className="mr-2 h-4 w-4" /> {t.export}
+                </Button>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 p-5">
                 {data.evidence.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-white/48">{t.empty}</p>
+                  <p className="py-8 text-center text-sm text-white/48">{t.empty}</p>
                 ) : data.evidence.map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div key={item.id} className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-blue-300/30">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="font-medium">{item.title}</p>
@@ -228,15 +250,32 @@ export default function AuditPackPage() {
   );
 }
 
-function MetricCard({ label, value, icon, progress }: { label: string; value: string | number; icon: React.ReactNode; progress?: number }) {
+function MiniSignal({ label, value }: { label: string; value: string }) {
   return (
-    <Card className="border-white/10 bg-white/[0.045] text-white">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-3">
+      <p className="text-[10px] uppercase tracking-[0.18em] text-white/38">{label}</p>
+      <p className="mt-2 text-lg font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function MetricCard({ label, value, icon, progress, tone }: { label: string; value: string | number; icon: ReactNode; progress?: number; tone: 'blue' | 'emerald' | 'red' | 'amber' | 'violet' }) {
+  const toneClass = {
+    blue: 'from-blue-500/20 to-cyan-500/5 text-blue-200',
+    emerald: 'from-emerald-500/20 to-teal-500/5 text-emerald-200',
+    red: 'from-red-500/20 to-rose-500/5 text-red-200',
+    amber: 'from-amber-500/20 to-orange-500/5 text-amber-200',
+    violet: 'from-violet-500/20 to-fuchsia-500/5 text-violet-200',
+  }[tone];
+
+  return (
+    <Card className={`border-white/10 bg-gradient-to-br ${toneClass}`}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-white/48">{label}</CardTitle>
-        <span className="text-blue-200">{icon}</span>
+        <CardTitle className="text-sm font-medium text-white/58">{label}</CardTitle>
+        <span>{icon}</span>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-2xl font-bold text-white">{value}</div>
         {typeof progress === 'number' && <Progress value={progress} className="mt-3 h-2" />}
       </CardContent>
     </Card>
@@ -251,11 +290,14 @@ function AuditList({ title, items }: { title: string; items: string[] }) {
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <p className="text-sm text-white/48">None</p>
+          <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-4 text-sm text-white/48">None</p>
         ) : (
           <div className="space-y-3">
             {items.map((item, index) => (
-              <div key={`${item}-${index}`} className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70">{item}</div>
+              <div key={`${item}-${index}`} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs">{index + 1}</span>
+                <span>{item}</span>
+              </div>
             ))}
           </div>
         )}
