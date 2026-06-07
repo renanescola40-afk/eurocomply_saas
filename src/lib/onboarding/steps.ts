@@ -1,5 +1,13 @@
 export type OnboardingStepStatus = 'pending' | 'complete';
 
+export type OnboardingState = {
+  hasOrganization: boolean;
+  hasMembers: boolean;
+  hasComplianceTasks: boolean;
+  hasDocuments: boolean;
+  hasVendors: boolean;
+};
+
 export type OnboardingStep = {
   id: string;
   title: string;
@@ -7,13 +15,7 @@ export type OnboardingStep = {
   status: OnboardingStepStatus;
 };
 
-export function buildOnboardingSteps(input: {
-  hasOrganization: boolean;
-  hasMembers: boolean;
-  hasComplianceTasks: boolean;
-  hasDocuments: boolean;
-  hasVendors: boolean;
-}): OnboardingStep[] {
+export function buildOnboardingSteps(input: OnboardingState): OnboardingStep[] {
   return [
     {
       id: 'create-organization',
