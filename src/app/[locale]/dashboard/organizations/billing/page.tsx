@@ -30,10 +30,10 @@ function formatStatus(status: string | null) {
 }
 
 function getStatusTone(status: string | null) {
-  if (status === 'active' || status === 'trialing') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
-  if (status === 'past_due' || status === 'unpaid' || status === 'incomplete') return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
-  if (status === 'canceled' || status === 'incomplete_expired') return 'border-red-500/30 bg-red-500/10 text-red-300';
-  return 'border-slate-500/30 bg-slate-500/10 text-slate-300';
+  if (status === 'active' || status === 'trialing') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200';
+  if (status === 'past_due' || status === 'unpaid' || status === 'incomplete') return 'border-amber-500/30 bg-amber-500/10 text-amber-200';
+  if (status === 'canceled' || status === 'incomplete_expired') return 'border-rose-500/30 bg-rose-500/10 text-rose-200';
+  return 'border-slate-500/30 bg-slate-500/10 text-slate-200';
 }
 
 function getUsagePercent(current: number, limit: number) {
@@ -45,25 +45,35 @@ function getUsageMessage(current: number, limit: number) {
   const percent = getUsagePercent(current, limit);
 
   if (percent >= 100) return 'Limit reached';
-  if (percent >= 80) return 'Close to limit';
+  if (percent >= 80) return 'Upgrade recommended';
   return 'Healthy usage';
+}
+
+function getUsageTone(percent: number) {
+  if (percent >= 100) return 'bg-rose-400 text-rose-200';
+  if (percent >= 80) return 'bg-amber-300 text-amber-200';
+  return 'bg-emerald-400 text-emerald-200';
 }
 
 function UsageMeter({ label, current, limit }: { label: string; current: number; limit: number }) {
   const percent = getUsagePercent(current, limit);
   const message = getUsageMessage(current, limit);
-  const tone = percent >= 100 ? 'text-red-300' : percent >= 80 ? 'text-amber-300' : 'text-muted-foreground';
+  const barTone = getUsageTone(percent).split(' ')[0];
+  const textTone = getUsageTone(percent).split(' ')[1];
 
   return (
-    <div className="space-y-2 rounded-xl border p-4">
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="font-medium">{label}</span>
-        <span className="text-muted-foreground">{current} / {limit}</span>
+    <div className="rounded-3xl border bg-card p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+          <p className="mt-2 text-2xl font-bold">{current} / {limit}</p>
+        </div>
+        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${textTone}`}>{message}</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
+        <div className={`h-full rounded-full ${barTone}`} style={{ width: `${percent}%` }} />
       </div>
-      <p className={`text-xs ${tone}`}>{message}</p>
+      <p className="mt-3 text-sm text-muted-foreground">{percent}% used</p>
     </div>
   );
 }
@@ -110,6 +120,8 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
     { label: 'Vendors', current: billing.usage.vendors, limit: currentPlan.limits.vendors },
     { label: 'Risks', current: billing.usage.risks, limit: currentPlan.limits.risks },
   ];
+  const highestUsage = Math.max(...usageMeters.map((meter) => getUsagePercent(meter.current, meter.limit)));
+  const upgradeRecommended = highestUsage >= 80;
 
   async function startCheckout(formData: FormData) {
     'use server';
@@ -164,13 +176,46 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
-      <section className="flex flex-col gap-2">
-        <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Billing</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Manage EuroComply billing</h1>
-        <p className="max-w-2xl text-muted-foreground">
-          Manage subscription access for {organization.name}. Checkout is powered by Stripe and subscription state is synced back to your organization.
-        </p>
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10">
+      <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-6 text-white shadow-2xl md:p-8">
+        <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute bottom-0 left-10 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
+
+        <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-primary/80">Billing command center</p>
+            <h1 className="mt-4 max-w-4xl text-4xl font-bold tracking-tight md:text-6xl">Plan, usage and upgrades</h1>
+            <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300">
+              Manage subscription access for {organization.name}. Stripe handles checkout and the customer portal, while EuroComply enforces plan limits across the workspace.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <form action={openCustomerPortal}>
+                <Button type="submit" className="rounded-full bg-white px-5 text-slate-950 hover:bg-slate-100">Manage subscription</Button>
+              </form>
+              {upgradeRecommended && (
+                <span className="inline-flex h-10 items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-4 text-sm font-semibold text-amber-200">
+                  Upgrade recommended
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-6 shadow-xl backdrop-blur">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Current plan</p>
+            <p className="mt-3 text-5xl font-bold tracking-tight">{currentPlan.name}</p>
+            <p className="mt-2 text-slate-300">€{currentPlan.priceMonthly}/month</p>
+            <div className={`mt-5 rounded-2xl border p-4 ${getStatusTone(billing.status)}`}>
+              <p className="text-xs font-medium uppercase tracking-[0.18em] opacity-80">Subscription status</p>
+              <p className="mt-2 text-2xl font-semibold capitalize">{formatStatus(billing.status)}</p>
+              {(billing.status === 'past_due' || billing.status === 'unpaid') && (
+                <p className="mt-2 text-sm">Payment attention is required. Open Stripe billing to update the payment method.</p>
+              )}
+              {billing.status === 'canceled' && (
+                <p className="mt-2 text-sm">This subscription is canceled. Choose a plan to restore paid access.</p>
+              )}
+            </div>
+          </div>
+        </div>
       </section>
 
       {message && (
@@ -180,91 +225,79 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
         </div>
       )}
 
-      <section className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Current subscription</CardTitle>
-            <CardDescription>Plan, status and Stripe management access.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="rounded-xl border p-4">
-              <p className="text-sm text-muted-foreground">Current plan</p>
-              <p className="mt-1 text-3xl font-bold">{currentPlan.name}</p>
-              <p className="mt-1 text-sm text-muted-foreground">€{currentPlan.priceMonthly}/month</p>
-            </div>
-            <div className={`rounded-xl border p-4 ${getStatusTone(billing.status)}`}>
-              <p className="text-sm font-medium">Subscription status</p>
-              <p className="mt-1 text-2xl font-semibold capitalize">{formatStatus(billing.status)}</p>
-              {(billing.status === 'past_due' || billing.status === 'unpaid') && (
-                <p className="mt-2 text-sm">Payment attention is required. Open Stripe billing to update the payment method.</p>
-              )}
-              {billing.status === 'canceled' && (
-                <p className="mt-2 text-sm">This subscription is canceled. Choose a plan to restore paid access.</p>
-              )}
-            </div>
-            <form action={openCustomerPortal}>
-              <Button type="submit" variant="outline" className="w-full">Manage subscription in Stripe</Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Plan usage</CardTitle>
-            <CardDescription>Monitor limits before customers hit a hard stop.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            {usageMeters.map((meter) => (
-              <UsageMeter key={meter.label} {...meter} />
-            ))}
-          </CardContent>
-        </Card>
+      <section>
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Plan usage</p>
+            <h2 className="text-2xl font-semibold tracking-tight">Current limits</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">Warnings appear automatically when usage approaches 80% of the current plan.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {usageMeters.map((meter) => (
+            <UsageMeter key={meter.label} {...meter} />
+          ))}
+        </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        {BILLING_PLANS.map((plan) => {
-          const isCurrent = plan.id === currentPlan.id;
-          const isUpgrade = plan.priceMonthly > currentPlan.priceMonthly;
+      <section>
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Plans</p>
+            <h2 className="text-2xl font-semibold tracking-tight">Choose the right tier</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">Upgrade when your team, evidence library or vendor program outgrows the current tier.</p>
+        </div>
 
-          return (
-            <Card key={plan.id} className={isCurrent ? 'border-primary' : undefined}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <CardTitle>{plan.name}</CardTitle>
-                    <CardDescription>€{plan.priceMonthly}/month</CardDescription>
+        <div className="grid gap-4 md:grid-cols-3">
+          {BILLING_PLANS.map((plan) => {
+            const isCurrent = plan.id === currentPlan.id;
+            const isUpgrade = plan.priceMonthly > currentPlan.priceMonthly;
+
+            return (
+              <Card key={plan.id} className={`overflow-hidden rounded-3xl transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg ${isCurrent ? 'border-primary shadow-md' : ''}`}>
+                <CardHeader className="border-b bg-muted/30">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                      <CardDescription className="mt-2 text-base">€{plan.priceMonthly}/month</CardDescription>
+                    </div>
+                    {isCurrent && <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Current</span>}
                   </div>
-                  {isCurrent && <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">Current</span>}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>{plan.limits.users} users</li>
-                  <li>{plan.limits.documents} documents</li>
-                  <li>{plan.limits.vendors} vendors</li>
-                  <li>{plan.limits.risks} risks</li>
-                  {plan.features.map((feature) => (
-                    <li key={feature}>• {feature}</li>
-                  ))}
-                </ul>
-                {isCurrent ? (
-                  <form action={openCustomerPortal}>
-                    <Button type="submit" className="w-full" variant="outline">
-                      Manage current plan
-                    </Button>
-                  </form>
-                ) : (
-                  <form action={startCheckout}>
-                    <input type="hidden" name="planId" value={plan.id} />
-                    <Button type="submit" className="w-full">
-                      {isUpgrade ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`}
-                    </Button>
-                  </form>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+                </CardHeader>
+                <CardContent className="space-y-5 p-6">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-2xl border bg-background p-3"><p className="text-muted-foreground">Users</p><p className="font-semibold">{plan.limits.users}</p></div>
+                    <div className="rounded-2xl border bg-background p-3"><p className="text-muted-foreground">Documents</p><p className="font-semibold">{plan.limits.documents}</p></div>
+                    <div className="rounded-2xl border bg-background p-3"><p className="text-muted-foreground">Vendors</p><p className="font-semibold">{plan.limits.vendors}</p></div>
+                    <div className="rounded-2xl border bg-background p-3"><p className="text-muted-foreground">Risks</p><p className="font-semibold">{plan.limits.risks}</p></div>
+                  </div>
+
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    {plan.features.map((feature) => (
+                      <li key={feature}>• {feature}</li>
+                    ))}
+                  </ul>
+
+                  {isCurrent ? (
+                    <form action={openCustomerPortal}>
+                      <Button type="submit" className="w-full rounded-full" variant="outline">
+                        Manage current plan
+                      </Button>
+                    </form>
+                  ) : (
+                    <form action={startCheckout}>
+                      <input type="hidden" name="planId" value={plan.id} />
+                      <Button type="submit" className="w-full rounded-full">
+                        {isUpgrade ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`}
+                      </Button>
+                    </form>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </section>
     </main>
   );
