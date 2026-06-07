@@ -7,14 +7,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 type AcceptInvitationCardProps = {
   email?: string | null;
   organizationName?: string | null;
+  disabled?: boolean;
   onAccept: () => Promise<void> | void;
 };
 
-export function AcceptInvitationCard({ email, organizationName, onAccept }: AcceptInvitationCardProps) {
+export function AcceptInvitationCard({ email, organizationName, disabled = false, onAccept }: AcceptInvitationCardProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleAccept() {
+    if (disabled || isSubmitting) {
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
@@ -40,7 +45,7 @@ export function AcceptInvitationCard({ email, organizationName, onAccept }: Acce
       <CardContent className="space-y-4">
         {email ? <p className="text-sm text-muted-foreground">Invited email: {email}</p> : null}
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <Button onClick={handleAccept} disabled={isSubmitting}>
+        <Button onClick={handleAccept} disabled={disabled || isSubmitting}>
           {isSubmitting ? 'Accepting...' : 'Accept invitation'}
         </Button>
       </CardContent>
