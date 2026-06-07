@@ -42,7 +42,7 @@ export default function GapAnalysisHistory({ workspaceId, locale }: { workspaceI
     async function loadHistory() {
       if (!workspaceId) return;
       setLoading(true);
-      const data = await tryLoadGapAssessmentHistory(workspaceId, 5);
+      const data = await tryLoadGapAssessmentHistory({ workspaceId, limit: 5 });
       if (mounted) {
         setItems(data as HistoryItem[]);
         setLoading(false);
