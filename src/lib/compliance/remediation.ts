@@ -146,3 +146,33 @@ export async function loadOpenComplianceWork(params: { workspaceId?: string | nu
     .select('id, article, title, severity, status, due_date, created_at')
     .in('status', ['open', 'in_progress'])
     .order('created_at', { ascending: false });
+
+  let tasksQuery = supabase
+    .from('compliance_tasks')
+    .select('id, finding_id, title, priority, status, due_date, created_at')
+    .in('status', ['open', 'in_progress'])
+    .order('created_at', { ascending: false });
+
+  if (params.workspaceId) {
+    findingsQuery = findingsQuery.eq('workspace_id', params.workspaceId);
+    tasksQuery = tasksQuery.eq('workspace_id', params.workspaceId);
+  }
+
+  if (params.userId) {
+    findingsQuery = findingsQuery.eq('user_id', params.userId);
+    tasksQuery = tasksQuery.eq('user_id', params.userId);
+  }
+
+  const [{ data: findings, error: findingsError }, { data: tasks, error: tasksError }] = await Promise.all([
+    findingsQuery,
+    tasksQuery,
+  ]);
+
+  if (findingsError) throw findingsError;
+  if (tasksError) throw tasksError;
+
+  return {
+    findings: findings || [],
+    tasks: tasks || [],
+  };
+}
