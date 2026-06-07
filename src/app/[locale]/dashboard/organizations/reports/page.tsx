@@ -11,6 +11,18 @@ function getScoreLabel(score: number) {
   return 'High risk';
 }
 
+function getScoreNarrative(score: number) {
+  if (score >= 85) return 'The program is ready for board review, customer security discussions and leadership reporting.';
+  if (score >= 65) return 'The program is operational, with clear focus areas that should be closed before a formal audit or customer review.';
+  return 'The program needs immediate attention across evidence, risk or vendor operations before external review.';
+}
+
+function getScoreTone(score: number) {
+  if (score >= 85) return 'text-emerald-300';
+  if (score >= 65) return 'text-amber-300';
+  return 'text-rose-300';
+}
+
 export default async function ExecutiveReportsPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
 
@@ -43,66 +55,85 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
   ];
 
   const exportLinks = [
-    { href: `/${params.locale}/dashboard/organizations/reports/print`, label: 'Printable report / save PDF' },
-    { href: '/api/reports/executive.csv', label: 'Export executive CSV' },
-    { href: '/api/reports/tasks.csv', label: 'Export tasks CSV' },
-    { href: '/api/reports/risks.csv', label: 'Export risks CSV' },
-    { href: '/api/reports/vendors.csv', label: 'Export vendors CSV' },
-    { href: '/api/reports/documents.csv', label: 'Export documents CSV' },
+    { href: `/${params.locale}/dashboard/organizations/reports/print`, label: 'Save PDF / print', primary: true },
+    { href: '/api/reports/executive.csv', label: 'Executive CSV' },
+    { href: '/api/reports/tasks.csv', label: 'Tasks CSV' },
+    { href: '/api/reports/risks.csv', label: 'Risks CSV' },
+    { href: '/api/reports/vendors.csv', label: 'Vendors CSV' },
+    { href: '/api/reports/documents.csv', label: 'Documents CSV' },
   ];
 
   return (
-    <main className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10">
-      <section className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Executive report</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight">{organization.name}</h1>
-          <p className="mt-3 max-w-3xl text-muted-foreground">
-            Snapshot generated on {reportDate}. Use this summary to brief leadership on compliance workload, vendor exposure, risk posture and evidence readiness.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {exportLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted"
-              >
-                {link.label}
-              </Link>
-            ))}
+    <main className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-10">
+      <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-6 text-white shadow-2xl md:p-8">
+        <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute bottom-0 left-10 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
+
+        <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-primary/80">Executive report</p>
+            <h1 className="mt-4 max-w-4xl text-4xl font-bold tracking-tight md:text-6xl">{organization.name}</h1>
+            <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300">
+              Snapshot generated on {reportDate}. {getScoreNarrative(summary.complianceScore)}
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              {exportLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={link.primary
+                    ? 'inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100'
+                    : 'inline-flex h-11 items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold text-white transition hover:bg-white/10'}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="rounded-2xl border bg-card p-5 text-center shadow-sm">
-          <p className="text-sm text-muted-foreground">Overall readiness</p>
-          <p className="mt-2 text-4xl font-bold">{summary.complianceScore}%</p>
-          <p className="mt-1 text-sm font-medium">{scoreLabel}</p>
+
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-6 text-center shadow-xl backdrop-blur">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Overall readiness</p>
+            <p className={`mt-3 text-7xl font-bold tracking-tight ${getScoreTone(summary.complianceScore)}`}>{summary.complianceScore}%</p>
+            <p className="mt-3 text-lg font-semibold">{scoreLabel}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-400">{maturity.level}: {maturity.description}</p>
+          </div>
         </div>
       </section>
 
-      <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-6">
+      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         {cards.map((card) => (
-          <article key={card.label} className="rounded-2xl border bg-card p-5 shadow-sm">
-            <p className="text-sm text-muted-foreground">{card.label}</p>
-            <p className="mt-2 text-3xl font-bold">{card.value}</p>
+          <article key={card.label} className="rounded-3xl border bg-card p-5 shadow-sm transition hover:border-primary/40">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{card.label}</p>
+            <p className="mt-3 text-3xl font-bold">{card.value}</p>
             <p className="mt-2 text-sm text-muted-foreground">{card.detail}</p>
           </article>
         ))}
       </section>
 
-      <section className="rounded-2xl border bg-card p-6 shadow-sm">
-        <h2 className="text-xl font-semibold">Board-ready commentary</h2>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <p className="text-sm leading-6 text-muted-foreground">{commentary.posture}</p>
-          <p className="text-sm leading-6 text-muted-foreground">{commentary.exposure}</p>
-          <p className="text-sm leading-6 text-muted-foreground">{commentary.operatingFocus}</p>
+      <section className="rounded-3xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Narrative</p>
+            <h2 className="mt-2 text-2xl font-semibold">Board-ready commentary</h2>
+          </div>
+          <p className="max-w-xl text-sm text-muted-foreground">Use this section as the executive framing for leadership, customers or advisory review.</p>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <article className="rounded-2xl border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">{commentary.posture}</article>
+          <article className="rounded-2xl border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">{commentary.exposure}</article>
+          <article className="rounded-2xl border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">{commentary.operatingFocus}</article>
         </div>
       </section>
 
-      <section className="grid gap-6 md:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-4">
         {scorecards.map((scorecard) => (
-          <article key={scorecard.area} className="rounded-2xl border bg-card p-6 shadow-sm">
-            <p className="text-sm text-muted-foreground">{scorecard.area}</p>
-            <p className="mt-2 text-4xl font-bold">{scorecard.score}%</p>
+          <article key={scorecard.area} className="rounded-3xl border bg-card p-6 shadow-sm transition hover:border-primary/40">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{scorecard.area}</p>
+            <p className="mt-3 text-5xl font-bold">{scorecard.score}%</p>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${scorecard.score}%` }} />
+            </div>
             <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
               {scorecard.metrics.map((metric) => (
                 <li key={metric}>• {metric}</li>
@@ -113,22 +144,25 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
       </section>
 
       <section className="grid gap-6 md:grid-cols-3">
-        <article className="rounded-2xl border bg-card p-6 shadow-sm md:col-span-1">
-          <h2 className="text-lg font-semibold">Maturity score</h2>
-          <p className="mt-3 text-3xl font-bold">{maturity.level}</p>
+        <article className="rounded-3xl border bg-card p-6 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Maturity</p>
+          <h2 className="mt-2 text-lg font-semibold">Maturity score</h2>
+          <p className="mt-4 text-3xl font-bold">{maturity.level}</p>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">{maturity.description}</p>
         </article>
-        <article className="rounded-2xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Next best actions</h2>
-          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+        <article className="rounded-3xl border bg-card p-6 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Execution</p>
+          <h2 className="mt-2 text-lg font-semibold">Next best actions</h2>
+          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
             {nextBestActions.map((action) => (
               <li key={action}>• {action}</li>
             ))}
           </ul>
         </article>
-        <article className="rounded-2xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Recommendations</h2>
-          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+        <article className="rounded-3xl border bg-card p-6 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Advisory</p>
+          <h2 className="mt-2 text-lg font-semibold">Recommendations</h2>
+          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
             {recommendations.map((recommendation) => (
               <li key={recommendation}>• {recommendation}</li>
             ))}
