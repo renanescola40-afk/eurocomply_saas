@@ -176,3 +176,5 @@ export async function loadOpenComplianceWork(params: { workspaceId?: string | nu
     tasks: tasks || [],
   };
 }
+
+export const tryLoadOpenComplianceWork = loadOpenComplianceWork;
