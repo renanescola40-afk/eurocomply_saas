@@ -10,6 +10,13 @@ export type ComplianceActionInput = {
   severity: 'critical' | 'medium';
 };
 
+type InsertedFinding = {
+  id: string;
+  article: string | null;
+  recommendation: string | null;
+  severity: ComplianceActionInput['severity'] | null;
+};
+
 export type CreateRemediationInput = {
   workspaceId?: string | null;
   userId: string;
@@ -88,7 +95,9 @@ export async function createFindingsAndTasks(input: CreateRemediationInput) {
 
   if (findingsError) throw findingsError;
 
-  const taskRows = (findings || []).map((finding, index) => {
+  const insertedFindings = (findings || []) as InsertedFinding[];
+
+  const taskRows = insertedFindings.map((finding, index) => {
     const action = actions[index];
     return {
       workspace_id: input.workspaceId || null,
@@ -114,7 +123,7 @@ export async function createFindingsAndTasks(input: CreateRemediationInput) {
     if (tasksError) throw tasksError;
   }
 
-  return { findingsCreated: findings?.length || 0, tasksCreated: taskRows.length };
+  return { findingsCreated: insertedFindings.length, tasksCreated: taskRows.length };
 }
 
 export async function tryCreateFindingsAndTasks(input: CreateRemediationInput): Promise<RemediationResult> {
@@ -137,41 +146,3 @@ export async function loadOpenComplianceWork(params: { workspaceId?: string | nu
     .select('id, article, title, severity, status, due_date, created_at')
     .in('status', ['open', 'in_progress'])
     .order('created_at', { ascending: false });
-
-  let tasksQuery = supabase
-    .from('compliance_tasks')
-    .select('id, title, priority, status, due_date, created_at')
-    .in('status', ['open', 'in_progress', 'blocked'])
-    .order('created_at', { ascending: false });
-
-  if (params.workspaceId) {
-    findingsQuery = findingsQuery.eq('workspace_id', params.workspaceId);
-    tasksQuery = tasksQuery.eq('workspace_id', params.workspaceId);
-  } else if (params.userId) {
-    findingsQuery = findingsQuery.eq('user_id', params.userId);
-    tasksQuery = tasksQuery.eq('user_id', params.userId);
-  } else {
-    return { findings: [], tasks: [] };
-  }
-
-  const [{ data: findings, error: findingsError }, { data: tasks, error: tasksError }] = await Promise.all([
-    findingsQuery,
-    tasksQuery,
-  ]);
-
-  if (findingsError) throw findingsError;
-  if (tasksError) throw tasksError;
-
-  return {
-    findings: findings || [],
-    tasks: tasks || [],
-  };
-}
-
-export async function tryLoadOpenComplianceWork(params: { workspaceId?: string | null; userId?: string | null }) {
-  try {
-    return await loadOpenComplianceWork(params);
-  } catch {
-    return { findings: [], tasks: [] };
-  }
-}
