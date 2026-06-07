@@ -29,7 +29,7 @@ export function OnboardingProgressCard({ state }: OnboardingProgressCardProps) {
         <div className="space-y-3">
           {steps.map((step) => (
             <div key={step.id} className="flex gap-3 rounded-lg border p-3">
-              {step.completed ? (
+              {step.status === 'complete' ? (
                 <CheckCircle2 className="mt-0.5 h-5 w-5" />
               ) : (
                 <Circle className="mt-0.5 h-5 w-5" />
