@@ -47,7 +47,7 @@ export default async function OnboardingPage() {
         <OnboardingProgressCard
           state={{
             hasOrganization: false,
-            hasTeamMembers: false,
+            hasMembers: false,
             hasComplianceTasks: false,
             hasDocuments: false,
             hasVendors: false,
