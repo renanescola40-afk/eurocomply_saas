@@ -74,7 +74,7 @@ export function AuditTimelinePreview({ summary, trendComparison, basePath }: Aud
       actor: 'Evidence automation',
       detail: `${summary.totals.documents} tracked documents available for evidence packaging`,
       timestamp: 'This week',
-      href: `${basePath}/audit-pack`,
+      href: `${basePath}/reports/print`,
       tone: 'sky',
     },
   ];
