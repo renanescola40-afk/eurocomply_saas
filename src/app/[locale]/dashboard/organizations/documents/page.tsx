@@ -27,6 +27,7 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
 
   const documents = await listDocuments(currentOrganization.id);
   const billing = await getOrganizationBillingContext(currentOrganization.id);
+  const dashboardBasePath = `/${params.locale}/dashboard/organizations`;
 
   async function uploadDocumentAction(input: UploadDocumentFormInput) {
     'use server';
@@ -112,7 +113,7 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
           </Link>
         </header>
 
-        <PlanGate planId={billing.plan} metric="documents" currentUsage={billing.usage.documents}>
+        <PlanGate planId={billing.plan} metric="documents" currentUsage={billing.usage.documents} onUpgradeHref={`${dashboardBasePath}/billing`}>
           <CreateDocumentForm onSubmit={uploadDocumentAction} />
         </PlanGate>
 
