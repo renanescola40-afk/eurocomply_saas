@@ -11,6 +11,17 @@ import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { listRisks } from '@/server/queries/risks';
 
+function getRiskScore(risk: { risk_score?: number | string | null; likelihood?: number | string | null; impact?: number | string | null }) {
+  const explicitScore = Number(risk.risk_score ?? 0);
+  if (Number.isFinite(explicitScore) && explicitScore > 0) return explicitScore;
+
+  const likelihood = Number(risk.likelihood ?? 0);
+  const impact = Number(risk.impact ?? 0);
+  if (Number.isFinite(likelihood) && Number.isFinite(impact) && likelihood > 0 && impact > 0) return likelihood * impact;
+
+  return 0;
+}
+
 export default async function OrganizationRisksPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
 
@@ -28,6 +39,7 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
     listRisks(organization.id),
     getOrganizationBillingContext(organization.id),
   ]);
+  const dashboardBasePath = `/${params.locale}/dashboard/organizations`;
 
   async function createRiskAction(input: CreateRiskFormInput) {
     'use server';
@@ -90,7 +102,7 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
         </Link>
       </div>
 
-      <PlanGate planId={billing.plan} metric="risks" currentUsage={billing.usage.risks}>
+      <PlanGate planId={billing.plan} metric="risks" currentUsage={billing.usage.risks} onUpgradeHref={`${dashboardBasePath}/billing`}>
         <CreateRiskForm onSubmit={createRiskAction} />
       </PlanGate>
 
@@ -114,8 +126,8 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
                     </div>
                     <div className="flex flex-col items-start gap-2 text-sm text-muted-foreground md:items-end">
                       <div className="text-right">
-                        <p>Score: {risk.risk_score ?? risk.likelihood * risk.impact}</p>
-                        <p>Status: {risk.status}</p>
+                        <p>Score: {getRiskScore(risk)}</p>
+                        <p>Status: {risk.status ?? 'open'}</p>
                       </div>
                       <DeleteRecordButton id={risk.id} label={risk.title} resourceName="risk" onDelete={deleteRiskAction} />
                     </div>
