@@ -5,6 +5,7 @@ import { AuditTimelinePreview } from '@/components/dashboard/audit-timeline-prev
 import { BoardReportCenter } from '@/components/dashboard/board-report-center';
 import { ComplianceTimeline } from '@/components/dashboard/compliance-timeline';
 import { DashboardExperienceIndex } from '@/components/dashboard/dashboard-experience-index';
+import { DashboardExperienceMap } from '@/components/dashboard/dashboard-experience-map';
 import { DashboardSectionNavigator } from '@/components/dashboard/dashboard-section-navigator';
 import { DepartmentOwnershipPreview } from '@/components/dashboard/department-ownership-preview';
 import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
@@ -99,6 +100,7 @@ export function DashboardOverview({
     <div className="space-y-6 scroll-smooth">
       <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
       <DashboardSectionNavigator />
+      <DashboardExperienceMap basePath={basePath} />
       <section id="experience-index" className="scroll-mt-28"><DashboardExperienceIndex summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
       <section id="executive-cockpit" className="scroll-mt-28"><ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
       <section id="operational-feed" className="scroll-mt-28"><OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section>
