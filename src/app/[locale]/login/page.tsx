@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Fingerprint } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -8,53 +9,74 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 
 const loginCopy: Record<string, {
+  title: string;
+  subtitle: string;
+  google: string;
+  email: string;
+  password: string;
+  submit: string;
+  signup: string;
   errorTitle: string;
-  redirectTitle: string;
-  errorSubtitle: string;
-  redirectSubtitle: string;
-  retryGoogle: string;
 }> = {
   en: {
+    title: 'Sign in to EuroComply',
+    subtitle: 'Access your compliance workspace with Google or email.',
+    google: 'Continue with Google',
+    email: 'Email',
+    password: 'Password',
+    submit: 'Sign in with email',
+    signup: 'Create an account',
     errorTitle: 'Could not complete sign-in',
-    redirectTitle: 'Redirecting to Google',
-    errorSubtitle: 'Review the message below and try again.',
-    redirectSubtitle: 'You will be taken to secure Google sign-in.',
-    retryGoogle: 'Try again with Google',
   },
   pt: {
+    title: 'Entrar no EuroComply',
+    subtitle: 'Acesse seu workspace de compliance com Google ou email.',
+    google: 'Continuar com Google',
+    email: 'Email',
+    password: 'Senha',
+    submit: 'Entrar com email',
+    signup: 'Criar conta',
     errorTitle: 'Não foi possível concluir o login',
-    redirectTitle: 'Redirecionando para o Google',
-    errorSubtitle: 'Revise a mensagem abaixo e tente novamente.',
-    redirectSubtitle: 'Você será levado diretamente para o login seguro do Google.',
-    retryGoogle: 'Tentar novamente com Google',
   },
   es: {
+    title: 'Entrar en EuroComply',
+    subtitle: 'Accede a tu workspace de compliance con Google o email.',
+    google: 'Continuar con Google',
+    email: 'Email',
+    password: 'Contraseña',
+    submit: 'Entrar con email',
+    signup: 'Crear cuenta',
     errorTitle: 'No se pudo completar el inicio de sesión',
-    redirectTitle: 'Redirigiendo a Google',
-    errorSubtitle: 'Revisa el mensaje abajo e inténtalo de nuevo.',
-    redirectSubtitle: 'Serás enviado al inicio de sesión seguro de Google.',
-    retryGoogle: 'Intentar de nuevo con Google',
   },
   fr: {
+    title: 'Connexion à EuroComply',
+    subtitle: 'Accédez à votre espace compliance avec Google ou email.',
+    google: 'Continuer avec Google',
+    email: 'Email',
+    password: 'Mot de passe',
+    submit: 'Connexion par email',
+    signup: 'Créer un compte',
     errorTitle: 'Impossible de terminer la connexion',
-    redirectTitle: 'Redirection vers Google',
-    errorSubtitle: 'Vérifiez le message ci-dessous et réessayez.',
-    redirectSubtitle: 'Vous allez être redirigé vers la connexion sécurisée Google.',
-    retryGoogle: 'Réessayer avec Google',
   },
   it: {
+    title: 'Accedi a EuroComply',
+    subtitle: 'Accedi al workspace compliance con Google o email.',
+    google: 'Continua con Google',
+    email: 'Email',
+    password: 'Password',
+    submit: 'Accedi con email',
+    signup: 'Crea account',
     errorTitle: 'Impossibile completare l’accesso',
-    redirectTitle: 'Reindirizzamento a Google',
-    errorSubtitle: 'Controlla il messaggio qui sotto e riprova.',
-    redirectSubtitle: 'Verrai portato al login sicuro di Google.',
-    retryGoogle: 'Riprova con Google',
   },
   de: {
+    title: 'Bei EuroComply anmelden',
+    subtitle: 'Melden Sie sich mit Google oder E-Mail an.',
+    google: 'Mit Google fortfahren',
+    email: 'E-Mail',
+    password: 'Passwort',
+    submit: 'Mit E-Mail anmelden',
+    signup: 'Konto erstellen',
     errorTitle: 'Anmeldung konnte nicht abgeschlossen werden',
-    redirectTitle: 'Weiterleitung zu Google',
-    errorSubtitle: 'Prüfen Sie die Meldung unten und versuchen Sie es erneut.',
-    redirectSubtitle: 'Sie werden zur sicheren Google-Anmeldung weitergeleitet.',
-    retryGoogle: 'Erneut mit Google versuchen',
   },
 };
 
@@ -66,75 +88,115 @@ export default function LoginPage() {
   const locale = (params.locale as string) || 'pt';
   const copy = loginCopy[locale] ?? loginCopy.en;
   const urlError = searchParams.get('error');
-  const { user, signInWithGoogle, loading: authLoading } = useAuth();
+  const { user, signInWithGoogle, signInWithEmail, loading: authLoading } = useAuth();
   const [error, setError] = useState(urlError ? decodeURIComponent(urlError) : '');
-  const startedGoogleLogin = useRef(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (authLoading || startedGoogleLogin.current) return;
+    if (authLoading) return;
 
     if (user) {
       router.replace(`/${locale}/dashboard`);
-      return;
     }
+  }, [authLoading, locale, router, user]);
 
-    if (urlError) {
-      setError(decodeURIComponent(urlError));
-      return;
-    }
-
-    startedGoogleLogin.current = true;
-
-    signInWithGoogle().then((result) => {
-      if (result.error) {
-        setError(result.error.message);
-        startedGoogleLogin.current = false;
-      }
-    });
-  }, [authLoading, locale, router, signInWithGoogle, urlError, user]);
-
-  const retryGoogleLogin = () => {
+  async function handleGoogleLogin() {
     setError('');
-    startedGoogleLogin.current = true;
-    router.replace(`/${locale}/login`);
-    signInWithGoogle().then((result) => {
-      if (result.error) {
-        setError(result.error.message);
-        startedGoogleLogin.current = false;
-      }
-    });
-  };
+    setSubmitting(true);
+    const result = await signInWithGoogle();
+    if (result.error) {
+      setError(result.error.message);
+      setSubmitting(false);
+    }
+  }
+
+  async function handleEmailLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    setSubmitting(true);
+
+    const result = await signInWithEmail(email, password);
+
+    if (result.error) {
+      setError(result.error.message);
+      setSubmitting(false);
+      return;
+    }
+
+    router.replace(`/${locale}/dashboard`);
+  }
 
   return (
     <main className="min-h-screen bg-[#050505] text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(37,99,235,0.24),transparent_34rem)]" />
 
       <div className="relative mx-auto flex min-h-screen max-w-md items-center px-5">
-        <div className="w-full rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-7 text-center shadow-2xl backdrop-blur-xl">
+        <div className="w-full rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-7 shadow-2xl backdrop-blur-xl">
           <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
             <Fingerprint className="h-6 w-6" />
           </div>
 
-          <p className="text-xs uppercase tracking-[0.28em] text-white/36">{t('secure')}</p>
-          <h1 className="mt-2 text-2xl font-semibold">
-            {error ? copy.errorTitle : copy.redirectTitle}
-          </h1>
-          <p className="mt-2 text-sm text-white/50">
-            {error ? copy.errorSubtitle : copy.redirectSubtitle}
-          </p>
+          <div className="text-center">
+            <p className="text-xs uppercase tracking-[0.28em] text-white/36">{t('secure')}</p>
+            <h1 className="mt-2 text-2xl font-semibold">{copy.title}</h1>
+            <p className="mt-2 text-sm text-white/50">{copy.subtitle}</p>
+          </div>
 
           {error && (
             <div className="mt-6 rounded-xl border border-red-400/20 bg-red-500/10 p-4 text-left text-sm text-red-200">
-              <p className="break-words">{error}</p>
-              <Button
-                type="button"
-                className="mt-4 w-full bg-white text-black hover:bg-white/90"
-                onClick={retryGoogleLogin}
-              >
-                {copy.retryGoogle}
-              </Button>
+              <p className="font-semibold">{copy.errorTitle}</p>
+              <p className="mt-1 break-words">{error}</p>
             </div>
           )}
+
+          <div className="mt-6 space-y-4">
+            <Button
+              type="button"
+              className="w-full bg-white text-black hover:bg-white/90"
+              onClick={handleGoogleLogin}
+              disabled={submitting || authLoading}
+            >
+              {copy.google}
+            </Button>
+
+            <div className="flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-white/30">
+              <span className="h-px flex-1 bg-white/10" />
+              or
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+
+            <form onSubmit={handleEmailLogin} className="space-y-3">
+              <label className="grid gap-1 text-sm">
+                <span className="text-white/70">{copy.email}</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-white outline-none focus:border-white/30"
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="text-white/70">{copy.password}</span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-white outline-none focus:border-white/30"
+                />
+              </label>
+              <Button type="submit" className="w-full" disabled={submitting || authLoading}>
+                {copy.submit}
+              </Button>
+            </form>
+
+            <Link href={`/${locale}/signup`} className="block text-center text-sm text-white/50 hover:text-white">
+              {copy.signup}
+            </Link>
+          </div>
         </div>
       </div>
     </main>
