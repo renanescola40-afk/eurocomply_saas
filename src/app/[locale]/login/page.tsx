@@ -84,6 +84,18 @@ function getDashboardHref(locale: string) {
   return `/${locale}/dashboard/organizations`;
 }
 
+function getSafeNextPath(next: string | null, locale: string) {
+  if (!next || next.includes('://') || next.startsWith('//')) {
+    return getDashboardHref(locale);
+  }
+
+  if (!next.startsWith(`/${locale}/dashboard`)) {
+    return getDashboardHref(locale);
+  }
+
+  return next;
+}
+
 export default function LoginPage() {
   const t = useTranslations('auth');
   const router = useRouter();
@@ -92,6 +104,7 @@ export default function LoginPage() {
   const locale = (params.locale as string) || 'pt';
   const copy = loginCopy[locale] ?? loginCopy.en;
   const urlError = searchParams.get('error');
+  const nextPath = getSafeNextPath(searchParams.get('next'), locale);
   const { user, signInWithGoogle, signInWithEmail, loading: authLoading } = useAuth();
   const [error, setError] = useState(urlError ? decodeURIComponent(urlError) : '');
   const [email, setEmail] = useState('');
@@ -102,9 +115,9 @@ export default function LoginPage() {
     if (authLoading) return;
 
     if (user) {
-      router.replace(getDashboardHref(locale));
+      router.replace(nextPath);
     }
-  }, [authLoading, locale, router, user]);
+  }, [authLoading, nextPath, router, user]);
 
   async function handleGoogleLogin() {
     setError('');
@@ -129,7 +142,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.replace(getDashboardHref(locale));
+    router.replace(nextPath);
   }
 
   return (
