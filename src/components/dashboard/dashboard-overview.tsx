@@ -4,6 +4,7 @@ import { ApprovalWorkflowPreview } from '@/components/dashboard/approval-workflo
 import { AuditTimelinePreview } from '@/components/dashboard/audit-timeline-preview';
 import { BoardReportCenter } from '@/components/dashboard/board-report-center';
 import { ComplianceTimeline } from '@/components/dashboard/compliance-timeline';
+import { DashboardExperienceIndex } from '@/components/dashboard/dashboard-experience-index';
 import { DepartmentOwnershipPreview } from '@/components/dashboard/department-ownership-preview';
 import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
 import { EnterpriseValueLadder } from '@/components/dashboard/enterprise-value-ladder';
@@ -96,6 +97,7 @@ export function DashboardOverview({
   return (
     <div className="space-y-6">
       <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
+      <DashboardExperienceIndex summary={summary} trendComparison={trendComparison} basePath={basePath} />
       <ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} />
       <OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
       <EvidenceGraph summary={summary} basePath={basePath} />
