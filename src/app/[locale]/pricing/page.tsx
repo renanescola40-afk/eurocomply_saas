@@ -9,15 +9,21 @@ const comparisonRows = [
   { label: 'Risks', getValue: (plan: (typeof BILLING_PLANS)[number]) => plan.limits.risks },
   { label: 'Executive dashboard', getValue: () => 'Included' },
   { label: 'Template library', getValue: () => 'Included' },
-  { label: 'Stripe billing portal', getValue: () => 'Included' },
   { label: 'Private document storage', getValue: () => 'Included' },
   { label: 'Audit logs', getValue: () => 'Included' },
+  { label: 'CSV exports', getValue: () => 'Included' },
+];
+
+const valueProof = [
+  ['Replace spreadsheet drift', 'Move evidence, vendors, risks and owners into one operational system.'],
+  ['Shorten customer reviews', 'Produce board-ready and customer-ready compliance summaries faster.'],
+  ['Create upgrade clarity', 'Usage limits are visible and predictable before procurement conversations begin.'],
 ];
 
 const billingFaqs = [
   {
     question: 'Why publish prices when larger GRC tools ask for a demo?',
-    answer: 'EuroComply is designed for European SaaS, fintech and B2B teams that want a clear starting point before enterprise procurement. Larger rollouts can still use custom Enterprise packaging.',
+    answer: 'EuroComply is designed for European SaaS, fintech and B2B teams that need a clear entry point before enterprise procurement. Larger rollouts can still use custom Enterprise packaging.',
   },
   {
     question: 'Can we change plans later?',
@@ -29,19 +35,58 @@ const billingFaqs = [
   },
 ];
 
+function planPositioning(planId: string) {
+  if (planId === 'starter') return 'For founders building their first evidence system.';
+  if (planId === 'growth') return 'For growing B2B teams preparing customer and board reviews.';
+  return 'For mature teams managing larger vendor, risk and document programs.';
+}
+
 export default function PricingPage({ params }: { params: { locale: string } }) {
   return (
     <main className="min-h-screen bg-[#05060a] text-white">
+      <header className="border-b border-white/10 bg-[#05060a]/85 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+          <Link href={`/${params.locale}`} className="text-lg font-bold tracking-tight">EuroComply</Link>
+          <nav className="flex items-center gap-2 text-sm">
+            <Link href={`/${params.locale}/login`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Sign in</Link>
+            <Link href={`/${params.locale}/signup`} className="rounded-full bg-white px-4 py-2 font-semibold text-black hover:bg-white/90">Start free</Link>
+          </nav>
+        </div>
+      </header>
+
       <section className="relative overflow-hidden border-b border-white/10">
-        <div className="absolute left-1/2 top-0 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="relative mx-auto max-w-6xl px-6 py-20 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.26em] text-blue-200">Pricing strategy</p>
-          <h1 className="mx-auto mt-4 max-w-4xl text-5xl font-semibold tracking-[-0.05em] md:text-7xl">
-            Premium compliance operations without enterprise procurement drag.
-          </h1>
-          <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-slate-300">
-            Start with a clear monthly plan, then expand toward enterprise controls as your evidence library, vendors, risks and team grow.
-          </p>
+        <div className="absolute left-1/2 top-0 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="absolute right-0 top-20 h-[24rem] w-[24rem] rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="relative mx-auto grid max-w-7xl gap-10 px-6 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div>
+            <p className="inline-flex rounded-full border border-blue-300/30 bg-blue-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-blue-100">Transparent B2B pricing</p>
+            <h1 className="mt-6 max-w-5xl text-5xl font-semibold tracking-[-0.05em] md:text-7xl">
+              Start like a startup. Scale like a regulated company.
+            </h1>
+            <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
+              EuroComply gives European teams a clear path from first compliance workspace to board-ready reporting and enterprise controls — without forcing every buyer into a sales call.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href={`/${params.locale}/signup`} className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
+                Start with Growth
+              </Link>
+              <Link href={`/${params.locale}/contact`} className="inline-flex h-12 items-center justify-center rounded-full border border-white/15 px-6 text-sm font-bold hover:bg-white/10">
+                Talk Enterprise
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-white/10 bg-slate-950 p-6 shadow-2xl">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Pricing psychology</p>
+            <div className="mt-5 grid gap-3">
+              {valueProof.map(([title, description]) => (
+                <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <p className="font-semibold">{title}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">{description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -51,11 +96,12 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
             const isFeatured = plan.id === 'growth';
 
             return (
-              <article key={plan.id} className={`relative flex rounded-3xl border p-6 shadow-xl flex-col ${isFeatured ? 'border-blue-300 bg-white text-slate-950' : 'border-white/10 bg-slate-950 text-white'}`}>
+              <article key={plan.id} className={`relative flex rounded-[2rem] border p-6 shadow-xl flex-col transition hover:-translate-y-1 ${isFeatured ? 'border-blue-300 bg-white text-slate-950' : 'border-white/10 bg-slate-950 text-white'}`}>
                 {isFeatured && <span className="absolute right-5 top-5 rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">Most popular</span>}
                 <div>
                   <h2 className="text-2xl font-semibold">{plan.name}</h2>
-                  <p className="mt-3 text-5xl font-bold">€{plan.priceMonthly}<span className={`text-base font-normal ${isFeatured ? 'text-slate-500' : 'text-slate-500'}`}>/mo</span></p>
+                  <p className={`mt-2 text-sm leading-6 ${isFeatured ? 'text-slate-600' : 'text-slate-400'}`}>{planPositioning(plan.id)}</p>
+                  <p className="mt-5 text-5xl font-bold">€{plan.priceMonthly}<span className="text-base font-normal text-slate-500">/mo</span></p>
                 </div>
 
                 <ul className={`mt-6 space-y-3 text-sm ${isFeatured ? 'text-slate-700' : 'text-slate-300'}`}>
@@ -76,7 +122,7 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
 
                 <Link
                   href={`/${params.locale}/signup`}
-                  className={`mt-8 inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-bold ${isFeatured ? 'bg-slate-950 text-white hover:bg-slate-800' : 'bg-white text-slate-950 hover:bg-slate-100'}`}
+                  className={`mt-auto inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-bold ${isFeatured ? 'bg-slate-950 text-white hover:bg-slate-800' : 'bg-white text-slate-950 hover:bg-slate-100'}`}
                 >
                   Start with {plan.name}
                 </Link>
@@ -84,24 +130,25 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
             );
           })}
 
-          <article className="relative flex rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] p-6 text-white shadow-xl flex-col">
+          <article className="relative flex rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/[0.10] to-white/[0.03] p-6 text-white shadow-xl flex-col transition hover:-translate-y-1">
+            <span className="absolute right-5 top-5 rounded-full border border-white/15 px-3 py-1 text-xs font-bold text-white/70">Anchor tier</span>
             <h2 className="text-2xl font-semibold">Enterprise</h2>
-            <p className="mt-3 text-5xl font-bold">Custom</p>
-            <p className="mt-4 text-sm leading-6 text-slate-300">For regulated teams, consultants and larger European rollouts.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">For regulated teams, consultants and larger European rollouts.</p>
+            <p className="mt-5 text-5xl font-bold">Custom</p>
             <ul className="mt-6 space-y-3 text-sm text-slate-300">
               <li>Custom usage limits</li>
-              <li>SSO roadmap</li>
-              <li>Custom DPA</li>
-              <li>Audit exports</li>
-              <li>Priority support</li>
+              <li>SSO and advanced RBAC roadmap</li>
+              <li>Custom DPA and procurement support</li>
+              <li>Audit exports and advanced reporting</li>
+              <li>Priority onboarding</li>
             </ul>
-            <Link href={`/${params.locale}/contact`} className="mt-8 inline-flex h-11 items-center justify-center rounded-full border border-white/15 px-4 text-sm font-bold hover:bg-white/10">
+            <Link href={`/${params.locale}/contact`} className="mt-auto inline-flex h-11 items-center justify-center rounded-full border border-white/15 px-4 text-sm font-bold hover:bg-white/10">
               Talk to us
             </Link>
           </article>
         </section>
 
-        <section className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950 shadow-xl">
+        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 shadow-xl">
           <div className="border-b border-white/10 p-6">
             <h2 className="text-2xl font-semibold">Compare plans</h2>
             <p className="mt-2 text-sm text-slate-400">Limits are enforced inside the product so teams know exactly when to upgrade.</p>
@@ -128,7 +175,7 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
 
         <section className="grid gap-6 md:grid-cols-3">
           {billingFaqs.map((faq) => (
-            <article key={faq.question} className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+            <article key={faq.question} className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
               <h3 className="font-semibold">{faq.question}</h3>
               <p className="mt-3 text-sm leading-6 text-slate-400">{faq.answer}</p>
             </article>
