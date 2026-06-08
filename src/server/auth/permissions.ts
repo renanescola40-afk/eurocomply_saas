@@ -1,8 +1,13 @@
 import { assertOrganizationPermission, type OrganizationPermission, type OrganizationRole } from '@/lib/security/permissions';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 export async function getOrganizationRoleForUser(organizationId: string, userId: string): Promise<OrganizationRole | null> {
-  const supabase = createAdminClient();
+  const supabase = tryCreateAdminClient();
+
+  if (!supabase) {
+    console.error('[auth] Missing Supabase admin client while checking organization permissions');
+    return null;
+  }
 
   const { data, error } = await supabase
     .from('organization_members')
