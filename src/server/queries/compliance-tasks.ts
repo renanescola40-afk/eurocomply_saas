@@ -10,7 +10,8 @@ export async function listComplianceTasks(organizationId: string) {
     .order('due_date', { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    console.warn('[tasks] list failed', error.message);
+    return [];
   }
 
   return data ?? [];
