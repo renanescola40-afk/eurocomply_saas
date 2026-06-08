@@ -28,6 +28,7 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
     listVendors(current.id),
     getOrganizationBillingContext(current.id),
   ]);
+  const dashboardBasePath = `/${params.locale}/dashboard/organizations`;
 
   async function handleCreateVendor(input: CreateVendorFormInput) {
     'use server';
@@ -73,7 +74,7 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
           </Link>
         </div>
 
-        <PlanGate planId={billing.plan} metric="vendors" currentUsage={billing.usage.vendors}>
+        <PlanGate planId={billing.plan} metric="vendors" currentUsage={billing.usage.vendors} onUpgradeHref={`${dashboardBasePath}/billing`}>
           <CreateVendorForm onCreate={handleCreateVendor} />
         </PlanGate>
 
