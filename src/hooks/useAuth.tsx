@@ -21,8 +21,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const DEFAULT_APP_URL = 'https://eurocomply-saas.vercel.app';
+const DEFAULT_APP_URL = 'http://localhost:3000';
 
 function getAppOrigin() {
   const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
@@ -31,21 +30,11 @@ function getAppOrigin() {
     return configuredUrl.replace(/\/$/, '');
   }
 
-  if (typeof window === 'undefined') {
-    return DEFAULT_APP_URL;
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
   }
 
-  const currentOrigin = window.location.origin;
-  const currentHost = window.location.hostname;
-
-  if (
-    currentHost.endsWith('.vercel.app') &&
-    currentHost !== 'eurocomply-saas.vercel.app'
-  ) {
-    return DEFAULT_APP_URL;
-  }
-
-  return currentOrigin;
+  return DEFAULT_APP_URL;
 }
 
 function getCurrentLocalePrefix() {
@@ -159,7 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isProviderDisabled) {
           return {
             error: new Error(
-              'Google OAuth ainda não está ativado no Supabase. Ative o provider Google em Authentication > Sign In / Providers.'
+              'Google OAuth ainda não está ativado no Supabase. Ative o provider Google em Authentication > Sign In / Providers ou entre com email e senha.'
             ) as Error,
           };
         }
