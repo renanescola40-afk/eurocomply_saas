@@ -22,6 +22,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const DEFAULT_APP_URL = 'http://localhost:3000';
+const AUTH_DASHBOARD_PATH = '/dashboard/organizations';
 
 function getAppOrigin() {
   const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
@@ -44,7 +45,7 @@ function getCurrentLocalePrefix() {
   return locales.includes(currentLocale as Locale) ? `/${currentLocale}` : '/pt';
 }
 
-function getAuthCallbackUrl(nextPath = '/pt/dashboard') {
+function getAuthCallbackUrl(nextPath = '/pt/dashboard/organizations') {
   const origin = getAppOrigin();
   const callbackUrl = new URL('/auth/callback', origin);
   callbackUrl.searchParams.set('next', nextPath);
@@ -54,6 +55,10 @@ function getAuthCallbackUrl(nextPath = '/pt/dashboard') {
 function getLocalizedPath(path: string) {
   const localePrefix = getCurrentLocalePrefix();
   return `${localePrefix}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+export function getLocalizedDashboardPath() {
+  return getLocalizedPath(AUTH_DASHBOARD_PATH);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -105,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       metadata?: { name?: string; company_name?: string }
     ) => {
       try {
-        const nextPath = getLocalizedPath('/dashboard');
+        const nextPath = getLocalizedDashboardPath();
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -125,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     try {
-      const nextPath = getLocalizedPath('/dashboard');
+      const nextPath = getLocalizedDashboardPath();
       const redirectTo = getAuthCallbackUrl(nextPath);
 
       const { error } = await supabase.auth.signInWithOAuth({
