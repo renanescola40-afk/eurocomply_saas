@@ -5,6 +5,7 @@ const sections = [
   { label: 'Heatmap', anchor: '#risk-heatmap', description: 'Risk clusters' },
   { label: 'Graph', anchor: '#relationship-graph', description: 'Dependencies' },
   { label: 'Board', anchor: '#board-mode', description: 'C-level view' },
+  { label: 'Simulate', anchor: '#scenario-simulator', description: 'Score lift' },
   { label: 'Cockpit', anchor: '#executive-cockpit', description: 'Health center' },
   { label: 'Activity', anchor: '#operational-feed', description: 'Work in motion' },
   { label: 'Evidence', anchor: '#evidence-graph', description: 'Connected proof' },
