@@ -12,6 +12,7 @@ import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
 import { EnterpriseValueLadder } from '@/components/dashboard/enterprise-value-ladder';
 import { EvidenceGraph } from '@/components/dashboard/evidence-graph';
 import { ExecutiveCockpit } from '@/components/dashboard/executive-cockpit';
+import { ExecutiveCommandCenter } from '@/components/dashboard/executive-command-center';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
 import { FrameworkCoveragePreview } from '@/components/dashboard/framework-coverage-preview';
 import { NextBestActions } from '@/components/dashboard/next-best-actions';
@@ -102,6 +103,7 @@ export function DashboardOverview({
       <DashboardSectionNavigator />
       <DashboardExperienceMap basePath={basePath} />
       <section id="experience-index" className="scroll-mt-28"><DashboardExperienceIndex summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
+      <section id="executive-command-center" className="scroll-mt-28"><ExecutiveCommandCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
       <section id="executive-cockpit" className="scroll-mt-28"><ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
       <section id="operational-feed" className="scroll-mt-28"><OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section>
       <section id="evidence-graph" className="scroll-mt-28"><EvidenceGraph summary={summary} basePath={basePath} /></section>
