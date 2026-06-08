@@ -63,7 +63,8 @@ export async function getUserOrganizationMemberships(userId: string) {
     .order('created_at', { ascending: true });
 
   if (error) {
-    throw error;
+    console.warn('[organization] Failed to load organization memberships:', error.message);
+    return [];
   }
 
   return ((data ?? []) as RawOrganizationMembership[])
