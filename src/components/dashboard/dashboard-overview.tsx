@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { AiCopilotPanel } from '@/components/dashboard/ai-copilot-panel';
 import { AiExecutiveLayer } from '@/components/dashboard/ai-executive-layer';
 import { ApprovalWorkflowPreview } from '@/components/dashboard/approval-workflow-preview';
 import { AuditTimelinePreview } from '@/components/dashboard/audit-timeline-preview';
@@ -104,6 +105,7 @@ export function DashboardOverview({
       <DashboardExperienceMap basePath={basePath} />
       <section id="experience-index" className="scroll-mt-28"><DashboardExperienceIndex summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
       <section id="executive-command-center" className="scroll-mt-28"><ExecutiveCommandCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
+      <section id="ai-copilot" className="scroll-mt-28"><AiCopilotPanel summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
       <section id="executive-cockpit" className="scroll-mt-28"><ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
       <section id="operational-feed" className="scroll-mt-28"><OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section>
       <section id="evidence-graph" className="scroll-mt-28"><EvidenceGraph summary={summary} basePath={basePath} /></section>
