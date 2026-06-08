@@ -1,4 +1,4 @@
-// middleware.ts - Versão COMBINADA (i18n + Auth)
+// middleware.ts - Combined i18n + Auth
 
 import { createServerClient } from '@supabase/ssr';
 import createIntlMiddleware from 'next-intl/middleware';
@@ -7,16 +7,22 @@ import { routing, locales, defaultLocale, COUNTRY_TO_LOCALE } from '@/lib/i18n/r
 
 const intlMiddleware = createIntlMiddleware(routing);
 const LOCALE_COOKIE = 'NEXT_LOCALE';
+const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations';
 
 const PUBLIC_ROUTES = [
   '/',
   '/login',
+  '/signup',
   '/register',
   '/auth',
+  '/pricing',
+  '/faq',
+  '/about',
+  '/contact',
   '/recuperar-senha',
   '/atualizar-senha',
   '/politica-privacidade',
-  '/termos-servico'
+  '/termos-servico',
 ];
 
 function isPublicRoute(pathname: string, locale: string): boolean {
@@ -116,18 +122,17 @@ export default async function middleware(req: NextRequest) {
 
     if (!session && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
+      loginUrl.searchParams.set('next', pathname);
       return NextResponse.redirect(loginUrl);
     }
 
-    if (session && pathname === `/${locale}/login`) {
-      const dashboardUrl = new URL(`/${locale}/dashboard`, req.url);
+    if (session && (pathname === `/${locale}/login` || pathname === `/${locale}/signup`)) {
+      const dashboardUrl = new URL(`/${locale}${ORGANIZATION_DASHBOARD_PATH}`, req.url);
       return NextResponse.redirect(dashboardUrl);
     }
 
     const response = intlMiddleware(req);
 
-    // Explicit URL locale must always win. If the user opens /en, store en.
-    // Never overwrite it with country detection such as PT/BR -> pt.
     response.cookies.set(LOCALE_COOKIE, locale, {
       maxAge: 60 * 60 * 24 * 365,
       path: '/',
