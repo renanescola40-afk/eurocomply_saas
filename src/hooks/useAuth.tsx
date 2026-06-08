@@ -61,6 +61,42 @@ export function getLocalizedDashboardPath() {
   return getLocalizedPath(AUTH_DASHBOARD_PATH);
 }
 
+function isPublicAuthPath(pathname: string) {
+  const localePrefix = getCurrentLocalePrefix();
+  return pathname === localePrefix || pathname === `${localePrefix}/login` || pathname === `${localePrefix}/signup`;
+}
+
+function redirectAuthenticatedUser() {
+  if (typeof window === 'undefined') return;
+
+  if (isPublicAuthPath(window.location.pathname)) {
+    window.location.replace(getLocalizedDashboardPath());
+  }
+}
+
+async function recoverOAuthSessionFromUrl() {
+  if (typeof window === 'undefined') return;
+
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get('code');
+
+  if (!code) return;
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  url.searchParams.delete('code');
+  url.searchParams.delete('state');
+  url.searchParams.delete('scope');
+  url.searchParams.delete('authuser');
+  url.searchParams.delete('prompt');
+
+  window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+
+  if (!error) {
+    redirectAuthenticatedUser();
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -69,10 +105,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function loadSession() {
       try {
+        await recoverOAuthSessionFromUrl();
         const { data } = await supabase.auth.getSession();
         const currentSession = data.session;
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
+
+        if (currentSession) {
+          redirectAuthenticatedUser();
+        }
       } catch (e) {
         setSession(null);
         setUser(null);
@@ -87,6 +128,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setLoading(false);
+
+      if (currentSession) {
+        redirectAuthenticatedUser();
+      }
     });
 
     return () => {
