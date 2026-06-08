@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AiExecutiveLayer } from '@/components/dashboard/ai-executive-layer';
+import { BoardReportCenter } from '@/components/dashboard/board-report-center';
 import { ComplianceTimeline } from '@/components/dashboard/compliance-timeline';
 import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
 import { EvidenceGraph } from '@/components/dashboard/evidence-graph';
@@ -93,6 +94,7 @@ export function DashboardOverview({
       <OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
       <EvidenceGraph summary={summary} basePath={basePath} />
       <AiExecutiveLayer summary={summary} trendComparison={trendComparison} basePath={basePath} />
+      <BoardReportCenter summary={summary} trendComparison={trendComparison} basePath={basePath} />
       <DomainScorecards summary={summary} basePath={basePath} />
       <NextBestActions summary={summary} basePath={basePath} />
       <ComplianceTimeline tasks={openTasks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
