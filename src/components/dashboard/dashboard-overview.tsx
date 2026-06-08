@@ -4,6 +4,7 @@ import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
 import { ExecutiveCockpit } from '@/components/dashboard/executive-cockpit';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
 import { NextBestActions } from '@/components/dashboard/next-best-actions';
+import { OperationalActivityFeed } from '@/components/dashboard/operational-activity-feed';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DashboardSummary, DashboardTrendComparison, DashboardTrendSnapshot } from '@/server/queries/dashboard';
 
@@ -87,6 +88,7 @@ export function DashboardOverview({
     <div className="space-y-6">
       <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
       <ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} />
+      <OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
       <DomainScorecards summary={summary} basePath={basePath} />
       <NextBestActions summary={summary} basePath={basePath} />
       <ComplianceTimeline tasks={openTasks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
