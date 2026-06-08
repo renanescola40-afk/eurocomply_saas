@@ -8,6 +8,7 @@ import { ExecutiveCockpit } from '@/components/dashboard/executive-cockpit';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
 import { NextBestActions } from '@/components/dashboard/next-best-actions';
 import { OperationalActivityFeed } from '@/components/dashboard/operational-activity-feed';
+import { WhiteLabelReportPreview } from '@/components/dashboard/white-label-report-preview';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DashboardSummary, DashboardTrendComparison, DashboardTrendSnapshot } from '@/server/queries/dashboard';
 
@@ -95,6 +96,7 @@ export function DashboardOverview({
       <EvidenceGraph summary={summary} basePath={basePath} />
       <AiExecutiveLayer summary={summary} trendComparison={trendComparison} basePath={basePath} />
       <BoardReportCenter summary={summary} trendComparison={trendComparison} basePath={basePath} />
+      <WhiteLabelReportPreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
       <DomainScorecards summary={summary} basePath={basePath} />
       <NextBestActions summary={summary} basePath={basePath} />
       <ComplianceTimeline tasks={openTasks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
