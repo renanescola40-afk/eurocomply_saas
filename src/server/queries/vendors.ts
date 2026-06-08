@@ -10,7 +10,8 @@ export async function listVendors(organizationId: string) {
     .order('created_at', { ascending: false });
 
   if (error) {
-    throw new Error(error.message);
+    console.warn('[vendors] Failed to list vendors:', error.message);
+    return [];
   }
 
   return data ?? [];
