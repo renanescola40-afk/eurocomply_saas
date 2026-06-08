@@ -70,8 +70,8 @@ function buildAnswers(summary: DashboardSummary, trendComparison: DashboardTrend
     {
       question: 'Prepare audit package',
       answer: `The audit package can use ${summary.totals.documents} tracked documents, the risk register and vendor review posture. Evidence gaps should be closed before external sharing.`,
-      action: 'Open audit pack',
-      href: `${basePath}/audit-pack`,
+      action: 'Open printable package',
+      href: `${basePath}/reports/print`,
       tone: 'sky',
     },
   ];
