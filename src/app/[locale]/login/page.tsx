@@ -80,6 +80,10 @@ const loginCopy: Record<string, {
   },
 };
 
+function getDashboardHref(locale: string) {
+  return `/${locale}/dashboard/organizations`;
+}
+
 export default function LoginPage() {
   const t = useTranslations('auth');
   const router = useRouter();
@@ -98,7 +102,7 @@ export default function LoginPage() {
     if (authLoading) return;
 
     if (user) {
-      router.replace(`/${locale}/dashboard`);
+      router.replace(getDashboardHref(locale));
     }
   }, [authLoading, locale, router, user]);
 
@@ -125,7 +129,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.replace(`/${locale}/dashboard`);
+    router.replace(getDashboardHref(locale));
   }
 
   return (
