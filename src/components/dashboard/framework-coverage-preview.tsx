@@ -79,7 +79,7 @@ export function FrameworkCoveragePreview({ summary, basePath }: FrameworkCoverag
       coverage: clampCoverage(evidenceCoverage - summary.missingDocuments),
       status: 'planned',
       description: 'Evidence packaging, audit trails, vendor risk and management assertions.',
-      href: `${basePath}/audit-pack`,
+      href: `${basePath}/reports/print`,
     },
     {
       name: 'AI Act',
