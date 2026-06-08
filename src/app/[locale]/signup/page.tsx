@@ -107,6 +107,10 @@ const signupCopy: Record<string, {
   },
 };
 
+function getDashboardHref(locale: string) {
+  return `/${locale}/dashboard/organizations`;
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const params = useParams();
@@ -125,7 +129,7 @@ export default function SignupPage() {
     if (authLoading) return;
 
     if (user) {
-      router.replace(`/${locale}/dashboard`);
+      router.replace(getDashboardHref(locale));
     }
   }, [authLoading, locale, router, user]);
 
