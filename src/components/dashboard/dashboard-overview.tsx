@@ -9,6 +9,7 @@ import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
 import { EvidenceGraph } from '@/components/dashboard/evidence-graph';
 import { ExecutiveCockpit } from '@/components/dashboard/executive-cockpit';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
+import { FrameworkCoveragePreview } from '@/components/dashboard/framework-coverage-preview';
 import { NextBestActions } from '@/components/dashboard/next-best-actions';
 import { OperationalActivityFeed } from '@/components/dashboard/operational-activity-feed';
 import { WhiteLabelReportPreview } from '@/components/dashboard/white-label-report-preview';
@@ -103,6 +104,7 @@ export function DashboardOverview({
       <ApprovalWorkflowPreview summary={summary} basePath={basePath} />
       <DepartmentOwnershipPreview summary={summary} basePath={basePath} />
       <AuditTimelinePreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
+      <FrameworkCoveragePreview summary={summary} basePath={basePath} />
       <DomainScorecards summary={summary} basePath={basePath} />
       <NextBestActions summary={summary} basePath={basePath} />
       <ComplianceTimeline tasks={openTasks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
