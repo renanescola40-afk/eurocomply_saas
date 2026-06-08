@@ -1,7 +1,8 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient, tryCreateAdminClient } from '@/lib/supabase/admin';
 
 export async function listDocuments(organizationId: string) {
-  const supabase = createAdminClient();
+  const supabase = tryCreateAdminClient();
+  if (!supabase) return [];
 
   const { data, error } = await supabase
     .from('documents')
