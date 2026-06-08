@@ -70,7 +70,7 @@ export function EnterpriseValueLadder({ summary, basePath }: EnterpriseValueLadd
       readiness: clamp((summary.complianceScore + evidenceReadiness) / 2),
       description: 'Package the same compliance foundation into GDPR, DORA, NIS2, ISO, SOC2 and AI Act modules.',
       unlocks: ['GDPR', 'DORA/NIS2', 'ISO/SOC2/AI Act'],
-      href: `${basePath}/audit-pack`,
+      href: `${basePath}/reports/print`,
       tone: 'amber',
     },
   ];
