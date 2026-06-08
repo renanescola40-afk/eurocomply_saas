@@ -1,10 +1,12 @@
 const sections = [
   { label: 'Index', anchor: '#experience-index', description: 'Operating grade' },
   { label: 'Command', anchor: '#executive-command-center', description: 'Control room' },
+  { label: 'AI', anchor: '#ai-copilot', description: 'Copilot panel' },
+  { label: 'Heatmap', anchor: '#risk-heatmap', description: 'Risk clusters' },
   { label: 'Cockpit', anchor: '#executive-cockpit', description: 'Health center' },
   { label: 'Activity', anchor: '#operational-feed', description: 'Work in motion' },
   { label: 'Evidence', anchor: '#evidence-graph', description: 'Connected proof' },
-  { label: 'AI', anchor: '#ai-executive-layer', description: 'Board answers' },
+  { label: 'Answers', anchor: '#ai-executive-layer', description: 'Board answers' },
   { label: 'Reports', anchor: '#board-report-center', description: 'Executive package' },
   { label: 'Enterprise', anchor: '#enterprise-governance', description: 'Workflow/RBAC' },
   { label: 'Marketplace', anchor: '#marketplace-expansion', description: 'Frameworks' },
