@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 type RawOrganizationMembership = {
   organization_id: string;
@@ -54,7 +54,8 @@ function normalizeMembership(membership: RawOrganizationMembership): CurrentOrga
 }
 
 export async function getUserOrganizationMemberships(userId: string) {
-  const supabase = createAdminClient();
+  const supabase = tryCreateAdminClient();
+  if (!supabase) return [];
 
   const { data, error } = await supabase
     .from('organization_members')
