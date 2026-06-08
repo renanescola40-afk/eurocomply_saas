@@ -5,17 +5,17 @@ import { createOrganization } from '@/server/actions/organizations';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect('/login');
+    redirect(`/${params.locale}/login`);
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (organization) {
-    redirect('/dashboard/organizations');
+    redirect(`/${params.locale}/dashboard/organizations`);
   }
 
   async function createOrganizationFromOnboarding(input: { name: string; slug: string }) {
@@ -24,11 +24,11 @@ export default async function OnboardingPage() {
     const currentUser = await getCurrentUser();
 
     if (!currentUser) {
-      redirect('/login');
+      redirect(`/${params.locale}/login`);
     }
 
     await createOrganization(input, currentUser.id, currentUser.email);
-    redirect('/dashboard/organizations');
+    redirect(`/${params.locale}/dashboard/organizations`);
   }
 
   return (
