@@ -90,7 +90,7 @@ export default async function middleware(req: NextRequest) {
   let supabaseResponse = NextResponse.next({ request: req });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  let session = null;
+  let isAuthenticated = false;
 
   if (supabaseUrl && supabaseAnonKey) {
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -108,8 +108,8 @@ export default async function middleware(req: NextRequest) {
       },
     });
 
-    const { data } = await supabase.auth.getSession();
-    session = data.session;
+    const { data, error } = await supabase.auth.getUser();
+    isAuthenticated = Boolean(data.user && !error);
   }
 
   const pathnameHasLocale = locales.some(
@@ -120,13 +120,13 @@ export default async function middleware(req: NextRequest) {
     const locale = pathname.split('/')[1];
     const isPublic = isPublicRoute(pathname, locale);
 
-    if (!session && !isPublic) {
+    if (!isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
       loginUrl.searchParams.set('next', pathname);
       return NextResponse.redirect(loginUrl);
     }
 
-    if (session && (pathname === `/${locale}/login` || pathname === `/${locale}/signup`)) {
+    if (isAuthenticated && (pathname === `/${locale}/login` || pathname === `/${locale}/signup`)) {
       const dashboardUrl = new URL(`/${locale}${ORGANIZATION_DASHBOARD_PATH}`, req.url);
       return NextResponse.redirect(dashboardUrl);
     }
