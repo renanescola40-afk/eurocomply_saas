@@ -3,29 +3,29 @@ import { PublicFooter } from '@/components/marketing/public-footer';
 
 const features = [
   {
-    title: 'Compliance dashboard',
-    description: 'Track documents, vendors, risks and tasks from one organization-first workspace.',
+    title: 'Executive dashboard',
+    description: 'See compliance score, risks, vendor exposure, document gaps and next best actions in one premium dashboard.',
   },
   {
     title: 'Audit-ready evidence',
-    description: 'Store compliance documents securely with private storage and signed downloads.',
+    description: 'Store policies, DPIAs, vendor agreements and evidence securely with private storage and signed downloads.',
   },
   {
     title: 'Vendor and risk management',
-    description: 'Classify third-party exposure, review vendors and prioritize risks by impact.',
+    description: 'Classify third-party exposure, review vendors, track DPA status and prioritize risks by impact.',
   },
   {
-    title: 'Billing and team controls',
-    description: 'Invite your team, enforce plan limits and manage subscriptions with Stripe.',
+    title: 'Board-ready reports',
+    description: 'Generate printable executive reports, maturity scorecards and CSV exports for leadership or customer review.',
   },
 ];
 
 const steps = [
   'Create your organization',
-  'Invite your compliance team',
-  'Upload policies and evidence',
-  'Track risks, vendors and tasks',
-  'Stay audit-ready over time',
+  'Generate tasks and documents from compliance templates',
+  'Upload evidence and assign owners',
+  'Track vendors, risks and deadlines',
+  'Export board-ready reports',
 ];
 
 const faqs = [
@@ -50,45 +50,62 @@ const faqs = [
 export default function HomePage({ params }: { params: { locale: string } }) {
   return (
     <main className="min-h-screen bg-background">
-      <section className="mx-auto flex max-w-7xl flex-col gap-12 px-6 py-20 lg:flex-row lg:items-center lg:py-28">
+      <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+        <Link href={`/${params.locale}`} className="text-lg font-bold tracking-tight">EuroComply</Link>
+        <nav className="flex items-center gap-2 text-sm">
+          <Link href={`/${params.locale}/pricing`} className="rounded-full px-4 py-2 text-muted-foreground hover:bg-muted hover:text-foreground">Pricing</Link>
+          <Link href={`/${params.locale}/login`} className="rounded-full border px-4 py-2 font-medium hover:bg-muted">Sign in</Link>
+          <Link href={`/${params.locale}/signup`} className="rounded-full bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary/90">Start free</Link>
+        </nav>
+      </header>
+
+      <section className="mx-auto grid max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:py-24">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">EuroComply</p>
-          <h1 className="mt-4 text-5xl font-bold tracking-tight md:text-6xl">
-            Compliance operations for European teams that need proof, not chaos.
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">EuroComply SaaS</p>
+          <h1 className="mt-4 text-5xl font-bold tracking-tight md:text-7xl">
+            Compliance operations that look board-ready from day one.
           </h1>
           <p className="mt-6 text-lg leading-8 text-muted-foreground">
-            Organize GDPR evidence, vendors, risks, tasks and billing controls in a secure multi-tenant SaaS built for growing compliance programs.
+            Organize GDPR evidence, vendors, risks, tasks, templates and executive reports in a secure multi-tenant SaaS built for European teams.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href={`/${params.locale}/signup`}
-              className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              className="inline-flex h-12 items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
               Start your workspace
             </Link>
             <Link
-              href={`/${params.locale}/pricing`}
-              className="inline-flex h-11 items-center justify-center rounded-md border px-6 text-sm font-medium hover:bg-muted"
+              href={`/${params.locale}/login`}
+              className="inline-flex h-12 items-center justify-center rounded-full border px-6 text-sm font-semibold hover:bg-muted"
             >
-              View pricing
+              Sign in
             </Link>
           </div>
         </div>
 
-        <div className="rounded-3xl border bg-card p-6 shadow-sm lg:w-[420px]">
-          <p className="text-sm font-medium text-muted-foreground">Audit readiness snapshot</p>
-          <div className="mt-6 space-y-4">
-            {[
-              ['Compliance score', '82%'],
-              ['Open risks', '7'],
-              ['High-risk vendors', '3'],
-              ['Missing documents', '5'],
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
-                <span className="text-sm text-muted-foreground">{label}</span>
-                <span className="text-lg font-semibold">{value}</span>
-              </div>
-            ))}
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-6 text-white shadow-2xl">
+          <div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-primary/20 blur-3xl" />
+          <div className="relative">
+            <p className="text-sm font-medium text-slate-400">Executive readiness snapshot</p>
+            <div className="mt-6 rounded-3xl border border-white/10 bg-white/[0.05] p-5 text-center">
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Compliance score</p>
+              <p className="mt-2 text-6xl font-bold text-emerald-300">82%</p>
+              <p className="mt-2 text-sm text-slate-400">Operationally controlled</p>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {[
+                ['Open risks', '7'],
+                ['High-risk vendors', '3'],
+                ['Missing documents', '5'],
+                ['Next best actions', '4'],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <span className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</span>
+                  <p className="mt-2 text-2xl font-semibold">{value}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
