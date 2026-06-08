@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 export type DashboardSummary = Awaited<ReturnType<typeof getDashboardSummary>>;
 
@@ -21,8 +21,37 @@ export type DashboardTrendComparison = {
   missingDocumentsDelta: number | null;
 };
 
+type DashboardRow = Record<string, unknown>;
+
+function emptyDashboardSummary() {
+  return {
+    complianceScore: 0,
+    openTasks: 0,
+    highRiskVendors: 0,
+    openRisks: 0,
+    criticalRisks: 0,
+    missingDocuments: 0,
+    totals: {
+      tasks: 0,
+      vendors: 0,
+      risks: 0,
+      documents: 0,
+    },
+  };
+}
+
+function safeRows(result: { data: DashboardRow[] | null; error: { message?: string } | null }, label: string) {
+  if (result.error) {
+    console.warn(`[dashboard] Failed to load ${label}:`, result.error.message ?? 'Unknown error');
+    return [];
+  }
+
+  return result.data ?? [];
+}
+
 export async function getDashboardSummary(organizationId: string) {
-  const supabase = createAdminClient();
+  const supabase = tryCreateAdminClient();
+  if (!supabase) return emptyDashboardSummary();
 
   const [tasks, vendors, risks, documents] = await Promise.all([
     supabase.from('compliance_tasks').select('id,status,priority', { count: 'exact', head: false }).eq('organization_id', organizationId),
@@ -31,15 +60,10 @@ export async function getDashboardSummary(organizationId: string) {
     supabase.from('documents').select('id,status,expires_at', { count: 'exact', head: false }).eq('organization_id', organizationId),
   ]);
 
-  if (tasks.error) throw tasks.error;
-  if (vendors.error) throw vendors.error;
-  if (risks.error) throw risks.error;
-  if (documents.error) throw documents.error;
-
-  const taskRows = tasks.data ?? [];
-  const vendorRows = vendors.data ?? [];
-  const riskRows = risks.data ?? [];
-  const documentRows = documents.data ?? [];
+  const taskRows = safeRows(tasks, 'tasks');
+  const vendorRows = safeRows(vendors, 'vendors');
+  const riskRows = safeRows(risks, 'risks');
+  const documentRows = safeRows(documents, 'documents');
 
   const openTasks = taskRows.filter((task) => task.status !== 'done').length;
   const highRiskVendors = vendorRows.filter((vendor) => vendor.risk_level === 'high').length;
@@ -68,7 +92,8 @@ export async function getDashboardSummary(organizationId: string) {
 }
 
 export async function recordDashboardMetricSnapshot(organizationId: string, summary: DashboardSummary) {
-  const supabase = createAdminClient();
+  const supabase = tryCreateAdminClient();
+  if (!supabase) return;
 
   const { error } = await supabase.from('compliance_metric_snapshots').upsert(
     {
@@ -95,7 +120,8 @@ export async function recordDashboardMetricSnapshot(organizationId: string, summ
 }
 
 export async function getDashboardTrendHistory(organizationId: string, limit = 12): Promise<DashboardTrendSnapshot[]> {
-  const supabase = createAdminClient();
+  const supabase = tryCreateAdminClient();
+  if (!supabase) return [];
 
   const { data, error } = await supabase
     .from('compliance_metric_snapshots')
