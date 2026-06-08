@@ -5,6 +5,7 @@ import { AuditTimelinePreview } from '@/components/dashboard/audit-timeline-prev
 import { BoardReportCenter } from '@/components/dashboard/board-report-center';
 import { ComplianceTimeline } from '@/components/dashboard/compliance-timeline';
 import { DashboardExperienceIndex } from '@/components/dashboard/dashboard-experience-index';
+import { DashboardSectionNavigator } from '@/components/dashboard/dashboard-section-navigator';
 import { DepartmentOwnershipPreview } from '@/components/dashboard/department-ownership-preview';
 import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
 import { EnterpriseValueLadder } from '@/components/dashboard/enterprise-value-ladder';
@@ -95,20 +96,25 @@ export function DashboardOverview({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 scroll-smooth">
       <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
-      <DashboardExperienceIndex summary={summary} trendComparison={trendComparison} basePath={basePath} />
-      <ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} />
-      <OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
-      <EvidenceGraph summary={summary} basePath={basePath} />
-      <AiExecutiveLayer summary={summary} trendComparison={trendComparison} basePath={basePath} />
-      <BoardReportCenter summary={summary} trendComparison={trendComparison} basePath={basePath} />
+      <DashboardSectionNavigator />
+      <section id="experience-index" className="scroll-mt-28"><DashboardExperienceIndex summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
+      <section id="executive-cockpit" className="scroll-mt-28"><ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
+      <section id="operational-feed" className="scroll-mt-28"><OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section>
+      <section id="evidence-graph" className="scroll-mt-28"><EvidenceGraph summary={summary} basePath={basePath} /></section>
+      <section id="ai-executive-layer" className="scroll-mt-28"><AiExecutiveLayer summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
+      <section id="board-report-center" className="scroll-mt-28"><BoardReportCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
       <WhiteLabelReportPreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
-      <ApprovalWorkflowPreview summary={summary} basePath={basePath} />
-      <DepartmentOwnershipPreview summary={summary} basePath={basePath} />
-      <AuditTimelinePreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
-      <FrameworkCoveragePreview summary={summary} basePath={basePath} />
-      <EnterpriseValueLadder summary={summary} basePath={basePath} />
+      <section id="enterprise-governance" className="space-y-6 scroll-mt-28">
+        <ApprovalWorkflowPreview summary={summary} basePath={basePath} />
+        <DepartmentOwnershipPreview summary={summary} basePath={basePath} />
+        <AuditTimelinePreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
+      </section>
+      <section id="marketplace-expansion" className="space-y-6 scroll-mt-28">
+        <FrameworkCoveragePreview summary={summary} basePath={basePath} />
+        <EnterpriseValueLadder summary={summary} basePath={basePath} />
+      </section>
       <DomainScorecards summary={summary} basePath={basePath} />
       <NextBestActions summary={summary} basePath={basePath} />
       <ComplianceTimeline tasks={openTasks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
