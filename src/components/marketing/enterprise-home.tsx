@@ -114,6 +114,13 @@ const homeCopy: Record<Locale, HomeCopy> = {
   },
 };
 
+const trustArchitecture = [
+  ['Tenant isolation', 'Every workflow is scoped by organization, keeping evidence, vendors and risks separated by workspace.'],
+  ['Private evidence layer', 'Documents stay in private storage and downloads use short-lived signed URLs.'],
+  ['Action audit trail', 'Key compliance actions are logged so teams can show who changed what and when.'],
+  ['Rate-limited workflows', 'Sensitive flows such as invitations, billing, uploads and exports are protected against abuse.'],
+];
+
 function SignalRail({ items }: { items: Array<[string, string]> }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -181,6 +188,31 @@ function ProductTheatre({ metrics }: { metrics: Array<[string, string]> }) {
   );
 }
 
+function TrustArchitecture() {
+  return (
+    <section className="mx-auto max-w-7xl px-6 py-20">
+      <div className="grid gap-8 rounded-[2.25rem] border border-white/10 bg-white/[0.035] p-6 shadow-2xl md:p-8 lg:grid-cols-[0.85fr_1.15fr]">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-200/70">Trust architecture</p>
+          <h2 className="mt-4 text-4xl font-bold tracking-tight">Built to feel credible before procurement asks hard questions.</h2>
+          <p className="mt-4 text-sm leading-7 text-white/55">
+            The public story is premium, but the product foundation is practical: scoped workspaces, audit trails, private evidence, rate-limited actions and board-ready outputs.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {trustArchitecture.map(([title, description]) => (
+            <article key={title} className="rounded-3xl border border-white/10 bg-[#070b15] p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/60">Control</p>
+              <h3 className="mt-3 text-lg font-semibold">{title}</h3>
+              <p className="mt-3 text-sm leading-6 text-white/52">{description}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function EnterpriseHome({ locale }: { locale: Locale }) {
   const c = homeCopy[locale];
 
@@ -227,6 +259,8 @@ export function EnterpriseHome({ locale }: { locale: Locale }) {
           <ProductTheatre metrics={c.metrics} />
         </div>
       </section>
+
+      <TrustArchitecture />
 
       <section id="platform" className="border-y border-white/10 bg-white/[0.03] py-20">
         <div className="mx-auto max-w-7xl px-6">
