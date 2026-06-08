@@ -3,7 +3,7 @@ import { csvDownloadResponse } from '@/lib/exports/csv';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
@@ -31,7 +31,11 @@ export async function GET() {
     return rateLimitResponse(rateLimit);
   }
 
-  const supabase = createAdminClient();
+  const supabase = tryCreateAdminClient();
+  if (!supabase) {
+    return csvDownloadResponse([['Name', 'Category', 'Risk level', 'Review status', 'DPA status', 'Data access level', 'Created at', 'Updated at']], 'vendors-report.csv');
+  }
+
   const { data, error } = await supabase
     .from('vendors')
     .select('name,category,risk_level,review_status,dpa_status,data_access_level,created_at,updated_at')
