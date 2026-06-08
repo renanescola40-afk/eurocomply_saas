@@ -22,28 +22,35 @@ async function countRows(table: string, organizationId: string) {
     .eq('organization_id', organizationId);
 
   if (error) {
-    throw error;
+    console.warn(`[billing] Failed to count ${table}:`, error.message);
+    return 0;
   }
 
   return count ?? 0;
 }
 
-export async function getOrganizationBillingContext(
-  organizationId: string,
-): Promise<OrganizationBillingContext> {
+async function getSubscription(organizationId: string) {
   const supabase = createAdminClient();
 
-  const { data: subscription, error } = await supabase
+  const { data, error } = await supabase
     .from('subscriptions')
     .select('plan,status')
     .eq('organization_id', organizationId)
     .maybeSingle();
 
   if (error) {
-    throw error;
+    console.warn('[billing] Failed to load subscription:', error.message);
+    return null;
   }
 
-  const [users, documents, vendors, risks] = await Promise.all([
+  return data;
+}
+
+export async function getOrganizationBillingContext(
+  organizationId: string,
+): Promise<OrganizationBillingContext> {
+  const [subscription, users, documents, vendors, risks] = await Promise.all([
+    getSubscription(organizationId),
     countRows('organization_members', organizationId),
     countRows('documents', organizationId),
     countRows('vendors', organizationId),
