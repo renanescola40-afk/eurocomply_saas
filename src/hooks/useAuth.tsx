@@ -25,14 +25,14 @@ const DEFAULT_APP_URL = 'http://localhost:3000';
 const AUTH_DASHBOARD_PATH = '/dashboard/organizations';
 
 function getAppOrigin() {
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+
   const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
 
   if (configuredUrl) {
     return configuredUrl.replace(/\/$/, '');
-  }
-
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
   }
 
   return DEFAULT_APP_URL;
