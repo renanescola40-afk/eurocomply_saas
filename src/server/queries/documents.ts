@@ -9,7 +9,10 @@ export async function listDocuments(organizationId: string) {
     .eq('organization_id', organizationId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.warn('[documents] Failed to list documents:', error.message);
+    return [];
+  }
 
   return data ?? [];
 }
