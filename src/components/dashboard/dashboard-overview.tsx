@@ -18,6 +18,7 @@ import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboa
 import { FrameworkCoveragePreview } from '@/components/dashboard/framework-coverage-preview';
 import { NextBestActions } from '@/components/dashboard/next-best-actions';
 import { OperationalActivityFeed } from '@/components/dashboard/operational-activity-feed';
+import { RiskHeatmap } from '@/components/dashboard/risk-heatmap';
 import { WhiteLabelReportPreview } from '@/components/dashboard/white-label-report-preview';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DashboardSummary, DashboardTrendComparison, DashboardTrendSnapshot } from '@/server/queries/dashboard';
@@ -106,6 +107,7 @@ export function DashboardOverview({
       <section id="experience-index" className="scroll-mt-28"><DashboardExperienceIndex summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
       <section id="executive-command-center" className="scroll-mt-28"><ExecutiveCommandCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
       <section id="ai-copilot" className="scroll-mt-28"><AiCopilotPanel summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
+      <section id="risk-heatmap" className="scroll-mt-28"><RiskHeatmap summary={summary} basePath={basePath} /></section>
       <section id="executive-cockpit" className="scroll-mt-28"><ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
       <section id="operational-feed" className="scroll-mt-28"><OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section>
       <section id="evidence-graph" className="scroll-mt-28"><EvidenceGraph summary={summary} basePath={basePath} /></section>
