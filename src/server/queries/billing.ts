@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 export type BillingUsage = {
   users: number;
@@ -14,7 +14,8 @@ export type OrganizationBillingContext = {
 };
 
 async function countRows(table: string, organizationId: string) {
-  const supabase = createAdminClient();
+  const supabase = tryCreateAdminClient();
+  if (!supabase) return 0;
 
   const { count, error } = await supabase
     .from(table)
@@ -30,7 +31,8 @@ async function countRows(table: string, organizationId: string) {
 }
 
 async function getSubscription(organizationId: string) {
-  const supabase = createAdminClient();
+  const supabase = tryCreateAdminClient();
+  if (!supabase) return null;
 
   const { data, error } = await supabase
     .from('subscriptions')
