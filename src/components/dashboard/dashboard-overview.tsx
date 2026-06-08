@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AiExecutiveLayer } from '@/components/dashboard/ai-executive-layer';
+import { ApprovalWorkflowPreview } from '@/components/dashboard/approval-workflow-preview';
 import { BoardReportCenter } from '@/components/dashboard/board-report-center';
 import { ComplianceTimeline } from '@/components/dashboard/compliance-timeline';
 import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
@@ -97,6 +98,7 @@ export function DashboardOverview({
       <AiExecutiveLayer summary={summary} trendComparison={trendComparison} basePath={basePath} />
       <BoardReportCenter summary={summary} trendComparison={trendComparison} basePath={basePath} />
       <WhiteLabelReportPreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
+      <ApprovalWorkflowPreview summary={summary} basePath={basePath} />
       <DomainScorecards summary={summary} basePath={basePath} />
       <NextBestActions summary={summary} basePath={basePath} />
       <ComplianceTimeline tasks={openTasks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
