@@ -1,5 +1,6 @@
 const sections = [
   { label: 'Index', anchor: '#experience-index', description: 'Operating grade' },
+  { label: 'Command', anchor: '#executive-command-center', description: 'Control room' },
   { label: 'Cockpit', anchor: '#executive-cockpit', description: 'Health center' },
   { label: 'Activity', anchor: '#operational-feed', description: 'Work in motion' },
   { label: 'Evidence', anchor: '#evidence-graph', description: 'Connected proof' },
