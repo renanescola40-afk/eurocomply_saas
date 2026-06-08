@@ -17,11 +17,14 @@ type ComplianceTaskListProps = {
 function formatDueDate(value?: string | null) {
   if (!value) return 'No due date';
 
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Invalid due date';
+
   return new Intl.DateTimeFormat('en', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  }).format(new Date(value));
+  }).format(date);
 }
 
 export function ComplianceTaskList({ tasks, onDelete }: ComplianceTaskListProps) {
