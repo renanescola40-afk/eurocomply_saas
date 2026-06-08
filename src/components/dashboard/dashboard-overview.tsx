@@ -22,6 +22,7 @@ import { OperationalActivityFeed } from '@/components/dashboard/operational-acti
 import { RelationshipGraph } from '@/components/dashboard/relationship-graph';
 import { RiskHeatmap } from '@/components/dashboard/risk-heatmap';
 import { ScenarioSimulator } from '@/components/dashboard/scenario-simulator';
+import { StickyExecutiveKpiBar } from '@/components/dashboard/sticky-executive-kpi-bar';
 import { WhiteLabelReportPreview } from '@/components/dashboard/white-label-report-preview';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DashboardSummary, DashboardTrendComparison, DashboardTrendSnapshot } from '@/server/queries/dashboard';
@@ -106,6 +107,7 @@ export function DashboardOverview({
     <div className="space-y-6 scroll-smooth">
       <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
       <DashboardSectionNavigator />
+      <StickyExecutiveKpiBar summary={summary} trendComparison={trendComparison} basePath={basePath} />
       <DashboardExperienceMap basePath={basePath} />
       <section id="experience-index" className="scroll-mt-28"><DashboardExperienceIndex summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
       <section id="executive-command-center" className="scroll-mt-28"><ExecutiveCommandCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
