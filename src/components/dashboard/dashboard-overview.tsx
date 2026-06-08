@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ComplianceTimeline } from '@/components/dashboard/compliance-timeline';
 import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
+import { ExecutiveCockpit } from '@/components/dashboard/executive-cockpit';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
 import { NextBestActions } from '@/components/dashboard/next-best-actions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -85,6 +86,7 @@ export function DashboardOverview({
   return (
     <div className="space-y-6">
       <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
+      <ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} />
       <DomainScorecards summary={summary} basePath={basePath} />
       <NextBestActions summary={summary} basePath={basePath} />
       <ComplianceTimeline tasks={openTasks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
