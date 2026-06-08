@@ -3,9 +3,11 @@ import { csvDownloadResponse } from '@/lib/exports/csv';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
+
+const TASKS_CSV_HEADER = ['Title', 'Category', 'Priority', 'Status', 'Due date', 'Created at', 'Updated at'];
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -31,7 +33,12 @@ export async function GET() {
     return rateLimitResponse(rateLimit);
   }
 
-  const supabase = createAdminClient();
+  const supabase = tryCreateAdminClient();
+
+  if (!supabase) {
+    return csvDownloadResponse([TASKS_CSV_HEADER], 'tasks-report.csv');
+  }
+
   const { data, error } = await supabase
     .from('compliance_tasks')
     .select('title,category,priority,status,due_date,created_at,updated_at')
@@ -44,7 +51,7 @@ export async function GET() {
   }
 
   const rows = [
-    ['Title', 'Category', 'Priority', 'Status', 'Due date', 'Created at', 'Updated at'],
+    TASKS_CSV_HEADER,
     ...((data ?? []).map((task) => [task.title, task.category, task.priority, task.status, task.due_date, task.created_at, task.updated_at])),
   ];
 
