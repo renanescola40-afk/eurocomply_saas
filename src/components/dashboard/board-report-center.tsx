@@ -106,8 +106,8 @@ export function BoardReportCenter({ summary, trendComparison, basePath }: BoardR
             <Link href={`${basePath}/reports`} className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-bold text-slate-950 transition hover:bg-slate-100">
               Open reports
             </Link>
-            <Link href={`${basePath}/audit-pack`} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-bold transition hover:border-primary/50 hover:bg-white/[0.08]">
-              Audit pack
+            <Link href={`${basePath}/reports/print`} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-bold transition hover:border-primary/50 hover:bg-white/[0.08]">
+              Print audit pack
             </Link>
           </div>
         </div>
