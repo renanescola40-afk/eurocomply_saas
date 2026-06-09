@@ -3,6 +3,8 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { requireEnterprisePlan } from '@/server/queries/subscription';
 import { createOrganizationInvite } from '@/server/queries/invites';
+import { createAuditEvent } from '@/server/queries/audit-events';
+import { createNotification } from '@/server/queries/notifications';
 
 const allowedRoles = new Set(['Admin', 'Editor', 'Visualizador']);
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -65,6 +67,14 @@ export async function POST(request: Request) {
   try {
     await requireEnterprisePlan(organization.id);
   } catch {
+    await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'enterprise_invite_blocked',
+      entityType: 'team_invite',
+      metadata: { reason: 'enterprise_required' },
+    });
+
     return NextResponse.json({ error: 'Enterprise plan required' }, { status: 403 });
   }
 
@@ -95,8 +105,30 @@ export async function POST(request: Request) {
     role: role as 'Admin' | 'Editor' | 'Visualizador',
   });
 
+  const audit = await createAuditEvent({
+    organizationId: organization.id,
+    actorUserId: user.id,
+    action: 'team_invite_created',
+    entityType: 'team_invite',
+    entityId: result.invite.id,
+    metadata: {
+      emailDomain: email.split('@')[1] ?? 'unknown',
+      role,
+      persisted: result.persisted,
+    },
+  });
+
+  const notification = await createNotification({
+    organizationId: organization.id,
+    userId: user.id,
+    type: 'invite',
+    message: `Convite enviado para ${email} com permissão ${role}.`,
+  });
+
   return NextResponse.json({
     invite: result.invite,
     persisted: result.persisted,
+    auditPersisted: audit.persisted,
+    notificationPersisted: notification.persisted,
   });
 }
