@@ -1,24 +1,19 @@
 import Link from 'next/link';
 import { AiCopilotPanel } from '@/components/dashboard/ai-copilot-panel';
-import { AiExecutiveLayer } from '@/components/dashboard/ai-executive-layer';
 import { ApprovalWorkflowPreview } from '@/components/dashboard/approval-workflow-preview';
 import { AuditTimelinePreview } from '@/components/dashboard/audit-timeline-preview';
 import { BoardModePreview } from '@/components/dashboard/board-mode-preview';
 import { BoardReportCenter } from '@/components/dashboard/board-report-center';
-import { ComplianceTimeline } from '@/components/dashboard/compliance-timeline';
 import { DashboardExperienceIndex } from '@/components/dashboard/dashboard-experience-index';
 import { DashboardExperienceMap } from '@/components/dashboard/dashboard-experience-map';
-import { DashboardSectionNavigator } from '@/components/dashboard/dashboard-section-navigator';
 import { DashboardWorkspaceSidebar } from '@/components/dashboard/dashboard-workspace-sidebar';
 import { DepartmentOwnershipPreview } from '@/components/dashboard/department-ownership-preview';
-import { DomainScorecards } from '@/components/dashboard/domain-scorecards';
 import { EnterpriseValueLadder } from '@/components/dashboard/enterprise-value-ladder';
 import { EvidenceGraph } from '@/components/dashboard/evidence-graph';
 import { ExecutiveCockpit } from '@/components/dashboard/executive-cockpit';
 import { ExecutiveCommandCenter } from '@/components/dashboard/executive-command-center';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
 import { FrameworkCoveragePreview } from '@/components/dashboard/framework-coverage-preview';
-import { NextBestActions } from '@/components/dashboard/next-best-actions';
 import { OperationalActivityFeed } from '@/components/dashboard/operational-activity-feed';
 import { RelationshipGraph } from '@/components/dashboard/relationship-graph';
 import { RiskHeatmap } from '@/components/dashboard/risk-heatmap';
@@ -64,6 +59,14 @@ type DashboardOverviewProps = {
   }>;
 };
 
+type WorkspaceView = {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+  accent: 'emerald' | 'sky' | 'violet' | 'amber' | 'rose';
+};
+
 function formatShortDate(value?: string | null) {
   if (!value) return 'not set';
   const date = new Date(value);
@@ -83,6 +86,18 @@ function getRiskTone(score?: number | string | null) {
   return 'text-muted-foreground';
 }
 
+function viewClasses(accent: WorkspaceView['accent']) {
+  const accents = {
+    emerald: 'hover:border-emerald-400/50 hover:bg-emerald-400/10',
+    sky: 'hover:border-sky-400/50 hover:bg-sky-400/10',
+    violet: 'hover:border-violet-400/50 hover:bg-violet-400/10',
+    amber: 'hover:border-amber-400/50 hover:bg-amber-400/10',
+    rose: 'hover:border-rose-400/50 hover:bg-rose-400/10',
+  };
+
+  return accents[accent];
+}
+
 export function DashboardOverview({
   summary,
   tasks,
@@ -94,6 +109,13 @@ export function DashboardOverview({
   documentsExpiringSoon = [],
 }: DashboardOverviewProps) {
   const openTasks = tasks.filter((task) => task.status !== 'done').slice(0, 5);
+  const views: WorkspaceView[] = [
+    { id: 'overview-view', label: 'Overview', description: 'Executive command', href: '#overview-view', accent: 'emerald' },
+    { id: 'intelligence-view', label: 'Intelligence', description: 'AI, heatmap, graph', href: '#intelligence-view', accent: 'violet' },
+    { id: 'board-view', label: 'Board', description: 'Decisions and reports', href: '#board-view', accent: 'sky' },
+    { id: 'operations-view', label: 'Operations', description: 'Tasks, risks, vendors', href: '#operations-view', accent: 'amber' },
+    { id: 'growth-view', label: 'Growth', description: 'Frameworks and pricing', href: '#growth-view', accent: 'rose' },
+  ];
 
   const metricCards = [
     { label: 'Open tasks', value: summary.openTasks, href: getDashboardHref(basePath, 'tasks') },
@@ -105,123 +127,157 @@ export function DashboardOverview({
   ];
 
   return (
-    <div className="scroll-smooth xl:grid xl:grid-cols-[20rem_minmax(0,1fr)] xl:gap-6">
+    <div className="min-h-[calc(100vh-2rem)] xl:grid xl:grid-cols-[20rem_minmax(0,1fr)] xl:gap-6">
       <DashboardWorkspaceSidebar summary={summary} basePath={basePath} />
 
-      <div className="min-w-0 space-y-6">
-        <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
-        <div className="xl:hidden"><DashboardSectionNavigator /></div>
-        <StickyExecutiveKpiBar summary={summary} trendComparison={trendComparison} basePath={basePath} />
-        <DashboardExperienceMap basePath={basePath} />
-        <section id="experience-index" className="scroll-mt-28"><DashboardExperienceIndex summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-        <section id="executive-command-center" className="scroll-mt-28"><ExecutiveCommandCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-        <section id="ai-copilot" className="scroll-mt-28"><AiCopilotPanel summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-        <section id="risk-heatmap" className="scroll-mt-28"><RiskHeatmap summary={summary} basePath={basePath} /></section>
-        <section id="relationship-graph" className="scroll-mt-28"><RelationshipGraph summary={summary} basePath={basePath} /></section>
-        <section id="board-mode" className="scroll-mt-28"><BoardModePreview summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-        <section id="scenario-simulator" className="scroll-mt-28"><ScenarioSimulator summary={summary} basePath={basePath} /></section>
-        <section id="executive-cockpit" className="scroll-mt-28"><ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-        <section id="operational-feed" className="scroll-mt-28"><OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section>
-        <section id="evidence-graph" className="scroll-mt-28"><EvidenceGraph summary={summary} basePath={basePath} /></section>
-        <section id="ai-executive-layer" className="scroll-mt-28"><AiExecutiveLayer summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-        <section id="board-report-center" className="scroll-mt-28"><BoardReportCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-        <WhiteLabelReportPreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
-        <section id="enterprise-governance" className="space-y-6 scroll-mt-28">
-          <ApprovalWorkflowPreview summary={summary} basePath={basePath} />
-          <DepartmentOwnershipPreview summary={summary} basePath={basePath} />
-          <AuditTimelinePreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
-        </section>
-        <section id="marketplace-expansion" className="space-y-6 scroll-mt-28">
-          <FrameworkCoveragePreview summary={summary} basePath={basePath} />
-          <EnterpriseValueLadder summary={summary} basePath={basePath} />
-        </section>
-        <DomainScorecards summary={summary} basePath={basePath} />
-        <NextBestActions summary={summary} basePath={basePath} />
-        <ComplianceTimeline tasks={openTasks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
+      <div className="min-w-0 overflow-hidden rounded-[2rem] border border-slate-200/70 bg-background/95 shadow-sm xl:h-[calc(100vh-2rem)] xl:overflow-hidden">
+        <div className="border-b bg-background/95 p-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="flex gap-2 overflow-x-auto">
+            {views.map((view) => (
+              <a
+                key={view.id}
+                href={view.href}
+                className={`min-w-40 rounded-2xl border px-4 py-3 transition ${viewClasses(view.accent)} focus:outline-none focus:ring-2 focus:ring-primary`}
+              >
+                <p className="text-sm font-bold leading-none">{view.label}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{view.description}</p>
+              </a>
+            ))}
+          </div>
+        </div>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {metricCards.map((metric) => (
-            <Link key={metric.label} href={metric.href} className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
-              <Card className="h-full transition hover:border-primary/50 hover:bg-muted/30">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">{metric.label}</CardTitle>
-                </CardHeader>
+        <div className="h-[calc(100vh-8.5rem)] snap-y snap-mandatory overflow-y-auto scroll-smooth p-4 xl:p-5">
+          <section id="overview-view" className="min-h-full snap-start scroll-mt-4 space-y-4">
+            <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
+            <StickyExecutiveKpiBar summary={summary} trendComparison={trendComparison} basePath={basePath} />
+            <div className="grid gap-4 2xl:grid-cols-[1.1fr_0.9fr]">
+              <ExecutiveCommandCenter summary={summary} trendComparison={trendComparison} basePath={basePath} />
+              <DashboardExperienceIndex summary={summary} trendComparison={trendComparison} basePath={basePath} />
+            </div>
+            <DashboardExperienceMap basePath={basePath} />
+          </section>
+
+          <section id="intelligence-view" className="min-h-full snap-start scroll-mt-4 space-y-4 pt-4">
+            <div className="grid gap-4 2xl:grid-cols-2">
+              <AiCopilotPanel summary={summary} trendComparison={trendComparison} basePath={basePath} />
+              <RiskHeatmap summary={summary} basePath={basePath} />
+            </div>
+            <div className="grid gap-4 2xl:grid-cols-2">
+              <RelationshipGraph summary={summary} basePath={basePath} />
+              <EvidenceGraph summary={summary} basePath={basePath} />
+            </div>
+          </section>
+
+          <section id="board-view" className="min-h-full snap-start scroll-mt-4 space-y-4 pt-4">
+            <div className="grid gap-4 2xl:grid-cols-2">
+              <BoardModePreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
+              <ScenarioSimulator summary={summary} basePath={basePath} />
+            </div>
+            <div className="grid gap-4 2xl:grid-cols-2">
+              <BoardReportCenter summary={summary} trendComparison={trendComparison} basePath={basePath} />
+              <WhiteLabelReportPreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
+            </div>
+          </section>
+
+          <section id="operations-view" className="min-h-full snap-start scroll-mt-4 space-y-4 pt-4">
+            <OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {metricCards.map((metric) => (
+                <Link key={metric.label} href={metric.href} className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
+                  <Card className="h-full transition hover:border-primary/50 hover:bg-muted/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">{metric.label}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-3xl font-bold">{metric.value}</p>
+                      <p className="mt-3 text-xs text-muted-foreground">Open dedicated dashboard</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-3">
+              <Card>
+                <CardHeader><CardTitle>Top risks</CardTitle></CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{metric.value}</p>
-                  <p className="mt-3 text-xs text-muted-foreground">Open details</p>
+                  {topRisks.length === 0 ? <p className="text-sm text-muted-foreground">No open risks requiring executive attention.</p> : (
+                    <div className="space-y-3">
+                      {topRisks.slice(0, 4).map((risk) => (
+                        <Link key={risk.id} href={getDashboardHref(basePath, 'risks')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-medium">{risk.title ?? 'Untitled risk'}</p>
+                              <p className="text-muted-foreground">{risk.category ?? 'General'} · {risk.status ?? 'open'}</p>
+                            </div>
+                            <p className={`font-semibold ${getRiskTone(risk.risk_score)}`}>{Number(risk.risk_score ?? 0)}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            </Link>
-          ))}
-        </section>
 
-        <section className="grid gap-6 xl:grid-cols-3">
-          <Card>
-            <CardHeader><CardTitle>Top risks</CardTitle></CardHeader>
-            <CardContent>
-              {topRisks.length === 0 ? <p className="text-sm text-muted-foreground">No open risks requiring executive attention.</p> : (
-                <div className="space-y-3">
-                  {topRisks.map((risk) => (
-                    <Link key={risk.id} href={getDashboardHref(basePath, 'risks')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium">{risk.title ?? 'Untitled risk'}</p>
-                          <p className="text-muted-foreground">{risk.category ?? 'General'} · {risk.status ?? 'open'}</p>
-                        </div>
-                        <p className={`font-semibold ${getRiskTone(risk.risk_score)}`}>{Number(risk.risk_score ?? 0)}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader><CardTitle>Vendors requiring review</CardTitle></CardHeader>
+                <CardContent>
+                  {vendorsRequiringReview.length === 0 ? <p className="text-sm text-muted-foreground">No vendor reviews currently require attention.</p> : (
+                    <div className="space-y-3">
+                      {vendorsRequiringReview.slice(0, 4).map((vendor) => (
+                        <Link key={vendor.id} href={getDashboardHref(basePath, 'vendors')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-medium">{vendor.name ?? 'Unnamed vendor'}</p>
+                              <p className="text-muted-foreground">Review {formatShortDate(vendor.next_review_at)}</p>
+                            </div>
+                            <div className="text-right text-xs uppercase tracking-wide text-muted-foreground">
+                              <p>{vendor.risk_level ?? 'unknown'}</p>
+                              <p>{vendor.review_status ?? 'pending'}</p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader><CardTitle>Vendors requiring review</CardTitle></CardHeader>
-            <CardContent>
-              {vendorsRequiringReview.length === 0 ? <p className="text-sm text-muted-foreground">No vendor reviews currently require attention.</p> : (
-                <div className="space-y-3">
-                  {vendorsRequiringReview.map((vendor) => (
-                    <Link key={vendor.id} href={getDashboardHref(basePath, 'vendors')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium">{vendor.name ?? 'Unnamed vendor'}</p>
-                          <p className="text-muted-foreground">Review {formatShortDate(vendor.next_review_at)}</p>
-                        </div>
-                        <div className="text-right text-xs uppercase tracking-wide text-muted-foreground">
-                          <p>{vendor.risk_level ?? 'unknown'}</p>
-                          <p>{vendor.review_status ?? 'pending'}</p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader><CardTitle>Documents expiring soon</CardTitle></CardHeader>
+                <CardContent>
+                  {documentsExpiringSoon.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming document expirations found.</p> : (
+                    <div className="space-y-3">
+                      {documentsExpiringSoon.slice(0, 4).map((document) => (
+                        <Link key={document.id} href={getDashboardHref(basePath, 'documents')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-medium">{document.title ?? document.name ?? 'Untitled document'}</p>
+                              <p className="text-muted-foreground">{document.category ?? 'General'} · {document.status ?? 'draft'}</p>
+                            </div>
+                            <p className="text-right text-xs font-semibold uppercase tracking-wide text-amber-300">{formatShortDate(document.expires_at)}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </section>
 
-          <Card>
-            <CardHeader><CardTitle>Documents expiring soon</CardTitle></CardHeader>
-            <CardContent>
-              {documentsExpiringSoon.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming document expirations found.</p> : (
-                <div className="space-y-3">
-                  {documentsExpiringSoon.map((document) => (
-                    <Link key={document.id} href={getDashboardHref(basePath, 'documents')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium">{document.title ?? document.name ?? 'Untitled document'}</p>
-                          <p className="text-muted-foreground">{document.category ?? 'General'} · {document.status ?? 'draft'}</p>
-                        </div>
-                        <p className="text-right text-xs font-semibold uppercase tracking-wide text-amber-300">{formatShortDate(document.expires_at)}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </section>
+          <section id="growth-view" className="min-h-full snap-start scroll-mt-4 space-y-4 pt-4">
+            <div className="grid gap-4 2xl:grid-cols-2">
+              <FrameworkCoveragePreview summary={summary} basePath={basePath} />
+              <EnterpriseValueLadder summary={summary} basePath={basePath} />
+            </div>
+            <div className="grid gap-4 2xl:grid-cols-2">
+              <ApprovalWorkflowPreview summary={summary} basePath={basePath} />
+              <DepartmentOwnershipPreview summary={summary} basePath={basePath} />
+            </div>
+            <AuditTimelinePreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
+          </section>
+        </div>
       </div>
     </div>
   );
