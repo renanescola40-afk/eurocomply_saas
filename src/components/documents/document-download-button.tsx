@@ -18,10 +18,9 @@ export function DocumentDownloadButton({ documentId, onCreateSignedUrl }: Docume
 
     try {
       const result = await onCreateSignedUrl(documentId);
-      window.open(result.signedUrl, '_blank', 'noopener,noreferrer');
+      window.location.assign(result.signedUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to download document');
-    } finally {
       setLoading(false);
     }
   }
