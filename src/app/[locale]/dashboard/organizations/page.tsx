@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Building2, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
-import { DashboardOverview } from '@/components/dashboard/dashboard-overview';
+import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { HomeDashboardPage } from '@/components/dashboard/dashboard-overview';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -27,13 +28,15 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
     redirect(`/${params.locale}/onboarding`);
   }
 
-  const dashboardBasePath = `/${params.locale}/dashboard/organizations`;
+  const dashboardBasePath = `/dashboard/organizations`;
+  const localizedDashboardBasePath = `/${params.locale}${dashboardBasePath}`;
   const complianceHealth = data.summary.complianceScore >= 80 ? 'Audit ready' : data.summary.complianceScore >= 55 ? 'Needs attention' : 'Critical remediation';
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.16),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))] px-4 py-6 md:px-8 md:py-10">
-      <div className="mx-auto max-w-7xl space-y-8">
-        <section className="relative overflow-hidden rounded-[2rem] border bg-background/86 p-6 shadow-2xl shadow-primary/5 backdrop-blur md:p-8">
+    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.16),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))]">
+      <DashboardCommandNavigation locale={params.locale} basePath={dashboardBasePath} activePage="Home" complianceHealth={complianceHealth} />
+      <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-10">
+        <section id="overview" className="relative scroll-mt-28 overflow-hidden rounded-[2rem] border bg-background/86 p-6 shadow-2xl shadow-primary/5 backdrop-blur md:p-8">
           <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
           <div className="relative grid gap-8 lg:grid-cols-[1.35fr_0.65fr] lg:items-end">
             <div className="space-y-6">
@@ -60,12 +63,12 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
 
               <div className="flex flex-wrap gap-3">
                 <Button asChild size="lg" className="rounded-full">
-                  <Link href={`${dashboardBasePath}/reports`}>
+                  <Link href={`${localizedDashboardBasePath}/reports`}>
                     Generate audit pack <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="rounded-full bg-background/70">
-                  <Link href={`${dashboardBasePath}/tasks`}>Review priority tasks</Link>
+                  <Link href={`${localizedDashboardBasePath}/tasks`}>Review priority tasks</Link>
                 </Button>
               </div>
             </div>
@@ -104,12 +107,12 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
           })}
         </section>
 
-        <DashboardOverview
+        <HomeDashboardPage
           summary={data.summary}
           tasks={data.tasks}
           trendHistory={data.trendHistory}
           trendComparison={data.trendComparison}
-          basePath={dashboardBasePath}
+          basePath={localizedDashboardBasePath}
           topRisks={data.topRisks}
           vendorsRequiringReview={data.vendorsRequiringReview}
           documentsExpiringSoon={data.documentsExpiringSoon}
