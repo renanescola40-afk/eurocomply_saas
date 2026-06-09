@@ -2,7 +2,21 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 const PUBLIC_FILE = /\.[^/]+$/;
-const protectedSegments = ['/dashboard', '/settings', '/billing', '/team'];
+const protectedSegments = [
+  '/dashboard',
+  '/settings',
+  '/billing',
+  '/team',
+  '/profile',
+  '/notificacoes',
+  '/auditoria',
+  '/eurocomply-home',
+  '/riscos',
+  '/documentos',
+  '/raci',
+  '/calendario-compliance',
+  '/aprovacoes',
+];
 const publicAuthSegments = ['/login', '/signup'];
 const DEFAULT_LOCALE = 'pt';
 
