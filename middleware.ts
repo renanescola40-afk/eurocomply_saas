@@ -3,7 +3,13 @@ import { createServerClient } from '@supabase/ssr';
 
 const PUBLIC_FILE = /\.[^/]+$/;
 const protectedSegments = ['/dashboard', '/settings', '/billing', '/team'];
-const authSegments = ['/login', '/signup', '/auth'];
+const publicAuthSegments = ['/login', '/signup'];
+const DEFAULT_LOCALE = 'pt';
+
+function getLocale(pathname: string) {
+  const firstSegment = pathname.split('/').filter(Boolean)[0];
+  return firstSegment && /^[a-z]{2}$/.test(firstSegment) ? firstSegment : DEFAULT_LOCALE;
+}
 
 function stripLocale(pathname: string) {
   const parts = pathname.split('/').filter(Boolean);
@@ -45,17 +51,19 @@ export async function middleware(request: NextRequest) {
 
   const { data } = await supabase.auth.getUser();
   const user = data.user;
+  const locale = getLocale(pathname);
 
   if (!user && matchesSegment(pathname, protectedSegments)) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/login';
-    redirectUrl.searchParams.set('redirectedFrom', pathname);
+    redirectUrl.pathname = `/${locale}/login`;
+    redirectUrl.searchParams.set('next', pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && matchesSegment(pathname, authSegments)) {
+  if (user && matchesSegment(pathname, publicAuthSegments)) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/dashboard/organizations';
+    redirectUrl.pathname = `/${locale}/dashboard/organizations`;
+    redirectUrl.search = '';
     return NextResponse.redirect(redirectUrl);
   }
 
