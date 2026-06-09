@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 
 type DocumentDeleteButtonProps = {
@@ -11,20 +11,30 @@ type DocumentDeleteButtonProps = {
 
 export function DocumentDeleteButton({ documentId, documentName, onDelete }: DocumentDeleteButtonProps) {
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   function handleDelete() {
     const confirmed = window.confirm(`Delete "${documentName}"? This removes the document record and its stored file.`);
 
     if (!confirmed) return;
 
+    setError(null);
+
     startTransition(async () => {
-      await onDelete(documentId);
+      try {
+        await onDelete(documentId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not delete document.');
+      }
     });
   }
 
   return (
-    <Button type="button" variant="destructive" onClick={handleDelete} disabled={pending}>
-      {pending ? 'Deleting...' : 'Delete'}
-    </Button>
+    <div className="space-y-2">
+      <Button type="button" variant="destructive" onClick={handleDelete} disabled={pending}>
+        {pending ? 'Deleting...' : 'Delete'}
+      </Button>
+      {error ? <p className="max-w-xs text-xs text-red-400">{error}</p> : null}
+    </div>
   );
 }
