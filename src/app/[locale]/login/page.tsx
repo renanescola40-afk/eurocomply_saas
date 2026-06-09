@@ -105,7 +105,8 @@ export default function LoginPage() {
   const copy = loginCopy[locale] ?? loginCopy.en;
   const urlError = searchParams.get('error');
   const nextPath = getSafeNextPath(searchParams.get('next'), locale);
-  const { user, signInWithGoogle, signInWithEmail, loading: authLoading } = useAuth();
+  const googleLoginHref = `/auth/google?locale=${encodeURIComponent(locale)}&next=${encodeURIComponent(nextPath)}`;
+  const { user, signInWithEmail, loading: authLoading } = useAuth();
   const [error, setError] = useState(urlError ? decodeURIComponent(urlError) : '');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -118,16 +119,6 @@ export default function LoginPage() {
       router.replace(nextPath);
     }
   }, [authLoading, nextPath, router, user]);
-
-  async function handleGoogleLogin() {
-    setError('');
-    setSubmitting(true);
-    const result = await signInWithGoogle();
-    if (result.error) {
-      setError(result.error.message);
-      setSubmitting(false);
-    }
-  }
 
   async function handleEmailLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -169,14 +160,12 @@ export default function LoginPage() {
           )}
 
           <div className="mt-6 space-y-4">
-            <Button
-              type="button"
-              className="w-full bg-white text-black hover:bg-white/90"
-              onClick={handleGoogleLogin}
-              disabled={submitting || authLoading}
+            <Link
+              href={googleLoginHref}
+              className="inline-flex h-10 w-full items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:pointer-events-none disabled:opacity-50"
             >
               {copy.google}
-            </Button>
+            </Link>
 
             <div className="flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-white/30">
               <span className="h-px flex-1 bg-white/10" />
