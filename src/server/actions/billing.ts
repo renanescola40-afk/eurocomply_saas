@@ -1,5 +1,6 @@
 'use server';
 
+import { z } from 'zod';
 import { getBillingPlan, getStripePriceId } from '@/lib/billing/plans';
 import { getStripeClient } from '@/lib/billing/stripe';
 import { reportError } from '@/lib/observability/report-error';
@@ -8,16 +9,58 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
 
-export async function createCheckoutSession(input: {
-  organizationId: string;
-  planId: string;
-  userId: string;
-  successPath?: string;
-  cancelPath?: string;
-}) {
-  const context = { area: 'billing_checkout', organizationId: input.organizationId, userId: input.userId, planId: input.planId };
+const uuidSchema = z.string().uuid();
+const safeReturnPathSchema = z
+  .string()
+  .trim()
+  .max(240)
+  .optional()
+  .refine((value) => !value || (value.startsWith('/') && !value.startsWith('//') && !value.includes('://')), 'Return path must be a relative internal path');
+
+const checkoutInputSchema = z.object({
+  organizationId: uuidSchema,
+  userId: uuidSchema,
+  planId: z.string().trim().min(1).max(64),
+  successPath: safeReturnPathSchema,
+  cancelPath: safeReturnPathSchema,
+});
+
+const portalInputSchema = z.object({
+  organizationId: uuidSchema,
+  userId: uuidSchema,
+  returnPath: safeReturnPathSchema,
+});
+
+type CheckoutInput = z.infer<typeof checkoutInputSchema>;
+type PortalInput = z.infer<typeof portalInputSchema>;
+
+function getAppUrl() {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+  if (!appUrl) {
+    throw new Error('NEXT_PUBLIC_APP_URL is required');
+  }
+
+  const parsedUrl = new URL(appUrl);
+
+  if (parsedUrl.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
+    throw new Error('NEXT_PUBLIC_APP_URL must use HTTPS in production');
+  }
+
+  return parsedUrl.origin;
+}
+
+export async function createCheckoutSession(input: CheckoutInput) {
+  const parsed = checkoutInputSchema.safeParse(input);
+
+  if (!parsed.success) {
+    throw new Error('Invalid checkout input');
+  }
+
+  const safeInput = parsed.data;
+  const context = { area: 'billing_checkout', organizationId: safeInput.organizationId, userId: safeInput.userId, planId: safeInput.planId };
   const rateLimit = await checkDistributedRateLimit({
-    key: `checkout:${input.organizationId}:${input.userId}`,
+    key: `checkout:${safeInput.organizationId}:${safeInput.userId}`,
     limit: 5,
     windowMs: 60 * 60 * 1000,
   });
@@ -29,7 +72,7 @@ export async function createCheckoutSession(input: {
   }
 
   try {
-    const plan = getBillingPlan(input.planId);
+    const plan = getBillingPlan(safeInput.planId);
 
     if (!plan) {
       throw new Error('Invalid billing plan');
@@ -41,37 +84,33 @@ export async function createCheckoutSession(input: {
       throw new Error(`${plan.stripePriceEnvKey} is required`);
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const appUrl = getAppUrl();
 
-    if (!appUrl) {
-      throw new Error('NEXT_PUBLIC_APP_URL is required');
-    }
-
-    await assertCurrentUserCan(input.organizationId, input.userId, 'billing:manage');
+    await assertCurrentUserCan(safeInput.organizationId, safeInput.userId, 'billing:manage');
 
     const stripe = getStripeClient();
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}${input.successPath ?? '/dashboard/organizations/billing?checkout=success'}`,
-      cancel_url: `${appUrl}${input.cancelPath ?? '/dashboard/organizations/billing?checkout=cancelled'}`,
+      success_url: `${appUrl}${safeInput.successPath ?? '/dashboard/organizations/billing?checkout=success'}`,
+      cancel_url: `${appUrl}${safeInput.cancelPath ?? '/dashboard/organizations/billing?checkout=cancelled'}`,
       metadata: {
-        organizationId: input.organizationId,
+        organizationId: safeInput.organizationId,
         planId: plan.id,
-        userId: input.userId,
+        userId: safeInput.userId,
       },
       subscription_data: {
         metadata: {
-          organizationId: input.organizationId,
+          organizationId: safeInput.organizationId,
           planId: plan.id,
         },
       },
     });
 
     await logAuditEvent({
-      organizationId: input.organizationId,
-      actorUserId: input.userId,
+      organizationId: safeInput.organizationId,
+      actorUserId: safeInput.userId,
       action: 'billing.checkout_created',
       entityType: 'subscription',
       entityId: session.id,
@@ -89,14 +128,17 @@ export async function createCheckoutSession(input: {
   }
 }
 
-export async function createCustomerPortalSession(input: {
-  organizationId: string;
-  userId: string;
-  returnPath?: string;
-}) {
-  const context = { area: 'billing_customer_portal', organizationId: input.organizationId, userId: input.userId };
+export async function createCustomerPortalSession(input: PortalInput) {
+  const parsed = portalInputSchema.safeParse(input);
+
+  if (!parsed.success) {
+    throw new Error('Invalid billing portal input');
+  }
+
+  const safeInput = parsed.data;
+  const context = { area: 'billing_customer_portal', organizationId: safeInput.organizationId, userId: safeInput.userId };
   const rateLimit = await checkDistributedRateLimit({
-    key: `customer_portal:${input.organizationId}:${input.userId}`,
+    key: `customer_portal:${safeInput.organizationId}:${safeInput.userId}`,
     limit: 10,
     windowMs: 60 * 60 * 1000,
   });
@@ -108,20 +150,16 @@ export async function createCustomerPortalSession(input: {
   }
 
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const appUrl = getAppUrl();
 
-    if (!appUrl) {
-      throw new Error('NEXT_PUBLIC_APP_URL is required');
-    }
-
-    await assertCurrentUserCan(input.organizationId, input.userId, 'billing:manage');
+    await assertCurrentUserCan(safeInput.organizationId, safeInput.userId, 'billing:manage');
 
     const supabase = createAdminClient();
 
     const { data: subscription, error: subscriptionError } = await supabase
       .from('subscriptions')
       .select('stripe_customer_id')
-      .eq('organization_id', input.organizationId)
+      .eq('organization_id', safeInput.organizationId)
       .maybeSingle();
 
     if (subscriptionError) {
@@ -136,12 +174,12 @@ export async function createCustomerPortalSession(input: {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,
-      return_url: `${appUrl}${input.returnPath ?? '/dashboard/organizations/billing'}`,
+      return_url: `${appUrl}${safeInput.returnPath ?? '/dashboard/organizations/billing'}`,
     });
 
     await logAuditEvent({
-      organizationId: input.organizationId,
-      actorUserId: input.userId,
+      organizationId: safeInput.organizationId,
+      actorUserId: safeInput.userId,
       action: 'billing.customer_portal_opened',
       entityType: 'subscription',
       metadata: {},
