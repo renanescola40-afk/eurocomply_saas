@@ -20,35 +20,30 @@ export const dashboardNavigation: MenuItem[] = [
     description: 'Home pós-login para clientes pagantes',
   },
   {
-    label: 'Visão Geral',
-    href: dashboardRoot,
-    description: 'Base operacional sem conflito com a Home EuroComply',
-  },
-  {
     label: 'Command Center',
     href: `${dashboardRoot}/command-center`,
     sections: [
       { label: 'Dashboard Executivo', href: `${dashboardRoot}/command-center`, description: 'Cockpit executivo completo' },
-      { label: 'Alertas', href: `${dashboardRoot}/command-center`, description: 'Radar, feed e sinais críticos' },
-      { label: 'Minhas Tarefas', href: `${dashboardRoot}/tasks`, description: 'Trabalho operacional atribuído' },
+      { label: 'Log de Auditoria', href: '/auditoria', description: 'Quem fez o quê, quando e porquê' },
+      { label: 'Calendário Legal', href: '/calendario-compliance', description: 'Prazos e obrigações regulatórias' },
     ],
   },
   {
     label: 'Evidence & Risk',
     href: `${dashboardRoot}/evidence-risk`,
     sections: [
-      { label: 'Documentos', href: `${dashboardRoot}/documents`, description: 'Evidências, políticas e provas' },
-      { label: 'Matriz de Risco', href: `${dashboardRoot}/evidence-risk`, description: 'Heatmap e exposição' },
-      { label: 'Auditorias', href: `${dashboardRoot}/reports-governance`, description: 'Trilha e pacotes de auditoria' },
+      { label: 'Documentos Controlados', href: '/documentos', description: 'Políticas, atas, certificados e versões' },
+      { label: 'Matriz de Riscos', href: '/riscos', description: 'Risk register com plano de ação' },
+      { label: 'Matriz RACI', href: '/raci', description: 'Responsável, aprovador, consultado e informado' },
     ],
   },
   {
     label: 'Reports & Governance',
     href: `${dashboardRoot}/reports-governance`,
     sections: [
-      { label: 'Relatórios Compliance', href: `${dashboardRoot}/reports`, description: 'Board reports e audit packs' },
-      { label: 'Políticas', href: `${dashboardRoot}/reports-governance`, description: 'Governança documental' },
-      { label: 'Atas', href: `${dashboardRoot}/reports-governance`, description: 'Decisões e registros executivos' },
+      { label: 'Relatórios Compliance', href: `${dashboardRoot}/reports-governance`, description: 'Board reports e audit packs' },
+      { label: 'Aprovações', href: '/aprovacoes', description: 'Workflow de aprovação documental' },
+      { label: 'Atas e Governança', href: `${dashboardRoot}/reports-governance`, description: 'Decisões e registros executivos' },
     ],
   },
   {
@@ -77,7 +72,7 @@ function localizeHref(locale: string, href: string) {
   return `/${locale}${href.startsWith('/') ? href : `/${href}`}`;
 }
 
-export function DashboardCommandNavigation({ locale, activePage = 'Visão Geral' }: DashboardCommandNavigationProps) {
+export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }: DashboardCommandNavigationProps) {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/92 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/78">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 md:px-8">
