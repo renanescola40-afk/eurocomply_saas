@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, FileText, Plus, UploadCloud } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -15,27 +15,61 @@ type ControlledDocument = {
   checksum?: string;
 };
 
+type InitialDocument = {
+  id: string;
+  title: string | null;
+  status: string | null;
+  version: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
 const storageKey = 'eurocomply-controlled-documents-demo';
 const defaultDocuments: ControlledDocument[] = [
   { id: 'doc-1', title: 'Política de Privacidade', version: 2, status: 'Aprovado', owner: 'Compliance' },
   { id: 'doc-2', title: 'Matriz de Riscos', version: 1, status: 'Pendente', owner: 'Security' },
 ];
 
-export function DocumentsClient({ locale }: { locale: string }) {
-  const [documents, setDocuments] = useState<ControlledDocument[]>(defaultDocuments);
+function normalizeStatus(status: string | null | undefined): ControlledDocument['status'] {
+  const value = String(status ?? '').toLowerCase();
+  if (value.includes('approved') || value.includes('aprov')) return 'Aprovado';
+  if (value.includes('review') || value.includes('revis')) return 'Revisão';
+  return 'Pendente';
+}
+
+function normalizeInitialDocuments(initialDocuments: InitialDocument[]): ControlledDocument[] {
+  return initialDocuments.map((document) => ({
+    id: document.id,
+    title: document.title ?? 'Documento sem título',
+    version: document.version ?? 1,
+    status: normalizeStatus(document.status),
+    owner: 'Compliance',
+  }));
+}
+
+export function DocumentsClient({ locale, initialDocuments = [] }: { locale: string; initialDocuments?: InitialDocument[] }) {
+  const serverDocuments = useMemo(() => normalizeInitialDocuments(initialDocuments), [initialDocuments]);
+  const [documents, setDocuments] = useState<ControlledDocument[]>(serverDocuments.length > 0 ? serverDocuments : defaultDocuments);
   const [title, setTitle] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [toast, setToast] = useState('');
 
   useEffect(() => {
+    if (serverDocuments.length > 0) {
+      setDocuments(serverDocuments);
+      return;
+    }
+
     const saved = window.localStorage.getItem(storageKey);
     if (saved) setDocuments(JSON.parse(saved));
-  }, []);
+  }, [serverDocuments]);
 
   useEffect(() => {
-    window.localStorage.setItem(storageKey, JSON.stringify(documents));
-  }, [documents]);
+    if (serverDocuments.length === 0) {
+      window.localStorage.setItem(storageKey, JSON.stringify(documents));
+    }
+  }, [documents, serverDocuments.length]);
 
   function showToast(message: string) {
     setToast(message);
@@ -85,8 +119,8 @@ export function DocumentsClient({ locale }: { locale: string }) {
         {
           id: payload.document?.id ?? crypto.randomUUID(),
           title: uploadedTitle,
-          version: 1,
-          status: 'Pendente',
+          version: payload.document?.version ?? 1,
+          status: normalizeStatus(payload.document?.status),
           owner: 'Compliance',
           checksum: payload.checksum,
         },
@@ -107,9 +141,23 @@ export function DocumentsClient({ locale }: { locale: string }) {
     showToast('Nova versão criada e enviada para revisão.');
   }
 
-  function approveDocument(id: string) {
-    setDocuments((current) => current.map((doc) => (doc.id === id ? { ...doc, status: 'Aprovado' } : doc)));
-    showToast('Documento aprovado na demo.');
+  async function approveDocument(id: string) {
+    try {
+      const response = await fetch(`/api/documents/${id}/approval`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve', note: 'Approved from controlled documents page' }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        showToast(payload.error ?? 'Não foi possível aprovar o documento.');
+        return;
+      }
+      setDocuments((current) => current.map((doc) => (doc.id === id ? { ...doc, status: 'Aprovado' } : doc)));
+      showToast(payload.persisted ? 'Documento aprovado e registado.' : 'Aprovação registada como evento de auditoria.');
+    } catch {
+      showToast('Falha de rede ao aprovar documento.');
+    }
   }
 
   return (
