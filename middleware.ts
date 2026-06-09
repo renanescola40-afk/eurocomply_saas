@@ -6,6 +6,36 @@ const protectedSegments = ['/dashboard', '/settings', '/billing', '/team'];
 const publicAuthSegments = ['/login', '/signup'];
 const DEFAULT_LOCALE = 'pt';
 
+const securityHeaders: Record<string, string> = {
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=()',
+  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "style-src 'self' 'unsafe-inline'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.sentry.io",
+    "connect-src 'self' https://*.supabase.co https://api.stripe.com https://*.sentry.io https://vitals.vercel-insights.com",
+    "frame-src https://js.stripe.com https://hooks.stripe.com",
+    "form-action 'self' https://checkout.stripe.com",
+    "upgrade-insecure-requests",
+  ].join('; '),
+};
+
+function applySecurityHeaders(response: NextResponse) {
+  Object.entries(securityHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+
+  return response;
+}
+
 function getLocale(pathname: string) {
   const firstSegment = pathname.split('/').filter(Boolean)[0];
   return firstSegment && /^[a-z]{2}$/.test(firstSegment) ? firstSegment : DEFAULT_LOCALE;
@@ -28,7 +58,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith('/_next') || pathname.startsWith('/api') || PUBLIC_FILE.test(pathname)) {
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
   let response = NextResponse.next({ request });
@@ -57,17 +87,17 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = `/${locale}/login`;
     redirectUrl.searchParams.set('next', pathname);
-    return NextResponse.redirect(redirectUrl);
+    return applySecurityHeaders(NextResponse.redirect(redirectUrl));
   }
 
   if (user && matchesSegment(pathname, publicAuthSegments)) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = `/${locale}/dashboard/organizations`;
     redirectUrl.search = '';
-    return NextResponse.redirect(redirectUrl);
+    return applySecurityHeaders(NextResponse.redirect(redirectUrl));
   }
 
-  return response;
+  return applySecurityHeaders(response);
 }
 
 export const config = {
