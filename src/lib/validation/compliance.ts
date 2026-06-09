@@ -3,13 +3,18 @@ import { z } from 'zod';
 export const complianceTaskStatusSchema = z.enum(['todo', 'in_progress', 'blocked', 'done']);
 export const prioritySchema = z.enum(['low', 'medium', 'high', 'critical']);
 
+const dateInputSchema = z.string().refine(
+  (value) => !value || /^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isNaN(Date.parse(value)),
+  'Invalid date',
+);
+
 export const createComplianceTaskSchema = z.object({
   organizationId: z.string().uuid(),
   title: z.string().min(2).max(160),
   description: z.string().max(2000).optional(),
   category: z.string().max(80).optional(),
   priority: prioritySchema.default('medium'),
-  dueDate: z.string().datetime().optional(),
+  dueDate: dateInputSchema.optional(),
   assigneeId: z.string().uuid().optional(),
 });
 
@@ -19,7 +24,7 @@ export const updateComplianceTaskSchema = z.object({
   category: z.string().max(80).optional(),
   priority: prioritySchema.optional(),
   status: complianceTaskStatusSchema.optional(),
-  dueDate: z.string().datetime().nullable().optional(),
+  dueDate: dateInputSchema.nullable().optional(),
   assigneeId: z.string().uuid().nullable().optional(),
 });
 
