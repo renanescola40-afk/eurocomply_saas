@@ -30,7 +30,6 @@ type QueryError = {
 
 type DashboardSnapshotRow = {
   created_at?: string | null;
-  updated_at?: string | null;
   compliance_score?: number | string | null;
   open_tasks?: number | string | null;
   open_risks?: number | string | null;
@@ -65,8 +64,8 @@ function safeRows(result: { data: DashboardRow[] | null; error: QueryError }, la
   return result.data ?? [];
 }
 
-function isMissingSnapshotDateColumn(message?: string | null) {
-  return Boolean(message?.includes('compliance_metric_snapshots.snapshot_date') || message?.includes('snapshot_date'));
+function isMissingColumn(error: QueryError) {
+  return error?.code === '42703';
 }
 
 export async function getDashboardSummary(organizationId: string) {
@@ -115,10 +114,6 @@ export async function recordDashboardMetricSnapshot(organizationId: string, summ
   const supabase = tryCreateAdminClient();
   if (!supabase) return;
 
-  const now = new Date().toISOString();
-
-  // Production currently has compliance_metric_snapshots without snapshot_date.
-  // Keep writes compatible with the live schema and use created_at/updated_at for trend ordering.
   const { error } = await supabase.from('compliance_metric_snapshots').insert({
     organization_id: organizationId,
     compliance_score: summary.complianceScore,
@@ -131,10 +126,9 @@ export async function recordDashboardMetricSnapshot(organizationId: string, summ
     total_risks: summary.totals.risks,
     total_vendors: summary.totals.vendors,
     total_documents: summary.totals.documents,
-    updated_at: now,
   });
 
-  if (error && !isMissingSnapshotDateColumn(error.message)) {
+  if (error && !isMissingColumn(error)) {
     console.warn('[dashboard] metric_snapshot_write_failed', { code: error.code ?? 'unknown' });
   }
 }
@@ -145,19 +139,21 @@ export async function getDashboardTrendHistory(organizationId: string, limit = 1
 
   const { data, error } = await supabase
     .from('compliance_metric_snapshots')
-    .select('created_at, updated_at, compliance_score, open_tasks, open_risks, critical_risks, high_risk_vendors, missing_documents')
+    .select('created_at, compliance_score, open_tasks, open_risks, critical_risks, high_risk_vendors, missing_documents')
     .eq('organization_id', organizationId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
   if (error) {
-    console.warn('[dashboard] trend_history_failed', { code: error.code ?? 'unknown' });
+    if (!isMissingColumn(error)) {
+      console.warn('[dashboard] trend_history_failed', { code: error.code ?? 'unknown' });
+    }
     return [];
   }
 
   return ((data ?? []) as DashboardSnapshotRow[])
-    .map((row) => ({
-      snapshotDate: row.created_at ?? row.updated_at ?? new Date().toISOString(),
+    .map((row, index) => ({
+      snapshotDate: row.created_at ?? new Date(Date.now() - index * 86_400_000).toISOString(),
       complianceScore: Number(row.compliance_score ?? 0),
       openTasks: Number(row.open_tasks ?? 0),
       openRisks: Number(row.open_risks ?? 0),
