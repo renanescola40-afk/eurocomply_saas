@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { getCurrentUser } from '@/server/queries/auth';
+import { listAuditEventsForUser } from '@/server/queries/compliance-activity';
 
 export default async function AuditLogPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -11,12 +12,7 @@ export default async function AuditLogPage({ params }: { params: Promise<{ local
     redirect(`/${locale}/login`);
   }
 
-  const rows = [
-    ['Admin', 'Atualizou documento controlado', '2025-04-02 09:20', 'Documento'],
-    ['Compliance', 'Aprovou matriz de riscos', '2025-04-08 14:10', 'Aprovação'],
-    ['Sistema', 'Gerou relatório mensal', '2025-05-01 08:00', 'Sistema'],
-    ['Legal', 'Revendo contrato de fornecedor', '2025-05-03 12:31', 'Fornecedor'],
-  ];
+  const rows = await listAuditEventsForUser(user.id);
 
   return (
     <div className="min-h-screen bg-muted/20">
@@ -25,7 +21,7 @@ export default async function AuditLogPage({ params }: { params: Promise<{ local
         <section className="rounded-3xl border bg-background p-6 shadow-sm">
           <p className="text-sm font-semibold text-primary">Log de Auditoria</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Trilha de conformidade</h1>
-          <p className="mt-2 max-w-3xl text-muted-foreground">Registo demonstrativo de ações relevantes para auditoria, GDPR e ISO 27001.</p>
+          <p className="mt-2 max-w-3xl text-muted-foreground">Registo de ações relevantes para auditoria, GDPR e ISO 27001. Quando a tabela audit_events existir, esta página passa a mostrar eventos reais.</p>
           <Link href={`/${locale}/notificacoes`} className="mt-5 inline-flex rounded-full bg-foreground px-5 py-2 text-sm font-semibold text-background">Ver notificações</Link>
         </section>
 
@@ -35,8 +31,7 @@ export default async function AuditLogPage({ params }: { params: Promise<{ local
               <label className="text-sm font-semibold">Filtro por {label}</label>
               <select className="mt-3 w-full rounded-xl border bg-background px-3 py-2 text-sm">
                 <option>Todos</option>
-                <option>Admin</option>
-                <option>Compliance</option>
+                <option>Usuário autenticado</option>
                 <option>Sistema</option>
               </select>
             </div>
@@ -52,8 +47,11 @@ export default async function AuditLogPage({ params }: { params: Promise<{ local
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.join('-')} className="border-t">
-                  {row.map((cell) => <td key={cell} className="p-4">{cell}</td>)}
+                <tr key={row.id} className="border-t">
+                  <td className="p-4">{row.actor}</td>
+                  <td className="p-4">{row.action}</td>
+                  <td className="p-4">{row.createdAt}</td>
+                  <td className="p-4">{row.type}</td>
                 </tr>
               ))}
             </tbody>
