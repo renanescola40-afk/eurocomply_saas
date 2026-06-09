@@ -3,23 +3,19 @@ import { csvDownloadResponse } from '@/lib/exports/csv';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
-import { getCurrentUser } from '@/server/queries/auth';
 import { getDashboardSummary } from '@/server/queries/dashboard';
-import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
+import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
 
 export async function GET() {
-  const user = await getCurrentUser();
+  let context: Awaited<ReturnType<typeof requireOrganizationContext>>;
 
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    context = await requireOrganizationContext();
+  } catch (error) {
+    return guardErrorResponse(error);
   }
 
-  const organization = await getCurrentOrganizationForUser(user.id);
-
-  if (!organization) {
-    return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
-  }
-
+  const { user, organization } = context;
   const rateLimit = await checkDistributedRateLimit({
     key: `export:executive:${organization.id}:${user.id}`,
     limit: 10,
