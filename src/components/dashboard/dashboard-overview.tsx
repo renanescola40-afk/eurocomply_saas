@@ -19,6 +19,7 @@ import { RiskHeatmap } from '@/components/dashboard/risk-heatmap';
 import { ScenarioSimulator } from '@/components/dashboard/scenario-simulator';
 import { StickyExecutiveKpiBar } from '@/components/dashboard/sticky-executive-kpi-bar';
 import { WhiteLabelReportPreview } from '@/components/dashboard/white-label-report-preview';
+import { WorkspaceCommandBar } from '@/components/dashboard/workspace-command-bar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { DashboardSummary, DashboardTrendComparison, DashboardTrendSnapshot } from '@/server/queries/dashboard';
 
@@ -150,6 +151,9 @@ export function DashboardOverview({
         </div>
 
         <div className="relative z-10 h-[calc(100vh-8.5rem)] snap-y snap-mandatory overflow-y-auto scroll-smooth p-4 xl:p-5">
+          <div className="mb-4">
+            <WorkspaceCommandBar summary={summary} trendComparison={trendComparison} basePath={basePath} />
+          </div>
           <section id="overview-view" className="premium-motion-enter min-h-full snap-start scroll-mt-4 space-y-4">
             <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
             <StickyExecutiveKpiBar summary={summary} trendComparison={trendComparison} basePath={basePath} />
