@@ -81,18 +81,7 @@ function getRiskTone(score?: number | string | null) {
   return 'text-muted-foreground';
 }
 
-export function DashboardOverview({
-  summary,
-  tasks,
-  trendHistory = [],
-  trendComparison,
-  basePath = '/dashboard/organizations',
-  topRisks = [],
-  vendorsRequiringReview = [],
-  documentsExpiringSoon = [],
-}: DashboardOverviewProps) {
-  const openTasks = tasks.filter((task) => task.status !== 'done').slice(0, 5);
-
+function DashboardMetricsGrid({ summary, basePath }: { summary: DashboardSummary; basePath: string }) {
   const metricCards = [
     { label: 'Open tasks', value: summary.openTasks, href: getDashboardHref(basePath, 'tasks') },
     { label: 'Open risks', value: summary.openRisks, href: getDashboardHref(basePath, 'risks') },
@@ -103,119 +92,48 @@ export function DashboardOverview({
   ];
 
   return (
-    <div className="space-y-6 scroll-smooth">
-      <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
-      <StickyExecutiveKpiBar summary={summary} trendComparison={trendComparison} basePath={basePath} />
-      <DashboardExperienceMap basePath={basePath} />
-      <section id="experience-index" className="scroll-mt-28"><DashboardExperienceIndex summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-      <section id="executive-command-center" className="scroll-mt-28"><ExecutiveCommandCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-      <section id="ai-copilot" className="scroll-mt-28"><AiCopilotPanel summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-      <section id="risk-heatmap" className="scroll-mt-28"><RiskHeatmap summary={summary} basePath={basePath} /></section>
-      <section id="relationship-graph" className="scroll-mt-28"><RelationshipGraph summary={summary} basePath={basePath} /></section>
-      <section id="board-mode" className="scroll-mt-28"><BoardModePreview summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-      <section id="scenario-simulator" className="scroll-mt-28"><ScenarioSimulator summary={summary} basePath={basePath} /></section>
-      <section id="executive-cockpit" className="scroll-mt-28"><ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-      <section id="operational-feed" className="scroll-mt-28"><OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section>
-      <section id="evidence-graph" className="scroll-mt-28"><EvidenceGraph summary={summary} basePath={basePath} /></section>
-      <section id="ai-executive-layer" className="scroll-mt-28"><AiExecutiveLayer summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-      <section id="board-report-center" className="scroll-mt-28"><BoardReportCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section>
-      <WhiteLabelReportPreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
-      <section id="enterprise-governance" className="space-y-6 scroll-mt-28">
-        <ApprovalWorkflowPreview summary={summary} basePath={basePath} />
-        <DepartmentOwnershipPreview summary={summary} basePath={basePath} />
-        <AuditTimelinePreview summary={summary} trendComparison={trendComparison} basePath={basePath} />
-      </section>
-      <section id="marketplace-expansion" className="space-y-6 scroll-mt-28">
-        <FrameworkCoveragePreview summary={summary} basePath={basePath} />
-        <EnterpriseValueLadder summary={summary} basePath={basePath} />
-      </section>
-      <DomainScorecards summary={summary} basePath={basePath} />
-      <NextBestActions summary={summary} basePath={basePath} />
-      <ComplianceTimeline tasks={openTasks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {metricCards.map((metric) => (
-          <Link key={metric.label} href={metric.href} className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
-            <Card className="h-full transition hover:border-primary/50 hover:bg-muted/30">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{metric.label}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">{metric.value}</p>
-                <p className="mt-3 text-xs text-muted-foreground">Open details</p>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-3">
-        <Card>
-          <CardHeader><CardTitle>Top risks</CardTitle></CardHeader>
-          <CardContent>
-            {topRisks.length === 0 ? <p className="text-sm text-muted-foreground">No open risks requiring executive attention.</p> : (
-              <div className="space-y-3">
-                {topRisks.map((risk) => (
-                  <Link key={risk.id} href={getDashboardHref(basePath, 'risks')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{risk.title ?? 'Untitled risk'}</p>
-                        <p className="text-muted-foreground">{risk.category ?? 'General'} · {risk.status ?? 'open'}</p>
-                      </div>
-                      <p className={`font-semibold ${getRiskTone(risk.risk_score)}`}>{Number(risk.risk_score ?? 0)}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle>Vendors requiring review</CardTitle></CardHeader>
-          <CardContent>
-            {vendorsRequiringReview.length === 0 ? <p className="text-sm text-muted-foreground">No vendor reviews currently require attention.</p> : (
-              <div className="space-y-3">
-                {vendorsRequiringReview.map((vendor) => (
-                  <Link key={vendor.id} href={getDashboardHref(basePath, 'vendors')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{vendor.name ?? 'Unnamed vendor'}</p>
-                        <p className="text-muted-foreground">Review {formatShortDate(vendor.next_review_at)}</p>
-                      </div>
-                      <div className="text-right text-xs uppercase tracking-wide text-muted-foreground">
-                        <p>{vendor.risk_level ?? 'unknown'}</p>
-                        <p>{vendor.review_status ?? 'pending'}</p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle>Documents expiring soon</CardTitle></CardHeader>
-          <CardContent>
-            {documentsExpiringSoon.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming document expirations found.</p> : (
-              <div className="space-y-3">
-                {documentsExpiringSoon.map((document) => (
-                  <Link key={document.id} href={getDashboardHref(basePath, 'documents')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{document.title ?? document.name ?? 'Untitled document'}</p>
-                        <p className="text-muted-foreground">{document.category ?? 'General'} · {document.status ?? 'draft'}</p>
-                      </div>
-                      <p className="text-right text-xs font-semibold uppercase tracking-wide text-amber-300">{formatShortDate(document.expires_at)}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-    </div>
+    <section id="risk-radar" className="grid scroll-mt-28 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {metricCards.map((metric) => (
+        <Link key={metric.label} href={metric.href} className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
+          <Card className="h-full transition hover:border-primary/50 hover:bg-muted/30">
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{metric.label}</CardTitle></CardHeader>
+            <CardContent><p className="text-3xl font-bold">{metric.value}</p><p className="mt-3 text-xs text-muted-foreground">Open details</p></CardContent>
+          </Card>
+        </Link>
+      ))}
+    </section>
   );
+}
+
+function ExposureLists({ basePath, topRisks, vendorsRequiringReview, documentsExpiringSoon }: Pick<DashboardOverviewProps, 'basePath' | 'topRisks' | 'vendorsRequiringReview' | 'documentsExpiringSoon'>) {
+  const safeBasePath = basePath ?? '/dashboard/organizations';
+  return (
+    <section className="grid gap-6 xl:grid-cols-3">
+      <Card id="risks" className="scroll-mt-28"><CardHeader><CardTitle>Top risks</CardTitle></CardHeader><CardContent>{(topRisks ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No open risks requiring executive attention.</p> : <div className="space-y-3">{(topRisks ?? []).map((risk) => <Link key={risk.id} href={getDashboardHref(safeBasePath, 'risks')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{risk.title ?? 'Untitled risk'}</p><p className="text-muted-foreground">{risk.category ?? 'General'} · {risk.status ?? 'open'}</p></div><p className={`font-semibold ${getRiskTone(risk.risk_score)}`}>{Number(risk.risk_score ?? 0)}</p></div></Link>)}</div>}</CardContent></Card>
+      <Card id="vendors" className="scroll-mt-28"><CardHeader><CardTitle>Vendors requiring review</CardTitle></CardHeader><CardContent>{(vendorsRequiringReview ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No vendor reviews currently require attention.</p> : <div className="space-y-3">{(vendorsRequiringReview ?? []).map((vendor) => <Link key={vendor.id} href={getDashboardHref(safeBasePath, 'vendors')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{vendor.name ?? 'Unnamed vendor'}</p><p className="text-muted-foreground">Review {formatShortDate(vendor.next_review_at)}</p></div><div className="text-right text-xs uppercase tracking-wide text-muted-foreground"><p>{vendor.risk_level ?? 'unknown'}</p><p>{vendor.review_status ?? 'pending'}</p></div></div></Link>)}</div>}</CardContent></Card>
+      <Card id="documents" className="scroll-mt-28"><CardHeader><CardTitle>Documents expiring soon</CardTitle></CardHeader><CardContent>{(documentsExpiringSoon ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No upcoming document expirations found.</p> : <div className="space-y-3">{(documentsExpiringSoon ?? []).map((document) => <Link key={document.id} href={getDashboardHref(safeBasePath, 'documents')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{document.title ?? document.name ?? 'Untitled document'}</p><p className="text-muted-foreground">{document.category ?? 'General'} · {document.status ?? 'draft'}</p></div><p className="text-right text-xs font-semibold uppercase tracking-wide text-amber-300">{formatShortDate(document.expires_at)}</p></div></Link>)}</div>}</CardContent></Card>
+    </section>
+  );
+}
+
+export function HomeDashboardPage({ summary, tasks, trendComparison, basePath = '/dashboard/organizations', topRisks = [], vendorsRequiringReview = [], documentsExpiringSoon = [] }: DashboardOverviewProps) {
+  const openTasks = tasks.filter((task) => task.status !== 'done').slice(0, 5);
+  return <div className="space-y-6 scroll-smooth"><section id="overview" className="scroll-mt-28"><ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} /></section><section id="experience-map" className="scroll-mt-28"><DashboardExperienceMap basePath={basePath} /></section><section id="experience-index" className="scroll-mt-28"><DashboardExperienceIndex summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="recommended-focus" className="scroll-mt-28"><NextBestActions summary={summary} basePath={basePath} /></section><section id="calendar" className="scroll-mt-28"><ComplianceTimeline tasks={openTasks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section></div>;
+}
+
+export function CommandCenterPage({ summary, tasks, trendComparison, basePath = '/dashboard/organizations', topRisks = [], vendorsRequiringReview = [], documentsExpiringSoon = [] }: DashboardOverviewProps) {
+  const openTasks = tasks.filter((task) => task.status !== 'done').slice(0, 5);
+  return <div className="space-y-6 scroll-smooth"><section id="executive-summary" className="scroll-mt-28"><ExecutiveCommandCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="kpi-strip" className="scroll-mt-28"><StickyExecutiveKpiBar summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="health-center" className="scroll-mt-28"><ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="ai-copilot" className="scroll-mt-28"><AiCopilotPanel summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="operational-feed" className="scroll-mt-28"><OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section></div>;
+}
+
+export function EvidenceRiskPage({ summary, basePath = '/dashboard/organizations', topRisks = [], vendorsRequiringReview = [], documentsExpiringSoon = [] }: DashboardOverviewProps) {
+  return <div className="space-y-6 scroll-smooth"><section id="risk-heatmap" className="scroll-mt-28"><RiskHeatmap summary={summary} basePath={basePath} /></section><section id="relationship-graph" className="scroll-mt-28"><RelationshipGraph summary={summary} basePath={basePath} /></section><section id="evidence-graph" className="scroll-mt-28"><EvidenceGraph summary={summary} basePath={basePath} /></section><DashboardMetricsGrid summary={summary} basePath={basePath} /><section id="tasks" className="scroll-mt-28"><DomainScorecards summary={summary} basePath={basePath} /></section><ExposureLists basePath={basePath} topRisks={topRisks} vendorsRequiringReview={vendorsRequiringReview} documentsExpiringSoon={documentsExpiringSoon} /></div>;
+}
+
+export function ReportsGovernancePage({ summary, trendComparison, basePath = '/dashboard/organizations' }: DashboardOverviewProps) {
+  return <div className="space-y-6 scroll-smooth"><section id="board-mode" className="scroll-mt-28"><BoardModePreview summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="scenario-simulator" className="scroll-mt-28"><ScenarioSimulator summary={summary} basePath={basePath} /></section><section id="board-report-center" className="scroll-mt-28"><BoardReportCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="white-label-reports" className="scroll-mt-28"><WhiteLabelReportPreview summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="approval-workflow" className="scroll-mt-28"><ApprovalWorkflowPreview summary={summary} basePath={basePath} /></section><section id="department-ownership" className="scroll-mt-28"><DepartmentOwnershipPreview summary={summary} basePath={basePath} /></section><section id="audit-timeline" className="scroll-mt-28"><AuditTimelinePreview summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="framework-coverage" className="scroll-mt-28"><FrameworkCoveragePreview summary={summary} basePath={basePath} /></section><section id="value-ladder" className="scroll-mt-28"><EnterpriseValueLadder summary={summary} basePath={basePath} /></section><section id="ai-executive-layer" className="scroll-mt-28"><AiExecutiveLayer summary={summary} trendComparison={trendComparison} basePath={basePath} /></section></div>;
+}
+
+export function DashboardOverview(props: DashboardOverviewProps) {
+  return <HomeDashboardPage {...props} />;
 }
