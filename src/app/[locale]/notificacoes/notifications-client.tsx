@@ -6,9 +6,18 @@ import { AlertTriangle, Bell, CheckCircle2, FileText, MailPlus, ShieldCheck, Spa
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import type { NotificationItem } from '@/server/queries/compliance-activity';
 
 type NotificationType = 'convites' | 'documentos' | 'sistema' | 'alertas';
 type Filter = 'todas' | 'nao-lidas' | NotificationType;
+
+type FeedNotification = {
+  id: string;
+  type: NotificationType;
+  unread: boolean;
+  message: string;
+  timestamp: string;
+};
 
 const iconMap = {
   convites: MailPlus,
@@ -16,16 +25,6 @@ const iconMap = {
   sistema: ShieldCheck,
   alertas: AlertTriangle,
 };
-
-const demoNotifications = [
-  { id: '1', type: 'convites' as NotificationType, unread: true, message: 'Você convidou joao@empresa.com para colaborar.', timestamp: 'há 5 minutos' },
-  { id: '2', type: 'documentos' as NotificationType, unread: true, message: 'Maria editou a planilha de Skills - Matriz de Riscos.', timestamp: 'há 18 minutos' },
-  { id: '3', type: 'sistema' as NotificationType, unread: false, message: 'Novo relatório de compliance gerado automaticamente.', timestamp: 'hoje às 09:12' },
-  { id: '4', type: 'convites' as NotificationType, unread: false, message: 'Convite aceito por ana@empresa.com.', timestamp: 'ontem' },
-  { id: '5', type: 'sistema' as NotificationType, unread: true, message: 'Seu plano foi atualizado para Enterprise.', timestamp: 'ontem às 16:40' },
-  { id: '6', type: 'alertas' as NotificationType, unread: true, message: 'Uma evidência crítica está próxima da data de revisão.', timestamp: 'segunda-feira' },
-  { id: '7', type: 'documentos' as NotificationType, unread: false, message: 'Documento “Política de Retenção” foi marcado como aprovado.', timestamp: 'semana passada' },
-];
 
 const filters: { label: string; value: Filter }[] = [
   { label: 'Todas', value: 'todas' },
@@ -36,9 +35,26 @@ const filters: { label: string; value: Filter }[] = [
   { label: 'Alertas', value: 'alertas' },
 ];
 
-export function NotificationsClient({ locale }: { locale: string }) {
+function mapNotificationType(type: NotificationItem['type']): NotificationType {
+  if (type === 'invite') return 'convites';
+  if (type === 'document' || type === 'approval') return 'documentos';
+  if (type === 'alert') return 'alertas';
+  return 'sistema';
+}
+
+function toFeedNotifications(items: NotificationItem[]): FeedNotification[] {
+  return items.map((item) => ({
+    id: item.id,
+    type: mapNotificationType(item.type),
+    unread: !item.read,
+    message: item.message,
+    timestamp: item.createdAt,
+  }));
+}
+
+export function NotificationsClient({ locale, initialNotifications }: { locale: string; initialNotifications: NotificationItem[] }) {
   const [activeFilter, setActiveFilter] = useState<Filter>('todas');
-  const [notifications, setNotifications] = useState(demoNotifications);
+  const [notifications, setNotifications] = useState<FeedNotification[]>(() => toFeedNotifications(initialNotifications));
 
   const filteredNotifications = useMemo(() => {
     if (activeFilter === 'todas') return notifications;
