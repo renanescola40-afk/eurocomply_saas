@@ -10,7 +10,6 @@ import { DashboardWorkspaceSidebar } from '@/components/dashboard/dashboard-work
 import { DepartmentOwnershipPreview } from '@/components/dashboard/department-ownership-preview';
 import { EnterpriseValueLadder } from '@/components/dashboard/enterprise-value-ladder';
 import { EvidenceGraph } from '@/components/dashboard/evidence-graph';
-import { ExecutiveCockpit } from '@/components/dashboard/executive-cockpit';
 import { ExecutiveCommandCenter } from '@/components/dashboard/executive-command-center';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
 import { FrameworkCoveragePreview } from '@/components/dashboard/framework-coverage-preview';
@@ -130,24 +129,28 @@ export function DashboardOverview({
     <div className="min-h-[calc(100vh-2rem)] xl:grid xl:grid-cols-[20rem_minmax(0,1fr)] xl:gap-6">
       <DashboardWorkspaceSidebar summary={summary} basePath={basePath} />
 
-      <div className="min-w-0 overflow-hidden rounded-[2rem] border border-slate-200/70 bg-background/95 shadow-sm xl:h-[calc(100vh-2rem)] xl:overflow-hidden">
-        <div className="border-b bg-background/95 p-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="flex gap-2 overflow-x-auto">
-            {views.map((view) => (
+      <div className="premium-motion-enter-delayed premium-shell premium-ambient-border premium-ambient-grid min-w-0 overflow-hidden rounded-[2rem] shadow-2xl xl:h-[calc(100vh-2rem)] xl:overflow-hidden">
+        <div className="relative z-10 border-b border-white/10 bg-slate-950/80 p-3 backdrop-blur-xl">
+          <div className="flex items-center gap-3 overflow-x-auto">
+            <div className="hidden shrink-0 rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 lg:block">
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary/80">Workspace views</p>
+              <p className="mt-1 text-xs text-slate-500">Choose one operating layer</p>
+            </div>
+            {views.map((view, index) => (
               <a
                 key={view.id}
                 href={view.href}
-                className={`min-w-40 rounded-2xl border px-4 py-3 transition ${viewClasses(view.accent)} focus:outline-none focus:ring-2 focus:ring-primary`}
+                className={`premium-magnetic premium-pressable min-w-44 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 transition ${index === 0 ? 'premium-tab-active' : ''} ${viewClasses(view.accent)} focus:outline-none focus:ring-2 focus:ring-primary`}
               >
-                <p className="text-sm font-bold leading-none">{view.label}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{view.description}</p>
+                <p className="text-sm font-bold leading-none text-white">{view.label}</p>
+                <p className="mt-1 text-xs text-slate-500">{view.description}</p>
               </a>
             ))}
           </div>
         </div>
 
-        <div className="h-[calc(100vh-8.5rem)] snap-y snap-mandatory overflow-y-auto scroll-smooth p-4 xl:p-5">
-          <section id="overview-view" className="min-h-full snap-start scroll-mt-4 space-y-4">
+        <div className="relative z-10 h-[calc(100vh-8.5rem)] snap-y snap-mandatory overflow-y-auto scroll-smooth p-4 xl:p-5">
+          <section id="overview-view" className="premium-motion-enter min-h-full snap-start scroll-mt-4 space-y-4">
             <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
             <StickyExecutiveKpiBar summary={summary} trendComparison={trendComparison} basePath={basePath} />
             <div className="grid gap-4 2xl:grid-cols-[1.1fr_0.9fr]">
@@ -183,7 +186,7 @@ export function DashboardOverview({
             <OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} />
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {metricCards.map((metric) => (
-                <Link key={metric.label} href={metric.href} className="block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
+                <Link key={metric.label} href={metric.href} className="premium-magnetic block rounded-xl focus:outline-none focus:ring-2 focus:ring-primary">
                   <Card className="h-full transition hover:border-primary/50 hover:bg-muted/30">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">{metric.label}</CardTitle>
@@ -204,7 +207,7 @@ export function DashboardOverview({
                   {topRisks.length === 0 ? <p className="text-sm text-muted-foreground">No open risks requiring executive attention.</p> : (
                     <div className="space-y-3">
                       {topRisks.slice(0, 4).map((risk) => (
-                        <Link key={risk.id} href={getDashboardHref(basePath, 'risks')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
+                        <Link key={risk.id} href={getDashboardHref(basePath, 'risks')} className="premium-magnetic block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="font-medium">{risk.title ?? 'Untitled risk'}</p>
@@ -225,7 +228,7 @@ export function DashboardOverview({
                   {vendorsRequiringReview.length === 0 ? <p className="text-sm text-muted-foreground">No vendor reviews currently require attention.</p> : (
                     <div className="space-y-3">
                       {vendorsRequiringReview.slice(0, 4).map((vendor) => (
-                        <Link key={vendor.id} href={getDashboardHref(basePath, 'vendors')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
+                        <Link key={vendor.id} href={getDashboardHref(basePath, 'vendors')} className="premium-magnetic block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="font-medium">{vendor.name ?? 'Unnamed vendor'}</p>
@@ -249,7 +252,7 @@ export function DashboardOverview({
                   {documentsExpiringSoon.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming document expirations found.</p> : (
                     <div className="space-y-3">
                       {documentsExpiringSoon.slice(0, 4).map((document) => (
-                        <Link key={document.id} href={getDashboardHref(basePath, 'documents')} className="block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
+                        <Link key={document.id} href={getDashboardHref(basePath, 'documents')} className="premium-magnetic block rounded-lg border p-3 text-sm transition hover:border-primary/50 hover:bg-muted/30">
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="font-medium">{document.title ?? document.name ?? 'Untitled document'}</p>
