@@ -6,7 +6,7 @@ import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
 
-const VENDORS_CSV_HEADER = ['Name', 'Category', 'Risk level', 'Review status', 'DPA status', 'Data access level', 'Created at', 'Updated at'];
+const VENDORS_CSV_HEADER = ['Name', 'Category', 'Risk level', 'Review status', 'Created at', 'Updated at'];
 
 export async function GET() {
   let context: Awaited<ReturnType<typeof requireOrganizationContext>>;
@@ -36,13 +36,13 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('vendors')
-    .select('name,category,risk_level,review_status,dpa_status,data_access_level,created_at,updated_at')
+    .select('name,category,risk_level,review_status,created_at,updated_at')
     .eq('organization_id', organization.id)
     .order('created_at', { ascending: false });
 
   if (error) {
-    reportError(error, { area: 'vendors_csv_export', organizationId: organization.id, userId: user.id });
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    reportError(new Error('Vendors CSV export failed'), { area: 'vendors_csv_export', organizationId: organization.id, userId: user.id, code: error.code ?? 'unknown' });
+    return NextResponse.json({ error: 'Unable to export vendors report' }, { status: 500 });
   }
 
   const rows = [
@@ -52,8 +52,6 @@ export async function GET() {
       vendor.category,
       vendor.risk_level,
       vendor.review_status,
-      vendor.dpa_status,
-      vendor.data_access_level,
       vendor.created_at,
       vendor.updated_at,
     ])),
