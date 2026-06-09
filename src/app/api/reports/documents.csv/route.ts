@@ -6,7 +6,7 @@ import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
 
-const DOCUMENTS_CSV_HEADER = ['Name', 'Category', 'Status', 'MIME type', 'Size bytes', 'Expires at', 'Created at', 'Updated at'];
+const DOCUMENTS_CSV_HEADER = ['Title', 'Status', 'Version', 'Expires at', 'Created at', 'Updated at'];
 
 export async function GET() {
   let context: Awaited<ReturnType<typeof requireOrganizationContext>>;
@@ -36,23 +36,21 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('documents')
-    .select('name,category,status,mime_type,size_bytes,expires_at,created_at,updated_at')
+    .select('title,status,version,expires_at,created_at,updated_at')
     .eq('organization_id', organization.id)
     .order('created_at', { ascending: false });
 
   if (error) {
-    reportError(error, { area: 'documents_csv_export', organizationId: organization.id, userId: user.id });
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    reportError(new Error('Documents CSV export failed'), { area: 'documents_csv_export', organizationId: organization.id, userId: user.id, code: error.code ?? 'unknown' });
+    return NextResponse.json({ error: 'Unable to export documents report' }, { status: 500 });
   }
 
   const rows = [
     DOCUMENTS_CSV_HEADER,
     ...((data ?? []).map((document) => [
-      document.name,
-      document.category,
+      document.title,
       document.status,
-      document.mime_type,
-      document.size_bytes,
+      document.version,
       document.expires_at,
       document.created_at,
       document.updated_at,
