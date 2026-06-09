@@ -43,6 +43,7 @@ function getUsagePercent(current: number, limit: number) {
 
 function getUsageMessage(current: number, limit: number) {
   const percent = getUsagePercent(current, limit);
+
   if (percent >= 100) return 'Limit reached';
   if (percent >= 80) return 'Upgrade recommended';
   return 'Healthy usage';
@@ -150,21 +151,23 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
       redirect(`/${params.locale}/onboarding`);
     }
 
+    const planId = String(formData.get('planId') ?? '');
+    let url: string;
+
     try {
-      const planId = String(formData.get('planId') ?? '');
-      const url = await createCheckoutSession({
+      url = await createCheckoutSession({
         organizationId: currentOrganization.id,
         planId,
         userId: currentUser.id,
         successPath: `/${params.locale}/dashboard/organizations/billing?checkout=success`,
         cancelPath: `/${params.locale}/dashboard/organizations/billing?checkout=cancelled`,
       });
-
-      revalidatePath(`/${params.locale}/dashboard/organizations/billing`);
-      redirect(url);
     } catch (error) {
       billingErrorRedirect(params.locale, error);
     }
+
+    revalidatePath(`/${params.locale}/dashboard/organizations/billing`);
+    redirect(url);
   }
 
   async function openCustomerPortal() {
@@ -182,17 +185,19 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
       redirect(`/${params.locale}/onboarding`);
     }
 
+    let url: string;
+
     try {
-      const url = await createCustomerPortalSession({
+      url = await createCustomerPortalSession({
         organizationId: currentOrganization.id,
         userId: currentUser.id,
         returnPath: `/${params.locale}/dashboard/organizations/billing`,
       });
-
-      redirect(url);
     } catch (error) {
       billingErrorRedirect(params.locale, error);
     }
+
+    redirect(url);
   }
 
   return (
