@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, FileText, Plus, UploadCloud } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ type ControlledDocument = {
   version: number;
   status: 'Pendente' | 'Aprovado' | 'Revisão';
   owner: string;
+  checksum?: string;
 };
 
 const storageKey = 'eurocomply-controlled-documents-demo';
@@ -23,6 +24,8 @@ const defaultDocuments: ControlledDocument[] = [
 export function DocumentsClient({ locale }: { locale: string }) {
   const [documents, setDocuments] = useState<ControlledDocument[]>(defaultDocuments);
   const [title, setTitle] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [toast, setToast] = useState('');
 
   useEffect(() => {
@@ -36,18 +39,67 @@ export function DocumentsClient({ locale }: { locale: string }) {
 
   function showToast(message: string) {
     setToast(message);
-    window.setTimeout(() => setToast(''), 2600);
+    window.setTimeout(() => setToast(''), 3200);
   }
 
-  function uploadDocument(event: FormEvent) {
+  function onFileChange(event: ChangeEvent<HTMLInputElement>) {
+    setFile(event.target.files?.[0] ?? null);
+  }
+
+  async function uploadDocument(event: FormEvent) {
     event.preventDefault();
-    if (!title.trim()) {
-      showToast('Informe o nome do documento.');
+
+    if (!title.trim() && !file) {
+      showToast('Informe o nome do documento ou selecione um arquivo.');
       return;
     }
-    setDocuments((current) => [{ id: crypto.randomUUID(), title, version: 1, status: 'Pendente', owner: 'Compliance' }, ...current]);
-    setTitle('');
-    showToast('Upload simulado criado com aprovação pendente.');
+
+    if (!file) {
+      setDocuments((current) => [{ id: crypto.randomUUID(), title: title.trim(), version: 1, status: 'Pendente', owner: 'Compliance' }, ...current]);
+      setTitle('');
+      showToast('Documento demo criado com aprovação pendente.');
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        showToast(payload.error ?? 'Não foi possível carregar o documento com segurança.');
+        return;
+      }
+
+      const uploadedTitle = payload.document?.title ?? title.trim() ?? file.name;
+
+      setDocuments((current) => [
+        {
+          id: payload.document?.id ?? crypto.randomUUID(),
+          title: uploadedTitle,
+          version: 1,
+          status: 'Pendente',
+          owner: 'Compliance',
+          checksum: payload.checksum,
+        },
+        ...current,
+      ]);
+      setTitle('');
+      setFile(null);
+      showToast('Documento carregado com validação segura e enviado para revisão.');
+    } catch {
+      showToast('Falha de rede ao carregar documento.');
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   function bumpVersion(id: string) {
@@ -67,12 +119,13 @@ export function DocumentsClient({ locale }: { locale: string }) {
       <section className="rounded-[2rem] border bg-background/90 p-6 shadow-xl shadow-primary/5 md:p-8">
         <Badge className="rounded-full uppercase tracking-[0.18em]">Evidence control</Badge>
         <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">Central de Documentos Controlados</h1>
-        <p className="mt-3 max-w-2xl text-muted-foreground">Upload simulado, versionamento e aprovação visual para políticas, atas, certificados e evidências.</p>
+        <p className="mt-3 max-w-2xl text-muted-foreground">Upload validado, versionamento e aprovação visual para políticas, atas, certificados e evidências.</p>
       </section>
 
-      <form onSubmit={uploadDocument} className="flex flex-col gap-3 rounded-[2rem] border bg-background/90 p-5 shadow-sm md:flex-row">
-        <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Nome do documento" className="min-w-0 flex-1 rounded-2xl border bg-background px-4 py-3 text-sm" />
-        <Button type="submit" className="rounded-full"><UploadCloud className="h-4 w-4" />Upload simulado</Button>
+      <form onSubmit={uploadDocument} className="grid gap-3 rounded-[2rem] border bg-background/90 p-5 shadow-sm md:grid-cols-[1fr_1fr_auto]">
+        <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Nome do documento" className="min-w-0 rounded-2xl border bg-background px-4 py-3 text-sm" />
+        <input onChange={onFileChange} type="file" accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/png,image/jpeg" className="min-w-0 rounded-2xl border bg-background px-4 py-3 text-sm" />
+        <Button type="submit" disabled={isUploading} className="rounded-full"><UploadCloud className="h-4 w-4" />{isUploading ? 'A carregar...' : 'Upload seguro'}</Button>
       </form>
 
       <section className="grid gap-4 md:grid-cols-2">
@@ -82,6 +135,7 @@ export function DocumentsClient({ locale }: { locale: string }) {
               <div>
                 <h2 className="text-xl font-semibold"><FileText className="mr-2 inline h-5 w-5 text-primary" />{document.title}</h2>
                 <p className="mt-2 text-sm text-muted-foreground">Owner: {document.owner} · versão v{document.version}</p>
+                {document.checksum ? <p className="mt-1 break-all text-xs text-muted-foreground">SHA-256: {document.checksum.slice(0, 24)}...</p> : null}
               </div>
               <Badge variant={document.status === 'Aprovado' ? 'default' : 'outline'}>{document.status}</Badge>
             </div>
