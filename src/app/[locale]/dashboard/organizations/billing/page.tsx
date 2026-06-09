@@ -10,7 +10,7 @@ import { getCurrentOrganizationForUser } from '@/server/queries/current-organiza
 
 type BillingPageProps = {
   params: { locale: string };
-  searchParams?: { checkout?: string };
+  searchParams?: { checkout?: string; billing_error?: string };
 };
 
 function formatStatus(status: string | null) {
@@ -43,7 +43,6 @@ function getUsagePercent(current: number, limit: number) {
 
 function getUsageMessage(current: number, limit: number) {
   const percent = getUsagePercent(current, limit);
-
   if (percent >= 100) return 'Limit reached';
   if (percent >= 80) return 'Upgrade recommended';
   return 'Healthy usage';
@@ -78,7 +77,15 @@ function UsageMeter({ label, current, limit }: { label: string; current: number;
   );
 }
 
-function checkoutMessage(checkout?: string) {
+function checkoutMessage(checkout?: string, billingError?: string) {
+  if (billingError) {
+    return {
+      title: 'Billing action could not be completed',
+      description: decodeURIComponent(billingError),
+      className: 'border-rose-500/30 bg-rose-500/10 text-rose-200',
+    };
+  }
+
   if (checkout === 'success') {
     return {
       title: 'Checkout completed',
@@ -98,6 +105,11 @@ function checkoutMessage(checkout?: string) {
   return null;
 }
 
+function billingErrorRedirect(locale: string, error: unknown) {
+  const message = error instanceof Error ? error.message : 'Unexpected billing error';
+  redirect(`/${locale}/dashboard/organizations/billing?billing_error=${encodeURIComponent(message)}`);
+}
+
 export default async function OrganizationBillingPage({ params, searchParams }: BillingPageProps) {
   const user = await getCurrentUser();
 
@@ -113,7 +125,7 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
 
   const billing = await getOrganizationBillingContext(organization.id);
   const currentPlan = getBillingPlan(billing.plan) ?? BILLING_PLANS[0];
-  const message = checkoutMessage(searchParams?.checkout);
+  const message = checkoutMessage(searchParams?.checkout, searchParams?.billing_error);
   const usageMeters = [
     { label: 'Team members', current: billing.usage.users, limit: currentPlan.limits.users },
     { label: 'Documents', current: billing.usage.documents, limit: currentPlan.limits.documents },
@@ -138,17 +150,21 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
       redirect(`/${params.locale}/onboarding`);
     }
 
-    const planId = String(formData.get('planId') ?? '');
-    const url = await createCheckoutSession({
-      organizationId: currentOrganization.id,
-      planId,
-      userId: currentUser.id,
-      successPath: `/${params.locale}/dashboard/organizations/billing?checkout=success`,
-      cancelPath: `/${params.locale}/dashboard/organizations/billing?checkout=cancelled`,
-    });
+    try {
+      const planId = String(formData.get('planId') ?? '');
+      const url = await createCheckoutSession({
+        organizationId: currentOrganization.id,
+        planId,
+        userId: currentUser.id,
+        successPath: `/${params.locale}/dashboard/organizations/billing?checkout=success`,
+        cancelPath: `/${params.locale}/dashboard/organizations/billing?checkout=cancelled`,
+      });
 
-    revalidatePath(`/${params.locale}/dashboard/organizations/billing`);
-    redirect(url);
+      revalidatePath(`/${params.locale}/dashboard/organizations/billing`);
+      redirect(url);
+    } catch (error) {
+      billingErrorRedirect(params.locale, error);
+    }
   }
 
   async function openCustomerPortal() {
@@ -166,13 +182,17 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
       redirect(`/${params.locale}/onboarding`);
     }
 
-    const url = await createCustomerPortalSession({
-      organizationId: currentOrganization.id,
-      userId: currentUser.id,
-      returnPath: `/${params.locale}/dashboard/organizations/billing`,
-    });
+    try {
+      const url = await createCustomerPortalSession({
+        organizationId: currentOrganization.id,
+        userId: currentUser.id,
+        returnPath: `/${params.locale}/dashboard/organizations/billing`,
+      });
 
-    redirect(url);
+      redirect(url);
+    } catch (error) {
+      billingErrorRedirect(params.locale, error);
+    }
   }
 
   return (
