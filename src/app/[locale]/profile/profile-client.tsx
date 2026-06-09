@@ -149,6 +149,24 @@ export function ProfileClient({ locale }: { locale: string }) {
     showToast('Convite registado com validação server-side.');
   }
 
+  async function downloadGdprExport() {
+    const response = await fetch('/api/gdpr/export');
+    if (!response.ok) {
+      showToast('Não foi possível preparar a exportação GDPR.');
+      return;
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'eurocomply-gdpr-export.json';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(url);
+    showToast('Exportação GDPR descarregada.');
+  }
+
   async function requestGdprDelete() {
     const response = await fetch('/api/gdpr/delete-request', {
       method: 'POST',
@@ -200,7 +218,7 @@ export function ProfileClient({ locale }: { locale: string }) {
 
         <section id="employees" className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur"><div className="flex items-center gap-3"><UsersRound className="h-5 w-5 text-primary" /><h2 className="text-2xl font-semibold">Gestão de funcionários</h2></div>{isEnterprise ? <div className="mt-5 space-y-5"><div className="grid gap-3 md:grid-cols-[1fr_220px_auto]"><input value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="email@empresa.com" className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" /><select value={inviteRole} onChange={(event) => setInviteRole(event.target.value)} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary"><option>Admin</option><option>Editor</option><option>Visualizador</option></select><Button type="button" onClick={inviteEmployee} className="rounded-full"><Mail className="h-4 w-4" /> Convidar funcionário</Button></div><div className="grid gap-3 md:grid-cols-2">{employees.map((employee) => <div key={employee.id} className="rounded-2xl border bg-muted/20 p-4"><p className="font-semibold">{employee.name}</p><p className="text-sm text-muted-foreground">{employee.email}</p><div className="mt-3 flex gap-2"><Badge variant="outline">{employee.role}</Badge><Badge>{employee.status}</Badge></div></div>)}</div></div> : <div className="mt-5 rounded-2xl border bg-muted/30 p-5 text-sm leading-6 text-muted-foreground">🔒 Upgrade para o plano Enterprise e convide até 10 funcionários para colaborar na implementação dos documentos.<div><Button asChild className="mt-4 rounded-full"><Link href={`/${locale}/pricing`}>Fazer upgrade</Link></Button></div></div>}</section>
 
-        <section id="privacy" className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur"><div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div className="flex items-start gap-3"><div className="rounded-2xl bg-primary/10 p-3 text-primary"><ShieldCheck className="h-5 w-5" /></div><div><h2 className="text-2xl font-semibold">Privacidade & GDPR</h2><p className="mt-1 text-sm text-muted-foreground">Ações protegidas por sessão. Exportação gera auditoria e notificação; apagamento fica pendente para revisão legal.</p></div></div><div className="flex flex-wrap gap-2"><Button asChild variant="outline" className="rounded-full"><a href="/api/gdpr/export"><Download className="h-4 w-4" /> Exportar dados</a></Button><Button type="button" variant="destructive" className="rounded-full" onClick={requestGdprDelete}><Trash2 className="h-4 w-4" /> Solicitar apagamento</Button></div></div></section>
+        <section id="privacy" className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur"><div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div className="flex items-start gap-3"><div className="rounded-2xl bg-primary/10 p-3 text-primary"><ShieldCheck className="h-5 w-5" /></div><div><h2 className="text-2xl font-semibold">Privacidade & GDPR</h2><p className="mt-1 text-sm text-muted-foreground">Ações protegidas por sessão. Exportação gera auditoria e notificação; apagamento fica pendente para revisão legal.</p></div></div><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" className="rounded-full" onClick={downloadGdprExport}><Download className="h-4 w-4" /> Exportar dados</Button><Button type="button" variant="destructive" className="rounded-full" onClick={requestGdprDelete}><Trash2 className="h-4 w-4" /> Solicitar apagamento</Button></div></div></section>
       </div>
     </main>
   );
