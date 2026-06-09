@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Bell, ChevronDown, Menu, X } from 'lucide-react';
+import { Bell, ChevronDown, Menu, Newspaper, X } from 'lucide-react';
 
 const dashboardRoot = '/dashboard/organizations';
 
@@ -42,6 +42,7 @@ export const dashboardNavigation: MenuItem[] = [
     href: `${dashboardRoot}/reports-governance`,
     sections: [
       { label: 'Relatórios Compliance', href: `${dashboardRoot}/reports-governance`, description: 'Board reports e audit packs' },
+      { label: 'Notícias Europeias', href: `${dashboardRoot}/reports-governance/news`, description: 'Atualizações regulatórias com IA' },
       { label: 'Aprovações', href: '/aprovacoes', description: 'Workflow de aprovação documental' },
       { label: 'Atas e Governança', href: `${dashboardRoot}/reports-governance`, description: 'Decisões e registros executivos' },
     ],
@@ -60,6 +61,11 @@ export const dashboardNavigation: MenuItem[] = [
     label: 'Notificações',
     href: '/notificacoes',
     description: 'Feed premium de atividades',
+  },
+  {
+    label: 'Notícias',
+    href: `${dashboardRoot}/reports-governance/news`,
+    description: 'Notícias europeias de compliance',
   },
 ];
 
@@ -101,6 +107,7 @@ export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }
                   }`}
                 >
                   {item.label === 'Notificações' ? <Bell className="h-3.5 w-3.5" /> : null}
+                  {item.label === 'Notícias' ? <Newspaper className="h-3.5 w-3.5" /> : null}
                   {item.label}
                   {hasSubmenu ? <ChevronDown className="h-3.5 w-3.5 transition group-hover:rotate-180" /> : null}
                 </Link>
