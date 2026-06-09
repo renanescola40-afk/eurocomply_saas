@@ -1,8 +1,16 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { getCurrentUser } from '@/server/queries/auth';
 
 export default async function AuditLogPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect(`/${locale}/login`);
+  }
+
   const rows = [
     ['Admin', 'Atualizou documento controlado', '2025-04-02 09:20', 'Documento'],
     ['Compliance', 'Aprovou matriz de riscos', '2025-04-08 14:10', 'Aprovação'],
