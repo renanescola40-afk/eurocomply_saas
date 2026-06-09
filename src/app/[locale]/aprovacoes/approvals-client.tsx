@@ -12,18 +12,69 @@ type Approval = {
   submittedAt: string;
 };
 
-const initialApprovals: Approval[] = [
+type DocumentRecord = {
+  id: string;
+  title?: string | null;
+  status?: string | null;
+  version?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+const fallbackApprovals: Approval[] = [
   { id: 'demo-privacy-policy', title: 'Política de Privacidade v2', owner: 'Compliance Lead', status: 'Pendente', submittedAt: 'Hoje' },
   { id: 'demo-risk-matrix', title: 'Matriz de Riscos GDPR', owner: 'Security Owner', status: 'Pendente', submittedAt: 'Ontem' },
   { id: 'demo-vendor-review', title: 'Ata de Revisão de Fornecedores', owner: 'Legal Counsel', status: 'Aprovado', submittedAt: 'Esta semana' },
 ];
 
-export default function ApprovalsClient({ locale }: { locale: string }) {
-  const [approvals, setApprovals] = useState(initialApprovals);
+function normalizeApprovalStatus(status?: string | null): Approval['status'] {
+  const value = String(status ?? '').toLowerCase();
+
+  if (value.includes('approved') || value.includes('aprov')) {
+    return 'Aprovado';
+  }
+
+  if (value.includes('reject') || value.includes('rejeit')) {
+    return 'Rejeitado';
+  }
+
+  return 'Pendente';
+}
+
+function formatSubmittedAt(value?: string | null) {
+  if (!value) {
+    return 'Sem data';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Sem data';
+  }
+
+  return new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
+}
+
+function mapDocumentsToApprovals(documents: DocumentRecord[]): Approval[] {
+  return documents.map((document) => ({
+    id: document.id,
+    title: `${document.title ?? 'Documento controlado'}${document.version ? ` v${document.version}` : ''}`,
+    owner: 'Compliance workflow',
+    status: normalizeApprovalStatus(document.status),
+    submittedAt: formatSubmittedAt(document.updated_at ?? document.created_at),
+  }));
+}
+
+export default function ApprovalsClient({ locale, initialDocuments = [] }: { locale: string; initialDocuments?: DocumentRecord[] }) {
+  const [approvals, setApprovals] = useState<Approval[]>(() => {
+    const mapped = mapDocumentsToApprovals(initialDocuments);
+    return mapped.length > 0 ? mapped : fallbackApprovals;
+  });
   const [toast, setToast] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const pendingCount = useMemo(() => approvals.filter((item) => item.status === 'Pendente').length, [approvals]);
+  const isUsingRealDocuments = initialDocuments.length > 0;
 
   const updateStatus = async (id: string, status: Approval['status']) => {
     setBusyId(id);
@@ -77,6 +128,9 @@ export default function ApprovalsClient({ locale }: { locale: string }) {
             Ver documentos
           </Link>
         </div>
+        <div className="mt-4 rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">
+          {isUsingRealDocuments ? 'A mostrar documentos reais da organização.' : 'Sem documentos reais disponíveis: a mostrar workflow demo seguro.'}
+        </div>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
             <Clock3 className="h-5 w-5 text-amber-300" />
@@ -111,10 +165,10 @@ export default function ApprovalsClient({ locale }: { locale: string }) {
                 <p className="text-sm text-slate-400">Responsável: {approval.owner}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={busyId === approval.id} onClick={() => updateStatus(approval.id, 'Aprovado')} className="inline-flex items-center gap-2 rounded-full bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60">
+                <button type="button" disabled={busyId === approval.id || approval.status === 'Aprovado'} onClick={() => updateStatus(approval.id, 'Aprovado')} className="inline-flex items-center gap-2 rounded-full bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60">
                   <CheckCircle2 className="h-4 w-4" /> {busyId === approval.id ? 'A processar...' : 'Aprovar'}
                 </button>
-                <button type="button" disabled={busyId === approval.id} onClick={() => updateStatus(approval.id, 'Rejeitado')} className="inline-flex items-center gap-2 rounded-full border border-rose-300/40 px-4 py-2 text-sm text-rose-100 transition hover:bg-rose-400/10 disabled:cursor-not-allowed disabled:opacity-60">
+                <button type="button" disabled={busyId === approval.id || approval.status === 'Rejeitado'} onClick={() => updateStatus(approval.id, 'Rejeitado')} className="inline-flex items-center gap-2 rounded-full border border-rose-300/40 px-4 py-2 text-sm text-rose-100 transition hover:bg-rose-400/10 disabled:cursor-not-allowed disabled:opacity-60">
                   <XCircle className="h-4 w-4" /> Rejeitar
                 </button>
               </div>
