@@ -16,6 +16,18 @@ export async function listUserOrganizations(userId: string) {
   return data ?? [];
 }
 
+export async function getCurrentOrganizationForUser(userId: string) {
+  const memberships = await listUserOrganizations(userId);
+  const firstMembership = memberships[0];
+  const organization = firstMembership?.organizations;
+
+  if (Array.isArray(organization)) {
+    return organization[0] ?? null;
+  }
+
+  return organization ?? null;
+}
+
 export async function getOrganizationBySlug(slug: string) {
   const supabase = createAdminClient();
 
