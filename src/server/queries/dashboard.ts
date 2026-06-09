@@ -23,6 +23,11 @@ export type DashboardTrendComparison = {
 
 type DashboardRow = Record<string, unknown>;
 
+type QueryError = {
+  code?: string;
+  message?: string;
+} | null;
+
 type DashboardSnapshotRow = {
   created_at?: string | null;
   updated_at?: string | null;
@@ -51,9 +56,9 @@ function emptyDashboardSummary() {
   };
 }
 
-function safeRows(result: { data: DashboardRow[] | null; error: { message?: string } | null }, label: string) {
+function safeRows(result: { data: DashboardRow[] | null; error: QueryError }, label: string) {
   if (result.error) {
-    console.warn(`[dashboard] Failed to load ${label}:`, result.error.message ?? 'Unknown error');
+    console.warn('[dashboard] query_failed', { label, code: result.error.code ?? 'unknown' });
     return [];
   }
 
@@ -130,7 +135,7 @@ export async function recordDashboardMetricSnapshot(organizationId: string, summ
   });
 
   if (error && !isMissingSnapshotDateColumn(error.message)) {
-    console.error('Failed to record dashboard metric snapshot', error.message);
+    console.warn('[dashboard] metric_snapshot_write_failed', { code: error.code ?? 'unknown' });
   }
 }
 
@@ -146,7 +151,7 @@ export async function getDashboardTrendHistory(organizationId: string, limit = 1
     .limit(limit);
 
   if (error) {
-    console.error('Failed to load dashboard trend history', error.message);
+    console.warn('[dashboard] trend_history_failed', { code: error.code ?? 'unknown' });
     return [];
   }
 
