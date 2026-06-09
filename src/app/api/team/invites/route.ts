@@ -2,11 +2,41 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { requireEnterprisePlan } from '@/server/queries/subscription';
+import { createOrganizationInvite } from '@/server/queries/invites';
 
 const allowedRoles = new Set(['Admin', 'Editor', 'Visualizador']);
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_ATTEMPTS = 5;
+const inviteAttempts = new Map<string, { count: number; resetAt: number }>();
 
 function isValidEmail(value: unknown) {
   return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function getClientIp(request: Request) {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  );
+}
+
+function isRateLimited(key: string) {
+  const now = Date.now();
+  const current = inviteAttempts.get(key);
+
+  if (!current || current.resetAt <= now) {
+    inviteAttempts.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+
+  if (current.count >= RATE_LIMIT_MAX_ATTEMPTS) {
+    return true;
+  }
+
+  current.count += 1;
+  inviteAttempts.set(key, current);
+  return false;
 }
 
 export async function POST(request: Request) {
@@ -14,6 +44,16 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const clientIp = getClientIp(request);
+  const rateLimitKey = `${user.id}:${clientIp}`;
+
+  if (isRateLimited(rateLimitKey)) {
+    return NextResponse.json(
+      { error: 'Too many invite attempts. Please wait before trying again.' },
+      { status: 429 },
+    );
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
@@ -48,14 +88,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid invite role' }, { status: 400 });
   }
 
-  // Security note: this endpoint performs server-side auth, organization lookup and Enterprise plan validation.
-  // The current implementation intentionally does not persist an invite until the production invitation schema is ready.
+  const result = await createOrganizationInvite({
+    organizationId: organization.id,
+    invitedBy: user.id,
+    email,
+    role: role as 'Admin' | 'Editor' | 'Visualizador',
+  });
+
   return NextResponse.json({
-    invite: {
-      email,
-      role,
-      organizationId: organization.id,
-      status: 'pending',
-    },
+    invite: result.invite,
+    persisted: result.persisted,
   });
 }
