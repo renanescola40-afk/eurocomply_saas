@@ -1,17 +1,19 @@
 import { createAdminClient, tryCreateAdminClient } from '@/lib/supabase/admin';
 
+const DOCUMENT_COLUMNS = 'id,organization_id,title,status,version,expires_at,created_at,updated_at';
+
 export async function listDocuments(organizationId: string) {
   const supabase = tryCreateAdminClient();
   if (!supabase) return [];
 
   const { data, error } = await supabase
     .from('documents')
-    .select('*')
+    .select(DOCUMENT_COLUMNS)
     .eq('organization_id', organizationId)
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.warn('[documents] Failed to list documents:', error.message);
+    console.warn('[documents] list_failed', { code: error.code });
     return [];
   }
 
@@ -23,12 +25,15 @@ export async function getDocument(documentId: string, organizationId: string) {
 
   const { data, error } = await supabase
     .from('documents')
-    .select('*')
+    .select(DOCUMENT_COLUMNS)
     .eq('id', documentId)
     .eq('organization_id', organizationId)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.warn('[documents] get_failed', { code: error.code });
+    throw error;
+  }
 
   return data;
 }
