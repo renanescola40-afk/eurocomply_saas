@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { ChevronDown, Settings, UserCircle2 } from 'lucide-react';
+import { ChevronDown, Menu, X } from 'lucide-react';
 
 const dashboardRoot = '/dashboard/organizations';
 
 type MenuLink = {
   label: string;
   href: string;
+  description?: string;
 };
 
 type MenuItem = MenuLink & {
@@ -16,54 +17,48 @@ export const dashboardNavigation: MenuItem[] = [
   {
     label: 'EuroComply',
     href: '/eurocomply-home',
+    description: 'Home pós-login para clientes pagantes',
   },
   {
     label: 'Visão Geral',
     href: dashboardRoot,
+    description: 'Base operacional sem conflito com a Home EuroComply',
   },
   {
     label: 'Command Center',
     href: `${dashboardRoot}/command-center`,
     sections: [
-      { label: 'Dashboard Executivo', href: `${dashboardRoot}/command-center/executive-dashboard` },
-      { label: 'Alertas', href: `${dashboardRoot}/command-center/alerts` },
-      { label: 'Minhas Tarefas', href: `${dashboardRoot}/tasks` },
+      { label: 'Dashboard Executivo', href: `${dashboardRoot}/command-center`, description: 'Cockpit executivo completo' },
+      { label: 'Alertas', href: `${dashboardRoot}/command-center/alerts`, description: 'Sinais críticos e avisos' },
+      { label: 'Minhas Tarefas', href: `${dashboardRoot}/tasks`, description: 'Trabalho operacional atribuído' },
     ],
   },
   {
     label: 'Evidence & Risk',
     href: `${dashboardRoot}/evidence-risk`,
     sections: [
-      { label: 'Documentos', href: `${dashboardRoot}/documents` },
-      { label: 'Matriz de Risco', href: `${dashboardRoot}/evidence-risk/risk-matrix` },
-      { label: 'Auditorias', href: `${dashboardRoot}/evidence-risk/audits` },
+      { label: 'Documentos', href: `${dashboardRoot}/documents`, description: 'Evidências, políticas e provas' },
+      { label: 'Matriz de Risco', href: `${dashboardRoot}/evidence-risk`, description: 'Heatmap e exposição' },
+      { label: 'Auditorias', href: `${dashboardRoot}/evidence-risk/audits`, description: 'Trilha e pacotes de auditoria' },
     ],
   },
   {
     label: 'Reports & Governance',
     href: `${dashboardRoot}/reports-governance`,
     sections: [
-      { label: 'Relatórios Compliance', href: `${dashboardRoot}/reports` },
-      { label: 'Políticas', href: `${dashboardRoot}/reports-governance/policies` },
-      { label: 'Atas', href: `${dashboardRoot}/reports-governance/minutes` },
+      { label: 'Relatórios Compliance', href: `${dashboardRoot}/reports`, description: 'Board reports e audit packs' },
+      { label: 'Políticas', href: `${dashboardRoot}/reports-governance/policies`, description: 'Governança documental' },
+      { label: 'Atas', href: `${dashboardRoot}/reports-governance/minutes`, description: 'Decisões e registros executivos' },
     ],
   },
   {
     label: 'Perfil',
     href: '/profile',
     sections: [
-      { label: 'Meus Dados', href: '/profile' },
-      { label: 'Notificações', href: '/profile/notifications' },
-      { label: 'Planos', href: '/profile/billing' },
-    ],
-  },
-  {
-    label: 'Configurações',
-    href: `${dashboardRoot}/settings`,
-    sections: [
-      { label: 'Equipe', href: `${dashboardRoot}/settings/team` },
-      { label: 'Integrações', href: `${dashboardRoot}/settings/integrations` },
-      { label: 'Preferências', href: `${dashboardRoot}/settings/preferences` },
+      { label: 'Meus Dados', href: '/profile#company-data', description: 'Dados da empresa e NIFs' },
+      { label: 'Notificações', href: '/profile#notifications', description: 'Preferências de alerta' },
+      { label: 'Planos', href: '/profile#plan', description: 'Plano atual e upgrade' },
+      { label: 'Funcionários', href: '/profile#employees', description: 'Convites Enterprise' },
     ],
   },
 ];
@@ -79,10 +74,19 @@ function localizeHref(locale: string, href: string) {
 
 export function DashboardCommandNavigation({ locale, activePage = 'Visão Geral' }: DashboardCommandNavigationProps) {
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/90 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/75">
+    <header className="sticky top-0 z-40 border-b bg-background/92 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/78">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 md:px-8">
-        <nav aria-label="Main EuroComply navigation" className="flex w-full items-center gap-2 overflow-x-auto whitespace-nowrap text-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {dashboardNavigation.map((item) => {
+        <input id="eurocomply-mobile-menu" type="checkbox" className="peer sr-only" aria-hidden="true" />
+
+        <Link
+          href={localizeHref(locale, '/eurocomply-home')}
+          className="shrink-0 rounded-full bg-foreground px-4 py-2 text-sm font-semibold tracking-tight text-background shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          EuroComply
+        </Link>
+
+        <nav aria-label="Main EuroComply navigation" className="hidden w-full items-center gap-2 whitespace-nowrap text-sm md:flex md:overflow-visible">
+          {dashboardNavigation.filter((item) => item.label !== 'EuroComply').map((item) => {
             const isActive = item.label === activePage;
             const hasSubmenu = Boolean(item.sections?.length);
 
@@ -97,18 +101,19 @@ export function DashboardCommandNavigation({ locale, activePage = 'Visão Geral'
                   }`}
                 >
                   {item.label}
-                  {hasSubmenu ? <ChevronDown className="h-3.5 w-3.5" /> : null}
+                  {hasSubmenu ? <ChevronDown className="h-3.5 w-3.5 transition group-hover:rotate-180" /> : null}
                 </Link>
 
                 {hasSubmenu ? (
-                  <div className="invisible absolute left-0 top-full z-50 mt-2 min-w-60 translate-y-1 rounded-2xl border bg-background/96 p-2 opacity-0 shadow-2xl shadow-primary/10 backdrop-blur transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                  <div className="invisible absolute left-0 top-full z-50 mt-2 min-w-72 translate-y-2 rounded-2xl border bg-background/98 p-2 opacity-0 shadow-2xl shadow-primary/10 backdrop-blur transition duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
                     {item.sections?.map((section) => (
                       <Link
                         key={section.href}
                         href={localizeHref(locale, section.href)}
-                        className="block rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-primary/10 hover:text-primary focus:bg-primary/10 focus:text-primary focus:outline-none"
+                        className="block rounded-xl px-3 py-2.5 transition hover:bg-primary/10 focus:bg-primary/10 focus:outline-none"
                       >
-                        {section.label}
+                        <span className="block text-sm font-medium text-foreground">{section.label}</span>
+                        {section.description ? <span className="mt-0.5 block text-xs text-muted-foreground">{section.description}</span> : null}
                       </Link>
                     ))}
                   </div>
@@ -116,6 +121,37 @@ export function DashboardCommandNavigation({ locale, activePage = 'Visão Geral'
               </div>
             );
           })}
+        </nav>
+
+        <label
+          htmlFor="eurocomply-mobile-menu"
+          className="ml-auto inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border bg-background text-muted-foreground transition hover:bg-muted md:hidden"
+          aria-label="Abrir menu"
+        >
+          <Menu className="h-5 w-5 peer-checked:hidden" />
+          <X className="hidden h-5 w-5 peer-checked:block" />
+        </label>
+      </div>
+
+      <div className="hidden border-t bg-background/98 px-4 py-3 shadow-lg peer-checked:block md:hidden">
+        <nav className="space-y-2" aria-label="Mobile EuroComply navigation">
+          {dashboardNavigation.map((item) => (
+            <details key={item.label} className="group rounded-2xl border bg-muted/20 p-2 open:bg-muted/40">
+              <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl px-3 py-2 font-medium">
+                <Link href={localizeHref(locale, item.href)}>{item.label}</Link>
+                {item.sections?.length ? <ChevronDown className="h-4 w-4 transition group-open:rotate-180" /> : null}
+              </summary>
+              {item.sections?.length ? (
+                <div className="mt-1 space-y-1 border-t pt-2">
+                  {item.sections.map((section) => (
+                    <Link key={section.href} href={localizeHref(locale, section.href)} className="block rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-primary/10 hover:text-primary">
+                      {section.label}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+            </details>
+          ))}
         </nav>
       </div>
     </header>
