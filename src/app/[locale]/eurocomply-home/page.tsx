@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowRight, BarChart3, CheckCircle2, Crown, FileText, Gauge, LockKeyhole, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
+import { ArrowRight, BarChart3, CheckCircle2, Clock3, Crown, FileText, Gauge, LockKeyhole, ShieldCheck, Sparkles, TimerReset, UsersRound } from 'lucide-react';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,9 +29,9 @@ const quickActions = [
 ];
 
 function userHasPaidAccess(user: Awaited<ReturnType<typeof getCurrentUser>>) {
-  // TODO: ligar aqui a regra real de billing/subscription.
-  // Exemplos possíveis quando o schema existir:
-  // return user.subscriptionStatus === 'active' || user.plan === 'pro' || user.customerAccess === 'paid';
+  // PONTO DE PERMISSÃO: trocar esta condição pela regra real de billing.
+  // Exemplo futuro:
+  // return ['pro', 'enterprise'].includes(user.subscriptionPlan) && user.subscriptionStatus === 'active';
   return Boolean(user);
 }
 
@@ -54,22 +54,22 @@ export default async function EuroComplyHomePage({ params }: { params: { locale:
 
   const macroCards = [
     {
-      label: 'Status geral',
-      value: data.summary.complianceScore >= 80 ? 'Estável' : data.summary.complianceScore >= 55 ? 'Em atenção' : 'Precisa foco',
-      description: 'Leitura macro da operação, sem entrar na fila operacional.',
-      icon: ShieldCheck,
+      label: 'Documentos pendentes',
+      value: `${data.summary.missingEvidence}`,
+      description: 'Itens que ainda podem fragilizar auditoria, procurement ou board review.',
+      icon: FileText,
     },
     {
-      label: 'Prontidão executiva',
+      label: 'Score de compliance',
       value: `${data.summary.complianceScore}%`,
       description: 'Indicador agregado para liderança e customer confidence.',
       icon: CheckCircle2,
     },
     {
-      label: 'Governança ativa',
-      value: `${data.summary.openTasks}`,
-      description: 'Ações abertas disponíveis no workspace operacional.',
-      icon: UsersRound,
+      label: 'Próximos prazos',
+      value: `${data.tasks.upcoming.length}`,
+      description: 'Datas úteis para manter evidências e tarefas sem atraso.',
+      icon: Clock3,
     },
   ];
 
@@ -87,16 +87,16 @@ export default async function EuroComplyHomePage({ params }: { params: { locale:
                   <Crown className="h-3.5 w-3.5" /> Cliente EuroComply
                 </Badge>
                 <Badge variant="outline" className="gap-2 rounded-full px-3 py-1 text-xs">
-                  <LockKeyhole className="h-3.5 w-3.5" /> Pós-login
+                  <LockKeyhole className="h-3.5 w-3.5" /> Pós-login pagante
                 </Badge>
               </div>
 
               <div className="space-y-3">
                 <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.04em] md:text-6xl">
-                  Bem-vindo ao seu centro EuroComply.
+                  Bem-vindo, {data.organization.name}.
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-                  Esta é a home interna para clientes pagantes: uma entrada limpa para status macro, atalhos essenciais e próximos passos, sem o ruído da dashboard operacional.
+                  Esta é a sua Home EuroComply: status macro, links rápidos e sinais de evolução para crescer do plano inicial para uma operação Enterprise.
                 </p>
               </div>
 
@@ -107,7 +107,7 @@ export default async function EuroComplyHomePage({ params }: { params: { locale:
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="rounded-full bg-background/70">
-                  <Link href={`/${params.locale}/dashboard/organizations/reports`}>Preparar relatório</Link>
+                  <Link href={`/${params.locale}/profile#plan`}>Desbloquear recursos Enterprise</Link>
                 </Button>
               </div>
             </div>
@@ -121,12 +121,12 @@ export default async function EuroComplyHomePage({ params }: { params: { locale:
                   <p className="text-xs text-muted-foreground">Score</p>
                 </div>
                 <div className="rounded-2xl bg-background/70 p-3">
-                  <p className="text-2xl font-bold">{data.summary.criticalRisks}</p>
-                  <p className="text-xs text-muted-foreground">Riscos</p>
+                  <p className="text-2xl font-bold">{data.summary.missingEvidence}</p>
+                  <p className="text-xs text-muted-foreground">Pendentes</p>
                 </div>
                 <div className="rounded-2xl bg-background/70 p-3">
-                  <p className="text-2xl font-bold">{data.summary.highRiskVendors}</p>
-                  <p className="text-xs text-muted-foreground">Vendors</p>
+                  <p className="text-2xl font-bold">{data.tasks.upcoming.length}</p>
+                  <p className="text-xs text-muted-foreground">Prazos</p>
                 </div>
               </div>
             </div>
@@ -137,7 +137,7 @@ export default async function EuroComplyHomePage({ params }: { params: { locale:
           {macroCards.map((card) => {
             const Icon = card.icon;
             return (
-              <article key={card.label} className="rounded-3xl border bg-background/82 p-5 shadow-sm backdrop-blur">
+              <article key={card.label} className="rounded-3xl border bg-background/82 p-5 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-lg">
                 <div className="flex items-start justify-between gap-4">
                   <div className="rounded-2xl bg-primary/10 p-3 text-primary">
                     <Icon className="h-5 w-5" />
@@ -152,13 +152,37 @@ export default async function EuroComplyHomePage({ params }: { params: { locale:
           })}
         </section>
 
+        <section className="grid gap-6 lg:grid-cols-[1fr_0.72fr]">
+          <article className="rounded-[2rem] border bg-foreground p-6 text-background shadow-2xl shadow-primary/10 md:p-8">
+            <Badge variant="secondary" className="rounded-full">Comparativo Enterprise</Badge>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight">Empresas Enterprise têm:</h2>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {['✅ múltiplos NIFs europeus', '✅ convite de funcionários', '✅ relatórios avançados', '✅ suporte prioritário'].map((item) => (
+                <div key={item} className="rounded-2xl bg-background/10 p-4 text-sm">{item}</div>
+              ))}
+            </div>
+            <Button asChild className="mt-6 rounded-full bg-background text-foreground hover:bg-background/90">
+              <Link href={`/${params.locale}/profile#plan`}>Ver plano Enterprise <ArrowRight className="h-4 w-4" /></Link>
+            </Button>
+          </article>
+
+          <article className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur md:p-8">
+            <div className="flex items-center gap-3 text-primary"><TimerReset className="h-5 w-5" /><p className="text-sm font-semibold uppercase tracking-[0.2em]">Promoção simulada</p></div>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight">Clientes Enterprise economizam 40% de tempo em compliance.</h2>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">Oferta interna expira em 02:14:39. Use isto como gatilho visual; no produto final, substitua por lógica real de campanha.</p>
+            <div className="mt-5 rounded-2xl bg-muted/40 p-4 text-sm italic text-muted-foreground">
+              “Migramos para Enterprise e reduzimos reuniões manuais entre Legal, Security e Finance.” — Cliente europeu fictício
+            </div>
+          </article>
+        </section>
+
         <section className="rounded-[2rem] border bg-background/82 p-5 shadow-sm backdrop-blur md:p-6">
           <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary">Links rápidos</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight">Ir direto para a função certa</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Cada ação abaixo abre a página final da ferramenta, sem scroll manual e sem cliques intermediários.
+                Cada ação abre a página final da ferramenta, sem scroll manual e sem cliques intermediários.
               </p>
             </div>
           </div>
