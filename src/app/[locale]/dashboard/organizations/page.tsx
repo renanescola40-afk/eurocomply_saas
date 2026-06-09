@@ -30,11 +30,11 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
 
   const dashboardBasePath = `/dashboard/organizations`;
   const localizedDashboardBasePath = `/${params.locale}${dashboardBasePath}`;
-  const complianceHealth = data.summary.complianceScore >= 80 ? 'Audit ready' : data.summary.complianceScore >= 55 ? 'Needs attention' : 'Critical remediation';
+  const complianceHealth = data.summary.complianceScore >= 80 ? 'Audit ready' : data.summary.complianceScore >= 55 ? 'Needs attention' : 'Remediation needed';
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.16),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))]">
-      <DashboardCommandNavigation locale={params.locale} basePath={dashboardBasePath} activePage="Home" complianceHealth={complianceHealth} />
+      <DashboardCommandNavigation locale={params.locale} activePage="Visão Geral" />
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-10">
         <section id="overview" className="relative scroll-mt-28 overflow-hidden rounded-[2rem] border bg-background/86 p-6 shadow-2xl shadow-primary/5 backdrop-blur md:p-8">
           <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
@@ -42,7 +42,7 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
             <div className="space-y-6">
               <div className="flex flex-wrap items-center gap-3">
                 <Badge className="gap-2 rounded-full px-3 py-1 text-xs uppercase tracking-[0.2em]">
-                  <Sparkles className="h-3.5 w-3.5" /> EuroComply Command Center
+                  <Sparkles className="h-3.5 w-3.5" /> EuroComply
                 </Badge>
                 <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
                   {complianceHealth}
