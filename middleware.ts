@@ -19,6 +19,7 @@ const protectedSegments = [
 ];
 const publicAuthSegments = ['/login', '/signup'];
 const DEFAULT_LOCALE = 'pt';
+const isProduction = process.env.NODE_ENV === 'production';
 
 const securityHeaders: Record<string, string> = {
   'X-Frame-Options': 'DENY',
@@ -34,11 +35,13 @@ const securityHeaders: Record<string, string> = {
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.sentry.io",
+    isProduction
+      ? "script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.sentry.io"
+      : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.sentry.io",
     "connect-src 'self' https://*.supabase.co https://api.stripe.com https://*.sentry.io https://vitals.vercel-insights.com",
     "frame-src https://js.stripe.com https://hooks.stripe.com",
     "form-action 'self' https://checkout.stripe.com",
-    "upgrade-insecure-requests",
+    'upgrade-insecure-requests',
   ].join('; '),
 };
 
