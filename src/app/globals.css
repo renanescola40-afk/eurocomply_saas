@@ -135,6 +135,58 @@
     box-shadow: 0 22px 90px rgba(0, 0, 0, 0.48), 0 0 0 1px rgba(37, 99, 235, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
+  .premium-motion-enter {
+    animation: premium-enter 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .premium-motion-enter-delayed {
+    animation: premium-enter 680ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+  }
+
+  .premium-magnetic {
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), border-color 220ms ease, background 220ms ease, box-shadow 220ms ease;
+    will-change: transform;
+  }
+
+  .premium-magnetic:hover {
+    transform: translate3d(0, -3px, 0) scale(1.012);
+  }
+
+  .premium-ambient-border {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .premium-ambient-border::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.45), rgba(16, 185, 129, 0.16), rgba(139, 92, 246, 0.38));
+    opacity: 0;
+    transition: opacity 260ms ease;
+  }
+
+  .premium-ambient-border:hover::before {
+    opacity: 1;
+  }
+
+  .premium-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .premium-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-140%);
+    background: linear-gradient(100deg, transparent 25%, rgba(255, 255, 255, 0.16), transparent 75%);
+    animation: premium-shimmer 6.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
   .tech-grid {
     background-image:
       linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
@@ -167,6 +219,17 @@
     transform: translateX(-120%);
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
     animation: shine 5.4s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
   }
 }
 
@@ -218,4 +281,22 @@
 @keyframes shine {
   0%, 62% { transform: translateX(-120%); }
   82%, 100% { transform: translateX(120%); }
+}
+
+@keyframes premium-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.985);
+    filter: blur(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes premium-shimmer {
+  0%, 68% { transform: translateX(-140%); }
+  88%, 100% { transform: translateX(140%); }
 }
