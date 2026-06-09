@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/server/queries/auth';
-import { getCurrentOrganizationForUser } from '@/server/queries/dashboard';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
 
