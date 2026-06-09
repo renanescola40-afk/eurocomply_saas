@@ -13,20 +13,53 @@ type Approval = {
 };
 
 const initialApprovals: Approval[] = [
-  { id: 'ap-1', title: 'Política de Privacidade v2', owner: 'Compliance Lead', status: 'Pendente', submittedAt: 'Hoje' },
-  { id: 'ap-2', title: 'Matriz de Riscos GDPR', owner: 'Security Owner', status: 'Pendente', submittedAt: 'Ontem' },
-  { id: 'ap-3', title: 'Ata de Revisão de Fornecedores', owner: 'Legal Counsel', status: 'Aprovado', submittedAt: 'Esta semana' },
+  { id: 'demo-privacy-policy', title: 'Política de Privacidade v2', owner: 'Compliance Lead', status: 'Pendente', submittedAt: 'Hoje' },
+  { id: 'demo-risk-matrix', title: 'Matriz de Riscos GDPR', owner: 'Security Owner', status: 'Pendente', submittedAt: 'Ontem' },
+  { id: 'demo-vendor-review', title: 'Ata de Revisão de Fornecedores', owner: 'Legal Counsel', status: 'Aprovado', submittedAt: 'Esta semana' },
 ];
 
 export default function ApprovalsClient({ locale }: { locale: string }) {
   const [approvals, setApprovals] = useState(initialApprovals);
   const [toast, setToast] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const pendingCount = useMemo(() => approvals.filter((item) => item.status === 'Pendente').length, [approvals]);
 
-  const updateStatus = (id: string, status: Approval['status']) => {
-    setApprovals((items) => items.map((item) => (item.id === id ? { ...item, status } : item)));
-    setToast(status === 'Aprovado' ? 'Documento aprovado e registado no workflow.' : 'Documento rejeitado com feedback pendente.');
+  const updateStatus = async (id: string, status: Approval['status']) => {
+    setBusyId(id);
+    setToast('');
+
+    const action = status === 'Aprovado' ? 'approve' : 'reject';
+
+    try {
+      const response = await fetch(`/api/documents/${encodeURIComponent(id)}/approval`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, note: status === 'Aprovado' ? 'Approved from workflow page' : 'Rejected from workflow page' }),
+      });
+
+      const payload = await response.json().catch(() => null) as { persisted?: boolean; error?: string } | null;
+
+      if (!response.ok) {
+        setToast(payload?.error ?? 'Não foi possível atualizar a aprovação.');
+        return;
+      }
+
+      setApprovals((items) => items.map((item) => (item.id === id ? { ...item, status } : item)));
+      setToast(
+        status === 'Aprovado'
+          ? payload?.persisted
+            ? 'Documento aprovado e persistido no workflow.'
+            : 'Documento aprovado na interface e registado como evento de auditoria.'
+          : payload?.persisted
+            ? 'Documento rejeitado e persistido no workflow.'
+            : 'Documento rejeitado na interface e registado como evento de auditoria.',
+      );
+    } catch {
+      setToast('Falha de rede ao atualizar aprovação. Tente novamente.');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
@@ -78,10 +111,10 @@ export default function ApprovalsClient({ locale }: { locale: string }) {
                 <p className="text-sm text-slate-400">Responsável: {approval.owner}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => updateStatus(approval.id, 'Aprovado')} className="inline-flex items-center gap-2 rounded-full bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">
-                  <CheckCircle2 className="h-4 w-4" /> Aprovar
+                <button type="button" disabled={busyId === approval.id} onClick={() => updateStatus(approval.id, 'Aprovado')} className="inline-flex items-center gap-2 rounded-full bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60">
+                  <CheckCircle2 className="h-4 w-4" /> {busyId === approval.id ? 'A processar...' : 'Aprovar'}
                 </button>
-                <button type="button" onClick={() => updateStatus(approval.id, 'Rejeitado')} className="inline-flex items-center gap-2 rounded-full border border-rose-300/40 px-4 py-2 text-sm text-rose-100 transition hover:bg-rose-400/10">
+                <button type="button" disabled={busyId === approval.id} onClick={() => updateStatus(approval.id, 'Rejeitado')} className="inline-flex items-center gap-2 rounded-full border border-rose-300/40 px-4 py-2 text-sm text-rose-100 transition hover:bg-rose-400/10 disabled:cursor-not-allowed disabled:opacity-60">
                   <XCircle className="h-4 w-4" /> Rejeitar
                 </button>
               </div>
