@@ -25,7 +25,7 @@ export default async function ApprovalsPage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-6 text-white">
       <div className="mx-auto max-w-7xl space-y-8">
-        <DashboardCommandNavigation locale={locale} active="reports-governance" />
+        <DashboardCommandNavigation locale={locale} />
         <ApprovalsClient locale={locale} initialDocuments={documents} />
       </div>
     </main>
