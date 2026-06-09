@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronDown, Menu, X } from 'lucide-react';
+import { Bell, ChevronDown, Menu, X } from 'lucide-react';
 
 const dashboardRoot = '/dashboard/organizations';
 
@@ -29,7 +29,7 @@ export const dashboardNavigation: MenuItem[] = [
     href: `${dashboardRoot}/command-center`,
     sections: [
       { label: 'Dashboard Executivo', href: `${dashboardRoot}/command-center`, description: 'Cockpit executivo completo' },
-      { label: 'Alertas', href: `${dashboardRoot}/command-center/alerts`, description: 'Sinais críticos e avisos' },
+      { label: 'Alertas', href: `${dashboardRoot}/command-center`, description: 'Radar, feed e sinais críticos' },
       { label: 'Minhas Tarefas', href: `${dashboardRoot}/tasks`, description: 'Trabalho operacional atribuído' },
     ],
   },
@@ -39,7 +39,7 @@ export const dashboardNavigation: MenuItem[] = [
     sections: [
       { label: 'Documentos', href: `${dashboardRoot}/documents`, description: 'Evidências, políticas e provas' },
       { label: 'Matriz de Risco', href: `${dashboardRoot}/evidence-risk`, description: 'Heatmap e exposição' },
-      { label: 'Auditorias', href: `${dashboardRoot}/evidence-risk/audits`, description: 'Trilha e pacotes de auditoria' },
+      { label: 'Auditorias', href: `${dashboardRoot}/reports-governance`, description: 'Trilha e pacotes de auditoria' },
     ],
   },
   {
@@ -47,19 +47,24 @@ export const dashboardNavigation: MenuItem[] = [
     href: `${dashboardRoot}/reports-governance`,
     sections: [
       { label: 'Relatórios Compliance', href: `${dashboardRoot}/reports`, description: 'Board reports e audit packs' },
-      { label: 'Políticas', href: `${dashboardRoot}/reports-governance/policies`, description: 'Governança documental' },
-      { label: 'Atas', href: `${dashboardRoot}/reports-governance/minutes`, description: 'Decisões e registros executivos' },
+      { label: 'Políticas', href: `${dashboardRoot}/reports-governance`, description: 'Governança documental' },
+      { label: 'Atas', href: `${dashboardRoot}/reports-governance`, description: 'Decisões e registros executivos' },
     ],
   },
   {
     label: 'Perfil',
     href: '/profile',
     sections: [
-      { label: 'Meus Dados', href: '/profile#company-data', description: 'Dados da empresa e NIFs' },
-      { label: 'Notificações', href: '/profile#notifications', description: 'Preferências de alerta' },
-      { label: 'Planos', href: '/profile#plan', description: 'Plano atual e upgrade' },
+      { label: 'Meus Dados', href: '/profile#company-data', description: 'Dados da empresa e operações fiscais' },
+      { label: 'Plano', href: '/profile#plan', description: 'Benefícios e upgrade' },
       { label: 'Funcionários', href: '/profile#employees', description: 'Convites Enterprise' },
+      { label: 'Avatar Enterprise', href: '/profile#enterprise-status', description: 'Status visual premium' },
     ],
+  },
+  {
+    label: 'Notificações',
+    href: '/notificacoes',
+    description: 'Feed premium de atividades',
   },
 ];
 
@@ -100,6 +105,7 @@ export function DashboardCommandNavigation({ locale, activePage = 'Visão Geral'
                       : 'border-transparent text-muted-foreground hover:border-primary/30 hover:bg-muted/60 hover:text-foreground'
                   }`}
                 >
+                  {item.label === 'Notificações' ? <Bell className="h-3.5 w-3.5" /> : null}
                   {item.label}
                   {hasSubmenu ? <ChevronDown className="h-3.5 w-3.5 transition group-hover:rotate-180" /> : null}
                 </Link>
@@ -108,7 +114,7 @@ export function DashboardCommandNavigation({ locale, activePage = 'Visão Geral'
                   <div className="invisible absolute left-0 top-full z-50 mt-2 min-w-72 translate-y-2 rounded-2xl border bg-background/98 p-2 opacity-0 shadow-2xl shadow-primary/10 backdrop-blur transition duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
                     {item.sections?.map((section) => (
                       <Link
-                        key={section.href}
+                        key={section.href + section.label}
                         href={localizeHref(locale, section.href)}
                         className="block rounded-xl px-3 py-2.5 transition hover:bg-primary/10 focus:bg-primary/10 focus:outline-none"
                       >
@@ -144,7 +150,7 @@ export function DashboardCommandNavigation({ locale, activePage = 'Visão Geral'
               {item.sections?.length ? (
                 <div className="mt-1 space-y-1 border-t pt-2">
                   {item.sections.map((section) => (
-                    <Link key={section.href} href={localizeHref(locale, section.href)} className="block rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-primary/10 hover:text-primary">
+                    <Link key={section.href + section.label} href={localizeHref(locale, section.href)} className="block rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-primary/10 hover:text-primary">
                       {section.label}
                     </Link>
                   ))}
