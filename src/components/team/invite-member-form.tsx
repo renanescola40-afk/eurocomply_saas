@@ -26,15 +26,19 @@ export function InviteMemberForm({ onSubmit }: InviteMemberFormProps) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('member');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError(null);
     setSubmitting(true);
 
     try {
       await onSubmit({ email, role });
       setEmail('');
       setRole('member');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send invitation.');
     } finally {
       setSubmitting(false);
     }
@@ -75,6 +79,8 @@ export function InviteMemberForm({ onSubmit }: InviteMemberFormProps) {
               </SelectContent>
             </Select>
           </div>
+
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
           <Button type="submit" disabled={submitting}>
             {submitting ? 'Sending...' : 'Send invitation'}
