@@ -28,38 +28,13 @@ import type { DashboardSummary, DashboardTrendComparison, DashboardTrendSnapshot
 
 type DashboardOverviewProps = {
   summary: DashboardSummary;
-  tasks: Array<{
-    id: string;
-    title?: string | null;
-    status?: string | null;
-    priority?: string | null;
-    due_date?: string | null;
-  }>;
+  tasks: Array<{ id: string; title?: string | null; status?: string | null; priority?: string | null; due_date?: string | null }>;
   trendHistory?: DashboardTrendSnapshot[];
   trendComparison?: DashboardTrendComparison;
   basePath?: string;
-  topRisks?: Array<{
-    id: string;
-    title?: string | null;
-    status?: string | null;
-    risk_score?: number | string | null;
-    category?: string | null;
-  }>;
-  vendorsRequiringReview?: Array<{
-    id: string;
-    name?: string | null;
-    risk_level?: string | null;
-    review_status?: string | null;
-    next_review_at?: string | null;
-  }>;
-  documentsExpiringSoon?: Array<{
-    id: string;
-    title?: string | null;
-    name?: string | null;
-    status?: string | null;
-    expires_at?: string | null;
-    category?: string | null;
-  }>;
+  topRisks?: Array<{ id: string; title?: string | null; status?: string | null; risk_score?: number | string | null; category?: string | null }>;
+  vendorsRequiringReview?: Array<{ id: string; name?: string | null; risk_level?: string | null; review_status?: string | null; next_review_at?: string | null }>;
+  documentsExpiringSoon?: Array<{ id: string; title?: string | null; name?: string | null; status?: string | null; expires_at?: string | null; category?: string | null }>;
 };
 
 function formatShortDate(value?: string | null) {
@@ -79,6 +54,35 @@ function getRiskTone(score?: number | string | null) {
   if (value >= 16) return 'text-red-400';
   if (value >= 9) return 'text-amber-300';
   return 'text-muted-foreground';
+}
+
+function EnterpriseMetricsPreview({ summary }: { summary: DashboardSummary }) {
+  const metrics = [
+    { label: 'Cross-country readiness', value: `${Math.min(100, summary.complianceScore + 12)}%` },
+    { label: 'Team collaboration index', value: summary.openTasks > 0 ? 'Active' : 'Ready' },
+    { label: 'Priority support signal', value: 'Preview' },
+  ];
+  return (
+    <section id="enterprise-preview" className="scroll-mt-28 rounded-[2rem] border border-amber-300/60 bg-gradient-to-br from-amber-50 to-background p-6 shadow-lg shadow-amber-500/10 dark:from-amber-950/30">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-300">Enterprise only preview</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight">Métricas Avançadas (Preview)</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Widget visual aspiracional para clientes Enterprise. Mostra status e prioridade sem liberar funcionalidades gratuitas fora do plano.</p>
+        </div>
+        <span className="rounded-full bg-amber-400 px-3 py-1 text-xs font-semibold text-black">◆ Enterprise Diamond</span>
+      </div>
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="rounded-2xl border bg-background/70 p-4">
+            <p className="text-sm text-muted-foreground">{metric.label}</p>
+            <p className="mt-2 text-2xl font-semibold">{metric.value}</p>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-amber-100"><div className="h-full w-2/3 animate-pulse rounded-full bg-amber-400" /></div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function DashboardMetricsGrid({ summary, basePath }: { summary: DashboardSummary; basePath: string }) {
@@ -123,7 +127,7 @@ export function HomeDashboardPage({ summary, tasks, trendComparison, basePath = 
 
 export function CommandCenterPage({ summary, tasks, trendComparison, basePath = '/dashboard/organizations', topRisks = [], vendorsRequiringReview = [], documentsExpiringSoon = [] }: DashboardOverviewProps) {
   const openTasks = tasks.filter((task) => task.status !== 'done').slice(0, 5);
-  return <div className="space-y-6 scroll-smooth"><section id="executive-summary" className="scroll-mt-28"><ExecutiveCommandCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="kpi-strip" className="scroll-mt-28"><StickyExecutiveKpiBar summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="health-center" className="scroll-mt-28"><ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="ai-copilot" className="scroll-mt-28"><AiCopilotPanel summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="operational-feed" className="scroll-mt-28"><OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section></div>;
+  return <div className="space-y-6 scroll-smooth"><section id="executive-summary" className="scroll-mt-28"><ExecutiveCommandCenter summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="kpi-strip" className="scroll-mt-28"><StickyExecutiveKpiBar summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="health-center" className="scroll-mt-28"><ExecutiveCockpit summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><EnterpriseMetricsPreview summary={summary} /><section id="ai-copilot" className="scroll-mt-28"><AiCopilotPanel summary={summary} trendComparison={trendComparison} basePath={basePath} /></section><section id="operational-feed" className="scroll-mt-28"><OperationalActivityFeed tasks={openTasks} topRisks={topRisks} vendors={vendorsRequiringReview} documents={documentsExpiringSoon} basePath={basePath} /></section></div>;
 }
 
 export function EvidenceRiskPage({ summary, basePath = '/dashboard/organizations', topRisks = [], vendorsRequiringReview = [], documentsExpiringSoon = [] }: DashboardOverviewProps) {
