@@ -78,11 +78,19 @@ function UsageMeter({ label, current, limit }: { label: string; current: number;
   );
 }
 
+function safeDecodeURIComponent(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 function checkoutMessage(checkout?: string, billingError?: string) {
   if (billingError) {
     return {
       title: 'Billing action could not be completed',
-      description: decodeURIComponent(billingError),
+      description: safeDecodeURIComponent(billingError),
       className: 'border-rose-500/30 bg-rose-500/10 text-rose-200',
     };
   }
@@ -106,7 +114,7 @@ function checkoutMessage(checkout?: string, billingError?: string) {
   return null;
 }
 
-function billingErrorRedirect(locale: string, error: unknown) {
+function billingErrorRedirect(locale: string, error: unknown): never {
   const message = error instanceof Error ? error.message : 'Unexpected billing error';
   redirect(`/${locale}/dashboard/organizations/billing?billing_error=${encodeURIComponent(message)}`);
 }
@@ -167,7 +175,7 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
     }
 
     revalidatePath(`/${params.locale}/dashboard/organizations/billing`);
-    redirect(url);
+    redirect(url!);
   }
 
   async function openCustomerPortal() {
@@ -197,7 +205,7 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
       billingErrorRedirect(params.locale, error);
     }
 
-    redirect(url);
+    redirect(url!);
   }
 
   return (
