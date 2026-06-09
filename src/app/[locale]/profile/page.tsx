@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { FormEvent, useMemo, useState } from 'react';
-import { ArrowRight, Bell, Building2, CheckCircle2, Crown, LockKeyhole, Mail, Plus, Save, Trash2, UploadCloud, UsersRound } from 'lucide-react';
+import { ArrowRight, Building2, CheckCircle2, Crown, Diamond, LockKeyhole, Mail, Plus, Save, Sparkles, Trash2, UploadCloud, UsersRound } from 'lucide-react';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 const defaultCompany = {
-  legalName: 'EuroComply Portugal, Lda.',
+  legalName: 'EuroComply Europe GmbH',
   tradeName: 'EuroComply',
   email: 'compliance@eurocomply.eu',
   phone: '+351 910 000 000',
@@ -17,21 +17,31 @@ const defaultCompany = {
   postalCode: '1250-146',
   city: 'Lisboa',
   logoUrl: 'https://dummyimage.com/180x180/111827/ffffff&text=EC',
-  nifPortugal: '509442013',
 };
 
-const countryTemplates = [
-  'Espanha — NIF/CIF',
-  'França — SIRET/SIREN',
-  'Alemanha — Steuernummer',
-  'Itália — Partita IVA',
-  'Holanda — BTW-nummer',
-  "Bélgica — Numéro d'entreprise",
-];
+const fiscalCountries = {
+  Portugal: { label: 'NIF', helper: '9 dígitos', placeholder: '509442013', pattern: /^\d{9}$/ },
+  França: { label: 'SIRET ou SIREN', helper: '14 ou 9 dígitos', placeholder: '12345678900012', pattern: /^(\d{9}|\d{14})$/ },
+  Espanha: { label: 'NIF', helper: '8 dígitos + letra', placeholder: '12345678Z', pattern: /^\d{8}[A-Za-z]$/ },
+  Alemanha: { label: 'Steuernummer', helper: '10–11 dígitos', placeholder: '12345678901', pattern: /^\d{10,11}$/ },
+  Itália: { label: 'Partita IVA', helper: '11 dígitos', placeholder: '12345678901', pattern: /^\d{11}$/ },
+  Holanda: { label: 'BTW-nummer', helper: '14 caracteres', placeholder: 'NL123456789B01', pattern: /^.{14}$/ },
+  Bélgica: { label: "Numéro d'entreprise", helper: '10 dígitos', placeholder: '0123456789', pattern: /^\d{10}$/ },
+  Irlanda: { label: 'VAT Number', helper: '8 caracteres + letras', placeholder: '1234567A', pattern: /^[A-Za-z0-9]{8,10}$/ },
+  Outro: { label: 'Identificação fiscal', helper: 'Formato local', placeholder: 'ID fiscal europeu', pattern: /^.{3,}$/ },
+};
 
-const initialEuropeanNifs = [
-  { id: crypto.randomUUID(), country: 'Espanha — NIF/CIF', value: 'B12345678' },
-  { id: crypto.randomUUID(), country: 'França — SIRET/SIREN', value: '123 456 789 00012' },
+type CountryKey = keyof typeof fiscalCountries;
+
+type FiscalId = {
+  id: string;
+  country: CountryKey;
+  value: string;
+};
+
+const initialFiscalIds: FiscalId[] = [
+  { id: crypto.randomUUID(), country: 'França', value: '12345678900012' },
+  { id: crypto.randomUUID(), country: 'Espanha', value: '12345678Z' },
 ];
 
 const initialEmployees = [
@@ -39,50 +49,51 @@ const initialEmployees = [
   { id: crypto.randomUUID(), name: 'Miguel Costa', email: 'miguel@eurocomply.eu', role: 'Visualizador', status: 'pendente' },
 ];
 
-function validatePortugueseNif(nif: string) {
-  const clean = nif.replace(/\D/g, '');
-  if (!/^\d{9}$/.test(clean)) return false;
-  const sum = clean
-    .slice(0, 8)
-    .split('')
-    .reduce((acc, digit, index) => acc + Number(digit) * (9 - index), 0);
-  const check = 11 - (sum % 11);
-  const expected = check >= 10 ? 0 : check;
-  return expected === Number(clean[8]);
+function normalizeFiscalValue(value: string) {
+  return value.replace(/[\s.-]/g, '').trim();
+}
+
+function isFiscalIdValid(item: FiscalId) {
+  if (!item.value.trim()) return true;
+  return fiscalCountries[item.country].pattern.test(normalizeFiscalValue(item.value));
 }
 
 export default function ProfilePage({ params }: { params: { locale: string } }) {
   const [company, setCompany] = useState(defaultCompany);
   const [plan, setPlan] = useState<'Básico' | 'Pro' | 'Enterprise'>('Básico');
-  const [nifs, setNifs] = useState(initialEuropeanNifs);
+  const [fiscalIds, setFiscalIds] = useState<FiscalId[]>(initialFiscalIds);
   const [employees, setEmployees] = useState(initialEmployees);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('Editor');
   const [saved, setSaved] = useState(false);
 
   const isEnterprise = plan === 'Enterprise';
-  const isValidNif = useMemo(() => validatePortugueseNif(company.nifPortugal), [company.nifPortugal]);
+  const allFiscalIdsValid = useMemo(() => fiscalIds.every(isFiscalIdValid), [fiscalIds]);
 
   function updateCompany(field: keyof typeof company, value: string) {
     setCompany((current) => ({ ...current, [field]: value }));
     setSaved(false);
   }
 
-  function addNif() {
-    setNifs((current) => [...current, { id: crypto.randomUUID(), country: 'Outro país europeu', value: '' }]);
+  function addFiscalCountry() {
+    setFiscalIds((current) => [...current, { id: crypto.randomUUID(), country: 'Portugal', value: '' }]);
+    setSaved(false);
   }
 
-  function updateNif(id: string, field: 'country' | 'value', value: string) {
-    setNifs((current) => current.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
+  function updateFiscalId(id: string, field: 'country' | 'value', value: string) {
+    setFiscalIds((current) => current.map((item) => (item.id === id ? { ...item, [field]: value } as FiscalId : item)));
+    setSaved(false);
   }
 
-  function removeNif(id: string) {
-    setNifs((current) => current.filter((item) => item.id !== id));
+  function removeFiscalId(id: string) {
+    setFiscalIds((current) => current.filter((item) => item.id !== id));
+    setSaved(false);
   }
 
   function saveProfile(event: FormEvent) {
     event.preventDefault();
-    if (!isValidNif) return;
+    if (!allFiscalIdsValid) return;
+    localStorage.setItem('eurocomply-profile-demo', JSON.stringify({ company, fiscalIds, plan }));
     setSaved(true);
   }
 
@@ -109,9 +120,9 @@ export default function ProfilePage({ params }: { params: { locale: string } }) 
         <section className="rounded-[2rem] border bg-background/88 p-6 shadow-xl shadow-primary/5 backdrop-blur md:p-9">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <Badge className="rounded-full px-3 py-1 uppercase tracking-[0.18em]">Perfil da empresa</Badge>
-              <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] md:text-5xl">Dados, plano e equipa.</h1>
-              <p className="mt-3 max-w-2xl text-muted-foreground">Gerencie a identidade fiscal europeia, dados comerciais, notificações e permissões colaborativas do workspace EuroComply.</p>
+              <Badge className="rounded-full px-3 py-1 uppercase tracking-[0.18em]">Perfil europeu</Badge>
+              <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] md:text-5xl">Empresa, fiscalidade e equipa.</h1>
+              <p className="mt-3 max-w-2xl text-muted-foreground">Gerencie dados comerciais, identificações fiscais por país e mimos visuais Enterprise sem transformar o perfil numa dashboard operacional.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {(['Básico', 'Pro', 'Enterprise'] as const).map((item) => (
@@ -123,13 +134,13 @@ export default function ProfilePage({ params }: { params: { locale: string } }) 
           </div>
         </section>
 
-        <form id="company-data" onSubmit={saveProfile} className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <form id="company-data" onSubmit={saveProfile} className="grid gap-6 lg:grid-cols-[1.12fr_0.88fr]">
           <section className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
             <div className="flex items-center gap-3">
               <div className="rounded-2xl bg-primary/10 p-3 text-primary"><Building2 className="h-5 w-5" /></div>
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight">Dados da empresa</h2>
-                <p className="text-sm text-muted-foreground">Editável inline. O NIF português é obrigatório e validado.</p>
+                <p className="text-sm text-muted-foreground">Campos editáveis. O logo usa upload simulado ou URL.</p>
               </div>
             </div>
 
@@ -138,7 +149,7 @@ export default function ProfilePage({ params }: { params: { locale: string } }) 
                 ['Razão Social', 'legalName'],
                 ['Nome Comercial', 'tradeName'],
                 ['Email da empresa', 'email'],
-                ['Telefone', 'phone'],
+                ['Telefone com indicativo', 'phone'],
                 ['Rua', 'street'],
                 ['Número', 'number'],
                 ['Código Postal', 'postalCode'],
@@ -150,55 +161,55 @@ export default function ProfilePage({ params }: { params: { locale: string } }) 
                   <input value={company[field as keyof typeof company]} onChange={(event) => updateCompany(field as keyof typeof company, event.target.value)} className="mt-1 w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10" />
                 </label>
               ))}
-
-              <label className="md:col-span-2">
-                <span className="text-sm font-medium">NIF Portugal obrigatório</span>
-                <input value={company.nifPortugal} onChange={(event) => updateCompany('nifPortugal', event.target.value)} className={`mt-1 w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none transition focus:ring-4 ${isValidNif ? 'border-emerald-500/50 focus:border-emerald-500 focus:ring-emerald-500/10' : 'border-red-500/60 focus:border-red-500 focus:ring-red-500/10'}`} />
-                <p className={`mt-2 text-xs ${isValidNif ? 'text-emerald-600' : 'text-red-600'}`}>{isValidNif ? 'NIF português válido.' : 'Digite um NIF português válido com 9 dígitos.'}</p>
-              </label>
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button type="submit" disabled={!isValidNif} className="rounded-full"><Save className="h-4 w-4" /> Guardar alterações</Button>
-              <Button type="button" variant="outline" className="rounded-full" onClick={() => updateCompany('logoUrl', 'https://dummyimage.com/180x180/2563eb/ffffff&text=Logo')}><UploadCloud className="h-4 w-4" /> Simular upload de logo</Button>
-              {saved ? <span className="inline-flex items-center gap-2 text-sm text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Alterações guardadas no navegador.</span> : null}
+              <Button type="submit" disabled={!allFiscalIdsValid} className="rounded-full"><Save className="h-4 w-4" /> Guardar alterações</Button>
+              <Button type="button" variant="outline" className="rounded-full" onClick={() => updateCompany('logoUrl', 'https://dummyimage.com/180x180/d4af37/111827&text=EC')}><UploadCloud className="h-4 w-4" /> Simular upload de logo</Button>
+              {saved ? <span className="inline-flex items-center gap-2 text-sm text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Guardado no localStorage demo.</span> : null}
             </div>
           </section>
 
-          <aside id="plan" className="space-y-6">
-            <section className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
+          <aside id="enterprise-status" className="space-y-6">
+            <section className={`rounded-[2rem] border p-6 shadow-sm backdrop-blur ${isEnterprise ? 'border-amber-300 bg-gradient-to-br from-amber-50 to-background shadow-amber-500/10 dark:from-amber-950/30' : 'bg-background/88'}`}>
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Plano atual</p>
                   <h2 className="mt-1 text-3xl font-semibold">{plan}</h2>
                 </div>
-                <Badge className={`rounded-full ${isEnterprise ? 'bg-emerald-600' : ''}`}><Crown className="mr-1 h-3.5 w-3.5" /> {isEnterprise ? 'Enterprise liberado' : 'Upgrade disponível'}</Badge>
+                <Badge className={`rounded-full ${isEnterprise ? 'bg-amber-500 text-black hover:bg-amber-500' : ''}`}>
+                  {isEnterprise ? <Diamond className="mr-1 h-3.5 w-3.5" /> : <Crown className="mr-1 h-3.5 w-3.5" />}
+                  {isEnterprise ? 'Enterprise Diamond' : 'Upgrade disponível'}
+                </Badge>
               </div>
+
+              <div className="mt-5 flex items-center gap-4">
+                <div className={`relative h-20 w-20 overflow-hidden rounded-3xl border-4 bg-muted ${isEnterprise ? 'border-amber-400 shadow-lg shadow-amber-400/20' : 'border-border'}`}>
+                  <img src={company.logoUrl} alt="Avatar da empresa" className="h-full w-full object-cover" />
+                </div>
+                <div>
+                  <p className="font-semibold">Avatar da empresa</p>
+                  <p className="text-sm text-muted-foreground">{isEnterprise ? 'Borda premium Enterprise ativa.' : 'Borda premium disponível no Enterprise.'}</p>
+                </div>
+              </div>
+
               {isEnterprise ? (
-                <ul className="mt-5 space-y-3 text-sm text-muted-foreground">
-                  <li>✅ Múltiplos NIFs europeus</li>
-                  <li>✅ Convite de funcionários</li>
-                  <li>✅ Relatórios avançados e suporte prioritário</li>
-                </ul>
+                <div className="mt-5 rounded-2xl border border-amber-300/70 bg-background/70 p-4 text-sm leading-6">
+                  <p className="font-medium">🏷️ Você está no plano mais alto — acesso prioritário em breve.</p>
+                  <div className="mt-4 h-3 overflow-hidden rounded-full bg-amber-100">
+                    <div className="h-full w-2/3 animate-pulse rounded-full bg-amber-400" />
+                  </div>
+                  <p className="mt-3 text-muted-foreground">Skeleton loader premium e status visual. Sem liberar funcionalidades grátis além do plano.</p>
+                </div>
               ) : (
                 <div className="mt-5 rounded-2xl bg-primary/10 p-4 text-sm leading-6 text-primary">
-                  O plano {plan} cobre o essencial. Enterprise desbloqueia colaboração, NIFs europeus ampliados, relatórios avançados e suporte prioritário para acelerar implementação.
+                  🔒 Desbloqueie múltiplos países fiscais com Enterprise e ganhe status visual, colaboração e prioridade.
                 </div>
               )}
-              <Button asChild className="mt-5 w-full rounded-full">
+
+              <Button asChild className="mt-5 w-full rounded-full transition hover:-translate-y-0.5 hover:shadow-lg">
                 <Link href={`/${params.locale}/pricing`}>Comparar planos <ArrowRight className="h-4 w-4" /></Link>
               </Button>
-            </section>
-
-            <section id="notifications" className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
-              <div className="flex items-center gap-3"><Bell className="h-5 w-5 text-primary" /><h2 className="text-xl font-semibold">Notificações</h2></div>
-              <div className="mt-4 space-y-3 text-sm">
-                {['Prazos de documentos', 'Alertas de risco', 'Resumo executivo semanal'].map((item) => (
-                  <label key={item} className="flex items-center justify-between rounded-2xl border bg-muted/20 px-4 py-3">
-                    <span>{item}</span><input type="checkbox" defaultChecked className="h-4 w-4 accent-primary" />
-                  </label>
-                ))}
-              </div>
             </section>
           </aside>
         </form>
@@ -206,51 +217,70 @@ export default function ProfilePage({ params }: { params: { locale: string } }) 
         <section className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight">NIFs de outros países europeus</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Adicione Espanha, França, Alemanha, Itália, Holanda, Bélgica ou qualquer outro identificador fiscal europeu.</p>
+              <h2 className="text-2xl font-semibold tracking-tight">Identificação fiscal por país</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Portugal não é obrigatório. Cada país ajusta automaticamente o tipo de identificação, máscara e validação.</p>
             </div>
-            <Button type="button" onClick={addNif} variant="outline" className="rounded-full"><Plus className="h-4 w-4" /> Adicionar país</Button>
+            <Button type="button" onClick={addFiscalCountry} variant="outline" className="rounded-full"><Plus className="h-4 w-4" /> Adicionar país</Button>
           </div>
 
+          {!isEnterprise ? (
+            <div className="mt-5 rounded-2xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+              🔒 No plano {plan}, a gestão multi-país aparece como preview bloqueado. Faça upgrade para Enterprise para usar múltiplas operações fiscais europeias.
+            </div>
+          ) : null}
+
           <div className="mt-5 grid gap-3 md:grid-cols-2">
-            {nifs.map((nif) => (
-              <div key={nif.id} className="rounded-2xl border bg-muted/20 p-4">
-                <select value={nif.country} onChange={(event) => updateNif(nif.id, 'country', event.target.value)} className="w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:border-primary">
-                  {[...countryTemplates, 'Outro país europeu'].map((country) => <option key={country}>{country}</option>)}
-                </select>
-                <div className="mt-3 flex gap-2">
-                  <input value={nif.value} onChange={(event) => updateNif(nif.id, 'value', event.target.value)} placeholder="Número fiscal" className="w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
-                  <button type="button" onClick={() => removeNif(nif.id)} className="rounded-xl border px-3 text-muted-foreground transition hover:bg-red-500/10 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+            {fiscalIds.map((item) => {
+              const meta = fiscalCountries[item.country];
+              const valid = isFiscalIdValid(item);
+              return (
+                <div key={item.id} className={`relative rounded-2xl border p-4 transition ${!isEnterprise ? 'bg-muted/30 opacity-75' : 'bg-muted/15 hover:border-primary/40'}`}>
+                  {!isEnterprise ? <div className="absolute right-4 top-4 rounded-full bg-background/90 px-2 py-1 text-xs"><LockKeyhole className="mr-1 inline h-3 w-3" /> Bloqueado</div> : null}
+                  <div className="grid gap-3 md:grid-cols-[0.85fr_1.15fr]">
+                    <label>
+                      <span className="text-sm font-medium">País</span>
+                      <select disabled={!isEnterprise} value={item.country} onChange={(event) => updateFiscalId(item.id, 'country', event.target.value)} className="mt-1 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:border-primary disabled:cursor-not-allowed">
+                        {(Object.keys(fiscalCountries) as CountryKey[]).map((country) => <option key={country}>{country}</option>)}
+                      </select>
+                    </label>
+                    <label>
+                      <span className="text-sm font-medium">{meta.label}</span>
+                      <input disabled={!isEnterprise} value={item.value} onChange={(event) => updateFiscalId(item.id, 'value', event.target.value)} placeholder={meta.placeholder} className={`mt-1 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:border-primary disabled:cursor-not-allowed ${valid ? '' : 'border-red-500'}`} />
+                      <span className={`mt-1 block text-xs ${valid ? 'text-muted-foreground' : 'text-red-600'}`}>{valid ? meta.helper : `Formato esperado: ${meta.helper}`}</span>
+                    </label>
+                  </div>
+                  <button disabled={!isEnterprise} type="button" onClick={() => removeFiscalId(item.id)} className="mt-3 rounded-xl border px-3 py-2 text-sm text-muted-foreground transition hover:bg-red-500/10 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"><Trash2 className="mr-1 inline h-4 w-4" /> Remover</button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
         <section id="employees" className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-primary/10 p-3 text-primary"><UsersRound className="h-5 w-5" /></div>
-            <div><h2 className="text-2xl font-semibold tracking-tight">Gestão de funcionários</h2><p className="text-sm text-muted-foreground">Convites são exclusivos do plano Enterprise.</p></div>
-          </div>
-
+          <div className="flex items-center gap-3"><UsersRound className="h-5 w-5 text-primary" /><h2 className="text-2xl font-semibold">Gestão de funcionários</h2></div>
           {isEnterprise ? (
-            <div className="mt-6 space-y-5">
-              <div className="grid gap-3 rounded-2xl border bg-muted/20 p-4 md:grid-cols-[1fr_220px_auto]">
-                <input value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} type="email" placeholder="email@empresa.eu" className="rounded-xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
-                <select value={inviteRole} onChange={(event) => setInviteRole(event.target.value)} className="rounded-xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary"><option>Admin</option><option>Editor</option><option>Visualizador</option></select>
-                <Button type="button" onClick={inviteEmployee} className="rounded-xl"><Mail className="h-4 w-4" /> Convidar funcionário</Button>
+            <div className="mt-5 space-y-5">
+              <div className="grid gap-3 md:grid-cols-[1fr_220px_auto]">
+                <input value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="email@empresa.com" className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
+                <select value={inviteRole} onChange={(event) => setInviteRole(event.target.value)} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary">
+                  <option>Admin</option><option>Editor</option><option>Visualizador</option>
+                </select>
+                <Button type="button" onClick={inviteEmployee} className="rounded-full"><Mail className="h-4 w-4" /> Convidar funcionário</Button>
               </div>
-              <div className="overflow-hidden rounded-2xl border">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-muted/40 text-muted-foreground"><tr><th className="p-3">Nome</th><th className="p-3">Email</th><th className="p-3">Permissão</th><th className="p-3">Status</th></tr></thead>
-                  <tbody>{employees.map((employee) => <tr key={employee.id} className="border-t"><td className="p-3 font-medium">{employee.name}</td><td className="p-3 text-muted-foreground">{employee.email}</td><td className="p-3">{employee.role}</td><td className="p-3"><Badge variant="outline" className="rounded-full">{employee.status}</Badge></td></tr>)}</tbody>
-                </table>
+              <div className="grid gap-3 md:grid-cols-2">
+                {employees.map((employee) => (
+                  <div key={employee.id} className="rounded-2xl border bg-muted/20 p-4">
+                    <p className="font-semibold">{employee.name}</p>
+                    <p className="text-sm text-muted-foreground">{employee.email}</p>
+                    <div className="mt-3 flex gap-2"><Badge variant="outline">{employee.role}</Badge><Badge>{employee.status}</Badge></div>
+                  </div>
+                ))}
               </div>
             </div>
           ) : (
-            <div className="mt-6 rounded-3xl border border-primary/20 bg-primary/10 p-6">
-              <div className="flex items-start gap-3"><LockKeyhole className="mt-1 h-5 w-5 text-primary" /><div><h3 className="font-semibold">🔒 Upgrade para o plano Enterprise e convide até 10 funcionários para colaborar na implementação dos documentos</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">Ideal para equipas com Legal, Compliance, Security e Finance trabalhando no mesmo programa.</p></div></div>
-              <Button asChild className="mt-5 rounded-full"><Link href={`/${params.locale}/pricing`}>Fazer upgrade <ArrowRight className="h-4 w-4" /></Link></Button>
+            <div className="mt-5 rounded-2xl border bg-muted/30 p-5 text-sm leading-6 text-muted-foreground">
+              🔒 Upgrade para o plano Enterprise e convide até 10 funcionários para colaborar na implementação dos documentos.
+              <div><Button asChild className="mt-4 rounded-full"><Link href={`/${params.locale}/pricing`}>Fazer upgrade</Link></Button></div>
             </div>
           )}
         </section>
