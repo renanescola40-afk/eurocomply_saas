@@ -23,6 +23,17 @@ export type DashboardTrendComparison = {
 
 type DashboardRow = Record<string, unknown>;
 
+type DashboardSnapshotRow = {
+  created_at?: string | null;
+  updated_at?: string | null;
+  compliance_score?: number | string | null;
+  open_tasks?: number | string | null;
+  open_risks?: number | string | null;
+  critical_risks?: number | string | null;
+  high_risk_vendors?: number | string | null;
+  missing_documents?: number | string | null;
+};
+
 function emptyDashboardSummary() {
   return {
     complianceScore: 0,
@@ -47,6 +58,10 @@ function safeRows(result: { data: DashboardRow[] | null; error: { message?: stri
   }
 
   return result.data ?? [];
+}
+
+function isMissingSnapshotDateColumn(message?: string | null) {
+  return Boolean(message?.includes('compliance_metric_snapshots.snapshot_date') || message?.includes('snapshot_date'));
 }
 
 export async function getDashboardSummary(organizationId: string) {
@@ -95,26 +110,26 @@ export async function recordDashboardMetricSnapshot(organizationId: string, summ
   const supabase = tryCreateAdminClient();
   if (!supabase) return;
 
-  const { error } = await supabase.from('compliance_metric_snapshots').upsert(
-    {
-      organization_id: organizationId,
-      snapshot_date: new Date().toISOString().slice(0, 10),
-      compliance_score: summary.complianceScore,
-      open_tasks: summary.openTasks,
-      open_risks: summary.openRisks,
-      critical_risks: summary.criticalRisks,
-      high_risk_vendors: summary.highRiskVendors,
-      missing_documents: summary.missingDocuments,
-      total_tasks: summary.totals.tasks,
-      total_risks: summary.totals.risks,
-      total_vendors: summary.totals.vendors,
-      total_documents: summary.totals.documents,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'organization_id,snapshot_date' },
-  );
+  const now = new Date().toISOString();
 
-  if (error) {
+  // Production currently has compliance_metric_snapshots without snapshot_date.
+  // Keep writes compatible with the live schema and use created_at/updated_at for trend ordering.
+  const { error } = await supabase.from('compliance_metric_snapshots').insert({
+    organization_id: organizationId,
+    compliance_score: summary.complianceScore,
+    open_tasks: summary.openTasks,
+    open_risks: summary.openRisks,
+    critical_risks: summary.criticalRisks,
+    high_risk_vendors: summary.highRiskVendors,
+    missing_documents: summary.missingDocuments,
+    total_tasks: summary.totals.tasks,
+    total_risks: summary.totals.risks,
+    total_vendors: summary.totals.vendors,
+    total_documents: summary.totals.documents,
+    updated_at: now,
+  });
+
+  if (error && !isMissingSnapshotDateColumn(error.message)) {
     console.error('Failed to record dashboard metric snapshot', error.message);
   }
 }
@@ -125,9 +140,9 @@ export async function getDashboardTrendHistory(organizationId: string, limit = 1
 
   const { data, error } = await supabase
     .from('compliance_metric_snapshots')
-    .select('snapshot_date, compliance_score, open_tasks, open_risks, critical_risks, high_risk_vendors, missing_documents')
+    .select('created_at, updated_at, compliance_score, open_tasks, open_risks, critical_risks, high_risk_vendors, missing_documents')
     .eq('organization_id', organizationId)
-    .order('snapshot_date', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(limit);
 
   if (error) {
@@ -135,9 +150,9 @@ export async function getDashboardTrendHistory(organizationId: string, limit = 1
     return [];
   }
 
-  return (data ?? [])
+  return ((data ?? []) as DashboardSnapshotRow[])
     .map((row) => ({
-      snapshotDate: row.snapshot_date,
+      snapshotDate: row.created_at ?? row.updated_at ?? new Date().toISOString(),
       complianceScore: Number(row.compliance_score ?? 0),
       openTasks: Number(row.open_tasks ?? 0),
       openRisks: Number(row.open_risks ?? 0),
