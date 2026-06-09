@@ -13,11 +13,10 @@ export default async function OrganizationCommandCenterPage({ params }: { params
 
   const dashboardBasePath = '/dashboard/organizations';
   const localizedDashboardBasePath = `/${params.locale}${dashboardBasePath}`;
-  const complianceHealth = data.summary.complianceScore >= 80 ? 'Audit ready' : data.summary.complianceScore >= 55 ? 'Needs attention' : 'Critical remediation';
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.16),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))]">
-      <DashboardCommandNavigation locale={params.locale} basePath={dashboardBasePath} activePage="Command Center" complianceHealth={complianceHealth} />
+      <DashboardCommandNavigation locale={params.locale} activePage="Command Center" />
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-10">
         <CommandCenterPage summary={data.summary} tasks={data.tasks} trendHistory={data.trendHistory} trendComparison={data.trendComparison} basePath={localizedDashboardBasePath} topRisks={data.topRisks} vendorsRequiringReview={data.vendorsRequiringReview} documentsExpiringSoon={data.documentsExpiringSoon} />
       </div>
