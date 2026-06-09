@@ -29,8 +29,10 @@ export default async function EuroComplyHomePage({ params }: { params: { locale:
   const data = await getOrganizationDashboardData(user.id);
   if (!data) redirect(`/${params.locale}/onboarding`);
 
+  const pendingDocuments = data.summary.missingDocuments;
+
   const macroCards = [
-    { label: 'Documentos pendentes', value: `${data.summary.missingEvidence}`, description: 'Itens que ainda podem fragilizar auditoria, procurement ou board review.', icon: FileText },
+    { label: 'Documentos pendentes', value: `${pendingDocuments}`, description: 'Itens que ainda podem fragilizar auditoria, procurement ou board review.', icon: FileText },
     { label: 'Score de compliance', value: `${data.summary.complianceScore}%`, description: 'Indicador agregado para liderança e customer confidence.', icon: CheckCircle2 },
     { label: 'Próximos prazos', value: `${data.tasks.upcoming.length}`, description: 'Datas úteis para manter evidências e tarefas sem atraso.', icon: Clock3 },
   ];
@@ -62,7 +64,7 @@ export default async function EuroComplyHomePage({ params }: { params: { locale:
               <p className="mt-2 text-2xl font-semibold tracking-tight">{data.organization.name}</p>
               <div className="mt-5 grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-2xl bg-background/70 p-3"><p className="text-2xl font-bold">{data.summary.complianceScore}%</p><p className="text-xs text-muted-foreground">Score</p></div>
-                <div className="rounded-2xl bg-background/70 p-3"><p className="text-2xl font-bold">{data.summary.missingEvidence}</p><p className="text-xs text-muted-foreground">Pendentes</p></div>
+                <div className="rounded-2xl bg-background/70 p-3"><p className="text-2xl font-bold">{pendingDocuments}</p><p className="text-xs text-muted-foreground">Pendentes</p></div>
                 <div className="rounded-2xl bg-background/70 p-3"><p className="text-2xl font-bold">{data.tasks.upcoming.length}</p><p className="text-xs text-muted-foreground">Prazos</p></div>
               </div>
             </div>
