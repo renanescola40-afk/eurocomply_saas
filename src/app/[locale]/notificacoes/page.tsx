@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/server/queries/auth';
+import { listNotificationsForUser } from '@/server/queries/compliance-activity';
 import { NotificationsClient } from './notifications-client';
 
 export default async function NotificationsPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -10,5 +11,7 @@ export default async function NotificationsPage({ params }: { params: Promise<{ 
     redirect(`/${locale}/login`);
   }
 
-  return <NotificationsClient locale={locale} />;
+  const notifications = await listNotificationsForUser(user.id);
+
+  return <NotificationsClient locale={locale} initialNotifications={notifications} />;
 }
