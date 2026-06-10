@@ -3,6 +3,7 @@ import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-com
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { listDocuments } from '@/server/queries/documents';
+import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { DocumentsClient } from './documents-client';
 
 export default async function DocumentsPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -15,11 +16,12 @@ export default async function DocumentsPage({ params }: { params: Promise<{ loca
 
   const organization = await getCurrentOrganizationForUser(user.id);
   const documents = organization ? await listDocuments(organization.id) : [];
+  const entitlements = organization ? await getOrganizationEntitlements(organization.id) : null;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
       <DashboardCommandNavigation locale={locale} activePage="Evidence & Risk" />
-      <DocumentsClient locale={locale} initialDocuments={documents} />
+      <DocumentsClient locale={locale} initialDocuments={documents} entitlements={entitlements} />
     </main>
   );
 }
