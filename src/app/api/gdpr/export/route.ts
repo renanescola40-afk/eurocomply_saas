@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
+import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { listDocuments } from '@/server/queries/documents';
@@ -25,14 +26,13 @@ export async function GET() {
   const entitlementCheck = await assertGdprSelfServiceEnabled(organization.id);
 
   if (!entitlementCheck.ok) {
-    return NextResponse.json(
-      {
-        error: entitlementCheck.error,
-        message: entitlementCheck.message,
-        plan: entitlementCheck.entitlements.plan,
-      },
-      { status: entitlementCheck.status },
-    );
+    return upgradeRequiredResponse({
+      error: entitlementCheck.error,
+      message: entitlementCheck.message,
+      plan: entitlementCheck.entitlements.plan,
+      requiredPlan: 'professional',
+      entitlements: entitlementCheck.entitlements,
+    }, entitlementCheck.status);
   }
 
   const [documents, auditEvents, notifications] = await Promise.all([
