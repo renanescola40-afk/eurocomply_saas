@@ -7,6 +7,7 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { createNotification } from '@/server/queries/notifications';
 import { assertDocumentQuota } from '@/server/billing/entitlements';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const STORAGE_BUCKET = 'controlled-documents';
@@ -38,6 +39,16 @@ export async function POST(request: NextRequest) {
 
   if (!organization) {
     return NextResponse.json({ error: 'Organization access required.' }, { status: 403 });
+  }
+
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: 'manage_documents',
+  });
+
+  if (!permission.ok) {
+    return permissionDeniedResponse(permission);
   }
 
   const quota = await assertDocumentQuota(organization.id);
@@ -133,6 +144,7 @@ export async function POST(request: NextRequest) {
       mimeType: file.type,
       sizeBytes: file.size,
       plan: quota.entitlements.plan,
+      actorRole: permission.role,
       documentCountBeforeUpload: quota.currentCount,
     },
   });
