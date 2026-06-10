@@ -5,6 +5,7 @@ import {
   normalizeAiSystemRole,
   normalizeAiSystemStatus,
 } from '@/server/ai-governance/classifier';
+import { evaluateAiGovernanceRole } from '@/lib/ai-governance/role-wizard';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAiSystem, listAiSystems } from '@/server/queries/ai-systems';
@@ -84,9 +85,22 @@ export async function POST(request: Request) {
   const generatesContent = asBoolean(body.generatesContent);
   const biometricIdentification = asBoolean(body.biometricIdentification);
   const manipulativeOrExploitative = asBoolean(body.manipulativeOrExploitative);
+  const vendorName = asText(body.vendorName) || null;
 
   const classification = classifyAiSystem({
     role,
+    riskDomain,
+    usesPersonalData,
+    interactsWithPeople,
+    generatesContent,
+    biometricIdentification,
+    manipulativeOrExploitative,
+  });
+
+  const roleAssessment = evaluateAiGovernanceRole({
+    role,
+    vendorName,
+    useCase,
     riskDomain,
     usesPersonalData,
     interactsWithPeople,
@@ -101,7 +115,7 @@ export async function POST(request: Request) {
       createdBy: user.id,
       name,
       ownerTeam: asText(body.ownerTeam) || null,
-      vendorName: asText(body.vendorName) || null,
+      vendorName,
       useCase,
       role,
       lifecycleStatus,
@@ -125,13 +139,16 @@ export async function POST(request: Request) {
       entityId: system.id,
       metadata: {
         riskLevel: system.risk_level,
-        role: system.role,
+        selectedRole: role,
+        recommendedRole: roleAssessment.recommendedRole,
+        roleConfidence: roleAssessment.confidence,
+        needsLegalReview: roleAssessment.needsLegalReview,
         lifecycleStatus: system.lifecycle_status,
         riskDomain: system.risk_domain,
       },
     });
 
-    return NextResponse.json({ system });
+    return NextResponse.json({ system, roleAssessment });
   } catch (error) {
     const code = getErrorCode(error);
 
