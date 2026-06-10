@@ -26,6 +26,8 @@ const requiredFiles = [
   'supabase/migrations/20260610_ai_governance_inventory.sql',
   'supabase/migrations/20260610_ai_incident_register.sql',
   'src/app/api/ops/enterprise-readiness/route.ts',
+  'src/server/governance/retention-policy.ts',
+  'src/app/[locale]/retention-center/page.tsx',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
   'docs/LEGAL_READINESS.md',
