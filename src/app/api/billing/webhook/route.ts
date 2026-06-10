@@ -38,10 +38,11 @@ async function recordBillingActivity(subscription: Stripe.Subscription, plan: Re
     createNotification({
       organizationId,
       userId: actorUserId,
-      type: 'billing',
+      type: 'system',
       title: 'Assinatura atualizada',
       body: `O plano ${plan} foi sincronizado com o estado ${subscription.status}.`,
       metadata: {
+        category: 'billing',
         plan,
         status: subscription.status,
         stripeSubscriptionId: subscription.id,
@@ -122,11 +123,7 @@ export async function POST(request: Request) {
       await syncSubscription(event.data.object as Stripe.Subscription);
     }
   } catch (error) {
-    console.error('[stripe_webhook] sync_failed', {
-      type: event.type,
-      message: error instanceof Error ? error.message : 'unknown',
-    });
-
+    console.error('[billing:webhook] sync failed', error);
     return NextResponse.json({ error: 'sync_failed' }, { status: 500 });
   }
 
