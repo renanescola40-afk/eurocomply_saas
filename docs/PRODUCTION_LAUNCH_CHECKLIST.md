@@ -14,6 +14,10 @@ Set these variables in Vercel for Production, Preview, and Development as needed
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_ESSENTIAL_MONTHLY`
+- `STRIPE_PRICE_PROFESSIONAL_MONTHLY`
+- `STRIPE_PRICE_BUSINESS_MONTHLY`
+- `HEALTHCHECK_TOKEN`
 - `NEXT_PUBLIC_SENTRY_DSN`
 - `SENTRY_DSN`
 - `SENTRY_ORG`
@@ -24,24 +28,34 @@ Set these variables in Vercel for Production, Preview, and Development as needed
 - `RESEND_API_KEY`
 - `EMAIL_FROM`
 
+Run before production deploy:
+
+```bash
+npm run preflight
+npm run typecheck
+npm run build
+```
+
 ## 2. Supabase database and storage
 
-Run this migration in the Supabase SQL editor:
+Run these migrations in the Supabase SQL editor, in order:
 
 - `supabase/migrations/20260610_public_launch_readiness.sql`
+- `supabase/migrations/20260610_billing_stripe_sync.sql`
 
-It creates or updates:
+They create or update:
 
 - `organization_invites`
 - `audit_events`
 - `notifications`
 - `rate_limits`
+- `subscriptions`
 - `documents.storage_path`
 - `documents.checksum_sha256`
 - private storage bucket `controlled-documents`
 - RLS policies for member-scoped reads and uploads
 
-After running it, verify:
+After running them, verify:
 
 - RLS is enabled on every organization-scoped table.
 - The `controlled-documents` bucket is private.
@@ -57,19 +71,23 @@ Create live products/prices for:
 - Business: EUR 399/month
 - Enterprise: from EUR 990/month or sales-led contract
 
+Configure Stripe webhook endpoint:
+
+- `https://YOUR_DOMAIN/api/billing/webhook`
+
 Configure Stripe webhook events:
 
-- `checkout.session.completed`
 - `customer.subscription.created`
 - `customer.subscription.updated`
 - `customer.subscription.deleted`
-- `invoice.payment_succeeded`
-- `invoice.payment_failed`
 
 Verify plan gates:
 
-- Enterprise-only team invites.
-- Downgrade removes Enterprise-only access.
+- Essential: 10 documents, no team invites, no RACI/workflows, no CSV/GDPR self-service.
+- Professional: 100 documents, AI calendar/news, audit log, CSV exports, GDPR self-service.
+- Business: 500 documents, team invites, RACI, approvals, executive reports.
+- Enterprise: unlimited scale, advanced permissions, consultative support.
+- Downgrades remove higher-tier access.
 - Failed payments do not leave privileged access active forever.
 
 ## 4. Security checks
@@ -84,6 +102,7 @@ Before launch:
 - Test language persistence via `NEXT_LOCALE` and `eurocomply-locale`.
 - Test file upload validation: size, MIME type, checksum, and private bucket storage.
 - Test GDPR export and delete request endpoints.
+- Test `/api/health`, `/api/ready`, and `/api/ops/smoke`.
 
 ## 5. Smoke test flow
 
@@ -95,17 +114,24 @@ Run this flow after every production deploy:
 4. Create or select an organization.
 5. Open dashboard, profile, documents, risks, RACI, approvals, calendar, notifications, and audit log.
 6. Upload a controlled document.
-7. Export GDPR data.
-8. Invite an employee with an Enterprise organization.
-9. Confirm audit events and notifications are written.
-10. Confirm another organization cannot access the same files/events.
+7. Confirm Essential document limits block after 10 documents.
+8. Upgrade to Professional via Stripe test mode and confirm CSV/GDPR self-service unlocks.
+9. Upgrade to Business and confirm RACI, approvals, team invites, and executive reports unlock.
+10. Confirm audit events and notifications are written.
+11. Confirm another organization cannot access the same files/events.
+
+Protected smoke endpoint:
+
+```bash
+curl -H "Authorization: Bearer $HEALTHCHECK_TOKEN" https://YOUR_DOMAIN/api/ops/smoke
+```
 
 ## 6. Launch decision
 
 Do not launch paid traffic until all items below are true:
 
 - Production build passes.
-- Supabase migration has been applied.
+- Supabase migrations have been applied.
 - Stripe live mode is configured and tested.
 - Vercel production environment is complete.
 - Sentry releases/source maps work.
