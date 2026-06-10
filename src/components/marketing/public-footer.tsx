@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
 type FooterLink = { label: string; href: string };
-
 type FooterCopy = {
   tagline: string;
   productTitle: string;
@@ -13,62 +12,54 @@ type FooterCopy = {
   trustLinks: FooterLink[];
 };
 
-const commonTrustHrefs = ['/trust', '/security', '/compliance', '/data-processing', '/sla', '/privacy', '/terms', '/dpa', '/subprocessors', '/status'] as const;
+const trustHrefs = ['/trust', '/security', '/compliance', '/data-processing', '/sla', '/privacy', '/terms', '/dpa', '/subprocessors', '/status'];
+
+function makeLinks(labels: string[], hrefs: string[]): FooterLink[] {
+  return labels.map((label, index) => ({ label, href: hrefs[index] ?? hrefs[0] ?? '/' }));
+}
 
 const footerCopy: Record<Locale, FooterCopy> = {
   en: {
-    tagline: 'Compliance evidence, risk and vendor operations for modern European teams. Built for operational readiness, not spreadsheet archaeology.',
-    productTitle: 'Product',
-    companyTitle: 'Company',
-    trustTitle: 'Trust',
-    productLinks: [{ label: 'Pricing', href: '/pricing' }, { label: 'Resources', href: '/resources' }, { label: 'FAQ', href: '/faq' }],
-    companyLinks: [{ label: 'About', href: '/about' }, { label: 'Contact', href: '/contact' }],
-    trustLinks: ['Trust Center', 'Security', 'Compliance', 'Data Processing', 'Service Commitments', 'Privacy', 'Terms', 'DPA', 'Subprocessors', 'Status'].map((label, index) => ({ label, href: commonTrustHrefs[index] })),
+    tagline: 'Compliance evidence, risk and vendor operations for modern European teams.',
+    productTitle: 'Product', companyTitle: 'Company', trustTitle: 'Trust',
+    productLinks: makeLinks(['Pricing', 'Resources', 'FAQ'], ['/pricing', '/resources', '/faq']),
+    companyLinks: makeLinks(['About', 'Contact'], ['/about', '/contact']),
+    trustLinks: makeLinks(['Trust Center', 'Security', 'Compliance', 'Data Processing', 'Service Commitments', 'Privacy', 'Terms', 'DPA', 'Subprocessors', 'Status'], trustHrefs),
   },
   pt: {
-    tagline: 'Evidências de compliance, risco e operações com fornecedores para equipas europeias modernas. Criado para prontidão operacional, não para arqueologia em folhas de cálculo.',
-    productTitle: 'Produto',
-    companyTitle: 'Empresa',
-    trustTitle: 'Confiança',
-    productLinks: [{ label: 'Preços', href: '/pricing' }, { label: 'Recursos', href: '/resources' }, { label: 'FAQ', href: '/faq' }],
-    companyLinks: [{ label: 'Sobre', href: '/about' }, { label: 'Contacto', href: '/contact' }],
-    trustLinks: ['Centro de Confiança', 'Segurança', 'Compliance', 'Tratamento de Dados', 'Compromissos de Serviço', 'Privacidade', 'Termos', 'DPA', 'Subprocessadores', 'Estado'].map((label, index) => ({ label, href: commonTrustHrefs[index] })),
+    tagline: 'Evidencias de compliance, risco e fornecedores para equipas europeias.',
+    productTitle: 'Produto', companyTitle: 'Empresa', trustTitle: 'Confianca',
+    productLinks: makeLinks(['Precos', 'Recursos', 'FAQ'], ['/pricing', '/resources', '/faq']),
+    companyLinks: makeLinks(['Sobre', 'Contacto'], ['/about', '/contact']),
+    trustLinks: makeLinks(['Centro de Confianca', 'Seguranca', 'Compliance', 'Tratamento de Dados', 'Compromissos de Servico', 'Privacidade', 'Termos', 'DPA', 'Subprocessadores', 'Estado'], trustHrefs),
   },
   es: {
-    tagline: 'Evidencias de compliance, riesgo y operaciones con proveedores para equipos europeos modernos. Construido para preparación operativa, no para arqueología en hojas de cálculo.',
-    productTitle: 'Producto',
-    companyTitle: 'Empresa',
-    trustTitle: 'Confianza',
-    productLinks: [{ label: 'Precios', href: '/pricing' }, { label: 'Recursos', href: '/resources' }, { label: 'FAQ', href: '/faq' }],
-    companyLinks: [{ label: 'Acerca de', href: '/about' }, { label: 'Contacto', href: '/contact' }],
-    trustLinks: ['Centro de Confianza', 'Seguridad', 'Compliance', 'Tratamiento de Datos', 'Compromisos de Servicio', 'Privacidad', 'Términos', 'DPA', 'Subprocesadores', 'Estado'].map((label, index) => ({ label, href: commonTrustHrefs[index] })),
+    tagline: 'Evidencias de compliance, riesgo y proveedores para equipos europeos.',
+    productTitle: 'Producto', companyTitle: 'Empresa', trustTitle: 'Confianza',
+    productLinks: makeLinks(['Precios', 'Recursos', 'FAQ'], ['/pricing', '/resources', '/faq']),
+    companyLinks: makeLinks(['Acerca de', 'Contacto'], ['/about', '/contact']),
+    trustLinks: makeLinks(['Centro de Confianza', 'Seguridad', 'Compliance', 'Tratamiento de Datos', 'Compromisos de Servicio', 'Privacidad', 'Terminos', 'DPA', 'Subprocesadores', 'Estado'], trustHrefs),
   },
   fr: {
-    tagline: 'Preuves de conformité, risques et opérations fournisseurs pour les équipes européennes modernes. Conçu pour la préparation opérationnelle, pas pour l’archéologie de tableurs.',
-    productTitle: 'Produit',
-    companyTitle: 'Entreprise',
-    trustTitle: 'Confiance',
-    productLinks: [{ label: 'Tarifs', href: '/pricing' }, { label: 'Ressources', href: '/resources' }, { label: 'FAQ', href: '/faq' }],
-    companyLinks: [{ label: 'À propos', href: '/about' }, { label: 'Contact', href: '/contact' }],
-    trustLinks: ['Centre de Confiance', 'Sécurité', 'Conformité', 'Traitement des Données', 'Engagements de Service', 'Confidentialité', 'Conditions', 'DPA', 'Sous-traitants', 'Statut'].map((label, index) => ({ label, href: commonTrustHrefs[index] })),
+    tagline: 'Preuves de conformite, risque et fournisseurs pour equipes europeennes.',
+    productTitle: 'Produit', companyTitle: 'Entreprise', trustTitle: 'Confiance',
+    productLinks: makeLinks(['Tarifs', 'Ressources', 'FAQ'], ['/pricing', '/resources', '/faq']),
+    companyLinks: makeLinks(['A propos', 'Contact'], ['/about', '/contact']),
+    trustLinks: makeLinks(['Centre de Confiance', 'Securite', 'Conformite', 'Traitement des Donnees', 'Engagements de Service', 'Confidentialite', 'Conditions', 'DPA', 'Sous-traitants', 'Statut'], trustHrefs),
   },
   it: {
-    tagline: 'Evidenze di compliance, rischio e operazioni fornitori per team europei moderni. Costruito per prontezza operativa, non per archeologia nei fogli di calcolo.',
-    productTitle: 'Prodotto',
-    companyTitle: 'Azienda',
-    trustTitle: 'Fiducia',
-    productLinks: [{ label: 'Prezzi', href: '/pricing' }, { label: 'Risorse', href: '/resources' }, { label: 'FAQ', href: '/faq' }],
-    companyLinks: [{ label: 'Chi siamo', href: '/about' }, { label: 'Contatto', href: '/contact' }],
-    trustLinks: ['Centro Fiducia', 'Sicurezza', 'Compliance', 'Trattamento Dati', 'Impegni di Servizio', 'Privacy', 'Termini', 'DPA', 'Subprocessori', 'Stato'].map((label, index) => ({ label, href: commonTrustHrefs[index] })),
+    tagline: 'Evidenze di compliance, rischio e fornitori per team europei.',
+    productTitle: 'Prodotto', companyTitle: 'Azienda', trustTitle: 'Fiducia',
+    productLinks: makeLinks(['Prezzi', 'Risorse', 'FAQ'], ['/pricing', '/resources', '/faq']),
+    companyLinks: makeLinks(['Chi siamo', 'Contatto'], ['/about', '/contact']),
+    trustLinks: makeLinks(['Centro Fiducia', 'Sicurezza', 'Compliance', 'Trattamento Dati', 'Impegni di Servizio', 'Privacy', 'Termini', 'DPA', 'Subprocessori', 'Stato'], trustHrefs),
   },
   de: {
-    tagline: 'Compliance-Nachweise, Risiken und Lieferantenprozesse für moderne europäische Teams. Gebaut für operative Bereitschaft, nicht für Tabellenkalkulations-Archäologie.',
-    productTitle: 'Produkt',
-    companyTitle: 'Unternehmen',
-    trustTitle: 'Vertrauen',
-    productLinks: [{ label: 'Preise', href: '/pricing' }, { label: 'Ressourcen', href: '/resources' }, { label: 'FAQ', href: '/faq' }],
-    companyLinks: [{ label: 'Über uns', href: '/about' }, { label: 'Kontakt', href: '/contact' }],
-    trustLinks: ['Trust Center', 'Sicherheit', 'Compliance', 'Datenverarbeitung', 'Service Commitments', 'Datenschutz', 'Bedingungen', 'DPA', 'Unterauftragsverarbeiter', 'Status'].map((label, index) => ({ label, href: commonTrustHrefs[index] })),
+    tagline: 'Compliance-Nachweise, Risiken und Lieferantenprozesse fuer europaeische Teams.',
+    productTitle: 'Produkt', companyTitle: 'Unternehmen', trustTitle: 'Vertrauen',
+    productLinks: makeLinks(['Preise', 'Ressourcen', 'FAQ'], ['/pricing', '/resources', '/faq']),
+    companyLinks: makeLinks(['Ueber uns', 'Kontakt'], ['/about', '/contact']),
+    trustLinks: makeLinks(['Trust Center', 'Sicherheit', 'Compliance', 'Datenverarbeitung', 'Service Commitments', 'Datenschutz', 'Bedingungen', 'DPA', 'Unterauftragsverarbeiter', 'Status'], trustHrefs),
   },
 };
 
@@ -79,40 +70,10 @@ export function PublicFooter({ locale }: { locale: string }) {
   return (
     <footer className="border-t bg-background px-6 py-10 text-sm text-muted-foreground">
       <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-        <div>
-          <p className="text-base font-semibold text-foreground">EuroComply</p>
-          <p className="mt-3 max-w-md leading-6">{copy.tagline}</p>
-        </div>
-        <nav>
-          <p className="font-medium text-foreground">{copy.productTitle}</p>
-          <ul className="mt-3 space-y-2">
-            {copy.productLinks.map((link) => (
-              <li key={link.href}>
-                <Link href={`/${activeLocale}${link.href}`} className="hover:text-foreground">{link.label}</Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <nav>
-          <p className="font-medium text-foreground">{copy.companyTitle}</p>
-          <ul className="mt-3 space-y-2">
-            {copy.companyLinks.map((link) => (
-              <li key={link.href}>
-                <Link href={`/${activeLocale}${link.href}`} className="hover:text-foreground">{link.label}</Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <nav>
-          <p className="font-medium text-foreground">{copy.trustTitle}</p>
-          <ul className="mt-3 space-y-2">
-            {copy.trustLinks.map((link) => (
-              <li key={link.href}>
-                <Link href={`/${activeLocale}${link.href}`} className="hover:text-foreground">{link.label}</Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <div><p className="text-base font-semibold text-foreground">EuroComply</p><p className="mt-3 max-w-md leading-6">{copy.tagline}</p></div>
+        <nav><p className="font-medium text-foreground">{copy.productTitle}</p><ul className="mt-3 space-y-2">{copy.productLinks.map((link) => <li key={link.href}><Link href={`/${activeLocale}${link.href}`} className="hover:text-foreground">{link.label}</Link></li>)}</ul></nav>
+        <nav><p className="font-medium text-foreground">{copy.companyTitle}</p><ul className="mt-3 space-y-2">{copy.companyLinks.map((link) => <li key={link.href}><Link href={`/${activeLocale}${link.href}`} className="hover:text-foreground">{link.label}</Link></li>)}</ul></nav>
+        <nav><p className="font-medium text-foreground">{copy.trustTitle}</p><ul className="mt-3 space-y-2">{copy.trustLinks.map((link) => <li key={link.href}><Link href={`/${activeLocale}${link.href}`} className="hover:text-foreground">{link.label}</Link></li>)}</ul></nav>
       </div>
     </footer>
   );
