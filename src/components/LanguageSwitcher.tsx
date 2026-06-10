@@ -34,6 +34,10 @@ function buildLocalizedPath(pathname: string, newLocale: Locale) {
   return `/${newLocale}${pathWithoutLocale}`;
 }
 
+function localeCode(locale: Locale) {
+  return locale.toUpperCase();
+}
+
 export default function LanguageSwitcher({ variant = 'dropdown', className = '' }: LanguageSwitcherProps) {
   const locale = useLocale() as Locale;
   const pathname = usePathname();
@@ -56,10 +60,9 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
   const switchLocale = (newLocale: Locale) => {
     const targetPath = buildLocalizedPath(pathname, newLocale);
     document.cookie = `${COOKIE_NAME}=${newLocale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+    localStorage.setItem('eurocomply-locale', newLocale);
     setOpen(false);
 
-    // Use a full navigation instead of router.push so the server reloads the
-    // right locale messages and avoids stale client-side i18n cache.
     window.location.assign(targetPath);
   };
 
@@ -76,13 +79,13 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
               onClick={() => switchLocale(loc)}
               title={meta.nativeName}
               aria-current={isActive ? 'true' : undefined}
-              className={`h-8 rounded px-2 text-xs font-medium transition-colors ${
+              className={`h-8 rounded px-2 text-xs font-medium tracking-[0.18em] transition-colors ${
                 isActive
-                  ? 'bg-white/20 text-white'
+                  ? 'bg-white text-black'
                   : 'text-white/60 hover:bg-white/10 hover:text-white'
               }`}
             >
-              {loc.toUpperCase()}
+              {localeCode(loc)}
             </button>
           );
         })}
@@ -98,7 +101,7 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
         className="flex items-center gap-2 rounded-md bg-white/10 px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/20 hover:text-white"
         aria-label="Select language"
       >
-        <span className="text-base">{currentMeta.flag}</span>
+        <span className="rounded border border-white/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.18em] text-white">{localeCode(locale)}</span>
         <span>{currentMeta.nativeName}</span>
         <svg className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -122,7 +125,7 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
                     : 'text-white/70 hover:bg-white/5 hover:text-white'
                 }`}
               >
-                <span className="text-lg">{meta.flag}</span>
+                <span className="w-8 rounded border border-white/10 px-1.5 py-0.5 text-center text-[10px] font-semibold tracking-[0.18em]">{localeCode(loc)}</span>
                 <span className="flex-1 text-left">{meta.nativeName}</span>
                 {isActive && (
                   <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
