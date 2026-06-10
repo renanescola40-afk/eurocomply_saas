@@ -14,6 +14,7 @@ function initSentry(dsn: string | undefined) {
     environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
     release: process.env.VERCEL_GIT_COMMIT_SHA,
     sendDefaultPii: false,
+    telemetry: false,
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.05 : 1.0,
     beforeSend: sanitizeEvent,
   });
