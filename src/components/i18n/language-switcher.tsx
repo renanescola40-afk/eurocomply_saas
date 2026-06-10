@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Globe2 } from 'lucide-react';
 import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
 
@@ -12,6 +12,12 @@ function switchLocalePath(pathname: string, nextLocale: Locale) {
     return `/${parts.join('/')}`;
   }
   return `/${nextLocale}${pathname.startsWith('/') ? pathname : `/${pathname}`}`;
+}
+
+function withCurrentLocationState(path: string, search: string) {
+  if (typeof window === 'undefined') return search ? `${path}?${search}` : path;
+  const query = search ? `?${search}` : window.location.search;
+  return `${path}${query}${window.location.hash}`;
 }
 
 function persistLocale(locale: Locale) {
@@ -33,6 +39,8 @@ type LanguageSwitcherProps = {
 
 export function LanguageSwitcher({ currentLocale, variant = 'light', compact = false }: LanguageSwitcherProps) {
   const pathname = usePathname() || `/${currentLocale}`;
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
   const isDark = variant === 'dark';
 
   return (
@@ -40,7 +48,7 @@ export function LanguageSwitcher({ currentLocale, variant = 'light', compact = f
       {!compact ? <Globe2 className={`ml-2 h-4 w-4 ${isDark ? 'text-white/60' : 'text-muted-foreground'}`} /> : null}
       {locales.map((locale) => {
         const active = locale === currentLocale;
-        const targetPath = switchLocalePath(pathname, locale);
+        const targetPath = withCurrentLocationState(switchLocalePath(pathname, locale), search);
         return (
           <Link
             key={locale}
