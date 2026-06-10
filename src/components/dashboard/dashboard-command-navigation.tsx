@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Bell, ChevronDown, Menu, Newspaper, X } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
+import { getLocalizedDashboardNavigation } from '@/components/dashboard/dashboard-navigation-i18n';
+import { getAppDictionary } from '@/lib/i18n/app-dictionary';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
 const dashboardRoot = '/dashboard/organizations';
@@ -82,6 +84,8 @@ function localizeHref(locale: string, href: string) {
 
 export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }: DashboardCommandNavigationProps) {
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+  const navigation = getLocalizedDashboardNavigation(activeLocale);
+  const navCopy = getAppDictionary(activeLocale).nav;
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/92 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/78">
@@ -95,9 +99,9 @@ export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }
           EuroComply
         </Link>
 
-        <nav aria-label="Main EuroComply navigation" className="hidden w-full items-center gap-2 whitespace-nowrap text-sm md:flex md:overflow-visible">
-          {dashboardNavigation.filter((item) => item.label !== 'EuroComply').map((item) => {
-            const isActive = item.label === activePage;
+        <nav aria-label={navCopy.mainNavigation} className="hidden w-full items-center gap-2 whitespace-nowrap text-sm md:flex md:overflow-visible">
+          {navigation.filter((item) => item.href !== '/eurocomply-home').map((item) => {
+            const isActive = item.label === activePage || dashboardNavigation.some((legacyItem) => legacyItem.label === activePage && legacyItem.href === item.href);
             const hasSubmenu = Boolean(item.sections?.length);
 
             return (
@@ -110,8 +114,8 @@ export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }
                       : 'border-transparent text-muted-foreground hover:border-primary/30 hover:bg-muted/60 hover:text-foreground'
                   }`}
                 >
-                  {item.label === 'Notificações' ? <Bell className="h-3.5 w-3.5" /> : null}
-                  {item.label === 'Notícias' ? <Newspaper className="h-3.5 w-3.5" /> : null}
+                  {item.href === '/notificacoes' ? <Bell className="h-3.5 w-3.5" /> : null}
+                  {item.href === `${dashboardRoot}/reports-governance/news` && !item.sections?.length ? <Newspaper className="h-3.5 w-3.5" /> : null}
                   {item.label}
                   {hasSubmenu ? <ChevronDown className="h-3.5 w-3.5 transition group-hover:rotate-180" /> : null}
                 </Link>
@@ -142,7 +146,7 @@ export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }
         <label
           htmlFor="eurocomply-mobile-menu"
           className="ml-auto inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border bg-background text-muted-foreground transition hover:bg-muted md:hidden"
-          aria-label="Abrir menu"
+          aria-label={navCopy.openMenu}
         >
           <Menu className="h-5 w-5 peer-checked:hidden" />
           <X className="hidden h-5 w-5 peer-checked:block" />
@@ -153,8 +157,8 @@ export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }
         <div className="mb-3">
           <LanguageSwitcher currentLocale={activeLocale} compact />
         </div>
-        <nav className="space-y-2" aria-label="Mobile EuroComply navigation">
-          {dashboardNavigation.map((item) => (
+        <nav className="space-y-2" aria-label={navCopy.mobileNavigation}>
+          {navigation.map((item) => (
             <details key={item.label} className="group rounded-2xl border bg-muted/20 p-2 open:bg-muted/40">
               <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl px-3 py-2 font-medium">
                 <Link href={localizeHref(activeLocale, item.href)}>{item.label}</Link>
