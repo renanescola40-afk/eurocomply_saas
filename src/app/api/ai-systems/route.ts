@@ -10,6 +10,7 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAiSystem, listAiSystems } from '@/server/queries/ai-systems';
 import { createAuditEvent } from '@/server/queries/audit-events';
+import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 
 function asText(value: unknown, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
@@ -40,8 +41,18 @@ export async function GET() {
     return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
   }
 
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: 'read_ai_governance',
+  });
+
+  if (!permission.ok) {
+    return permissionDeniedResponse(permission);
+  }
+
   const systems = await listAiSystems(organization.id);
-  return NextResponse.json({ systems });
+  return NextResponse.json({ systems, role: permission.role });
 }
 
 export async function POST(request: Request) {
@@ -55,6 +66,16 @@ export async function POST(request: Request) {
 
   if (!organization) {
     return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+  }
+
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: 'manage_ai_governance',
+  });
+
+  if (!permission.ok) {
+    return permissionDeniedResponse(permission);
   }
 
   let payload: unknown;
@@ -145,6 +166,7 @@ export async function POST(request: Request) {
         needsLegalReview: roleAssessment.needsLegalReview,
         lifecycleStatus: system.lifecycle_status,
         riskDomain: system.risk_domain,
+        actorRole: permission.role,
       },
     });
 
