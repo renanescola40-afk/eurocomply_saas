@@ -6,11 +6,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { LanguageSwitcher } from '@/components/i18n/language-switcher';
+import { locales, type Locale } from '@/lib/i18n/routing';
 
 const signupCopy: Record<string, {
   title: string;
   subtitle: string;
   google: string;
+  separator: string;
   name: string;
   company: string;
   email: string;
@@ -25,6 +28,7 @@ const signupCopy: Record<string, {
     title: 'Create your EuroComply workspace',
     subtitle: 'Start organizing documents, vendors, risks and compliance tasks in one secure workspace.',
     google: 'Continue with Google',
+    separator: 'or',
     name: 'Full name',
     company: 'Company name',
     email: 'Email',
@@ -36,23 +40,25 @@ const signupCopy: Record<string, {
     errorTitle: 'Could not create account',
   },
   pt: {
-    title: 'Crie seu workspace EuroComply',
-    subtitle: 'Comece a organizar documentos, vendors, riscos e tarefas de compliance em um workspace seguro.',
+    title: 'Crie o seu workspace EuroComply',
+    subtitle: 'Comece a organizar documentos, fornecedores, riscos e tarefas de compliance num workspace seguro.',
     google: 'Continuar com Google',
+    separator: 'ou',
     name: 'Nome completo',
     company: 'Nome da empresa',
     email: 'Email',
-    password: 'Senha',
+    password: 'Palavra-passe',
     submit: 'Criar conta',
     login: 'Já tem conta? Entrar',
     successTitle: 'Conta criada',
-    successSubtitle: 'Verifique seu email para confirmar a conta e depois faça login.',
+    successSubtitle: 'Verifique o seu email para confirmar a conta e depois faça login.',
     errorTitle: 'Não foi possível criar a conta',
   },
   es: {
     title: 'Crea tu workspace EuroComply',
     subtitle: 'Organiza documentos, proveedores, riesgos y tareas de compliance en un workspace seguro.',
     google: 'Continuar con Google',
+    separator: 'o',
     name: 'Nombre completo',
     company: 'Empresa',
     email: 'Email',
@@ -67,6 +73,7 @@ const signupCopy: Record<string, {
     title: 'Créez votre espace EuroComply',
     subtitle: 'Organisez documents, fournisseurs, risques et tâches compliance dans un espace sécurisé.',
     google: 'Continuer avec Google',
+    separator: 'ou',
     name: 'Nom complet',
     company: 'Entreprise',
     email: 'Email',
@@ -81,6 +88,7 @@ const signupCopy: Record<string, {
     title: 'Crea il tuo workspace EuroComply',
     subtitle: 'Organizza documenti, fornitori, rischi e attività compliance in un workspace sicuro.',
     google: 'Continua con Google',
+    separator: 'o',
     name: 'Nome completo',
     company: 'Azienda',
     email: 'Email',
@@ -95,6 +103,7 @@ const signupCopy: Record<string, {
     title: 'EuroComply Workspace erstellen',
     subtitle: 'Organisieren Sie Dokumente, Lieferanten, Risiken und Compliance-Aufgaben sicher an einem Ort.',
     google: 'Mit Google fortfahren',
+    separator: 'oder',
     name: 'Vollständiger Name',
     company: 'Unternehmen',
     email: 'E-Mail',
@@ -115,8 +124,10 @@ export default function SignupPage() {
   const router = useRouter();
   const params = useParams();
   const locale = (params.locale as string) || 'pt';
-  const copy = signupCopy[locale] ?? signupCopy.en;
-  const { user, signUpWithEmail, signInWithGoogle, loading: authLoading } = useAuth();
+  const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+  const copy = signupCopy[activeLocale] ?? signupCopy.en;
+  const googleSignupHref = `/auth/google?locale=${encodeURIComponent(activeLocale)}&next=${encodeURIComponent(getDashboardHref(activeLocale))}`;
+  const { user, signUpWithEmail, loading: authLoading } = useAuth();
   const [name, setName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
@@ -129,19 +140,9 @@ export default function SignupPage() {
     if (authLoading) return;
 
     if (user) {
-      router.replace(getDashboardHref(locale));
+      router.replace(getDashboardHref(activeLocale));
     }
-  }, [authLoading, locale, router, user]);
-
-  async function handleGoogleSignup() {
-    setError('');
-    setSubmitting(true);
-    const result = await signInWithGoogle();
-    if (result.error) {
-      setError(result.error.message);
-      setSubmitting(false);
-    }
-  }
+  }, [authLoading, activeLocale, router, user]);
 
   async function handleEmailSignup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -167,6 +168,9 @@ export default function SignupPage() {
   return (
     <main className="min-h-screen bg-[#050505] text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(37,99,235,0.24),transparent_34rem)]" />
+      <div className="fixed right-5 top-5 z-20">
+        <LanguageSwitcher currentLocale={activeLocale} variant="dark" compact />
+      </div>
 
       <div className="relative mx-auto flex min-h-screen max-w-md items-center px-5 py-10">
         <div className="w-full rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-7 shadow-2xl backdrop-blur-xl">
@@ -195,18 +199,16 @@ export default function SignupPage() {
           )}
 
           <div className="mt-6 space-y-4">
-            <Button
-              type="button"
-              className="w-full bg-white text-black hover:bg-white/90"
-              onClick={handleGoogleSignup}
-              disabled={submitting || authLoading}
+            <Link
+              href={googleSignupHref}
+              className="inline-flex h-10 w-full items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:pointer-events-none disabled:opacity-50"
             >
               {copy.google}
-            </Button>
+            </Link>
 
             <div className="flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-white/30">
               <span className="h-px flex-1 bg-white/10" />
-              or
+              {copy.separator}
               <span className="h-px flex-1 bg-white/10" />
             </div>
 
@@ -232,7 +234,7 @@ export default function SignupPage() {
               </Button>
             </form>
 
-            <Link href={`/${locale}/login`} className="block text-center text-sm text-white/50 hover:text-white">
+            <Link href={`/${activeLocale}/login`} className="block text-center text-sm text-white/50 hover:text-white">
               {copy.login}
             </Link>
           </div>
