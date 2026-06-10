@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { createSupabaseAdminClient } from '@/lib/supabase/admin';
-import { getStripe } from '@/server/billing/stripe';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { getStripeClient } from '@/server/billing/stripe';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
 
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Organization required.' }, { status: 403 });
   }
 
-  const supabase = createSupabaseAdminClient();
+  const supabase = createAdminClient();
   const { data: subscription, error } = await supabase
     .from('subscriptions')
     .select('stripe_customer_id')
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   const locale = url.searchParams.get('locale') ?? 'en';
   const returnUrl = `${getBaseUrl()}/${locale}/settings/billing`;
 
-  const stripe = getStripe();
+  const stripe = getStripeClient();
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: subscription.stripe_customer_id,
     return_url: returnUrl,
