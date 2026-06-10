@@ -1,8 +1,13 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { ExternalLink, FileText, UserRound, CalendarDays, Building2 } from 'lucide-react';
 
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
+import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { isPlanAtLeast } from '@/server/queries/subscription';
 
 const baseNews = [
   {
@@ -74,7 +79,11 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
     redirect(`/${locale}/login`);
   }
 
-  const news = query.ai === '1' ? [...aiNews, ...baseNews] : baseNews;
+  const organization = await getCurrentOrganizationForUser(user.id);
+  const entitlements = organization ? await getOrganizationEntitlements(organization.id) : null;
+  const canUseAiNews = entitlements ? isPlanAtLeast(entitlements.plan, 'professional') : false;
+  const wantsAiNews = query.ai === '1';
+  const news = wantsAiNews && canUseAiNews ? [...aiNews, ...baseNews] : baseNews;
   const term = (query.q ?? '').toLowerCase().trim();
   const country = query.country ?? 'all';
   const category = query.category ?? 'all';
@@ -98,7 +107,7 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
         </Link>
 
         <section className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-700">AI regulatory news</p>
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">AI regulatory news</p>
           <h1 className="mt-3 text-4xl font-black tracking-tight">European compliance news</h1>
           <p className="mt-3 max-w-3xl text-slate-600">
             Notícias regulatórias reescritas em linguagem executiva, com fonte, autor, instituição e data original. Idioma principal: {locale === 'fr' ? 'francês' : locale === 'es' ? 'espanhol' : locale === 'pt' ? 'português' : 'inglês'}.
@@ -107,11 +116,26 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
             <Link href={`/${locale}/notificacoes`} className="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:shadow-lg">
               Ver notificações
             </Link>
-            <Link href={`/${locale}/dashboard/organizations/reports-governance/news?ai=1`} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-bold transition hover:bg-slate-100">
-              Atualizar notícias com IA
-            </Link>
+            {canUseAiNews ? (
+              <Link href={`/${locale}/dashboard/organizations/reports-governance/news?ai=1`} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-bold transition hover:bg-slate-100">
+                Atualizar notícias com IA
+              </Link>
+            ) : (
+              <Link href={`/${locale}/pricing`} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-bold transition hover:bg-slate-100">
+                Desbloquear notícias IA
+              </Link>
+            )}
           </div>
         </section>
+
+        {wantsAiNews && !canUseAiNews ? (
+          <UpgradeRequiredCard
+            locale={locale}
+            title="Notícias IA exigem Professional ou superior"
+            description="O plano Essential inclui notícias regulatórias básicas. Atualizações reescritas por IA, filtros avançados e resumos por país ficam disponíveis a partir do Professional."
+            ctaLabel="Ver planos"
+          />
+        ) : null}
 
         <form className="grid gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-4" action={`/${locale}/dashboard/organizations/reports-governance/news`}>
           <input name="q" defaultValue={query.q ?? ''} placeholder="Buscar palavra-chave" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-500" />
@@ -126,7 +150,7 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
           <button className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:shadow-lg" type="submit">Filtrar notícias</button>
         </form>
 
-        {query.ai === '1' ? <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">IA simulada adicionou {aiNews.length} notícias novas e preparou notificações de atualização regulatória.</p> : null}
+        {wantsAiNews && canUseAiNews ? <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">IA simulada adicionou {aiNews.length} notícias novas e preparou notificações de atualização regulatória.</p> : null}
 
         <section className="grid gap-4 md:grid-cols-3">
           {filtered.map((item) => (
@@ -141,11 +165,11 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
                 <summary className="cursor-pointer text-sm font-bold text-slate-950">Ler mais</summary>
                 <p className="mt-3 text-sm leading-6 text-slate-700">{item.body}</p>
                 <footer className="mt-4 space-y-1 border-t border-slate-200 pt-3 text-xs text-slate-500">
-                  <p>📌 Fonte original: {item.source}</p>
-                  <p>✍️ Autor: {item.author}</p>
-                  <p>🔗 Site: {item.site}</p>
-                  <p>📅 Data da publicação original: {item.date}</p>
-                  <p>🏷️ País/Instituição relacionada: {item.country}</p>
+                  <p className="flex items-center gap-2"><FileText className="h-3.5 w-3.5" /> Fonte original: {item.source}</p>
+                  <p className="flex items-center gap-2"><UserRound className="h-3.5 w-3.5" /> Autor: {item.author}</p>
+                  <p className="flex items-center gap-2"><ExternalLink className="h-3.5 w-3.5" /> Site: {item.site}</p>
+                  <p className="flex items-center gap-2"><CalendarDays className="h-3.5 w-3.5" /> Data da publicação original: {item.date}</p>
+                  <p className="flex items-center gap-2"><Building2 className="h-3.5 w-3.5" /> País ou instituição relacionada: {item.country}</p>
                 </footer>
               </details>
             </article>
