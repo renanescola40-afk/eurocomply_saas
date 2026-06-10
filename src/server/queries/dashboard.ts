@@ -57,15 +57,17 @@ function emptyDashboardSummary() {
 
 function safeRows(result: { data: DashboardRow[] | null; error: QueryError }, label: string) {
   if (result.error) {
-    console.warn('[dashboard] query_failed', { label, code: result.error.code ?? 'unknown' });
+    if (!isExpectedSchemaFallback(result.error)) {
+      console.warn('[dashboard] query_failed', { label, code: result.error.code ?? 'unknown' });
+    }
     return [];
   }
 
   return result.data ?? [];
 }
 
-function isMissingColumn(error: QueryError) {
-  return error?.code === '42703';
+function isExpectedSchemaFallback(error: QueryError) {
+  return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST204' || error?.code === 'PGRST205';
 }
 
 export async function getDashboardSummary(organizationId: string) {
@@ -128,7 +130,7 @@ export async function recordDashboardMetricSnapshot(organizationId: string, summ
     total_documents: summary.totals.documents,
   });
 
-  if (error && !isMissingColumn(error)) {
+  if (error && !isExpectedSchemaFallback(error)) {
     console.warn('[dashboard] metric_snapshot_write_failed', { code: error.code ?? 'unknown' });
   }
 }
@@ -145,7 +147,7 @@ export async function getDashboardTrendHistory(organizationId: string, limit = 1
     .limit(limit);
 
   if (error) {
-    if (!isMissingColumn(error)) {
+    if (!isExpectedSchemaFallback(error)) {
       console.warn('[dashboard] trend_history_failed', { code: error.code ?? 'unknown' });
     }
     return [];
