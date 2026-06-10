@@ -27,6 +27,7 @@ import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
 const plans = [
   {
     name: 'Essential',
+    planKey: 'essential',
     price: '€49',
     period: '/mês',
     text: 'Plano de acesso para microempresas, consultores e equipas pequenas que querem sair do Excel sem medo.',
@@ -35,6 +36,7 @@ const plans = [
   },
   {
     name: 'Professional',
+    planKey: 'professional',
     price: '€149',
     period: '/mês',
     text: 'Para PMEs com obrigações reais, documentos, riscos e prazos que precisam de controlo consistente.',
@@ -43,6 +45,7 @@ const plans = [
   },
   {
     name: 'Business',
+    planKey: 'business',
     price: '€399',
     period: '/mês',
     text: 'Para empresas em crescimento europeu com operação multi-país, equipa interna e reporting executivo.',
@@ -89,6 +92,11 @@ function href(locale: Locale, path: string) {
   return `/${locale}${path}`;
 }
 
+function planHref(locale: Locale, plan: (typeof plans)[number]) {
+  if (plan.enterprise) return href(locale, '/contact');
+  return href(locale, `/billing/checkout/${plan.planKey}`);
+}
+
 export function EnterpriseHome({ locale }: { locale: string }) {
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const meta = LOCALE_META[activeLocale];
@@ -111,7 +119,7 @@ export function EnterpriseHome({ locale }: { locale: string }) {
           <div className="flex items-center gap-3">
             <LanguageSwitcher currentLocale={activeLocale} variant="dark" compact />
             <Link href={href(activeLocale, '/login')} className="hidden rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 sm:inline-flex">Entrar</Link>
-            <Link href={href(activeLocale, '/signup')} className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black shadow-[0_0_40px_rgba(255,255,255,.18)] transition hover:-translate-y-0.5 hover:bg-zinc-200">Assinar agora</Link>
+            <Link href={href(activeLocale, '/billing/checkout/essential')} className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black shadow-[0_0_40px_rgba(255,255,255,.18)] transition hover:-translate-y-0.5 hover:bg-zinc-200">Assinar agora</Link>
           </div>
         </nav>
       </header>
@@ -136,7 +144,7 @@ export function EnterpriseHome({ locale }: { locale: string }) {
               Empresas que usam EuroComply reduzem riscos fiscais em 73% e economizam 40h/mês em burocracia.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <Link href={href(activeLocale, '/signup')} className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-4 text-base font-bold text-black shadow-[0_0_50px_rgba(255,255,255,.18)] transition hover:-translate-y-1 hover:bg-zinc-200">Assinar Agora <ChevronRight className="h-4 w-4" /></Link>
+              <Link href={href(activeLocale, '/billing/checkout/essential')} className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-4 text-base font-bold text-black shadow-[0_0_50px_rgba(255,255,255,.18)] transition hover:-translate-y-1 hover:bg-zinc-200">Assinar Agora <ChevronRight className="h-4 w-4" /></Link>
               <a href="#demo" className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-7 py-4 text-base font-bold text-white backdrop-blur transition hover:-translate-y-1 hover:bg-white/10">Ver demonstração</a>
             </div>
           </div>
@@ -252,31 +260,23 @@ await EuroComply.monitor({
                 <span className={`text-4xl font-semibold tracking-tight transition duration-300 group-hover:scale-105 ${plan.highlighted ? 'text-black' : 'text-white group-hover:text-black'}`}>{plan.price}</span>
                 <span className={`pb-1.5 ${plan.highlighted ? 'text-zinc-600' : 'text-zinc-500 group-hover:text-zinc-600'}`}>{plan.period}</span>
               </div>
-              <Link href={href(activeLocale, plan.enterprise ? '/contact' : '/signup')} className={`mt-7 inline-flex w-full justify-center rounded-2xl px-5 py-4 font-bold transition hover:-translate-y-0.5 ${plan.highlighted ? 'bg-black text-white hover:bg-zinc-800' : 'border border-white/15 bg-white/5 text-white hover:border-black hover:bg-black hover:text-white group-hover:border-black/10 group-hover:bg-black group-hover:text-white'}`}>{plan.cta}</Link>
+              <Link href={planHref(activeLocale, plan)} className={`mt-7 inline-flex w-full justify-center rounded-2xl px-5 py-4 font-bold transition hover:-translate-y-0.5 ${plan.highlighted ? 'bg-black text-white hover:bg-zinc-800' : 'border border-white/15 bg-white/5 text-white hover:border-black hover:bg-black hover:text-white group-hover:border-black/10 group-hover:bg-black group-hover:text-white'}`}>{plan.cta}</Link>
               <ul className="mt-7 space-y-3">
                 {plan.features.map((feature) => <li key={feature} className={`flex gap-3 text-sm ${plan.highlighted ? 'text-zinc-800' : 'text-zinc-300 group-hover:text-zinc-800'}`}><Check className={`mt-0.5 h-4 w-4 shrink-0 ${plan.highlighted ? 'text-black' : 'text-white group-hover:text-black'}`} />{feature}</li>)}
               </ul>
             </article>
           ))}
         </div>
-
-        <p className="mx-auto mt-10 max-w-4xl text-center text-lg font-medium leading-8 text-white">Essential reduz a barreira de entrada. Professional captura PMEs com obrigações reais. Business vende operação, equipa e expansão europeia. Enterprise preserva valor premium para empresas reguladas e multi-país.</p>
+        <p className="mx-auto mt-10 max-w-3xl text-center text-zinc-400">Essential reduz a barreira de entrada. Professional captura PMEs com obrigações reais. Business vende operação, equipa e expansão europeia. Enterprise preserva valor premium para empresas reguladas e multi-país.</p>
       </section>
 
-      <section className="px-6 py-28">
-        <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,.12),rgba(19,19,26,1))] p-10 text-center shadow-2xl sm:p-16">
-          <h2 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">O compliance não precisa ser um pesadelo. Deixe com quem entende.</h2>
-          <Link href={href(activeLocale, '/signup')} className="mt-9 inline-flex rounded-full bg-white px-9 py-5 text-lg font-bold text-black shadow-[0_0_50px_rgba(255,255,255,.18)] transition hover:-translate-y-1 hover:bg-zinc-200">Assinar EuroComply agora</Link>
-          <p className="mt-5 text-sm text-zinc-400">Teste grátis por 14 dias. Sem compromisso.</p>
-        </div>
+      <section className="mx-6 mb-16 rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,#111118,#050508)] px-6 py-24 text-center shadow-2xl">
+        <h2 className="mx-auto max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">O compliance não precisa ser um pesadelo. Deixe com quem entende.</h2>
+        <Link href={href(activeLocale, '/billing/checkout/essential')} className="mt-8 inline-flex rounded-full bg-white px-8 py-4 text-lg font-bold text-black transition hover:-translate-y-1 hover:bg-zinc-200">Assinar EuroComply agora</Link>
+        <p className="mt-4 text-sm text-zinc-500">Teste grátis por 14 dias. Sem compromisso.</p>
       </section>
 
-      <style>{`
-        @keyframes security-marquee-right {
-          from { transform: translateX(-50%); }
-          to { transform: translateX(0); }
-        }
-      `}</style>
+      <style>{`@keyframes security-marquee-right{from{transform:translateX(-50%)}to{transform:translateX(0)}}`}</style>
       <PublicFooter locale={activeLocale} />
     </main>
   );
