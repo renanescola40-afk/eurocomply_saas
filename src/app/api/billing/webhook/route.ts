@@ -10,8 +10,22 @@ import { normalizePlan } from '@/server/queries/subscription';
 
 export const runtime = 'nodejs';
 
+type SubscriptionWithPeriod = Stripe.Subscription & {
+  current_period_end?: number | null;
+  items?: {
+    data?: Array<{ current_period_end?: number | null }>;
+  };
+};
+
 function getPlanFromSubscription(subscription: Stripe.Subscription) {
   return normalizePlan(subscription.metadata?.plan);
+}
+
+function getCurrentPeriodEnd(subscription: Stripe.Subscription) {
+  const typedSubscription = subscription as SubscriptionWithPeriod;
+  const periodEnd = typedSubscription.current_period_end ?? typedSubscription.items?.data?.[0]?.current_period_end ?? null;
+
+  return typeof periodEnd === 'number' ? new Date(periodEnd * 1000).toISOString() : null;
 }
 
 async function recordBillingActivity(subscription: Stripe.Subscription, plan: ReturnType<typeof normalizePlan>) {
@@ -58,9 +72,7 @@ async function syncSubscription(subscription: Stripe.Subscription) {
   }
 
   const plan = getPlanFromSubscription(subscription);
-  const currentPeriodEnd = subscription.items.data[0]?.current_period_end
-    ? new Date(subscription.items.data[0].current_period_end * 1000).toISOString()
-    : null;
+  const currentPeriodEnd = getCurrentPeriodEnd(subscription);
 
   const { error } = await supabase
     .from('subscriptions')
