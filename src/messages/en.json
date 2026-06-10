@@ -1,183 +1,121 @@
 {
   "landing": {
-    "badge": "EU AI Act Ready",
-    "heroTitle": "Complete AI governance for European enterprises",
-    "heroSubtitle": "Simplify compliance, monitor risk, and generate reports from a single secure platform.",
+    "nav": {
+      "platform": "Features",
+      "governance": "Security",
+      "pricing": "Plans",
+      "login": "Log in",
+      "cta": "Subscribe now"
+    },
+    "badge": "European compliance operating system",
+    "heroTitle": "Compliance that accelerates your business. Not slows it down.",
+    "heroSubtitle": "Companies using EuroComply reduce fiscal risk by 73% and save 40h/month in bureaucracy.",
     "cta": {
-      "start": "Get started",
+      "start": "Subscribe now",
       "demo": "View demo"
     },
     "badges": {
-      "gdpr": "GDPR",
-      "euHost": "EU-hosted",
-      "auditLogs": "Audit logs",
-      "soc": "SOC 2"
+      "gdpr": "GDPR compliant",
+      "euHost": "European operations",
+      "auditLogs": "Immutable audit trail",
+      "soc": "ISO 27001 in preparation"
     },
-    "console": {
-      "title": "Compliance dashboard",
-      "readiness": "Audit-ready status",
-      "impactMap": "Impact map",
-      "updated": "Updated now",
-      "row1": "Live risk assessment",
-      "row2": "System inventory",
-      "row3": "Compliance reporting",
-      "row4": "Recommended actions",
-      "risk": "Risk",
-      "high": "High",
-      "limited": "Limited",
-      "minimal": "Minimal"
-    },
-    "modules": {
-      "compliance": "Compliance",
-      "complianceDetail": "Policy compliance in real time",
-      "systems": "Systems",
-      "systemsDetail": "AI inventory and system health",
-      "documents": "Documents",
-      "documentsDetail": "Generated reports and policies",
-      "signals": "Signals",
-      "signalsDetail": "Continuous monitoring alerts"
-    },
-    "tracker": {
-      "badge": "Regulatory tracking",
-      "text": "Monitor AI Act updates and receive practical alerts."
-    },
-    "procurement": {
-      "badge": "Procurement AI",
-      "text": "Document supplier requirements and assess vendor risk."
-    },
-    "socialProof": {
-      "title": "Companies trusting EuroComply AI"
+    "security": {
+      "title": "Security your company requires",
+      "subtitle": "Controls already applied in the platform and additional layers planned for Business and Enterprise customers."
     },
     "platform": {
-      "badge": "Platform",
-      "title": "Everything your compliance team needs",
-      "subtitle": "Manage governance, inventory, reporting, and monitoring in one place."
+      "badge": "Features",
+      "title": "What you gain by subscribing to EuroComply",
+      "subtitle": "Replace spreadsheets, forgotten deadlines and improvised audits with one executive compliance cockpit."
     },
-    "capRows": {
-      "eaiAct": {
-        "title": "EU AI Act compliance",
-        "text": "Track regulatory requirements and stay aligned with industry standards."
-      },
-      "policy": {
-        "title": "Corporate policies",
-        "text": "Create, review, and publish internal policies automatically."
-      },
-      "registry": {
-        "title": "System registry",
-        "text": "Maintain an up-to-date inventory of your AI solutions."
-      },
-      "procurement": {
-        "title": "Procurement workflows",
-        "text": "Evaluate suppliers with standardized compliance data."
-      }
+    "features": {
+      "calendar": "AI calendar",
+      "calendarText": "Never miss a fiscal deadline again. Automatic alerts for new obligations.",
+      "news": "Multilingual news",
+      "newsText": "Compliance news in PT, FR, ES, EN, IT and DE, updated by AI.",
+      "risk": "Risk matrix",
+      "riskText": "Identify, assess and mitigate risks before they become fines.",
+      "employees": "Employee invitations",
+      "employeesText": "Keep your whole team aligned. Available on Enterprise workflows.",
+      "taxIds": "Multiple tax IDs by country",
+      "taxIdsText": "Expand into France, Germany, Italy, Spain and Portugal with less fiscal friction.",
+      "audit": "Audit log",
+      "auditText": "Every action recorded. Ready for inspections, board reviews and client evidence requests."
     },
-    "monitoring": {
-      "badge": "Monitoring",
-      "title": "Monitor AI risk in real time",
-      "subtitle": "Set alerts and keep visibility on safety, privacy, and compliance.",
-      "bullet1": "Policy violation detection",
-      "bullet2": "Regulatory change alerts",
-      "bullet3": "Continuous risk reporting"
-    },
-    "engine": {
-      "title": "Risk classification engine",
-      "row1": {
-        "label": "Ethical impact",
-        "weight": "40%",
-        "value": "72"
-      },
-      "row2": {
-        "label": "Data sensitivity",
-        "weight": "30%",
-        "value": "48"
-      },
-      "row3": {
-        "label": "Model maturity",
-        "weight": "20%",
-        "value": "34"
-      }
+    "infrastructure": {
+      "title": "Our team works continuously to protect your data.",
+      "subtitle": "Real-time updates, secure infrastructure and a compliance platform built for European companies.",
+      "cta": "Explore our infrastructure"
     },
     "pricing": {
-      "badge": "Pricing",
-      "title": "Plans for growing teams",
-      "starter": {
-        "name": "Starter",
-        "description": "For small teams beginning AI governance.",
-        "features": [
-          "Up to 5 monitored systems",
-          "Basic compliance documentation",
-          "Monthly audit reports",
-          "Email support",
-          "Compliance dashboard access"
-        ],
-        "cta": "Start now"
+      "badge": "Plans",
+      "title": "Choose the right plan for your company",
+      "subtitle": "The entry plan removes friction. Higher plans unlock teams, countries and enterprise evidence.",
+      "essential": {
+        "name": "Essential",
+        "description": "For micro-companies, consultants and teams with one country.",
+        "price": "€49",
+        "features": ["1 fiscal country", "1 user", "Basic legal calendar", "Basic regulatory news", "Company profile", "Up to 10 documents", "Simple risk matrix", "Basic notifications"],
+        "cta": "Start Essential"
       },
-      "growth": {
-        "name": "Growth",
-        "description": "For teams that need advanced automation and monitoring.",
-        "features": [
-          "Continuous monitoring",
-          "Automated risk assessment",
-          "Policy management",
-          "Customizable reports",
-          "Priority support"
-        ],
-        "cta": "Choose Growth"
+      "professional": {
+        "name": "Professional",
+        "description": "For SMEs with real obligations, documents, risks and deadlines.",
+        "price": "€149",
+        "features": ["Up to 2 fiscal countries", "AI calendar", "Controlled documents", "Versioning", "Complete risk matrix", "Audit log", "Basic reports", "Premium notifications", "Up to 3 users"],
+        "cta": "Choose Professional"
+      },
+      "business": {
+        "name": "Business",
+        "description": "For companies growing across Europe with internal teams.",
+        "price": "€399",
+        "features": ["Up to 5 fiscal countries", "Multi-country tax IDs", "Approval workflows", "Executive reports", "Audit packs", "AI news by country/category", "RACI matrix", "Up to 10 users", "Priority support"],
+        "cta": "Choose Business"
       },
       "enterprise": {
         "name": "Enterprise",
-        "description": "Complete solution for regulated organizations.",
-        "features": [
-          "Multi-team governance",
-          "Private workspaces",
-          "Vendor compliance integration",
-          "Advanced reporting",
-          "SLA and dedicated support"
-        ],
-        "cta": "Contact sales"
+        "description": "For regulated companies, groups, fintechs, healthtechs and large B2B suppliers.",
+        "price": "From €990",
+        "features": ["Unlimited countries", "Advanced users", "Role-based permissions", "White-label reports", "Assisted onboarding", "SLA", "DORA, NIS2, ISO 27001 and AI Act modules", "Advanced metrics", "Full audit trail"],
+        "cta": "Talk to sales"
       },
-      "popular": "Most popular",
+      "popular": "Best balance",
       "perMonth": "per month"
     },
     "finalCta": {
-      "title": "Start protecting your AI today",
-      "subtitle": "Accelerate compliance with a platform built for European teams."
+      "title": "Compliance does not need to be a nightmare. Leave it with people who understand it.",
+      "subtitle": "14-day free trial. No commitment.",
+      "button": "Subscribe to EuroComply now"
     },
     "footer": {
-      "tagline": "Your AI governance journey begins here",
-      "badges": "GDPR · AI Act · SOC 2"
-    },
-    "nav": {
-      "platform": "Platform",
-      "governance": "Governance",
-      "pricing": "Pricing",
-      "login": "Log in",
-      "cta": "Create account"
+      "tagline": "European compliance infrastructure for serious B2B companies.",
+      "badges": "GDPR · Audit trail · Risk matrix · Legal calendar"
     }
   },
   "auth": {
-    "secure": "Secure sign-in",
-    "loginTitle": "Sign in to your account",
+    "secure": "Secure access",
+    "loginTitle": "Log in to your account",
     "registerTitle": "Create a new account",
-    "subtitle": "Start protecting your AI systems with security and compliance.",
+    "subtitle": "Start managing fiscal, legal and operational compliance in Europe.",
     "continueWithGoogle": "Continue with Google",
     "fullName": "Full name",
     "companyName": "Company name",
     "email": "Email",
     "password": "Password",
-    "loggingIn": "Signing in...",
+    "loggingIn": "Logging in...",
     "creating": "Creating account...",
     "loginBtn": "Log in",
     "registerBtn": "Create account",
-    "noAccount": "Don’t have an account? Create one.",
-    "hasAccount": "Already have an account? Sign in.",
-    "successWorkspace": "Workspace created successfully!",
+    "noAccount": "No account yet? Create one.",
+    "hasAccount": "Already have an account? Log in.",
+    "successWorkspace": "Workspace created successfully.",
     "errorOnboarding": "Unable to complete onboarding.",
-    "errorCreating": "Could not create your workspace."
+    "errorCreating": "Unable to create your workspace."
   },
   "onboarding": {
     "badge": "Company details",
-    "title": "Tell us about your team",
+    "title": "Tell us about your company",
     "fullName": "Full name",
     "companyName": "Company name",
     "companySize": {
