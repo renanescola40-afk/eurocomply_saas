@@ -6,7 +6,7 @@ export type Locale = (typeof locales)[number];
 export const defaultLocale: Locale = 'en';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mapa de país → idioma (para deteção automática)
+// Mapa de país → idioma (para deteção automática europeia)
 // ─────────────────────────────────────────────────────────────────────────────
 export const COUNTRY_TO_LOCALE: Record<string, Locale> = {
   // DACH
@@ -17,7 +17,6 @@ export const COUNTRY_TO_LOCALE: Record<string, Locale> = {
   // Iberia
   ES: 'es',
   PT: 'pt',
-  BR: 'pt',
 
   // França
   FR: 'fr',
@@ -61,13 +60,13 @@ export const routing = defineRouting({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Bandeiras e nomes para o LanguageSwitcher
+// Nomes europeus para o seletor de idioma
 // ─────────────────────────────────────────────────────────────────────────────
-export const LOCALE_META: Record<Locale, { name: string; flag: string; nativeName: string }> = {
-  en: { name: 'English', flag: '🇬🇧', nativeName: 'English' },
-  pt: { name: 'Portuguese', flag: '🇧🇷', nativeName: 'Português' },
-  es: { name: 'Spanish', flag: '🇪🇸', nativeName: 'Español' },
-  fr: { name: 'French', flag: '🇫🇷', nativeName: 'Français' },
-  it: { name: 'Italian', flag: '🇮🇹', nativeName: 'Italiano' },
-  de: { name: 'German', flag: '🇩🇪', nativeName: 'Deutsch' },
+export const LOCALE_META: Record<Locale, { name: string; nativeName: string; region: string }> = {
+  en: { name: 'English', nativeName: 'English', region: 'Europe / International' },
+  pt: { name: 'Portuguese', nativeName: 'Português de Portugal', region: 'Portugal' },
+  es: { name: 'Spanish', nativeName: 'Español de España', region: 'España' },
+  fr: { name: 'French', nativeName: 'Français', region: 'France' },
+  it: { name: 'Italian', nativeName: 'Italiano', region: 'Italia' },
+  de: { name: 'German', nativeName: 'Deutsch', region: 'Deutschland' },
 };
