@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Globe2 } from 'lucide-react';
 import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
 
@@ -23,10 +23,9 @@ function switchLocalePath(pathname: string, nextLocale: Locale) {
   return `/${nextLocale}${pathname.startsWith('/') ? pathname : `/${pathname}`}`;
 }
 
-function withCurrentLocationState(path: string, search: string) {
-  if (typeof window === 'undefined') return search ? `${path}?${search}` : path;
-  const query = search ? `?${search}` : window.location.search;
-  return `${path}${query}${window.location.hash}`;
+function withCurrentLocationState(path: string) {
+  if (typeof window === 'undefined') return path;
+  return `${path}${window.location.search}${window.location.hash}`;
 }
 
 function persistLocale(locale: Locale) {
@@ -48,8 +47,6 @@ type LanguageSwitcherProps = {
 
 export function LanguageSwitcher({ currentLocale, variant = 'light', compact = false }: LanguageSwitcherProps) {
   const pathname = usePathname() || `/${currentLocale}`;
-  const searchParams = useSearchParams();
-  const search = searchParams.toString();
   const isDark = variant === 'dark';
 
   return (
@@ -57,16 +54,16 @@ export function LanguageSwitcher({ currentLocale, variant = 'light', compact = f
       {!compact ? <Globe2 className={`ml-2 h-4 w-4 ${isDark ? 'text-white/60' : 'text-muted-foreground'}`} /> : null}
       {locales.map((locale) => {
         const active = locale === currentLocale;
-        const targetPath = withCurrentLocationState(switchLocalePath(pathname, locale), search);
+        const baseTargetPath = switchLocalePath(pathname, locale);
         return (
           <Link
             key={locale}
-            href={targetPath}
+            href={baseTargetPath}
             onClick={(event) => {
               persistLocale(locale);
               if (locale !== currentLocale) {
                 event.preventDefault();
-                window.location.assign(targetPath);
+                window.location.assign(withCurrentLocationState(baseTargetPath));
               }
             }}
             className={`rounded-full px-2.5 py-1.5 text-xs font-bold uppercase tracking-[0.18em] transition ${active ? (isDark ? 'bg-white text-black' : 'bg-foreground text-background') : isDark ? 'text-white/60 hover:bg-white/10 hover:text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
