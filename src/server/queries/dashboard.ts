@@ -70,6 +70,10 @@ function isExpectedSchemaFallback(error: QueryError) {
   return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST204' || error?.code === 'PGRST205';
 }
 
+function areDashboardSnapshotsEnabled() {
+  return process.env.ENABLE_DASHBOARD_METRIC_SNAPSHOTS === 'true';
+}
+
 export async function getDashboardSummary(organizationId: string) {
   const supabase = tryCreateAdminClient();
   if (!supabase) return emptyDashboardSummary();
@@ -113,6 +117,8 @@ export async function getDashboardSummary(organizationId: string) {
 }
 
 export async function recordDashboardMetricSnapshot(organizationId: string, summary: DashboardSummary) {
+  if (!areDashboardSnapshotsEnabled()) return;
+
   const supabase = tryCreateAdminClient();
   if (!supabase) return;
 
@@ -136,6 +142,8 @@ export async function recordDashboardMetricSnapshot(organizationId: string, summ
 }
 
 export async function getDashboardTrendHistory(organizationId: string, limit = 12): Promise<DashboardTrendSnapshot[]> {
+  if (!areDashboardSnapshotsEnabled()) return [];
+
   const supabase = tryCreateAdminClient();
   if (!supabase) return [];
 
