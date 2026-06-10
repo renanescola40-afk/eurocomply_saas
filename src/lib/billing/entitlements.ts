@@ -1,13 +1,28 @@
-import { type BillingPlanId, getBillingPlan } from './plans';
+import { getBillingPlan, type BillingPlanId } from './plans';
 
 export type UsageMetric = 'users' | 'documents' | 'vendors' | 'risks';
 
 export type PlanUsage = Partial<Record<UsageMetric, number>>;
 
-export function getPlanLimit(planId: BillingPlanId | string | null | undefined, metric: UsageMetric) {
-  if (!planId) return 0;
+function normalizePlanForLimits(planId: BillingPlanId | string | null | undefined) {
+  if (!planId) return 'starter';
 
-  const plan = getBillingPlan(planId);
+  const normalized = String(planId).toLowerCase();
+
+  if (normalized === 'enterprise') return 'enterprise';
+  if (normalized === 'business') return 'business';
+  if (normalized === 'professional' || normalized === 'pro' || normalized === 'growth') return 'growth';
+  if (normalized === 'essential' || normalized === 'basic' || normalized === 'starter') return 'starter';
+
+  return 'starter';
+}
+
+export function getPlanLimit(planId: BillingPlanId | string | null | undefined, metric: UsageMetric) {
+  const normalizedPlanId = normalizePlanForLimits(planId);
+
+  if (normalizedPlanId === 'enterprise') return Number.POSITIVE_INFINITY;
+
+  const plan = getBillingPlan(normalizedPlanId);
 
   return plan?.limits[metric] ?? 0;
 }
@@ -19,7 +34,7 @@ export function isWithinPlanLimit(
 ) {
   const limit = getPlanLimit(planId, metric);
 
-  return currentUsage < limit;
+  return limit === Number.POSITIVE_INFINITY || currentUsage < limit;
 }
 
 export function getUsagePercentage(
@@ -29,6 +44,7 @@ export function getUsagePercentage(
 ) {
   const limit = getPlanLimit(planId, metric);
 
+  if (limit === Number.POSITIVE_INFINITY) return 0;
   if (!limit) return 100;
 
   return Math.min(100, Math.round((currentUsage / limit) * 100));
