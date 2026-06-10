@@ -33,6 +33,13 @@ export const dashboardNavigation: MenuItem[] = [
     ],
   },
   {
+    label: 'AI Governance',
+    href: '/ai-systems',
+    sections: [
+      { label: 'Inventário de Sistemas de IA', href: '/ai-systems', description: 'Classificação AI Act e obrigações iniciais' },
+    ],
+  },
+  {
     label: 'Evidence & Risk',
     href: `${dashboardRoot}/evidence-risk`,
     sections: [
@@ -82,6 +89,14 @@ function localizeHref(locale: string, href: string) {
   return `/${locale}${href.startsWith('/') ? href : `/${href}`}`;
 }
 
+function isActiveNavigationItem(item: MenuItem, activePage: string) {
+  return (
+    item.label === activePage ||
+    (activePage === 'AI Governance' && item.href === '/ai-systems') ||
+    dashboardNavigation.some((legacyItem) => legacyItem.label === activePage && legacyItem.href === item.href)
+  );
+}
+
 export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }: DashboardCommandNavigationProps) {
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const navigation = getLocalizedDashboardNavigation(activeLocale);
@@ -101,7 +116,7 @@ export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }
 
         <nav aria-label={navCopy.mainNavigation} className="hidden w-full items-center gap-2 whitespace-nowrap text-sm md:flex md:overflow-visible">
           {navigation.filter((item) => item.href !== '/eurocomply-home').map((item) => {
-            const isActive = item.label === activePage || dashboardNavigation.some((legacyItem) => legacyItem.label === activePage && legacyItem.href === item.href);
+            const isActive = isActiveNavigationItem(item, activePage);
             const hasSubmenu = Boolean(item.sections?.length);
 
             return (
