@@ -1,24 +1,32 @@
 import { describe, expect, it } from 'vitest';
-
-function localStatus(score: number) {
-  if (score >= 80) return 'audit_ready';
-  if (score >= 40) return 'in_progress';
-  return 'starting';
-}
+import { calculateEvidencePackScore, getEvidencePackStatus } from './audit-evidence-pack';
 
 describe('audit evidence pack readiness thresholds', () => {
   it('marks low scores as starting', () => {
-    expect(localStatus(0)).toBe('starting');
-    expect(localStatus(39)).toBe('starting');
+    expect(getEvidencePackStatus(0)).toBe('starting');
+    expect(getEvidencePackStatus(39)).toBe('starting');
   });
 
   it('marks mid scores as in progress', () => {
-    expect(localStatus(40)).toBe('in_progress');
-    expect(localStatus(79)).toBe('in_progress');
+    expect(getEvidencePackStatus(40)).toBe('in_progress');
+    expect(getEvidencePackStatus(79)).toBe('in_progress');
   });
 
   it('marks high scores as audit ready', () => {
-    expect(localStatus(80)).toBe('audit_ready');
-    expect(localStatus(100)).toBe('audit_ready');
+    expect(getEvidencePackStatus(80)).toBe('audit_ready');
+    expect(getEvidencePackStatus(100)).toBe('audit_ready');
+  });
+
+  it('calculates score from populated evidence categories', () => {
+    const score = calculateEvidencePackScore({
+      documents: [{ status: 'approved' }],
+      vendors: [{ risk_level: 'low' }],
+      risks: [{ status: 'open' }],
+      aiSystems: [{ risk_level: 'limited_transparency' }] as never,
+      aiIncidents: [{ report_status: 'closed' }] as never,
+      auditEvents: [{ event_type: 'test' }] as never,
+    });
+
+    expect(score).toBeGreaterThanOrEqual(90);
   });
 });
