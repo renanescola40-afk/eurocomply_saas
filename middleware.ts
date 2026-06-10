@@ -12,6 +12,7 @@ const protectedSegments = [
   '/profile',
   '/security-center',
   '/retention-center',
+  '/continuity-center',
   '/audit-pack',
   '/notificacoes',
   '/auditoria',
