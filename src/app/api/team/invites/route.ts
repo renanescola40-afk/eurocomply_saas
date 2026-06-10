@@ -41,6 +41,10 @@ function isRateLimited(key: string) {
   return false;
 }
 
+function getInviteEntityId(invite: { id?: unknown }) {
+  return typeof invite.id === 'string' ? invite.id : undefined;
+}
+
 export async function POST(request: Request) {
   const user = await getCurrentUser();
 
@@ -110,7 +114,7 @@ export async function POST(request: Request) {
     actorUserId: user.id,
     action: 'team_invite_created',
     entityType: 'team_invite',
-    entityId: result.invite.id,
+    entityId: getInviteEntityId(result.invite),
     metadata: {
       emailDomain: email.split('@')[1] ?? 'unknown',
       role,
