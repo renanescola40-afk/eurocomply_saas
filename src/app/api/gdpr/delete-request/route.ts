@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
+import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAuditEvent } from '@/server/queries/audit-events';
@@ -23,14 +24,13 @@ export async function POST(request: NextRequest) {
   const entitlementCheck = await assertGdprSelfServiceEnabled(organization.id);
 
   if (!entitlementCheck.ok) {
-    return NextResponse.json(
-      {
-        error: entitlementCheck.error,
-        message: entitlementCheck.message,
-        plan: entitlementCheck.entitlements.plan,
-      },
-      { status: entitlementCheck.status },
-    );
+    return upgradeRequiredResponse({
+      error: entitlementCheck.error,
+      message: entitlementCheck.message,
+      plan: entitlementCheck.entitlements.plan,
+      requiredPlan: 'professional',
+      entitlements: entitlementCheck.entitlements,
+    }, entitlementCheck.status);
   }
 
   const body = await request.json().catch(() => ({}));
@@ -52,8 +52,11 @@ export async function POST(request: NextRequest) {
     message: 'Pedido de apagamento GDPR recebido e enviado para revisão.',
   });
 
-  return NextResponse.json({
-    status: 'pending_review',
-    message: 'Deletion request received. A compliance administrator must review retention, legal hold, billing and audit requirements before deletion.',
-  });
+  return NextResponse.json(
+    {
+      status: 'pending_review',
+      message: 'Deletion request received. A compliance administrator must review retention, legal hold, billing and audit requirements before deletion.',
+    },
+    { headers: { 'Cache-Control': 'no-store' } },
+  );
 }
