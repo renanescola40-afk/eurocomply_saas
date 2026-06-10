@@ -72,13 +72,13 @@ const rolesCopy: Record<string, string> = {
   de: 'Workspace-Rollen',
 };
 
-const evidencePackCopy: Record<string, { label: string; description: string }> = {
-  en: { label: 'Evidence Pack', description: 'Export a structured audit evidence snapshot' },
-  pt: { label: 'Pacote de Evidências', description: 'Exporte uma fotografia estruturada de evidências de auditoria' },
-  es: { label: 'Paquete de Evidencias', description: 'Exporta una fotografía estructurada de evidencias de auditoría' },
-  fr: { label: 'Pack de Preuves', description: 'Exporter un instantané structuré des preuves d’audit' },
-  it: { label: 'Pacchetto Evidenze', description: 'Esporta uno snapshot strutturato delle evidenze di audit' },
-  de: { label: 'Evidence Pack', description: 'Strukturierten Audit-Nachweis-Snapshot exportieren' },
+const evidencePackCopy: Record<string, { label: string; description: string; verify: string; verifyDescription: string }> = {
+  en: { label: 'Evidence Pack', description: 'Export a structured audit evidence snapshot', verify: 'Verify Evidence Pack', verifyDescription: 'Validate exported pack hash and signature status' },
+  pt: { label: 'Pacote de Evidências', description: 'Exporte uma fotografia estruturada de evidências de auditoria', verify: 'Verificar Evidências', verifyDescription: 'Valide hash e estado da assinatura do pacote exportado' },
+  es: { label: 'Paquete de Evidencias', description: 'Exporta una fotografía estructurada de evidencias de auditoría', verify: 'Verificar Evidencias', verifyDescription: 'Valida hash y estado de firma del paquete exportado' },
+  fr: { label: 'Pack de Preuves', description: 'Exporter un instantané structuré des preuves d’audit', verify: 'Vérifier le Pack', verifyDescription: 'Valider le hash et l’état de signature du pack exporté' },
+  it: { label: 'Pacchetto Evidenze', description: 'Esporta uno snapshot strutturato delle evidenze di audit', verify: 'Verifica Evidenze', verifyDescription: 'Valida hash e stato firma del pacchetto esportato' },
+  de: { label: 'Evidence Pack', description: 'Strukturierten Audit-Nachweis-Snapshot exportieren', verify: 'Evidence Pack prüfen', verifyDescription: 'Hash und Signaturstatus des exportierten Pakets prüfen' },
 };
 
 function getAiGovernanceCopy(locale: string) {
@@ -136,6 +136,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
       sections: [
         { label: nav.complianceReports, href: `${dashboardRoot}/reports-governance`, description: nav.complianceReportsDescription },
         { label: evidencePack.label, href: '/audit-pack', description: evidencePack.description },
+        { label: evidencePack.verify, href: '/audit-pack/verify', description: evidencePack.verifyDescription },
         { label: nav.europeanNews, href: `${dashboardRoot}/reports-governance/news`, description: nav.europeanNewsDescription },
         { label: nav.approvals, href: '/aprovacoes', description: nav.approvalsDescription },
         { label: nav.minutesGovernance, href: `${dashboardRoot}/reports-governance`, description: nav.minutesGovernanceDescription },
