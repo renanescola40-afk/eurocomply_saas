@@ -59,7 +59,41 @@ export function EnterpriseHome({ locale }: { locale: string }) {
 
       <section className="mx-auto max-w-7xl px-6 py-20"><p className="text-sm font-bold uppercase tracking-[0.22em] text-emerald-300">O que a sua empresa ganha</p><h2 className="mt-3 max-w-3xl text-4xl font-black tracking-tight">Menos ansiedade regulatória. Mais velocidade comercial.</h2><div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{benefits.map(([icon,title,text]) => <div key={title} className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-xl transition hover:-translate-y-1 hover:bg-white/[0.07]"><div className="text-4xl">{icon}</div><h3 className="mt-5 text-xl font-bold">{title}</h3><p className="mt-3 text-sm leading-6 text-white/60">{text}</p></div>)}</div></section>
 
-      <section className="mx-auto max-w-7xl px-6 py-20"><div className="text-center"><p className="text-sm font-bold uppercase tracking-[0.22em] text-amber-200">Planos</p><h2 className="mt-3 text-4xl font-black tracking-tight">Entre por €49. Escale quando compliance virar operação séria.</h2><p className="mx-auto mt-4 max-w-3xl text-white/60">Essential reduz a barreira de entrada. Professional e Business capturam equipas em crescimento. Enterprise preserva o valor premium para organizações reguladas e multi-país.</p></div><div className="mt-12 grid gap-6 lg:grid-cols-4">{plans.map((plan) => <div key={plan.name} className={`relative rounded-[2rem] border p-7 shadow-2xl transition hover:-translate-y-1 ${plan.highlighted ? 'border-amber-300/50 bg-amber-300/10' : 'border-white/10 bg-white/[0.04]'}`}>{plan.highlighted ? <div className="absolute -top-4 left-6 rounded-full bg-amber-300 px-4 py-2 text-xs font-black text-slate-950">⭐ Melhor equilíbrio para empresas europeias</div> : null}<h3 className="text-2xl font-black">{plan.name}</h3><p className="mt-2 text-white/60">{plan.text}</p><p className="mt-6 text-4xl font-black">{plan.price}</p><ul className="mt-6 space-y-3 text-sm text-white/70">{plan.features.map((feature) => <li key={feature}>✓ {feature}</li>)}</ul><Link href={href(activeLocale, '/pricing')} className={`mt-8 block rounded-full px-5 py-4 text-center font-black transition hover:-translate-y-0.5 ${plan.highlighted ? 'bg-amber-300 text-slate-950 hover:bg-amber-200' : 'border border-white/15 text-white hover:bg-white/10'}`}>{plan.name === 'Enterprise' ? 'Falar com vendas' : plan.name === 'Essential' ? 'Começar por €49' : 'Assinar agora'}</Link></div>)}</div></section>
+      <section className="relative isolate overflow-hidden px-6 py-24">
+        <div className="absolute inset-0 -z-10 bg-black" />
+        <div className="absolute left-1/2 top-0 -z-10 h-[40rem] w-[80%] -translate-x-1/2 rounded-full bg-blue-700/30 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 -z-10 h-96 bg-[linear-gradient(to_right,#ffffff17_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0d_1px,transparent_1px)] bg-[size:70px_80px] [mask-image:radial-gradient(50%_50%,white,transparent)]" />
+        <div className="mx-auto max-w-7xl">
+          <div className="text-center">
+            <p className="text-sm font-bold uppercase tracking-[0.22em] text-blue-300">Planos</p>
+            <h2 className="mt-3 text-4xl font-black tracking-tight">Entre por €49. Escale quando compliance virar operação séria.</h2>
+            <p className="mx-auto mt-4 max-w-3xl text-white/60">Essential reduz a barreira de entrada. Professional e Business capturam equipas em crescimento. Enterprise preserva o valor premium para organizações reguladas e multi-país.</p>
+          </div>
+          <div className="mt-8 flex justify-center">
+            <div className="rounded-full border border-blue-500/40 bg-neutral-900 p-1 text-sm font-semibold text-white shadow-2xl shadow-blue-900/30">
+              <span className="inline-flex rounded-full bg-gradient-to-t from-blue-500 to-blue-600 px-6 py-3 shadow-lg shadow-blue-700/30">Monthly</span>
+              <span className="inline-flex px-6 py-3 text-gray-300">Yearly soon</span>
+            </div>
+          </div>
+          <div className="mt-12 grid gap-6 lg:grid-cols-4">
+            {plans.map((plan) => (
+              <div key={plan.name} className={`relative rounded-[1.6rem] border border-neutral-800 bg-gradient-to-r from-neutral-950 via-neutral-900 to-neutral-950 p-7 text-white shadow-2xl transition hover:-translate-y-1 ${plan.highlighted ? 'z-20 shadow-[0px_-13px_220px_0px_rgba(37,99,235,.55)] ring-1 ring-blue-500/50' : 'z-10'}`}>
+                {plan.highlighted ? <div className="absolute -top-4 left-6 rounded-full bg-gradient-to-t from-blue-500 to-blue-600 px-4 py-2 text-xs font-black text-white shadow-lg shadow-blue-800/40">⭐ Melhor equilíbrio para empresas europeias</div> : null}
+                <h3 className="text-3xl font-semibold">{plan.name}</h3>
+                <div className="mt-6 flex items-baseline"><span className="text-4xl font-semibold">{plan.price}</span></div>
+                <p className="mt-4 min-h-20 text-sm leading-6 text-gray-300">{plan.text}</p>
+                <Link href={href(activeLocale, '/pricing')} className={`mt-6 block w-full rounded-xl p-4 text-center text-lg font-bold transition hover:-translate-y-0.5 ${plan.highlighted ? 'border border-blue-500 bg-gradient-to-t from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-800/40' : 'border border-neutral-800 bg-gradient-to-t from-neutral-950 to-neutral-700 text-white shadow-lg shadow-neutral-950'}`}>{plan.name === 'Enterprise' ? 'Falar com vendas' : plan.name === 'Essential' ? 'Começar por €49' : 'Assinar agora'}</Link>
+                <div className="mt-6 border-t border-neutral-700 pt-5">
+                  <h4 className="mb-3 text-sm font-medium text-white">Inclui:</h4>
+                  <ul className="space-y-2">
+                    {plan.features.map((feature) => <li key={feature} className="flex items-center gap-2 text-sm text-gray-300"><span className="h-2.5 w-2.5 rounded-full bg-neutral-500" />{feature}</li>)}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section className="bg-white py-20 text-slate-950"><div className="mx-auto max-w-7xl px-6"><p className="text-sm font-black uppercase tracking-[0.22em] text-blue-700">Segurança para decisores B2B</p><h2 className="mt-3 max-w-3xl text-4xl font-black tracking-tight">Confiança antes do contrato. Evidência antes da auditoria.</h2><div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">{security.map(([icon,title]) => <div key={title} className="rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm"><div className="text-3xl">{icon}</div><h3 className="mt-4 font-black">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">Arquitetura pensada para dados empresariais sensíveis, auditoria e separação multi-tenant.</p></div>)}</div></div></section>
 
