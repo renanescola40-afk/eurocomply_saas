@@ -29,6 +29,7 @@ function href(locale: Locale, path: string) { return `/${locale}${path}`; }
 export function EnterpriseHome({ locale }: { locale: string }) {
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const meta = LOCALE_META[activeLocale];
+  const localeName = meta.nativeName ?? meta.name;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -38,7 +39,7 @@ export function EnterpriseHome({ locale }: { locale: string }) {
 
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
           <Link href={`/${activeLocale}`} className="flex items-center gap-3 font-bold"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-950">EC</span>EuroComply</Link>
-          <div className="flex items-center gap-3 text-sm"><span className="hidden text-white/50 sm:inline">{meta.label}</span><Link href={href(activeLocale, '/pricing')} className="hidden text-white/70 hover:text-white sm:inline">Preços</Link><Link href={href(activeLocale, '/login')} className="rounded-full border border-white/15 px-4 py-2 hover:bg-white/10">Entrar</Link></div>
+          <div className="flex items-center gap-3 text-sm"><span className="hidden text-white/50 sm:inline">{localeName}</span><Link href={href(activeLocale, '/pricing')} className="hidden text-white/70 hover:text-white sm:inline">Preços</Link><Link href={href(activeLocale, '/login')} className="rounded-full border border-white/15 px-4 py-2 hover:bg-white/10">Entrar</Link></div>
         </nav>
 
         <div className="mx-auto grid max-w-7xl gap-12 px-6 pb-28 pt-16 lg:grid-cols-[1.05fr_.95fr] lg:items-center">
