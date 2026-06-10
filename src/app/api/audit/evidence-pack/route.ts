@@ -8,7 +8,10 @@ import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { buildAuditEvidencePack } from '@/server/queries/audit-evidence-pack';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
+import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+
+export const runtime = 'nodejs';
 
 function jsonDownloadResponse(payload: unknown, filename: string) {
   return new NextResponse(JSON.stringify(payload, null, 2), {
@@ -88,6 +91,13 @@ export async function GET() {
       role: permission.role,
       entitlements: planCheck.entitlements,
     });
+    const integrity = buildEvidencePackIntegrity(pack);
+    const exportPayload = {
+      schemaVersion: '2026-06-10',
+      exportType: 'eurocomply.audit_evidence_pack',
+      payload: pack,
+      integrity,
+    };
 
     await createAuditEvent({
       organizationId: organization.id,
@@ -104,13 +114,15 @@ export async function GET() {
         aiSystems: pack.summary.aiSystems,
         aiIncidents: pack.summary.aiIncidents,
         actorRole: permission.role,
+        payloadHash: integrity.payloadHash,
+        signed: integrity.signed,
       },
     });
 
     const date = new Date().toISOString().slice(0, 10);
     const filename = `eurocomply-audit-evidence-pack-${safeFilenamePart(organization.slug ?? organization.name)}-${date}.json`;
 
-    return jsonDownloadResponse(pack, filename);
+    return jsonDownloadResponse(exportPayload, filename);
   } catch (error) {
     reportError(error, {
       area: 'audit_evidence_pack_export',
