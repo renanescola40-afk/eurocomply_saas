@@ -5,6 +5,7 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { assertCsvExportsEnabled } from '@/server/billing/entitlements';
+import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
 
 const VENDORS_CSV_HEADER = ['Name', 'Category', 'Risk level', 'Review status', 'Created at', 'Updated at'];
@@ -22,14 +23,13 @@ export async function GET() {
   const entitlementCheck = await assertCsvExportsEnabled(organization.id);
 
   if (!entitlementCheck.ok) {
-    return NextResponse.json(
-      {
-        error: entitlementCheck.error,
-        message: entitlementCheck.message,
-        plan: entitlementCheck.entitlements.plan,
-      },
-      { status: entitlementCheck.status },
-    );
+    return upgradeRequiredResponse({
+      error: entitlementCheck.error,
+      message: entitlementCheck.message,
+      plan: entitlementCheck.entitlements.plan,
+      requiredPlan: 'professional',
+      entitlements: entitlementCheck.entitlements,
+    }, entitlementCheck.status);
   }
 
   const rateLimit = await checkDistributedRateLimit({
