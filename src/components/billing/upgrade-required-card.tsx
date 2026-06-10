@@ -7,11 +7,13 @@ export function UpgradeRequiredCard({
   title,
   description,
   requiredPlan = 'Business',
+  ctaLabel = 'Ver planos',
 }: {
   locale: string;
   title: string;
   description: string;
   requiredPlan?: string;
+  ctaLabel?: string;
 }) {
   return (
     <section className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 shadow-2xl shadow-black/20">
@@ -26,7 +28,7 @@ export function UpgradeRequiredCard({
         </div>
         <Button asChild className="rounded-full bg-white text-slate-950 hover:bg-white/90">
           <Link href={`/${locale}/pricing`}>
-            Ver planos <ArrowUpRight className="h-4 w-4" />
+            {ctaLabel} <ArrowUpRight className="h-4 w-4" />
           </Link>
         </Button>
       </div>
