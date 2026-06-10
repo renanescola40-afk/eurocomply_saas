@@ -12,42 +12,54 @@ export type LocalizedMenuItem = LocalizedMenuLink & {
   sections?: LocalizedMenuLink[];
 };
 
-const aiGovernanceCopy: Record<string, { label: string; description: string; inventory: string; inventoryDescription: string }> = {
+const aiGovernanceCopy: Record<string, { label: string; description: string; inventory: string; inventoryDescription: string; incidents: string; incidentsDescription: string }> = {
   en: {
     label: 'AI Governance',
     description: 'AI systems inventory and AI Act classification',
     inventory: 'AI Systems Inventory',
     inventoryDescription: 'Register AI tools, roles, risk domains and obligations',
+    incidents: 'AI Incident Register',
+    incidentsDescription: 'Track serious incidents, triage deadlines and authority-ready evidence',
   },
   pt: {
     label: 'Governação de IA',
     description: 'Inventário de sistemas de IA e classificação AI Act',
     inventory: 'Inventário de Sistemas de IA',
     inventoryDescription: 'Registe ferramentas, papéis, domínios de risco e obrigações',
+    incidents: 'Registo de Incidentes de IA',
+    incidentsDescription: 'Acompanhe incidentes graves, prazos de triagem e evidências para autoridades',
   },
   es: {
     label: 'Gobierno de IA',
     description: 'Inventario de sistemas de IA y clasificación AI Act',
     inventory: 'Inventario de Sistemas de IA',
     inventoryDescription: 'Registra herramientas, roles, dominios de riesgo y obligaciones',
+    incidents: 'Registro de Incidentes de IA',
+    incidentsDescription: 'Controla incidentes graves, plazos de triaje y evidencias para autoridades',
   },
   fr: {
     label: 'Gouvernance IA',
     description: 'Inventaire des systèmes IA et classification AI Act',
     inventory: 'Inventaire des Systèmes IA',
     inventoryDescription: 'Recenser outils, rôles, domaines de risque et obligations',
+    incidents: 'Registre des Incidents IA',
+    incidentsDescription: 'Suivre incidents graves, échéances de triage et preuves prêtes pour autorités',
   },
   it: {
     label: 'Governance IA',
     description: 'Inventario sistemi IA e classificazione AI Act',
     inventory: 'Inventario Sistemi IA',
     inventoryDescription: 'Registra strumenti, ruoli, domini di rischio e obblighi',
+    incidents: 'Registro Incidenti IA',
+    incidentsDescription: 'Monitora incidenti gravi, scadenze di triage ed evidenze per autorità',
   },
   de: {
     label: 'KI-Governance',
     description: 'KI-Systeminventar und AI-Act-Klassifizierung',
     inventory: 'KI-Systeminventar',
     inventoryDescription: 'Tools, Rollen, Risikobereiche und Pflichten erfassen',
+    incidents: 'KI-Vorfallregister',
+    incidentsDescription: 'Schwerwiegende Vorfälle, Triage-Fristen und behördenfähige Nachweise verfolgen',
   },
 };
 
@@ -76,6 +88,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
       description: aiNav.description,
       sections: [
         { label: aiNav.inventory, href: '/ai-systems', description: aiNav.inventoryDescription },
+        { label: aiNav.incidents, href: '/ai-incidents', description: aiNav.incidentsDescription },
         { label: nav.riskMatrix, href: '/riscos', description: nav.riskMatrixDescription },
         { label: nav.raciMatrix, href: '/raci', description: nav.raciMatrixDescription },
       ],
