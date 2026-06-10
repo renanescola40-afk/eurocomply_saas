@@ -2,7 +2,8 @@
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, FileText, Plus, UploadCloud } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileText, Plus, UploadCloud } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -22,6 +23,11 @@ type InitialDocument = {
   version: number | null;
   created_at?: string | null;
   updated_at?: string | null;
+};
+
+type DocumentEntitlements = {
+  plan: string;
+  maxDocuments: number;
 };
 
 const storageKey = 'eurocomply-controlled-documents-demo';
@@ -47,13 +53,35 @@ function normalizeInitialDocuments(initialDocuments: InitialDocument[]): Control
   }));
 }
 
-export function DocumentsClient({ locale, initialDocuments = [] }: { locale: string; initialDocuments?: InitialDocument[] }) {
+function formatPlan(plan: string) {
+  return plan.charAt(0).toUpperCase() + plan.slice(1);
+}
+
+function formatLimit(limit?: number) {
+  if (typeof limit !== 'number' || !Number.isFinite(limit)) return 'ilimitado';
+  return String(limit);
+}
+
+export function DocumentsClient({
+  locale,
+  initialDocuments = [],
+  entitlements,
+}: {
+  locale: string;
+  initialDocuments?: InitialDocument[];
+  entitlements?: DocumentEntitlements | null;
+}) {
   const serverDocuments = useMemo(() => normalizeInitialDocuments(initialDocuments), [initialDocuments]);
   const [documents, setDocuments] = useState<ControlledDocument[]>(serverDocuments.length > 0 ? serverDocuments : defaultDocuments);
   const [title, setTitle] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [toast, setToast] = useState('');
+
+  const maxDocuments = entitlements?.maxDocuments;
+  const hasFiniteLimit = typeof maxDocuments === 'number' && Number.isFinite(maxDocuments);
+  const quotaReached = hasFiniteLimit && documents.length >= maxDocuments;
+  const usageLabel = `${documents.length}/${formatLimit(maxDocuments)}`;
 
   useEffect(() => {
     if (serverDocuments.length > 0) {
@@ -83,6 +111,11 @@ export function DocumentsClient({ locale, initialDocuments = [] }: { locale: str
   async function uploadDocument(event: FormEvent) {
     event.preventDefault();
 
+    if (quotaReached) {
+      showToast(`O plano ${formatPlan(entitlements?.plan ?? 'essential')} atingiu o limite de ${formatLimit(maxDocuments)} documentos.`);
+      return;
+    }
+
     if (!title.trim() && !file) {
       showToast('Informe o nome do documento ou selecione um arquivo.');
       return;
@@ -109,7 +142,7 @@ export function DocumentsClient({ locale, initialDocuments = [] }: { locale: str
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        showToast(payload.error ?? 'Não foi possível carregar o documento com segurança.');
+        showToast(payload.message ?? payload.error ?? 'Não foi possível carregar o documento com segurança.');
         return;
       }
 
@@ -170,10 +203,25 @@ export function DocumentsClient({ locale, initialDocuments = [] }: { locale: str
         <p className="mt-3 max-w-2xl text-muted-foreground">Upload validado, versionamento e aprovação visual para políticas, atas, certificados e evidências.</p>
       </section>
 
+      {entitlements ? (
+        <Alert className="rounded-[1.5rem] border bg-background/90">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Plano {formatPlan(entitlements.plan)}: {usageLabel} documentos utilizados</AlertTitle>
+          <AlertDescription>
+            {quotaReached ? (
+              <span>O limite deste plano foi atingido. Faça upgrade para continuar a carregar documentos controlados.</span>
+            ) : (
+              <span>Este limite também é validado no servidor antes de qualquer upload.</span>
+            )}
+            <Button asChild variant="link" className="ml-1 h-auto p-0"><Link href={`/${locale}/pricing`}>Ver upgrade</Link></Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <form onSubmit={uploadDocument} className="grid gap-3 rounded-[2rem] border bg-background/90 p-5 shadow-sm md:grid-cols-[1fr_1fr_auto]">
-        <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Nome do documento" className="min-w-0 rounded-2xl border bg-background px-4 py-3 text-sm" />
-        <input onChange={onFileChange} type="file" accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/png,image/jpeg" className="min-w-0 rounded-2xl border bg-background px-4 py-3 text-sm" />
-        <Button type="submit" disabled={isUploading} className="rounded-full"><UploadCloud className="h-4 w-4" />{isUploading ? 'A carregar...' : 'Upload seguro'}</Button>
+        <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Nome do documento" disabled={quotaReached} className="min-w-0 rounded-2xl border bg-background px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60" />
+        <input onChange={onFileChange} type="file" disabled={quotaReached} accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/png,image/jpeg" className="min-w-0 rounded-2xl border bg-background px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60" />
+        <Button type="submit" disabled={isUploading || quotaReached} className="rounded-full"><UploadCloud className="h-4 w-4" />{isUploading ? 'A carregar...' : quotaReached ? 'Limite atingido' : 'Upload seguro'}</Button>
       </form>
 
       <section className="grid gap-4 md:grid-cols-2">
