@@ -12,6 +12,7 @@ const loginCopy: Record<string, {
   title: string;
   subtitle: string;
   google: string;
+  separator: string;
   email: string;
   password: string;
   submit: string;
@@ -22,6 +23,7 @@ const loginCopy: Record<string, {
     title: 'Sign in to EuroComply',
     subtitle: 'Access your compliance workspace with Google or email.',
     google: 'Continue with Google',
+    separator: 'or',
     email: 'Email',
     password: 'Password',
     submit: 'Sign in with email',
@@ -30,10 +32,11 @@ const loginCopy: Record<string, {
   },
   pt: {
     title: 'Entrar no EuroComply',
-    subtitle: 'Acesse seu workspace de compliance com Google ou email.',
+    subtitle: 'Aceda ao seu workspace de compliance com Google ou email.',
     google: 'Continuar com Google',
+    separator: 'ou',
     email: 'Email',
-    password: 'Senha',
+    password: 'Palavra-passe',
     submit: 'Entrar com email',
     signup: 'Criar conta',
     errorTitle: 'Não foi possível concluir o login',
@@ -42,6 +45,7 @@ const loginCopy: Record<string, {
     title: 'Entrar en EuroComply',
     subtitle: 'Accede a tu workspace de compliance con Google o email.',
     google: 'Continuar con Google',
+    separator: 'o',
     email: 'Email',
     password: 'Contraseña',
     submit: 'Entrar con email',
@@ -52,6 +56,7 @@ const loginCopy: Record<string, {
     title: 'Connexion à EuroComply',
     subtitle: 'Accédez à votre espace compliance avec Google ou email.',
     google: 'Continuer avec Google',
+    separator: 'ou',
     email: 'Email',
     password: 'Mot de passe',
     submit: 'Connexion par email',
@@ -62,6 +67,7 @@ const loginCopy: Record<string, {
     title: 'Accedi a EuroComply',
     subtitle: 'Accedi al workspace compliance con Google o email.',
     google: 'Continua con Google',
+    separator: 'o',
     email: 'Email',
     password: 'Password',
     submit: 'Accedi con email',
@@ -72,6 +78,7 @@ const loginCopy: Record<string, {
     title: 'Bei EuroComply anmelden',
     subtitle: 'Melden Sie sich mit Google oder E-Mail an.',
     google: 'Mit Google fortfahren',
+    separator: 'oder',
     email: 'E-Mail',
     password: 'Passwort',
     submit: 'Mit E-Mail anmelden',
@@ -169,7 +176,7 @@ export default function LoginPage() {
 
             <div className="flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-white/30">
               <span className="h-px flex-1 bg-white/10" />
-              or
+              {copy.separator}
               <span className="h-px flex-1 bg-white/10" />
             </div>
 
