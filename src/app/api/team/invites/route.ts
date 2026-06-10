@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { requireEnterprisePlan } from '@/server/queries/subscription';
 import { createOrganizationInvite } from '@/server/queries/invites';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
+import { getOrganizationEntitlements } from '@/server/billing/entitlements';
+import { isPlanAtLeast } from '@/server/queries/subscription';
 import { isRateLimited } from '@/server/security/rate-limit';
 
 const allowedRoles = new Set(['Admin', 'Editor', 'Visualizador']);
@@ -61,18 +62,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
   }
 
-  try {
-    await requireEnterprisePlan(organization.id);
-  } catch {
+  const entitlements = await getOrganizationEntitlements(organization.id);
+
+  if (!entitlements.employeeInvites) {
     await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
-      action: 'enterprise_invite_blocked',
+      action: 'team_invite_blocked',
       entityType: 'team_invite',
-      metadata: { reason: 'enterprise_required' },
+      metadata: { reason: 'business_required', plan: entitlements.plan },
     });
 
-    return NextResponse.json({ error: 'Enterprise plan required' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'business_plan_required', message: 'Team invites require the Business plan or higher.' },
+      { status: 402 },
+    );
   }
 
   let payload: unknown;
@@ -95,6 +99,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid invite role' }, { status: 400 });
   }
 
+  if (role === 'Admin' && !isPlanAtLeast(entitlements.plan, 'enterprise')) {
+    return NextResponse.json(
+      { error: 'enterprise_plan_required', message: 'Admin invitations require the Enterprise plan.' },
+      { status: 402 },
+    );
+  }
+
   const result = await createOrganizationInvite({
     organizationId: organization.id,
     invitedBy: user.id,
@@ -111,6 +122,7 @@ export async function POST(request: Request) {
     metadata: {
       emailDomain: email.split('@')[1] ?? 'unknown',
       role,
+      plan: entitlements.plan,
       persisted: result.persisted,
     },
   });
@@ -127,5 +139,6 @@ export async function POST(request: Request) {
     persisted: result.persisted,
     auditPersisted: audit.persisted,
     notificationPersisted: notification.persisted,
+    plan: entitlements.plan,
   });
 }
