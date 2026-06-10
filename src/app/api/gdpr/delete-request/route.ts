@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAuditEvent } from '@/server/queries/audit-events';
@@ -19,6 +20,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
   }
 
+  const entitlementCheck = await assertGdprSelfServiceEnabled(organization.id);
+
+  if (!entitlementCheck.ok) {
+    return NextResponse.json(
+      {
+        error: entitlementCheck.error,
+        message: entitlementCheck.message,
+        plan: entitlementCheck.entitlements.plan,
+      },
+      { status: entitlementCheck.status },
+    );
+  }
+
   const body = await request.json().catch(() => ({}));
   const reason = typeof body.reason === 'string' && body.reason.trim().length > 0 ? body.reason.trim().slice(0, 500) : 'No reason provided';
 
@@ -28,7 +42,7 @@ export async function POST(request: NextRequest) {
     action: 'gdpr_delete_requested',
     entityType: 'organization',
     entityId: organization.id,
-    metadata: { reason, status: 'pending_review' },
+    metadata: { reason, status: 'pending_review', plan: entitlementCheck.entitlements.plan },
   });
 
   await createNotification({
