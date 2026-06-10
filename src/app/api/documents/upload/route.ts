@@ -5,6 +5,7 @@ import { createAuditEvent } from '@/server/queries/audit-events';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { getCurrentUser } from '@/server/queries/auth';
 import { createNotification } from '@/server/queries/notifications';
+import { assertDocumentQuota } from '@/server/billing/entitlements';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -37,6 +38,20 @@ export async function POST(request: NextRequest) {
 
   if (!organization) {
     return NextResponse.json({ error: 'Organization access required.' }, { status: 403 });
+  }
+
+  const quota = await assertDocumentQuota(organization.id);
+
+  if (!quota.ok) {
+    return NextResponse.json(
+      {
+        error: quota.error,
+        message: quota.message,
+        plan: quota.entitlements.plan,
+        currentCount: quota.currentCount,
+      },
+      { status: quota.status },
+    );
   }
 
   let formData: FormData;
@@ -117,6 +132,8 @@ export async function POST(request: NextRequest) {
       title,
       mimeType: file.type,
       sizeBytes: file.size,
+      plan: quota.entitlements.plan,
+      documentCountBeforeUpload: quota.currentCount,
     },
   });
 
@@ -130,5 +147,9 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     document,
     checksum,
+    plan: quota.entitlements.plan,
+    remainingDocuments: Number.isFinite(quota.entitlements.maxDocuments)
+      ? Math.max(quota.entitlements.maxDocuments - quota.currentCount - 1, 0)
+      : null,
   });
 }
