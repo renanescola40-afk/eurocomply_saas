@@ -5,11 +5,11 @@ import { requireEnterprisePlan } from '@/server/queries/subscription';
 import { createOrganizationInvite } from '@/server/queries/invites';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
+import { isRateLimited } from '@/server/security/rate-limit';
 
 const allowedRoles = new Set(['Admin', 'Editor', 'Visualizador']);
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
-const inviteAttempts = new Map<string, { count: number; resetAt: number }>();
 
 function isValidEmail(value: unknown) {
   return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -21,24 +21,6 @@ function getClientIp(request: Request) {
     request.headers.get('x-real-ip') ||
     'unknown'
   );
-}
-
-function isRateLimited(key: string) {
-  const now = Date.now();
-  const current = inviteAttempts.get(key);
-
-  if (!current || current.resetAt <= now) {
-    inviteAttempts.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return false;
-  }
-
-  if (current.count >= RATE_LIMIT_MAX_ATTEMPTS) {
-    return true;
-  }
-
-  current.count += 1;
-  inviteAttempts.set(key, current);
-  return false;
 }
 
 function getInviteEntityId(invite: unknown) {
@@ -58,9 +40,15 @@ export async function POST(request: Request) {
   }
 
   const clientIp = getClientIp(request);
-  const rateLimitKey = `${user.id}:${clientIp}`;
+  const rateLimitKey = `team-invite:${user.id}:${clientIp}`;
 
-  if (isRateLimited(rateLimitKey)) {
+  if (
+    await isRateLimited({
+      key: rateLimitKey,
+      limit: RATE_LIMIT_MAX_ATTEMPTS,
+      windowMs: RATE_LIMIT_WINDOW_MS,
+    })
+  ) {
     return NextResponse.json(
       { error: 'Too many invite attempts. Please wait before trying again.' },
       { status: 429 },
