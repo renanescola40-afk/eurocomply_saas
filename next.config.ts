@@ -52,13 +52,17 @@ const nextConfig: NextConfig = {
 };
 
 const nextIntlConfig = withNextIntl(nextConfig);
+const shouldUploadSentryArtifacts = Boolean(
+  process.env.SENTRY_ORG && process.env.SENTRY_PROJECT && process.env.SENTRY_AUTH_TOKEN,
+);
 
-export default withSentryConfig(nextIntlConfig, {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  tunnelRoute: '/monitoring',
-  disableLogger: true,
-});
+export default shouldUploadSentryArtifacts
+  ? withSentryConfig(nextIntlConfig, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      silent: !process.env.CI,
+      widenClientFileUpload: true,
+      tunnelRoute: '/monitoring',
+    })
+  : nextIntlConfig;
