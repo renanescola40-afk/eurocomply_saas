@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Download, FileArchive, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { Download, FileArchive, Fingerprint, LockKeyhole, ShieldCheck } from 'lucide-react';
 
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
@@ -20,6 +20,8 @@ const copy = {
     businessRequired: 'Audit Evidence Pack is available on Business and Enterprise plans.',
     sections: ['Controlled documents', 'Vendors', 'Risks', 'AI systems', 'AI incidents', 'Audit trail'],
     nextActions: 'Recommended next actions',
+    integrity: 'Integrity protected export',
+    integrityDescription: 'Every JSON export includes a SHA-256 payload hash and can be signed with an organization-controlled signing secret for verification.',
   },
   pt: {
     eyebrow: 'Evidências de Auditoria',
@@ -30,6 +32,8 @@ const copy = {
     businessRequired: 'O Pacote de Evidências está disponível nos planos Business e Enterprise.',
     sections: ['Documentos controlados', 'Fornecedores', 'Riscos', 'Sistemas de IA', 'Incidentes de IA', 'Trilha de auditoria'],
     nextActions: 'Próximas ações recomendadas',
+    integrity: 'Exportação com integridade protegida',
+    integrityDescription: 'Cada export JSON inclui hash SHA-256 do payload e pode ser assinado com um segredo controlado pela organização para verificação.',
   },
   es: {
     eyebrow: 'Evidencias de Auditoría',
@@ -40,6 +44,8 @@ const copy = {
     businessRequired: 'El Paquete de Evidencias está disponible en Business y Enterprise.',
     sections: ['Documentos controlados', 'Proveedores', 'Riesgos', 'Sistemas de IA', 'Incidentes de IA', 'Registro de auditoría'],
     nextActions: 'Próximas acciones recomendadas',
+    integrity: 'Exportación con integridad protegida',
+    integrityDescription: 'Cada export JSON incluye un hash SHA-256 del payload y puede firmarse con un secreto controlado por la organización para verificación.',
   },
   fr: {
     eyebrow: 'Preuves d’audit',
@@ -50,6 +56,8 @@ const copy = {
     businessRequired: 'Le pack de preuves est disponible sur Business et Enterprise.',
     sections: ['Documents contrôlés', 'Fournisseurs', 'Risques', 'Systèmes IA', 'Incidents IA', 'Journal d’audit'],
     nextActions: 'Actions recommandées',
+    integrity: 'Export protégé par intégrité',
+    integrityDescription: 'Chaque export JSON inclut un hash SHA-256 du payload et peut être signé avec un secret contrôlé par l’organisation.',
   },
   it: {
     eyebrow: 'Evidenze di audit',
@@ -60,6 +68,8 @@ const copy = {
     businessRequired: 'Il pacchetto evidenze è disponibile nei piani Business ed Enterprise.',
     sections: ['Documenti controllati', 'Fornitori', 'Rischi', 'Sistemi IA', 'Incidenti IA', 'Audit trail'],
     nextActions: 'Azioni consigliate',
+    integrity: 'Export con integrità protetta',
+    integrityDescription: 'Ogni export JSON include un hash SHA-256 del payload e può essere firmato con un segreto controllato dall’organizzazione.',
   },
   de: {
     eyebrow: 'Audit-Nachweise',
@@ -70,6 +80,8 @@ const copy = {
     businessRequired: 'Das Evidence Pack ist in Business und Enterprise verfügbar.',
     sections: ['Kontrollierte Dokumente', 'Anbieter', 'Risiken', 'KI-Systeme', 'KI-Incidents', 'Audit Trail'],
     nextActions: 'Empfohlene nächste Schritte',
+    integrity: 'Export mit Integritätsschutz',
+    integrityDescription: 'Jeder JSON-Export enthält einen SHA-256-Payload-Hash und kann mit einem organisationskontrollierten Secret signiert werden.',
   },
 } as const;
 
@@ -153,6 +165,18 @@ export default async function AuditPackPage({ params }: PageProps) {
                 <LockKeyhole className="h-5 w-5 text-violet-300" />
                 <p className="mt-3 text-3xl font-semibold">{permission.role}</p>
                 <p className="text-sm text-slate-400">Export role</p>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 p-6 text-emerald-50">
+              <div className="flex items-start gap-4">
+                <div className="rounded-2xl bg-emerald-300/15 p-3">
+                  <Fingerprint className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">{t.integrity}</h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-emerald-50/80">{t.integrityDescription}</p>
+                </div>
               </div>
             </div>
 
