@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, Plus, Save, Trash2 } from 'lucide-react';
+import { CheckCircle2, Plus, Save, ShieldAlert, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -15,6 +15,12 @@ type Risk = {
   action: string;
 };
 
+type RiskEntitlements = {
+  plan: string;
+  advancedRiskMatrix: boolean;
+  approvalWorkflows: boolean;
+} | null;
+
 const defaultRisks: Risk[] = [
   { id: 'risk-1', title: 'Revisão de fornecedores atrasada', probability: 'Média', impact: 'Alto', owner: 'Legal', action: 'Atualizar DPAs e próxima data de revisão.' },
   { id: 'risk-2', title: 'Evidência de política sem aprovação', probability: 'Baixa', impact: 'Médio', owner: 'Compliance', action: 'Enviar política para workflow de aprovação.' },
@@ -22,10 +28,13 @@ const defaultRisks: Risk[] = [
 
 const storageKey = 'eurocomply-risk-register-demo';
 
-export function RisksClient({ locale }: { locale: string }) {
+export function RisksClient({ locale, entitlements }: { locale: string; entitlements: RiskEntitlements }) {
   const [risks, setRisks] = useState<Risk[]>(defaultRisks);
   const [toast, setToast] = useState('');
   const [form, setForm] = useState({ title: '', probability: 'Média' as Risk['probability'], impact: 'Médio' as Risk['impact'], owner: '', action: '' });
+  const advancedRiskMatrix = entitlements?.advancedRiskMatrix ?? false;
+  const approvalWorkflows = entitlements?.approvalWorkflows ?? false;
+  const planName = entitlements?.plan ? entitlements.plan.charAt(0).toUpperCase() + entitlements.plan.slice(1) : 'Essential';
 
   useEffect(() => {
     const saved = window.localStorage.getItem(storageKey);
@@ -51,7 +60,7 @@ export function RisksClient({ locale }: { locale: string }) {
     }
     setRisks((current) => [{ id: crypto.randomUUID(), ...form }, ...current]);
     setForm({ title: '', probability: 'Média', impact: 'Médio', owner: '', action: '' });
-    showToast('Risco adicionado e salvo localmente.');
+    showToast(advancedRiskMatrix ? 'Risco adicionado ao registro avançado.' : 'Risco adicionado ao registro básico.');
   }
 
   function removeRisk(id: string) {
@@ -59,20 +68,50 @@ export function RisksClient({ locale }: { locale: string }) {
     showToast('Risco removido do registro.');
   }
 
+  function requestExecutiveReview() {
+    if (!approvalWorkflows) {
+      showToast('Workflows de aprovação exigem o plano Business ou superior.');
+      return;
+    }
+
+    showToast('Risco marcado para revisão executiva.');
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 md:px-8 md:py-12">
       {toast ? <div className="fixed right-4 top-4 z-50 rounded-2xl border bg-background px-4 py-3 text-sm shadow-xl"><CheckCircle2 className="mr-2 inline h-4 w-4 text-emerald-600" />{toast}</div> : null}
 
       <section className="rounded-[2rem] border bg-background/90 p-6 shadow-xl shadow-primary/5 backdrop-blur md:p-8">
-        <Badge className="rounded-full uppercase tracking-[0.18em]">Risk register</Badge>
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge className="rounded-full uppercase tracking-[0.18em]">Risk register</Badge>
+          <Badge variant="outline" className="rounded-full">Plano {planName}</Badge>
+          {!advancedRiskMatrix ? <Badge variant="secondary" className="rounded-full">Modo básico</Badge> : null}
+        </div>
         <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">Matriz de Riscos</h1>
-        <p className="mt-3 max-w-2xl text-muted-foreground">CRUD simulado para probabilidade, impacto, responsável e plano de ação. Persistência em localStorage para demo segura.</p>
+        <p className="mt-3 max-w-2xl text-muted-foreground">
+          Identifique riscos, responsáveis e planos de ação. Matrizes avançadas, workflows e revisão executiva ficam disponíveis nos planos Business e Enterprise.
+        </p>
         <div className="mt-6 grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl border bg-muted/20 p-4"><p className="text-sm text-muted-foreground">Riscos totais</p><p className="text-3xl font-semibold">{risks.length}</p></div>
           <div className="rounded-2xl border bg-muted/20 p-4"><p className="text-sm text-muted-foreground">Críticos</p><p className="text-3xl font-semibold">{criticalCount}</p></div>
-          <div className="rounded-2xl border bg-muted/20 p-4"><p className="text-sm text-muted-foreground">Próximo passo</p><Link className="font-medium text-primary" href={`/${locale}/aprovacoes`}>Enviar ações para aprovação</Link></div>
+          <div className="rounded-2xl border bg-muted/20 p-4">
+            <p className="text-sm text-muted-foreground">Próximo passo</p>
+            {approvalWorkflows ? <Link className="font-medium text-primary" href={`/${locale}/aprovacoes`}>Enviar ações para aprovação</Link> : <Link className="font-medium text-primary" href={`/${locale}/pricing`}>Desbloquear workflows</Link>}
+          </div>
         </div>
       </section>
+
+      {!advancedRiskMatrix ? (
+        <section className="rounded-[1.5rem] border bg-background/80 p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="mt-1 h-5 w-5 text-muted-foreground" />
+            <div>
+              <h2 className="font-semibold">Matriz avançada disponível em Professional+</h2>
+              <p className="mt-1 text-sm text-muted-foreground">O plano Essential mantém o registro básico. Faça upgrade para classificação avançada, exportações e análise executiva.</p>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <form onSubmit={addRisk} className="grid gap-3 rounded-[2rem] border bg-background/90 p-5 shadow-sm md:grid-cols-6">
         <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Título do risco" className="rounded-2xl border bg-background px-4 py-3 text-sm md:col-span-2" />
@@ -88,7 +127,7 @@ export function RisksClient({ locale }: { locale: string }) {
           <article key={risk.id} className="rounded-[1.5rem] border bg-background/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
-                <h2 className="text-xl font-semibold"><AlertTriangle className="mr-2 inline h-5 w-5 text-amber-500" />{risk.title}</h2>
+                <h2 className="text-xl font-semibold"><ShieldAlert className="mr-2 inline h-5 w-5 text-muted-foreground" />{risk.title}</h2>
                 <p className="mt-2 text-sm text-muted-foreground">Plano: {risk.action || 'Definir plano de ação'}</p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -98,7 +137,7 @@ export function RisksClient({ locale }: { locale: string }) {
               </div>
             </div>
             <div className="mt-4 flex gap-2">
-              <Button type="button" variant="outline" className="rounded-full" onClick={() => showToast('Risco marcado para revisão executiva.')}><Save className="h-4 w-4" />Revisar</Button>
+              <Button type="button" variant="outline" className="rounded-full" onClick={requestExecutiveReview}><Save className="h-4 w-4" />Revisar</Button>
               <Button type="button" variant="outline" className="rounded-full" onClick={() => removeRisk(risk.id)}><Trash2 className="h-4 w-4" />Excluir</Button>
             </div>
           </article>
