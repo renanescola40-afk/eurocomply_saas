@@ -13,6 +13,8 @@ export type PlanEntitlements = {
   employeeInvites: boolean;
   approvalWorkflows: boolean;
   executiveReports: boolean;
+  csvExports: boolean;
+  gdprSelfService: boolean;
   whiteLabelReports: boolean;
 };
 
@@ -28,6 +30,8 @@ const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
     employeeInvites: false,
     approvalWorkflows: false,
     executiveReports: false,
+    csvExports: false,
+    gdprSelfService: false,
     whiteLabelReports: false,
   },
   professional: {
@@ -41,6 +45,8 @@ const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
     employeeInvites: false,
     approvalWorkflows: false,
     executiveReports: false,
+    csvExports: true,
+    gdprSelfService: true,
     whiteLabelReports: false,
   },
   business: {
@@ -54,6 +60,8 @@ const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
     employeeInvites: true,
     approvalWorkflows: true,
     executiveReports: true,
+    csvExports: true,
+    gdprSelfService: true,
     whiteLabelReports: false,
   },
   enterprise: {
@@ -67,6 +75,8 @@ const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
     employeeInvites: true,
     approvalWorkflows: true,
     executiveReports: true,
+    csvExports: true,
+    gdprSelfService: true,
     whiteLabelReports: true,
   },
 };
@@ -89,6 +99,38 @@ export async function assertPlanAtLeast(organizationId: string, minimumPlan: Sub
       status: 402,
       error: `${minimumPlan}_plan_required`,
       message: `This feature requires the ${minimumPlan} plan or higher.`,
+      entitlements,
+    };
+  }
+
+  return { ok: true as const, entitlements };
+}
+
+export async function assertCsvExportsEnabled(organizationId: string) {
+  const entitlements = await getOrganizationEntitlements(organizationId);
+
+  if (!entitlements.csvExports) {
+    return {
+      ok: false as const,
+      status: 402,
+      error: 'professional_plan_required',
+      message: 'CSV exports require the Professional plan or higher.',
+      entitlements,
+    };
+  }
+
+  return { ok: true as const, entitlements };
+}
+
+export async function assertGdprSelfServiceEnabled(organizationId: string) {
+  const entitlements = await getOrganizationEntitlements(organizationId);
+
+  if (!entitlements.gdprSelfService) {
+    return {
+      ok: false as const,
+      status: 402,
+      error: 'professional_plan_required',
+      message: 'Self-service GDPR exports require the Professional plan or higher.',
       entitlements,
     };
   }
