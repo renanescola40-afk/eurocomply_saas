@@ -4,6 +4,7 @@ import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan } from '@/server/billing/plans';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -26,6 +27,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'organization_required' }, { status: 400 });
   }
 
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: 'manage_billing',
+  });
+
+  if (!permission.ok) {
+    return permissionDeniedResponse(permission);
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
   const stripe = getStripeClient();
   const priceId = getStripePriceId(plan);
@@ -41,12 +52,14 @@ export async function POST(request: Request) {
       organization_id: organization.id,
       user_id: user.id,
       plan,
+      actor_role: permission.role ?? 'unknown',
     },
     subscription_data: {
       metadata: {
         organization_id: organization.id,
         user_id: user.id,
         plan,
+        actor_role: permission.role ?? 'unknown',
       },
     },
     allow_promotion_codes: true,
