@@ -3,7 +3,7 @@ import { locales, type Locale } from '@/lib/i18n/routing';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { getStripePriceId, isSelfServePlan } from '@/server/billing/plans';
-import { getStripe } from '@/server/billing/stripe';
+import { getStripeClient } from '@/server/billing/stripe';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
 
@@ -34,7 +34,7 @@ export default async function BillingCheckoutPage({
     redirect(`/${activeLocale}/onboarding`);
   }
 
-  const stripe = getStripe();
+  const stripe = getStripeClient();
   const baseUrl = getBaseUrl();
   const priceId = getStripePriceId(plan);
 
