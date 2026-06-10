@@ -76,7 +76,7 @@ export async function listAiIncidents(organizationId: string): Promise<AiInciden
     return [];
   }
 
-  return (data ?? []) as AiIncidentRecord[];
+  return (data ?? []) as unknown as AiIncidentRecord[];
 }
 
 export async function createAiIncident(input: CreateAiIncidentInput): Promise<AiIncidentRecord> {
@@ -107,5 +107,5 @@ export async function createAiIncident(input: CreateAiIncidentInput): Promise<Ai
     throw error;
   }
 
-  return data as AiIncidentRecord;
+  return data as unknown as AiIncidentRecord;
 }
