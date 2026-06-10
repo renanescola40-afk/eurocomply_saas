@@ -72,6 +72,15 @@ const rolesCopy: Record<string, string> = {
   de: 'Workspace-Rollen',
 };
 
+const evidencePackCopy: Record<string, { label: string; description: string }> = {
+  en: { label: 'Evidence Pack', description: 'Export a structured audit evidence snapshot' },
+  pt: { label: 'Pacote de Evidências', description: 'Exporte uma fotografia estruturada de evidências de auditoria' },
+  es: { label: 'Paquete de Evidencias', description: 'Exporta una fotografía estructurada de evidencias de auditoría' },
+  fr: { label: 'Pack de Preuves', description: 'Exporter un instantané structuré des preuves d’audit' },
+  it: { label: 'Pacchetto Evidenze', description: 'Esporta uno snapshot strutturato delle evidenze di audit' },
+  de: { label: 'Evidence Pack', description: 'Strukturierten Audit-Nachweis-Snapshot exportieren' },
+};
+
 function getAiGovernanceCopy(locale: string) {
   return aiGovernanceCopy[locale] ?? aiGovernanceCopy.en;
 }
@@ -80,10 +89,15 @@ function getRolesCopy(locale: string) {
   return rolesCopy[locale] ?? rolesCopy.en;
 }
 
+function getEvidencePackCopy(locale: string) {
+  return evidencePackCopy[locale] ?? evidencePackCopy.en;
+}
+
 export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuItem[] {
   const nav = getAppDictionary(locale).nav;
   const aiNav = getAiGovernanceCopy(locale);
   const rolesLabel = getRolesCopy(locale);
+  const evidencePack = getEvidencePackCopy(locale);
 
   return [
     { label: nav.eurocomply, href: '/eurocomply-home', description: nav.eurocomplyDescription },
@@ -121,6 +135,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
       href: `${dashboardRoot}/reports-governance`,
       sections: [
         { label: nav.complianceReports, href: `${dashboardRoot}/reports-governance`, description: nav.complianceReportsDescription },
+        { label: evidencePack.label, href: '/audit-pack', description: evidencePack.description },
         { label: nav.europeanNews, href: `${dashboardRoot}/reports-governance/news`, description: nav.europeanNewsDescription },
         { label: nav.approvals, href: '/aprovacoes', description: nav.approvalsDescription },
         { label: nav.minutesGovernance, href: `${dashboardRoot}/reports-governance`, description: nav.minutesGovernanceDescription },
