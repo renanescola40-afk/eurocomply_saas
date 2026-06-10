@@ -15,11 +15,16 @@ const recommended = [
   'STRIPE_PRICE_BUSINESS_MONTHLY',
   'HEALTHCHECK_TOKEN',
   'SENTRY_AUTH_TOKEN',
+  'UPSTASH_REDIS_REST_URL',
+  'UPSTASH_REDIS_REST_TOKEN',
 ];
 
 const requiredFiles = [
   'supabase/migrations/20260610_public_launch_readiness.sql',
   'supabase/migrations/20260610_billing_stripe_sync.sql',
+  'supabase/migrations/20260610_ai_governance_inventory.sql',
+  'supabase/migrations/20260610_ai_incident_register.sql',
+  'src/app/api/ops/enterprise-readiness/route.ts',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
   'docs/LEGAL_READINESS.md',
