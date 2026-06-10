@@ -12,6 +12,7 @@ const companyLinks = [
 ];
 
 const trustLinks = [
+  { label: 'Trust Center', href: '/trust' },
   { label: 'Privacy', href: '/privacy' },
   { label: 'Terms', href: '/terms' },
   { label: 'DPA', href: '/dpa' },
