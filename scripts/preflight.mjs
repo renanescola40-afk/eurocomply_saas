@@ -28,6 +28,8 @@ const requiredFiles = [
   'src/app/api/ops/enterprise-readiness/route.ts',
   'src/server/governance/retention-policy.ts',
   'src/app/[locale]/retention-center/page.tsx',
+  'src/server/governance/continuity-policy.ts',
+  'src/app/[locale]/continuity-center/page.tsx',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
   'docs/LEGAL_READINESS.md',
