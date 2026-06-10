@@ -6,12 +6,17 @@ import {
   CalendarDays,
   Check,
   ChevronRight,
+  Database,
   FileText,
+  Fingerprint,
   Globe2,
+  KeyRound,
   Layers,
   Lock,
+  Network,
   Server,
   ShieldCheck,
+  ShieldAlert,
   TrendingUp,
   Users,
 } from 'lucide-react';
@@ -56,14 +61,18 @@ const plans = [
 ];
 
 const securityItems = [
-  ['Criptografia ponta a ponta', ShieldCheck],
-  ['GDPR Compliant', Lock],
-  ['Log de auditoria imutável', FileText],
-  ['Isolamento multi-empresa', Building2],
-  ['Autenticação segura', ShieldCheck],
-  ['Vercel + Supabase', Server],
-  ['ISO 27001 em preparação', Award],
-  ['Testes de penetração anuais', Lock],
+  ['Criptografia ponta a ponta', ShieldCheck, 'Dados sensíveis protegidos em trânsito e repouso.'],
+  ['GDPR Compliant', Lock, 'Fluxos alinhados com privacidade e direitos do titular.'],
+  ['Log de auditoria imutável', FileText, 'Toda ação crítica fica registrada para fiscalização.'],
+  ['Isolamento multi-empresa', Building2, 'Separação rígida de dados entre organizações.'],
+  ['Autenticação segura', Fingerprint, 'Sessões protegidas com Supabase Auth e políticas RLS.'],
+  ['Infraestrutura Vercel + Supabase', Server, 'Deploy global, banco gerenciado e segurança server-side.'],
+  ['Políticas RLS por organização', Database, 'Acesso baseado em membership e contexto empresarial.'],
+  ['Controle de permissões', KeyRound, 'Perfis e roles para operações sensíveis.'],
+  ['Monitoramento de eventos', Bell, 'Alertas para atividades, aprovações e prazos críticos.'],
+  ['Backups e continuidade planejados', Network, 'Roadmap de resiliência para operações enterprise.'],
+  ['ISO 27001 em preparação', Award, 'Programa de maturidade e governança de segurança.'],
+  ['Testes de penetração anuais', ShieldAlert, 'Controlo previsto no plano de segurança enterprise.'],
 ] as const;
 
 const featureCards = [
@@ -172,17 +181,28 @@ export function EnterpriseHome({ locale }: { locale: string }) {
         </div>
       </section>
 
-      <section id="security" className="overflow-hidden border-y border-white/10 bg-[#0D0D14] py-14">
+      <section id="security" className="overflow-hidden border-y border-white/10 bg-[#0D0D14] py-16">
         <div className="mx-auto max-w-7xl px-6">
-          <h2 className="text-center text-3xl font-semibold tracking-tight text-white">Segurança que sua empresa exige</h2>
+          <p className="text-center text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">Security architecture</p>
+          <h2 className="mt-4 text-center text-3xl font-semibold tracking-tight text-white sm:text-4xl">Segurança que sua empresa exige</h2>
+          <p className="mx-auto mt-4 max-w-3xl text-center text-sm leading-6 text-zinc-400">Controles já aplicados na plataforma e camadas adicionais planejadas para clientes Business e Enterprise.</p>
         </div>
-        <div className="mt-10 flex w-max animate-[security-marquee_28s_linear_infinite] gap-4 px-6">
-          {[...securityItems, ...securityItems].map(([label, Icon], index) => (
-            <div key={`${label}-${index}`} className="flex min-w-[280px] items-center gap-3 rounded-2xl border border-white/10 bg-[#13131A] px-5 py-4 text-sm text-zinc-300">
-              <Icon className="h-5 w-5 text-cyan-200" />
-              <span>{label}</span>
-            </div>
-          ))}
+        <div className="relative mt-10 overflow-hidden">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-[#0D0D14] to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-[#0D0D14] to-transparent" />
+          <div className="flex w-max animate-[security-marquee-right_30s_linear_infinite] gap-4 px-6 hover:[animation-play-state:paused]">
+            {[...securityItems, ...securityItems].map(([label, Icon, description], index) => (
+              <div key={`${label}-${index}`} className="group flex min-w-[330px] items-start gap-4 rounded-2xl border border-white/10 bg-[#13131A]/90 px-5 py-5 text-left shadow-[0_18px_60px_rgba(0,0,0,.24)] transition hover:-translate-y-1 hover:border-cyan-300/30 hover:bg-[#171722]">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-100">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-white">{label}</span>
+                  <span className="mt-1 block text-xs leading-5 text-zinc-500 group-hover:text-zinc-400">{description}</span>
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -193,51 +213,55 @@ export function EnterpriseHome({ locale }: { locale: string }) {
         </div>
         <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {featureCards.map(([title, description, Icon]) => (
-            <article key={title} className="group rounded-3xl border border-[#2A2A35] bg-[#13131A] p-7 transition hover:-translate-y-1 hover:border-cyan-300/30 hover:bg-[#171722]">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-100">
-                <Icon className="h-5 w-5" />
-              </div>
-              <h3 className="mt-7 text-xl font-semibold text-white">{title}</h3>
+            <article key={title} className="rounded-3xl border border-[#2A2A35] bg-[#13131A] p-7 transition hover:-translate-y-1 hover:border-cyan-300/30">
+              <Icon className="h-7 w-7 text-cyan-200" />
+              <h3 className="mt-6 text-xl font-semibold text-white">{title}</h3>
               <p className="mt-3 min-h-20 text-sm leading-6 text-zinc-400">{description}</p>
-              <a href="#plans" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-cyan-200 transition group-hover:gap-3">Saiba mais <ChevronRight className="h-4 w-4" /></a>
+              <a href="#plans" className="mt-6 inline-flex items-center gap-1 text-sm font-semibold text-cyan-200">Saiba mais <ChevronRight className="h-4 w-4" /></a>
             </article>
           ))}
         </div>
       </section>
 
-      <section id="demo" className="relative isolate overflow-hidden px-6 py-28">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_70%_30%,rgba(124,58,237,.30),transparent_30%),radial-gradient(circle_at_20%_60%,rgba(0,229,255,.16),transparent_30%)]" />
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center">
-          <div className="rounded-[2rem] border border-white/10 bg-[#13131A]/80 p-5 shadow-2xl">
-            <div className="rounded-[1.4rem] bg-black p-5 font-mono text-sm leading-7 text-zinc-300">
-              <p className="text-cyan-200">const protection = await EuroComply.monitor();</p>
-              <p>riskMatrix.evaluate(company, jurisdictions);</p>
-              <p>auditLog.write('policy.approved');</p>
-              <p>calendarAI.detectNewDeadlines('EU');</p>
-              <p className="text-violet-300">deploy.status = 'zero-downtime';</p>
-            </div>
+      <section id="demo" className="relative overflow-hidden border-y border-white/10 bg-black px-6 py-28">
+        <div className="absolute inset-0 opacity-40 [background:radial-gradient(circle_at_70%_20%,rgba(0,229,255,.22),transparent_34%)]" />
+        <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:items-center">
+          <div className="rounded-3xl border border-white/10 bg-[#09090E] p-6 font-mono text-sm text-zinc-300 shadow-2xl">
+            <div className="mb-5 flex gap-2"><span className="h-3 w-3 rounded-full bg-zinc-700" /><span className="h-3 w-3 rounded-full bg-zinc-700" /><span className="h-3 w-3 rounded-full bg-cyan-300" /></div>
+            <pre className="whitespace-pre-wrap leading-7 text-zinc-400"><code>{`type ComplianceControl = {
+  company: EuropeanEntity;
+  fiscalIds: CountryTaxProfile[];
+  auditTrail: ImmutableEvent[];
+  riskScore: LiveMetric;
+};
+
+await EuroComply.monitor({
+  deadlines: 'real-time',
+  evidence: 'controlled',
+  security: 'enterprise',
+});`}</code></pre>
           </div>
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-violet-200">Infraestrutura</p>
-            <h2 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">Nossa equipe trabalha 24/7 para proteger seus dados.</h2>
-            <p className="mt-6 text-lg leading-8 text-zinc-300">Atualizações em tempo real, arquitetura multi-tenant isolada e operação preparada para empresas que não podem falhar em auditorias, contratos e expansão europeia.</p>
-            <a href="#security" className="mt-8 inline-flex rounded-full border border-white/15 bg-white/5 px-7 py-4 font-bold text-white transition hover:-translate-y-1 hover:bg-white/10">Conheça nossa infraestrutura</a>
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">Infraestrutura</p>
+            <h2 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">Nossa equipe trabalha para proteger seus dados e reduzir risco operacional.</h2>
+            <p className="mt-6 text-lg leading-8 text-zinc-400">Atualizações contínuas, arquitetura server-side, autenticação segura e isolamento por organização para empresas que tratam compliance como infraestrutura crítica.</p>
+            <a href="#security" className="mt-8 inline-flex rounded-full border border-white/15 px-7 py-4 font-bold text-white transition hover:-translate-y-1 hover:bg-white/10">Conheça nossa infraestrutura</a>
           </div>
         </div>
       </section>
 
       <section id="plans" className="mx-auto max-w-7xl px-6 py-28">
         <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">Planos e preços</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">Planos</p>
           <h2 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">Escolha o plano certo para sua empresa</h2>
-          <p className="mx-auto mt-5 max-w-3xl text-lg text-zinc-400">Entre por €49. Escale quando compliance virar operação séria.</p>
+          <p className="mx-auto mt-5 max-w-3xl text-lg text-zinc-400">Quanto você está perdendo por não ter uma operação de compliance estruturada?</p>
         </div>
         <div className="mt-14 grid gap-5 lg:grid-cols-4">
           {plans.map((plan) => (
-            <article key={plan.name} className={`relative rounded-3xl border bg-[#13131A] p-7 transition hover:-translate-y-1 ${plan.highlighted ? 'border-cyan-300/50 shadow-[0_0_70px_rgba(0,229,255,.16)]' : plan.enterprise ? 'border-amber-300/45 shadow-[0_0_70px_rgba(251,191,36,.12)]' : 'border-[#2A2A35]'}`}>
-              {plan.highlighted ? <div className="absolute -top-4 left-7 rounded-full border border-cyan-300/40 bg-cyan-300 px-4 py-2 text-xs font-bold text-slate-950">Melhor equilíbrio</div> : null}
-              {plan.enterprise ? <div className="absolute -top-4 left-7 rounded-full border border-amber-300/40 bg-amber-300 px-4 py-2 text-xs font-bold text-slate-950">Plano consultivo</div> : null}
-              <h3 className="text-2xl font-semibold text-white">{plan.name}</h3>
+            <article key={plan.name} className={`relative rounded-3xl border p-7 transition hover:-translate-y-1 ${plan.highlighted ? 'border-cyan-300/60 bg-cyan-300/[0.08] shadow-[0_0_80px_rgba(0,229,255,.16)]' : plan.enterprise ? 'border-amber-300/50 bg-amber-300/[0.06]' : 'border-[#2A2A35] bg-[#13131A]'}`}>
+              {plan.highlighted ? <span className="rounded-full bg-cyan-300 px-3 py-1 text-xs font-bold text-slate-950">Melhor equilíbrio</span> : null}
+              {plan.enterprise ? <span className="rounded-full bg-amber-300 px-3 py-1 text-xs font-bold text-slate-950">Consultivo premium</span> : null}
+              <h3 className="mt-5 text-2xl font-semibold text-white">{plan.name}</h3>
               <p className="mt-4 min-h-28 text-sm leading-6 text-zinc-400">{plan.text}</p>
               <div className="mt-7 flex items-end gap-1">
                 <span className="text-4xl font-semibold tracking-tight text-white">{plan.price}</span>
@@ -274,6 +298,12 @@ export function EnterpriseHome({ locale }: { locale: string }) {
         </div>
       </section>
 
+      <style>{`
+        @keyframes security-marquee-right {
+          from { transform: translateX(-50%); }
+          to { transform: translateX(0); }
+        }
+      `}</style>
       <PublicFooter locale={activeLocale} />
     </main>
   );
