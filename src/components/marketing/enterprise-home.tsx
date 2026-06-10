@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
+import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
 
@@ -78,10 +79,10 @@ const securityItems = [
 const featureCards = [
   ['Calendário com IA', 'Nunca mais perca um prazo fiscal. Alertas automáticos de novas obrigações.', CalendarDays],
   ['Notícias multilíngues', 'Notícias de compliance em PT, FR, ES e EN, sempre atualizadas por IA.', Globe2],
-  ['Matriz de riscos', 'Identifique, avalie e mitigue riscos antes que virem multas.', TrendingUp],
-  ['Convite de funcionários', 'Time todo alinhado com acessos e responsabilidades. Disponível no Enterprise.', Users],
-  ['Múltiplos NIFs por país', 'Expanda para França, Alemanha e Itália sem dores fiscais.', Layers],
-  ['Log de auditoria', 'Toda ação registrada. Pronto para fiscalização, clientes e auditorias.', FileText],
+  ['Matriz de riscos', 'Identifique, avalie e mitigue riscos antes que virem multas.', ShieldAlert],
+  ['Convite de funcionários', 'Time todo alinhado com permissões e acesso Enterprise.', Users],
+  ['Múltiplos NIFs por país', 'Expanda para França, Alemanha, Itália e Espanha sem dores fiscais.', Building2],
+  ['Log de auditoria', 'Toda ação registrada e pronta para fiscalização.', FileText],
 ] as const;
 
 function href(locale: Locale, path: string) {
@@ -108,6 +109,7 @@ export function EnterpriseHome({ locale }: { locale: string }) {
             <span className="text-zinc-500">{localeName}</span>
           </div>
           <div className="flex items-center gap-3">
+            <LanguageSwitcher currentLocale={activeLocale} variant="dark" compact />
             <Link href={href(activeLocale, '/login')} className="hidden rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 sm:inline-flex">Entrar</Link>
             <Link href={href(activeLocale, '/signup')} className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black shadow-[0_0_40px_rgba(255,255,255,.18)] transition hover:-translate-y-0.5 hover:bg-zinc-200">Assinar agora</Link>
           </div>
