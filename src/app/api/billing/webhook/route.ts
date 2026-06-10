@@ -1,0 +1,94 @@
+import { headers } from 'next/headers';
+import { NextResponse } from 'next/server';
+import Stripe from 'stripe';
+
+import { createAdminClient } from '@/lib/supabase/admin';
+import { normalizePlan } from '@/server/queries/subscription';
+import { getStripeClient } from '@/server/billing/stripe';
+
+export const runtime = 'nodejs';
+
+function getPlanFromSubscription(subscription: Stripe.Subscription) {
+  return normalizePlan(subscription.metadata?.plan);
+}
+
+async function syncSubscription(subscription: Stripe.Subscription) {
+  const supabase = createAdminClient();
+
+  if (!supabase) {
+    throw new Error('supabase_admin_unavailable');
+  }
+
+  const organizationId = subscription.metadata?.organization_id;
+
+  if (!organizationId) {
+    throw new Error('missing_organization_id');
+  }
+
+  const plan = getPlanFromSubscription(subscription);
+  const currentPeriodEnd = subscription.items.data[0]?.current_period_end
+    ? new Date(subscription.items.data[0].current_period_end * 1000).toISOString()
+    : null;
+
+  const { error } = await supabase
+    .from('subscriptions')
+    .upsert({
+      organization_id: organizationId,
+      plan,
+      tier: plan,
+      status: subscription.status,
+      stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
+      stripe_subscription_id: subscription.id,
+      current_period_end: currentPeriodEnd,
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'stripe_subscription_id',
+    });
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function POST(request: Request) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    return NextResponse.json({ error: 'webhook_not_configured' }, { status: 500 });
+  }
+
+  const signature = (await headers()).get('stripe-signature');
+
+  if (!signature) {
+    return NextResponse.json({ error: 'missing_signature' }, { status: 400 });
+  }
+
+  const payload = await request.text();
+  const stripe = getStripeClient();
+  let event: Stripe.Event;
+
+  try {
+    event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+  } catch {
+    return NextResponse.json({ error: 'invalid_signature' }, { status: 400 });
+  }
+
+  try {
+    if (
+      event.type === 'customer.subscription.created' ||
+      event.type === 'customer.subscription.updated' ||
+      event.type === 'customer.subscription.deleted'
+    ) {
+      await syncSubscription(event.data.object as Stripe.Subscription);
+    }
+  } catch (error) {
+    console.error('[stripe_webhook] sync_failed', {
+      type: event.type,
+      message: error instanceof Error ? error.message : 'unknown',
+    });
+
+    return NextResponse.json({ error: 'sync_failed' }, { status: 500 });
+  }
+
+  return NextResponse.json({ received: true });
+}
