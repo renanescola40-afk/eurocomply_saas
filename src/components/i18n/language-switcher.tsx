@@ -5,6 +5,15 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { Globe2 } from 'lucide-react';
 import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
 
+const languageLabels: Record<Locale, string> = {
+  en: 'Select language',
+  pt: 'Selecionar idioma',
+  es: 'Seleccionar idioma',
+  fr: 'Sélectionner la langue',
+  it: 'Seleziona lingua',
+  de: 'Sprache auswählen',
+};
+
 function switchLocalePath(pathname: string, nextLocale: Locale) {
   const parts = pathname.split('/').filter(Boolean);
   if (parts.length > 0 && locales.includes(parts[0] as Locale)) {
@@ -44,7 +53,7 @@ export function LanguageSwitcher({ currentLocale, variant = 'light', compact = f
   const isDark = variant === 'dark';
 
   return (
-    <div className={`flex items-center gap-1 rounded-full border p-1 ${isDark ? 'border-white/15 bg-black/30 text-white backdrop-blur' : 'border-border bg-background/80 text-foreground shadow-sm backdrop-blur'}`} aria-label="Selecionar idioma">
+    <div className={`flex items-center gap-1 rounded-full border p-1 ${isDark ? 'border-white/15 bg-black/30 text-white backdrop-blur' : 'border-border bg-background/80 text-foreground shadow-sm backdrop-blur'}`} aria-label={languageLabels[currentLocale]}>
       {!compact ? <Globe2 className={`ml-2 h-4 w-4 ${isDark ? 'text-white/60' : 'text-muted-foreground'}`} /> : null}
       {locales.map((locale) => {
         const active = locale === currentLocale;
