@@ -11,6 +11,7 @@ const protectedSegments = [
   '/team',
   '/profile',
   '/security-center',
+  '/audit-pack',
   '/notificacoes',
   '/auditoria',
   '/eurocomply-home',
