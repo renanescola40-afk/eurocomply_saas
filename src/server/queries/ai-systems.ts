@@ -91,7 +91,7 @@ export async function listAiSystems(organizationId: string): Promise<AiSystemRec
     return [];
   }
 
-  return (data ?? []) as AiSystemRecord[];
+  return (data ?? []) as unknown as AiSystemRecord[];
 }
 
 export async function createAiSystem(input: CreateAiSystemInput): Promise<AiSystemRecord> {
@@ -127,5 +127,5 @@ export async function createAiSystem(input: CreateAiSystemInput): Promise<AiSyst
     throw error;
   }
 
-  return data as AiSystemRecord;
+  return data as unknown as AiSystemRecord;
 }
