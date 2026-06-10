@@ -75,20 +75,21 @@ export default async function LocaleLayout({ children, params }: Props) {
     <html lang={safeLocale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
         <NextIntlClientProvider messages={messages}>
-          <AuthProvider>
-            {children}
-            <GapAnalysisShortcut />
-            <DashboardI18nRuntime />
-            <DashboardChildI18nRuntime />
-            <GlobalClientEffects />
-            <Toaster />
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="dark"
-              enableSystem={false}
-              disableTransitionOnChange
-            />
-          </AuthProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem={false}
+            disableTransitionOnChange
+          >
+            <AuthProvider>
+              {children}
+              <GapAnalysisShortcut />
+              <DashboardI18nRuntime />
+              <DashboardChildI18nRuntime />
+              <GlobalClientEffects />
+              <Toaster />
+            </AuthProvider>
+          </ThemeProvider>
         </NextIntlClientProvider>
       </body>
     </html>
