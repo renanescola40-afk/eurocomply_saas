@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 const PUBLIC_FILE = /\.[^/]+$/;
+const supportedLocales = ['en', 'pt', 'es', 'fr', 'it', 'de'] as const;
+type SupportedLocale = (typeof supportedLocales)[number];
 const protectedSegments = [
   '/dashboard',
   '/settings',
@@ -18,7 +20,7 @@ const protectedSegments = [
   '/aprovacoes',
 ];
 const publicAuthSegments = ['/login', '/signup'];
-const DEFAULT_LOCALE = 'pt';
+const DEFAULT_LOCALE: SupportedLocale = 'en';
 const isProduction = process.env.NODE_ENV === 'production';
 
 const securityHeaders: Record<string, string> = {
@@ -53,14 +55,38 @@ function applySecurityHeaders(response: NextResponse) {
   return response;
 }
 
-function getLocale(pathname: string) {
-  const firstSegment = pathname.split('/').filter(Boolean)[0];
-  return firstSegment && /^[a-z]{2}$/.test(firstSegment) ? firstSegment : DEFAULT_LOCALE;
+function isSupportedLocale(value: string | undefined): value is SupportedLocale {
+  return Boolean(value && supportedLocales.includes(value as SupportedLocale));
+}
+
+function pickLocaleFromAcceptLanguage(header: string | null): SupportedLocale | null {
+  if (!header) return null;
+
+  const languageRanges = header
+    .split(',')
+    .map((part) => part.trim().split(';')[0]?.toLowerCase().slice(0, 2))
+    .filter(Boolean);
+
+  for (const language of languageRanges) {
+    if (isSupportedLocale(language)) return language;
+  }
+
+  return null;
+}
+
+function getLocale(request: NextRequest) {
+  const firstSegment = request.nextUrl.pathname.split('/').filter(Boolean)[0];
+  if (isSupportedLocale(firstSegment)) return firstSegment;
+
+  const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value;
+  if (isSupportedLocale(cookieLocale)) return cookieLocale;
+
+  return pickLocaleFromAcceptLanguage(request.headers.get('accept-language')) ?? DEFAULT_LOCALE;
 }
 
 function stripLocale(pathname: string) {
   const parts = pathname.split('/').filter(Boolean);
-  if (parts[0] && /^[a-z]{2}$/.test(parts[0])) {
+  if (isSupportedLocale(parts[0])) {
     return '/' + parts.slice(1).join('/');
   }
   return pathname;
@@ -98,7 +124,7 @@ export async function middleware(request: NextRequest) {
 
   const { data } = await supabase.auth.getUser();
   const user = data.user;
-  const locale = getLocale(pathname);
+  const locale = getLocale(request);
 
   if (!user && matchesSegment(pathname, protectedSegments)) {
     const redirectUrl = request.nextUrl.clone();
