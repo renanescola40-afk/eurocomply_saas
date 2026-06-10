@@ -42,6 +42,8 @@ Run these migrations in the Supabase SQL editor, in order:
 
 - `supabase/migrations/20260610_public_launch_readiness.sql`
 - `supabase/migrations/20260610_billing_stripe_sync.sql`
+- `supabase/migrations/20260610_ai_governance_inventory.sql`
+- `supabase/migrations/20260610_ai_incident_register.sql`
 
 They create or update:
 
@@ -50,6 +52,8 @@ They create or update:
 - `notifications`
 - `rate_limits`
 - `subscriptions`
+- `ai_systems`
+- `ai_incidents`
 - `documents.storage_path`
 - `documents.checksum_sha256`
 - private storage bucket `controlled-documents`
@@ -102,7 +106,7 @@ Before launch:
 - Test language persistence via `NEXT_LOCALE` and `eurocomply-locale`.
 - Test file upload validation: size, MIME type, checksum, and private bucket storage.
 - Test GDPR export and delete request endpoints.
-- Test `/api/health`, `/api/ready`, and `/api/ops/smoke`.
+- Test `/api/health`, `/api/ready`, `/api/ops/smoke`, and `/api/ops/enterprise-readiness`.
 
 ## 5. Smoke test flow
 
@@ -112,19 +116,29 @@ Run this flow after every production deploy:
 2. Switch language to PT, ES, FR, IT, DE and EN.
 3. Sign up or log in.
 4. Create or select an organization.
-5. Open dashboard, profile, documents, risks, RACI, approvals, calendar, notifications, and audit log.
+5. Open dashboard, profile, documents, risks, RACI, approvals, calendar, notifications, audit log, AI Systems, and AI Incidents.
 6. Upload a controlled document.
-7. Confirm Essential document limits block after 10 documents.
-8. Upgrade to Professional via Stripe test mode and confirm CSV/GDPR self-service unlocks.
-9. Upgrade to Business and confirm RACI, approvals, team invites, and executive reports unlock.
-10. Confirm audit events and notifications are written.
-11. Confirm another organization cannot access the same files/events.
+7. Register an AI system and confirm AI Act classification appears.
+8. Register an AI incident and confirm deadline triage appears.
+9. Confirm Essential document limits block after 10 documents.
+10. Upgrade to Professional via Stripe test mode and confirm CSV/GDPR self-service unlocks.
+11. Upgrade to Business and confirm RACI, approvals, team invites, and executive reports unlock.
+12. Confirm audit events and notifications are written.
+13. Confirm another organization cannot access the same files/events.
 
 Protected smoke endpoint:
 
 ```bash
 curl -H "Authorization: Bearer $HEALTHCHECK_TOKEN" https://YOUR_DOMAIN/api/ops/smoke
 ```
+
+Protected enterprise readiness endpoint:
+
+```bash
+curl -H "Authorization: Bearer $HEALTHCHECK_TOKEN" https://YOUR_DOMAIN/api/ops/enterprise-readiness
+```
+
+Target before enterprise sales: `score >= 90` and `status = enterprise_ready`.
 
 ## 6. Launch decision
 
@@ -134,6 +148,8 @@ Do not launch paid traffic until all items below are true:
 - Supabase migrations have been applied.
 - Stripe live mode is configured and tested.
 - Vercel production environment is complete.
-- Sentry releases/source maps work.
+- Sentry releases/source maps work or source-map upload is intentionally disabled for the environment.
 - Upstash rate limiting is configured.
+- AI Governance migrations are applied.
 - Cross-organization data isolation has been manually tested.
+- Enterprise readiness endpoint reports at least 90/100.
