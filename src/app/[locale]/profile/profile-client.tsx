@@ -33,7 +33,7 @@ const fiscalCountries = {
 };
 
 type CountryKey = keyof typeof fiscalCountries;
-type Plan = 'Básico' | 'Pro' | 'Enterprise';
+type Plan = 'Essential' | 'Professional' | 'Business' | 'Enterprise';
 
 type FiscalId = {
   id: string;
@@ -66,7 +66,7 @@ function isFiscalIdValid(item: FiscalId) {
 
 export function ProfileClient({ locale }: { locale: string }) {
   const [company, setCompany] = useState(defaultCompany);
-  const [plan, setPlan] = useState<Plan>('Básico');
+  const [plan, setPlan] = useState<Plan>('Essential');
   const [fiscalIds, setFiscalIds] = useState<FiscalId[]>(initialFiscalIds);
   const [employees, setEmployees] = useState(initialEmployees);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -74,6 +74,7 @@ export function ProfileClient({ locale }: { locale: string }) {
   const [saved, setSaved] = useState(false);
   const [toast, setToast] = useState('');
 
+  const isBusinessOrEnterprise = plan === 'Business' || plan === 'Enterprise';
   const isEnterprise = plan === 'Enterprise';
   const allFiscalIdsValid = useMemo(() => fiscalIds.every(isFiscalIdValid), [fiscalIds]);
 
@@ -88,8 +89,8 @@ export function ProfileClient({ locale }: { locale: string }) {
   }
 
   function addFiscalCountry() {
-    if (!isEnterprise) {
-      showToast('Recurso multi-país disponível no Enterprise.');
+    if (!isBusinessOrEnterprise) {
+      showToast('Gestão multi-país disponível nos planos Business e Enterprise.');
       return;
     }
     setFiscalIds((current) => [...current, { id: createId('fiscal'), country: 'Portugal', value: '' }]);
@@ -103,8 +104,8 @@ export function ProfileClient({ locale }: { locale: string }) {
   }
 
   function removeFiscalId(id: string) {
-    if (!isEnterprise) {
-      showToast('Faça upgrade para editar operações fiscais multi-país.');
+    if (!isBusinessOrEnterprise) {
+      showToast('Faça upgrade para Business ou Enterprise para editar operações fiscais multi-país.');
       return;
     }
     setFiscalIds((current) => current.filter((item) => item.id !== id));
@@ -149,6 +150,20 @@ export function ProfileClient({ locale }: { locale: string }) {
     showToast('Convite registado com validação server-side.');
   }
 
+  async function openBillingPortal() {
+    const response = await fetch('/api/billing/portal', { method: 'POST' });
+    if (!response.ok) {
+      showToast('Ainda não existe uma assinatura Stripe ativa para esta organização.');
+      return;
+    }
+    const payload = (await response.json()) as { url?: string };
+    if (payload.url) {
+      window.location.href = payload.url;
+      return;
+    }
+    showToast('Não foi possível abrir o portal de faturação.');
+  }
+
   async function downloadGdprExport() {
     const response = await fetch('/api/gdpr/export');
     if (!response.ok) {
@@ -190,7 +205,7 @@ export function ProfileClient({ locale }: { locale: string }) {
               <p className="mt-3 max-w-2xl text-muted-foreground">Gerencie dados comerciais, identificações fiscais por país, equipa e direitos GDPR.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {(['Básico', 'Pro', 'Enterprise'] as const).map((item) => (
+              {(['Essential', 'Professional', 'Business', 'Enterprise'] as const).map((item) => (
                 <button key={item} type="button" onClick={() => { setPlan(item); showToast(`Plano simulado: ${item}`); }} className={`rounded-full border px-4 py-2 text-sm font-medium transition ${plan === item ? 'border-primary bg-primary text-primary-foreground shadow-lg' : 'bg-background hover:bg-muted'}`}>
                   Simular {item}
                 </button>
@@ -211,12 +226,11 @@ export function ProfileClient({ locale }: { locale: string }) {
             </div>
             <div className="mt-6 flex flex-wrap gap-3"><Button type="submit" disabled={!allFiscalIdsValid} className="rounded-full"><Save className="h-4 w-4" /> Guardar alterações</Button><Button type="button" variant="outline" className="rounded-full" onClick={() => { updateCompany('logoUrl', 'https://dummyimage.com/180x180/d4af37/111827&text=EC'); showToast('Upload de logo simulado.'); }}><UploadCloud className="h-4 w-4" /> Simular upload de logo</Button>{saved ? <span className="inline-flex items-center gap-2 text-sm text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Guardado no localStorage demo.</span> : null}</div>
           </section>
-          <aside id="enterprise-status" className="space-y-6"><section className={`rounded-[2rem] border p-6 shadow-sm backdrop-blur ${isEnterprise ? 'border-amber-300 bg-gradient-to-br from-amber-50 to-background shadow-amber-500/10 dark:from-amber-950/30' : 'bg-background/88'}`}><div className="flex items-start justify-between gap-4"><div><p className="text-sm text-muted-foreground">Plano atual</p><h2 className="mt-1 text-3xl font-semibold">{plan}</h2></div><Badge className={`rounded-full ${isEnterprise ? 'bg-amber-500 text-black hover:bg-amber-500' : ''}`}>{isEnterprise ? <Diamond className="mr-1 h-3.5 w-3.5" /> : <Crown className="mr-1 h-3.5 w-3.5" />}{isEnterprise ? 'Enterprise Diamond' : 'Upgrade disponível'}</Badge></div><div className="mt-5 flex items-center gap-4"><div className={`relative h-20 w-20 overflow-hidden rounded-3xl border-4 bg-muted ${isEnterprise ? 'border-amber-400 shadow-lg shadow-amber-400/20' : 'border-border'}`}><Image src={company.logoUrl} alt="Avatar da empresa" fill sizes="80px" className="object-cover" unoptimized /></div><div><p className="font-semibold">Avatar da empresa</p><p className="text-sm text-muted-foreground">{isEnterprise ? 'Borda premium Enterprise ativa.' : 'Borda premium disponível no Enterprise.'}</p></div></div><div className={`mt-5 rounded-2xl p-4 text-sm leading-6 ${isEnterprise ? 'border border-amber-300/70 bg-background/70' : 'bg-primary/10 text-primary'}`}>{isEnterprise ? '🏷️ Você está no plano mais alto — acesso prioritário em breve.' : '🔒 Desbloqueie múltiplos países fiscais com Enterprise e ganhe status visual, colaboração e prioridade.'}{isEnterprise ? <div className="mt-4 h-3 overflow-hidden rounded-full bg-amber-100"><div className="h-full w-2/3 animate-pulse rounded-full bg-amber-400" /></div> : null}</div><Button asChild className="mt-5 w-full rounded-full transition hover:-translate-y-0.5 hover:shadow-lg"><Link href={`/${locale}/pricing`}>Comparar planos <ArrowRight className="h-4 w-4" /></Link></Button></section></aside>
-        </form>
+          <aside id="enterprise-status" className="space-y-6"><section className={`rounded-[2rem] border p-6 shadow-sm backdrop-blur ${isEnterprise ? 'border-foreground/30 bg-gradient-to-br from-muted to-background shadow-foreground/10' : 'bg-background/88'}`}><div className="flex items-start justify-between gap-4"><div><p className="text-sm text-muted-foreground">Plano atual</p><h2 className="mt-1 text-3xl font-semibold">{plan}</h2></div><Badge className="rounded-full">{isEnterprise ? <Diamond className="mr-1 h-3.5 w-3.5" /> : <Crown className="mr-1 h-3.5 w-3.5" />}{isEnterprise ? 'Enterprise' : 'Upgrade disponível'}</Badge></div><div className="mt-5 flex items-center gap-4"><div className={`relative h-20 w-20 overflow-hidden rounded-3xl border-4 bg-muted ${isEnterprise ? 'border-foreground shadow-lg shadow-foreground/10' : 'border-border'}`}><Image src={company.logoUrl} alt="Avatar da empresa" fill sizes="80px" className="object-cover" unoptimized /></div><div><p className="font-semibold">Avatar da empresa</p><p className="text-sm text-muted-foreground">{isEnterprise ? 'Identidade premium Enterprise ativa.' : 'Identidade premium disponível no Enterprise.'}</p></div></div><div className={`mt-5 rounded-2xl p-4 text-sm leading-6 ${isEnterprise ? 'border bg-background/70' : 'bg-primary/10 text-primary'}`}>{isEnterprise ? 'Você está no plano mais alto, com acesso a permissões avançadas, suporte prioritário e onboarding.' : 'Desbloqueie operações multi-país avançadas, equipa, permissões e relatórios executivos nos planos superiores.'}</div><div className="mt-4 flex flex-wrap gap-2"><Button type="button" variant="outline" className="rounded-full" onClick={openBillingPortal}>Gerir assinatura</Button><Button asChild className="rounded-full"><Link href={`/${locale}/pricing`}>Ver planos</Link></Button></div></section></aside>
 
-        <section className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur"><div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><h2 className="text-2xl font-semibold tracking-tight">Identificação fiscal por país</h2><p className="mt-1 text-sm text-muted-foreground">Portugal não é obrigatório. Cada país ajusta automaticamente o tipo de identificação, máscara e validação.</p></div><Button type="button" onClick={addFiscalCountry} variant="outline" className="rounded-full"><Plus className="h-4 w-4" /> Adicionar país</Button></div>{!isEnterprise ? <div className="mt-5 rounded-2xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">🔒 No plano {plan}, a gestão multi-país aparece como preview bloqueado. Faça upgrade para Enterprise.</div> : null}<div className="mt-5 grid gap-3 md:grid-cols-2">{fiscalIds.map((item) => { const meta = fiscalCountries[item.country]; const valid = isFiscalIdValid(item); return <div key={item.id} className={`relative rounded-2xl border p-4 transition ${!isEnterprise ? 'bg-muted/30 opacity-75' : 'bg-muted/15 hover:border-primary/40'}`}>{!isEnterprise ? <div className="absolute right-4 top-4 rounded-full bg-background/90 px-2 py-1 text-xs"><LockKeyhole className="mr-1 inline h-3 w-3" /> Bloqueado</div> : null}<div className="grid gap-3 md:grid-cols-[0.85fr_1.15fr]"><label><span className="text-sm font-medium">País</span><select disabled={!isEnterprise} value={item.country} onChange={(event) => updateFiscalId(item.id, 'country', event.target.value)} className="mt-1 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:border-primary disabled:cursor-not-allowed">{(Object.keys(fiscalCountries) as CountryKey[]).map((country) => <option key={country}>{country}</option>)}</select></label><label><span className="text-sm font-medium">{meta.label}</span><input disabled={!isEnterprise} value={item.value} onChange={(event) => updateFiscalId(item.id, 'value', event.target.value)} placeholder={meta.placeholder} className={`mt-1 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:border-primary disabled:cursor-not-allowed ${valid ? '' : 'border-red-500'}`} /><span className={`mt-1 block text-xs ${valid ? 'text-muted-foreground' : 'text-red-600'}`}>{valid ? meta.helper : `Formato esperado: ${meta.helper}`}</span></label></div><button disabled={!isEnterprise} type="button" onClick={() => removeFiscalId(item.id)} className="mt-3 rounded-xl border px-3 py-2 text-sm text-muted-foreground transition hover:bg-red-500/10 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"><Trash2 className="mr-1 inline h-4 w-4" /> Remover</button></div>; })}</div></section>
+        <section className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur"><div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><h2 className="text-2xl font-semibold tracking-tight">Identificação fiscal por país</h2><p className="mt-1 text-sm text-muted-foreground">Portugal não é obrigatório. Cada país ajusta automaticamente o tipo de identificação, máscara e validação.</p></div><Button type="button" onClick={addFiscalCountry} variant="outline" className="rounded-full"><Plus className="h-4 w-4" /> Adicionar país</Button></div>{!isBusinessOrEnterprise ? <div className="mt-5 rounded-2xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground"><LockKeyhole className="mr-2 inline h-4 w-4" /> No plano {plan}, a gestão multi-país aparece como preview bloqueado. Faça upgrade para Business ou Enterprise.</div> : null}<div className="mt-5 grid gap-3 md:grid-cols-2">{fiscalIds.map((item) => { const meta = fiscalCountries[item.country]; const valid = isFiscalIdValid(item); return <div key={item.id} className={`relative rounded-2xl border p-4 transition ${!isBusinessOrEnterprise ? 'bg-muted/30 opacity-75' : 'bg-muted/15 hover:border-primary/40'}`}>{!isBusinessOrEnterprise ? <div className="absolute right-4 top-4 rounded-full bg-background/90 px-2 py-1 text-xs"><LockKeyhole className="mr-1 inline h-3 w-3" /> Bloqueado</div> : null}<div className="grid gap-3 md:grid-cols-[0.85fr_1.15fr]"><label><span className="text-sm font-medium">País</span><select disabled={!isBusinessOrEnterprise} value={item.country} onChange={(event) => updateFiscalId(item.id, 'country', event.target.value)} className="mt-1 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:border-primary disabled:cursor-not-allowed">{(Object.keys(fiscalCountries) as CountryKey[]).map((country) => <option key={country}>{country}</option>)}</select></label><label><span className="text-sm font-medium">{meta.label}</span><input disabled={!isBusinessOrEnterprise} value={item.value} onChange={(event) => updateFiscalId(item.id, 'value', event.target.value)} placeholder={meta.placeholder} className={`mt-1 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:border-primary disabled:cursor-not-allowed ${valid ? '' : 'border-red-500'}`} /><span className={`mt-1 block text-xs ${valid ? 'text-muted-foreground' : 'text-red-600'}`}>{valid ? meta.helper : `Formato esperado: ${meta.helper}`}</span></label></div><button disabled={!isBusinessOrEnterprise} type="button" onClick={() => removeFiscalId(item.id)} className="mt-3 rounded-xl border px-3 py-2 text-sm text-muted-foreground transition hover:bg-red-500/10 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"><Trash2 className="mr-1 inline h-4 w-4" /> Remover</button></div>; })}</div></section>
 
-        <section id="employees" className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur"><div className="flex items-center gap-3"><UsersRound className="h-5 w-5 text-primary" /><h2 className="text-2xl font-semibold">Gestão de funcionários</h2></div>{isEnterprise ? <div className="mt-5 space-y-5"><div className="grid gap-3 md:grid-cols-[1fr_220px_auto]"><input value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="email@empresa.com" className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" /><select value={inviteRole} onChange={(event) => setInviteRole(event.target.value)} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary"><option>Admin</option><option>Editor</option><option>Visualizador</option></select><Button type="button" onClick={inviteEmployee} className="rounded-full"><Mail className="h-4 w-4" /> Convidar funcionário</Button></div><div className="grid gap-3 md:grid-cols-2">{employees.map((employee) => <div key={employee.id} className="rounded-2xl border bg-muted/20 p-4"><p className="font-semibold">{employee.name}</p><p className="text-sm text-muted-foreground">{employee.email}</p><div className="mt-3 flex gap-2"><Badge variant="outline">{employee.role}</Badge><Badge>{employee.status}</Badge></div></div>)}</div></div> : <div className="mt-5 rounded-2xl border bg-muted/30 p-5 text-sm leading-6 text-muted-foreground">🔒 Upgrade para o plano Enterprise e convide até 10 funcionários para colaborar na implementação dos documentos.<div><Button asChild className="mt-4 rounded-full"><Link href={`/${locale}/pricing`}>Fazer upgrade</Link></Button></div></div>}</section>
+        <section id="employees" className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur"><div className="flex items-center gap-3"><UsersRound className="h-5 w-5 text-primary" /><h2 className="text-2xl font-semibold">Gestão de funcionários</h2></div>{isEnterprise ? <div className="mt-5 space-y-5"><div className="grid gap-3 md:grid-cols-[1fr_220px_auto]"><input value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="email@empresa.com" className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" /><select value={inviteRole} onChange={(event) => setInviteRole(event.target.value)} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary"><option>Admin</option><option>Editor</option><option>Visualizador</option></select><Button type="button" onClick={inviteEmployee} className="rounded-full"><Mail className="h-4 w-4" /> Convidar funcionário</Button></div><div className="grid gap-3 md:grid-cols-2">{employees.map((employee) => <div key={employee.id} className="rounded-2xl border bg-muted/20 p-4"><p className="font-semibold">{employee.name}</p><p className="text-sm text-muted-foreground">{employee.email}</p><div className="mt-3 flex gap-2"><Badge variant="outline">{employee.role}</Badge><Badge>{employee.status}</Badge></div></div>)}</div></div> : <div className="mt-5 rounded-2xl border bg-muted/30 p-5 text-sm leading-6 text-muted-foreground"><LockKeyhole className="mr-2 inline h-4 w-4" /> Upgrade para o plano Enterprise e convide até 10 funcionários para colaborar na implementação dos documentos.<div><Button asChild className="mt-4 rounded-full"><Link href={`/${locale}/pricing`}>Fazer upgrade</Link></Button></div></div>}</section>
 
         <section id="privacy" className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur"><div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div className="flex items-start gap-3"><div className="rounded-2xl bg-primary/10 p-3 text-primary"><ShieldCheck className="h-5 w-5" /></div><div><h2 className="text-2xl font-semibold">Privacidade & GDPR</h2><p className="mt-1 text-sm text-muted-foreground">Ações protegidas por sessão. Exportação gera auditoria e notificação; apagamento fica pendente para revisão legal.</p></div></div><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" className="rounded-full" onClick={downloadGdprExport}><Download className="h-4 w-4" /> Exportar dados</Button><Button type="button" variant="destructive" className="rounded-full" onClick={requestGdprDelete}><Trash2 className="h-4 w-4" /> Solicitar apagamento</Button></div></div></section>
       </div>
