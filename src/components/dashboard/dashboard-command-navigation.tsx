@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { Bell, ChevronDown, Menu, Newspaper, X } from 'lucide-react';
+import { LanguageSwitcher } from '@/components/i18n/language-switcher';
+import { locales, type Locale } from '@/lib/i18n/routing';
 
 const dashboardRoot = '/dashboard/organizations';
 
@@ -79,13 +81,15 @@ function localizeHref(locale: string, href: string) {
 }
 
 export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }: DashboardCommandNavigationProps) {
+  const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+
   return (
     <header className="sticky top-0 z-40 border-b bg-background/92 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/78">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 md:px-8">
         <input id="eurocomply-mobile-menu" type="checkbox" className="peer sr-only" aria-hidden="true" />
 
         <Link
-          href={localizeHref(locale, '/eurocomply-home')}
+          href={localizeHref(activeLocale, '/eurocomply-home')}
           className="shrink-0 rounded-full bg-foreground px-4 py-2 text-sm font-semibold tracking-tight text-background shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
         >
           EuroComply
@@ -99,7 +103,7 @@ export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }
             return (
               <div key={item.label} className="group relative shrink-0">
                 <Link
-                  href={localizeHref(locale, item.href)}
+                  href={localizeHref(activeLocale, item.href)}
                   className={`flex items-center gap-1 rounded-full border px-3.5 py-2 font-medium transition ${
                     isActive
                       ? 'border-primary/50 bg-primary/10 text-primary shadow-sm'
@@ -117,7 +121,7 @@ export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }
                     {item.sections?.map((section) => (
                       <Link
                         key={section.href + section.label}
-                        href={localizeHref(locale, section.href)}
+                        href={localizeHref(activeLocale, section.href)}
                         className="block rounded-xl px-3 py-2.5 transition hover:bg-primary/10 focus:bg-primary/10 focus:outline-none"
                       >
                         <span className="block text-sm font-medium text-foreground">{section.label}</span>
@@ -131,6 +135,10 @@ export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }
           })}
         </nav>
 
+        <div className="ml-auto hidden md:block">
+          <LanguageSwitcher currentLocale={activeLocale} compact />
+        </div>
+
         <label
           htmlFor="eurocomply-mobile-menu"
           className="ml-auto inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border bg-background text-muted-foreground transition hover:bg-muted md:hidden"
@@ -142,17 +150,20 @@ export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }
       </div>
 
       <div className="hidden border-t bg-background/98 px-4 py-3 shadow-lg peer-checked:block md:hidden">
+        <div className="mb-3">
+          <LanguageSwitcher currentLocale={activeLocale} compact />
+        </div>
         <nav className="space-y-2" aria-label="Mobile EuroComply navigation">
           {dashboardNavigation.map((item) => (
             <details key={item.label} className="group rounded-2xl border bg-muted/20 p-2 open:bg-muted/40">
               <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl px-3 py-2 font-medium">
-                <Link href={localizeHref(locale, item.href)}>{item.label}</Link>
+                <Link href={localizeHref(activeLocale, item.href)}>{item.label}</Link>
                 {item.sections?.length ? <ChevronDown className="h-4 w-4 transition group-open:rotate-180" /> : null}
               </summary>
               {item.sections?.length ? (
                 <div className="mt-1 space-y-1 border-t pt-2">
                   {item.sections.map((section) => (
-                    <Link key={section.href + section.label} href={localizeHref(locale, section.href)} className="block rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-primary/10 hover:text-primary">
+                    <Link key={section.href + section.label} href={localizeHref(activeLocale, section.href)} className="block rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-primary/10 hover:text-primary">
                       {section.label}
                     </Link>
                   ))}
