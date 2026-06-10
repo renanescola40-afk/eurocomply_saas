@@ -20,29 +20,38 @@ import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
 
 const plans = [
   {
-    name: 'Básico',
+    name: 'Essential',
     price: '€49',
     period: '/mês',
-    text: 'Para empresas pequenas que querem abandonar planilhas e controlar obrigações essenciais.',
-    cta: 'Começar agora',
-    features: ['1 empresa', '1 funcionário', '1 país fiscal', 'Calendário legal básico', 'Notícias essenciais', 'Suporte padrão'],
+    text: 'Plano de acesso para microempresas, consultores e equipas pequenas que querem sair do Excel sem medo.',
+    cta: 'Começar Essential',
+    features: ['1 país fiscal', '1 utilizador', 'Calendário legal básico', 'Notícias regulatórias básicas', 'Perfil da empresa', 'Até 10 documentos', 'Matriz de riscos simples', 'Notificações básicas'],
   },
   {
-    name: 'Pro',
-    price: '€99',
+    name: 'Professional',
+    price: '€149',
     period: '/mês',
-    text: 'Para PMEs que precisam de IA, documentos, riscos e evidências com mais consistência.',
-    cta: 'Assinar Pro',
-    features: ['Até 3 empresas', 'Até 5 funcionários', 'Até 2 países fiscais', 'Calendário com IA', 'Matriz de riscos', 'Log de auditoria'],
+    text: 'Para PMEs com obrigações reais, documentos, riscos e prazos que precisam de controlo consistente.',
+    cta: 'Assinar Professional',
+    features: ['Até 2 países fiscais', 'Calendário com IA', 'Documentos controlados', 'Versionamento', 'Matriz de riscos completa', 'Log de auditoria', 'Relatórios básicos', 'Até 3 utilizadores'],
+  },
+  {
+    name: 'Business',
+    price: '€399',
+    period: '/mês',
+    text: 'Para empresas em crescimento europeu com operação multi-país, equipa interna e reporting executivo.',
+    cta: 'Assinar Business',
+    highlighted: true,
+    features: ['Até 5 países fiscais', 'NIFs por país', 'Workflows de aprovação', 'Relatórios executivos', 'Audit packs', 'Notícias IA por país', 'Matriz RACI', 'Até 10 utilizadores'],
   },
   {
     name: 'Enterprise',
-    price: '€249',
+    price: 'Desde €990',
     period: '/mês',
-    text: 'Para empresas que tratam compliance como vantagem competitiva, expansão e confiança comercial.',
-    cta: 'Assinar Enterprise',
-    highlighted: true,
-    features: ['Empresas ilimitadas', 'Até 10 funcionários', 'NIFs múltiplos por país', 'Notícias IA multilíngues', 'Convite de funcionários', 'Suporte prioritário'],
+    text: 'Plano consultivo para empresas reguladas, grupos, fintechs, healthtechs e fornecedores B2B enterprise.',
+    cta: 'Falar com vendas',
+    enterprise: true,
+    features: ['Países ilimitados', 'Utilizadores avançados', 'Permissões por função', 'Relatórios white-label', 'Onboarding assistido', 'SLA e suporte prioritário', 'Módulos DORA, NIS2, ISO 27001 e AI Act', 'Trilha de auditoria completa'],
   },
 ];
 
@@ -67,15 +76,16 @@ const featureCards = [
 ] as const;
 
 const comparisonRows = [
-  ['Empresas', '1', 'Até 3', 'Ilimitadas'],
-  ['Funcionários', '1', 'Até 5', 'Até 10'],
-  ['NIFs múltiplos', 'Limitado', 'Incluído', 'Avançado'],
-  ['Calendário IA', 'Básico', 'Incluído', 'Avançado'],
-  ['Notícias IA', 'Essenciais', 'Incluído', 'Multilíngue'],
-  ['Matriz de riscos', 'Simples', 'Completa', 'Avançada'],
-  ['Log de auditoria', 'Básico', 'Incluído', 'Completo'],
-  ['Convite de funcionários', 'Não incluído', 'Limitado', 'Incluído'],
-  ['Suporte', 'Padrão', 'Prioritário', 'Prioritário'],
+  ['Empresas', '1', 'Até 3', 'Até 10', 'Ilimitadas'],
+  ['Funcionários', '1', 'Até 3', 'Até 10', 'Avançado'],
+  ['Países fiscais', '1', 'Até 2', 'Até 5', 'Ilimitados'],
+  ['NIFs múltiplos', 'Não incluído', 'Limitado', 'Incluído', 'Avançado'],
+  ['Calendário IA', 'Básico', 'Incluído', 'Avançado', 'Avançado'],
+  ['Notícias IA', 'Básicas', 'Incluído', 'Por país/categoria', 'Multilíngue avançado'],
+  ['Matriz de riscos', 'Simples', 'Completa', 'Avançada', 'Enterprise'],
+  ['Log de auditoria', 'Não incluído', 'Incluído', 'Completo', 'Completo + exportável'],
+  ['Convite de funcionários', 'Não incluído', 'Não incluído', 'Incluído', 'Incluído com permissões'],
+  ['Suporte', 'Padrão', 'Padrão', 'Prioritário', 'SLA + onboarding'],
 ];
 
 function href(locale: Locale, path: string) {
@@ -143,7 +153,7 @@ export function EnterpriseHome({ locale }: { locale: string }) {
                 <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-semibold text-cyan-100">Live</span>
               </div>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                {[['73%', 'risco fiscal reduzido'], ['40h', 'poupadas por mês'], ['12k', 'euros em multas evitadas'], ['8', 'obrigações próximas']].map(([value, label]) => (
+                {[["73%", "risco fiscal reduzido"], ["40h", "poupadas por mês"], ["12k", "euros em multas evitadas"], ["8", "obrigações próximas"]].map(([value, label]) => (
                   <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
                     <p className="text-3xl font-semibold text-white">{value}</p>
                     <p className="mt-2 text-sm text-zinc-500">{label}</p>
@@ -151,7 +161,7 @@ export function EnterpriseHome({ locale }: { locale: string }) {
                 ))}
               </div>
               <div className="mt-6 space-y-3">
-                {['Novo prazo fiscal identificado para França', 'Política aprovada e registrada no log de auditoria', 'Relatório executivo pronto para revisão'].map((item) => (
+                {["Novo prazo fiscal identificado para França", "Política aprovada e registrada no log de auditoria", "Relatório executivo pronto para revisão"].map((item) => (
                   <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300">
                     <Check className="h-4 w-4 text-cyan-200" /> {item}
                   </div>
@@ -196,7 +206,6 @@ export function EnterpriseHome({ locale }: { locale: string }) {
       </section>
 
       <section id="demo" className="relative isolate overflow-hidden px-6 py-28">
-        <div className="absolute inset-0 -z-10 bg-[#050508]" />
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_70%_30%,rgba(124,58,237,.30),transparent_30%),radial-gradient(circle_at_20%_60%,rgba(0,229,255,.16),transparent_30%)]" />
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center">
           <div className="rounded-[2rem] border border-white/10 bg-[#13131A]/80 p-5 shadow-2xl">
@@ -221,19 +230,20 @@ export function EnterpriseHome({ locale }: { locale: string }) {
         <div className="text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">Planos e preços</p>
           <h2 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">Escolha o plano certo para sua empresa</h2>
-          <p className="mx-auto mt-5 max-w-3xl text-lg text-zinc-400">Quanto você está perdendo por não ter o Enterprise?</p>
+          <p className="mx-auto mt-5 max-w-3xl text-lg text-zinc-400">Entre por €49. Escale quando compliance virar operação séria.</p>
         </div>
-        <div className="mt-14 grid gap-6 lg:grid-cols-3">
+        <div className="mt-14 grid gap-5 lg:grid-cols-4">
           {plans.map((plan) => (
-            <article key={plan.name} className={`relative rounded-3xl border bg-[#13131A] p-8 transition hover:-translate-y-1 ${plan.highlighted ? 'border-amber-300/50 shadow-[0_0_70px_rgba(251,191,36,.16)]' : 'border-[#2A2A35]'}`}>
-              {plan.highlighted ? <div className="absolute -top-4 left-8 rounded-full border border-amber-300/40 bg-amber-300 px-4 py-2 text-xs font-bold text-slate-950">Mais escolhido</div> : null}
+            <article key={plan.name} className={`relative rounded-3xl border bg-[#13131A] p-7 transition hover:-translate-y-1 ${plan.highlighted ? 'border-cyan-300/50 shadow-[0_0_70px_rgba(0,229,255,.16)]' : plan.enterprise ? 'border-amber-300/45 shadow-[0_0_70px_rgba(251,191,36,.12)]' : 'border-[#2A2A35]'}`}>
+              {plan.highlighted ? <div className="absolute -top-4 left-7 rounded-full border border-cyan-300/40 bg-cyan-300 px-4 py-2 text-xs font-bold text-slate-950">Melhor equilíbrio</div> : null}
+              {plan.enterprise ? <div className="absolute -top-4 left-7 rounded-full border border-amber-300/40 bg-amber-300 px-4 py-2 text-xs font-bold text-slate-950">Plano consultivo</div> : null}
               <h3 className="text-2xl font-semibold text-white">{plan.name}</h3>
-              <p className="mt-4 min-h-20 text-sm leading-6 text-zinc-400">{plan.text}</p>
+              <p className="mt-4 min-h-28 text-sm leading-6 text-zinc-400">{plan.text}</p>
               <div className="mt-7 flex items-end gap-1">
-                <span className="text-5xl font-semibold tracking-tight text-white">{plan.price}</span>
-                <span className="pb-2 text-zinc-500">{plan.period}</span>
+                <span className="text-4xl font-semibold tracking-tight text-white">{plan.price}</span>
+                <span className="pb-1.5 text-zinc-500">{plan.period}</span>
               </div>
-              <Link href={href(activeLocale, '/signup')} className={`mt-7 inline-flex w-full justify-center rounded-2xl px-5 py-4 font-bold transition hover:-translate-y-0.5 ${plan.highlighted ? 'bg-amber-300 text-slate-950 hover:bg-white' : 'border border-white/15 bg-white/5 text-white hover:bg-white/10'}`}>{plan.cta}</Link>
+              <Link href={href(activeLocale, plan.enterprise ? '/contact' : '/signup')} className={`mt-7 inline-flex w-full justify-center rounded-2xl px-5 py-4 font-bold transition hover:-translate-y-0.5 ${plan.highlighted ? 'bg-cyan-300 text-slate-950 hover:bg-white' : plan.enterprise ? 'bg-amber-300 text-slate-950 hover:bg-white' : 'border border-white/15 bg-white/5 text-white hover:bg-white/10'}`}>{plan.cta}</Link>
               <ul className="mt-7 space-y-3">
                 {plan.features.map((feature) => <li key={feature} className="flex gap-3 text-sm text-zinc-300"><Check className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />{feature}</li>)}
               </ul>
@@ -241,17 +251,19 @@ export function EnterpriseHome({ locale }: { locale: string }) {
           ))}
         </div>
 
-        <div className="mt-12 overflow-hidden rounded-3xl border border-[#2A2A35] bg-[#13131A]">
-          <div className="grid grid-cols-4 border-b border-[#2A2A35] bg-white/[0.03] text-sm font-semibold text-white">
-            <div className="p-4">Comparativo</div><div className="p-4">Básico</div><div className="p-4">Pro</div><div className="p-4">Enterprise</div>
-          </div>
-          {comparisonRows.map(([label, basic, pro, enterprise]) => (
-            <div key={label} className="grid grid-cols-4 border-b border-white/5 text-sm text-zinc-400 last:border-b-0">
-              <div className="p-4 text-zinc-200">{label}</div><div className="p-4">{basic}</div><div className="p-4">{pro}</div><div className="p-4 text-white">{enterprise}</div>
+        <div className="mt-12 overflow-x-auto rounded-3xl border border-[#2A2A35] bg-[#13131A]">
+          <div className="min-w-[920px]">
+            <div className="grid grid-cols-5 border-b border-[#2A2A35] bg-white/[0.03] text-sm font-semibold text-white">
+              <div className="p-4">Comparativo</div><div className="p-4">Essential</div><div className="p-4">Professional</div><div className="p-4">Business</div><div className="p-4">Enterprise</div>
             </div>
-          ))}
+            {comparisonRows.map(([label, essential, professional, business, enterprise]) => (
+              <div key={label} className="grid grid-cols-5 border-b border-white/5 text-sm text-zinc-400 last:border-b-0">
+                <div className="p-4 text-zinc-200">{label}</div><div className="p-4">{essential}</div><div className="p-4">{professional}</div><div className="p-4 text-white">{business}</div><div className="p-4 text-amber-100">{enterprise}</div>
+              </div>
+            ))}
+          </div>
         </div>
-        <p className="mx-auto mt-8 max-w-4xl text-center text-lg font-medium leading-8 text-white">Clientes Enterprise economizam em média €12.000/ano em multas evitadas. Upgrade agora e ganhe 1 mês grátis na assinatura anual.</p>
+        <p className="mx-auto mt-8 max-w-4xl text-center text-lg font-medium leading-8 text-white">Essential reduz a barreira de entrada. Professional captura PMEs com obrigações reais. Business vende operação, equipa e expansão europeia. Enterprise preserva valor premium para empresas reguladas e multi-país.</p>
       </section>
 
       <section className="px-6 py-28">
