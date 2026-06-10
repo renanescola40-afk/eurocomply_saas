@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { AiSystemRecord } from '@/server/queries/ai-systems';
 import type { AiActRiskLevel } from '@/server/ai-governance/classifier';
+import { RoleWizardCard } from './role-wizard-card';
 
 type AiSystemsClientProps = {
   locale: string;
@@ -302,6 +303,7 @@ export function AiSystemsClient({ locale, initialSystems, organizationName }: Ai
               </label>
             ))}
           </fieldset>
+          <RoleWizardCard locale={locale} input={form} />
           {notice ? <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-100"><AlertTriangle className="mr-2 inline h-4 w-4" />{notice}</div> : null}
           <Button type="submit" disabled={isSubmitting} className="mt-5 rounded-full">
             <Plus className="h-4 w-4" />{isSubmitting ? t.saving : t.submit}
