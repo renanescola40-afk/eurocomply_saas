@@ -5,6 +5,7 @@ import { listDocuments } from '@/server/queries/documents';
 import { listRisks } from '@/server/queries/risks';
 import { listVendors } from '@/server/queries/vendors';
 import type { PlanEntitlements } from '@/server/billing/entitlements';
+import { getRetentionSummary, RETENTION_POLICIES } from '@/server/governance/retention-policy';
 import type { OrganizationRole } from '@/server/security/rbac';
 
 type OrganizationSnapshot = {
@@ -72,6 +73,12 @@ export type AuditEvidencePack = {
     highRiskAiSystems: number;
     openAiIncidents: number;
   };
+  governance: {
+    retention: {
+      summary: ReturnType<typeof getRetentionSummary>;
+      policies: typeof RETENTION_POLICIES;
+    };
+  };
   evidence: {
     documents: EvidenceDocument[];
     vendors: EvidenceVendor[];
@@ -96,7 +103,7 @@ export type AuditEvidencePack = {
   nextActions: string[];
 };
 
-function normalizeRows<T>(rows: unknown): T[] {
+export function normalizeRows<T>(rows: unknown): T[] {
   return Array.isArray(rows) ? (rows as T[]) : [];
 }
 
@@ -117,7 +124,7 @@ function mapApprovalStatus(status?: string | null): 'pending' | 'approved' | 're
   return 'pending';
 }
 
-function calculateScore({
+export function calculateEvidencePackScore({
   documents,
   vendors,
   risks,
@@ -146,7 +153,7 @@ function calculateScore({
   return Math.min(100, score);
 }
 
-function getPackStatus(score: number): AuditEvidencePack['summary']['status'] {
+export function getEvidencePackStatus(score: number): AuditEvidencePack['summary']['status'] {
   if (score >= 80) return 'audit_ready';
   if (score >= 40) return 'in_progress';
   return 'starting';
@@ -195,10 +202,10 @@ export async function buildAuditEvidencePack({
   const highRiskAiSystems = aiSystems.filter((system) => system.risk_level === 'high_risk_review' || system.risk_level === 'prohibited_review').length;
   const openAiIncidents = aiIncidents.filter((incident) => !['reported', 'closed'].includes(incident.report_status)).length;
 
-  const score = calculateScore({ documents, vendors, risks, aiSystems, aiIncidents, auditEvents });
+  const score = calculateEvidencePackScore({ documents, vendors, risks, aiSystems, aiIncidents, auditEvents });
   const summary = {
     score,
-    status: getPackStatus(score),
+    status: getEvidencePackStatus(score),
     documents: documents.length,
     vendors: vendors.length,
     risks: risks.length,
@@ -221,6 +228,12 @@ export async function buildAuditEvidencePack({
     organization,
     plan: entitlements,
     summary,
+    governance: {
+      retention: {
+        summary: getRetentionSummary(),
+        policies: RETENTION_POLICIES,
+      },
+    },
     evidence: {
       documents,
       vendors,
