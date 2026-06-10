@@ -15,6 +15,7 @@ const trustLinks = [
   { label: 'Trust Center', href: '/trust' },
   { label: 'Security', href: '/security' },
   { label: 'Compliance', href: '/compliance' },
+  { label: 'Data Processing', href: '/data-processing' },
   { label: 'Privacy', href: '/privacy' },
   { label: 'Terms', href: '/terms' },
   { label: 'DPA', href: '/dpa' },
