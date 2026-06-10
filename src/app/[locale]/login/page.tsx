@@ -7,6 +7,8 @@ import { Fingerprint } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { LanguageSwitcher } from '@/components/i18n/language-switcher';
+import { locales, type Locale } from '@/lib/i18n/routing';
 
 const loginCopy: Record<string, {
   title: string;
@@ -109,10 +111,11 @@ export default function LoginPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const locale = (params.locale as string) || 'pt';
-  const copy = loginCopy[locale] ?? loginCopy.en;
+  const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+  const copy = loginCopy[activeLocale] ?? loginCopy.en;
   const urlError = searchParams.get('error');
-  const nextPath = getSafeNextPath(searchParams.get('next'), locale);
-  const googleLoginHref = `/auth/google?locale=${encodeURIComponent(locale)}&next=${encodeURIComponent(nextPath)}`;
+  const nextPath = getSafeNextPath(searchParams.get('next'), activeLocale);
+  const googleLoginHref = `/auth/google?locale=${encodeURIComponent(activeLocale)}&next=${encodeURIComponent(nextPath)}`;
   const { user, signInWithEmail, loading: authLoading } = useAuth();
   const [error, setError] = useState(urlError ? decodeURIComponent(urlError) : '');
   const [email, setEmail] = useState('');
@@ -146,6 +149,9 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen bg-[#050505] text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(37,99,235,0.24),transparent_34rem)]" />
+      <div className="fixed right-5 top-5 z-20">
+        <LanguageSwitcher currentLocale={activeLocale} variant="dark" compact />
+      </div>
 
       <div className="relative mx-auto flex min-h-screen max-w-md items-center px-5">
         <div className="w-full rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-7 shadow-2xl backdrop-blur-xl">
@@ -206,7 +212,7 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <Link href={`/${locale}/signup`} className="block text-center text-sm text-white/50 hover:text-white">
+            <Link href={`/${activeLocale}/signup`} className="block text-center text-sm text-white/50 hover:text-white">
               {copy.signup}
             </Link>
           </div>
