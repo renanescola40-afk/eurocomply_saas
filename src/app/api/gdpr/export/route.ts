@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { listDocuments } from '@/server/queries/documents';
@@ -21,6 +22,19 @@ export async function GET() {
     return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
   }
 
+  const entitlementCheck = await assertGdprSelfServiceEnabled(organization.id);
+
+  if (!entitlementCheck.ok) {
+    return NextResponse.json(
+      {
+        error: entitlementCheck.error,
+        message: entitlementCheck.message,
+        plan: entitlementCheck.entitlements.plan,
+      },
+      { status: entitlementCheck.status },
+    );
+  }
+
   const [documents, auditEvents, notifications] = await Promise.all([
     listDocuments(organization.id),
     listAuditEventsForUser(user.id),
@@ -33,7 +47,7 @@ export async function GET() {
     action: 'gdpr_export_requested',
     entityType: 'organization',
     entityId: organization.id,
-    metadata: { scope: 'organization_export' },
+    metadata: { scope: 'organization_export', plan: entitlementCheck.entitlements.plan },
   });
 
   await createNotification({
