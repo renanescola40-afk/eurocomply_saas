@@ -12,6 +12,24 @@ import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { listDocuments } from '@/server/queries/documents';
 
+function formatDocumentStatus(status: string | null | undefined) {
+  const normalized = String(status ?? 'pending').toLowerCase();
+
+  if (normalized.includes('approved') || normalized.includes('aprovado')) {
+    return 'Approved';
+  }
+
+  if (normalized.includes('review') || normalized.includes('revis')) {
+    return 'In review';
+  }
+
+  if (normalized.includes('reject') || normalized.includes('rejeit')) {
+    return 'Rejected';
+  }
+
+  return 'Pending';
+}
+
 export default async function OrganizationDocumentsPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
 
@@ -131,28 +149,35 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
             </div>
           ) : (
             <div className="space-y-3">
-              {documents.map((document) => (
-                <article key={document.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <h3 className="font-medium text-white">{document.name}</h3>
-                      <p className="mt-1 text-sm text-white/50">{document.category} · {document.status}</p>
-                      <p className="mt-2 text-xs text-white/35">{document.mime_type ?? 'Unknown type'} · {document.size_bytes ?? 0} bytes</p>
-                    </div>
-                    <div className="flex flex-col items-start gap-2 md:items-end">
-                      {document.expires_at && (
-                        <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/60">
-                          Expires {document.expires_at}
-                        </span>
-                      )}
-                      <div className="flex flex-wrap gap-2 md:justify-end">
-                        <DocumentDownloadButton documentId={document.id} onCreateSignedUrl={createDownloadUrlAction} />
-                        <DocumentDeleteButton documentId={document.id} documentName={document.name} onDelete={deleteDocumentAction} />
+              {documents.map((document) => {
+                const title = document.title ?? 'Untitled compliance document';
+                const status = formatDocumentStatus(document.status);
+
+                return (
+                  <article key={document.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <h3 className="font-medium text-white">{title}</h3>
+                        <p className="mt-1 text-sm text-white/50">Version v{document.version ?? 1} · {status}</p>
+                        <p className="mt-2 text-xs text-white/35">
+                          Created {document.created_at ? new Date(document.created_at).toLocaleDateString('en-GB') : 'without date'}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-start gap-2 md:items-end">
+                        {document.expires_at && (
+                          <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/60">
+                            Expires {new Date(document.expires_at).toLocaleDateString('en-GB')}
+                          </span>
+                        )}
+                        <div className="flex flex-wrap gap-2 md:justify-end">
+                          <DocumentDownloadButton documentId={document.id} onCreateSignedUrl={createDownloadUrlAction} />
+                          <DocumentDeleteButton documentId={document.id} documentName={title} onDelete={deleteDocumentAction} />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
