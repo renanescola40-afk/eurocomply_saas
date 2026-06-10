@@ -15,6 +15,10 @@ function getDateTime(value?: string | null) {
   return new Date(value).getTime();
 }
 
+function getVendorReviewSortDate(vendor: { updated_at?: string | null; created_at?: string | null }) {
+  return getDateTime(vendor.updated_at ?? vendor.created_at ?? null);
+}
+
 export async function getOrganizationDashboardData(userId: string, organizationSlug?: string) {
   const organization = await getCurrentOrganizationForUser(userId, organizationSlug);
 
@@ -45,7 +49,7 @@ export async function getOrganizationDashboardData(userId: string, organizationS
     .sort((a, b) => {
       const aIsHighRisk = a.risk_level === 'high' ? 1 : 0;
       const bIsHighRisk = b.risk_level === 'high' ? 1 : 0;
-      return bIsHighRisk - aIsHighRisk || getDateTime(a.next_review_at) - getDateTime(b.next_review_at);
+      return bIsHighRisk - aIsHighRisk || getVendorReviewSortDate(a) - getVendorReviewSortDate(b);
     })
     .slice(0, 5);
 
