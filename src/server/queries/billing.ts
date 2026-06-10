@@ -1,4 +1,5 @@
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { normalizePlan } from '@/server/queries/subscription';
 
 export type BillingUsage = {
   users: number;
@@ -60,7 +61,7 @@ export async function getOrganizationBillingContext(
   ]);
 
   return {
-    plan: subscription?.plan ?? 'starter',
+    plan: normalizePlan(subscription?.plan ?? 'essential'),
     status: subscription?.status ?? null,
     usage: {
       users,
