@@ -41,8 +41,13 @@ function isRateLimited(key: string) {
   return false;
 }
 
-function getInviteEntityId(invite: { id?: unknown }) {
-  return typeof invite.id === 'string' ? invite.id : undefined;
+function getInviteEntityId(invite: unknown) {
+  if (!invite || typeof invite !== 'object' || !('id' in invite)) {
+    return undefined;
+  }
+
+  const { id } = invite as { id?: unknown };
+  return typeof id === 'string' ? id : undefined;
 }
 
 export async function POST(request: Request) {
