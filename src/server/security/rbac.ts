@@ -36,6 +36,26 @@ export type PermissionCheckResult = {
   permission: OrganizationPermission;
 };
 
+export const ORGANIZATION_ROLES: OrganizationRole[] = ['owner', 'admin', 'editor', 'member', 'viewer'];
+
+export const ORGANIZATION_PERMISSIONS: OrganizationPermission[] = [
+  'manage_billing',
+  'manage_team',
+  'manage_documents',
+  'read_documents',
+  'manage_vendors',
+  'read_vendors',
+  'manage_risks',
+  'read_risks',
+  'manage_ai_governance',
+  'read_ai_governance',
+  'manage_ai_incidents',
+  'read_ai_incidents',
+  'read_audit',
+  'export_data',
+  'manage_settings',
+];
+
 const ROLE_PERMISSIONS: Record<OrganizationRole, OrganizationPermission[]> = {
   owner: [
     'manage_billing',
@@ -94,6 +114,17 @@ const ROLE_PERMISSIONS: Record<OrganizationRole, OrganizationPermission[]> = {
   ],
   viewer: ['read_documents', 'read_vendors', 'read_risks', 'read_ai_governance', 'read_ai_incidents'],
 };
+
+export function getRolePermissions(role: string | null | undefined) {
+  return [...ROLE_PERMISSIONS[normalizeOrganizationRole(role)]];
+}
+
+export function getOrganizationPermissionMatrix() {
+  return ORGANIZATION_ROLES.map((role) => ({
+    role,
+    permissions: getRolePermissions(role),
+  }));
+}
 
 export function normalizeOrganizationRole(role: string | null | undefined): OrganizationRole {
   const normalized = String(role ?? '')
