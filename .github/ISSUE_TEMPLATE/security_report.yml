@@ -1,0 +1,56 @@
+name: Security report
+description: Report a suspected vulnerability privately whenever possible
+title: "[Security]: "
+labels: ["security", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include secrets, access tokens, personal data, tax identifiers, or customer documents. For high severity issues, follow SECURITY.md and contact the maintainers privately.
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Suspected severity
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+        - Unknown
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Authentication
+        - Authorization / RLS
+        - Multi-tenant isolation
+        - Billing / Stripe
+        - Document storage
+        - GDPR export/delete
+        - Audit logs
+        - API rate limiting
+        - Frontend / XSS
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the suspected vulnerability without exposing sensitive data.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Potential impact
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction notes
+      description: Provide minimal safe steps. Redact secrets and customer data.
