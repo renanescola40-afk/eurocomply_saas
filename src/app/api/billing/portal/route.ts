@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/server/billing/stripe';
+import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
 
@@ -20,6 +21,16 @@ export async function POST(request: Request) {
   const organization = await getCurrentOrganizationForUser(user.id);
   if (!organization) {
     return NextResponse.json({ error: 'Organization required.' }, { status: 403 });
+  }
+
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: 'manage_billing',
+  });
+
+  if (!permission.ok) {
+    return permissionDeniedResponse(permission);
   }
 
   const supabase = createAdminClient();
