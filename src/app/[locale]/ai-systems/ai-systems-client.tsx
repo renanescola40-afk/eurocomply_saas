@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { AiSystemRecord } from '@/server/queries/ai-systems';
 import type { AiActRiskLevel } from '@/server/ai-governance/classifier';
+import { ReadinessCard } from './readiness-card';
 import { RoleWizardCard } from './role-wizard-card';
 
 type AiSystemsClientProps = {
@@ -267,6 +268,8 @@ export function AiSystemsClient({ locale, initialSystems, organizationName }: Ai
             <div className="rounded-2xl border bg-muted/20 p-4"><FileText className="h-5 w-5 text-primary" /><p className="mt-3 text-2xl font-bold">{stats.transparency}</p><p className="text-xs text-muted-foreground">{t.transparency}</p></div>
           </div>
         </div>
+
+        <ReadinessCard locale={locale} systems={systems} />
 
         <form onSubmit={submit} className="mt-8 rounded-3xl border bg-muted/20 p-5">
           <div className="mb-5">
