@@ -1,6 +1,13 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 
-export type SubscriptionPlan = 'basic' | 'pro' | 'enterprise';
+export type SubscriptionPlan = 'essential' | 'professional' | 'business' | 'enterprise';
+
+const PLAN_RANK: Record<SubscriptionPlan, number> = {
+  essential: 1,
+  professional: 2,
+  business: 3,
+  enterprise: 4,
+};
 
 type OrganizationSubscriptionRow = {
   plan?: string | null;
@@ -8,19 +15,25 @@ type OrganizationSubscriptionRow = {
   status?: string | null;
 };
 
-function normalizePlan(value: string | null | undefined): SubscriptionPlan {
-  const normalized = value?.toLowerCase();
+export function normalizePlan(value: string | null | undefined): SubscriptionPlan {
+  const normalized = value?.toLowerCase().trim();
 
   if (normalized === 'enterprise') return 'enterprise';
-  if (normalized === 'pro') return 'pro';
-  return 'basic';
+  if (normalized === 'business') return 'business';
+  if (normalized === 'professional' || normalized === 'pro') return 'professional';
+
+  return 'essential';
+}
+
+export function isPlanAtLeast(plan: SubscriptionPlan, minimumPlan: SubscriptionPlan) {
+  return PLAN_RANK[plan] >= PLAN_RANK[minimumPlan];
 }
 
 export async function getOrganizationPlan(organizationId: string): Promise<SubscriptionPlan> {
   const supabase = createAdminClient();
 
   if (!supabase) {
-    return 'basic';
+    return 'essential';
   }
 
   const { data, error } = await supabase
@@ -34,18 +47,26 @@ export async function getOrganizationPlan(organizationId: string): Promise<Subsc
 
   if (error) {
     console.warn('[subscription] plan_lookup_failed', { code: error.code ?? 'unknown' });
-    return 'basic';
+    return 'essential';
   }
 
   return normalizePlan(data?.plan ?? data?.tier);
 }
 
-export async function requireEnterprisePlan(organizationId: string) {
+export async function requirePlanAtLeast(organizationId: string, minimumPlan: SubscriptionPlan) {
   const plan = await getOrganizationPlan(organizationId);
 
-  if (plan !== 'enterprise') {
-    throw new Error('enterprise_required');
+  if (!isPlanAtLeast(plan, minimumPlan)) {
+    throw new Error(`${minimumPlan}_required`);
   }
 
   return plan;
+}
+
+export async function requireBusinessPlan(organizationId: string) {
+  return requirePlanAtLeast(organizationId, 'business');
+}
+
+export async function requireEnterprisePlan(organizationId: string) {
+  return requirePlanAtLeast(organizationId, 'enterprise');
 }
