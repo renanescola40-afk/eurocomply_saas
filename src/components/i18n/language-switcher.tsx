@@ -14,6 +14,13 @@ function switchLocalePath(pathname: string, nextLocale: Locale) {
   return `/${nextLocale}${pathname.startsWith('/') ? pathname : `/${pathname}`}`;
 }
 
+function persistLocale(locale: Locale) {
+  try {
+    localStorage.setItem('eurocomply-locale', locale);
+    document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax`;
+  } catch {}
+}
+
 function persistLocaleScript(locale: Locale) {
   return `try{localStorage.setItem('eurocomply-locale','${locale}');document.cookie='NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax'}catch(e){}`;
 }
@@ -33,15 +40,17 @@ export function LanguageSwitcher({ currentLocale, variant = 'light', compact = f
       {!compact ? <Globe2 className={`ml-2 h-4 w-4 ${isDark ? 'text-white/60' : 'text-muted-foreground'}`} /> : null}
       {locales.map((locale) => {
         const active = locale === currentLocale;
+        const targetPath = switchLocalePath(pathname, locale);
         return (
           <Link
             key={locale}
-            href={switchLocalePath(pathname, locale)}
-            onClick={() => {
-              try {
-                localStorage.setItem('eurocomply-locale', locale);
-                document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax`;
-              } catch {}
+            href={targetPath}
+            onClick={(event) => {
+              persistLocale(locale);
+              if (locale !== currentLocale) {
+                event.preventDefault();
+                window.location.assign(targetPath);
+              }
             }}
             className={`rounded-full px-2.5 py-1.5 text-xs font-bold uppercase tracking-[0.18em] transition ${active ? (isDark ? 'bg-white text-black' : 'bg-foreground text-background') : isDark ? 'text-white/60 hover:bg-white/10 hover:text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
             title={LOCALE_META[locale].nativeName}
