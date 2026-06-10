@@ -9,7 +9,7 @@ import DashboardI18nRuntime from '@/components/DashboardI18nRuntime';
 import DashboardChildI18nRuntime from '@/components/DashboardChildI18nRuntime';
 import GapAnalysisShortcut from '@/components/GapAnalysisShortcut';
 import { AuthProvider } from '@/hooks/useAuth';
-import { routing } from '@/lib/i18n/routing';
+import { routing, type Locale } from '@/lib/i18n/routing';
 
 import '../globals.css';
 
@@ -30,34 +30,35 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
-  const labels: Record<string, { title: string; description: string }> = {
+  const labels: Record<Locale, { title: string; description: string }> = {
     en: {
-      title: 'EuroComply AI - AI Compliance Platform for Europe',
-      description: 'Automate documentation, governance and AI compliance in minutes.',
+      title: 'EuroComply - European Compliance Operating System',
+      description: 'Control deadlines, risks, documents, audit logs and fiscal identifiers across Europe.',
     },
     pt: {
-      title: 'EuroComply AI - Plataforma de Compliance de IA para a Europa',
-      description: 'Automatize documentação, governança e compliance de IA em minutos.',
+      title: 'EuroComply - Sistema Operacional de Compliance Europeu',
+      description: 'Controle prazos, riscos, documentos, logs de auditoria e identificações fiscais na Europa.',
     },
     es: {
-      title: 'EuroComply AI - Plataforma de Cumplimiento de IA para Europa',
-      description: 'Automatiza documentación, gobernanza y cumplimiento de IA en minutos.',
+      title: 'EuroComply - Sistema Operativo de Compliance Europeo',
+      description: 'Controle plazos, riesgos, documentos, registros de auditoría e identificadores fiscales en Europa.',
     },
     fr: {
-      title: 'EuroComply AI - Plateforme de Conformité IA pour Europe',
-      description: 'Automatisez documentation, gouvernance et conformité IA en minutes.',
+      title: 'EuroComply - Système Opérationnel de Conformité Européenne',
+      description: 'Pilotez échéances, risques, documents, journaux d’audit et identifiants fiscaux en Europe.',
     },
     it: {
-      title: 'EuroComply AI - Piattaforma di Conformità IA per Europa',
-      description: 'Automatizza documentazione, governance e conformità IA in pochi minuti.',
+      title: 'EuroComply - Sistema Operativo di Compliance Europea',
+      description: 'Gestisci scadenze, rischi, documenti, registri di audit e identificativi fiscali in Europa.',
     },
     de: {
-      title: 'EuroComply AI - KI-Compliance-Plattform für Europa',
-      description: 'Automatisieren Sie Dokumentation, Governance und KI-Compliance in Minuten.',
+      title: 'EuroComply - Europäisches Compliance-Betriebssystem',
+      description: 'Steuern Sie Fristen, Risiken, Dokumente, Audit-Logs und Steuerkennungen in Europa.',
     },
   };
 
-  const meta = labels[locale] ?? labels.en;
+  const safeLocale = routing.locales.includes(locale as Locale) ? (locale as Locale) : 'en';
+  const meta = labels[safeLocale];
 
   return {
     title: meta.title,
@@ -67,15 +68,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
-
-  if (!routing.locales.includes(locale as 'en')) {
-    // redirect handled by middleware, but safe fallback
-  }
-
+  const safeLocale = routing.locales.includes(locale as Locale) ? locale : 'en';
   const messages = await getMessages();
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={safeLocale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
