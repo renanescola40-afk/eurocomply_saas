@@ -36,6 +36,15 @@ const REQUIRED_TABLES = [
   'ai_incidents',
 ] as const;
 
+type SupabaseAdminClient = ReturnType<typeof createAdminClient>;
+type DynamicSupabaseClient = SupabaseAdminClient & {
+  from: (table: string) => {
+    select: (columns: string) => {
+      limit: (count: number) => Promise<{ error: { code?: string; message?: string } | null }>;
+    };
+  };
+};
+
 function hasBearerToken(request: Request) {
   const configuredToken = process.env.HEALTHCHECK_TOKEN;
 
@@ -55,9 +64,10 @@ function envCheck(names: readonly string[]) {
   return names.map((name) => ({ name, configured: Boolean(process.env[name]) }));
 }
 
-async function checkTable(admin: ReturnType<typeof createAdminClient>, table: string) {
+async function checkTable(admin: SupabaseAdminClient, table: string) {
   try {
-    const { error } = await admin.from(table).select('id').limit(1);
+    const dynamicAdmin = admin as unknown as DynamicSupabaseClient;
+    const { error } = await dynamicAdmin.from(table).select('id').limit(1);
     return {
       name: table,
       ok: !error,
@@ -72,7 +82,7 @@ async function checkTable(admin: ReturnType<typeof createAdminClient>, table: st
   }
 }
 
-async function checkBucket(admin: ReturnType<typeof createAdminClient>, name: string) {
+async function checkBucket(admin: SupabaseAdminClient, name: string) {
   try {
     const { error } = await admin.storage.getBucket(name);
     return {
