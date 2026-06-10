@@ -1,9 +1,24 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+function isAuthorized(request: NextRequest) {
+  const token = process.env.HEALTHCHECK_TOKEN;
+
+  if (!token) {
+    return process.env.NODE_ENV !== 'production';
+  }
+
+  const authorization = request.headers.get('authorization');
+  return authorization === `Bearer ${token}`;
+}
+
+export async function GET(request: NextRequest) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ status: 'unauthorized' }, { status: 401 });
+  }
+
   const checks = {
     env: {
       supabaseUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
