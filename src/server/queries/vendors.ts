@@ -1,12 +1,14 @@
 import { createAdminClient, tryCreateAdminClient } from '@/lib/supabase/admin';
 
+const VENDOR_COLUMNS = 'id,name,website,country,category,risk_level,review_status,created_at,updated_at';
+
 export async function listVendors(organizationId: string) {
   const supabase = tryCreateAdminClient();
   if (!supabase) return [];
 
   const { data, error } = await supabase
     .from('vendors')
-    .select('*')
+    .select(VENDOR_COLUMNS)
     .eq('organization_id', organizationId)
     .order('created_at', { ascending: false });
 
@@ -23,7 +25,7 @@ export async function getVendor(vendorId: string, organizationId: string) {
 
   const { data, error } = await supabase
     .from('vendors')
-    .select('*')
+    .select(VENDOR_COLUMNS)
     .eq('id', vendorId)
     .eq('organization_id', organizationId)
     .single();
