@@ -39,14 +39,7 @@ async function recordBillingActivity(subscription: Stripe.Subscription, plan: Re
       organizationId,
       userId: actorUserId,
       type: 'system',
-      title: 'Assinatura atualizada',
-      body: `O plano ${plan} foi sincronizado com o estado ${subscription.status}.`,
-      metadata: {
-        category: 'billing',
-        plan,
-        status: subscription.status,
-        stripeSubscriptionId: subscription.id,
-      },
+      message: `Assinatura atualizada: o plano ${plan} foi sincronizado com o estado ${subscription.status}.`,
     }),
   ]);
 }
