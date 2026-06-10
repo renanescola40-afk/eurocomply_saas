@@ -5,6 +5,7 @@ import { listDocuments } from '@/server/queries/documents';
 import { listRisks } from '@/server/queries/risks';
 import { listVendors } from '@/server/queries/vendors';
 import type { PlanEntitlements } from '@/server/billing/entitlements';
+import { CONTINUITY_CONTROLS, getContinuitySummary } from '@/server/governance/continuity-policy';
 import { getRetentionSummary, RETENTION_POLICIES } from '@/server/governance/retention-policy';
 import type { OrganizationRole } from '@/server/security/rbac';
 
@@ -77,6 +78,10 @@ export type AuditEvidencePack = {
     retention: {
       summary: ReturnType<typeof getRetentionSummary>;
       policies: typeof RETENTION_POLICIES;
+    };
+    continuity: {
+      summary: ReturnType<typeof getContinuitySummary>;
+      controls: typeof CONTINUITY_CONTROLS;
     };
   };
   evidence: {
@@ -232,6 +237,10 @@ export async function buildAuditEvidencePack({
       retention: {
         summary: getRetentionSummary(),
         policies: RETENTION_POLICIES,
+      },
+      continuity: {
+        summary: getContinuitySummary(),
+        controls: CONTINUITY_CONTROLS,
       },
     },
     evidence: {
