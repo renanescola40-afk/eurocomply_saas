@@ -63,13 +63,27 @@ const aiGovernanceCopy: Record<string, { label: string; description: string; inv
   },
 };
 
+const rolesCopy: Record<string, string> = {
+  en: 'Workspace Roles',
+  pt: 'Papéis do Workspace',
+  es: 'Roles del Workspace',
+  fr: 'Rôles du Workspace',
+  it: 'Ruoli Workspace',
+  de: 'Workspace-Rollen',
+};
+
 function getAiGovernanceCopy(locale: string) {
   return aiGovernanceCopy[locale] ?? aiGovernanceCopy.en;
+}
+
+function getRolesCopy(locale: string) {
+  return rolesCopy[locale] ?? rolesCopy.en;
 }
 
 export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuItem[] {
   const nav = getAppDictionary(locale).nav;
   const aiNav = getAiGovernanceCopy(locale);
+  const rolesLabel = getRolesCopy(locale);
 
   return [
     { label: nav.eurocomply, href: '/eurocomply-home', description: nav.eurocomplyDescription },
@@ -119,6 +133,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
         { label: nav.myData, href: '/profile#company-data', description: nav.myDataDescription },
         { label: nav.plan, href: '/profile#plan', description: nav.planDescription },
         { label: nav.employees, href: '/profile#employees', description: nav.employeesDescription },
+        { label: rolesLabel, href: '/security-center' },
         { label: nav.enterpriseAvatar, href: '/profile#enterprise-status', description: nav.enterpriseAvatarDescription },
       ],
     },
