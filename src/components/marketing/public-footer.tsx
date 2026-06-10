@@ -11,10 +11,17 @@ const companyLinks = [
   { label: 'Contact', href: '/contact' },
 ];
 
+const trustLinks = [
+  { label: 'Privacy', href: '/privacy' },
+  { label: 'Terms', href: '/terms' },
+  { label: 'DPA', href: '/dpa' },
+  { label: 'Subprocessors', href: '/subprocessors' },
+];
+
 export function PublicFooter({ locale }: { locale: string }) {
   return (
     <footer className="border-t bg-background px-6 py-10 text-sm text-muted-foreground">
-      <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.4fr_1fr_1fr]">
+      <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
           <p className="text-base font-semibold text-foreground">EuroComply</p>
           <p className="mt-3 max-w-md leading-6">
@@ -35,6 +42,16 @@ export function PublicFooter({ locale }: { locale: string }) {
           <p className="font-medium text-foreground">Company</p>
           <ul className="mt-3 space-y-2">
             {companyLinks.map((link) => (
+              <li key={link.href}>
+                <Link href={`/${locale}${link.href}`} className="hover:text-foreground">{link.label}</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <nav>
+          <p className="font-medium text-foreground">Trust</p>
+          <ul className="mt-3 space-y-2">
+            {trustLinks.map((link) => (
               <li key={link.href}>
                 <Link href={`/${locale}${link.href}`} className="hover:text-foreground">{link.label}</Link>
               </li>
