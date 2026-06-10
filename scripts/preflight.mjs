@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+
 const required = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
@@ -15,8 +17,19 @@ const recommended = [
   'SENTRY_AUTH_TOKEN',
 ];
 
+const requiredFiles = [
+  'supabase/migrations/20260610_public_launch_readiness.sql',
+  'supabase/migrations/20260610_billing_stripe_sync.sql',
+  'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
+  'docs/SECURITY_OVERVIEW.md',
+  'docs/LEGAL_READINESS.md',
+  'docs/INCIDENT_RESPONSE.md',
+  'docs/BACKUP_AND_CONTINUITY.md',
+];
+
 const missingRequired = required.filter((key) => !process.env[key]);
 const missingRecommended = recommended.filter((key) => !process.env[key]);
+const missingFiles = requiredFiles.filter((path) => !existsSync(path));
 
 console.log('EuroComply production preflight');
 console.log('--------------------------------');
@@ -34,6 +47,14 @@ if (missingRecommended.length > 0) {
   for (const key of missingRecommended) console.warn(`- ${key}`);
 } else {
   console.log('Recommended production variables: ok');
+}
+
+if (missingFiles.length > 0) {
+  console.error('Missing launch-critical files:');
+  for (const path of missingFiles) console.error(`- ${path}`);
+  process.exitCode = 1;
+} else {
+  console.log('Launch-critical files: ok');
 }
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL;
