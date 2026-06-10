@@ -16,6 +16,7 @@ const trustLinks = [
   { label: 'Terms', href: '/terms' },
   { label: 'DPA', href: '/dpa' },
   { label: 'Subprocessors', href: '/subprocessors' },
+  { label: 'Status', href: '/status' },
 ];
 
 export function PublicFooter({ locale }: { locale: string }) {
