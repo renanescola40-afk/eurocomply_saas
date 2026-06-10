@@ -81,9 +81,13 @@ const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
   },
 };
 
+export function getPlanEntitlements(plan: SubscriptionPlan): PlanEntitlements {
+  return { plan, ...ENTITLEMENTS[plan] };
+}
+
 export async function getOrganizationEntitlements(organizationId: string): Promise<PlanEntitlements> {
   const plan = await getOrganizationPlan(organizationId);
-  return { plan, ...ENTITLEMENTS[plan] };
+  return getPlanEntitlements(plan);
 }
 
 export function formatLimit(limit: number) {
