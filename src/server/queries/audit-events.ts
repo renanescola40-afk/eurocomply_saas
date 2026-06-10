@@ -9,6 +9,23 @@ type AuditEventInput = {
   metadata?: Record<string, unknown>;
 };
 
+export type AuditEventRecord = {
+  id: string;
+  organization_id: string;
+  actor_user_id: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+const AUDIT_EVENT_COLUMNS = 'id,organization_id,actor_user_id,action,entity_type,entity_id,metadata,created_at';
+
+function isMissingAuditEventsTable(error: { code?: string; message?: string }) {
+  return error.code === '42P01' || error.code === 'PGRST205' || /audit_events/i.test(error.message ?? '');
+}
+
 export async function createAuditEvent(input: AuditEventInput) {
   const supabase = tryCreateAdminClient();
 
@@ -31,4 +48,28 @@ export async function createAuditEvent(input: AuditEventInput) {
   }
 
   return { persisted: true };
+}
+
+export async function listAuditEvents(organizationId: string, limit = 100): Promise<AuditEventRecord[]> {
+  const supabase = tryCreateAdminClient();
+
+  if (!supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('audit_events')
+    .select(AUDIT_EVENT_COLUMNS)
+    .eq('organization_id', organizationId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    if (!isMissingAuditEventsTable(error)) {
+      console.warn('[audit] list_events_failed', { code: error.code ?? 'unknown' });
+    }
+    return [];
+  }
+
+  return (data ?? []) as unknown as AuditEventRecord[];
 }
