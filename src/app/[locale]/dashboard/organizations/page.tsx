@@ -5,6 +5,7 @@ import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-com
 import { HomeDashboardPage } from '@/components/dashboard/dashboard-overview';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getOrganizationEntitlements, formatLimit } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
 
@@ -14,6 +15,13 @@ const quickLinks = [
   { href: '/dashboard/organizations/vendors', label: 'Vendors', description: 'Track third-party review exposure', icon: UsersRound },
   { href: '/dashboard/organizations/risks', label: 'Risks', description: 'Prioritise high-impact compliance gaps', icon: Gauge },
 ];
+
+const planLabels = {
+  essential: 'Essential',
+  professional: 'Professional',
+  business: 'Business',
+  enterprise: 'Enterprise',
+};
 
 export default async function OrganizationDashboardPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
@@ -28,6 +36,7 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
     redirect(`/${params.locale}/onboarding`);
   }
 
+  const entitlements = await getOrganizationEntitlements(data.organization.id);
   const dashboardBasePath = `/dashboard/organizations`;
   const localizedDashboardBasePath = `/${params.locale}${dashboardBasePath}`;
   const complianceHealth = data.summary.complianceScore >= 80 ? 'Audit ready' : data.summary.complianceScore >= 55 ? 'Needs attention' : 'Remediation needed';
@@ -47,6 +56,9 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
                 <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
                   {complianceHealth}
                 </Badge>
+                <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
+                  Plano {planLabels[entitlements.plan]}
+                </Badge>
               </div>
 
               <div className="space-y-3">
@@ -59,6 +71,21 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
                 <p className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
                   Monitor GDPR, AI Act and operational compliance from one executive cockpit: risk, evidence, vendors and remediation work — without the spreadsheet chaos.
                 </p>
+              </div>
+
+              <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
+                <div className="rounded-2xl border bg-background/70 p-4">
+                  <p className="font-semibold text-foreground">Documentos</p>
+                  <p>{formatLimit(entitlements.maxDocuments)} incluídos</p>
+                </div>
+                <div className="rounded-2xl border bg-background/70 p-4">
+                  <p className="font-semibold text-foreground">Utilizadores</p>
+                  <p>{formatLimit(entitlements.maxUsers)} incluídos</p>
+                </div>
+                <div className="rounded-2xl border bg-background/70 p-4">
+                  <p className="font-semibold text-foreground">Países fiscais</p>
+                  <p>{formatLimit(entitlements.maxFiscalCountries)} incluídos</p>
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-3">
