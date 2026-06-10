@@ -3,13 +3,51 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
 import { createAdminClient } from '@/lib/supabase/admin';
-import { normalizePlan } from '@/server/queries/subscription';
 import { getStripeClient } from '@/server/billing/stripe';
+import { createAuditEvent } from '@/server/queries/audit-events';
+import { createNotification } from '@/server/queries/notifications';
+import { normalizePlan } from '@/server/queries/subscription';
 
 export const runtime = 'nodejs';
 
 function getPlanFromSubscription(subscription: Stripe.Subscription) {
   return normalizePlan(subscription.metadata?.plan);
+}
+
+async function recordBillingActivity(subscription: Stripe.Subscription, plan: ReturnType<typeof normalizePlan>) {
+  const organizationId = subscription.metadata?.organization_id;
+  const actorUserId = subscription.metadata?.user_id;
+
+  if (!organizationId || !actorUserId) {
+    return;
+  }
+
+  await Promise.allSettled([
+    createAuditEvent({
+      organizationId,
+      actorUserId,
+      action: 'subscription_synced',
+      entityType: 'subscription',
+      entityId: subscription.id,
+      metadata: {
+        plan,
+        status: subscription.status,
+        stripeCustomerId: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
+      },
+    }),
+    createNotification({
+      organizationId,
+      userId: actorUserId,
+      type: 'billing',
+      title: 'Assinatura atualizada',
+      body: `O plano ${plan} foi sincronizado com o estado ${subscription.status}.`,
+      metadata: {
+        plan,
+        status: subscription.status,
+        stripeSubscriptionId: subscription.id,
+      },
+    }),
+  ]);
 }
 
 async function syncSubscription(subscription: Stripe.Subscription) {
@@ -48,6 +86,8 @@ async function syncSubscription(subscription: Stripe.Subscription) {
   if (error) {
     throw error;
   }
+
+  await recordBillingActivity(subscription, plan);
 }
 
 export async function POST(request: Request) {
