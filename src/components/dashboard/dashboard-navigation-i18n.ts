@@ -81,6 +81,15 @@ const retentionCopy: Record<string, { label: string; description: string }> = {
   de: { label: 'Retention Center', description: 'Aufbewahrung für Nachweise, Datensätze und Audit-Historie prüfen' },
 };
 
+const continuityCopy: Record<string, { label: string; description: string }> = {
+  en: { label: 'Continuity Center', description: 'Review operational continuity controls and recovery readiness' },
+  pt: { label: 'Centro de Continuidade', description: 'Reveja controlos de continuidade operacional e prontidão de recuperação' },
+  es: { label: 'Centro de Continuidad', description: 'Revisa controles de continuidad operativa y preparación de recuperación' },
+  fr: { label: 'Centre de Continuité', description: 'Vérifier les contrôles de continuité et la préparation de reprise' },
+  it: { label: 'Centro Continuità', description: 'Verifica controlli di continuità operativa e readiness di recovery' },
+  de: { label: 'Continuity Center', description: 'Operative Kontinuität und Wiederherstellungsreife prüfen' },
+};
+
 const evidencePackCopy: Record<string, { label: string; description: string; verify: string; verifyDescription: string }> = {
   en: { label: 'Evidence Pack', description: 'Export a structured audit evidence snapshot', verify: 'Verify Evidence Pack', verifyDescription: 'Validate exported pack hash and signature status' },
   pt: { label: 'Pacote de Evidências', description: 'Exporte uma fotografia estruturada de evidências de auditoria', verify: 'Verificar Evidências', verifyDescription: 'Valide hash e estado da assinatura do pacote exportado' },
@@ -102,6 +111,10 @@ function getRetentionCopy(locale: string) {
   return retentionCopy[locale] ?? retentionCopy.en;
 }
 
+function getContinuityCopy(locale: string) {
+  return continuityCopy[locale] ?? continuityCopy.en;
+}
+
 function getEvidencePackCopy(locale: string) {
   return evidencePackCopy[locale] ?? evidencePackCopy.en;
 }
@@ -111,6 +124,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
   const aiNav = getAiGovernanceCopy(locale);
   const rolesLabel = getRolesCopy(locale);
   const retention = getRetentionCopy(locale);
+  const continuity = getContinuityCopy(locale);
   const evidencePack = getEvidencePackCopy(locale);
 
   return [
@@ -152,6 +166,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
         { label: evidencePack.label, href: '/audit-pack', description: evidencePack.description },
         { label: evidencePack.verify, href: '/audit-pack/verify', description: evidencePack.verifyDescription },
         { label: retention.label, href: '/retention-center', description: retention.description },
+        { label: continuity.label, href: '/continuity-center', description: continuity.description },
         { label: nav.europeanNews, href: `${dashboardRoot}/reports-governance/news`, description: nav.europeanNewsDescription },
         { label: nav.approvals, href: '/aprovacoes', description: nav.approvalsDescription },
         { label: nav.minutesGovernance, href: `${dashboardRoot}/reports-governance`, description: nav.minutesGovernanceDescription },
