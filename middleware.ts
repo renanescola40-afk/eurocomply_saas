@@ -19,6 +19,7 @@ const protectedSegments = [
   '/calendario-compliance',
   '/aprovacoes',
   '/ai-systems',
+  '/ai-incidents',
 ];
 const publicAuthSegments = ['/login', '/signup'];
 const DEFAULT_LOCALE: SupportedLocale = 'en';
