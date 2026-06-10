@@ -4,6 +4,12 @@ import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
 const DASHBOARD_PATH = '/dashboard/organizations';
 
+type CookieToSet = {
+  name: string;
+  value: string;
+  options?: Parameters<NextResponse['cookies']['set']>[2];
+};
+
 function getLocale(rawLocale: string | null): Locale {
   return rawLocale && locales.includes(rawLocale as Locale) ? rawLocale as Locale : defaultLocale;
 }
@@ -41,15 +47,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(getLoginUrl(request, locale, 'Supabase env missing'));
   }
 
-  const response = NextResponse.next();
+  const cookiesToSet: CookieToSet[] = [];
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
+      setAll(nextCookiesToSet) {
+        nextCookiesToSet.forEach(({ name, value, options }) => {
+          cookiesToSet.push({ name, value, options });
         });
       },
     },
@@ -67,5 +73,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(getLoginUrl(request, locale, message));
   }
 
-  return NextResponse.redirect(data.url);
+  const redirectResponse = NextResponse.redirect(data.url);
+  cookiesToSet.forEach(({ name, value, options }) => {
+    redirectResponse.cookies.set(name, value, options);
+  });
+
+  return redirectResponse;
 }
