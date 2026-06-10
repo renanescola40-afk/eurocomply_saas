@@ -15,6 +15,8 @@ const TRUST_COPY: Record<SupportedLocale, {
     description: 'EuroComply is built for organizations that need control, evidence and confidence before expanding across Europe.',
     cards: [
       { title: 'Security overview', description: 'Authentication, tenant isolation, audit logs, secure storage and operational safeguards.', href: '/security', icon: 'shield' },
+      { title: 'Compliance posture', description: 'European compliance workflows, evidence readiness and regulatory roadmap.', href: '/compliance', icon: 'shield' },
+      { title: 'Data processing', description: 'How EuroComply processes customer data, access controls and document storage.', href: '/data-processing', icon: 'database' },
       { title: 'Privacy policy', description: 'How EuroComply handles personal data, legal bases and GDPR rights.', href: '/privacy', icon: 'lock' },
       { title: 'Data Processing Addendum', description: 'Processor commitments for customers that use EuroComply with personal data.', href: '/dpa', icon: 'scale' },
       { title: 'Subprocessors', description: 'Infrastructure and service providers involved in operating EuroComply.', href: '/subprocessors', icon: 'database' },
@@ -28,6 +30,8 @@ const TRUST_COPY: Record<SupportedLocale, {
     description: 'O EuroComply foi criado para organizações que precisam de controlo, evidência e confiança antes de crescer na Europa.',
     cards: [
       { title: 'Visão geral de segurança', description: 'Autenticação, isolamento por empresa, auditoria, armazenamento seguro e controlos operacionais.', href: '/security', icon: 'shield' },
+      { title: 'Postura de compliance', description: 'Workflows europeus, prontidão de evidências e roadmap regulatório.', href: '/compliance', icon: 'shield' },
+      { title: 'Tratamento de dados', description: 'Como o EuroComply trata dados de clientes, controlos de acesso e armazenamento documental.', href: '/data-processing', icon: 'database' },
       { title: 'Política de privacidade', description: 'Como o EuroComply trata dados pessoais, bases legais e direitos GDPR.', href: '/privacy', icon: 'lock' },
       { title: 'Acordo de tratamento de dados', description: 'Compromissos como subcontratante para clientes que usam dados pessoais.', href: '/dpa', icon: 'scale' },
       { title: 'Subprocessadores', description: 'Infraestrutura e fornecedores usados para operar o EuroComply.', href: '/subprocessors', icon: 'database' },
@@ -41,6 +45,8 @@ const TRUST_COPY: Record<SupportedLocale, {
     description: 'EuroComply está diseñado para organizaciones que necesitan control, evidencia y confianza antes de expandirse por Europa.',
     cards: [
       { title: 'Resumen de seguridad', description: 'Autenticación, aislamiento por empresa, auditoría, almacenamiento seguro y controles operativos.', href: '/security', icon: 'shield' },
+      { title: 'Postura de compliance', description: 'Workflows europeos, preparación de evidencias y roadmap regulatorio.', href: '/compliance', icon: 'shield' },
+      { title: 'Tratamiento de datos', description: 'Cómo EuroComply trata datos de clientes, controles de acceso y almacenamiento documental.', href: '/data-processing', icon: 'database' },
       { title: 'Política de privacidad', description: 'Cómo EuroComply gestiona datos personales, bases legales y derechos GDPR.', href: '/privacy', icon: 'lock' },
       { title: 'Acuerdo de tratamiento de datos', description: 'Compromisos como encargado del tratamiento para clientes con datos personales.', href: '/dpa', icon: 'scale' },
       { title: 'Subprocesadores', description: 'Infraestructura y proveedores utilizados para operar EuroComply.', href: '/subprocessors', icon: 'database' },
@@ -54,6 +60,8 @@ const TRUST_COPY: Record<SupportedLocale, {
     description: 'EuroComply est conçu pour les organisations qui ont besoin de contrôle, de preuves et de confiance avant de se développer en Europe.',
     cards: [
       { title: 'Vue sécurité', description: 'Authentification, isolation par entreprise, journaux d’audit, stockage sécurisé et contrôles opérationnels.', href: '/security', icon: 'shield' },
+      { title: 'Posture conformité', description: 'Workflows européens, préparation des preuves et feuille de route réglementaire.', href: '/compliance', icon: 'shield' },
+      { title: 'Traitement des données', description: 'Traitement des données client, contrôles d’accès et stockage documentaire.', href: '/data-processing', icon: 'database' },
       { title: 'Politique de confidentialité', description: 'Traitement des données personnelles, bases légales et droits GDPR.', href: '/privacy', icon: 'lock' },
       { title: 'Accord de traitement des données', description: 'Engagements de sous-traitant pour les clients utilisant des données personnelles.', href: '/dpa', icon: 'scale' },
       { title: 'Sous-traitants', description: 'Infrastructure et prestataires utilisés pour exploiter EuroComply.', href: '/subprocessors', icon: 'database' },
@@ -67,6 +75,8 @@ const TRUST_COPY: Record<SupportedLocale, {
     description: 'EuroComply è progettato per organizzazioni che richiedono controllo, prove e fiducia prima di crescere in Europa.',
     cards: [
       { title: 'Panoramica sicurezza', description: 'Autenticazione, isolamento tenant, audit log, storage sicuro e controlli operativi.', href: '/security', icon: 'shield' },
+      { title: 'Postura compliance', description: 'Workflow europei, evidenze pronte e roadmap regolatoria.', href: '/compliance', icon: 'shield' },
+      { title: 'Trattamento dati', description: 'Come EuroComply tratta dati cliente, controlli di accesso e storage documentale.', href: '/data-processing', icon: 'database' },
       { title: 'Privacy policy', description: 'Come EuroComply tratta dati personali, basi legali e diritti GDPR.', href: '/privacy', icon: 'lock' },
       { title: 'Accordo trattamento dati', description: 'Impegni come responsabile del trattamento per clienti con dati personali.', href: '/dpa', icon: 'scale' },
       { title: 'Subprocessori', description: 'Infrastruttura e provider usati per operare EuroComply.', href: '/subprocessors', icon: 'database' },
@@ -80,6 +90,8 @@ const TRUST_COPY: Record<SupportedLocale, {
     description: 'EuroComply wurde für Organisationen entwickelt, die Kontrolle, Nachweise und Vertrauen für Wachstum in Europa benötigen.',
     cards: [
       { title: 'Sicherheitsübersicht', description: 'Authentifizierung, Mandantentrennung, Audit-Logs, sichere Speicherung und operative Kontrollen.', href: '/security', icon: 'shield' },
+      { title: 'Compliance-Position', description: 'Europäische Workflows, Nachweisbereitschaft und regulatorische Roadmap.', href: '/compliance', icon: 'shield' },
+      { title: 'Datenverarbeitung', description: 'Wie EuroComply Kundendaten, Zugriffskontrollen und Dokumentenspeicherung verarbeitet.', href: '/data-processing', icon: 'database' },
       { title: 'Datenschutzerklärung', description: 'Wie EuroComply personenbezogene Daten, Rechtsgrundlagen und GDPR-Rechte behandelt.', href: '/privacy', icon: 'lock' },
       { title: 'Datenverarbeitungsvereinbarung', description: 'Auftragsverarbeiterpflichten für Kunden mit personenbezogenen Daten.', href: '/dpa', icon: 'scale' },
       { title: 'Unterauftragsverarbeiter', description: 'Infrastruktur und Anbieter, die für den Betrieb von EuroComply genutzt werden.', href: '/subprocessors', icon: 'database' },
