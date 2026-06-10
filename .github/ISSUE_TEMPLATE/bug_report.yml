@@ -1,0 +1,71 @@
+name: Bug report
+description: Report a product or production bug
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a EuroComply issue. Please avoid sharing secrets, personal data, tax IDs, or customer documents.
+  - type: input
+    id: route
+    attributes:
+      label: Route or feature
+      description: Example: /pt/documentos, /en/dashboard/organizations, Stripe checkout, Supabase upload
+      placeholder: /pt/dashboard/organizations
+    validations:
+      required: true
+  - type: dropdown
+    id: plan
+    attributes:
+      label: Plan
+      options:
+        - Essential
+        - Professional
+        - Business
+        - Enterprise
+        - Unknown
+    validations:
+      required: true
+  - type: dropdown
+    id: locale
+    attributes:
+      label: Locale
+      options:
+        - EN
+        - PT
+        - ES
+        - FR
+        - IT
+        - DE
+        - Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Redact sensitive data before pasting.
+      render: shell
