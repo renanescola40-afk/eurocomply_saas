@@ -16,6 +16,7 @@ const copy = {
     title: 'Audit Evidence Pack',
     description: 'Export a structured evidence snapshot for internal audits, procurement reviews and customer due diligence.',
     download: 'Download JSON pack',
+    verify: 'Verify exported pack',
     restricted: 'Your current role cannot export evidence packs.',
     businessRequired: 'Audit Evidence Pack is available on Business and Enterprise plans.',
     sections: ['Controlled documents', 'Vendors', 'Risks', 'AI systems', 'AI incidents', 'Audit trail'],
@@ -28,6 +29,7 @@ const copy = {
     title: 'Pacote de Evidências de Auditoria',
     description: 'Exporte uma fotografia estruturada de evidências para auditorias internas, procurement e due diligence de clientes.',
     download: 'Baixar pacote JSON',
+    verify: 'Verificar pacote exportado',
     restricted: 'O seu papel atual não permite exportar pacotes de evidência.',
     businessRequired: 'O Pacote de Evidências está disponível nos planos Business e Enterprise.',
     sections: ['Documentos controlados', 'Fornecedores', 'Riscos', 'Sistemas de IA', 'Incidentes de IA', 'Trilha de auditoria'],
@@ -40,6 +42,7 @@ const copy = {
     title: 'Paquete de Evidencias de Auditoría',
     description: 'Exporta una fotografía estructurada de evidencias para auditorías internas, procurement y due diligence de clientes.',
     download: 'Descargar paquete JSON',
+    verify: 'Verificar paquete exportado',
     restricted: 'Tu rol actual no permite exportar paquetes de evidencia.',
     businessRequired: 'El Paquete de Evidencias está disponible en Business y Enterprise.',
     sections: ['Documentos controlados', 'Proveedores', 'Riesgos', 'Sistemas de IA', 'Incidentes de IA', 'Registro de auditoría'],
@@ -52,6 +55,7 @@ const copy = {
     title: 'Pack de Preuves d’Audit',
     description: 'Exportez un instantané structuré des preuves pour audits internes, procurement et due diligence client.',
     download: 'Télécharger le pack JSON',
+    verify: 'Vérifier le pack exporté',
     restricted: 'Votre rôle actuel ne permet pas d’exporter ce pack.',
     businessRequired: 'Le pack de preuves est disponible sur Business et Enterprise.',
     sections: ['Documents contrôlés', 'Fournisseurs', 'Risques', 'Systèmes IA', 'Incidents IA', 'Journal d’audit'],
@@ -64,6 +68,7 @@ const copy = {
     title: 'Pacchetto Evidenze di Audit',
     description: 'Esporta uno snapshot strutturato delle evidenze per audit interni, procurement e due diligence clienti.',
     download: 'Scarica pacchetto JSON',
+    verify: 'Verifica pacchetto esportato',
     restricted: 'Il tuo ruolo attuale non consente di esportare pacchetti di evidenze.',
     businessRequired: 'Il pacchetto evidenze è disponibile nei piani Business ed Enterprise.',
     sections: ['Documenti controllati', 'Fornitori', 'Rischi', 'Sistemi IA', 'Incidenti IA', 'Audit trail'],
@@ -76,6 +81,7 @@ const copy = {
     title: 'Audit Evidence Pack',
     description: 'Exportieren Sie einen strukturierten Nachweis-Snapshot für interne Audits, Procurement und Kundendiligence.',
     download: 'JSON-Paket herunterladen',
+    verify: 'Exportiertes Paket prüfen',
     restricted: 'Ihre aktuelle Rolle darf keine Evidence Packs exportieren.',
     businessRequired: 'Das Evidence Pack ist in Business und Enterprise verfügbar.',
     sections: ['Kontrollierte Dokumente', 'Anbieter', 'Risiken', 'KI-Systeme', 'KI-Incidents', 'Audit Trail'],
@@ -144,9 +150,14 @@ export default async function AuditPackPage({ params }: PageProps) {
                   <h1 className="mt-2 text-3xl font-semibold">{t.title}</h1>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">{t.description}</p>
                 </div>
-                <Link href="/api/audit/evidence-pack" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-100">
-                  <Download className="h-4 w-4" /> {t.download}
-                </Link>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Link href={`/${locale}/audit-pack/verify`} className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
+                    <Fingerprint className="h-4 w-4" /> {t.verify}
+                  </Link>
+                  <Link href="/api/audit/evidence-pack" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-100">
+                    <Download className="h-4 w-4" /> {t.download}
+                  </Link>
+                </div>
               </div>
             </div>
 
