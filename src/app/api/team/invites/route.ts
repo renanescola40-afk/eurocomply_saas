@@ -7,6 +7,7 @@ import { createNotification } from '@/server/queries/notifications';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { isPlanAtLeast } from '@/server/queries/subscription';
 import { isRateLimited } from '@/server/security/rate-limit';
+import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 
 const allowedRoles = new Set(['Admin', 'Editor', 'Visualizador']);
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -62,6 +63,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
   }
 
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: 'manage_team',
+  });
+
+  if (!permission.ok) {
+    return permissionDeniedResponse(permission);
+  }
+
   const entitlements = await getOrganizationEntitlements(organization.id);
 
   if (!entitlements.employeeInvites) {
@@ -70,7 +81,7 @@ export async function POST(request: Request) {
       actorUserId: user.id,
       action: 'team_invite_blocked',
       entityType: 'team_invite',
-      metadata: { reason: 'business_required', plan: entitlements.plan },
+      metadata: { reason: 'business_required', plan: entitlements.plan, role: permission.role },
     });
 
     return NextResponse.json(
@@ -122,6 +133,7 @@ export async function POST(request: Request) {
     metadata: {
       emailDomain: email.split('@')[1] ?? 'unknown',
       role,
+      actorRole: permission.role,
       plan: entitlements.plan,
       persisted: result.persisted,
     },
