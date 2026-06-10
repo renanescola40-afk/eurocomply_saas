@@ -17,6 +17,10 @@ export type NotificationItem = {
   createdAt: string;
 };
 
+type ActivityQueryError = {
+  code?: string;
+} | null;
+
 const demoAuditRows: AuditLogItem[] = [
   { id: 'demo-audit-1', actor: 'Admin', action: 'Atualizou documento controlado', type: 'Documento', createdAt: '2025-04-02 09:20' },
   { id: 'demo-audit-2', actor: 'Compliance', action: 'Aprovou matriz de riscos', type: 'Aprovação', createdAt: '2025-04-08 14:10' },
@@ -29,6 +33,10 @@ const demoNotifications: NotificationItem[] = [
   { id: 'demo-note-3', type: 'system', message: 'Novo relatório de compliance gerado automaticamente.', read: true, createdAt: 'ontem' },
   { id: 'demo-note-4', type: 'approval', message: 'Convite aceite por ana@empresa.com.', read: true, createdAt: '2 dias atrás' },
 ];
+
+function isExpectedSchemaFallback(error: ActivityQueryError) {
+  return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST204' || error?.code === 'PGRST205';
+}
 
 export async function listAuditEventsForUser(userId: string): Promise<AuditLogItem[]> {
   const organization = await getCurrentOrganizationForUser(userId);
@@ -51,7 +59,7 @@ export async function listAuditEventsForUser(userId: string): Promise<AuditLogIt
     .limit(50);
 
   if (error) {
-    if (error.code !== '42P01' && error.code !== '42703') {
+    if (!isExpectedSchemaFallback(error)) {
       console.warn('[audit] list_failed', { code: error.code ?? 'unknown' });
     }
 
@@ -92,7 +100,7 @@ export async function listNotificationsForUser(userId: string): Promise<Notifica
     .limit(50);
 
   if (error) {
-    if (error.code !== '42P01' && error.code !== '42703') {
+    if (!isExpectedSchemaFallback(error)) {
       console.warn('[notifications] list_failed', { code: error.code ?? 'unknown' });
     }
 
