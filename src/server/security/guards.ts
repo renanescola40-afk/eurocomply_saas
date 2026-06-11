@@ -53,3 +53,19 @@ export function assertSameOrganization(resourceOrganizationId: string | null | u
     throw new SecurityGuardError('FORBIDDEN', 'Resource does not belong to the current organization', 403);
   }
 }
+
+export function isPrivilegedOrganizationRole(role: string | null | undefined) {
+  return role === 'owner' || role === 'admin';
+}
+
+export function assertPrivilegedOrganizationRole(role: string | null | undefined) {
+  if (!isPrivilegedOrganizationRole(role)) {
+    throw new SecurityGuardError('FORBIDDEN', 'Insufficient organization permissions', 403);
+  }
+}
+
+export async function requirePrivilegedOrganizationContext(slug?: string) {
+  const context = await requireOrganizationContext(slug);
+  assertPrivilegedOrganizationRole(context.organization.role);
+  return context;
+}
