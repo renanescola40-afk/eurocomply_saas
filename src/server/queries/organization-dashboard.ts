@@ -85,7 +85,10 @@ async function listDashboardTasks(organizationId: string) {
     return [];
   }
 
-  return data ?? [];
+  return (data ?? []).map((task) => ({
+    ...task,
+    dueDate: task.due_date ?? null,
+  }));
 }
 
 async function listDashboardTopRisks(organizationId: string) {
