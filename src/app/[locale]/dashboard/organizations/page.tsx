@@ -5,7 +5,7 @@ import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-com
 import { HomeDashboardPage } from '@/components/dashboard/dashboard-overview';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getOrganizationEntitlements, formatLimit } from '@/server/billing/entitlements';
+import { formatLimit } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
 
@@ -36,7 +36,7 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
     redirect(`/${params.locale}/onboarding`);
   }
 
-  const entitlements = await getOrganizationEntitlements(data.organization.id);
+  const entitlements = data.entitlements;
   const dashboardBasePath = `/dashboard/organizations`;
   const localizedDashboardBasePath = `/${params.locale}${dashboardBasePath}`;
   const complianceHealth = data.summary.complianceScore >= 80 ? 'Audit ready' : data.summary.complianceScore >= 55 ? 'Needs attention' : 'Remediation needed';
