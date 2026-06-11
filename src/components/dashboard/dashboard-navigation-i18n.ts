@@ -90,6 +90,15 @@ const continuityCopy: Record<string, { label: string; description: string }> = {
   de: { label: 'Continuity Center', description: 'Operative Kontinuität und Wiederherstellungsreife prüfen' },
 };
 
+const vendorAssuranceCopy: Record<string, { label: string; description: string }> = {
+  en: { label: 'Vendor Assurance', description: 'Review key providers, subprocessors and vendor evidence' },
+  pt: { label: 'Garantia de Fornecedores', description: 'Reveja fornecedores, subprocessadores e evidências de terceiros' },
+  es: { label: 'Garantía de Proveedores', description: 'Revisa proveedores, subprocesadores y evidencias de terceros' },
+  fr: { label: 'Assurance Fournisseurs', description: 'Vérifier les prestataires, sous-traitants et preuves associées' },
+  it: { label: 'Assurance Fornitori', description: 'Verifica provider, subprocessori ed evidenze di terze parti' },
+  de: { label: 'Vendor Assurance', description: 'Anbieter, Unterauftragsverarbeiter und Nachweise prüfen' },
+};
+
 const evidencePackCopy: Record<string, { label: string; description: string; verify: string; verifyDescription: string }> = {
   en: { label: 'Evidence Pack', description: 'Export a structured audit evidence snapshot', verify: 'Verify Evidence Pack', verifyDescription: 'Validate exported pack hash and signature status' },
   pt: { label: 'Pacote de Evidências', description: 'Exporte uma fotografia estruturada de evidências de auditoria', verify: 'Verificar Evidências', verifyDescription: 'Valide hash e estado da assinatura do pacote exportado' },
@@ -115,6 +124,10 @@ function getContinuityCopy(locale: string) {
   return continuityCopy[locale] ?? continuityCopy.en;
 }
 
+function getVendorAssuranceCopy(locale: string) {
+  return vendorAssuranceCopy[locale] ?? vendorAssuranceCopy.en;
+}
+
 function getEvidencePackCopy(locale: string) {
   return evidencePackCopy[locale] ?? evidencePackCopy.en;
 }
@@ -125,6 +138,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
   const rolesLabel = getRolesCopy(locale);
   const retention = getRetentionCopy(locale);
   const continuity = getContinuityCopy(locale);
+  const vendorAssurance = getVendorAssuranceCopy(locale);
   const evidencePack = getEvidencePackCopy(locale);
 
   return [
@@ -167,6 +181,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
         { label: evidencePack.verify, href: '/audit-pack/verify', description: evidencePack.verifyDescription },
         { label: retention.label, href: '/retention-center', description: retention.description },
         { label: continuity.label, href: '/continuity-center', description: continuity.description },
+        { label: vendorAssurance.label, href: '/vendor-assurance', description: vendorAssurance.description },
         { label: nav.europeanNews, href: `${dashboardRoot}/reports-governance/news`, description: nav.europeanNewsDescription },
         { label: nav.approvals, href: '/aprovacoes', description: nav.approvalsDescription },
         { label: nav.minutesGovernance, href: `${dashboardRoot}/reports-governance`, description: nav.minutesGovernanceDescription },
