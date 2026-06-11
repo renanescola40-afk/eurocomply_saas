@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/server/queries/auth';
-import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
+import { getCurrentOrganizationForUser, type CurrentOrganizationMembership } from '@/server/queries/current-organization';
+
+export type AuthenticatedUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 
 export type AuthenticatedOrganizationContext = {
-  user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
-  organization: NonNullable<Awaited<ReturnType<typeof getCurrentOrganizationForUser>>>;
+  user: AuthenticatedUser;
+  organization: CurrentOrganizationMembership;
+  organizationId: string;
+  role: string;
 };
 
 export class SecurityGuardError extends Error {
   status: number;
-  code: 'UNAUTHORIZED' | 'ORGANIZATION_REQUIRED' | 'FORBIDDEN';
+  code: 'UNAUTHORIZED' | 'ORGANIZATION_REQUIRED' | 'FORBIDDEN' | 'BAD_REQUEST';
 
   constructor(code: SecurityGuardError['code'], message: string, status: number) {
     super(message);
@@ -34,10 +38,15 @@ export async function requireOrganizationContext(slug?: string): Promise<Authent
   const organization = await getCurrentOrganizationForUser(user.id, slug);
 
   if (!organization) {
-    throw new SecurityGuardError('ORGANIZATION_REQUIRED', 'Organization context required', 404);
+    throw new SecurityGuardError('ORGANIZATION_REQUIRED', 'Organization context required', 403);
   }
 
-  return { user, organization };
+  return {
+    user,
+    organization,
+    organizationId: organization.id,
+    role: organization.role,
+  };
 }
 
 export function guardErrorResponse(error: unknown) {
@@ -54,6 +63,10 @@ export function assertSameOrganization(resourceOrganizationId: string | null | u
   }
 }
 
+export function assertOrganizationResource(resourceOrganizationId: string | null | undefined, context: AuthenticatedOrganizationContext) {
+  assertSameOrganization(resourceOrganizationId, context.organizationId);
+}
+
 export function isPrivilegedOrganizationRole(role: string | null | undefined) {
   return role === 'owner' || role === 'admin';
 }
@@ -64,8 +77,22 @@ export function assertPrivilegedOrganizationRole(role: string | null | undefined
   }
 }
 
+export function assertRole(context: AuthenticatedOrganizationContext, allowedRoles: string[]) {
+  if (!allowedRoles.includes(context.role)) {
+    throw new SecurityGuardError('FORBIDDEN', 'Insufficient organization permissions', 403);
+  }
+}
+
+export function assertMutationAllowed(context: AuthenticatedOrganizationContext) {
+  assertRole(context, ['owner', 'admin', 'member']);
+}
+
+export function assertAdminAllowed(context: AuthenticatedOrganizationContext) {
+  assertPrivilegedOrganizationRole(context.role);
+}
+
 export async function requirePrivilegedOrganizationContext(slug?: string) {
   const context = await requireOrganizationContext(slug);
-  assertPrivilegedOrganizationRole(context.organization.role);
+  assertAdminAllowed(context);
   return context;
 }
