@@ -1,6 +1,6 @@
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { normalizeOrganization } from '@/lib/dashboard/organization-adapter';
-import { getOrganizationEntitlements } from '@/server/billing/entitlements';
+import { getOrganizationEntitlements, getPlanEntitlements } from '@/server/billing/entitlements';
 import { getCurrentOrganizationForUser } from './current-organization';
 import {
   getDashboardSummary,
@@ -157,6 +157,7 @@ export async function getOrganizationDashboardData(userId: string, organizationS
   }
 
   const emptySummary = getEmptyDashboardSummary();
+  const fallbackEntitlements = getPlanEntitlements('essential');
 
   const [summary, tasks, topRisks, vendorsRequiringReview, documentsExpiringSoon, entitlements, trendHistory] = await Promise.all([
     withDashboardTimeout('summary', getDashboardSummary(organization.id), emptySummary),
@@ -164,7 +165,7 @@ export async function getOrganizationDashboardData(userId: string, organizationS
     withDashboardTimeout('risks', listDashboardTopRisks(organization.id), []),
     withDashboardTimeout('vendors', listDashboardVendorsRequiringReview(organization.id), []),
     withDashboardTimeout('documents', listDashboardDocumentsExpiringSoon(organization.id), []),
-    withDashboardTimeout('entitlements', getOrganizationEntitlements(organization.id), getOrganizationEntitlements('__fallback__'), 2_500),
+    withDashboardTimeout('entitlements', getOrganizationEntitlements(organization.id), fallbackEntitlements, 2_500),
     withDashboardTimeout<DashboardTrendSnapshot[]>('trend_history', getDashboardTrendHistory(organization.id), [], 2_500),
   ]);
 
