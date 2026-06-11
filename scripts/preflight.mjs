@@ -31,6 +31,7 @@ const requiredFiles = [
   'src/app/api/enterprise-readiness/export/route.ts',
   'src/server/governance/retention-policy.ts',
   'src/app/[locale]/retention-center/page.tsx',
+  'src/app/api/retention-center/export/route.ts',
   'src/server/governance/continuity-policy.ts',
   'src/app/[locale]/continuity-center/page.tsx',
   'src/server/governance/vendor-assurance-policy.ts',
