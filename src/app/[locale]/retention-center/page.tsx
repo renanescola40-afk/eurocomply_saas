@@ -1,4 +1,5 @@
-import { Archive, CalendarClock, CheckCircle2, Clock3, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
+import { Archive, CalendarClock, CheckCircle2, Clock3, Download, ShieldCheck } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
@@ -14,6 +15,8 @@ const copy: Record<SupportedLocale, {
   nextActions: string;
   months: string;
   enterpriseReady: string;
+  exportLabel: string;
+  exportDescription: string;
 }> = {
   en: {
     title: 'Retention Center',
@@ -25,6 +28,8 @@ const copy: Record<SupportedLocale, {
     nextActions: 'Next actions',
     months: 'months',
     enterpriseReady: 'Enterprise-ready',
+    exportLabel: 'Export retention JSON',
+    exportDescription: 'Download a signed retention-policy export for DPA, GDPR and procurement reviews.',
   },
   pt: {
     title: 'Centro de Retenção',
@@ -36,6 +41,8 @@ const copy: Record<SupportedLocale, {
     nextActions: 'Próximas ações',
     months: 'meses',
     enterpriseReady: 'Pronto para enterprise',
+    exportLabel: 'Exportar retenção JSON',
+    exportDescription: 'Baixe um export assinado da política de retenção para DPA, GDPR e procurement.',
   },
   es: {
     title: 'Centro de Retención',
@@ -47,6 +54,8 @@ const copy: Record<SupportedLocale, {
     nextActions: 'Próximas acciones',
     months: 'meses',
     enterpriseReady: 'Listo para enterprise',
+    exportLabel: 'Exportar retención JSON',
+    exportDescription: 'Descarga un export firmado de política de retención para DPA, GDPR y procurement.',
   },
   fr: {
     title: 'Centre de Rétention',
@@ -58,6 +67,8 @@ const copy: Record<SupportedLocale, {
     nextActions: 'Prochaines actions',
     months: 'mois',
     enterpriseReady: 'Prêt pour enterprise',
+    exportLabel: 'Exporter rétention JSON',
+    exportDescription: 'Télécharger un export signé de politique de rétention pour DPA, GDPR et procurement.',
   },
   it: {
     title: 'Centro Retention',
@@ -69,6 +80,8 @@ const copy: Record<SupportedLocale, {
     nextActions: 'Prossime azioni',
     months: 'mesi',
     enterpriseReady: 'Pronto enterprise',
+    exportLabel: 'Esporta retention JSON',
+    exportDescription: 'Scarica un export firmato della retention policy per DPA, GDPR e procurement.',
   },
   de: {
     title: 'Retention Center',
@@ -80,6 +93,8 @@ const copy: Record<SupportedLocale, {
     nextActions: 'Nächste Schritte',
     months: 'Monate',
     enterpriseReady: 'Enterprise-ready',
+    exportLabel: 'Retention JSON exportieren',
+    exportDescription: 'Signierten Retention-Policy-Export für DPA, GDPR und Procurement herunterladen.',
   },
 };
 
@@ -102,6 +117,11 @@ export default async function RetentionCenterPage({ params }: { params: Promise<
               </div>
               <h1 className="mt-5 text-4xl font-semibold tracking-tight text-foreground">{t.title}</h1>
               <p className="mt-4 text-lg leading-8 text-muted-foreground">{t.subtitle}</p>
+              <Link href="/api/retention-center/export" className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:-translate-y-0.5">
+                <Download className="h-4 w-4" />
+                {t.exportLabel}
+              </Link>
+              <p className="mt-2 text-xs text-muted-foreground">{t.exportDescription}</p>
             </div>
             <div className="rounded-3xl border bg-background p-6 text-center">
               <p className="text-sm text-muted-foreground">{t.score}</p>
