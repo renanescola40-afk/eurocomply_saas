@@ -15,30 +15,84 @@ const vendorSchema = z.object({
   dpaSigned: z.boolean().default(false),
 });
 
+type SupabaseLikeError = {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+};
+
+function isMissingOptionalVendorColumn(error: SupabaseLikeError | null | undefined) {
+  const text = [error?.message, error?.details, error?.hint].filter(Boolean).join(' ').toLowerCase();
+
+  return (
+    error?.code === '42703' ||
+    text.includes('data_access_level') ||
+    text.includes('dpa_signed') ||
+    text.includes('created_by') ||
+    text.includes('schema cache')
+  );
+}
+
+function toCreateVendorErrorMessage(error: SupabaseLikeError | Error | unknown) {
+  const message = error instanceof Error ? error.message : typeof error === 'object' && error !== null && 'message' in error ? String((error as SupabaseLikeError).message ?? '') : '';
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes('vendors') && (lowerMessage.includes('does not exist') || lowerMessage.includes('schema cache'))) {
+    return 'A tabela de vendors ainda não está atualizada no Supabase. Aplique a migration de vendors antes de guardar fornecedores.';
+  }
+
+  if (lowerMessage.includes('invalid input syntax') || lowerMessage.includes('check constraint')) {
+    return 'Os dados do fornecedor não passaram na validação do banco. Verifique país, categoria, risco e acesso a dados.';
+  }
+
+  if (lowerMessage.includes('permission') || lowerMessage.includes('not authorized')) {
+    return 'Sem permissão para criar fornecedores nesta organização.';
+  }
+
+  return message || 'Não foi possível criar o fornecedor agora.';
+}
+
 export async function createVendor(input: unknown, userId: string) {
   const payload = vendorSchema.parse(input);
   await assertCurrentUserCan(payload.organizationId, userId, 'vendors:write');
 
   const supabase = createAdminClient();
+  const baseRecord = {
+    organization_id: payload.organizationId,
+    name: payload.name,
+    website: payload.website,
+    country: payload.country,
+    category: payload.category,
+    risk_level: payload.riskLevel,
+    review_status: payload.reviewStatus,
+  };
+  const fullRecord = {
+    ...baseRecord,
+    data_access_level: payload.dataAccessLevel,
+    dpa_signed: payload.dpaSigned,
+    created_by: userId,
+  };
 
-  const { data, error } = await supabase
-    .from('vendors')
-    .insert({
-      organization_id: payload.organizationId,
-      name: payload.name,
-      website: payload.website,
-      country: payload.country,
-      category: payload.category,
-      data_access_level: payload.dataAccessLevel,
-      risk_level: payload.riskLevel,
-      review_status: payload.reviewStatus,
-      dpa_signed: payload.dpaSigned,
-      created_by: userId,
-    })
-    .select('*')
-    .single();
+  const insertVendor = async (record: typeof baseRecord | typeof fullRecord) =>
+    supabase
+      .from('vendors')
+      .insert(record)
+      .select('*')
+      .single();
 
-  if (error) throw error;
+  let { data, error } = await insertVendor(fullRecord);
+
+  if (error && isMissingOptionalVendorColumn(error)) {
+    console.warn('[vendors] Falling back to legacy vendor schema:', error.message);
+    const fallbackResult = await insertVendor(baseRecord);
+    data = fallbackResult.data;
+    error = fallbackResult.error;
+  }
+
+  if (error) {
+    throw new Error(toCreateVendorErrorMessage(error));
+  }
 
   await logAuditEvent({
     organizationId: payload.organizationId,
