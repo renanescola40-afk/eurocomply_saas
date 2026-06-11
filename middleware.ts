@@ -14,6 +14,7 @@ const protectedSegments = [
   '/security-center',
   '/retention-center',
   '/continuity-center',
+  '/vendor-assurance',
   '/audit-pack',
   '/notificacoes',
   '/auditoria',
