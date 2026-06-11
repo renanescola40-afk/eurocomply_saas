@@ -72,6 +72,15 @@ const rolesCopy: Record<string, string> = {
   de: 'Workspace-Rollen',
 };
 
+const readinessCopy: Record<string, { label: string; description: string }> = {
+  en: { label: 'Enterprise Readiness', description: 'Review consolidated enterprise maturity across governance controls' },
+  pt: { label: 'Prontidão Enterprise', description: 'Reveja a maturidade enterprise consolidada dos controlos de governança' },
+  es: { label: 'Preparación Enterprise', description: 'Revisa la madurez enterprise consolidada de los controles de gobernanza' },
+  fr: { label: 'Préparation Enterprise', description: 'Vérifier la maturité enterprise consolidée des contrôles de gouvernance' },
+  it: { label: 'Readiness Enterprise', description: 'Verifica la maturità enterprise consolidata dei controlli governance' },
+  de: { label: 'Enterprise Readiness', description: 'Konsolidierten Enterprise-Reifegrad der Governance-Kontrollen prüfen' },
+};
+
 const retentionCopy: Record<string, { label: string; description: string }> = {
   en: { label: 'Retention Center', description: 'Review retention coverage for evidence, records and audit history' },
   pt: { label: 'Centro de Retenção', description: 'Reveja a cobertura de retenção de evidências, registos e auditoria' },
@@ -125,6 +134,10 @@ function getRolesCopy(locale: string) {
   return rolesCopy[locale] ?? rolesCopy.en;
 }
 
+function getReadinessCopy(locale: string) {
+  return readinessCopy[locale] ?? readinessCopy.en;
+}
+
 function getRetentionCopy(locale: string) {
   return retentionCopy[locale] ?? retentionCopy.en;
 }
@@ -149,6 +162,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
   const nav = getAppDictionary(locale).nav;
   const aiNav = getAiGovernanceCopy(locale);
   const rolesLabel = getRolesCopy(locale);
+  const readiness = getReadinessCopy(locale);
   const retention = getRetentionCopy(locale);
   const continuity = getContinuityCopy(locale);
   const vendorAssurance = getVendorAssuranceCopy(locale);
@@ -191,6 +205,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
       href: `${dashboardRoot}/reports-governance`,
       sections: [
         { label: nav.complianceReports, href: `${dashboardRoot}/reports-governance`, description: nav.complianceReportsDescription },
+        { label: readiness.label, href: '/enterprise-readiness', description: readiness.description },
         { label: evidencePack.label, href: '/audit-pack', description: evidencePack.description },
         { label: evidencePack.verify, href: '/audit-pack/verify', description: evidencePack.verifyDescription },
         { label: questionnaire.label, href: '/security-questionnaire', description: questionnaire.description },
