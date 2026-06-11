@@ -7,6 +7,7 @@ import { listVendors } from '@/server/queries/vendors';
 import type { PlanEntitlements } from '@/server/billing/entitlements';
 import { CONTINUITY_CONTROLS, getContinuitySummary } from '@/server/governance/continuity-policy';
 import { getRetentionSummary, RETENTION_POLICIES } from '@/server/governance/retention-policy';
+import { getVendorAssuranceSummary, VENDOR_ASSURANCE_CONTROLS } from '@/server/governance/vendor-assurance-policy';
 import type { OrganizationRole } from '@/server/security/rbac';
 
 type OrganizationSnapshot = {
@@ -82,6 +83,10 @@ export type AuditEvidencePack = {
     continuity: {
       summary: ReturnType<typeof getContinuitySummary>;
       controls: typeof CONTINUITY_CONTROLS;
+    };
+    vendorAssurance: {
+      summary: ReturnType<typeof getVendorAssuranceSummary>;
+      controls: typeof VENDOR_ASSURANCE_CONTROLS;
     };
   };
   evidence: {
@@ -241,6 +246,10 @@ export async function buildAuditEvidencePack({
       continuity: {
         summary: getContinuitySummary(),
         controls: CONTINUITY_CONTROLS,
+      },
+      vendorAssurance: {
+        summary: getVendorAssuranceSummary(),
+        controls: VENDOR_ASSURANCE_CONTROLS,
       },
     },
     evidence: {
