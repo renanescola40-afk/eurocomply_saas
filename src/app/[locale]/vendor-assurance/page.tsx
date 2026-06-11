@@ -1,4 +1,5 @@
-import { ShieldCheck, Building2, AlertTriangle, CheckCircle2, Clock3 } from 'lucide-react';
+import Link from 'next/link';
+import { ShieldCheck, Building2, AlertTriangle, CheckCircle2, Clock3, Download } from 'lucide-react';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
 import { getVendorAssuranceSummary, VENDOR_ASSURANCE_CONTROLS } from '@/server/governance/vendor-assurance-policy';
@@ -16,6 +17,8 @@ const COPY: Record<SupportedLocale, {
   evidence: string;
   cadence: string;
   nextActions: string;
+  exportLabel: string;
+  exportDescription: string;
 }> = {
   en: {
     title: 'Vendor Assurance Center',
@@ -30,6 +33,8 @@ const COPY: Record<SupportedLocale, {
     evidence: 'Evidence',
     cadence: 'Cadence',
     nextActions: 'Next actions',
+    exportLabel: 'Export vendor assurance JSON',
+    exportDescription: 'Download a signed supplier assurance export for customer procurement reviews.',
   },
   pt: {
     title: 'Centro de Garantia de Fornecedores',
@@ -44,6 +49,8 @@ const COPY: Record<SupportedLocale, {
     evidence: 'Evidências',
     cadence: 'Cadência',
     nextActions: 'Próximas ações',
+    exportLabel: 'Exportar fornecedores JSON',
+    exportDescription: 'Baixe um export assinado de garantia de fornecedores para procurement de clientes.',
   },
   es: {
     title: 'Centro de Garantía de Proveedores',
@@ -58,6 +65,8 @@ const COPY: Record<SupportedLocale, {
     evidence: 'Evidencias',
     cadence: 'Cadencia',
     nextActions: 'Próximas acciones',
+    exportLabel: 'Exportar proveedores JSON',
+    exportDescription: 'Descarga un export firmado de garantía de proveedores para procurement.',
   },
   fr: {
     title: 'Centre Assurance Fournisseurs',
@@ -72,6 +81,8 @@ const COPY: Record<SupportedLocale, {
     evidence: 'Preuves',
     cadence: 'Cadence',
     nextActions: 'Prochaines actions',
+    exportLabel: 'Exporter fournisseurs JSON',
+    exportDescription: 'Télécharger un export signé d’assurance fournisseurs pour procurement client.',
   },
   it: {
     title: 'Centro Assurance Fornitori',
@@ -86,6 +97,8 @@ const COPY: Record<SupportedLocale, {
     evidence: 'Evidenze',
     cadence: 'Cadenza',
     nextActions: 'Prossime azioni',
+    exportLabel: 'Esporta fornitori JSON',
+    exportDescription: 'Scarica un export firmato di assurance fornitori per procurement clienti.',
   },
   de: {
     title: 'Vendor Assurance Center',
@@ -100,6 +113,8 @@ const COPY: Record<SupportedLocale, {
     evidence: 'Nachweise',
     cadence: 'Kadenz',
     nextActions: 'Nächste Schritte',
+    exportLabel: 'Vendor Assurance JSON exportieren',
+    exportDescription: 'Signierten Anbieter-Assurance-Export für Customer Procurement herunterladen.',
   },
 };
 
@@ -125,6 +140,11 @@ export default async function VendorAssurancePage({ params }: { params: Promise<
               <p className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">Enterprise Governance</p>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">{copy.title}</h1>
               <p className="mt-4 max-w-3xl text-muted-foreground">{copy.subtitle}</p>
+              <Link href="/api/vendor-assurance/export" className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:-translate-y-0.5">
+                <Download className="h-4 w-4" />
+                {copy.exportLabel}
+              </Link>
+              <p className="mt-2 text-xs text-muted-foreground">{copy.exportDescription}</p>
             </div>
             <div className="rounded-3xl border bg-muted/40 p-6 text-center">
               <ShieldCheck className="mx-auto h-8 w-8" />
