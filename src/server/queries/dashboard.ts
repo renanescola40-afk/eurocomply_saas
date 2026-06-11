@@ -21,12 +21,15 @@ export type DashboardTrendComparison = {
   missingDocumentsDelta: number | null;
 };
 
-type DashboardRow = Record<string, unknown>;
-
 type QueryError = {
   code?: string;
   message?: string;
 } | null;
+
+type CountResult = {
+  count: number | null;
+  error: QueryError;
+};
 
 type DashboardSnapshotRow = {
   created_at?: string | null;
@@ -55,19 +58,19 @@ function emptyDashboardSummary() {
   };
 }
 
-function safeRows(result: { data: DashboardRow[] | null; error: QueryError }, label: string) {
-  if (result.error) {
-    if (!isExpectedSchemaFallback(result.error)) {
-      console.warn('[dashboard] query_failed', { label, code: result.error.code ?? 'unknown' });
-    }
-    return [];
-  }
-
-  return result.data ?? [];
-}
-
 function isExpectedSchemaFallback(error: QueryError) {
   return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST204' || error?.code === 'PGRST205';
+}
+
+function safeCount(result: CountResult, label: string) {
+  if (result.error) {
+    if (!isExpectedSchemaFallback(result.error)) {
+      console.warn('[dashboard] count_failed', { label, code: result.error.code ?? 'unknown' });
+    }
+    return 0;
+  }
+
+  return result.count ?? 0;
 }
 
 function areDashboardSnapshotsEnabled() {
@@ -78,25 +81,39 @@ export async function getDashboardSummary(organizationId: string) {
   const supabase = tryCreateAdminClient();
   if (!supabase) return emptyDashboardSummary();
 
-  const [tasks, vendors, risks, documents] = await Promise.all([
-    supabase.from('compliance_tasks').select('id,status,priority', { count: 'exact', head: false }).eq('organization_id', organizationId),
-    supabase.from('vendors').select('id,risk_level,review_status', { count: 'exact', head: false }).eq('organization_id', organizationId),
-    supabase.from('risks').select('id,status,risk_score', { count: 'exact', head: false }).eq('organization_id', organizationId),
-    supabase.from('documents').select('id,status,expires_at', { count: 'exact', head: false }).eq('organization_id', organizationId),
+  const [
+    taskTotalResult,
+    openTaskResult,
+    vendorTotalResult,
+    highRiskVendorResult,
+    riskTotalResult,
+    openRiskResult,
+    criticalRiskResult,
+    documentTotalResult,
+    missingDocumentResult,
+  ] = await Promise.all([
+    supabase.from('compliance_tasks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+    supabase.from('compliance_tasks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).neq('status', 'done'),
+    supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+    supabase.from('vendors').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'high'),
+    supabase.from('risks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+    supabase.from('risks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).neq('status', 'closed'),
+    supabase.from('risks').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).gte('risk_score', 16),
+    supabase.from('documents').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+    supabase.from('documents').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).neq('status', 'approved'),
   ]);
 
-  const taskRows = safeRows(tasks, 'tasks');
-  const vendorRows = safeRows(vendors, 'vendors');
-  const riskRows = safeRows(risks, 'risks');
-  const documentRows = safeRows(documents, 'documents');
+  const taskTotal = safeCount(taskTotalResult, 'tasks_total');
+  const openTasks = safeCount(openTaskResult, 'tasks_open');
+  const vendorTotal = safeCount(vendorTotalResult, 'vendors_total');
+  const highRiskVendors = safeCount(highRiskVendorResult, 'vendors_high_risk');
+  const riskTotal = safeCount(riskTotalResult, 'risks_total');
+  const openRisks = safeCount(openRiskResult, 'risks_open');
+  const criticalRisks = safeCount(criticalRiskResult, 'risks_critical');
+  const documentTotal = safeCount(documentTotalResult, 'documents_total');
+  const missingDocuments = safeCount(missingDocumentResult, 'documents_missing');
 
-  const openTasks = taskRows.filter((task) => task.status !== 'done').length;
-  const highRiskVendors = vendorRows.filter((vendor) => vendor.risk_level === 'high').length;
-  const openRisks = riskRows.filter((risk) => risk.status !== 'closed').length;
-  const criticalRisks = riskRows.filter((risk) => Number(risk.risk_score ?? 0) >= 16).length;
-  const missingDocuments = documentRows.filter((document) => document.status !== 'approved').length;
-
-  const totalSignals = taskRows.length + vendorRows.length + riskRows.length + documentRows.length;
+  const totalSignals = taskTotal + vendorTotal + riskTotal + documentTotal;
   const negativeSignals = openTasks + highRiskVendors + criticalRisks + missingDocuments;
   const complianceScore = totalSignals === 0 ? 0 : Math.max(0, Math.round(100 - (negativeSignals / totalSignals) * 100));
 
@@ -108,10 +125,10 @@ export async function getDashboardSummary(organizationId: string) {
     criticalRisks,
     missingDocuments,
     totals: {
-      tasks: taskRows.length,
-      vendors: vendorRows.length,
-      risks: riskRows.length,
-      documents: documentRows.length,
+      tasks: taskTotal,
+      vendors: vendorTotal,
+      risks: riskTotal,
+      documents: documentTotal,
     },
   };
 }

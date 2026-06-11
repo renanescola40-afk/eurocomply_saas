@@ -52,17 +52,17 @@ export function getEnterpriseReadinessSummary(): EnterpriseReadinessSummary {
     {
       id: 'retention',
       label: 'Retention governance',
-      score: retention.score,
+      score: retention.readinessScore,
       weight: 1,
-      status: normalizeStatus(retention.score),
+      status: normalizeStatus(retention.readinessScore),
       nextActions: retention.nextActions,
     },
     {
       id: 'continuity',
       label: 'Operational continuity',
-      score: continuity.score,
+      score: continuity.readinessScore,
       weight: 1.2,
-      status: normalizeStatus(continuity.score),
+      status: normalizeStatus(continuity.readinessScore),
       nextActions: continuity.nextActions,
     },
     {

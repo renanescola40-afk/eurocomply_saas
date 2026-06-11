@@ -73,6 +73,44 @@ function detectLocale(req: NextRequest): string {
   return defaultLocale;
 }
 
+async function getAuthState(req: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request: req });
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return { isAuthenticated: false, supabaseResponse };
+  }
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return req.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
+        supabaseResponse = NextResponse.next({ request: req });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
+
+  const { data, error } = await supabase.auth.getUser();
+
+  return {
+    isAuthenticated: Boolean(data.user && !error),
+    supabaseResponse,
+  };
+}
+
+function copyAuthCookies(source: NextResponse, target: NextResponse) {
+  source.cookies.getAll().forEach((cookie) => {
+    target.cookies.set(cookie.name, cookie.value, cookie);
+  });
+}
+
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
@@ -87,31 +125,6 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  let supabaseResponse = NextResponse.next({ request: req });
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  let isAuthenticated = false;
-
-  if (supabaseUrl && supabaseAnonKey) {
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        getAll() {
-          return req.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request: req });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    });
-
-    const { data, error } = await supabase.auth.getUser();
-    isAuthenticated = Boolean(data.user && !error);
-  }
-
   const pathnameHasLocale = locales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
   );
@@ -119,16 +132,25 @@ export default async function middleware(req: NextRequest) {
   if (pathnameHasLocale) {
     const locale = pathname.split('/')[1];
     const isPublic = isPublicRoute(pathname, locale);
+    const isAuthEntryRoute = pathname === `/${locale}/login` || pathname === `/${locale}/signup`;
+    const shouldCheckAuth = !isPublic || isAuthEntryRoute;
+    const authState = shouldCheckAuth
+      ? await getAuthState(req)
+      : { isAuthenticated: false, supabaseResponse: NextResponse.next({ request: req }) };
 
-    if (!isAuthenticated && !isPublic) {
+    if (!authState.isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
       loginUrl.searchParams.set('next', pathname);
-      return NextResponse.redirect(loginUrl);
+      const response = NextResponse.redirect(loginUrl);
+      copyAuthCookies(authState.supabaseResponse, response);
+      return response;
     }
 
-    if (isAuthenticated && (pathname === `/${locale}/login` || pathname === `/${locale}/signup`)) {
+    if (authState.isAuthenticated && isAuthEntryRoute) {
       const dashboardUrl = new URL(`/${locale}${ORGANIZATION_DASHBOARD_PATH}`, req.url);
-      return NextResponse.redirect(dashboardUrl);
+      const response = NextResponse.redirect(dashboardUrl);
+      copyAuthCookies(authState.supabaseResponse, response);
+      return response;
     }
 
     const response = intlMiddleware(req);
@@ -139,9 +161,7 @@ export default async function middleware(req: NextRequest) {
       sameSite: 'lax',
     });
 
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      response.cookies.set(cookie.name, cookie.value, cookie);
-    });
+    copyAuthCookies(authState.supabaseResponse, response);
 
     return response;
   }
@@ -155,10 +175,6 @@ export default async function middleware(req: NextRequest) {
     maxAge: 60 * 60 * 24 * 365,
     path: '/',
     sameSite: 'lax',
-  });
-
-  supabaseResponse.cookies.getAll().forEach((cookie) => {
-    response.cookies.set(cookie.name, cookie.value, cookie);
   });
 
   return response;

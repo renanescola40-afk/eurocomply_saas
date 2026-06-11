@@ -51,8 +51,8 @@ export function ExecutiveDashboardHero({ summary, trendComparison, reportsHref }
 
   return (
     <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-6 text-white shadow-2xl md:p-8">
-      <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-      <div className="absolute bottom-0 left-10 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" aria-hidden="true" />
+      <div className="pointer-events-none absolute bottom-0 left-10 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" aria-hidden="true" />
 
       <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div className="space-y-6">

@@ -2,10 +2,10 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Building2, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
-import { HomeDashboardPage } from '@/components/dashboard/dashboard-overview';
+import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-overview';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getOrganizationEntitlements, formatLimit } from '@/server/billing/entitlements';
+import { formatLimit } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
 
@@ -36,7 +36,7 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
     redirect(`/${params.locale}/onboarding`);
   }
 
-  const entitlements = await getOrganizationEntitlements(data.organization.id);
+  const entitlements = data.entitlements;
   const dashboardBasePath = `/dashboard/organizations`;
   const localizedDashboardBasePath = `/${params.locale}${dashboardBasePath}`;
   const complianceHealth = data.summary.complianceScore >= 80 ? 'Audit ready' : data.summary.complianceScore >= 55 ? 'Needs attention' : 'Remediation needed';
@@ -46,7 +46,7 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
       <DashboardCommandNavigation locale={params.locale} activePage="Visão Geral" />
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-10">
         <section id="overview" className="relative scroll-mt-28 overflow-hidden rounded-[2rem] border bg-background/86 p-6 shadow-2xl shadow-primary/5 backdrop-blur md:p-8">
-          <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+          <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
           <div className="relative grid gap-8 lg:grid-cols-[1.35fr_0.65fr] lg:items-end">
             <div className="space-y-6">
               <div className="flex flex-wrap items-center gap-3">
@@ -134,13 +134,12 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
           })}
         </section>
 
-        <HomeDashboardPage
+        <DashboardHomeOverview
           summary={data.summary}
           tasks={data.tasks}
           trendHistory={data.trendHistory}
           trendComparison={data.trendComparison}
           basePath={localizedDashboardBasePath}
-          topRisks={data.topRisks}
           vendorsRequiringReview={data.vendorsRequiringReview}
           documentsExpiringSoon={data.documentsExpiringSoon}
         />
