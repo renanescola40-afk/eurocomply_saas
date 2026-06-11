@@ -32,6 +32,8 @@ const requiredFiles = [
   'src/app/[locale]/continuity-center/page.tsx',
   'src/server/governance/vendor-assurance-policy.ts',
   'src/app/[locale]/vendor-assurance/page.tsx',
+  'src/server/governance/security-questionnaire.ts',
+  'src/app/[locale]/security-questionnaire/page.tsx',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
   'docs/LEGAL_READINESS.md',
