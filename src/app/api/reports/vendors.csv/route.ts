@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { csvDownloadResponse } from '@/lib/exports/csv';
 import { reportError } from '@/lib/observability/report-error';
+import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
@@ -56,6 +57,14 @@ export async function GET() {
 
   const supabase = tryCreateAdminClient();
   if (!supabase) {
+    await writeAuditLog({
+      action: 'report.export',
+      organizationId: organization.id,
+      userId: user.id,
+      entityType: 'report',
+      entityId: 'vendors.csv',
+      metadata: { format: 'csv', report: 'vendors', fallback: true },
+    });
     return csvDownloadResponse([VENDORS_CSV_HEADER], 'vendors-report.csv');
   }
 
@@ -81,6 +90,15 @@ export async function GET() {
       vendor.updated_at,
     ])),
   ];
+
+  await writeAuditLog({
+    action: 'report.export',
+    organizationId: organization.id,
+    userId: user.id,
+    entityType: 'report',
+    entityId: 'vendors.csv',
+    metadata: { format: 'csv', report: 'vendors', rows: rows.length },
+  });
 
   return csvDownloadResponse(rows, 'vendors-report.csv');
 }
