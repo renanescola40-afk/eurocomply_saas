@@ -7,6 +7,7 @@ import { listVendors } from '@/server/queries/vendors';
 import type { PlanEntitlements } from '@/server/billing/entitlements';
 import { CONTINUITY_CONTROLS, getContinuitySummary } from '@/server/governance/continuity-policy';
 import { getRetentionSummary, RETENTION_POLICIES } from '@/server/governance/retention-policy';
+import { getSecurityQuestionnaireSummary, SECURITY_QUESTIONNAIRE_ITEMS } from '@/server/governance/security-questionnaire';
 import { getVendorAssuranceSummary, VENDOR_ASSURANCE_CONTROLS } from '@/server/governance/vendor-assurance-policy';
 import type { OrganizationRole } from '@/server/security/rbac';
 
@@ -87,6 +88,10 @@ export type AuditEvidencePack = {
     vendorAssurance: {
       summary: ReturnType<typeof getVendorAssuranceSummary>;
       controls: typeof VENDOR_ASSURANCE_CONTROLS;
+    };
+    securityQuestionnaire: {
+      summary: ReturnType<typeof getSecurityQuestionnaireSummary>;
+      items: typeof SECURITY_QUESTIONNAIRE_ITEMS;
     };
   };
   evidence: {
@@ -250,6 +255,10 @@ export async function buildAuditEvidencePack({
       vendorAssurance: {
         summary: getVendorAssuranceSummary(),
         controls: VENDOR_ASSURANCE_CONTROLS,
+      },
+      securityQuestionnaire: {
+        summary: getSecurityQuestionnaireSummary(),
+        items: SECURITY_QUESTIONNAIRE_ITEMS,
       },
     },
     evidence: {
