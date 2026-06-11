@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, BarChart3, CheckCircle2, CircleAlert, ShieldCheck, Target } from 'lucide-react';
+import { ArrowRight, BarChart3, CheckCircle2, CircleAlert, Download, ShieldCheck, Target } from 'lucide-react';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
 import { getEnterpriseReadinessSummary } from '@/server/governance/enterprise-readiness';
@@ -15,6 +15,8 @@ const COPY: Record<SupportedLocale, {
   nextActions: string;
   evidencePack: string;
   evidencePackDescription: string;
+  exportLabel: string;
+  exportDescription: string;
 }> = {
   en: {
     title: 'Enterprise Readiness Center',
@@ -27,6 +29,8 @@ const COPY: Record<SupportedLocale, {
     nextActions: 'Next actions',
     evidencePack: 'Open Evidence Pack',
     evidencePackDescription: 'Export a structured pack with governance summaries and integrity metadata.',
+    exportLabel: 'Export readiness JSON',
+    exportDescription: 'Download a signed executive readiness export for board, audit or customer review.',
   },
   pt: {
     title: 'Centro de Prontidão Enterprise',
@@ -39,6 +43,8 @@ const COPY: Record<SupportedLocale, {
     nextActions: 'Próximas ações',
     evidencePack: 'Abrir Evidence Pack',
     evidencePackDescription: 'Exporte um pacote estruturado com resumos de governança e metadados de integridade.',
+    exportLabel: 'Exportar readiness JSON',
+    exportDescription: 'Baixe um export executivo assinado para board, auditoria ou review de clientes.',
   },
   es: {
     title: 'Centro de Preparación Enterprise',
@@ -51,6 +57,8 @@ const COPY: Record<SupportedLocale, {
     nextActions: 'Próximas acciones',
     evidencePack: 'Abrir Evidence Pack',
     evidencePackDescription: 'Exporta un paquete estructurado con resúmenes de gobernanza y metadatos de integridad.',
+    exportLabel: 'Exportar readiness JSON',
+    exportDescription: 'Descarga un export ejecutivo firmado para board, auditoría o revisión de clientes.',
   },
   fr: {
     title: 'Centre de Préparation Enterprise',
@@ -63,6 +71,8 @@ const COPY: Record<SupportedLocale, {
     nextActions: 'Prochaines actions',
     evidencePack: 'Ouvrir Evidence Pack',
     evidencePackDescription: 'Exporter un pack structuré avec résumés de gouvernance et métadonnées d’intégrité.',
+    exportLabel: 'Exporter readiness JSON',
+    exportDescription: 'Télécharger un export exécutif signé pour board, audit ou revue client.',
   },
   it: {
     title: 'Centro Readiness Enterprise',
@@ -75,6 +85,8 @@ const COPY: Record<SupportedLocale, {
     nextActions: 'Prossime azioni',
     evidencePack: 'Apri Evidence Pack',
     evidencePackDescription: 'Esporta un pacchetto strutturato con sintesi governance e metadati di integrità.',
+    exportLabel: 'Esporta readiness JSON',
+    exportDescription: 'Scarica un export executive firmato per board, audit o review clienti.',
   },
   de: {
     title: 'Enterprise Readiness Center',
@@ -87,6 +99,8 @@ const COPY: Record<SupportedLocale, {
     nextActions: 'Nächste Schritte',
     evidencePack: 'Evidence Pack öffnen',
     evidencePackDescription: 'Strukturiertes Paket mit Governance-Zusammenfassungen und Integritätsmetadaten exportieren.',
+    exportLabel: 'Readiness JSON exportieren',
+    exportDescription: 'Signierten Executive-Readiness-Export für Board, Audit oder Customer Review herunterladen.',
   },
 };
 
@@ -120,6 +134,11 @@ export default async function EnterpriseReadinessPage({ params }: { params: Prom
               <p className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">Enterprise Readiness</p>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">{copy.title}</h1>
               <p className="mt-4 max-w-3xl text-muted-foreground">{copy.subtitle}</p>
+              <Link href="/api/enterprise-readiness/export" className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:-translate-y-0.5">
+                <Download className="h-4 w-4" />
+                {copy.exportLabel}
+              </Link>
+              <p className="mt-2 text-xs text-muted-foreground">{copy.exportDescription}</p>
             </div>
             <div className="rounded-3xl border bg-muted/40 p-6 text-center">
               <ShieldCheck className="mx-auto h-8 w-8" />
