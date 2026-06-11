@@ -32,6 +32,12 @@ function safeFilenamePart(value: string | null | undefined) {
     .slice(0, 80) || 'organization';
 }
 
+function getRetentionExportStatus(readinessScore: number) {
+  if (readinessScore >= 90) return 'enterprise_ready';
+  if (readinessScore >= 70) return 'operational';
+  return 'foundation';
+}
+
 export async function GET() {
   let context: Awaited<ReturnType<typeof requireOrganizationContext>>;
 
@@ -82,6 +88,7 @@ export async function GET() {
 
   try {
     const summary = getRetentionSummary();
+    const status = getRetentionExportStatus(summary.readinessScore);
     const payload = {
       schemaVersion: '2026-06-10',
       exportType: 'eurocomply.retention_policy',
@@ -96,7 +103,10 @@ export async function GET() {
         slug: organization.slug,
       },
       plan: planCheck.entitlements,
-      summary,
+      summary: {
+        ...summary,
+        status,
+      },
       policies: RETENTION_POLICIES,
     };
     const integrity = buildEvidencePackIntegrity(payload);
@@ -114,8 +124,8 @@ export async function GET() {
       entityType: 'retention_policy',
       entityId: organization.id,
       metadata: {
-        score: summary.score,
-        status: summary.status,
+        score: summary.readinessScore,
+        status,
         totalPolicies: summary.totalPolicies,
         enterpriseReadyPolicies: summary.enterpriseReadyPolicies,
         actorRole: permission.role,
