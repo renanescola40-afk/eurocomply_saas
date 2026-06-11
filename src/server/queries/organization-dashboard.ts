@@ -1,7 +1,15 @@
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { normalizeOrganization } from '@/lib/dashboard/organization-adapter';
+import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentOrganizationForUser } from './current-organization';
-import { getDashboardSummary, getDashboardTrendComparison, getDashboardTrendHistory, recordDashboardMetricSnapshot } from './dashboard';
+import {
+  getDashboardSummary,
+  getDashboardTrendComparison,
+  getDashboardTrendHistory,
+  recordDashboardMetricSnapshot,
+  type DashboardSummary,
+  type DashboardTrendSnapshot,
+} from './dashboard';
 
 type QueryError = {
   code?: string;
@@ -15,6 +23,48 @@ function isExpectedSchemaFallback(error: QueryError) {
 function logDashboardPreviewError(label: string, error: QueryError) {
   if (error && !isExpectedSchemaFallback(error)) {
     console.warn('[dashboard] preview_query_failed', { label, code: error.code ?? 'unknown' });
+  }
+}
+
+function getEmptyDashboardSummary(): DashboardSummary {
+  return {
+    complianceScore: 0,
+    openTasks: 0,
+    highRiskVendors: 0,
+    openRisks: 0,
+    criticalRisks: 0,
+    missingDocuments: 0,
+    totals: {
+      tasks: 0,
+      vendors: 0,
+      risks: 0,
+      documents: 0,
+    },
+  };
+}
+
+async function withDashboardTimeout<T>(label: string, promise: Promise<T>, fallback: T, timeoutMs = 3_500) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const timeout = new Promise<T>((resolve) => {
+    timeoutId = setTimeout(() => {
+      console.warn('[dashboard] query_timeout', { label, timeoutMs });
+      resolve(fallback);
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } catch (error) {
+    console.warn('[dashboard] query_failed', {
+      label,
+      message: error instanceof Error ? error.message : 'unknown',
+    });
+    return fallback;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
   }
 }
 
@@ -106,25 +156,31 @@ export async function getOrganizationDashboardData(userId: string, organizationS
     return null;
   }
 
-  const [summary, tasks, topRisks, vendorsRequiringReview, documentsExpiringSoon] = await Promise.all([
-    getDashboardSummary(organization.id),
-    listDashboardTasks(organization.id),
-    listDashboardTopRisks(organization.id),
-    listDashboardVendorsRequiringReview(organization.id),
-    listDashboardDocumentsExpiringSoon(organization.id),
+  const emptySummary = getEmptyDashboardSummary();
+
+  const [summary, tasks, topRisks, vendorsRequiringReview, documentsExpiringSoon, entitlements, trendHistory] = await Promise.all([
+    withDashboardTimeout('summary', getDashboardSummary(organization.id), emptySummary),
+    withDashboardTimeout('tasks', listDashboardTasks(organization.id), []),
+    withDashboardTimeout('risks', listDashboardTopRisks(organization.id), []),
+    withDashboardTimeout('vendors', listDashboardVendorsRequiringReview(organization.id), []),
+    withDashboardTimeout('documents', listDashboardDocumentsExpiringSoon(organization.id), []),
+    withDashboardTimeout('entitlements', getOrganizationEntitlements(organization.id), getOrganizationEntitlements('__fallback__'), 2_500),
+    withDashboardTimeout<DashboardTrendSnapshot[]>('trend_history', getDashboardTrendHistory(organization.id), [], 2_500),
   ]);
 
-  await recordDashboardMetricSnapshot(organization.id, summary);
-
-  const trendHistory = await getDashboardTrendHistory(organization.id);
-  const trendComparison = getDashboardTrendComparison(trendHistory);
+  void recordDashboardMetricSnapshot(organization.id, summary).catch((error) => {
+    console.warn('[dashboard] metric_snapshot_background_failed', {
+      message: error instanceof Error ? error.message : 'unknown',
+    });
+  });
 
   return {
     organization: normalizeOrganization(organization),
+    entitlements,
     summary,
     tasks,
     trendHistory,
-    trendComparison,
+    trendComparison: getDashboardTrendComparison(trendHistory),
     topRisks,
     vendorsRequiringReview,
     documentsExpiringSoon,
