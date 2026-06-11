@@ -1,0 +1,195 @@
+import Link from 'next/link';
+import { ArrowRight, BarChart3, CheckCircle2, CircleAlert, ShieldCheck, Target } from 'lucide-react';
+import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
+import { getEnterpriseReadinessSummary } from '@/server/governance/enterprise-readiness';
+
+const COPY: Record<SupportedLocale, {
+  title: string;
+  subtitle: string;
+  score: string;
+  status: string;
+  strongest: string;
+  weakest: string;
+  areas: string;
+  nextActions: string;
+  evidencePack: string;
+  evidencePackDescription: string;
+}> = {
+  en: {
+    title: 'Enterprise Readiness Center',
+    subtitle: 'A consolidated view of EuroComply maturity across evidence, access, continuity, retention, vendors and procurement readiness.',
+    score: 'Enterprise score',
+    status: 'Status',
+    strongest: 'Strongest areas',
+    weakest: 'Areas to improve',
+    areas: 'Readiness areas',
+    nextActions: 'Next actions',
+    evidencePack: 'Open Evidence Pack',
+    evidencePackDescription: 'Export a structured pack with governance summaries and integrity metadata.',
+  },
+  pt: {
+    title: 'Centro de Prontidão Enterprise',
+    subtitle: 'Visão consolidada da maturidade do EuroComply em evidências, acesso, continuidade, retenção, fornecedores e procurement.',
+    score: 'Score enterprise',
+    status: 'Estado',
+    strongest: 'Áreas mais fortes',
+    weakest: 'Áreas a melhorar',
+    areas: 'Áreas de prontidão',
+    nextActions: 'Próximas ações',
+    evidencePack: 'Abrir Evidence Pack',
+    evidencePackDescription: 'Exporte um pacote estruturado com resumos de governança e metadados de integridade.',
+  },
+  es: {
+    title: 'Centro de Preparación Enterprise',
+    subtitle: 'Vista consolidada de madurez en evidencias, acceso, continuidad, retención, proveedores y procurement.',
+    score: 'Puntuación enterprise',
+    status: 'Estado',
+    strongest: 'Áreas más fuertes',
+    weakest: 'Áreas a mejorar',
+    areas: 'Áreas de preparación',
+    nextActions: 'Próximas acciones',
+    evidencePack: 'Abrir Evidence Pack',
+    evidencePackDescription: 'Exporta un paquete estructurado con resúmenes de gobernanza y metadatos de integridad.',
+  },
+  fr: {
+    title: 'Centre de Préparation Enterprise',
+    subtitle: 'Vue consolidée de la maturité sur preuves, accès, continuité, rétention, fournisseurs et procurement.',
+    score: 'Score enterprise',
+    status: 'Statut',
+    strongest: 'Points forts',
+    weakest: 'Axes d’amélioration',
+    areas: 'Domaines de préparation',
+    nextActions: 'Prochaines actions',
+    evidencePack: 'Ouvrir Evidence Pack',
+    evidencePackDescription: 'Exporter un pack structuré avec résumés de gouvernance et métadonnées d’intégrité.',
+  },
+  it: {
+    title: 'Centro Readiness Enterprise',
+    subtitle: 'Vista consolidata della maturità su evidenze, accesso, continuità, retention, fornitori e procurement.',
+    score: 'Punteggio enterprise',
+    status: 'Stato',
+    strongest: 'Aree più forti',
+    weakest: 'Aree da migliorare',
+    areas: 'Aree di readiness',
+    nextActions: 'Prossime azioni',
+    evidencePack: 'Apri Evidence Pack',
+    evidencePackDescription: 'Esporta un pacchetto strutturato con sintesi governance e metadati di integrità.',
+  },
+  de: {
+    title: 'Enterprise Readiness Center',
+    subtitle: 'Konsolidierte Sicht auf Reifegrad für Nachweise, Zugriff, Kontinuität, Aufbewahrung, Anbieter und Procurement.',
+    score: 'Enterprise-Score',
+    status: 'Status',
+    strongest: 'Stärkste Bereiche',
+    weakest: 'Verbesserungsbereiche',
+    areas: 'Readiness-Bereiche',
+    nextActions: 'Nächste Schritte',
+    evidencePack: 'Evidence Pack öffnen',
+    evidencePackDescription: 'Strukturiertes Paket mit Governance-Zusammenfassungen und Integritätsmetadaten exportieren.',
+  },
+};
+
+function statusLabel(status: string) {
+  if (status === 'enterprise_ready') return 'Enterprise ready';
+  if (status === 'operational') return 'Operational';
+  if (status === 'review_ready') return 'Review ready';
+  return 'Foundation';
+}
+
+function statusClass(status: string) {
+  if (status === 'enterprise_ready') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+  if (status === 'operational') return 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300';
+  if (status === 'review_ready') return 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300';
+  return 'border-muted-foreground/20 bg-muted text-muted-foreground';
+}
+
+export default async function EnterpriseReadinessPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale: rawLocale } = await params;
+  const locale = isSupportedLocale(rawLocale) ? rawLocale : 'en';
+  const copy = COPY[locale];
+  const summary = getEnterpriseReadinessSummary();
+
+  return (
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
+      <DashboardCommandNavigation locale={locale} />
+      <section className="mx-auto max-w-7xl px-6 py-10">
+        <div className="rounded-[2rem] border bg-background/90 p-8 shadow-sm">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">Enterprise Readiness</p>
+              <h1 className="mt-4 text-4xl font-semibold tracking-tight">{copy.title}</h1>
+              <p className="mt-4 max-w-3xl text-muted-foreground">{copy.subtitle}</p>
+            </div>
+            <div className="rounded-3xl border bg-muted/40 p-6 text-center">
+              <ShieldCheck className="mx-auto h-8 w-8" />
+              <p className="mt-3 text-sm text-muted-foreground">{copy.score}</p>
+              <p className="mt-1 text-5xl font-semibold">{summary.score}%</p>
+              <p className={`mt-3 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${statusClass(summary.status)}`}>{statusLabel(summary.status)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <article className="rounded-3xl border bg-background/85 p-5 shadow-sm">
+            <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+            <h2 className="mt-4 text-lg font-semibold">{copy.strongest}</h2>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              {summary.strongestAreas.map((area) => <li key={area}>{area}</li>)}
+            </ul>
+          </article>
+          <article className="rounded-3xl border bg-background/85 p-5 shadow-sm">
+            <CircleAlert className="h-5 w-5 text-muted-foreground" />
+            <h2 className="mt-4 text-lg font-semibold">{copy.weakest}</h2>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              {summary.weakestAreas.map((area) => <li key={area}>{area}</li>)}
+            </ul>
+          </article>
+          <Link href={`/${locale}/audit-pack`} className="rounded-3xl border bg-background/85 p-5 shadow-sm transition hover:-translate-y-1 hover:border-primary/40">
+            <Target className="h-5 w-5 text-muted-foreground" />
+            <h2 className="mt-4 text-lg font-semibold">{copy.evidencePack}</h2>
+            <p className="mt-3 text-sm text-muted-foreground">{copy.evidencePackDescription}</p>
+            <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">Open <ArrowRight className="h-4 w-4" /></span>
+          </Link>
+        </div>
+
+        <section className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_0.8fr]">
+          <div className="rounded-[2rem] border bg-background/90 p-6 shadow-sm">
+            <h2 className="text-xl font-semibold">{copy.areas}</h2>
+            <div className="mt-5 space-y-4">
+              {summary.areas.map((area) => (
+                <article key={area.id} className="rounded-2xl border bg-muted/30 p-5">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">{area.label}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">Weight {area.weight}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusClass(area.status)}`}>{statusLabel(area.status)}</span>
+                      <span className="text-2xl font-semibold">{area.score}%</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-foreground" style={{ width: `${Math.max(4, Math.min(100, area.score))}%` }} />
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <aside className="rounded-[2rem] border bg-background/90 p-6 shadow-sm">
+            <BarChart3 className="h-5 w-5 text-muted-foreground" />
+            <h2 className="mt-4 text-xl font-semibold">{copy.nextActions}</h2>
+            <ol className="mt-5 space-y-3">
+              {summary.nextActions.map((action, index) => (
+                <li key={`${action}-${index}`} className="rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+                  <span className="mr-2 font-semibold text-foreground">{index + 1}.</span>{action}
+                </li>
+              ))}
+            </ol>
+          </aside>
+        </section>
+      </section>
+    </main>
+  );
+}
