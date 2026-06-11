@@ -36,6 +36,9 @@ const REQUIRED_TABLES = [
   'ai_incidents',
 ] as const;
 
+type RequiredTable = (typeof REQUIRED_TABLES)[number];
+type DatabaseCheck = { name: RequiredTable; ok: boolean; detail: string };
+type StorageCheck = { name: 'controlled-documents'; ok: boolean; detail: string };
 type SupabaseAdminClient = ReturnType<typeof createAdminClient>;
 type DynamicSupabaseClient = SupabaseAdminClient & {
   from: (table: string) => {
@@ -64,7 +67,7 @@ function envCheck(names: readonly string[]) {
   return names.map((name) => ({ name, configured: Boolean(process.env[name]) }));
 }
 
-async function checkTable(admin: SupabaseAdminClient, table: string) {
+async function checkTable<T extends RequiredTable>(admin: SupabaseAdminClient, table: T): Promise<{ name: T; ok: boolean; detail: string }> {
   try {
     const dynamicAdmin = admin as unknown as DynamicSupabaseClient;
     const { error } = await dynamicAdmin.from(table).select('id').limit(1);
@@ -82,7 +85,7 @@ async function checkTable(admin: SupabaseAdminClient, table: string) {
   }
 }
 
-async function checkBucket(admin: SupabaseAdminClient, name: string) {
+async function checkBucket(admin: SupabaseAdminClient, name: StorageCheck['name']): Promise<StorageCheck> {
   try {
     const { error } = await admin.storage.getBucket(name);
     return {
@@ -115,8 +118,8 @@ export async function GET(request: Request) {
   const missingRequiredEnv = requiredEnv.filter((item) => !item.configured).map((item) => item.name);
   const missingRecommendedEnv = recommendedEnv.filter((item) => !item.configured).map((item) => item.name);
 
-  let database = REQUIRED_TABLES.map((name) => ({ name, ok: false, detail: 'not_checked' }));
-  let storage = [{ name: 'controlled-documents', ok: false, detail: 'not_checked' }];
+  let database: DatabaseCheck[] = REQUIRED_TABLES.map((name) => ({ name, ok: false, detail: 'not_checked' }));
+  let storage: StorageCheck[] = [{ name: 'controlled-documents', ok: false, detail: 'not_checked' }];
 
   try {
     const admin = createAdminClient();
