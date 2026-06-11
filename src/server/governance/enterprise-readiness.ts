@@ -52,9 +52,9 @@ export function getEnterpriseReadinessSummary(): EnterpriseReadinessSummary {
     {
       id: 'retention',
       label: 'Retention governance',
-      score: retention.score,
+      score: retention.readinessScore,
       weight: 1,
-      status: normalizeStatus(retention.score),
+      status: normalizeStatus(retention.readinessScore),
       nextActions: retention.nextActions,
     },
     {
