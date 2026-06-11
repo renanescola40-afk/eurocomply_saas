@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Building2, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-overview';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,7 +42,6 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.16),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))]">
-      <DashboardCommandNavigation locale={params.locale} activePage="Visão Geral" />
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-10">
         <section id="overview" className="relative scroll-mt-28 overflow-hidden rounded-[2rem] border bg-background/86 p-6 shadow-2xl shadow-primary/5 backdrop-blur md:p-8">
           <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
