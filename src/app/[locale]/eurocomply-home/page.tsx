@@ -44,7 +44,7 @@ export default async function EuroComplyHomePage({ params }: { params: { locale:
 
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-12">
         <section className="relative overflow-hidden rounded-[2rem] border bg-background/88 p-6 shadow-2xl shadow-primary/5 backdrop-blur md:p-10">
-          <div className="absolute right-[-6rem] top-[-6rem] h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+          <div className="pointer-events-none absolute right-[-6rem] top-[-6rem] h-80 w-80 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
           <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
             <div className="space-y-6">
               <div className="flex flex-wrap items-center gap-3">
