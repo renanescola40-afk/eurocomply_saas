@@ -30,6 +30,8 @@ const requiredFiles = [
   'src/app/[locale]/retention-center/page.tsx',
   'src/server/governance/continuity-policy.ts',
   'src/app/[locale]/continuity-center/page.tsx',
+  'src/server/governance/vendor-assurance-policy.ts',
+  'src/app/[locale]/vendor-assurance/page.tsx',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
   'docs/LEGAL_READINESS.md',
