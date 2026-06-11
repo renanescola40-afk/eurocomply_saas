@@ -46,7 +46,7 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
       <DashboardCommandNavigation locale={params.locale} activePage="Visão Geral" />
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-10">
         <section id="overview" className="relative scroll-mt-28 overflow-hidden rounded-[2rem] border bg-background/86 p-6 shadow-2xl shadow-primary/5 backdrop-blur md:p-8">
-          <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+          <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
           <div className="relative grid gap-8 lg:grid-cols-[1.35fr_0.65fr] lg:items-end">
             <div className="space-y-6">
               <div className="flex flex-wrap items-center gap-3">
