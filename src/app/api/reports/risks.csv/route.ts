@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { csvDownloadResponse } from '@/lib/exports/csv';
 import { reportError } from '@/lib/observability/report-error';
+import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
@@ -32,6 +33,14 @@ export async function GET() {
   const supabase = tryCreateAdminClient();
 
   if (!supabase) {
+    await writeAuditLog({
+      action: 'report.export',
+      organizationId: organization.id,
+      userId: user.id,
+      entityType: 'report',
+      entityId: 'risks.csv',
+      metadata: { format: 'csv', report: 'risks', fallback: true },
+    });
     return csvDownloadResponse([RISKS_CSV_HEADER], 'risks-report.csv');
   }
 
@@ -50,6 +59,15 @@ export async function GET() {
     RISKS_CSV_HEADER,
     ...((data ?? []).map((risk) => [risk.title, risk.status, risk.risk_score, risk.likelihood, risk.impact, risk.created_at, risk.updated_at])),
   ];
+
+  await writeAuditLog({
+    action: 'report.export',
+    organizationId: organization.id,
+    userId: user.id,
+    entityType: 'report',
+    entityId: 'risks.csv',
+    metadata: { format: 'csv', report: 'risks', rows: rows.length },
+  });
 
   return csvDownloadResponse(rows, 'risks-report.csv');
 }
