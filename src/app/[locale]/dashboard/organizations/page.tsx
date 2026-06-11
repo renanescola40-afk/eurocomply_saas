@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Building2, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
-import { HomeDashboardPage } from '@/components/dashboard/dashboard-overview';
+import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-overview';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatLimit } from '@/server/billing/entitlements';
@@ -134,13 +134,12 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
           })}
         </section>
 
-        <HomeDashboardPage
+        <DashboardHomeOverview
           summary={data.summary}
           tasks={data.tasks}
           trendHistory={data.trendHistory}
           trendComparison={data.trendComparison}
           basePath={localizedDashboardBasePath}
-          topRisks={data.topRisks}
           vendorsRequiringReview={data.vendorsRequiringReview}
           documentsExpiringSoon={data.documentsExpiringSoon}
         />
