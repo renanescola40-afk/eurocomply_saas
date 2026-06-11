@@ -14,7 +14,7 @@ export type CreateVendorFormInput = {
   dpaSigned: boolean;
 };
 
-type CreateVendorActionResult = { error?: string } | void;
+type CreateVendorActionResult = { error?: string } | undefined;
 
 export function CreateVendorForm({ onCreate }: { onCreate: (input: CreateVendorFormInput) => Promise<CreateVendorActionResult> }) {
   const [error, setError] = useState<string | null>(null);
