@@ -6,6 +6,7 @@ import { listRisks } from '@/server/queries/risks';
 import { listVendors } from '@/server/queries/vendors';
 import type { PlanEntitlements } from '@/server/billing/entitlements';
 import { CONTINUITY_CONTROLS, getContinuitySummary } from '@/server/governance/continuity-policy';
+import { getEnterpriseReadinessSummary } from '@/server/governance/enterprise-readiness';
 import { getRetentionSummary, RETENTION_POLICIES } from '@/server/governance/retention-policy';
 import { getSecurityQuestionnaireSummary, SECURITY_QUESTIONNAIRE_ITEMS } from '@/server/governance/security-questionnaire';
 import { getVendorAssuranceSummary, VENDOR_ASSURANCE_CONTROLS } from '@/server/governance/vendor-assurance-policy';
@@ -77,6 +78,7 @@ export type AuditEvidencePack = {
     openAiIncidents: number;
   };
   governance: {
+    enterpriseReadiness: ReturnType<typeof getEnterpriseReadinessSummary>;
     retention: {
       summary: ReturnType<typeof getRetentionSummary>;
       policies: typeof RETENTION_POLICIES;
@@ -244,6 +246,7 @@ export async function buildAuditEvidencePack({
     plan: entitlements,
     summary,
     governance: {
+      enterpriseReadiness: getEnterpriseReadinessSummary(),
       retention: {
         summary: getRetentionSummary(),
         policies: RETENTION_POLICIES,
