@@ -60,9 +60,9 @@ export function getEnterpriseReadinessSummary(): EnterpriseReadinessSummary {
     {
       id: 'continuity',
       label: 'Operational continuity',
-      score: continuity.score,
+      score: continuity.readinessScore,
       weight: 1.2,
-      status: normalizeStatus(continuity.score),
+      status: normalizeStatus(continuity.readinessScore),
       nextActions: continuity.nextActions,
     },
     {
