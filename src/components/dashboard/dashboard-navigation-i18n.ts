@@ -99,6 +99,15 @@ const vendorAssuranceCopy: Record<string, { label: string; description: string }
   de: { label: 'Vendor Assurance', description: 'Anbieter, Unterauftragsverarbeiter und Nachweise prüfen' },
 };
 
+const questionnaireCopy: Record<string, { label: string; description: string }> = {
+  en: { label: 'Security Questionnaire', description: 'Review reusable answers for security reviews, RFPs and procurement' },
+  pt: { label: 'Questionário de Segurança', description: 'Reveja respostas reutilizáveis para security reviews, RFPs e procurement' },
+  es: { label: 'Cuestionario de Seguridad', description: 'Revisa respuestas reutilizables para security reviews, RFPs y procurement' },
+  fr: { label: 'Questionnaire Sécurité', description: 'Vérifier les réponses réutilisables pour revues sécurité, RFP et procurement' },
+  it: { label: 'Questionario Sicurezza', description: 'Verifica risposte riutilizzabili per security review, RFP e procurement' },
+  de: { label: 'Security Questionnaire', description: 'Wiederverwendbare Antworten für Security Reviews, RFPs und Procurement prüfen' },
+};
+
 const evidencePackCopy: Record<string, { label: string; description: string; verify: string; verifyDescription: string }> = {
   en: { label: 'Evidence Pack', description: 'Export a structured audit evidence snapshot', verify: 'Verify Evidence Pack', verifyDescription: 'Validate exported pack hash and signature status' },
   pt: { label: 'Pacote de Evidências', description: 'Exporte uma fotografia estruturada de evidências de auditoria', verify: 'Verificar Evidências', verifyDescription: 'Valide hash e estado da assinatura do pacote exportado' },
@@ -128,6 +137,10 @@ function getVendorAssuranceCopy(locale: string) {
   return vendorAssuranceCopy[locale] ?? vendorAssuranceCopy.en;
 }
 
+function getQuestionnaireCopy(locale: string) {
+  return questionnaireCopy[locale] ?? questionnaireCopy.en;
+}
+
 function getEvidencePackCopy(locale: string) {
   return evidencePackCopy[locale] ?? evidencePackCopy.en;
 }
@@ -139,6 +152,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
   const retention = getRetentionCopy(locale);
   const continuity = getContinuityCopy(locale);
   const vendorAssurance = getVendorAssuranceCopy(locale);
+  const questionnaire = getQuestionnaireCopy(locale);
   const evidencePack = getEvidencePackCopy(locale);
 
   return [
@@ -179,6 +193,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
         { label: nav.complianceReports, href: `${dashboardRoot}/reports-governance`, description: nav.complianceReportsDescription },
         { label: evidencePack.label, href: '/audit-pack', description: evidencePack.description },
         { label: evidencePack.verify, href: '/audit-pack/verify', description: evidencePack.verifyDescription },
+        { label: questionnaire.label, href: '/security-questionnaire', description: questionnaire.description },
         { label: retention.label, href: '/retention-center', description: retention.description },
         { label: continuity.label, href: '/continuity-center', description: continuity.description },
         { label: vendorAssurance.label, href: '/vendor-assurance', description: vendorAssurance.description },
