@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { csvDownloadResponse } from '@/lib/exports/csv';
 import { reportError } from '@/lib/observability/report-error';
+import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getDashboardSummary } from '@/server/queries/dashboard';
@@ -44,6 +45,15 @@ export async function GET() {
       ['Total documents', summary.totals.documents],
       ['Generated at', new Date().toISOString()],
     ];
+
+    await writeAuditLog({
+      action: 'report.export',
+      organizationId: organization.id,
+      userId: user.id,
+      entityType: 'report',
+      entityId: 'executive.csv',
+      metadata: { format: 'csv', report: 'executive', rows: rows.length },
+    });
 
     return csvDownloadResponse(rows, 'executive-report.csv');
   } catch (error) {
