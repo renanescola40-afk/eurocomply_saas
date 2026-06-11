@@ -1,4 +1,5 @@
-import { ClipboardCheck, CheckCircle2, CircleAlert, FileText, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
+import { ClipboardCheck, CheckCircle2, CircleAlert, Download, FileText, ShieldCheck } from 'lucide-react';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
 import { getSecurityQuestionnaireSummary, SECURITY_QUESTIONNAIRE_ITEMS } from '@/server/governance/security-questionnaire';
@@ -14,6 +15,8 @@ const COPY: Record<SupportedLocale, {
   answers: string;
   evidence: string;
   nextActions: string;
+  exportLabel: string;
+  exportDescription: string;
 }> = {
   en: {
     title: 'Security Questionnaire Center',
@@ -26,6 +29,8 @@ const COPY: Record<SupportedLocale, {
     answers: 'Questionnaire answers',
     evidence: 'Evidence references',
     nextActions: 'Next actions',
+    exportLabel: 'Export questionnaire JSON',
+    exportDescription: 'Download a signed JSON export for RFPs and security reviews.',
   },
   pt: {
     title: 'Centro de Questionários de Segurança',
@@ -38,6 +43,8 @@ const COPY: Record<SupportedLocale, {
     answers: 'Respostas do questionário',
     evidence: 'Referências de evidência',
     nextActions: 'Próximas ações',
+    exportLabel: 'Exportar questionário JSON',
+    exportDescription: 'Baixe um export JSON assinado para RFPs e reviews de segurança.',
   },
   es: {
     title: 'Centro de Cuestionarios de Seguridad',
@@ -50,6 +57,8 @@ const COPY: Record<SupportedLocale, {
     answers: 'Respuestas del cuestionario',
     evidence: 'Referencias de evidencia',
     nextActions: 'Próximas acciones',
+    exportLabel: 'Exportar cuestionario JSON',
+    exportDescription: 'Descarga un export JSON firmado para RFPs y revisiones de seguridad.',
   },
   fr: {
     title: 'Centre de Questionnaires Sécurité',
@@ -62,6 +71,8 @@ const COPY: Record<SupportedLocale, {
     answers: 'Réponses questionnaire',
     evidence: 'Références preuves',
     nextActions: 'Prochaines actions',
+    exportLabel: 'Exporter questionnaire JSON',
+    exportDescription: 'Télécharger un export JSON signé pour RFP et revues sécurité.',
   },
   it: {
     title: 'Centro Questionari Sicurezza',
@@ -74,6 +85,8 @@ const COPY: Record<SupportedLocale, {
     answers: 'Risposte questionario',
     evidence: 'Riferimenti evidenza',
     nextActions: 'Prossime azioni',
+    exportLabel: 'Esporta questionario JSON',
+    exportDescription: 'Scarica un export JSON firmato per RFP e security review.',
   },
   de: {
     title: 'Security Questionnaire Center',
@@ -86,6 +99,8 @@ const COPY: Record<SupportedLocale, {
     answers: 'Questionnaire-Antworten',
     evidence: 'Nachweisreferenzen',
     nextActions: 'Nächste Schritte',
+    exportLabel: 'Questionnaire JSON exportieren',
+    exportDescription: 'Signierten JSON-Export für RFPs und Security Reviews herunterladen.',
   },
 };
 
@@ -117,6 +132,11 @@ export default async function SecurityQuestionnairePage({ params }: { params: Pr
               <p className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">Enterprise Procurement</p>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">{copy.title}</h1>
               <p className="mt-4 max-w-3xl text-muted-foreground">{copy.subtitle}</p>
+              <Link href="/api/security-questionnaire/export" className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:-translate-y-0.5">
+                <Download className="h-4 w-4" />
+                {copy.exportLabel}
+              </Link>
+              <p className="mt-2 text-xs text-muted-foreground">{copy.exportDescription}</p>
             </div>
             <div className="rounded-3xl border bg-muted/40 p-6 text-center">
               <ClipboardCheck className="mx-auto h-8 w-8" />
