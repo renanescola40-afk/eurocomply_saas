@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 
-function sanitizeEvent(event: Sentry.Event) {
+function sanitizeErrorEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
   event.request = undefined;
   event.user = undefined;
   return event;
@@ -16,7 +16,7 @@ function initSentry(dsn: string | undefined) {
     sendDefaultPii: false,
     telemetry: false,
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.05 : 1.0,
-    beforeSend: sanitizeEvent,
+    beforeSend: sanitizeErrorEvent,
   });
 }
 
