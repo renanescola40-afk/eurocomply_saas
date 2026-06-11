@@ -36,6 +36,7 @@ const requiredFiles = [
   'src/app/[locale]/vendor-assurance/page.tsx',
   'src/server/governance/security-questionnaire.ts',
   'src/app/[locale]/security-questionnaire/page.tsx',
+  'src/app/api/security-questionnaire/export/route.ts',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
   'docs/LEGAL_READINESS.md',
