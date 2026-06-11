@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { assertSafeEnvironment } from '@/lib/security/env-guard';
 
 const PUBLIC_FILE = /\.[^/]+$/;
 const supportedLocales = ['en', 'pt', 'es', 'fr', 'it', 'de'] as const;
@@ -104,6 +105,7 @@ function matchesSegment(pathname: string, segments: string[]) {
 }
 
 export async function middleware(request: NextRequest) {
+  assertSafeEnvironment();
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith('/_next') || pathname.startsWith('/api') || PUBLIC_FILE.test(pathname)) {
