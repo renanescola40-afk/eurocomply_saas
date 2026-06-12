@@ -4,6 +4,7 @@ import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/server/billing/stripe';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { assertTrustedOrigin } from '@/server/security/origin-guard';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
 
@@ -13,6 +14,9 @@ function getBaseUrl() {
 }
 
 export async function POST(request: Request) {
+  const originDenied = assertTrustedOrigin(request);
+  if (originDenied) return originDenied;
+
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
