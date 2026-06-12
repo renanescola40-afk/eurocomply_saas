@@ -27,6 +27,7 @@ const checks = [
     tokens: [
       'npm install --ignore-scripts',
       'npm run security:ci',
+      'node scripts/security/check-step-up.mjs',
       'actions/setup-node@v4',
       'node-version: 22',
       'NEXT_PUBLIC_SUPABASE_URL',
