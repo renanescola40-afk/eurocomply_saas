@@ -13,8 +13,8 @@ This matrix is the working control map for EuroComply security assurance. Target
 | Authorization | RBAC, organization context, plan entitlements, export permissions |
 | Multi-tenancy | Supabase RLS, organization_id isolation, storage path isolation |
 | Data lifecycle | Retention, GDPR export/delete, document storage, audit evidence pack |
-| Operations | Vercel build/deploy, GitHub CI, secrets, observability, Sentry |
-| Procurement evidence | Evidence Pack, Security Questionnaire, Vendor Assurance, Enterprise Readiness exports |
+| Operations | Vercel build/deploy, GitHub CI, secrets, observability, Sentry, continuity exports |
+| Procurement evidence | Evidence Pack, Security Questionnaire, Vendor Assurance, Enterprise Readiness, Retention and Continuity exports |
 | Uploads | Controlled document upload, type allowlist, size limits, magic-byte validation, private storage |
 
 ## Control Matrix
@@ -31,9 +31,9 @@ This matrix is the working control map for EuroComply security assurance. Target
 | V5 Validation | User input is validated and normalized | API validation, type normalization, upload allowlists and security checks | API route modules, upload route | Implemented / continue endpoint-by-endpoint review |
 | V5 Validation | Cross-site mutating requests are rejected | Origin/Referer guard for mutating sensitive APIs, with allowlist via `NEXT_PUBLIC_APP_URL` and `TRUSTED_ORIGINS` | `src/server/security/origin-guard.ts`, `scripts/security/check-origin-guards.mjs` | Implemented / advisory gate |
 | V7 Error Handling | Errors do not leak secrets or internals | Generic error messages and centralized no-store response helpers | `src/server/security/no-store.ts`, `scripts/security/check-security-responses.mjs` | Implemented + CI gate |
-| V8 Data Protection | Sensitive exports are protected and traceable | Evidence Pack, Security Questionnaire, Vendor Assurance, Enterprise Readiness, Retention and GDPR exports require auth/RBAC/plan gates | `/api/*/export` routes, GDPR APIs | Implemented |
+| V8 Data Protection | Sensitive exports are protected and traceable | Evidence Pack, Security Questionnaire, Vendor Assurance, Enterprise Readiness, Retention, Continuity and GDPR exports require auth/RBAC/plan gates | `/api/*/export` routes, GDPR APIs, `src/app/api/continuity-center/export/route.ts` | Implemented |
 | V8 Data Protection | Sensitive responses are not cached by browsers, CDN or proxies | `noStoreJson()` and `noStoreDownload()` used for sensitive API responses | `src/server/security/no-store.ts`, `scripts/security/check-no-store.mjs` | Implemented + CI gate |
-| V8 Data Protection | Export integrity is verifiable | SHA-256 hash + optional HMAC signature | `src/server/security/evidence-pack-integrity.ts` | Implemented |
+| V8 Data Protection | Export integrity is verifiable | SHA-256 hash + optional HMAC signature used by evidence and continuity exports | `src/server/security/evidence-pack-integrity.ts`, `src/app/api/continuity-center/export/route.ts` | Implemented |
 | V9 Communications | HTTPS and strong browser security headers are enforced | CSP, HSTS, frame protections, referrer policy, content sniffing protection and permissions policy | `proxy.ts`, `next.config.ts`, `scripts/security/check-security-headers.mjs` | Implemented + CI gate |
 | V10 Malicious Code | Dependency risk is continuously monitored | Dependabot/CI/security gates | `.github/dependabot.yml`, CI workflow | Partial / add CodeQL/OSV if not enabled |
 | V11 Business Logic | Plan and role restrictions are enforced server-side | Entitlement checks and RBAC guards | `src/server/billing/entitlements.ts`, `src/server/security/rbac.ts` | Implemented / expanding tests |
@@ -62,7 +62,7 @@ This matrix is the working control map for EuroComply security assurance. Target
 ## Critical Attack Scenarios To Test Before Enterprise Launch
 
 1. User from Organization A attempts to read Organization B documents, vendors, risks, AI systems and incidents.
-2. Viewer attempts to export Evidence Pack, Security Questionnaire and Vendor Assurance reports.
+2. Viewer attempts to export Evidence Pack, Security Questionnaire, Vendor Assurance and Continuity reports.
 3. Member attempts to access billing portal or invite an admin.
 4. Removed user reuses an old session to access APIs.
 5. Public/anonymous user calls every `/api/*/export` endpoint.
@@ -75,6 +75,7 @@ This matrix is the working control map for EuroComply security assurance. Target
 12. RLS policy regression in a new migration.
 13. Sensitive API response is cached by browser, CDN or proxy.
 14. CSP regression introduces wildcard or production `unsafe-eval`.
+15. Continuity export is requested by a user without `export_data` or without Business+ entitlement.
 
 ## Required Security Evidence For Enterprise Reviews
 
@@ -93,6 +94,7 @@ This matrix is the working control map for EuroComply security assurance. Target
 | Security Questionnaire export | `/security-questionnaire` |
 | Vendor Assurance export | `/vendor-assurance` |
 | Retention Policy export | `/retention-center` |
+| Continuity Center export | `/continuity-center` |
 | GDPR export/delete controls | `src/app/api/gdpr/*/route.ts` |
 | Upload controls | `src/app/api/documents/upload/route.ts`, `src/server/security/file-signature.ts` |
 
