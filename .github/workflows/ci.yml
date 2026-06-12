@@ -26,6 +26,7 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run preflight
+      - run: npm run security:rls
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test
