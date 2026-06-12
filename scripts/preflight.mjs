@@ -18,6 +18,7 @@ const recommended = [
   'SENTRY_AUTH_TOKEN',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
+  'SUPABASE_ACCESS_TOKEN',
 ];
 
 const requiredFiles = [
@@ -40,6 +41,8 @@ const requiredFiles = [
   'src/server/governance/security-questionnaire.ts',
   'src/app/[locale]/security-questionnaire/page.tsx',
   'src/app/api/security-questionnaire/export/route.ts',
+  'scripts/security/check-rls.mjs',
+  'docs/security/ASVS_MATRIX.md',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
   'docs/LEGAL_READINESS.md',
@@ -94,6 +97,10 @@ for (const price of stripePrices) {
     console.error(`Stripe price id looks invalid: ${price}`);
     process.exitCode = 1;
   }
+}
+
+if (!process.env.SUPABASE_ACCESS_TOKEN) {
+  console.warn('SUPABASE_ACCESS_TOKEN is not configured; live RLS CI checks will run in advisory mode only.');
 }
 
 if (process.exitCode === 1) {
