@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { ReportsGovernancePage } from '@/components/dashboard/dashboard-overview';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -21,7 +20,6 @@ export default async function OrganizationReportsGovernancePage({ params }: { pa
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.16),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))]">
-      <DashboardCommandNavigation locale={params.locale} activePage="Reports & Governance" />
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-10">
         {canViewExecutiveReports ? (
           <ReportsGovernancePage summary={data.summary} tasks={data.tasks} trendHistory={data.trendHistory} trendComparison={data.trendComparison} basePath={localizedDashboardBasePath} topRisks={data.topRisks} vendorsRequiringReview={data.vendorsRequiringReview} documentsExpiringSoon={data.documentsExpiringSoon} />
