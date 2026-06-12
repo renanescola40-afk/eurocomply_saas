@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import {
   classifyAiSystem,
   normalizeAiRiskDomain,
@@ -12,6 +11,7 @@ import { createAiSystem, listAiSystems } from '@/server/queries/ai-systems';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
+import { noStoreJson } from '@/server/security/no-store';
 
 function asText(value: unknown, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
@@ -33,13 +33,13 @@ export async function GET() {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
   }
 
   const permission = await assertOrganizationPermission({
@@ -53,7 +53,7 @@ export async function GET() {
   }
 
   const systems = await listAiSystems(organization.id);
-  return NextResponse.json({ systems, role: permission.role });
+  return noStoreJson({ systems, role: permission.role });
 }
 
 export async function POST(request: Request) {
@@ -63,13 +63,13 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
   }
 
   const permission = await assertOrganizationPermission({
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return noStoreJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const body = payload as Record<string, unknown>;
@@ -95,11 +95,11 @@ export async function POST(request: Request) {
   const useCase = asText(body.useCase);
 
   if (name.length < 2) {
-    return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    return noStoreJson({ error: 'Name is required' }, { status: 400 });
   }
 
   if (useCase.length < 8) {
-    return NextResponse.json({ error: 'Use case must describe how the AI system is used' }, { status: 400 });
+    return noStoreJson({ error: 'Use case must describe how the AI system is used' }, { status: 400 });
   }
 
   const role = normalizeAiSystemRole(body.role);
@@ -174,17 +174,17 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ system, roleAssessment });
+    return noStoreJson({ system, roleAssessment });
   } catch (error) {
     const code = getErrorCode(error);
 
     if (code === '42P01' || code === 'PGRST205') {
-      return NextResponse.json(
+      return noStoreJson(
         { error: 'ai_systems_table_missing', message: 'Apply the AI governance Supabase migration before creating AI systems.' },
         { status: 503 },
       );
     }
 
-    return NextResponse.json({ error: 'Could not create AI system' }, { status: 500 });
+    return noStoreJson({ error: 'Could not create AI system' }, { status: 500 });
   }
 }
