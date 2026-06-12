@@ -51,6 +51,12 @@ const endpointRules = [
     requiredAll: ['verifyEvidencePackIntegrity'],
   },
   {
+    name: 'audit chain verifier',
+    match: /src\/app\/api\/audit\/chain\/verify\/route\.ts$/,
+    requiredAny: [authGuard, organizationGuard, rbacGuard, planGuard, rateLimitGuard, noStoreGuard],
+    requiredAll: ['read_audit', 'listAuditEvents', 'verifyAuditChain', 'legacyEvents', 'chainedEventsChecked'],
+  },
+  {
     name: 'AI governance endpoint',
     match: /src\/app\/api\/ai-(systems|incidents)\/route\.ts$/,
     requiredAny: [authGuard, organizationGuard, rbacGuard, auditGuard, originGuard, noStoreGuard],
