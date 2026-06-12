@@ -11,6 +11,7 @@ import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAiSystem, listAiSystems } from '@/server/queries/ai-systems';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { assertTrustedOrigin } from '@/server/security/origin-guard';
 
 function asText(value: unknown, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
@@ -56,6 +57,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const originDenied = assertTrustedOrigin(request);
+  if (originDenied) return originDenied;
+
   const user = await getCurrentUser();
 
   if (!user) {
