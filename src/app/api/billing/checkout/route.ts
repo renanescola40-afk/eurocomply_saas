@@ -1,11 +1,10 @@
-import { NextResponse } from 'next/server';
-
 import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan } from '@/server/billing/plans';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
+import { noStoreJson } from '@/server/security/no-store';
 
 export async function POST(request: Request) {
   const originDenied = assertTrustedOrigin(request);
@@ -14,7 +13,7 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'authentication_required' }, { status: 401 });
+    return noStoreJson({ error: 'authentication_required' }, { status: 401 });
   }
 
   const body = await request.json().catch(() => null) as { plan?: string; locale?: string } | null;
@@ -22,13 +21,13 @@ export async function POST(request: Request) {
   const locale = body?.locale?.match(/^(en|pt|es|fr|it|de)$/) ? body.locale : 'en';
 
   if (!plan || !isSelfServePlan(plan)) {
-    return NextResponse.json({ error: 'invalid_plan' }, { status: 400 });
+    return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization?.id) {
-    return NextResponse.json({ error: 'organization_required' }, { status: 400 });
+    return noStoreJson({ error: 'organization_required' }, { status: 400 });
   }
 
   const permission = await assertOrganizationPermission({
@@ -69,5 +68,5 @@ export async function POST(request: Request) {
     allow_promotion_codes: true,
   });
 
-  return NextResponse.json({ url: session.url });
+  return noStoreJson({ url: session.url });
 }
