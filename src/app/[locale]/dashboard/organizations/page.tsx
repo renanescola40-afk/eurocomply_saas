@@ -4,15 +4,16 @@ import { ArrowRight, Building2, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersR
 import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-overview';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { locales, type Locale } from '@/lib/i18n/routing';
 import { formatLimit } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
 
 const quickLinks = [
-  { href: '/dashboard/organizations/tasks', label: 'Tasks', description: 'Assign owners and unblock overdue work', icon: FileCheck2 },
-  { href: '/dashboard/organizations/documents', label: 'Evidence', description: 'Review policies, proofs and expirations', icon: ShieldCheck },
-  { href: '/dashboard/organizations/vendors', label: 'Vendors', description: 'Track third-party review exposure', icon: UsersRound },
-  { href: '/dashboard/organizations/risks', label: 'Risks', description: 'Prioritise high-impact compliance gaps', icon: Gauge },
+  { href: '/aprovacoes', label: 'Tasks', description: 'Assign owners and unblock overdue work', icon: FileCheck2 },
+  { href: '/documentos', label: 'Evidence', description: 'Review policies, proofs and expirations', icon: ShieldCheck },
+  { href: '/vendor-assurance', label: 'Vendors', description: 'Track third-party review exposure', icon: UsersRound },
+  { href: '/riscos', label: 'Risks', description: 'Prioritise high-impact compliance gaps', icon: Gauge },
 ];
 
 const planLabels = {
@@ -22,22 +23,32 @@ const planLabels = {
   enterprise: 'Enterprise',
 };
 
-export default async function OrganizationDashboardPage({ params }: { params: { locale: string } }) {
+type PageProps = {
+  params: Promise<{ locale: string }>;
+};
+
+function getSafeLocale(locale: string): Locale {
+  return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+}
+
+export default async function OrganizationDashboardPage({ params }: PageProps) {
+  const { locale } = await params;
+  const safeLocale = getSafeLocale(locale);
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect(`/${params.locale}/login`);
+    redirect(`/${safeLocale}/login`);
   }
 
   const data = await getOrganizationDashboardData(user.id);
 
   if (!data) {
-    redirect(`/${params.locale}/onboarding`);
+    redirect(`/${safeLocale}/onboarding`);
   }
 
   const entitlements = data.entitlements;
   const dashboardBasePath = `/dashboard/organizations`;
-  const localizedDashboardBasePath = `/${params.locale}${dashboardBasePath}`;
+  const localizedDashboardBasePath = `/${safeLocale}${dashboardBasePath}`;
   const complianceHealth = data.summary.complianceScore >= 80 ? 'Audit ready' : data.summary.complianceScore >= 55 ? 'Needs attention' : 'Remediation needed';
 
   return (
@@ -88,12 +99,12 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
 
               <div className="flex flex-wrap gap-3">
                 <Button asChild size="lg" className="rounded-full">
-                  <Link href={`${localizedDashboardBasePath}/reports`}>
+                  <Link href={`${localizedDashboardBasePath}/reports-governance`}>
                     Generate audit pack <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="rounded-full bg-background/70">
-                  <Link href={`${localizedDashboardBasePath}/tasks`}>Review priority tasks</Link>
+                  <Link href={`/${safeLocale}/aprovacoes`}>Review priority tasks</Link>
                 </Button>
               </div>
             </div>
@@ -118,7 +129,7 @@ export default async function OrganizationDashboardPage({ params }: { params: { 
           {quickLinks.map((link) => {
             const Icon = link.icon;
             return (
-              <Link key={link.href} href={`/${params.locale}${link.href}`} className="group rounded-2xl border bg-background/78 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
+              <Link key={link.href} href={`/${safeLocale}${link.href}`} className="group rounded-2xl border bg-background/78 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
                 <div className="flex items-start justify-between gap-3">
                   <div className="rounded-xl bg-primary/10 p-2 text-primary">
                     <Icon className="h-5 w-5" />
