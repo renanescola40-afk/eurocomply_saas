@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -7,6 +6,7 @@ import { listDocuments } from '@/server/queries/documents';
 import { listAuditEventsForUser, listNotificationsForUser } from '@/server/queries/compliance-activity';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
+import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 
@@ -14,13 +14,13 @@ export async function GET() {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
   }
 
   const entitlementCheck = await assertGdprSelfServiceEnabled(organization.id);
@@ -70,12 +70,11 @@ export async function GET() {
     note: 'Exportação simulada para GDPR Artigo 20. Adicionar riscos, fornecedores, tarefas e ficheiros quando os schemas estiverem finalizados.',
   };
 
-  return new NextResponse(JSON.stringify(body, null, 2), {
+  return noStoreDownload(JSON.stringify(body, null, 2), {
     status: 200,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Content-Disposition': `attachment; filename="eurocomply-gdpr-export-${organization.slug ?? organization.id}.json"`,
-      'Cache-Control': 'no-store',
     },
   });
 }
