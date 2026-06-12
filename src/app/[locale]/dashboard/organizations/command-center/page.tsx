@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { CommandCenterPage } from '@/components/dashboard/dashboard-overview';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
@@ -16,7 +15,6 @@ export default async function OrganizationCommandCenterPage({ params }: { params
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.16),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))]">
-      <DashboardCommandNavigation locale={params.locale} activePage="Command Center" />
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-10">
         <CommandCenterPage summary={data.summary} tasks={data.tasks} trendHistory={data.trendHistory} trendComparison={data.trendComparison} basePath={localizedDashboardBasePath} topRisks={data.topRisks} vendorsRequiringReview={data.vendorsRequiringReview} documentsExpiringSoon={data.documentsExpiringSoon} />
       </div>
