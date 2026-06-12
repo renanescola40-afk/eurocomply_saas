@@ -58,7 +58,7 @@ export default async function AddOnsAndCreditsPage({ params }: { params: Promise
   const isPremium = currentPlan === 'enterprise';
 
   // Future hook: when add-on subscription items are persisted, populate this list from Supabase/Stripe sync.
-  const activeAddOnIds = [];
+  const activeAddOnIds: string[] = [];
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
