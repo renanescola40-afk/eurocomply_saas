@@ -21,6 +21,13 @@ type Obligation = {
   sourceUrl: string;
 };
 
+type IntelligenceSuggestion = {
+  source?: string;
+  title?: string;
+  country?: string;
+  description?: string;
+};
+
 const storageKey = 'eurocomply-compliance-calendar-v1';
 const notificationsStorageKey = 'eurocomply-local-notifications-v1';
 
@@ -94,7 +101,32 @@ function notifyLocally(message: string) {
   }
 }
 
-export default function ComplianceCalendarClient({ locale, canUseAiSearch, plan }: { locale: string; canUseAiSearch: boolean; plan: string }) {
+function addDaysIso(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function createObligationFromSuggestion(suggestion?: IntelligenceSuggestion): Obligation | null {
+  if (suggestion?.source !== 'intelligence' || !suggestion.title) return null;
+
+  return {
+    id: `intel-${suggestion.title.toLowerCase().replace(/[^a-z0-9]+/gi, '-').slice(0, 42)}`,
+    title: suggestion.title,
+    country: suggestion.country || 'União Europeia',
+    type: 'Governança',
+    due: addDaysIso(30),
+    owner: 'Compliance Lead',
+    status: 'Pendente',
+    description: suggestion.description || 'Sugestão criada a partir do EuroComply Intelligence para revisão interna.',
+    legalBasis: 'EuroComply Intelligence — análise regulatória e tecnológica.',
+    penalty: 'Risco de atraso na análise regulatória, evidências incompletas ou resposta operacional tardia.',
+    source: 'EuroComply Intelligence',
+    sourceUrl: '#',
+  };
+}
+
+export default function ComplianceCalendarClient({ locale, canUseAiSearch, plan, suggestion }: { locale: string; canUseAiSearch: boolean; plan: string; suggestion?: IntelligenceSuggestion }) {
   const [obligations, setObligations] = useState<Obligation[]>(initialObligations);
   const [toast, setToast] = useState('');
   const [view, setView] = useState<'month' | 'week'>('month');
@@ -108,6 +140,24 @@ export default function ComplianceCalendarClient({ locale, canUseAiSearch, plan 
       setObligations(saved);
     }
   }, []);
+
+  useEffect(() => {
+    const obligation = createObligationFromSuggestion(suggestion);
+    if (!obligation) return;
+
+    setObligations((items) => {
+      if (items.some((item) => item.id === obligation.id)) {
+        setToast('Esta sugestão do Jornal IA já está no calendário.');
+        return items;
+      }
+
+      notifyLocally(`Sugestão do Jornal IA adicionada ao calendário: ${obligation.title}`);
+      setToast('Sugestão do Jornal IA adicionada ao calendário inteligente.');
+      setSelected(obligation);
+      setCurrentMonth(new Date(`${obligation.due}T12:00:00`));
+      return [...items, obligation];
+    });
+  }, [suggestion]);
 
   useEffect(() => {
     try {
