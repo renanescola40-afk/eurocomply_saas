@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const helperPath = 'src/server/security/step-up.ts';
 const testPath = 'src/server/security/step-up.test.ts';
 const docPath = 'docs/security/STEP_UP_AUTH.md';
+const auditChainVerifierPath = 'src/app/api/audit/chain/verify/route.ts';
 
 const helperRequiredTokens = [
   'STEP_UP_MAX_AGE_MS',
@@ -43,6 +44,16 @@ const docRequiredTokens = [
   'Rollout Plan',
 ];
 
+const auditChainVerifierRequiredTokens = [
+  'assessStepUp',
+  'stepUpRequiredResponse',
+  'audit_chain_verify',
+  'x-eurocomply-step-up-verified-at',
+  'stepUp',
+  'verifiedAt',
+  'expiresAt',
+];
+
 const failures = [];
 
 function read(path) {
@@ -68,10 +79,12 @@ console.log('---------------------------------------');
 const helper = read(helperPath);
 const test = read(testPath);
 const doc = read(docPath);
+const auditChainVerifier = read(auditChainVerifierPath);
 
 if (helper) requireTokens(helperPath, helper, helperRequiredTokens);
 if (test) requireTokens(testPath, test, testRequiredTokens);
 if (doc) requireTokens(docPath, doc, docRequiredTokens);
+if (auditChainVerifier) requireTokens(auditChainVerifierPath, auditChainVerifier, auditChainVerifierRequiredTokens);
 
 if (helper && helper.includes('NextResponse.json')) {
   failures.push(`${helperPath} must use noStoreJson instead of direct NextResponse.json`);
@@ -79,6 +92,10 @@ if (helper && helper.includes('NextResponse.json')) {
 
 if (helper && !helper.includes('10 * 60 * 1000')) {
   failures.push(`${helperPath} must keep the default step-up window explicit and reviewable`);
+}
+
+if (auditChainVerifier && auditChainVerifier.indexOf('assessStepUp') > auditChainVerifier.indexOf('checkDistributedRateLimit')) {
+  failures.push(`${auditChainVerifierPath} should enforce step-up before rate-limited sensitive processing`);
 }
 
 if (failures.length > 0) {
