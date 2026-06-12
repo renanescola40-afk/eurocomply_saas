@@ -16,7 +16,7 @@
     },
     {
       "path": "/api/intelligence/refresh",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 6 * * *"
     }
   ]
 }
