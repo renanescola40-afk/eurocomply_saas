@@ -42,6 +42,7 @@ const requiredFiles = [
   'src/app/[locale]/security-questionnaire/page.tsx',
   'src/app/api/security-questionnaire/export/route.ts',
   'scripts/security/check-rls.mjs',
+  'scripts/security/check-api-guards.mjs',
   'docs/security/ASVS_MATRIX.md',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
