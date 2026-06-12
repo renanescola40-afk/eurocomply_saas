@@ -7,6 +7,7 @@ const auditChainVerifierPath = 'src/app/api/audit/chain/verify/route.ts';
 
 const helperRequiredTokens = [
   'STEP_UP_MAX_AGE_MS',
+  'STEP_UP_SIGNING_SECRET_ENV',
   'HIGH_RISK_ACTIONS',
   'export_data',
   'manage_billing',
@@ -16,16 +17,28 @@ const helperRequiredTokens = [
   'audit_chain_export',
   'change_security_settings',
   'assessStepUp',
+  'createStepUpToken',
+  'assessStepUpToken',
   'stepUpRequiredResponse',
+  'createHmac',
+  'timingSafeEqual',
+  'STEP_UP_SIGNING_SECRET',
+  'AUDIT_CHAIN_SIGNING_SECRET',
   'noStoreJson',
   'step_up_required',
   'missing_verification',
   'expired_verification',
   'invalid_verification',
+  'missing_step_up_secret',
+  'invalid_step_up_token',
+  'step_up_token_scope_mismatch',
 ];
 
 const testRequiredTokens = [
   'accepts a fresh verification timestamp',
+  'creates and accepts a signed scoped step-up token',
+  'rejects a tampered signed step-up token',
+  'rejects a signed token scoped to another organization',
   'rejects a missing verification timestamp',
   'rejects an invalid verification timestamp',
   'rejects an expired verification timestamp',
@@ -45,10 +58,11 @@ const docRequiredTokens = [
 ];
 
 const auditChainVerifierRequiredTokens = [
-  'assessStepUp',
+  'assessStepUpToken',
   'stepUpRequiredResponse',
   'audit_chain_verify',
-  'x-eurocomply-step-up-verified-at',
+  'x-eurocomply-step-up-token',
+  'signed_hmac',
   'stepUp',
   'verifiedAt',
   'expiresAt',
@@ -94,8 +108,12 @@ if (helper && !helper.includes('10 * 60 * 1000')) {
   failures.push(`${helperPath} must keep the default step-up window explicit and reviewable`);
 }
 
-if (auditChainVerifier && auditChainVerifier.indexOf('assessStepUp') > auditChainVerifier.indexOf('checkDistributedRateLimit')) {
-  failures.push(`${auditChainVerifierPath} should enforce step-up before rate-limited sensitive processing`);
+if (auditChainVerifier && auditChainVerifier.includes('x-eurocomply-step-up-verified-at')) {
+  failures.push(`${auditChainVerifierPath} must not trust raw timestamp step-up headers`);
+}
+
+if (auditChainVerifier && auditChainVerifier.indexOf('assessStepUpToken') > auditChainVerifier.indexOf('checkDistributedRateLimit')) {
+  failures.push(`${auditChainVerifierPath} should enforce signed step-up before rate-limited sensitive processing`);
 }
 
 if (failures.length > 0) {
