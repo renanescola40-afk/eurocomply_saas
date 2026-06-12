@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/server/billing/stripe';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
+import { noStoreJson } from '@/server/security/no-store';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
 
@@ -19,12 +19,12 @@ export async function POST(request: Request) {
 
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+    return noStoreJson({ error: 'Authentication required.' }, { status: 401 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
   if (!organization) {
-    return NextResponse.json({ error: 'Organization required.' }, { status: 403 });
+    return noStoreJson({ error: 'Organization required.' }, { status: 403 });
   }
 
   const permission = await assertOrganizationPermission({
@@ -48,11 +48,11 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: 'Unable to load billing profile.' }, { status: 500 });
+    return noStoreJson({ error: 'Unable to load billing profile.' }, { status: 500 });
   }
 
   if (!subscription?.stripe_customer_id) {
-    return NextResponse.json({ error: 'No active Stripe customer found.' }, { status: 404 });
+    return noStoreJson({ error: 'No active Stripe customer found.' }, { status: 404 });
   }
 
   const url = new URL(request.url);
@@ -65,5 +65,5 @@ export async function POST(request: Request) {
     return_url: returnUrl,
   });
 
-  return NextResponse.json({ url: portalSession.url });
+  return noStoreJson({ url: portalSession.url });
 }
