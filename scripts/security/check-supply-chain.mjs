@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const packageJsonPath = 'package.json';
+const npmrcPath = '.npmrc';
 const securityCiWorkflowPath = '.github/workflows/security-ci.yml';
 const dependencyReviewWorkflowPath = '.github/workflows/dependency-review.yml';
 
@@ -26,6 +27,7 @@ function read(path) {
 }
 
 const pkg = readJson(packageJsonPath);
+const npmrc = read(npmrcPath);
 const securityCi = read(securityCiWorkflowPath);
 const dependencyReview = read(dependencyReviewWorkflowPath);
 
@@ -45,8 +47,16 @@ if (pkg) {
   }
 }
 
+if (npmrc) {
+  for (const token of ['package-lock=true', 'audit=true', 'fund=false', 'save-exact=true']) {
+    if (!npmrc.includes(token)) {
+      failures.push(`${npmrcPath} missing required npm policy: ${token}`);
+    }
+  }
+}
+
 if (!existsSync('package-lock.json')) {
-  warnings.push('package-lock.json is missing; npm install --ignore-scripts is used temporarily. Commit a lockfile and switch CI back to npm ci for stronger reproducibility.');
+  warnings.push('package-lock.json is missing; npm install --ignore-scripts is used temporarily. Commit a lockfile and switch CI back to npm ci --ignore-scripts for stronger reproducibility.');
 }
 
 if (securityCi) {
