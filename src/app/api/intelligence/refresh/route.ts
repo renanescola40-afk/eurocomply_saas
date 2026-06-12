@@ -5,27 +5,51 @@ import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
 
-const maintenanceItem = {
-  external_id: 'eurocomply-intelligence-maintenance',
-  title: 'EuroComply Intelligence: monitoramento editorial ativo',
-  category: 'Operação do Jornal IA',
-  jurisdiction: 'União Europeia',
-  source_name: 'EuroComply Intelligence Desk',
-  source_type: 'technical_observatory',
-  author: 'EuroComply Intelligence Desk',
-  published_at: new Date().toISOString(),
-  reliability: 'medium',
-  impact: 'monitor',
-  executive_summary: 'Registro técnico usado para validar que o fluxo de atualização do Jornal IA está operacional sem copiar conteúdo protegido de terceiros.',
-  internal_analysis: 'A rota de atualização está ativa e protegida por segredo. A ingestão real deve manter a política editorial: metadados, referência e análise própria para mídia comum; texto completo apenas para fontes oficiais, abertas ou licenciadas.',
-  affected_companies: ['Compliance', 'Legal', 'Risk management'],
-  recommended_actions: ['Validar fontes oficiais.', 'Revisar direitos de conteúdo.', 'Confirmar sugestões de calendário antes de criar obrigações.'],
-  reference_label: 'EuroComply internal refresh check',
-  content_rights: 'metadata_and_analysis_only',
-  full_text_allowed: false,
-  premium: false,
-  status: 'published',
+type IntelligenceRefreshPayload = {
+  external_id: string;
+  title: string;
+  category: string;
+  jurisdiction: string;
+  source_name: string;
+  source_type: 'official' | 'regulator' | 'institution' | 'technical_observatory' | 'licensed_media' | 'media_reference';
+  author: string;
+  published_at: string;
+  reliability: 'high' | 'medium' | 'low';
+  impact: 'monitor' | 'medium' | 'high' | 'critical';
+  executive_summary: string;
+  internal_analysis: string;
+  affected_companies: string[];
+  recommended_actions: string[];
+  reference_label: string;
+  content_rights: 'official_open' | 'licensed_full_text' | 'metadata_and_analysis_only';
+  full_text_allowed: boolean;
+  premium: boolean;
+  status: 'draft' | 'published' | 'archived';
 };
+
+function buildMaintenanceItem(): IntelligenceRefreshPayload {
+  return {
+    external_id: 'eurocomply-intelligence-maintenance',
+    title: 'EuroComply Intelligence: monitoramento editorial ativo',
+    category: 'Operação do Jornal IA',
+    jurisdiction: 'União Europeia',
+    source_name: 'EuroComply Intelligence Desk',
+    source_type: 'technical_observatory',
+    author: 'EuroComply Intelligence Desk',
+    published_at: new Date().toISOString(),
+    reliability: 'medium',
+    impact: 'monitor',
+    executive_summary: 'Registro técnico usado para validar que o fluxo de atualização do Jornal IA está operacional sem copiar conteúdo protegido de terceiros.',
+    internal_analysis: 'A rota de atualização está ativa e protegida por segredo. A ingestão real deve manter a política editorial: metadados, referência e análise própria para mídia comum; texto completo apenas para fontes oficiais, abertas ou licenciadas.',
+    affected_companies: ['Compliance', 'Legal', 'Risk management'],
+    recommended_actions: ['Validar fontes oficiais.', 'Revisar direitos de conteúdo.', 'Confirmar sugestões de calendário antes de criar obrigações.'],
+    reference_label: 'EuroComply internal refresh check',
+    content_rights: 'metadata_and_analysis_only',
+    full_text_allowed: false,
+    premium: false,
+    status: 'published',
+  };
+}
 
 export async function POST(request: Request) {
   if (!isAuthorizedInternalCronRequest(request)) {
@@ -40,7 +64,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from('intelligence_items')
-    .upsert(maintenanceItem, { onConflict: 'external_id' })
+    .upsert(buildMaintenanceItem(), { onConflict: 'external_id' })
     .select('external_id,title,updated_at');
 
   if (error) {
