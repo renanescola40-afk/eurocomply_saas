@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { assessStepUp, HIGH_RISK_ACTIONS, stepUpRequiredResponse } from './step-up';
+import { assessStepUp, assessStepUpToken, createStepUpToken, HIGH_RISK_ACTIONS, stepUpRequiredResponse } from './step-up';
+
+const secret = 'test-step-up-secret';
+const tokenInput = {
+  action: 'audit_chain_verify' as const,
+  userId: 'user_123',
+  organizationId: 'org_123',
+  verifiedAt: '2026-06-12T10:00:00.000Z',
+  nonce: 'nonce_123',
+  secret,
+};
 
 describe('step-up authentication helper', () => {
   it('lists high-risk actions that require explicit policy review', () => {
@@ -18,6 +28,50 @@ describe('step-up authentication helper', () => {
 
     expect(assessment).toMatchObject({ ok: true, action: 'export_data' });
     expect(assessment.expiresAt).toBe('2026-06-12T10:10:00.000Z');
+  });
+
+  it('creates and accepts a signed scoped step-up token', () => {
+    const token = createStepUpToken(tokenInput);
+    const assessment = assessStepUpToken({
+      action: 'audit_chain_verify',
+      userId: 'user_123',
+      organizationId: 'org_123',
+      token,
+      now: '2026-06-12T10:05:00.000Z',
+      secret,
+    });
+
+    expect(token).toContain('.');
+    expect(assessment).toMatchObject({ ok: true, action: 'audit_chain_verify' });
+    expect(assessment.expiresAt).toBe('2026-06-12T10:10:00.000Z');
+  });
+
+  it('rejects a tampered signed step-up token', () => {
+    const token = createStepUpToken(tokenInput);
+    const assessment = assessStepUpToken({
+      action: 'audit_chain_verify',
+      userId: 'user_123',
+      organizationId: 'org_123',
+      token: `${token}tampered`,
+      now: '2026-06-12T10:05:00.000Z',
+      secret,
+    });
+
+    expect(assessment).toMatchObject({ ok: false, reason: 'invalid_step_up_token' });
+  });
+
+  it('rejects a signed token scoped to another organization', () => {
+    const token = createStepUpToken(tokenInput);
+    const assessment = assessStepUpToken({
+      action: 'audit_chain_verify',
+      userId: 'user_123',
+      organizationId: 'org_other',
+      token,
+      now: '2026-06-12T10:05:00.000Z',
+      secret,
+    });
+
+    expect(assessment).toMatchObject({ ok: false, reason: 'step_up_token_scope_mismatch' });
   });
 
   it('rejects a missing verification timestamp', () => {
