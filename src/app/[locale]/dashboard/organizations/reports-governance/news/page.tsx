@@ -68,6 +68,7 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href={`/${locale}/dashboard/organizations/add-ons`} className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:bg-primary/90"><Sparkles className="h-4 w-4" /> Ver add-on Notícias Premium</Link>
             <Link href={`/${locale}/calendario-compliance`} className="inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-bold transition hover:bg-muted"><CalendarDays className="h-4 w-4" /> Abrir calendário inteligente</Link>
+            <Link href={`/${locale}/dashboard/organizations/reports-governance/news/editorial`} className="inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-bold transition hover:bg-muted"><ShieldCheck className="h-4 w-4" /> Painel editorial</Link>
           </div>
         </section>
 
