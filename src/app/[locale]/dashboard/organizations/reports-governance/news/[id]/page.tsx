@@ -58,6 +58,7 @@ export default async function IntelligenceDetailPage({ params }: PageProps) {
 
         <article className="rounded-[2rem] border bg-background/92 p-6 shadow-xl shadow-primary/5 backdrop-blur md:p-9">
           <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold">{item.persona.desk}</span>
             <span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold">{item.category}</span>
             <span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold">{item.jurisdiction}</span>
             <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getImpactTone(item.impact)}`}>Impacto: {item.impact}</span>
@@ -65,11 +66,11 @@ export default async function IntelligenceDetailPage({ params }: PageProps) {
           </div>
 
           <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] md:text-6xl">{item.title}</h1>
-          <p className="mt-5 text-base leading-8 text-muted-foreground md:text-lg">{item.executiveSummary}</p>
+          <p className="mt-5 text-xl leading-9 text-muted-foreground md:text-2xl">{item.newspaperDeck}</p>
 
           <div className="mt-6 grid gap-3 rounded-[1.5rem] border bg-muted/25 p-5 text-sm text-muted-foreground md:grid-cols-2">
-            <p className="flex items-center gap-2"><FileText className="h-4 w-4" /> Fonte: {item.source}</p>
-            <p className="flex items-center gap-2"><UserRound className="h-4 w-4" /> Editor/autor: {item.author}</p>
+            <p className="flex items-center gap-2"><UserRound className="h-4 w-4" /> Por {item.persona.name}, {item.persona.desk}</p>
+            <p className="flex items-center gap-2"><FileText className="h-4 w-4" /> Fonte monitorada: {item.source}</p>
             <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Data: {formatDate(item.publishedAt, locale)}</p>
             <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Confiabilidade: {item.reliability}</p>
           </div>
@@ -83,11 +84,23 @@ export default async function IntelligenceDetailPage({ params }: PageProps) {
               </Link>
             </section>
           ) : (
-            <div className="mt-8 space-y-6">
+            <div className="mt-8 space-y-8">
+              <section className="rounded-[1.5rem] border bg-background/70 p-6 md:p-8">
+                <div className="border-b pb-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">Matéria original EuroComply Intelligence</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{item.persona.tagline}</p>
+                </div>
+                <div className="mt-6 space-y-6 text-lg leading-9 text-foreground/88">
+                  {item.articleParagraphs.map((paragraph) => (
+                    <p key={paragraph}>{paragraph}</p>
+                  ))}
+                </div>
+              </section>
+
               <section className="rounded-[1.5rem] border bg-muted/20 p-6">
                 <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">Análise EuroComply</h2>
                 <p className="mt-3 text-sm leading-7 text-foreground/85 md:text-base">{item.eurocomplyAnalysis}</p>
-                <p className="mt-4 rounded-2xl border bg-background/70 p-3 text-xs leading-5 text-muted-foreground">Nota editorial: o EuroComply mantém metadados, referência e análise própria. Conteúdo completo só deve ser armazenado para fontes oficiais, abertas ou licenciadas.</p>
+                <p className="mt-4 rounded-2xl border bg-background/70 p-3 text-xs leading-5 text-muted-foreground">Nota editorial: o EuroComply mantém metadados, referência e análise própria. Conteúdo completo só deve ser armazenado para fontes oficiais, abertas ou licenciadas. Para mídia comercial, o jornal publica síntese e análise próprias com referência ao original.</p>
               </section>
 
               <section className="grid gap-4 md:grid-cols-2">
@@ -116,7 +129,7 @@ export default async function IntelligenceDetailPage({ params }: PageProps) {
                 <div className="mt-4 grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
                   <p className="flex items-center gap-2"><Building2 className="h-4 w-4" /> Jurisdição: {item.jurisdiction}</p>
                   <p className="flex items-center gap-2"><FileText className="h-4 w-4" /> Fonte: {item.source}</p>
-                  <p className="flex items-center gap-2"><UserRound className="h-4 w-4" /> Autor/editor: {item.author}</p>
+                  <p className="flex items-center gap-2"><UserRound className="h-4 w-4" /> Editor/persona: {item.persona.name}</p>
                   <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Publicado em: {formatDate(item.publishedAt, locale)}</p>
                 </div>
               </section>
