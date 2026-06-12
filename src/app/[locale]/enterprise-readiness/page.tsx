@@ -134,10 +134,10 @@ export default async function EnterpriseReadinessPage({ params }: { params: Prom
               <p className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">Enterprise Readiness</p>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">{copy.title}</h1>
               <p className="mt-4 max-w-3xl text-muted-foreground">{copy.subtitle}</p>
-              <Link href="/api/enterprise-readiness/export" className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:-translate-y-0.5">
+              <a href="/api/enterprise-readiness/export" download className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:-translate-y-0.5">
                 <Download className="h-4 w-4" />
                 {copy.exportLabel}
-              </Link>
+              </a>
               <p className="mt-2 text-xs text-muted-foreground">{copy.exportDescription}</p>
             </div>
             <div className="rounded-3xl border bg-muted/40 p-6 text-center">
