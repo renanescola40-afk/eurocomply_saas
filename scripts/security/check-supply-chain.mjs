@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const packageJsonPath = 'package.json';
 const npmrcPath = '.npmrc';
+const supplyChainDocPath = 'docs/security/SUPPLY_CHAIN.md';
 const securityCiWorkflowPath = '.github/workflows/security-ci.yml';
 const dependencyReviewWorkflowPath = '.github/workflows/dependency-review.yml';
 
@@ -28,6 +29,7 @@ function read(path) {
 
 const pkg = readJson(packageJsonPath);
 const npmrc = read(npmrcPath);
+const supplyChainDoc = read(supplyChainDocPath);
 const securityCi = read(securityCiWorkflowPath);
 const dependencyReview = read(dependencyReviewWorkflowPath);
 
@@ -51,6 +53,14 @@ if (npmrc) {
   for (const token of ['package-lock=true', 'audit=true', 'fund=false', 'save-exact=true']) {
     if (!npmrc.includes(token)) {
       failures.push(`${npmrcPath} missing required npm policy: ${token}`);
+    }
+  }
+}
+
+if (supplyChainDoc) {
+  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts']) {
+    if (!supplyChainDoc.includes(token)) {
+      failures.push(`${supplyChainDocPath} missing required supply-chain evidence token: ${token}`);
     }
   }
 }
