@@ -47,6 +47,8 @@ const requiredFiles = [
   'src/server/security/origin-guard.test.ts',
   'src/server/security/file-signature.ts',
   'src/server/security/file-signature.test.ts',
+  'src/server/security/security-scenarios.ts',
+  'src/server/security/security-scenarios.test.ts',
   'scripts/security/check-rls.mjs',
   'scripts/security/check-api-guards.mjs',
   'scripts/security/check-protected-routes.mjs',
