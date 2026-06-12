@@ -61,6 +61,7 @@ const requiredFiles = [
   'scripts/security/check-upload-security.mjs',
   'scripts/security/check-security-responses.mjs',
   'docs/security/ASVS_MATRIX.md',
+  'docs/security/EXPORTS_AND_INTEGRITY.md',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
   'docs/LEGAL_READINESS.md',
