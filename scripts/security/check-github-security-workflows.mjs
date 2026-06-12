@@ -22,6 +22,21 @@ const checks = [
       'pull_request',
     ],
   },
+  {
+    path: '.github/workflows/security-ci.yml',
+    tokens: [
+      'npm ci',
+      'npm run security:ci',
+      'actions/setup-node@v4',
+      'node-version: 22',
+      'NEXT_PUBLIC_SUPABASE_URL',
+      'SUPABASE_SERVICE_ROLE_KEY',
+      'AUDIT_CHAIN_SIGNING_SECRET',
+      'EVIDENCE_PACK_SIGNING_SECRET',
+      'timeout-minutes: 25',
+      'cancel-in-progress: true',
+    ],
+  },
 ];
 
 const failures = [];
