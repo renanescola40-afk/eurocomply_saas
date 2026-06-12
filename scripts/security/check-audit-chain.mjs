@@ -4,6 +4,7 @@ const helperPath = 'src/server/security/audit-chain.ts';
 const testPath = 'src/server/security/audit-chain.test.ts';
 const auditEventsPath = 'src/server/queries/audit-events.ts';
 const migrationPath = 'supabase/migrations/20260612_audit_event_hash_chain.sql';
+const verifierRoutePath = 'src/app/api/audit/chain/verify/route.ts';
 const preflightPath = 'scripts/preflight.mjs';
 
 const helperRequiredTokens = [
@@ -59,6 +60,21 @@ const migrationRequiredTokens = [
   'audit_events_previous_hash_idx',
 ];
 
+const verifierRequiredTokens = [
+  'getCurrentUser',
+  'getCurrentOrganizationForUser',
+  'assertOrganizationPermission',
+  'read_audit',
+  'assertPlanAtLeast',
+  'business',
+  'checkDistributedRateLimit',
+  'listAuditEvents',
+  'verifyAuditChain',
+  'noStoreJson',
+  'legacyEvents',
+  'chainedEventsChecked',
+];
+
 const failures = [];
 
 function read(path) {
@@ -85,12 +101,14 @@ const helper = read(helperPath);
 const test = read(testPath);
 const auditEvents = read(auditEventsPath);
 const migration = read(migrationPath);
+const verifierRoute = read(verifierRoutePath);
 const preflight = read(preflightPath);
 
 if (helper) requireTokens(helperPath, helper, helperRequiredTokens);
 if (test) requireTokens(testPath, test, testRequiredTokens);
 if (auditEvents) requireTokens(auditEventsPath, auditEvents, auditEventsRequiredTokens);
 if (migration) requireTokens(migrationPath, migration, migrationRequiredTokens);
+if (verifierRoute) requireTokens(verifierRoutePath, verifierRoute, verifierRequiredTokens);
 
 if (preflight && !preflight.includes('AUDIT_CHAIN_SIGNING_SECRET')) {
   failures.push(`${preflightPath} must recommend AUDIT_CHAIN_SIGNING_SECRET`);
@@ -118,6 +136,10 @@ if (auditEvents && auditEvents.includes('event_hash') && !auditEvents.includes('
 
 if (auditEvents && !auditEvents.includes('randomUUID')) {
   failures.push(`${auditEventsPath} must assign the audit event id before hashing`);
+}
+
+if (verifierRoute && !verifierRoute.includes('Math.min(Math.max')) {
+  failures.push(`${verifierRoutePath} must clamp the verification limit`);
 }
 
 if (failures.length > 0) {
