@@ -7,8 +7,11 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 import { checkDistributedRateLimit } from '@/server/security/rate-limit';
 import { verifyAuditChain, type AuditChainRecord } from '@/server/security/audit-chain';
 import { noStoreJson } from '@/server/security/no-store';
+import { assessStepUp, stepUpRequiredResponse } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
+
+const STEP_UP_VERIFIED_AT_HEADER = 'x-eurocomply-step-up-verified-at';
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -43,6 +46,15 @@ export async function GET(request: Request) {
       requiredPlan: 'business',
       entitlements: plan.entitlements,
     }, plan.status);
+  }
+
+  const stepUp = assessStepUp({
+    action: 'audit_chain_verify',
+    verifiedAt: request.headers.get(STEP_UP_VERIFIED_AT_HEADER),
+  });
+
+  if (!stepUp.ok) {
+    return stepUpRequiredResponse(stepUp);
   }
 
   const rateLimit = await checkDistributedRateLimit({
@@ -94,5 +106,10 @@ export async function GET(request: Request) {
     failures: verification.failures,
     actorRole: permission.role,
     plan: plan.entitlements.plan,
+    stepUp: {
+      action: stepUp.action,
+      verifiedAt: stepUp.verifiedAt,
+      expiresAt: stepUp.expiresAt,
+    },
   });
 }
