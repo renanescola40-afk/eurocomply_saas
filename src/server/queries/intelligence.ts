@@ -1,3 +1,4 @@
+import { getPersonaByCategory, type IntelligencePersona } from '@/lib/news/intelligence-personas';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 export type IntelligenceImpact = 'Monitorar' | 'Médio' | 'Alto' | 'Crítico';
@@ -40,7 +41,27 @@ export type IntelligenceItem = {
   recommendedActions: string[];
   calendarSuggestion: string;
   premium: boolean;
+  persona: IntelligencePersona;
+  newspaperDeck: string;
+  articleParagraphs: string[];
 };
+
+function buildArticleParagraphs(item: Pick<IntelligenceItem, 'title' | 'category' | 'jurisdiction' | 'source' | 'executiveSummary' | 'eurocomplyAnalysis' | 'affectedCompanies' | 'recommendedActions'>): string[] {
+  const affected = item.affectedCompanies.length ? item.affectedCompanies.join(', ') : 'empresas com operação digital, fornecedores tecnológicos e times de compliance';
+  const firstAction = item.recommendedActions[0] ?? 'abrir uma revisão interna e documentar a decisão tomada';
+
+  return [
+    `${item.title} deixou de ser apenas uma atualização de mercado: para empresas que compram, vendem ou operam tecnologia, o tema passa a tocar governança, orçamento e exposição regulatória. A leitura do EuroComply é que a notícia precisa ser tratada como sinal de decisão, não como ruído informativo.`,
+    `A fonte monitorada nesta edição é ${item.source}, com foco em ${item.jurisdiction}. O ponto central é simples: ${item.executiveSummary}`,
+    `Para ${affected}, o impacto aparece em contratos, fornecedores, evidências, políticas internas e capacidade de responder a auditorias. Uma empresa que deixa esse tipo de mudança fora do radar tende a descobrir tarde demais que uma decisão técnica virou risco jurídico, operacional ou financeiro.`,
+    `${item.eurocomplyAnalysis} O primeiro movimento recomendado pela redação é ${firstAction.toLowerCase()}.`,
+    'Esta matéria é uma síntese editorial própria do EuroComply Intelligence: ela preserva referência, data, fonte e contexto, mas não republica textos integrais de terceiros. Quando a origem for mídia comercial ou paywall, o produto deve manter metadados e análise própria, apontando o leitor para a fonte original.',
+  ];
+}
+
+function buildNewspaperDeck(summary: string) {
+  return summary.length > 180 ? `${summary.slice(0, 177).trim()}...` : summary;
+}
 
 export const fallbackIntelligenceItems: IntelligenceItem[] = [
   {
@@ -60,6 +81,18 @@ export const fallbackIntelligenceItems: IntelligenceItem[] = [
     recommendedActions: ['Atualizar inventário de IA.', 'Classificar risco AI Act.', 'Criar revisão para sistemas com clientes.', 'Separar evidências de logs e transparência.'],
     calendarSuggestion: 'Criar tarefa de revisão do inventário de IA em 30 dias, prioridade alta.',
     premium: false,
+    persona: getPersonaByCategory('AI Act'),
+    newspaperDeck: 'O regulador deixou claro que IA de alto risco exige inventário, evidência e supervisão. Para empresas, a notícia vira tarefa operacional.',
+    articleParagraphs: buildArticleParagraphs({
+      title: 'EU AI Act: empresas devem preparar evidências para sistemas de IA de alto risco',
+      category: 'AI Act',
+      jurisdiction: 'União Europeia',
+      source: 'European Commission / EU AI Act policy pages',
+      executiveSummary: 'Empresas que usam ou fornecem sistemas de IA com impacto em pessoas precisam manter inventário, gestão de risco, documentação, supervisão humana e logs auditáveis.',
+      eurocomplyAnalysis: 'A organização deve mapear sistemas de IA, confirmar o papel contratual e anexar evidências por obrigação. O maior risco é tratar uso operacional externo como simples ferramenta interna.',
+      affectedCompanies: ['SaaS B2B', 'Fintech', 'RH e recrutamento', 'Educação', 'Healthtech'],
+      recommendedActions: ['Atualizar inventário de IA.'],
+    }),
   },
   {
     id: 'edpb-ai-gdpr-transparency',
@@ -78,6 +111,18 @@ export const fallbackIntelligenceItems: IntelligenceItem[] = [
     recommendedActions: ['Revisar política interna de IA.', 'Adicionar fornecedores de IA ao registro de terceiros.', 'Criar evidência de base legal.', 'Treinar equipes que usam prompts.'],
     calendarSuggestion: 'Criar revisão de política de IA generativa e RGPD em 45 dias.',
     premium: false,
+    persona: getPersonaByCategory('RGPD / Dados pessoais'),
+    newspaperDeck: 'O uso corporativo de IA com dados pessoais exige explicação, base legal e controle. A pressão agora é transformar política em evidência.',
+    articleParagraphs: buildArticleParagraphs({
+      title: 'IA e RGPD: transparência e base legal continuam centrais para uso corporativo de modelos',
+      category: 'RGPD / Dados pessoais',
+      jurisdiction: 'União Europeia',
+      source: 'EDPB / autoridades europeias de proteção de dados',
+      executiveSummary: 'Empresas que usam IA com dados pessoais precisam demonstrar finalidade, minimização, transparência, controle de acesso, retenção e base legal adequada.',
+      eurocomplyAnalysis: 'O cliente deve revisar política de uso aceitável de IA, DPIA quando houver alto risco e fornecedores que processam dados fora da empresa.',
+      affectedCompanies: ['E-commerce', 'SaaS com suporte ao cliente', 'Consultorias', 'Empresas com CRM'],
+      recommendedActions: ['Revisar política interna de IA.'],
+    }),
   },
   {
     id: 'nis2-dora-technology-governance',
@@ -96,6 +141,18 @@ export const fallbackIntelligenceItems: IntelligenceItem[] = [
     recommendedActions: ['Marcar fornecedores críticos.', 'Validar plano de continuidade.', 'Testar resposta a incidentes.', 'Atualizar subprocessadores.'],
     calendarSuggestion: 'Criar revisão de terceiros críticos e continuidade operacional em 30 dias.',
     premium: true,
+    persona: getPersonaByCategory('business vendor risk'),
+    newspaperDeck: 'Resiliência e terceiros viraram assunto de diretoria. O risco agora mora em contratos, fornecedores e capacidade de provar resposta.',
+    articleParagraphs: buildArticleParagraphs({
+      title: 'Governança tecnológica: NIS2 e DORA elevam pressão sobre risco de terceiros e incidentes',
+      category: 'Cibersegurança / Terceiros',
+      jurisdiction: 'União Europeia',
+      source: 'ENISA / autoridades nacionais competentes',
+      executiveSummary: 'Empresas reguladas e fornecedores críticos precisam mostrar rastreabilidade de incidentes, continuidade operacional, fornecedores essenciais e evidências de resposta.',
+      eurocomplyAnalysis: 'A notícia deve acionar revisão de vendors críticos, SLAs, DPA, incident response e continuidade. O calendário inteligente deve sugerir revisão periódica.',
+      affectedCompanies: ['Fintech', 'SaaS corporativo', 'Cloud providers', 'Empresas com fornecedores críticos'],
+      recommendedActions: ['Marcar fornecedores críticos.'],
+    }),
   },
 ];
 
@@ -126,7 +183,7 @@ function isUuid(value: string) {
 }
 
 function mapDatabaseItem(item: IntelligenceDatabaseRow): IntelligenceItem {
-  return {
+  const base = {
     id: item.external_id ?? item.id,
     title: item.title,
     category: item.category,
@@ -143,6 +200,13 @@ function mapDatabaseItem(item: IntelligenceDatabaseRow): IntelligenceItem {
     recommendedActions: normalizeStringArray(item.recommended_actions),
     calendarSuggestion: item.impact === 'high' || item.impact === 'critical' ? 'Criar revisão no calendário inteligente em até 30 dias.' : 'Monitorar e criar tarefa se houver impacto direto na empresa.',
     premium: Boolean(item.premium),
+    persona: getPersonaByCategory(item.category),
+  };
+
+  return {
+    ...base,
+    newspaperDeck: buildNewspaperDeck(base.executiveSummary),
+    articleParagraphs: buildArticleParagraphs(base),
   };
 }
 
