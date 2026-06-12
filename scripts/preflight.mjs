@@ -8,6 +8,7 @@ const required = [
 
 const recommended = [
   'NEXT_PUBLIC_APP_URL',
+  'TRUSTED_ORIGINS',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
   'STRIPE_PRICE_ESSENTIAL_MONTHLY',
@@ -42,6 +43,8 @@ const requiredFiles = [
   'src/app/[locale]/security-questionnaire/page.tsx',
   'src/app/api/security-questionnaire/export/route.ts',
   'src/server/security/no-store.ts',
+  'src/server/security/origin-guard.ts',
+  'src/server/security/origin-guard.test.ts',
   'scripts/security/check-rls.mjs',
   'scripts/security/check-api-guards.mjs',
   'scripts/security/check-protected-routes.mjs',
@@ -49,6 +52,7 @@ const requiredFiles = [
   'scripts/security/check-client-boundaries.mjs',
   'scripts/security/check-security-headers.mjs',
   'scripts/security/check-no-store.mjs',
+  'scripts/security/check-origin-guards.mjs',
   'docs/security/ASVS_MATRIX.md',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
