@@ -9,10 +9,12 @@ import ComplianceCalendarClient from './compliance-calendar-client';
 
 type PageProps = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ source?: string; title?: string; country?: string; description?: string }>;
 };
 
-export default async function ComplianceCalendarPage({ params }: PageProps) {
+export default async function ComplianceCalendarPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
+  const suggestion = (await searchParams) ?? {};
   const user = await getCurrentUser();
 
   if (!user) {
@@ -27,7 +29,7 @@ export default async function ComplianceCalendarPage({ params }: PageProps) {
     <main className="min-h-screen bg-slate-950 px-6 py-6 text-white">
       <div className="mx-auto max-w-7xl space-y-8">
         <DashboardCommandNavigation locale={locale} />
-        <ComplianceCalendarClient locale={locale} canUseAiSearch={canUseAiSearch} plan={entitlements?.plan ?? 'essential'} />
+        <ComplianceCalendarClient locale={locale} canUseAiSearch={canUseAiSearch} plan={entitlements?.plan ?? 'essential'} suggestion={suggestion} />
       </div>
     </main>
   );
