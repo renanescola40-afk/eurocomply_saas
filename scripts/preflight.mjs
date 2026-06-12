@@ -45,6 +45,7 @@ const requiredFiles = [
   'scripts/security/check-api-guards.mjs',
   'scripts/security/check-protected-routes.mjs',
   'scripts/security/check-public-secrets.mjs',
+  'scripts/security/check-client-boundaries.mjs',
   'docs/security/ASVS_MATRIX.md',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
