@@ -25,7 +25,7 @@ const checks = [
   {
     path: '.github/workflows/security-ci.yml',
     tokens: [
-      'npm ci',
+      'npm install --ignore-scripts',
       'npm run security:ci',
       'actions/setup-node@v4',
       'node-version: 22',
