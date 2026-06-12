@@ -1,24 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
+import { assertTrustedOrigin } from '@/server/security/origin-guard';
+import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  const originDenied = assertTrustedOrigin(request);
+  if (originDenied) return originDenied;
+
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
   }
 
   const entitlementCheck = await assertGdprSelfServiceEnabled(organization.id);
@@ -52,11 +57,8 @@ export async function POST(request: NextRequest) {
     message: 'Pedido de apagamento GDPR recebido e enviado para revisão.',
   });
 
-  return NextResponse.json(
-    {
-      status: 'pending_review',
-      message: 'Deletion request received. A compliance administrator must review retention, legal hold, billing and audit requirements before deletion.',
-    },
-    { headers: { 'Cache-Control': 'no-store' } },
-  );
+  return noStoreJson({
+    status: 'pending_review',
+    message: 'Deletion request received. A compliance administrator must review retention, legal hold, billing and audit requirements before deletion.',
+  });
 }
