@@ -29,16 +29,12 @@ export function isPlanAtLeast(plan: SubscriptionPlan, minimumPlan: SubscriptionP
   return PLAN_RANK[plan] >= PLAN_RANK[minimumPlan];
 }
 
-export async function getOrganizationPlan(organizationId: string): Promise<SubscriptionPlan> {
+async function getLatestSubscriptionRow(organizationId: string, select: string): Promise<OrganizationSubscriptionRow | null> {
   const supabase = createAdminClient();
-
-  if (!supabase) {
-    return 'essential';
-  }
 
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('plan,tier,status')
+    .select(select)
     .eq('organization_id', organizationId)
     .in('status', ['active', 'trialing'])
     .order('created_at', { ascending: false })
@@ -46,11 +42,28 @@ export async function getOrganizationPlan(organizationId: string): Promise<Subsc
     .maybeSingle<OrganizationSubscriptionRow>();
 
   if (error) {
+    if (error.code === '42703') return null;
     console.warn('[subscription] plan_lookup_failed', { code: error.code ?? 'unknown' });
-    return 'essential';
+    return null;
   }
 
-  return normalizePlan(data?.plan ?? data?.tier);
+  return data;
+}
+
+export async function getOrganizationPlan(organizationId: string): Promise<SubscriptionPlan> {
+  const primary = await getLatestSubscriptionRow(organizationId, 'plan,status,created_at');
+
+  if (primary?.plan) {
+    return normalizePlan(primary.plan);
+  }
+
+  const legacy = await getLatestSubscriptionRow(organizationId, 'tier,status,created_at');
+
+  if (legacy?.tier) {
+    return normalizePlan(legacy.tier);
+  }
+
+  return 'essential';
 }
 
 export async function requirePlanAtLeast(organizationId: string, minimumPlan: SubscriptionPlan) {
