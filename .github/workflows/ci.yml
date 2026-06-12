@@ -27,6 +27,7 @@ jobs:
       - run: npm install
       - run: npm run preflight
       - run: npm run security:rls
+      - run: npm run security:api-guards
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test
