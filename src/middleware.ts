@@ -25,6 +25,33 @@ const PUBLIC_ROUTES = [
   '/termos-servico',
 ];
 
+const LEGACY_UNDEFINED_ROUTES: Record<string, string> = {
+  '/dashboard/organizations/vendors': '/vendor-assurance',
+  '/dashboard/organizations/risks': '/riscos',
+  '/dashboard/organizations/documents': '/documentos',
+  '/dashboard/organizations/tasks': '/aprovacoes',
+  '/dashboard/organizations/reports': '/dashboard/organizations/reports-governance',
+  '/pricing': '/pricing',
+};
+
+function normalizeLegacyUndefinedPath(pathname: string): string | null {
+  const segments = pathname.split('/').filter(Boolean);
+
+  if (segments[0] === 'undefined') {
+    const legacyPath = `/${segments.slice(1).join('/')}`;
+    return LEGACY_UNDEFINED_ROUTES[legacyPath] ?? `/${segments.slice(1).join('/')}`;
+  }
+
+  if (segments.length >= 2 && locales.includes(segments[0] as 'en') && segments[1] === 'undefined') {
+    const locale = segments[0];
+    const legacyPath = `/${segments.slice(2).join('/')}`;
+    const destination = LEGACY_UNDEFINED_ROUTES[legacyPath] ?? `/${segments.slice(2).join('/')}`;
+    return `/${locale}${destination === '/' ? '' : destination}`;
+  }
+
+  return null;
+}
+
 function isPublicRoute(pathname: string, locale: string): boolean {
   let path = pathname;
   if (locales.includes(locale as 'en') && pathname.startsWith(`/${locale}`)) {
@@ -123,6 +150,13 @@ export default async function middleware(req: NextRequest) {
     pathname.includes('.')
   ) {
     return NextResponse.next();
+  }
+
+  const normalizedLegacyPath = normalizeLegacyUndefinedPath(pathname);
+  if (normalizedLegacyPath && normalizedLegacyPath !== pathname) {
+    const redirectUrl = new URL(normalizedLegacyPath, req.url);
+    redirectUrl.search = req.nextUrl.search;
+    return NextResponse.redirect(redirectUrl);
   }
 
   const pathnameHasLocale = locales.some(
