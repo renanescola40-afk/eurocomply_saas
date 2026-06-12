@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server';
-
 import { createAdminClient } from '@/lib/supabase/admin';
+import { noStoreJson } from '@/server/security/no-store';
 
 export type OrganizationRole = 'owner' | 'admin' | 'editor' | 'viewer' | 'member';
 
@@ -217,7 +216,7 @@ export async function assertOrganizationPermission({
 }
 
 export function permissionDeniedResponse(result: PermissionCheckResult) {
-  return NextResponse.json(
+  return noStoreJson(
     {
       error: result.error ?? 'permission_denied',
       message: result.message ?? 'Permission denied.',
