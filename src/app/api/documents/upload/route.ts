@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createHash, randomUUID } from 'crypto';
 
 import { createAuditEvent } from '@/server/queries/audit-events';
@@ -8,6 +8,8 @@ import { createNotification } from '@/server/queries/notifications';
 import { assertDocumentQuota } from '@/server/billing/entitlements';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { assertTrustedOrigin } from '@/server/security/origin-guard';
+import { noStoreJson } from '@/server/security/no-store';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const STORAGE_BUCKET = 'controlled-documents';
@@ -29,16 +31,19 @@ function safeDocumentTitle(name: string) {
 }
 
 export async function POST(request: NextRequest) {
+  const originDenied = assertTrustedOrigin(request);
+  if (originDenied) return originDenied;
+
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+    return noStoreJson({ error: 'Authentication required.' }, { status: 401 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    return NextResponse.json({ error: 'Organization access required.' }, { status: 403 });
+    return noStoreJson({ error: 'Organization access required.' }, { status: 403 });
   }
 
   const permission = await assertOrganizationPermission({
@@ -54,7 +59,7 @@ export async function POST(request: NextRequest) {
   const quota = await assertDocumentQuota(organization.id);
 
   if (!quota.ok) {
-    return NextResponse.json(
+    return noStoreJson(
       {
         error: quota.error,
         message: quota.message,
@@ -70,23 +75,23 @@ export async function POST(request: NextRequest) {
   try {
     formData = await request.formData();
   } catch {
-    return NextResponse.json({ error: 'Invalid upload request.' }, { status: 400 });
+    return noStoreJson({ error: 'Invalid upload request.' }, { status: 400 });
   }
 
   const file = formData.get('file');
 
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: 'File is required.' }, { status: 400 });
+    return noStoreJson({ error: 'File is required.' }, { status: 400 });
   }
 
   const extension = ALLOWED_TYPES.get(file.type);
 
   if (!extension) {
-    return NextResponse.json({ error: 'Unsupported file type. Use PDF, DOCX, XLSX, PNG or JPG.' }, { status: 415 });
+    return noStoreJson({ error: 'Unsupported file type. Use PDF, DOCX, XLSX, PNG or JPG.' }, { status: 415 });
   }
 
   if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
-    return NextResponse.json({ error: 'File must be between 1 byte and 10 MB.' }, { status: 413 });
+    return noStoreJson({ error: 'File must be between 1 byte and 10 MB.' }, { status: 413 });
   }
 
   const arrayBuffer = await file.arrayBuffer();
@@ -97,7 +102,7 @@ export async function POST(request: NextRequest) {
   const supabase = tryCreateAdminClient();
 
   if (!supabase) {
-    return NextResponse.json({ error: 'Secure document storage is not configured.' }, { status: 503 });
+    return noStoreJson({ error: 'Secure document storage is not configured.' }, { status: 503 });
   }
 
   const { error: uploadError } = await supabase.storage
@@ -110,7 +115,7 @@ export async function POST(request: NextRequest) {
   if (uploadError) {
     console.warn('[documents] upload_failed', { code: uploadError.message ? 'storage_error' : 'unknown' });
 
-    return NextResponse.json({ error: 'Unable to store document securely.' }, { status: 500 });
+    return noStoreJson({ error: 'Unable to store document securely.' }, { status: 500 });
   }
 
   const { data: document, error: documentError } = await supabase
@@ -130,7 +135,7 @@ export async function POST(request: NextRequest) {
     await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
     console.warn('[documents] metadata_create_failed', { code: documentError.code ?? 'unknown' });
 
-    return NextResponse.json({ error: 'Unable to register document metadata.' }, { status: 500 });
+    return noStoreJson({ error: 'Unable to register document metadata.' }, { status: 500 });
   }
 
   await createAuditEvent({
@@ -156,7 +161,7 @@ export async function POST(request: NextRequest) {
     message: `Documento ${title} carregado para revisão.`,
   });
 
-  return NextResponse.json({
+  return noStoreJson({
     document,
     checksum,
     plan: quota.entitlements.plan,
