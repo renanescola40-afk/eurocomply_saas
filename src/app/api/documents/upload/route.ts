@@ -10,6 +10,7 @@ import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
+import { validateUploadFileSignature } from '@/server/security/file-signature';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const STORAGE_BUCKET = 'controlled-documents';
@@ -96,6 +97,25 @@ export async function POST(request: NextRequest) {
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
+
+  if (!validateUploadFileSignature(file.type, buffer)) {
+    await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'document_upload_rejected',
+      entityType: 'document',
+      entityId: organization.id,
+      metadata: {
+        reason: 'signature_mismatch',
+        claimedMimeType: file.type,
+        sizeBytes: file.size,
+        actorRole: permission.role,
+      },
+    });
+
+    return noStoreJson({ error: 'File signature does not match the declared file type.' }, { status: 415 });
+  }
+
   const checksum = createHash('sha256').update(buffer).digest('hex');
   const storagePath = `${organization.id}/${randomUUID()}.${extension}`;
   const title = safeDocumentTitle(file.name);
@@ -148,6 +168,7 @@ export async function POST(request: NextRequest) {
       title,
       mimeType: file.type,
       sizeBytes: file.size,
+      checksumSha256: checksum,
       plan: quota.entitlements.plan,
       actorRole: permission.role,
       documentCountBeforeUpload: quota.currentCount,
