@@ -126,6 +126,15 @@ const evidencePackCopy: Record<string, { label: string; description: string; ver
   de: { label: 'Evidence Pack', description: 'Strukturierten Audit-Nachweis-Snapshot exportieren', verify: 'Evidence Pack prüfen', verifyDescription: 'Hash und Signaturstatus des exportierten Pakets prüfen' },
 };
 
+const addOnsCopy: Record<string, { label: string; description: string }> = {
+  en: { label: 'Add-ons & Credits', description: 'Check what is included, active or available before buying extras' },
+  pt: { label: 'Add-ons & Créditos', description: 'Veja o que está incluído, ativo ou disponível antes de comprar adicionais' },
+  es: { label: 'Add-ons y Créditos', description: 'Consulta qué está incluido, activo o disponible antes de comprar extras' },
+  fr: { label: 'Modules & Crédits', description: 'Vérifier ce qui est inclus, actif ou disponible avant achat' },
+  it: { label: 'Add-on e Crediti', description: 'Verifica cosa è incluso, attivo o disponibile prima dell’acquisto' },
+  de: { label: 'Add-ons & Credits', description: 'Prüfen, was enthalten, aktiv oder vor dem Kauf verfügbar ist' },
+};
+
 function getAiGovernanceCopy(locale: string) {
   return aiGovernanceCopy[locale] ?? aiGovernanceCopy.en;
 }
@@ -158,6 +167,10 @@ function getEvidencePackCopy(locale: string) {
   return evidencePackCopy[locale] ?? evidencePackCopy.en;
 }
 
+function getAddOnsCopy(locale: string) {
+  return addOnsCopy[locale] ?? addOnsCopy.en;
+}
+
 export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuItem[] {
   const nav = getAppDictionary(locale).nav;
   const aiNav = getAiGovernanceCopy(locale);
@@ -168,6 +181,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
   const vendorAssurance = getVendorAssuranceCopy(locale);
   const questionnaire = getQuestionnaireCopy(locale);
   const evidencePack = getEvidencePackCopy(locale);
+  const addOns = getAddOnsCopy(locale);
 
   return [
     { label: nav.eurocomply, href: '/eurocomply-home', description: nav.eurocomplyDescription },
@@ -223,6 +237,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
       sections: [
         { label: nav.myData, href: '/profile#company-data', description: nav.myDataDescription },
         { label: nav.plan, href: '/profile#plan', description: nav.planDescription },
+        { label: addOns.label, href: `${dashboardRoot}/add-ons`, description: addOns.description },
         { label: nav.employees, href: '/profile#employees', description: nav.employeesDescription },
         { label: rolesLabel, href: '/security-center' },
         { label: nav.enterpriseAvatar, href: '/profile#enterprise-status', description: nav.enterpriseAvatarDescription },
