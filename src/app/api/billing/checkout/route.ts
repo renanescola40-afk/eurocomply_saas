@@ -5,8 +5,12 @@ import { getStripePriceId, isSelfServePlan } from '@/server/billing/plans';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { assertTrustedOrigin } from '@/server/security/origin-guard';
 
 export async function POST(request: Request) {
+  const originDenied = assertTrustedOrigin(request);
+  if (originDenied) return originDenied;
+
   const user = await getCurrentUser();
 
   if (!user) {
