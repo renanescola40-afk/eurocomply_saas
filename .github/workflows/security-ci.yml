@@ -46,3 +46,6 @@ jobs:
 
       - name: Run EuroComply security CI
         run: npm run security:ci
+
+      - name: Run step-up authentication gate
+        run: node scripts/security/check-step-up.mjs
