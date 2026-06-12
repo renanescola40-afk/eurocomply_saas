@@ -98,22 +98,9 @@ function mapImpact(impact: string | null | undefined): IntelligenceImpact {
   return 'Monitorar';
 }
 
-export async function listPublishedIntelligenceItems(): Promise<IntelligenceItem[]> {
-  const supabase = tryCreateAdminClient();
-
-  if (!supabase) return fallbackIntelligenceItems;
-
-  const { data, error } = await supabase
-    .from('intelligence_items')
-    .select('id,title,category,jurisdiction,published_at,source_name,source_type,author,reliability,impact,executive_summary,internal_analysis,affected_companies,recommended_actions,premium')
-    .eq('status', 'published')
-    .order('published_at', { ascending: false })
-    .limit(50);
-
-  if (error || !data?.length) return fallbackIntelligenceItems;
-
-  return data.map((item) => ({
-    id: item.id,
+function mapDatabaseItem(item: Record<string, any>): IntelligenceItem {
+  return {
+    id: item.external_id ?? item.id,
     title: item.title,
     category: item.category,
     jurisdiction: item.jurisdiction,
@@ -129,5 +116,42 @@ export async function listPublishedIntelligenceItems(): Promise<IntelligenceItem
     recommendedActions: Array.isArray(item.recommended_actions) ? item.recommended_actions : [],
     calendarSuggestion: item.impact === 'high' || item.impact === 'critical' ? 'Criar revisão no calendário inteligente em até 30 dias.' : 'Monitorar e criar tarefa se houver impacto direto na empresa.',
     premium: Boolean(item.premium),
-  }));
+  };
+}
+
+const intelligenceSelect = 'id,external_id,title,category,jurisdiction,published_at,source_name,source_type,author,reliability,impact,executive_summary,internal_analysis,affected_companies,recommended_actions,premium';
+
+export async function listPublishedIntelligenceItems(): Promise<IntelligenceItem[]> {
+  const supabase = tryCreateAdminClient();
+
+  if (!supabase) return fallbackIntelligenceItems;
+
+  const { data, error } = await supabase
+    .from('intelligence_items')
+    .select(intelligenceSelect)
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(50);
+
+  if (error || !data?.length) return fallbackIntelligenceItems;
+
+  return data.map((item) => mapDatabaseItem(item));
+}
+
+export async function getPublishedIntelligenceItem(id: string): Promise<IntelligenceItem | null> {
+  const fallback = fallbackIntelligenceItems.find((item) => item.id === id);
+  const supabase = tryCreateAdminClient();
+
+  if (!supabase) return fallback ?? null;
+
+  const { data, error } = await supabase
+    .from('intelligence_items')
+    .select(intelligenceSelect)
+    .eq('status', 'published')
+    .or(`external_id.eq.${id},id.eq.${id}`)
+    .maybeSingle();
+
+  if (error || !data) return fallback ?? null;
+
+  return mapDatabaseItem(data);
 }
