@@ -64,6 +64,7 @@ export const dashboardNavigation: MenuItem[] = [
     sections: [
       { label: 'Meus Dados', href: '/profile#company-data', description: 'Dados da empresa e operações fiscais' },
       { label: 'Plano', href: '/profile#plan', description: 'Benefícios e upgrade' },
+      { label: 'Add-ons & Créditos', href: `${dashboardRoot}/add-ons`, description: 'Veja o que está ativo, incluído ou disponível para comprar' },
       { label: 'Funcionários', href: '/profile#employees', description: 'Convites Enterprise' },
       { label: 'Avatar Enterprise', href: '/profile#enterprise-status', description: 'Status visual premium' },
     ],
