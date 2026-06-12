@@ -28,7 +28,7 @@ export type AuditEventRecord = {
 };
 
 const AUDIT_EVENT_COLUMNS = 'id,organization_id,actor_user_id,action,entity_type,entity_id,metadata,created_at,previous_hash,event_hash,hash_algorithm,hash_signature';
-const LEGACY_AUDIT_EVENT_COLUMNS = 'id,organization_id,actor_user_id,action,entity_type,entity_id,metadata,created_at';
+const LEGACY_AUDIT_EVENT_COLUMNS = 'id,organization_id,actor_user_id:actor_id,action,entity_type,entity_id,metadata,created_at';
 
 function isMissingAuditEventsTable(error: { code?: string; message?: string }) {
   return error.code === '42P01' || error.code === 'PGRST205' || /audit_events/i.test(error.message ?? '');
@@ -92,7 +92,7 @@ function buildChainedPayload(input: AuditEventInput, previousHash: string | null
 function buildLegacyPayload(input: AuditEventInput) {
   return {
     organization_id: input.organizationId,
-    actor_user_id: input.actorUserId,
+    actor_id: input.actorUserId,
     action: input.action,
     entity_type: input.entityType,
     entity_id: input.entityId ?? null,
