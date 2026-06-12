@@ -1,90 +1,15 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { AlertTriangle, Building2, CalendarDays, CheckCircle2, FileText, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { Building2, CalendarDays, CheckCircle2, FileText, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
 
 import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
+import { listPublishedIntelligenceItems, type IntelligenceImpact } from '@/server/queries/intelligence';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { isPlanAtLeast } from '@/server/queries/subscription';
 
-type IntelligenceItem = {
-  id: string;
-  title: string;
-  category: string;
-  jurisdiction: string;
-  publishedAt: string;
-  source: string;
-  sourceType: 'Regulador' | 'Fonte oficial' | 'Instituição europeia' | 'Observatório técnico';
-  author: string;
-  reliability: 'Alta' | 'Média';
-  impact: 'Monitorar' | 'Médio' | 'Alto' | 'Crítico';
-  executiveSummary: string;
-  eurocomplyAnalysis: string;
-  affectedCompanies: string[];
-  recommendedActions: string[];
-  calendarSuggestion: string;
-  premium: boolean;
-};
-
-const intelligenceItems: IntelligenceItem[] = [
-  {
-    id: 'eu-ai-act-high-risk-readiness',
-    title: 'EU AI Act: empresas devem preparar evidências para sistemas de IA de alto risco',
-    category: 'AI Act',
-    jurisdiction: 'União Europeia',
-    publishedAt: '2026-06-10',
-    source: 'European Commission / EU AI Act policy pages',
-    sourceType: 'Instituição europeia',
-    author: 'EuroComply Intelligence Desk',
-    reliability: 'Alta',
-    impact: 'Alto',
-    executiveSummary: 'Empresas que usam ou fornecem sistemas de IA com impacto em pessoas precisam manter inventário, gestão de risco, documentação, supervisão humana e logs auditáveis.',
-    eurocomplyAnalysis: 'A organização deve mapear sistemas de IA, confirmar o papel contratual e anexar evidências por obrigação. O maior risco é tratar uso operacional externo como simples ferramenta interna.',
-    affectedCompanies: ['SaaS B2B', 'Fintech', 'RH e recrutamento', 'Educação', 'Healthtech'],
-    recommendedActions: ['Atualizar inventário de IA.', 'Classificar risco AI Act.', 'Criar revisão para sistemas com clientes.', 'Separar evidências de logs e transparência.'],
-    calendarSuggestion: 'Criar tarefa de revisão do inventário de IA em 30 dias, prioridade alta.',
-    premium: false,
-  },
-  {
-    id: 'edpb-ai-gdpr-transparency',
-    title: 'IA e RGPD: transparência e base legal continuam centrais para uso corporativo de modelos',
-    category: 'RGPD / Dados pessoais',
-    jurisdiction: 'União Europeia',
-    publishedAt: '2026-06-08',
-    source: 'EDPB / autoridades europeias de proteção de dados',
-    sourceType: 'Regulador',
-    author: 'EuroComply Intelligence Desk',
-    reliability: 'Alta',
-    impact: 'Médio',
-    executiveSummary: 'Empresas que usam IA com dados pessoais precisam demonstrar finalidade, minimização, transparência, controle de acesso, retenção e base legal adequada.',
-    eurocomplyAnalysis: 'O cliente deve revisar política de uso aceitável de IA, DPIA quando houver alto risco e fornecedores que processam dados fora da empresa.',
-    affectedCompanies: ['E-commerce', 'SaaS com suporte ao cliente', 'Consultorias', 'Empresas com CRM'],
-    recommendedActions: ['Revisar política interna de IA.', 'Adicionar fornecedores de IA ao registro de terceiros.', 'Criar evidência de base legal.', 'Treinar equipes que usam prompts.'],
-    calendarSuggestion: 'Criar revisão de política de IA generativa e RGPD em 45 dias.',
-    premium: false,
-  },
-  {
-    id: 'nis2-dora-technology-governance',
-    title: 'Governança tecnológica: NIS2 e DORA elevam pressão sobre risco de terceiros e incidentes',
-    category: 'Cibersegurança / Terceiros',
-    jurisdiction: 'União Europeia',
-    publishedAt: '2026-06-05',
-    source: 'ENISA / autoridades nacionais competentes',
-    sourceType: 'Fonte oficial',
-    author: 'EuroComply Intelligence Desk',
-    reliability: 'Alta',
-    impact: 'Alto',
-    executiveSummary: 'Empresas reguladas e fornecedores críticos precisam mostrar rastreabilidade de incidentes, continuidade operacional, fornecedores essenciais e evidências de resposta.',
-    eurocomplyAnalysis: 'A notícia deve acionar revisão de vendors críticos, SLAs, DPA, incident response e continuidade. O calendário inteligente deve sugerir revisão periódica.',
-    affectedCompanies: ['Fintech', 'SaaS corporativo', 'Cloud providers', 'Empresas com fornecedores críticos'],
-    recommendedActions: ['Marcar fornecedores críticos.', 'Validar plano de continuidade.', 'Testar resposta a incidentes.', 'Atualizar subprocessadores.'],
-    calendarSuggestion: 'Criar revisão de terceiros críticos e continuidade operacional em 30 dias.',
-    premium: true,
-  },
-];
-
-function getImpactTone(impact: IntelligenceItem['impact']) {
+function getImpactTone(impact: IntelligenceImpact) {
   if (impact === 'Crítico') return 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-200';
   if (impact === 'Alto') return 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-200';
   if (impact === 'Médio') return 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200';
@@ -92,7 +17,7 @@ function getImpactTone(impact: IntelligenceItem['impact']) {
 }
 
 function formatDate(date: string, locale: string) {
-  return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : locale, { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${date}T12:00:00Z`));
+  return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : locale, { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${date.slice(0, 10)}T12:00:00Z`));
 }
 
 export default async function ComplianceNewsPage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams?: Promise<{ q?: string; jurisdiction?: string; category?: string; premium?: string }> }) {
@@ -105,6 +30,7 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
   const organization = await getCurrentOrganizationForUser(user.id);
   const entitlements = organization ? await getOrganizationEntitlements(organization.id) : null;
   const canUsePremiumNews = entitlements ? isPlanAtLeast(entitlements.plan, 'professional') : false;
+  const intelligenceItems = await listPublishedIntelligenceItems();
   const wantsPremium = query.premium === '1';
   const term = (query.q ?? '').toLowerCase().trim();
   const jurisdiction = query.jurisdiction ?? 'all';
@@ -127,7 +53,7 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
         <section className="rounded-[2rem] border bg-background/92 p-6 shadow-xl shadow-primary/5 backdrop-blur md:p-9">
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-primary">EuroComply Intelligence</p>
           <h1 className="mt-3 max-w-4xl text-4xl font-semibold tracking-[-0.045em] md:text-6xl">Jornal IA para leis, tecnologia e riscos que afetam empresas.</h1>
-          <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">Monitoramento editorial preparado para evoluir para ingestão 24/7: fontes oficiais, reguladores e referências técnicas com análise EuroComply, impacto empresarial e sugestão para calendário inteligente.</p>
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">Monitoramento editorial preparado para ingestão 24/7: fontes oficiais, reguladores e referências técnicas com análise EuroComply, impacto empresarial e sugestão para calendário inteligente.</p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href={`/${locale}/dashboard/organizations/add-ons`} className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:bg-primary/90"><Sparkles className="h-4 w-4" /> Ver add-on Notícias Premium</Link>
             <Link href={`/${locale}/calendario-compliance`} className="inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-bold transition hover:bg-muted"><CalendarDays className="h-4 w-4" /> Abrir calendário inteligente</Link>
