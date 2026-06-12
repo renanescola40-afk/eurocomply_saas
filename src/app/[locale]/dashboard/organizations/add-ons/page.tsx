@@ -6,7 +6,7 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { ADD_ON_CATALOG, CREDIT_PACKS, getAddOnStatus, getPlanDisplayName } from '@/lib/billing/addons';
-import type { AddOnCatalogItem } from '@/lib/billing/addons';
+import type { AddOnCatalogItem, AddOnId } from '@/lib/billing/addons';
 
 const statusCopy = {
   included: {
@@ -58,7 +58,7 @@ export default async function AddOnsAndCreditsPage({ params }: { params: Promise
   const isPremium = currentPlan === 'enterprise';
 
   // Future hook: when add-on subscription items are persisted, populate this list from Supabase/Stripe sync.
-  const activeAddOnIds: string[] = [];
+  const activeAddOnIds: AddOnId[] = [];
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
@@ -188,22 +188,18 @@ export default async function AddOnsAndCreditsPage({ params }: { params: Promise
             </div>
           </div>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {CREDIT_PACKS.map((pack) => (
               <article key={pack.id} className="rounded-[1.5rem] border bg-muted/20 p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-semibold">{pack.name}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{pack.description}</p>
-                  </div>
-                  <Badge variant={isPremium ? 'default' : 'outline'} className="rounded-full">
-                    {isPremium ? 'Extra opcional' : 'Não ativo'}
-                  </Badge>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold">{pack.name}</h3>
+                  <Badge variant={isPremium ? 'secondary' : 'outline'}>{isPremium ? 'Opcional' : 'Não ativo'}</Badge>
                 </div>
-                <p className="mt-5 text-3xl font-semibold">€{pack.price}</p>
-                <p className="mt-1 text-xs text-muted-foreground">Compra avulsa · {pack.credits.toLocaleString('pt-PT')} créditos</p>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">{pack.description}</p>
+                <p className="mt-5 text-2xl font-semibold">€{pack.price}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{pack.credits.toLocaleString('pt-PT')} créditos</p>
                 <Link href={`/${locale}/profile#plan`} className="mt-4 inline-flex h-10 items-center justify-center rounded-full border px-4 text-sm font-semibold transition hover:bg-muted">
-                  {isPremium ? 'Comprar créditos extra' : 'Comprar pacote'}
+                  Comprar créditos
                 </Link>
               </article>
             ))}
