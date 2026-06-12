@@ -1,4 +1,5 @@
-import { Activity, CheckCircle2, Cloud, Database, FileCheck2, RotateCcw, ShieldAlert } from 'lucide-react';
+import { Activity, CheckCircle2, Cloud, Database, Download, FileCheck2, RotateCcw, ShieldAlert } from 'lucide-react';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
@@ -14,6 +15,8 @@ const copy: Record<SupportedLocale, {
   nextActions: string;
   ready: string;
   needsEvidence: string;
+  exportJson: string;
+  exportHint: string;
 }> = {
   en: {
     title: 'Continuity Center',
@@ -25,6 +28,8 @@ const copy: Record<SupportedLocale, {
     nextActions: 'Next actions',
     ready: 'Ready',
     needsEvidence: 'Needs evidence',
+    exportJson: 'Export continuity evidence',
+    exportHint: 'Business+ export with integrity hash and audit trail.',
   },
   pt: {
     title: 'Centro de Continuidade',
@@ -36,6 +41,8 @@ const copy: Record<SupportedLocale, {
     nextActions: 'Próximas ações',
     ready: 'Pronto',
     needsEvidence: 'Precisa de evidência',
+    exportJson: 'Exportar evidência de continuidade',
+    exportHint: 'Export Business+ com hash de integridade e trilho de auditoria.',
   },
   es: {
     title: 'Centro de Continuidad',
@@ -47,6 +54,8 @@ const copy: Record<SupportedLocale, {
     nextActions: 'Próximas acciones',
     ready: 'Listo',
     needsEvidence: 'Necesita evidencia',
+    exportJson: 'Exportar evidencia de continuidad',
+    exportHint: 'Export Business+ con hash de integridad y auditoría.',
   },
   fr: {
     title: 'Centre de Continuité',
@@ -58,6 +67,8 @@ const copy: Record<SupportedLocale, {
     nextActions: 'Prochaines actions',
     ready: 'Prêt',
     needsEvidence: 'Preuve requise',
+    exportJson: 'Exporter la preuve de continuité',
+    exportHint: 'Export Business+ avec hash d’intégrité et journal d’audit.',
   },
   it: {
     title: 'Centro Continuità',
@@ -69,6 +80,8 @@ const copy: Record<SupportedLocale, {
     nextActions: 'Prossime azioni',
     ready: 'Pronto',
     needsEvidence: 'Richiede evidenza',
+    exportJson: 'Esporta evidenza di continuità',
+    exportHint: 'Export Business+ con hash di integrità e audit trail.',
   },
   de: {
     title: 'Continuity Center',
@@ -80,6 +93,8 @@ const copy: Record<SupportedLocale, {
     nextActions: 'Nächste Schritte',
     ready: 'Bereit',
     needsEvidence: 'Nachweis erforderlich',
+    exportJson: 'Continuity-Nachweis exportieren',
+    exportHint: 'Business+ Export mit Integritäts-Hash und Audit Trail.',
   },
 };
 
@@ -112,6 +127,16 @@ export default async function ContinuityCenterPage({ params }: { params: Promise
               </div>
               <h1 className="mt-5 text-4xl font-semibold tracking-tight text-foreground">{t.title}</h1>
               <p className="mt-4 text-lg leading-8 text-muted-foreground">{t.subtitle}</p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Link
+                  href="/api/continuity-center/export"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background transition hover:opacity-90"
+                >
+                  <Download className="h-4 w-4" />
+                  {t.exportJson}
+                </Link>
+                <p className="text-sm text-muted-foreground">{t.exportHint}</p>
+              </div>
             </div>
             <div className="rounded-3xl border bg-background p-6 text-center">
               <p className="text-sm text-muted-foreground">{t.score}</p>
