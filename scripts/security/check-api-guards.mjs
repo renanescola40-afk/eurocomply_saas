@@ -3,61 +3,88 @@ import { join, relative, sep } from 'node:path';
 
 const apiRoot = join(process.cwd(), 'src', 'app', 'api');
 
+const authGuard = ['getCurrentUser', 'requireOrganizationContext'];
+const organizationGuard = ['getCurrentOrganizationForUser', 'requireOrganizationContext'];
+const rbacGuard = ['assertOrganizationPermission'];
+const planGuard = ['assertPlanAtLeast', 'assertGdprSelfServiceEnabled'];
+const rateLimitGuard = ['checkDistributedRateLimit'];
+const auditGuard = ['createAuditEvent'];
+const integrityGuard = ['buildEvidencePackIntegrity'];
+const noStoreGuard = ['noStoreJson', 'noStoreDownload', 'Cache-Control'];
+const originGuard = ['assertTrustedOrigin', 'verifyTrustedOrigin'];
+
 const endpointRules = [
   {
     name: 'billing checkout',
     match: /src\/app\/api\/billing\/checkout\/route\.ts$/,
-    required: ['requireOrganizationContext', 'assertOrganizationPermission', 'assertPlanAtLeast'],
+    requiredAny: [authGuard, organizationGuard, rbacGuard, originGuard, noStoreGuard],
+    requiredAll: ['manage_billing', 'getStripeClient'],
   },
   {
     name: 'billing portal',
     match: /src\/app\/api\/billing\/portal\/route\.ts$/,
-    required: ['requireOrganizationContext', 'assertOrganizationPermission'],
+    requiredAny: [authGuard, organizationGuard, rbacGuard, originGuard, noStoreGuard],
+    requiredAll: ['manage_billing', 'getStripeClient'],
   },
   {
     name: 'Stripe webhook',
     match: /src\/app\/api\/billing\/webhook\/route\.ts$/,
-    required: ['constructEvent', 'STRIPE_WEBHOOK_SECRET'],
+    requiredAny: [],
+    requiredAll: ['constructEvent', 'STRIPE_WEBHOOK_SECRET'],
   },
   {
-    name: 'export endpoint',
-    match: /src\/app\/api\/.*\/export\/route\.ts$/,
-    required: ['requireOrganizationContext', 'assertOrganizationPermission', 'assertPlanAtLeast', 'checkDistributedRateLimit', 'createAuditEvent', 'buildEvidencePackIntegrity'],
+    name: 'enterprise export endpoint',
+    match: /src\/app\/api\/(audit\/evidence-pack|security-questionnaire|vendor-assurance|enterprise-readiness|retention-center|continuity-center)\/export?\/route\.ts$|src\/app\/api\/(security-questionnaire|vendor-assurance|enterprise-readiness|retention-center|continuity-center)\/export\/route\.ts$/,
+    requiredAny: [authGuard, organizationGuard, rbacGuard, planGuard, rateLimitGuard, auditGuard, integrityGuard, noStoreGuard],
+    requiredAll: ['export_data'],
   },
   {
     name: 'audit evidence pack export',
     match: /src\/app\/api\/audit\/evidence-pack\/route\.ts$/,
-    required: ['requireOrganizationContext', 'assertOrganizationPermission', 'assertPlanAtLeast', 'checkDistributedRateLimit', 'createAuditEvent', 'buildEvidencePackIntegrity'],
+    requiredAny: [authGuard, organizationGuard, rbacGuard, planGuard, rateLimitGuard, auditGuard, integrityGuard, noStoreGuard],
+    requiredAll: ['export_data'],
   },
   {
     name: 'evidence pack verifier',
     match: /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/,
-    required: ['checkDistributedRateLimit', 'verifyEvidencePackIntegrity'],
+    requiredAny: [rateLimitGuard, noStoreGuard],
+    requiredAll: ['verifyEvidencePackIntegrity'],
   },
   {
     name: 'AI governance endpoint',
     match: /src\/app\/api\/ai-(systems|incidents)\/route\.ts$/,
-    required: ['requireOrganizationContext', 'assertOrganizationPermission', 'createAuditEvent'],
+    requiredAny: [authGuard, organizationGuard, rbacGuard, auditGuard, originGuard, noStoreGuard],
+    requiredAll: [],
   },
   {
     name: 'ops endpoint',
     match: /src\/app\/api\/ops\/.*\/route\.ts$/,
-    required: ['HEALTHCHECK_TOKEN'],
+    requiredAny: [noStoreGuard],
+    requiredAll: ['HEALTHCHECK_TOKEN'],
   },
   {
-    name: 'team invite endpoint',
+    name: 'team endpoint',
     match: /src\/app\/api\/team\/.*\/route\.ts$/,
-    required: ['requireOrganizationContext', 'assertOrganizationPermission', 'checkDistributedRateLimit'],
+    requiredAny: [authGuard, organizationGuard, rbacGuard, rateLimitGuard, originGuard, noStoreGuard],
+    requiredAll: ['manage_team'],
   },
   {
     name: 'GDPR endpoint',
     match: /src\/app\/api\/gdpr\/.*\/route\.ts$/,
-    required: ['requireOrganizationContext', 'assertOrganizationPermission', 'assertPlanAtLeast', 'createAuditEvent'],
+    requiredAny: [authGuard, organizationGuard, planGuard, auditGuard, noStoreGuard],
+    requiredAll: [],
+  },
+  {
+    name: 'GDPR delete request endpoint',
+    match: /src\/app\/api\/gdpr\/delete-request\/route\.ts$/,
+    requiredAny: [originGuard],
+    requiredAll: [],
   },
   {
     name: 'document mutation endpoint',
     match: /src\/app\/api\/documents\/.*\/route\.ts$/,
-    required: ['requireOrganizationContext', 'assertOrganizationPermission'],
+    requiredAny: [authGuard, organizationGuard, rbacGuard, originGuard, noStoreGuard],
+    requiredAll: ['manage_documents'],
   },
 ];
 
@@ -87,6 +114,14 @@ function normalizePath(path) {
   return relative(process.cwd(), path).split(sep).join('/');
 }
 
+function hasAnyToken(source, tokens) {
+  return tokens.some((token) => source.includes(token));
+}
+
+function describeTokenGroup(tokens) {
+  return tokens.join(' OR ');
+}
+
 function evaluateRoute(filePath) {
   const normalized = normalizePath(filePath);
   const source = readFileSync(filePath, 'utf8');
@@ -100,9 +135,17 @@ function evaluateRoute(filePath) {
 
   for (const rule of endpointRules) {
     if (!rule.match.test(normalized)) continue;
-    const missing = rule.required.filter((token) => !source.includes(token));
-    if (missing.length > 0) {
-      failures.push(`${normalized}: ${rule.name} missing guard token(s): ${missing.join(', ')}`);
+
+    for (const token of rule.requiredAll ?? []) {
+      if (!source.includes(token)) {
+        failures.push(`${normalized}: ${rule.name} missing required guard token: ${token}`);
+      }
+    }
+
+    for (const tokens of rule.requiredAny ?? []) {
+      if (!hasAnyToken(source, tokens)) {
+        failures.push(`${normalized}: ${rule.name} missing one of guard token group: ${describeTokenGroup(tokens)}`);
+      }
     }
   }
 
