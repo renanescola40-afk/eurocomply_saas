@@ -7,11 +7,11 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 import { checkDistributedRateLimit } from '@/server/security/rate-limit';
 import { verifyAuditChain, type AuditChainRecord } from '@/server/security/audit-chain';
 import { noStoreJson } from '@/server/security/no-store';
-import { assessStepUp, stepUpRequiredResponse } from '@/server/security/step-up';
+import { assessStepUpToken, stepUpRequiredResponse } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
-const STEP_UP_VERIFIED_AT_HEADER = 'x-eurocomply-step-up-verified-at';
+const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -48,9 +48,11 @@ export async function GET(request: Request) {
     }, plan.status);
   }
 
-  const stepUp = assessStepUp({
+  const stepUp = assessStepUpToken({
     action: 'audit_chain_verify',
-    verifiedAt: request.headers.get(STEP_UP_VERIFIED_AT_HEADER),
+    userId: user.id,
+    organizationId: organization.id,
+    token: request.headers.get(STEP_UP_TOKEN_HEADER),
   });
 
   if (!stepUp.ok) {
@@ -110,6 +112,7 @@ export async function GET(request: Request) {
       action: stepUp.action,
       verifiedAt: stepUp.verifiedAt,
       expiresAt: stepUp.expiresAt,
+      tokenType: 'signed_hmac',
     },
   });
 }
