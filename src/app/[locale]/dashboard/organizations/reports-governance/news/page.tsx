@@ -20,6 +20,17 @@ function formatDate(date: string, locale: string) {
   return new Intl.DateTimeFormat(locale === 'pt' ? 'pt-PT' : locale, { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${date.slice(0, 10)}T12:00:00Z`));
 }
 
+function buildCalendarSuggestionHref(locale: string, item: { title: string; jurisdiction: string; executiveSummary: string }) {
+  const params = new URLSearchParams({
+    source: 'intelligence',
+    title: item.title,
+    country: item.jurisdiction,
+    description: item.executiveSummary,
+  });
+
+  return `/${locale}/calendario-compliance?${params.toString()}`;
+}
+
 export default async function ComplianceNewsPage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams?: Promise<{ q?: string; jurisdiction?: string; category?: string; premium?: string }> }) {
   const { locale } = await params;
   const query = (await searchParams) ?? {};
@@ -86,7 +97,7 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
                 <h2 className="mt-4 text-2xl font-semibold tracking-tight md:text-3xl">{item.title}</h2>
                 <p className="mt-3 text-sm leading-7 text-muted-foreground md:text-base">{item.executiveSummary}</p>
                 <div className="mt-5 grid gap-3 text-sm text-muted-foreground md:grid-cols-4"><p className="flex items-center gap-2"><FileText className="h-4 w-4" /> {item.source}</p><p className="flex items-center gap-2"><UserRound className="h-4 w-4" /> {item.author}</p><p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" /> {formatDate(item.publishedAt, locale)}</p><p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> {item.reliability}</p></div>
-                {locked ? <div className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-100">Dossiê premium em preview. Ative Notícias Premium para ver análise completa e ações detalhadas.</div> : <div className="mt-6 grid gap-4 lg:grid-cols-2"><section className="rounded-[1.5rem] border bg-muted/20 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">Análise EuroComply</h3><p className="mt-3 text-sm leading-7">{item.eurocomplyAnalysis}</p><p className="mt-4 rounded-2xl border bg-background/70 p-3 text-xs leading-5 text-muted-foreground">Nota editorial: o EuroComply mantém metadados, referência e análise própria. Conteúdo completo só deve ser armazenado para fontes oficiais, abertas ou licenciadas.</p></section><section className="rounded-[1.5rem] border bg-muted/20 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">Calendário inteligente</h3><p className="mt-3 text-sm leading-6">{item.calendarSuggestion}</p><Link href={`/${locale}/calendario-compliance`} className="mt-4 inline-flex rounded-full border px-4 py-2 text-xs font-bold transition hover:bg-background">Abrir calendário</Link></section></div>}
+                {locked ? <div className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-100">Dossiê premium em preview. Ative Notícias Premium para ver análise completa e ações detalhadas.</div> : <div className="mt-6 grid gap-4 lg:grid-cols-2"><section className="rounded-[1.5rem] border bg-muted/20 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">Análise EuroComply</h3><p className="mt-3 text-sm leading-7">{item.eurocomplyAnalysis}</p><p className="mt-4 rounded-2xl border bg-background/70 p-3 text-xs leading-5 text-muted-foreground">Nota editorial: o EuroComply mantém metadados, referência e análise própria. Conteúdo completo só deve ser armazenado para fontes oficiais, abertas ou licenciadas.</p></section><section className="rounded-[1.5rem] border bg-muted/20 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">Calendário inteligente</h3><p className="mt-3 text-sm leading-6">{item.calendarSuggestion}</p><Link href={buildCalendarSuggestionHref(locale, item)} className="mt-4 inline-flex rounded-full border px-4 py-2 text-xs font-bold transition hover:bg-background">Adicionar ao calendário</Link></section></div>}
                 {!locked ? <div className="mt-5 grid gap-4 lg:grid-cols-2"><section><h3 className="text-sm font-semibold">Empresas afetadas</h3><div className="mt-3 flex flex-wrap gap-2">{item.affectedCompanies.map((company) => <span key={company} className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{company}</span>)}</div></section><section><h3 className="text-sm font-semibold">Ações recomendadas</h3><ul className="mt-3 space-y-2 text-sm text-muted-foreground">{item.recommendedActions.map((action) => <li key={action} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> {action}</li>)}</ul></section></div> : null}
               </article>
             );
