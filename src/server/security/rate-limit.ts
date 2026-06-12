@@ -3,6 +3,13 @@ type LocalRateLimitEntry = {
   resetAt: number;
 };
 
+type DistributedRateLimitResult = {
+  allowed: boolean;
+  limit: number;
+  remaining: number;
+  retryAfterSeconds: number;
+};
+
 const localAttempts = new Map<string, LocalRateLimitEntry>();
 
 async function incrementUpstash(key: string, windowSeconds: number) {
@@ -42,13 +49,67 @@ function incrementLocal(key: string, windowMs: number) {
   const current = localAttempts.get(key);
 
   if (!current || current.resetAt <= now) {
-    localAttempts.set(key, { count: 1, resetAt: now + windowMs });
-    return 1;
+    const next = { count: 1, resetAt: now + windowMs };
+    localAttempts.set(key, next);
+    return next;
   }
 
   const next = { ...current, count: current.count + 1 };
   localAttempts.set(key, next);
-  return next.count;
+  return next;
+}
+
+function toRateLimitResult({
+  count,
+  limit,
+  retryAfterSeconds,
+}: {
+  count: number;
+  limit: number;
+  retryAfterSeconds: number;
+}): DistributedRateLimitResult {
+  return {
+    allowed: count <= limit,
+    limit,
+    remaining: Math.max(0, limit - count),
+    retryAfterSeconds: count > limit ? Math.max(1, retryAfterSeconds) : 0,
+  };
+}
+
+export async function checkDistributedRateLimit({
+  key,
+  limit,
+  windowSeconds,
+}: {
+  key: string;
+  limit: number;
+  windowSeconds: number;
+}): Promise<DistributedRateLimitResult> {
+  const safeWindowSeconds = Math.max(1, Math.ceil(windowSeconds));
+
+  try {
+    const upstashCount = await incrementUpstash(key, safeWindowSeconds);
+    if (typeof upstashCount === 'number') {
+      return toRateLimitResult({
+        count: upstashCount,
+        limit,
+        retryAfterSeconds: safeWindowSeconds,
+      });
+    }
+  } catch (error) {
+    console.warn('Upstash rate limit failed, using local fallback', {
+      message: error instanceof Error ? error.message : 'unknown_error',
+    });
+  }
+
+  const now = Date.now();
+  const local = incrementLocal(key, safeWindowSeconds * 1000);
+
+  return toRateLimitResult({
+    count: local.count,
+    limit,
+    retryAfterSeconds: Math.ceil((local.resetAt - now) / 1000),
+  });
 }
 
 export async function isRateLimited({
@@ -60,18 +121,11 @@ export async function isRateLimited({
   limit: number;
   windowMs: number;
 }) {
-  const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+  const result = await checkDistributedRateLimit({
+    key,
+    limit,
+    windowSeconds: Math.ceil(windowMs / 1000),
+  });
 
-  try {
-    const upstashCount = await incrementUpstash(key, windowSeconds);
-    if (typeof upstashCount === 'number') {
-      return upstashCount > limit;
-    }
-  } catch (error) {
-    console.warn('Upstash rate limit failed, using local fallback', {
-      message: error instanceof Error ? error.message : 'unknown_error',
-    });
-  }
-
-  return incrementLocal(key, windowMs) > limit;
+  return !result.allowed;
 }
