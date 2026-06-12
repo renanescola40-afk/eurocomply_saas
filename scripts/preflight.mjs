@@ -43,6 +43,7 @@ const requiredFiles = [
   'src/app/api/security-questionnaire/export/route.ts',
   'scripts/security/check-rls.mjs',
   'scripts/security/check-api-guards.mjs',
+  'scripts/security/check-protected-routes.mjs',
   'docs/security/ASVS_MATRIX.md',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
