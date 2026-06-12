@@ -28,6 +28,7 @@ const requiredFiles = [
   'supabase/migrations/20260610_billing_stripe_sync.sql',
   'supabase/migrations/20260610_ai_governance_inventory.sql',
   'supabase/migrations/20260610_ai_incident_register.sql',
+  'supabase/migrations/20260612_audit_event_hash_chain.sql',
   'src/app/api/ops/enterprise-readiness/route.ts',
   'src/server/governance/enterprise-readiness.ts',
   'src/app/[locale]/enterprise-readiness/page.tsx',
