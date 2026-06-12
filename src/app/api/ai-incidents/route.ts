@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import {
   buildAiIncidentTriagePlan,
   normalizeAiIncidentCategory,
@@ -12,6 +11,7 @@ import { createAiIncident, listAiIncidents } from '@/server/queries/ai-incidents
 import { listAiSystems } from '@/server/queries/ai-systems';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
+import { noStoreJson } from '@/server/security/no-store';
 
 function asText(value: unknown, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
@@ -35,13 +35,13 @@ export async function GET() {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
   }
 
   const permission = await assertOrganizationPermission({
@@ -59,7 +59,7 @@ export async function GET() {
     listAiSystems(organization.id),
   ]);
 
-  return NextResponse.json({ incidents, systems, role: permission.role });
+  return noStoreJson({ incidents, systems, role: permission.role });
 }
 
 export async function POST(request: Request) {
@@ -69,13 +69,13 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
   }
 
   const permission = await assertOrganizationPermission({
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    return noStoreJson({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const body = payload as Record<string, unknown>;
@@ -101,11 +101,11 @@ export async function POST(request: Request) {
   const summary = asText(body.summary);
 
   if (title.length < 3) {
-    return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+    return noStoreJson({ error: 'Title is required' }, { status: 400 });
   }
 
   if (summary.length < 12) {
-    return NextResponse.json({ error: 'Summary must describe what happened' }, { status: 400 });
+    return noStoreJson({ error: 'Summary must describe what happened' }, { status: 400 });
   }
 
   const systems = await listAiSystems(organization.id);
@@ -152,17 +152,17 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ incident, triage });
+    return noStoreJson({ incident, triage });
   } catch (error) {
     const code = getErrorCode(error);
 
     if (code === '42P01' || code === 'PGRST205') {
-      return NextResponse.json(
+      return noStoreJson(
         { error: 'ai_incidents_table_missing', message: 'Apply the AI incident register Supabase migration before creating incidents.' },
         { status: 503 },
       );
     }
 
-    return NextResponse.json({ error: 'Could not create AI incident' }, { status: 500 });
+    return noStoreJson({ error: 'Could not create AI incident' }, { status: 500 });
   }
 }
