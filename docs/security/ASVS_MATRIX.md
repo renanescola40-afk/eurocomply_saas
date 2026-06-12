@@ -33,7 +33,7 @@ This matrix is the working control map for EuroComply security assurance. Target
 | V7 Error Handling | Errors do not leak secrets or internals | Generic error messages and centralized no-store response helpers | `src/server/security/no-store.ts`, `scripts/security/check-security-responses.mjs` | Implemented + CI gate |
 | V8 Data Protection | Sensitive exports are protected and traceable | Evidence Pack, Security Questionnaire, Vendor Assurance, Enterprise Readiness, Retention, Continuity and GDPR exports require auth/RBAC/plan gates | `/api/*/export` routes, GDPR APIs, `src/app/api/continuity-center/export/route.ts` | Implemented |
 | V8 Data Protection | Sensitive responses are not cached by browsers, CDN or proxies | `noStoreJson()` and `noStoreDownload()` used for sensitive API responses | `src/server/security/no-store.ts`, `scripts/security/check-no-store.mjs` | Implemented + CI gate |
-| V8 Data Protection | Export integrity is verifiable | SHA-256 hash + optional HMAC signature used by evidence and continuity exports | `src/server/security/evidence-pack-integrity.ts`, `src/app/api/continuity-center/export/route.ts` | Implemented |
+| V8 Data Protection | Export integrity is verifiable | SHA-256 hash + optional HMAC signature used by evidence and continuity exports | `src/server/security/evidence-pack-integrity.ts`, `docs/security/EXPORTS_AND_INTEGRITY.md` | Implemented |
 | V9 Communications | HTTPS and strong browser security headers are enforced | CSP, HSTS, frame protections, referrer policy, content sniffing protection and permissions policy | `proxy.ts`, `next.config.ts`, `scripts/security/check-security-headers.mjs` | Implemented + CI gate |
 | V10 Malicious Code | Dependency risk is continuously monitored | Dependabot/CI/security gates | `.github/dependabot.yml`, CI workflow | Partial / add CodeQL/OSV if not enabled |
 | V11 Business Logic | Plan and role restrictions are enforced server-side | Entitlement checks and RBAC guards | `src/server/billing/entitlements.ts`, `src/server/security/rbac.ts` | Implemented / expanding tests |
@@ -87,6 +87,7 @@ This matrix is the working control map for EuroComply security assurance. Target
 | Legal readiness | `docs/LEGAL_READINESS.md` |
 | Production checklist | `docs/PRODUCTION_LAUNCH_CHECKLIST.md` |
 | ASVS control matrix | `docs/security/ASVS_MATRIX.md` |
+| Export integrity standard | `docs/security/EXPORTS_AND_INTEGRITY.md` |
 | Security gates | `scripts/security/*.mjs` |
 | Evidence Pack export | `/audit-pack` |
 | Evidence Pack verifier | `/audit-pack/verify` |
