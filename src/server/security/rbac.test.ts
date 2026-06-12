@@ -5,6 +5,7 @@ import {
   getRolePermissions,
   normalizeOrganizationRole,
   ORGANIZATION_ROLES,
+  permissionDeniedResponse,
   roleHasPermission,
 } from './rbac';
 
@@ -54,5 +55,20 @@ describe('organization RBAC', () => {
     expect(matrix.map((entry) => entry.role)).toEqual(ORGANIZATION_ROLES);
     expect(matrix.find((entry) => entry.role === 'owner')?.permissions).toContain('manage_billing');
     expect(matrix.find((entry) => entry.role === 'viewer')?.permissions).not.toContain('export_data');
+  });
+
+  it('returns no-store headers for denied responses', () => {
+    const response = permissionDeniedResponse({
+      ok: false,
+      status: 403,
+      error: 'insufficient_role_permission',
+      message: 'Your organization role does not allow this action.',
+      permission: 'manage_billing',
+      role: 'viewer',
+    });
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get('Cache-Control')).toContain('no-store');
+    expect(response.headers.get('Pragma')).toBe('no-cache');
   });
 });
