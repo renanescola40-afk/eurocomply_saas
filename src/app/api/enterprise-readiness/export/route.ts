@@ -13,13 +13,40 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 
 export const runtime = 'nodejs';
 
-function jsonDownloadResponse(payload: unknown, filename: string) {
+type EnterpriseReadinessExportPayload = {
+  schemaVersion: string;
+  exportType: 'eurocomply.enterprise_readiness_export';
+  payload: {
+    schemaVersion: string;
+    exportType: 'eurocomply.enterprise_readiness';
+    generatedAt: string;
+    generatedBy: {
+      userId: string;
+      role: string | undefined;
+    };
+    organization: {
+      id: string;
+      name: string;
+      slug: string | null | undefined;
+    };
+    plan: unknown;
+    readiness: ReturnType<typeof getEnterpriseReadinessSummary>;
+  };
+  integrity: ReturnType<typeof buildEvidencePackIntegrity>;
+  audit: {
+    attempted: boolean;
+    persisted: boolean;
+  };
+};
+
+function jsonDownloadResponse(payload: EnterpriseReadinessExportPayload, filename: string) {
   return new NextResponse(JSON.stringify(payload, null, 2), {
     status: 200,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"`,
       'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
     },
   });
 }
@@ -84,7 +111,7 @@ export async function GET() {
     const readiness = getEnterpriseReadinessSummary();
     const payload = {
       schemaVersion: '2026-06-10',
-      exportType: 'eurocomply.enterprise_readiness',
+      exportType: 'eurocomply.enterprise_readiness' as const,
       generatedAt: new Date().toISOString(),
       generatedBy: {
         userId: user.id,
@@ -99,29 +126,43 @@ export async function GET() {
       readiness,
     };
     const integrity = buildEvidencePackIntegrity(payload);
-    const exportPayload = {
+    const exportPayload: EnterpriseReadinessExportPayload = {
       schemaVersion: '2026-06-10',
       exportType: 'eurocomply.enterprise_readiness_export',
       payload,
       integrity,
+      audit: {
+        attempted: true,
+        persisted: false,
+      },
     };
 
-    await createAuditEvent({
-      organizationId: organization.id,
-      actorUserId: user.id,
-      action: 'enterprise_readiness.exported',
-      entityType: 'enterprise_readiness',
-      entityId: organization.id,
-      metadata: {
-        score: readiness.score,
-        status: readiness.status,
-        weakestAreas: readiness.weakestAreas,
-        strongestAreas: readiness.strongestAreas,
-        actorRole: permission.role,
-        payloadHash: integrity.payloadHash,
-        signed: integrity.signed,
-      },
-    });
+    try {
+      const auditResult = await createAuditEvent({
+        organizationId: organization.id,
+        actorUserId: user.id,
+        action: 'enterprise_readiness.exported',
+        entityType: 'enterprise_readiness',
+        entityId: organization.id,
+        metadata: {
+          score: readiness.score,
+          status: readiness.status,
+          weakestAreas: readiness.weakestAreas,
+          strongestAreas: readiness.strongestAreas,
+          actorRole: permission.role,
+          payloadHash: integrity.payloadHash,
+          signed: integrity.signed,
+        },
+      });
+
+      exportPayload.audit.persisted = Boolean(auditResult.persisted);
+    } catch (auditError) {
+      reportError(auditError, {
+        area: 'enterprise_readiness_export_audit_non_blocking',
+        organizationId: organization.id,
+        userId: user.id,
+      });
+    }
 
     const date = new Date().toISOString().slice(0, 10);
     const filename = `eurocomply-enterprise-readiness-${safeFilenamePart(organization.slug ?? organization.name)}-${date}.json`;
