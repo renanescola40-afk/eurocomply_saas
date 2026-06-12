@@ -4,6 +4,25 @@ export type IntelligenceImpact = 'Monitorar' | 'Médio' | 'Alto' | 'Crítico';
 export type IntelligenceReliability = 'Alta' | 'Média';
 export type IntelligenceSourceType = 'Regulador' | 'Fonte oficial' | 'Instituição europeia' | 'Observatório técnico';
 
+type IntelligenceDatabaseRow = {
+  id: string;
+  external_id: string | null;
+  title: string;
+  category: string;
+  jurisdiction: string;
+  published_at: string | null;
+  source_name: string;
+  source_type: string | null;
+  author: string | null;
+  reliability: string | null;
+  impact: string | null;
+  executive_summary: string;
+  internal_analysis: string;
+  affected_companies: unknown;
+  recommended_actions: unknown;
+  premium: boolean | null;
+};
+
 export type IntelligenceItem = {
   id: string;
   title: string;
@@ -98,7 +117,15 @@ function mapImpact(impact: string | null | undefined): IntelligenceImpact {
   return 'Monitorar';
 }
 
-function mapDatabaseItem(item: Record<string, any>): IntelligenceItem {
+function normalizeStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function mapDatabaseItem(item: IntelligenceDatabaseRow): IntelligenceItem {
   return {
     id: item.external_id ?? item.id,
     title: item.title,
@@ -112,8 +139,8 @@ function mapDatabaseItem(item: Record<string, any>): IntelligenceItem {
     impact: mapImpact(item.impact),
     executiveSummary: item.executive_summary,
     eurocomplyAnalysis: item.internal_analysis,
-    affectedCompanies: Array.isArray(item.affected_companies) ? item.affected_companies : [],
-    recommendedActions: Array.isArray(item.recommended_actions) ? item.recommended_actions : [],
+    affectedCompanies: normalizeStringArray(item.affected_companies),
+    recommendedActions: normalizeStringArray(item.recommended_actions),
     calendarSuggestion: item.impact === 'high' || item.impact === 'critical' ? 'Criar revisão no calendário inteligente em até 30 dias.' : 'Monitorar e criar tarefa se houver impacto direto na empresa.',
     premium: Boolean(item.premium),
   };
@@ -135,7 +162,7 @@ export async function listPublishedIntelligenceItems(): Promise<IntelligenceItem
 
   if (error || !data?.length) return fallbackIntelligenceItems;
 
-  return data.map((item) => mapDatabaseItem(item));
+  return (data as IntelligenceDatabaseRow[]).map((item) => mapDatabaseItem(item));
 }
 
 export async function getPublishedIntelligenceItem(id: string): Promise<IntelligenceItem | null> {
@@ -144,14 +171,24 @@ export async function getPublishedIntelligenceItem(id: string): Promise<Intellig
 
   if (!supabase) return fallback ?? null;
 
-  const { data, error } = await supabase
+  const { data: externalMatch, error: externalError } = await supabase
     .from('intelligence_items')
     .select(intelligenceSelect)
     .eq('status', 'published')
-    .or(`external_id.eq.${id},id.eq.${id}`)
+    .eq('external_id', id)
     .maybeSingle();
 
-  if (error || !data) return fallback ?? null;
+  if (!externalError && externalMatch) return mapDatabaseItem(externalMatch as IntelligenceDatabaseRow);
+  if (!isUuid(id)) return fallback ?? null;
 
-  return mapDatabaseItem(data);
+  const { data: uuidMatch, error: uuidError } = await supabase
+    .from('intelligence_items')
+    .select(intelligenceSelect)
+    .eq('status', 'published')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (uuidError || !uuidMatch) return fallback ?? null;
+
+  return mapDatabaseItem(uuidMatch as IntelligenceDatabaseRow);
 }
