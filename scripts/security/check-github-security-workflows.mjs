@@ -51,6 +51,23 @@ const checks = [
       'if-no-files-found: warn',
     ],
   },
+  {
+    path: '.github/dependabot.yml',
+    tokens: [
+      'version: 2',
+      'package-ecosystem: "npm"',
+      'package-ecosystem: "github-actions"',
+      'timezone: "Europe/Lisbon"',
+      'open-pull-requests-limit: 1',
+      'open-pull-requests-limit: 2',
+      'prefix: "deps"',
+      'prefix: "ci"',
+      'include: "scope"',
+      'version-update:semver-major',
+      'dependencies',
+      'security',
+    ],
+  },
 ];
 
 const failures = [];
