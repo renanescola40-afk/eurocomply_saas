@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-06-13T16:15:00+01:00",
+  "phase": "security-audit-final-execution-readiness",
+  "status": "implemented",
+  "summary": "Added a deterministic final security execution runbook for the remaining npm/lockfile/audit remediation work that requires real npm registry access.",
+  "changes": [
+    {
+      "path": "docs/ops/2026-06-13-final-security-execution-runbook.md",
+      "description": "Documents preconditions, execution sequence, targeted remediation sequence, commit rules, promotion criteria and rollback plan for the final supply-chain closure work."
+    }
+  ],
+  "notes": [
+    "This does not claim vulnerabilities are fixed.",
+    "The remaining remediation still requires generating package-lock.json and npm-audit.json with npm@10.8.2.",
+    "Raw audit/readiness artifacts remain intentionally uncommitted."
+  ]
+}
