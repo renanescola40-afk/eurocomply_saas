@@ -1,0 +1,33 @@
+{
+  "timestamp": "2026-06-13T15:55:00+01:00",
+  "phase": "security_audit_supply_chain_readiness",
+  "summary": "Surfaced final security readiness blockers in Security CI as a non-blocking diagnostic summary and artifact file.",
+  "changes": [
+    {
+      "path": ".github/workflows/security-ci.yml",
+      "type": "update",
+      "details": "Added a warning-only final security readiness step that writes final-security-readiness.md, appends it to GITHUB_STEP_SUMMARY and includes it in the npm-audit-triage artifact."
+    },
+    {
+      "path": "docs/ops/2026-06-13-final-readiness-ci-reporting.md",
+      "type": "create",
+      "details": "Documented why final readiness remains non-blocking, where reviewers can find the output and when to promote it into security:ci."
+    }
+  ],
+  "commits": [
+    "42e8f7f94a3d44d3f74619fd6f4cce732b49a097",
+    "50a6d04f6564ca88a92cf668a25afe4cdace656b"
+  ],
+  "blocked_actions": [
+    {
+      "path": "scripts/security/check-github-security-workflows.mjs",
+      "details": "Attempted to add regression tokens for final-security-readiness.md and security:final-readiness, but the connector write was blocked by safety settings. The existing gate was not weakened."
+    }
+  ],
+  "remaining_blockers": [
+    "Vercel deploy status is blocked by build-rate-limit quota, not by an observed code error.",
+    "package-lock.json must still be generated with npm run supply-chain:lockfile and reviewed.",
+    "npm-audit-triage artifact must be reviewed to apply targeted dependency fixes.",
+    "Floating dependency specs must be replaced with exact audited versions after lockfile generation."
+  ]
+}
