@@ -1,4 +1,4 @@
-export type BillingPlanId = 'starter' | 'growth' | 'business';
+export type BillingPlanId = 'starter' | 'growth' | 'business' | 'enterprise';
 
 export type BillingPlan = {
   id: BillingPlanId;
@@ -38,6 +38,23 @@ export const BILLING_PLANS: BillingPlan[] = [
     stripePriceEnvKey: 'STRIPE_BUSINESS_PRICE_ID',
     limits: { users: 50, documents: 1000, vendors: 300, risks: 750 },
     features: ['Advanced audit logs', 'Executive reporting', 'Priority support', 'Compliance timeline', 'Production observability'],
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    priceMonthly: 990,
+    stripePriceEnvKey: 'STRIPE_ENTERPRISE_PRICE_ID',
+    limits: { users: 250, documents: 10000, vendors: 2500, risks: 5000 },
+    features: [
+      'All Business features',
+      'Premium intelligence journal',
+      'AI governance pro workflows',
+      'Evidence and audit pack',
+      'Enterprise readiness exports',
+      'Advanced vendor assurance',
+      'Priority implementation support',
+      'Expanded monthly credits',
+    ],
   },
 ];
 
