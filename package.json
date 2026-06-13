@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "preflight": "node scripts/preflight.mjs",
+    "quality:routes": "node scripts/quality/check-route-links.mjs",
     "security:rls": "node scripts/security/check-rls.mjs",
     "security:api-guards": "node scripts/security/check-api-guards.mjs",
     "security:protected-routes": "node scripts/security/check-protected-routes.mjs",
