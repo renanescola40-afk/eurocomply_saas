@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-06-13T15:25:00Z",
+  "phase": "security_audit_and_supply_chain_hardening",
+  "status": "implemented",
+  "summary": "Added a repository-managed safe lockfile generation command and taught the supply-chain regression gate to require it.",
+  "changes": [
+    {
+      "file": "package.json",
+      "details": [
+        "Added supply-chain:lockfile script using npm install --package-lock-only --ignore-scripts."
+      ]
+    },
+    {
+      "file": "scripts/security/check-supply-chain.mjs",
+      "details": [
+        "Requires supply-chain:lockfile to stay present.",
+        "Fails if supply-chain:lockfile does not generate only the lockfile and ignore lifecycle scripts.",
+        "Requires docs/security/SUPPLY_CHAIN.md to mention supply-chain:lockfile as evidence."
+      ]
+    },
+    {
+      "file": "docs/security/SUPPLY_CHAIN.md",
+      "details": [
+        "Documented npm run supply-chain:lockfile as the official first-lockfile generation command.",
+        "Updated regression gates, checklist and open hardening items."
+      ]
+    }
+  ],
+  "commits": [
+    "ea7f58203e6bacf5984eb95773c4c1f3c3d6e30e",
+    "26392129cdfa7f6917ee11055b0dc400c8a2d88b",
+    "5a96b739205d9ced31bd8687276502f11c9bb411"
+  ],
+  "notes": [
+    "No package-lock.json was generated in this environment because network-backed npm install is not available here.",
+    "This change prepares the repository for a reproducible lockfile/audit handoff once npm can resolve dependencies."
+  ]
+}
