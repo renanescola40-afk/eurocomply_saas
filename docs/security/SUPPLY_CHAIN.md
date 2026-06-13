@@ -14,6 +14,7 @@ EuroComply depends on the Node.js/npm ecosystem, GitHub Actions and third-party 
 | npm runtime drift warning | `scripts/security/check-supply-chain.mjs` |
 | npm repository policy | `.npmrc` |
 | Safe lockfile generation command | `package.json` `supply-chain:lockfile` |
+| Floating dependency triage command | `package.json` `supply-chain:floating-deps` |
 | npm audit triage commands | `package.json` audit scripts |
 | Non-blocking npm audit summary | `.github/workflows/security-ci.yml` |
 | Floating dependency spec warnings | `scripts/security/check-supply-chain.mjs` |
@@ -109,6 +110,14 @@ x
 ranges with ||
 ```
 
+Use the dedicated triage command to print only the floating dependency list:
+
+```txt
+npm run supply-chain:floating-deps
+```
+
+This command does not contact npm. It reads `package.json` and lists the exact dependency paths that must be replaced during lockfile/audit triage.
+
 These warnings are not hard failures yet because the repository still lacks a committed `package-lock.json` and the current npm audit findings need package-level triage first.
 
 Target state:
@@ -197,6 +206,7 @@ security-and-quality
 - dangerous lifecycle scripts are not defined
 - npm audit triage scripts remain present
 - `supply-chain:lockfile` remains present and uses `--package-lock-only --ignore-scripts`
+- `supply-chain:floating-deps` remains present and uses `scripts/security/list-floating-dependencies.mjs`
 - floating version specs are reported as warnings
 - the security CI uses a safe install mode
 - dependency review remains configured
@@ -227,7 +237,7 @@ Before approving dependency changes:
 7. Run `npm run security:npm-audit:summary` before changing dependencies.
 8. Confirm npm runtime matches `packageManager` before generating or committing `package-lock.json`.
 9. Generate the lockfile with `npm run supply-chain:lockfile`.
-10. Review floating dependency warnings and replace them with exact audited versions where possible.
+10. Run `npm run supply-chain:floating-deps` and replace listed specs with exact audited versions where possible.
 11. Review new package purpose and maintainer health.
 12. Confirm no lifecycle scripts were added.
 13. Confirm license compatibility.
