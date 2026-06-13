@@ -229,6 +229,26 @@
         "Confirm CRON_SECRET or INTERNAL_CRON_SECRET exists in Vercel project settings.",
         "Keep watching billing/provider wiring so Enterprise/Premium cannot become active without a confirmed provider event."
       ]
+    },
+    {
+      "timestamp": "2026-06-13T11:24:00Z",
+      "cycle": "vercel_supply_chain_hardening",
+      "status": "patched_waiting_for_ci",
+      "findings": [
+        "The latest checked Vercel status for commit 54befbe783a543ddbc9faa2e4185fd5efebaa4fe was success.",
+        "The security CI workflow already installs dependencies with npm install --ignore-scripts.",
+        "vercel.json still used npm install without the ignore-scripts guard."
+      ],
+      "actions_taken": [
+        "Changed the Vercel install command to npm install --ignore-scripts.",
+        "Kept the build command and single daily maintenance cron unchanged."
+      ],
+      "commits": ["5ed4c205215bc58b643279315dfdf46e4871405c"],
+      "next_cycle_focus": [
+        "Verify Vercel build status for the hardened install command.",
+        "If it passes, review npm audit details with package names before attempting dependency changes.",
+        "Do not run npm audit fix --force without reviewing the dependency diff."
+      ]
     }
   ]
 }
