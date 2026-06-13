@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const uploadRoute = 'src/app/api/documents/upload/route.ts';
 const signatureHelper = 'src/server/security/file-signature.ts';
 const signatureTest = 'src/server/security/file-signature.test.ts';
+const contentScanHelper = 'src/server/security/malware-scan.ts';
 
 const requiredUploadTokens = [
   'assertTrustedOrigin',
@@ -35,6 +36,16 @@ const requiredSignatureTokens = [
   'xl/',
 ];
 
+const requiredContentScanTokens = [
+  'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
+  'MALWARE_SCANNER_PROVIDER',
+  'not_configured',
+  'unavailable',
+  'clean',
+  'scanUploadForMalware',
+  'shouldBlockUploadForMalwareScan',
+];
+
 const failures = [];
 
 function assertFile(path) {
@@ -58,10 +69,12 @@ console.log('-----------------------------------------');
 
 const uploadSource = assertFile(uploadRoute);
 const signatureSource = assertFile(signatureHelper);
+const contentScanSource = assertFile(contentScanHelper);
 assertFile(signatureTest);
 
 if (uploadSource) assertTokens(uploadSource, requiredUploadTokens, uploadRoute);
 if (signatureSource) assertTokens(signatureSource, requiredSignatureTokens, signatureHelper);
+if (contentScanSource) assertTokens(contentScanSource, requiredContentScanTokens, contentScanHelper);
 
 if (uploadSource.includes('contentType: file.type') && !uploadSource.includes('validateUploadFileSignature(file.type, buffer)')) {
   failures.push(`${uploadRoute} sets storage contentType from client MIME without prior file signature validation`);
@@ -69,6 +82,10 @@ if (uploadSource.includes('contentType: file.type') && !uploadSource.includes('v
 
 if (uploadSource.includes('supabase.storage') && uploadSource.indexOf('validateUploadFileSignature') > uploadSource.indexOf('supabase.storage')) {
   failures.push(`${uploadRoute} validates file signature after storage access; validation must happen before upload`);
+}
+
+if (contentScanSource && !contentScanSource.includes('required && result.status !==')) {
+  failures.push(`${contentScanHelper} must fail closed when scanning is required and the scan is not clean`);
 }
 
 if (failures.length > 0) {
