@@ -84,6 +84,7 @@ const requiredFiles = [
   'docs/security/SUPPLY_CHAIN.md',
   'docs/security/LOCKFILE_TRIAGE_RUNBOOK.md',
   'docs/security/UPLOAD_CONTENT_SCAN.md',
+  'docs/security/RLS_LIVE_VALIDATION_RUNBOOK.md',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
   'docs/LEGAL_READINESS.md',
