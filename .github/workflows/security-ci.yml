@@ -54,6 +54,15 @@ jobs:
           echo '```' >> npm-audit-summary.md
           cat npm-audit-summary.md >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Print final security readiness blockers
+        run: |
+          echo "## Final security readiness" > final-security-readiness.md
+          echo "" >> final-security-readiness.md
+          echo '```text' >> final-security-readiness.md
+          npm run security:final-readiness 2>&1 | tee -a final-security-readiness.md || true
+          echo '```' >> final-security-readiness.md
+          cat final-security-readiness.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload npm audit triage artifact
         uses: actions/upload-artifact@v4
         with:
@@ -61,6 +70,7 @@ jobs:
           path: |
             npm-audit.json
             npm-audit-summary.md
+            final-security-readiness.md
           retention-days: 7
           if-no-files-found: warn
 
