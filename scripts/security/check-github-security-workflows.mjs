@@ -4,17 +4,23 @@ const checks = [
   {
     path: '.github/workflows/codeql.yml',
     tokens: [
+      'permissions:',
+      'actions: read',
+      'contents: read',
+      'security-events: write',
       'github/codeql-action/init@v3',
       'github/codeql-action/analyze@v3',
       'security-extended',
       'security-and-quality',
-      'security-events: write',
       'javascript-typescript',
     ],
   },
   {
     path: '.github/workflows/dependency-review.yml',
     tokens: [
+      'permissions:',
+      'contents: read',
+      'pull-requests: read',
       'actions/dependency-review-action@v4',
       'fail-on-severity: high',
       'deny-licenses',
@@ -25,6 +31,8 @@ const checks = [
   {
     path: '.github/workflows/security-ci.yml',
     tokens: [
+      'permissions:',
+      'contents: read',
       'npm install --ignore-scripts',
       'npm run security:ci',
       'node scripts/security/check-step-up.mjs',
@@ -36,6 +44,11 @@ const checks = [
       'EVIDENCE_PACK_SIGNING_SECRET',
       'timeout-minutes: 25',
       'cancel-in-progress: true',
+      '$GITHUB_STEP_SUMMARY',
+      'actions/upload-artifact@v4',
+      'npm-audit-triage',
+      'retention-days: 7',
+      'if-no-files-found: warn',
     ],
   },
 ];
