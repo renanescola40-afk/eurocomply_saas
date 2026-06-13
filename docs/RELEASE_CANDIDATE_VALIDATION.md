@@ -10,6 +10,8 @@ It is not a final enterprise release until the checks below are completed and at
 
 Use `docs/RELEASE_EVIDENCE_CHECKLIST.md` as the canonical checklist for attaching release evidence, approvals, exceptions, and manual validation notes.
 
+Use `docs/RELEASE_GO_NO_GO_CHECKLIST.md` as the final decision checklist before marking a release as Go, Conditional Go, or No-Go.
+
 ## Required evidence before Release Candidate
 
 ### 1. Dependency lockfile
@@ -160,6 +162,8 @@ Release evidence must include:
 Every Release Candidate must include a completed evidence package based on:
 
 - `docs/RELEASE_EVIDENCE_CHECKLIST.md`
+- `docs/RELEASE_APPROVAL_RECORD.md`
+- `docs/RELEASE_GO_NO_GO_CHECKLIST.md`
 
 The evidence package must include:
 
@@ -174,6 +178,7 @@ The evidence package must include:
 - observability proof
 - external review proof when applicable
 - documented exceptions and approvals
+- final Go, Conditional Go, or No-Go decision
 
 ### 11. Preflight coverage
 
@@ -183,6 +188,7 @@ The preflight file should include at least:
 
 - `docs/RELEASE_CANDIDATE_VALIDATION.md`
 - `docs/RELEASE_EVIDENCE_CHECKLIST.md`
+- `docs/RELEASE_GO_NO_GO_CHECKLIST.md`
 - `scripts/security/check-release-candidate.mjs`
 - lockfile and supply-chain runbook coverage
 - RLS live validation runbook coverage
@@ -203,7 +209,7 @@ Before public enterprise procurement, attach evidence for:
 
 ## Release decision
 
-EuroComply may be called a Release Candidate only when all required evidence sections above are complete.
+EuroComply may be called a Release Candidate only when all required evidence sections above are complete and the Go/No-Go checklist has been completed.
 
 EuroComply may be called enterprise-ready only when:
 
@@ -217,6 +223,7 @@ EuroComply may be called enterprise-ready only when:
 - Stripe webhooks are validated
 - external security review is complete
 - release evidence package is attached and approved
+- the final decision in `docs/RELEASE_GO_NO_GO_CHECKLIST.md` is Go or explicitly approved Conditional Go
 
 ## Failure handling
 
