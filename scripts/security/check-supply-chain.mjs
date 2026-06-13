@@ -83,6 +83,7 @@ const npmrc = read(npmrcPath);
 const supplyChainDoc = read(supplyChainDocPath);
 const securityCi = read(securityCiWorkflowPath);
 const dependencyReview = read(dependencyReviewWorkflowPath);
+const hasPackageLock = existsSync('package-lock.json');
 
 console.log('EuroComply supply-chain policy check');
 console.log('------------------------------------');
@@ -149,14 +150,14 @@ if (npmrc) {
 }
 
 if (supplyChainDoc) {
-  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version', 'npm runtime drift', 'supply-chain:lockfile', 'supply-chain:floating-deps', 'security:zod-compat', 'security:final-readiness', 'security:final-readiness:report']) {
+  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version', 'npm runtime drift', 'supply-chain:lockfile', 'supply-chain:floating-deps', 'security:zod-compat', 'security:final-readiness', 'security:final-readiness:report', 'cache disabled until lockfile exists']) {
     if (!supplyChainDoc.includes(token)) {
       failures.push(`${supplyChainDocPath} missing required supply-chain evidence token: ${token}`);
     }
   }
 }
 
-if (!existsSync('package-lock.json')) {
+if (!hasPackageLock) {
   warnings.push('package-lock.json is missing; npm install --ignore-scripts is used temporarily. Commit a lockfile and switch CI back to npm ci --ignore-scripts for stronger reproducibility.');
 }
 
@@ -177,6 +178,14 @@ if (securityCi) {
 
   if (securityCi.includes('npm install') && !securityCi.includes('--ignore-scripts')) {
     failures.push(`${securityCiWorkflowPath} must use --ignore-scripts when npm install is used`);
+  }
+
+  if (!hasPackageLock && securityCi.includes('cache: npm')) {
+    failures.push(`${securityCiWorkflowPath} must not enable npm cache until package-lock.json exists`);
+  }
+
+  if (hasPackageLock && !securityCi.includes('npm ci --ignore-scripts')) {
+    warnings.push(`${securityCiWorkflowPath} should use npm ci --ignore-scripts once package-lock.json is committed.`);
   }
 }
 
