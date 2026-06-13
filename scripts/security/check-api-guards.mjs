@@ -54,7 +54,17 @@ const endpointRules = [
     name: 'audit chain verifier',
     match: /src\/app\/api\/audit\/chain\/verify\/route\.ts$/,
     requiredAny: [authGuard, organizationGuard, rbacGuard, planGuard, rateLimitGuard, noStoreGuard],
-    requiredAll: ['read_audit', 'listAuditEvents', 'verifyAuditChain', 'legacyEvents', 'chainedEventsChecked'],
+    requiredAll: [
+      'read_audit',
+      'assessStepUpToken',
+      'stepUpRequiredResponse',
+      'x-eurocomply-step-up-token',
+      'signed_hmac',
+      'listAuditEvents',
+      'verifyAuditChain',
+      'legacyEvents',
+      'chainedEventsChecked',
+    ],
   },
   {
     name: 'AI governance endpoint',
