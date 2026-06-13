@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-06-13T16:30:00+01:00",
+  "task": "Enable manual Security CI triage runs",
+  "changes": [
+    {
+      "file": ".github/workflows/security-ci.yml",
+      "summary": "Added workflow_dispatch so EuroComply Security CI can be run manually to generate npm-audit-triage artifacts without requiring a new push or Vercel deployment."
+    },
+    {
+      "file": "docs/ops/2026-06-13-final-security-execution-runbook.md",
+      "summary": "Documented how to manually run EuroComply Security CI and download the npm-audit-triage artifact after lockfile/dependency remediation."
+    }
+  ],
+  "status": "implemented",
+  "remaining_blockers": [
+    "Generate package-lock.json with npm@10.8.2",
+    "Generate and review npm-audit.json",
+    "Resolve reported vulnerabilities with targeted dependency updates",
+    "Replace floating specs with audited exact versions",
+    "Vercel remains blocked by build-rate-limit until plan/quota allows deployment"
+  ]
+}
