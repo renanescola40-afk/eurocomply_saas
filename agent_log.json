@@ -119,6 +119,25 @@
         "Promote route quality scan into security:ci after false positives are resolved.",
         "Continue billing add-on webhook sync with Codex in local environment."
       ]
+    },
+    {
+      "timestamp": "2026-06-13T10:29:00Z",
+      "cycle": "manual_quality_gate",
+      "status": "partially_hardened",
+      "findings": [
+        "The route quality scanner existed but was not part of the main security CI chain, so Codex/CI could miss broken internal links during hardening runs."
+      ],
+      "actions_taken": [
+        "Promoted the route quality scanner into security:ci immediately after preflight, before deeper security checks, typecheck and tests."
+      ],
+      "commits": [
+        "b80f56fba47f29ebc653b7bb9f4c99f46922f504"
+      ],
+      "next_cycle_focus": [
+        "Run npm run security:ci locally or in CI to validate the new quality gate.",
+        "Fix any route scanner warnings surfaced by the stricter pipeline.",
+        "Continue billing add-on webhook sync with Codex in local environment."
+      ]
     }
   ]
 }
