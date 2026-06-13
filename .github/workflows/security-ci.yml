@@ -44,6 +44,11 @@ jobs:
       - name: Install dependencies without lifecycle scripts
         run: npm install --ignore-scripts
 
+      - name: Print npm audit triage summary
+        run: |
+          npm run security:npm-audit:json > npm-audit.json || true
+          npm run security:npm-audit:summary || true
+
       - name: Run EuroComply security CI
         run: npm run security:ci
 
