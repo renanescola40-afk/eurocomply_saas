@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-06-13T15:35:00+01:00",
+  "phase": "security-ci-hardening",
+  "status": "implemented",
+  "summary": "Hardened the GitHub security workflow regression gate so it now protects minimal workflow permissions plus npm audit Summary/artifact evidence tokens.",
+  "changes": [
+    {
+      "path": "scripts/security/check-github-security-workflows.mjs",
+      "type": "update",
+      "details": [
+        "Requires CodeQL workflow to keep explicit permissions for actions:read, contents:read and security-events:write.",
+        "Requires Dependency Review workflow to keep contents:read and pull-requests:read permissions.",
+        "Requires Security CI to keep contents:read permission, GitHub Step Summary output, npm-audit-triage artifact upload, seven-day retention and if-no-files-found warning behavior."
+      ]
+    }
+  ],
+  "commits": [
+    "dcd403e164ad2efafe848b13b30d48ad04b56c67"
+  ],
+  "notes": [
+    "This does not require npm registry access or a new package-lock.json.",
+    "Vercel remains blocked by build-rate-limit rather than a verified code failure."
+  ],
+  "next_steps": [
+    "Run GitHub Actions to produce npm-audit-triage artifact.",
+    "Generate package-lock.json with npm run supply-chain:lockfile once npm@10.8.2 is available.",
+    "Use npm audit and floating dependency outputs to pin vulnerable/floating packages."
+  ]
+}
