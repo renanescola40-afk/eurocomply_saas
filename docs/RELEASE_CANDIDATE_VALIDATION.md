@@ -12,6 +12,8 @@ Use `docs/RELEASE_EVIDENCE_CHECKLIST.md` as the canonical checklist for attachin
 
 Use `docs/RELEASE_GO_NO_GO_CHECKLIST.md` as the final decision checklist before marking a release as Go, Conditional Go, or No-Go.
 
+Use `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md` as the required customer communication plan for release-impacting incidents, degraded service, rollback notices, security/privacy statements, and post-incident customer summaries.
+
 ## Required evidence before Release Candidate
 
 ### 1. Dependency lockfile
@@ -164,6 +166,7 @@ Every Release Candidate must include a completed evidence package based on:
 - `docs/RELEASE_EVIDENCE_CHECKLIST.md`
 - `docs/RELEASE_APPROVAL_RECORD.md`
 - `docs/RELEASE_GO_NO_GO_CHECKLIST.md`
+- `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md`
 
 The evidence package must include:
 
@@ -176,11 +179,30 @@ The evidence package must include:
 - upload scanning proof
 - Stripe billing proof
 - observability proof
+- customer communication owner and customer notice decision
+- status page decision and evidence, when applicable
 - external review proof when applicable
 - documented exceptions and approvals
 - final Go, Conditional Go, or No-Go decision
 
-### 11. Preflight coverage
+### 11. Customer communication readiness
+
+A production or enterprise Release Candidate must define the customer communication path before promotion.
+
+Release evidence must include:
+
+- assigned customer communication owner
+- incident commander communication trigger decision
+- status page owner or explicit status page exception
+- support owner and customer support readiness confirmation
+- security/compliance review owner for security, privacy, audit-chain, RLS, authorization, billing, or data integrity messaging
+- SEV-1 and SEV-2 communication timing targets
+- customer notice evidence for customer-impacting incidents
+- post-incident customer summary decision for material incidents
+
+The canonical plan is `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md`.
+
+### 12. Preflight coverage
 
 Release Candidate evidence must prove that preflight protects both operational controls and release governance artifacts.
 
@@ -189,6 +211,7 @@ The preflight file should include at least:
 - `docs/RELEASE_CANDIDATE_VALIDATION.md`
 - `docs/RELEASE_EVIDENCE_CHECKLIST.md`
 - `docs/RELEASE_GO_NO_GO_CHECKLIST.md`
+- `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md`
 - `scripts/security/check-release-candidate.mjs`
 - lockfile and supply-chain runbook coverage
 - RLS live validation runbook coverage
@@ -198,7 +221,7 @@ The preflight file should include at least:
 
 If preflight cannot be updated because of platform restrictions, the release owner must attach a manual evidence note explaining the restriction and confirming that `npm run security:release-candidate` was run successfully.
 
-### 12. External review
+### 13. External review
 
 Before public enterprise procurement, attach evidence for:
 
@@ -206,6 +229,7 @@ Before public enterprise procurement, attach evidence for:
 - basic penetration test or external security review
 - privacy/data-retention review
 - incident response owner and escalation path
+- customer communication owner and escalation path
 
 ## Release decision
 
@@ -221,6 +245,7 @@ EuroComply may be called enterprise-ready only when:
 - step-up uses a real MFA/IdP provider
 - upload scanning uses a real provider in fail-closed mode
 - Stripe webhooks are validated
+- customer communication plan is assigned and ready
 - external security review is complete
 - release evidence package is attached and approved
 - the final decision in `docs/RELEASE_GO_NO_GO_CHECKLIST.md` is Go or explicitly approved Conditional Go
