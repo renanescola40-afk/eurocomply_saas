@@ -71,6 +71,16 @@ if (pkg) {
     }
   }
 
+  for (const scriptName of [
+    'security:npm-audit:prod',
+    'security:npm-audit:json',
+    'security:npm-audit:summary',
+  ]) {
+    if (!scripts[scriptName]) {
+      failures.push(`${packageJsonPath} missing required npm audit script: ${scriptName}`);
+    }
+  }
+
   warnOnFloatingDependencySpecs('dependencies', pkg.dependencies ?? {});
   warnOnFloatingDependencySpecs('devDependencies', pkg.devDependencies ?? {});
 }
