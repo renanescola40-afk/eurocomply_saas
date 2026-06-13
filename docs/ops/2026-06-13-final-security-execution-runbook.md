@@ -36,6 +36,20 @@ Expected intermediate state before fixes:
 - `final-security-readiness.json` should exist locally but stay uncommitted unless a future policy explicitly allows it.
 - `security:final-readiness` may still fail until vulnerabilities and floating specs are resolved.
 
+## GitHub Actions manual triage run
+
+The Security CI workflow supports `workflow_dispatch`, so the final audit/readiness artifact can be generated on demand without waiting for a new push or Vercel deployment.
+
+Use this after committing dependency and lockfile remediation:
+
+1. Open **Actions** in GitHub.
+2. Select **EuroComply Security CI**.
+3. Choose **Run workflow** on `main`.
+4. Download the `npm-audit-triage` artifact from the completed run.
+5. Review `npm-audit-summary.md`, `final-security-readiness.md`, and `final-security-readiness.json`.
+
+This is especially useful while Vercel is blocked by `upgradeToPro=build-rate-limit`.
+
 ## Targeted remediation sequence
 
 1. Review `npm-audit.json` and `npm run security:npm-audit:summary` output.
