@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getBillingPlan, getStripePriceId, type BillingPlanId } from '@/lib/billing/plans';
+import { getBillingPlan, getStripePriceId } from '@/lib/billing/plans';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
@@ -12,9 +12,14 @@ type CheckoutIntentRequest = {
   planId?: string;
 };
 
-const BILLING_TO_ENTITLEMENT_PLAN: Record<BillingPlanId, SubscriptionPlan> = {
+type BillingPlanAliasId = SubscriptionPlan | 'starter' | 'growth' | 'pro';
+
+const BILLING_TO_ENTITLEMENT_PLAN: Record<BillingPlanAliasId, SubscriptionPlan> = {
+  essential: 'essential',
   starter: 'essential',
+  professional: 'professional',
   growth: 'professional',
+  pro: 'professional',
   business: 'business',
   enterprise: 'enterprise',
 };
