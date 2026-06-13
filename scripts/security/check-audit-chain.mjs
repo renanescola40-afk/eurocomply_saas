@@ -4,6 +4,8 @@ const helperPath = 'src/server/security/audit-chain.ts';
 const testPath = 'src/server/security/audit-chain.test.ts';
 const auditEventsPath = 'src/server/queries/audit-events.ts';
 const migrationPath = 'supabase/migrations/20260612_audit_event_hash_chain.sql';
+const chainedRpcMigrationPath = 'supabase/migrations/20260613_audit_event_chained_rpc.sql';
+const concurrencyRunbookPath = 'docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md';
 const verifierRoutePath = 'src/app/api/audit/chain/verify/route.ts';
 const preflightPath = 'scripts/preflight.mjs';
 
@@ -60,6 +62,30 @@ const migrationRequiredTokens = [
   'audit_events_previous_hash_idx',
 ];
 
+const chainedRpcMigrationRequiredTokens = [
+  'append_audit_event_chained',
+  'pg_advisory_xact_lock',
+  'hashtext(p_organization_id::text)',
+  'previous_hash',
+  'event_hash',
+  'hash_algorithm',
+  'hash_signature',
+  'order by created_at desc',
+  'limit 1',
+  'security definer',
+];
+
+const concurrencyRunbookRequiredTokens = [
+  'Audit Chain Concurrency Runbook',
+  'pg_advisory_xact_lock',
+  'append_audit_event_chained',
+  'same organization',
+  'previous_hash',
+  'event_hash',
+  'concurrent writes',
+  'Enterprise Release Rule',
+];
+
 const verifierRequiredTokens = [
   'getCurrentUser',
   'getCurrentOrganizationForUser',
@@ -101,6 +127,8 @@ const helper = read(helperPath);
 const test = read(testPath);
 const auditEvents = read(auditEventsPath);
 const migration = read(migrationPath);
+const chainedRpcMigration = read(chainedRpcMigrationPath);
+const concurrencyRunbook = read(concurrencyRunbookPath);
 const verifierRoute = read(verifierRoutePath);
 const preflight = read(preflightPath);
 
@@ -108,6 +136,8 @@ if (helper) requireTokens(helperPath, helper, helperRequiredTokens);
 if (test) requireTokens(testPath, test, testRequiredTokens);
 if (auditEvents) requireTokens(auditEventsPath, auditEvents, auditEventsRequiredTokens);
 if (migration) requireTokens(migrationPath, migration, migrationRequiredTokens);
+if (chainedRpcMigration) requireTokens(chainedRpcMigrationPath, chainedRpcMigration, chainedRpcMigrationRequiredTokens);
+if (concurrencyRunbook) requireTokens(concurrencyRunbookPath, concurrencyRunbook, concurrencyRunbookRequiredTokens);
 if (verifierRoute) requireTokens(verifierRoutePath, verifierRoute, verifierRequiredTokens);
 
 if (preflight && !preflight.includes('AUDIT_CHAIN_SIGNING_SECRET')) {
@@ -116,6 +146,14 @@ if (preflight && !preflight.includes('AUDIT_CHAIN_SIGNING_SECRET')) {
 
 if (preflight && !preflight.includes(migrationPath)) {
   failures.push(`${preflightPath} must require the audit chain migration`);
+}
+
+if (preflight && !preflight.includes(chainedRpcMigrationPath)) {
+  failures.push(`${preflightPath} must require the transactional audit chain RPC migration`);
+}
+
+if (preflight && !preflight.includes(concurrencyRunbookPath)) {
+  failures.push(`${preflightPath} must require the audit chain concurrency runbook`);
 }
 
 if (helper && !helper.includes('.sort(([left], [right]) => left.localeCompare(right))')) {
