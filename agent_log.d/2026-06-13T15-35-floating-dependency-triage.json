@@ -1,0 +1,39 @@
+{
+  "timestamp": "2026-06-13T15:35:00Z",
+  "status": "implemented",
+  "area": "supply-chain",
+  "summary": "Added a dedicated floating dependency triage command so existing latest/open-ended specs can be listed independently of the broader supply-chain gate.",
+  "changes": [
+    {
+      "path": "scripts/security/list-floating-dependencies.mjs",
+      "action": "created",
+      "details": "Reads package.json and prints dependencies/devDependencies with highly floating specs plus recommended next steps."
+    },
+    {
+      "path": "package.json",
+      "action": "updated",
+      "details": "Added npm run supply-chain:floating-deps."
+    },
+    {
+      "path": "scripts/security/check-supply-chain.mjs",
+      "action": "updated",
+      "details": "Requires supply-chain:floating-deps to remain present and wired to scripts/security/list-floating-dependencies.mjs."
+    },
+    {
+      "path": "docs/security/SUPPLY_CHAIN.md",
+      "action": "updated",
+      "details": "Documented the floating dependency triage command and added it to the dependency-change checklist."
+    }
+  ],
+  "commits": [
+    "4ae8973444bd3c1f8609f8b46a2c345535f91460",
+    "2c09b3aec1651bac1d5d3c1346a1995fc258d2a6",
+    "5da74256ae01b848a4ba0bbcffa2adf8d8fa9a85",
+    "6b01ca067d5b36455a902d1841ab8fc5350bde28"
+  ],
+  "remaining": [
+    "Run npm run supply-chain:lockfile with npm@10.8.2 and commit package-lock.json after review.",
+    "Use npm-audit-triage artifact to update vulnerable packages precisely.",
+    "Replace floating dependency specs with exact audited lockfile-resolved versions."
+  ]
+}
