@@ -12,6 +12,7 @@ const auditGuard = ['createAuditEvent'];
 const integrityGuard = ['buildEvidencePackIntegrity'];
 const noStoreGuard = ['noStoreJson', 'noStoreDownload', 'Cache-Control'];
 const originGuard = ['assertTrustedOrigin', 'verifyTrustedOrigin'];
+const stepUpGuard = ['requireStepUpForRequest'];
 
 const endpointRules = [
   {
@@ -35,14 +36,14 @@ const endpointRules = [
   {
     name: 'enterprise export endpoint',
     match: /src\/app\/api\/(audit\/evidence-pack|security-questionnaire|vendor-assurance|enterprise-readiness|retention-center|continuity-center)\/export?\/route\.ts$|src\/app\/api\/(security-questionnaire|vendor-assurance|enterprise-readiness|retention-center|continuity-center)\/export\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, planGuard, rateLimitGuard, auditGuard, integrityGuard, noStoreGuard],
-    requiredAll: ['export_data'],
+    requiredAny: [authGuard, organizationGuard, rbacGuard, planGuard, rateLimitGuard, auditGuard, integrityGuard, stepUpGuard, noStoreGuard],
+    requiredAll: ['export_data', 'signed_hmac'],
   },
   {
     name: 'audit evidence pack export',
     match: /src\/app\/api\/audit\/evidence-pack\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, planGuard, rateLimitGuard, auditGuard, integrityGuard, noStoreGuard],
-    requiredAll: ['export_data'],
+    requiredAny: [authGuard, organizationGuard, rbacGuard, planGuard, rateLimitGuard, auditGuard, integrityGuard, stepUpGuard, noStoreGuard],
+    requiredAll: ['export_data', 'requireStepUpForRequest', 'signed_hmac', 'stepUpVerifiedAt'],
   },
   {
     name: 'evidence pack verifier',
