@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-06-13T15:45:00+01:00",
+  "area": "supply-chain/dependabot",
+  "status": "completed",
+  "summary": "Hardened Dependabot policy and added regression coverage through the GitHub security workflow gate.",
+  "changes": [
+    {
+      "path": ".github/dependabot.yml",
+      "details": [
+        "Added scoped commit-message prefixes for npm and GitHub Actions updates.",
+        "Added explicit GitHub Actions open PR limit.",
+        "Preserved conservative npm update limits and semver-major ignores for critical packages."
+      ]
+    },
+    {
+      "path": "scripts/security/check-github-security-workflows.mjs",
+      "details": [
+        "Added Dependabot policy tokens to the workflow/security regression gate.",
+        "The gate now checks npm and GitHub Actions ecosystems, weekly schedule, PR limits, commit prefixes and semver-major ignore policy."
+      ]
+    },
+    {
+      "path": "docs/ops/2026-06-13-dependabot-policy-hardening.md",
+      "details": [
+        "Documented Dependabot policy, rationale and next validation steps."
+      ]
+    }
+  ],
+  "commits": [
+    "5440a014540acf173be2b082cc2219562608a215",
+    "c72245d3ec9751710237d813ced772660d8c6cab",
+    "499dbadf7254a4b045c00a2a4687584286dc5647"
+  ],
+  "remaining_blockers": [
+    "Generate package-lock.json with npm@10.8.2.",
+    "Read npm-audit-triage artifact from GitHub Actions.",
+    "Pin floating dependencies to exact audited versions.",
+    "Fix npm audit findings with targeted updates."
+  ]
+}
