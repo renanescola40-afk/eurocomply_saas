@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-06-13T15:15:00Z",
+  "scope": "security-ci/npm-audit-triage",
+  "action": "implemented",
+  "finding": "The npm audit triage step was visible in logs only, which made vulnerability review harder for GitHub Actions reviewers.",
+  "changes": [
+    "Updated .github/workflows/security-ci.yml to write the non-blocking npm audit summary to $GITHUB_STEP_SUMMARY.",
+    "Updated docs/ops/2026-06-13-npm-audit-triage.md to document where reviewers should inspect the generated summary."
+  ],
+  "commits": [
+    "63952e99cae97c97eb6bdcb6a7923348bc6009bd",
+    "92a46d18033d02df1e265ff9038108930b15c166"
+  ],
+  "status": "implemented_pending_ci",
+  "next_steps": [
+    "Inspect the next EuroComply Security CI job summary for concrete npm audit package names.",
+    "Apply targeted dependency updates only after the audit summary identifies the affected package chain.",
+    "Promote npm audit to a blocking gate only after production audit is clean or an explicit exception is accepted."
+  ]
+}
