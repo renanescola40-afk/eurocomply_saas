@@ -221,6 +221,25 @@
         "Create the live Enterprise price in the payment provider dashboard and configure the matching production environment key.",
         "Have Codex connect the existing billing webhook to organization add-on persistence in a local environment."
       ]
+    },
+    {
+      "timestamp": "2026-06-13T12:00:00Z",
+      "cycle": "manual_billing_alignment",
+      "status": "patch_prepared_not_applied",
+      "findings": [
+        "Billing plan IDs drifted between public catalog/signup/add-ons and backend entitlements/checkout: public catalog used starter/growth while backend canonical plans are essential/professional/business/enterprise.",
+        "The public billing catalog used Stripe environment keys that do not match .env.example and the server checkout plan mapping.",
+        "A direct corrective patch to billing/Stripe-adjacent code was blocked by connector safety controls, so the patch was prepared for manual Codex/local application instead of being forced through GitHub API."
+      ],
+      "actions_taken": [
+        "Prepared a safe alignment patch: canonicalize public plan IDs to essential/professional/business/enterprise, keep starter/growth aliases for old links, align Stripe env key names, and prevent Enterprise from being treated as self-serve checkout until explicitly enabled.",
+        "Recorded the blocked application attempt and next manual application steps."
+      ],
+      "next_cycle_focus": [
+        "Apply the prepared billing plan alignment patch locally with Codex or a human review because it touches checkout and Stripe-adjacent code.",
+        "After applying, run npm run typecheck and npm run security:ci.",
+        "Verify /pricing, /signup?plan=professional, /signup?plan=growth legacy alias, and /dashboard/organizations/add-ons?plan=enterprise do not unlock entitlements without checkout/webhook confirmation."
+      ]
     }
   ]
 }
