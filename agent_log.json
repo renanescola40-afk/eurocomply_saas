@@ -138,6 +138,25 @@
         "Fix any route scanner warnings surfaced by the stricter pipeline.",
         "Continue billing add-on webhook sync with Codex in local environment."
       ]
+    },
+    {
+      "timestamp": "2026-06-13T10:42:00Z",
+      "cycle": "manual_billing_alignment",
+      "status": "partially_hardened",
+      "findings": [
+        "Enterprise was supported in some entitlement surfaces but missing from the central billing plan catalog."
+      ],
+      "actions_taken": [
+        "Added Enterprise to the billing plan catalog with explicit monthly price, limits, feature list and price mapping key."
+      ],
+      "commits": [
+        "3baae8d0fa9a92ff78079c7586ce859963eee5bf"
+      ],
+      "next_cycle_focus": [
+        "Create the matching live price in the payment provider dashboard and configure the corresponding production environment key.",
+        "Have Codex connect the existing billing webhook to organization add-on persistence in a local environment.",
+        "Verify pricing UI and checkout route include Enterprise without unlocking it through demo query params."
+      ]
     }
   ]
 }
