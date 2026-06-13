@@ -2,8 +2,15 @@
 node_modules
 .DS_Store
 .claude
+.vercel
 
 # local env files
 .env*
 !.env.example
 .env
+
+# local reports and generated diagnostics
+coverage
+playwright-report
+test-results
+npm-audit*.json
