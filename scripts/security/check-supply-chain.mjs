@@ -106,6 +106,7 @@ if (pkg) {
     'security:npm-audit:json',
     'security:npm-audit:summary',
     'supply-chain:lockfile',
+    'supply-chain:floating-deps',
   ]) {
     if (!scripts[scriptName]) {
       failures.push(`${packageJsonPath} missing required supply-chain script: ${scriptName}`);
@@ -114,6 +115,10 @@ if (pkg) {
 
   if (scripts['supply-chain:lockfile'] && !scripts['supply-chain:lockfile'].includes('--package-lock-only --ignore-scripts')) {
     failures.push(`${packageJsonPath} supply-chain:lockfile must generate only the lockfile and ignore lifecycle scripts`);
+  }
+
+  if (scripts['supply-chain:floating-deps'] && !scripts['supply-chain:floating-deps'].includes('scripts/security/list-floating-dependencies.mjs')) {
+    failures.push(`${packageJsonPath} supply-chain:floating-deps must use scripts/security/list-floating-dependencies.mjs`);
   }
 
   warnOnFloatingDependencySpecs('dependencies', pkg.dependencies ?? {});
@@ -129,7 +134,7 @@ if (npmrc) {
 }
 
 if (supplyChainDoc) {
-  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version', 'npm runtime drift', 'supply-chain:lockfile']) {
+  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version', 'npm runtime drift', 'supply-chain:lockfile', 'supply-chain:floating-deps']) {
     if (!supplyChainDoc.includes(token)) {
       failures.push(`${supplyChainDocPath} missing required supply-chain evidence token: ${token}`);
     }
