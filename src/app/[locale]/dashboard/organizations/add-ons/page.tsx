@@ -7,6 +7,7 @@ import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { listActiveOrganizationAddOns } from '@/server/billing/addons';
 import { ADD_ON_CATALOG, CREDIT_PACKS, getAddOnStatus, getPlanDisplayName } from '@/lib/billing/addons';
+import { getBillingPlan } from '@/lib/billing/plans';
 import type { AddOnId } from '@/lib/billing/addons';
 
 const enterpriseDemoModules = [
@@ -28,7 +29,7 @@ const enterpriseDemoEnabled = process.env.NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO ===
 
 type PageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ demo?: string }>;
+  searchParams?: Promise<{ demo?: string; plan?: string }>;
 };
 
 export default async function AddOnsAndCreditsPage({ params, searchParams }: PageProps) {
@@ -36,6 +37,7 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
   const query = searchParams ? await searchParams : {};
   const requestedEnterpriseDemo = query.demo === 'enterprise' || query.demo === 'premium';
   const isEnterpriseDemo = enterpriseDemoEnabled && requestedEnterpriseDemo;
+  const selectedPlan = query.plan ? getBillingPlan(query.plan) : undefined;
   const user = await getCurrentUser();
 
   if (!user) {
@@ -53,6 +55,7 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
   const currentPlan = isEnterpriseDemo ? ('enterprise' as const) : entitlements.plan;
   const isPremium = currentPlan === 'enterprise';
   const activeAddOnCount = activeAddOnIds.length;
+  const selectedPlanDiffers = selectedPlan && selectedPlan.id !== currentPlan;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
@@ -60,6 +63,38 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
         {requestedEnterpriseDemo && !enterpriseDemoEnabled ? (
           <section className="rounded-[1.5rem] border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-100">
             Enterprise demo is disabled in this environment. Set NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO=true only for controlled sales/demo deployments.
+          </section>
+        ) : null}
+
+        {query.plan && !selectedPlan ? (
+          <section className="rounded-[1.5rem] border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-100">
+            Plano solicitado inválido. A página está mostrando o estado real da organização.
+          </section>
+        ) : null}
+
+        {selectedPlanDiffers ? (
+          <section className="rounded-[1.75rem] border border-primary/25 bg-primary/10 p-5 shadow-sm md:p-6">
+            <Badge variant="outline" className="rounded-full bg-background/80">Plano selecionado para revisão</Badge>
+            <div className="mt-3 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight">{selectedPlan.name} ainda não está ativo nesta organização.</h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                  Esta é uma intenção de compra/revisão enviada pelo pricing ou onboarding. Ela não desbloqueia permissões, add-ons ou demo. Para ativar, o checkout real e o webhook de cobrança precisam confirmar a assinatura.
+                </p>
+              </div>
+              <div className="rounded-2xl border bg-background/80 p-4 text-right">
+                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Preço do plano</p>
+                <p className="mt-1 text-3xl font-semibold">€{selectedPlan.priceMonthly}<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href={`/${locale}/pricing`} className="inline-flex h-10 items-center justify-center rounded-full border bg-background px-4 text-sm font-semibold transition hover:bg-muted">
+                Voltar ao pricing
+              </Link>
+              <Link href={`/${locale}/dashboard/organizations?plan=${selectedPlan.id}`} className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90">
+                Continuar revisão do plano
+              </Link>
+            </div>
           </section>
         ) : null}
 
