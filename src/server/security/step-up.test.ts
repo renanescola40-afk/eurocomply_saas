@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { assessStepUp, assessStepUpToken, createStepUpToken, HIGH_RISK_ACTIONS, stepUpRequiredResponse } from './step-up';
+import {
+  assessStepUp,
+  assessStepUpToken,
+  createStepUpToken,
+  HIGH_RISK_ACTIONS,
+  requireStepUpForRequest,
+  STEP_UP_TOKEN_HEADER,
+  stepUpRequiredResponse,
+} from './step-up';
 
 const secret = 'test-step-up-secret';
 const tokenInput = {
@@ -44,6 +52,46 @@ describe('step-up authentication helper', () => {
     expect(token).toContain('.');
     expect(assessment).toMatchObject({ ok: true, action: 'audit_chain_verify' });
     expect(assessment.expiresAt).toBe('2026-06-12T10:10:00.000Z');
+  });
+
+  it('accepts signed tokens through the reusable request helper', () => {
+    const token = createStepUpToken(tokenInput);
+    const request = new Request('https://eurocomply.example/api/audit/chain/verify', {
+      headers: {
+        [STEP_UP_TOKEN_HEADER]: token,
+      },
+    });
+
+    const result = requireStepUpForRequest({
+      request,
+      action: 'audit_chain_verify',
+      userId: 'user_123',
+      organizationId: 'org_123',
+      now: '2026-06-12T10:05:00.000Z',
+      secret,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.assessment.expiresAt).toBe('2026-06-12T10:10:00.000Z');
+    }
+  });
+
+  it('rejects missing request helper tokens with no-store response', () => {
+    const result = requireStepUpForRequest({
+      request: new Request('https://eurocomply.example/api/audit/chain/verify'),
+      action: 'audit_chain_verify',
+      userId: 'user_123',
+      organizationId: 'org_123',
+      secret,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.assessment.reason).toBe('missing_verification');
+      expect(result.response.status).toBe(403);
+      expect(result.response.headers.get('Cache-Control')).toContain('no-store');
+    }
   });
 
   it('rejects a tampered signed step-up token', () => {
