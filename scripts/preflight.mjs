@@ -77,6 +77,7 @@ const requiredFiles = [
   'docs/security/ASVS_MATRIX.md',
   'docs/security/EXPORTS_AND_INTEGRITY.md',
   'docs/security/AUDIT_CHAIN.md',
+  'docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md',
   'docs/security/STEP_UP_AUTH.md',
   'docs/security/STEP_UP_ROLLOUT_MATRIX.md',
   'docs/security/BILLING_STEP_UP.md',
