@@ -1,13 +1,14 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { locales, type Locale } from '@/lib/i18n/routing';
+import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
 
 const signupCopy: Record<string, {
   title: string;
@@ -23,6 +24,8 @@ const signupCopy: Record<string, {
   successTitle: string;
   successSubtitle: string;
   errorTitle: string;
+  selectedPlan: string;
+  planHelp: string;
 }> = {
   en: {
     title: 'Create your EuroComply workspace',
@@ -38,6 +41,8 @@ const signupCopy: Record<string, {
     successTitle: 'Account created',
     successSubtitle: 'Check your email to confirm your account, then sign in to continue.',
     errorTitle: 'Could not create account',
+    selectedPlan: 'Selected plan',
+    planHelp: 'This plan is stored with your signup so checkout/onboarding can continue with the right package.',
   },
   pt: {
     title: 'Crie o seu workspace EuroComply',
@@ -53,6 +58,8 @@ const signupCopy: Record<string, {
     successTitle: 'Conta criada',
     successSubtitle: 'Verifique o seu email para confirmar a conta e depois faça login.',
     errorTitle: 'Não foi possível criar a conta',
+    selectedPlan: 'Plano selecionado',
+    planHelp: 'Este plano fica guardado no registo para o checkout/onboarding continuar com o pacote certo.',
   },
   es: {
     title: 'Crea tu workspace EuroComply',
@@ -68,6 +75,8 @@ const signupCopy: Record<string, {
     successTitle: 'Cuenta creada',
     successSubtitle: 'Revisa tu email para confirmar la cuenta y luego inicia sesión.',
     errorTitle: 'No se pudo crear la cuenta',
+    selectedPlan: 'Plan seleccionado',
+    planHelp: 'Este plan se guarda con el registro para continuar el checkout/onboarding correcto.',
   },
   fr: {
     title: 'Créez votre espace EuroComply',
@@ -83,6 +92,8 @@ const signupCopy: Record<string, {
     successTitle: 'Compte créé',
     successSubtitle: 'Vérifiez votre email pour confirmer le compte, puis connectez-vous.',
     errorTitle: 'Impossible de créer le compte',
+    selectedPlan: 'Forfait sélectionné',
+    planHelp: 'Ce forfait est conservé avec l’inscription pour poursuivre le bon checkout/onboarding.',
   },
   it: {
     title: 'Crea il tuo workspace EuroComply',
@@ -98,6 +109,8 @@ const signupCopy: Record<string, {
     successTitle: 'Account creato',
     successSubtitle: 'Controlla la tua email per confermare l’account, poi accedi.',
     errorTitle: 'Impossibile creare account',
+    selectedPlan: 'Piano selezionato',
+    planHelp: 'Questo piano viene salvato con la registrazione per continuare il checkout/onboarding corretto.',
   },
   de: {
     title: 'EuroComply Workspace erstellen',
@@ -113,20 +126,31 @@ const signupCopy: Record<string, {
     successTitle: 'Konto erstellt',
     successSubtitle: 'Bestätigen Sie Ihr Konto per E-Mail und melden Sie sich anschließend an.',
     errorTitle: 'Konto konnte nicht erstellt werden',
+    selectedPlan: 'Ausgewählter Plan',
+    planHelp: 'Dieser Plan wird bei der Registrierung gespeichert, damit Checkout/Onboarding korrekt fortgesetzt werden kann.',
   },
 };
 
-function getDashboardHref(locale: string) {
-  return `/${locale}/dashboard/organizations`;
+function getDashboardHref(locale: string, planId?: string) {
+  const baseHref = `/${locale}/dashboard/organizations`;
+  return planId ? `${baseHref}?plan=${encodeURIComponent(planId)}` : baseHref;
+}
+
+function normalizePlanId(planId: string | null) {
+  return getBillingPlan(planId ?? '')?.id ?? 'growth';
 }
 
 export default function SignupPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const locale = (params.locale as string) || 'pt';
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const copy = signupCopy[activeLocale] ?? signupCopy.en;
-  const googleSignupHref = `/auth/google?locale=${encodeURIComponent(activeLocale)}&next=${encodeURIComponent(getDashboardHref(activeLocale))}`;
+  const selectedPlanId = normalizePlanId(searchParams.get('plan'));
+  const selectedPlan = useMemo(() => getBillingPlan(selectedPlanId) ?? BILLING_PLANS[1], [selectedPlanId]);
+  const dashboardHref = getDashboardHref(activeLocale, selectedPlan.id);
+  const googleSignupHref = `/auth/google?locale=${encodeURIComponent(activeLocale)}&next=${encodeURIComponent(dashboardHref)}`;
   const { user, signUpWithEmail, loading: authLoading } = useAuth();
   const [name, setName] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -140,9 +164,9 @@ export default function SignupPage() {
     if (authLoading) return;
 
     if (user) {
-      router.replace(getDashboardHref(activeLocale));
+      router.replace(dashboardHref);
     }
-  }, [authLoading, activeLocale, router, user]);
+  }, [authLoading, activeLocale, dashboardHref, router, user]);
 
   async function handleEmailSignup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -153,6 +177,7 @@ export default function SignupPage() {
     const result = await signUpWithEmail(email, password, {
       name,
       company_name: companyName,
+      requested_plan: selectedPlan.id,
     });
 
     if (result.error) {
@@ -182,6 +207,15 @@ export default function SignupPage() {
             <p className="text-xs uppercase tracking-[0.28em] text-white/36">EuroComply</p>
             <h1 className="mt-2 text-2xl font-semibold">{copy.title}</h1>
             <p className="mt-2 text-sm text-white/50">{copy.subtitle}</p>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-blue-300/20 bg-blue-400/10 p-4 text-sm text-blue-100">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-200/80">{copy.selectedPlan}</p>
+            <div className="mt-2 flex items-baseline justify-between gap-3">
+              <p className="text-lg font-semibold">{selectedPlan.name}</p>
+              <p className="font-bold">€{selectedPlan.priceMonthly}/mo</p>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-blue-100/70">{copy.planHelp}</p>
           </div>
 
           {error && (
