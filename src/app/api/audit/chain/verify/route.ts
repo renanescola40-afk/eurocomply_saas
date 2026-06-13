@@ -7,11 +7,9 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 import { checkDistributedRateLimit } from '@/server/security/rate-limit';
 import { verifyAuditChain, type AuditChainRecord } from '@/server/security/audit-chain';
 import { noStoreJson } from '@/server/security/no-store';
-import { assessStepUpToken, stepUpRequiredResponse } from '@/server/security/step-up';
+import { requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
-
-const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -48,15 +46,15 @@ export async function GET(request: Request) {
     }, plan.status);
   }
 
-  const stepUp = assessStepUpToken({
+  const stepUp = requireStepUpForRequest({
+    request,
     action: 'audit_chain_verify',
     userId: user.id,
     organizationId: organization.id,
-    token: request.headers.get(STEP_UP_TOKEN_HEADER),
   });
 
   if (!stepUp.ok) {
-    return stepUpRequiredResponse(stepUp);
+    return stepUp.response;
   }
 
   const rateLimit = await checkDistributedRateLimit({
@@ -109,9 +107,9 @@ export async function GET(request: Request) {
     actorRole: permission.role,
     plan: plan.entitlements.plan,
     stepUp: {
-      action: stepUp.action,
-      verifiedAt: stepUp.verifiedAt,
-      expiresAt: stepUp.expiresAt,
+      action: stepUp.assessment.action,
+      verifiedAt: stepUp.assessment.verifiedAt,
+      expiresAt: stepUp.assessment.expiresAt,
       tokenType: 'signed_hmac',
     },
   });
