@@ -1,7 +1,10 @@
+import { existsSync, readFileSync } from 'node:fs';
+
 const requiredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const projectRef = requiredUrl?.match(/^https:\/\/([^.]+)\.supabase\.co/i)?.[1];
 const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
+const rlsRunbookPath = 'docs/security/RLS_LIVE_VALIDATION_RUNBOOK.md';
 
 const criticalTables = [
   'organizations',
@@ -22,12 +25,46 @@ const unsafePolicyPatterns = [
   /to\s+public/i,
 ];
 
+const runbookRequiredTokens = [
+  'RLS Live Validation Runbook',
+  'SUPABASE_ACCESS_TOKEN',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'advisory',
+  'live validation',
+  'npm run security:rls',
+  'Security CI',
+  'Release Candidate',
+  'Critical tables',
+  'organizations',
+  'organization_members',
+  'documents',
+  'audit_events',
+];
+
 function explainSetup() {
   console.log('Supabase RLS security gate');
   console.log('--------------------------');
   console.log('This script validates RLS posture through the Supabase Management API when SUPABASE_ACCESS_TOKEN is available.');
   console.log('Required env for live check: NEXT_PUBLIC_SUPABASE_URL + SUPABASE_ACCESS_TOKEN.');
   console.log('Recommended env for production app checks: SUPABASE_SERVICE_ROLE_KEY must exist but is never printed.');
+}
+
+function checkRunbook() {
+  if (!existsSync(rlsRunbookPath)) {
+    console.error(`${rlsRunbookPath} is missing`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const runbook = readFileSync(rlsRunbookPath, 'utf8');
+  const missingTokens = runbookRequiredTokens.filter((token) => !runbook.includes(token));
+
+  if (missingTokens.length > 0) {
+    console.error(`${rlsRunbookPath} is missing required RLS evidence tokens:`);
+    for (const token of missingTokens) console.error(`- ${token}`);
+    process.exitCode = 1;
+  }
 }
 
 async function fetchJson(url, token) {
@@ -83,6 +120,8 @@ function getPolicyDefinition(row) {
 }
 
 async function runLiveCheck() {
+  checkRunbook();
+
   if (!projectRef || !accessToken) {
     explainSetup();
     if (!requiredUrl) {
