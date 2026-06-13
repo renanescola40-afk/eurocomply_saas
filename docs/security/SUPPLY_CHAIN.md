@@ -16,6 +16,7 @@ EuroComply depends on the Node.js/npm ecosystem, GitHub Actions and third-party 
 | Safe lockfile generation command | `package.json` `supply-chain:lockfile` |
 | Floating dependency triage command | `package.json` `supply-chain:floating-deps` |
 | Final security readiness command | `package.json` `security:final-readiness` |
+| Final security readiness JSON report | `package.json` `security:final-readiness:report` |
 | npm audit triage commands | `package.json` audit scripts |
 | Non-blocking npm audit summary | `.github/workflows/security-ci.yml` |
 | Floating dependency spec warnings | `scripts/security/check-supply-chain.mjs` |
@@ -168,7 +169,15 @@ Use the manual readiness command before treating dependency and supply-chain har
 npm run security:final-readiness
 ```
 
-This command is intentionally not part of `security:ci` yet because it is expected to fail until the lockfile is committed, `npm-audit.json` has been generated and the remaining floating dependency specs have been replaced with exact audited versions.
+Security CI also emits a machine-readable readiness report through:
+
+```txt
+npm run security:final-readiness:report
+```
+
+The JSON report is written to `final-security-readiness.json` and is uploaded inside the `npm-audit-triage` GitHub Actions artifact. This report is intentionally non-blocking until the lockfile, audit findings and floating dependency specs are resolved.
+
+The readiness command is intentionally not part of `security:ci` yet because it is expected to fail until the lockfile is committed, `npm-audit.json` has been generated and the remaining floating dependency specs have been replaced with exact audited versions.
 
 The command reports release/security readiness blockers for:
 
@@ -229,6 +238,7 @@ security-and-quality
 - `supply-chain:lockfile` remains present and uses `--package-lock-only --ignore-scripts`
 - `supply-chain:floating-deps` remains present and uses `scripts/security/list-floating-dependencies.mjs`
 - `security:final-readiness` remains present and uses `scripts/security/check-final-security-readiness.mjs`
+- `security:final-readiness:report` remains present and uses `scripts/security/write-final-readiness-report.mjs`
 - floating version specs are reported as warnings
 - the security CI uses a safe install mode
 - dependency review remains configured
@@ -261,10 +271,11 @@ Before approving dependency changes:
 9. Generate the lockfile with `npm run supply-chain:lockfile`.
 10. Run `npm run supply-chain:floating-deps` and replace listed specs with exact audited versions where possible.
 11. Run `npm run security:final-readiness` and resolve all reported blockers before claiming supply-chain hardening is complete.
-12. Review new package purpose and maintainer health.
-13. Confirm no lifecycle scripts were added.
-14. Confirm license compatibility.
-15. If lockfile changes are present, confirm they only contain expected dependency updates.
+12. Review `final-security-readiness.json` from `npm run security:final-readiness:report` or the `npm-audit-triage` artifact when automating readiness status.
+13. Review new package purpose and maintainer health.
+14. Confirm no lifecycle scripts were added.
+15. Confirm license compatibility.
+16. If lockfile changes are present, confirm they only contain expected dependency updates.
 
 ## Open Hardening Items
 
