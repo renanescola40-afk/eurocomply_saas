@@ -16,6 +16,8 @@ The audit chain adds integrity evidence so reviewers can detect whether event co
 | Helper tests | `src/server/security/audit-chain.test.ts` |
 | Persistence integration | `src/server/queries/audit-events.ts` |
 | Schema migration | `supabase/migrations/20260612_audit_event_hash_chain.sql` |
+| Transactional append RPC migration | `supabase/migrations/20260613_audit_event_chained_rpc.sql` |
+| Concurrency runbook | `docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md` |
 | Regression gate | `scripts/security/check-audit-chain.mjs` |
 
 ## Stored Fields
@@ -48,18 +50,28 @@ The event hash is built from a canonical representation of:
 
 Object keys are sorted recursively before hashing. Undefined values are removed. This keeps hashes stable when metadata field order changes.
 
-## Write Flow
+## Enterprise Write Flow
 
-`createAuditEvent()` performs the following sequence when the new schema is available:
+`createAuditEvent()` should prefer the transactional RPC path when the enterprise schema is available:
 
 1. Resolve the last known `event_hash` for the organization.
 2. Generate the next audit event id and timestamp.
 3. Build a canonical audit payload.
 4. Compute `event_hash` with SHA-256.
 5. Optionally compute `hash_signature` when signing is configured.
-6. Insert the audit event with hash-chain fields.
+6. Call `append_audit_event_chained(...)` with the calculated `previous_hash`, `event_hash`, `hash_algorithm` and `hash_signature`.
+7. Let the database function acquire `pg_advisory_xact_lock(hashtext(p_organization_id::text))` and validate that `p_previous_hash` still matches the latest committed event hash.
+8. If the database reports a `previous_hash` mismatch, retry the append with the new latest hash.
 
-If the hash-chain columns are not yet available, the helper falls back to the legacy audit event insert path. This keeps production safe during migration rollout.
+This protects organization-scoped chains from concurrent writes creating forks.
+
+## Compatibility Write Flow
+
+If the transactional RPC is not yet available, the helper may fall back to the direct hash-chain insert path while migrations are rolling out.
+
+If the hash-chain columns are not yet available, the helper falls back to the legacy audit event insert path. This keeps production safe during phased migration rollout.
+
+Enterprise deployments should treat the fallback as temporary and should complete the migration to `append_audit_event_chained(...)` before final release approval.
 
 ## Verification Model
 
@@ -84,9 +96,13 @@ Failure reasons are structured as:
 - optional HMAC signing
 - previous hash linkage
 - event hash verification
-- schema migration
+- base schema migration
+- transactional RPC migration
+- `append_audit_event_chained(...)`
+- `pg_advisory_xact_lock`
 - persistence integration in `createAuditEvent()`
 - legacy fallback
+- concurrency runbook
 - unit tests
 
 The full security package includes this gate through:
@@ -98,9 +114,11 @@ npm run security:ci
 ## Operational Notes
 
 - Apply `supabase/migrations/20260612_audit_event_hash_chain.sql` before relying on persisted chain fields.
+- Apply `supabase/migrations/20260613_audit_event_chained_rpc.sql` before relying on concurrency-safe appends.
 - Configure `AUDIT_CHAIN_SIGNING_SECRET` when signed audit hashes are required.
 - Existing legacy events remain valid but may not have chain fields.
 - Chain validation should be organization-scoped and ordered by event creation time.
+- Enterprise release candidates should attach evidence that the transactional RPC exists in the target Supabase project.
 
 ## Future Work
 
