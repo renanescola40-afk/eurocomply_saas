@@ -106,6 +106,7 @@ if (pkg) {
     'security:npm-audit:json',
     'security:npm-audit:summary',
     'security:final-readiness',
+    'security:final-readiness:report',
     'supply-chain:lockfile',
     'supply-chain:floating-deps',
   ]) {
@@ -126,6 +127,10 @@ if (pkg) {
     failures.push(`${packageJsonPath} security:final-readiness must use scripts/security/check-final-security-readiness.mjs`);
   }
 
+  if (scripts['security:final-readiness:report'] && !scripts['security:final-readiness:report'].includes('scripts/security/write-final-readiness-report.mjs')) {
+    failures.push(`${packageJsonPath} security:final-readiness:report must use scripts/security/write-final-readiness-report.mjs`);
+  }
+
   warnOnFloatingDependencySpecs('dependencies', pkg.dependencies ?? {});
   warnOnFloatingDependencySpecs('devDependencies', pkg.devDependencies ?? {});
 }
@@ -139,7 +144,7 @@ if (npmrc) {
 }
 
 if (supplyChainDoc) {
-  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version', 'npm runtime drift', 'supply-chain:lockfile', 'supply-chain:floating-deps', 'security:final-readiness']) {
+  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version', 'npm runtime drift', 'supply-chain:lockfile', 'supply-chain:floating-deps', 'security:final-readiness', 'security:final-readiness:report']) {
     if (!supplyChainDoc.includes(token)) {
       failures.push(`${supplyChainDocPath} missing required supply-chain evidence token: ${token}`);
     }
@@ -156,6 +161,7 @@ if (securityCi) {
     'npm run security:ci',
     'actions/setup-node@v4',
     'node-version: 22',
+    'final-security-readiness.json',
   ];
 
   for (const token of requiredTokens) {
