@@ -12,6 +12,7 @@ EuroComply depends on the Node.js/npm ecosystem, GitHub Actions and third-party 
 | --- | --- |
 | Package manager pinning | `package.json` `packageManager` |
 | npm repository policy | `.npmrc` |
+| npm audit triage commands | `package.json` audit scripts |
 | Dependency Review | `.github/workflows/dependency-review.yml` |
 | CodeQL SAST | `.github/workflows/codeql.yml` |
 | Internal security CI | `.github/workflows/security-ci.yml` |
@@ -47,13 +48,28 @@ postinstall
 prepare
 ```
 
-The security CI currently installs dependencies with:
+The security CI and Vercel deploy install dependencies with:
 
 ```txt
 npm install --ignore-scripts
 ```
 
 This reduces risk from dependency lifecycle scripts while the project does not yet have a committed `package-lock.json`.
+
+## npm Audit Triage
+
+The project exposes explicit npm audit commands:
+
+```txt
+npm run security:npm-audit:prod
+npm run security:npm-audit:all
+npm run security:npm-audit:json
+```
+
+Use `security:npm-audit:prod` first to determine whether any high-severity advisory affects production dependencies.
+Use `security:npm-audit:json` when Vercel or npm only prints a summarized vulnerability count and package-level detail is needed.
+
+These commands are not yet part of `npm run security:ci` because the current Vercel install summary reports known audit findings that still need package-level triage. Promote `security:npm-audit:prod` into `security:ci` only after the production audit is clean or an accepted exception is documented.
 
 ## Lockfile Status
 
@@ -136,16 +152,19 @@ Before approving dependency changes:
 1. Confirm Dependency Review passed.
 2. Confirm CodeQL has no new relevant alerts.
 3. Confirm `npm run security:ci` passed.
-4. Review new package purpose and maintainer health.
-5. Confirm no lifecycle scripts were added.
-6. Confirm license compatibility.
-7. If lockfile changes are present, confirm they only contain expected dependency updates.
+4. Run `npm run security:npm-audit:prod` and review failures.
+5. If Vercel only reports vulnerability counts, capture `npm run security:npm-audit:json` output for package-level triage.
+6. Review new package purpose and maintainer health.
+7. Confirm no lifecycle scripts were added.
+8. Confirm license compatibility.
+9. If lockfile changes are present, confirm they only contain expected dependency updates.
 
 ## Open Hardening Items
 
 - Commit a real `package-lock.json`.
 - Change Security CI install from `npm install --ignore-scripts` to `npm ci --ignore-scripts`.
 - Make missing `package-lock.json` a hard failure.
+- Promote production npm audit into `security:ci` after package-level triage is clean or explicitly accepted.
 - Add OSV Scanner or equivalent vulnerability scanner.
 - Add provenance/SBOM generation for release builds.
 - Pin GitHub Actions by SHA for high-assurance environments.
