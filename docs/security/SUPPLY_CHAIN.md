@@ -11,6 +11,7 @@ EuroComply depends on the Node.js/npm ecosystem, GitHub Actions and third-party 
 | Control | Location |
 | --- | --- |
 | Package manager pinning | `package.json` `packageManager` |
+| npm runtime drift warning | `scripts/security/check-supply-chain.mjs` |
 | npm repository policy | `.npmrc` |
 | npm audit triage commands | `package.json` audit scripts |
 | Non-blocking npm audit summary | `.github/workflows/security-ci.yml` |
@@ -38,6 +39,18 @@ This means:
 - npm audit remains enabled.
 - funding prompts are disabled for deterministic CI logs.
 - newly saved package versions are exact instead of broad ranges.
+
+## Package Manager Runtime Policy
+
+The repository pins the expected package manager in `package.json`:
+
+```txt
+npm@10.8.2
+```
+
+`npm run security:supply-chain` warns on npm runtime drift when `npm --version` does not match the pinned `packageManager` value.
+
+This warning is intentionally non-blocking until `package-lock.json` is committed. Before generating the lockfile or using `npm-audit.json` for dependency updates, align local/CI npm with the pinned package manager so the lockfile and audit output are reproducible.
 
 ## Lifecycle Script Policy
 
@@ -164,6 +177,7 @@ security-and-quality
 `npm run security:supply-chain` validates:
 
 - `packageManager` is pinned to `npm@10.8.2`
+- npm runtime drift is reported as a warning
 - `.npmrc` exists and has the required policy
 - dangerous lifecycle scripts are not defined
 - npm audit triage scripts remain present
@@ -195,18 +209,19 @@ Before approving dependency changes:
 5. Run `npm run security:npm-audit:prod` and review failures.
 6. If Vercel only reports vulnerability counts, capture `npm run security:npm-audit:json` output for package-level triage.
 7. Run `npm run security:npm-audit:summary` before changing dependencies.
-8. Review floating dependency warnings and replace them with exact audited versions where possible.
-9. Review new package purpose and maintainer health.
-10. Confirm no lifecycle scripts were added.
-11. Confirm license compatibility.
-12. If lockfile changes are present, confirm they only contain expected dependency updates.
+8. Confirm npm runtime matches `packageManager` before generating or committing `package-lock.json`.
+9. Review floating dependency warnings and replace them with exact audited versions where possible.
+10. Review new package purpose and maintainer health.
+11. Confirm no lifecycle scripts were added.
+12. Confirm license compatibility.
+13. If lockfile changes are present, confirm they only contain expected dependency updates.
 
 ## Open Hardening Items
 
 - Commit a real `package-lock.json`.
 - Replace `latest`, wildcard and open-ended dependency specs with exact audited versions.
 - Change Security CI install from `npm install --ignore-scripts` to `npm ci --ignore-scripts`.
-- Make missing `package-lock.json` a hard failure.
+- Make missing lockfile and npm runtime drift hard failures.
 - Promote production npm audit into `security:ci` after package-level triage is clean or explicitly accepted.
 - Promote floating dependency specs from warnings to failures after the lockfile is committed.
 - Add OSV Scanner or equivalent vulnerability scanner.
