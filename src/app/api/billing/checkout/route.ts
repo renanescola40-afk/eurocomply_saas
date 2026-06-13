@@ -5,6 +5,7 @@ import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
+import { requireStepUpForRequest } from '@/server/security/step-up';
 
 export async function POST(request: Request) {
   const originDenied = assertTrustedOrigin(request);
@@ -40,6 +41,17 @@ export async function POST(request: Request) {
     return permissionDeniedResponse(permission);
   }
 
+  const stepUp = requireStepUpForRequest({
+    request,
+    action: 'manage_billing',
+    userId: user.id,
+    organizationId: organization.id,
+  });
+
+  if (!stepUp.ok) {
+    return stepUp.response;
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
   const stripe = getStripeClient();
   const priceId = getStripePriceId(plan);
@@ -56,6 +68,8 @@ export async function POST(request: Request) {
       user_id: user.id,
       plan,
       actor_role: permission.role ?? 'unknown',
+      step_up_action: stepUp.assessment.action,
+      step_up_verified_at: stepUp.assessment.verifiedAt ?? '',
     },
     subscription_data: {
       metadata: {
@@ -63,10 +77,20 @@ export async function POST(request: Request) {
         user_id: user.id,
         plan,
         actor_role: permission.role ?? 'unknown',
+        step_up_action: stepUp.assessment.action,
+        step_up_verified_at: stepUp.assessment.verifiedAt ?? '',
       },
     },
     allow_promotion_codes: true,
   });
 
-  return noStoreJson({ url: session.url });
+  return noStoreJson({
+    url: session.url,
+    stepUp: {
+      action: stepUp.assessment.action,
+      verifiedAt: stepUp.assessment.verifiedAt,
+      expiresAt: stepUp.assessment.expiresAt,
+      tokenType: 'signed_hmac',
+    },
+  });
 }
