@@ -10,6 +10,7 @@ import { createAuditEvent } from '@/server/queries/audit-events';
 import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
@@ -31,6 +32,12 @@ type EnterpriseReadinessExportPayload = {
     };
     plan: unknown;
     readiness: ReturnType<typeof getEnterpriseReadinessSummary>;
+    stepUp: {
+      action: string;
+      verifiedAt: string | null;
+      expiresAt: string | null;
+      tokenType: 'signed_hmac';
+    };
   };
   integrity: ReturnType<typeof buildEvidencePackIntegrity>;
   audit: {
@@ -59,7 +66,7 @@ function safeFilenamePart(value: string | null | undefined) {
     .slice(0, 80) || 'organization';
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   let context: Awaited<ReturnType<typeof requireOrganizationContext>>;
 
   try {
@@ -90,6 +97,17 @@ export async function GET() {
       requiredPlan: 'business',
       entitlements: planCheck.entitlements,
     }, planCheck.status);
+  }
+
+  const stepUp = requireStepUpForRequest({
+    request,
+    action: 'export_data',
+    userId: user.id,
+    organizationId: organization.id,
+  });
+
+  if (!stepUp.ok) {
+    return stepUp.response;
   }
 
   const rateLimit = await checkDistributedRateLimit({
@@ -124,6 +142,12 @@ export async function GET() {
       },
       plan: planCheck.entitlements,
       readiness,
+      stepUp: {
+        action: stepUp.assessment.action,
+        verifiedAt: stepUp.assessment.verifiedAt,
+        expiresAt: stepUp.assessment.expiresAt,
+        tokenType: 'signed_hmac' as const,
+      },
     };
     const integrity = buildEvidencePackIntegrity(payload);
     const exportPayload: EnterpriseReadinessExportPayload = {
@@ -152,6 +176,8 @@ export async function GET() {
           actorRole: permission.role,
           payloadHash: integrity.payloadHash,
           signed: integrity.signed,
+          stepUpAction: stepUp.assessment.action,
+          stepUpVerifiedAt: stepUp.assessment.verifiedAt,
         },
       });
 
