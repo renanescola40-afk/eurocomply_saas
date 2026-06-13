@@ -5,6 +5,7 @@ import { getStripeClient } from '@/server/billing/stripe';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
+import { requireStepUpForRequest } from '@/server/security/step-up';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
 
@@ -37,6 +38,17 @@ export async function POST(request: Request) {
     return permissionDeniedResponse(permission);
   }
 
+  const stepUp = requireStepUpForRequest({
+    request,
+    action: 'manage_billing',
+    userId: user.id,
+    organizationId: organization.id,
+  });
+
+  if (!stepUp.ok) {
+    return stepUp.response;
+  }
+
   const supabase = createAdminClient();
   const { data: subscription, error } = await supabase
     .from('subscriptions')
@@ -65,5 +77,13 @@ export async function POST(request: Request) {
     return_url: returnUrl,
   });
 
-  return noStoreJson({ url: portalSession.url });
+  return noStoreJson({
+    url: portalSession.url,
+    stepUp: {
+      action: stepUp.assessment.action,
+      verifiedAt: stepUp.assessment.verifiedAt,
+      expiresAt: stepUp.assessment.expiresAt,
+      tokenType: 'signed_hmac',
+    },
+  });
 }
