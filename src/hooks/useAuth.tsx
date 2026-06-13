@@ -5,6 +5,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import type { User, Session } from '@supabase/supabase-js';
 
+type SignupMetadata = {
+  name?: string;
+  company_name?: string;
+  requested_plan?: string;
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -13,7 +19,7 @@ interface AuthContextType {
   signUpWithEmail: (
     email: string,
     password: string,
-    metadata?: { name?: string; company_name?: string }
+    metadata?: SignupMetadata
   ) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
@@ -59,6 +65,12 @@ function getLocalizedPath(path: string) {
 
 export function getLocalizedDashboardPath() {
   return getLocalizedPath(AUTH_DASHBOARD_PATH);
+}
+
+function appendRequestedPlan(path: string, requestedPlan?: string) {
+  if (!requestedPlan) return path;
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}plan=${encodeURIComponent(requestedPlan)}`;
 }
 
 function isPublicAuthPath(pathname: string) {
@@ -152,10 +164,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (
       email: string,
       password: string,
-      metadata?: { name?: string; company_name?: string }
+      metadata?: SignupMetadata
     ) => {
       try {
-        const nextPath = getLocalizedDashboardPath();
+        const nextPath = appendRequestedPlan(getLocalizedDashboardPath(), metadata?.requested_plan);
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -257,10 +269,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-
   return context;
 }
