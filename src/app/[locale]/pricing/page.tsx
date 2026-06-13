@@ -38,18 +38,29 @@ const billingFaqs = [
 function planPositioning(planId: string) {
   if (planId === 'starter') return 'For founders building their first evidence system.';
   if (planId === 'growth') return 'For growing B2B teams preparing customer and board reviews.';
-  return 'For mature teams managing larger vendor, risk and document programs.';
+  if (planId === 'business') return 'For mature teams managing larger vendor, risk and document programs.';
+  return 'For regulated teams that need premium intelligence, enterprise evidence and expanded limits.';
 }
 
-export default function PricingPage({ params }: { params: { locale: string } }) {
+function planBadge(planId: string) {
+  if (planId === 'growth') return 'Most popular';
+  if (planId === 'enterprise') return 'Premium tier';
+  return null;
+}
+
+type Props = { params: Promise<{ locale: string }> };
+
+export default async function PricingPage({ params }: Props) {
+  const { locale } = await params;
+
   return (
     <main className="min-h-screen bg-[#05060a] text-white">
       <header className="border-b border-white/10 bg-[#05060a]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link href={`/${params.locale}`} className="text-lg font-bold tracking-tight">EuroComply</Link>
+          <Link href={`/${locale}`} className="text-lg font-bold tracking-tight">EuroComply</Link>
           <nav className="flex items-center gap-2 text-sm">
-            <Link href={`/${params.locale}/login`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Sign in</Link>
-            <Link href={`/${params.locale}/signup`} className="rounded-full bg-white px-4 py-2 font-semibold text-black hover:bg-white/90">Start free</Link>
+            <Link href={`/${locale}/login`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Sign in</Link>
+            <Link href={`/${locale}/signup`} className="rounded-full bg-white px-4 py-2 font-semibold text-black hover:bg-white/90">Start free</Link>
           </nav>
         </div>
       </header>
@@ -67,11 +78,11 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
               EuroComply gives European teams a clear path from first compliance workspace to board-ready reporting and enterprise controls — without forcing every buyer into a sales call.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={`/${params.locale}/signup`} className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
+              <Link href={`/${locale}/signup?plan=growth`} className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
                 Start with Growth
               </Link>
-              <Link href={`/${params.locale}/contact`} className="inline-flex h-12 items-center justify-center rounded-full border border-white/15 px-6 text-sm font-bold hover:bg-white/10">
-                Talk Enterprise
+              <Link href={`/${locale}/signup?plan=enterprise`} className="inline-flex h-12 items-center justify-center rounded-full border border-white/15 px-6 text-sm font-bold hover:bg-white/10">
+                Start Enterprise
               </Link>
             </div>
           </div>
@@ -94,10 +105,12 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
         <section className="grid gap-4 lg:grid-cols-4">
           {BILLING_PLANS.map((plan) => {
             const isFeatured = plan.id === 'growth';
+            const badge = planBadge(plan.id);
+            const isEnterprise = plan.id === 'enterprise';
 
             return (
-              <article key={plan.id} className={`relative flex rounded-[2rem] border p-6 shadow-xl flex-col transition hover:-translate-y-1 ${isFeatured ? 'border-blue-300 bg-white text-slate-950' : 'border-white/10 bg-slate-950 text-white'}`}>
-                {isFeatured && <span className="absolute right-5 top-5 rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">Most popular</span>}
+              <article key={plan.id} className={`relative flex rounded-[2rem] border p-6 shadow-xl flex-col transition hover:-translate-y-1 ${isFeatured ? 'border-blue-300 bg-white text-slate-950' : isEnterprise ? 'border-emerald-300/40 bg-gradient-to-b from-emerald-300/15 to-slate-950 text-white' : 'border-white/10 bg-slate-950 text-white'}`}>
+                {badge && <span className={`absolute right-5 top-5 rounded-full px-3 py-1 text-xs font-bold ${isFeatured ? 'bg-slate-950 text-white' : 'border border-emerald-300/40 text-emerald-100'}`}>{badge}</span>}
                 <div>
                   <h2 className="text-2xl font-semibold">{plan.name}</h2>
                   <p className={`mt-2 text-sm leading-6 ${isFeatured ? 'text-slate-600' : 'text-slate-400'}`}>{planPositioning(plan.id)}</p>
@@ -121,7 +134,7 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
                 </div>
 
                 <Link
-                  href={`/${params.locale}/signup`}
+                  href={`/${locale}/signup?plan=${plan.id}`}
                   className={`mt-auto inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-bold ${isFeatured ? 'bg-slate-950 text-white hover:bg-slate-800' : 'bg-white text-slate-950 hover:bg-slate-100'}`}
                 >
                   Start with {plan.name}
@@ -129,23 +142,6 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
               </article>
             );
           })}
-
-          <article className="relative flex rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/[0.10] to-white/[0.03] p-6 text-white shadow-xl flex-col transition hover:-translate-y-1">
-            <span className="absolute right-5 top-5 rounded-full border border-white/15 px-3 py-1 text-xs font-bold text-white/70">Anchor tier</span>
-            <h2 className="text-2xl font-semibold">Enterprise</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-300">For regulated teams, consultants and larger European rollouts.</p>
-            <p className="mt-5 text-5xl font-bold">Custom</p>
-            <ul className="mt-6 space-y-3 text-sm text-slate-300">
-              <li>Custom usage limits</li>
-              <li>SSO and advanced RBAC roadmap</li>
-              <li>Custom DPA and procurement support</li>
-              <li>Audit exports and advanced reporting</li>
-              <li>Priority onboarding</li>
-            </ul>
-            <Link href={`/${params.locale}/contact`} className="mt-auto inline-flex h-11 items-center justify-center rounded-full border border-white/15 px-4 text-sm font-bold hover:bg-white/10">
-              Talk to us
-            </Link>
-          </article>
         </section>
 
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 shadow-xl">
@@ -183,7 +179,7 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
         </section>
       </div>
 
-      <PublicFooter locale={params.locale} />
+      <PublicFooter locale={locale} />
     </main>
   );
 }
