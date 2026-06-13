@@ -65,7 +65,7 @@ jobs:
           npm run security:final-readiness:report || true
 
       - name: Upload npm audit triage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: npm-audit-triage
           path: |
