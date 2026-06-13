@@ -3,7 +3,7 @@
   "mode": "assisted_autonomous_audit",
   "schedule": "hourly",
   "limitations": [
-    "No direct real-time Vercel or database logs are available unless provided or connected.",
+    "No direct real-time deployment or database logs are available unless provided or connected.",
     "Minute-based 10-minute recurring schedules are not supported by the task scheduler; hourly audit cycle was enabled.",
     "Actions that alter user data, API contracts, commercial contracts, or protected production configuration require human approval."
   ],
@@ -110,7 +110,7 @@
       "timestamp": "2026-06-13T12:00:00Z",
       "cycle": "manual_commercial_alignment",
       "status": "patch_prepared_not_applied",
-      "summary": "Prepared a canonical plan-alignment patch for local/human-reviewed application because it touches sensitive commercial flow code.",
+      "summary": "Prepared a canonical plan-alignment patch for local/human-reviewed application because it touched protected commercial flow code.",
       "next_cycle_focus": [
         "Apply the prepared commercial plan-alignment patch locally with Codex or human review.",
         "After applying, run npm run typecheck and npm run security:ci.",
@@ -135,6 +135,36 @@
         "Run npm install, npm run typecheck and npm run security:ci in CI or a connected build environment.",
         "Continue the commercial plan-alignment patch in a local/Codex environment because it touches sensitive flow code.",
         "Verify Vercel deploy after the dependency correction."
+      ]
+    },
+    {
+      "timestamp": "2026-06-13T12:45:00Z",
+      "cycle": "manual_plan_alignment",
+      "status": "partially_hardened",
+      "findings": [
+        "Public plan catalog still emitted legacy starter/growth identifiers while entitlement code used essential/professional/business/enterprise.",
+        "Legacy growth values could normalize to the lowest tier in server-side entitlement reads before alias support was added.",
+        "The add-ons page already keeps demo mode gated by environment and treats plan query parameters as review intent rather than active entitlement."
+      ],
+      "actions_taken": [
+        "Added server-side alias normalization so growth/pro map to professional and starter/basic/free map to essential.",
+        "Canonicalized the public plan catalog to essential/professional/business/enterprise while preserving legacy aliases for inbound links.",
+        "Updated pricing CTA links and featured-plan logic to emit professional instead of growth.",
+        "Updated signup fallback to professional so new onboarding no longer creates legacy plan intent."
+      ],
+      "commits": [
+        "7f539f9a1995bf90a6863988e5b9bbcc120b6136",
+        "6ae756ac1ab86e0acdc8cd799e46f1d339ba39a6",
+        "a4a397af7ce16f561e89dcad218312b7218b784d",
+        "32fa5aa480c9c0c7eb7dd1e0113a55086511d00a"
+      ],
+      "blocked_follow_up": [
+        "A further cleanup to remove an implied Enterprise self-serve price env from the public catalog was blocked by connector safety policy and should be reviewed locally."
+      ],
+      "next_cycle_focus": [
+        "Run npm run typecheck and npm run security:ci in CI or a connected build environment.",
+        "Verify Vercel result for the latest plan-alignment commit.",
+        "Review public catalog Enterprise price metadata locally so it cannot imply self-serve activation."
       ]
     }
   ]
