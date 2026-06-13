@@ -14,7 +14,7 @@ const createDocumentSchema = z.object({
   mimeType: z.string().max(120).optional().nullable(),
   sizeBytes: z.number().int().nonnegative().optional().nullable(),
   expiresAt: z.string().optional().nullable(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 const uploadDocumentSchema = z.object({
