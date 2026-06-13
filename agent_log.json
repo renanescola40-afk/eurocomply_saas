@@ -157,6 +157,27 @@
         "Have Codex connect the existing billing webhook to organization add-on persistence in a local environment.",
         "Verify pricing UI and checkout route include Enterprise without unlocking it through demo query params."
       ]
+    },
+    {
+      "timestamp": "2026-06-13T10:54:00Z",
+      "cycle": "manual_billing_alignment",
+      "status": "partially_hardened",
+      "findings": [
+        "Pricing UI rendered Enterprise twice after Enterprise was added to the central billing plan catalog: once from the catalog and once as a manual custom card."
+      ],
+      "actions_taken": [
+        "Removed the duplicate manual Enterprise card and made the public pricing page render Enterprise from the billing plan catalog.",
+        "Updated pricing page links to pass the selected plan through the signup query parameter.",
+        "Updated the pricing page to use async route params for newer framework compatibility."
+      ],
+      "commits": [
+        "5ffbbd6df0073f1f5a12c0e184389f41df3373cd"
+      ],
+      "next_cycle_focus": [
+        "Verify signup and checkout flows consume the selected plan query parameter correctly.",
+        "Create the live Enterprise price in the payment provider dashboard and configure the matching environment key.",
+        "Have Codex connect the existing billing webhook to organization add-on persistence in a local environment."
+      ]
     }
   ]
 }
