@@ -153,7 +153,23 @@ Release evidence must include:
 - failed webhook signature test
 - step-up validation for billing actions
 
-### 10. External review
+### 10. Preflight coverage
+
+Release Candidate evidence must prove that preflight protects both operational controls and release governance artifacts.
+
+The preflight file should include at least:
+
+- `docs/RELEASE_CANDIDATE_VALIDATION.md`
+- `scripts/security/check-release-candidate.mjs`
+- lockfile and supply-chain runbook coverage
+- RLS live validation runbook coverage
+- audit-chain concurrency runbook coverage
+- upload content scan runbook coverage
+- step-up rollout coverage
+
+If preflight cannot be updated because of platform restrictions, the release owner must attach a manual evidence note explaining the restriction and confirming that `npm run security:release-candidate` was run successfully.
+
+### 11. External review
 
 Before public enterprise procurement, attach evidence for:
 
