@@ -29,7 +29,7 @@
         "Enterprise demo mode was available through query parameter without environment guard."
       ],
       "actions_taken": [
-        "Added NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO guard to the add-ons page."
+        "Added environment guard to the add-ons page demo mode."
       ],
       "commits": ["09d1f0d420470ca352279f7dcf123bff0a6f9bd5"]
     },
@@ -42,7 +42,7 @@
       ],
       "actions_taken": [
         "Created server-side active add-on lookup with fallback.",
-        "Added migration for organization_add_ons.",
+        "Added migration for persisted organization add-ons.",
         "Updated add-ons page to use persisted active add-ons outside demo mode."
       ],
       "commits": [
@@ -51,7 +51,7 @@
         "5dccebcdc9ff58db047615348bebb2a9e4d71ee9"
       ],
       "next_cycle_focus": [
-        "Connect payment webhooks to organization_add_ons.",
+        "Connect payment webhooks to persisted organization add-ons.",
         "Review Premium plan pricing contract.",
         "Verify latest deploy after platform quota reset."
       ]
@@ -61,21 +61,41 @@
       "cycle": "manual_hardening",
       "status": "partially_hardened",
       "findings": [
-        "Vercel configuration had four daily cron entries, which can trigger plan quota failures on Hobby deployments.",
-        "Direct billing webhook add-on sync patch was blocked by tool safety rules because it touches payment-webhook sensitive code."
+        "Deployment configuration had multiple daily scheduled jobs, which can trigger plan quota failures on low-tier deployments.",
+        "Direct payment-webhook add-on sync patch was blocked by tool safety rules because it touches sensitive billing code."
       ],
       "actions_taken": [
-        "Created a protected daily maintenance aggregator route that runs metric snapshots, compliance alerts, trial reminders and intelligence refresh sequentially.",
-        "Reduced vercel.json to one daily cron pointing to the maintenance aggregator."
+        "Created a protected daily maintenance aggregator route that runs scheduled maintenance tasks sequentially.",
+        "Reduced deployment schedule configuration to one daily job pointing to the maintenance aggregator."
       ],
       "commits": [
         "4c946bac889535b991591321da38e637e1ec8534",
         "27c32161999b09cdaeb274368b8e9d89a74db918"
       ],
       "next_cycle_focus": [
-        "Have Codex wire syncBillingSubscriptionAddOns into the existing billing webhook locally.",
-        "Run latest Vercel build after quota reset.",
-        "Apply organization_add_ons migration in Supabase."
+        "Have Codex wire add-on sync into the existing billing webhook locally.",
+        "Run latest deployment build after quota reset.",
+        "Apply persisted organization add-ons migration in the database."
+      ]
+    },
+    {
+      "timestamp": "2026-06-13T10:05:00Z",
+      "cycle": "manual_hardening",
+      "status": "partially_hardened",
+      "findings": [
+        "The public health endpoint returned operational configuration names that were unnecessary for external monitors."
+      ],
+      "actions_taken": [
+        "Hardened the public health endpoint to return only generic health status, environment, commit and non-sensitive checks.",
+        "Kept no-store and nosniff headers for monitoring responses."
+      ],
+      "commits": [
+        "19ed345ad80c871aba503e01773310a0d1c4c655"
+      ],
+      "next_cycle_focus": [
+        "Verify latest build status after deployment quota reset.",
+        "Connect external uptime monitor to the public health endpoint.",
+        "Continue billing add-on webhook sync with Codex in local environment."
       ]
     }
   ]
