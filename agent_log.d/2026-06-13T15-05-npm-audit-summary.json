@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-06-13T15:05:00Z",
+  "cycle": "npm_audit_summary_tooling",
+  "status": "patched_waiting_for_ci",
+  "summary": "Added a local npm audit summarizer so raw npm-audit.json output can be converted into an actionable package/severity/fix summary before dependency updates are applied.",
+  "findings": [
+    "Vercel reports 2 npm audit findings, but the summary log does not include the affected package names.",
+    "The repository had commands to generate raw audit JSON, but no repo-local parser to summarize the result consistently."
+  ],
+  "actions_taken": [
+    "Added scripts/security/summarize-npm-audit.mjs.",
+    "Added package script security:npm-audit:summary.",
+    "Updated the npm audit triage documentation to run the JSON + summary pair before dependency changes.",
+    "Kept npm audit out of security:ci until the advisory package names and dependency diff are reviewed."
+  ],
+  "commits": [
+    "12adcf9781343c9d6770d3bbc9158be342eb8080",
+    "5cc6a5c56d3b516180ed611ce20e2e21957136a0",
+    "cfdda54a14584df79960cdb64ac8a8974bf6368a"
+  ],
+  "next_cycle_focus": [
+    "Verify Vercel status for the documentation/tooling-only commits.",
+    "Run npm run security:npm-audit:json > npm-audit.json followed by npm run security:npm-audit:summary in a connected environment.",
+    "Apply targeted dependency updates only after the summary identifies affected package chains."
+  ]
+}
