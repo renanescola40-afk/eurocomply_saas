@@ -36,14 +36,14 @@ const billingFaqs = [
 ];
 
 function planPositioning(planId: string) {
-  if (planId === 'starter') return 'For founders building their first evidence system.';
-  if (planId === 'growth') return 'For growing B2B teams preparing customer and board reviews.';
+  if (planId === 'essential') return 'For founders building their first evidence system.';
+  if (planId === 'professional') return 'For growing B2B teams preparing customer and board reviews.';
   if (planId === 'business') return 'For mature teams managing larger vendor, risk and document programs.';
   return 'For regulated teams that need premium intelligence, enterprise evidence and expanded limits.';
 }
 
 function planBadge(planId: string) {
-  if (planId === 'growth') return 'Most popular';
+  if (planId === 'professional') return 'Most popular';
   if (planId === 'enterprise') return 'Premium tier';
   return null;
 }
@@ -78,8 +78,8 @@ export default async function PricingPage({ params }: Props) {
               EuroComply gives European teams a clear path from first compliance workspace to board-ready reporting and enterprise controls — without forcing every buyer into a sales call.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={`/${locale}/signup?plan=growth`} className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
-                Start with Growth
+              <Link href={`/${locale}/signup?plan=professional`} className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
+                Start with Professional
               </Link>
               <Link href={`/${locale}/signup?plan=enterprise`} className="inline-flex h-12 items-center justify-center rounded-full border border-white/15 px-6 text-sm font-bold hover:bg-white/10">
                 Start Enterprise
@@ -104,7 +104,7 @@ export default async function PricingPage({ params }: Props) {
       <div className="mx-auto flex max-w-7xl flex-col gap-14 px-6 py-16">
         <section className="grid gap-4 lg:grid-cols-4">
           {BILLING_PLANS.map((plan) => {
-            const isFeatured = plan.id === 'growth';
+            const isFeatured = plan.id === 'professional';
             const badge = planBadge(plan.id);
             const isEnterprise = plan.id === 'enterprise';
 
