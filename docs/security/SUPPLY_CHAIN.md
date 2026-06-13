@@ -15,6 +15,7 @@ EuroComply depends on the Node.js/npm ecosystem, GitHub Actions and third-party 
 | npm repository policy | `.npmrc` |
 | Safe lockfile generation command | `package.json` `supply-chain:lockfile` |
 | Floating dependency triage command | `package.json` `supply-chain:floating-deps` |
+| Final security readiness command | `package.json` `security:final-readiness` |
 | npm audit triage commands | `package.json` audit scripts |
 | Non-blocking npm audit summary | `.github/workflows/security-ci.yml` |
 | Floating dependency spec warnings | `scripts/security/check-supply-chain.mjs` |
@@ -159,6 +160,26 @@ missing lockfile treated as a failure
 
 This will improve build reproducibility and supply-chain traceability.
 
+## Final Security Readiness
+
+Use the manual readiness command before treating dependency and supply-chain hardening as complete:
+
+```txt
+npm run security:final-readiness
+```
+
+This command is intentionally not part of `security:ci` yet because it is expected to fail until the lockfile is committed, `npm-audit.json` has been generated and the remaining floating dependency specs have been replaced with exact audited versions.
+
+The command reports release/security readiness blockers for:
+
+- missing `package-lock.json`
+- missing `npm-audit.json`
+- remaining floating dependency specs
+- npm audit findings still present in `npm-audit.json`
+- package manager pin drift
+
+Promote this readiness check into CI only after the project reaches the target supply-chain state.
+
 ## Dependency Review Policy
 
 Pull requests are checked by GitHub Dependency Review.
@@ -207,6 +228,7 @@ security-and-quality
 - npm audit triage scripts remain present
 - `supply-chain:lockfile` remains present and uses `--package-lock-only --ignore-scripts`
 - `supply-chain:floating-deps` remains present and uses `scripts/security/list-floating-dependencies.mjs`
+- `security:final-readiness` remains present and uses `scripts/security/check-final-security-readiness.mjs`
 - floating version specs are reported as warnings
 - the security CI uses a safe install mode
 - dependency review remains configured
@@ -238,10 +260,11 @@ Before approving dependency changes:
 8. Confirm npm runtime matches `packageManager` before generating or committing `package-lock.json`.
 9. Generate the lockfile with `npm run supply-chain:lockfile`.
 10. Run `npm run supply-chain:floating-deps` and replace listed specs with exact audited versions where possible.
-11. Review new package purpose and maintainer health.
-12. Confirm no lifecycle scripts were added.
-13. Confirm license compatibility.
-14. If lockfile changes are present, confirm they only contain expected dependency updates.
+11. Run `npm run security:final-readiness` and resolve all reported blockers before claiming supply-chain hardening is complete.
+12. Review new package purpose and maintainer health.
+13. Confirm no lifecycle scripts were added.
+14. Confirm license compatibility.
+15. If lockfile changes are present, confirm they only contain expected dependency updates.
 
 ## Open Hardening Items
 
@@ -250,6 +273,7 @@ Before approving dependency changes:
 - Change Security CI install from `npm install --ignore-scripts` to `npm ci --ignore-scripts`.
 - Make missing lockfile and npm runtime drift hard failures.
 - Promote production npm audit into `security:ci` after package-level triage is clean or explicitly accepted.
+- Promote `security:final-readiness` into CI after the target supply-chain state is reached.
 - Promote floating dependency specs from warnings to failures after the lockfile is committed.
 - Add OSV Scanner or equivalent vulnerability scanner.
 - Add provenance/SBOM generation for release builds.
