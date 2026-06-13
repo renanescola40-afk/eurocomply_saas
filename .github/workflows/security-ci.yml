@@ -47,7 +47,12 @@ jobs:
       - name: Print npm audit triage summary
         run: |
           npm run security:npm-audit:json > npm-audit.json || true
-          npm run security:npm-audit:summary || true
+          echo "## npm audit triage summary" > npm-audit-summary.md
+          echo "" >> npm-audit-summary.md
+          echo '```text' >> npm-audit-summary.md
+          npm run security:npm-audit:summary | tee -a npm-audit-summary.md || true
+          echo '```' >> npm-audit-summary.md
+          cat npm-audit-summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run EuroComply security CI
         run: npm run security:ci
