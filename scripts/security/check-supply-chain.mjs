@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const packageJsonPath = 'package.json';
 const npmrcPath = '.npmrc';
 const supplyChainDocPath = 'docs/security/SUPPLY_CHAIN.md';
+const lockfileRunbookPath = 'docs/security/LOCKFILE_TRIAGE_RUNBOOK.md';
 const securityCiWorkflowPath = '.github/workflows/security-ci.yml';
 const dependencyReviewWorkflowPath = '.github/workflows/dependency-review.yml';
 const expectedPackageManager = 'npm@10.8.2';
@@ -81,6 +82,7 @@ function warnOnNpmRuntimeDrift(packageManager) {
 const pkg = readJson(packageJsonPath);
 const npmrc = read(npmrcPath);
 const supplyChainDoc = read(supplyChainDocPath);
+const lockfileRunbook = read(lockfileRunbookPath);
 const securityCi = read(securityCiWorkflowPath);
 const dependencyReview = read(dependencyReviewWorkflowPath);
 const hasPackageLock = existsSync('package-lock.json');
@@ -153,6 +155,14 @@ if (supplyChainDoc) {
   for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version', 'npm runtime drift', 'supply-chain:lockfile', 'supply-chain:floating-deps', 'security:zod-compat', 'security:final-readiness', 'security:final-readiness:report', 'cache disabled until lockfile exists']) {
     if (!supplyChainDoc.includes(token)) {
       failures.push(`${supplyChainDocPath} missing required supply-chain evidence token: ${token}`);
+    }
+  }
+}
+
+if (lockfileRunbook) {
+  for (const token of ['Lockfile and npm Audit Triage Runbook', 'npm@10.8.2', 'npm run supply-chain:lockfile', 'npm install --package-lock-only --ignore-scripts', 'npm run security:npm-audit:json > npm-audit.json', 'npm run security:npm-audit:summary', 'npm run supply-chain:floating-deps', 'npm ci --ignore-scripts', 'Security readiness: ok', 'package-lock.json exists']) {
+    if (!lockfileRunbook.includes(token)) {
+      failures.push(`${lockfileRunbookPath} missing required lockfile triage token: ${token}`);
     }
   }
 }
