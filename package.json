@@ -33,6 +33,8 @@
     "security:final-readiness": "node scripts/security/check-final-security-readiness.mjs",
     "security:final-readiness:report": "node scripts/security/write-final-readiness-report.mjs final-security-readiness.json",
     "security:release-candidate": "node scripts/security/check-release-candidate.mjs",
+    "security:release-evidence": "node scripts/security/check-release-evidence.mjs",
+    "release:readiness": "npm run security:release-candidate && npm run security:release-evidence",
     "supply-chain:lockfile": "npm install --package-lock-only --ignore-scripts",
     "supply-chain:floating-deps": "node scripts/security/list-floating-dependencies.mjs",
     "security:npm-audit:prod": "npm audit --omit=dev --audit-level=high",
