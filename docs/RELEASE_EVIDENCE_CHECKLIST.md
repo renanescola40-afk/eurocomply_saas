@@ -15,6 +15,7 @@ For every release candidate, record:
 - Release owner
 - Approval date
 - Rollback owner
+- Customer communication owner
 
 ## Build and CI evidence
 
@@ -146,6 +147,27 @@ Accepted evidence:
 - Logging access confirmation
 - Rollback runbook reference
 
+## Customer communication evidence
+
+Attach evidence for:
+
+- Customer communication owner assigned
+- Status page owner assigned or explicit exception recorded
+- Support owner assigned
+- Support macros or response guidance prepared
+- Security/compliance reviewer assigned for security, privacy, audit-chain, RLS, authorization, billing, or data integrity communications
+- SEV-1 and SEV-2 communication timing targets acknowledged
+- Customer communication plan reviewed before Go/No-Go
+
+Accepted evidence:
+
+- Completed `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md` review note
+- Release approval record naming the customer communication owner
+- Status page decision
+- Support readiness note
+- Customer notice draft, if applicable
+- Post-incident customer summary decision, if applicable
+
 ## External review evidence
 
 For public production or enterprise procurement, attach evidence for:
@@ -172,6 +194,6 @@ A release may be promoted only when every required evidence section is either:
 
 Private beta may accept more documented exceptions.
 
-Public production should not accept exceptions for build, CI, RLS, audit-chain integrity, or billing correctness.
+Public production should not accept exceptions for build, CI, RLS, audit-chain integrity, billing correctness, or customer communication ownership.
 
-Enterprise procurement should not accept exceptions for supply-chain triage, live RLS validation, step-up authentication, upload scanning policy, audit-chain integrity, or external review.
+Enterprise procurement should not accept exceptions for supply-chain triage, live RLS validation, step-up authentication, upload scanning policy, audit-chain integrity, customer communication readiness, or external review.
