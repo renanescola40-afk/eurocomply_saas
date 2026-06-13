@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const roots = ['src', 'scripts'];
+const selfPath = 'scripts/security/check-zod-error-usage.mjs';
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'coverage', 'playwright-report', 'test-results']);
 const checkedExtensions = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx']);
 const forbiddenPatterns = [
@@ -17,11 +18,21 @@ const forbiddenPatterns = [
 
 const failures = [];
 
+function normalizePath(filePath) {
+  return relative(process.cwd(), filePath).replaceAll('\\', '/');
+}
+
 function hasCheckedExtension(filePath) {
   return [...checkedExtensions].some(extension => filePath.endsWith(extension));
 }
 
+function shouldSkipFile(filePath) {
+  return normalizePath(filePath) === selfPath;
+}
+
 function scanFile(filePath) {
+  if (shouldSkipFile(filePath)) return;
+
   const source = readFileSync(filePath, 'utf8');
 
   for (const { pattern, message } of forbiddenPatterns) {
@@ -29,7 +40,7 @@ function scanFile(filePath) {
     let match;
     while ((match = pattern.exec(source)) !== null) {
       const line = source.slice(0, match.index).split('\n').length;
-      failures.push(`${relative(process.cwd(), filePath)}:${line} ${message}`);
+      failures.push(`${normalizePath(filePath)}:${line} ${message}`);
     }
   }
 }
