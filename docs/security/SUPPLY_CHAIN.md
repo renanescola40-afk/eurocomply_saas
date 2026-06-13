@@ -13,6 +13,7 @@ EuroComply depends on the Node.js/npm ecosystem, GitHub Actions and third-party 
 | Package manager pinning | `package.json` `packageManager` |
 | npm repository policy | `.npmrc` |
 | npm audit triage commands | `package.json` audit scripts |
+| Non-blocking npm audit summary | `.github/workflows/security-ci.yml` |
 | Floating dependency spec warnings | `scripts/security/check-supply-chain.mjs` |
 | Dependency Review | `.github/workflows/dependency-review.yml` |
 | CodeQL SAST | `.github/workflows/codeql.yml` |
@@ -65,12 +66,21 @@ The project exposes explicit npm audit commands:
 npm run security:npm-audit:prod
 npm run security:npm-audit:all
 npm run security:npm-audit:json
+npm run security:npm-audit:summary
 ```
 
 Use `security:npm-audit:prod` first to determine whether any high-severity advisory affects production dependencies.
 Use `security:npm-audit:json` when Vercel or npm only prints a summarized vulnerability count and package-level detail is needed.
+Use `security:npm-audit:summary` after generating `npm-audit.json` to print the package, severity, vulnerable range, affected paths and advertised fix.
 
-These commands are not yet part of `npm run security:ci` because the current Vercel install summary reports known audit findings that still need package-level triage. Promote `security:npm-audit:prod` into `security:ci` only after the production audit is clean or an accepted exception is documented.
+Security CI currently captures and prints the npm audit summary as a non-blocking diagnostic step:
+
+```txt
+npm run security:npm-audit:json > npm-audit.json || true
+npm run security:npm-audit:summary || true
+```
+
+This diagnostic step is intentionally warning-only. Promote `security:npm-audit:prod` into `security:ci` only after the production audit is clean or an accepted exception is documented.
 
 ## Floating Version Spec Policy
 
@@ -156,6 +166,7 @@ security-and-quality
 - `packageManager` is pinned to `npm@10.8.2`
 - `.npmrc` exists and has the required policy
 - dangerous lifecycle scripts are not defined
+- npm audit triage scripts remain present
 - floating version specs are reported as warnings
 - the security CI uses a safe install mode
 - dependency review remains configured
@@ -180,13 +191,15 @@ Before approving dependency changes:
 1. Confirm Dependency Review passed.
 2. Confirm CodeQL has no new relevant alerts.
 3. Confirm `npm run security:ci` passed.
-4. Run `npm run security:npm-audit:prod` and review failures.
-5. If Vercel only reports vulnerability counts, capture `npm run security:npm-audit:json` output for package-level triage.
-6. Review floating dependency warnings and replace them with exact audited versions where possible.
-7. Review new package purpose and maintainer health.
-8. Confirm no lifecycle scripts were added.
-9. Confirm license compatibility.
-10. If lockfile changes are present, confirm they only contain expected dependency updates.
+4. Review the non-blocking npm audit summary printed by Security CI.
+5. Run `npm run security:npm-audit:prod` and review failures.
+6. If Vercel only reports vulnerability counts, capture `npm run security:npm-audit:json` output for package-level triage.
+7. Run `npm run security:npm-audit:summary` before changing dependencies.
+8. Review floating dependency warnings and replace them with exact audited versions where possible.
+9. Review new package purpose and maintainer health.
+10. Confirm no lifecycle scripts were added.
+11. Confirm license compatibility.
+12. If lockfile changes are present, confirm they only contain expected dependency updates.
 
 ## Open Hardening Items
 
