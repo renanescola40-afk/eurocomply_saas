@@ -274,6 +274,28 @@
         "Prefer targeted dependency updates over npm audit fix --force.",
         "Commit a real package-lock.json and later promote production npm audit into security:ci once clean or explicitly accepted."
       ]
+    },
+    {
+      "timestamp": "2026-06-13T14:30:00Z",
+      "cycle": "floating_dependency_spec_hardening",
+      "status": "patched_waiting_for_ci",
+      "findings": [
+        "The supply-chain checker warned about missing lockfile but did not surface highly floating dependency specs such as latest, wildcard, or open-ended ranges.",
+        "package.json still contains some dependency specs that should be pinned after lockfile and audit triage, but changing package versions without npm audit detail would be riskier than warning first."
+      ],
+      "actions_taken": [
+        "Updated scripts/security/check-supply-chain.mjs to warn on highly floating dependency specs without failing CI.",
+        "Updated docs/security/SUPPLY_CHAIN.md with floating version spec policy, target state, checklist entry, and open hardening items."
+      ],
+      "commits": [
+        "76d95e6d5b3d3aceef45e763292fdbe77d2c14c0",
+        "75a89b68d4ef63417a028c0d8eec00cc86e95c91"
+      ],
+      "next_cycle_focus": [
+        "Verify Vercel status for the latest supply-chain warning commits.",
+        "Run npm run security:ci in a connected environment and confirm warning-only behavior remains non-blocking.",
+        "Generate npm audit JSON, commit a package-lock.json, and replace floating specs with exact audited versions."
+      ]
     }
   ]
 }
