@@ -1,0 +1,301 @@
+{
+  "schemaVersion": "2026-06-13.enterprise-trust-evidence.v1",
+  "product": "EuroComply SaaS",
+  "lastReviewedAt": "2026-06-13",
+  "classification": "internal-trust-evidence",
+  "disclaimer": "This manifest tracks internal evidence readiness. Do not represent draft, planned, or partial items as certified, externally audited, contractually committed, or production-proven without the required evidence and approval.",
+  "claims": [
+    {
+      "id": "iso-27001",
+      "question": "Do you have ISO 27001?",
+      "status": "not_available",
+      "customerAnswer": "Not yet. EuroComply is not currently ISO 27001 certified.",
+      "evidence": [
+        "docs/trust/ISO27001_SOC2_READINESS.md"
+      ],
+      "blockers": [
+        "Formal ISMS scope is not approved.",
+        "External certification audit has not been completed."
+      ],
+      "nextActions": [
+        "Define ISMS scope and owners.",
+        "Create control mapping and evidence repository.",
+        "Engage an accredited auditor when controls are operating."
+      ]
+    },
+    {
+      "id": "soc-2",
+      "question": "Do you have SOC 2?",
+      "status": "not_available",
+      "customerAnswer": "Not yet. EuroComply does not currently have a SOC 2 Type I or Type II report.",
+      "evidence": [
+        "docs/trust/ISO27001_SOC2_READINESS.md"
+      ],
+      "blockers": [
+        "SOC 2 scope and trust service criteria are not finalized.",
+        "External audit has not been completed."
+      ],
+      "nextActions": [
+        "Define SOC 2 scope.",
+        "Collect operating evidence for security controls.",
+        "Start Type I readiness once control owners and evidence are stable."
+      ]
+    },
+    {
+      "id": "external-pentest",
+      "question": "Do you have a pentest?",
+      "status": "planned",
+      "customerAnswer": "An external independent pentest has not been completed yet. Pentest readiness is being tracked internally.",
+      "evidence": [
+        "docs/trust/PENTEST_READINESS.md"
+      ],
+      "blockers": [
+        "External vendor not selected.",
+        "Production-like test scope not finalized."
+      ],
+      "nextActions": [
+        "Finalize scope and rules of engagement.",
+        "Run pre-pentest security checks.",
+        "Schedule external pentest and track remediation."
+      ]
+    },
+    {
+      "id": "sso-saml",
+      "question": "Do you support SSO/SAML?",
+      "status": "planned",
+      "customerAnswer": "SAML/SSO is on the enterprise roadmap but is not currently available as a production feature.",
+      "evidence": [
+        "docs/trust/SSO_MFA_ENTERPRISE_PLAN.md"
+      ],
+      "blockers": [
+        "SAML provider integration is not implemented.",
+        "Enterprise IdP test matrix is not completed."
+      ],
+      "nextActions": [
+        "Choose SAML/OIDC implementation path.",
+        "Add organization-level SSO configuration.",
+        "Test with at least one enterprise IdP."
+      ]
+    },
+    {
+      "id": "mandatory-mfa",
+      "question": "Do you support mandatory MFA?",
+      "status": "planned",
+      "customerAnswer": "Mandatory MFA policy enforcement is on the enterprise roadmap but is not currently available as a production feature.",
+      "evidence": [
+        "docs/trust/SSO_MFA_ENTERPRISE_PLAN.md"
+      ],
+      "blockers": [
+        "Organization-level MFA enforcement is not implemented.",
+        "MFA bypass and recovery policies are not documented."
+      ],
+      "nextActions": [
+        "Add organization-level MFA required flag.",
+        "Block access for non-compliant sessions.",
+        "Document break-glass and recovery flow."
+      ]
+    },
+    {
+      "id": "exportable-logs",
+      "question": "Do you provide exportable logs?",
+      "status": "partial",
+      "customerAnswer": "Audit logging controls exist internally, and exportable enterprise audit logs are being tracked as a roadmap item.",
+      "evidence": [
+        "docs/trust/AUDIT_LOG_EXPORT_IMMUTABILITY_PLAN.md",
+        "scripts/security/check-api-guards.mjs"
+      ],
+      "blockers": [
+        "Customer-facing export workflow is not fully evidenced.",
+        "Export format, retention, and access controls need final validation."
+      ],
+      "nextActions": [
+        "Implement or verify enterprise audit export endpoint/UI.",
+        "Add export tests and sample artifact.",
+        "Document supported formats and retention."
+      ]
+    },
+    {
+      "id": "tenant-segregation",
+      "question": "Is tenant segregation proven?",
+      "status": "partial_strong",
+      "customerAnswer": "EuroComply has organization-scoped authorization controls and RLS/security checks. Production evidence and live RLS validation should be provided before claiming proven tenant isolation.",
+      "evidence": [
+        "src/server/authz.ts",
+        "scripts/security/check-rls.mjs",
+        "scripts/security/check-api-guards.mjs"
+      ],
+      "blockers": [
+        "Live RLS evidence must be generated against the production Supabase project.",
+        "Cross-tenant negative tests need to be stored as evidence."
+      ],
+      "nextActions": [
+        "Run RLS live check with SUPABASE_ACCESS_TOKEN.",
+        "Store tenant isolation test evidence.",
+        "Add cross-tenant regression tests to CI where safe."
+      ]
+    },
+    {
+      "id": "disaster-recovery-tested",
+      "question": "Is disaster recovery tested?",
+      "status": "planned",
+      "customerAnswer": "A DR test plan exists, but a completed DR exercise has not yet been evidenced.",
+      "evidence": [
+        "docs/trust/DISASTER_RECOVERY_TEST_PLAN.md"
+      ],
+      "blockers": [
+        "DR exercise has not been executed and signed off.",
+        "RTO/RPO measurements are not recorded."
+      ],
+      "nextActions": [
+        "Run a tabletop DR test.",
+        "Run a technical failover/restore drill where applicable.",
+        "Record RTO/RPO and remediation items."
+      ]
+    },
+    {
+      "id": "backup-restore-tested",
+      "question": "Is backup restore tested?",
+      "status": "planned",
+      "customerAnswer": "A backup restore test plan exists, but a completed restore test has not yet been evidenced.",
+      "evidence": [
+        "docs/trust/BACKUP_RESTORE_TEST_PLAN.md"
+      ],
+      "blockers": [
+        "Restore drill has not been completed and signed off.",
+        "Restore artifact and integrity checks are not stored."
+      ],
+      "nextActions": [
+        "Run restore drill in a non-production environment.",
+        "Record timestamp, dataset scope, operator, duration, and validation checks.",
+        "Store evidence and remediation items."
+      ]
+    },
+    {
+      "id": "dpa",
+      "question": "Can you sign a DPA?",
+      "status": "draft",
+      "customerAnswer": "A DPA draft exists but requires legal review before customer signature.",
+      "evidence": [
+        "docs/trust/DPA_DRAFT.md"
+      ],
+      "blockers": [
+        "Legal review not completed.",
+        "Authorized signer and customer process not finalized."
+      ],
+      "nextActions": [
+        "Complete legal review.",
+        "Define signing process.",
+        "Publish customer-ready DPA version."
+      ]
+    },
+    {
+      "id": "subprocessors",
+      "question": "Are subprocessors documented?",
+      "status": "draft",
+      "customerAnswer": "A subprocessors draft exists but must be reviewed and published before being treated as customer-ready.",
+      "evidence": [
+        "docs/trust/SUBPROCESSORS.md"
+      ],
+      "blockers": [
+        "Vendor list needs final confirmation.",
+        "Notification/change process not customer-ready."
+      ],
+      "nextActions": [
+        "Confirm all subprocessors and regions.",
+        "Add change notification process.",
+        "Publish reviewed subprocessors list."
+      ]
+    },
+    {
+      "id": "sla",
+      "question": "Do you provide a contractual SLA?",
+      "status": "draft",
+      "customerAnswer": "An SLA draft exists but is not yet a signed contractual commitment.",
+      "evidence": [
+        "docs/trust/SLA_DRAFT.md"
+      ],
+      "blockers": [
+        "Legal/commercial review not completed.",
+        "Monitoring and incident response commitments need operational proof."
+      ],
+      "nextActions": [
+        "Finalize uptime target and exclusions.",
+        "Define service credit policy if applicable.",
+        "Align monitoring and support coverage with SLA."
+      ]
+    },
+    {
+      "id": "monitoring-24-7",
+      "question": "Do you provide 24/7 monitoring?",
+      "status": "not_available",
+      "customerAnswer": "Formal 24/7 monitoring is not currently offered as a contractual commitment.",
+      "evidence": [
+        "docs/trust/SLA_DRAFT.md"
+      ],
+      "blockers": [
+        "On-call schedule and escalation process not established.",
+        "24/7 coverage not contractually staffed."
+      ],
+      "nextActions": [
+        "Define monitoring stack and alert routing.",
+        "Establish on-call schedule.",
+        "Run incident response drill."
+      ]
+    },
+    {
+      "id": "retention-policy",
+      "question": "Do you have a retention policy?",
+      "status": "draft",
+      "customerAnswer": "A retention policy draft exists and requires review before customer-facing publication.",
+      "evidence": [
+        "docs/trust/RETENTION_POLICY_DRAFT.md"
+      ],
+      "blockers": [
+        "Legal/privacy review not completed.",
+        "Technical enforcement and deletion evidence need validation."
+      ],
+      "nextActions": [
+        "Finalize retention periods by data class.",
+        "Implement and test deletion/retention enforcement.",
+        "Publish reviewed policy."
+      ]
+    },
+    {
+      "id": "granular-permissions",
+      "question": "Do you support granular permissions?",
+      "status": "partial_strong",
+      "customerAnswer": "EuroComply supports organization-scoped roles and permissions. Fine-grained enterprise policy controls may require additional roadmap work depending on customer needs.",
+      "evidence": [
+        "src/server/authz.ts",
+        "scripts/security/check-api-guards.mjs"
+      ],
+      "blockers": [
+        "Customer-facing custom roles are not confirmed.",
+        "Permission matrix evidence should be published for enterprise review."
+      ],
+      "nextActions": [
+        "Publish role/permission matrix.",
+        "Add tests for each sensitive permission path.",
+        "Decide whether custom roles are required."
+      ]
+    },
+    {
+      "id": "immutable-audit-trail",
+      "question": "Do you provide immutable audit trails?",
+      "status": "planned",
+      "customerAnswer": "Audit trail immutability/tamper-evidence is planned. Current audit logging should not be represented as immutable until append-only/tamper-evident controls are implemented and tested.",
+      "evidence": [
+        "docs/trust/AUDIT_LOG_EXPORT_IMMUTABILITY_PLAN.md"
+      ],
+      "blockers": [
+        "Append-only or WORM storage is not evidenced.",
+        "Hash chaining/signing and retention enforcement are not implemented/evidenced."
+      ],
+      "nextActions": [
+        "Design append-only audit log storage.",
+        "Add hash chaining or external WORM export.",
+        "Test tamper-evidence and export verification."
+      ]
+    }
+  ]
+}
