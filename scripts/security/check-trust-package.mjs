@@ -20,6 +20,7 @@ const REQUIRED_FILES = [
   'docs/trust/AUDIT_LOG_EXPORT_IMMUTABILITY_PLAN.md',
   'docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md',
   'docs/trust/ENTERPRISE_TRUST_ROADMAP.md',
+  'docs/trust/evidence/README.md',
   'docs/trust/evidence/enterprise-trust-evidence.json',
   'scripts/security/check-enterprise-trust-evidence.mjs',
 ];
@@ -30,6 +31,7 @@ const REQUIRED_DISCLAIMERS = new Map([
   ['docs/trust/PENTEST_READINESS.md', ['has not completed', 'third-party']],
   ['docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md', ['Do not answer `yes`', 'not currently']],
   ['docs/trust/ENTERPRISE_TRUST_ROADMAP.md', ['Do not claim ISO 27001', 'package-lock.json']],
+  ['docs/trust/evidence/README.md', ['Never answer `yes`', 'externally_validated']],
   ['docs/trust/evidence/enterprise-trust-evidence.json', ['internal-trust-evidence', 'Do not represent draft, planned, or partial items as certified']],
   ['scripts/security/check-enterprise-trust-evidence.mjs', ['CLAIMS_REQUIRING_EXTERNAL_EVIDENCE', 'externally_validated']],
 ]);
