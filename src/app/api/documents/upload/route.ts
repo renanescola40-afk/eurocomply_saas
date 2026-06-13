@@ -11,6 +11,7 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
 import { validateUploadFileSignature } from '@/server/security/file-signature';
+import { scanUploadForMalware, shouldBlockUploadForMalwareScan } from '@/server/security/malware-scan';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const STORAGE_BUCKET = 'controlled-documents';
@@ -116,6 +117,45 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'File signature does not match the declared file type.' }, { status: 415 });
   }
 
+  const scan = await scanUploadForMalware({
+    buffer,
+    mimeType: file.type,
+    filename: file.name,
+    organizationId: organization.id,
+  });
+
+  if (shouldBlockUploadForMalwareScan(scan)) {
+    await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'document_upload_rejected',
+      entityType: 'document',
+      entityId: organization.id,
+      metadata: {
+        reason: 'malware_scan_not_clean',
+        scanStatus: scan.status,
+        scanProvider: scan.provider,
+        scanRequired: scan.required,
+        scanReason: scan.reason,
+        mimeType: file.type,
+        sizeBytes: file.size,
+        actorRole: permission.role,
+      },
+    });
+
+    return noStoreJson(
+      {
+        error: 'Document upload cannot be accepted until content scanning is available.',
+        scan: {
+          status: scan.status,
+          provider: scan.provider,
+          required: scan.required,
+        },
+      },
+      { status: 503 },
+    );
+  }
+
   const checksum = createHash('sha256').update(buffer).digest('hex');
   const storagePath = `${organization.id}/${randomUUID()}.${extension}`;
   const title = safeDocumentTitle(file.name);
@@ -172,6 +212,10 @@ export async function POST(request: NextRequest) {
       plan: quota.entitlements.plan,
       actorRole: permission.role,
       documentCountBeforeUpload: quota.currentCount,
+      scanStatus: scan.status,
+      scanProvider: scan.provider,
+      scanRequired: scan.required,
+      scanCheckedAt: scan.scannedAt,
     },
   });
 
@@ -185,6 +229,11 @@ export async function POST(request: NextRequest) {
   return noStoreJson({
     document,
     checksum,
+    scan: {
+      status: scan.status,
+      provider: scan.provider,
+      required: scan.required,
+    },
     plan: quota.entitlements.plan,
     remainingDocuments: Number.isFinite(quota.entitlements.maxDocuments)
       ? Math.max(quota.entitlements.maxDocuments - quota.currentCount - 1, 0)
