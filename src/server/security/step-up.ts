@@ -4,6 +4,7 @@ import { noStoreJson } from '@/server/security/no-store';
 
 export const STEP_UP_MAX_AGE_MS = 10 * 60 * 1000;
 export const STEP_UP_SIGNING_SECRET_ENV = 'STEP_UP_SIGNING_SECRET';
+export const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
 
 export type HighRiskAction =
   | 'export_data'
@@ -40,6 +41,16 @@ export type StepUpTokenAssessmentInput = {
   secret?: string;
 };
 
+export type StepUpRequestInput = {
+  request: Request;
+  action: HighRiskAction;
+  userId: string;
+  organizationId: string;
+  now?: string | number | Date;
+  maxAgeMs?: number;
+  secret?: string;
+};
+
 export type StepUpAssessment = {
   ok: boolean;
   action: HighRiskAction;
@@ -54,6 +65,10 @@ export type StepUpAssessment = {
   expiresAt: string | null;
   maxAgeMs: number;
 };
+
+export type StepUpRequestResult =
+  | { ok: true; assessment: StepUpAssessment }
+  | { ok: false; assessment: StepUpAssessment; response: Response };
 
 export const HIGH_RISK_ACTIONS: ReadonlyArray<HighRiskAction> = [
   'export_data',
@@ -211,4 +226,26 @@ export function stepUpRequiredResponse(assessment: StepUpAssessment) {
     },
     { status: 403 },
   );
+}
+
+export function requireStepUpForRequest(input: StepUpRequestInput): StepUpRequestResult {
+  const assessment = assessStepUpToken({
+    action: input.action,
+    userId: input.userId,
+    organizationId: input.organizationId,
+    token: input.request.headers.get(STEP_UP_TOKEN_HEADER),
+    now: input.now,
+    maxAgeMs: input.maxAgeMs,
+    secret: input.secret,
+  });
+
+  if (!assessment.ok) {
+    return {
+      ok: false,
+      assessment,
+      response: stepUpRequiredResponse(assessment),
+    };
+  }
+
+  return { ok: true, assessment };
 }
