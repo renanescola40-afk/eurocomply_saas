@@ -178,6 +178,29 @@
         "Create the live Enterprise price in the payment provider dashboard and configure the matching environment key.",
         "Have Codex connect the existing billing webhook to organization add-on persistence in a local environment."
       ]
+    },
+    {
+      "timestamp": "2026-06-13T11:07:00Z",
+      "cycle": "manual_billing_alignment",
+      "status": "partially_hardened",
+      "findings": [
+        "Signup links accepted a plan query parameter from pricing, but the signup page did not display or persist the selected plan.",
+        "Email signup redirects did not preserve the selected billing plan for onboarding continuation."
+      ],
+      "actions_taken": [
+        "Updated signup to validate and display the selected billing plan from the query parameter.",
+        "Stored requested_plan in auth signup metadata.",
+        "Preserved the requested plan in email confirmation redirects and Google signup next URLs."
+      ],
+      "commits": [
+        "be1a489a3a242c4e9a7c406b75eea591ce3edcea",
+        "498894e215f8c1308fe491484c32fbb574674312"
+      ],
+      "next_cycle_focus": [
+        "Connect post-signup onboarding to create or resume checkout for the requested plan.",
+        "Create the live Enterprise price in the payment provider dashboard and configure the matching production environment key.",
+        "Have Codex connect the existing billing webhook to organization add-on persistence in a local environment."
+      ]
     }
   ]
 }
