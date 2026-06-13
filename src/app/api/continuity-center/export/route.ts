@@ -8,6 +8,7 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 import { checkDistributedRateLimit } from '@/server/security/rate-limit';
 import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
 import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
+import { requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
@@ -46,6 +47,17 @@ export async function GET(request: Request) {
     }, plan.status);
   }
 
+  const stepUp = requireStepUpForRequest({
+    request,
+    action: 'export_data',
+    userId: user.id,
+    organizationId: organization.id,
+  });
+
+  if (!stepUp.ok) {
+    return stepUp.response;
+  }
+
   const rateLimit = await checkDistributedRateLimit({
     key: `continuity-export:${organization.id}:${user.id}`,
     limit: 5,
@@ -80,6 +92,12 @@ export async function GET(request: Request) {
       openCriticalControls: summary.openCriticalControls,
       nextActions: summary.nextActions,
     },
+    stepUp: {
+      action: stepUp.assessment.action,
+      verifiedAt: stepUp.assessment.verifiedAt,
+      expiresAt: stepUp.assessment.expiresAt,
+      tokenType: 'signed_hmac',
+    },
   };
 
   const integrity = buildEvidencePackIntegrity(payload);
@@ -103,6 +121,8 @@ export async function GET(request: Request) {
       actorRole: permission.role,
       plan: plan.entitlements.plan,
       payloadHash: integrity.payloadHash,
+      stepUpAction: stepUp.assessment.action,
+      stepUpVerifiedAt: stepUp.assessment.verifiedAt,
     },
   });
 
