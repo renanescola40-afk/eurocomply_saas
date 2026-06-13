@@ -27,6 +27,29 @@ function read(path) {
   return readFileSync(path, 'utf8');
 }
 
+function isFloatingDependencySpec(versionSpec) {
+  const normalized = String(versionSpec ?? '').trim();
+
+  return (
+    normalized === 'latest' ||
+    normalized === '*' ||
+    normalized.startsWith('>=') ||
+    normalized.includes(' || ') ||
+    /^\d+\.x(?:\.x)?$/i.test(normalized) ||
+    /^x(?:\.x){0,2}$/i.test(normalized)
+  );
+}
+
+function warnOnFloatingDependencySpecs(sectionName, dependencies = {}) {
+  for (const [name, versionSpec] of Object.entries(dependencies)) {
+    if (!isFloatingDependencySpec(versionSpec)) continue;
+
+    warnings.push(
+      `${packageJsonPath} ${sectionName}.${name} uses floating version spec "${versionSpec}"; replace it with an exact audited version during lockfile triage.`,
+    );
+  }
+}
+
 const pkg = readJson(packageJsonPath);
 const npmrc = read(npmrcPath);
 const supplyChainDoc = read(supplyChainDocPath);
@@ -47,6 +70,9 @@ if (pkg) {
       failures.push(`${packageJsonPath} must not define lifecycle script: ${scriptName}`);
     }
   }
+
+  warnOnFloatingDependencySpecs('dependencies', pkg.dependencies ?? {});
+  warnOnFloatingDependencySpecs('devDependencies', pkg.devDependencies ?? {});
 }
 
 if (npmrc) {
@@ -58,7 +84,7 @@ if (npmrc) {
 }
 
 if (supplyChainDoc) {
-  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts']) {
+  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version']) {
     if (!supplyChainDoc.includes(token)) {
       failures.push(`${supplyChainDocPath} missing required supply-chain evidence token: ${token}`);
     }
