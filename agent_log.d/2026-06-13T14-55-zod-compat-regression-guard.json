@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-06-13T14:55:00+01:00",
+  "phase": "build/typecheck hardening",
+  "summary": "Added a Zod compatibility regression guard after Vercel exposed a ZodError.errors typecheck failure.",
+  "changes": [
+    "Created scripts/security/check-zod-error-usage.mjs to fail on deprecated .error.errors usage and point contributors to ZodError.issues.",
+    "Added package.json script security:zod-compat.",
+    "Inserted security:zod-compat into security:ci before typecheck.",
+    "Protected security:zod-compat from removal/retargeting in scripts/security/check-supply-chain.mjs.",
+    "Updated docs/security/SUPPLY_CHAIN.md with the Zod compatibility policy and checklist item."
+  ],
+  "notes": [
+    "The previous build failure was a real TypeScript error, not Vercel build-rate-limit.",
+    "This round prevents the same Zod v4 compatibility issue from reappearing silently."
+  ]
+}
