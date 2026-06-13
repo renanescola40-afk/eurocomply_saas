@@ -105,6 +105,7 @@ if (pkg) {
     'security:npm-audit:prod',
     'security:npm-audit:json',
     'security:npm-audit:summary',
+    'security:zod-compat',
     'security:final-readiness',
     'security:final-readiness:report',
     'supply-chain:lockfile',
@@ -121,6 +122,10 @@ if (pkg) {
 
   if (scripts['supply-chain:floating-deps'] && !scripts['supply-chain:floating-deps'].includes('scripts/security/list-floating-dependencies.mjs')) {
     failures.push(`${packageJsonPath} supply-chain:floating-deps must use scripts/security/list-floating-dependencies.mjs`);
+  }
+
+  if (scripts['security:zod-compat'] && !scripts['security:zod-compat'].includes('scripts/security/check-zod-error-usage.mjs')) {
+    failures.push(`${packageJsonPath} security:zod-compat must use scripts/security/check-zod-error-usage.mjs`);
   }
 
   if (scripts['security:final-readiness'] && !scripts['security:final-readiness'].includes('scripts/security/check-final-security-readiness.mjs')) {
@@ -144,7 +149,7 @@ if (npmrc) {
 }
 
 if (supplyChainDoc) {
-  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version', 'npm runtime drift', 'supply-chain:lockfile', 'supply-chain:floating-deps', 'security:final-readiness', 'security:final-readiness:report']) {
+  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version', 'npm runtime drift', 'supply-chain:lockfile', 'supply-chain:floating-deps', 'security:zod-compat', 'security:final-readiness', 'security:final-readiness:report']) {
     if (!supplyChainDoc.includes(token)) {
       failures.push(`${supplyChainDocPath} missing required supply-chain evidence token: ${token}`);
     }
