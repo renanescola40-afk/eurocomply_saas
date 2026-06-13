@@ -15,6 +15,7 @@ EuroComply depends on the Node.js/npm ecosystem, GitHub Actions and third-party 
 | npm repository policy | `.npmrc` |
 | Safe lockfile generation command | `package.json` `supply-chain:lockfile` |
 | Floating dependency triage command | `package.json` `supply-chain:floating-deps` |
+| Zod error API compatibility guard | `package.json` `security:zod-compat` |
 | Final security readiness command | `package.json` `security:final-readiness` |
 | Final security readiness JSON report | `package.json` `security:final-readiness:report` |
 | npm audit triage commands | `package.json` audit scripts |
@@ -133,6 +134,18 @@ floating dependency specs treated as failures
 
 When replacing a floating spec, prefer the exact version resolved in the audited lockfile instead of blindly choosing the newest version.
 
+## Zod Compatibility Policy
+
+The project uses Zod v4, where validation issues should be read from `ZodError.issues`.
+
+The compatibility guard is exposed through:
+
+```txt
+npm run security:zod-compat
+```
+
+This command scans source and script files for deprecated `.error.errors` access. It is included in `security:ci` before `typecheck` so a regression is reported with a targeted message instead of surfacing later as a Next.js build type error.
+
 ## Lockfile Status
 
 `package-lock.json` is currently treated as a warning rather than a hard failure.
@@ -237,6 +250,7 @@ security-and-quality
 - npm audit triage scripts remain present
 - `supply-chain:lockfile` remains present and uses `--package-lock-only --ignore-scripts`
 - `supply-chain:floating-deps` remains present and uses `scripts/security/list-floating-dependencies.mjs`
+- `security:zod-compat` remains present and uses `scripts/security/check-zod-error-usage.mjs`
 - `security:final-readiness` remains present and uses `scripts/security/check-final-security-readiness.mjs`
 - `security:final-readiness:report` remains present and uses `scripts/security/write-final-readiness-report.mjs`
 - floating version specs are reported as warnings
@@ -270,12 +284,13 @@ Before approving dependency changes:
 8. Confirm npm runtime matches `packageManager` before generating or committing `package-lock.json`.
 9. Generate the lockfile with `npm run supply-chain:lockfile`.
 10. Run `npm run supply-chain:floating-deps` and replace listed specs with exact audited versions where possible.
-11. Run `npm run security:final-readiness` and resolve all reported blockers before claiming supply-chain hardening is complete.
-12. Review `final-security-readiness.json` from `npm run security:final-readiness:report` or the `npm-audit-triage` artifact when automating readiness status.
-13. Review new package purpose and maintainer health.
-14. Confirm no lifecycle scripts were added.
-15. Confirm license compatibility.
-16. If lockfile changes are present, confirm they only contain expected dependency updates.
+11. Run `npm run security:zod-compat` after dependency or Zod upgrades.
+12. Run `npm run security:final-readiness` and resolve all reported blockers before claiming supply-chain hardening is complete.
+13. Review `final-security-readiness.json` from `npm run security:final-readiness:report` or the `npm-audit-triage` artifact when automating readiness status.
+14. Review new package purpose and maintainer health.
+15. Confirm no lifecycle scripts were added.
+16. Confirm license compatibility.
+17. If lockfile changes are present, confirm they only contain expected dependency updates.
 
 ## Open Hardening Items
 
