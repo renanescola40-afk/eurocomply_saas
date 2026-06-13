@@ -11,6 +11,8 @@ const MAINTENANCE_JOBS = [
   '/api/intelligence/refresh',
 ] as const;
 
+const DEFAULT_JOB_TIMEOUT_MS = 25_000;
+
 function getBaseUrl(request: Request) {
   return (process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin).replace(/\/$/, '');
 }
@@ -19,31 +21,49 @@ function getInternalCronCredential() {
   return process.env.CRON_SECRET ?? process.env.INTERNAL_CRON_SECRET ?? '';
 }
 
-async function runMaintenanceJob(baseUrl: string, path: string, credential: string) {
-  const startedAt = Date.now();
-  const response = await fetch(`${baseUrl}${path}`, {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${credential}`,
-      'x-internal-cron-secret': credential,
-    },
-    cache: 'no-store',
-  });
+function getMaintenanceJobTimeoutMs() {
+  const configuredTimeout = Number(process.env.DAILY_MAINTENANCE_JOB_TIMEOUT_MS);
 
-  let body: unknown = null;
-  try {
-    body = await response.json();
-  } catch {
-    body = null;
+  if (Number.isFinite(configuredTimeout) && configuredTimeout > 0) {
+    return configuredTimeout;
   }
 
-  return {
-    path,
-    ok: response.ok,
-    status: response.status,
-    durationMs: Date.now() - startedAt,
-    body,
-  };
+  return DEFAULT_JOB_TIMEOUT_MS;
+}
+
+async function runMaintenanceJob(baseUrl: string, path: string, credential: string) {
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), getMaintenanceJobTimeoutMs());
+
+  try {
+    const response = await fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${credential}`,
+        'x-internal-cron-secret': credential,
+      },
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+
+    let body: unknown = null;
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
+
+    return {
+      path,
+      ok: response.ok,
+      status: response.status,
+      durationMs: Date.now() - startedAt,
+      body,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function POST(request: Request) {
