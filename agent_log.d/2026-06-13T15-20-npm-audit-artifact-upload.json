@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-06-13T15:20:00Z",
+  "phase": "security-audit-ci-hardening",
+  "status": "implemented",
+  "summary": "Added a short-lived GitHub Actions artifact for npm audit triage outputs and updated the operational triage documentation.",
+  "changes": [
+    {
+      "file": ".github/workflows/security-ci.yml",
+      "details": [
+        "Uploads npm-audit.json and npm-audit-summary.md as npm-audit-triage.",
+        "Uses a 7-day retention window and warning-only missing-file behavior."
+      ]
+    },
+    {
+      "file": "docs/ops/2026-06-13-npm-audit-triage.md",
+      "details": [
+        "Documents the GitHub Actions Summary and npm-audit-triage artifact review paths.",
+        "Keeps raw audit JSON out of the repository while preserving run-level reviewability."
+      ]
+    }
+  ],
+  "commits": [
+    "3178980b861d2e4478f47dada3ad79cafd69000e",
+    "e8137ece3fa48acb17ea136e07f56b14dd33c3c6"
+  ],
+  "next_steps": [
+    "Inspect the npm-audit-triage artifact from the next Security CI run.",
+    "Apply targeted dependency updates once vulnerable packages are identified.",
+    "Generate and commit package-lock.json with npm@10.8.2 once dependency updates are reviewed."
+  ]
+}
