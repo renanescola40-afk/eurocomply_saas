@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server';
-import { getBillingPlan, getStripePriceId } from '@/lib/billing/plans';
+import { getBillingPlan, getStripePriceId, type BillingPlanId } from '@/lib/billing/plans';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
+import type { SubscriptionPlan } from '@/server/queries/subscription';
 
 export const dynamic = 'force-dynamic';
 
 type CheckoutIntentRequest = {
   plan?: string;
   planId?: string;
+};
+
+const BILLING_TO_ENTITLEMENT_PLAN: Record<BillingPlanId, SubscriptionPlan> = {
+  starter: 'essential',
+  growth: 'professional',
+  business: 'business',
+  enterprise: 'enterprise',
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -56,8 +64,9 @@ async function handleCheckoutIntent(request: Request) {
   }
 
   const entitlements = await getOrganizationEntitlements(organization.id);
+  const targetEntitlementPlan = BILLING_TO_ENTITLEMENT_PLAN[plan.id];
   const priceId = getStripePriceId(plan);
-  const alreadyOnPlan = entitlements.plan === plan.id;
+  const alreadyOnPlan = entitlements.plan === targetEntitlementPlan;
 
   return jsonResponse({
     ok: true,
@@ -66,6 +75,7 @@ async function handleCheckoutIntent(request: Request) {
         id: plan.id,
         name: plan.name,
         priceMonthly: plan.priceMonthly,
+        targetEntitlementPlan,
       },
       organization: {
         id: organization.id,
