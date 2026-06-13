@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-06-13T15:35:00Z",
+  "summary": "Added a manual final security readiness command for the remaining supply-chain blockers.",
+  "changes": [
+    {
+      "path": "scripts/security/check-final-security-readiness.mjs",
+      "reason": "Provide a single blocking readiness check that reports missing package-lock.json, missing npm-audit.json, remaining floating dependency specs, unresolved npm audit vulnerabilities, and package manager pin drift."
+    },
+    {
+      "path": "package.json",
+      "reason": "Expose the readiness checker as npm run security:final-readiness without adding it to security:ci while current blockers remain expected."
+    },
+    {
+      "path": "scripts/security/check-supply-chain.mjs",
+      "reason": "Guard the new readiness command so it is not removed or retargeted without the supply-chain policy gate noticing."
+    },
+    {
+      "path": "docs/security/SUPPLY_CHAIN.md",
+      "reason": "Document the manual readiness gate, expected blockers, promotion criteria, and operational checklist placement."
+    }
+  ],
+  "commits": [
+    "0141f373ee74493d73ab17e722b22fab4eba6796",
+    "d5abb782890258cd0fa8ac2012a053f303e425b2",
+    "9b443585319152e1ca4f519c0f224d2f83f3c83a",
+    "abe2b34022ea77f86863ad04982326b3e301b6e5"
+  ],
+  "status": "Manual final readiness gate added; not promoted into security:ci yet because lockfile, npm-audit.json, and exact audited dependency versions are still pending external npm/GitHub Actions execution.",
+  "next": [
+    "Generate package-lock.json with npm run supply-chain:lockfile using npm@10.8.2.",
+    "Generate or download npm-audit.json and run npm run security:npm-audit:summary.",
+    "Replace remaining floating dependency specs with exact audited versions.",
+    "Run npm run security:final-readiness and promote it into CI only after blockers are cleared."
+  ]
+}
