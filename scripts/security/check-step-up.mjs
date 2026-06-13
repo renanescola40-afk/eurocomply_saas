@@ -8,6 +8,7 @@ const auditChainVerifierPath = 'src/app/api/audit/chain/verify/route.ts';
 const helperRequiredTokens = [
   'STEP_UP_MAX_AGE_MS',
   'STEP_UP_SIGNING_SECRET_ENV',
+  'STEP_UP_TOKEN_HEADER',
   'HIGH_RISK_ACTIONS',
   'export_data',
   'manage_billing',
@@ -19,6 +20,7 @@ const helperRequiredTokens = [
   'assessStepUp',
   'createStepUpToken',
   'assessStepUpToken',
+  'requireStepUpForRequest',
   'stepUpRequiredResponse',
   'createHmac',
   'timingSafeEqual',
@@ -37,6 +39,8 @@ const helperRequiredTokens = [
 const testRequiredTokens = [
   'accepts a fresh verification timestamp',
   'creates and accepts a signed scoped step-up token',
+  'accepts signed tokens through the reusable request helper',
+  'rejects missing request helper tokens with no-store response',
   'rejects a tampered signed step-up token',
   'rejects a signed token scoped to another organization',
   'rejects a missing verification timestamp',
@@ -58,10 +62,8 @@ const docRequiredTokens = [
 ];
 
 const auditChainVerifierRequiredTokens = [
-  'assessStepUpToken',
-  'stepUpRequiredResponse',
+  'requireStepUpForRequest',
   'audit_chain_verify',
-  'x-eurocomply-step-up-token',
   'signed_hmac',
   'stepUp',
   'verifiedAt',
@@ -112,7 +114,11 @@ if (auditChainVerifier && auditChainVerifier.includes('x-eurocomply-step-up-veri
   failures.push(`${auditChainVerifierPath} must not trust raw timestamp step-up headers`);
 }
 
-if (auditChainVerifier && auditChainVerifier.indexOf('assessStepUpToken') > auditChainVerifier.indexOf('checkDistributedRateLimit')) {
+if (auditChainVerifier && auditChainVerifier.includes('assessStepUpToken')) {
+  failures.push(`${auditChainVerifierPath} should use requireStepUpForRequest instead of ad hoc token validation`);
+}
+
+if (auditChainVerifier && auditChainVerifier.indexOf('requireStepUpForRequest') > auditChainVerifier.indexOf('checkDistributedRateLimit')) {
   failures.push(`${auditChainVerifierPath} should enforce signed step-up before rate-limited sensitive processing`);
 }
 
