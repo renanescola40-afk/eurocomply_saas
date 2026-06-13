@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --turbopack -H 0.0.0.0",
     "dev:debug": "NODE_OPTIONS='--inspect' next dev -H 0.0.0.0",
+    "prebuild": "npm run security:zod-compat",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
     "lint": "eslint .",
