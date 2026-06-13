@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-06-13T15:20:00+01:00",
+  "phase": "security-audit-and-supply-chain-hardening",
+  "status": "implemented",
+  "summary": "Added a warning-only supply-chain check for npm runtime drift against package.json packageManager before lockfile generation and npm audit triage.",
+  "files_changed": [
+    "scripts/security/check-supply-chain.mjs",
+    "docs/security/SUPPLY_CHAIN.md"
+  ],
+  "commits": [
+    "36a3c8731a8b3b0154cd27c5cc2c23092220fd3e",
+    "e3580683e7252df79e92dbf109c112b1b1cc31d3"
+  ],
+  "verification": {
+    "local_build": "not_run_container_cannot_install_dependencies_from_github",
+    "ci_status": "pending_after_latest_commit"
+  },
+  "next_focus": [
+    "Download or inspect the npm-audit-triage artifact from GitHub Actions.",
+    "Generate and commit package-lock.json using the pinned npm runtime.",
+    "Pin floating dependency specs to exact audited versions."
+  ]
+}
