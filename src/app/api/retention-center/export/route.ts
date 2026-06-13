@@ -10,6 +10,7 @@ import { createAuditEvent } from '@/server/queries/audit-events';
 import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
@@ -38,7 +39,7 @@ function getRetentionExportStatus(readinessScore: number) {
   return 'foundation';
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   let context: Awaited<ReturnType<typeof requireOrganizationContext>>;
 
   try {
@@ -69,6 +70,17 @@ export async function GET() {
       requiredPlan: 'business',
       entitlements: planCheck.entitlements,
     }, planCheck.status);
+  }
+
+  const stepUp = requireStepUpForRequest({
+    request,
+    action: 'export_data',
+    userId: user.id,
+    organizationId: organization.id,
+  });
+
+  if (!stepUp.ok) {
+    return stepUp.response;
   }
 
   const rateLimit = await checkDistributedRateLimit({
@@ -108,6 +120,12 @@ export async function GET() {
         status,
       },
       policies: RETENTION_POLICIES,
+      stepUp: {
+        action: stepUp.assessment.action,
+        verifiedAt: stepUp.assessment.verifiedAt,
+        expiresAt: stepUp.assessment.expiresAt,
+        tokenType: 'signed_hmac',
+      },
     };
     const integrity = buildEvidencePackIntegrity(payload);
     const exportPayload = {
@@ -131,6 +149,8 @@ export async function GET() {
         actorRole: permission.role,
         payloadHash: integrity.payloadHash,
         signed: integrity.signed,
+        stepUpAction: stepUp.assessment.action,
+        stepUpVerifiedAt: stepUp.assessment.verifiedAt,
       },
     });
 
