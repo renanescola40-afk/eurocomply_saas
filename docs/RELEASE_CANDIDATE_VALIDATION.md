@@ -8,6 +8,8 @@ EuroComply is in an advanced pre-production state. The product has strong applic
 
 It is not a final enterprise release until the checks below are completed and attached as evidence.
 
+Use `docs/RELEASE_EVIDENCE_CHECKLIST.md` as the canonical checklist for attaching release evidence, approvals, exceptions, and manual validation notes.
+
 ## Required evidence before Release Candidate
 
 ### 1. Dependency lockfile
@@ -153,13 +155,34 @@ Release evidence must include:
 - failed webhook signature test
 - step-up validation for billing actions
 
-### 10. Preflight coverage
+### 10. Release evidence package
+
+Every Release Candidate must include a completed evidence package based on:
+
+- `docs/RELEASE_EVIDENCE_CHECKLIST.md`
+
+The evidence package must include:
+
+- release identity
+- build and CI proof
+- supply-chain proof
+- Supabase and RLS proof
+- audit-chain proof
+- step-up proof
+- upload scanning proof
+- Stripe billing proof
+- observability proof
+- external review proof when applicable
+- documented exceptions and approvals
+
+### 11. Preflight coverage
 
 Release Candidate evidence must prove that preflight protects both operational controls and release governance artifacts.
 
 The preflight file should include at least:
 
 - `docs/RELEASE_CANDIDATE_VALIDATION.md`
+- `docs/RELEASE_EVIDENCE_CHECKLIST.md`
 - `scripts/security/check-release-candidate.mjs`
 - lockfile and supply-chain runbook coverage
 - RLS live validation runbook coverage
@@ -169,7 +192,7 @@ The preflight file should include at least:
 
 If preflight cannot be updated because of platform restrictions, the release owner must attach a manual evidence note explaining the restriction and confirming that `npm run security:release-candidate` was run successfully.
 
-### 11. External review
+### 12. External review
 
 Before public enterprise procurement, attach evidence for:
 
@@ -193,6 +216,7 @@ EuroComply may be called enterprise-ready only when:
 - upload scanning uses a real provider in fail-closed mode
 - Stripe webhooks are validated
 - external security review is complete
+- release evidence package is attached and approved
 
 ## Failure handling
 
