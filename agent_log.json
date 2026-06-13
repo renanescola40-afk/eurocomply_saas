@@ -249,6 +249,31 @@
         "If it passes, review npm audit details with package names before attempting dependency changes.",
         "Do not run npm audit fix --force without reviewing the dependency diff."
       ]
+    },
+    {
+      "timestamp": "2026-06-13T14:12:00Z",
+      "cycle": "npm_audit_triage_hardening",
+      "status": "patched_waiting_for_ci",
+      "findings": [
+        "Vercel install reports two npm audit findings, but the summary log does not include package-level advisory details.",
+        "The repository still lacks a committed package-lock.json, so targeted dependency remediation should be performed in a connected environment after generating audit detail.",
+        "Running npm audit fix --force without reviewing the dependency diff could introduce breaking framework or tooling upgrades."
+      ],
+      "actions_taken": [
+        "Added explicit npm audit scripts for production, full, and JSON audit views.",
+        "Documented the npm audit triage workflow in docs/ops/2026-06-13-npm-audit-triage.md.",
+        "Updated the supply-chain standard with audit commands, triage sequence, and promotion criteria for adding production npm audit to security:ci."
+      ],
+      "commits": [
+        "6c045ad0320a5a146ce30123c96bc675fa95cc43",
+        "eb63c55f3298b27fe5a293e94e0714afacd8004d",
+        "1ad76673fedc159e76f91eb2d45032542b0cc1ca"
+      ],
+      "next_cycle_focus": [
+        "Run npm run security:npm-audit:json in a connected environment and identify package names behind the moderate and high findings.",
+        "Prefer targeted dependency updates over npm audit fix --force.",
+        "Commit a real package-lock.json and later promote production npm audit into security:ci once clean or explicitly accepted."
+      ]
     }
   ]
 }
