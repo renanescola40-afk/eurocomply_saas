@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const helperPath = 'src/server/security/malware-scan.ts';
 const uploadRoutePath = 'src/app/api/documents/upload/route.ts';
 const preflightPath = 'scripts/preflight.mjs';
+const docPath = 'docs/security/UPLOAD_CONTENT_SCAN.md';
 
 const failures = [];
 
@@ -29,6 +30,7 @@ console.log('-------------------------------------');
 const helper = read(helperPath);
 const uploadRoute = read(uploadRoutePath);
 const preflight = read(preflightPath);
+const doc = read(docPath);
 
 if (helper) {
   requireTokens(helperPath, helper, [
@@ -71,8 +73,26 @@ if (uploadRoute) {
 if (preflight) {
   requireTokens(preflightPath, preflight, [
     'src/server/security/malware-scan.ts',
+    'scripts/security/check-upload-content-scan.mjs',
+    'docs/security/UPLOAD_CONTENT_SCAN.md',
     'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
     'MALWARE_SCANNER_PROVIDER',
+  ]);
+}
+
+if (doc) {
+  requireTokens(docPath, doc, [
+    'Upload Content Scan Security Standard',
+    'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
+    'MALWARE_SCANNER_PROVIDER',
+    'advisory',
+    'fail-closed',
+    'scanStatus',
+    'scanProvider',
+    'scanRequired',
+    'scanCheckedAt',
+    'document_upload_rejected',
+    'Enterprise Release Rule',
   ]);
 }
 
