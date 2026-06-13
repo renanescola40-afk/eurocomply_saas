@@ -31,6 +31,7 @@ jobs:
       HEALTHCHECK_TOKEN: test-healthcheck-token
       EVIDENCE_PACK_SIGNING_SECRET: test-evidence-pack-signing-secret
       AUDIT_CHAIN_SIGNING_SECRET: test-audit-chain-signing-secret
+      STEP_UP_SIGNING_SECRET: test-step-up-signing-secret
 
     steps:
       - name: Checkout repository
@@ -40,7 +41,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Install dependencies without lifecycle scripts
         run: npm install --ignore-scripts
