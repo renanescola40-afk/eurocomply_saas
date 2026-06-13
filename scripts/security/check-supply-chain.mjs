@@ -105,10 +105,15 @@ if (pkg) {
     'security:npm-audit:prod',
     'security:npm-audit:json',
     'security:npm-audit:summary',
+    'supply-chain:lockfile',
   ]) {
     if (!scripts[scriptName]) {
-      failures.push(`${packageJsonPath} missing required npm audit script: ${scriptName}`);
+      failures.push(`${packageJsonPath} missing required supply-chain script: ${scriptName}`);
     }
+  }
+
+  if (scripts['supply-chain:lockfile'] && !scripts['supply-chain:lockfile'].includes('--package-lock-only --ignore-scripts')) {
+    failures.push(`${packageJsonPath} supply-chain:lockfile must generate only the lockfile and ignore lifecycle scripts`);
   }
 
   warnOnFloatingDependencySpecs('dependencies', pkg.dependencies ?? {});
@@ -124,7 +129,7 @@ if (npmrc) {
 }
 
 if (supplyChainDoc) {
-  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version', 'npm runtime drift']) {
+  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version', 'npm runtime drift', 'supply-chain:lockfile']) {
     if (!supplyChainDoc.includes(token)) {
       failures.push(`${supplyChainDocPath} missing required supply-chain evidence token: ${token}`);
     }
