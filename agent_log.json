@@ -55,6 +55,28 @@
         "Review Premium plan pricing contract.",
         "Verify latest deploy after platform quota reset."
       ]
+    },
+    {
+      "timestamp": "2026-06-13T09:48:00Z",
+      "cycle": "manual_hardening",
+      "status": "partially_hardened",
+      "findings": [
+        "Vercel configuration had four daily cron entries, which can trigger plan quota failures on Hobby deployments.",
+        "Direct billing webhook add-on sync patch was blocked by tool safety rules because it touches payment-webhook sensitive code."
+      ],
+      "actions_taken": [
+        "Created a protected daily maintenance aggregator route that runs metric snapshots, compliance alerts, trial reminders and intelligence refresh sequentially.",
+        "Reduced vercel.json to one daily cron pointing to the maintenance aggregator."
+      ],
+      "commits": [
+        "4c946bac889535b991591321da38e637e1ec8534",
+        "27c32161999b09cdaeb274368b8e9d89a74db918"
+      ],
+      "next_cycle_focus": [
+        "Have Codex wire syncBillingSubscriptionAddOns into the existing billing webhook locally.",
+        "Run latest Vercel build after quota reset.",
+        "Apply organization_add_ons migration in Supabase."
+      ]
     }
   ]
 }
