@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
+import { listActiveOrganizationAddOns } from '@/server/billing/addons';
 import { ADD_ON_CATALOG, CREDIT_PACKS, getAddOnStatus, getPlanDisplayName } from '@/lib/billing/addons';
 import type { AddOnId } from '@/lib/billing/addons';
 
@@ -48,9 +49,10 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
   }
 
   const entitlements = await getOrganizationEntitlements(organization.id);
+  const activeAddOnIds: AddOnId[] = isEnterpriseDemo ? [] : await listActiveOrganizationAddOns(organization.id);
   const currentPlan = isEnterpriseDemo ? ('enterprise' as const) : entitlements.plan;
   const isPremium = currentPlan === 'enterprise';
-  const activeAddOnIds: AddOnId[] = [];
+  const activeAddOnCount = activeAddOnIds.length;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
@@ -83,7 +85,7 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
                 <h2 className="text-3xl font-semibold">{isEnterpriseDemo ? 'Enterprise Demo' : getPlanDisplayName(currentPlan)}</h2>
               </div>
               <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                {isPremium ? 'Add-ons principais e franquia Premium incluídos.' : 'Premium desbloqueia todos os add-ons principais.'}
+                {isPremium ? 'Add-ons principais e franquia Premium incluídos.' : `${activeAddOnCount} add-on(s) ativo(s) nesta organização.`}
               </p>
             </div>
           </div>
@@ -120,9 +122,9 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
             <p className="mt-2 text-sm text-muted-foreground">{isPremium ? 'Add-ons principais incluídos no plano.' : 'Premium desbloqueia todos os add-ons principais.'}</p>
           </article>
           <article className="rounded-[1.75rem] border bg-background/90 p-5 shadow-sm">
-            <p className="text-sm text-muted-foreground">Créditos mensais incluídos</p>
-            <p className="mt-2 text-3xl font-semibold">{isPremium ? '5.000' : '0'}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{isPremium ? 'Franquia Premium ativa.' : 'Planos inferiores compram créditos avulsos.'}</p>
+            <p className="text-sm text-muted-foreground">Add-ons ativos</p>
+            <p className="mt-2 text-3xl font-semibold">{isPremium ? 'Todos' : activeAddOnCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{isPremium ? 'Franquia Premium ativa.' : 'Lidos da tabela organization_add_ons quando disponível.'}</p>
           </article>
           <article className="rounded-[1.75rem] border bg-background/90 p-5 shadow-sm">
             <p className="text-sm text-muted-foreground">Proteção contra duplicidade</p>
