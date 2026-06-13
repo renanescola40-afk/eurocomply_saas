@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const helperPath = 'src/server/security/audit-chain.ts';
 const testPath = 'src/server/security/audit-chain.test.ts';
 const auditEventsPath = 'src/server/queries/audit-events.ts';
+const auditEventsTestPath = 'src/server/queries/audit-events.test.ts';
 const migrationPath = 'supabase/migrations/20260612_audit_event_hash_chain.sql';
 const chainedRpcMigrationPath = 'supabase/migrations/20260613_audit_event_chained_rpc.sql';
 const concurrencyRunbookPath = 'docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md';
@@ -40,6 +41,12 @@ const auditEventsRequiredTokens = [
   'buildAuditChainRecord',
   'getPreviousAuditHash',
   'buildChainedPayload',
+  'append_audit_event_chained',
+  'p_previous_hash',
+  'p_event_hash',
+  'p_hash_signature',
+  'isPreviousHashMismatch',
+  'isMissingAuditChainRpc',
   'previous_hash',
   'event_hash',
   'hash_algorithm',
@@ -49,6 +56,20 @@ const auditEventsRequiredTokens = [
   'actor_id',
   'actor_user_id',
   'isMissingAuditChainColumns',
+];
+
+const auditEventsTestRequiredTokens = [
+  'persists through the transactional audit-chain RPC when available',
+  'retries the transactional RPC when Supabase reports a previous hash mismatch',
+  'falls back to direct chained insert only when the transactional RPC is unavailable',
+  'append_audit_event_chained',
+  'audit chain previous hash mismatch',
+  '40001',
+  'p_previous_hash',
+  'p_event_hash',
+  'transactional: true',
+  'transactional: false',
+  'rpcUnavailable: true',
 ];
 
 const migrationRequiredTokens = [
@@ -66,6 +87,8 @@ const chainedRpcMigrationRequiredTokens = [
   'append_audit_event_chained',
   'pg_advisory_xact_lock',
   'hashtext(p_organization_id::text)',
+  'p_previous_hash',
+  'audit chain previous hash mismatch',
   'previous_hash',
   'event_hash',
   'hash_algorithm',
@@ -126,6 +149,7 @@ console.log('-------------------------------------');
 const helper = read(helperPath);
 const test = read(testPath);
 const auditEvents = read(auditEventsPath);
+const auditEventsTest = read(auditEventsTestPath);
 const migration = read(migrationPath);
 const chainedRpcMigration = read(chainedRpcMigrationPath);
 const concurrencyRunbook = read(concurrencyRunbookPath);
@@ -135,6 +159,7 @@ const preflight = read(preflightPath);
 if (helper) requireTokens(helperPath, helper, helperRequiredTokens);
 if (test) requireTokens(testPath, test, testRequiredTokens);
 if (auditEvents) requireTokens(auditEventsPath, auditEvents, auditEventsRequiredTokens);
+if (auditEventsTest) requireTokens(auditEventsTestPath, auditEventsTest, auditEventsTestRequiredTokens);
 if (migration) requireTokens(migrationPath, migration, migrationRequiredTokens);
 if (chainedRpcMigration) requireTokens(chainedRpcMigrationPath, chainedRpcMigration, chainedRpcMigrationRequiredTokens);
 if (concurrencyRunbook) requireTokens(concurrencyRunbookPath, concurrencyRunbook, concurrencyRunbookRequiredTokens);
