@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-06-13T15:55:00Z",
+  "phase": "build-fix",
+  "summary": "Aligned src/lib/security/env.ts with canonical Stripe billing plan environment variables after the Zod v4 typecheck fix exposed this nearby legacy drift.",
+  "changes": [
+    "Replaced required STRIPE_STARTER_PRICE_ID and STRIPE_GROWTH_PRICE_ID schema fields with STRIPE_PRICE_ESSENTIAL_MONTHLY and STRIPE_PRICE_PROFESSIONAL_MONTHLY.",
+    "Added STRIPE_PRICE_BUSINESS_MONTHLY as a required schema field to match the public billing catalog and .env.example.",
+    "Kept legacy fallbacks from STRIPE_STARTER_PRICE_ID to STRIPE_PRICE_ESSENTIAL_MONTHLY and STRIPE_GROWTH_PRICE_ID to STRIPE_PRICE_PROFESSIONAL_MONTHLY.",
+    "Made STRIPE_PRICE_ENTERPRISE_MONTHLY optional with fallback from STRIPE_ENTERPRISE_PRICE_ID, because Enterprise is not part of the self-serve checkout flow."
+  ],
+  "build_context": {
+    "last_vercel_error": "ZodError.errors typecheck failure in src/lib/security/env.ts; corrected separately to ZodError.issues.",
+    "follow_up_risk_reduced": "Legacy Stripe env names in env.ts no longer drift from billing/plans.ts and .env.example."
+  },
+  "validation": {
+    "local_build": "not_run_container_has_no_github_dns_or_registry_access",
+    "expected_next_step": "rerun Vercel or GitHub Security CI after commit is picked up"
+  }
+}
