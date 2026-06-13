@@ -23,6 +23,8 @@
 
 import { z } from 'zod';
 
+const DEFAULT_DEV_AUTH_SECRET = 'dev-secret-min-32-chars-please-change';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Esquema de validação — define TODAS as envs esperadas
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,13 +51,19 @@ const envSchema = z.object({
   // ── App ────────────────────────────────────────────────────────────────
   NEXT_PUBLIC_APP_URL: z.string().url('NEXT_PUBLIC_APP_URL deve ser uma URL'),
 
-  // ── Segurança (opcionais mas recomendadas) ────────────────────────────
-  /** Chave secreta para signed URLs, cookies, etc. Min 32 chars */
+  // ── Segurança ─────────────────────────────────────────────────────────
+  /**
+   * Chave secreta para signed URLs, cookies, etc. Min 32 chars.
+   *
+   * Em desenvolvimento existe um fallback explícito para facilitar onboarding.
+   * Em produção, o bloco pós-parse abaixo falha se este valor estiver ausente
+   * ou igual ao fallback de desenvolvimento.
+   */
   AUTH_SECRET: z
     .string()
     .min(32, 'AUTH_SECRET deve ter pelo menos 32 caracteres')
     .optional()
-    .default('dev-secret-min-32-chars-please-change'),
+    .default(DEFAULT_DEV_AUTH_SECRET),
 
   /** Para Upstash Redis rate limiting (opcional) */
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
@@ -126,6 +134,18 @@ ${errors}
       // Em dev, retorna objecto vazio para a app não crashar durante o desenvolvimento
       return {} as z.infer<typeof envSchema>;
     }
+  }
+
+  if (process.env.NODE_ENV === 'production' && result.data.AUTH_SECRET === DEFAULT_DEV_AUTH_SECRET) {
+    throw new Error(`
+╔══════════════════════════════════════════════════════════════╗
+║  ERRO DE CONFIGURAÇÃO — AUTH_SECRET INSEGURO EM PRODUÇÃO     ║
+╠══════════════════════════════════════════════════════════════╣
+║  AUTH_SECRET é obrigatório em produção e não pode usar       ║
+║  o fallback de desenvolvimento. Gere um segredo forte com:   ║
+║                                                              ║
+║    openssl rand -base64 32                                   ║
+╚══════════════════════════════════════════════════════════════╝`);
   }
 
   console.log('[ENV] Variáveis de ambiente validadas com sucesso');
