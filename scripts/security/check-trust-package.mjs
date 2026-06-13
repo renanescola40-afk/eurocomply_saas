@@ -19,6 +19,7 @@ const REQUIRED_FILES = [
   'docs/trust/SSO_MFA_ENTERPRISE_PLAN.md',
   'docs/trust/AUDIT_LOG_EXPORT_IMMUTABILITY_PLAN.md',
   'docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md',
+  'docs/trust/ENTERPRISE_TRUST_ROADMAP.md',
 ];
 
 const REQUIRED_DISCLAIMERS = new Map([
@@ -26,6 +27,7 @@ const REQUIRED_DISCLAIMERS = new Map([
   ['docs/trust/DPA_DRAFT.md', ['Status: draft', 'legal review']],
   ['docs/trust/PENTEST_READINESS.md', ['has not completed', 'third-party']],
   ['docs/trust/ENTERPRISE_SECURITY_QUESTIONNAIRE.md', ['Do not answer `yes`', 'not currently']],
+  ['docs/trust/ENTERPRISE_TRUST_ROADMAP.md', ['Do not claim ISO 27001', 'package-lock.json']],
 ]);
 
 const failures = [];
