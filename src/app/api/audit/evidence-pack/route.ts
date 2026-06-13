@@ -10,6 +10,7 @@ import { buildAuditEvidencePack } from '@/server/queries/audit-evidence-pack';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
 import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
@@ -32,7 +33,7 @@ function safeFilenamePart(value: string | null | undefined) {
     .slice(0, 80) || 'organization';
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   let context: Awaited<ReturnType<typeof requireOrganizationContext>>;
 
   try {
@@ -63,6 +64,17 @@ export async function GET() {
       requiredPlan: 'business',
       entitlements: planCheck.entitlements,
     }, planCheck.status);
+  }
+
+  const stepUp = requireStepUpForRequest({
+    request,
+    action: 'export_data',
+    userId: user.id,
+    organizationId: organization.id,
+  });
+
+  if (!stepUp.ok) {
+    return stepUp.response;
   }
 
   const rateLimit = await checkDistributedRateLimit({
@@ -97,6 +109,12 @@ export async function GET() {
       exportType: 'eurocomply.audit_evidence_pack',
       payload: pack,
       integrity,
+      stepUp: {
+        action: stepUp.assessment.action,
+        verifiedAt: stepUp.assessment.verifiedAt,
+        expiresAt: stepUp.assessment.expiresAt,
+        tokenType: 'signed_hmac',
+      },
     };
 
     await createAuditEvent({
@@ -116,6 +134,8 @@ export async function GET() {
         actorRole: permission.role,
         payloadHash: integrity.payloadHash,
         signed: integrity.signed,
+        stepUpAction: stepUp.assessment.action,
+        stepUpVerifiedAt: stepUp.assessment.verifiedAt,
       },
     });
 
