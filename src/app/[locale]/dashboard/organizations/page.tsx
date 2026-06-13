@@ -5,6 +5,7 @@ import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-ove
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { locales, type Locale } from '@/lib/i18n/routing';
+import { getBillingPlan } from '@/lib/billing/plans';
 import { formatLimit } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
@@ -25,14 +26,16 @@ const planLabels = {
 
 type PageProps = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ plan?: string }>;
 };
 
 function getSafeLocale(locale: string): Locale {
   return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
 }
 
-export default async function OrganizationDashboardPage({ params }: PageProps) {
+export default async function OrganizationDashboardPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
   const safeLocale = getSafeLocale(locale);
   const user = await getCurrentUser();
 
@@ -43,17 +46,44 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
   const data = await getOrganizationDashboardData(user.id);
 
   if (!data) {
-    redirect(`/${safeLocale}/onboarding`);
+    const requestedPlan = resolvedSearchParams.plan ? `?plan=${encodeURIComponent(resolvedSearchParams.plan)}` : '';
+    redirect(`/${safeLocale}/onboarding${requestedPlan}`);
   }
 
   const entitlements = data.entitlements;
   const dashboardBasePath = `/dashboard/organizations`;
   const localizedDashboardBasePath = `/${safeLocale}${dashboardBasePath}`;
   const complianceHealth = data.summary.complianceScore >= 80 ? 'Audit ready' : data.summary.complianceScore >= 55 ? 'Needs attention' : 'Remediation needed';
+  const requestedPlan = resolvedSearchParams.plan ? getBillingPlan(resolvedSearchParams.plan) : undefined;
+  const shouldShowRequestedPlan = requestedPlan && requestedPlan.id !== entitlements.plan;
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.16),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))]">
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-10">
+        {shouldShowRequestedPlan ? (
+          <section className="rounded-[1.5rem] border border-primary/25 bg-primary/8 p-5 shadow-lg shadow-primary/5 md:flex md:items-center md:justify-between md:gap-6">
+            <div>
+              <Badge className="rounded-full px-3 py-1">Plano selecionado</Badge>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight">
+                Continuar com {requestedPlan.name} · €{requestedPlan.priceMonthly}/mês
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                Você chegou ao dashboard com intenção de assinar este plano. Continue para rever limites, add-ons e finalizar a configuração comercial sem perder a escolha feita no pricing.
+              </p>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3 md:mt-0 md:justify-end">
+              <Button asChild className="rounded-full">
+                <Link href={`/${safeLocale}/dashboard/organizations/add-ons?plan=${requestedPlan.id}`}>
+                  Rever plano e add-ons <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-full bg-background/70">
+                <Link href={`/${safeLocale}/pricing`}>Comparar planos</Link>
+              </Button>
+            </div>
+          </section>
+        ) : null}
+
         <section id="overview" className="relative scroll-mt-28 overflow-hidden rounded-[2rem] border bg-background/86 p-6 shadow-2xl shadow-primary/5 backdrop-blur md:p-8">
           <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
           <div className="relative grid gap-8 lg:grid-cols-[1.35fr_0.65fr] lg:items-end">
