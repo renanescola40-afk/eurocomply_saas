@@ -13,6 +13,7 @@ EuroComply depends on the Node.js/npm ecosystem, GitHub Actions and third-party 
 | Package manager pinning | `package.json` `packageManager` |
 | npm repository policy | `.npmrc` |
 | npm audit triage commands | `package.json` audit scripts |
+| Floating dependency spec warnings | `scripts/security/check-supply-chain.mjs` |
 | Dependency Review | `.github/workflows/dependency-review.yml` |
 | CodeQL SAST | `.github/workflows/codeql.yml` |
 | Internal security CI | `.github/workflows/security-ci.yml` |
@@ -70,6 +71,32 @@ Use `security:npm-audit:prod` first to determine whether any high-severity advis
 Use `security:npm-audit:json` when Vercel or npm only prints a summarized vulnerability count and package-level detail is needed.
 
 These commands are not yet part of `npm run security:ci` because the current Vercel install summary reports known audit findings that still need package-level triage. Promote `security:npm-audit:prod` into `security:ci` only after the production audit is clean or an accepted exception is documented.
+
+## Floating Version Spec Policy
+
+`npm run security:supply-chain` warns when existing dependencies use highly floating version specs such as:
+
+```txt
+latest
+*
+>=...
+1.x
+x
+ranges with ||
+```
+
+These warnings are not hard failures yet because the repository still lacks a committed `package-lock.json` and the current npm audit findings need package-level triage first.
+
+Target state:
+
+```txt
+No dependency uses latest or open-ended ranges
+package-lock.json committed
+npm ci --ignore-scripts used in CI
+floating dependency specs treated as failures
+```
+
+When replacing a floating spec, prefer the exact version resolved in the audited lockfile instead of blindly choosing the newest version.
 
 ## Lockfile Status
 
@@ -129,6 +156,7 @@ security-and-quality
 - `packageManager` is pinned to `npm@10.8.2`
 - `.npmrc` exists and has the required policy
 - dangerous lifecycle scripts are not defined
+- floating version specs are reported as warnings
 - the security CI uses a safe install mode
 - dependency review remains configured
 
@@ -154,17 +182,20 @@ Before approving dependency changes:
 3. Confirm `npm run security:ci` passed.
 4. Run `npm run security:npm-audit:prod` and review failures.
 5. If Vercel only reports vulnerability counts, capture `npm run security:npm-audit:json` output for package-level triage.
-6. Review new package purpose and maintainer health.
-7. Confirm no lifecycle scripts were added.
-8. Confirm license compatibility.
-9. If lockfile changes are present, confirm they only contain expected dependency updates.
+6. Review floating dependency warnings and replace them with exact audited versions where possible.
+7. Review new package purpose and maintainer health.
+8. Confirm no lifecycle scripts were added.
+9. Confirm license compatibility.
+10. If lockfile changes are present, confirm they only contain expected dependency updates.
 
 ## Open Hardening Items
 
 - Commit a real `package-lock.json`.
+- Replace `latest`, wildcard and open-ended dependency specs with exact audited versions.
 - Change Security CI install from `npm install --ignore-scripts` to `npm ci --ignore-scripts`.
 - Make missing `package-lock.json` a hard failure.
 - Promote production npm audit into `security:ci` after package-level triage is clean or explicitly accepted.
+- Promote floating dependency specs from warnings to failures after the lockfile is committed.
 - Add OSV Scanner or equivalent vulnerability scanner.
 - Add provenance/SBOM generation for release builds.
 - Pin GitHub Actions by SHA for high-assurance environments.
