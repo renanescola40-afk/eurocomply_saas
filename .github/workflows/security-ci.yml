@@ -54,6 +54,16 @@ jobs:
           echo '```' >> npm-audit-summary.md
           cat npm-audit-summary.md >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Upload npm audit triage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-triage
+          path: |
+            npm-audit.json
+            npm-audit-summary.md
+          retention-days: 7
+          if-no-files-found: warn
+
       - name: Run EuroComply security CI
         run: npm run security:ci
 
