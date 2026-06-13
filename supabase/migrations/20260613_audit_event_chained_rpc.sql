@@ -4,6 +4,10 @@
 -- Application-side read-previous-hash + insert can fork the chain under concurrent writes.
 -- This function serializes appends per organization with pg_advisory_xact_lock and performs
 -- previous_hash lookup plus insert in one database transaction.
+--
+-- The application computes event_hash with the previous_hash it observed. The RPC validates
+-- that the database still has the same previous_hash after taking the lock. If concurrent
+-- writes advanced the chain, the RPC raises 40001 so the application can refetch and retry.
 
 create or replace function public.append_audit_event_chained(
   p_organization_id uuid,
@@ -12,6 +16,7 @@ create or replace function public.append_audit_event_chained(
   p_entity_type text,
   p_entity_id text,
   p_metadata jsonb,
+  p_previous_hash text,
   p_event_hash text,
   p_hash_signature text default null,
   p_hash_algorithm text default 'sha256'
@@ -52,6 +57,10 @@ begin
   order by ae.created_at desc, ae.id desc
   limit 1;
 
+  if coalesce(v_previous_hash, '') <> coalesce(p_previous_hash, '') then
+    raise exception 'audit chain previous hash mismatch' using errcode = '40001';
+  end if;
+
   insert into public.audit_events (
     organization_id,
     actor_user_id,
@@ -81,11 +90,11 @@ begin
 end;
 $$;
 
-revoke all on function public.append_audit_event_chained(uuid, uuid, text, text, text, jsonb, text, text, text) from public;
-revoke all on function public.append_audit_event_chained(uuid, uuid, text, text, text, jsonb, text, text, text) from anon;
-revoke all on function public.append_audit_event_chained(uuid, uuid, text, text, text, jsonb, text, text, text) from authenticated;
+revoke all on function public.append_audit_event_chained(uuid, uuid, text, text, text, jsonb, text, text, text, text) from public;
+revoke all on function public.append_audit_event_chained(uuid, uuid, text, text, text, jsonb, text, text, text, text) from anon;
+revoke all on function public.append_audit_event_chained(uuid, uuid, text, text, text, jsonb, text, text, text, text) from authenticated;
 
-grant execute on function public.append_audit_event_chained(uuid, uuid, text, text, text, jsonb, text, text, text) to service_role;
+grant execute on function public.append_audit_event_chained(uuid, uuid, text, text, text, jsonb, text, text, text, text) to service_role;
 
-comment on function public.append_audit_event_chained(uuid, uuid, text, text, text, jsonb, text, text, text)
-  is 'Appends an audit event with organization-scoped advisory locking so previous_hash lookup and insert happen atomically.';
+comment on function public.append_audit_event_chained(uuid, uuid, text, text, text, jsonb, text, text, text, text)
+  is 'Appends an audit event with organization-scoped advisory locking and validates the previous_hash used to compute event_hash before inserting.';
