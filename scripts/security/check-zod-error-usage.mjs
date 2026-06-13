@@ -9,6 +9,10 @@ const forbiddenPatterns = [
     pattern: /\.error\.errors\b/g,
     message: 'Use ZodError.issues instead of ZodError.errors; Zod v4 no longer exposes .errors on the public type.',
   },
+  {
+    pattern: /z\.record\s*\(\s*z\.unknown\s*\(\s*\)\s*\)/g,
+    message: 'Use z.record(z.string(), z.unknown()) instead of z.record(z.unknown()); Zod v4 requires an explicit key schema.',
+  },
 ];
 
 const failures = [];
