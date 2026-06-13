@@ -166,6 +166,26 @@
         "Verify Vercel result for the latest plan-alignment commit.",
         "Review public catalog Enterprise price metadata locally so it cannot imply self-serve activation."
       ]
+    },
+    {
+      "timestamp": "2026-06-13T13:36:00Z",
+      "cycle": "vercel_typecheck_regression",
+      "status": "patch_prepared_not_applied",
+      "findings": [
+        "Vercel compiled successfully on Next.js 15.5.9 but failed during type checking because a protected commercial endpoint kept legacy plan aliases in a map typed with canonical plan IDs.",
+        "The central plan lookup already normalizes legacy inbound plan values, so the endpoint can use the canonical resolved plan id directly."
+      ],
+      "actions_taken": [
+        "Attempted a direct minimal endpoint correction, but the connector blocked writes to the protected commercial endpoint.",
+        "Committed docs/ops/2026-06-13-vercel-typecheck-fix.md with the exact local patch required to restore typecheck.",
+        "Recorded that the latest deployment will continue to fail until that local patch is applied to the protected endpoint."
+      ],
+      "commits": ["38c50b1d831659c92ad45e8888eb726366e1844a"],
+      "next_cycle_focus": [
+        "Apply the documented local patch to the protected endpoint.",
+        "Run npm run build after applying the patch.",
+        "Review the two npm audit findings separately after deployment is green."
+      ]
     }
   ]
 }
