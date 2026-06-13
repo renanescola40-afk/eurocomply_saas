@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 
 const packageJsonPath = 'package.json';
@@ -5,6 +6,7 @@ const npmrcPath = '.npmrc';
 const supplyChainDocPath = 'docs/security/SUPPLY_CHAIN.md';
 const securityCiWorkflowPath = '.github/workflows/security-ci.yml';
 const dependencyReviewWorkflowPath = '.github/workflows/dependency-review.yml';
+const expectedPackageManager = 'npm@10.8.2';
 
 const failures = [];
 const warnings = [];
@@ -25,6 +27,17 @@ function read(path) {
   }
 
   return readFileSync(path, 'utf8');
+}
+
+function getCurrentNpmVersion() {
+  try {
+    return execSync('npm --version', {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+  } catch {
+    return null;
+  }
 }
 
 function isFloatingDependencySpec(versionSpec) {
@@ -50,6 +63,21 @@ function warnOnFloatingDependencySpecs(sectionName, dependencies = {}) {
   }
 }
 
+function warnOnNpmRuntimeDrift(packageManager) {
+  const currentNpmVersion = getCurrentNpmVersion();
+  if (!currentNpmVersion) {
+    warnings.push('Unable to detect npm runtime version; confirm CI/local npm matches packageManager before dependency triage.');
+    return;
+  }
+
+  const currentPackageManager = `npm@${currentNpmVersion}`;
+  if (currentPackageManager === packageManager) return;
+
+  warnings.push(
+    `Current npm runtime is ${currentPackageManager}, but ${packageJsonPath} pins ${packageManager}; align npm before generating package-lock.json or triaging npm audit output.`,
+  );
+}
+
 const pkg = readJson(packageJsonPath);
 const npmrc = read(npmrcPath);
 const supplyChainDoc = read(supplyChainDocPath);
@@ -60,9 +88,11 @@ console.log('EuroComply supply-chain policy check');
 console.log('------------------------------------');
 
 if (pkg) {
-  if (pkg.packageManager !== 'npm@10.8.2') {
-    failures.push(`${packageJsonPath} must pin packageManager to npm@10.8.2`);
+  if (pkg.packageManager !== expectedPackageManager) {
+    failures.push(`${packageJsonPath} must pin packageManager to ${expectedPackageManager}`);
   }
+
+  warnOnNpmRuntimeDrift(pkg.packageManager);
 
   const scripts = pkg.scripts ?? {};
   for (const scriptName of ['preinstall', 'install', 'postinstall', 'prepare']) {
@@ -94,7 +124,7 @@ if (npmrc) {
 }
 
 if (supplyChainDoc) {
-  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version']) {
+  for (const token of ['Dependency Review', 'CodeQL', 'npm install --ignore-scripts', 'package-lock.json', 'npm ci --ignore-scripts', 'floating version', 'npm runtime drift']) {
     if (!supplyChainDoc.includes(token)) {
       failures.push(`${supplyChainDocPath} missing required supply-chain evidence token: ${token}`);
     }
