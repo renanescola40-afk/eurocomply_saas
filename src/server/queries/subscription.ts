@@ -20,7 +20,7 @@ export function normalizePlan(value: string | null | undefined): SubscriptionPla
 
   if (normalized === 'enterprise') return 'enterprise';
   if (normalized === 'business') return 'business';
-  if (normalized === 'professional' || normalized === 'pro') return 'professional';
+  if (normalized === 'professional' || normalized === 'pro' || normalized === 'growth') return 'professional';
 
   return 'essential';
 }
