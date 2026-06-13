@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const helperPath = 'src/server/security/step-up.ts';
 const testPath = 'src/server/security/step-up.test.ts';
 const docPath = 'docs/security/STEP_UP_AUTH.md';
+const rolloutMatrixPath = 'docs/security/STEP_UP_ROLLOUT_MATRIX.md';
 const auditChainVerifierPath = 'src/app/api/audit/chain/verify/route.ts';
 const challengePath = 'src/app/api/security/step-up/challenge/route.ts';
 
@@ -62,6 +63,27 @@ const docRequiredTokens = [
   'Rollout Plan',
 ];
 
+const rolloutMatrixRequiredTokens = [
+  'Step-Up Rollout Matrix',
+  'GET /api/audit/chain/verify',
+  'GET /api/audit/evidence-pack',
+  'GET /api/security-questionnaire/export',
+  'GET /api/vendor-assurance/export',
+  'GET /api/enterprise-readiness/export',
+  'GET /api/retention-center/export',
+  'GET /api/continuity-center/export',
+  'POST /api/billing/checkout',
+  'POST /api/billing/portal',
+  'POST /api/gdpr/delete-request',
+  'POST /api/security/step-up/challenge',
+  'requireStepUpForRequest()',
+  'signed_hmac',
+  'step_up_provider_not_configured',
+  'HTTP 501',
+  'Team invite management',
+  'Security settings changes',
+];
+
 const auditChainVerifierRequiredTokens = [
   'requireStepUpForRequest',
   'audit_chain_verify',
@@ -111,12 +133,14 @@ console.log('---------------------------------------');
 const helper = read(helperPath);
 const test = read(testPath);
 const doc = read(docPath);
+const rolloutMatrix = read(rolloutMatrixPath);
 const auditChainVerifier = read(auditChainVerifierPath);
 const challenge = read(challengePath);
 
 if (helper) requireTokens(helperPath, helper, helperRequiredTokens);
 if (test) requireTokens(testPath, test, testRequiredTokens);
 if (doc) requireTokens(docPath, doc, docRequiredTokens);
+if (rolloutMatrix) requireTokens(rolloutMatrixPath, rolloutMatrix, rolloutMatrixRequiredTokens);
 if (auditChainVerifier) requireTokens(auditChainVerifierPath, auditChainVerifier, auditChainVerifierRequiredTokens);
 if (challenge) requireTokens(challengePath, challenge, challengeRequiredTokens);
 
