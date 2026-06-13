@@ -91,7 +91,7 @@ const signupCopy: Record<string, {
     login: 'Déjà un compte ? Connexion',
     successTitle: 'Compte créé',
     successSubtitle: 'Vérifiez votre email pour confirmer le compte, puis connectez-vous.',
-    errorTitle: 'Impossible de créer le compte',
+    errorTitle: 'Impossible de créer un compte',
     selectedPlan: 'Forfait sélectionné',
     planHelp: 'Ce forfait est conservé avec l’inscription pour poursuivre le bon checkout/onboarding.',
   },
@@ -137,7 +137,7 @@ function getDashboardHref(locale: string, planId?: string) {
 }
 
 function normalizePlanId(planId: string | null) {
-  return getBillingPlan(planId ?? '')?.id ?? 'growth';
+  return getBillingPlan(planId)?.id ?? 'professional';
 }
 
 export default function SignupPage() {
