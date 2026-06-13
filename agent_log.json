@@ -201,6 +201,26 @@
         "Create the live Enterprise price in the payment provider dashboard and configure the matching production environment key.",
         "Have Codex connect the existing billing webhook to organization add-on persistence in a local environment."
       ]
+    },
+    {
+      "timestamp": "2026-06-13T11:20:00Z",
+      "cycle": "manual_billing_alignment",
+      "status": "partially_hardened",
+      "findings": [
+        "Post-signup dashboard redirects preserved the requested plan only when organization onboarding was missing; existing organizations could lose visibility of the selected plan intent."
+      ],
+      "actions_taken": [
+        "Updated the organization dashboard to read the selected plan query parameter, validate it through the billing catalog, and display a continuation CTA when the selected plan differs from the current entitlement plan.",
+        "Preserved the selected plan when redirecting users without an organization to onboarding."
+      ],
+      "commits": [
+        "3d76744c940551e0a0b0d0e426629cb37e1c8bce"
+      ],
+      "next_cycle_focus": [
+        "Connect the add-ons/plan review CTA to the real checkout creation route once the sensitive billing webhook/checkout patch is applied by Codex locally.",
+        "Create the live Enterprise price in the payment provider dashboard and configure the matching production environment key.",
+        "Have Codex connect the existing billing webhook to organization add-on persistence in a local environment."
+      ]
     }
   ]
 }
