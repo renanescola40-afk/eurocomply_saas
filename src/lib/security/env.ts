@@ -41,9 +41,10 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z
     .string()
     .startsWith('whsec_', 'STRIPE_WEBHOOK_SECRET deve começar com whsec_'),
-  STRIPE_STARTER_PRICE_ID: z.string().min(1, 'STRIPE_STARTER_PRICE_ID é obrigatório'),
-  STRIPE_GROWTH_PRICE_ID: z.string().min(1, 'STRIPE_GROWTH_PRICE_ID é obrigatório'),
-  STRIPE_ENTERPRISE_PRICE_ID: z.string().min(1, 'STRIPE_ENTERPRISE_PRICE_ID é obrigatório'),
+  STRIPE_PRICE_ESSENTIAL_MONTHLY: z.string().min(1, 'STRIPE_PRICE_ESSENTIAL_MONTHLY é obrigatório'),
+  STRIPE_PRICE_PROFESSIONAL_MONTHLY: z.string().min(1, 'STRIPE_PRICE_PROFESSIONAL_MONTHLY é obrigatório'),
+  STRIPE_PRICE_BUSINESS_MONTHLY: z.string().min(1, 'STRIPE_PRICE_BUSINESS_MONTHLY é obrigatório'),
+  STRIPE_PRICE_ENTERPRISE_MONTHLY: z.string().optional().default(''),
 
   // ── App ────────────────────────────────────────────────────────────────
   NEXT_PUBLIC_APP_URL: z.string().url('NEXT_PUBLIC_APP_URL deve ser uma URL'),
@@ -79,6 +80,21 @@ const resolvedEnv = {
     process.env.SUPABASE_PUBLISHABLE_KEY ||
     process.env.SUPABASE_KEY ||
     process.env.SUPABASE_ANON_KEY ||
+    '',
+  STRIPE_PRICE_ESSENTIAL_MONTHLY:
+    process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY ||
+    process.env.STRIPE_STARTER_PRICE_ID ||
+    '',
+  STRIPE_PRICE_PROFESSIONAL_MONTHLY:
+    process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY ||
+    process.env.STRIPE_GROWTH_PRICE_ID ||
+    '',
+  STRIPE_PRICE_BUSINESS_MONTHLY:
+    process.env.STRIPE_PRICE_BUSINESS_MONTHLY ||
+    '',
+  STRIPE_PRICE_ENTERPRISE_MONTHLY:
+    process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY ||
+    process.env.STRIPE_ENTERPRISE_PRICE_ID ||
     '',
 };
 
@@ -156,9 +172,11 @@ STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
 # IDs dos preços criados no Stripe Dashboard
-STRIPE_STARTER_PRICE_ID=price_...
-STRIPE_GROWTH_PRICE_ID=price_...
-STRIPE_ENTERPRISE_PRICE_ID=price_...
+STRIPE_PRICE_ESSENTIAL_MONTHLY=price_...
+STRIPE_PRICE_PROFESSIONAL_MONTHLY=price_...
+STRIPE_PRICE_BUSINESS_MONTHLY=price_...
+# Opcional: apenas se o fluxo Enterprise usar checkout direto no futuro.
+STRIPE_PRICE_ENTERPRISE_MONTHLY=price_...
 
 # URL pública da aplicação (sem trailing slash)
 NEXT_PUBLIC_APP_URL=https://app.eurocomply.ai
