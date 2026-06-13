@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-06-13T14:35:00Z",
+  "repo": "renanescola40-afk/eurocomply_saas",
+  "branch": "main",
+  "phase": "vercel-build-fix",
+  "trigger": "Vercel build failed during typecheck on src/lib/security/env.ts because ZodError.errors does not exist.",
+  "changes": [
+    {
+      "path": "src/lib/security/env.ts",
+      "summary": "Replaced result.error.errors with result.error.issues for compatibility with the installed Zod version while preserving validation message formatting."
+    }
+  ],
+  "verification": [
+    "Searched repository for related error.errors/ZodError/safeParse patterns; no additional matches were returned by code search.",
+    "Local build was not run in this environment. Vercel should be the source of truth for the next build attempt."
+  ],
+  "follow_up": [
+    "Watch Vercel build for the new commit and address any subsequent typecheck errors if surfaced.",
+    "Do not run npm audit fix --force blindly; use the existing npm audit triage artifact/report flow."
+  ]
+}
