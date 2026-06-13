@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-06-13T14:45:00+01:00",
+  "type": "build_fix_hardening",
+  "summary": "Added npm prebuild hook so Vercel runs the Zod compatibility guard before next build.",
+  "context": {
+    "vercel_error_commit": "7a3705a",
+    "vercel_error": "ZodError.errors is not available; use ZodError.issues",
+    "current_fix_commit": "c794af64f95c329d84f622569d5faea33395851c"
+  },
+  "changes": [
+    "Added package.json prebuild script: npm run security:zod-compat",
+    "Kept existing build command as next build",
+    "Ensures npm run build in Vercel fails early with a clear custom guard if deprecated ZodError.errors usage returns"
+  ],
+  "notes": [
+    "The pasted Vercel log still references commit 7a3705a, which predates the Zod fix commits.",
+    "A fresh Vercel deployment must clone c794af64 or newer to include the current build fixes."
+  ]
+}
