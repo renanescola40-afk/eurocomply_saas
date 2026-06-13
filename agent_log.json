@@ -49,6 +49,39 @@
         "Review demo Enterprise exposure and billing contract separation",
         "Verify Vercel cron limits and Supabase migration alignment"
       ]
+    },
+    {
+      "timestamp": "2026-06-13T09:18:00Z",
+      "cycle": "manual_hardening",
+      "scope": [
+        "Enterprise/Premium demo exposure",
+        "Add-ons commercial page",
+        "Billing/demo separation"
+      ],
+      "findings": [
+        {
+          "severity": "high",
+          "area": "billing_demo",
+          "title": "Enterprise demo mode was enabled by query parameter only",
+          "evidence": "The add-ons page allowed any authenticated user to request ?demo=enterprise or ?demo=premium and see Enterprise/Premium UI without an environment guard.",
+          "impact": "Users could confuse a visual demo with a real entitlement, creating commercial, support and product-trust risk.",
+          "auto_fix_applied": true,
+          "fix_commit": "09d1f0d420470ca352279f7dcf123bff0a6f9bd5",
+          "recommended_action": "Keep NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO unset/false in production. Enable it only for controlled sales/demo deployments."
+        }
+      ],
+      "actions_taken": [
+        "Added NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO guard to the add-ons page.",
+        "Added a warning banner when demo mode is requested but disabled.",
+        "Preserved real entitlements unless the demo flag is explicitly enabled."
+      ],
+      "status": "partially_hardened",
+      "next_cycle_focus": [
+        "Create Codex hardening backlog",
+        "Review pricing and Enterprise plan contract",
+        "Replace activeAddOnIds placeholder with real add-on persistence",
+        "Verify latest Vercel deploy after build quota reset"
+      ]
     }
   ]
 }
