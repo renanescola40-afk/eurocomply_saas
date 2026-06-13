@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const packageJsonPath = 'package.json';
 const packageLockPath = 'package-lock.json';
 const npmAuditJsonPath = 'npm-audit.json';
+const securityCiWorkflowPath = '.github/workflows/security-ci.yml';
 const expectedPackageManager = 'npm@10.8.2';
 
 const blockers = [];
@@ -14,6 +15,15 @@ function readJson(path) {
   } catch (error) {
     blockers.push(`${path} could not be read as JSON: ${error.message}`);
     return null;
+  }
+}
+
+function readText(path) {
+  try {
+    return readFileSync(path, 'utf8');
+  } catch (error) {
+    blockers.push(`${path} could not be read: ${error.message}`);
+    return '';
   }
 }
 
@@ -64,6 +74,29 @@ function checkLockfile() {
   }
 }
 
+function checkSecurityCiCachePolicy() {
+  if (!existsSync(securityCiWorkflowPath)) {
+    blockers.push(`${securityCiWorkflowPath} is missing`);
+    return;
+  }
+
+  const securityCi = readText(securityCiWorkflowPath);
+  const hasLockfile = existsSync(packageLockPath);
+
+  if (!hasLockfile && securityCi.includes('cache: npm')) {
+    blockers.push(`${securityCiWorkflowPath} must not enable npm cache until ${packageLockPath} exists.`);
+    return;
+  }
+
+  if (!hasLockfile) {
+    notes.push('Security CI npm cache is disabled while package-lock.json is missing. This is expected until lockfile triage is complete.');
+  }
+
+  if (hasLockfile && securityCi.includes('npm install --ignore-scripts')) {
+    blockers.push(`${securityCiWorkflowPath} should switch from npm install --ignore-scripts to npm ci --ignore-scripts after package-lock.json is committed.`);
+  }
+}
+
 function checkNpmAuditJson() {
   if (!existsSync(npmAuditJsonPath)) {
     blockers.push(`${npmAuditJsonPath} is missing; run npm run security:npm-audit:json > npm-audit.json or download the npm-audit-triage artifact.`);
@@ -90,6 +123,7 @@ console.log('-----------------------------------------');
 
 checkPackageJson();
 checkLockfile();
+checkSecurityCiCachePolicy();
 checkNpmAuditJson();
 
 if (notes.length > 0) {
