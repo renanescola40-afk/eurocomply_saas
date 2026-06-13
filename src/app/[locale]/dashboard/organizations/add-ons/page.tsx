@@ -23,6 +23,8 @@ const enterpriseDemoModules = [
   ['Documentos', '/documentos'],
 ] as const;
 
+const enterpriseDemoEnabled = process.env.NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO === 'true';
+
 type PageProps = {
   params: Promise<{ locale: string }>;
   searchParams?: Promise<{ demo?: string }>;
@@ -31,7 +33,8 @@ type PageProps = {
 export default async function AddOnsAndCreditsPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
   const query = searchParams ? await searchParams : {};
-  const isEnterpriseDemo = query.demo === 'enterprise' || query.demo === 'premium';
+  const requestedEnterpriseDemo = query.demo === 'enterprise' || query.demo === 'premium';
+  const isEnterpriseDemo = enterpriseDemoEnabled && requestedEnterpriseDemo;
   const user = await getCurrentUser();
 
   if (!user) {
@@ -52,6 +55,12 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.12),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.35))]">
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-12">
+        {requestedEnterpriseDemo && !enterpriseDemoEnabled ? (
+          <section className="rounded-[1.5rem] border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-100">
+            Enterprise demo is disabled in this environment. Set NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO=true only for controlled sales/demo deployments.
+          </section>
+        ) : null}
+
         <section className="rounded-[2rem] border bg-background/90 p-6 shadow-xl shadow-primary/5 md:p-9">
           <Badge className="rounded-full px-3 py-1 uppercase tracking-[0.18em]">
             {isEnterpriseDemo ? 'Enterprise demo' : 'Add-ons & créditos'}
