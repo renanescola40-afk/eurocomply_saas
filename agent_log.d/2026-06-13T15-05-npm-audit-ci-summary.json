@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-06-13T15:05:00Z",
+  "scope": "security-ci/npm-audit-triage",
+  "action": "implemented_non_blocking_audit_summary",
+  "status": "completed",
+  "finding": "The repository had npm audit triage scripts and a local summary parser, but Security CI did not yet print the audit package summary during automated runs.",
+  "changes": [
+    {
+      "file": ".github/workflows/security-ci.yml",
+      "summary": "Added a non-blocking step that captures npm audit JSON and prints the triage summary before the main security gate."
+    },
+    {
+      "file": "docs/security/SUPPLY_CHAIN.md",
+      "summary": "Documented the non-blocking CI audit summary, the warning-only policy, and the updated operational checklist."
+    }
+  ],
+  "commits": [
+    "57e4a64d3002ba3618edb1704aff4c88e6788752",
+    "cab40cbe34379e59c037cde2ac1da1d0c0b7ddb8"
+  ],
+  "notes": [
+    "The CI audit summary intentionally uses `|| true` so existing npm audit findings are visible but do not block until triage is complete.",
+    "The next dependency-fix phase should use the printed audit summary to update only affected packages, avoiding `npm audit fix --force`."
+  ],
+  "next_steps": [
+    "Wait for the next Security CI/Vercel run and inspect the npm audit summary in logs.",
+    "Generate and commit package-lock.json after audited dependency pins are chosen.",
+    "Promote production npm audit into security:ci only after production findings are fixed or explicitly accepted."
+  ]
+}
