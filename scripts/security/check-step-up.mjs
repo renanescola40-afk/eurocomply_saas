@@ -4,6 +4,7 @@ const helperPath = 'src/server/security/step-up.ts';
 const testPath = 'src/server/security/step-up.test.ts';
 const docPath = 'docs/security/STEP_UP_AUTH.md';
 const auditChainVerifierPath = 'src/app/api/audit/chain/verify/route.ts';
+const challengePath = 'src/app/api/security/step-up/challenge/route.ts';
 
 const helperRequiredTokens = [
   'STEP_UP_MAX_AGE_MS',
@@ -70,6 +71,21 @@ const auditChainVerifierRequiredTokens = [
   'expiresAt',
 ];
 
+const challengeRequiredTokens = [
+  'assertTrustedOrigin',
+  'getCurrentUser',
+  'getCurrentOrganizationForUser',
+  'noStoreJson',
+  'step_up_provider_not_configured',
+  'mfa_or_identity_provider_reauthentication',
+  'export_data',
+  'manage_billing',
+  'manage_team',
+  'gdpr_delete',
+  'audit_chain_verify',
+  'change_security_settings',
+];
+
 const failures = [];
 
 function read(path) {
@@ -96,11 +112,13 @@ const helper = read(helperPath);
 const test = read(testPath);
 const doc = read(docPath);
 const auditChainVerifier = read(auditChainVerifierPath);
+const challenge = read(challengePath);
 
 if (helper) requireTokens(helperPath, helper, helperRequiredTokens);
 if (test) requireTokens(testPath, test, testRequiredTokens);
 if (doc) requireTokens(docPath, doc, docRequiredTokens);
 if (auditChainVerifier) requireTokens(auditChainVerifierPath, auditChainVerifier, auditChainVerifierRequiredTokens);
+if (challenge) requireTokens(challengePath, challenge, challengeRequiredTokens);
 
 if (helper && helper.includes('NextResponse.json')) {
   failures.push(`${helperPath} must use noStoreJson instead of direct NextResponse.json`);
@@ -120,6 +138,14 @@ if (auditChainVerifier && auditChainVerifier.includes('assessStepUpToken')) {
 
 if (auditChainVerifier && auditChainVerifier.indexOf('requireStepUpForRequest') > auditChainVerifier.indexOf('checkDistributedRateLimit')) {
   failures.push(`${auditChainVerifierPath} should enforce signed step-up before rate-limited sensitive processing`);
+}
+
+if (challenge && challenge.includes('createStepUpToken')) {
+  failures.push(`${challengePath} must not issue step-up tokens until a real MFA or reauthentication provider is integrated`);
+}
+
+if (challenge && !challenge.includes('{ status: 501 }')) {
+  failures.push(`${challengePath} must fail closed while the real step-up provider is not configured`);
 }
 
 if (failures.length > 0) {
