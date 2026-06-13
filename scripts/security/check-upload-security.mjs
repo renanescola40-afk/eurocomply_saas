@@ -12,6 +12,8 @@ const requiredUploadTokens = [
   'manage_documents',
   'assertDocumentQuota',
   'validateUploadFileSignature',
+  'scanUploadForMalware',
+  'shouldBlockUploadForMalwareScan',
   'createHash',
   'sha256',
   'tryCreateAdminClient',
@@ -19,8 +21,12 @@ const requiredUploadTokens = [
   'createAuditEvent',
   'document_upload_rejected',
   'signature_mismatch',
+  'malware_scan_not_clean',
   'document_uploaded',
   'checksumSha256',
+  'scanStatus',
+  'scanProvider',
+  'scanRequired',
   'MAX_UPLOAD_BYTES',
   'ALLOWED_TYPES',
 ];
@@ -82,6 +88,14 @@ if (uploadSource.includes('contentType: file.type') && !uploadSource.includes('v
 
 if (uploadSource.includes('supabase.storage') && uploadSource.indexOf('validateUploadFileSignature') > uploadSource.indexOf('supabase.storage')) {
   failures.push(`${uploadRoute} validates file signature after storage access; validation must happen before upload`);
+}
+
+if (uploadSource.includes('.upload(storagePath') && uploadSource.indexOf('shouldBlockUploadForMalwareScan') > uploadSource.indexOf('.upload(storagePath')) {
+  failures.push(`${uploadRoute} must enforce content scan policy before storing the upload`);
+}
+
+if (uploadSource.includes('document_uploaded') && !uploadSource.includes('scanCheckedAt')) {
+  failures.push(`${uploadRoute} must include content scan evidence in successful upload audit metadata`);
 }
 
 if (contentScanSource && !contentScanSource.includes('required && result.status !==')) {
