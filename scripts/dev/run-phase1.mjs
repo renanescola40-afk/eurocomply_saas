@@ -5,7 +5,9 @@ import { writeFileSync } from 'node:fs';
 
 const startedAt = new Date().toISOString();
 const steps = [
+  { name: 'pin-dependencies', command: 'node', args: ['scripts/dev/pin-known-latest-deps.mjs'] },
   { name: 'lockfile', command: 'npm', args: ['install', '--package-lock-only', '--ignore-scripts'] },
+  { name: 'dependency-pin-report', command: 'node', args: ['scripts/dev/write-dependency-pin-report.mjs'] },
   { name: 'status', command: 'node', args: ['scripts/dev/write-phase1-status.mjs'] },
   { name: 'foundation', command: 'node', args: ['scripts/dev/check-local-foundation.mjs'] },
   { name: 'quality', command: 'node', args: ['scripts/dev/run-quality-report.mjs'] },
