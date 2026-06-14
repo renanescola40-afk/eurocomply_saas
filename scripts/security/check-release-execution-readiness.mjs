@@ -14,6 +14,7 @@ const commands = [
   ['node', ['scripts/security/check-release-operations.mjs']],
   ['node', ['scripts/security/check-release-readiness-scorecard.mjs']],
   ['node', ['scripts/security/check-release-execution-evidence.mjs']],
+  ['node', ['scripts/security/check-release-deployment-evidence.mjs']],
 ];
 
 for (const [command, args] of commands) {
