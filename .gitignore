@@ -14,3 +14,10 @@ coverage
 playwright-report
 test-results
 npm-audit*.json
+local-build-report.json
+local-quality-report.json
+phase1-status.json
+phase1-run-report.json
+dependency-pin-report.json
+final-security-readiness.json
+docs-manifest.json
