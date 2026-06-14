@@ -19,5 +19,6 @@ local-quality-report.json
 phase1-status.json
 phase1-run-report.json
 dependency-pin-report.json
+dependency-pin-change-report.json
 final-security-readiness.json
 docs-manifest.json
