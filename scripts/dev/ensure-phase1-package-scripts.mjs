@@ -12,6 +12,7 @@ pkg.scripts = {
   'phase1:strict': 'node scripts/dev/run-phase1-strict.mjs',
   'phase1:commit-plan': 'node scripts/dev/write-phase1-commit-plan.mjs',
   'phase2:check': 'node scripts/dev/check-phase2-cicd-foundation.mjs',
+  'phase2:strict': 'node scripts/dev/run-phase2-strict.mjs',
 };
 
 writeFileSync(packageJsonPath, `${JSON.stringify(pkg, null, 2)}\n`);
