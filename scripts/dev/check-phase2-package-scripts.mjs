@@ -11,6 +11,7 @@ const expected = {
   'phase2:complete': 'node scripts/dev/run-phase2-complete.mjs',
   'phase2:finalize': 'node scripts/dev/run-phase2-finalize.mjs',
   'phase2:gitignore': 'node scripts/dev/ensure-phase2-gitignore.mjs',
+  'phase2:ci-workflow': 'node scripts/dev/ensure-phase2-ci-workflow.mjs',
 };
 
 const mismatches = Object.entries(expected).filter(([name, command]) => scripts[name] !== command);
