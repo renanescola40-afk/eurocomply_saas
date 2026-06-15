@@ -12,6 +12,7 @@ const requiredFiles = [
   'scripts/dev/check-phase2-package-scripts.mjs',
   'scripts/dev/ensure-phase2-ci-workflow.mjs',
   'scripts/dev/ensure-phase2-gitignore.mjs',
+  'scripts/dev/run-phase2-ci-ready.mjs',
   'scripts/dev/run-phase2-complete.mjs',
   'scripts/dev/run-phase2-finalize.mjs',
   'scripts/dev/run-phase2-strict.mjs',
