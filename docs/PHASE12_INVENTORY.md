@@ -34,6 +34,7 @@ Evidence handoff readiness review.
 - `docs/PHASE12_SCOPE.md`
 - `docs/PHASE12_INVENTORY.md`
 - `docs/PHASE12_VALIDATION_PLAN.md`
+- `docs/PHASE12_REVIEW_GATE.md`
 - `scripts/dev/run-phase12-checks.mjs`
 - `scripts/dev/run-phase12-review.mjs`
 - `tests/phase12/evidence-handoff-readiness-review.test.ts`
