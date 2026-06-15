@@ -7,6 +7,8 @@ const requiredPhrases = [
   'production-complete',
   'repository-complete',
   'validated',
+  'npm run phase3:strict',
+  'npm run phase3:closeout',
   'Production secrets are configured only in the deployment provider or external services',
   'Supabase production migrations are reviewed and applied in filename order',
   'Stripe live products and prices are configured',
