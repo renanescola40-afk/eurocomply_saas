@@ -3,6 +3,7 @@ import { DashboardExperienceIndex } from '@/components/dashboard/dashboard-exper
 import { DashboardExperienceMap } from '@/components/dashboard/dashboard-experience-map';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
 import { NextBestActions } from '@/components/dashboard/next-best-actions';
+import { ReadinessFollowUpPlan } from '@/components/dashboard/readiness-follow-up-plan';
 import { WorkflowReadinessSummary } from '@/components/dashboard/workflow-readiness-summary';
 import type { OrganizationWorkflowReadiness } from '@/server/queries/organization-dashboard';
 import type { DashboardSummary, DashboardTrendComparison, DashboardTrendSnapshot } from '@/server/queries/dashboard';
@@ -46,6 +47,9 @@ export function DashboardHomeOverview({
       </section>
       <section id="workflow-readiness" className="scroll-mt-28">
         <WorkflowReadinessSummary workflowReadiness={workflowReadiness} />
+      </section>
+      <section id="readiness-follow-up" className="scroll-mt-28">
+        <ReadinessFollowUpPlan workflowReadiness={workflowReadiness} basePath={basePath} />
       </section>
       <section id="recommended-focus" className="scroll-mt-28">
         <NextBestActions summary={summary} basePath={basePath} workflowReadiness={workflowReadiness} />
