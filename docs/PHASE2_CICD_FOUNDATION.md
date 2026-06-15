@@ -28,10 +28,16 @@ The minimum required checks are:
 Before marking Phase 2 as ready, run:
 
 ```bash
-node scripts/dev/run-phase2-complete.mjs
+node scripts/dev/run-phase2-finalize.mjs
 ```
 
 After aliases are added, the preferred command is:
+
+```bash
+npm run phase2:finalize
+```
+
+For the complete local validation before the final commit-plan check, run:
 
 ```bash
 npm run phase2:complete
@@ -55,7 +61,15 @@ To patch only the Phase 2 generated-report entries in `.gitignore`, run:
 npm run phase2:gitignore
 ```
 
+The workflow patcher is:
+
+```txt
+ensure-phase2-ci-workflow
+```
+
 The complete runner validates file inventory, documentation, generated report hygiene, package aliases, CI/CD workflow requirements, and writes the final Phase 2 report.
+
+The finalizer runs the complete runner and then validates the commit plan.
 
 ## Local diagnostic outputs
 
@@ -63,6 +77,20 @@ The Phase 2 checker writes local diagnostics that should not be committed:
 
 - `phase2-cicd-report.json`
 - `phase2-final-report.txt`
+- `phase2-commit-plan.json`
+
+## Phase 2 script inventory
+
+The core scripts are:
+
+- `check-phase2-script-files`
+- `ensure-phase2-gitignore`
+- `check-phase2-gitignore`
+- `check-phase2-package-scripts`
+- `check-phase2-cicd-foundation`
+- `write-phase2-final-report`
+- `write-phase2-commit-plan`
+- `check-phase2-commit-plan`
 
 ## Completion criteria
 
@@ -79,6 +107,7 @@ Phase 2 CI/CD foundation is complete when:
 - The local Phase 2 CI/CD checker passes.
 - `phase2-cicd-report.json` reports success.
 - `phase2-final-report.txt` is reviewed.
+- `phase2-commit-plan.json` reports ready to commit.
 - A first CI run completes successfully in GitHub Actions.
 
 ## Expected gaps before implementation
@@ -93,4 +122,4 @@ Before the CI workflow is fully aligned, the Phase 2 checker is expected to flag
 
 ## Exit criteria
 
-Phase 2 can be marked complete only after the workflow file is committed, `npm run phase2:complete` passes locally, `phase2-final-report.txt` is reviewed, and a real GitHub Actions run passes.
+Phase 2 can be marked complete only after the workflow file is committed, `npm run phase2:finalize` passes locally, `phase2-final-report.txt` is reviewed, `phase2-commit-plan.json` is ready, and a real GitHub Actions run passes.
