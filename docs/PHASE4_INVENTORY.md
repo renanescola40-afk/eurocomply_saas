@@ -20,7 +20,7 @@ This inventory tracks the initial Phase 4 planning and validation artifacts.
 ```bash
 npm run phase3:strict
 npm run phase3:closeout
-node scripts/dev/run-phase4-checks.mjs
+npm run phase4:check
 ```
 
 ## Scope guard
