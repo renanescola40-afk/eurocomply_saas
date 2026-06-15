@@ -16,6 +16,11 @@ type QueryError = {
   message?: string;
 } | null;
 
+export type OrganizationWorkflowReadiness = {
+  status: 'ready' | 'attention' | 'blocked';
+  reasons: string[];
+};
+
 function isExpectedSchemaFallback(error: QueryError) {
   return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST204' || error?.code === 'PGRST205';
 }
@@ -41,6 +46,42 @@ function getEmptyDashboardSummary(): DashboardSummary {
       documents: 0,
     },
   };
+}
+
+function getOrganizationWorkflowReadiness(
+  summary: DashboardSummary,
+  tasks: unknown[],
+  topRisks: unknown[],
+  vendorsRequiringReview: unknown[],
+  documentsExpiringSoon: unknown[],
+): OrganizationWorkflowReadiness {
+  const reasons: string[] = [];
+
+  if (summary.criticalRisks > 0 || topRisks.length > 0) {
+    reasons.push('risk-review-required');
+  }
+
+  if (summary.openTasks > 0 || tasks.length > 0) {
+    reasons.push('open-compliance-work');
+  }
+
+  if (summary.highRiskVendors > 0 || vendorsRequiringReview.length > 0) {
+    reasons.push('vendor-review-required');
+  }
+
+  if (summary.missingDocuments > 0 || documentsExpiringSoon.length > 0) {
+    reasons.push('evidence-review-required');
+  }
+
+  if (summary.complianceScore < 55) {
+    return { status: 'blocked', reasons };
+  }
+
+  if (reasons.length > 0 || summary.complianceScore < 80) {
+    return { status: 'attention', reasons };
+  }
+
+  return { status: 'ready', reasons: ['ready-for-executive-review'] };
 }
 
 async function withDashboardTimeout<T>(label: string, promise: Promise<T>, fallback: T, timeoutMs = 3_500) {
@@ -182,6 +223,7 @@ export async function getOrganizationDashboardData(userId: string, organizationS
     organization: normalizeOrganization(organization),
     entitlements,
     summary,
+    workflowReadiness: getOrganizationWorkflowReadiness(summary, tasks, topRisks, vendorsRequiringReview, documentsExpiringSoon),
     tasks,
     trendHistory,
     trendComparison: getDashboardTrendComparison(trendHistory),
