@@ -27,6 +27,18 @@ describe('Phase 9 readiness export preparation', () => {
     expect(overview).toContain('executive-reporting-package');
   });
 
+  it('renders the readiness export preparation surface', () => {
+    const exportPreparation = read('src/components/dashboard/readiness-export-preparation.tsx');
+    const overview = read('src/components/dashboard/dashboard-home-overview.tsx');
+
+    expect(exportPreparation).toContain('ReadinessExportPreparation');
+    expect(exportPreparation).toContain('Readiness export preparation');
+    expect(exportPreparation).toContain('Prepare from reports');
+    expect(exportPreparation).toContain('workflowReadiness?.reasons.length');
+    expect(overview).toContain('ReadinessExportPreparation');
+    expect(overview).toContain('readiness-export-preparation');
+  });
+
   it('keeps export preparation safe before additional runtime changes', () => {
     const validation = read('docs/PHASE9_VALIDATION_PLAN.md');
 
