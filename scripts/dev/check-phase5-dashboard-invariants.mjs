@@ -14,7 +14,26 @@ const expectations = [
   [files.root, ['redirect', "'/pt'"]],
   [files.localeHome, ['getCurrentUser', 'dashboard/organizations', 'EnterpriseHome']],
   [files.orgDashboard, ['getCurrentUser', 'redirect(`/${safeLocale}/login`)', 'getOrganizationDashboardData', 'redirect(`/${safeLocale}/onboarding']],
-  [files.orgDashboardQuery, ['getCurrentOrganizationForUser', 'organization.id', "eq('organization_id', organizationId)", "from('compliance_tasks')", "from('risks')", "from('vendors')", "from('documents')"]],
+  [
+    files.orgDashboardQuery,
+    [
+      'getCurrentOrganizationForUser',
+      'organization.id',
+      "eq('organization_id', organizationId)",
+      "from('compliance_tasks')",
+      "from('risks')",
+      "from('vendors')",
+      "from('documents')",
+      'OrganizationWorkflowReadiness',
+      'getOrganizationWorkflowReadiness',
+      'workflowReadiness',
+      'risk-review-required',
+      'open-compliance-work',
+      'vendor-review-required',
+      'evidence-review-required',
+      'ready-for-executive-review',
+    ],
+  ],
   [files.currentOrganization, ["from('organization_members')", "eq('user_id', userId)", 'getCurrentOrganizationForUser', 'membership.slug === slug']],
 ];
 
