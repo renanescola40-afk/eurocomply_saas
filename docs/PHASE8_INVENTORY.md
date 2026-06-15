@@ -27,13 +27,16 @@ Executive readiness reporting package preparation.
 - `docs/PHASE8_KICKOFF.md`
 - `docs/PHASE8_SCOPE.md`
 - `docs/PHASE8_INVENTORY.md`
+- `docs/PHASE8_VALIDATION_PLAN.md`
 - `scripts/dev/run-phase8-checks.mjs`
+- `tests/phase8/executive-reporting-package.test.ts`
 
 ## Required commands
 
 ```bash
 npm run phase7:verify
 npm run phase8:check
+npm run test
 ```
 
 ## Runtime boundary
