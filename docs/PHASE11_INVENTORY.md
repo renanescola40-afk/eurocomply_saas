@@ -34,12 +34,15 @@ Evidence handoff review.
 - `docs/PHASE11_SCOPE.md`
 - `docs/PHASE11_INVENTORY.md`
 - `scripts/dev/run-phase11-checks.mjs`
+- `scripts/dev/run-phase11-review.mjs`
+- `scripts/dev/run-phase11-verify.mjs`
 
 ## Required commands
 
 ```bash
-npm run phase10:verify
 node scripts/dev/run-phase11-checks.mjs
+node scripts/dev/run-phase11-review.mjs
+node scripts/dev/run-phase11-verify.mjs
 ```
 
 ## Runtime boundary
