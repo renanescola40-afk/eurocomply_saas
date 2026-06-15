@@ -7,6 +7,7 @@ const steps = [
   ['node', ['scripts/dev/check-phase7-scope.mjs']],
   ['node', ['scripts/dev/check-phase7-inventory.mjs']],
   ['node', ['scripts/dev/check-phase7-validation-plan.mjs']],
+  ['node', ['scripts/dev/check-phase7-focused-test.mjs']],
 ];
 
 for (const [command, args] of steps) {
