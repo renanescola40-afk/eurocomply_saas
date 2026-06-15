@@ -18,27 +18,33 @@ Read-only organization workflow readiness reporting.
 - `src/app/[locale]/dashboard/organizations/page.tsx`
 - `src/components/dashboard/dashboard-home-overview.tsx`
 - `src/components/dashboard/next-best-actions.tsx`
+- `src/components/dashboard/workflow-readiness-summary.tsx`
 
 ## Validation artifacts
 
 - `docs/PHASE6_KICKOFF.md`
 - `docs/PHASE6_SCOPE.md`
 - `docs/PHASE6_INVENTORY.md`
+- `docs/PHASE6_VALIDATION_PLAN.md`
 - `scripts/dev/check-phase6-kickoff.mjs`
 - `scripts/dev/check-phase6-scope.mjs`
 - `scripts/dev/check-phase6-inventory.mjs`
+- `scripts/dev/check-phase6-validation-plan.mjs`
+- `scripts/dev/check-phase6-readiness-surface.mjs`
+- `scripts/dev/check-phase6-focused-test.mjs`
 - `scripts/dev/run-phase6-checks.mjs`
+- `tests/phase6/readiness-reporting-surface.test.ts`
 
 ## Required commands
 
 ```bash
 npm run phase5:review
-npm run phase6:check
+npm run phase6:review
 ```
 
 ## Runtime boundary
 
-Phase 6 inventory does not introduce new runtime behavior by itself. It records the reporting surface and validation requirements before additional changes.
+Phase 6 inventory records the readiness reporting surface and validation requirements for the read-only dashboard summary.
 
 ## Safety boundary
 
