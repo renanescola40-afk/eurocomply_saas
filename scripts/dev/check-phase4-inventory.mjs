@@ -10,13 +10,13 @@ const requiredFiles = [
   'scripts/dev/check-phase4-kickoff.mjs',
   'scripts/dev/check-phase4-scope.mjs',
   'scripts/dev/check-phase4-inventory.mjs',
+  'scripts/dev/run-phase4-checks.mjs',
 ];
 
 const requiredPhrases = [
   'npm run phase3:strict',
   'npm run phase3:closeout',
-  'node scripts/dev/check-phase4-kickoff.mjs',
-  'node scripts/dev/check-phase4-scope.mjs',
+  'node scripts/dev/run-phase4-checks.mjs',
   'No product, email, document, or UI template change is authorized by this inventory',
 ];
 
