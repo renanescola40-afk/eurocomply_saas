@@ -29,6 +29,7 @@ Audit package review.
 - `docs/PHASE10_KICKOFF.md`
 - `docs/PHASE10_SCOPE.md`
 - `docs/PHASE10_INVENTORY.md`
+- `docs/PHASE10_VALIDATION_PLAN.md`
 - `scripts/dev/run-phase10-checks.mjs`
 
 ## Required commands
@@ -36,6 +37,7 @@ Audit package review.
 ```bash
 npm run phase9:verify
 npm run phase10:check
+npm run test
 ```
 
 ## Runtime boundary
