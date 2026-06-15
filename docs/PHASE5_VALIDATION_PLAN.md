@@ -28,6 +28,10 @@ Organization-scoped compliance project workflows.
 
 - `scripts/dev/check-phase5-dashboard-invariants.mjs` verifies routing, membership, and dashboard query invariants for the identified files.
 
+## Focused test
+
+- `tests/phase5/dashboard-invariants.test.ts` mirrors the Phase 5 dashboard invariants through Vitest.
+
 ## Required command sequence
 
 ```bash
@@ -36,6 +40,7 @@ npm run phase3:closeout
 npm run phase4:check
 npm run phase4:review
 npm run phase5:check
+npm run test
 ```
 
 ## Readiness rule
