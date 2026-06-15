@@ -33,6 +33,7 @@ jobs:
       - run: node scripts/dev/check-phase4-next-implementation-plan.mjs
       - run: node scripts/dev/check-phase4-validation-commands.mjs
       - run: npm run phase5:check
+      - run: npm run phase6:check
       - run: npm run security:rls
       - run: npm run security:api-guards
       - run: npm run lint
