@@ -8,7 +8,8 @@ const checks = new Map([
   ['docs/PHASE6_VALIDATION_PLAN.md', ['reporting surface remains read-only', 'Existing dashboard consumers continue to receive the readiness signal']],
   ['src/server/queries/organization-dashboard.ts', ['OrganizationWorkflowReadiness', 'workflowReadiness', 'getOrganizationWorkflowReadiness']],
   ['src/app/[locale]/dashboard/organizations/page.tsx', ['workflowReadiness={data.workflowReadiness}']],
-  ['src/components/dashboard/dashboard-home-overview.tsx', ['workflowReadiness?: OrganizationWorkflowReadiness', 'workflowReadiness={workflowReadiness}']],
+  ['src/components/dashboard/dashboard-home-overview.tsx', ['WorkflowReadinessSummary', 'workflowReadiness?: OrganizationWorkflowReadiness', 'workflowReadiness={workflowReadiness}']],
+  ['src/components/dashboard/workflow-readiness-summary.tsx', ['WorkflowReadinessSummary', 'Read-only reporting snapshot', 'workflowReadiness?.reasons', 'Readiness healthy']],
   ['src/components/dashboard/next-best-actions.tsx', ['buildWorkflowReadinessAction', 'current workflow readiness']],
   ['tests/phase5/dashboard-invariants.test.ts', ['workflowReadiness={data.workflowReadiness}', 'buildWorkflowReadinessAction']],
 ]);
