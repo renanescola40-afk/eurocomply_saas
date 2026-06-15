@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import type { OrganizationWorkflowReadiness } from '@/server/queries/organization-dashboard';
 import type { DashboardSummary } from '@/server/queries/dashboard';
 
 type NextBestActionsProps = {
   summary: DashboardSummary;
   basePath: string;
+  workflowReadiness?: OrganizationWorkflowReadiness;
 };
 
 type ActionItem = {
@@ -27,8 +29,45 @@ function getPriorityTone(priority: ActionItem['priority']) {
   }
 }
 
-function buildActions(summary: DashboardSummary, basePath: string): ActionItem[] {
+function buildWorkflowReadinessAction(workflowReadiness: OrganizationWorkflowReadiness | undefined, basePath: string): ActionItem | null {
+  if (!workflowReadiness) return null;
+
+  if (workflowReadiness.status === 'blocked') {
+    return {
+      title: 'Stabilize blocked workflow readiness',
+      description: 'Your organization workflow readiness is blocked. Review the highest-impact risk, evidence, vendor and task gaps before executive reporting.',
+      priority: 'Critical',
+      impact: 'Restores a clear path to audit-ready operations.',
+      href: `${basePath}/risks`,
+    };
+  }
+
+  if (workflowReadiness.status === 'attention') {
+    return {
+      title: 'Resolve workflow readiness blockers',
+      description: `${workflowReadiness.reasons.length} readiness signal${workflowReadiness.reasons.length === 1 ? '' : 's'} need review before the next compliance checkpoint.`,
+      priority: 'High',
+      impact: 'Improves operational confidence before leadership review.',
+      href: `${basePath}/tasks`,
+    };
+  }
+
+  return {
+    title: 'Capture workflow readiness evidence',
+    description: 'Your organization workflow readiness is healthy. Generate an executive pack while the current state is clean.',
+    priority: 'Low',
+    impact: 'Creates a shareable readiness snapshot.',
+    href: `${basePath}/reports`,
+  };
+}
+
+function buildActions(summary: DashboardSummary, basePath: string, workflowReadiness?: OrganizationWorkflowReadiness): ActionItem[] {
   const actions: ActionItem[] = [];
+  const readinessAction = buildWorkflowReadinessAction(workflowReadiness, basePath);
+
+  if (readinessAction && readinessAction.priority !== 'Low') {
+    actions.push(readinessAction);
+  }
 
   if (summary.criticalRisks > 0) {
     actions.push({
@@ -71,20 +110,22 @@ function buildActions(summary: DashboardSummary, basePath: string): ActionItem[]
   }
 
   if (actions.length === 0) {
-    actions.push({
-      title: 'Generate an executive report',
-      description: 'Your operational posture looks healthy. Capture the current state for leadership or customer review.',
-      priority: 'Low',
-      impact: 'Creates a shareable compliance snapshot.',
-      href: `${basePath}/reports`,
-    });
+    actions.push(
+      readinessAction ?? {
+        title: 'Generate an executive report',
+        description: 'Your operational posture looks healthy. Capture the current state for leadership or customer review.',
+        priority: 'Low',
+        impact: 'Creates a shareable compliance snapshot.',
+        href: `${basePath}/reports`,
+      },
+    );
   }
 
   return actions.slice(0, 4);
 }
 
-export function NextBestActions({ summary, basePath }: NextBestActionsProps) {
-  const actions = buildActions(summary, basePath);
+export function NextBestActions({ summary, basePath, workflowReadiness }: NextBestActionsProps) {
+  const actions = buildActions(summary, basePath, workflowReadiness);
 
   return (
     <section className="rounded-3xl border border-white/10 bg-slate-950 p-5 text-white shadow-xl md:p-6">
@@ -94,7 +135,7 @@ export function NextBestActions({ summary, basePath }: NextBestActionsProps) {
           <h2 className="mt-2 text-2xl font-semibold tracking-tight">Next best actions</h2>
         </div>
         <p className="max-w-xl text-sm text-slate-400">
-          Prioritized from your current risk, vendor, document and task posture.
+          Prioritized from your current workflow readiness, risk, vendor, document and task posture.
         </p>
       </div>
 
