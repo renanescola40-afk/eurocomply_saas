@@ -1,3 +1,4 @@
+import { AuditPackageReview } from '@/components/dashboard/audit-package-review';
 import { ComplianceTimeline } from '@/components/dashboard/compliance-timeline';
 import { DashboardExperienceIndex } from '@/components/dashboard/dashboard-experience-index';
 import { DashboardExperienceMap } from '@/components/dashboard/dashboard-experience-map';
@@ -46,6 +47,9 @@ export function DashboardHomeOverview({
       </section>
       <section id="readiness-export-preparation" className="scroll-mt-28">
         <ReadinessExportPreparation summary={summary} workflowReadiness={workflowReadiness} basePath={basePath} />
+      </section>
+      <section id="audit-package-review" className="scroll-mt-28">
+        <AuditPackageReview summary={summary} workflowReadiness={workflowReadiness} basePath={basePath} />
       </section>
       <section id="experience-map" className="scroll-mt-28">
         <DashboardExperienceMap basePath={basePath} />
