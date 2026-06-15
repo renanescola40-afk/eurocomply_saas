@@ -14,10 +14,7 @@ Required repository validation commands:
 
 ```bash
 npm run phase3:strict
-node scripts/dev/check-phase3-progress-status.mjs
-node scripts/dev/check-phase3-scope-lock.mjs
-node scripts/dev/check-phase3-external-gates-checklist.mjs
-node scripts/dev/check-phase3-final-validation-commands.mjs
+npm run phase3:closeout
 ```
 
 ## External validation
