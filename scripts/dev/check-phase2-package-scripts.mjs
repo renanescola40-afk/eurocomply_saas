@@ -9,6 +9,7 @@ const expected = {
   'phase2:check': 'node scripts/dev/check-phase2-cicd-foundation.mjs',
   'phase2:strict': 'node scripts/dev/run-phase2-strict.mjs',
   'phase2:complete': 'node scripts/dev/run-phase2-complete.mjs',
+  'phase2:finalize': 'node scripts/dev/run-phase2-finalize.mjs',
   'phase2:gitignore': 'node scripts/dev/ensure-phase2-gitignore.mjs',
 };
 
