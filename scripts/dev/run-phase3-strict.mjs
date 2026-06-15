@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 
 const steps = [
   ['node', ['scripts/dev/check-phase3-script-files.mjs']],
+  ['node', ['scripts/dev/check-phase3-runtime-readiness.mjs']],
   ['node', ['scripts/dev/check-phase3-production-readiness.mjs']],
 ];
 
