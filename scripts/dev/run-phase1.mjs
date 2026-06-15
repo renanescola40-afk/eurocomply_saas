@@ -17,6 +17,7 @@ const steps = [
   { name: 'foundation', command: 'node', args: ['scripts/dev/check-local-foundation.mjs'] },
   { name: 'quality', command: 'node', args: ['scripts/dev/run-quality-report.mjs'] },
   { name: 'commit-plan', command: 'node', args: ['scripts/dev/write-phase1-commit-plan.mjs'] },
+  { name: 'final-report', command: 'node', args: ['scripts/dev/write-phase1-final-report.mjs'] },
   { name: 'commit-plan-check', command: 'node', args: ['scripts/dev/check-phase1-commit-plan.mjs'] },
 ];
 
@@ -46,6 +47,8 @@ function nextAction(stepName) {
       return 'Open local-quality-report.json and fix the first failing typecheck, test, or build step.';
     case 'commit-plan':
       return 'Review phase1-commit-plan.json and resolve any remaining blockers.';
+    case 'final-report':
+      return 'Review phase1-final-report.txt and rerun the phase 1 runner.';
     case 'commit-plan-check':
       return 'Commit package.json and package-lock.json once the plan is ready.';
     default:
@@ -122,3 +125,4 @@ if (!report.success) {
 console.log('\nPhase 1 runner passed.');
 console.log('Report written to phase1-run-report.json');
 console.log('Summary written to phase1-summary.json');
+console.log('Final report written to phase1-final-report.txt');
