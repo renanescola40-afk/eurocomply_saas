@@ -14,6 +14,7 @@ const requiredIgnoredFiles = [
   'phase1-run-report.json',
   'phase1-summary.json',
   'phase1-commit-plan.json',
+  'phase1-final-report.txt',
   'dependency-pin-report.json',
   'dependency-pin-change-report.json',
 ];
