@@ -8,14 +8,15 @@ const requiredFiles = [
   'scripts/dev/check-phase2-cicd-foundation.mjs',
   'scripts/dev/check-phase2-commit-plan.mjs',
   'scripts/dev/check-phase2-docs.mjs',
-  'scripts/dev/check-phase2-finalize-alias.mjs',
   'scripts/dev/check-phase2-gitignore.mjs',
-  'scripts/dev/ensure-phase2-gitignore.mjs',
   'scripts/dev/check-phase2-package-scripts.mjs',
+  'scripts/dev/ensure-phase2-ci-workflow.mjs',
+  'scripts/dev/ensure-phase2-gitignore.mjs',
+  'scripts/dev/run-phase2-complete.mjs',
+  'scripts/dev/run-phase2-finalize.mjs',
+  'scripts/dev/run-phase2-strict.mjs',
   'scripts/dev/write-phase2-commit-plan.mjs',
   'scripts/dev/write-phase2-final-report.mjs',
-  'scripts/dev/run-phase2-complete.mjs',
-  'scripts/dev/run-phase2-strict.mjs',
 ];
 
 const missing = requiredFiles.filter((path) => !existsSync(path));
