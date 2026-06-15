@@ -13,14 +13,14 @@ This inventory tracks the initial Phase 4 planning and validation artifacts.
 - `scripts/dev/check-phase4-kickoff.mjs`
 - `scripts/dev/check-phase4-scope.mjs`
 - `scripts/dev/check-phase4-inventory.mjs`
+- `scripts/dev/run-phase4-checks.mjs`
 
 ## Entry commands
 
 ```bash
 npm run phase3:strict
 npm run phase3:closeout
-node scripts/dev/check-phase4-kickoff.mjs
-node scripts/dev/check-phase4-scope.mjs
+node scripts/dev/run-phase4-checks.mjs
 ```
 
 ## Scope guard
