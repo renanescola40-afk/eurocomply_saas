@@ -2,6 +2,7 @@ import { ComplianceTimeline } from '@/components/dashboard/compliance-timeline';
 import { DashboardExperienceIndex } from '@/components/dashboard/dashboard-experience-index';
 import { DashboardExperienceMap } from '@/components/dashboard/dashboard-experience-map';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
+import { ExecutiveReportingPackage } from '@/components/dashboard/executive-reporting-package';
 import { NextBestActions } from '@/components/dashboard/next-best-actions';
 import { ReadinessFollowUpPlan } from '@/components/dashboard/readiness-follow-up-plan';
 import { WorkflowReadinessSummary } from '@/components/dashboard/workflow-readiness-summary';
@@ -38,6 +39,9 @@ export function DashboardHomeOverview({
     <div className="space-y-6 scroll-smooth">
       <section id="overview" className="scroll-mt-28">
         <ExecutiveDashboardHero summary={summary} trendComparison={trendComparison} reportsHref={getDashboardHref(basePath, 'reports')} />
+      </section>
+      <section id="executive-reporting-package" className="scroll-mt-28">
+        <ExecutiveReportingPackage summary={summary} workflowReadiness={workflowReadiness} basePath={basePath} />
       </section>
       <section id="experience-map" className="scroll-mt-28">
         <DashboardExperienceMap basePath={basePath} />
