@@ -30,6 +30,7 @@ Readiness export preparation.
 - `docs/PHASE9_INVENTORY.md`
 - `docs/PHASE9_VALIDATION_PLAN.md`
 - `scripts/dev/run-phase9-checks.mjs`
+- `tests/phase9/readiness-export-preparation.test.ts`
 
 ## Required commands
 
