@@ -28,6 +28,18 @@ describe('Phase 8 executive reporting package', () => {
     expect(overview).toContain('ReadinessFollowUpPlan');
   });
 
+  it('renders the executive reporting package surface', () => {
+    const reportingPackage = read('src/components/dashboard/executive-reporting-package.tsx');
+    const overview = read('src/components/dashboard/dashboard-home-overview.tsx');
+
+    expect(reportingPackage).toContain('ExecutiveReportingPackage');
+    expect(reportingPackage).toContain('Executive reporting package');
+    expect(reportingPackage).toContain('Open reports');
+    expect(reportingPackage).toContain('workflowReadiness?.reasons.length');
+    expect(overview).toContain('ExecutiveReportingPackage');
+    expect(overview).toContain('executive-reporting-package');
+  });
+
   it('keeps the package safe before additional runtime changes', () => {
     const validation = read('docs/PHASE8_VALIDATION_PLAN.md');
 
