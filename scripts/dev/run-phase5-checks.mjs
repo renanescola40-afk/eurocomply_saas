@@ -9,6 +9,7 @@ const steps = [
   ['node', ['scripts/dev/check-phase5-discovery-notes.mjs']],
   ['node', ['scripts/dev/check-phase5-functional-inventory.mjs']],
   ['node', ['scripts/dev/check-phase5-validation-plan.mjs']],
+  ['node', ['scripts/dev/check-phase5-dashboard-invariants.mjs']],
 ];
 
 for (const [command, args] of steps) {
