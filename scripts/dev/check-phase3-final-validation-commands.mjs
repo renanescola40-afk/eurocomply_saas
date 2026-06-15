@@ -5,9 +5,8 @@ import { existsSync, readFileSync } from 'node:fs';
 const path = 'docs/PHASE3_FINAL_VALIDATION_COMMANDS.md';
 const required = [
   'npm run phase3:strict',
-  'check-phase3-progress-status.mjs',
-  'check-phase3-scope-lock.mjs',
-  'check-phase3-external-gates-checklist.mjs',
+  'npm run phase3:closeout',
+  'validated but not production-complete',
 ];
 
 if (!existsSync(path)) {
