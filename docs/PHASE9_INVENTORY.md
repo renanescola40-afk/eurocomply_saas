@@ -9,6 +9,7 @@ Readiness export preparation.
 ## Source surface
 
 - `src/components/dashboard/executive-reporting-package.tsx`
+- `src/components/dashboard/readiness-export-preparation.tsx`
 - `src/components/dashboard/executive-dashboard-hero.tsx`
 - `src/components/dashboard/workflow-readiness-summary.tsx`
 - `src/components/dashboard/readiness-follow-up-plan.tsx`
@@ -18,6 +19,7 @@ Readiness export preparation.
 ## Export preparation touchpoints
 
 - Executive reporting package snapshot.
+- Read-only export preparation surface.
 - Read-only readiness summary.
 - Read-only follow-up plan.
 - Reports navigation entrypoint.
@@ -42,7 +44,7 @@ npm run test
 
 ## Runtime boundary
 
-Phase 9 inventory does not introduce new runtime behavior by itself. It records export preparation touchpoints before additional changes.
+Phase 9 inventory records the read-only readiness export preparation surface and supporting dashboard touchpoints.
 
 ## Safety boundary
 
