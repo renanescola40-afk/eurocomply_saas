@@ -9,6 +9,7 @@ const steps = [
   { name: 'pin-dependencies', command: 'node', args: ['scripts/dev/pin-known-latest-deps.mjs'] },
   { name: 'build-prereqs', command: 'node', args: ['scripts/dev/check-build-prereqs.mjs'] },
   { name: 'lockfile', command: 'npm', args: ['install', '--package-lock-only', '--ignore-scripts'] },
+  { name: 'lockfile-commit-ready', command: 'node', args: ['scripts/dev/check-lockfile-commit-ready.mjs'] },
   { name: 'dependency-pin-report', command: 'node', args: ['scripts/dev/write-dependency-pin-report.mjs'] },
   { name: 'status', command: 'node', args: ['scripts/dev/write-phase1-status.mjs'] },
   { name: 'foundation', command: 'node', args: ['scripts/dev/check-local-foundation.mjs'] },
@@ -27,6 +28,8 @@ function nextAction(stepName) {
       return 'Review missing base files or required dependencies before running install/build.';
     case 'lockfile':
       return 'Review npm install output, dependency resolution, and package manager version.';
+    case 'lockfile-commit-ready':
+      return 'Ensure package-lock.json exists and is not ignored by Git.';
     case 'dependency-pin-report':
       return 'Replace remaining latest dependency versions or update the known pin list.';
     case 'status':
