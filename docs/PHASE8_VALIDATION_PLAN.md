@@ -9,6 +9,7 @@ Executive readiness reporting package preparation.
 ## Source touchpoints
 
 - `src/components/dashboard/executive-dashboard-hero.tsx`
+- `src/components/dashboard/executive-reporting-package.tsx`
 - `src/components/dashboard/workflow-readiness-summary.tsx`
 - `src/components/dashboard/readiness-follow-up-plan.tsx`
 - `src/components/dashboard/dashboard-home-overview.tsx`
@@ -19,6 +20,7 @@ Executive readiness reporting package preparation.
 - The reporting package remains based on the existing organization readiness signal.
 - The reporting package remains read-only until additional runtime changes are explicitly scoped.
 - The executive dashboard summary remains available as the package entry surface.
+- The executive reporting package surface remains wired into the dashboard overview.
 - The readiness summary and follow-up plan remain available as package supporting surfaces.
 - No product, email, document, or UI template changes are required.
 
@@ -32,7 +34,7 @@ npm run test
 
 ## Runtime boundary
 
-This validation plan does not introduce new runtime behavior by itself.
+This validation plan documents the read-only executive reporting package surface and does not introduce mutation behavior by itself.
 
 ## Safety boundary
 
