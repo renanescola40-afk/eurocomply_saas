@@ -24,6 +24,10 @@ Organization-scoped compliance project workflows.
 - Query fallbacks remain safe when optional tables or columns are missing.
 - No product, email, document, or UI template changes are required for this validation plan.
 
+## Static checker
+
+- `scripts/dev/check-phase5-dashboard-invariants.mjs` verifies routing, membership, and dashboard query invariants for the identified files.
+
 ## Required command sequence
 
 ```bash
