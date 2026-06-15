@@ -4,6 +4,7 @@ import { DashboardExperienceMap } from '@/components/dashboard/dashboard-experie
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
 import { ExecutiveReportingPackage } from '@/components/dashboard/executive-reporting-package';
 import { NextBestActions } from '@/components/dashboard/next-best-actions';
+import { ReadinessExportPreparation } from '@/components/dashboard/readiness-export-preparation';
 import { ReadinessFollowUpPlan } from '@/components/dashboard/readiness-follow-up-plan';
 import { WorkflowReadinessSummary } from '@/components/dashboard/workflow-readiness-summary';
 import type { OrganizationWorkflowReadiness } from '@/server/queries/organization-dashboard';
@@ -42,6 +43,9 @@ export function DashboardHomeOverview({
       </section>
       <section id="executive-reporting-package" className="scroll-mt-28">
         <ExecutiveReportingPackage summary={summary} workflowReadiness={workflowReadiness} basePath={basePath} />
+      </section>
+      <section id="readiness-export-preparation" className="scroll-mt-28">
+        <ReadinessExportPreparation summary={summary} workflowReadiness={workflowReadiness} basePath={basePath} />
       </section>
       <section id="experience-map" className="scroll-mt-28">
         <DashboardExperienceMap basePath={basePath} />
