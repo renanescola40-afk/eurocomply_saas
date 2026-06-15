@@ -35,13 +35,17 @@ Evidence handoff readiness review.
 - `docs/PHASE12_INVENTORY.md`
 - `docs/PHASE12_VALIDATION_PLAN.md`
 - `scripts/dev/run-phase12-checks.mjs`
+- `scripts/dev/run-phase12-review.mjs`
 - `tests/phase12/evidence-handoff-readiness-review.test.ts`
 
 ## Required commands
 
 ```bash
 node scripts/dev/run-phase12-checks.mjs
-npm run test
+node scripts/dev/run-phase12-review.mjs
+npm run lint
+npm run typecheck
+npm run build
 ```
 
 ## Runtime boundary
