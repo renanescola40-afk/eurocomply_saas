@@ -6,8 +6,11 @@ const reportPath = 'phase2-cicd-report.json';
 const planPath = 'phase2-commit-plan.json';
 
 const filesToCommit = [
+  '.gitignore',
   '.github/workflows/ci.yml',
+  'package.json',
   'docs/PHASE2_CICD_FOUNDATION.md',
+  'scripts/dev/ensure-phase1-package-scripts.mjs',
   'scripts/dev/check-phase2-cicd-foundation.mjs',
   'scripts/dev/check-phase2-commit-plan.mjs',
   'scripts/dev/check-phase2-docs.mjs',
