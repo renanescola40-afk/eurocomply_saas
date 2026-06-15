@@ -11,6 +11,27 @@ const checks = [
     file: 'docs/PHASE12_SCOPE.md',
     required: ['Phase 12 Scope', 'Evidence handoff readiness review', 'node scripts/dev/run-phase12-checks.mjs'],
   },
+  {
+    file: 'docs/PHASE12_INVENTORY.md',
+    required: [
+      'Phase 12 Inventory',
+      'Evidence handoff readiness review',
+      'src/components/dashboard/evidence-handoff-review.tsx',
+      'src/components/dashboard/audit-package-review.tsx',
+      'src/components/dashboard/readiness-export-preparation.tsx',
+      'src/components/dashboard/executive-reporting-package.tsx',
+      'src/components/dashboard/workflow-readiness-summary.tsx',
+      'src/components/dashboard/readiness-follow-up-plan.tsx',
+      'src/components/dashboard/dashboard-home-overview.tsx',
+      'src/server/queries/organization-dashboard.ts',
+      'Evidence handoff review surface',
+      'Readiness export preparation surface',
+      'Reports navigation entrypoint',
+      'workflowReadiness',
+      'node scripts/dev/run-phase11-verify.mjs',
+      'node scripts/dev/run-phase12-checks.mjs',
+    ],
+  },
 ];
 
 for (const { file, required } of checks) {
