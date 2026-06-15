@@ -33,19 +33,17 @@ Evidence handoff readiness review.
 - `docs/PHASE12_KICKOFF.md`
 - `docs/PHASE12_SCOPE.md`
 - `docs/PHASE12_INVENTORY.md`
+- `docs/PHASE12_VALIDATION_PLAN.md`
 - `scripts/dev/run-phase12-checks.mjs`
+- `tests/phase12/evidence-handoff-readiness-review.test.ts`
 
 ## Required commands
 
 ```bash
-node scripts/dev/run-phase11-verify.mjs
 node scripts/dev/run-phase12-checks.mjs
+npm run test
 ```
 
 ## Runtime boundary
 
-Phase 12 inventory does not introduce new runtime behavior by itself. It records evidence handoff readiness review touchpoints before additional changes.
-
-## Safety boundary
-
-Do not commit local environment files, provider credentials, private keys, service credentials, or customer data.
+Phase 12 inventory records evidence handoff readiness review touchpoints before additional changes.
