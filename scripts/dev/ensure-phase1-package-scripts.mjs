@@ -17,6 +17,7 @@ pkg.scripts = {
   'phase2:finalize': 'node scripts/dev/run-phase2-finalize.mjs',
   'phase2:gitignore': 'node scripts/dev/ensure-phase2-gitignore.mjs',
   'phase2:ci-workflow': 'node scripts/dev/ensure-phase2-ci-workflow.mjs',
+  'phase2:ci-ready': 'node scripts/dev/run-phase2-ci-ready.mjs',
 };
 
 writeFileSync(packageJsonPath, `${JSON.stringify(pkg, null, 2)}\n`);
