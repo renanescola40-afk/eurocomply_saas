@@ -9,6 +9,7 @@ Executive readiness reporting package preparation.
 ## Source surface
 
 - `src/components/dashboard/executive-dashboard-hero.tsx`
+- `src/components/dashboard/executive-reporting-package.tsx`
 - `src/components/dashboard/workflow-readiness-summary.tsx`
 - `src/components/dashboard/readiness-follow-up-plan.tsx`
 - `src/components/dashboard/dashboard-home-overview.tsx`
@@ -17,6 +18,7 @@ Executive readiness reporting package preparation.
 ## Reporting package touchpoints
 
 - Executive dashboard summary.
+- Executive reporting package snapshot.
 - Read-only readiness snapshot.
 - Readiness reasons displayed as signals.
 - Read-only follow-up planning surface.
@@ -41,7 +43,7 @@ npm run test
 
 ## Runtime boundary
 
-Phase 8 inventory does not introduce new runtime behavior by itself. It records executive reporting package touchpoints before additional changes.
+Phase 8 inventory records the read-only executive reporting package surface and supporting dashboard touchpoints.
 
 ## Safety boundary
 
