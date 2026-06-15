@@ -37,13 +37,20 @@ After aliases are added, the preferred command is:
 npm run phase2:strict
 ```
 
-The strict runner validates the Phase 2 file inventory, ensures package aliases, validates Phase 1 and Phase 2 aliases, and then validates the CI/CD workflow foundation.
+The strict runner validates the Phase 2 file inventory, ensures package aliases, validates Phase 1 and Phase 2 aliases, validates documentation, validates the CI/CD workflow foundation, and writes the final Phase 2 report.
 
 For only the CI/CD workflow check, run:
 
 ```bash
 npm run phase2:check
 ```
+
+## Local diagnostic outputs
+
+The Phase 2 checker writes local diagnostics that should not be committed:
+
+- `phase2-cicd-report.json`
+- `phase2-final-report.txt`
 
 ## Completion criteria
 
@@ -58,6 +65,8 @@ Phase 2 CI/CD foundation is complete when:
 - The Phase 2 file inventory checker passes.
 - The Phase 2 package alias checker passes.
 - The local Phase 2 CI/CD checker passes.
+- `phase2-cicd-report.json` reports success.
+- `phase2-final-report.txt` is reviewed.
 - A first CI run completes successfully in GitHub Actions.
 
 ## Expected gaps before implementation
@@ -72,4 +81,4 @@ Before the CI workflow is fully aligned, the Phase 2 checker is expected to flag
 
 ## Exit criteria
 
-Phase 2 can be marked complete only after the workflow file is committed, `npm run phase2:strict` passes locally, and a real GitHub Actions run passes.
+Phase 2 can be marked complete only after the workflow file is committed, `npm run phase2:strict` passes locally, `phase2-final-report.txt` is reviewed, and a real GitHub Actions run passes.
