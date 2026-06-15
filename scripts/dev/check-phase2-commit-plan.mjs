@@ -4,8 +4,11 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const planPath = 'phase2-commit-plan.json';
 const requiredFiles = [
+  '.gitignore',
   '.github/workflows/ci.yml',
+  'package.json',
   'docs/PHASE2_CICD_FOUNDATION.md',
+  'scripts/dev/ensure-phase1-package-scripts.mjs',
   'scripts/dev/check-phase2-cicd-foundation.mjs',
   'scripts/dev/check-phase2-commit-plan.mjs',
   'scripts/dev/check-phase2-docs.mjs',
