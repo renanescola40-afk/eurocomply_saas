@@ -10,6 +10,7 @@ const steps = [
   ['node', ['scripts/dev/check-phase5-functional-inventory.mjs']],
   ['node', ['scripts/dev/check-phase5-validation-plan.mjs']],
   ['node', ['scripts/dev/check-phase5-dashboard-invariants.mjs']],
+  ['node', ['scripts/dev/check-phase5-focused-test.mjs']],
 ];
 
 for (const [command, args] of steps) {
