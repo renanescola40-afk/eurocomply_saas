@@ -9,6 +9,7 @@ This inventory tracks the initial Phase 4 planning and validation artifacts.
 - `docs/PHASE4_INVENTORY.md`
 - `docs/PHASE4_DATA_FLOW.md`
 - `docs/PHASE4_ACCESS_MODEL.md`
+- `docs/PHASE4_OPERATIONAL_ASSUMPTIONS.md`
 
 ## Required checkers
 
@@ -17,6 +18,7 @@ This inventory tracks the initial Phase 4 planning and validation artifacts.
 - `scripts/dev/check-phase4-inventory.mjs`
 - `scripts/dev/check-phase4-data-flow.mjs`
 - `scripts/dev/check-phase4-access-model.mjs`
+- `scripts/dev/check-phase4-operational-assumptions.mjs`
 - `scripts/dev/run-phase4-checks.mjs`
 
 ## Entry commands
