@@ -6,6 +6,7 @@ import { writeFileSync } from 'node:fs';
 const startedAt = new Date().toISOString();
 const steps = [
   { name: 'gitignore-hygiene', command: 'node', args: ['scripts/dev/check-phase1-gitignore.mjs'] },
+  { name: 'package-manager', command: 'node', args: ['scripts/dev/check-package-manager.mjs'] },
   { name: 'pin-dependencies', command: 'node', args: ['scripts/dev/pin-known-latest-deps.mjs'] },
   { name: 'build-prereqs', command: 'node', args: ['scripts/dev/check-build-prereqs.mjs'] },
   { name: 'lockfile', command: 'npm', args: ['install', '--package-lock-only', '--ignore-scripts'] },
@@ -22,6 +23,8 @@ function nextAction(stepName) {
   switch (stepName) {
     case 'gitignore-hygiene':
       return 'Add missing local diagnostic report files to .gitignore.';
+    case 'package-manager':
+      return 'Install or activate the npm major version declared in package.json.';
     case 'pin-dependencies':
       return 'Check package.json write permissions and rerun the phase 1 runner.';
     case 'build-prereqs':
