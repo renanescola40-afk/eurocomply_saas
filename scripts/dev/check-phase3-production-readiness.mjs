@@ -5,6 +5,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 const reportPath = 'phase3-production-readiness-report.json';
 const requiredFiles = [
   'docs/PHASE3_PRODUCTION_READINESS.md',
+  'docs/PHASE3_DEPLOYMENT_RUNBOOK.md',
+  'docs/PHASE3_DATABASE_MIGRATION_SAFETY.md',
   '.env.example',
   'package.json',
 ];
@@ -25,6 +27,38 @@ const requiredPackageScripts = [
   'phase3:files',
   'phase3:check',
   'phase3:strict',
+];
+
+const requiredDocChecks = [
+  {
+    path: 'docs/PHASE3_PRODUCTION_READINESS.md',
+    phrases: [
+      'Authorized scope',
+      'Prohibited scope',
+      'Implementation method',
+      'Do not modify product, email, document, or UI templates',
+    ],
+  },
+  {
+    path: 'docs/PHASE3_DEPLOYMENT_RUNBOOK.md',
+    phrases: [
+      'Required production secrets',
+      'Pre-deployment checks',
+      'Post-deployment smoke checks',
+      'Rollback triggers',
+      'Rollback method',
+    ],
+  },
+  {
+    path: 'docs/PHASE3_DATABASE_MIGRATION_SAFETY.md',
+    phrases: [
+      'Migration source of truth',
+      'Pre-migration checklist',
+      'Prohibited migration patterns',
+      'Post-migration verification',
+      'Rollback caution',
+    ],
+  },
 ];
 
 const forbiddenTemplatePaths = [
@@ -61,6 +95,17 @@ if (existsSync('package.json')) {
   }
 }
 
+for (const docCheck of requiredDocChecks) {
+  if (!existsSync(docCheck.path)) continue;
+
+  const content = readFileSync(docCheck.path, 'utf8');
+  for (const phrase of docCheck.phrases) {
+    if (!content.includes(phrase)) {
+      blockers.push(`${docCheck.path} is missing required section or phrase: ${phrase}`);
+    }
+  }
+}
+
 if (existsSync('.env')) {
   blockers.push('.env exists locally; confirm it is not committed and contains no production secrets');
 }
@@ -71,6 +116,7 @@ const report = {
   requiredFiles,
   requiredEnvHints,
   requiredPackageScripts,
+  requiredDocChecks,
   forbiddenTemplatePaths,
   blockers,
 };
