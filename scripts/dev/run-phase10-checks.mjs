@@ -30,6 +30,28 @@ const checks = [
       'Add tests or static checks for audit review wiring',
     ],
   },
+  {
+    file: 'docs/PHASE10_INVENTORY.md',
+    required: [
+      'Phase 10 Inventory',
+      'Audit package review',
+      'src/components/dashboard/readiness-export-preparation.tsx',
+      'src/components/dashboard/executive-reporting-package.tsx',
+      'src/components/dashboard/workflow-readiness-summary.tsx',
+      'src/components/dashboard/readiness-follow-up-plan.tsx',
+      'src/components/dashboard/dashboard-home-overview.tsx',
+      'src/server/queries/organization-dashboard.ts',
+      'Readiness export preparation surface',
+      'Executive reporting package snapshot',
+      'Read-only readiness summary',
+      'Read-only follow-up plan',
+      'Reports navigation entrypoint',
+      'workflowReadiness',
+      'docs/PHASE10_INVENTORY.md',
+      'npm run phase9:verify',
+      'npm run phase10:check',
+    ],
+  },
 ];
 
 for (const { file, required } of checks) {
