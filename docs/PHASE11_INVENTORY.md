@@ -8,6 +8,7 @@ Evidence handoff review.
 
 ## Source surface
 
+- `src/components/dashboard/evidence-handoff-review.tsx`
 - `src/components/dashboard/audit-package-review.tsx`
 - `src/components/dashboard/readiness-export-preparation.tsx`
 - `src/components/dashboard/executive-reporting-package.tsx`
@@ -18,6 +19,7 @@ Evidence handoff review.
 
 ## Handoff review touchpoints
 
+- Evidence handoff review surface.
 - Audit package review surface.
 - Readiness export preparation surface.
 - Executive reporting package snapshot.
@@ -42,7 +44,7 @@ node scripts/dev/run-phase11-checks.mjs
 
 ## Runtime boundary
 
-Phase 11 inventory does not introduce new runtime behavior by itself. It records evidence handoff review touchpoints before additional changes.
+Phase 11 inventory records the read-only evidence handoff review surface and supporting dashboard touchpoints.
 
 ## Safety boundary
 
