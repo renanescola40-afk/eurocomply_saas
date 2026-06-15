@@ -7,9 +7,15 @@ const required = [
   'docs/PHASE3_PRODUCTION_READINESS.md',
   'docs/PHASE3_PRODUCTION_HANDOFF.md',
   'docs/PHASE3_CLOSEOUT_DECISION_RECORD.md',
+  'docs/PHASE3_EVIDENCE_PACK.md',
+  'docs/PHASE3_TWO_COMMAND_CLOSEOUT.md',
   'scripts/dev/run-phase3-strict.mjs',
+  'scripts/dev/run-phase3-closeout.mjs',
   'scripts/dev/check-phase3-closeout-decision.mjs',
+  'scripts/dev/check-phase3-evidence-pack.mjs',
+  'scripts/dev/check-phase3-two-command-closeout.mjs',
   'npm run phase3:strict',
+  'npm run phase3:closeout',
   'Production-complete status requires external gates',
 ];
 
