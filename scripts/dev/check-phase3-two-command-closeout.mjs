@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const path = 'docs/PHASE3_TWO_COMMAND_CLOSEOUT.md';
 const required = [
   'npm run phase3:strict',
-  'node scripts/dev/run-phase3-closeout.mjs',
+  'npm run phase3:closeout',
   'This does not mean production-complete',
   'external deployment gates',
 ];
