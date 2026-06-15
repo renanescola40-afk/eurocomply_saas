@@ -178,6 +178,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
           tasks={data.tasks}
           trendHistory={data.trendHistory}
           trendComparison={data.trendComparison}
+          workflowReadiness={data.workflowReadiness}
           basePath={localizedDashboardBasePath}
           vendorsRequiringReview={data.vendorsRequiringReview}
           documentsExpiringSoon={data.documentsExpiringSoon}
