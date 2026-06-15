@@ -8,6 +8,7 @@ Audit package review.
 
 ## Source surface
 
+- `src/components/dashboard/audit-package-review.tsx`
 - `src/components/dashboard/readiness-export-preparation.tsx`
 - `src/components/dashboard/executive-reporting-package.tsx`
 - `src/components/dashboard/workflow-readiness-summary.tsx`
@@ -17,6 +18,7 @@ Audit package review.
 
 ## Audit review touchpoints
 
+- Audit package review surface.
 - Readiness export preparation surface.
 - Executive reporting package snapshot.
 - Read-only readiness summary.
@@ -43,7 +45,7 @@ npm run test
 
 ## Runtime boundary
 
-Phase 10 inventory does not introduce new runtime behavior by itself. It records audit package review touchpoints before additional changes.
+Phase 10 inventory records the read-only audit package review surface and supporting dashboard touchpoints.
 
 ## Safety boundary
 
