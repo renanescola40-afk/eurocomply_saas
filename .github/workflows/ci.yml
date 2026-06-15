@@ -27,7 +27,7 @@ jobs:
       - run: npm install
       - run: npm run preflight
       - run: npm run phase3:strict
-      - run: node scripts/dev/check-phase3-progress-status.mjs
+      - run: npm run phase3:closeout
       - run: npm run security:rls
       - run: npm run security:api-guards
       - run: npm run lint
