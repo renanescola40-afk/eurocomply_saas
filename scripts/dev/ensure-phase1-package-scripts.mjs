@@ -14,6 +14,7 @@ pkg.scripts = {
   'phase2:check': 'node scripts/dev/check-phase2-cicd-foundation.mjs',
   'phase2:strict': 'node scripts/dev/run-phase2-strict.mjs',
   'phase2:complete': 'node scripts/dev/run-phase2-complete.mjs',
+  'phase2:gitignore': 'node scripts/dev/ensure-phase2-gitignore.mjs',
 };
 
 writeFileSync(packageJsonPath, `${JSON.stringify(pkg, null, 2)}\n`);
