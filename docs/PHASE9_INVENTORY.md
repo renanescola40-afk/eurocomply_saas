@@ -28,6 +28,7 @@ Readiness export preparation.
 - `docs/PHASE9_KICKOFF.md`
 - `docs/PHASE9_SCOPE.md`
 - `docs/PHASE9_INVENTORY.md`
+- `docs/PHASE9_VALIDATION_PLAN.md`
 - `scripts/dev/run-phase9-checks.mjs`
 
 ## Required commands
@@ -35,6 +36,7 @@ Readiness export preparation.
 ```bash
 npm run phase8:verify
 npm run phase9:check
+npm run test
 ```
 
 ## Runtime boundary
