@@ -9,6 +9,7 @@ Readiness export preparation.
 ## Source touchpoints
 
 - `src/components/dashboard/executive-reporting-package.tsx`
+- `src/components/dashboard/readiness-export-preparation.tsx`
 - `src/components/dashboard/executive-dashboard-hero.tsx`
 - `src/components/dashboard/workflow-readiness-summary.tsx`
 - `src/components/dashboard/readiness-follow-up-plan.tsx`
@@ -20,6 +21,7 @@ Readiness export preparation.
 - Export preparation remains based on the existing organization readiness signal.
 - Export preparation remains read-only until additional runtime changes are explicitly scoped.
 - Executive reporting package remains available as the export preparation entry surface.
+- Readiness export preparation remains wired into the dashboard overview.
 - Readiness summary and follow-up plan remain available as supporting surfaces.
 - Reports navigation remains the safe export preparation entrypoint.
 - No product, email, document, or UI template changes are required.
@@ -34,7 +36,7 @@ npm run test
 
 ## Runtime boundary
 
-This validation plan does not introduce new runtime behavior by itself.
+This validation plan documents the read-only readiness export preparation surface and does not introduce mutation behavior by itself.
 
 ## Safety boundary
 
