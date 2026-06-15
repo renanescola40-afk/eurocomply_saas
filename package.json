@@ -29,6 +29,7 @@
     "phase8:check": "node scripts/dev/run-phase8-checks.mjs",
     "phase8:review": "npm run phase8:check && npm run test",
     "phase8:verify": "npm run phase8:review && npm run lint && npm run typecheck && npm run build",
+    "phase9:check": "node scripts/dev/run-phase9-checks.mjs",
     "quality:routes": "node scripts/quality/check-route-links.mjs",
     "security:rls": "node scripts/security/check-rls.mjs",
     "security:api-guards": "node scripts/security/check-api-guards.mjs",
