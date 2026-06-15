@@ -49,6 +49,12 @@ For only the CI/CD workflow check, run:
 npm run phase2:check
 ```
 
+To patch only the Phase 2 generated-report entries in `.gitignore`, run:
+
+```bash
+npm run phase2:gitignore
+```
+
 The complete runner validates file inventory, documentation, generated report hygiene, package aliases, CI/CD workflow requirements, and writes the final Phase 2 report.
 
 ## Local diagnostic outputs
