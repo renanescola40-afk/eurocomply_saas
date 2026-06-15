@@ -26,6 +26,29 @@ const checks = [
       'read-only handoff review touchpoints',
     ],
   },
+  {
+    file: 'docs/PHASE11_INVENTORY.md',
+    required: [
+      'Phase 11 Inventory',
+      'Evidence handoff review',
+      'src/components/dashboard/audit-package-review.tsx',
+      'src/components/dashboard/readiness-export-preparation.tsx',
+      'src/components/dashboard/executive-reporting-package.tsx',
+      'src/components/dashboard/workflow-readiness-summary.tsx',
+      'src/components/dashboard/readiness-follow-up-plan.tsx',
+      'src/components/dashboard/dashboard-home-overview.tsx',
+      'src/server/queries/organization-dashboard.ts',
+      'Audit package review surface',
+      'Readiness export preparation surface',
+      'Executive reporting package snapshot',
+      'Read-only readiness summary',
+      'Read-only follow-up plan',
+      'Reports navigation entrypoint',
+      'workflowReadiness',
+      'npm run phase10:verify',
+      'node scripts/dev/run-phase11-checks.mjs',
+    ],
+  },
 ];
 
 for (const { file, required } of checks) {
