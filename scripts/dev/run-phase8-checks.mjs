@@ -47,6 +47,26 @@ const checks = [
       'npm run phase8:check',
     ],
   },
+  {
+    file: 'docs/PHASE8_VALIDATION_PLAN.md',
+    required: [
+      'Phase 8 Validation Plan',
+      'Executive readiness reporting package preparation',
+      'src/components/dashboard/executive-dashboard-hero.tsx',
+      'src/components/dashboard/workflow-readiness-summary.tsx',
+      'src/components/dashboard/readiness-follow-up-plan.tsx',
+      'src/components/dashboard/dashboard-home-overview.tsx',
+      'src/server/queries/organization-dashboard.ts',
+      'reporting package remains based on the existing organization readiness signal',
+      'reporting package remains read-only',
+      'executive dashboard summary remains available as the package entry surface',
+      'readiness summary and follow-up plan remain available as package supporting surfaces',
+      'No product, email, document, or UI template changes are required',
+      'npm run phase7:verify',
+      'npm run phase8:check',
+      'npm run test',
+    ],
+  },
 ];
 
 for (const { file, required } of checks) {
