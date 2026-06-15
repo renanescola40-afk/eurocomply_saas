@@ -10,24 +10,37 @@ Run the full Phase 1 flow with:
 node scripts/dev/run-phase1.mjs
 ```
 
+After the first successful package script patch, the same flow is also available as:
+
+```bash
+npm run phase1
+```
+
+For a terminal-friendly final output, use:
+
+```bash
+npm run phase1:finalize
+```
+
 The runner clears stale local reports first, then performs the current flow:
 
 1. Validate `.gitignore` hygiene for local reports.
 2. Validate Node.js runtime compatibility.
 3. Validate the declared package manager version.
-4. Pin known `latest` dependencies.
-5. Validate build prerequisites.
-6. Generate `package-lock.json` without running lifecycle scripts.
-7. Validate that `package-lock.json` exists and is not ignored by Git.
-8. Write dependency pin diagnostics.
-9. Write Phase 1 status diagnostics.
-10. Validate local foundation prerequisites.
-11. Run TypeScript typecheck.
-12. Run unit tests.
-13. Run production build.
-14. Write the Phase 1 commit plan.
-15. Validate the Phase 1 commit plan.
-16. Always write the final text report after the run summary is generated.
+4. Ensure Phase 1 npm script aliases exist in `package.json`.
+5. Pin known `latest` dependencies.
+6. Validate build prerequisites.
+7. Generate `package-lock.json` without running lifecycle scripts.
+8. Validate that `package-lock.json` exists and is not ignored by Git.
+9. Write dependency pin diagnostics.
+10. Write Phase 1 status diagnostics.
+11. Validate local foundation prerequisites.
+12. Run TypeScript typecheck.
+13. Run unit tests.
+14. Run production build.
+15. Write the Phase 1 commit plan.
+16. Validate the Phase 1 commit plan.
+17. Always write the final text report after the run summary is generated.
 
 ## Expected generated files
 
@@ -45,7 +58,7 @@ These files are local diagnostics and should not be committed:
 
 These files should be committed after the runner succeeds:
 
-- `package.json`, if dependency pins changed.
+- `package.json`, if dependency pins or Phase 1 aliases changed.
 - `package-lock.json`, after it is generated.
 
 ## Completion criteria
@@ -57,6 +70,7 @@ Phase 1 is complete when all items below are true:
 - No dependencies use `latest`.
 - Node.js runtime is compatible.
 - The active npm major version matches `packageManager`.
+- Phase 1 npm aliases exist in `package.json`.
 - `npm ci` succeeds from a clean checkout.
 - `npm run typecheck` succeeds.
 - `npm run test` succeeds.
