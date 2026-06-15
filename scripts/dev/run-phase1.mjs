@@ -1,7 +1,25 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
+
+const generatedReportFiles = [
+  'phase1-run-report.json',
+  'phase1-summary.json',
+  'phase1-commit-plan.json',
+  'phase1-final-report.txt',
+  'phase1-status.json',
+  'dependency-pin-report.json',
+  'dependency-pin-change-report.json',
+  'local-quality-report.json',
+  'local-build-report.json',
+];
+
+for (const file of generatedReportFiles) {
+  if (existsSync(file)) {
+    unlinkSync(file);
+  }
+}
 
 const startedAt = new Date().toISOString();
 const steps = [
