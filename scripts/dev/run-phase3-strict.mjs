@@ -8,6 +8,7 @@ const steps = [
   ['node', ['scripts/dev/check-phase3-auth-session-readiness.mjs']],
   ['node', ['scripts/dev/check-phase3-production-readiness.mjs']],
   ['node', ['scripts/dev/check-phase3-completion-gates.mjs']],
+  ['node', ['scripts/dev/check-phase3-production-handoff.mjs']],
 ];
 
 for (const [command, args] of steps) {
