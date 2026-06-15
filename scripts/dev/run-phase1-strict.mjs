@@ -6,6 +6,7 @@ const steps = [
   ['node', ['scripts/dev/check-phase1-script-files.mjs']],
   ['node', ['scripts/dev/ensure-phase1-package-scripts.mjs']],
   ['node', ['scripts/dev/check-phase1-package-scripts.mjs']],
+  ['node', ['scripts/dev/check-phase1-docs.mjs']],
   ['node', ['scripts/dev/run-phase1-finalize.mjs']],
 ];
 
