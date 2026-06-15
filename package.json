@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "preflight": "node scripts/preflight.mjs",
     "phase1:check": "node scripts/dev/run-phase1-checks.mjs",
+    "phase1:capture": "node scripts/dev/capture-phase1-evidence.mjs",
     "phase3:files": "node scripts/dev/check-phase3-script-files.mjs",
     "phase3:check": "node scripts/dev/check-phase3-production-readiness.mjs",
     "phase3:strict": "node scripts/dev/run-phase3-strict.mjs",
