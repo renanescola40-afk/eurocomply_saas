@@ -4,7 +4,7 @@ This status matrix tracks EuroComply SaaS Phase 3 completion.
 
 ## Current estimate
 
-Phase 3 is approximately 95% complete from the repository implementation perspective.
+Phase 3 is approximately 97% complete from the repository implementation perspective.
 
 It is not production-complete until external deployment gates are confirmed.
 
@@ -19,13 +19,16 @@ It is not production-complete until external deployment gates are confirmed.
 | Auth/session readiness guide | Complete |
 | Completion gates document | Complete |
 | Progress status document | Complete |
+| Production handoff document | Complete |
 | File inventory checker | Complete |
 | Production readiness checker | Complete |
 | Runtime readiness checker | Complete |
 | Auth/session readiness checker | Complete |
 | Completion gates checker | Complete |
 | Progress status checker | Complete |
+| Production handoff checker | Complete |
 | Strict runner calls required Phase 3 readiness checkers | Complete |
+| CI runs Phase 3 strict/progress checks | Complete |
 | Generated Phase 3 reports ignored by Git | Complete |
 | No template changes required | Complete |
 
@@ -39,6 +42,7 @@ It is not production-complete until external deployment gates are confirmed.
 | Supabase migrations reviewed and applied in production order | Pending confirmation |
 | Stripe live products, prices, and webhook configured | Pending confirmation |
 | Sentry production project configured when observability is enabled | Pending confirmation |
+| Production owner accepts the handoff | Pending confirmation |
 
 ## Completion language
 
