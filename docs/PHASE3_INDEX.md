@@ -22,6 +22,8 @@ It does not authorize product, email, document, or UI template changes.
 - `docs/PHASE3_EXTERNAL_GATES_CHECKLIST.md`
 - `docs/PHASE3_FINAL_VALIDATION_COMMANDS.md`
 - `docs/PHASE3_CLOSEOUT_DECISION_RECORD.md`
+- `docs/PHASE3_EVIDENCE_PACK.md`
+- `docs/PHASE3_TWO_COMMAND_CLOSEOUT.md`
 
 ## Addenda
 
@@ -41,10 +43,15 @@ It does not authorize product, email, document, or UI template changes.
 - `scripts/dev/check-phase3-external-gates-checklist.mjs`
 - `scripts/dev/check-phase3-final-validation-commands.mjs`
 - `scripts/dev/check-phase3-closeout-decision.mjs`
+- `scripts/dev/check-phase3-index.mjs`
+- `scripts/dev/check-phase3-repository-closeout.mjs`
+- `scripts/dev/check-phase3-evidence-pack.mjs`
+- `scripts/dev/check-phase3-two-command-closeout.mjs`
 
-## Runner
+## Runners
 
 - `scripts/dev/run-phase3-strict.mjs`
+- `scripts/dev/run-phase3-closeout.mjs`
 
 ## CI
 
@@ -54,11 +61,7 @@ It does not authorize product, email, document, or UI template changes.
 
 ```bash
 npm run phase3:strict
-node scripts/dev/check-phase3-progress-status.mjs
-node scripts/dev/check-phase3-scope-lock.mjs
-node scripts/dev/check-phase3-external-gates-checklist.mjs
-node scripts/dev/check-phase3-final-validation-commands.mjs
-node scripts/dev/check-phase3-closeout-decision.mjs
+npm run phase3:closeout
 ```
 
 ## Status boundary
