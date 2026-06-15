@@ -30,6 +30,27 @@ const checks = [
       'Add tests or static checks for export wiring',
     ],
   },
+  {
+    file: 'docs/PHASE9_INVENTORY.md',
+    required: [
+      'Phase 9 Inventory',
+      'Readiness export preparation',
+      'src/components/dashboard/executive-reporting-package.tsx',
+      'src/components/dashboard/executive-dashboard-hero.tsx',
+      'src/components/dashboard/workflow-readiness-summary.tsx',
+      'src/components/dashboard/readiness-follow-up-plan.tsx',
+      'src/components/dashboard/dashboard-home-overview.tsx',
+      'src/server/queries/organization-dashboard.ts',
+      'Executive reporting package snapshot',
+      'Read-only readiness summary',
+      'Read-only follow-up plan',
+      'Reports navigation entrypoint',
+      'workflowReadiness',
+      'docs/PHASE9_INVENTORY.md',
+      'npm run phase8:verify',
+      'npm run phase9:check',
+    ],
+  },
 ];
 
 for (const { file, required } of checks) {
