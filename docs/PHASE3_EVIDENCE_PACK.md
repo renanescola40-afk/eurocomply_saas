@@ -29,6 +29,7 @@ It does not authorize product, email, document, or UI template changes.
 - `docs/PHASE3_CLOSEOUT_DECISION_RECORD.md`
 - `docs/PHASE3_INDEX.md`
 - `docs/PHASE3_TWO_COMMAND_CLOSEOUT.md`
+- `docs/PHASE3_OWNER_ACCEPTANCE_TEMPLATE.md`
 
 ### Automation evidence
 
@@ -49,6 +50,7 @@ It does not authorize product, email, document, or UI template changes.
 - `scripts/dev/check-phase3-repository-closeout.mjs`
 - `scripts/dev/check-phase3-evidence-pack.mjs`
 - `scripts/dev/check-phase3-two-command-closeout.mjs`
+- `scripts/dev/check-phase3-owner-acceptance-template.mjs`
 
 ### CI evidence
 
