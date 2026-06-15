@@ -19,7 +19,7 @@ export function compareManifestSnapshots(
       continue;
     }
 
-    if (previous.sha256 === entry.sha256) {
+    if (previous.digest === entry.digest) {
       unchanged.push(path);
     } else {
       changed.push(path);
@@ -33,8 +33,6 @@ export function compareManifestSnapshots(
   }
 
   return {
-    beforeId: before.id,
-    afterId: after.id,
     added: added.sort(),
     removed: removed.sort(),
     changed: changed.sort(),
