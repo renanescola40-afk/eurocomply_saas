@@ -5,6 +5,7 @@ import { writeFileSync } from 'node:fs';
 
 const startedAt = new Date().toISOString();
 const steps = [
+  { name: 'gitignore-hygiene', command: 'node', args: ['scripts/dev/check-phase1-gitignore.mjs'] },
   { name: 'pin-dependencies', command: 'node', args: ['scripts/dev/pin-known-latest-deps.mjs'] },
   { name: 'build-prereqs', command: 'node', args: ['scripts/dev/check-build-prereqs.mjs'] },
   { name: 'lockfile', command: 'npm', args: ['install', '--package-lock-only', '--ignore-scripts'] },
@@ -12,10 +13,14 @@ const steps = [
   { name: 'status', command: 'node', args: ['scripts/dev/write-phase1-status.mjs'] },
   { name: 'foundation', command: 'node', args: ['scripts/dev/check-local-foundation.mjs'] },
   { name: 'quality', command: 'node', args: ['scripts/dev/run-quality-report.mjs'] },
+  { name: 'commit-plan', command: 'node', args: ['scripts/dev/write-phase1-commit-plan.mjs'] },
+  { name: 'commit-plan-check', command: 'node', args: ['scripts/dev/check-phase1-commit-plan.mjs'] },
 ];
 
 function nextAction(stepName) {
   switch (stepName) {
+    case 'gitignore-hygiene':
+      return 'Add missing local diagnostic report files to .gitignore.';
     case 'pin-dependencies':
       return 'Check package.json write permissions and rerun the phase 1 runner.';
     case 'build-prereqs':
@@ -30,6 +35,10 @@ function nextAction(stepName) {
       return 'Review local foundation output and fix package or script requirements.';
     case 'quality':
       return 'Open local-quality-report.json and fix the first failing typecheck, test, or build step.';
+    case 'commit-plan':
+      return 'Review phase1-commit-plan.json and resolve any remaining blockers.';
+    case 'commit-plan-check':
+      return 'Commit package.json and package-lock.json once the plan is ready.';
     default:
       return 'Review the failing step output and rerun the phase 1 runner.';
   }
