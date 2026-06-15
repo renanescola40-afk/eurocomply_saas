@@ -8,6 +8,7 @@ const content = readFileSync(file, 'utf8');
 const requiredText = [
   'node scripts/dev/run-phase2-strict.mjs',
   'npm run phase2:strict',
+  'npm run phase2:complete',
   'npm run phase2:check',
   'check-phase2-script-files',
   'check-phase2-package-scripts',
