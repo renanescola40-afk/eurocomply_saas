@@ -26,6 +26,18 @@ describe('Phase 7 readiness follow-up workflow', () => {
     expect(overview).toContain('WorkflowReadinessSummary');
   });
 
+  it('renders the readiness follow-up planning surface', () => {
+    const plan = read('src/components/dashboard/readiness-follow-up-plan.tsx');
+    const overview = read('src/components/dashboard/dashboard-home-overview.tsx');
+
+    expect(plan).toContain('ReadinessFollowUpPlan');
+    expect(plan).toContain('Follow-up planning');
+    expect(plan).toContain('Open follow-up area');
+    expect(plan).toContain('workflowReadiness?.reasons');
+    expect(overview).toContain('ReadinessFollowUpPlan');
+    expect(overview).toContain('readiness-follow-up');
+  });
+
   it('keeps the workflow safe before additional runtime changes', () => {
     const validation = read('docs/PHASE7_VALIDATION_PLAN.md');
 
