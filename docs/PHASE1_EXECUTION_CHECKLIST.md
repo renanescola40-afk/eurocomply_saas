@@ -28,7 +28,7 @@ For the strictest local closeout flow, use:
 npm run phase1:strict
 ```
 
-The strict flow ensures the aliases exist, validates them, and then runs the finalizer.
+The strict flow validates that every Phase 1 script file exists, ensures the aliases exist, validates them, and then runs the finalizer.
 
 The runner clears stale local reports first, then performs the current flow:
 
@@ -78,6 +78,7 @@ Phase 1 is complete when all items below are true:
 - No dependencies use `latest`.
 - Node.js runtime is compatible.
 - The active npm major version matches `packageManager`.
+- Every Phase 1 script file exists.
 - Phase 1 npm aliases exist in `package.json` and pass validation.
 - `npm ci` succeeds from a clean checkout.
 - `npm run typecheck` succeeds.
