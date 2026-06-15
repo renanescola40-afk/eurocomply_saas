@@ -31,6 +31,7 @@ Audit package review.
 - `docs/PHASE10_INVENTORY.md`
 - `docs/PHASE10_VALIDATION_PLAN.md`
 - `scripts/dev/run-phase10-checks.mjs`
+- `tests/phase10/audit-package-review.test.ts`
 
 ## Required commands
 
