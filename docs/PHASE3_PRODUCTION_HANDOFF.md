@@ -24,7 +24,7 @@ Run these commands before production promotion:
 
 ```bash
 npm run phase3:strict
-node scripts/dev/check-phase3-progress-status.mjs
+npm run phase3:closeout
 ```
 
 If either command fails, do not mark Phase 3 complete.
@@ -59,7 +59,7 @@ Phase 3 is a go only when:
 Use these exact statuses:
 
 - `repository-complete`: repository docs and checks exist.
-- `validated`: `npm run phase3:strict` and progress checks pass.
+- `validated`: `npm run phase3:strict` and `npm run phase3:closeout` pass.
 - `production-complete`: repository checks pass and all external confirmations are complete.
 
 Until external confirmations are complete, the correct status is `repository-complete`, not `production-complete`.
