@@ -6,6 +6,7 @@ import { writeFileSync } from 'node:fs';
 const startedAt = new Date().toISOString();
 const steps = [
   { name: 'gitignore-hygiene', command: 'node', args: ['scripts/dev/check-phase1-gitignore.mjs'] },
+  { name: 'node-runtime', command: 'node', args: ['scripts/dev/check-node-runtime.mjs'] },
   { name: 'package-manager', command: 'node', args: ['scripts/dev/check-package-manager.mjs'] },
   { name: 'pin-dependencies', command: 'node', args: ['scripts/dev/pin-known-latest-deps.mjs'] },
   { name: 'build-prereqs', command: 'node', args: ['scripts/dev/check-build-prereqs.mjs'] },
@@ -23,6 +24,8 @@ function nextAction(stepName) {
   switch (stepName) {
     case 'gitignore-hygiene':
       return 'Add missing local diagnostic report files to .gitignore.';
+    case 'node-runtime':
+      return 'Install or activate Node.js 20+ before running Phase 1.';
     case 'package-manager':
       return 'Install or activate the npm major version declared in package.json.';
     case 'pin-dependencies':
