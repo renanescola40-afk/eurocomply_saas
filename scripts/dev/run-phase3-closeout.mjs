@@ -11,6 +11,7 @@ const steps = [
   ['node', ['scripts/dev/check-phase3-index.mjs']],
   ['node', ['scripts/dev/check-phase3-repository-closeout.mjs']],
   ['node', ['scripts/dev/check-phase3-evidence-pack.mjs']],
+  ['node', ['scripts/dev/check-phase3-two-command-closeout.mjs']],
 ];
 
 for (const [command, args] of steps) {
