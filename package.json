@@ -15,6 +15,7 @@
     "phase3:files": "node scripts/dev/check-phase3-script-files.mjs",
     "phase3:check": "node scripts/dev/check-phase3-production-readiness.mjs",
     "phase3:strict": "node scripts/dev/run-phase3-strict.mjs",
+    "phase3:closeout": "node scripts/dev/run-phase3-closeout.mjs",
     "quality:routes": "node scripts/quality/check-route-links.mjs",
     "security:rls": "node scripts/security/check-rls.mjs",
     "security:api-guards": "node scripts/security/check-api-guards.mjs",
