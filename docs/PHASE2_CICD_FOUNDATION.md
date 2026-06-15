@@ -28,22 +28,28 @@ The minimum required checks are:
 Before marking Phase 2 as ready, run:
 
 ```bash
-node scripts/dev/run-phase2-strict.mjs
+node scripts/dev/run-phase2-complete.mjs
 ```
 
 After aliases are added, the preferred command is:
 
 ```bash
-npm run phase2:strict
+npm run phase2:complete
 ```
 
-The strict runner validates the Phase 2 file inventory, ensures package aliases, validates Phase 1 and Phase 2 aliases, validates documentation, validates the CI/CD workflow foundation, and writes the final Phase 2 report.
+For the stricter CI/CD workflow validation without the full local-report wrapper, run:
+
+```bash
+npm run phase2:strict
+```
 
 For only the CI/CD workflow check, run:
 
 ```bash
 npm run phase2:check
 ```
+
+The complete runner validates file inventory, documentation, generated report hygiene, package aliases, CI/CD workflow requirements, and writes the final Phase 2 report.
 
 ## Local diagnostic outputs
 
@@ -81,4 +87,4 @@ Before the CI workflow is fully aligned, the Phase 2 checker is expected to flag
 
 ## Exit criteria
 
-Phase 2 can be marked complete only after the workflow file is committed, `npm run phase2:strict` passes locally, `phase2-final-report.txt` is reviewed, and a real GitHub Actions run passes.
+Phase 2 can be marked complete only after the workflow file is committed, `npm run phase2:complete` passes locally, `phase2-final-report.txt` is reviewed, and a real GitHub Actions run passes.
