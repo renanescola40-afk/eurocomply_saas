@@ -9,6 +9,7 @@ const required = [
   'production-complete',
   'Do not mark Phase 3 as production-complete from repository evidence alone',
   'npm run phase3:strict',
+  'npm run phase3:closeout',
 ];
 
 if (!existsSync(path)) {
