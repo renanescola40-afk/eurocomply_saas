@@ -27,6 +27,8 @@ Phase 3 validates that the project has a clear production path for:
 Phase 3 work is authorized only in low-risk implementation control files:
 
 - `docs/PHASE3_PRODUCTION_READINESS.md`
+- `docs/PHASE3_DEPLOYMENT_RUNBOOK.md`
+- `docs/PHASE3_DATABASE_MIGRATION_SAFETY.md`
 - `scripts/dev/check-phase3-production-readiness.mjs`
 - `scripts/dev/check-phase3-script-files.mjs`
 - `scripts/dev/run-phase3-strict.mjs`
@@ -62,6 +64,8 @@ Phase 3 changes must be deterministic and verifiable:
 The Phase 3 foundation expects these files:
 
 - `docs/PHASE3_PRODUCTION_READINESS.md`
+- `docs/PHASE3_DEPLOYMENT_RUNBOOK.md`
+- `docs/PHASE3_DATABASE_MIGRATION_SAFETY.md`
 - `scripts/dev/check-phase3-production-readiness.mjs`
 - `scripts/dev/check-phase3-script-files.mjs`
 - `scripts/dev/run-phase3-strict.mjs`
@@ -73,6 +77,13 @@ The Phase 3 foundation expects these npm aliases:
 - `phase3:files`
 - `phase3:check`
 - `phase3:strict`
+
+## Required operational documents
+
+Phase 3 requires two operational documents in addition to this checklist:
+
+- `docs/PHASE3_DEPLOYMENT_RUNBOOK.md` for deploy, smoke checks, rollback triggers, and incident handoff.
+- `docs/PHASE3_DATABASE_MIGRATION_SAFETY.md` for Supabase/Postgres migration ordering, prohibited patterns, verification, and rollback caution.
 
 ## Required local validation
 
@@ -100,6 +111,7 @@ Phase 3 foundation is complete when:
 
 - Required Phase 3 files exist.
 - Required package aliases exist.
+- Required operational documents exist and include deployment, rollback, migration safety, and prohibited-scope notes.
 - `.env.example` exists and documents required production environment variables.
 - Production secrets are not committed.
 - Database migration commands are documented.
