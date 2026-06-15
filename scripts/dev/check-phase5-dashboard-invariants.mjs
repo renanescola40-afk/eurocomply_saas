@@ -6,6 +6,8 @@ const files = {
   root: 'src/app/page.tsx',
   localeHome: 'src/app/[locale]/page.tsx',
   orgDashboard: 'src/app/[locale]/dashboard/organizations/page.tsx',
+  dashboardHomeOverview: 'src/components/dashboard/dashboard-home-overview.tsx',
+  nextBestActions: 'src/components/dashboard/next-best-actions.tsx',
   orgDashboardQuery: 'src/server/queries/organization-dashboard.ts',
   currentOrganization: 'src/server/queries/current-organization.ts',
 };
@@ -13,7 +15,9 @@ const files = {
 const expectations = [
   [files.root, ['redirect', "'/pt'"]],
   [files.localeHome, ['getCurrentUser', 'dashboard/organizations', 'EnterpriseHome']],
-  [files.orgDashboard, ['getCurrentUser', 'redirect(`/${safeLocale}/login`)', 'getOrganizationDashboardData', 'redirect(`/${safeLocale}/onboarding']],
+  [files.orgDashboard, ['getCurrentUser', 'redirect(`/${safeLocale}/login`)', 'getOrganizationDashboardData', 'redirect(`/${safeLocale}/onboarding', 'workflowReadiness={data.workflowReadiness}']],
+  [files.dashboardHomeOverview, ['OrganizationWorkflowReadiness', 'workflowReadiness', 'NextBestActions']],
+  [files.nextBestActions, ['OrganizationWorkflowReadiness', 'buildWorkflowReadinessAction', 'workflowReadiness', 'current workflow readiness']],
   [
     files.orgDashboardQuery,
     [
