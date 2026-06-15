@@ -23,6 +23,7 @@
     "phase6:check": "node scripts/dev/run-phase6-checks.mjs",
     "phase6:review": "npm run phase6:check && npm run test",
     "phase6:verify": "npm run phase6:review && npm run lint && npm run typecheck && npm run build",
+    "phase7:check": "node scripts/dev/run-phase7-checks.mjs",
     "quality:routes": "node scripts/quality/check-route-links.mjs",
     "security:rls": "node scripts/security/check-rls.mjs",
     "security:api-guards": "node scripts/security/check-api-guards.mjs",
