@@ -17,7 +17,6 @@ const steps = [
   { name: 'foundation', command: 'node', args: ['scripts/dev/check-local-foundation.mjs'] },
   { name: 'quality', command: 'node', args: ['scripts/dev/run-quality-report.mjs'] },
   { name: 'commit-plan', command: 'node', args: ['scripts/dev/write-phase1-commit-plan.mjs'] },
-  { name: 'final-report', command: 'node', args: ['scripts/dev/write-phase1-final-report.mjs'] },
   { name: 'commit-plan-check', command: 'node', args: ['scripts/dev/check-phase1-commit-plan.mjs'] },
 ];
 
@@ -47,8 +46,6 @@ function nextAction(stepName) {
       return 'Open local-quality-report.json and fix the first failing typecheck, test, or build step.';
     case 'commit-plan':
       return 'Review phase1-commit-plan.json and resolve any remaining blockers.';
-    case 'final-report':
-      return 'Review phase1-final-report.txt and rerun the phase 1 runner.';
     case 'commit-plan-check':
       return 'Commit package.json and package-lock.json once the plan is ready.';
     default:
@@ -115,10 +112,24 @@ const summary = {
 writeFileSync('phase1-run-report.json', `${JSON.stringify(report, null, 2)}\n`);
 writeFileSync('phase1-summary.json', `${JSON.stringify(summary, null, 2)}\n`);
 
+const finalReportResult = spawnSync('node', ['scripts/dev/write-phase1-final-report.mjs'], {
+  encoding: 'utf8',
+  shell: false,
+});
+
+if (finalReportResult.stdout) process.stdout.write(finalReportResult.stdout);
+if (finalReportResult.stderr) process.stderr.write(finalReportResult.stderr);
+
+if (finalReportResult.status !== 0 && report.success) {
+  console.error('Phase 1 final report generation failed.');
+  process.exit(finalReportResult.status ?? 1);
+}
+
 if (!report.success) {
   console.error(`Phase 1 runner failed at: ${failed?.name ?? 'unknown'}`);
   console.error('Report written to phase1-run-report.json');
   console.error('Summary written to phase1-summary.json');
+  console.error('Final report written to phase1-final-report.txt');
   process.exit(failed?.status || 1);
 }
 
