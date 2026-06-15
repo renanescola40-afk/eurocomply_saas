@@ -8,6 +8,7 @@ const requiredFiles = [
   'docs/PHASE3_RUNTIME_SECURITY_OBSERVABILITY.md',
   'next.config.ts',
   'package.json',
+  'scripts/dev/run-phase3-strict.mjs',
 ];
 
 const requiredNextConfigPhrases = [
@@ -70,9 +71,12 @@ if (existsSync('package.json')) {
       blockers.push(`package.json is missing runtime dependency: ${dependencyName}`);
     }
   }
+}
 
-  if (packageJson.scripts?.['phase3:runtime'] !== 'node scripts/dev/check-phase3-runtime-readiness.mjs') {
-    blockers.push('package.json is missing npm script phase3:runtime');
+if (existsSync('scripts/dev/run-phase3-strict.mjs')) {
+  const strictRunner = readFileSync('scripts/dev/run-phase3-strict.mjs', 'utf8');
+  if (!strictRunner.includes('scripts/dev/check-phase3-runtime-readiness.mjs')) {
+    blockers.push('run-phase3-strict.mjs does not execute the runtime readiness checker');
   }
 }
 
