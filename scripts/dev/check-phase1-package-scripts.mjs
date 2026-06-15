@@ -8,6 +8,7 @@ const scripts = pkg.scripts ?? {};
 const expected = {
   phase1: 'node scripts/dev/run-phase1.mjs',
   'phase1:finalize': 'node scripts/dev/run-phase1-finalize.mjs',
+  'phase1:strict': 'node scripts/dev/run-phase1-strict.mjs',
   'phase1:commit-plan': 'node scripts/dev/write-phase1-commit-plan.mjs',
 };
 
