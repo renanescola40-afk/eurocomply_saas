@@ -22,6 +22,14 @@ For a terminal-friendly final output, use:
 npm run phase1:finalize
 ```
 
+For the strictest local closeout flow, use:
+
+```bash
+npm run phase1:strict
+```
+
+The strict flow ensures the aliases exist, validates them, and then runs the finalizer.
+
 The runner clears stale local reports first, then performs the current flow:
 
 1. Validate `.gitignore` hygiene for local reports.
@@ -70,7 +78,7 @@ Phase 1 is complete when all items below are true:
 - No dependencies use `latest`.
 - Node.js runtime is compatible.
 - The active npm major version matches `packageManager`.
-- Phase 1 npm aliases exist in `package.json`.
+- Phase 1 npm aliases exist in `package.json` and pass validation.
 - `npm ci` succeeds from a clean checkout.
 - `npm run typecheck` succeeds.
 - `npm run test` succeeds.
