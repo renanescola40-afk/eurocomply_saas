@@ -9,6 +9,7 @@ const steps = [
   ['node', ['scripts/dev/check-phase4-data-flow.mjs']],
   ['node', ['scripts/dev/check-phase4-access-model.mjs']],
   ['node', ['scripts/dev/check-phase4-operational-assumptions.mjs']],
+  ['node', ['scripts/dev/check-phase4-implementation-readiness.mjs']],
 ];
 
 for (const [command, args] of steps) {
