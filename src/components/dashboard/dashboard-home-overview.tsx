@@ -2,6 +2,7 @@ import { AuditPackageReview } from '@/components/dashboard/audit-package-review'
 import { ComplianceTimeline } from '@/components/dashboard/compliance-timeline';
 import { DashboardExperienceIndex } from '@/components/dashboard/dashboard-experience-index';
 import { DashboardExperienceMap } from '@/components/dashboard/dashboard-experience-map';
+import { EvidenceHandoffReview } from '@/components/dashboard/evidence-handoff-review';
 import { ExecutiveDashboardHero } from '@/components/dashboard/executive-dashboard-hero';
 import { ExecutiveReportingPackage } from '@/components/dashboard/executive-reporting-package';
 import { NextBestActions } from '@/components/dashboard/next-best-actions';
@@ -50,6 +51,9 @@ export function DashboardHomeOverview({
       </section>
       <section id="audit-package-review" className="scroll-mt-28">
         <AuditPackageReview summary={summary} workflowReadiness={workflowReadiness} basePath={basePath} />
+      </section>
+      <section id="evidence-handoff-review" className="scroll-mt-28">
+        <EvidenceHandoffReview summary={summary} workflowReadiness={workflowReadiness} basePath={basePath} />
       </section>
       <section id="experience-map" className="scroll-mt-28">
         <DashboardExperienceMap basePath={basePath} />
