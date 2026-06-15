@@ -28,6 +28,25 @@ const checks = [
       'Add tests or static checkers for reporting package wiring',
     ],
   },
+  {
+    file: 'docs/PHASE8_INVENTORY.md',
+    required: [
+      'Phase 8 Inventory',
+      'Executive readiness reporting package preparation',
+      'src/components/dashboard/executive-dashboard-hero.tsx',
+      'src/components/dashboard/workflow-readiness-summary.tsx',
+      'src/components/dashboard/readiness-follow-up-plan.tsx',
+      'src/components/dashboard/dashboard-home-overview.tsx',
+      'src/server/queries/organization-dashboard.ts',
+      'Executive dashboard summary',
+      'Read-only readiness snapshot',
+      'Read-only follow-up planning surface',
+      'workflowReadiness',
+      'docs/PHASE8_INVENTORY.md',
+      'npm run phase7:verify',
+      'npm run phase8:check',
+    ],
+  },
 ];
 
 for (const { file, required } of checks) {
