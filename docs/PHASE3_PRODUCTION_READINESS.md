@@ -6,6 +6,10 @@ Phase 3 starts after the CI/CD foundation is in place.
 
 Prepare the SaaS for a production deployment path with explicit environment, security, database, and observability gates.
 
+## Phase position
+
+Phase 3 is the production readiness foundation inside the 13-phase EuroComply SaaS implementation sequence.
+
 ## Required production readiness areas
 
 Phase 3 validates that the project has a clear production path for:
@@ -18,6 +22,41 @@ Phase 3 validates that the project has a clear production path for:
 - Error handling and operational diagnostics.
 - Deployment checklist and rollback notes.
 
+## Authorized scope
+
+Phase 3 work is authorized only in low-risk implementation control files:
+
+- `docs/PHASE3_PRODUCTION_READINESS.md`
+- `scripts/dev/check-phase3-production-readiness.mjs`
+- `scripts/dev/check-phase3-script-files.mjs`
+- `scripts/dev/run-phase3-strict.mjs`
+- `package.json` npm aliases for Phase 3 validation
+- `.env.example` documentation when a required production variable is missing
+
+## Prohibited scope
+
+Do not modify product, email, document, or UI templates during Phase 3 readiness work unless a later phase explicitly authorizes template changes.
+
+Protected template paths include:
+
+- `templates/`
+- `app/templates/`
+- `components/templates/`
+- `emails/templates/`
+
+Do not commit production secrets, local `.env` files, private keys, live Stripe keys, Supabase service credentials, Sentry auth tokens, or customer data.
+
+## Implementation method
+
+Phase 3 changes must be deterministic and verifiable:
+
+1. Add or update checks before declaring readiness.
+2. Keep generated reports outside product runtime paths.
+3. Prefer scripts and docs over UI/template changes.
+4. Validate required npm aliases before relying on them.
+5. Keep deployment secrets outside the repository.
+6. Run the strict Phase 3 runner before marking the phase complete.
+
 ## Required files
 
 The Phase 3 foundation expects these files:
@@ -26,6 +65,14 @@ The Phase 3 foundation expects these files:
 - `scripts/dev/check-phase3-production-readiness.mjs`
 - `scripts/dev/check-phase3-script-files.mjs`
 - `scripts/dev/run-phase3-strict.mjs`
+
+## Required package aliases
+
+The Phase 3 foundation expects these npm aliases:
+
+- `phase3:files`
+- `phase3:check`
+- `phase3:strict`
 
 ## Required local validation
 
