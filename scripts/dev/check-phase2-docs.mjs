@@ -12,6 +12,7 @@ const requiredText = [
   'check-phase2-script-files',
   'check-phase2-package-scripts',
   'check-phase2-cicd-foundation',
+  'write-phase2-final-report',
   'phase2-cicd-report.json',
   'phase2-final-report.txt',
   'npm ci',
