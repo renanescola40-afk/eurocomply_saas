@@ -40,6 +40,19 @@ describe('Phase 5 dashboard invariants', () => {
     expect(content).toContain("from('documents')");
   });
 
+  it('exposes derived workflow readiness for organization workflows', () => {
+    const content = read('src/server/queries/organization-dashboard.ts');
+
+    expect(content).toContain('OrganizationWorkflowReadiness');
+    expect(content).toContain('getOrganizationWorkflowReadiness');
+    expect(content).toContain('workflowReadiness');
+    expect(content).toContain('risk-review-required');
+    expect(content).toContain('open-compliance-work');
+    expect(content).toContain('vendor-review-required');
+    expect(content).toContain('evidence-review-required');
+    expect(content).toContain('ready-for-executive-review');
+  });
+
   it('keeps current organization resolution scoped to user membership', () => {
     const content = read('src/server/queries/current-organization.ts');
 
