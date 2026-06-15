@@ -7,6 +7,7 @@ const requiredFiles = [
   '.github/workflows/ci.yml',
   'scripts/dev/check-phase2-cicd-foundation.mjs',
   'scripts/dev/check-phase2-docs.mjs',
+  'scripts/dev/check-phase2-gitignore.mjs',
   'scripts/dev/check-phase2-package-scripts.mjs',
   'scripts/dev/write-phase2-final-report.mjs',
   'scripts/dev/run-phase2-strict.mjs',
