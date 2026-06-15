@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 const steps = [
   ['node', ['scripts/dev/check-phase6-kickoff.mjs']],
   ['node', ['scripts/dev/check-phase6-scope.mjs']],
+  ['node', ['scripts/dev/check-phase6-inventory.mjs']],
 ];
 
 for (const [command, args] of steps) {
