@@ -14,9 +14,7 @@ Run these commands before marking the repository side of Phase 3 complete:
 
 ```bash
 npm run phase3:strict
-node scripts/dev/check-phase3-progress-status.mjs
-node scripts/dev/check-phase3-scope-lock.mjs
-node scripts/dev/check-phase3-external-gates-checklist.mjs
+npm run phase3:closeout
 ```
 
 ## Optional focused checks
