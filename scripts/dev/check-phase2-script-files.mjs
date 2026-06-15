@@ -6,6 +6,7 @@ const requiredFiles = [
   'docs/PHASE2_CICD_FOUNDATION.md',
   '.github/workflows/ci.yml',
   'scripts/dev/check-phase2-cicd-foundation.mjs',
+  'scripts/dev/check-phase2-docs.mjs',
   'scripts/dev/check-phase2-package-scripts.mjs',
   'scripts/dev/run-phase2-strict.mjs',
 ];
