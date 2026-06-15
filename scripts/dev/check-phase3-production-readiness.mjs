@@ -10,9 +10,28 @@ const requiredFiles = [
 ];
 
 const requiredEnvHints = [
-  'DATABASE_URL',
-  'NEXTAUTH_SECRET',
-  'NEXTAUTH_URL',
+  'NEXT_PUBLIC_APP_URL',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'HEALTHCHECK_TOKEN',
+  'CRON_SECRET',
+  'NEXT_PUBLIC_SENTRY_DSN',
+];
+
+const requiredPackageScripts = [
+  'phase3:files',
+  'phase3:check',
+  'phase3:strict',
+];
+
+const forbiddenTemplatePaths = [
+  'templates/',
+  'app/templates/',
+  'components/templates/',
+  'emails/templates/',
 ];
 
 const blockers = [];
@@ -32,6 +51,16 @@ if (existsSync('.env.example')) {
   }
 }
 
+if (existsSync('package.json')) {
+  const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
+  const scripts = packageJson.scripts ?? {};
+  for (const scriptName of requiredPackageScripts) {
+    if (typeof scripts[scriptName] !== 'string') {
+      blockers.push(`package.json is missing npm script ${scriptName}`);
+    }
+  }
+}
+
 if (existsSync('.env')) {
   blockers.push('.env exists locally; confirm it is not committed and contains no production secrets');
 }
@@ -41,6 +70,8 @@ const report = {
   success: blockers.length === 0,
   requiredFiles,
   requiredEnvHints,
+  requiredPackageScripts,
+  forbiddenTemplatePaths,
   blockers,
 };
 
