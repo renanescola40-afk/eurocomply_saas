@@ -28,10 +28,18 @@ The minimum required checks are:
 Before marking Phase 2 as ready, run:
 
 ```bash
-node scripts/dev/check-phase2-cicd-foundation.mjs
+node scripts/dev/run-phase2-strict.mjs
 ```
 
-After aliases are added, the preferred command will be:
+After aliases are added, the preferred command is:
+
+```bash
+npm run phase2:strict
+```
+
+The strict runner validates the Phase 2 file inventory, ensures package aliases, validates Phase 1 and Phase 2 aliases, and then validates the CI/CD workflow foundation.
+
+For only the CI/CD workflow check, run:
 
 ```bash
 npm run phase2:check
@@ -44,20 +52,24 @@ Phase 2 CI/CD foundation is complete when:
 - `.github/workflows/ci.yml` exists.
 - The CI workflow runs on pull requests.
 - The CI workflow runs on pushes to the main branch.
-- The CI workflow uses `npm ci`.
+- The CI workflow uses Node.js 20.
+- The CI workflow uses `npm ci` instead of `npm install`.
 - The CI workflow runs typecheck, tests, and build.
+- The Phase 2 file inventory checker passes.
+- The Phase 2 package alias checker passes.
 - The local Phase 2 CI/CD checker passes.
 - A first CI run completes successfully in GitHub Actions.
 
 ## Expected gaps before implementation
 
-Before the CI workflow is added, the Phase 2 checker is expected to flag:
+Before the CI workflow is fully aligned, the Phase 2 checker is expected to flag:
 
-- Missing `.github/workflows/ci.yml`.
-- Missing CI trigger coverage.
-- Missing dependency installation step.
-- Missing quality gates.
+- Missing `main` push trigger.
+- Missing `node-version: 20`.
+- Missing `npm ci`.
+- Forbidden `npm install` usage.
+- Missing typecheck, test, or build gates.
 
 ## Exit criteria
 
-Phase 2 can be marked complete only after the workflow file is committed and a real GitHub Actions run passes.
+Phase 2 can be marked complete only after the workflow file is committed, `npm run phase2:strict` passes locally, and a real GitHub Actions run passes.
