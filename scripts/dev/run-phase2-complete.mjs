@@ -12,6 +12,7 @@ const steps = [
   ['node', ['scripts/dev/check-phase2-package-scripts.mjs']],
   ['node', ['scripts/dev/check-phase2-cicd-foundation.mjs']],
   ['node', ['scripts/dev/write-phase2-final-report.mjs']],
+  ['node', ['scripts/dev/write-phase2-commit-plan.mjs']],
 ];
 
 for (const [command, args] of steps) {
