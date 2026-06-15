@@ -7,6 +7,7 @@ const scripts = pkg.scripts ?? {};
 
 const expected = {
   'phase2:check': 'node scripts/dev/check-phase2-cicd-foundation.mjs',
+  'phase2:strict': 'node scripts/dev/run-phase2-strict.mjs',
 };
 
 const mismatches = Object.entries(expected).filter(([name, command]) => scripts[name] !== command);
