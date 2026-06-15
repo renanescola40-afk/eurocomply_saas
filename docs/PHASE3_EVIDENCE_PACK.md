@@ -28,10 +28,12 @@ It does not authorize product, email, document, or UI template changes.
 - `docs/PHASE3_FINAL_VALIDATION_COMMANDS.md`
 - `docs/PHASE3_CLOSEOUT_DECISION_RECORD.md`
 - `docs/PHASE3_INDEX.md`
+- `docs/PHASE3_TWO_COMMAND_CLOSEOUT.md`
 
 ### Automation evidence
 
 - `scripts/dev/run-phase3-strict.mjs`
+- `scripts/dev/run-phase3-closeout.mjs`
 - `scripts/dev/check-phase3-script-files.mjs`
 - `scripts/dev/check-phase3-production-readiness.mjs`
 - `scripts/dev/check-phase3-runtime-readiness.mjs`
@@ -45,6 +47,8 @@ It does not authorize product, email, document, or UI template changes.
 - `scripts/dev/check-phase3-closeout-decision.mjs`
 - `scripts/dev/check-phase3-index.mjs`
 - `scripts/dev/check-phase3-repository-closeout.mjs`
+- `scripts/dev/check-phase3-evidence-pack.mjs`
+- `scripts/dev/check-phase3-two-command-closeout.mjs`
 
 ### CI evidence
 
@@ -60,11 +64,5 @@ It cannot alone prove production-complete status because external gates require 
 
 ```bash
 npm run phase3:strict
-node scripts/dev/check-phase3-progress-status.mjs
-node scripts/dev/check-phase3-scope-lock.mjs
-node scripts/dev/check-phase3-external-gates-checklist.mjs
-node scripts/dev/check-phase3-final-validation-commands.mjs
-node scripts/dev/check-phase3-closeout-decision.mjs
-node scripts/dev/check-phase3-index.mjs
-node scripts/dev/check-phase3-repository-closeout.mjs
+npm run phase3:closeout
 ```
