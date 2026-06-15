@@ -7,6 +7,12 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+function preview(value, maxLines = 40) {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  return text.split('\n').slice(-maxLines).join('\n');
+}
+
 const summary = readJson('phase1-summary.json');
 const plan = readJson('phase1-commit-plan.json');
 const lines = [];
@@ -33,12 +39,39 @@ if (summary?.failedStep) {
   lines.push(`- Status: ${summary.failedStep.status}`);
   lines.push(`- Next action: ${summary.failedStep.nextAction}`);
   lines.push('');
+
+  const stderrPreview = preview(summary.failedStep.stderrPreview);
+  const stdoutPreview = preview(summary.failedStep.stdoutPreview);
+
+  if (stderrPreview) {
+    lines.push('stderr preview:');
+    lines.push('```');
+    lines.push(stderrPreview);
+    lines.push('```');
+    lines.push('');
+  }
+
+  if (stdoutPreview) {
+    lines.push('stdout preview:');
+    lines.push('```');
+    lines.push(stdoutPreview);
+    lines.push('```');
+    lines.push('');
+  }
 }
 
 if (plan?.blockers?.length) {
   lines.push('Blockers:');
   for (const blocker of plan.blockers) {
     lines.push(`- ${blocker}`);
+  }
+  lines.push('');
+}
+
+if (plan?.latestDependencies?.length) {
+  lines.push('Dependencies still using latest:');
+  for (const dependency of plan.latestDependencies) {
+    lines.push(`- ${dependency.section}: ${dependency.name}@${dependency.version}`);
   }
   lines.push('');
 }
