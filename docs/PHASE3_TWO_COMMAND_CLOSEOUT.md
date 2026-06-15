@@ -12,7 +12,7 @@ It does not authorize product, email, document, or UI template changes.
 
 ```bash
 npm run phase3:strict
-node scripts/dev/run-phase3-closeout.mjs
+npm run phase3:closeout
 ```
 
 ## Meaning
