@@ -20,6 +20,7 @@ describe('Phase 1 local base validation gate', () => {
     expect(pkg).toContain('phase1:capture');
     expect(pkg).toContain('phase1:smoke');
     expect(pkg).toContain('supply-chain:lockfile');
+    expect(pkg).toContain('supply-chain:floating-deps');
     expect(pkg).toContain('npm install --package-lock-only --ignore-scripts');
   });
 
@@ -27,9 +28,19 @@ describe('Phase 1 local base validation gate', () => {
     const gate = read('docs/PHASE1_EXECUTION_GATE.md');
     const evidence = read('docs/evidence/phase1/README.md');
 
+    for (const command of [
+      'npm run supply-chain:floating-deps',
+      'npm ci',
+      'npm run typecheck',
+      'npm run test',
+      'npm run build',
+      'npm run lint',
+    ]) {
+      expect(evidence).toContain(command);
+    }
+
     for (const command of ['npm ci', 'npm run typecheck', 'npm run test', 'npm run build', 'npm run lint']) {
       expect(gate).toContain(command);
-      expect(evidence).toContain(command);
     }
 
     expect(gate).toContain('package-lock.json');
