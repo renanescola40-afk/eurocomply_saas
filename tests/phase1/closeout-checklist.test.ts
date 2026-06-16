@@ -13,6 +13,7 @@ describe('Phase 1 closeout checklist', () => {
     expect(checklist).toContain('dev-smoke.log');
     expect(checklist).toContain('npm run phase1:evidence');
     expect(checklist).toContain('npm run phase1:check');
+    expect(checklist).toContain('npm run phase1:closeout');
     expect(checklist).toContain('No unresolved blocking warning remains');
     expect(checklist).toContain('real committed evidence');
   });
