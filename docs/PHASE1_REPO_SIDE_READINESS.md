@@ -6,6 +6,7 @@ This report records the repository-side status of Phase 1.
 
 - Phase 1 execution gate: `docs/PHASE1_EXECUTION_GATE.md`
 - Local validation runbook: `docs/PHASE1_LOCAL_VALIDATION_RUNBOOK.md`
+- Execution handoff: `docs/PHASE1_EXECUTION_HANDOFF.md`
 - Evidence index: `docs/evidence/phase1/README.md`
 - Evidence status command: `npm run phase1:evidence`
 - Closeout command: `npm run phase1:closeout`
