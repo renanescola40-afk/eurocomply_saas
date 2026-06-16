@@ -27,10 +27,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
+      - name: Show runner Node.js and npm versions
+        run: |
+          node --version
+          npm --version
 
       - name: Generate P0 progress report
         run: node scripts/security/write-p0-enterprise-progress.mjs
