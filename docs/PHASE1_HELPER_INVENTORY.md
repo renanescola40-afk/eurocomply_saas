@@ -16,6 +16,12 @@ This inventory records the repository-side helpers for Phase 1 local technical v
 - `scripts/dev/capture-phase1-evidence.mjs`
 - `scripts/dev/capture-phase1-smoke.mjs`
 
+## Documentation files
+
+- `docs/PHASE1_EXECUTION_GATE.md`
+- `docs/PHASE1_LOCAL_VALIDATION_RUNBOOK.md`
+- `docs/evidence/phase1/README.md`
+
 ## Test files
 
 - `tests/phase1/local-base-validation.test.ts`
