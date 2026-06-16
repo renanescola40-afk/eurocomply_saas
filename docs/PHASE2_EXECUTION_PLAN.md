@@ -73,6 +73,19 @@ Day 3 must not start until Day 2 evidence is committed and reviewed.
 
 ## Day 3: Vercel preview and production validation
 
+Required closeout command:
+
+```bash
+npm run phase2:day3:closeout
+```
+
+This command runs:
+
+```bash
+npm run phase2:day3:smoke
+npm run phase2:day3:evidence
+```
+
 Required checks:
 
 - preview deploy completes
@@ -81,7 +94,23 @@ Required checks:
 - smoke test covers the deployed URL
 - deployment logs are retained
 
+Day 3 is complete only after deploy evidence exists and health/smoke logs pass with `## exitCode: 0`.
+
+Day 4 must not start until Day 3 evidence is committed and reviewed.
+
 ## Day 4: Supabase staging and production validation
+
+Required closeout command:
+
+```bash
+npm run phase2:day4:closeout
+```
+
+This command runs:
+
+```bash
+npm run phase2:day4:evidence
+```
 
 Required checks:
 
@@ -91,6 +120,8 @@ Required checks:
 - RLS validation passes
 - storage/security policies reviewed
 - no service-role key is exposed to client code
+
+Day 4 is complete only after staging, production, RLS, and storage/security policy evidence is committed and reviewed.
 
 ## Later phases
 
