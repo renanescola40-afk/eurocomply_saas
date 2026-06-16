@@ -19,6 +19,7 @@ Validation:
 
 ```bash
 npm run supply-chain:lockfile
+node scripts/security/plan-dependency-pins-from-lockfile.mjs
 npm run supply-chain:floating-deps
 npm run security:npm-audit:json > npm-audit.json
 npm run security:npm-audit:summary
@@ -39,6 +40,14 @@ Required outcome:
 - No dependency uses broad `x` ranges.
 - No dependency uses unresolved open-ended ranges.
 - Replacements use exact audited versions from the generated lockfile.
+
+Safe planning command:
+
+```bash
+node scripts/security/plan-dependency-pins-from-lockfile.mjs
+```
+
+This command must only recommend versions that are already resolved in `package-lock.json`. Do not replace floating specs with guessed versions.
 
 Gate:
 
