@@ -113,7 +113,7 @@ const governanceChecks = [
   },
   {
     path: p0ProgressWorkflowPath,
-    tokens: ['P0 Progress', 'write-p0-enterprise-progress.mjs', 'p0-enterprise-progress.json'],
+    tokens: ['P0 Progress', 'write-p0-enterprise-progress.mjs', 'p0-enterprise-progress.json', 'Show runner Node.js and npm versions'],
   },
   {
     path: p0ProgressCommentWorkflowPath,
