@@ -12,6 +12,7 @@ const fullSecuritySuitePath = '.github/workflows/full-security-suite.yml';
 const semgrepWorkflowPath = '.github/workflows/semgrep.yml';
 const actionlintWorkflowPath = '.github/workflows/actionlint.yml';
 const p0LockfilePlanWorkflowPath = '.github/workflows/p0-lockfile-plan.yml';
+const p0LockfileCommitWorkflowPath = '.github/workflows/p0-commit-lockfile.yml';
 const p0RuntimeEvidenceWorkflowPath = '.github/workflows/p0-runtime-evidence.yml';
 const p0ProgressWorkflowPath = '.github/workflows/p0-progress.yml';
 const p0ProgressCommentWorkflowPath = '.github/workflows/p0-progress-comment.yml';
@@ -101,6 +102,10 @@ const governanceChecks = [
   {
     path: p0LockfilePlanWorkflowPath,
     tokens: ['P0 Lockfile Plan', 'npm install --package-lock-only --ignore-scripts', 'p0-lockfile-artifacts.sha256', 'package.pinned.json'],
+  },
+  {
+    path: p0LockfileCommitWorkflowPath,
+    tokens: ['P0 Commit Lockfile', 'workflow_dispatch:', 'contents: write', 'npm install --package-lock-only --ignore-scripts', 'security: commit deterministic npm lockfile'],
   },
   {
     path: p0RuntimeEvidenceWorkflowPath,
