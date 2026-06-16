@@ -41,13 +41,11 @@ jobs:
       - name: Generate dependency pin plan
         run: node scripts/security/plan-dependency-pins-from-lockfile.mjs
 
-      - name: Check floating dependency policy
-        run: node scripts/security/list-floating-dependencies.mjs
-        continue-on-error: true
+      - name: Capture floating dependency policy output
+        run: node scripts/security/list-floating-dependencies.mjs > floating-dependencies.txt 2>&1 || true
 
-      - name: Generate npm audit JSON
-        run: npm audit --json > npm-audit.json
-        continue-on-error: true
+      - name: Capture npm audit JSON
+        run: npm audit --json > npm-audit.json || true
 
       - name: Upload P0 lockfile planning artifacts
         uses: actions/upload-artifact@v4
@@ -56,5 +54,6 @@ jobs:
           path: |
             package-lock.json
             dependency-pin-plan.json
+            floating-dependencies.txt
             npm-audit.json
           if-no-files-found: error
