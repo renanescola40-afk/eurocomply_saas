@@ -1,0 +1,68 @@
+name: Full Security Suite
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-security-suite-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-security-suite:
+    name: Run expanded security gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm install --ignore-scripts
+
+      - name: Run repository security gates
+        run: |
+          node scripts/quality/check-route-links.mjs
+          node scripts/security/check-rls.mjs
+          node scripts/security/check-api-guards.mjs
+          node scripts/security/check-protected-routes.mjs
+          node scripts/security/check-public-secrets.mjs
+          node scripts/security/check-client-boundaries.mjs
+          node scripts/security/check-authorization-bola.mjs
+          node scripts/security/check-api-endpoint-hardening.mjs
+          node scripts/security/check-storage-security.mjs
+          node scripts/security/check-ci-cd-secrets.mjs
+          node scripts/security/check-log-sanitization.mjs
+          node scripts/security/check-security-headers.mjs
+          node scripts/security/check-no-store.mjs
+          ENFORCE_ORIGIN_GUARDS=true node scripts/security/check-origin-guards.mjs
+          node scripts/security/check-upload-security.mjs
+          node scripts/security/check-upload-content-scan.mjs
+          node scripts/security/check-security-responses.mjs
+          node scripts/security/check-audit-chain.mjs
+          node scripts/security/check-github-security-workflows.mjs
+          node scripts/security/check-supply-chain.mjs
+          node scripts/security/check-zod-error-usage.mjs
+          node scripts/security/check-trust-package.mjs
+          node scripts/security/check-enterprise-trust-evidence.mjs
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
