@@ -1,0 +1,33 @@
+title = "EuroComply Gitleaks Configuration"
+
+[allowlist]
+description = "Allow documented placeholders only"
+regexes = [
+  '''(?i)placeholder''',
+  '''(?i)changeme''',
+  '''(?i)example''',
+  '''(?i)dummy''',
+  '''(?i)redacted'''
+]
+paths = [
+  '''docs/security/.*''',
+  '''docs/.*RUNBOOK.*'''
+]
+
+[[rules]]
+id = "eurocomply-public-env-sensitive-name"
+description = "Public environment variables must not be named like private material"
+regex = '''NEXT_PUBLIC_[A-Z0-9_]*(SECRET|PRIVATE|PASSWORD|SERVICE_ROLE|WEBHOOK|SIGNING)[A-Z0-9_]*'''
+keywords = ["NEXT_PUBLIC_"]
+
+[[rules]]
+id = "eurocomply-provider-key-like-value"
+description = "Provider key-like values must not be committed"
+regex = '''(sk_live_|rk_live_|whsec_|sbp_|GOCSPX-)\S{12,}'''
+keywords = ["sk_live_", "rk_live_", "whsec_", "sbp_", "GOCSPX-"]
+
+[[rules]]
+id = "eurocomply-service-role-name"
+description = "Service role references are allowed only as environment variable names, never as values"
+regex = '''SUPABASE_SERVICE_ROLE_KEY\s*[:=]\s*['\"]?[^\s'\"$<]+'''
+keywords = ["SUPABASE_SERVICE_ROLE_KEY"]
