@@ -14,6 +14,7 @@ const actionlintWorkflowPath = '.github/workflows/actionlint.yml';
 const p0LockfilePlanWorkflowPath = '.github/workflows/p0-lockfile-plan.yml';
 const p0RuntimeEvidenceWorkflowPath = '.github/workflows/p0-runtime-evidence.yml';
 const p0ProgressWorkflowPath = '.github/workflows/p0-progress.yml';
+const p0ProgressCommentWorkflowPath = '.github/workflows/p0-progress-comment.yml';
 const gitignorePath = '.gitignore';
 const npmrcPath = '.npmrc';
 const packageJsonPath = 'package.json';
@@ -108,6 +109,10 @@ const governanceChecks = [
   {
     path: p0ProgressWorkflowPath,
     tokens: ['P0 Progress', 'write-p0-enterprise-progress.mjs', 'p0-enterprise-progress.json'],
+  },
+  {
+    path: p0ProgressCommentWorkflowPath,
+    tokens: ['P0 Progress Issue Comment', 'workflow_dispatch:', 'issues: write', 'write-p0-progress-comment.mjs', 'issue_number: 76'],
   },
   {
     path: gitignorePath,
