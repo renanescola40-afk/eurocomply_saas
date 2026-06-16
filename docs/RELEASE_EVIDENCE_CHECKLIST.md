@@ -34,6 +34,27 @@ Accepted evidence:
 - Build output summary
 - Release approval note
 
+## Production environment evidence
+
+Attach evidence for:
+
+- `.env.example` matches the variables required by the release candidate
+- Production environment variables are configured in Vercel or the target hosting provider
+- Secret values are stored only in the provider secret store, not in source control
+- `AUDIT_CHAIN_SIGNING_SECRET` is configured before enabling audit-chain verification evidence
+- `EVIDENCE_PACK_SIGNING_SECRET` is configured before sharing Audit Evidence Packs externally
+- `HEALTHCHECK_TOKEN`, `CRON_SECRET`, and `INTERNAL_CRON_SECRET` are configured for protected operational routes
+- `SUPABASE_SERVICE_ROLE_KEY` is configured only as a server-side secret
+- Stripe, Resend, Upstash, and Sentry environment variables are set for the target release tier
+
+Accepted evidence:
+
+- Hosting-provider environment variable screenshot or export with values redacted
+- Release owner confirmation that all secrets are provider-managed
+- `.env.example` policy check output
+- Audit-chain signing smoke-test output
+- Evidence Pack signing smoke-test output
+
 ## Supply-chain evidence
 
 Attach evidence for:
