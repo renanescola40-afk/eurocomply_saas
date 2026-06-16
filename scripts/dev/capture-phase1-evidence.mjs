@@ -7,6 +7,7 @@ const evidenceDir = 'docs/evidence/phase1';
 const commands = [
   ['floating-deps', 'npm', ['run', 'supply-chain:floating-deps']],
   ['npm-ci', 'npm', ['ci']],
+  ['npm-audit', 'npm', ['audit', '--audit-level=moderate']],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['test', 'npm', ['run', 'test']],
   ['build', 'npm', ['run', 'build']],
