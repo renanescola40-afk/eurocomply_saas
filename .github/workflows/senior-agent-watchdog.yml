@@ -1,0 +1,107 @@
+name: Senior Agent Watchdog
+
+on:
+  schedule:
+    # Every 6 hours, offset from the hour to avoid GitHub Actions peak load.
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "Optional note about the area to inspect"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: senior-agent-watchdog-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gates:
+    name: Run production readiness gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Security CI
+        run: npm run security:ci
+
+  open-watchdog-issue:
+    name: Open issue when watchdog fails
+    needs: quality-gates
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Create or update watchdog issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SCOPE: ${{ inputs.scope }}
+        run: |
+          set -euo pipefail
+
+          title="Senior Agent Watchdog: failing quality gate"
+          body_file="watchdog-body.md"
+
+          cat > "$body_file" <<EOF
+          ## Senior Agent Watchdog detected a failing gate
+
+          A scheduled or manual watchdog run failed.
+
+          - Run: $RUN_URL
+          - Scope: ${SCOPE:-not specified}
+
+          ## Required senior-agent response
+
+          1. Inspect the failed job logs.
+          2. Reproduce locally or in a PR branch.
+          3. Identify the root cause before patching.
+          4. Implement the smallest safe fix.
+          5. Run the relevant checks from AGENTS.md.
+          6. Open a PR with verification evidence.
+
+          Do not weaken tests, linting, type checks, build checks, or security checks to make this pass.
+          EOF
+
+          existing_issue="$(gh issue list \
+            --repo "$GH_REPO" \
+            --state open \
+            --search "Senior Agent Watchdog: failing quality gate in:title" \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          if [ -n "$existing_issue" ]; then
+            gh issue comment "$existing_issue" --repo "$GH_REPO" --body-file "$body_file"
+          else
+            gh issue create --repo "$GH_REPO" --title "$title" --body-file "$body_file"
+          fi
