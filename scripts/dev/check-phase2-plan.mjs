@@ -5,9 +5,12 @@ import { existsSync, readFileSync } from 'node:fs';
 const requiredFiles = [
   'docs/PHASE2_EXECUTION_PLAN.md',
   'docs/PHASE2_DAY1_CLOSEOUT.md',
+  'docs/PHASE2_DAY2_CLOSEOUT.md',
   'docs/evidence/phase2/README.md',
   'scripts/dev/capture-phase2-day1.mjs',
   'scripts/dev/check-phase2-day1-evidence.mjs',
+  'scripts/dev/capture-phase2-day2.mjs',
+  'scripts/dev/check-phase2-day2-evidence.mjs',
   'scripts/dev/check-phase2-evidence-status.mjs',
   'package.json',
 ];
@@ -27,6 +30,9 @@ for (const script of [
   'phase2:day1',
   'phase2:day1:evidence',
   'phase2:day1:closeout',
+  'phase2:day2',
+  'phase2:day2:evidence',
+  'phase2:day2:closeout',
   'phase2:ci',
   'phase2:evidence',
   'security:ci',
@@ -40,6 +46,8 @@ for (const script of [
 for (const command of [
   'npm run phase2:day1:closeout',
   'npm run phase2:day1:evidence',
+  'npm run phase2:day2:closeout',
+  'npm run phase2:day2:evidence',
   'npm ci',
   'npm run lint',
   'npm run typecheck',
