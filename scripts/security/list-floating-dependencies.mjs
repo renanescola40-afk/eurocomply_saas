@@ -35,24 +35,22 @@ const floatingDependencies = [
   ...collectFloatingDependencies('devDependencies', pkg.devDependencies ?? {}),
 ];
 
-console.log('EuroComply floating dependency triage');
-console.log('--------------------------------------');
+console.log('EuroComply floating dependency policy check');
+console.log('-------------------------------------------');
 
 if (floatingDependencies.length === 0) {
   console.log('No floating dependency specs found.');
   process.exit(0);
 }
 
-console.log(`Found ${floatingDependencies.length} floating dependency spec(s):`);
-console.log('');
+console.error(`Found ${floatingDependencies.length} forbidden floating dependency spec(s):`);
+console.error('');
 
 for (const dependency of floatingDependencies) {
-  console.log(`- ${dependency.sectionName}.${dependency.name}: ${dependency.versionSpec}`);
+  console.error(`- ${dependency.sectionName}.${dependency.name}: ${dependency.versionSpec}`);
 }
 
-console.log('');
-console.log('Recommended next steps:');
-console.log('1. Generate package-lock.json with npm run supply-chain:lockfile.');
-console.log('2. Run npm audit triage and review the lockfile-resolved versions.');
-console.log('3. Replace each floating spec with the exact audited version resolved in package-lock.json.');
-console.log('4. Re-run npm run security:ci before committing dependency changes.');
+console.error('');
+console.error('Floating dependency specs are forbidden for production readiness.');
+console.error('Replace each value with an exact audited version, regenerate package-lock.json, and re-run the security suite.');
+process.exitCode = 1;
