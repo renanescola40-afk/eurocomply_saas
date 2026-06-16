@@ -16,6 +16,9 @@ const p0LockfileCommitWorkflowPath = '.github/workflows/p0-commit-lockfile.yml';
 const p0RuntimeEvidenceWorkflowPath = '.github/workflows/p0-runtime-evidence.yml';
 const p0ProgressWorkflowPath = '.github/workflows/p0-progress.yml';
 const p0ProgressCommentWorkflowPath = '.github/workflows/p0-progress-comment.yml';
+const p0RuntimeEvidenceSchemaPath = 'docs/security/evidence/p0-runtime-evidence.schema.json';
+const p0RuntimeEvidenceExamplesPath = 'docs/security/evidence/p0-runtime-evidence.examples.md';
+const p0RuntimeEvidenceFilesCheckPath = 'scripts/security/check-p0-runtime-evidence-files.mjs';
 const gitignorePath = '.gitignore';
 const npmrcPath = '.npmrc';
 const packageJsonPath = 'package.json';
@@ -109,7 +112,19 @@ const governanceChecks = [
   },
   {
     path: p0RuntimeEvidenceWorkflowPath,
-    tokens: ['P0 Runtime Evidence', 'check-p0-runtime-evidence-register.mjs', 'persist-credentials: false'],
+    tokens: ['P0 Runtime Evidence', 'check-p0-runtime-evidence-register.mjs', 'check-p0-runtime-evidence-files.mjs', 'persist-credentials: false'],
+  },
+  {
+    path: p0RuntimeEvidenceSchemaPath,
+    tokens: ['EuroComply P0 Runtime Evidence', 'branch-protection-main', 'required-status-checks', 'production-secrets-provider-stores', 'supabase-live-rls-validation', 'external-security-review-or-pentest', 'redactionConfirmation'],
+  },
+  {
+    path: p0RuntimeEvidenceExamplesPath,
+    tokens: ['P0 Runtime Evidence Examples', 'branch-protection-main', 'required-status-checks', 'production-secrets-provider-stores', 'supabase-live-rls-validation', 'external-security-review-or-pentest'],
+  },
+  {
+    path: p0RuntimeEvidenceFilesCheckPath,
+    tokens: ['docs/security/evidence/runtime', 'allowedItems', 'redactionConfirmation', 'controlsVerified', 'status Exception requires exception object'],
   },
   {
     path: p0ProgressWorkflowPath,
