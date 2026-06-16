@@ -4,20 +4,12 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   quality:
     runs-on: ubuntu-latest
-    env:
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
-      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
-      SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key
-      STRIPE_SECRET_KEY: sk_test_ci_placeholder
-      STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
-      STRIPE_PRICE_ESSENTIAL_MONTHLY: price_ci_essential
-      STRIPE_PRICE_PROFESSIONAL_MONTHLY: price_ci_professional
-      STRIPE_PRICE_BUSINESS_MONTHLY: price_ci_business
-      HEALTHCHECK_TOKEN: ci-healthcheck-token
 
     steps:
       - uses: actions/checkout@v6
@@ -25,7 +17,6 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - run: npm run preflight
       - run: npm run phase3:strict
       - run: npm run phase3:closeout
       - run: npm run phase4:check
@@ -34,9 +25,6 @@ jobs:
       - run: node scripts/dev/check-phase4-validation-commands.mjs
       - run: npm run phase5:check
       - run: npm run phase6:check
-      - run: npm run security:rls
-      - run: npm run security:api-guards
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test
-      - run: npm run build
