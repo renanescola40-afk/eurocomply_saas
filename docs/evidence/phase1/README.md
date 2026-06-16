@@ -13,6 +13,7 @@ After generating the lockfile, run:
 ```bash
 npm run phase1:capture
 npm run phase1:smoke
+npm run phase1:evidence
 ```
 
 The helpers record command outputs in this folder. Keep real outputs only.
@@ -45,5 +46,7 @@ npm run dev
 | `npm run build` output | Missing |
 | `npm run lint` output | Missing |
 | local startup smoke output | Missing |
+
+Use `npm run phase1:evidence` to summarize committed evidence status after running the capture helpers.
 
 Do not hand-write lockfile contents or fabricate command output. Use real logs from local execution or CI.
