@@ -1,0 +1,60 @@
+name: P0 Lockfile Plan
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - package.json
+      - .npmrc
+      - scripts/security/plan-dependency-pins-from-lockfile.mjs
+      - scripts/security/list-floating-dependencies.mjs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p0-lockfile-plan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p0-lockfile-plan:
+    name: Generate lockfile and dependency pin plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Generate lockfile without lifecycle scripts
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Generate dependency pin plan
+        run: node scripts/security/plan-dependency-pins-from-lockfile.mjs
+
+      - name: Check floating dependency policy
+        run: node scripts/security/list-floating-dependencies.mjs
+        continue-on-error: true
+
+      - name: Generate npm audit JSON
+        run: npm audit --json > npm-audit.json
+        continue-on-error: true
+
+      - name: Upload P0 lockfile planning artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-lockfile-plan
+          path: |
+            package-lock.json
+            dependency-pin-plan.json
+            npm-audit.json
+          if-no-files-found: error
