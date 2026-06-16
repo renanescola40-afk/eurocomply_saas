@@ -18,8 +18,31 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect dependency manifest changes
+        id: dependency_changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed_files="$(git diff --name-only \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}" \
+            -- package.json package-lock.json npm-shrinkwrap.json yarn.lock pnpm-lock.yaml bun.lock bun.lockb)"
+
+          if [ -n "$changed_files" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Dependency manifests changed:"
+            echo "$changed_files"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No dependency manifest changes detected; skipping dependency review."
+          fi
 
       - name: Dependency Review
+        if: steps.dependency_changes.outputs.changed == 'true'
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
