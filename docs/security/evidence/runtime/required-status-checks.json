@@ -1,0 +1,23 @@
+{
+  "evidenceItem": "required-status-checks",
+  "status": "Complete",
+  "reviewer": "Renan Silva",
+  "reviewedAt": "2026-06-16",
+  "summary": "GitHub ruleset named main is active for the main branch and requires status checks before the protected ref can be updated. The configured required checks include the full security suite, Semgrep, Gitleaks, Actionlint, OSSF Scorecard, CodeQL, Dependency Review, P0 Runtime Evidence, and P0 Progress.",
+  "evidenceLocations": [
+    "GitHub repository Settings > Rulesets > main, as reviewed by Renan Silva in ChatGPT conversation on 2026-06-16. The pasted settings show Require status checks to pass enabled and list the required checks: Full Security Suite / Run expanded security gates, Semgrep / Run Semgrep SAST, Gitleaks / Scan repository for accidental secret exposure, Actionlint / Lint GitHub Actions workflows, OSSF Scorecard / Run OSSF Scorecard, CodeQL, Dependency Review, P0 Runtime Evidence / Validate P0 runtime evidence register, and P0 Progress / Report P0 enterprise progress."
+  ],
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "controlsVerified": [
+    "Require status checks to pass is enabled.",
+    "Full Security Suite / Run expanded security gates is required.",
+    "Semgrep / Run Semgrep SAST is required.",
+    "Gitleaks / Scan repository for accidental secret exposure is required.",
+    "Actionlint / Lint GitHub Actions workflows is required.",
+    "OSSF Scorecard / Run OSSF Scorecard is required.",
+    "CodeQL is required.",
+    "Dependency Review is required.",
+    "P0 Runtime Evidence / Validate P0 runtime evidence register is required.",
+    "P0 Progress / Report P0 enterprise progress is required."
+  ]
+}
