@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies without lifecycle scripts
         run: npm install --ignore-scripts
 
+      - name: Report P0 enterprise progress
+        run: node scripts/security/write-p0-enterprise-progress.mjs
+
       - name: Run repository security gates
         run: |
           node scripts/quality/check-route-links.mjs
