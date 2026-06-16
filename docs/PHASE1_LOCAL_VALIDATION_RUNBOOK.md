@@ -19,6 +19,7 @@ npm run supply-chain:lockfile
 npm ci
 npm run phase1:capture
 npm run phase1:smoke
+npm run phase1:evidence
 npm run phase1:check
 ```
 
@@ -46,12 +47,16 @@ Phase 1 can only be marked complete when:
 6. `npm run build` exits with code 0.
 7. `npm run lint` exits with code 0 or remaining warnings are documented as non-critical.
 8. `npm run phase1:smoke` records an HTTP response from the local app.
-9. `npm run phase1:check` exits with code 0 after the lockfile is committed.
+9. `npm run phase1:evidence` exits with code 0.
+10. `npm run phase1:check` exits with code 0 after the lockfile is committed.
+11. `docs/PHASE1_WARNING_TRIAGE.md` has no unresolved blocking warning.
 
 ## Failure handling
 
 If a command fails, keep the generated log, fix the underlying issue, rerun the failed command through the helper, and commit only real output.
 
+If warnings remain, classify them through `docs/PHASE1_WARNING_TRIAGE.md` before marking Phase 1 complete.
+
 ## Current repository-side status
 
-The repository has the Phase 1 gate, helper scripts, smoke helper, evidence index, and focused test. Runtime validation is still pending until the commands above are executed in a real local or CI environment.
+The repository has the Phase 1 gate, helper scripts, smoke helper, evidence index, warning triage policy, and focused tests. Runtime validation is still pending until the commands above are executed in a real local or CI environment.
