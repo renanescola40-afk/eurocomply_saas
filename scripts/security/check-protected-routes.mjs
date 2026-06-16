@@ -105,7 +105,7 @@ const governanceChecks = [
   },
   {
     path: p0LockfileCommitWorkflowPath,
-    tokens: ['P0 Commit Lockfile', 'workflow_dispatch:', 'contents: write', 'npm install --package-lock-only --ignore-scripts', 'security: commit deterministic npm lockfile'],
+    tokens: ['P0 Commit Lockfile', 'workflow_dispatch:', 'contents: write', 'npm install --package-lock-only --ignore-scripts', 'git add package-lock.json', 'security: commit deterministic npm lockfile'],
   },
   {
     path: p0RuntimeEvidenceWorkflowPath,
