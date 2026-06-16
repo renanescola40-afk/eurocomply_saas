@@ -1,0 +1,22 @@
+{
+  "evidenceItem": "branch-protection-main",
+  "status": "Complete",
+  "reviewer": "Renan Silva",
+  "reviewedAt": "2026-06-16",
+  "summary": "GitHub ruleset named main is active, targets the main branch, applies to one target branch, has an empty bypass list, requires pull requests before merging, requires Code Owners review, requires most recent reviewable push approval, requires conversation resolution, restricts branch deletions, and blocks force pushes.",
+  "evidenceLocations": [
+    "GitHub repository Settings > Rulesets > main, as reviewed by Renan Silva in ChatGPT conversation on 2026-06-16. The pasted settings show Enforcement status Active, target branch criteria main, Applies to 1 target: main, Bypass list is empty, Require a pull request before merging, Require review from Code Owners, Require approval of the most recent reviewable push, Require conversation resolution before merging, Restrict deletions, and Block force pushes."
+  ],
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "controlsVerified": [
+    "Ruleset enforcement status is Active.",
+    "Ruleset targets branch pattern main and applies to main.",
+    "Bypass list is empty.",
+    "Pull requests are required before merging.",
+    "Code Owners review is required.",
+    "Approval of the most recent reviewable push is required.",
+    "Conversation resolution is required before merging.",
+    "Branch deletion is restricted.",
+    "Force pushes are blocked."
+  ]
+}
