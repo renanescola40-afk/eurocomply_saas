@@ -23,7 +23,26 @@ Expected files:
 - `day2-test.log`
 - `day2-build.log`
 - `day2-security-ci.log`
+- `day2-artifacts-summary.md`
+
+## Day 3 evidence
+
+Expected files:
+
+- `day3-preview-deploy.md`
+- `day3-production-deploy.md`
+- `day3-health-check.log`
+- `day3-smoke-test.log`
+
+## Day 4 evidence
+
+Expected files:
+
+- `day4-supabase-staging.md`
+- `day4-supabase-production.md`
+- `day4-rls-validation.log`
+- `day4-storage-policy-review.md`
 
 ## Completion rule
 
-Phase 2 local and CI evidence is complete only when the expected logs are generated from real command output.
+Phase 2 evidence is complete only when the expected files for Day 1 through Day 4 are generated from real command output or provider evidence.
