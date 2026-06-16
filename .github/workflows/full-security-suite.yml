@@ -59,6 +59,7 @@ jobs:
           node scripts/security/check-workflow-permissions.mjs
           node scripts/security/check-workflow-sensitive-patterns.mjs
           node scripts/security/check-workflow-pinned-actions.mjs
+          node scripts/security/check-lockfile-required.mjs
           node scripts/security/list-floating-dependencies.mjs
           node scripts/security/check-supply-chain.mjs
           node scripts/security/check-zod-error-usage.mjs
