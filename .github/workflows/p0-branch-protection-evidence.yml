@@ -1,0 +1,110 @@
+name: P0 Branch Protection Evidence
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p0-branch-protection-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  branch-protection-evidence:
+    name: Generate branch protection evidence draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Generate branch protection evidence JSON
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const branch = 'main';
+
+            let protection;
+            try {
+              const response = await github.rest.repos.getBranchProtection({ owner, repo, branch });
+              protection = response.data;
+            } catch (error) {
+              core.setFailed(`Unable to read branch protection for ${owner}/${repo}@${branch}: ${error.message}. Run this workflow after branch protection is configured and with a token that can read repository administration/protection settings.`);
+              return;
+            }
+
+            const requiredChecks = [
+              'Full Security Suite / Run expanded security gates',
+              'Semgrep / Run Semgrep SAST',
+              'Gitleaks / Scan repository for accidental secret exposure',
+              'Actionlint / Lint GitHub Actions workflows',
+              'OSSF Scorecard / Run OSSF Scorecard',
+              'CodeQL',
+              'Dependency Review',
+              'P0 Runtime Evidence / Validate P0 runtime evidence register',
+            ];
+
+            const contexts = protection.required_status_checks?.contexts ?? [];
+            const checks = protection.required_status_checks?.checks?.map((check) => check.context) ?? [];
+            const configuredChecks = [...new Set([...contexts, ...checks])];
+            const missingChecks = requiredChecks.filter((check) => !configuredChecks.includes(check));
+
+            const controlsVerified = [
+              protection.required_pull_request_reviews ? 'Pull requests are required before merging' : null,
+              protection.required_pull_request_reviews?.require_code_owner_reviews ? 'CODEOWNERS review is required' : null,
+              protection.required_status_checks ? 'Required status checks are enforced' : null,
+              protection.required_conversation_resolution ? 'Conversations must be resolved before merge' : null,
+              protection.allow_force_pushes?.enabled === false ? 'Force pushes are blocked' : null,
+              protection.allow_deletions?.enabled === false ? 'Branch deletion is blocked' : null,
+              missingChecks.length === 0 ? 'All documented P0 required checks are configured' : null,
+            ].filter(Boolean);
+
+            const complete = controlsVerified.length === 7;
+            const evidence = {
+              evidenceItem: 'branch-protection-main',
+              status: complete ? 'Complete' : 'Exception',
+              reviewer: '@renansilva2002',
+              reviewedAt: new Date().toISOString(),
+              summary: complete
+                ? 'GitHub branch protection for main was read through the GitHub API and matched the P0 protection requirements.'
+                : `GitHub branch protection for main was read through the GitHub API, but ${7 - controlsVerified.length} required control(s) are missing or not detectable.`,
+              evidenceLocations: [
+                `GitHub Actions run: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
+                'Artifact: p0-branch-protection-evidence/branch-protection-main.generated.json',
+              ],
+              redactionConfirmation: 'I confirm all secrets, tokens, keys, connection strings, and access-granting values are redacted.',
+              controlsVerified,
+              source: {
+                repository: `${owner}/${repo}`,
+                branch,
+                runId: String(context.runId),
+                missingRequiredChecks: missingChecks,
+                configuredRequiredChecks: configuredChecks,
+              },
+            };
+
+            if (!complete) {
+              evidence.exception = {
+                riskOwner: '@renansilva2002',
+                rationale: 'Generated evidence draft detected that branch protection is not fully configured or not fully visible to the workflow token.',
+                compensatingControls: ['Do not mark this P0 item Complete until branch protection evidence is complete.'],
+                expiryDate: 'YYYY-MM-DD',
+                approvalReference: 'P0 tracking issue #76',
+              };
+            }
+
+            fs.mkdirSync('p0-evidence', { recursive: true });
+            fs.writeFileSync('p0-evidence/branch-protection-main.generated.json', `${JSON.stringify(evidence, null, 2)}\n`);
+
+      - name: Upload branch protection evidence draft
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-branch-protection-evidence
+          path: p0-evidence/branch-protection-main.generated.json
+          if-no-files-found: error
