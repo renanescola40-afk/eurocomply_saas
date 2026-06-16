@@ -42,7 +42,13 @@ The workflow generates reviewable artifacts without committing them automaticall
 - `npm-audit.json`
 - `p0-lockfile-artifacts.sha256`
 
-Reviewers must compare `package.pinned.json` with the current `package.json`, review audit output, and verify checksums before committing the lockfile and pinned manifest.
+After downloading the artifact, verify it locally from the extracted artifact directory:
+
+```bash
+node scripts/security/verify-p0-lockfile-artifacts.mjs
+```
+
+Reviewers must compare `package.pinned.json` with the current `package.json`, review audit output, verify checksums, and only then commit the lockfile and pinned manifest.
 
 Gate:
 
