@@ -62,6 +62,7 @@ jobs:
           node scripts/security/check-lockfile-required.mjs
           node scripts/security/list-floating-dependencies.mjs
           node scripts/security/check-npm-package-sources.mjs
+          node scripts/security/check-npm-script-safety.mjs
           node scripts/security/check-supply-chain.mjs
           node scripts/security/check-zod-error-usage.mjs
           node scripts/security/check-trust-package.mjs
