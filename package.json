@@ -42,6 +42,7 @@
     "phase3:strict": "node scripts/dev/run-phase3-strict.mjs",
     "phase3:closeout": "node scripts/dev/run-phase3-closeout.mjs",
     "phase4:check": "node scripts/dev/run-phase4-checks.mjs",
+    "phase4:day1": "node scripts/dev/check-phase4-kickoff.mjs && node scripts/dev/check-phase4-scope.mjs && node scripts/dev/check-phase4-inventory.mjs && node scripts/dev/check-phase4-day1-closeout.mjs",
     "phase4:review": "node scripts/dev/check-phase4-final-review.mjs && node scripts/dev/check-phase4-next-implementation-plan.mjs && node scripts/dev/check-phase4-validation-commands.mjs",
     "phase5:check": "node scripts/dev/run-phase5-checks.mjs",
     "phase5:review": "npm run phase5:check && npm run test",
