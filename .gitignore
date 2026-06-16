@@ -24,6 +24,7 @@ phase1-final-report.txt
 dependency-pin-report.json
 dependency-pin-change-report.json
 final-security-readiness.json
+p0-enterprise-progress.json
 phase3-production-readiness-report.json
 phase3-runtime-readiness-report.json
 phase3-auth-session-readiness-report.json
