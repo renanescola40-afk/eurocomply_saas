@@ -65,6 +65,7 @@ jobs:
           node scripts/security/check-npm-script-safety.mjs
           node scripts/security/check-env-example-policy.mjs
           node scripts/security/check-release-environment-evidence.mjs
+          node scripts/security/check-p0-enterprise-blockers.mjs
           node scripts/security/check-supply-chain.mjs
           node scripts/security/check-zod-error-usage.mjs
           node scripts/security/check-trust-package.mjs
