@@ -1,0 +1,43 @@
+name: P0 Progress
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p0-progress-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p0-progress:
+    name: Report P0 enterprise progress
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Generate P0 progress report
+        run: node scripts/security/write-p0-enterprise-progress.mjs
+
+      - name: Upload P0 progress report
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-enterprise-progress
+          path: p0-enterprise-progress.json
+          if-no-files-found: error
