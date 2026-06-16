@@ -12,6 +12,7 @@ describe('Phase 1 local base validation gate', () => {
     expect(existsSync('docs/evidence/phase1/README.md')).toBe(true);
     expect(existsSync('docs/PHASE1_HELPER_INVENTORY.md')).toBe(true);
     expect(existsSync('docs/PHASE1_LOCAL_VALIDATION_RUNBOOK.md')).toBe(true);
+    expect(existsSync('docs/PHASE1_DEPENDENCY_REMEDIATION.md')).toBe(true);
   });
 
   it('keeps package scripts wired for phase 1 execution', () => {
@@ -65,5 +66,16 @@ describe('Phase 1 local base validation gate', () => {
 
     expect(runbook).toContain('Do not edit `package-lock.json` by hand');
     expect(runbook).toContain('Runtime validation is still pending');
+  });
+
+  it('keeps floating dependency remediation explicit', () => {
+    const remediation = read('docs/PHASE1_DEPENDENCY_REMEDIATION.md');
+
+    expect(remediation).toContain('dependencies.@emotion/is-prop-valid');
+    expect(remediation).toContain('dependencies.framer-motion');
+    expect(remediation).toContain('dependencies.vaul');
+    expect(remediation).toContain('npm run supply-chain:lockfile');
+    expect(remediation).toContain('npm run supply-chain:floating-deps');
+    expect(remediation).toContain('Do not pin versions manually');
   });
 });
