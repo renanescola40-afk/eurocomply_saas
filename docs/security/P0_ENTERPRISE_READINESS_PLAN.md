@@ -20,10 +20,26 @@ Validation:
 ```bash
 npm run supply-chain:lockfile
 node scripts/security/plan-dependency-pins-from-lockfile.mjs
+node scripts/security/apply-dependency-pins-from-lockfile.mjs
 npm run supply-chain:floating-deps
 npm run security:npm-audit:json > npm-audit.json
 npm run security:npm-audit:summary
 ```
+
+Artifact workflow:
+
+```text
+P0 Lockfile Plan
+```
+
+The workflow generates reviewable artifacts without committing them automatically:
+
+- `package-lock.json`
+- `package.pinned.json`
+- `dependency-pin-plan.json`
+- `dependency-pin-change-report.json`
+- `floating-dependencies.txt`
+- `npm-audit.json`
 
 Gate:
 
@@ -47,7 +63,13 @@ Safe planning command:
 node scripts/security/plan-dependency-pins-from-lockfile.mjs
 ```
 
-This command must only recommend versions that are already resolved in `package-lock.json`. Do not replace floating specs with guessed versions.
+Safe application command:
+
+```bash
+node scripts/security/apply-dependency-pins-from-lockfile.mjs
+```
+
+These commands must only use versions that are already resolved in `package-lock.json`. Do not replace floating specs with guessed versions.
 
 Gate:
 
