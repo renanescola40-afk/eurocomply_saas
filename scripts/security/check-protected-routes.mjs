@@ -14,6 +14,7 @@ const actionlintWorkflowPath = '.github/workflows/actionlint.yml';
 const p0LockfilePlanWorkflowPath = '.github/workflows/p0-lockfile-plan.yml';
 const p0LockfileCommitWorkflowPath = '.github/workflows/p0-commit-lockfile.yml';
 const p0RuntimeEvidenceWorkflowPath = '.github/workflows/p0-runtime-evidence.yml';
+const p0BranchProtectionEvidenceWorkflowPath = '.github/workflows/p0-branch-protection-evidence.yml';
 const p0ProgressWorkflowPath = '.github/workflows/p0-progress.yml';
 const p0ProgressCommentWorkflowPath = '.github/workflows/p0-progress-comment.yml';
 const p0RuntimeEvidenceSchemaPath = 'docs/security/evidence/p0-runtime-evidence.schema.json';
@@ -114,6 +115,10 @@ const governanceChecks = [
   {
     path: p0RuntimeEvidenceWorkflowPath,
     tokens: ['P0 Runtime Evidence', 'check-p0-runtime-evidence-register.mjs', 'check-p0-runtime-evidence-files.mjs', 'persist-credentials: false'],
+  },
+  {
+    path: p0BranchProtectionEvidenceWorkflowPath,
+    tokens: ['P0 Branch Protection Evidence', 'workflow_dispatch:', 'contents: read', 'repos.getBranchProtection', 'branch-protection-main.generated.json', 'p0-branch-protection-evidence'],
   },
   {
     path: p0RuntimeEvidenceSchemaPath,
