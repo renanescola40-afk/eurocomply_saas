@@ -16,6 +16,7 @@
     "phase1:capture": "node scripts/dev/capture-phase1-evidence.mjs",
     "phase1:smoke": "node scripts/dev/capture-phase1-smoke.mjs",
     "phase1:evidence": "node scripts/dev/check-phase1-evidence-status.mjs",
+    "phase1:closeout": "npm run phase1:evidence && npm run phase1:check",
     "phase3:files": "node scripts/dev/check-phase3-script-files.mjs",
     "phase3:check": "node scripts/dev/check-phase3-production-readiness.mjs",
     "phase3:strict": "node scripts/dev/run-phase3-strict.mjs",
