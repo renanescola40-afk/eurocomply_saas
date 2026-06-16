@@ -33,7 +33,20 @@ Day 2 must not start until Day 1 evidence is committed and reviewed.
 
 ## Day 2: CI validation
 
-Required CI sequence:
+Required closeout command:
+
+```bash
+npm run phase2:day2:closeout
+```
+
+This command runs:
+
+```bash
+npm run phase2:day2
+npm run phase2:day2:evidence
+```
+
+The Day 2 capture helper runs:
 
 ```bash
 npm ci
@@ -53,6 +66,10 @@ Required outputs:
 - build log
 - security log
 - uploaded artifacts for logs and test/build outputs
+
+Day 2 is complete only after every Day 2 log passes with `## exitCode: 0` and the artifacts summary is generated.
+
+Day 3 must not start until Day 2 evidence is committed and reviewed.
 
 ## Day 3: Vercel preview and production validation
 
