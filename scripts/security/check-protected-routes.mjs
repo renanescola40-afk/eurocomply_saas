@@ -10,6 +10,7 @@ const gitleaksWorkflowPath = '.github/workflows/gitleaks.yml';
 const gitleaksConfigPath = '.gitleaks.toml';
 const fullSecuritySuitePath = '.github/workflows/full-security-suite.yml';
 const semgrepWorkflowPath = '.github/workflows/semgrep.yml';
+const actionlintWorkflowPath = '.github/workflows/actionlint.yml';
 const gitignorePath = '.gitignore';
 const npmrcPath = '.npmrc';
 const packageJsonPath = 'package.json';
@@ -88,6 +89,10 @@ const governanceChecks = [
   {
     path: semgrepWorkflowPath,
     tokens: ['Semgrep', 'semgrep/semgrep', 'p/owasp-top-ten', 'p/typescript', 'p/javascript'],
+  },
+  {
+    path: actionlintWorkflowPath,
+    tokens: ['Actionlint', 'raven-actions/actionlint@v2', 'persist-credentials: false', 'pull_request'],
   },
   {
     path: gitignorePath,
