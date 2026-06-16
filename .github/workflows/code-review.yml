@@ -17,24 +17,25 @@ jobs:
     runs-on: ubuntu-latest
     name: Code Review
     steps:
-      - name: Check reviewer token
-        id: reviewer_token
+      - name: Check external reviewer configuration
+        id: reviewer_config
         env:
           CHAT_TOKEN: ${{ secrets.CHAT_TOKEN }}
+          ENABLE_DEEPSEEK_REVIEW: ${{ vars.ENABLE_DEEPSEEK_REVIEW }}
         run: |
-          if [ -n "$CHAT_TOKEN" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
+          if [ "$ENABLE_DEEPSEEK_REVIEW" = "true" ] && [ -n "$CHAT_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "CHAT_TOKEN is not configured; skipping optional DeepSeek review."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "DeepSeek review is optional and is disabled unless ENABLE_DEEPSEEK_REVIEW=true and CHAT_TOKEN is configured."
           fi
 
       - name: DeepSeek Code Review
-        if: steps.reviewer_token.outputs.available == 'true'
+        if: steps.reviewer_config.outputs.enabled == 'true'
         uses: hustcer/deepseek-review@v1
         with:
           chat-token: ${{ secrets.CHAT_TOKEN }}
 
       - name: Skip optional code review
-        if: steps.reviewer_token.outputs.available != 'true'
-        run: echo "Optional DeepSeek review skipped because CHAT_TOKEN is not configured."
+        if: steps.reviewer_config.outputs.enabled != 'true'
+        run: echo "Optional DeepSeek review skipped. Enable it with ENABLE_DEEPSEEK_REVIEW=true and a valid CHAT_TOKEN."
