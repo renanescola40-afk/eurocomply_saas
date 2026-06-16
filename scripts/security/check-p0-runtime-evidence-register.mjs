@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
+const evidenceTemplatePath = '.github/ISSUE_TEMPLATE/p0-runtime-evidence.yml';
 const allowedStatuses = new Set(['Open', 'Complete', 'Exception']);
 const requiredItems = [
   'Branch protection applied on `main`',
@@ -10,6 +11,16 @@ const requiredItems = [
   'External security review or pentest completed',
   'Deterministic npm lockfile committed',
   'Floating dependency specs removed',
+];
+const requiredTemplateTokens = [
+  'P0 Runtime Evidence',
+  'Evidence item',
+  'Requested register status',
+  'Evidence summary',
+  'Evidence location',
+  'Redaction confirmation',
+  'Reviewer / owner',
+  'Exception details',
 ];
 const failures = [];
 
@@ -55,6 +66,17 @@ if (!existsSync(registerPath)) {
 
     if (row.status === 'Exception' && !/(exception|risk|owner|due|expiry|approval)/i.test(row.evidence)) {
       failures.push(`${registerPath} Exception item must reference risk acceptance evidence: ${row.item}`);
+    }
+  }
+}
+
+if (!existsSync(evidenceTemplatePath)) {
+  failures.push(`${evidenceTemplatePath} is missing`);
+} else {
+  const template = readFileSync(evidenceTemplatePath, 'utf8');
+  for (const token of requiredTemplateTokens) {
+    if (!template.includes(token)) {
+      failures.push(`${evidenceTemplatePath} missing required template token: ${token}`);
     }
   }
 }
