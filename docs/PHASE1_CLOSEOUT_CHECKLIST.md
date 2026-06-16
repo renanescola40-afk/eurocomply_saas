@@ -25,6 +25,7 @@ Use this checklist before marking Phase 1 complete.
 - [ ] `npm run phase1:smoke` recorded a stable local HTTP response.
 - [ ] `npm run phase1:evidence` exited with code 0.
 - [ ] `npm run phase1:check` exited with code 0.
+- [ ] `npm run phase1:closeout` exited with code 0.
 
 ## Dependency closure
 
