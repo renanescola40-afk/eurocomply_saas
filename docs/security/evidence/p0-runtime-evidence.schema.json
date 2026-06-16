@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eurocomply.local/security/p0-runtime-evidence.schema.json",
+  "title": "EuroComply P0 Runtime Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidenceItem",
+    "status",
+    "reviewer",
+    "reviewedAt",
+    "summary",
+    "evidenceLocations",
+    "redactionConfirmation"
+  ],
+  "properties": {
+    "evidenceItem": {
+      "type": "string",
+      "enum": [
+        "branch-protection-main",
+        "required-status-checks",
+        "production-secrets-provider-stores",
+        "supabase-live-rls-validation",
+        "external-security-review-or-pentest"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Complete", "Exception"]
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 3
+    },
+    "reviewedAt": {
+      "type": "string",
+      "description": "ISO-8601 date or datetime when the evidence was reviewed."
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 40
+    },
+    "evidenceLocations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 8
+      }
+    },
+    "redactionConfirmation": {
+      "type": "string",
+      "const": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted."
+    },
+    "controlsVerified": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 3
+      }
+    },
+    "exception": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["riskOwner", "rationale", "compensatingControls", "expiresAt", "approvalReference"],
+      "properties": {
+        "riskOwner": { "type": "string", "minLength": 3 },
+        "rationale": { "type": "string", "minLength": 20 },
+        "compensatingControls": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 5 }
+        },
+        "expiresAt": { "type": "string", "minLength": 10 },
+        "approvalReference": { "type": "string", "minLength": 5 }
+      }
+    }
+  }
+}
