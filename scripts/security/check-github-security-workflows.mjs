@@ -21,7 +21,7 @@ const checks = [
       'permissions:',
       'contents: read',
       'pull-requests: read',
-      'actions/dependency-review-action@v4',
+      'actions/dependency-review-action@v5',
       'fail-on-severity: high',
       'deny-licenses',
       'AGPL-3.0',
@@ -90,6 +90,28 @@ const checks = [
       'security',
     ],
   },
+  {
+    path: 'CODEOWNERS',
+    tokens: [
+      '/src/app/api/',
+      '/src/server/security/',
+      '/supabase/',
+      '/.github/',
+      '/scripts/security/',
+      '/package.json',
+    ],
+  },
+  {
+    path: '.github/pull_request_template.md',
+    tokens: [
+      'Security impact',
+      'Resource identifiers are checked server-side',
+      'Sensitive routes return no-store responses',
+      'Inputs from requests, query strings or form data are schema validated before use',
+      'Role, plan and organization authorization checks were reviewed',
+      'Logs do not include secrets',
+    ],
+  },
 ];
 
 const failures = [];
@@ -103,18 +125,18 @@ for (const check of checks) {
   const source = readFileSync(check.path, 'utf8');
   for (const token of check.tokens) {
     if (!source.includes(token)) {
-      failures.push(`${check.path} missing required workflow token: ${token}`);
+      failures.push(`${check.path} missing required workflow/governance token: ${token}`);
     }
   }
 }
 
-console.log('EuroComply GitHub security workflow check');
-console.log('-----------------------------------------');
+console.log('EuroComply GitHub security workflow and governance check');
+console.log('--------------------------------------------------------');
 
 if (failures.length > 0) {
-  console.error('GitHub security workflow failures:');
+  console.error('GitHub security workflow/governance failures:');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log('GitHub security workflows: ok');
+  console.log('GitHub security workflows and governance: ok');
 }
