@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { z } from 'zod';
+
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createOrganizationInvite } from '@/server/queries/invites';
@@ -7,15 +8,17 @@ import { createNotification } from '@/server/queries/notifications';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { isPlanAtLeast } from '@/server/queries/subscription';
 import { isRateLimited } from '@/server/security/rate-limit';
+import { assertTrustedOrigin } from '@/server/security/origin-guard';
+import { noStoreJson } from '@/server/security/no-store';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 
-const allowedRoles = new Set(['Admin', 'Editor', 'Visualizador']);
+const inviteSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  role: z.enum(['Admin', 'Editor', 'Visualizador']).default('Visualizador'),
+});
+
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
-
-function isValidEmail(value: unknown) {
-  return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
 
 function getClientIp(request: Request) {
   return (
@@ -35,10 +38,13 @@ function getInviteEntityId(invite: unknown) {
 }
 
 export async function POST(request: Request) {
+  const originDenied = assertTrustedOrigin(request);
+  if (originDenied) return originDenied;
+
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const clientIp = getClientIp(request);
@@ -51,7 +57,7 @@ export async function POST(request: Request) {
       windowMs: RATE_LIMIT_WINDOW_MS,
     })
   ) {
-    return NextResponse.json(
+    return noStoreJson(
       { error: 'Too many invite attempts. Please wait before trying again.' },
       { status: 429 },
     );
@@ -60,7 +66,7 @@ export async function POST(request: Request) {
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
   }
 
   const permission = await assertOrganizationPermission({
@@ -84,34 +90,23 @@ export async function POST(request: Request) {
       metadata: { reason: 'business_required', plan: entitlements.plan, role: permission.role },
     });
 
-    return NextResponse.json(
+    return noStoreJson(
       { error: 'business_plan_required', message: 'Team invites require the Business plan or higher.' },
       { status: 402 },
     );
   }
 
-  let payload: unknown;
+  const payload = await request.json().catch(() => null);
+  const parsed = inviteSchema.safeParse(payload);
 
-  try {
-    payload = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  if (!parsed.success) {
+    return noStoreJson({ error: 'invalid_invite_payload' }, { status: 400 });
   }
 
-  const body = payload as { email?: unknown; role?: unknown };
-  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-  const role = typeof body.role === 'string' ? body.role : 'Visualizador';
-
-  if (!isValidEmail(email)) {
-    return NextResponse.json({ error: 'Invalid invite email' }, { status: 400 });
-  }
-
-  if (!allowedRoles.has(role)) {
-    return NextResponse.json({ error: 'Invalid invite role' }, { status: 400 });
-  }
+  const { email, role } = parsed.data;
 
   if (role === 'Admin' && !isPlanAtLeast(entitlements.plan, 'enterprise')) {
-    return NextResponse.json(
+    return noStoreJson(
       { error: 'enterprise_plan_required', message: 'Admin invitations require the Enterprise plan.' },
       { status: 402 },
     );
@@ -121,7 +116,7 @@ export async function POST(request: Request) {
     organizationId: organization.id,
     invitedBy: user.id,
     email,
-    role: role as 'Admin' | 'Editor' | 'Visualizador',
+    role,
   });
 
   const audit = await createAuditEvent({
@@ -143,10 +138,10 @@ export async function POST(request: Request) {
     organizationId: organization.id,
     userId: user.id,
     type: 'invite',
-    message: `Convite enviado para ${email} com permissão ${role}.`,
+    message: `Convite de equipa enviado com permissão ${role}.`,
   });
 
-  return NextResponse.json({
+  return noStoreJson({
     invite: result.invite,
     persisted: result.persisted,
     auditPersisted: audit.persisted,
