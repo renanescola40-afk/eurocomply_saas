@@ -16,6 +16,15 @@ const items = [
   ['day2-test', evidenceDir + '/day2-test.log'],
   ['day2-build', evidenceDir + '/day2-build.log'],
   ['day2-security-ci', evidenceDir + '/day2-security-ci.log'],
+  ['day2-artifacts-summary', evidenceDir + '/day2-artifacts-summary.md'],
+  ['day3-preview-deploy', evidenceDir + '/day3-preview-deploy.md'],
+  ['day3-production-deploy', evidenceDir + '/day3-production-deploy.md'],
+  ['day3-health-check', evidenceDir + '/day3-health-check.log'],
+  ['day3-smoke-test', evidenceDir + '/day3-smoke-test.log'],
+  ['day4-supabase-staging', evidenceDir + '/day4-supabase-staging.md'],
+  ['day4-supabase-production', evidenceDir + '/day4-supabase-production.md'],
+  ['day4-rls-validation', evidenceDir + '/day4-rls-validation.log'],
+  ['day4-storage-policy-review', evidenceDir + '/day4-storage-policy-review.md'],
 ];
 
 function getStatus(path) {
