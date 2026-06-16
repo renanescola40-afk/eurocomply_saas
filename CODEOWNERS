@@ -1,0 +1,35 @@
+# EuroComply code ownership
+# GitHub branch protection should require Code Owner review before merging changes to protected branches.
+
+* @renansilva2002
+
+# Authentication, authorization, tenant isolation and security helpers
+/src/server/security/ @renansilva2002
+/src/server/queries/auth.ts @renansilva2002
+/src/server/queries/organizations.ts @renansilva2002
+/src/lib/supabase/ @renansilva2002
+/proxy.ts @renansilva2002
+/next.config.ts @renansilva2002
+
+# API routes and server-side business logic
+/src/app/api/ @renansilva2002
+/src/server/billing/ @renansilva2002
+/src/server/governance/ @renansilva2002
+
+# Supabase migrations, storage, RLS and policies
+/supabase/ @renansilva2002
+
+# CI/CD, supply-chain and security gates
+/.github/ @renansilva2002
+/scripts/security/ @renansilva2002
+/scripts/preflight.mjs @renansilva2002
+/package.json @renansilva2002
+/.npmrc @renansilva2002
+
+# Security, release, incident and trust documentation
+/SECURITY.md @renansilva2002
+/docs/security/ @renansilva2002
+/docs/trust/ @renansilva2002
+/docs/RELEASE_*.md @renansilva2002
+/docs/INCIDENT_RESPONSE.md @renansilva2002
+/docs/PRODUCTION_LAUNCH_CHECKLIST.md @renansilva2002
