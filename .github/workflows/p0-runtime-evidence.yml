@@ -12,10 +12,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: p0-runtime-evidence-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   p0-runtime-evidence:
     name: Validate P0 runtime evidence register
@@ -27,10 +23,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
+      - name: Show runner Node.js and npm versions
+        run: |
+          node --version
+          npm --version
 
       - name: Validate runtime evidence register
         run: node scripts/security/check-p0-runtime-evidence-register.mjs
+
+      - name: Validate runtime evidence files
+        run: node scripts/security/check-p0-runtime-evidence-files.mjs
