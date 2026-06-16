@@ -1,0 +1,71 @@
+import { existsSync, readFileSync } from 'node:fs';
+
+const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
+const allowedStatuses = new Set(['Open', 'Complete', 'Exception']);
+const requiredItems = [
+  'Branch protection applied on `main`',
+  'Required status checks configured',
+  'Production secrets configured in provider secret stores',
+  'Supabase live RLS validation completed',
+  'External security review or pentest completed',
+  'Deterministic npm lockfile committed',
+  'Floating dependency specs removed',
+];
+const failures = [];
+
+function parseRows(source) {
+  return source
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('|') && !line.includes('---'))
+    .map((line) => line.split('|').map((cell) => cell.trim()).filter(Boolean))
+    .filter((cells) => cells.length >= 4 && cells[0] !== 'Evidence item')
+    .map(([item, status, evidence, owner]) => ({ item, status, evidence, owner }));
+}
+
+if (!existsSync(registerPath)) {
+  failures.push(`${registerPath} is missing`);
+} else {
+  const source = readFileSync(registerPath, 'utf8');
+  const rows = parseRows(source);
+  const rowByItem = new Map(rows.map((row) => [row.item, row]));
+
+  for (const item of requiredItems) {
+    if (!rowByItem.has(item)) {
+      failures.push(`${registerPath} missing required evidence item: ${item}`);
+    }
+  }
+
+  for (const row of rows) {
+    if (!allowedStatuses.has(row.status)) {
+      failures.push(`${registerPath} invalid status for ${row.item}: ${row.status}`);
+    }
+
+    if (!row.evidence || row.evidence.length < 12) {
+      failures.push(`${registerPath} missing useful evidence requirement for ${row.item}`);
+    }
+
+    if (!row.owner || row.owner.length < 5) {
+      failures.push(`${registerPath} missing owner for ${row.item}`);
+    }
+
+    if (row.status === 'Complete' && !/(evidence|screenshot|export|output|report|review|commit|settings|artifact|link)/i.test(row.evidence)) {
+      failures.push(`${registerPath} Complete item must reference reviewable evidence: ${row.item}`);
+    }
+
+    if (row.status === 'Exception' && !/(exception|risk|owner|due|expiry|approval)/i.test(row.evidence)) {
+      failures.push(`${registerPath} Exception item must reference risk acceptance evidence: ${row.item}`);
+    }
+  }
+}
+
+console.log('EuroComply P0 runtime evidence register check');
+console.log('------------------------------------------------');
+
+if (failures.length > 0) {
+  console.error('P0 runtime evidence register failures:');
+  for (const failure of failures) console.error(`- ${failure}`);
+  process.exitCode = 1;
+} else {
+  console.log('P0 runtime evidence register: ok');
+}
