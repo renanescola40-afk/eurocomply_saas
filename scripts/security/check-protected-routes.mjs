@@ -8,6 +8,8 @@ const threatModelPath = 'docs/security/THREAT_MODEL.md';
 const exceptionRegisterPath = 'docs/security/SECURITY_EXCEPTION_REGISTER.md';
 const gitleaksWorkflowPath = '.github/workflows/gitleaks.yml';
 const gitleaksConfigPath = '.gitleaks.toml';
+const fullSecuritySuitePath = '.github/workflows/full-security-suite.yml';
+const semgrepWorkflowPath = '.github/workflows/semgrep.yml';
 const gitignorePath = '.gitignore';
 const npmrcPath = '.npmrc';
 const packageJsonPath = 'package.json';
@@ -78,6 +80,14 @@ const governanceChecks = [
   {
     path: gitleaksConfigPath,
     tokens: ['EuroComply Gitleaks Configuration', 'eurocomply-public-env-sensitive-name', 'eurocomply-provider-key-like-value'],
+  },
+  {
+    path: fullSecuritySuitePath,
+    tokens: ['Full Security Suite', 'Run expanded security gates', 'check-api-endpoint-hardening.mjs', 'check-storage-security.mjs', 'check-enterprise-trust-evidence.mjs'],
+  },
+  {
+    path: semgrepWorkflowPath,
+    tokens: ['Semgrep', 'semgrep/semgrep', 'p/owasp-top-ten', 'p/typescript', 'p/javascript'],
   },
   {
     path: gitignorePath,
