@@ -8,6 +8,9 @@ const threatModelPath = 'docs/security/THREAT_MODEL.md';
 const exceptionRegisterPath = 'docs/security/SECURITY_EXCEPTION_REGISTER.md';
 const gitleaksWorkflowPath = '.github/workflows/gitleaks.yml';
 const gitleaksConfigPath = '.gitleaks.toml';
+const gitignorePath = '.gitignore';
+const npmrcPath = '.npmrc';
+const packageJsonPath = 'package.json';
 
 const requiredProtectedSegments = [
   '/dashboard',
@@ -75,6 +78,18 @@ const governanceChecks = [
   {
     path: gitleaksConfigPath,
     tokens: ['EuroComply Gitleaks Configuration', 'eurocomply-public-env-sensitive-name', 'eurocomply-provider-key-like-value'],
+  },
+  {
+    path: gitignorePath,
+    tokens: ['.env*', '!.env.example', '.vercel', 'security-endpoints-inventory.json', 'npm-audit*.json'],
+  },
+  {
+    path: npmrcPath,
+    tokens: ['package-lock=true', 'audit=true', 'fund=false', 'save-exact=true'],
+  },
+  {
+    path: packageJsonPath,
+    tokens: ['"packageManager": "npm@10.8.2"', '"security:public-secrets"', '"security:supply-chain"', '"security:protected-routes"', '"security:api-guards"'],
   },
 ];
 
