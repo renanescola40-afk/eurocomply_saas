@@ -18,6 +18,7 @@ const p0ProgressWorkflowPath = '.github/workflows/p0-progress.yml';
 const p0ProgressCommentWorkflowPath = '.github/workflows/p0-progress-comment.yml';
 const p0RuntimeEvidenceSchemaPath = 'docs/security/evidence/p0-runtime-evidence.schema.json';
 const p0RuntimeEvidenceExamplesPath = 'docs/security/evidence/p0-runtime-evidence.examples.md';
+const p0RuntimeEvidenceTemplatesPath = 'docs/security/evidence/p0-runtime-evidence.templates.md';
 const p0RuntimeEvidenceFilesCheckPath = 'scripts/security/check-p0-runtime-evidence-files.mjs';
 const gitignorePath = '.gitignore';
 const npmrcPath = '.npmrc';
@@ -121,6 +122,10 @@ const governanceChecks = [
   {
     path: p0RuntimeEvidenceExamplesPath,
     tokens: ['P0 Runtime Evidence Examples', 'branch-protection-main', 'required-status-checks', 'production-secrets-provider-stores', 'supabase-live-rls-validation', 'external-security-review-or-pentest'],
+  },
+  {
+    path: p0RuntimeEvidenceTemplatesPath,
+    tokens: ['P0 Runtime Evidence JSON Templates', 'Branch protection applied on `main`', 'Required status checks configured', 'Production secrets configured in provider secret stores', 'Supabase live RLS validation completed', 'External security review or pentest completed', 'Formal private-beta exception'],
   },
   {
     path: p0RuntimeEvidenceFilesCheckPath,
