@@ -57,6 +57,7 @@ jobs:
           node scripts/security/check-audit-chain.mjs
           node scripts/security/check-github-security-workflows.mjs
           node scripts/security/check-workflow-permissions.mjs
+          node scripts/security/check-workflow-sensitive-patterns.mjs
           node scripts/security/check-supply-chain.mjs
           node scripts/security/check-zod-error-usage.mjs
           node scripts/security/check-trust-package.mjs
