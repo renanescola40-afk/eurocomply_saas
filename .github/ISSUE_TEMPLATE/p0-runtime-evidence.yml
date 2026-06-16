@@ -1,0 +1,85 @@
+name: P0 Runtime Evidence
+
+description: Submit reviewable evidence for a P0 enterprise-readiness control.
+
+title: "P0 evidence: <control name>"
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to attach or reference evidence for P0 runtime controls.
+
+        Do not paste secret values. Redact tokens, keys, IDs that grant access, connection strings, and private URLs before submitting.
+
+  - type: dropdown
+    id: evidence_item
+    attributes:
+      label: Evidence item
+      description: Select the P0 runtime control this evidence supports.
+      options:
+        - Branch protection applied on main
+        - Required status checks configured
+        - Production secrets configured in provider secret stores
+        - Supabase live RLS validation completed
+        - External security review or pentest completed
+        - Deterministic npm lockfile committed
+        - Floating dependency specs removed
+    validations:
+      required: true
+
+  - type: dropdown
+    id: requested_status
+    attributes:
+      label: Requested register status
+      description: Choose the status requested for docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md.
+      options:
+        - Complete
+        - Exception
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence_summary
+    attributes:
+      label: Evidence summary
+      description: Summarize what was verified and why it satisfies the control.
+      placeholder: "Example: Branch protection settings for main were reviewed on YYYY-MM-DD and show PR requirement, CODEOWNERS review, required checks, force-push block, deletion block, and conversation resolution."
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence_location
+    attributes:
+      label: Evidence location
+      description: Link to or describe where the evidence is stored. External private locations are allowed, but they must be reviewable by the release/security owner.
+      placeholder: "Example: GitHub issue attachment, private evidence folder, CI run URL, redacted screenshot, artifact URL, or pentest report location."
+    validations:
+      required: true
+
+  - type: textarea
+    id: redaction_confirmation
+    attributes:
+      label: Redaction confirmation
+      description: Confirm that evidence does not expose secret values or credentials.
+      placeholder: "I confirm all secrets, tokens, keys, connection strings, and access-granting values are redacted."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reviewer
+    attributes:
+      label: Reviewer / owner
+      description: Name the person responsible for reviewing this evidence.
+      placeholder: "Release owner or security reviewer"
+    validations:
+      required: true
+
+  - type: textarea
+    id: exception_details
+    attributes:
+      label: Exception details, if requested
+      description: Required only when requested status is Exception. Include risk owner, rationale, compensating control, expiry date, and approval reference.
+      placeholder: "Risk owner, rationale, compensating control, expiry date, approval reference."
+    validations:
+      required: false
