@@ -7,6 +7,7 @@ This handoff is for the person or CI job that will perform the real Phase 1 exec
 Run the commands below from the repository root:
 
 ```bash
+npm run phase1:repo-ready
 npm run supply-chain:lockfile
 npm ci
 npm run phase1:capture
