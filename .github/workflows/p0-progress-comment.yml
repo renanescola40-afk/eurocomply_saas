@@ -1,0 +1,56 @@
+name: P0 Progress Issue Comment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: p0-progress-comment-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p0-progress-comment:
+    name: Comment P0 progress on tracking issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Generate P0 progress report
+        run: node scripts/security/write-p0-enterprise-progress.mjs
+
+      - name: Render P0 progress comment
+        run: node scripts/security/write-p0-progress-comment.mjs
+
+      - name: Comment on P0 tracking issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('p0-progress-comment.md', 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 76,
+              body,
+            });
+
+      - name: Upload P0 progress comment artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-progress-comment
+          path: |
+            p0-enterprise-progress.json
+            p0-progress-comment.md
+          if-no-files-found: error
