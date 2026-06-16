@@ -40,6 +40,9 @@ The workflow generates reviewable artifacts without committing them automaticall
 - `dependency-pin-change-report.json`
 - `floating-dependencies.txt`
 - `npm-audit.json`
+- `p0-lockfile-artifacts.sha256`
+
+Reviewers must compare `package.pinned.json` with the current `package.json`, review audit output, and verify checksums before committing the lockfile and pinned manifest.
 
 Gate:
 
