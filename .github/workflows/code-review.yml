@@ -1,12 +1,15 @@
 name: Code Review
+
 on:
-  pull_request_target:
+  pull_request:
     types:
       - opened
       - reopened
       - synchronize
+      - ready_for_review
 
 permissions:
+  contents: read
   pull-requests: write
 
 jobs:
@@ -14,7 +17,24 @@ jobs:
     runs-on: ubuntu-latest
     name: Code Review
     steps:
+      - name: Check reviewer token
+        id: reviewer_token
+        env:
+          CHAT_TOKEN: ${{ secrets.CHAT_TOKEN }}
+        run: |
+          if [ -n "$CHAT_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "CHAT_TOKEN is not configured; skipping optional DeepSeek review."
+          fi
+
       - name: DeepSeek Code Review
+        if: steps.reviewer_token.outputs.available == 'true'
         uses: hustcer/deepseek-review@v1
         with:
           chat-token: ${{ secrets.CHAT_TOKEN }}
+
+      - name: Skip optional code review
+        if: steps.reviewer_token.outputs.available != 'true'
+        run: echo "Optional DeepSeek review skipped because CHAT_TOKEN is not configured."
