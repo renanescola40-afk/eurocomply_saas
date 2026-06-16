@@ -19,7 +19,7 @@
     "phase1:repo-ready": "node scripts/dev/check-phase1-repo-side-readiness.mjs",
     "phase1:closeout": "npm run phase1:evidence && npm run phase1:check",
     "phase2:plan": "node scripts/dev/check-phase2-plan.mjs",
-    "phase2:day1": "npm run supply-chain:lockfile && npm ci && npm run typecheck && npm run test && npm run build",
+    "phase2:day1": "node scripts/dev/capture-phase2-day1.mjs",
     "phase2:ci": "npm ci && npm run lint && npm run typecheck && npm run test && npm run build && npm run security:ci",
     "phase2:evidence": "node scripts/dev/check-phase2-evidence-status.mjs",
     "phase3:files": "node scripts/dev/check-phase3-script-files.mjs",
