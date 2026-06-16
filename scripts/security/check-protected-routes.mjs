@@ -11,6 +11,9 @@ const gitleaksConfigPath = '.gitleaks.toml';
 const fullSecuritySuitePath = '.github/workflows/full-security-suite.yml';
 const semgrepWorkflowPath = '.github/workflows/semgrep.yml';
 const actionlintWorkflowPath = '.github/workflows/actionlint.yml';
+const p0LockfilePlanWorkflowPath = '.github/workflows/p0-lockfile-plan.yml';
+const p0RuntimeEvidenceWorkflowPath = '.github/workflows/p0-runtime-evidence.yml';
+const p0ProgressWorkflowPath = '.github/workflows/p0-progress.yml';
 const gitignorePath = '.gitignore';
 const npmrcPath = '.npmrc';
 const packageJsonPath = 'package.json';
@@ -93,6 +96,18 @@ const governanceChecks = [
   {
     path: actionlintWorkflowPath,
     tokens: ['Actionlint', 'raven-actions/actionlint@v2', 'persist-credentials: false', 'pull_request'],
+  },
+  {
+    path: p0LockfilePlanWorkflowPath,
+    tokens: ['P0 Lockfile Plan', 'npm install --package-lock-only --ignore-scripts', 'p0-lockfile-artifacts.sha256', 'package.pinned.json'],
+  },
+  {
+    path: p0RuntimeEvidenceWorkflowPath,
+    tokens: ['P0 Runtime Evidence', 'check-p0-runtime-evidence-register.mjs', 'persist-credentials: false'],
+  },
+  {
+    path: p0ProgressWorkflowPath,
+    tokens: ['P0 Progress', 'write-p0-enterprise-progress.mjs', 'p0-enterprise-progress.json'],
   },
   {
     path: gitignorePath,
