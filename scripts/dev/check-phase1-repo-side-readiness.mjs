@@ -16,6 +16,7 @@ const requiredFiles = [
   'scripts/dev/capture-phase1-evidence.mjs',
   'scripts/dev/capture-phase1-smoke.mjs',
   'scripts/dev/check-phase1-evidence-status.mjs',
+  'scripts/dev/check-phase1-repo-side-readiness.mjs',
   'scripts/dev/run-phase1-checks.mjs',
   'tests/phase1/local-base-validation.test.ts',
   'tests/phase1/evidence-status.test.ts',
@@ -25,6 +26,7 @@ const requiredFiles = [
   'tests/phase1/closeout-command.test.ts',
   'tests/phase1/execution-handoff.test.ts',
   'tests/phase1/repo-side-readiness.test.ts',
+  'tests/phase1/repo-ready-command.test.ts',
 ];
 
 const requiredPackageScripts = [
@@ -32,6 +34,7 @@ const requiredPackageScripts = [
   'phase1:capture',
   'phase1:smoke',
   'phase1:evidence',
+  'phase1:repo-ready',
   'phase1:closeout',
   'supply-chain:lockfile',
   'supply-chain:floating-deps',
