@@ -29,6 +29,16 @@ const allowedClientImportPatterns = [
   '@/server/governance/enterprise-readiness',
 ];
 
+const browserSessionStoragePatterns = [
+  /\blocalStorage\b/,
+  /\bsessionStorage\b/,
+  /document\.cookie\s*=/,
+  /window\.localStorage\b/,
+  /window\.sessionStorage\b/,
+];
+
+const tokenNamePattern = /(access[_-]?token|refresh[_-]?token|id[_-]?token|jwt|bearer|supabase[_-]?auth[_-]?token)/i;
+
 function walk(dir) {
   if (!existsSync(dir)) return [];
   const entries = readdirSync(dir, { withFileTypes: true });
@@ -96,6 +106,16 @@ for (const file of files) {
   if (/process\.env\.(?!NEXT_PUBLIC_)[A-Z0-9_]+/.test(source)) {
     failures.push(`${normalized}: client boundary references non-public process.env value`);
   }
+
+  const lines = source.split('\n');
+  lines.forEach((line, index) => {
+    if (!browserSessionStoragePatterns.some((pattern) => pattern.test(line))) return;
+
+    const surroundingSource = lines.slice(Math.max(0, index - 2), Math.min(lines.length, index + 3)).join('\n');
+    if (tokenNamePattern.test(surroundingSource)) {
+      failures.push(`${normalized}:${index + 1} client boundary appears to store or read auth tokens from browser storage; use Supabase SSR cookies with HttpOnly, Secure and SameSite instead`);
+    }
+  });
 }
 
 console.log('EuroComply client boundary security check');
