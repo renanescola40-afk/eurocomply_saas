@@ -33,6 +33,7 @@ describe('Phase 1 local base validation gate', () => {
     for (const command of [
       'npm run supply-chain:floating-deps',
       'npm ci',
+      'npm audit --audit-level=moderate',
       'npm run typecheck',
       'npm run test',
       'npm run build',
@@ -64,6 +65,8 @@ describe('Phase 1 local base validation gate', () => {
       expect(runbook).toContain(command);
     }
 
+    expect(runbook).toContain('npm audit --audit-level=moderate');
+    expect(runbook).toContain('npm-audit.log');
     expect(runbook).toContain('Do not edit `package-lock.json` by hand');
     expect(runbook).toContain('Runtime validation is still pending');
   });
@@ -76,6 +79,7 @@ describe('Phase 1 local base validation gate', () => {
     expect(remediation).toContain('dependencies.vaul');
     expect(remediation).toContain('npm run supply-chain:lockfile');
     expect(remediation).toContain('npm run supply-chain:floating-deps');
+    expect(remediation).toContain('npm audit --audit-level=moderate');
     expect(remediation).toContain('Do not pin versions manually');
   });
 });
