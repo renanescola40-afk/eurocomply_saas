@@ -11,6 +11,7 @@ describe('Phase 1 local base validation gate', () => {
     expect(existsSync('docs/PHASE1_EXECUTION_GATE.md')).toBe(true);
     expect(existsSync('docs/evidence/phase1/README.md')).toBe(true);
     expect(existsSync('docs/PHASE1_HELPER_INVENTORY.md')).toBe(true);
+    expect(existsSync('docs/PHASE1_LOCAL_VALIDATION_RUNBOOK.md')).toBe(true);
   });
 
   it('keeps package scripts wired for phase 1 execution', () => {
@@ -47,5 +48,22 @@ describe('Phase 1 local base validation gate', () => {
     expect(evidence).toContain('npm run phase1:capture');
     expect(evidence).toContain('npm run phase1:smoke');
     expect(evidence).toContain('Do not hand-write lockfile contents or fabricate command output');
+  });
+
+  it('keeps the phase 1 runbook aligned with the execution gate', () => {
+    const runbook = read('docs/PHASE1_LOCAL_VALIDATION_RUNBOOK.md');
+
+    for (const command of [
+      'npm run supply-chain:lockfile',
+      'npm ci',
+      'npm run phase1:capture',
+      'npm run phase1:smoke',
+      'npm run phase1:check',
+    ]) {
+      expect(runbook).toContain(command);
+    }
+
+    expect(runbook).toContain('Do not edit `package-lock.json` by hand');
+    expect(runbook).toContain('Runtime validation is still pending');
   });
 });
