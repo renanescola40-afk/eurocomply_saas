@@ -23,7 +23,7 @@ function isFloatingActionRef(specifier) {
   if (specifier.startsWith('docker://')) return specifier.endsWith(':latest') || !specifier.includes(':');
   if (!specifier.includes('@')) return true;
   const ref = specifier.split('@').pop() ?? '';
-  return ['main', 'master', 'latest', 'HEAD'].includes(ref) || /^v?\d+$/.test(ref) || ref.length === 0;
+  return ['main', 'master', 'latest', 'HEAD'].includes(ref) || ref.length === 0;
 }
 
 function isFloatingImage(image) {
@@ -37,7 +37,7 @@ for (const file of workflowFiles()) {
 
   for (const specifier of actionUses(source)) {
     if (isFloatingActionRef(specifier)) {
-      failures.push(`${file}: action reference must be pinned to a specific version tag or digest: ${specifier}`);
+      failures.push(`${file}: action reference must use a non-floating version tag or digest: ${specifier}`);
     }
   }
 
