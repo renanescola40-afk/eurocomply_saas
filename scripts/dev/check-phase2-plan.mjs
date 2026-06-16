@@ -2,7 +2,13 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 
-const requiredFiles = ['docs/PHASE2_EXECUTION_PLAN.md', 'package.json'];
+const requiredFiles = [
+  'docs/PHASE2_EXECUTION_PLAN.md',
+  'docs/evidence/phase2/README.md',
+  'scripts/dev/check-phase2-evidence-status.mjs',
+  'package.json',
+];
+
 for (const file of requiredFiles) {
   if (!existsSync(file)) {
     console.error('Missing required file: ' + file);
@@ -13,7 +19,7 @@ for (const file of requiredFiles) {
 const pkg = readFileSync('package.json', 'utf8');
 const plan = readFileSync('docs/PHASE2_EXECUTION_PLAN.md', 'utf8');
 
-for (const script of ['phase2:day1', 'phase2:ci', 'security:ci']) {
+for (const script of ['phase2:plan', 'phase2:day1', 'phase2:ci', 'phase2:evidence', 'security:ci']) {
   if (!pkg.includes('"' + script + '"')) {
     console.error('Missing package script: ' + script);
     process.exit(1);
