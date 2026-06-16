@@ -28,4 +28,5 @@ phase3-production-readiness-report.json
 phase3-runtime-readiness-report.json
 phase3-auth-session-readiness-report.json
 phase3-completion-gates-report.json
+security-endpoints-inventory.json
 docs-manifest.json
