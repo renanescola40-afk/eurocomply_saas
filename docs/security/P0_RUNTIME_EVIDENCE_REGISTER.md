@@ -9,12 +9,12 @@ Repository gates can prove that controls are documented and wired into CI. Runti
 | Evidence item | Status | Required evidence | Owner |
 | --- | --- | --- | --- |
 | Branch protection applied on `main` | Open | Screenshot or exported settings showing pull request requirement, CODEOWNERS review, required checks, force-push block, deletion block, and conversation resolution | Release owner |
-| Required status checks configured | Open | Screenshot or exported settings showing Full Security Suite, Semgrep, Gitleaks, Actionlint, OSSF Scorecard, CodeQL, and Dependency Review as required checks | Release owner |
+| Required status checks configured | Open | Screenshot or exported settings showing Full Security Suite, Semgrep, Gitleaks, Actionlint, OSSF Scorecard, CodeQL, Dependency Review, and P0 Runtime Evidence as required checks | Release owner |
 | Production secrets configured in provider secret stores | Open | Redacted screenshot or provider export showing variables configured without revealing values | Release owner |
 | Supabase live RLS validation completed | Open | Test output proving cross-tenant read/write denial and service-role path review | Security reviewer |
 | External security review or pentest completed | Open | Pentest report, finding triage, critical/high resolution evidence, and retest evidence where applicable | Security reviewer |
-| Deterministic npm lockfile committed | Open | `package-lock.json` committed and reviewed | Engineering owner |
-| Floating dependency specs removed | Open | `node scripts/security/list-floating-dependencies.mjs` output showing no forbidden specs | Engineering owner |
+| Deterministic npm lockfile committed | Complete | `package-lock.json` committed with npm lockfile version 3 after P0 Commit Lockfile workflow | Engineering owner |
+| Floating dependency specs removed | Complete | `node scripts/security/list-floating-dependencies.mjs` output showing no forbidden specs | Engineering owner |
 
 ## Evidence storage rule
 
