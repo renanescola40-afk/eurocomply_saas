@@ -36,7 +36,7 @@
     "phase3:day1": "npm run phase3:files && npm run phase3:check && node scripts/dev/check-phase3-day1-closeout.mjs",
     "phase3:day2": "node scripts/dev/check-phase3-runtime-readiness.mjs && node scripts/dev/check-phase3-auth-session-readiness.mjs && node scripts/dev/check-phase3-day2-closeout.mjs",
     "phase3:day3": "node scripts/dev/check-phase3-day3-files.mjs && npm run phase3:check && node scripts/dev/check-phase3-day3-closeout.mjs",
-    "phase3:day4": "node scripts/dev/check-phase3-completion-gates.mjs && node scripts/dev/check-phase3-evidence-pack.mjs && node scripts/dev/check-phase3-owner-acceptance-template.mjs && node scripts/dev/check-phase3-two-command-closeout.mjs && node scripts/dev/check-phase3-day4-closeout.mjs",
+    "phase3:day4": "node scripts/dev/check-phase3-day4-files.mjs && node scripts/dev/check-phase3-completion-gates.mjs && node scripts/dev/check-phase3-evidence-pack.mjs && node scripts/dev/check-phase3-owner-acceptance-template.mjs && node scripts/dev/check-phase3-two-command-closeout.mjs && node scripts/dev/check-phase3-day4-closeout.mjs",
     "phase3:check": "node scripts/dev/check-phase3-production-readiness.mjs",
     "phase3:strict": "node scripts/dev/run-phase3-strict.mjs",
     "phase3:closeout": "node scripts/dev/run-phase3-closeout.mjs",
