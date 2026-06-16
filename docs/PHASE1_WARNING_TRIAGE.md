@@ -34,7 +34,13 @@ A warning can be accepted only when:
 
 ## Required warning evidence
 
-If warnings remain, add a short note to the related evidence log or a follow-up document that includes:
+If warnings remain, add a short note to the related evidence log or use:
+
+```text
+docs/evidence/phase1/WARNING_EXCEPTIONS_TEMPLATE.md
+```
+
+The warning record must include:
 
 - Warning summary.
 - Impact assessment.
