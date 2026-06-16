@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 
 const evidenceDir = 'docs/evidence/phase1';
 const commands = [
+  ['floating-deps', 'npm', ['run', 'supply-chain:floating-deps']],
   ['npm-ci', 'npm', ['ci']],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['test', 'npm', ['run', 'test']],
