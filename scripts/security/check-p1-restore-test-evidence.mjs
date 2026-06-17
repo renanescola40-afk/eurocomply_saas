@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const evidencePath = process.argv[2] || path.join('docs', 'security', 'evidence', 'p1', 'restore-tested.json');
+const evidencePath = process.argv[2] || path.join('docs', 'security', 'evidence', 'p1', 'backup-restore-tested.json');
 const placeholderPattern = /REPLACE_|YYYY-MM-DD|placeholder|TODO/i;
 const requiredControls = [
   'Critical systems are covered',
@@ -33,7 +33,7 @@ try {
 }
 
 if (placeholderPattern.test(JSON.stringify(evidence))) fail('evidence must not contain placeholders');
-if (evidence.control !== 'restore-tested') fail('control must be restore-tested');
+if (evidence.control !== 'backup-restore-tested') fail('control must be backup-restore-tested');
 if (!['Complete', 'Exception'].includes(evidence.status)) fail('status must be Complete or Exception');
 if (!evidence.reviewedAt || !evidence.reviewer || !evidence.targetEnvironment) fail('reviewedAt, reviewer, and targetEnvironment are required');
 
