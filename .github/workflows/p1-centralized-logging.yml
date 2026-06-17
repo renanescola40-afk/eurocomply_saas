@@ -1,0 +1,30 @@
+name: P1 Centralized Logging Evidence
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/security/evidence/p1/centralized-logging-alerts.json'
+      - 'docs/security/evidence/p1/centralized-logging-alerts.template.json'
+      - 'docs/security/P1_CENTRALIZED_LOGGING_USAGE.md'
+      - 'scripts/security/check-p1-centralized-logging-evidence.mjs'
+      - '.github/workflows/p1-centralized-logging.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p1-centralized-logging:
+    name: Validate P1 centralized logging evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Validate P1 centralized logging evidence if present
+        run: node scripts/security/check-p1-centralized-logging-evidence.mjs
