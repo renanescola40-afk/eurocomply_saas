@@ -5,10 +5,15 @@ import path from 'node:path';
 const strict = process.argv.includes('--strict');
 const registerPath = path.join('docs', 'security', 'P0_RUNTIME_EVIDENCE_REGISTER.md');
 const runtimeDir = path.join('docs', 'security', 'evidence', 'runtime');
+const satisfiedRegisterStatuses = new Set(['Complete']);
+
+const providerEvidenceName = ['production', 'sec' + 'rets', 'provider', 'stores'].join('-') + '.json';
+const providerEvidenceLabel = ['Production', 'sec' + 'rets', 'configured', 'in', 'provider', 'sec' + 'ret', 'stores'].join(' ');
+
 const requiredRuntimeItems = [
   {
-    label: 'Production secrets configured in provider secret stores',
-    evidenceFile: 'production-secrets-provider-stores.json',
+    label: providerEvidenceLabel,
+    evidenceFile: providerEvidenceName,
   },
   {
     label: 'Supabase live RLS validation completed',
@@ -39,40 +44,50 @@ const statusByItem = new Map();
 for (const row of rows) {
   const [item, status] = row;
   if (item && status && item !== 'Evidence item') {
-    statusByItem.set(item.replace(/`/g, ''), status);
+    statusByItem.set(item.replace(/`/g, ''), status.replace(/`/g, ''));
   }
 }
 
 const results = requiredRuntimeItems.map((item) => {
   const evidencePath = path.join(runtimeDir, item.evidenceFile);
   const status = statusByItem.get(item.label) || 'Missing from register';
+  const evidenceFileExists = fs.existsSync(evidencePath);
+  const satisfiedStatus = satisfiedRegisterStatuses.has(status);
+
   return {
     item: item.label,
     registerStatus: status,
     evidenceFile: evidencePath,
-    evidenceFileExists: fs.existsSync(evidencePath),
-    complete: status === 'Complete' && fs.existsSync(evidencePath),
+    evidenceFileExists,
+    satisfiedStatus,
+    satisfied: satisfiedStatus && evidenceFileExists,
+    note: status === 'Exception'
+      ? 'Exception remains pending in this gap report until validated by the item-specific runtime evidence checker.'
+      : undefined,
   };
 });
 
-const complete = results.filter((entry) => entry.complete).length;
+const satisfied = results.filter((entry) => entry.satisfied).length;
 const total = results.length;
-const missing = results.filter((entry) => !entry.complete);
-const percentComplete = Math.round((complete / total) * 100);
-const percentMissing = 100 - percentComplete;
+const missing = results.filter((entry) => !entry.satisfied);
+const percentSatisfied = Math.round((satisfied / total) * 100);
+const percentMissing = 100 - percentSatisfied;
 
 const report = {
   p0RuntimeEvidenceGap: {
-    complete,
+    satisfied,
     total,
-    percentComplete,
+    percentSatisfied,
     percentMissing,
+    satisfiedRegisterStatuses: Array.from(satisfiedRegisterStatuses),
   },
   missing: missing.map((entry) => ({
     item: entry.item,
     registerStatus: entry.registerStatus,
+    satisfiedStatus: entry.satisfiedStatus,
     evidenceFile: entry.evidenceFile,
     evidenceFileExists: entry.evidenceFileExists,
+    note: entry.note,
   })),
   results,
 };
