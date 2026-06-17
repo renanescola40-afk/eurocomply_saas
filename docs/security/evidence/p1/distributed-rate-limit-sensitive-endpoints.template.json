@@ -1,0 +1,33 @@
+{
+  "control": "distributed-rate-limit-sensitive-endpoints",
+  "status": "Open",
+  "reviewedAt": "YYYY-MM-DD",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "targetEnvironment": "production",
+  "redaction": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "rateLimitBackend": {
+    "provider": "REPLACE_WITH_BACKEND_PROVIDER",
+    "scope": "distributed",
+    "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+    "notes": "REPLACE_WITH_REDACTED_NOTES"
+  },
+  "sensitiveEndpointsReviewed": [
+    {
+      "endpoint": "REPLACE_WITH_REDACTED_ENDPOINT",
+      "category": "auth",
+      "limitPolicy": "REPLACE_WITH_POLICY_REFERENCE",
+      "keyingStrategy": "REPLACE_WITH_KEYING_STRATEGY",
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "controlsVerified": [
+    "Rate limit state is shared across instances",
+    "Sensitive endpoints have explicit policies",
+    "Bypass paths are documented or blocked",
+    "Alerting exists for sustained throttling or abuse",
+    "Evidence contains no secrets"
+  ],
+  "nextReviewDue": "YYYY-MM-DD"
+}
