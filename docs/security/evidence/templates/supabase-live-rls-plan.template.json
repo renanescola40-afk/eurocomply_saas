@@ -1,0 +1,38 @@
+{
+  "planId": "supabase-live-rls-validation-plan",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "plannedAt": "YYYY-MM-DD",
+  "targetEnvironment": "production-like",
+  "redactionRules": [
+    "Do not store private credentials in this plan.",
+    "Do not store raw production rows in this plan.",
+    "Do not store private customer data in this plan.",
+    "Use synthetic tenant identifiers where possible."
+  ],
+  "requiredTestCases": [
+    "rls-cross-tenant-read-denied",
+    "rls-cross-tenant-write-denied",
+    "rls-same-tenant-allowed",
+    "rls-service-role-review"
+  ],
+  "tables": [
+    {
+      "table": "REPLACE_WITH_TABLE_NAME",
+      "tenantBoundaryColumn": "REPLACE_WITH_TENANT_BOUNDARY_COLUMN",
+      "clientAccessible": true,
+      "expectedCoverage": [
+        "cross-tenant-read-denied",
+        "cross-tenant-write-denied",
+        "same-tenant-allowed"
+      ],
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "serviceRolePathsReviewed": [
+    {
+      "path": "REPLACE_WITH_SERVER_ONLY_PATH_OR_FUNCTION",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "evidenceOutputTarget": "docs/security/evidence/runtime/supabase-live-rls-validation.json"
+}
