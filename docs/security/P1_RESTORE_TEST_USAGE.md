@@ -4,8 +4,8 @@ This control tracks tested restore capability for critical systems.
 
 ## Files
 
-- Template: `docs/security/evidence/p1/restore-tested.template.json`
-- Final evidence: `docs/security/evidence/p1/restore-tested.json`
+- Template: `docs/security/evidence/p1/backup-restore-tested.template.json`
+- Final evidence: `docs/security/evidence/p1/backup-restore-tested.json`
 - Checker: `scripts/security/check-p1-restore-test-evidence.mjs`
 
 ## Workflow
