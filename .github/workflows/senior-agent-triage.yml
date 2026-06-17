@@ -1,0 +1,186 @@
+name: Senior Agent Triage
+
+on:
+  issues:
+    types: [opened, edited, reopened, labeled, unlabeled]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: senior-agent-triage-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    name: Triage senior-agent queue
+    runs-on: ubuntu-latest
+    if: github.event_name != 'issue_comment' || contains(github.event.comment.body, '/agent')
+    steps:
+      - name: Classify issue or queue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const labels = {
+              seniorAgent: { name: 'senior-agent', color: '5319e7', description: 'Work belongs to the senior engineering agent queue.' },
+              ready: { name: 'agent:ready', color: '0e8a16', description: 'Agent may start implementation.' },
+              triage: { name: 'agent:triage', color: 'fbca04', description: 'Needs investigation or scoping before implementation.' },
+              blocked: { name: 'agent:blocked', color: 'b60205', description: 'Agent must wait for owner input or external configuration.' },
+              p0: { name: 'priority:p0', color: 'b60205', description: 'Production, security, or compliance blocker.' },
+              p1: { name: 'priority:p1', color: 'd93f0b', description: 'Important reliability, correctness, or launch-readiness issue.' },
+              p2: { name: 'priority:p2', color: 'fbca04', description: 'Normal product or engineering improvement.' },
+              highRisk: { name: 'risk:high', color: 'b60205', description: 'Touches a high-risk EuroComply surface.' },
+              bug: { name: 'type:bug', color: 'd73a4a', description: 'Defect or failing behavior.' },
+              ci: { name: 'type:ci', color: '1d76db', description: 'CI, checks, workflow, or build problem.' },
+              security: { name: 'type:security', color: 'b60205', description: 'Security hardening, scanner finding, or security regression.' },
+              feature: { name: 'type:feature', color: 'a2eeef', description: 'Product capability or enhancement.' },
+              needsOwner: { name: 'needs-owner', color: 'cc317c', description: 'Owner decision required.' },
+            };
+
+            async function ensureLabel(label) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name: label.name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({ owner, repo, ...label });
+              }
+            }
+
+            await Promise.all(Object.values(labels).map(ensureLabel));
+
+            async function addLabels(issue_number, names) {
+              const uniqueNames = [...new Set(names.filter(Boolean))];
+              if (uniqueNames.length === 0) return;
+              await github.rest.issues.addLabels({ owner, repo, issue_number, labels: uniqueNames });
+            }
+
+            async function removeLabel(issue_number, name) {
+              try {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number, name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
+
+            function classify(text) {
+              const lower = text.toLowerCase();
+              const result = [labels.seniorAgent.name];
+
+              if (/\b(p0|production down|prod down|security incident|data leak|tenant leak|compliance blocker)\b/.test(lower)) {
+                result.push(labels.p0.name, labels.highRisk.name, labels.needsOwner.name);
+              } else if (/\b(p1|launch blocker|broken build|failing ci|critical bug)\b/.test(lower)) {
+                result.push(labels.p1.name);
+              } else {
+                result.push(labels.p2.name);
+              }
+
+              if (/\b(ci|workflow|github actions|build|lint|typecheck|test|vercel|deployment)\b/.test(lower)) {
+                result.push(labels.ci.name);
+              }
+              if (/\b(secret|security|auth|authorization|rls|tenant|audit|compliance|upload|stripe|billing|supabase service role)\b/.test(lower)) {
+                result.push(labels.security.name, labels.highRisk.name);
+              }
+              if (/\b(bug|fix|broken|error|exception|regression|failure|failing)\b/.test(lower)) {
+                result.push(labels.bug.name);
+              }
+              if (/\b(feature|add|implement|create|enhance|improve)\b/.test(lower)) {
+                result.push(labels.feature.name);
+              }
+
+              return result;
+            }
+
+            const commandHelp = [
+              '## Senior Agent queue',
+              '',
+              'I classified this issue for the 24/7 senior engineering agent queue.',
+              '',
+              '**Available commands:**',
+              '- `/agent triage` — keep this in triage.',
+              '- `/agent run` — mark this as ready for agent implementation.',
+              '- `/agent block` — block agent work until owner input/config is provided.',
+              '- `/agent p0` — mark as P0 and require owner review.',
+              '- `/agent explain` — ask for a concise status/next-step summary.',
+              '',
+              'The agent must follow `AGENTS.md` and open PRs only; it must not merge its own work.',
+            ].join('\n');
+
+            async function commentOnce(issue_number, marker, body) {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number,
+                per_page: 100,
+              });
+              if (comments.some((comment) => comment.body && comment.body.includes(marker))) return;
+              await github.rest.issues.createComment({ owner, repo, issue_number, body: `${marker}\n${body}` });
+            }
+
+            if (context.eventName === 'schedule' || context.eventName === 'workflow_dispatch') {
+              const query = `repo:${owner}/${repo} is:issue is:open label:senior-agent`;
+              const { data } = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 20 });
+              core.summary.addHeading('Senior Agent Queue');
+              core.summary.addRaw(`Open senior-agent issues: ${data.total_count}\n\n`);
+              for (const item of data.items.slice(0, 20)) {
+                core.summary.addRaw(`- #${item.number} ${item.title}\n`);
+              }
+              await core.summary.write();
+              return;
+            }
+
+            const issue = context.payload.issue;
+            if (!issue || issue.pull_request) return;
+
+            const issueNumber = issue.number;
+            const titleAndBody = `${issue.title}\n\n${issue.body || ''}`;
+            const currentComment = context.payload.comment ? context.payload.comment.body || '' : '';
+            const fullText = `${titleAndBody}\n\n${currentComment}`;
+            const labelsToAdd = classify(fullText);
+
+            if (context.eventName === 'issue_comment') {
+              const command = currentComment.toLowerCase();
+              if (command.includes('/agent run')) {
+                labelsToAdd.push(labels.ready.name);
+                await removeLabel(issueNumber, labels.triage.name);
+                await removeLabel(issueNumber, labels.blocked.name);
+              }
+              if (command.includes('/agent triage')) {
+                labelsToAdd.push(labels.triage.name);
+                await removeLabel(issueNumber, labels.ready.name);
+              }
+              if (command.includes('/agent block')) {
+                labelsToAdd.push(labels.blocked.name, labels.needsOwner.name);
+                await removeLabel(issueNumber, labels.ready.name);
+              }
+              if (command.includes('/agent p0')) {
+                labelsToAdd.push(labels.p0.name, labels.highRisk.name, labels.needsOwner.name);
+              }
+              if (command.includes('/agent explain')) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  body: [
+                    '## Senior Agent status',
+                    '',
+                    `Current labels: ${issue.labels.map((label) => `\`${label.name}\``).join(', ') || 'none'}`,
+                    '',
+                    'Next step: keep the issue scoped, add acceptance criteria, then use `/agent run` when it is ready for implementation.',
+                  ].join('\n'),
+                });
+              }
+            } else {
+              labelsToAdd.push(labels.triage.name);
+            }
+
+            await addLabels(issueNumber, labelsToAdd);
+            await commentOnce(issueNumber, '<!-- senior-agent-triage -->', commandHelp);
