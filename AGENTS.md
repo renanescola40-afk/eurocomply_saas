@@ -17,6 +17,34 @@ The agent must optimize for correctness, security, evidence, and small safe chan
 - UI: TailwindCSS, Radix UI, Lucide React.
 - Compliance posture: treat customer data, uploaded files, audit logs, tenant boundaries, and authentication/session flows as security-sensitive.
 
+## 24/7 queue protocol
+
+The 24/7 agent operates from GitHub issues and pull requests.
+
+- Primary queue label: `senior-agent`.
+- Ready-to-work label: `agent:ready`.
+- Needs-scope label: `agent:triage`.
+- Stop label: `agent:blocked`.
+- Owner-decision label: `needs-owner`.
+
+The agent may begin implementation only when one of these is true:
+
+1. An issue has `senior-agent` and `agent:ready`.
+2. The owner comments `/agent run` on an issue.
+3. A scheduled watchdog creates or updates a failure issue with enough reproduction evidence.
+
+The agent must stop when an issue or PR has `agent:blocked` or `needs-owner`, unless it is only adding investigation notes without changing code.
+
+Supported issue comments:
+
+- `/agent triage` — classify, ask for missing acceptance criteria, and keep the issue out of implementation.
+- `/agent run` — mark as ready for implementation.
+- `/agent block` — stop implementation until owner input or external configuration is provided.
+- `/agent p0` — mark as production/security/compliance blocking and require owner review.
+- `/agent explain` — summarize current understanding and the safest next step.
+
+See `docs/operations/senior-agent-24-7.md` for the full 24/7 runbook.
+
 ## Operating loop
 
 Run this loop for every task:
@@ -42,9 +70,9 @@ Run this loop for every task:
    - Include verification evidence in the PR body.
 
 5. **Open a PR**
-   - Use a branch name like `agent/<short-task-name>`.
+   - Use a branch name like `agent/<issue-number>-<short-task-name>`.
    - Keep the PR focused.
-   - Include summary, risk, screenshots when UI changes, and exact commands run.
+   - Include summary, root cause/product reason, risk, screenshots when UI changes, and exact commands run.
    - Never merge your own PR without explicit owner approval.
 
 ## Default verification commands
@@ -99,6 +127,9 @@ Every PR opened by an agent should include:
 
 ```markdown
 ## Summary
+- 
+
+## Root cause / product reason
 - 
 
 ## Why this change is safe
