@@ -1,0 +1,36 @@
+{
+  "control": "sso-saml-oidc",
+  "status": "Open",
+  "reviewedAt": "YYYY-MM-DD",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "targetEnvironment": "production",
+  "redaction": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "identityProtocolsReviewed": [
+    {
+      "protocol": "SAML_OR_OIDC",
+      "provider": "REPLACE_WITH_IDENTITY_PROVIDER",
+      "tenantOrOrgScope": "REPLACE_WITH_SCOPE",
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "accessBoundariesReviewed": [
+    {
+      "boundary": "REPLACE_WITH_BOUNDARY_NAME",
+      "mappedRolesOrGroups": [
+        "REPLACE_WITH_ROLE_OR_GROUP"
+      ],
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "controlsVerified": [
+    "Enterprise identity protocol is configured",
+    "Organization or tenant scope is reviewed",
+    "Role and group mapping is reviewed",
+    "Deprovisioning behavior is documented",
+    "Evidence contains no secrets"
+  ],
+  "nextReviewDue": "YYYY-MM-DD"
+}
