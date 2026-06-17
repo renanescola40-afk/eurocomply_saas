@@ -28,15 +28,15 @@ Use strict mode on final evidence or release-ready branches.
 
 The script reports only the remaining runtime evidence group. It does not replace the full P0 register or the runtime evidence validators.
 
-A remaining runtime evidence item is considered satisfied when:
+A remaining runtime evidence item is considered satisfied by this gap report when:
 
 - the referenced runtime evidence file exists; and
-- `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md` marks that item as `Complete` or `Exception`.
+- `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md` marks that item as `Complete`.
 
-`Exception` is only acceptable when the referenced runtime JSON carries the required approved-exception evidence enforced by the item-specific checker.
+`Exception` items remain pending in this gap report until the item-specific runtime evidence checker validates the approved-exception fields. This prevents a placeholder or unapproved exception file from being counted as release-ready.
 
 Current target for release-ready state:
 
 - 3 of 3 remaining runtime evidence items satisfied
 - all referenced runtime evidence files exist
-- each remaining item is marked as `Complete` or `Exception` in the runtime register
+- each remaining item is marked as `Complete` in the runtime register
