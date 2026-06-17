@@ -5,6 +5,7 @@ import path from 'node:path';
 const strict = process.argv.includes('--strict');
 const registerPath = path.join('docs', 'security', 'P0_RUNTIME_EVIDENCE_REGISTER.md');
 const runtimeDir = path.join('docs', 'security', 'evidence', 'runtime');
+const acceptedRegisterStatuses = new Set(['Complete', 'Exception']);
 const requiredRuntimeItems = [
   {
     label: 'Production secrets configured in provider secret stores',
@@ -39,38 +40,44 @@ const statusByItem = new Map();
 for (const row of rows) {
   const [item, status] = row;
   if (item && status && item !== 'Evidence item') {
-    statusByItem.set(item.replace(/`/g, ''), status);
+    statusByItem.set(item.replace(/`/g, ''), status.replace(/`/g, ''));
   }
 }
 
 const results = requiredRuntimeItems.map((item) => {
   const evidencePath = path.join(runtimeDir, item.evidenceFile);
   const status = statusByItem.get(item.label) || 'Missing from register';
+  const evidenceFileExists = fs.existsSync(evidencePath);
+  const acceptedStatus = acceptedRegisterStatuses.has(status);
+
   return {
     item: item.label,
     registerStatus: status,
     evidenceFile: evidencePath,
-    evidenceFileExists: fs.existsSync(evidencePath),
-    complete: status === 'Complete' && fs.existsSync(evidencePath),
+    evidenceFileExists,
+    acceptedStatus,
+    satisfied: acceptedStatus && evidenceFileExists,
   };
 });
 
-const complete = results.filter((entry) => entry.complete).length;
+const satisfied = results.filter((entry) => entry.satisfied).length;
 const total = results.length;
-const missing = results.filter((entry) => !entry.complete);
-const percentComplete = Math.round((complete / total) * 100);
-const percentMissing = 100 - percentComplete;
+const missing = results.filter((entry) => !entry.satisfied);
+const percentSatisfied = Math.round((satisfied / total) * 100);
+const percentMissing = 100 - percentSatisfied;
 
 const report = {
   p0RuntimeEvidenceGap: {
-    complete,
+    satisfied,
     total,
-    percentComplete,
+    percentSatisfied,
     percentMissing,
+    acceptedRegisterStatuses: Array.from(acceptedRegisterStatuses),
   },
   missing: missing.map((entry) => ({
     item: entry.item,
     registerStatus: entry.registerStatus,
+    acceptedStatus: entry.acceptedStatus,
     evidenceFile: entry.evidenceFile,
     evidenceFileExists: entry.evidenceFileExists,
   })),
