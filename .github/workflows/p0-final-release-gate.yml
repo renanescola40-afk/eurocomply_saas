@@ -1,0 +1,43 @@
+name: P0 Final Release Gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md'
+      - 'docs/security/evidence/runtime/**'
+      - 'scripts/security/**'
+      - '.github/workflows/p0-final-release-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p0-final-release-gate:
+    name: Validate final P0 release evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Show runner Node.js and npm versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Validate runtime evidence register
+        run: node scripts/security/check-p0-runtime-evidence-register.mjs
+
+      - name: Validate runtime evidence file hygiene
+        run: node scripts/security/check-p0-evidence-files.mjs
+
+      - name: Validate optional runtime evidence files
+        run: node scripts/security/check-p0-runtime-evidence-optionals.mjs
+
+      - name: Enforce remaining runtime evidence gap is closed
+        run: node scripts/security/report-p0-runtime-evidence-gap.mjs --strict
