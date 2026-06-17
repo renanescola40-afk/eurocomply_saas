@@ -36,3 +36,6 @@ jobs:
 
       - name: Validate production secrets evidence if present
         run: node scripts/security/check-p0-production-secrets-evidence.mjs
+
+      - name: Validate Supabase RLS evidence if present
+        run: node scripts/security/check-p0-supabase-rls-evidence.mjs
