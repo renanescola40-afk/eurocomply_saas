@@ -6,30 +6,18 @@ on:
     branches:
       - main
     paths:
-      - 'docs/security/evidence/p1/restore-tested.json'
-      - 'docs/security/evidence/p1/restore-tested.template.json'
-      - 'docs/security/P1_RESTORE_TEST_USAGE.md'
-      - 'scripts/security/check-p1-restore-test-evidence.mjs'
-      - '.github/workflows/p1-restore-test.yml'
+      - "docs/security/evidence/p1/backup-restore-tested.json"
+      - "docs/security/evidence/p1/backup-restore-tested.template.json"
+      - "docs/security/P1_RESTORE_TEST_USAGE.md"
+      - "scripts/security/check-p1-restore-test-evidence.mjs"
+      - ".github/workflows/p1-restore-test.yml"
 
 permissions:
   contents: read
 
 jobs:
   p1-restore-test:
-    name: Validate P1 restore test evidence
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - name: Show runner Node.js and npm versions
-        run: |
-          node --version
-          npm --version
-
-      - name: Validate P1 restore test evidence if present
-        run: node scripts/security/check-p1-restore-test-evidence.mjs
+      - uses: actions/checkout@v6
+      - run: node scripts/security/check-p1-restore-test-evidence.mjs
