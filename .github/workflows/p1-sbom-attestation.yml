@@ -1,0 +1,35 @@
+name: P1 SBOM Attestation Evidence
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/security/evidence/p1/sbom-artifact-attestation.json'
+      - 'docs/security/evidence/p1/sbom-artifact-attestation.template.json'
+      - 'docs/security/P1_SBOM_ATTESTATION_USAGE.md'
+      - 'scripts/security/check-p1-sbom-attestation-evidence.mjs'
+      - '.github/workflows/p1-sbom-attestation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p1-sbom-attestation:
+    name: Validate P1 SBOM attestation evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Show runner Node.js and npm versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Validate P1 SBOM attestation evidence if present
+        run: node scripts/security/check-p1-sbom-attestation-evidence.mjs
