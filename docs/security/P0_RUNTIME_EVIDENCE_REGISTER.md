@@ -8,8 +8,8 @@ Repository gates can prove that controls are documented and wired into CI. Runti
 
 | Evidence item | Status | Required evidence | Owner |
 | --- | --- | --- | --- |
-| Branch protection applied on `main` | Open | Screenshot or exported settings showing pull request requirement, CODEOWNERS review, required checks, force-push block, deletion block, and conversation resolution | Release owner |
-| Required status checks configured | Open | Screenshot or exported settings showing Full Security Suite, Semgrep, Gitleaks, Actionlint, OSSF Scorecard, CodeQL, Dependency Review, and P0 Runtime Evidence as required checks | Release owner |
+| Branch protection applied on `main` | Complete | `docs/security/evidence/runtime/branch-protection-main.json` records active ruleset evidence for PR requirement, CODEOWNERS review, required checks, force-push block, deletion block, and conversation resolution | Release owner |
+| Required status checks configured | Complete | `docs/security/evidence/runtime/required-status-checks.json` records required checks for Full Security Suite, Semgrep, Gitleaks, Actionlint, OSSF Scorecard, CodeQL, Dependency Review, P0 Runtime Evidence, and P0 Progress | Release owner |
 | Production secrets configured in provider secret stores | Open | Redacted screenshot or provider export showing variables configured without revealing values | Release owner |
 | Supabase live RLS validation completed | Open | Test output proving cross-tenant read/write denial and service-role path review | Security reviewer |
 | External security review or pentest completed | Open | Pentest report, finding triage, critical/high resolution evidence, and retest evidence where applicable | Security reviewer |
