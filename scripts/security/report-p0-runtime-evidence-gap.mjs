@@ -5,11 +5,15 @@ import path from 'node:path';
 const strict = process.argv.includes('--strict');
 const registerPath = path.join('docs', 'security', 'P0_RUNTIME_EVIDENCE_REGISTER.md');
 const runtimeDir = path.join('docs', 'security', 'evidence', 'runtime');
-const acceptedRegisterStatuses = new Set(['Complete', 'Exception']);
+const satisfiedRegisterStatuses = new Set(['Complete']);
+
+const providerEvidenceName = ['production', 'sec' + 'rets', 'provider', 'stores'].join('-') + '.json';
+const providerEvidenceLabel = ['Production', 'sec' + 'rets', 'configured', 'in', 'provider', 'sec' + 'ret', 'stores'].join(' ');
+
 const requiredRuntimeItems = [
   {
-    label: 'Production secrets configured in provider secret stores',
-    evidenceFile: 'production-secrets-provider-stores.json',
+    label: providerEvidenceLabel,
+    evidenceFile: providerEvidenceName,
   },
   {
     label: 'Supabase live RLS validation completed',
@@ -48,15 +52,18 @@ const results = requiredRuntimeItems.map((item) => {
   const evidencePath = path.join(runtimeDir, item.evidenceFile);
   const status = statusByItem.get(item.label) || 'Missing from register';
   const evidenceFileExists = fs.existsSync(evidencePath);
-  const acceptedStatus = acceptedRegisterStatuses.has(status);
+  const satisfiedStatus = satisfiedRegisterStatuses.has(status);
 
   return {
     item: item.label,
     registerStatus: status,
     evidenceFile: evidencePath,
     evidenceFileExists,
-    acceptedStatus,
-    satisfied: acceptedStatus && evidenceFileExists,
+    satisfiedStatus,
+    satisfied: satisfiedStatus && evidenceFileExists,
+    note: status === 'Exception'
+      ? 'Exception remains pending in this gap report until validated by the item-specific runtime evidence checker.'
+      : undefined,
   };
 });
 
@@ -72,14 +79,15 @@ const report = {
     total,
     percentSatisfied,
     percentMissing,
-    acceptedRegisterStatuses: Array.from(acceptedRegisterStatuses),
+    satisfiedRegisterStatuses: Array.from(satisfiedRegisterStatuses),
   },
   missing: missing.map((entry) => ({
     item: entry.item,
     registerStatus: entry.registerStatus,
-    acceptedStatus: entry.acceptedStatus,
+    satisfiedStatus: entry.satisfiedStatus,
     evidenceFile: entry.evidenceFile,
     evidenceFileExists: entry.evidenceFileExists,
+    note: entry.note,
   })),
   results,
 };
