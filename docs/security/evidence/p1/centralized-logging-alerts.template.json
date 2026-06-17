@@ -1,0 +1,43 @@
+{
+  "control": "centralized-logging-alerts",
+  "status": "Open",
+  "reviewedAt": "YYYY-MM-DD",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "targetEnvironment": "production",
+  "redaction": "All confidential values are redacted.",
+  "loggingBackend": {
+    "provider": "REPLACE_WITH_LOGGING_PROVIDER",
+    "scope": "centralized",
+    "retentionPolicy": "REPLACE_WITH_RETENTION_POLICY_REFERENCE",
+    "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
+  },
+  "logSourcesReviewed": [
+    {
+      "source": "application",
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
+    },
+    {
+      "source": "identity",
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
+    }
+  ],
+  "alertsReviewed": [
+    {
+      "alertName": "REPLACE_WITH_ALERT_NAME",
+      "trigger": "REPLACE_WITH_TRIGGER_DESCRIPTION",
+      "severity": "high",
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
+    }
+  ],
+  "controlsVerified": [
+    "Security logs are centralized",
+    "Identity events are captured",
+    "Alerting exists for high-risk security events",
+    "Retention policy is documented",
+    "Evidence is redacted"
+  ],
+  "nextReviewDue": "YYYY-MM-DD"
+}
