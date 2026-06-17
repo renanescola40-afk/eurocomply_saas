@@ -1,0 +1,44 @@
+{
+  "control": "admin-mfa-required",
+  "status": "Open",
+  "reviewedAt": "YYYY-MM-DD",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "targetEnvironment": "production",
+  "redaction": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "identityProvidersReviewed": [
+    {
+      "provider": "REPLACE_WITH_IDENTITY_PROVIDER",
+      "adminPopulation": "REPLACE_WITH_ADMIN_GROUP_OR_ROLE",
+      "mfaPolicy": "REPLACE_WITH_POLICY_NAME_OR_REFERENCE",
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "adminSurfacesReviewed": [
+    {
+      "surface": "REPLACE_WITH_ADMIN_SURFACE",
+      "accessPath": "REPLACE_WITH_REDACTED_ACCESS_PATH",
+      "mfaEnforced": false,
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "breakGlassAccounts": [
+    {
+      "accountReference": "REPLACE_WITH_REDACTED_REFERENCE",
+      "mfaEnforced": false,
+      "storageReviewed": false,
+      "rotationReviewed": false,
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "controlsVerified": [
+    "Admin users require MFA",
+    "Admin groups or roles are reviewed",
+    "Break-glass accounts are documented and protected",
+    "Recovery paths are documented",
+    "Evidence contains no secrets"
+  ],
+  "nextReviewDue": "YYYY-MM-DD"
+}
