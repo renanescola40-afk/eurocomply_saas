@@ -1,0 +1,68 @@
+{
+  "planId": "provider-runtime-evidence-plan",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "plannedAt": "YYYY-MM-DD",
+  "targetEnvironment": "production",
+  "redactionRules": [
+    "Do not store private credentials in this plan.",
+    "Do not store tokens, connection strings, or private values in this plan.",
+    "Use provider names, environment names, and durable evidence references only.",
+    "Screenshots and exports must be redacted before they are referenced."
+  ],
+  "requiredProviders": [
+    {
+      "provider": "GitHub",
+      "environment": "production",
+      "status": "planned",
+      "expectedEvidence": [
+        "environment settings reviewed",
+        "repository variables reviewed",
+        "required checks and rules reviewed"
+      ],
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    },
+    {
+      "provider": "Vercel",
+      "environment": "Production",
+      "status": "planned",
+      "expectedEvidence": [
+        "production environment settings reviewed",
+        "preview and production separation reviewed",
+        "project access reviewed"
+      ],
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    },
+    {
+      "provider": "Supabase",
+      "environment": "production-like",
+      "status": "planned",
+      "expectedEvidence": [
+        "project settings reviewed",
+        "server-only access paths reviewed",
+        "database access controls reviewed"
+      ],
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "optionalProviders": [
+    {
+      "provider": "Payment provider",
+      "environment": "production",
+      "status": "planned_or_not_applicable",
+      "rationale": "REPLACE_WITH_REDACTED_RATIONALE"
+    },
+    {
+      "provider": "Cache or queue provider",
+      "environment": "production",
+      "status": "planned_or_not_applicable",
+      "rationale": "REPLACE_WITH_REDACTED_RATIONALE"
+    },
+    {
+      "provider": "Email, analytics, storage, monitoring, or error reporting provider",
+      "environment": "production",
+      "status": "planned_or_not_applicable",
+      "rationale": "REPLACE_WITH_REDACTED_RATIONALE"
+    }
+  ],
+  "evidenceOutputTarget": "docs/security/evidence/runtime/production-secrets-provider-stores.json"
+}
