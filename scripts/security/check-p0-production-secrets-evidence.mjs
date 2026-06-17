@@ -5,14 +5,15 @@ import path from 'node:path';
 const evidencePath = path.join('docs', 'security', 'evidence', 'runtime', 'production-secrets-provider-stores.json');
 const exactRedaction = 'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.';
 const placeholderPattern = /REPLACE_|YYYY-MM-DD|placeholder|TODO/i;
+const mandatoryProviders = ['github', 'vercel', 'supabase'];
 
 function fail(message) {
-  console.error(`P0 production secrets evidence check failed: ${message}`);
+  console.error(`P0 production provider evidence check failed: ${message}`);
   process.exit(1);
 }
 
 if (!fs.existsSync(evidencePath)) {
-  console.log(`No ${evidencePath} file found yet; production secrets runtime evidence remains open.`);
+  console.log(`No ${evidencePath} file found yet; production provider runtime evidence remains open.`);
   process.exit(0);
 }
 
@@ -49,14 +50,26 @@ if (!Array.isArray(evidence.controlsVerified) || evidence.controlsVerified.lengt
 }
 
 if (evidence.status === 'Complete') {
-  if (!Array.isArray(evidence.providersReviewed) || evidence.providersReviewed.length < 3) {
-    fail('Complete evidence must include providersReviewed entries for at least GitHub, Vercel, and Supabase');
+  if (!Array.isArray(evidence.providersReviewed) || evidence.providersReviewed.length < mandatoryProviders.length) {
+    fail('Complete evidence must include providersReviewed entries for GitHub, Vercel, and Supabase');
   }
 
-  const providerNames = new Set(evidence.providersReviewed.map((entry) => String(entry.provider || '').toLowerCase()));
-  for (const requiredProvider of ['github', 'vercel', 'supabase']) {
-    if (!providerNames.has(requiredProvider)) {
+  const providersByName = new Map(
+    evidence.providersReviewed.map((entry) => [String(entry.provider || '').toLowerCase(), entry]),
+  );
+
+  for (const requiredProvider of mandatoryProviders) {
+    const entry = providersByName.get(requiredProvider);
+    if (!entry) {
       fail(`Complete evidence must include provider ${requiredProvider}`);
+    }
+
+    if (entry.status !== 'reviewed') {
+      fail(`mandatory provider ${requiredProvider} must have status reviewed`);
+    }
+
+    if (!entry.environment || !entry.evidenceLocation || !entry.notes) {
+      fail(`mandatory provider ${requiredProvider} must include environment, evidenceLocation, and notes`);
     }
   }
 
@@ -73,9 +86,17 @@ if (evidence.status === 'Complete') {
 
 if (evidence.status === 'Exception') {
   const exception = evidence.exception;
-  if (!exception || !exception.riskOwner || !exception.rationale || !exception.expiryDate || !exception.approvalReference) {
-    fail('Exception evidence must include riskOwner, rationale, expiryDate, and approvalReference');
+  if (
+    !exception ||
+    !exception.riskOwner ||
+    !exception.rationale ||
+    !exception.expiresAt ||
+    !exception.approvalReference ||
+    !Array.isArray(exception.compensatingControls) ||
+    exception.compensatingControls.length === 0
+  ) {
+    fail('Exception evidence must include riskOwner, rationale, expiresAt, approvalReference, and compensatingControls');
   }
 }
 
-console.log('P0 production secrets evidence file is valid.');
+console.log('P0 production provider evidence file is valid.');
