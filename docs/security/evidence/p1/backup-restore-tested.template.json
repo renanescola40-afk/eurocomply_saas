@@ -1,0 +1,28 @@
+{
+  "control": "backup-restore-tested",
+  "status": "Open",
+  "reviewedAt": "YYYY-MM-DD",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "targetEnvironment": "production",
+  "restoreTests": [
+    {
+      "testId": "REPLACE_WITH_TEST_ID",
+      "system": "REPLACE_WITH_SYSTEM",
+      "startedAt": "YYYY-MM-DDTHH:MM:SSZ",
+      "completedAt": "YYYY-MM-DDTHH:MM:SSZ",
+      "rtoTarget": "REPLACE_WITH_RTO_TARGET",
+      "rtoActual": "REPLACE_WITH_RTO_ACTUAL",
+      "rpoTarget": "REPLACE_WITH_RPO_TARGET",
+      "rpoActual": "REPLACE_WITH_RPO_ACTUAL",
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REFERENCE"
+    }
+  ],
+  "controlsVerified": [
+    "Critical systems are covered",
+    "Restore test completed successfully",
+    "RTO target was evaluated",
+    "RPO target was evaluated"
+  ],
+  "nextReviewDue": "YYYY-MM-DD"
+}
