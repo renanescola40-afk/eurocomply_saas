@@ -1,0 +1,38 @@
+{
+  "planId": "external-review-plan",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "plannedAt": "YYYY-MM-DD",
+  "targetRelease": "REPLACE_WITH_RELEASE_OR_PRIVATE_BETA_ID",
+  "allowedOutcomes": [
+    "independent_review_complete",
+    "approved_private_beta_exception"
+  ],
+  "redactionRules": [
+    "Do not store private findings in this plan.",
+    "Do not store exploit details in this plan.",
+    "Do not store private customer data in this plan.",
+    "Use durable redacted references only."
+  ],
+  "requiredCoverage": [
+    "authentication and authorization boundaries",
+    "tenant isolation and data access boundaries",
+    "secrets handling and deployment configuration",
+    "dependency and supply-chain posture",
+    "logging, monitoring, and incident response readiness",
+    "release-blocking finding triage"
+  ],
+  "assessmentPlan": {
+    "providerOrReviewer": "REPLACE_WITH_APPROVED_REVIEWER_OR_PROVIDER",
+    "assessmentType": "REPLACE_WITH_REVIEW_TYPE",
+    "scopeSummary": "REPLACE_WITH_REDACTED_SCOPE_SUMMARY",
+    "expectedReportReference": "REPLACE_WITH_REDACTED_REFERENCE_OR_PENDING"
+  },
+  "exceptionPlan": {
+    "allowed": true,
+    "requiresRiskOwner": true,
+    "requiresExpiry": true,
+    "requiresCompensatingControls": true,
+    "requiresApprovalReference": true
+  },
+  "evidenceOutputTarget": "docs/security/evidence/runtime/external-security-review-or-pentest.json"
+}
