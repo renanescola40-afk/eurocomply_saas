@@ -6,10 +6,21 @@ const evidencePath = process.argv[2] || path.join('docs', 'security', 'evidence'
 const placeholderPattern = /REPLACE_|YYYY-MM-DD|placeholder|TODO/i;
 const requiredRedaction = 'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.';
 const requiredActions = new Set(['billing', 'exports', 'team-management', 'gdpr-delete']);
+const requiredControls = [
+  'Sensitive actions require step-up authentication',
+  'Step-up state expires and cannot be reused indefinitely',
+  'Authorization is rechecked after step-up',
+  'Audit event is emitted for sensitive actions',
+  'Evidence contains no secrets',
+];
 
 function fail(message) {
   console.error(`P1 step-up evidence check failed: ${message}`);
   process.exit(1);
+}
+
+function hasControl(controls, expected) {
+  return controls.some((control) => String(control).trim().toLowerCase() === expected.toLowerCase());
 }
 
 if (!fs.existsSync(evidencePath)) {
@@ -39,7 +50,11 @@ for (const action of requiredActions) {
   if (evidence.status === 'Complete' && entry.status !== 'enforced') fail(`${action} must have status enforced for Complete evidence`);
 }
 
-if (!Array.isArray(evidence.controlsVerified) || evidence.controlsVerified.length < 5) fail('controlsVerified must include at least five controls');
+if (!Array.isArray(evidence.controlsVerified)) fail('controlsVerified must be an array');
+for (const control of requiredControls) {
+  if (!hasControl(evidence.controlsVerified, control)) fail(`controlsVerified must include: ${control}`);
+}
+
 if (!evidence.nextReviewDue) fail('nextReviewDue is required');
 
 if (evidence.status === 'Exception') {
