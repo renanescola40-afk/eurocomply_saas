@@ -12,6 +12,7 @@ const requiredControls = [
   'Alerting exists for sustained throttling or abuse',
   'Evidence contains no secrets',
 ];
+const requiredCompleteCategories = ['auth', 'billing', 'documents', 'team', 'audit'];
 
 function fail(message) {
   console.error(`P1 rate limit evidence check failed: ${message}`);
@@ -43,9 +44,17 @@ if (!evidence.reviewedAt || !evidence.reviewer || !evidence.targetEnvironment) f
 if (!evidence.rateLimitBackend || evidence.rateLimitBackend.scope !== 'distributed' || !evidence.rateLimitBackend.provider || !evidence.rateLimitBackend.evidenceLocation) fail('rateLimitBackend must identify a distributed backend provider and evidenceLocation');
 
 if (!Array.isArray(evidence.sensitiveEndpointsReviewed) || evidence.sensitiveEndpointsReviewed.length === 0) fail('sensitiveEndpointsReviewed must include at least one endpoint');
+const categories = new Set();
 for (const endpoint of evidence.sensitiveEndpointsReviewed) {
   if (!endpoint.endpoint || !endpoint.category || !endpoint.limitPolicy || !endpoint.keyingStrategy || !endpoint.status || !endpoint.evidenceLocation) fail('each sensitive endpoint must include endpoint, category, limitPolicy, keyingStrategy, status, and evidenceLocation');
+  categories.add(String(endpoint.category).trim().toLowerCase());
   if (evidence.status === 'Complete' && endpoint.status !== 'enforced') fail(`${endpoint.endpoint} must have status enforced for Complete evidence`);
+}
+
+if (evidence.status === 'Complete') {
+  for (const category of requiredCompleteCategories) {
+    if (!categories.has(category)) fail(`Complete evidence must include rate limit coverage for category: ${category}`);
+  }
 }
 
 if (!Array.isArray(evidence.controlsVerified)) fail('controlsVerified must be an array');
