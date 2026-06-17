@@ -1,0 +1,87 @@
+# EuroComply Senior Agent configuration
+# This file is read by humans, coding-agent providers, and GitHub Actions workflows.
+
+version: 1
+
+queue:
+  primary_label: senior-agent
+  ready_label: agent:ready
+  triage_label: agent:triage
+  blocked_label: agent:blocked
+  owner_required_label: needs-owner
+  branch_prefix: agent
+
+commands:
+  triage: /agent triage
+  run: /agent run
+  block: /agent block
+  p0: /agent p0
+  explain: /agent explain
+
+branching:
+  base_branch: main
+  pattern: agent/<issue-number>-<short-slug>
+  allow_direct_push_to_main: false
+  allow_force_push: false
+
+pull_requests:
+  draft_by_default: false
+  require_owner_merge: true
+  link_issue: true
+  require_sections:
+    - Summary
+    - Root cause / product reason
+    - Why this change is safe
+    - Verification
+    - Risk notes
+    - Follow-ups
+
+verification:
+  full_gate:
+    - npm ci
+    - npm run lint
+    - npm run typecheck
+    - npm run test
+    - npm run build
+    - npm run security:ci
+  low_risk_docs_gate:
+    - npm run lint
+  ci_fix_gate:
+    - npm ci
+    - npm run lint
+    - npm run typecheck
+    - npm run test
+  security_gate:
+    - npm run security:ci
+    - npm run security:public-secrets
+    - npm run security:supply-chain
+
+safe_autonomy:
+  allowed:
+    - Documentation and runbook updates.
+    - GitHub issue templates and PR templates.
+    - CI hardening that preserves or strengthens checks.
+    - Small lint, typecheck, test, and build fixes with evidence.
+    - Small bug fixes with tests or clear reproduction evidence.
+  blocked_without_owner:
+    - Authentication, sessions, cookies, middleware auth, or step-up auth.
+    - Authorization, tenant isolation, object-level access, or Supabase RLS assumptions.
+    - Billing, subscriptions, Stripe webhooks, or pricing behavior.
+    - Audit chain, compliance evidence, trust package, or legal records.
+    - Upload security, malware scanning, storage buckets, or signed URLs.
+    - Production secrets, environment configuration, or new external integrations.
+    - Database migrations that delete data or are not backward-compatible.
+
+security:
+  never_commit:
+    - .env
+    - Supabase service role keys
+    - Stripe secrets
+    - GitHub tokens
+    - customer data
+    - production logs containing PII
+  required_pr_checks:
+    - No security/compliance guardrail weakened.
+    - No tenant boundary widened.
+    - No privileged operation moved client-side.
+    - No scanner disabled to make a build pass.
