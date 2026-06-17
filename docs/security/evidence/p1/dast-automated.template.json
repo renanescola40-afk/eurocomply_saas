@@ -1,0 +1,39 @@
+{
+  "control": "dast-automated",
+  "status": "Open",
+  "reviewedAt": "YYYY-MM-DD",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "targetEnvironment": "production",
+  "redaction": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "scanner": {
+    "name": "REPLACE_WITH_SCANNER_NAME",
+    "version": "REPLACE_WITH_SCANNER_VERSION",
+    "profile": "REPLACE_WITH_SCAN_PROFILE",
+    "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
+  },
+  "targetsReviewed": [
+    {
+      "target": "REPLACE_WITH_REDACTED_TARGET",
+      "environment": "production",
+      "authenticated": false,
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "findingsSummary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "acceptedRiskReferences": []
+  },
+  "controlsVerified": [
+    "DAST runs automatically or on demand in CI",
+    "Production-like target is scanned",
+    "Critical and high findings block completion",
+    "Findings are triaged with durable references",
+    "Evidence contains no secrets"
+  ],
+  "nextReviewDue": "YYYY-MM-DD"
+}
