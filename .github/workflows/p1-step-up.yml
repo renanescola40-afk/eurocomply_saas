@@ -1,0 +1,35 @@
+name: P1 Step-Up Evidence
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/security/evidence/p1/step-up-sensitive-actions.json'
+      - 'docs/security/evidence/p1/step-up-sensitive-actions.template.json'
+      - 'docs/security/P1_STEP_UP_USAGE.md'
+      - 'scripts/security/check-p1-step-up-evidence.mjs'
+      - '.github/workflows/p1-step-up.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p1-step-up:
+    name: Validate P1 step-up evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Show runner Node.js and npm versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Validate P1 step-up evidence if present
+        run: node scripts/security/check-p1-step-up-evidence.mjs
