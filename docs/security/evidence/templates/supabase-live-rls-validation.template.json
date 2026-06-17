@@ -1,0 +1,55 @@
+{
+  "evidenceItem": "supabase-live-rls-validation",
+  "status": "Complete",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "reviewedAt": "YYYY-MM-DD",
+  "summary": "REPLACE_WITH_REDACTED_SUMMARY_OF_LIVE_RLS_VALIDATION",
+  "evidenceLocations": [
+    "REPLACE_WITH_DURABLE_REDACTED_EVIDENCE_REFERENCE"
+  ],
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "controlsVerified": [
+    "Cross-tenant read attempts are denied by Supabase RLS.",
+    "Cross-tenant write attempts are denied by Supabase RLS.",
+    "Same-tenant access works where expected.",
+    "Anonymous access is denied for tenant-scoped tables unless explicitly public by design.",
+    "Service-role paths were reviewed separately and are not exposed to client-side code.",
+    "RLS policies are enabled on tenant-scoped tables."
+  ],
+  "testCases": [
+    {
+      "id": "rls-cross-tenant-read-denied",
+      "status": "passed",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_TEST_OUTPUT_REFERENCE",
+      "notes": "Tenant A user cannot read Tenant B records. Values redacted."
+    },
+    {
+      "id": "rls-cross-tenant-write-denied",
+      "status": "passed",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_TEST_OUTPUT_REFERENCE",
+      "notes": "Tenant A user cannot create, update, or delete Tenant B records. Values redacted."
+    },
+    {
+      "id": "rls-same-tenant-allowed",
+      "status": "passed",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_TEST_OUTPUT_REFERENCE",
+      "notes": "Same-tenant expected access is allowed. Values redacted."
+    },
+    {
+      "id": "rls-service-role-review",
+      "status": "passed",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_SERVICE_ROLE_REVIEW_REFERENCE",
+      "notes": "Service-role usage reviewed separately and not exposed in client-side code. Values redacted."
+    }
+  ],
+  "tablesReviewed": [
+    {
+      "table": "REPLACE_WITH_TABLE_NAME",
+      "tenantKey": "REPLACE_WITH_TENANT_KEY_OR_NA",
+      "status": "validated",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_TABLE_POLICY_REFERENCE",
+      "notes": "RLS enabled and allow/deny behavior validated. Values redacted."
+    }
+  ],
+  "nextReviewDue": "YYYY-MM-DD"
+}
