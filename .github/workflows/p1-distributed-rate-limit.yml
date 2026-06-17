@@ -1,0 +1,35 @@
+name: P1 Distributed Rate Limit Evidence
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json'
+      - 'docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.template.json'
+      - 'docs/security/P1_DISTRIBUTED_RATE_LIMIT_USAGE.md'
+      - 'scripts/security/check-p1-distributed-rate-limit-evidence.mjs'
+      - '.github/workflows/p1-distributed-rate-limit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p1-distributed-rate-limit:
+    name: Validate P1 distributed rate limit evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Show runner Node.js and npm versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Validate P1 distributed rate limit evidence if present
+        run: node scripts/security/check-p1-distributed-rate-limit-evidence.mjs
