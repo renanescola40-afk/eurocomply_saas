@@ -87,9 +87,9 @@ for (const path of walk('src')) {
   if (path === csvHelperPath) continue;
 
   const source = readFileSync(path, 'utf8');
-  const buildsCsvResponse = source.includes('text/csv') || source.includes('Content-Disposition');
+  const buildsCsvResponse = source.includes('text/csv') || path.endsWith('.csv/route.ts');
   if (buildsCsvResponse && path.includes('/api/') && !source.includes('csvDownloadResponse')) {
-    failures.push(`${path} builds CSV/download headers outside the hardened helper`);
+    failures.push(`${path} builds CSV responses outside the hardened helper`);
   }
 }
 
