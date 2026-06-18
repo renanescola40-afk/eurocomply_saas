@@ -29,6 +29,7 @@ const delegatedGateScripts = [
   'scripts/security/check-json-body-limits.mjs',
   'scripts/security/check-billing-return-url.mjs',
   'scripts/security/check-billing-page-boundary.mjs',
+  'scripts/security/check-billing-checkout-intent.mjs',
 ];
 
 const publicVerifierRoutes = [
