@@ -167,6 +167,20 @@ EuroComply must not expose generic proxy routes, catch-all integration relays or
 
 `npm run security:no-open-proxy` scans route handlers for proxy/catch-all SSRF regressions and is part of `security:ci`.
 
+## Internal maintenance job policy
+
+Internal maintenance fan-out routes may call other internal endpoints, but production destinations must be derived from server-controlled app configuration, not from the incoming request URL or Host header.
+
+Internal maintenance jobs must:
+
+- require the existing internal cron credential before running any job;
+- resolve the base URL from a valid HTTP(S) `NEXT_PUBLIC_APP_URL` value;
+- fail closed in production when that configured URL is missing or invalid;
+- allow request URL fallback only for local development and test execution;
+- return stable public errors and `no-store` headers when the destination control is unavailable.
+
+`npm run security:internal-maintenance` scans the daily maintenance fan-out route and its tests for production fail-closed destination handling. It is part of `security:ci`.
+
 ## Security headers
 
 The app must keep defense-in-depth headers active globally:
@@ -206,6 +220,7 @@ npm run security:api-guards
 npm run security:no-store
 npm run security:origin-guards
 npm run security:no-open-proxy
+npm run security:internal-maintenance
 npm run security:public-errors
 npm run security:csv-exports
 npm run security:document-filenames
@@ -218,37 +233,3 @@ npm run security:responses
 ```
 
 A PR must fail if a sensitive mutable route lacks authentication, organization context, RBAC, trusted-origin validation, tenant/resource checks, no-store responses or required rate limiting.
-
-### Preflight profiles
-
-There are two separate preflight profiles:
-
-- **Production/deployment**: `npm run preflight` must run with real production secrets and variables. Missing Supabase, Stripe, internal signing or Upstash configuration must block deployment until operators fix the environment.
-- **Security CI**: `.github/workflows/security-ci.yml` runs `node scripts/preflight-ci.mjs`, which injects non-secret placeholder values before delegating to `scripts/preflight.mjs`. This keeps repository/file/format checks active in pull requests without requiring production secrets to be exposed to PR jobs.
-
-The CI placeholder profile must never be used by production deployment workflows. The production workflow remains required to call `npm run preflight` directly.
-
-## Implementation checklist for new APIs
-
-Before adding a new API route, verify:
-
-- [ ] route is classified as private, public verifier, signed webhook or internal cron/ops;
-- [ ] mutable private route checks trusted origin first;
-- [ ] route authenticates a real Supabase user;
-- [ ] route resolves organization from authenticated membership;
-- [ ] route enforces the smallest required RBAC permission;
-- [ ] every dynamic resource ID is checked against `organization_id`;
-- [ ] sensitive route uses distributed rate limiting;
-- [ ] route returns no-store headers on every response path;
-- [ ] exported server actions derive user and tenant server-side instead of accepting caller-supplied identity;
-- [ ] outbound fetches use allowlisted hosts, explicit headers and no generic catch-all proxying;
-- [ ] public auth/user-facing errors are allowlisted codes with generic localized copy;
-- [ ] CSV/download routes use the hardened export helper instead of manual serialization or headers;
-- [ ] document filenames used in storage paths or temporary links are sanitized through the document helper;
-- [ ] errors are sanitized and do not expose stack traces, SQL, provider payloads or secrets;
-- [ ] logs use stable event names and metadata without tokens, cookies, passwords or service keys;
-- [ ] service role is used only through server-only helpers.
-
-## Operational notes
-
-Treat security dependencies as production-critical configuration. If `TRUSTED_ORIGINS`, Supabase admin credentials, webhook secrets, internal cron secrets or Upstash Redis are missing in production, the safest behavior is to block privileged actions and alert operators.
