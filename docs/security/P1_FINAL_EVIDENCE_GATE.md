@@ -4,12 +4,16 @@ The P1 final evidence gate validates the P1 evidence index, validates any final 
 
 On pull requests, it reports and validates structure without requiring all controls to be complete.
 
+Use the same runner locally or in CI:
+
+```bash
+node scripts/security/run-p1-final-evidence-gate.mjs
+```
+
 Manual `workflow_dispatch` runs execute strict mode:
 
 ```bash
-node scripts/security/check-p1-evidence-index.mjs --strict
-node scripts/security/check-p1-final-evidence-files.mjs --strict
-node scripts/security/report-p1-evidence-gap.mjs --strict
+node scripts/security/run-p1-final-evidence-gate.mjs --strict
 ```
 
 Strict mode should only pass when the 10 final P1 evidence files exist, pass final evidence validation, and the index marks all controls complete.
