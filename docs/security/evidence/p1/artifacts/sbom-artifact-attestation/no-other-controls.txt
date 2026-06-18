@@ -1,0 +1,7 @@
+Scope reference
+
+This branch only formalizes P1-06 SBOM + artifact attestation.
+
+It does not mark P1-01, P1-02, P1-03, P1-04, P1-05, P1-07, or P1-09 as Complete.
+
+No secrets are stored here.
