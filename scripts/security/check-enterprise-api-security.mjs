@@ -33,6 +33,7 @@ const delegatedGateScripts = [
   'scripts/security/check-ready-endpoint-security.mjs',
   'scripts/security/check-step-up-response-contract.mjs',
   'scripts/security/check-audit-chain-verify-contract.mjs',
+  'scripts/security/check-enterprise-readiness-export-contract.mjs',
 ];
 
 const publicVerifierRoutes = [
