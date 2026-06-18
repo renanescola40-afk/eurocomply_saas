@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server';
 import { getBillingPlan, getStripePriceId } from '@/lib/billing/plans';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
+import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import type { SubscriptionPlan } from '@/server/queries/subscription';
+import { noStoreJson } from '@/server/security/no-store';
+import { assertTrustedOrigin } from '@/server/security/origin-guard';
+import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,16 +31,6 @@ const BILLING_TO_ENTITLEMENT_PLAN: Record<BillingPlanAliasId, SubscriptionPlan> 
   enterprise: 'enterprise',
 };
 
-function jsonResponse(body: unknown, status = 200) {
-  return NextResponse.json(body, {
-    status,
-    headers: {
-      'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
-    },
-  });
-}
-
 async function resolvePlanId(request: Request) {
   if (request.method === 'GET') {
     const url = new URL(request.url);
@@ -54,20 +48,40 @@ async function handleCheckoutIntent(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return jsonResponse({ ok: false, error: 'authentication_required' }, 401);
+    return noStoreJson({ ok: false, error: 'authentication_required' }, { status: 401 });
   }
 
   const planId = await resolvePlanId(request);
   const plan = getBillingPlan(planId);
 
   if (!plan) {
-    return jsonResponse({ ok: false, error: 'invalid_plan' }, 400);
+    return noStoreJson({ ok: false, error: 'invalid_plan' }, { status: 400 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization?.id) {
-    return jsonResponse({ ok: false, error: 'organization_required' }, 409);
+    return noStoreJson({ ok: false, error: 'organization_required' }, { status: 409 });
+  }
+
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: 'manage_billing',
+  });
+
+  if (!permission.ok) {
+    return permissionDeniedResponse(permission);
+  }
+
+  const rateLimit = await checkDistributedRateLimit({
+    key: `billing:checkout-intent:${organization.id}:${user.id}`,
+    limit: 30,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
   }
 
   const entitlements = await getOrganizationEntitlements(organization.id);
@@ -75,7 +89,7 @@ async function handleCheckoutIntent(request: Request) {
   const priceId = getStripePriceId(plan);
   const alreadyOnPlan = entitlements.plan === targetEntitlementPlan;
 
-  return jsonResponse({
+  return noStoreJson({
     ok: true,
     checkoutIntent: {
       plan: {
@@ -106,5 +120,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const originDenied = assertTrustedOrigin(request);
+  if (originDenied) return originDenied;
+
   return handleCheckoutIntent(request);
 }
