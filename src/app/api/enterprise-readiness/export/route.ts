@@ -1,5 +1,3 @@
-import { NextResponse } from 'next/server';
-
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
@@ -9,8 +7,9 @@ import { getEnterpriseReadinessSummary } from '@/server/governance/enterprise-re
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
+import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
-import { requireStepUpForRequest } from '@/server/security/step-up';
+import { publicStepUpSummary, requireStepUpForRequest, type PublicStepUpSummary } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
@@ -32,12 +31,7 @@ type EnterpriseReadinessExportPayload = {
     };
     plan: unknown;
     readiness: ReturnType<typeof getEnterpriseReadinessSummary>;
-    stepUp: {
-      action: string;
-      verifiedAt: string | null;
-      expiresAt: string | null;
-      tokenType: 'signed_hmac';
-    };
+    stepUp: PublicStepUpSummary;
   };
   integrity: ReturnType<typeof buildEvidencePackIntegrity>;
   audit: {
@@ -47,12 +41,11 @@ type EnterpriseReadinessExportPayload = {
 };
 
 function jsonDownloadResponse(payload: EnterpriseReadinessExportPayload, filename: string) {
-  return new NextResponse(JSON.stringify(payload, null, 2), {
+  return noStoreDownload(JSON.stringify(payload, null, 2), {
     status: 200,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"`,
-      'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff',
     },
   });
@@ -142,12 +135,7 @@ export async function GET(request: Request) {
       },
       plan: planCheck.entitlements,
       readiness,
-      stepUp: {
-        action: stepUp.assessment.action,
-        verifiedAt: stepUp.assessment.verifiedAt,
-        expiresAt: stepUp.assessment.expiresAt,
-        tokenType: 'signed_hmac' as const,
-      },
+      stepUp: publicStepUpSummary(stepUp.assessment),
     };
     const integrity = buildEvidencePackIntegrity(payload);
     const exportPayload: EnterpriseReadinessExportPayload = {
@@ -201,6 +189,6 @@ export async function GET(request: Request) {
       userId: user.id,
     });
 
-    return NextResponse.json({ error: 'Unable to generate enterprise readiness export.' }, { status: 500 });
+    return noStoreJson({ error: 'enterprise_readiness_export_failed' }, { status: 500 });
   }
 }
