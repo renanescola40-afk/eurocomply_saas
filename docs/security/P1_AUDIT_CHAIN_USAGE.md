@@ -7,13 +7,13 @@ This workflow prepares validation for the P1 audit chain control.
 Use this final evidence path when production evidence is available:
 
 ```text
-docs/security/evidence/p1/audit-chain-verifiable.json
+docs/security/evidence/p1/verifiable-production-audit-chain.json
 ```
 
 The template is available at:
 
 ```text
-docs/security/evidence/p1/audit-chain-verifiable.template.json
+docs/security/evidence/p1/verifiable-production-audit-chain.template.json
 ```
 
 ## Validation
