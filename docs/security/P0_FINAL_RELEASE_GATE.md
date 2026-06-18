@@ -7,15 +7,23 @@ It validates:
 - the runtime evidence register;
 - runtime evidence file hygiene;
 - item-specific runtime evidence validators;
-- the remaining runtime evidence gap in strict mode.
+- the remaining runtime evidence gap in strict mode when runtime evidence or the runtime evidence register changes.
 
 ## Workflow
 
-`P0 Final Release Gate` runs on pull requests to `main` when runtime evidence or security validation files change. It can also be run manually with `workflow_dispatch`.
+`P0 Final Release Gate` runs on pull requests to `main` when runtime evidence, security validation files, or the workflow itself changes. It can also be run manually with `workflow_dispatch`.
+
+The strict runtime evidence gap check runs when:
+
+- the workflow is run manually; or
+- the pull request changes `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md`; or
+- the pull request changes files under `docs/security/evidence/runtime/`.
+
+For gate-only or checker-only changes, the workflow still validates register and file hygiene, but does not require the remaining runtime evidence gap to be closed before the gate itself can be merged.
 
 ## Release-ready expectation
 
-For a branch to pass this gate, the remaining runtime evidence gap must be closed:
+For a final evidence branch to pass strict mode, the remaining runtime evidence gap must be closed:
 
 - `production-secrets-provider-stores.json` exists and passes validation;
 - `supabase-live-rls-validation.json` exists and passes validation;
