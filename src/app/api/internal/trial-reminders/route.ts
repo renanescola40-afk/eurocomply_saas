@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email/client';
 import { trialUpgradeEmail } from '@/lib/email/templates';
 import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 
@@ -128,15 +128,15 @@ async function sendTrialReminders() {
 
 export async function POST(request: Request) {
   if (!isAuthorizedInternalCronRequest(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const reminders = await sendTrialReminders();
-    return NextResponse.json({ ok: true, reminders });
+    return noStoreJson({ ok: true, reminders });
   } catch (error) {
     reportError(error, { area: 'trial_reminder_job' });
-    return NextResponse.json({ error: 'Unable to send trial reminders' }, { status: 500 });
+    return noStoreJson({ error: 'Unable to send trial reminders' }, { status: 500 });
   }
 }
 
