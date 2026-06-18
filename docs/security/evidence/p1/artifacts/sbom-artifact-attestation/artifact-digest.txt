@@ -1,0 +1,9 @@
+P1-06 SBOM artifact digest reference
+
+Artifact name: p1-sbom-cyclonedx
+Artifact id: 7731847352
+Digest: sha256:23dfdfe29e24cdba79ff00f92b5fe436b2c671802ec2764ecaea7046cb1eeb3d
+Created at: 2026-06-18T18:08:26Z
+Expired: false
+
+This file preserves the reviewed artifact digest metadata for the P1-06 final evidence record. It does not contain secrets.

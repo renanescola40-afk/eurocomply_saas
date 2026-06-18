@@ -1,0 +1,7 @@
+Merge impact reference
+
+This branch formalizes P1-06 final evidence and updates the P1 progress dashboard from 2/10 to 3/10.
+
+No other controls are changed to Complete by this branch.
+
+No secrets are stored here.

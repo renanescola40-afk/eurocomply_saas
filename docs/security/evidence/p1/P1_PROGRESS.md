@@ -2,8 +2,8 @@
 
 This dashboard is generated from `docs/security/evidence/p1/P1_EVIDENCE_INDEX.json`.
 
-- Complete: 2/10 = 20%
-- Open: 8/10
+- Complete: 3/10 = 30%
+- Open: 7/10
 - Exceptions: 0/10
 
 | Control | Status | Evidence |
@@ -13,7 +13,7 @@ This dashboard is generated from `docs/security/evidence/p1/P1_EVIDENCE_INDEX.js
 | P1-03 step-up-sensitive-actions | ❌ Open | `docs/security/evidence/p1/step-up-sensitive-actions.json` |
 | P1-04 distributed-rate-limit-sensitive-endpoints | ❌ Open | `docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json` |
 | P1-05 dast-automated | ❌ Open | `docs/security/evidence/p1/dast-automated.json` |
-| P1-06 sbom-artifact-attestation | ❌ Open | `docs/security/evidence/p1/sbom-artifact-attestation.json` |
+| P1-06 sbom-artifact-attestation | ✅ Complete | `docs/security/evidence/p1/sbom-artifact-attestation.json` |
 | P1-07 backup-restore-tested | ❌ Open | `docs/security/evidence/p1/backup-restore-tested.json` |
 | P1-08 centralized-logging-alerts | ✅ Complete | `docs/security/evidence/p1/centralized-logging-alerts.json` |
 | P1-09 verifiable-production-audit-chain | ❌ Open | `docs/security/evidence/p1/verifiable-production-audit-chain.json` |

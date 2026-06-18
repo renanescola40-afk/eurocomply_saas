@@ -1,0 +1,16 @@
+P1-06 GitHub Actions job steps reference
+
+Workflow run id: 27779627063
+Job: Generate SBOM and attest provenance
+Observed successful steps:
+- Checkout repository
+- Set up Node.js
+- Install dependencies
+- Generate SBOM
+- Validate SBOM
+- Generate SBOM digest
+- Upload SBOM artifact
+- Attest SBOM provenance
+- Write evidence summary
+
+This file stores reviewed job-step metadata only. It does not contain secrets.
