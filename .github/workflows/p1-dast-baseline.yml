@@ -9,6 +9,12 @@ on:
         default: "https://eurocomply-saas.vercel.app"
   schedule:
     - cron: "17 3 * * 1"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/p1-dast-baseline.yml"
+      - "docs/security/P1_DAST_AUTOMATION.md"
   pull_request:
     paths:
       - ".github/workflows/p1-dast-baseline.yml"
