@@ -1,4 +1,4 @@
-name: P1 SBOM Attestation Evidence
+name: P1 SBOM and Artifact Attestation
 
 on:
   workflow_dispatch:
@@ -6,30 +6,92 @@ on:
     branches:
       - main
     paths:
+      - '.github/workflows/p1-sbom-attestation.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/security/check-p1-sbom-attestation-workflow.mjs'
+      - 'docs/security/P1_SBOM_ATTESTATION_CI.md'
       - 'docs/security/evidence/p1/sbom-artifact-attestation.json'
       - 'docs/security/evidence/p1/sbom-artifact-attestation.template.json'
       - 'docs/security/P1_SBOM_ATTESTATION_USAGE.md'
       - 'scripts/security/check-p1-sbom-attestation-evidence.mjs'
-      - '.github/workflows/p1-sbom-attestation.yml'
 
-permissions:
-  contents: read
+permissions: write-all
+
+concurrency:
+  group: p1-sbom-attestation-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  p1-sbom-attestation:
-    name: Validate P1 SBOM attestation evidence
+  sbom-attestation:
+    name: Generate SBOM and attest provenance
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           persist-credentials: false
 
-      - name: Show runner Node.js and npm versions
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Validate workflow contract
+        run: node scripts/security/check-p1-sbom-attestation-workflow.mjs
+
+      - name: Generate CycloneDX SBOM
+        run: >-
+          npm exec --yes --package @cyclonedx/cyclonedx-npm@1.19.3 --
+          cyclonedx-npm --output-file sbom.cdx.json --output-format JSON
+
+      - name: Validate SBOM artifact
         run: |
-          node --version
-          npm --version
+          test -s sbom.cdx.json
+          node - <<'NODE'
+          const fs = require('fs');
+          const sbom = JSON.parse(fs.readFileSync('sbom.cdx.json', 'utf8'));
+          if (sbom.bomFormat !== 'CycloneDX') {
+            throw new Error('Expected CycloneDX SBOM');
+          }
+          if (!Array.isArray(sbom.components) || sbom.components.length === 0) {
+            throw new Error('SBOM has no components');
+          }
+          console.log(`CycloneDX SBOM components: ${sbom.components.length}`);
+          NODE
+          sha256sum sbom.cdx.json | tee sbom.cdx.sha256
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: p1-sbom-cyclonedx
+          path: |
+            sbom.cdx.json
+            sbom.cdx.sha256
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Attest SBOM artifact provenance
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: sbom.cdx.json
 
       - name: Validate P1 SBOM attestation evidence if present
         run: node scripts/security/check-p1-sbom-attestation-evidence.mjs
+
+      - name: Write evidence summary
+        run: |
+          digest="$(cut -d ' ' -f1 sbom.cdx.sha256)"
+          {
+            echo "## P1-06 SBOM + artifact attestation"
+            echo ""
+            echo "- Generated artifact: sbom.cdx.json"
+            echo "- Uploaded artifact: p1-sbom-cyclonedx"
+            echo "- Generated SHA-256: ${digest}"
+            echo "- Attestation: actions/attest-build-provenance@v3 subject-path sbom.cdx.json"
+          } >> "$GITHUB_STEP_SUMMARY"
