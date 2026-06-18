@@ -5,30 +5,39 @@ import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { requireCurrentUser } from '@/server/queries/auth';
+import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
 
 const SIGNED_URL_EXPIRES_IN_SECONDS = 60 * 5;
 
-export async function createDocumentSignedDownloadUrl(documentId: string, organizationId: string, userId: string) {
-  const context = { area: 'document_signed_download_url', organizationId, documentId, userId };
+export async function createDocumentSignedDownloadUrl(documentId: string) {
+  const user = await requireCurrentUser();
+  const memberships = await getUserOrganizationMemberships(user.id);
+  const organizationIds = memberships.map((membership) => membership.organization_id);
+  const context = { area: 'document_signed_download_url', documentId, userId: user.id };
 
-  await assertCurrentUserCan(organizationId, userId, 'documents:read');
+  if (organizationIds.length === 0) {
+    throw new Error('Organization access required');
+  }
 
   const supabase = createAdminClient();
   const { data: document, error: documentError } = await supabase
     .from('documents')
     .select('id,name,storage_path,organization_id')
     .eq('id', documentId)
-    .eq('organization_id', organizationId)
-    .single();
+    .in('organization_id', organizationIds)
+    .maybeSingle();
 
   if (documentError || !document?.storage_path) {
     reportError(documentError ?? new Error('Document not found'), context);
     throw new Error('Document not found');
   }
 
-  if (!document.storage_path.startsWith(`${organizationId}/`)) {
+  await assertCurrentUserCan(document.organization_id, user.id, 'documents:read');
+
+  if (!document.storage_path.startsWith(`${document.organization_id}/`)) {
     const error = new Error('Document storage path does not match organization scope');
-    reportError(error, { ...context, storagePath: document.storage_path });
+    reportError(error, { ...context, organizationId: document.organization_id });
     throw error;
   }
 
@@ -39,13 +48,16 @@ export async function createDocumentSignedDownloadUrl(documentId: string, organi
     });
 
   if (error || !data?.signedUrl) {
-    reportError(error ?? new Error('Unable to create signed download URL'), context);
-    throw new Error(error?.message ?? 'Unable to create signed download URL');
+    reportError(error ?? new Error('Unable to create signed download URL'), {
+      ...context,
+      organizationId: document.organization_id,
+    });
+    throw new Error('Unable to create signed download URL');
   }
 
   await logAuditEvent({
-    organizationId,
-    actorUserId: userId,
+    organizationId: document.organization_id,
+    actorUserId: user.id,
     action: 'document.download_url_created',
     entityType: 'document',
     entityId: documentId,
