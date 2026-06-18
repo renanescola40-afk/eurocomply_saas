@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-
+import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
@@ -9,28 +8,21 @@ import { getSecurityQuestionnaireSummary, SECURITY_QUESTIONNAIRE_ITEMS } from '@
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
+import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
-import { requireStepUpForRequest } from '@/server/security/step-up';
+import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
 function jsonDownloadResponse(payload: unknown, filename: string) {
-  return new NextResponse(JSON.stringify(payload, null, 2), {
+  return noStoreDownload(JSON.stringify(payload, null, 2), {
     status: 200,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"`,
-      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
     },
   });
-}
-
-function safeFilenamePart(value: string | null | undefined) {
-  return String(value ?? 'organization')
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || 'organization';
 }
 
 export async function GET(request: Request) {
@@ -109,12 +101,7 @@ export async function GET(request: Request) {
       plan: planCheck.entitlements,
       summary: getSecurityQuestionnaireSummary(),
       items: SECURITY_QUESTIONNAIRE_ITEMS,
-      stepUp: {
-        action: stepUp.assessment.action,
-        verifiedAt: stepUp.assessment.verifiedAt,
-        expiresAt: stepUp.assessment.expiresAt,
-        tokenType: 'signed_hmac',
-      },
+      stepUp: publicStepUpSummary(stepUp.assessment),
     };
     const integrity = buildEvidencePackIntegrity(payload);
     const exportPayload = {
@@ -144,7 +131,9 @@ export async function GET(request: Request) {
     });
 
     const date = new Date().toISOString().slice(0, 10);
-    const filename = `eurocomply-security-questionnaire-${safeFilenamePart(organization.slug ?? organization.name)}-${date}.json`;
+    const filename = sanitizeDocumentDownloadFileName(
+      `eurocomply-security-questionnaire-${organization.slug ?? organization.name ?? organization.id}-${date}.json`,
+    );
 
     return jsonDownloadResponse(exportPayload, filename);
   } catch (error) {
@@ -154,6 +143,6 @@ export async function GET(request: Request) {
       userId: user.id,
     });
 
-    return NextResponse.json({ error: 'Unable to generate security questionnaire export.' }, { status: 500 });
+    return noStoreJson({ error: 'security_questionnaire_export_failed' }, { status: 500 });
   }
 }
