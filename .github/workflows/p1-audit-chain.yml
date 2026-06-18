@@ -1,0 +1,24 @@
+name: P1 Audit Chain Evidence
+
+on:
+  pull_request:
+    paths:
+      - 'docs/security/evidence/p1/audit-chain-verifiable.json'
+      - 'docs/security/evidence/p1/audit-chain-verifiable.template.json'
+      - 'scripts/security/check-p1-audit-chain-evidence.mjs'
+      - '.github/workflows/p1-audit-chain.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-p1-audit-chain-evidence:
+    name: Validate P1 audit chain evidence
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate P1 audit chain evidence
+        run: node scripts/security/check-p1-audit-chain-evidence.mjs
