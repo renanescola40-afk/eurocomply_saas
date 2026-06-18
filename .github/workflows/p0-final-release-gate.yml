@@ -34,7 +34,7 @@ jobs:
         run: node scripts/security/check-p0-runtime-evidence-register.mjs
 
       - name: Validate runtime evidence file hygiene
-        run: node scripts/security/check-p0-evidence-files.mjs
+        run: node scripts/security/check-p0-runtime-evidence-files.mjs
 
       - name: Validate optional runtime evidence files
         run: node scripts/security/check-p0-runtime-evidence-optionals.mjs
