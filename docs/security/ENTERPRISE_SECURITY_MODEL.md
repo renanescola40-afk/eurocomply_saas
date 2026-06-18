@@ -140,6 +140,15 @@ npm run security:responses
 
 A PR must fail if a sensitive mutable route lacks authentication, organization context, RBAC, trusted-origin validation, tenant/resource checks, no-store responses or required rate limiting.
 
+### Preflight profiles
+
+There are two separate preflight profiles:
+
+- **Production/deployment**: `npm run preflight` must run with real production secrets and variables. Missing Supabase, Stripe, internal signing or Upstash configuration must block deployment until operators fix the environment.
+- **Security CI**: `.github/workflows/security-ci.yml` runs `node scripts/preflight-ci.mjs`, which injects non-secret placeholder values before delegating to `scripts/preflight.mjs`. This keeps repository/file/format checks active in pull requests without requiring production secrets to be exposed to PR jobs.
+
+The CI placeholder profile must never be used by production deployment workflows. The production workflow remains required to call `npm run preflight` directly.
+
 ## Implementation checklist for new APIs
 
 Before adding a new API route, verify:

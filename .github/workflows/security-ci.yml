@@ -54,8 +54,11 @@ jobs:
       - name: Install dependencies without lifecycle scripts
         run: npm install --ignore-scripts
 
-      - name: Run production preflight
-        run: npm run preflight
+      - name: Run CI preflight with placeholders
+        run: node scripts/preflight-ci.mjs
+
+      - name: Run GitHub workflow governance gate
+        run: npm run security:github-workflows
 
       - name: Print npm audit triage summary
         run: |
