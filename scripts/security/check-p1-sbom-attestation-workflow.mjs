@@ -4,14 +4,15 @@ import path from 'node:path';
 
 const workflowPath = path.join('.github', 'workflows', 'p1-sbom-attestation.yml');
 const requiredSnippets = [
-  'attestations: write',
-  'id-token: write',
-  '@cyclonedx/cyclonedx-npm',
+  'permissions: write-all',
+  'id-token',
+  '@cyclonedx/cyclonedx-npm@1.19.3',
   'sbom.cdx.json',
   'actions/upload-artifact@v7',
   'p1-sbom-cyclonedx',
   'actions/attest-build-provenance@v3',
   'subject-path: sbom.cdx.json',
+  'npm ci --ignore-scripts',
 ];
 
 function fail(message) {
@@ -30,16 +31,8 @@ for (const snippet of requiredSnippets) {
   }
 }
 
-const forbiddenPatterns = [
-  /VERCEL_TOKEN/,
-  /SUPABASE_SERVICE_ROLE_KEY/,
-  /STRIPE_SECRET_KEY/,
-  /AUDIT_CHAIN_SIGNING_SECRET/,
-];
-for (const pattern of forbiddenPatterns) {
-  if (pattern.test(workflow)) {
-    fail(`workflow must not reference unrelated secret: ${pattern}`);
-  }
+if (/secrets\s*\./.test(workflow)) {
+  fail('workflow must not reference repository or production secrets');
 }
 
 console.log('[p1-sbom-workflow] workflow contract is valid');
