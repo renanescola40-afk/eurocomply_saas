@@ -1,105 +1,15 @@
 name: Senior Agent CI Rescue
 
 on:
-  workflow_run:
-    workflows:
-      - CI
-      - EuroComply Security CI
-      - Full Security Suite
-      - Semgrep
-      - Gitleaks
-      - Dependency Review
-    types: [completed]
+  workflow_dispatch:
 
 permissions:
   contents: read
-  issues: write
-\ nconcurrency:
-  group: senior-agent-ci-rescue-${{ github.event.workflow_run.id }}
-  cancel-in-progress: false
 
 jobs:
-  rescue:
-    name: Create CI rescue task
+  disabled:
+    name: Disabled placeholder
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'failure'
     steps:
-      - name: Create or update CI rescue issue
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const run = context.payload.workflow_run;
-            const title = `[CI Rescue] ${run.name} failed on ${run.head_branch}`;
-
-            const requiredLabels = [
-              { name: 'senior-agent', color: '5319e7', description: 'Senior agent queue.' },
-              { name: 'agent:ready', color: '0e8a16', description: 'Ready for senior agent implementation.' },
-              { name: 'type:ci', color: '1d76db', description: 'CI, checks, workflow, or build problem.' },
-              { name: 'priority:p1', color: 'd93f0b', description: 'Important reliability, correctness, or launch-readiness issue.' },
-            ];
-
-            for (const label of requiredLabels) {
-              try {
-                await github.rest.issues.getLabel({ owner, repo, name: label.name });
-              } catch (error) {
-                if (error.status !== 404) throw error;
-                await github.rest.issues.createLabel({ owner, repo, ...label });
-              }
-            }
-
-            const body = [
-              '<!-- senior-agent-ci-rescue -->',
-              '## CI Rescue Task',
-              '',
-              `Workflow: ${run.name}`,
-              `Branch: ${run.head_branch}`,
-              `Commit: ${run.head_sha}`,
-              `Run URL: ${run.html_url}`,
-              '',
-              '## Goal',
-              'Analyze the failing workflow, apply safe automated fixes if possible, and open a PR with evidence.',
-              '',
-              '## Acceptance criteria',
-              '- Failing check is explained.',
-              '- Safe mechanical fixes are applied when possible.',
-              '- PR is opened for owner review if files change.',
-              '- No security or compliance guardrail is weakened.',
-              '',
-              '## Agent instruction',
-              '/agent autofix',
-            ].join('\n');
-
-            const q = `repo:${owner}/${repo} is:issue is:open in:title "${title}"`;
-            const { data } = await github.rest.search.issuesAndPullRequests({ q, per_page: 5 });
-            const existing = data.items.find((item) => item.title === title);
-
-            let issueNumber;
-            if (existing) {
-              issueNumber = existing.number;
-              await github.rest.issues.update({ owner, repo, issue_number: issueNumber, body });
-            } else {
-              const created = await github.rest.issues.create({
-                owner,
-                repo,
-                title,
-                body,
-                labels: ['senior-agent', 'type:ci', 'priority:p1'],
-              });
-              issueNumber = created.data.number;
-            }
-
-            await github.rest.issues.addLabels({
-              owner,
-              repo,
-              issue_number: issueNumber,
-              labels: ['agent:ready'],
-            });
-
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: issueNumber,
-              body: 'Senior Agent CI Rescue marked this issue `agent:ready`. The autofix workflow may now attempt safe mechanical fixes.',
-            });
+      - name: Explain disabled workflow
+        run: echo "Senior Agent CI Rescue draft disabled until reviewed."
