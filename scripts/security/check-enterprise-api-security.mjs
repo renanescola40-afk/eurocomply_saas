@@ -36,6 +36,7 @@ const delegatedGateScripts = [
   'scripts/security/check-enterprise-readiness-export-contract.mjs',
   'scripts/security/check-continuity-export-contract.mjs',
   'scripts/security/check-governance-export-contracts.mjs',
+  'scripts/security/check-stripe-webhook-contract.mjs',
 ];
 
 const publicVerifierRoutes = [
