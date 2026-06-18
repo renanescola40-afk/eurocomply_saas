@@ -3,6 +3,7 @@ import { normalizePublicAuthErrorCode } from '@/lib/auth/public-errors';
 import {
   getAuthCallbackLoginUrl,
   getSafeAuthCallbackNextPath,
+  getSafeAuthCallbackNextPathForLocale,
 } from './auth-callback';
 
 describe('auth callback redirect hardening', () => {
@@ -16,6 +17,13 @@ describe('auth callback redirect hardening', () => {
     expect(getSafeAuthCallbackNextPath('/en/dashboard/organizations')).toBe('/en/dashboard/organizations');
     expect(getSafeAuthCallbackNextPath('/pt/dashboard/evidence?id=123')).toBe('/pt/dashboard/evidence?id=123');
     expect(getSafeAuthCallbackNextPath('/en/settings')).toBe('/en/dashboard/organizations');
+  });
+
+  it('uses the caller locale when starting OAuth without a safe next path', () => {
+    expect(getSafeAuthCallbackNextPathForLocale(null, 'fr')).toBe('/fr/dashboard/organizations');
+    expect(getSafeAuthCallbackNextPathForLocale('/fr/dashboard/evidence', 'fr')).toBe('/fr/dashboard/evidence');
+    expect(getSafeAuthCallbackNextPathForLocale('/en/dashboard/evidence', 'fr')).toBe('/fr/dashboard/organizations');
+    expect(getSafeAuthCallbackNextPathForLocale('https://evil.example/fr/dashboard', 'fr')).toBe('/fr/dashboard/organizations');
   });
 
   it('only emits allowlisted public auth error codes', () => {
