@@ -1,0 +1,44 @@
+name: Senior Agent Functionality Guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  functionality-guard:
+    name: Verify agent PR functionality
+    runs-on: ubuntu-latest
+    if: startsWith(github.head_ref, 'agent/')
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify routes
+        run: npm run quality:routes
+
+      - name: Verify protected routes
+        run: npm run security:protected-routes
+
+      - name: Verify API guards
+        run: npm run security:api-guards
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
