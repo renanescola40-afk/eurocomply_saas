@@ -56,6 +56,24 @@ verification:
     - npm run security:public-secrets
     - npm run security:supply-chain
 
+runtime_guard:
+  enabled_when_configured: true
+  target_url_variable_priority:
+    - PRODUCTION_URL
+    - NEXT_PUBLIC_APP_URL
+  cadence_minutes: 30
+  failure_policy:
+    label_priority: priority:p0
+    mark_blocked: true
+    require_owner_review: true
+    do_not_auto_merge: true
+  recommended_checks:
+    - deployment provider status
+    - application availability
+    - recent deploys
+    - environment configuration
+    - database provider health
+
 safe_autonomy:
   allowed:
     - Documentation and runbook updates.
