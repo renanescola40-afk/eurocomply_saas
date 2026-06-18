@@ -1,0 +1,10 @@
+P1-06 SBOM + artifact attestation evidence summary
+
+The reviewed evidence for this control is a successful GitHub Actions run that generated a CycloneDX SBOM, uploaded the SBOM artifact, generated an artifact digest, and completed the SBOM provenance attestation step.
+
+Run id: 27779627063
+Artifact: p1-sbom-cyclonedx
+Artifact id: 7731847352
+Digest: sha256:23dfdfe29e24cdba79ff00f92b5fe436b2c671802ec2764ecaea7046cb1eeb3d
+
+No secrets are stored in this file.
