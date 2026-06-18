@@ -1,5 +1,4 @@
 import { headers } from 'next/headers';
-import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -7,6 +6,7 @@ import { getStripeClient } from '@/server/billing/stripe';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
 import { normalizePlan } from '@/server/queries/subscription';
+import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 
@@ -100,13 +100,13 @@ export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
-    return NextResponse.json({ error: 'webhook_not_configured' }, { status: 500 });
+    return noStoreJson({ error: 'webhook_not_configured' }, { status: 500 });
   }
 
   const signature = (await headers()).get('stripe-signature');
 
   if (!signature) {
-    return NextResponse.json({ error: 'missing_signature' }, { status: 400 });
+    return noStoreJson({ error: 'missing_signature' }, { status: 400 });
   }
 
   const payload = await request.text();
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
   try {
     event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
   } catch {
-    return NextResponse.json({ error: 'invalid_signature' }, { status: 400 });
+    return noStoreJson({ error: 'invalid_signature' }, { status: 400 });
   }
 
   try {
@@ -127,10 +127,10 @@ export async function POST(request: Request) {
     ) {
       await syncSubscription(event.data.object as Stripe.Subscription);
     }
-  } catch (error) {
-    console.error('[billing:webhook] sync failed', error);
-    return NextResponse.json({ error: 'sync_failed' }, { status: 500 });
+  } catch {
+    console.error('[billing:webhook] sync failed');
+    return noStoreJson({ error: 'sync_failed' }, { status: 500 });
   }
 
-  return NextResponse.json({ received: true });
+  return noStoreJson({ received: true });
 }
