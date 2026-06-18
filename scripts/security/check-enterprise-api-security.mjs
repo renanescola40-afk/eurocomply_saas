@@ -23,6 +23,7 @@ const guardGroups = {
 };
 
 const delegatedGateScripts = [
+  'scripts/security/check-route-entrypoints.mjs',
   'scripts/security/check-upload-security.mjs',
   'scripts/security/check-upload-content-scan.mjs',
   'scripts/security/check-json-body-limits.mjs',
