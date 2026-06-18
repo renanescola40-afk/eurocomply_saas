@@ -10,7 +10,7 @@ import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
-import { requireStepUpForRequest } from '@/server/security/step-up';
+import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
@@ -96,11 +96,6 @@ export async function POST(request: NextRequest) {
   return noStoreJson({
     status: 'pending_review',
     message: 'Deletion request received. A compliance administrator must review retention, legal hold, billing and audit requirements before deletion.',
-    stepUp: {
-      action: stepUp.assessment.action,
-      verifiedAt: stepUp.assessment.verifiedAt,
-      expiresAt: stepUp.assessment.expiresAt,
-      tokenType: 'signed_hmac',
-    },
+    stepUp: publicStepUpSummary(stepUp.assessment),
   });
 }

@@ -9,7 +9,7 @@ import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
-import { requireStepUpForRequest } from '@/server/security/step-up';
+import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 const CHECKOUT_JSON_MAX_BYTES = 2 * 1024;
 
@@ -110,11 +110,6 @@ export async function POST(request: Request) {
 
   return noStoreJson({
     url: session.url,
-    stepUp: {
-      action: stepUp.assessment.action,
-      verifiedAt: stepUp.assessment.verifiedAt,
-      expiresAt: stepUp.assessment.expiresAt,
-      tokenType: 'signed_hmac',
-    },
+    stepUp: publicStepUpSummary(stepUp.assessment),
   });
 }

@@ -66,6 +66,10 @@ export type StepUpAssessment = {
   maxAgeMs: number;
 };
 
+export type PublicStepUpSummary = {
+  verified: true;
+};
+
 export type StepUpRequestResult =
   | { ok: true; assessment: StepUpAssessment }
   | { ok: false; assessment: StepUpAssessment; response: Response };
@@ -106,6 +110,11 @@ function safeEqual(left: string, right: string) {
 
 function getStepUpSecret(explicitSecret?: string) {
   return explicitSecret ?? process.env.STEP_UP_SIGNING_SECRET ?? process.env.AUDIT_CHAIN_SIGNING_SECRET ?? null;
+}
+
+export function publicStepUpSummary(assessment: StepUpAssessment): PublicStepUpSummary {
+  void assessment;
+  return { verified: true };
 }
 
 export function assessStepUp(input: StepUpAssessmentInput): StepUpAssessment {
