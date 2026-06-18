@@ -43,7 +43,10 @@ if (helper) {
     'unavailable',
   ]);
 
-  if (!helper.includes('process.env.REQUIRE_MALWARE_SCAN_FOR_UPLOADS')) {
+  if (
+    !helper.includes('process.env[REQUIRE_MALWARE_SCAN_ENV]') &&
+    !helper.includes('process.env.REQUIRE_MALWARE_SCAN_FOR_UPLOADS')
+  ) {
     failures.push(`${helperPath} must read REQUIRE_MALWARE_SCAN_FOR_UPLOADS from environment`);
   }
 
