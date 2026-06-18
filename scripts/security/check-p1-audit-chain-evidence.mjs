@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const evidencePath = process.argv[2] || path.join('docs', 'security', 'evidence', 'p1', 'audit-chain-verifiable.json');
+const evidencePath = process.argv[2] || path.join('docs', 'security', 'evidence', 'p1', 'verifiable-production-audit-chain.json');
 
 const requiredControls = [
   'Audit events include stable event identifiers',
@@ -46,8 +46,8 @@ if (!fs.existsSync(evidencePath)) {
 const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
 assertNoPlaceholders(evidence);
 
-if (evidence.control !== 'audit-chain-verifiable') {
-  fail('control must be audit-chain-verifiable');
+if (evidence.control !== 'verifiable-production-audit-chain') {
+  fail('control must be verifiable-production-audit-chain');
 }
 
 if (!['Complete', 'Exception'].includes(evidence.status)) {
