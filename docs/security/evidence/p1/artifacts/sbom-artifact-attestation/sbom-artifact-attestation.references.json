@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "controlId": "P1-06",
+  "control": "sbom-artifact-attestation",
+  "workflowRunId": 27779627063,
+  "workflowRunUrl": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/27779627063",
+  "jobId": 82200790960,
+  "artifact": {
+    "id": 7731847352,
+    "name": "p1-sbom-cyclonedx",
+    "digest": "sha256:23dfdfe29e24cdba79ff00f92b5fe436b2c671802ec2764ecaea7046cb1eeb3d",
+    "createdAt": "2026-06-18T18:08:26Z",
+    "expiresAt": "2026-07-18T18:08:25Z"
+  },
+  "commit": {
+    "headSha": "181456bfebeb12a0674791a08307b4c69dc46604",
+    "mergeCommitSha": "86866dd179a71fb59e810a157fab7b3b620f8b6a"
+  },
+  "attestation": {
+    "action": "actions/attest-build-provenance@v3",
+    "subjectPath": "sbom.cdx.json",
+    "stepName": "Attest SBOM artifact provenance",
+    "jobConclusion": "success"
+  }
+}
