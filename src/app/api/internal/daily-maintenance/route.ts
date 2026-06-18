@@ -13,8 +13,37 @@ const MAINTENANCE_JOBS = [
 
 const DEFAULT_JOB_TIMEOUT_MS = 25_000;
 
-function getBaseUrl(request: Request) {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin).replace(/\/$/, '');
+export function getConfiguredMaintenanceBaseUrl() {
+  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+
+  if (!configuredAppUrl) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(configuredAppUrl);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return null;
+    }
+
+    return parsed.origin.replace(/\/$/, '');
+  } catch {
+    return null;
+  }
+}
+
+export function resolveMaintenanceBaseUrl(request: Request) {
+  const configuredBaseUrl = getConfiguredMaintenanceBaseUrl();
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
+
+  return new URL(request.url).origin.replace(/\/$/, '');
 }
 
 function getInternalCronCredential() {
@@ -76,7 +105,11 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'Internal cron credential is not configured.' }, { status: 500 });
   }
 
-  const baseUrl = getBaseUrl(request);
+  const baseUrl = resolveMaintenanceBaseUrl(request);
+  if (!baseUrl) {
+    return noStoreJson({ error: 'internal_maintenance_base_url_unavailable' }, { status: 503 });
+  }
+
   const results = [];
 
   for (const path of MAINTENANCE_JOBS) {
