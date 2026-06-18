@@ -1,0 +1,272 @@
+name: Senior Agent Autofix
+
+on:
+  issues:
+    types: [labeled, reopened]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to autofix
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: senior-agent-autofix-${{ github.event.issue.number || inputs.issue_number }}
+  cancel-in-progress: false
+
+jobs:
+  autofix:
+    name: Analyze and implement safe autofix
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' && github.event.label.name == 'agent:ready') ||
+      (github.event_name == 'issue_comment' && (contains(github.event.comment.body, '/agent run') || contains(github.event.comment.body, '/agent autofix')))
+    steps:
+      - name: Resolve issue and safety state
+        id: issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = context.eventName === 'workflow_dispatch'
+              ? Number(core.getInput('issue_number'))
+              : context.payload.issue.number;
+
+            const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number: issueNumber });
+            if (issue.pull_request) {
+              core.setFailed('Autofix only works on issues, not pull requests.');
+              return;
+            }
+
+            const labels = issue.labels.map((label) => label.name);
+            const ready = labels.includes('agent:ready') || context.eventName === 'workflow_dispatch';
+            const blocked = labels.includes('agent:blocked') || labels.includes('needs-owner') || labels.includes('risk:high');
+
+            core.setOutput('issue_number', String(issueNumber));
+            core.setOutput('issue_title', issue.title);
+            core.setOutput('issue_url', issue.html_url);
+            core.setOutput('labels', labels.join(','));
+
+            if (!ready) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: 'Senior Agent Autofix skipped: issue is not labeled `agent:ready`. Comment `/agent run` when it is ready.',
+              });
+              core.setFailed('Issue is not ready.');
+              return;
+            }
+
+            if (blocked) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: 'Senior Agent Autofix skipped: issue has `agent:blocked`, `needs-owner`, or `risk:high`. Owner review is required before automated implementation.',
+              });
+              core.setFailed('Issue is blocked or high risk.');
+              return;
+            }
+
+            const slug = issue.title
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-+|-+$/g, '')
+              .slice(0, 48) || 'autofix';
+            core.setOutput('branch', `agent/${issueNumber}-${slug}`);
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create analysis directory
+        run: mkdir -p .agent-report
+
+      - name: Analyze current health
+        shell: bash
+        run: |
+          set +e
+          {
+            echo "# Senior Agent Autofix Report"
+            echo
+            echo "Issue: #${{ steps.issue.outputs.issue_number }}"
+            echo "Title: ${{ steps.issue.outputs.issue_title }}"
+            echo "Labels: ${{ steps.issue.outputs.labels }}"
+            echo
+            echo "## Initial checks"
+          } > .agent-report/report.md
+
+          echo '```txt' >> .agent-report/report.md
+          npm run lint >> .agent-report/report.md 2>&1
+          echo '```' >> .agent-report/report.md
+
+          echo >> .agent-report/report.md
+          echo '```txt' >> .agent-report/report.md
+          npm run typecheck >> .agent-report/report.md 2>&1
+          echo '```' >> .agent-report/report.md
+
+          echo >> .agent-report/report.md
+          echo '```txt' >> .agent-report/report.md
+          npm run test >> .agent-report/report.md 2>&1
+          echo '```' >> .agent-report/report.md
+          exit 0
+
+      - name: Apply safe automated fixes
+        shell: bash
+        run: |
+          set +e
+          npm run lint -- --fix
+          npm run security:zod-compat
+          npm run quality:routes
+          exit 0
+
+      - name: Verify after autofix
+        id: verify
+        shell: bash
+        run: |
+          set +e
+          echo >> .agent-report/report.md
+          echo "## Verification after autofix" >> .agent-report/report.md
+
+          echo '```txt' >> .agent-report/report.md
+          npm run lint >> .agent-report/report.md 2>&1
+          LINT_STATUS=$?
+          echo '```' >> .agent-report/report.md
+
+          echo >> .agent-report/report.md
+          echo '```txt' >> .agent-report/report.md
+          npm run typecheck >> .agent-report/report.md 2>&1
+          TYPE_STATUS=$?
+          echo '```' >> .agent-report/report.md
+
+          echo >> .agent-report/report.md
+          echo '```txt' >> .agent-report/report.md
+          npm run test >> .agent-report/report.md 2>&1
+          TEST_STATUS=$?
+          echo '```' >> .agent-report/report.md
+
+          echo "lint_status=$LINT_STATUS" >> "$GITHUB_OUTPUT"
+          echo "type_status=$TYPE_STATUS" >> "$GITHUB_OUTPUT"
+          echo "test_status=$TEST_STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Check for changes
+        id: changes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push autofix branch
+        if: steps.changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ steps.issue.outputs.branch }}
+        shell: bash
+        run: |
+          git config user.name "eurocomply-senior-agent"
+          git config user.email "actions@github.com"
+          git checkout -B "$BRANCH_NAME"
+          git add -A
+          git commit -m "fix: apply senior agent autofix for issue #${{ steps.issue.outputs.issue_number }}"
+          git push --force-with-lease "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "$BRANCH_NAME"
+
+      - name: Open pull request
+        if: steps.changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ steps.issue.outputs.branch }}
+        shell: bash
+        run: |
+          PR_BODY=$(cat <<'BODY'
+          ## Summary
+          - Applies safe automated fixes from the Senior Agent Autofix workflow.
+          - Linked issue: #${{ steps.issue.outputs.issue_number }}
+
+          ## Root cause / product reason
+          - The issue was marked `agent:ready`, so the autofix engine analyzed lint/typecheck/test health and applied safe local fixes only.
+
+          ## Why this change is safe
+          - No production secrets are used.
+          - No direct push to `main` is performed.
+          - The workflow only opens a PR for owner review.
+          - High-risk issues labeled `risk:high`, `needs-owner`, or `agent:blocked` are skipped.
+
+          ## Verification
+          - `npm run lint`: see workflow output
+          - `npm run typecheck`: see workflow output
+          - `npm run test`: see workflow output
+
+          ## Risk notes
+          - This is an automated PR. Review all changed files before merge.
+          - The agent must not merge its own PR.
+
+          ## Follow-ups
+          - If checks still fail, use the logs as evidence for a deeper manual/coding-agent task.
+          BODY
+          )
+
+          gh pr create \
+            --repo "${{ github.repository }}" \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --title "fix: senior agent autofix for #${{ steps.issue.outputs.issue_number }}" \
+            --body "$PR_BODY" || true
+
+      - name: Comment result on issue
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = Number('${{ steps.issue.outputs.issue_number }}');
+            const hasChanges = '${{ steps.changes.outputs.has_changes }}' === 'true';
+            const branch = '${{ steps.issue.outputs.branch }}';
+            const lintStatus = '${{ steps.verify.outputs.lint_status }}';
+            const typeStatus = '${{ steps.verify.outputs.type_status }}';
+            const testStatus = '${{ steps.verify.outputs.test_status }}';
+
+            const body = [
+              '## Senior Agent Autofix result',
+              '',
+              hasChanges
+                ? `Created or updated branch \`${branch}\` and attempted to open a PR.`
+                : 'No safe automated file changes were produced.',
+              '',
+              '### Verification exit codes',
+              `- lint: ${lintStatus || 'not run'}`,
+              `- typecheck: ${typeStatus || 'not run'}`,
+              `- test: ${testStatus || 'not run'}`,
+              '',
+              hasChanges
+                ? 'Review the generated PR and required checks before merging.'
+                : 'If the issue still needs implementation, connect a coding-agent provider or add more specific acceptance criteria.',
+            ].join('\n');
+
+            await github.rest.issues.createComment({ owner, repo, issue_number, body });
