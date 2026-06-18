@@ -1,0 +1,73 @@
+name: Senior Agent PR Guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  guard:
+    name: Guard automated agent PRs
+    runs-on: ubuntu-latest
+    if: startsWith(github.head_ref, 'agent/')
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect protected file changes
+        id: guard
+        shell: bash
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" > /tmp/agent_changed_files.txt
+          echo "Changed files:"
+          cat /tmp/agent_changed_files.txt
+
+          BLOCKED=false
+          while IFS= read -r file; do
+            case "$file" in
+              package.json|package-lock.json|vercel.json|next.config.*|middleware.*|src/middleware.*)
+                BLOCKED=true
+                ;;
+              app/api/*|pages/api/*|supabase/*|migrations/*|database/*)
+                BLOCKED=true
+                ;;
+              .github/workflows/security-ci.yml|.github/workflows/gitleaks.yml|.github/workflows/semgrep.yml|.github/workflows/codeql.yml)
+                BLOCKED=true
+                ;;
+            esac
+          done < /tmp/agent_changed_files.txt
+
+          echo "blocked=$BLOCKED" >> "$GITHUB_OUTPUT"
+          if [ "$BLOCKED" = "true" ]; then
+            echo "Automated agent PR touched protected surfaces. Owner review required."
+            exit 1
+          fi
+
+      - name: Comment guard result
+        if: failure() && steps.guard.outputs.blocked == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.payload.pull_request.number;
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: [
+                '## Senior Agent PR Guard blocked this automated PR',
+                '',
+                'This PR was opened from an `agent/...` branch and touched protected surfaces.',
+                '',
+                'Owner review is required before this can merge. The agent must not bypass this guard.',
+              ].join('\n'),
+            });
