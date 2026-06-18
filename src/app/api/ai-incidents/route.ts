@@ -1,5 +1,6 @@
 import { buildAiIncidentTriagePlan, normalizeAiIncidentCategory, normalizeAiIncidentReportStatus, normalizeAiIncidentSeverity } from '@/lib/ai-governance/incidents';
 import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAuditEvent } from '@/server/queries/audit-events';
@@ -8,6 +9,8 @@ import { listAiSystems } from '@/server/queries/ai-systems';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
+
+const AI_INCIDENT_JSON_MAX_BYTES = 64 * 1024;
 
 function asText(value: unknown, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
@@ -113,15 +116,15 @@ export async function POST(request: Request) {
     return rateLimitDeniedResponse(rateLimit);
   }
 
-  let payload: unknown;
+  const payload = await readBoundedJsonRequest<Record<string, unknown>>(request, {
+    maxBytes: AI_INCIDENT_JSON_MAX_BYTES,
+  }).catch(() => null);
 
-  try {
-    payload = await request.json();
-  } catch {
-    return noStoreJson({ error: 'Invalid JSON body' }, { status: 400 });
+  if (!payload) {
+    return noStoreJson({ error: 'invalid_json_body' }, { status: 400 });
   }
 
-  const body = payload as Record<string, unknown>;
+  const body = payload;
   const title = asText(body.title);
   const summary = asText(body.summary);
 
