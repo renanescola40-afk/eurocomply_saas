@@ -1,5 +1,6 @@
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan } from '@/server/billing/plans';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -8,6 +9,8 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireStepUpForRequest } from '@/server/security/step-up';
+
+const CHECKOUT_JSON_MAX_BYTES = 2 * 1024;
 
 export async function POST(request: Request) {
   const originDenied = assertTrustedOrigin(request);
@@ -19,9 +22,12 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'authentication_required' }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => null) as { plan?: string; locale?: string } | null;
-  const plan = body?.plan;
-  const locale = body?.locale?.match(/^(en|pt|es|fr|it|de)$/) ? body.locale : 'en';
+  const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
+    maxBytes: CHECKOUT_JSON_MAX_BYTES,
+  }).catch(() => null);
+  const plan = typeof body?.plan === 'string' ? body.plan : undefined;
+  const localeValue = typeof body?.locale === 'string' ? body.locale : '';
+  const locale = localeValue.match(/^(en|pt|es|fr|it|de)$/) ? localeValue : 'en';
 
   if (!plan || !isSelfServePlan(plan)) {
     return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
