@@ -8,40 +8,66 @@ type DistributedRateLimitResult = {
   limit: number;
   remaining: number;
   retryAfterSeconds: number;
+  reason?: 'redis_not_configured' | 'redis_request_failed' | 'redis_unavailable';
 };
 
 const localAttempts = new Map<string, LocalRateLimitEntry>();
 
+function isProductionRuntime() {
+  return process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+}
+
+function failClosed(
+  limit: number,
+  retryAfterSeconds: number,
+  reason: NonNullable<DistributedRateLimitResult['reason']>,
+): DistributedRateLimitResult {
+  return {
+    allowed: false,
+    limit,
+    remaining: 0,
+    retryAfterSeconds: Math.max(1, retryAfterSeconds),
+    reason,
+  };
+}
+
+function normalizeRedisKey(key: string) {
+  return `eurocomply:rate-limit:${key.replace(/[^a-zA-Z0-9:_-]/g, '_')}`;
+}
+
 async function incrementUpstash(key: string, windowSeconds: number) {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const url = process.env.UPSTASH_REDIS_REST_URL?.replace(/\/$/, '');
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!url || !token) {
     return null;
   }
 
-  const redisKey = `eurocomply:rate-limit:${key}`;
+  const redisKey = normalizeRedisKey(key);
 
-  const incrementResponse = await fetch(`${url}/incr/${encodeURIComponent(redisKey)}`, {
-    headers: { Authorization: `Bearer ${token}` },
+  const response = await fetch(`${url}/pipeline`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([
+      ['INCR', redisKey],
+      ['EXPIRE', redisKey, windowSeconds, 'NX'],
+      ['TTL', redisKey],
+    ]),
     cache: 'no-store',
+    signal: AbortSignal.timeout(3000),
   });
 
-  if (!incrementResponse.ok) {
+  if (!response.ok) {
     return null;
   }
 
-  const incrementPayload = (await incrementResponse.json()) as { result?: number };
-  const count = Number(incrementPayload.result ?? 0);
+  const payload = (await response.json()) as Array<[unknown, unknown]>;
+  const count = Number(payload[0]?.[1] ?? 0);
 
-  if (count === 1) {
-    await fetch(`${url}/expire/${encodeURIComponent(redisKey)}/${windowSeconds}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store',
-    });
-  }
-
-  return count;
+  return Number.isFinite(count) ? count : null;
 }
 
 function incrementLocal(key: string, windowMs: number) {
@@ -86,6 +112,22 @@ export async function checkDistributedRateLimit({
   windowSeconds: number;
 }): Promise<DistributedRateLimitResult> {
   const safeWindowSeconds = Math.max(1, Math.ceil(windowSeconds));
+  const hasRedisConfig = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+
+  if (!hasRedisConfig) {
+    if (isProductionRuntime()) {
+      console.error('[security:rate-limit] Upstash Redis is not configured; blocking production request.');
+      return failClosed(limit, safeWindowSeconds, 'redis_not_configured');
+    }
+
+    const now = Date.now();
+    const local = incrementLocal(key, safeWindowSeconds * 1000);
+    return toRateLimitResult({
+      count: local.count,
+      limit,
+      retryAfterSeconds: Math.ceil((local.resetAt - now) / 1000),
+    });
+  }
 
   try {
     const upstashCount = await incrementUpstash(key, safeWindowSeconds);
@@ -96,10 +138,16 @@ export async function checkDistributedRateLimit({
         retryAfterSeconds: safeWindowSeconds,
       });
     }
-  } catch (error) {
-    console.warn('Upstash rate limit failed, using local fallback', {
-      message: error instanceof Error ? error.message : 'unknown_error',
-    });
+
+    console.error('[security:rate-limit] Upstash Redis request failed.');
+    if (isProductionRuntime()) {
+      return failClosed(limit, safeWindowSeconds, 'redis_request_failed');
+    }
+  } catch {
+    console.error('[security:rate-limit] Upstash Redis unavailable.');
+    if (isProductionRuntime()) {
+      return failClosed(limit, safeWindowSeconds, 'redis_unavailable');
+    }
   }
 
   const now = Date.now();
