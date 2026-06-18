@@ -58,6 +58,20 @@ Tenant isolation is mandatory at every layer:
 - server actions must use the same membership and permission checks as API routes;
 - Supabase RLS remains required, but application-level tenant checks are still mandatory for admin/service-role code.
 
+## Server action identity policy
+
+Top-level files with `'use server'` export callable server actions. Those exported actions must never accept caller-supplied identity or tenant arguments such as `userId` or `organizationId`. A client can control server-action arguments, so identity must be derived inside the action from the authenticated Supabase session.
+
+Privileged server actions must:
+
+- call `requireCurrentUser` or `getCurrentUser` inside the action;
+- derive organization membership from that authenticated user;
+- check RBAC against the derived organization before service-role reads/writes or provider calls;
+- filter resource lookups by organizations the authenticated user actually belongs to;
+- return sanitized public errors while logging detailed provider/database errors server-side only.
+
+`npm run security:server-action-identity` scans top-level server-action files for caller-supplied identity/tenant inputs and is part of `security:ci`.
+
 ## Service-role containment
 
 `SUPABASE_SERVICE_ROLE_KEY` may only be used by server-only modules. The service-role client is centralized in `src/lib/supabase/admin.ts`, which imports `server-only` to prevent client bundling.
@@ -147,6 +161,7 @@ npm run security:api-guards
 npm run security:no-store
 npm run security:origin-guards
 npm run security:no-open-proxy
+npm run security:server-action-identity
 npm run security:authorization-bola
 npm run security:client-boundaries
 npm run security:headers
@@ -177,6 +192,7 @@ Before adding a new API route, verify:
 - [ ] every dynamic resource ID is checked against `organization_id`;
 - [ ] sensitive route uses distributed rate limiting;
 - [ ] route returns no-store headers on every response path;
+- [ ] exported server actions derive user and tenant server-side instead of accepting caller-supplied identity;
 - [ ] outbound fetches use allowlisted hosts, explicit headers and no generic catch-all proxying;
 - [ ] errors are sanitized and do not expose stack traces, SQL, provider payloads or secrets;
 - [ ] logs use stable event names and metadata without tokens, cookies, passwords or service keys;
