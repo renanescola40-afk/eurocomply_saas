@@ -38,6 +38,7 @@ const delegatedGateScripts = [
   'scripts/security/check-governance-export-contracts.mjs',
   'scripts/security/check-stripe-webhook-contract.mjs',
   'scripts/security/check-auth-redirect-base-url.mjs',
+  'scripts/security/check-audit-chain.mjs',
 ];
 
 const publicVerifierRoutes = [
