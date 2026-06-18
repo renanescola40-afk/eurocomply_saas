@@ -1,0 +1,9 @@
+P1-06 workflow run reference
+
+Workflow: P1 SBOM and Artifact Attestation
+Run id: 27779627063
+Run status: success
+Reviewed at: 2026-06-18T18:08:26Z
+Reviewer: renan silva <renansilva2002@gmail.com>
+
+This file stores reviewed workflow-run metadata only. It does not contain secrets.
