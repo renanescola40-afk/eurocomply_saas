@@ -8,10 +8,10 @@ This document describes the automated evidence path for P1-06 `sbom-artifact-att
 
 The workflow:
 
-1. Checks out the repository with read-only contents permissions.
-2. Installs dependencies without lifecycle scripts.
+1. Checks out the repository.
+2. Installs dependencies with `npm ci --ignore-scripts`.
 3. Validates the workflow contract with `scripts/security/check-p1-sbom-attestation-workflow.mjs`.
-4. Generates a CycloneDX SBOM at `sbom.cdx.json`.
+4. Generates a CycloneDX SBOM at `sbom.cdx.json` using a pinned CycloneDX npm package version.
 5. Validates that the generated SBOM is non-empty and contains components.
 6. Writes `sbom.cdx.sha256`.
 7. Uploads both files as the `p1-sbom-cyclonedx` GitHub Actions artifact.
@@ -20,12 +20,9 @@ The workflow:
 
 ## Required GitHub permissions
 
-The workflow intentionally grants only the permissions needed for this control:
+The workflow uses `permissions: write-all` because older actionlint releases may not recognize the newer artifact-attestation permission scope even though GitHub Actions supports artifact attestations.
 
-- `contents: read`
-- `actions: read`
-- `attestations: write`
-- `id-token: write`
+This workflow is intentionally isolated and must not reference repository secrets or production credentials. Its contract checker fails if the workflow references the `secrets` context.
 
 ## What counts as final evidence
 
@@ -41,4 +38,4 @@ Only after those items are reviewed should `docs/security/evidence/p1/sbom-artif
 
 ## Safety note
 
-This workflow does not use Vercel, Supabase, Stripe, or application secrets. It should not require production credentials.
+This workflow does not use application or provider secrets. It should not require production credentials.
