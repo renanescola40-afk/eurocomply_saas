@@ -1,8 +1,19 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
+import { applyNoStoreHeaders } from '@/server/security/no-store';
+import {
+  getAuthCallbackLoginUrl,
+  getSafeAuthCallbackNextPathForLocale,
+} from '@/server/security/auth-callback';
 
-const DASHBOARD_PATH = '/dashboard/organizations';
+function getLocale(rawLocale: string | null): Locale {
+  return rawLocale && locales.includes(rawLocale as Locale) ? rawLocale as Locale : defaultLocale;
+}
+
+function noStoreRedirect(url: string | URL) {
+  return applyNoStoreHeaders(NextResponse.redirect(url));
+}
 
 type CookieToSet = {
   name: string;
@@ -10,32 +21,10 @@ type CookieToSet = {
   options?: Parameters<NextResponse['cookies']['set']>[2];
 };
 
-function getLocale(rawLocale: string | null): Locale {
-  return rawLocale && locales.includes(rawLocale as Locale) ? rawLocale as Locale : defaultLocale;
-}
-
-function getSafeNextPath(rawNext: string | null, locale: Locale) {
-  if (!rawNext || rawNext.includes('://') || rawNext.startsWith('//')) {
-    return `/${locale}${DASHBOARD_PATH}`;
-  }
-
-  if (!rawNext.startsWith(`/${locale}/dashboard`)) {
-    return `/${locale}${DASHBOARD_PATH}`;
-  }
-
-  return rawNext;
-}
-
-function getLoginUrl(request: NextRequest, locale: Locale, error: string) {
-  const loginUrl = new URL(`/${locale}/login`, request.url);
-  loginUrl.searchParams.set('error', error);
-  return loginUrl;
-}
-
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const locale = getLocale(requestUrl.searchParams.get('locale'));
-  const next = getSafeNextPath(requestUrl.searchParams.get('next'), locale);
+  const next = getSafeAuthCallbackNextPathForLocale(requestUrl.searchParams.get('next'), locale);
   const origin = requestUrl.origin;
   const callbackUrl = new URL('/auth/callback', origin);
   callbackUrl.searchParams.set('next', next);
@@ -44,7 +33,8 @@ export async function GET(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.redirect(getLoginUrl(request, locale, 'Supabase env missing'));
+    console.warn('google_oauth_configuration_unavailable');
+    return noStoreRedirect(getAuthCallbackLoginUrl(request.url, next, 'auth_configuration_unavailable'));
   }
 
   const cookiesToSet: CookieToSet[] = [];
@@ -61,19 +51,19 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const { data, error } = await supabase.auth.signInWithOAuth({
+  const signInResult = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: callbackUrl.toString(),
     },
   });
 
-  if (error || !data.url) {
-    const message = error?.message ?? 'Could not start Google login';
-    return NextResponse.redirect(getLoginUrl(request, locale, message));
+  if (signInResult.error || !signInResult.data.url) {
+    console.warn('google_oauth_start_failed');
+    return noStoreRedirect(getAuthCallbackLoginUrl(request.url, next, 'auth_exchange_failed'));
   }
 
-  const redirectResponse = NextResponse.redirect(data.url);
+  const redirectResponse = noStoreRedirect(signInResult.data.url);
   cookiesToSet.forEach(({ name, value, options }) => {
     redirectResponse.cookies.set(name, value, options);
   });
