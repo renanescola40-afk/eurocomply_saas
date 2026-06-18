@@ -1,0 +1,9 @@
+Evidence reviewed marker
+
+Reviewed evidence:
+- Workflow run 27779627063
+- Artifact p1-sbom-cyclonedx
+- Artifact id 7731847352
+- Attestation step success
+
+No secrets are stored here.
