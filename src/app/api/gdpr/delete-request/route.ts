@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -12,6 +13,8 @@ import { noStoreJson } from '@/server/security/no-store';
 import { requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
+
+const DELETE_REQUEST_JSON_MAX_BYTES = 4 * 1024;
 
 export async function POST(request: NextRequest) {
   const originDenied = assertTrustedOrigin(request);
@@ -62,7 +65,9 @@ export async function POST(request: NextRequest) {
     return stepUp.response;
   }
 
-  const body = await request.json().catch(() => ({}));
+  const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
+    maxBytes: DELETE_REQUEST_JSON_MAX_BYTES,
+  }).catch(() => ({}));
   const reason = typeof body.reason === 'string' && body.reason.trim().length > 0 ? body.reason.trim().slice(0, 500) : 'No reason provided';
 
   await createAuditEvent({

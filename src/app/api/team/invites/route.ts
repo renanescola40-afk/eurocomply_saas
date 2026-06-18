@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { checkDistributedRateLimit } from '@/server/security/rate-limit';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createOrganizationInvite } from '@/server/queries/invites';
@@ -7,7 +9,6 @@ import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { isPlanAtLeast } from '@/server/queries/subscription';
-import { checkDistributedRateLimit } from '@/server/security/rate-limit';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
@@ -19,6 +20,7 @@ const inviteSchema = z.object({
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
+const INVITE_JSON_MAX_BYTES = 4 * 1024;
 
 function getClientIp(request: Request) {
   return (
@@ -101,7 +103,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const payload = await request.json().catch(() => null);
+  const payload = await readBoundedJsonRequest(request, { maxBytes: INVITE_JSON_MAX_BYTES }).catch(() => null);
   const parsed = inviteSchema.safeParse(payload);
 
   if (!parsed.success) {
