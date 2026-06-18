@@ -43,9 +43,9 @@ body:
     attributes:
       label: Risk area
       options:
-        - Low: UI/content only
-        - Medium: product logic or data display
-        - High: auth, authorization, tenant isolation, uploads, audit, billing, or compliance evidence
+        - "Low: UI/content only"
+        - "Medium: product logic or data display"
+        - "High: auth, authorization, tenant isolation, uploads, audit, billing, or compliance evidence"
     validations:
       required: true
 
