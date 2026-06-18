@@ -11,17 +11,47 @@ import { requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
+export const DEFAULT_AUDIT_CHAIN_VERIFY_LIMIT = 250;
+export const MAX_AUDIT_CHAIN_VERIFY_LIMIT = 1000;
+
+type AuditChainLimitResult =
+  | { ok: true; limit: number }
+  | { ok: false; error: 'invalid_limit' };
+
+export function parseAuditChainVerifyLimit(requestUrl: string): AuditChainLimitResult {
+  const { searchParams } = new URL(requestUrl);
+  const rawLimit = searchParams.get('limit');
+
+  if (rawLimit === null) {
+    return { ok: true, limit: DEFAULT_AUDIT_CHAIN_VERIFY_LIMIT };
+  }
+
+  const normalizedLimit = rawLimit.trim();
+
+  if (!/^\d+$/.test(normalizedLimit)) {
+    return { ok: false, error: 'invalid_limit' };
+  }
+
+  const limit = Number(normalizedLimit);
+
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_AUDIT_CHAIN_VERIFY_LIMIT) {
+    return { ok: false, error: 'invalid_limit' };
+  }
+
+  return { ok: true, limit };
+}
+
 export async function GET(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'unauthorized' }, { status: 401 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
+    return noStoreJson({ error: 'organization_required' }, { status: 403 });
   }
 
   const permission = await assertOrganizationPermission({
@@ -67,9 +97,13 @@ export async function GET(request: Request) {
     return noStoreJson({ error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds }, { status: 429 });
   }
 
-  const { searchParams } = new URL(request.url);
-  const limit = Math.min(Math.max(Number(searchParams.get('limit') ?? '250') || 250, 1), 1000);
-  const events = await listAuditEvents(organization.id, limit);
+  const parsedLimit = parseAuditChainVerifyLimit(request.url);
+
+  if (!parsedLimit.ok) {
+    return noStoreJson({ error: parsedLimit.error }, { status: 400 });
+  }
+
+  const events = await listAuditEvents(organization.id, parsedLimit.limit);
   const chronological = [...events].reverse();
   const chainRecords = chronological
     .filter((event) => event.event_hash)
@@ -91,26 +125,15 @@ export async function GET(request: Request) {
   const legacyEvents = events.length - chainRecords.length;
 
   return noStoreJson({
-    organization: {
-      id: organization.id,
-      name: organization.name,
-      slug: organization.slug,
-    },
+    organizationId: organization.id,
     checkedAt: new Date().toISOString(),
-    requestedLimit: limit,
+    requestedLimit: parsedLimit.limit,
     totalEventsLoaded: events.length,
     chainedEventsChecked: verification.checked,
     legacyEvents,
     ok: verification.ok,
     lastHash: verification.lastHash,
     failures: verification.failures,
-    actorRole: permission.role,
-    plan: plan.entitlements.plan,
-    stepUp: {
-      action: stepUp.assessment.action,
-      verifiedAt: stepUp.assessment.verifiedAt,
-      expiresAt: stepUp.assessment.expiresAt,
-      tokenType: 'signed_hmac',
-    },
+    stepUpVerified: true,
   });
 }
