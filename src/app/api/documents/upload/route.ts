@@ -7,6 +7,8 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { createNotification } from '@/server/queries/notifications';
 import { assertDocumentQuota } from '@/server/billing/entitlements';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
@@ -56,6 +58,16 @@ export async function POST(request: NextRequest) {
 
   if (!permission.ok) {
     return permissionDeniedResponse(permission);
+  }
+
+  const rateLimit = await checkDistributedRateLimit({
+    key: `documents:upload:${organization.id}:${user.id}`,
+    limit: 10,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
   }
 
   const quota = await assertDocumentQuota(organization.id);
