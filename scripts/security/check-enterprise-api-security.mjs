@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
@@ -20,6 +21,11 @@ const guardGroups = {
   tenant: ['organization.id', 'organizationId', 'organization_id', 'resourceOrganizationId', 'requireEnterpriseApiAccess'],
   webhookAuth: ['constructEvent', 'STRIPE_WEBHOOK_SECRET', 'stripe-signature'],
 };
+
+const delegatedGateScripts = [
+  'scripts/security/check-upload-security.mjs',
+  'scripts/security/check-upload-content-scan.mjs',
+];
 
 const publicVerifierRoutes = [
   /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/,
@@ -201,12 +207,39 @@ function evaluateClientBoundary(filePath) {
   return failures;
 }
 
+function runDelegatedGate(scriptPath) {
+  const fullPath = join(root, scriptPath);
+  if (!existsSync(fullPath)) {
+    return `${scriptPath} is missing; delegated enterprise gate cannot run`;
+  }
+
+  const result = spawnSync(process.execPath, [scriptPath], {
+    cwd: root,
+    stdio: 'inherit',
+  });
+
+  if (result.error) {
+    return `${scriptPath} failed to execute: ${result.error.message}`;
+  }
+
+  if (result.status !== 0) {
+    return `${scriptPath} failed as part of enterprise API security coverage`;
+  }
+
+  return null;
+}
+
 const routeFiles = walk(apiRoot, (_path, name) => name === 'route.ts');
 const sourceFiles = walk(srcRoot, (_path, name) => /\.(ts|tsx|js|jsx)$/.test(name));
 const failures = [
   ...routeFiles.flatMap(evaluateRoute),
   ...sourceFiles.flatMap(evaluateClientBoundary),
 ];
+
+for (const scriptPath of delegatedGateScripts) {
+  const failure = runDelegatedGate(scriptPath);
+  if (failure) failures.push(failure);
+}
 
 const adminClientPath = join(root, 'src', 'lib', 'supabase', 'admin.ts');
 if (!existsSync(adminClientPath)) {

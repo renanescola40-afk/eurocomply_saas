@@ -15,6 +15,7 @@ EuroComply accepts customer documents that may contain sensitive compliance evid
 | Upload endpoint | `src/app/api/documents/upload/route.ts` |
 | Upload security gate | `scripts/security/check-upload-security.mjs` |
 | Upload content scan gate | `scripts/security/check-upload-content-scan.mjs` |
+| Enterprise CI delegation | `scripts/security/check-enterprise-api-security.mjs` |
 
 ## Required Environment Variables
 
@@ -60,6 +61,17 @@ scanCheckedAt
 
 Blocked uploads should record a rejection event with scan context before returning an error response.
 
+## CI Coverage
+
+`npm run security:enterprise-api` delegates to both upload gates so the normal `npm run security:ci` path fails if upload signature validation, content scanning, fail-closed behavior or audit evidence coverage regresses.
+
+The upload gates must remain runnable on their own for focused investigations:
+
+```bash
+npm run security:upload
+npm run security:upload-content-scan
+```
+
 ## Release Rule
 
 Do not claim enterprise upload readiness until:
@@ -70,6 +82,7 @@ shouldBlockUploadForMalwareScan is enforced
 REQUIRE_MALWARE_SCAN_FOR_UPLOADS is enabled in enterprise production
 MALWARE_SCANNER_PROVIDER points to a real scanning provider
 upload rejection audit events include scan status and provider
+security:ci delegates to upload security gates
 ```
 
 ## Future Work
