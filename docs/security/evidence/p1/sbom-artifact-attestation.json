@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "controlId": "P1-06",
+  "control": "sbom-artifact-attestation",
+  "status": "Complete",
+  "evidenceKind": "final-p1-control-evidence",
+  "generatedFromRealEvidence": true,
+  "productionValidated": true,
+  "generatedAt": "2026-06-18T18:08:26Z",
+  "reviewedAt": "2026-06-18T18:09:17Z",
+  "reviewer": "renan silva <renansilva2002@gmail.com>",
+  "nextReviewDue": "2026-09-18",
+  "environment": "github-actions-supply-chain-ci",
+  "validation": {
+    "result": "pass",
+    "validatedAt": "2026-06-18T18:08:26Z",
+    "validator": "GitHub Actions workflow P1 SBOM and Artifact Attestation",
+    "method": "Reviewed successful GitHub Actions run 27779627063 for commit 181456bfebeb12a0674791a08307b4c69dc46604. The run generated a CycloneDX SBOM, validated the SBOM artifact, uploaded the p1-sbom-cyclonedx artifact, and completed the GitHub artifact provenance attestation step successfully."
+  },
+  "artifacts": [
+    {
+      "type": "github-actions-run",
+      "reference": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/27779627063",
+      "description": "Successful P1 SBOM and Artifact Attestation workflow run for commit 181456bfebeb12a0674791a08307b4c69dc46604.",
+      "collectedAt": "2026-06-18T18:08:26Z"
+    },
+    {
+      "type": "github-actions-job",
+      "reference": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/27779627063/job/82200790960",
+      "description": "GitHub Actions job Generate SBOM and attest provenance completed successfully, including Generate CycloneDX SBOM, Validate SBOM artifact, Upload SBOM artifact, and Attest SBOM artifact provenance steps.",
+      "collectedAt": "2026-06-18T18:08:26Z"
+    },
+    {
+      "type": "github-actions-artifact",
+      "reference": "p1-sbom-cyclonedx artifact id 7731847352 digest sha256:23dfdfe29e24cdba79ff00f92b5fe436b2c671802ec2764ecaea7046cb1eeb3d",
+      "description": "GitHub Actions artifact p1-sbom-cyclonedx contains sbom.cdx.json and sbom.cdx.sha256, was created by run 27779627063, and expires on 2026-07-18T18:08:25Z.",
+      "collectedAt": "2026-06-18T18:08:26Z"
+    },
+    {
+      "type": "attestation",
+      "reference": "GitHub artifact provenance attestation step in run 27779627063 for subject sbom.cdx.json",
+      "description": "The workflow step Attest SBOM artifact provenance completed successfully using actions/attest-build-provenance@v3 with subject-path sbom.cdx.json.",
+      "collectedAt": "2026-06-18T18:08:26Z"
+    },
+    {
+      "type": "merge-record",
+      "reference": "PR #116 merge commit 86866dd179a71fb59e810a157fab7b3b620f8b6a",
+      "description": "PR #116 added the P1 SBOM attestation CI and was merged into main after the successful workflow run was available for review.",
+      "collectedAt": "2026-06-18T18:09:17Z"
+    }
+  ]
+}
