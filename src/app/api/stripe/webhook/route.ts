@@ -7,10 +7,34 @@ import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 
+export const MAX_STRIPE_WEBHOOK_BYTES = 1_000_000;
+
 function getWebhookRateLimitKey(request: Request) {
   const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
   const realIp = request.headers.get('x-real-ip');
   return `stripe-webhook:${forwardedFor ?? realIp ?? 'unknown'}`;
+}
+
+export function getStripeWebhookContentLength(request: Request) {
+  const contentLength = request.headers.get('content-length');
+  if (!contentLength) return null;
+
+  const parsed = Number(contentLength);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
+export async function readBoundedStripeWebhookBody(request: Request) {
+  const contentLength = getStripeWebhookContentLength(request);
+  if (contentLength !== null && contentLength > MAX_STRIPE_WEBHOOK_BYTES) {
+    return null;
+  }
+
+  const body = await request.text();
+  if (new TextEncoder().encode(body).byteLength > MAX_STRIPE_WEBHOOK_BYTES) {
+    return null;
+  }
+
+  return body;
 }
 
 export async function POST(request: Request) {
@@ -39,7 +63,12 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'missing_signature' }, { status: 400 });
   }
 
-  const body = await request.text();
+  const body = await readBoundedStripeWebhookBody(request);
+  if (body === null) {
+    reportError(new Error('Stripe webhook payload is too large'), { area: 'stripe_webhook' });
+    return noStoreJson({ error: 'payload_too_large' }, { status: 413 });
+  }
+
   const stripe = getStripeClient();
 
   try {
