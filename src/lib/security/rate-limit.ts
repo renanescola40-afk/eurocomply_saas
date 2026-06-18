@@ -5,10 +5,13 @@ type Bucket = {
 
 const buckets = new Map<string, Bucket>();
 
+export type RateLimitFailureReason = 'redis_not_configured' | 'redis_request_failed' | 'redis_unavailable';
+
 export type RateLimitResult = {
   allowed: boolean;
   remaining: number;
   resetAt: number;
+  reason?: RateLimitFailureReason;
 };
 
 export type RateLimitOptions = {
@@ -20,7 +23,27 @@ export type RateLimitOptions = {
 
 type UpstashPipelineResponse = Array<[unknown, unknown]>;
 
-function getRedisConfig() {
+type RedisConfig = {
+  url: string;
+  token: string;
+};
+
+function isProductionRuntime() {
+  return process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+}
+
+function failClosed(options: RateLimitOptions, reason: RateLimitFailureReason): RateLimitResult {
+  const now = options.now ?? Date.now();
+
+  return {
+    allowed: false,
+    remaining: 0,
+    resetAt: now + Math.max(options.windowMs, 1),
+    reason,
+  };
+}
+
+function getRedisConfig(): RedisConfig | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -73,6 +96,11 @@ export async function checkDistributedRateLimit(options: RateLimitOptions): Prom
   const config = getRedisConfig();
 
   if (!config) {
+    if (isProductionRuntime()) {
+      console.error('[security:rate-limit] Upstash Redis is not configured; blocking production request.');
+      return failClosed(options, 'redis_not_configured');
+    }
+
     return localRateLimit(options);
   }
 
@@ -93,10 +121,15 @@ export async function checkDistributedRateLimit(options: RateLimitOptions): Prom
         ['TTL', redisKey],
       ]),
       cache: 'no-store',
+      signal: AbortSignal.timeout(3000),
     });
 
     if (!response.ok) {
-      console.error('Upstash rate limit request failed', response.status);
+      console.error('[security:rate-limit] Upstash Redis request failed; blocking in production.', {
+        status: response.status,
+      });
+
+      if (isProductionRuntime()) return failClosed(options, 'redis_request_failed');
       return localRateLimit(options);
     }
 
@@ -110,13 +143,20 @@ export async function checkDistributedRateLimit(options: RateLimitOptions): Prom
       remaining: Math.max(options.limit - count, 0),
       resetAt,
     };
-  } catch (error) {
-    console.error('Upstash rate limit fallback triggered', error);
+  } catch {
+    console.error('[security:rate-limit] Upstash Redis unavailable; blocking in production.');
+
+    if (isProductionRuntime()) return failClosed(options, 'redis_unavailable');
     return localRateLimit(options);
   }
 }
 
 export function checkRateLimit(options: RateLimitOptions): RateLimitResult {
+  if (isProductionRuntime()) {
+    console.error('[security:rate-limit] Local rate limit requested in production; blocking request.');
+    return failClosed(options, 'redis_not_configured');
+  }
+
   return localRateLimit(options);
 }
 
