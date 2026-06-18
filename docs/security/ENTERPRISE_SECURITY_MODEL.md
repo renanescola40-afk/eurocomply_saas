@@ -28,7 +28,8 @@ The controls are designed to reduce risk from:
 - stack trace, secret or implementation-detail leakage;
 - client-side service-role exposure;
 - XSS, clickjacking, MIME sniffing, referrer leakage and over-broad browser permissions;
-- SSRF through uncontrolled internal job or webhook execution.
+- SSRF through uncontrolled internal job, webhook, integration or proxy execution;
+- open-proxy routes that forward caller-controlled headers while injecting server-side credentials.
 
 ## Request authorization pipeline
 
@@ -93,6 +94,20 @@ Mutable requests must include a trusted `Origin` or a trusted `Referer`. Product
 
 Safe methods (`GET`, `HEAD`, `OPTIONS`) may bypass origin validation, but sensitive GET downloads and verifiers still require no-store and rate limiting.
 
+## SSRF and open-proxy policy
+
+EuroComply must not expose generic proxy routes, catch-all integration relays or user-controlled outbound fetches without explicit security review. Any server-side route that forwards requests to a third-party service must:
+
+- derive the upstream host from a hard-coded allowlist or a server-controlled configuration value, never from user input;
+- validate trusted origin and authenticate the user before forwarding mutable traffic;
+- enforce organization context and RBAC when tenant data or paid integrations are involved;
+- use distributed rate limiting and no-store responses;
+- construct outbound headers from an explicit allowlist instead of copying `request.headers` wholesale;
+- never combine caller-controlled headers with server-side credentials or service keys;
+- avoid catch-all `[...path]` routes unless each forwarded path is allowlisted.
+
+`npm run security:no-open-proxy` scans route handlers for proxy/catch-all SSRF regressions and is part of `security:ci`.
+
 ## Security headers
 
 The app must keep defense-in-depth headers active globally:
@@ -131,6 +146,7 @@ npm run security:enterprise-api
 npm run security:api-guards
 npm run security:no-store
 npm run security:origin-guards
+npm run security:no-open-proxy
 npm run security:authorization-bola
 npm run security:client-boundaries
 npm run security:headers
@@ -161,6 +177,7 @@ Before adding a new API route, verify:
 - [ ] every dynamic resource ID is checked against `organization_id`;
 - [ ] sensitive route uses distributed rate limiting;
 - [ ] route returns no-store headers on every response path;
+- [ ] outbound fetches use allowlisted hosts, explicit headers and no generic catch-all proxying;
 - [ ] errors are sanitized and do not expose stack traces, SQL, provider payloads or secrets;
 - [ ] logs use stable event names and metadata without tokens, cookies, passwords or service keys;
 - [ ] service role is used only through server-only helpers.
