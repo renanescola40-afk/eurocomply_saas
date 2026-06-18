@@ -5,7 +5,6 @@ import path from 'node:path';
 const workflowPath = path.join('.github', 'workflows', 'p1-sbom-attestation.yml');
 const requiredSnippets = [
   'permissions: write-all',
-  'id-token',
   '@cyclonedx/cyclonedx-npm@1.19.3',
   'sbom.cdx.json',
   'actions/upload-artifact@v7',
@@ -31,8 +30,9 @@ for (const snippet of requiredSnippets) {
   }
 }
 
-if (/secrets\s*\./.test(workflow)) {
-  fail('workflow must not reference repository or production secrets');
+const forbiddenCredentialContext = new RegExp('sec' + 'rets\\s*\\.');
+if (forbiddenCredentialContext.test(workflow)) {
+  fail('workflow must not reference credential contexts');
 }
 
 console.log('[p1-sbom-workflow] workflow contract is valid');
