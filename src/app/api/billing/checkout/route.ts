@@ -1,6 +1,7 @@
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
+import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan } from '@/server/billing/plans';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -70,7 +71,12 @@ export async function POST(request: Request) {
     return stepUp.response;
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
+  const returnBaseUrl = resolveBillingReturnBaseUrl(request.url);
+
+  if (!returnBaseUrl.ok) {
+    return noStoreJson({ error: returnBaseUrl.error }, { status: 503 });
+  }
+
   const stripe = getStripeClient();
   const priceId = getStripePriceId(plan);
 
@@ -78,8 +84,8 @@ export async function POST(request: Request) {
     mode: 'subscription',
     customer_email: user.email ?? undefined,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/${locale}/dashboard/organizations?checkout=success`,
-    cancel_url: `${appUrl}/${locale}/pricing?checkout=cancelled`,
+    success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
+    cancel_url: `${returnBaseUrl.appUrl}/${locale}/pricing?checkout=cancelled`,
     client_reference_id: organization.id,
     metadata: {
       organization_id: organization.id,
