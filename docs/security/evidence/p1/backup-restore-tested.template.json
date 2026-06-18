@@ -1,21 +1,34 @@
 {
+  "schemaVersion": 1,
+  "controlId": "P1-07",
   "control": "backup-restore-tested",
-  "status": "Open",
-  "reviewedAt": "YYYY-MM-DD",
-  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
-  "targetEnvironment": "production",
+  "status": "Complete",
+  "evidenceKind": "final-p1-control-evidence",
+  "generatedFromRealEvidence": true,
+  "productionValidated": true,
+  "generatedAt": "REPLACE_WITH_GENERATED_AT",
+  "reviewedAt": "REPLACE_WITH_REVIEWED_AT",
+  "reviewer": "REPLACE_WITH_REVIEWER",
+  "nextReviewDue": "REPLACE_WITH_NEXT_REVIEW_DUE",
+  "environment": "production",
+  "validation": {
+    "result": "pass",
+    "validatedAt": "REPLACE_WITH_VALIDATED_AT",
+    "validator": "REPLACE_WITH_VALIDATOR",
+    "method": "restore-test-review"
+  },
   "restoreTests": [
     {
       "testId": "REPLACE_WITH_TEST_ID",
       "system": "REPLACE_WITH_SYSTEM",
-      "startedAt": "YYYY-MM-DDTHH:MM:SSZ",
-      "completedAt": "YYYY-MM-DDTHH:MM:SSZ",
+      "startedAt": "REPLACE_WITH_STARTED_AT",
+      "completedAt": "REPLACE_WITH_COMPLETED_AT",
       "rtoTarget": "REPLACE_WITH_RTO_TARGET",
       "rtoActual": "REPLACE_WITH_RTO_ACTUAL",
       "rpoTarget": "REPLACE_WITH_RPO_TARGET",
       "rpoActual": "REPLACE_WITH_RPO_ACTUAL",
-      "status": "planned",
-      "evidenceLocation": "REPLACE_WITH_REFERENCE"
+      "status": "passed",
+      "evidenceLocation": "REPLACE_WITH_EVIDENCE_REFERENCE"
     }
   ],
   "controlsVerified": [
@@ -24,5 +37,12 @@
     "RTO target was evaluated",
     "RPO target was evaluated"
   ],
-  "nextReviewDue": "YYYY-MM-DD"
+  "artifacts": [
+    {
+      "type": "restore-report",
+      "reference": "REPLACE_WITH_ARTIFACT_REFERENCE",
+      "description": "Reviewed restore test evidence",
+      "collectedAt": "REPLACE_WITH_COLLECTED_AT"
+    }
+  ]
 }
