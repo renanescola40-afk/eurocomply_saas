@@ -23,6 +23,10 @@ function hasControl(controls, expected) {
   return controls.some((control) => String(control).trim().toLowerCase() === expected.toLowerCase());
 }
 
+function assertNonEmptyString(value, field) {
+  if (typeof value !== 'string' || value.trim().length === 0) fail(`${field} is required`);
+}
+
 if (!fs.existsSync(evidencePath)) {
   console.log(`P1 rate limit evidence is open: ${evidencePath} is not present yet.`);
   process.exit(0);
@@ -36,37 +40,53 @@ try {
 }
 
 if (placeholderPattern.test(JSON.stringify(evidence))) fail('evidence must not contain placeholders');
+if (evidence.schemaVersion !== 1) fail('schemaVersion must be 1');
+if (evidence.controlId !== 'P1-04') fail('controlId must be P1-04');
 if (evidence.control !== 'distributed-rate-limit-sensitive-endpoints') fail('control must be distributed-rate-limit-sensitive-endpoints');
-if (!['Complete', 'Exception'].includes(evidence.status)) fail('status must be Complete or Exception');
+if (evidence.status !== 'Complete') fail('status must be Complete');
+if (evidence.evidenceKind !== 'final-p1-control-evidence') fail('evidenceKind must be final-p1-control-evidence');
+if (evidence.generatedFromRealEvidence !== true) fail('generatedFromRealEvidence must be true');
+if (evidence.productionValidated !== true) fail('productionValidated must be true');
 if (evidence.redaction !== requiredRedaction) fail('redaction statement is missing or invalid');
-if (!evidence.reviewedAt || !evidence.reviewer || !evidence.targetEnvironment) fail('reviewedAt, reviewer, and targetEnvironment are required');
+
+assertNonEmptyString(evidence.generatedAt, 'generatedAt');
+assertNonEmptyString(evidence.reviewedAt, 'reviewedAt');
+assertNonEmptyString(evidence.reviewer, 'reviewer');
+assertNonEmptyString(evidence.nextReviewDue, 'nextReviewDue');
+assertNonEmptyString(evidence.environment, 'environment');
+if (!['production', 'prod'].includes(evidence.environment.trim().toLowerCase())) fail('environment must be production');
+
+if (!evidence.validation || evidence.validation.result !== 'pass') fail('validation.result must be pass');
+assertNonEmptyString(evidence.validation.validatedAt, 'validation.validatedAt');
+assertNonEmptyString(evidence.validation.validator, 'validation.validator');
+assertNonEmptyString(evidence.validation.method, 'validation.method');
+
+if (!Array.isArray(evidence.artifacts) || evidence.artifacts.length === 0) fail('artifacts must include at least one production evidence reference');
+for (const [index, artifact] of evidence.artifacts.entries()) {
+  assertNonEmptyString(artifact.type, `artifacts[${index}].type`);
+  assertNonEmptyString(artifact.reference, `artifacts[${index}].reference`);
+  assertNonEmptyString(artifact.description, `artifacts[${index}].description`);
+  assertNonEmptyString(artifact.collectedAt, `artifacts[${index}].collectedAt`);
+}
 
 if (!evidence.rateLimitBackend || evidence.rateLimitBackend.scope !== 'distributed' || !evidence.rateLimitBackend.provider || !evidence.rateLimitBackend.evidenceLocation) fail('rateLimitBackend must identify a distributed backend provider and evidenceLocation');
+if (!['upstash', 'redis', 'upstash redis'].includes(String(evidence.rateLimitBackend.provider).trim().toLowerCase())) fail('rateLimitBackend.provider must identify Upstash/Redis');
 
 if (!Array.isArray(evidence.sensitiveEndpointsReviewed) || evidence.sensitiveEndpointsReviewed.length === 0) fail('sensitiveEndpointsReviewed must include at least one endpoint');
 const categories = new Set();
 for (const endpoint of evidence.sensitiveEndpointsReviewed) {
   if (!endpoint.endpoint || !endpoint.category || !endpoint.limitPolicy || !endpoint.keyingStrategy || !endpoint.status || !endpoint.evidenceLocation) fail('each sensitive endpoint must include endpoint, category, limitPolicy, keyingStrategy, status, and evidenceLocation');
   categories.add(String(endpoint.category).trim().toLowerCase());
-  if (evidence.status === 'Complete' && endpoint.status !== 'enforced') fail(`${endpoint.endpoint} must have status enforced for Complete evidence`);
+  if (endpoint.status !== 'enforced') fail(`${endpoint.endpoint} must have status enforced for Complete evidence`);
 }
 
-if (evidence.status === 'Complete') {
-  for (const category of requiredCompleteCategories) {
-    if (!categories.has(category)) fail(`Complete evidence must include rate limit coverage for category: ${category}`);
-  }
+for (const category of requiredCompleteCategories) {
+  if (!categories.has(category)) fail(`Complete evidence must include rate limit coverage for category: ${category}`);
 }
 
 if (!Array.isArray(evidence.controlsVerified)) fail('controlsVerified must be an array');
 for (const control of requiredControls) {
   if (!hasControl(evidence.controlsVerified, control)) fail(`controlsVerified must include: ${control}`);
-}
-
-if (!evidence.nextReviewDue) fail('nextReviewDue is required');
-
-if (evidence.status === 'Exception') {
-  if (!evidence.exception || !evidence.exception.riskOwner || !evidence.exception.rationale || !evidence.exception.expiresAt || !evidence.exception.approvalReference) fail('Exception evidence requires riskOwner, rationale, expiresAt, and approvalReference');
-  if (!Array.isArray(evidence.exception.compensatingControls) || evidence.exception.compensatingControls.length === 0) fail('Exception evidence requires compensatingControls');
 }
 
 console.log(`P1 rate limit evidence is valid: ${evidencePath}`);

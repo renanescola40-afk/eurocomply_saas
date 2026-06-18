@@ -2,6 +2,15 @@ name: P1 Rate Limit Evidence
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json'
+      - 'docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.template.json'
+      - 'docs/security/P1_RATE_LIMIT_USAGE.md'
+      - 'scripts/security/check-p1-rate-limit-evidence.mjs'
+      - '.github/workflows/p1-rate-limit.yml'
   pull_request:
     branches:
       - main
