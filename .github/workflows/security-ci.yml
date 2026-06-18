@@ -57,6 +57,9 @@ jobs:
       - name: Run CI preflight with placeholders
         run: node scripts/preflight-ci.mjs
 
+      - name: Run GitHub workflow governance gate
+        run: npm run security:github-workflows
+
       - name: Print npm audit triage summary
         run: |
           npm run security:npm-audit:json > npm-audit.json || true
