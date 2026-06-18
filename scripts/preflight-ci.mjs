@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-const ciDefaults = {
+const ciPlaceholders = {
   NEXT_PUBLIC_SUPABASE_URL: 'https://ci-placeholder.supabase.co',
   NEXT_PUBLIC_SUPABASE_ANON_KEY: 'ci_supabase_anon_key_placeholder',
   SUPABASE_SERVICE_ROLE_KEY: 'ci_supabase_service_role_key_placeholder',
@@ -23,15 +23,16 @@ const ciDefaults = {
   SUPABASE_ACCESS_TOKEN: 'ci_supabase_access_token_placeholder',
 };
 
-const env = { ...process.env, EUROCOMPLY_PREFLIGHT_PROFILE: 'ci' };
-
-for (const [key, value] of Object.entries(ciDefaults)) {
-  if (!env[key]) env[key] = value;
-}
+const env = {
+  ...process.env,
+  ...ciPlaceholders,
+  EUROCOMPLY_PREFLIGHT_PROFILE: 'ci',
+};
 
 console.log('EuroComply CI preflight profile');
 console.log('--------------------------------');
-console.log('Using non-secret placeholder values for environment-dependent production preflight checks.');
+console.log('Using deterministic non-secret placeholder values for environment-dependent production preflight checks.');
+console.log('Any similarly named secrets passed by the workflow are intentionally overwritten in this CI-only profile.');
 console.log('Deployment workflows must still run npm run preflight with real production secrets and variables.');
 console.log('');
 
