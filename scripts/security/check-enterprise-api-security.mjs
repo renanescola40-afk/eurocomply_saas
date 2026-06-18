@@ -35,13 +35,17 @@ const internalRoutes = [
   /src\/app\/api\/intelligence\/refresh\/route\.ts$/,
 ];
 
+const privateReadOnlyPostRoutes = [
+  /src\/app\/api\/billing\/checkout-intent\/route\.ts$/,
+];
+
 const publicMutationExemptions = [
   ...webhookRoutes,
   ...publicVerifierRoutes,
 ];
 
 const routeSpecificPermissions = [
-  { match: /src\/app\/api\/billing\/(checkout|checkout-intent|portal)\/route\.ts$/, tokens: ['manage_billing'] },
+  { match: /src\/app\/api\/billing\/(checkout|portal)\/route\.ts$/, tokens: ['manage_billing'] },
   { match: /src\/app\/api\/team\/.*\/route\.ts$/, tokens: ['manage_team'] },
   { match: /src\/app\/api\/documents\/.*\/route\.ts$/, tokens: ['manage_documents'] },
   { match: /src\/app\/api\/ai-systems\/route\.ts$/, tokens: ['manage_ai_governance', 'read_ai_governance'] },
@@ -112,6 +116,7 @@ function evaluateRoute(filePath) {
   const isInternal = isAnyMatch(path, internalRoutes);
   const isWebhook = isAnyMatch(path, webhookRoutes);
   const isPublicVerifier = isAnyMatch(path, publicVerifierRoutes);
+  const isPrivateReadOnlyPost = isAnyMatch(path, privateReadOnlyPostRoutes);
   const isPublicMutationExemption = isAnyMatch(path, publicMutationExemptions);
 
   if (routeHandlers.length === 0) return failures;
@@ -134,6 +139,13 @@ function evaluateRoute(filePath) {
     if (!source.includes('verifyEvidencePackIntegrity')) {
       failures.push(`${path}: public verifier must validate evidence-pack integrity`);
     }
+    return failures;
+  }
+
+  if (isPrivateReadOnlyPost) {
+    assertGuard(failures, source, path, 'auth', 'authentication');
+    assertGuard(failures, source, path, 'organization', 'organization/tenant context');
+    assertGuard(failures, source, path, 'noStore', 'no-store response protection');
     return failures;
   }
 
