@@ -1,3 +1,4 @@
+import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -14,13 +15,13 @@ export async function GET() {
   const user = await getCurrentUser();
 
   if (!user) {
-    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'unauthorized' }, { status: 401 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
+    return noStoreJson({ error: 'organization_required' }, { status: 404 });
   }
 
   const entitlementCheck = await assertGdprSelfServiceEnabled(organization.id);
@@ -63,18 +64,27 @@ export async function GET() {
       userId: user.id,
       email: user.email,
     },
-    organization,
+    organization: {
+      id: organization.id,
+      name: organization.name,
+      slug: organization.slug,
+    },
     documents,
     auditEvents,
     notifications,
     note: 'Exportação simulada para GDPR Artigo 20. Adicionar riscos, fornecedores, tarefas e ficheiros quando os schemas estiverem finalizados.',
   };
 
+  const fileName = sanitizeDocumentDownloadFileName(
+    `eurocomply-gdpr-export-${organization.slug ?? organization.id}.json`,
+  );
+
   return noStoreDownload(JSON.stringify(body, null, 2), {
     status: 200,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Content-Disposition': `attachment; filename="eurocomply-gdpr-export-${organization.slug ?? organization.id}.json"`,
+      'Content-Disposition': `attachment; filename="${fileName}"`,
+      'X-Content-Type-Options': 'nosniff',
     },
   });
 }
