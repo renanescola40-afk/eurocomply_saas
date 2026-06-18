@@ -30,7 +30,8 @@ The controls are designed to reduce risk from:
 - XSS, clickjacking, MIME sniffing, referrer leakage and over-broad browser permissions;
 - SSRF through uncontrolled internal job, webhook, integration or proxy execution;
 - open-proxy routes that forward caller-controlled headers while injecting server-side credentials;
-- spreadsheet formula execution and response-header injection through CSV exports.
+- spreadsheet formula execution and response-header injection through CSV exports;
+- unsafe browser-visible document filenames in temporary document links.
 
 ## Request authorization pipeline
 
@@ -138,6 +139,20 @@ CSV exports must:
 
 `npm run security:csv-exports` scans CSV helpers and report routes for formula-injection, header-injection and manual-response regressions. It is part of `security:ci`.
 
+## Document filename policy
+
+Document upload and temporary document link filenames must be normalized through `src/lib/documents/upload.ts` helpers. Storage paths and browser-visible names are separate surfaces and both require sanitization.
+
+Document filename handling must:
+
+- strip control characters and path separators before building storage paths or temporary link filenames;
+- apply a stable fallback when the supplied filename is empty, reserved or only unsafe characters;
+- cap filename length to prevent oversized response metadata;
+- derive storage paths from authenticated organization and user IDs, not caller-supplied tenant values;
+- sanitize the browser-visible filename before asking the storage client to create a temporary document link.
+
+`npm run security:document-filenames` checks that storage and temporary document link filenames keep using the centralized helpers. It is part of `security:ci`.
+
 ## SSRF and open-proxy policy
 
 EuroComply must not expose generic proxy routes, catch-all integration relays or user-controlled outbound fetches without explicit security review. Any server-side route that forwards requests to a third-party service must:
@@ -193,6 +208,7 @@ npm run security:origin-guards
 npm run security:no-open-proxy
 npm run security:public-errors
 npm run security:csv-exports
+npm run security:document-filenames
 npm run security:server-action-identity
 npm run security:authorization-bola
 npm run security:client-boundaries
@@ -228,6 +244,7 @@ Before adding a new API route, verify:
 - [ ] outbound fetches use allowlisted hosts, explicit headers and no generic catch-all proxying;
 - [ ] public auth/user-facing errors are allowlisted codes with generic localized copy;
 - [ ] CSV/download routes use the hardened export helper instead of manual serialization or headers;
+- [ ] document filenames used in storage paths or temporary links are sanitized through the document helper;
 - [ ] errors are sanitized and do not expose stack traces, SQL, provider payloads or secrets;
 - [ ] logs use stable event names and metadata without tokens, cookies, passwords or service keys;
 - [ ] service role is used only through server-only helpers.

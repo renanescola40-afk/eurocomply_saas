@@ -1,6 +1,6 @@
 'use server';
 
-import { DOCUMENT_BUCKET } from '@/lib/documents/upload';
+import { DOCUMENT_BUCKET, sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
 import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
@@ -44,7 +44,7 @@ export async function createDocumentSignedDownloadUrl(documentId: string) {
   const { data, error } = await supabase.storage
     .from(DOCUMENT_BUCKET)
     .createSignedUrl(document.storage_path, SIGNED_URL_EXPIRES_IN_SECONDS, {
-      download: document.name ?? true,
+      download: sanitizeDocumentDownloadFileName(document.name),
     });
 
   if (error || !data?.signedUrl) {

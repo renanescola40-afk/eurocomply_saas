@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   buildDocumentStoragePath,
   isAllowedDocumentMimeType,
   MAX_DOCUMENT_SIZE_BYTES,
+  sanitizeDocumentDownloadFileName,
+  sanitizeDocumentStorageFileName,
   validateDocumentFile,
 } from './upload';
 
@@ -13,14 +15,28 @@ describe('document upload helpers', () => {
   });
 
   it('builds organization-scoped storage paths', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
+
     const path = buildDocumentStoragePath({
       organizationId: 'org-1',
       userId: 'user-1',
       fileName: 'Privacy Policy FINAL.pdf',
     });
 
-    expect(path).toContain('org-1/user-1/');
-    expect(path).toMatch(/privacy-policy-final\.pdf$/);
+    expect(path).toBe('org-1/user-1/1700000000000-privacy-policy-final.pdf');
+  });
+
+  it('sanitizes storage file names and falls back safely', () => {
+    expect(sanitizeDocumentStorageFileName('../Q4 Evidence\r\nFinal.pdf')).toBe('q4-evidence-final.pdf');
+    expect(sanitizeDocumentStorageFileName('\u0000\u0001////')).toBe('document');
+  });
+
+  it('sanitizes signed download filenames without caller-controlled header characters', () => {
+    expect(sanitizeDocumentDownloadFileName('../Board Pack\r\nContent-Disposition: evil.pdf')).toBe(
+      'Board Pack Content-Disposition- evil.pdf',
+    );
+    expect(sanitizeDocumentDownloadFileName('CON')).toBe('document');
+    expect(sanitizeDocumentDownloadFileName('Relatório 2026.pdf')).toBe('Relat-rio 2026.pdf');
   });
 
   it('rejects unsupported files', () => {
