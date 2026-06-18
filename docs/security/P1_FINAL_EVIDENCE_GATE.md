@@ -12,5 +12,3 @@ node scripts/security/report-p1-evidence-gap.mjs --strict
 ```
 
 Strict mode should only pass when the 10 final P1 evidence files exist and the index marks all controls complete.
-
-This gate is governance-only. It must not be used as evidence that any P1 control is implemented, tested, or production-validated.
