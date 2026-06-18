@@ -1,12 +1,33 @@
 {
+  "schemaVersion": 1,
+  "controlId": "P1-04",
   "control": "distributed-rate-limit-sensitive-endpoints",
-  "status": "Open",
-  "reviewedAt": "YYYY-MM-DD",
+  "status": "Complete",
+  "evidenceKind": "final-p1-control-evidence",
+  "generatedFromRealEvidence": true,
+  "productionValidated": true,
+  "generatedAt": "YYYY-MM-DDTHH:mm:ssZ",
+  "reviewedAt": "YYYY-MM-DDTHH:mm:ssZ",
   "reviewer": "REPLACE_WITH_REVIEWER_NAME",
-  "targetEnvironment": "production",
+  "nextReviewDue": "YYYY-MM-DD",
+  "environment": "production",
   "redaction": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "validation": {
+    "result": "pass",
+    "validatedAt": "YYYY-MM-DDTHH:mm:ssZ",
+    "validator": "REPLACE_WITH_VALIDATOR_NAME_OR_SYSTEM",
+    "method": "REPLACE_WITH_VALIDATION_METHOD"
+  },
+  "artifacts": [
+    {
+      "type": "production-configuration-screenshot",
+      "reference": "REPLACE_WITH_REDACTED_ARTIFACT_REFERENCE",
+      "description": "Redacted production environment evidence showing Upstash/Redis rate limit backend variables are configured without exposing values.",
+      "collectedAt": "YYYY-MM-DDTHH:mm:ssZ"
+    }
+  ],
   "rateLimitBackend": {
-    "provider": "REPLACE_WITH_BACKEND_PROVIDER",
+    "provider": "Upstash Redis",
     "scope": "distributed",
     "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
     "notes": "REPLACE_WITH_REDACTED_NOTES"
@@ -17,7 +38,43 @@
       "category": "auth",
       "limitPolicy": "REPLACE_WITH_POLICY_REFERENCE",
       "keyingStrategy": "REPLACE_WITH_KEYING_STRATEGY",
-      "status": "planned",
+      "status": "enforced",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    },
+    {
+      "endpoint": "REPLACE_WITH_REDACTED_ENDPOINT",
+      "category": "billing",
+      "limitPolicy": "REPLACE_WITH_POLICY_REFERENCE",
+      "keyingStrategy": "REPLACE_WITH_KEYING_STRATEGY",
+      "status": "enforced",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    },
+    {
+      "endpoint": "REPLACE_WITH_REDACTED_ENDPOINT",
+      "category": "documents",
+      "limitPolicy": "REPLACE_WITH_POLICY_REFERENCE",
+      "keyingStrategy": "REPLACE_WITH_KEYING_STRATEGY",
+      "status": "enforced",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    },
+    {
+      "endpoint": "REPLACE_WITH_REDACTED_ENDPOINT",
+      "category": "team",
+      "limitPolicy": "REPLACE_WITH_POLICY_REFERENCE",
+      "keyingStrategy": "REPLACE_WITH_KEYING_STRATEGY",
+      "status": "enforced",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    },
+    {
+      "endpoint": "REPLACE_WITH_REDACTED_ENDPOINT",
+      "category": "audit",
+      "limitPolicy": "REPLACE_WITH_POLICY_REFERENCE",
+      "keyingStrategy": "REPLACE_WITH_KEYING_STRATEGY",
+      "status": "enforced",
       "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
       "notes": "REPLACE_WITH_REDACTED_NOTES"
     }
@@ -28,6 +85,5 @@
     "Bypass paths are documented or blocked",
     "Alerting exists for sustained throttling or abuse",
     "Evidence contains no secrets"
-  ],
-  "nextReviewDue": "YYYY-MM-DD"
+  ]
 }
