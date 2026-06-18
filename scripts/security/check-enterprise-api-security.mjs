@@ -53,7 +53,7 @@ const routeSpecificPermissions = [
 
 const unsafeErrorPatterns = [
   { name: 'stack trace returned or serialized', pattern: /error\.stack|stack:\s*error|JSON\.stringify\(\s*error/ },
-  { name: 'raw error returned to client', pattern: /return\s+(?:NextResponse\.json|noStoreJson)\([^)]*\berror\b[^)]*\)/s },
+  { name: 'raw error message returned to client', pattern: /(message|details):\s*(error|err|caught|exception)\.message/ },
 ];
 
 function walk(dir, predicate) {
