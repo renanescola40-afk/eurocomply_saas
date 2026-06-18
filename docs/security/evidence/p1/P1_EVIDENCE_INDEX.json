@@ -31,8 +31,11 @@
     {
       "controlId": "P1-05",
       "control": "dast-automated",
-      "status": "Open",
-      "evidencePath": "docs/security/evidence/p1/dast-automated.json"
+      "status": "Complete",
+      "evidencePath": "docs/security/evidence/p1/dast-automated.json",
+      "reviewedAt": "2026-06-18T21:52:00Z",
+      "reviewer": "renan silva <renansilva2002@gmail.com>",
+      "nextReviewDue": "2026-09-18"
     },
     {
       "controlId": "P1-06",
