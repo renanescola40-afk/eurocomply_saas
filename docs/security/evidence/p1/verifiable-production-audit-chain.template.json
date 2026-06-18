@@ -1,0 +1,47 @@
+{
+  "control": "verifiable-production-audit-chain",
+  "status": "Complete",
+  "reviewedAt": "YYYY-MM-DDTHH:mm:ssZ",
+  "reviewer": "REPLACE_WITH_REVIEWER",
+  "targetEnvironment": "production",
+  "redactionStatement": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "chainScope": {
+    "periodStart": "YYYY-MM-DDTHH:mm:ssZ",
+    "periodEnd": "YYYY-MM-DDTHH:mm:ssZ",
+    "systemsCovered": [
+      "REPLACE_WITH_SYSTEM"
+    ],
+    "eventClassesCovered": [
+      "authentication",
+      "authorization",
+      "tenant-isolation",
+      "admin-action",
+      "data-export",
+      "billing",
+      "gdpr-delete"
+    ]
+  },
+  "chainSegmentsReviewed": [
+    {
+      "segment": "REPLACE_WITH_SEGMENT_NAME",
+      "sourceSystem": "REPLACE_WITH_SOURCE_SYSTEM",
+      "sinkOrStore": "REPLACE_WITH_SINK_OR_STORE",
+      "hashAlgorithm": "SHA-256",
+      "rootOrCheckpointHash": "REPLACE_WITH_REDACTED_HASH_OR_LOCATION",
+      "previousHashContinuityVerified": true,
+      "sequenceContinuityVerified": true,
+      "timestampContinuityVerified": true,
+      "tamperEvidenceVerified": true,
+      "evidenceLocation": "REPLACE_WITH_EVIDENCE_LOCATION"
+    }
+  ],
+  "controlsVerified": [
+    "Audit events include stable event identifiers",
+    "Audit chain preserves previous-hash continuity",
+    "Audit event ordering or sequence continuity is verified",
+    "Audit timestamps are monotonic within accepted tolerance",
+    "Audit storage is append-only or tamper-evident",
+    "Verification evidence contains no secrets"
+  ],
+  "nextReviewDue": "YYYY-MM-DD"
+}
