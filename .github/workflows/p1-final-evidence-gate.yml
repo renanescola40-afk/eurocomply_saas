@@ -7,8 +7,10 @@ on:
       - 'docs/security/evidence/p1/**.json'
       - 'docs/security/evidence/p1/P1_PROGRESS.md'
       - 'scripts/security/check-p1-evidence-index.mjs'
+      - 'scripts/security/check-p1-final-evidence-files.mjs'
       - 'scripts/security/report-p1-evidence-gap.mjs'
       - 'scripts/security/generate-p1-progress-dashboard.mjs'
+      - 'scripts/security/run-p1-final-evidence-gate.mjs'
       - '.github/workflows/p1-final-evidence-gate.yml'
 
 permissions:
@@ -23,19 +25,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate P1 evidence index
-        run: node scripts/security/check-p1-evidence-index.mjs
+      - name: Run P1 final evidence gate
+        run: node scripts/security/run-p1-final-evidence-gate.mjs
 
-      - name: Report P1 evidence gap
-        run: node scripts/security/report-p1-evidence-gap.mjs
-
-      - name: Validate generated P1 progress dashboard
-        run: |
-          node scripts/security/generate-p1-progress-dashboard.mjs
-          git diff --exit-code docs/security/evidence/p1/P1_PROGRESS.md
-
-      - name: Enforce final P1 evidence only when declared complete
+      - name: Enforce strict P1 final evidence on manual runs
         if: github.event_name == 'workflow_dispatch'
-        run: |
-          node scripts/security/check-p1-evidence-index.mjs --strict
-          node scripts/security/report-p1-evidence-gap.mjs --strict
+        run: node scripts/security/run-p1-final-evidence-gate.mjs --strict
