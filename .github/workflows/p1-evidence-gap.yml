@@ -1,0 +1,23 @@
+name: P1 Evidence Gap
+
+on:
+  pull_request:
+    paths:
+      - 'docs/security/evidence/p1/**.json'
+      - 'scripts/security/report-p1-evidence-gap.mjs'
+      - '.github/workflows/p1-evidence-gap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report-p1-evidence-gap:
+    name: Report P1 evidence gap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Report P1 evidence gap
+        run: node scripts/security/report-p1-evidence-gap.mjs
