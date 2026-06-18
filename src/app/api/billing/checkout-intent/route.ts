@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getBillingPlan, getStripePriceId } from '@/lib/billing/plans';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
@@ -13,6 +14,8 @@ type CheckoutIntentRequest = {
 };
 
 type BillingPlanAliasId = SubscriptionPlan | 'starter' | 'growth' | 'pro';
+
+const CHECKOUT_INTENT_JSON_MAX_BYTES = 2 * 1024;
 
 const BILLING_TO_ENTITLEMENT_PLAN: Record<BillingPlanAliasId, SubscriptionPlan> = {
   essential: 'essential',
@@ -40,12 +43,11 @@ async function resolvePlanId(request: Request) {
     return url.searchParams.get('plan') ?? url.searchParams.get('planId') ?? '';
   }
 
-  try {
-    const body = (await request.json()) as CheckoutIntentRequest;
-    return body.planId ?? body.plan ?? '';
-  } catch {
-    return '';
-  }
+  const body = await readBoundedJsonRequest<CheckoutIntentRequest>(request, {
+    maxBytes: CHECKOUT_INTENT_JSON_MAX_BYTES,
+  }).catch(() => null);
+
+  return body?.planId ?? body?.plan ?? '';
 }
 
 async function handleCheckoutIntent(request: Request) {
