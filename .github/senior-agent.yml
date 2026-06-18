@@ -74,6 +74,25 @@ runtime_guard:
     - environment configuration
     - database provider health
 
+external_blockers:
+  do_not_autofix:
+    - vercel build rate limit
+    - deployment quota
+    - missing environment secret
+    - missing environment variable
+    - billing or plan upgrade required
+    - provider outage
+  policy:
+    mark_blocked: true
+    require_owner_review: true
+    open_configuration_issue: true
+    do_not_open_code_pr: true
+  owner_actions:
+    - review deployment provider limits
+    - configure required environment secrets
+    - configure required environment variables
+    - re-run failed jobs after configuration is fixed
+
 safe_autonomy:
   allowed:
     - Documentation and runbook updates.
