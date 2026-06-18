@@ -4,21 +4,32 @@ import { applyNoStoreHeaders } from '@/server/security/no-store';
 import {
   getAuthCallbackLoginUrl,
   getSafeAuthCallbackNextPath,
+  resolveAuthAppBaseUrl,
 } from '@/server/security/auth-callback';
 
 function noStoreRedirect(url: URL) {
   return applyNoStoreHeaders(NextResponse.redirect(url));
 }
 
+function unavailableResponse() {
+  return applyNoStoreHeaders(new NextResponse(null, { status: 503 }));
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
+  const appBaseUrl = resolveAuthAppBaseUrl(request.url);
   const oauthCode = requestUrl.searchParams.get('code');
   const next = getSafeAuthCallbackNextPath(requestUrl.searchParams.get('next'));
 
-  let response = noStoreRedirect(new URL(next, request.url));
+  if (!appBaseUrl) {
+    console.warn('auth_app_url_unavailable');
+    return unavailableResponse();
+  }
+
+  let response = noStoreRedirect(new URL(next, appBaseUrl));
 
   if (!oauthCode) {
-    return noStoreRedirect(getAuthCallbackLoginUrl(request.url, next, 'missing_oauth_code'));
+    return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'missing_oauth_code'));
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -26,7 +37,7 @@ export async function GET(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('auth_callback_configuration_unavailable');
-    return noStoreRedirect(getAuthCallbackLoginUrl(request.url, next, 'auth_configuration_unavailable'));
+    return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'auth_configuration_unavailable'));
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -46,7 +57,7 @@ export async function GET(request: NextRequest) {
 
   if (exchangeResult.error) {
     console.warn('auth_callback_exchange_failed');
-    return noStoreRedirect(getAuthCallbackLoginUrl(request.url, next, 'auth_exchange_failed'));
+    return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'auth_exchange_failed'));
   }
 
   return response;
