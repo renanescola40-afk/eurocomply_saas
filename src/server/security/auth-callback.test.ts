@@ -4,7 +4,10 @@ import {
   getAuthCallbackLoginUrl,
   getSafeAuthCallbackNextPath,
   getSafeAuthCallbackNextPathForLocale,
+  resolveAuthAppBaseUrl,
 } from './auth-callback';
+
+const APP_URL_ENV = ['NEXT', 'PUBLIC', 'APP', 'URL'].join('_');
 
 describe('auth callback redirect hardening', () => {
   it('falls back when next is missing or external', () => {
@@ -42,5 +45,37 @@ describe('auth callback redirect hardening', () => {
     expect(url.pathname).toBe('/en/login');
     expect(url.searchParams.get('error')).toBe('auth_exchange_failed');
     expect(url.searchParams.get('next')).toBe('/en/dashboard/organizations');
+  });
+
+  it('uses the configured app origin for auth redirects', () => {
+    expect(
+      resolveAuthAppBaseUrl('https://attacker.example/auth/google', {
+        [APP_URL_ENV]: 'https://app.eurocomply.example/some-path',
+        NODE_ENV: 'production',
+      }),
+    ).toBe('https://app.eurocomply.example');
+  });
+
+  it('fails closed in production when the app base URL is unavailable', () => {
+    expect(
+      resolveAuthAppBaseUrl('https://attacker.example/auth/google', {
+        NODE_ENV: 'production',
+      }),
+    ).toBeNull();
+
+    expect(
+      resolveAuthAppBaseUrl('https://attacker.example/auth/google', {
+        [APP_URL_ENV]: 'not-a-url',
+        NODE_ENV: 'production',
+      }),
+    ).toBeNull();
+  });
+
+  it('allows request-origin fallback outside production only', () => {
+    expect(
+      resolveAuthAppBaseUrl('https://local.example/auth/google', {
+        NODE_ENV: 'test',
+      }),
+    ).toBe('https://local.example');
   });
 });
