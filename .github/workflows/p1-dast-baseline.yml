@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       target_url:
-        description: "HTTPS URL to scan"
+        description: "HTTPS EuroComply URL to scan"
         required: false
         default: "https://eurocomply-saas.vercel.app"
   schedule:
@@ -46,9 +46,9 @@ jobs:
           target_url="${INPUT_TARGET_URL:-${DEFAULT_DAST_TARGET_URL}}"
 
           case "$target_url" in
-            https://*) ;;
+            https://eurocomply-saas.vercel.app|https://eurocomply-saas.vercel.app/*|https://*.eurocomply-saas.vercel.app|https://*.eurocomply-saas.vercel.app/*) ;;
             *)
-              echo "DAST target must use https://" >&2
+              echo "DAST target must be an approved EuroComply HTTPS URL." >&2
               exit 1
               ;;
           esac
