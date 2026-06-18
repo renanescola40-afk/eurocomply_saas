@@ -1,0 +1,5 @@
+P1-06 SBOM + artifact attestation marker
+
+Final evidence file: docs/security/evidence/p1/sbom-artifact-attestation.json
+
+No secrets are stored here.
