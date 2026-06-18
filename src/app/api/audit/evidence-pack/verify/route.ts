@@ -1,11 +1,12 @@
-import { NextResponse } from 'next/server';
-
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { verifyEvidencePackIntegrity, type EvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
+import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
+
+const MAX_EVIDENCE_PACK_BYTES = 1_000_000;
 
 type EvidencePackExport = {
   payload?: unknown;
@@ -24,6 +25,42 @@ function isIntegrity(value: unknown): value is EvidencePackIntegrity {
   );
 }
 
+export function isJsonContentType(request: Request) {
+  const contentType = request.headers.get('content-type')?.toLowerCase() ?? '';
+  return contentType.startsWith('application/json') || contentType.includes('+json');
+}
+
+export function getEvidencePackContentLength(request: Request) {
+  const contentLength = request.headers.get('content-length');
+  if (!contentLength) return null;
+
+  const parsed = Number(contentLength);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+export async function readBoundedEvidencePackExport(request: Request): Promise<EvidencePackExport | null> {
+  if (!isJsonContentType(request)) {
+    return null;
+  }
+
+  const contentLength = getEvidencePackContentLength(request);
+  if (contentLength !== null && contentLength > MAX_EVIDENCE_PACK_BYTES) {
+    return null;
+  }
+
+  const rawBody = await request.text();
+  if (new TextEncoder().encode(rawBody).byteLength > MAX_EVIDENCE_PACK_BYTES) {
+    return null;
+  }
+
+  const body = JSON.parse(rawBody) as EvidencePackExport;
+  if (!body || !body.payload || !isIntegrity(body.integrity)) {
+    return null;
+  }
+
+  return body;
+}
+
 export async function POST(request: Request) {
   const rateLimit = await checkDistributedRateLimit({
     key: `audit-evidence-pack-verify:${request.headers.get('x-forwarded-for') ?? 'unknown'}`,
@@ -36,10 +73,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as EvidencePackExport;
+    const body = await readBoundedEvidencePackExport(request);
 
-    if (!body || !body.payload || !isIntegrity(body.integrity)) {
-      return NextResponse.json({ valid: false, error: 'Invalid evidence pack export format.' }, { status: 400 });
+    if (!body) {
+      return noStoreJson({ valid: false, error: 'invalid_evidence_pack_export' }, { status: 400 });
     }
 
     const result = verifyEvidencePackIntegrity({
@@ -47,20 +84,16 @@ export async function POST(request: Request) {
       integrity: body.integrity,
     });
 
-    return NextResponse.json({
+    return noStoreJson({
       valid: result.validHash && (result.validSignature ?? true),
       validHash: result.validHash,
       validSignature: result.validSignature,
       signed: result.signed,
       payloadHash: result.payloadHash,
       expectedHash: result.expectedHash,
-    }, {
-      headers: {
-        'Cache-Control': 'no-store',
-      },
     });
   } catch (error) {
     reportError(error, { area: 'audit_evidence_pack_verify' });
-    return NextResponse.json({ valid: false, error: 'Unable to verify evidence pack.' }, { status: 400 });
+    return noStoreJson({ valid: false, error: 'verification_failed' }, { status: 400 });
   }
 }
