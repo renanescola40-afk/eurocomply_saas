@@ -122,6 +122,10 @@ const verifierRequiredTokens = [
   'noStoreJson',
   'legacyEvents',
   'chainedEventsChecked',
+  'parseAuditChainVerifyLimit',
+  'DEFAULT_AUDIT_CHAIN_VERIFY_LIMIT',
+  'MAX_AUDIT_CHAIN_VERIFY_LIMIT',
+  'invalid_limit',
 ];
 
 const failures = [];
@@ -201,8 +205,16 @@ if (auditEvents && !auditEvents.includes('randomUUID')) {
   failures.push(`${auditEventsPath} must assign the audit event id before hashing`);
 }
 
-if (verifierRoute && !verifierRoute.includes('Math.min(Math.max')) {
-  failures.push(`${verifierRoutePath} must clamp the verification limit`);
+if (verifierRoute && verifierRoute.includes('Math.min(Math.max')) {
+  failures.push(`${verifierRoutePath} must reject invalid verification limits instead of silently clamping them`);
+}
+
+if (verifierRoute && !verifierRoute.includes('Number.isSafeInteger(limit)')) {
+  failures.push(`${verifierRoutePath} must validate verification limits as safe integers`);
+}
+
+if (verifierRoute && !verifierRoute.includes('limit < 1 || limit > MAX_AUDIT_CHAIN_VERIFY_LIMIT')) {
+  failures.push(`${verifierRoutePath} must enforce explicit lower and upper limit bounds`);
 }
 
 if (failures.length > 0) {
