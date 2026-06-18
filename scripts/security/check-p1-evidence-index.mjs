@@ -1,0 +1,84 @@
+#!/usr/bin/env node
+import fs from 'node:fs';
+import path from 'node:path';
+
+const indexPath = process.argv[2] || path.join('docs', 'security', 'evidence', 'p1', 'P1_EVIDENCE_INDEX.json');
+const allowedStatuses = new Set(['Open', 'Complete', 'Exception']);
+const expectedControls = [
+  ['P1-01', 'sso-saml-oidc', 'docs/security/evidence/p1/sso-saml-oidc.json'],
+  ['P1-02', 'admin-mfa-required', 'docs/security/evidence/p1/admin-mfa-required.json'],
+  ['P1-03', 'step-up-sensitive-actions', 'docs/security/evidence/p1/step-up-sensitive-actions.json'],
+  ['P1-04', 'distributed-rate-limit-sensitive-endpoints', 'docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json'],
+  ['P1-05', 'dast-automated', 'docs/security/evidence/p1/dast-automated.json'],
+  ['P1-06', 'sbom-artifact-attestation', 'docs/security/evidence/p1/sbom-artifact-attestation.json'],
+  ['P1-07', 'backup-restore-tested', 'docs/security/evidence/p1/backup-restore-tested.json'],
+  ['P1-08', 'centralized-logging-alerts', 'docs/security/evidence/p1/centralized-logging-alerts.json'],
+  ['P1-09', 'verifiable-production-audit-chain', 'docs/security/evidence/p1/verifiable-production-audit-chain.json'],
+  ['P1-10', 'waf-cdn-ddos', 'docs/security/evidence/p1/waf-cdn-ddos.json'],
+];
+
+function fail(message) {
+  console.error(`[p1-evidence-index] ${message}`);
+  process.exit(1);
+}
+
+function assertString(value, field) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    fail(`${field} must be a non-empty string`);
+  }
+}
+
+if (!fs.existsSync(indexPath)) {
+  fail(`index file is missing: ${indexPath}`);
+}
+
+let index;
+try {
+  index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+} catch (error) {
+  fail(`invalid JSON in ${indexPath}: ${error.message}`);
+}
+
+if (index.schemaVersion !== 1) fail('schemaVersion must be 1');
+if (index.phase !== 'P1 Enterprise Security') fail('phase must be P1 Enterprise Security');
+if (!allowedStatuses.has(index.status)) fail('status must be Open, Complete, or Exception');
+if (index.generatedFromRealEvidence !== false && index.status !== 'Complete') {
+  fail('generatedFromRealEvidence must remain false until the index is complete');
+}
+
+if (!Array.isArray(index.controls) || index.controls.length !== expectedControls.length) {
+  fail(`controls must include exactly ${expectedControls.length} entries`);
+}
+
+const byId = new Map(index.controls.map((control) => [control.controlId, control]));
+
+for (const [controlId, controlName, evidencePath] of expectedControls) {
+  const entry = byId.get(controlId);
+  if (!entry) fail(`missing control ${controlId}`);
+  if (entry.control !== controlName) fail(`${controlId}.control must be ${controlName}`);
+  if (entry.evidencePath !== evidencePath) fail(`${controlId}.evidencePath must be ${evidencePath}`);
+  if (!allowedStatuses.has(entry.status)) fail(`${controlId}.status must be Open, Complete, or Exception`);
+
+  if (entry.status === 'Complete') {
+    if (!fs.existsSync(entry.evidencePath)) fail(`${controlId} is Complete but evidence file is missing`);
+    assertString(entry.reviewedAt, `${controlId}.reviewedAt`);
+    assertString(entry.reviewer, `${controlId}.reviewer`);
+    assertString(entry.nextReviewDue, `${controlId}.nextReviewDue`);
+  }
+
+  if (entry.status === 'Exception') {
+    assertString(entry.reviewedAt, `${controlId}.reviewedAt`);
+    assertString(entry.reviewer, `${controlId}.reviewer`);
+    assertString(entry.nextReviewDue, `${controlId}.nextReviewDue`);
+    assertString(entry.exceptionReference, `${controlId}.exceptionReference`);
+  }
+}
+
+if (index.status === 'Complete') {
+  for (const entry of index.controls) {
+    if (entry.status !== 'Complete') fail('phase cannot be Complete until every control is Complete');
+  }
+  if (index.generatedFromRealEvidence !== true) fail('Complete phase requires generatedFromRealEvidence true');
+}
+
+console.log(`[p1-evidence-index] valid: ${indexPath}`);
