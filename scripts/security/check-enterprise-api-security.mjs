@@ -218,6 +218,38 @@ function evaluateClientBoundary(filePath) {
   return failures;
 }
 
+function evaluateAuditEvidencePackExportContract() {
+  const routePath = join(apiRoot, 'audit', 'evidence-pack', 'route.ts');
+  if (!existsSync(routePath)) return ['src/app/api/audit/evidence-pack/route.ts is missing'];
+
+  const source = readFileSync(routePath, 'utf8');
+  const path = normalizePath(routePath);
+  const failures = [];
+  const requiredTokens = [
+    'publicStepUpSummary',
+    'noStoreDownload',
+    'noStoreJson',
+    'sanitizeDocumentDownloadFileName',
+    'X-Content-Type-Options',
+  ];
+
+  for (const token of requiredTokens) {
+    if (!source.includes(token)) {
+      failures.push(`${path}: missing required export contract token ${token}`);
+    }
+  }
+
+  if (source.includes("from 'next/server'")) {
+    failures.push(`${path}: must use shared no-store response helpers instead of direct next/server response creation`);
+  }
+
+  if (source.includes('stepUp: {')) {
+    failures.push(`${path}: must not hand-build step-up details in exported payloads`);
+  }
+
+  return failures;
+}
+
 function runDelegatedGate(scriptPath) {
   const fullPath = join(root, scriptPath);
   if (!existsSync(fullPath)) {
@@ -245,6 +277,7 @@ const sourceFiles = walk(srcRoot, (_path, name) => /\.(ts|tsx|js|jsx)$/.test(nam
 const failures = [
   ...routeFiles.flatMap(evaluateRoute),
   ...sourceFiles.flatMap(evaluateClientBoundary),
+  ...evaluateAuditEvidencePackExportContract(),
 ];
 
 for (const scriptPath of delegatedGateScripts) {
