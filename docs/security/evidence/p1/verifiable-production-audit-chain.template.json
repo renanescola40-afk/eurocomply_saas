@@ -1,9 +1,30 @@
 {
+  "schemaVersion": 1,
+  "controlId": "P1-09",
   "control": "verifiable-production-audit-chain",
   "status": "Complete",
+  "evidenceKind": "final-p1-control-evidence",
+  "generatedFromRealEvidence": true,
+  "productionValidated": true,
+  "generatedAt": "YYYY-MM-DDTHH:mm:ssZ",
   "reviewedAt": "YYYY-MM-DDTHH:mm:ssZ",
   "reviewer": "REPLACE_WITH_REVIEWER",
-  "targetEnvironment": "production",
+  "nextReviewDue": "YYYY-MM-DD",
+  "environment": "production",
+  "validation": {
+    "result": "pass",
+    "validatedAt": "YYYY-MM-DDTHH:mm:ssZ",
+    "validator": "REPLACE_WITH_VALIDATOR_OR_WORKFLOW",
+    "method": "REPLACE_WITH_AUDIT_CHAIN_VERIFICATION_METHOD"
+  },
+  "artifacts": [
+    {
+      "type": "audit-chain-verification-report",
+      "reference": "REPLACE_WITH_RUN_URL_OR_ARTIFACT_REFERENCE",
+      "description": "REPLACE_WITH_REPORT_DESCRIPTION",
+      "collectedAt": "YYYY-MM-DDTHH:mm:ssZ"
+    }
+  ],
   "redactionStatement": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "chainScope": {
     "periodStart": "YYYY-MM-DDTHH:mm:ssZ",
@@ -42,6 +63,5 @@
     "Audit timestamps are monotonic within accepted tolerance",
     "Audit storage is append-only or tamper-evident",
     "Verification evidence contains no secrets"
-  ],
-  "nextReviewDue": "YYYY-MM-DD"
+  ]
 }
