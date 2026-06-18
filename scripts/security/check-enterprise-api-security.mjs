@@ -30,6 +30,7 @@ const delegatedGateScripts = [
   'scripts/security/check-billing-return-url.mjs',
   'scripts/security/check-billing-page-boundary.mjs',
   'scripts/security/check-billing-checkout-intent.mjs',
+  'scripts/security/check-ready-endpoint-security.mjs',
 ];
 
 const publicVerifierRoutes = [
