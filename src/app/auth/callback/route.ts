@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { applyNoStoreHeaders } from '@/server/security/no-store';
+import { applyNoStoreHeaders, noStoreJson } from '@/server/security/no-store';
 import {
   getAuthCallbackLoginUrl,
   getSafeAuthCallbackNextPath,
@@ -12,7 +12,7 @@ function noStoreRedirect(url: URL) {
 }
 
 function unavailableResponse() {
-  return applyNoStoreHeaders(new NextResponse(null, { status: 503 }));
+  return noStoreJson({ error: 'auth_app_url_unavailable' }, { status: 503 });
 }
 
 export async function GET(request: NextRequest) {
