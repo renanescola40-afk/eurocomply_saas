@@ -1,0 +1,7 @@
+Progress reference after P1-06 merge
+
+Complete controls: 3/10
+Open controls: 7/10
+Control completed by this branch: P1-06 sbom-artifact-attestation
+
+No secrets are stored here.
