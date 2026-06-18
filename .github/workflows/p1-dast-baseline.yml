@@ -62,6 +62,8 @@ jobs:
           set -euo pipefail
           docker pull ghcr.io/zaproxy/zaproxy:stable
           docker run --rm \
+            --user root \
+            --workdir /zap/wrk \
             -v "${{ github.workspace }}/dast-report:/zap/wrk:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
@@ -76,11 +78,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -s dast-report/p1-dast-report.html
-          test -s dast-report/p1-dast-report.json
-          test -s dast-report/p1-dast-report.md
-          test -s dast-report/p1-dast-report.xml
-          sha256sum dast-report/p1-dast-report.* > dast-report/p1-dast-report.sha256
+          find dast-report -maxdepth 1 -type f -print | sort | tee dast-report/p1-dast-files.txt
+
+          report_count="$(find dast-report -maxdepth 1 -type f \
+            \( -name '*.html' -o -name '*.json' -o -name '*.md' -o -name '*.xml' \) \
+            -size +0c | wc -l | tr -d ' ')"
+
+          if [ "$report_count" -eq 0 ]; then
+            echo "No non-empty OWASP ZAP report files were produced." >&2
+            exit 1
+          fi
+
+          sha256sum dast-report/* > dast-report/p1-dast-report.sha256
+          {
+            echo "{"
+            echo "  \"targetUrl\": \"${{ steps.target.outputs.target_url }}\","
+            echo "  \"tool\": \"OWASP ZAP baseline\","
+            echo "  \"reportFileCount\": $report_count,"
+            echo "  \"generatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\""
+            echo "}"
+          } > dast-report/p1-dast-manifest.json
 
       - name: Upload DAST report artifact
         uses: actions/upload-artifact@v4
@@ -100,7 +117,7 @@ jobs:
             echo "- Target: ${{ steps.target.outputs.target_url }}"
             echo "- Tool: OWASP ZAP baseline"
             echo "- Artifact: p1-dast-baseline-report"
-            echo "- Reports: HTML, JSON, Markdown, XML, SHA-256 digest"
+            echo "- Reports: see p1-dast-manifest.json and p1-dast-report.sha256 in the artifact"
             echo
             echo "This workflow generates automation evidence only. P1-05 must remain Open until a successful production run is reviewed and formalized in docs/security/evidence/p1/dast-automated.json."
           } >> "$GITHUB_STEP_SUMMARY"
