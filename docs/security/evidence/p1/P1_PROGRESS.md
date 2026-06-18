@@ -2,8 +2,8 @@
 
 This dashboard is generated from `docs/security/evidence/p1/P1_EVIDENCE_INDEX.json`.
 
-- Complete: 3/10 = 30%
-- Open: 7/10
+- Complete: 4/10 = 40%
+- Open: 6/10
 - Exceptions: 0/10
 
 | Control | Status | Evidence |
@@ -12,7 +12,7 @@ This dashboard is generated from `docs/security/evidence/p1/P1_EVIDENCE_INDEX.js
 | P1-02 admin-mfa-required | ❌ Open | `docs/security/evidence/p1/admin-mfa-required.json` |
 | P1-03 step-up-sensitive-actions | ❌ Open | `docs/security/evidence/p1/step-up-sensitive-actions.json` |
 | P1-04 distributed-rate-limit-sensitive-endpoints | ❌ Open | `docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json` |
-| P1-05 dast-automated | ❌ Open | `docs/security/evidence/p1/dast-automated.json` |
+| P1-05 dast-automated | ✅ Complete | `docs/security/evidence/p1/dast-automated.json` |
 | P1-06 sbom-artifact-attestation | ✅ Complete | `docs/security/evidence/p1/sbom-artifact-attestation.json` |
 | P1-07 backup-restore-tested | ❌ Open | `docs/security/evidence/p1/backup-restore-tested.json` |
 | P1-08 centralized-logging-alerts | ✅ Complete | `docs/security/evidence/p1/centralized-logging-alerts.json` |
