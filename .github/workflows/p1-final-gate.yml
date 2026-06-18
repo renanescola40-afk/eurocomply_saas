@@ -1,0 +1,24 @@
+name: P1 Final Gate
+
+on:
+  pull_request:
+    paths:
+      - 'docs/security/P1_ENTERPRISE_SECURITY_REGISTER.md'
+      - 'docs/security/evidence/p1/**.json'
+      - 'scripts/security/check-p1-final-gate.mjs'
+      - '.github/workflows/p1-final-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-p1-final-gate:
+    name: Validate P1 final gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate P1 final gate
+        run: node scripts/security/check-p1-final-gate.mjs
