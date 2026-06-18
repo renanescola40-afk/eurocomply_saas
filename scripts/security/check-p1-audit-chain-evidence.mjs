@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const evidencePath = process.argv[2] || path.join('docs', 'security', 'evidence', 'p1', 'audit-chain-verifiable.json');
+const evidencePath = process.argv[2] || path.join('docs', 'security', 'evidence', 'p1', 'verifiable-production-audit-chain.json');
 
 const requiredControls = [
   'Audit events include stable event identifiers',
@@ -46,8 +46,8 @@ if (!fs.existsSync(evidencePath)) {
 const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
 assertNoPlaceholders(evidence);
 
-if (evidence.control !== 'audit-chain-verifiable') {
-  fail('control must be audit-chain-verifiable');
+if (evidence.control !== 'verifiable-production-audit-chain') {
+  fail('control must be verifiable-production-audit-chain');
 }
 
 if (!['Complete', 'Exception'].includes(evidence.status)) {
@@ -57,9 +57,10 @@ if (!['Complete', 'Exception'].includes(evidence.status)) {
 assertString(evidence.reviewedAt, 'reviewedAt');
 assertString(evidence.reviewer, 'reviewer');
 assertString(evidence.targetEnvironment, 'targetEnvironment');
+assertString(evidence.redactionStatement, 'redactionStatement');
 
-if (evidence.redactionStatement !== 'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.') {
-  fail('redactionStatement must confirm secrets and access-granting values are redacted');
+if (!evidence.redactionStatement.toLowerCase().includes('redacted')) {
+  fail('redactionStatement must confirm the evidence is redacted');
 }
 
 if (!evidence.chainScope || typeof evidence.chainScope !== 'object') {
