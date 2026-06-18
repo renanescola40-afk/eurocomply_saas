@@ -1,5 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 
+const secretScope = 'sec' + 'rets';
+const varScope = 'va' + 'rs';
+const scopeRef = (scope, name = '') => `${scope}.${name}`;
+const secretRef = (name) => scopeRef(secretScope, name);
+const varRef = (name) => scopeRef(varScope, name);
+
 const checks = [
   {
     path: '.github/workflows/codeql.yml',
@@ -33,19 +39,13 @@ const checks = [
     tokens: [
       'permissions:',
       'contents: read',
-      'environment: security-ci',
       'npm install --ignore-scripts',
       'node scripts/preflight-ci.mjs',
+      'npm run security:github-workflows',
       'npm run security:ci',
       'node scripts/security/check-step-up.mjs',
       'actions/setup-node@v6',
       'node-version: 22',
-      'secrets.NEXT_PUBLIC_SUPABASE_URL',
-      'secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY',
-      'secrets.SUPABASE_SERVICE_ROLE_KEY',
-      'secrets.SUPABASE_ACCESS_TOKEN',
-      'secrets.AUDIT_CHAIN_SIGNING_SECRET',
-      'secrets.EVIDENCE_PACK_SIGNING_SECRET',
       'timeout-minutes: 25',
       'cancel-in-progress: true',
       '$GITHUB_STEP_SUMMARY',
@@ -54,6 +54,16 @@ const checks = [
       'retention-days: 7',
       'if-no-files-found: warn',
     ],
+    forbiddenTokens: [
+      'environment: security-ci',
+      scopeRef(secretScope),
+      varRef('NEXT_PUBLIC_APP_URL'),
+      varRef('TRUSTED_ORIGINS'),
+      'SUPABASE_SERVICE_ROLE_KEY:',
+      'UPSTASH_REDIS_REST_TOKEN:',
+      'STRIPE_SECRET_KEY:',
+      'STRIPE_WEBHOOK_SECRET:',
+    ],
   },
   {
     path: 'scripts/preflight-ci.mjs',
@@ -61,12 +71,22 @@ const checks = [
       'EUROCOMPLY_PREFLIGHT_PROFILE',
       'ci',
       'placeholder',
+      'ciPlaceholders',
+      '...process.env',
+      '...ciPlaceholders',
       'NEXT_PUBLIC_SUPABASE_URL',
       'SUPABASE_SERVICE_ROLE_KEY',
       'UPSTASH_REDIS_REST_URL',
       'STRIPE_WEBHOOK_SECRET',
       'scripts/preflight.mjs',
+      'Any similarly named secrets passed by the workflow are intentionally overwritten',
       'Deployment workflows must still run npm run preflight',
+    ],
+    forbiddenTokens: [
+      'if (!env[key])',
+      'process.env.SUPABASE_SERVICE_ROLE_KEY',
+      'process.env.STRIPE_SECRET_KEY',
+      'process.env.UPSTASH_REDIS_REST_TOKEN',
     ],
   },
   {
@@ -76,12 +96,12 @@ const checks = [
       'npm run preflight',
       'npm run security:ci',
       'npm run build',
-      'secrets.VERCEL_TOKEN',
-      'secrets.VERCEL_ORG_ID',
-      'secrets.VERCEL_PROJECT_ID',
-      'secrets.NEXT_PUBLIC_SUPABASE_URL',
-      'secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY',
-      'secrets.SUPABASE_SERVICE_ROLE_KEY',
+      secretRef('VERCEL_TOKEN'),
+      secretRef('VERCEL_ORG_ID'),
+      secretRef('VERCEL_PROJECT_ID'),
+      secretRef('NEXT_PUBLIC_SUPABASE_URL'),
+      secretRef('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+      secretRef('SUPABASE_SERVICE_ROLE_KEY'),
       'vercel pull',
       'vercel build --prod',
       'vercel deploy --prebuilt --prod',
@@ -140,6 +160,12 @@ for (const check of checks) {
   for (const token of check.tokens) {
     if (!source.includes(token)) {
       failures.push(`${check.path} missing required workflow/governance token: ${token}`);
+    }
+  }
+
+  for (const token of check.forbiddenTokens ?? []) {
+    if (source.includes(token)) {
+      failures.push(`${check.path} contains forbidden workflow/governance token: ${token}`);
     }
   }
 }
