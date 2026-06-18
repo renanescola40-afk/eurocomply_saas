@@ -29,7 +29,8 @@ The controls are designed to reduce risk from:
 - client-side service-role exposure;
 - XSS, clickjacking, MIME sniffing, referrer leakage and over-broad browser permissions;
 - SSRF through uncontrolled internal job, webhook, integration or proxy execution;
-- open-proxy routes that forward caller-controlled headers while injecting server-side credentials.
+- open-proxy routes that forward caller-controlled headers while injecting server-side credentials;
+- spreadsheet formula execution and response-header injection through CSV exports.
 
 ## Request authorization pipeline
 
@@ -123,6 +124,20 @@ The login page must not decode or render arbitrary `error` query values. It may 
 
 `npm run security:public-errors` scans for public error reflection regressions and is part of `security:ci`.
 
+## CSV export policy
+
+Tenant CSV exports must be generated through `src/lib/exports/csv.ts`. Report routes must not build `text/csv` responses, `Content-Disposition` headers or CSV serialization manually.
+
+CSV exports must:
+
+- neutralize spreadsheet formulas in string cells before escaping CSV delimiters;
+- preserve numeric values without converting valid negative numbers into text formulas;
+- sanitize attachment filenames before placing them in `Content-Disposition`;
+- return `Cache-Control: no-store, max-age=0`, `Pragma: no-cache`, `Expires: 0` and `X-Content-Type-Options: nosniff`;
+- continue enforcing auth, RBAC, organization context, entitlement checks and export rate limits at the route layer.
+
+`npm run security:csv-exports` scans CSV helpers and report routes for formula-injection, header-injection and manual-response regressions. It is part of `security:ci`.
+
 ## SSRF and open-proxy policy
 
 EuroComply must not expose generic proxy routes, catch-all integration relays or user-controlled outbound fetches without explicit security review. Any server-side route that forwards requests to a third-party service must:
@@ -177,6 +192,7 @@ npm run security:no-store
 npm run security:origin-guards
 npm run security:no-open-proxy
 npm run security:public-errors
+npm run security:csv-exports
 npm run security:server-action-identity
 npm run security:authorization-bola
 npm run security:client-boundaries
@@ -211,6 +227,7 @@ Before adding a new API route, verify:
 - [ ] exported server actions derive user and tenant server-side instead of accepting caller-supplied identity;
 - [ ] outbound fetches use allowlisted hosts, explicit headers and no generic catch-all proxying;
 - [ ] public auth/user-facing errors are allowlisted codes with generic localized copy;
+- [ ] CSV/download routes use the hardened export helper instead of manual serialization or headers;
 - [ ] errors are sanitized and do not expose stack traces, SQL, provider payloads or secrets;
 - [ ] logs use stable event names and metadata without tokens, cookies, passwords or service keys;
 - [ ] service role is used only through server-only helpers.
