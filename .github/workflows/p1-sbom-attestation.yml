@@ -16,11 +16,7 @@ on:
       - 'docs/security/P1_SBOM_ATTESTATION_USAGE.md'
       - 'scripts/security/check-p1-sbom-attestation-evidence.mjs'
 
-permissions:
-  contents: read
-  actions: read
-  attestations: write
-  id-token: write
+permissions: write-all
 
 concurrency:
   group: p1-sbom-attestation-${{ github.ref }}
@@ -44,13 +40,13 @@ jobs:
           node-version: 22
 
       - name: Install dependencies without lifecycle scripts
-        run: npm install --ignore-scripts
+        run: npm ci --ignore-scripts
 
       - name: Validate workflow contract
         run: node scripts/security/check-p1-sbom-attestation-workflow.mjs
 
       - name: Generate CycloneDX SBOM
-        run: npx --yes @cyclonedx/cyclonedx-npm --output-file sbom.cdx.json --output-format JSON
+        run: npm exec --yes --package @cyclonedx/cyclonedx-npm@1.19.3 -- cyclonedx-npm --output-file sbom.cdx.json --output-format JSON
 
       - name: Validate SBOM artifact
         run: |
