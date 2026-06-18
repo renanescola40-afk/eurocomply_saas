@@ -26,6 +26,7 @@ const delegatedGateScripts = [
   'scripts/security/check-upload-security.mjs',
   'scripts/security/check-upload-content-scan.mjs',
   'scripts/security/check-json-body-limits.mjs',
+  'scripts/security/check-billing-return-url.mjs',
 ];
 
 const publicVerifierRoutes = [
