@@ -1,0 +1,8 @@
+Provenance reference for P1-06
+
+Workflow run id: 27779627063
+Step: Attest SBOM provenance
+Conclusion: success
+Subject: sbom.cdx.json
+
+No secrets are stored here.
