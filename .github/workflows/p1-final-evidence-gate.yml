@@ -7,6 +7,7 @@ on:
       - 'docs/security/evidence/p1/**.json'
       - 'docs/security/evidence/p1/P1_PROGRESS.md'
       - 'scripts/security/check-p1-evidence-index.mjs'
+      - 'scripts/security/check-p1-final-evidence-files.mjs'
       - 'scripts/security/report-p1-evidence-gap.mjs'
       - 'scripts/security/generate-p1-progress-dashboard.mjs'
       - '.github/workflows/p1-final-evidence-gate.yml'
@@ -26,6 +27,9 @@ jobs:
       - name: Validate P1 evidence index
         run: node scripts/security/check-p1-evidence-index.mjs
 
+      - name: Validate present P1 final evidence files
+        run: node scripts/security/check-p1-final-evidence-files.mjs
+
       - name: Report P1 evidence gap
         run: node scripts/security/report-p1-evidence-gap.mjs
 
@@ -38,4 +42,5 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           node scripts/security/check-p1-evidence-index.mjs --strict
+          node scripts/security/check-p1-final-evidence-files.mjs --strict
           node scripts/security/report-p1-evidence-gap.mjs --strict
