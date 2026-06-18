@@ -1,20 +1,15 @@
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
+import { normalizeLocale } from '@/lib/i18n/locales';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/server/billing/stripe';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireStepUpForRequest } from '@/server/security/step-up';
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
-
-function getBaseUrl() {
-  if (APP_URL.startsWith('http')) return APP_URL;
-  return `https://${APP_URL}`;
-}
 
 export async function POST(request: Request) {
   const originDenied = assertTrustedOrigin(request);
@@ -79,9 +74,15 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'No active Stripe customer found.' }, { status: 404 });
   }
 
+  const returnBaseUrl = resolveBillingReturnBaseUrl(request.url);
+
+  if (!returnBaseUrl.ok) {
+    return noStoreJson({ error: returnBaseUrl.error }, { status: 503 });
+  }
+
   const url = new URL(request.url);
-  const locale = url.searchParams.get('locale') ?? 'en';
-  const returnUrl = `${getBaseUrl()}/${locale}/settings/billing`;
+  const locale = normalizeLocale(url.searchParams.get('locale'));
+  const returnUrl = `${returnBaseUrl.appUrl}/${locale}/settings/billing`;
 
   const stripe = getStripeClient();
   const portalSession = await stripe.billingPortal.sessions.create({
