@@ -1,0 +1,7 @@
+P1-06 status reference
+
+Status: Complete after PR merge
+Evidence source: successful GitHub Actions SBOM and attestation workflow run 27779627063
+Artifact: p1-sbom-cyclonedx
+
+This file does not contain secrets.
