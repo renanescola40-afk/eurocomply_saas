@@ -46,12 +46,24 @@ jobs:
         run: node scripts/security/check-p1-sbom-attestation-workflow.mjs
 
       - name: Generate CycloneDX SBOM
-        run: npm exec --yes --package @cyclonedx/cyclonedx-npm@1.19.3 -- cyclonedx-npm --output-file sbom.cdx.json --output-format JSON
+        run: >-
+          npm exec --yes --package @cyclonedx/cyclonedx-npm@1.19.3 --
+          cyclonedx-npm --output-file sbom.cdx.json --output-format JSON
 
       - name: Validate SBOM artifact
         run: |
           test -s sbom.cdx.json
-          node -e "const fs=require('fs'); const sbom=JSON.parse(fs.readFileSync('sbom.cdx.json','utf8')); if (sbom.bomFormat !== 'CycloneDX') throw new Error('Expected CycloneDX SBOM'); if (!Array.isArray(sbom.components) || sbom.components.length === 0) throw new Error('SBOM has no components'); console.log('CycloneDX SBOM components: ' + sbom.components.length);"
+          node - <<'NODE'
+          const fs = require('fs');
+          const sbom = JSON.parse(fs.readFileSync('sbom.cdx.json', 'utf8'));
+          if (sbom.bomFormat !== 'CycloneDX') {
+            throw new Error('Expected CycloneDX SBOM');
+          }
+          if (!Array.isArray(sbom.components) || sbom.components.length === 0) {
+            throw new Error('SBOM has no components');
+          }
+          console.log(`CycloneDX SBOM components: ${sbom.components.length}`);
+          NODE
           sha256sum sbom.cdx.json | tee sbom.cdx.sha256
 
       - name: Upload SBOM artifact
@@ -74,9 +86,12 @@ jobs:
 
       - name: Write evidence summary
         run: |
-          echo "## P1-06 SBOM + artifact attestation" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Generated artifact: sbom.cdx.json" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Uploaded artifact: p1-sbom-cyclonedx" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Generated SHA-256: $(cut -d ' ' -f1 sbom.cdx.sha256)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Attestation: actions/attest-build-provenance@v3 subject-path sbom.cdx.json" >> "$GITHUB_STEP_SUMMARY"
+          digest="$(cut -d ' ' -f1 sbom.cdx.sha256)"
+          {
+            echo "## P1-06 SBOM + artifact attestation"
+            echo ""
+            echo "- Generated artifact: sbom.cdx.json"
+            echo "- Uploaded artifact: p1-sbom-cyclonedx"
+            echo "- Generated SHA-256: ${digest}"
+            echo "- Attestation: actions/attest-build-provenance@v3 subject-path sbom.cdx.json"
+          } >> "$GITHUB_STEP_SUMMARY"
