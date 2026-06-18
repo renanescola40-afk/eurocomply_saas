@@ -1,0 +1,7 @@
+Artifact id reference for P1-06
+
+Artifact id: 7731847352
+Artifact name: p1-sbom-cyclonedx
+Workflow run id: 27779627063
+
+No secrets are stored here.
