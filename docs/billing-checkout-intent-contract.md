@@ -14,6 +14,21 @@ This document describes the non-sensitive checkout intent layer used before a re
 }
 ```
 
+## Security contract
+
+The checkout intent response includes organization billing state, current entitlement plan and the next billing action. It is therefore organization-sensitive even though it does not create a payment provider session.
+
+Required controls:
+
+- authenticated user;
+- current organization context;
+- `manage_billing` RBAC permission;
+- distributed rate limiting scoped by organization and user;
+- bounded JSON parsing for POST bodies;
+- trusted Origin validation for POST;
+- no-store JSON responses on success and failure;
+- no provider secrets or provider price identifiers returned to the client.
+
 ## Supported plan ids
 
 Commercial plan ids:
@@ -62,6 +77,12 @@ This mapping is required because public pricing names and internal entitlement n
 - `401 authentication_required` when no authenticated user is present.
 - `400 invalid_plan` when the requested plan is not in the billing catalog.
 - `409 organization_required` when the user has not created or joined an organization yet.
+- `403 insufficient_role_permission` when the user is not allowed to manage billing.
+- `429 rate_limited` when the distributed billing-intent limit is exceeded.
+
+## CI enforcement
+
+`scripts/security/check-billing-checkout-intent.mjs` verifies that this route keeps RBAC, rate limiting, Origin validation, bounded JSON parsing and no-store responses. It is delegated from `security:enterprise-api`, which runs inside `security:ci`.
 
 ## Codex implementation notes
 
@@ -70,7 +91,7 @@ When wiring the real checkout session:
 1. Keep this route as the validation gate.
 2. Do not return provider secrets or price identifiers to the client.
 3. If `checkoutReady` is false and `nextAction` is `configure_plan_price`, show a safe admin/support message rather than failing silently.
-4. Create the provider checkout session only after validating user, organization, plan, and target entitlement.
+4. Create the provider checkout session only after validating user, organization, plan, target entitlement and `manage_billing` permission.
 5. Include metadata in the provider session/subscription so the webhook can persist:
    - `organization_id`
    - `billing_plan_id`
@@ -80,4 +101,4 @@ When wiring the real checkout session:
 
 ## Current status
 
-The route validates intent but does not create the real provider checkout session yet. This is intentional until the sensitive billing webhook/checkout patch is applied in a local Codex environment with access to the payment provider configuration.
+The route validates intent but does not create the real provider checkout session. It is intentionally kept as an authorization and readiness gate in front of the sensitive checkout creation API.
