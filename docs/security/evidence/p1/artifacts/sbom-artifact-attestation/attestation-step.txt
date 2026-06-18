@@ -1,0 +1,10 @@
+P1-06 attestation step reference
+
+Workflow run id: 27779627063
+Job: Generate SBOM and attest provenance
+Step: Attest SBOM provenance
+Step conclusion: success
+Subject: sbom.cdx.json
+Artifact: p1-sbom-cyclonedx
+
+This file preserves the reviewed attestation step metadata for the P1-06 final evidence record. It does not contain secrets.
