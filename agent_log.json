@@ -296,6 +296,30 @@
         "Run npm run security:ci in a connected environment and confirm warning-only behavior remains non-blocking.",
         "Generate npm audit JSON, commit a package-lock.json, and replace floating specs with exact audited versions."
       ]
+    },
+    {
+      "timestamp": "2026-06-18T20:10:15Z",
+      "cycle": "scheduled_health_audit",
+      "status": "patched_waiting_for_ci",
+      "findings": [
+        "PR #141 is open and mergeable, hardening the P1-07 restore evidence contract and adding main-branch workflow execution for evidence changes.",
+        "The PR head CI was degraded: CI quality failed at npm run lint because ESLint analyzed generated next-env.d.ts and rejected the Next-generated triple-slash routes reference.",
+        "P1 restore evidence and several P0/P1 gates passed, but security workflows including Gitleaks, Semgrep, Full Security Suite, EuroComply Security CI, Dependency Review, and P1 Final Evidence Gate reported failures or still required follow-up on the PR head.",
+        "No billing/demo exposure change was introduced by the inspected PR patch; touched files were restore-evidence workflow, template, and validator only.",
+        "No cron sprawl was found in this patch; the new P1 restore workflow trigger is path-scoped to relevant evidence and workflow files."
+      ],
+      "actions_taken": [
+        "Applied a safe non-breaking lint correction on restore-main by adding next-env.d.ts to ESLint ignores.",
+        "Recorded the audit and correction in agent_log.json."
+      ],
+      "commits": [
+        "cf0ce1996db4f16ace976ec4faeb71d81b402b7b"
+      ],
+      "next_cycle_focus": [
+        "Verify the new PR head CI after the lint-ignore correction.",
+        "Inspect Gitleaks, Semgrep, Dependency Review, Security CI, and P1 Final Evidence Gate logs before merging PR #141.",
+        "Keep P1-07 marked incomplete until real final restore evidence exists."
+      ]
     }
   ]
 }
