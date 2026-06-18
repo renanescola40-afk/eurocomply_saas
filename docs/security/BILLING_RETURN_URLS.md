@@ -20,6 +20,16 @@ Production billing routes must return the stable public error code `billing_app_
 
 Billing portal locale query values must be normalized through the central locale allowlist before being appended to the return path.
 
+## Page boundary policy
+
+Billing pages are presentation/navigation boundaries only. They must not create Stripe sessions, initialize Stripe clients, build absolute return URLs, perform billing RBAC, or duplicate tenant lookup logic during server rendering.
+
+The deprecated `src/app/[locale]/billing/checkout/[plan]/page.tsx` entrypoint exists only as a safe compatibility redirect. It validates the plan and locale, then redirects users back to pricing with the `start_secure_checkout` marker so checkout creation remains confined to the hardened POST API flow.
+
 ## CI enforcement
 
-`scripts/security/check-billing-return-url.mjs` validates the billing checkout route, billing portal route, helper and tests. It is delegated from `security:enterprise-api`, which is part of `security:ci`.
+`scripts/security/check-billing-return-url.mjs` validates the billing checkout route, billing portal route, helper and tests.
+
+`scripts/security/check-billing-page-boundary.mjs` validates that billing page boundaries cannot create Stripe checkout sessions or use deployment-host return URL fallbacks.
+
+Both checks are delegated from `security:enterprise-api`, which is part of `security:ci`.
