@@ -1,17 +1,38 @@
 {
+  "schemaVersion": 1,
+  "controlId": "P1-01",
   "control": "sso-saml-oidc",
-  "status": "Open",
-  "reviewedAt": "YYYY-MM-DD",
+  "status": "Complete",
+  "evidenceKind": "final-p1-control-evidence",
+  "generatedFromRealEvidence": true,
+  "productionValidated": true,
+  "generatedAt": "YYYY-MM-DDTHH:mm:ssZ",
+  "reviewedAt": "YYYY-MM-DDTHH:mm:ssZ",
   "reviewer": "REPLACE_WITH_REVIEWER_NAME",
-  "targetEnvironment": "production",
-  "redaction": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "nextReviewDue": "YYYY-MM-DD",
+  "environment": "production",
+  "validation": {
+    "result": "pass",
+    "validatedAt": "YYYY-MM-DDTHH:mm:ssZ",
+    "validator": "REPLACE_WITH_VALIDATOR_NAME",
+    "method": "REPLACE_WITH_VALIDATION_METHOD"
+  },
+  "artifacts": [
+    {
+      "type": "screenshot-or-report",
+      "reference": "REPLACE_WITH_REDACTED_REFERENCE",
+      "description": "Redacted production evidence showing enterprise SSO via SAML or OIDC.",
+      "collectedAt": "YYYY-MM-DDTHH:mm:ssZ"
+    }
+  ],
   "identityProtocolsReviewed": [
     {
-      "protocol": "SAML_OR_OIDC",
+      "protocol": "SAML",
       "provider": "REPLACE_WITH_IDENTITY_PROVIDER",
       "tenantOrOrgScope": "REPLACE_WITH_SCOPE",
-      "status": "planned",
+      "status": "configured",
       "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "reviewedAt": "YYYY-MM-DDTHH:mm:ssZ",
       "notes": "REPLACE_WITH_REDACTED_NOTES"
     }
   ],
@@ -22,6 +43,7 @@
         "REPLACE_WITH_ROLE_OR_GROUP"
       ],
       "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "reviewedAt": "YYYY-MM-DDTHH:mm:ssZ",
       "notes": "REPLACE_WITH_REDACTED_NOTES"
     }
   ],
@@ -30,7 +52,6 @@
     "Organization or tenant scope is reviewed",
     "Role and group mapping is reviewed",
     "Deprovisioning behavior is documented",
-    "Evidence contains no secrets"
-  ],
-  "nextReviewDue": "YYYY-MM-DD"
+    "Evidence contains no access-granting values"
+  ]
 }
