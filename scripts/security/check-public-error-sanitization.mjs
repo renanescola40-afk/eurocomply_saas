@@ -8,6 +8,7 @@ const requiredFiles = [
   'src/server/security/auth-callback.ts',
   'src/server/security/auth-callback.test.ts',
   'src/app/auth/callback/route.ts',
+  'src/app/auth/google/route.ts',
   'src/app/[locale]/login/page.tsx',
 ];
 
@@ -46,7 +47,12 @@ function hasRawPublicErrorReflection(source) {
   const hasMessageSource = source.includes('.message') || source.includes('JSON.stringify(');
   const decodesUrlError = source.includes('decodeURIComponent(urlError)');
   const reflectsSdkError = source.includes('setError(result.error') && source.includes('.message');
-  return (hasPublicErrorSink && hasMessageSource) || decodesUrlError || reflectsSdkError;
+  const buildsProviderMessage = source.includes('error?.message') || source.includes('error.message');
+  const passesMessageToLoginRedirect = source.includes('getLoginUrl(') && source.includes('message');
+  return (hasPublicErrorSink && hasMessageSource)
+    || decodesUrlError
+    || reflectsSdkError
+    || (buildsProviderMessage && passesMessageToLoginRedirect);
 }
 
 console.log('EuroComply public error sanitization check');
@@ -56,8 +62,8 @@ for (const path of requiredFiles) {
   readRequiredFile(path);
 }
 
-const routeSource = readRequiredFile('src/app/auth/callback/route.ts');
-if (!containsAll(routeSource, [
+const callbackRouteSource = readRequiredFile('src/app/auth/callback/route.ts');
+if (!containsAll(callbackRouteSource, [
   'getSafeAuthCallbackNextPath',
   'getAuthCallbackLoginUrl',
   'applyNoStoreHeaders',
@@ -65,6 +71,17 @@ if (!containsAll(routeSource, [
   'auth_configuration_unavailable',
 ])) {
   failures.push('src/app/auth/callback/route.ts must use sanitized auth callback redirects and no-store');
+}
+
+const googleRouteSource = readRequiredFile('src/app/auth/google/route.ts');
+if (!containsAll(googleRouteSource, [
+  'getSafeAuthCallbackNextPathForLocale',
+  'getAuthCallbackLoginUrl',
+  'applyNoStoreHeaders',
+  'auth_exchange_failed',
+  'auth_configuration_unavailable',
+])) {
+  failures.push('src/app/auth/google/route.ts must use sanitized OAuth start redirects and no-store');
 }
 
 const loginSource = readRequiredFile('src/app/[locale]/login/page.tsx');

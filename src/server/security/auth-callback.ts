@@ -8,18 +8,25 @@ export function getLocaleFromAuthCallbackNextPath(nextPath: string) {
   return firstSegment && locales.includes(firstSegment) ? firstSegment : defaultLocale;
 }
 
-export function getSafeAuthCallbackNextPath(rawNext: string | null) {
+export function getSafeAuthCallbackNextPathForLocale(rawNext: string | null, locale: Locale) {
   if (!rawNext || rawNext === '/' || rawNext.includes('://') || rawNext.startsWith('//')) {
-    return `/${defaultLocale}${DASHBOARD_PATH}`;
+    return `/${locale}${DASHBOARD_PATH}`;
   }
-
-  const locale = getLocaleFromAuthCallbackNextPath(rawNext);
 
   if (!rawNext.startsWith(`/${locale}/dashboard`)) {
     return `/${locale}${DASHBOARD_PATH}`;
   }
 
   return rawNext;
+}
+
+export function getSafeAuthCallbackNextPath(rawNext: string | null) {
+  if (!rawNext || rawNext === '/' || rawNext.includes('://') || rawNext.startsWith('//')) {
+    return `/${defaultLocale}${DASHBOARD_PATH}`;
+  }
+
+  const locale = getLocaleFromAuthCallbackNextPath(rawNext);
+  return getSafeAuthCallbackNextPathForLocale(rawNext, locale);
 }
 
 export function getAuthCallbackLoginUrl(
