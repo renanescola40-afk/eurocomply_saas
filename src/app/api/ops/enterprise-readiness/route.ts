@@ -1,27 +1,23 @@
-import { NextResponse } from 'next/server';
+import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { noStoreJson } from '@/server/security/no-store';
 
-const REQUIRED_ENV = [
-  'NEXT_PUBLIC_APP_URL',
-  'NEXT_PUBLIC_SUPABASE_URL',
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET',
-  'STRIPE_PRICE_ESSENTIAL_MONTHLY',
-  'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
-  'STRIPE_PRICE_BUSINESS_MONTHLY',
-  'HEALTHCHECK_TOKEN',
-] as const;
+const REQUIRED_ENV_GROUPS = {
+  app: ['NEXT_PUBLIC_APP_URL', 'HEALTHCHECK_TOKEN'],
+  supabase: ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'],
+  stripe: [
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+    'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+    'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+    'STRIPE_PRICE_BUSINESS_MONTHLY',
+  ],
+} as const;
 
-const RECOMMENDED_ENV = [
-  'NEXT_PUBLIC_SENTRY_DSN',
-  'SENTRY_ORG',
-  'SENTRY_PROJECT',
-  'SENTRY_AUTH_TOKEN',
-  'UPSTASH_REDIS_REST_URL',
-  'UPSTASH_REDIS_REST_TOKEN',
-] as const;
+const RECOMMENDED_ENV_GROUPS = {
+  sentry: ['NEXT_PUBLIC_SENTRY_DSN', 'SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN'],
+  rateLimit: ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN'],
+} as const;
 
 const REQUIRED_TABLES = [
   'organizations',
@@ -63,8 +59,15 @@ function hasBearerToken(request: Request) {
   return authorization === `Bearer ${configuredToken}`;
 }
 
-function envCheck(names: readonly string[]) {
-  return names.map((name) => ({ name, configured: Boolean(process.env[name]) }));
+function envGroupCheck(groups: Record<string, readonly string[]>) {
+  return Object.entries(groups).map(([name, variables]) => {
+    const missingCount = variables.filter((variable) => !process.env[variable]).length;
+    return {
+      name,
+      configured: missingCount === 0,
+      missingCount,
+    };
+  });
 }
 
 async function checkTable<T extends RequiredTable>(admin: SupabaseAdminClient, table: T): Promise<{ name: T; ok: boolean; detail: string }> {
@@ -77,10 +80,11 @@ async function checkTable<T extends RequiredTable>(admin: SupabaseAdminClient, t
       detail: error?.code ?? 'ok',
     };
   } catch (error) {
+    reportError(error, { area: 'ops_enterprise_readiness_table_check', table });
     return {
       name: table,
       ok: false,
-      detail: error instanceof Error ? error.message : 'unknown_error',
+      detail: 'query_failed',
     };
   }
 }
@@ -91,13 +95,14 @@ async function checkBucket(admin: SupabaseAdminClient, name: StorageCheck['name'
     return {
       name,
       ok: !error,
-      detail: error?.message ?? 'ok',
+      detail: error ? 'bucket_unavailable' : 'ok',
     };
   } catch (error) {
+    reportError(error, { area: 'ops_enterprise_readiness_storage_check', bucket: name });
     return {
       name,
       ok: false,
-      detail: error instanceof Error ? error.message : 'unknown_error',
+      detail: 'bucket_check_failed',
     };
   }
 }
@@ -110,13 +115,13 @@ function calculateScore(checks: Array<{ ok: boolean; weight: number }>) {
 
 export async function GET(request: Request) {
   if (!hasBearerToken(request)) {
-    return NextResponse.json({ status: 'unauthorized' }, { status: 401 });
+    return noStoreJson({ status: 'unauthorized' }, { status: 401 });
   }
 
-  const requiredEnv = envCheck(REQUIRED_ENV);
-  const recommendedEnv = envCheck(RECOMMENDED_ENV);
-  const missingRequiredEnv = requiredEnv.filter((item) => !item.configured).map((item) => item.name);
-  const missingRecommendedEnv = recommendedEnv.filter((item) => !item.configured).map((item) => item.name);
+  const requiredEnvironment = envGroupCheck(REQUIRED_ENV_GROUPS);
+  const recommendedEnvironment = envGroupCheck(RECOMMENDED_ENV_GROUPS);
+  const missingRequiredGroups = requiredEnvironment.filter((item) => !item.configured).map((item) => item.name);
+  const missingRecommendedGroups = recommendedEnvironment.filter((item) => !item.configured).map((item) => item.name);
 
   let database: DatabaseCheck[] = REQUIRED_TABLES.map((name) => ({ name, ok: false, detail: 'not_checked' }));
   let storage: StorageCheck[] = [{ name: 'controlled-documents', ok: false, detail: 'not_checked' }];
@@ -126,21 +131,19 @@ export async function GET(request: Request) {
     database = await Promise.all(REQUIRED_TABLES.map((table) => checkTable(admin, table)));
     storage = [await checkBucket(admin, 'controlled-documents')];
   } catch (error) {
-    const detail = error instanceof Error ? error.message : 'admin_client_unavailable';
-    database = REQUIRED_TABLES.map((name) => ({ name, ok: false, detail }));
-    storage = [{ name: 'controlled-documents', ok: false, detail }];
+    reportError(error, { area: 'ops_enterprise_readiness_admin_client' });
+    database = REQUIRED_TABLES.map((name) => ({ name, ok: false, detail: 'admin_client_unavailable' }));
+    storage = [{ name: 'controlled-documents', ok: false, detail: 'admin_client_unavailable' }];
   }
 
   const databaseOk = database.every((item) => item.ok);
   const storageOk = storage.every((item) => item.ok);
-  const requiredEnvOk = missingRequiredEnv.length === 0;
-  const sentryReleaseUploadsConfigured = Boolean(
-    process.env.NEXT_PUBLIC_SENTRY_DSN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT && process.env.SENTRY_AUTH_TOKEN,
-  );
-  const rateLimitConfigured = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+  const requiredEnvironmentOk = missingRequiredGroups.length === 0;
+  const sentryReleaseUploadsConfigured = recommendedEnvironment.find((item) => item.name === 'sentry')?.configured ?? false;
+  const rateLimitConfigured = recommendedEnvironment.find((item) => item.name === 'rateLimit')?.configured ?? false;
 
   const score = calculateScore([
-    { ok: requiredEnvOk, weight: 25 },
+    { ok: requiredEnvironmentOk, weight: 25 },
     { ok: databaseOk, weight: 30 },
     { ok: storageOk, weight: 15 },
     { ok: sentryReleaseUploadsConfigured, weight: 15 },
@@ -150,30 +153,30 @@ export async function GET(request: Request) {
 
   const status = score >= 90 ? 'enterprise_ready' : score >= 70 ? 'production_ready_with_gaps' : 'needs_attention';
 
-  return NextResponse.json(
+  return noStoreJson(
     {
       status,
       score,
       timestamp: new Date().toISOString(),
-      requiredEnv,
-      recommendedEnv,
-      missingRequiredEnv,
-      missingRecommendedEnv,
+      requiredEnvironment,
+      recommendedEnvironment,
+      missingRequiredGroups,
+      missingRecommendedGroups,
       database,
       storage,
       controls: {
-        billingConfigured: REQUIRED_ENV.filter((name) => name.startsWith('STRIPE_')).every((name) => Boolean(process.env[name])),
+        billingConfigured: requiredEnvironment.find((item) => item.name === 'stripe')?.configured ?? false,
         sentryReleaseUploadsConfigured,
         rateLimitConfigured,
         healthcheckProtected: Boolean(process.env.HEALTHCHECK_TOKEN),
         aiGovernanceTablesReady: database.filter((item) => ['ai_systems', 'ai_incidents'].includes(item.name)).every((item) => item.ok),
       },
       nextActions: [
-        ...missingRequiredEnv.map((name) => `Configure required environment variable: ${name}`),
+        ...missingRequiredGroups.map((name) => `Configure required environment group: ${name}`),
         ...database.filter((item) => !item.ok).map((item) => `Apply or refresh Supabase migration for table: ${item.name}`),
         ...storage.filter((item) => !item.ok).map((item) => `Create or verify private storage bucket: ${item.name}`),
-        ...(sentryReleaseUploadsConfigured ? [] : ['Configure Sentry release uploads with SENTRY_ORG, SENTRY_PROJECT and SENTRY_AUTH_TOKEN']),
-        ...(rateLimitConfigured ? [] : ['Configure Upstash Redis rate limiting for production abuse protection']),
+        ...(sentryReleaseUploadsConfigured ? [] : ['Configure Sentry release uploads']),
+        ...(rateLimitConfigured ? [] : ['Configure Upstash Redis rate limiting']),
       ],
     },
     { status: score >= 70 ? 200 : 503 },

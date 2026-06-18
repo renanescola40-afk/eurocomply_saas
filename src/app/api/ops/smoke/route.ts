@@ -1,16 +1,19 @@
-import { NextResponse } from 'next/server';
+import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { noStoreJson } from '@/server/security/no-store';
 
-const requiredEnv = [
-  'NEXT_PUBLIC_SUPABASE_URL',
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET',
-  'STRIPE_PRICE_ESSENTIAL_MONTHLY',
-  'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
-  'STRIPE_PRICE_BUSINESS_MONTHLY',
-] as const;
+const REQUIRED_ENV_GROUPS = {
+  supabase: ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'],
+  stripe: [
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+    'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+    'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+    'STRIPE_PRICE_BUSINESS_MONTHLY',
+  ],
+} as const;
+
+type EnvGroupName = keyof typeof REQUIRED_ENV_GROUPS;
 
 function hasBearerToken(request: Request) {
   const configuredToken = process.env.HEALTHCHECK_TOKEN;
@@ -27,15 +30,23 @@ function hasBearerToken(request: Request) {
   return authorization === `Bearer ${configuredToken}`;
 }
 
+export function envGroupCheck() {
+  return Object.entries(REQUIRED_ENV_GROUPS).map(([name, variables]) => {
+    const missingCount = variables.filter((variable) => !process.env[variable]).length;
+    return {
+      name: name as EnvGroupName,
+      configured: missingCount === 0,
+      missingCount,
+    };
+  });
+}
+
 export async function GET(request: Request) {
   if (!hasBearerToken(request)) {
-    return NextResponse.json({ status: 'unauthorized' }, { status: 401 });
+    return noStoreJson({ status: 'unauthorized' }, { status: 401 });
   }
 
-  const env = requiredEnv.map((name) => ({
-    name,
-    configured: Boolean(process.env[name]),
-  }));
+  const environment = envGroupCheck();
 
   let supabase = { ok: false, detail: 'not_checked' };
 
@@ -44,21 +55,22 @@ export async function GET(request: Request) {
     const { error } = await admin.from('subscriptions').select('id').limit(1);
     supabase = error ? { ok: false, detail: error.code ?? 'query_failed' } : { ok: true, detail: 'ok' };
   } catch (error) {
-    supabase = { ok: false, detail: error instanceof Error ? error.message : 'unknown_error' };
+    reportError(error, { area: 'ops_smoke_supabase_check' });
+    supabase = { ok: false, detail: 'query_failed' };
   }
 
-  const missingEnv = env.filter((item) => !item.configured).map((item) => item.name);
-  const ok = missingEnv.length === 0 && supabase.ok;
+  const missingEnvironmentGroups = environment.filter((item) => !item.configured).map((item) => item.name);
+  const ok = missingEnvironmentGroups.length === 0 && supabase.ok;
 
-  return NextResponse.json(
+  return noStoreJson(
     {
       status: ok ? 'ok' : 'degraded',
       timestamp: new Date().toISOString(),
-      env,
+      environment,
       supabase,
       checks: {
-        billingConfigured: missingEnv.filter((name) => name.startsWith('STRIPE_')).length === 0,
-        supabaseConfigured: missingEnv.filter((name) => name.includes('SUPABASE')).length === 0,
+        billingConfigured: environment.find((item) => item.name === 'stripe')?.configured ?? false,
+        supabaseConfigured: environment.find((item) => item.name === 'supabase')?.configured ?? false,
       },
     },
     { status: ok ? 200 : 503 },
