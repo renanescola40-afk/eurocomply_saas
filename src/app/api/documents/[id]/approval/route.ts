@@ -1,5 +1,6 @@
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -10,6 +11,7 @@ import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 
 const allowedActions = new Set(['approve', 'reject']);
+const APPROVAL_JSON_MAX_BYTES = 8 * 1024;
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const originDenied = assertTrustedOrigin(request);
@@ -48,8 +50,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const { id } = await params;
-  const body = await request.json().catch(() => null) as { action?: string; note?: string } | null;
-  const action = body?.action;
+  const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
+    maxBytes: APPROVAL_JSON_MAX_BYTES,
+  }).catch(() => null);
+  const action = typeof body?.action === 'string' ? body.action : undefined;
 
   if (!action || !allowedActions.has(action)) {
     return noStoreJson({ error: 'Invalid approval action' }, { status: 400 });
@@ -88,7 +92,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     metadata: {
       documentId: id,
       documentTitle,
-      note: body?.note?.slice(0, 300) ?? null,
+      note: typeof body?.note === 'string' ? body.note.slice(0, 300) : null,
       persisted,
       actorRole: permission.role,
     },
