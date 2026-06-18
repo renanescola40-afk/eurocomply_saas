@@ -9,7 +9,7 @@ import { getStripeClient } from '@/server/billing/stripe';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
-import { requireStepUpForRequest } from '@/server/security/step-up';
+import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export async function POST(request: Request) {
   const originDenied = assertTrustedOrigin(request);
@@ -92,11 +92,6 @@ export async function POST(request: Request) {
 
   return noStoreJson({
     url: portalSession.url,
-    stepUp: {
-      action: stepUp.assessment.action,
-      verifiedAt: stepUp.assessment.verifiedAt,
-      expiresAt: stepUp.assessment.expiresAt,
-      tokenType: 'signed_hmac',
-    },
+    stepUp: publicStepUpSummary(stepUp.assessment),
   });
 }
