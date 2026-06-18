@@ -69,6 +69,22 @@ const checks = [
     ],
     forbidden: [],
   },
+  {
+    path: 'src/app/api/billing/entitlements/route.ts',
+    required: ['noStoreJson', 'organization_required', 'Number.isFinite'],
+    forbidden: ['NextResponse.json'],
+  },
+  {
+    path: 'src/app/api/billing/entitlements/route.test.ts',
+    required: [
+      'billing entitlements response hardening',
+      'returns no-store unauthorized responses',
+      'returns no-store organization-required responses',
+      'normalized numeric limits',
+      'no-store',
+    ],
+    forbidden: [],
+  },
 ];
 
 const failures = [];
