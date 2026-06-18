@@ -125,6 +125,26 @@ function assertGuard(failures, source, path, groupName, description) {
   }
 }
 
+function evaluateGdprExportContract(failures, source, path) {
+  if (path !== 'src/app/api/gdpr/export/route.ts') return;
+
+  if (!source.includes('sanitizeDocumentDownloadFileName')) {
+    failures.push(`${path}: GDPR export filename must use the shared download filename sanitizer.`);
+  }
+
+  if (/organization\s*,/.test(source)) {
+    failures.push(`${path}: GDPR export must export an explicit minimal organization shape, not the full object.`);
+  }
+
+  if (/filename="eurocomply-gdpr-export-\$\{/.test(source)) {
+    failures.push(`${path}: GDPR export must not interpolate organization data directly into Content-Disposition.`);
+  }
+
+  if (!source.includes('X-Content-Type-Options')) {
+    failures.push(`${path}: GDPR export must set nosniff for downloaded JSON.`);
+  }
+}
+
 function evaluateRoute(filePath) {
   const path = normalizePath(filePath);
   const source = readFileSync(filePath, 'utf8');
@@ -187,6 +207,8 @@ function evaluateRoute(filePath) {
   if (path.includes('[') && !isPublicMutationExemption) {
     assertGuard(failures, source, path, 'tenant', 'tenant/resource organization validation for dynamic resource route');
   }
+
+  evaluateGdprExportContract(failures, source, path);
 
   for (const unsafe of unsafeErrorPatterns) {
     if (unsafe.pattern.test(source)) {
