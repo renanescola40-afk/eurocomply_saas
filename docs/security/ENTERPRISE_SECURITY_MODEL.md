@@ -167,6 +167,34 @@ EuroComply must not expose generic proxy routes, catch-all integration relays or
 
 `npm run security:no-open-proxy` scans route handlers for proxy/catch-all SSRF regressions and is part of `security:ci`.
 
+## Internal maintenance job policy
+
+Internal maintenance fan-out routes may call other internal endpoints, but production destinations must be derived from server-controlled app configuration, not from the incoming request URL or Host header.
+
+Internal maintenance jobs must:
+
+- require the existing internal cron credential before running any job;
+- resolve the base URL from a valid HTTP(S) `NEXT_PUBLIC_APP_URL` value;
+- fail closed in production when that configured URL is missing or invalid;
+- allow request URL fallback only for local development and test execution;
+- return stable public errors and `no-store` headers when the destination control is unavailable.
+
+`npm run security:internal-maintenance` scans the daily maintenance fan-out route and its tests for production fail-closed destination handling. It is part of `security:ci`.
+
+## Ops readiness response policy
+
+Ops readiness endpoints may expose health state only after a valid healthcheck bearer token. They must not become secret-enumeration, stack-trace or provider-error oracles.
+
+Ops readiness responses must:
+
+- use `noStoreJson` for every response path, including unauthorized responses;
+- report detailed database/provider failures server-side through `reportError`;
+- return stable public detail codes such as `query_failed`, `bucket_unavailable` or `admin_client_unavailable`;
+- group environment readiness by capability, such as `supabase`, `stripe`, `sentry` and `rateLimit`, instead of returning individual secret/configuration key names;
+- return grouped remediation hints, not messages that name individual sensitive environment variables.
+
+`npm run security:ops-readiness` scans ops readiness endpoints for no-store, grouped environment status and sanitized provider-error behavior. It is part of `security:ci`.
+
 ## Security headers
 
 The app must keep defense-in-depth headers active globally:
@@ -206,6 +234,8 @@ npm run security:api-guards
 npm run security:no-store
 npm run security:origin-guards
 npm run security:no-open-proxy
+npm run security:internal-maintenance
+npm run security:ops-readiness
 npm run security:public-errors
 npm run security:csv-exports
 npm run security:document-filenames
