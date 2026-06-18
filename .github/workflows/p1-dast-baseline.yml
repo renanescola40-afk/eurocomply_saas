@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       target_url:
-        description: "HTTPS URL to scan"
+        description: "HTTPS EuroComply URL to scan"
         required: false
         default: "https://eurocomply-saas.vercel.app"
   schedule:
@@ -46,9 +46,9 @@ jobs:
           target_url="${INPUT_TARGET_URL:-${DEFAULT_DAST_TARGET_URL}}"
 
           case "$target_url" in
-            https://*) ;;
+            https://eurocomply-saas.vercel.app|https://eurocomply-saas.vercel.app/*|https://*.eurocomply-saas.vercel.app|https://*.eurocomply-saas.vercel.app/*) ;;
             *)
-              echo "DAST target must use https://" >&2
+              echo "DAST target must be an approved EuroComply HTTPS URL." >&2
               exit 1
               ;;
           esac
@@ -74,30 +74,60 @@ jobs:
               -x p1-dast-report.xml \
               -I
 
-      - name: Verify DAST reports exist
+      - name: Normalize and verify DAST reports
         shell: bash
         run: |
           set -euo pipefail
-          find dast-report -maxdepth 1 -type f -print | sort | tee dast-report/p1-dast-files.txt
+          shopt -s nullglob
 
-          report_count="$(find dast-report -maxdepth 1 -type f \
-            \( -name '*.html' -o -name '*.json' -o -name '*.md' -o -name '*.xml' \) \
-            -size +0c | wc -l | tr -d ' ')"
+          echo "Files produced by ZAP:"
+          find dast-report -maxdepth 1 -type f -print | sort || true
 
-          if [ "$report_count" -eq 0 ]; then
-            echo "No non-empty OWASP ZAP report files were produced." >&2
+          reports=()
+          for candidate in dast-report/p1-dast-report.* dast-report/*report* dast-report/*zap*; do
+            if [ -s "$candidate" ]; then
+              reports+=("$candidate")
+            fi
+          done
+
+          if [ "${#reports[@]}" -eq 0 ]; then
+            echo "No non-empty ZAP report files were produced." >&2
             exit 1
           fi
 
-          sha256sum dast-report/* > dast-report/p1-dast-report.sha256
+          sha256sum "${reports[@]}" > dast-report/p1-dast-report.sha256
+
+          cat > dast-report/p1-dast-manifest.json <<JSON
           {
-            echo "{"
-            echo "  \"targetUrl\": \"${{ steps.target.outputs.target_url }}\","
-            echo "  \"tool\": \"OWASP ZAP baseline\","
-            echo "  \"reportFileCount\": $report_count,"
-            echo "  \"generatedAt\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\""
-            echo "}"
-          } > dast-report/p1-dast-manifest.json
+            "schemaVersion": 1,
+            "controlId": "P1-05",
+            "control": "dast-automated",
+            "evidenceKind": "automation-output",
+            "targetUrl": "${{ steps.target.outputs.target_url }}",
+            "workflow": "P1 DAST Baseline",
+            "runId": "${{ github.run_id }}",
+            "runAttempt": "${{ github.run_attempt }}",
+            "commit": "${{ github.sha }}",
+            "artifactName": "p1-dast-baseline-report",
+            "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "reports": [
+          JSON
+
+          first=1
+          for report in "${reports[@]}"; do
+            digest="$(sha256sum "$report" | awk '{print $1}')"
+            name="$(basename "$report")"
+            if [ "$first" -eq 0 ]; then
+              echo "," >> dast-report/p1-dast-manifest.json
+            fi
+            first=0
+            printf '              {"file":"%s","sha256":"%s"}' "$name" "$digest" >> dast-report/p1-dast-manifest.json
+          done
+
+          cat >> dast-report/p1-dast-manifest.json <<JSON
+            ]
+          }
+          JSON
 
       - name: Upload DAST report artifact
         uses: actions/upload-artifact@v4
@@ -117,7 +147,8 @@ jobs:
             echo "- Target: ${{ steps.target.outputs.target_url }}"
             echo "- Tool: OWASP ZAP baseline"
             echo "- Artifact: p1-dast-baseline-report"
-            echo "- Reports: see p1-dast-manifest.json and p1-dast-report.sha256 in the artifact"
+            echo "- Manifest: p1-dast-manifest.json"
+            echo "- Digest: p1-dast-report.sha256"
             echo
             echo "This workflow generates automation evidence only. P1-05 must remain Open until a successful production run is reviewed and formalized in docs/security/evidence/p1/dast-automated.json."
           } >> "$GITHUB_STEP_SUMMARY"
