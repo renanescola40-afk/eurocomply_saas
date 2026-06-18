@@ -108,6 +108,21 @@ Mutable requests must include a trusted `Origin` or a trusted `Referer`. Product
 
 Safe methods (`GET`, `HEAD`, `OPTIONS`) may bypass origin validation, but sensitive GET downloads and verifiers still require no-store and rate limiting.
 
+## Public authentication error policy
+
+Authentication callbacks and login UI must never reflect provider, SDK, database or exception messages into public URLs or browser-visible error text. Public authentication failures must use short allowlisted codes from `src/lib/auth/public-errors.ts`, then map those codes to generic localized UI copy.
+
+The OAuth callback must:
+
+- validate `next` as a same-origin localized dashboard path;
+- redirect only with allowlisted public error codes;
+- apply no-store headers to every redirect response;
+- log only stable event names without provider payloads or raw exception messages.
+
+The login page must not decode or render arbitrary `error` query values. It may render only messages mapped from allowlisted public codes. Email/password failures use generic copy rather than raw SDK messages.
+
+`npm run security:public-errors` scans for public error reflection regressions and is part of `security:ci`.
+
 ## SSRF and open-proxy policy
 
 EuroComply must not expose generic proxy routes, catch-all integration relays or user-controlled outbound fetches without explicit security review. Any server-side route that forwards requests to a third-party service must:
@@ -161,6 +176,7 @@ npm run security:api-guards
 npm run security:no-store
 npm run security:origin-guards
 npm run security:no-open-proxy
+npm run security:public-errors
 npm run security:server-action-identity
 npm run security:authorization-bola
 npm run security:client-boundaries
@@ -194,6 +210,7 @@ Before adding a new API route, verify:
 - [ ] route returns no-store headers on every response path;
 - [ ] exported server actions derive user and tenant server-side instead of accepting caller-supplied identity;
 - [ ] outbound fetches use allowlisted hosts, explicit headers and no generic catch-all proxying;
+- [ ] public auth/user-facing errors are allowlisted codes with generic localized copy;
 - [ ] errors are sanitized and do not expose stack traces, SQL, provider payloads or secrets;
 - [ ] logs use stable event names and metadata without tokens, cookies, passwords or service keys;
 - [ ] service role is used only through server-only helpers.
