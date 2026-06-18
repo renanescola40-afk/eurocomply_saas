@@ -12,6 +12,10 @@ function fail(message) {
   process.exit(1);
 }
 
+function assertString(value, field) {
+  if (typeof value !== 'string' || value.trim().length === 0) fail(`${field} is required`);
+}
+
 if (!fs.existsSync(evidencePath)) {
   console.log(`P1 identity access evidence is open: ${evidencePath} is not present yet.`);
   process.exit(0);
@@ -25,29 +29,40 @@ try {
 }
 
 if (placeholderPattern.test(JSON.stringify(evidence))) fail('evidence must not contain placeholders');
+if (evidence.schemaVersion !== 1) fail('schemaVersion must be 1');
+if (evidence.controlId !== 'P1-01') fail('controlId must be P1-01');
 if (evidence.control !== 'sso-saml-oidc') fail('control must be sso-saml-oidc');
-if (!['Complete', 'Exception'].includes(evidence.status)) fail('status must be Complete or Exception');
+if (evidence.status !== 'Complete') fail('status must be Complete');
+if (evidence.evidenceKind !== 'final-p1-control-evidence') fail('evidenceKind must be final-p1-control-evidence');
+if (evidence.generatedFromRealEvidence !== true) fail('generatedFromRealEvidence must be true');
+if (evidence.productionValidated !== true) fail('productionValidated must be true');
 if (evidence.redaction !== requiredRedaction) fail('redaction statement is missing or invalid');
-if (!evidence.reviewedAt || !evidence.reviewer || !evidence.targetEnvironment) fail('reviewedAt, reviewer, and targetEnvironment are required');
+
+for (const field of ['generatedAt', 'reviewedAt', 'reviewer', 'nextReviewDue', 'environment']) assertString(evidence[field], field);
+if (!['production', 'prod'].includes(evidence.environment.trim().toLowerCase())) fail('environment must be production');
+
+if (!evidence.validation || evidence.validation.result !== 'pass') fail('validation.result must be pass');
+for (const field of ['validatedAt', 'validator', 'method']) assertString(evidence.validation[field], `validation.${field}`);
+
+if (!Array.isArray(evidence.artifacts) || evidence.artifacts.length === 0) fail('artifacts must include at least one evidence reference');
+for (const [index, artifact] of evidence.artifacts.entries()) {
+  for (const field of ['type', 'reference', 'description', 'collectedAt']) assertString(artifact[field], `artifacts[${index}].${field}`);
+}
 
 if (!Array.isArray(evidence.identityProtocolsReviewed) || evidence.identityProtocolsReviewed.length === 0) fail('identityProtocolsReviewed must include at least one entry');
 for (const entry of evidence.identityProtocolsReviewed) {
-  if (!entry.protocol || !entry.provider || !entry.tenantOrOrgScope || !entry.status || !entry.evidenceLocation) fail('each identity protocol entry must include required fields');
+  for (const field of ['protocol', 'provider', 'tenantOrOrgScope', 'status', 'evidenceLocation']) assertString(entry[field], `identityProtocolsReviewed.${field}`);
   if (!allowedProtocols.has(entry.protocol)) fail(`${entry.protocol} is not an allowed identity protocol`);
-  if (evidence.status === 'Complete' && entry.status !== 'configured') fail(`${entry.provider} must have status configured for Complete evidence`);
+  if (entry.status !== 'configured') fail(`${entry.provider} must have status configured`);
 }
 
 if (!Array.isArray(evidence.accessBoundariesReviewed) || evidence.accessBoundariesReviewed.length === 0) fail('accessBoundariesReviewed must include at least one boundary');
 for (const boundary of evidence.accessBoundariesReviewed) {
-  if (!boundary.boundary || !Array.isArray(boundary.mappedRolesOrGroups) || boundary.mappedRolesOrGroups.length === 0 || !boundary.evidenceLocation) fail('each access boundary must include boundary, mappedRolesOrGroups, and evidenceLocation');
+  assertString(boundary.boundary, 'access boundary name');
+  if (!Array.isArray(boundary.mappedRolesOrGroups) || boundary.mappedRolesOrGroups.length === 0) fail('each access boundary must include mappedRolesOrGroups');
+  assertString(boundary.evidenceLocation, 'access boundary evidenceLocation');
 }
 
 if (!Array.isArray(evidence.controlsVerified) || evidence.controlsVerified.length < 5) fail('controlsVerified must include at least five controls');
-if (!evidence.nextReviewDue) fail('nextReviewDue is required');
-
-if (evidence.status === 'Exception') {
-  if (!evidence.exception || !evidence.exception.riskOwner || !evidence.exception.rationale || !evidence.exception.expiresAt || !evidence.exception.approvalReference) fail('Exception evidence requires riskOwner, rationale, expiresAt, and approvalReference');
-  if (!Array.isArray(evidence.exception.compensatingControls) || evidence.exception.compensatingControls.length === 0) fail('Exception evidence requires compensatingControls');
-}
 
 console.log(`P1 identity access evidence is valid: ${evidencePath}`);
