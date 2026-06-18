@@ -195,6 +195,21 @@ Ops readiness responses must:
 
 `npm run security:ops-readiness` scans ops readiness endpoints for no-store, grouped environment status and sanitized provider-error behavior. It is part of `security:ci`.
 
+## Public verifier policy
+
+Public verifier endpoints accept untrusted payloads from unauthenticated users and must be treated as abuse-facing APIs even when they only validate cryptographic evidence.
+
+Public verifiers must:
+
+- use distributed rate limiting and fail closed when the rate-limit dependency is unavailable;
+- reject unsupported content types before parsing request bodies;
+- enforce a small explicit request-size limit before and after body read;
+- use `noStoreJson` for success and every error path;
+- return stable public error codes instead of prose parser/provider errors;
+- keep unit tests for bounded valid input, oversized input and content-type rejection.
+
+`npm run security:public-verifiers` scans public evidence-pack verifiers for bounded parsing, no-store responses, rate limiting and sanitized errors. It is part of `security:ci`.
+
 ## Security headers
 
 The app must keep defense-in-depth headers active globally:
@@ -236,6 +251,7 @@ npm run security:origin-guards
 npm run security:no-open-proxy
 npm run security:internal-maintenance
 npm run security:ops-readiness
+npm run security:public-verifiers
 npm run security:public-errors
 npm run security:csv-exports
 npm run security:document-filenames
