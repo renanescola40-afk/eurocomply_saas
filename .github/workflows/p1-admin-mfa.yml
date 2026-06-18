@@ -2,6 +2,15 @@ name: P1 Admin MFA Evidence
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/security/evidence/p1/admin-mfa-required.json'
+      - 'docs/security/evidence/p1/admin-mfa-required.template.json'
+      - 'docs/security/P1_ADMIN_MFA_USAGE.md'
+      - 'scripts/security/check-p1-admin-mfa-evidence.mjs'
+      - '.github/workflows/p1-admin-mfa.yml'
   pull_request:
     branches:
       - main
