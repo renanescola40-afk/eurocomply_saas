@@ -1,51 +1,96 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { reportError } from '@/lib/observability/report-error';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { noStoreJson } from '@/server/security/no-store';
 
 export const dynamic = 'force-dynamic';
 
-function isAuthorized(request: NextRequest) {
+const REQUIRED_ENV_GROUPS = {
+  supabase: ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'],
+} as const;
+
+type EnvGroupName = keyof typeof REQUIRED_ENV_GROUPS;
+
+type ReadyEnvironmentGroup = {
+  name: EnvGroupName;
+  configured: boolean;
+  missingCount: number;
+};
+
+function hasBearerToken(request: Request) {
   const token = process.env.HEALTHCHECK_TOKEN;
 
+  if (process.env.NODE_ENV !== 'production' && !token) {
+    return true;
+  }
+
   if (!token) {
-    return process.env.NODE_ENV !== 'production';
+    return false;
   }
 
   const authorization = request.headers.get('authorization');
   return authorization === `Bearer ${token}`;
 }
 
-export async function GET(request: NextRequest) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ status: 'unauthorized' }, { status: 401 });
+export function readyEnvironmentCheck(): ReadyEnvironmentGroup[] {
+  return Object.entries(REQUIRED_ENV_GROUPS).map(([name, variables]) => {
+    const missingCount = variables.filter((variable) => !process.env[variable]).length;
+    return {
+      name: name as EnvGroupName,
+      configured: missingCount === 0,
+      missingCount,
+    };
+  });
+}
+
+export async function GET(request: Request) {
+  if (!hasBearerToken(request)) {
+    return noStoreJson({ status: 'unauthorized' }, { status: 401 });
   }
 
-  const checks = {
-    env: {
-      supabaseUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
-      supabaseAnonKey: Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
-      supabaseServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
-    },
-    database: {
-      adminClient: false,
-      subscriptionsReadable: false,
-    },
+  const environment = readyEnvironmentCheck();
+  const supabaseConfigured = environment.find((item) => item.name === 'supabase')?.configured ?? false;
+
+  let database = {
+    adminClient: false,
+    subscriptionsReadable: false,
+    detail: 'not_checked',
   };
 
-  const supabase = tryCreateAdminClient();
-  checks.database.adminClient = Boolean(supabase);
+  try {
+    const supabase = tryCreateAdminClient();
+    database.adminClient = Boolean(supabase);
 
-  if (supabase) {
-    const { error } = await supabase.from('subscriptions').select('id').limit(1);
-    checks.database.subscriptionsReadable = !error;
+    if (supabase) {
+      const { error } = await supabase.from('subscriptions').select('id').limit(1);
+      database = {
+        adminClient: true,
+        subscriptionsReadable: !error,
+        detail: error ? error.code ?? 'query_failed' : 'ok',
+      };
+    } else {
+      database.detail = 'admin_client_unavailable';
+    }
+  } catch (error) {
+    reportError(error, { area: 'ready_supabase_check' });
+    database = {
+      adminClient: false,
+      subscriptionsReadable: false,
+      detail: 'query_failed',
+    };
   }
 
-  const ok = checks.env.supabaseUrl && checks.env.supabaseAnonKey && checks.env.supabaseServiceRole && checks.database.adminClient;
+  const ok = supabaseConfigured && database.adminClient && database.subscriptionsReadable;
 
-  return NextResponse.json(
+  return noStoreJson(
     {
       status: ok ? 'ready' : 'not_ready',
       timestamp: new Date().toISOString(),
-      checks,
+      environment,
+      database,
+      checks: {
+        supabaseConfigured,
+        databaseReachable: database.adminClient && database.subscriptionsReadable,
+      },
     },
     { status: ok ? 200 : 503 },
   );
