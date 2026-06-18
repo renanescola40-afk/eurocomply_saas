@@ -35,6 +35,7 @@ const delegatedGateScripts = [
   'scripts/security/check-audit-chain-verify-contract.mjs',
   'scripts/security/check-enterprise-readiness-export-contract.mjs',
   'scripts/security/check-continuity-export-contract.mjs',
+  'scripts/security/check-governance-export-contracts.mjs',
 ];
 
 const publicVerifierRoutes = [
@@ -261,14 +262,10 @@ if (!existsSync(adminClientPath)) {
   }
 }
 
-console.log('Enterprise API security gate');
-console.log('----------------------------');
-console.log(`Scanned ${routeFiles.length} API route files and ${sourceFiles.length} source files.`);
-
 if (failures.length > 0) {
-  console.error('Enterprise API security failures:');
+  console.error('Enterprise API security check failed:');
   for (const failure of failures) console.error(`- ${failure}`);
-  process.exitCode = 1;
-} else {
-  console.log('Enterprise API security gate: ok');
+  process.exit(1);
 }
+
+console.log('Enterprise API security checks passed.');
