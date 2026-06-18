@@ -146,7 +146,6 @@ export default async function middleware(req: NextRequest) {
     pathname.startsWith('/api') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/next_api') ||
-    pathname.startsWith('/zoer_proxy') ||
     pathname.includes('.')
   ) {
     return NextResponse.next();
@@ -215,5 +214,5 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api|next_api|zoer_proxy|.*\\..*).*)'],
+  matcher: ['/((?!_next|api|next_api|.*\\..*).*)'],
 };
