@@ -25,6 +25,7 @@ const guardGroups = {
 const delegatedGateScripts = [
   'scripts/security/check-upload-security.mjs',
   'scripts/security/check-upload-content-scan.mjs',
+  'scripts/security/check-json-body-limits.mjs',
 ];
 
 const publicVerifierRoutes = [
