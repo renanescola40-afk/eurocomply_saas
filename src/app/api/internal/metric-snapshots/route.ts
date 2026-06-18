@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server';
 import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getDashboardSummary, recordDashboardMetricSnapshot } from '@/server/queries/dashboard';
+import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   if (!isAuthorizedInternalCronRequest(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const supabase = createAdminClient();
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   if (error) {
     reportError(error, { area: 'metric_snapshot_job', step: 'list_organizations' });
-    return NextResponse.json({ error: 'Unable to list organizations' }, { status: 500 });
+    return noStoreJson({ error: 'Unable to list organizations' }, { status: 500 });
   }
 
   const results = {
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: results.failed === 0, ...results });
+  return noStoreJson({ ok: results.failed === 0, ...results });
 }
 
 export async function GET(request: Request) {

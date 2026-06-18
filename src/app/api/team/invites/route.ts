@@ -7,7 +7,7 @@ import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { isPlanAtLeast } from '@/server/queries/subscription';
-import { isRateLimited } from '@/server/security/rate-limit';
+import { checkDistributedRateLimit } from '@/server/security/rate-limit';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
@@ -49,17 +49,22 @@ export async function POST(request: Request) {
 
   const clientIp = getClientIp(request);
   const rateLimitKey = `team-invite:${user.id}:${clientIp}`;
+  const rateLimit = await checkDistributedRateLimit({
+    key: rateLimitKey,
+    limit: RATE_LIMIT_MAX_ATTEMPTS,
+    windowSeconds: Math.ceil(RATE_LIMIT_WINDOW_MS / 1000),
+  });
 
-  if (
-    await isRateLimited({
-      key: rateLimitKey,
-      limit: RATE_LIMIT_MAX_ATTEMPTS,
-      windowMs: RATE_LIMIT_WINDOW_MS,
-    })
-  ) {
+  if (!rateLimit.allowed) {
     return noStoreJson(
-      { error: 'Too many invite attempts. Please wait before trying again.' },
-      { status: 429 },
+      { error: rateLimit.reason ? 'security_control_unavailable' : 'Too many invite attempts. Please wait before trying again.' },
+      {
+        status: rateLimit.reason ? 503 : 429,
+        headers: {
+          'Retry-After': String(Math.max(1, rateLimit.retryAfterSeconds)),
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+        },
+      },
     );
   }
 

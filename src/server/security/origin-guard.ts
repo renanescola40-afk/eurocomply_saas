@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { noStoreJson } from './no-store';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -50,7 +50,7 @@ export function verifyTrustedOrigin(request: Request, trustedOrigins = getTruste
   const origin = readOrigin(request);
 
   if (!origin) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && process.env.VERCEL_ENV !== 'production') {
       return { ok: true, reason: 'development_no_origin' };
     }
 
@@ -69,17 +69,12 @@ export function verifyTrustedOrigin(request: Request, trustedOrigins = getTruste
 }
 
 export function originDeniedResponse(result: Extract<OriginGuardResult, { ok: false }>) {
-  return NextResponse.json(
+  return noStoreJson(
     {
       error: 'untrusted_origin',
       reason: result.reason,
     },
-    {
-      status: 403,
-      headers: {
-        'Cache-Control': 'no-store',
-      },
-    },
+    { status: 403 },
   );
 }
 

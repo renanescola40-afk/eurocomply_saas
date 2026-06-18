@@ -1,3 +1,5 @@
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -36,6 +38,16 @@ export async function POST(request: Request) {
 
   if (!permission.ok) {
     return permissionDeniedResponse(permission);
+  }
+
+  const rateLimit = await checkDistributedRateLimit({
+    key: `billing:portal:${organization.id}:${user.id}`,
+    limit: 10,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
   }
 
   const stepUp = requireStepUpForRequest({

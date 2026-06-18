@@ -1,4 +1,6 @@
 import { NextRequest } from 'next/server';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -25,6 +27,16 @@ export async function POST(request: NextRequest) {
 
   if (!organization) {
     return noStoreJson({ error: 'Organization not found' }, { status: 404 });
+  }
+
+  const rateLimit = await checkDistributedRateLimit({
+    key: `gdpr:delete-request:${organization.id}:${user.id}`,
+    limit: 3,
+    windowMs: 60 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
   }
 
   const entitlementCheck = await assertGdprSelfServiceEnabled(organization.id);

@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email/client';
 import { documentExpiringEmail, vendorReviewEmail } from '@/lib/email/templates';
 import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 
@@ -224,7 +224,7 @@ async function sendVendorReviewAlerts() {
 
 export async function POST(request: Request) {
   if (!isAuthorizedInternalCronRequest(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -233,14 +233,14 @@ export async function POST(request: Request) {
       sendVendorReviewAlerts(),
     ]);
 
-    return NextResponse.json({
+    return noStoreJson({
       ok: true,
       documentAlerts,
       vendorAlerts,
     });
   } catch (error) {
     reportError(error, { area: 'compliance_alert_job' });
-    return NextResponse.json({ error: 'Unable to send compliance alerts' }, { status: 500 });
+    return noStoreJson({ error: 'Unable to send compliance alerts' }, { status: 500 });
   }
 }
 

@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
 import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
+import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 
@@ -68,12 +68,12 @@ async function runMaintenanceJob(baseUrl: string, path: string, credential: stri
 
 export async function POST(request: Request) {
   if (!isAuthorizedInternalCronRequest(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const credential = getInternalCronCredential();
   if (!credential) {
-    return NextResponse.json({ error: 'Internal cron credential is not configured.' }, { status: 500 });
+    return noStoreJson({ error: 'Internal cron credential is not configured.' }, { status: 500 });
   }
 
   const baseUrl = getBaseUrl(request);
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
 
   const failed = results.filter((result) => !result.ok);
 
-  return NextResponse.json({
+  return noStoreJson({
     ok: failed.length === 0,
     jobs: results.length,
     failed: failed.length,
