@@ -1,7 +1,6 @@
-import { NextResponse } from 'next/server';
-
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 
@@ -53,13 +52,13 @@ function buildMaintenanceItem(): IntelligenceRefreshPayload {
 
 export async function POST(request: Request) {
   if (!isAuthorizedInternalCronRequest(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const supabase = tryCreateAdminClient();
 
   if (!supabase) {
-    return NextResponse.json({ ok: false, error: 'Supabase admin client is not configured' }, { status: 500 });
+    return noStoreJson({ ok: false, error: 'Supabase admin client is not configured' }, { status: 500 });
   }
 
   const { data, error } = await supabase
@@ -68,10 +67,11 @@ export async function POST(request: Request) {
     .select('external_id,title,updated_at');
 
   if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    console.error('[intelligence:refresh] upsert failed', { code: error.code ?? 'unknown' });
+    return noStoreJson({ ok: false, error: 'Unable to refresh intelligence items' }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, processed: data?.length ?? 0, items: data ?? [] });
+  return noStoreJson({ ok: true, processed: data?.length ?? 0, items: data ?? [] });
 }
 
 export async function GET(request: Request) {
