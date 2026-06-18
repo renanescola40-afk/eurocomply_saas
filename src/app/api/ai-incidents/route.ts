@@ -1,9 +1,5 @@
-import {
-  buildAiIncidentTriagePlan,
-  normalizeAiIncidentCategory,
-  normalizeAiIncidentReportStatus,
-  normalizeAiIncidentSeverity,
-} from '@/lib/ai-governance/incidents';
+import { buildAiIncidentTriagePlan, normalizeAiIncidentCategory, normalizeAiIncidentReportStatus, normalizeAiIncidentSeverity } from '@/lib/ai-governance/incidents';
+import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAuditEvent } from '@/server/queries/audit-events';
@@ -29,6 +25,25 @@ function normalizeDetectedAt(value: unknown) {
   const text = asText(value);
   if (!text || Number.isNaN(Date.parse(text))) return new Date().toISOString();
   return new Date(text).toISOString();
+}
+
+function rateLimitDeniedResponse(result: RateLimitResult) {
+  const retryAfter = Math.max(1, Math.ceil((result.resetAt - Date.now()) / 1000));
+
+  return noStoreJson(
+    {
+      error: result.reason ? 'security_control_unavailable' : 'rate_limit_exceeded',
+      retryAfter,
+    },
+    {
+      status: result.reason ? 503 : 429,
+      headers: {
+        'Retry-After': String(retryAfter),
+        'X-RateLimit-Remaining': String(result.remaining),
+        'X-RateLimit-Reset': String(Math.ceil(result.resetAt / 1000)),
+      },
+    },
+  );
 }
 
 export async function GET() {
@@ -86,6 +101,16 @@ export async function POST(request: Request) {
 
   if (!permission.ok) {
     return permissionDeniedResponse(permission);
+  }
+
+  const rateLimit = await checkDistributedRateLimit({
+    key: `ai-incidents:create:${organization.id}`,
+    limit: 20,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitDeniedResponse(rateLimit);
   }
 
   let payload: unknown;
