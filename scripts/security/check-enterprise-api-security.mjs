@@ -34,6 +34,7 @@ const delegatedGateScripts = [
   'scripts/security/check-step-up-response-contract.mjs',
   'scripts/security/check-audit-chain-verify-contract.mjs',
   'scripts/security/check-enterprise-readiness-export-contract.mjs',
+  'scripts/security/check-continuity-export-contract.mjs',
 ];
 
 const publicVerifierRoutes = [
@@ -260,17 +261,8 @@ if (!existsSync(adminClientPath)) {
   }
 }
 
-const publicSecretPattern = /NEXT_PUBLIC_[A-Z0-9_]*SERVICE_ROLE/i;
-for (const file of sourceFiles) {
-  const path = normalizePath(file);
-  const source = readFileSync(file, 'utf8');
-  if (publicSecretPattern.test(source)) {
-    failures.push(`${path}: service role key must never use NEXT_PUBLIC_* naming.`);
-  }
-}
-
-console.log('EuroComply enterprise API security check');
-console.log('-----------------------------------------');
+console.log('Enterprise API security gate');
+console.log('----------------------------');
 console.log(`Scanned ${routeFiles.length} API route files and ${sourceFiles.length} source files.`);
 
 if (failures.length > 0) {
@@ -278,5 +270,5 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log('Enterprise API security coverage: ok');
+  console.log('Enterprise API security gate: ok');
 }

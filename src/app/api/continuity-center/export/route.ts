@@ -1,3 +1,4 @@
+import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
 import { getContinuitySummary, CONTINUITY_CONTROLS } from '@/server/governance/continuity-policy';
 import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
@@ -8,7 +9,7 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 import { checkDistributedRateLimit } from '@/server/security/rate-limit';
 import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
 import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
-import { requireStepUpForRequest } from '@/server/security/step-up';
+import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
@@ -92,12 +93,7 @@ export async function GET(request: Request) {
       openCriticalControls: summary.openCriticalControls,
       nextActions: summary.nextActions,
     },
-    stepUp: {
-      action: stepUp.assessment.action,
-      verifiedAt: stepUp.assessment.verifiedAt,
-      expiresAt: stepUp.assessment.expiresAt,
-      tokenType: 'signed_hmac',
-    },
+    stepUp: publicStepUpSummary(stepUp.assessment),
   };
 
   const integrity = buildEvidencePackIntegrity(payload);
@@ -126,7 +122,7 @@ export async function GET(request: Request) {
     },
   });
 
-  const fileName = `eurocomply-continuity-center-${organization.slug ?? organization.id}.json`;
+  const fileName = sanitizeDocumentDownloadFileName(`eurocomply-continuity-center-${organization.slug ?? organization.id}.json`);
 
   return noStoreDownload(JSON.stringify(envelope, null, 2), {
     status: 200,
