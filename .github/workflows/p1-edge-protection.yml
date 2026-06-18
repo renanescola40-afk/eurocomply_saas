@@ -1,0 +1,24 @@
+name: P1 Edge Protection Evidence
+
+on:
+  pull_request:
+    paths:
+      - 'docs/security/evidence/p1/waf-cdn-ddos.json'
+      - 'docs/security/evidence/p1/waf-cdn-ddos.template.json'
+      - 'scripts/security/check-p1-edge-protection-evidence.mjs'
+      - '.github/workflows/p1-edge-protection.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-p1-edge-protection-evidence:
+    name: Validate P1 edge protection evidence
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate P1 edge protection evidence
+        run: node scripts/security/check-p1-edge-protection-evidence.mjs
