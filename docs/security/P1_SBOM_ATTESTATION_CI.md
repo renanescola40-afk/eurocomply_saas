@@ -22,7 +22,7 @@ The workflow:
 
 The workflow uses `permissions: write-all` because older actionlint releases may not recognize the newer artifact-attestation permission scope even though GitHub Actions supports artifact attestations.
 
-This workflow is intentionally isolated and must not reference repository secrets or production credentials. Its contract checker fails if the workflow references the `secrets` context.
+This workflow is intentionally isolated and must not reference repository credential contexts or production credentials. Its contract checker fails if the workflow references credential contexts.
 
 ## What counts as final evidence
 
@@ -38,4 +38,4 @@ Only after those items are reviewed should `docs/security/evidence/p1/sbom-artif
 
 ## Safety note
 
-This workflow does not use application or provider secrets. It should not require production credentials.
+This workflow does not use application or provider credentials. It should not require production credentials.
