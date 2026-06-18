@@ -1,3 +1,5 @@
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan } from '@/server/billing/plans';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -39,6 +41,16 @@ export async function POST(request: Request) {
 
   if (!permission.ok) {
     return permissionDeniedResponse(permission);
+  }
+
+  const rateLimit = await checkDistributedRateLimit({
+    key: `billing:checkout:${organization.id}:${user.id}`,
+    limit: 10,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
   }
 
   const stepUp = requireStepUpForRequest({
