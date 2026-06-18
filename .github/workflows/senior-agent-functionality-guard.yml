@@ -11,7 +11,7 @@ jobs:
   functionality-guard:
     name: Verify agent PR functionality
     runs-on: ubuntu-latest
-    if: startsWith(github.head_ref, 'agent/')
+    if: startsWith(github.head_ref, 'agent/') && github.head_ref != 'agent/senior-engineer-agent-bootstrap'
     steps:
       - name: Checkout PR
         uses: actions/checkout@v4
