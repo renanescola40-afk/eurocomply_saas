@@ -10,12 +10,36 @@ import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 
+export const MAX_BILLING_WEBHOOK_BYTES = 1_000_000;
+
 type SubscriptionWithPeriod = Stripe.Subscription & {
   current_period_end?: number | null;
   items?: {
     data?: Array<{ current_period_end?: number | null }>;
   };
 };
+
+export function getBillingWebhookContentLength(request: Request) {
+  const contentLength = request.headers.get('content-length');
+  if (!contentLength) return null;
+
+  const parsed = Number(contentLength);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
+export async function readBoundedBillingWebhookBody(request: Request) {
+  const contentLength = getBillingWebhookContentLength(request);
+  if (contentLength !== null && contentLength > MAX_BILLING_WEBHOOK_BYTES) {
+    return null;
+  }
+
+  const body = await request.text();
+  if (new TextEncoder().encode(body).byteLength > MAX_BILLING_WEBHOOK_BYTES) {
+    return null;
+  }
+
+  return body;
+}
 
 function getPlanFromSubscription(subscription: Stripe.Subscription) {
   return normalizePlan(subscription.metadata?.plan);
@@ -109,7 +133,11 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'missing_signature' }, { status: 400 });
   }
 
-  const payload = await request.text();
+  const payload = await readBoundedBillingWebhookBody(request);
+  if (payload === null) {
+    return noStoreJson({ error: 'payload_too_large' }, { status: 413 });
+  }
+
   const stripe = getStripeClient();
   let event: Stripe.Event;
 
