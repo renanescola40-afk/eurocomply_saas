@@ -3,34 +3,35 @@ import { join, relative, sep } from 'node:path';
 
 const apiRoot = join(process.cwd(), 'src', 'app', 'api');
 
-const authGuard = ['getCurrentUser', 'requireOrganizationContext'];
-const organizationGuard = ['getCurrentOrganizationForUser', 'requireOrganizationContext'];
-const rbacGuard = ['assertOrganizationPermission'];
+const authGuard = ['getCurrentUser', 'requireCurrentUser', 'requireOrganizationContext', 'requireEnterpriseApiAccess'];
+const organizationGuard = ['getCurrentOrganizationForUser', 'requireOrganizationContext', 'requireEnterpriseApiAccess'];
+const rbacGuard = ['assertOrganizationPermission', 'requireEnterpriseApiAccess'];
 const planGuard = ['assertPlanAtLeast', 'assertGdprSelfServiceEnabled'];
-const rateLimitGuard = ['checkDistributedRateLimit'];
+const rateLimitGuard = ['checkDistributedRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireEnterpriseApiAccess'];
 const auditGuard = ['createAuditEvent'];
 const integrityGuard = ['buildEvidencePackIntegrity'];
-const noStoreGuard = ['noStoreJson', 'noStoreDownload', 'Cache-Control'];
-const originGuard = ['assertTrustedOrigin', 'verifyTrustedOrigin'];
+const noStoreGuard = ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'Cache-Control', 'no-store'];
+const originGuard = ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireEnterpriseApiAccess'];
 const stepUpGuard = ['requireStepUpForRequest'];
+const internalAuthGuard = ['isAuthorizedInternalCronRequest', 'HEALTHCHECK_TOKEN', 'CRON_SECRET', 'INTERNAL_CRON_SECRET'];
 
 const endpointRules = [
   {
     name: 'billing checkout',
-    match: /src\/app\/api\/billing\/checkout\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, originGuard, noStoreGuard],
-    requiredAll: ['manage_billing', 'getStripeClient'],
+    match: /src\/app\/api\/billing\/(checkout|checkout-intent)\/route\.ts$/,
+    requiredAny: [authGuard, organizationGuard, rbacGuard, originGuard, rateLimitGuard, noStoreGuard],
+    requiredAll: ['manage_billing'],
   },
   {
     name: 'billing portal',
     match: /src\/app\/api\/billing\/portal\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, originGuard, noStoreGuard],
+    requiredAny: [authGuard, organizationGuard, rbacGuard, originGuard, rateLimitGuard, noStoreGuard],
     requiredAll: ['manage_billing', 'getStripeClient'],
   },
   {
     name: 'Stripe webhook',
-    match: /src\/app\/api\/billing\/webhook\/route\.ts$/,
-    requiredAny: [],
+    match: /src\/app\/api\/(billing|stripe)\/webhook\/route\.ts$/,
+    requiredAny: [noStoreGuard],
     requiredAll: ['constructEvent', 'STRIPE_WEBHOOK_SECRET'],
   },
   {
@@ -68,14 +69,20 @@ const endpointRules = [
   {
     name: 'AI governance endpoint',
     match: /src\/app\/api\/ai-(systems|incidents)\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, auditGuard, originGuard, noStoreGuard],
+    requiredAny: [authGuard, organizationGuard, rbacGuard, auditGuard, originGuard, rateLimitGuard, noStoreGuard],
     requiredAll: [],
   },
   {
     name: 'ops endpoint',
     match: /src\/app\/api\/ops\/.*\/route\.ts$/,
-    requiredAny: [noStoreGuard],
-    requiredAll: ['HEALTHCHECK_TOKEN'],
+    requiredAny: [internalAuthGuard, noStoreGuard],
+    requiredAll: [],
+  },
+  {
+    name: 'internal cron endpoint',
+    match: /src\/app\/api\/internal\/.*\/route\.ts$|src\/app\/api\/intelligence\/refresh\/route\.ts$/,
+    requiredAny: [internalAuthGuard, noStoreGuard],
+    requiredAll: [],
   },
   {
     name: 'team endpoint',
@@ -92,14 +99,20 @@ const endpointRules = [
   {
     name: 'GDPR delete request endpoint',
     match: /src\/app\/api\/gdpr\/delete-request\/route\.ts$/,
-    requiredAny: [originGuard],
+    requiredAny: [originGuard, rateLimitGuard],
     requiredAll: [],
   },
   {
     name: 'document mutation endpoint',
     match: /src\/app\/api\/documents\/.*\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, originGuard, noStoreGuard],
+    requiredAny: [authGuard, organizationGuard, rbacGuard, originGuard, rateLimitGuard, noStoreGuard],
     requiredAll: ['manage_documents'],
+  },
+  {
+    name: 'step-up challenge endpoint',
+    match: /src\/app\/api\/security\/step-up\/challenge\/route\.ts$/,
+    requiredAny: [authGuard, organizationGuard, originGuard, rateLimitGuard, noStoreGuard],
+    requiredAll: [],
   },
 ];
 
@@ -111,6 +124,10 @@ const forbiddenPatterns = [
   {
     name: 'hard-coded Supabase service role JWT prefix',
     pattern: /eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}/,
+  },
+  {
+    name: 'stack trace exposure',
+    pattern: /error\.stack|stack:\s*error|JSON\.stringify\(\s*error/,
   },
 ];
 
