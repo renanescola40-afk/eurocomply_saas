@@ -133,7 +133,7 @@ export async function createCheckoutSession(input: CheckoutInput) {
     return session.url;
   } catch (error) {
     reportError(error, context);
-    throw error instanceof Error ? new Error(error.message) : new Error('Unable to create checkout session');
+    throw new Error('Unable to create checkout session');
   }
 }
 
@@ -198,6 +198,6 @@ export async function createCustomerPortalSession(input: PortalInput) {
     return session.url;
   } catch (error) {
     reportError(error, context);
-    throw error instanceof Error ? new Error(error.message) : new Error('Unable to create customer portal session');
+    throw new Error('Unable to create customer portal session');
   }
 }
