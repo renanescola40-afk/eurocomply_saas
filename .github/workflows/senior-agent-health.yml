@@ -1,0 +1,123 @@
+name: Senior Agent Health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '12 8 * * 1-5'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: senior-agent-health
+  cancel-in-progress: false
+
+jobs:
+  health:
+    name: Validate senior agent control plane
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate required files
+        id: validate
+        shell: bash
+        run: |
+          set +e
+          missing=0
+          report=""
+
+          require_file() {
+            path="$1"
+            if [ ! -f "$path" ]; then
+              missing=1
+              report="$report
+          - Missing: $path"
+            fi
+          }
+
+          require_file "AGENTS.md"
+          require_file ".github/senior-agent.yml"
+          require_file ".github/workflows/senior-agent-watchdog.yml"
+          require_file ".github/workflows/senior-agent-triage.yml"
+          require_file ".github/workflows/senior-agent-dispatch.yml"
+          require_file ".github/workflows/senior-agent-autofix.yml"
+          require_file ".github/workflows/senior-agent-self-heal.yml"
+          require_file ".github/workflows/senior-agent-daily-handoff.yml"
+          require_file ".github/workflows/senior-agent-pr-guard.yml"
+          require_file ".github/workflows/senior-agent-functionality-guard.yml"
+
+          if [ -f ".github/senior-agent.yml" ]; then
+            grep -q "external_blockers:" .github/senior-agent.yml || {
+              missing=1
+              report="$report
+          - Missing external_blockers policy in .github/senior-agent.yml"
+            }
+            grep -q "safe_autonomy:" .github/senior-agent.yml || {
+              missing=1
+              report="$report
+          - Missing safe_autonomy policy in .github/senior-agent.yml"
+            }
+          fi
+
+          {
+            echo "missing=$missing"
+            echo "report<<EOF"
+            if [ -z "$report" ]; then
+              echo "Senior agent control plane looks healthy."
+            else
+              echo "$report"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open health issue when broken
+        if: steps.validate.outputs.missing == '1'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = '[Senior Agent Health] Control plane needs repair';
+            const body = [
+              '<!-- senior-agent-health -->',
+              '## Senior Agent Health Check',
+              '',
+              'The senior-agent control plane is missing required files or policies.',
+              '',
+              '## Findings',
+              `${{ steps.validate.outputs.report }}`,
+              '',
+              '## Required action',
+              'Restore the missing file or policy before relying on autonomous maintenance.',
+            ].join('\n');
+
+            const q = `repo:${owner}/${repo} is:issue is:open in:title "${title}"`;
+            const { data } = await github.rest.search.issuesAndPullRequests({ q, per_page: 5 });
+            const existing = data.items.find((item) => item.title === title);
+
+            if (existing) {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+                labels: ['senior-agent', 'agent:blocked', 'needs-owner'],
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+                labels: ['senior-agent', 'agent:blocked', 'needs-owner'],
+              });
+            }
+
+      - name: Fail if unhealthy
+        if: steps.validate.outputs.missing == '1'
+        run: exit 1
