@@ -8,6 +8,7 @@ const auditChainVerifierPath = 'src/app/api/audit/chain/verify/route.ts';
 const auditChainExportPath = 'src/app/api/audit/evidence-pack/route.ts';
 const teamInvitePath = 'src/app/api/team/invites/route.ts';
 const teamRemovePath = 'src/app/api/team/members/remove/route.ts';
+const teamRolePath = 'src/app/api/team/members/role/route.ts';
 const teamCancelInvitePath = 'src/app/api/team/invitations/cancel/route.ts';
 const teamPagePath = 'src/app/[locale]/dashboard/organizations/team/page.tsx';
 const teamSettingsPath = 'src/components/team/team-settings-section.tsx';
@@ -87,6 +88,9 @@ const rolloutMatrixRequiredTokens = [
   'POST /api/billing/portal',
   'POST /api/gdpr/delete-request',
   'POST /api/team/invites',
+  'POST /api/team/members/remove',
+  'POST /api/team/members/role',
+  'POST /api/team/invitations/cancel',
   'POST /api/security/step-up/challenge',
   'src/components/security/step-up-mfa-dialog.tsx',
   'signed_hmac',
@@ -172,6 +176,7 @@ const runtimeEvidenceRequiredTokens = [
   'singleUseNonce',
   'enterpriseReleaseBlockedWithoutProvider',
   'POST /api/team/invites',
+  'POST /api/team/members/role',
 ];
 
 const failures = [];
@@ -210,6 +215,7 @@ const auditChainVerifier = read(auditChainVerifierPath);
 const auditChainExport = read(auditChainExportPath);
 const teamInvite = read(teamInvitePath);
 const teamRemove = read(teamRemovePath);
+const teamRole = read(teamRolePath);
 const teamCancelInvite = read(teamCancelInvitePath);
 const teamPage = read(teamPagePath);
 const teamSettings = read(teamSettingsPath);
@@ -226,6 +232,7 @@ if (auditChainVerifier) requireTokens(auditChainVerifierPath, auditChainVerifier
 if (auditChainExport) requireTokens(auditChainExportPath, auditChainExport, auditChainExportRequiredTokens);
 if (teamInvite) requireTokens(teamInvitePath, teamInvite, teamMutationRequiredTokens);
 if (teamRemove) requireTokens(teamRemovePath, teamRemove, teamMutationRequiredTokens);
+if (teamRole) requireTokens(teamRolePath, teamRole, teamMutationRequiredTokens);
 if (teamCancelInvite) requireTokens(teamCancelInvitePath, teamCancelInvite, teamMutationRequiredTokens);
 if (teamSettings) requireTokens(teamSettingsPath, teamSettings, teamSettingsRequiredTokens);
 if (challenge) requireTokens(challengePath, challenge, challengeRequiredTokens);
@@ -247,6 +254,7 @@ for (const routePath of [
   'src/app/api/continuity-center/export/route.ts',
   'src/app/api/team/invites/route.ts',
   'src/app/api/team/members/remove/route.ts',
+  'src/app/api/team/members/role/route.ts',
   'src/app/api/team/invitations/cancel/route.ts',
 ]) {
   const source = read(routePath);
