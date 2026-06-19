@@ -3,10 +3,10 @@
   "id": "step-up-mfa-validation",
   "status": "Complete",
   "reviewer": "EuroComply security automation",
-  "reviewedAt": "2026-06-19T17:45:00.000Z",
-  "generatedAt": "2026-06-19T17:45:00.000Z",
+  "reviewedAt": "2026-06-19T17:55:00.000Z",
+  "generatedAt": "2026-06-19T17:55:00.000Z",
   "control": "Enterprise step-up MFA / IdP validation for critical actions",
-  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Team invite, member removal, role change and invitation cancellation management now enforce the same step-up helper after RBAC and before writes. Enterprise release remains blocked when a signing key and real MFA or IdP policy are not configured.",
+  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Team invite, member removal, role change and invitation cancellation management now enforce the same step-up helper after RBAC and before writes. Enterprise release remains blocked when a signing key and real MFA or IdP policy are not configured, and operators now have a dedicated redacted runtime preflight command for deploy environments.",
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "src/server/security/step-up.ts",
@@ -19,6 +19,7 @@
     "supabase/migrations/20260619143000_step_up_token_store.sql",
     "src/server/security/step-up.test.ts",
     "scripts/security/check-step-up.mjs",
+    "scripts/security/check-step-up-runtime-preflight.mjs",
     "docs/security/STEP_UP_AUTH.md",
     "docs/security/STEP_UP_ROLLOUT_MATRIX.md"
   ],
@@ -31,7 +32,8 @@
     "Team invite, team member removal, team role change and invitation cancellation require manage_team step-up after RBAC and before writes.",
     "Team role changes block self-change, non-owner owner grants/removals and last-owner demotion.",
     "Team UI uses the shared StepUpMfaDialog and sends x-eurocomply-step-up-token only to fixed protected API endpoints.",
-    "Enterprise release gate fails closed when signing configuration or real provider configuration is missing."
+    "Enterprise release gate fails closed when signing configuration or real provider configuration is missing.",
+    "Runtime provider preflight reports only redacted configuration state and fails when no real Supabase MFA or enterprise IdP policy is configured."
   ],
   "providers": {
     "supabase_mfa": {
@@ -113,17 +115,20 @@
     "tamperedTokenFails": true,
     "singleUseReplayFails": true,
     "providerMissingFailsClosed": true,
-    "enterpriseReleaseBlockedWithoutProvider": true
+    "enterpriseReleaseBlockedWithoutProvider": true,
+    "runtimePreflightFailsWithoutProvider": true
   },
   "releaseGate": {
     "script": "scripts/security/check-step-up.mjs",
+    "runtimePreflightScript": "scripts/security/check-step-up-runtime-preflight.mjs",
     "enterpriseReleaseEnv": "EUROCOMPLY_ENTERPRISE_RELEASE=true",
     "requires": [
       "STEP_UP_SIGNING_SECRET or AUDIT_CHAIN_SIGNING_SECRET",
       "STEP_UP_PROVIDER_MODE",
       "Supabase MFA configuration or enterprise IdP ACR/AMR policy"
     ],
-    "failClosedWithoutProvider": true
+    "failClosedWithoutProvider": true,
+    "redactedRuntimeOutput": true
   },
   "limitations": [
     "This repository evidence validates implementation wiring and fail-closed behavior. Live provider execution must be run in an environment with real Supabase MFA or enterprise IdP credentials configured.",
