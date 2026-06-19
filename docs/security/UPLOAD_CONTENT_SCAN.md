@@ -1,6 +1,6 @@
 # EuroComply Upload Content Scanning Policy
 
-This document defines the upload content scanning policy for user-submitted files.
+This document is the Upload Content Scan Security Standard for user-submitted files.
 
 ## Purpose
 
@@ -24,7 +24,7 @@ EuroComply accepts customer documents that may contain sensitive compliance evid
 
 | Variable | Purpose |
 | --- | --- |
-| `REQUIRE_MALWARE_SCAN_FOR_UPLOADS` | When `true`, uploads must fail closed if scanning is unavailable or not clean. Enterprise production must set this to `true`. |
+| `REQUIRE_MALWARE_SCAN_FOR_UPLOADS` | When `true`, uploads must fail-closed if scanning is unavailable or not clean. Enterprise production must set this to `true`. |
 | `MALWARE_SCANNER_PROVIDER` | Identifies the configured scanning provider. Supported values are `clamav`, `clamd`, `http`, `generic-http` and `webhook`. |
 | `MALWARE_SCANNER_TIMEOUT_MS` | Optional scanner timeout. Defaults to 10 seconds. |
 | `MALWARE_SCANNER_CLAMAV_HOST` / `MALWARE_SCANNER_CLAMAV_PORT` | ClamAV/clamd TCP endpoint. Defaults to `127.0.0.1:3310`. |
@@ -42,7 +42,7 @@ REQUIRE_MALWARE_SCAN_FOR_UPLOADS=false
 MALWARE_SCANNER_PROVIDER=none
 ```
 
-In this mode the helper records scan evidence, but unavailable scanning does not block upload by default. Provider-reported `infected`, `suspicious` or `error` verdicts still block uploads.
+In this advisory mode the helper records scan evidence, but unavailable scanning does not block upload by default. Provider-reported `infected`, `suspicious` or `error` verdicts still block uploads.
 
 ### Enterprise Fail-Closed Mode
 
@@ -54,7 +54,7 @@ MALWARE_SCANNER_PROVIDER=clamav
 # or: MALWARE_SCANNER_PROVIDER=http
 ```
 
-In this mode upload is rejected unless the scan status is `clean`. `not_configured`, `unavailable`, `suspicious`, `infected` and `error` all block storage.
+In this fail-closed mode upload is rejected unless the scan status is `clean`. `not_configured`, `unavailable`, `suspicious`, `infected` and `error` all block storage.
 
 ## Provider Contracts
 
@@ -112,7 +112,7 @@ organizationId
 actorUserId
 ```
 
-Blocked uploads should record a rejection event with scan context before returning an error response.
+Blocked uploads should record a `document_upload_rejected` event with scan context before returning an error response.
 
 ## CI Coverage
 
@@ -126,7 +126,7 @@ npm run security:upload-content-scan
 npm run test -- tests/security/upload-malware-scan-validation.test.ts
 ```
 
-## Release Rule
+## Enterprise Release Rule
 
 Do not claim enterprise upload readiness until:
 
