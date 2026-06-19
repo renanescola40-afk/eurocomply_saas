@@ -3,10 +3,10 @@
   "id": "step-up-mfa-validation",
   "status": "Complete",
   "reviewer": "EuroComply security automation",
-  "reviewedAt": "2026-06-19T17:55:00.000Z",
-  "generatedAt": "2026-06-19T17:55:00.000Z",
+  "reviewedAt": "2026-06-19T18:10:00.000Z",
+  "generatedAt": "2026-06-19T18:10:00.000Z",
   "control": "Enterprise step-up MFA / IdP validation for critical actions",
-  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Team invite, member removal, role change and invitation cancellation management now enforce the same step-up helper after RBAC and before writes. Enterprise release remains blocked when a signing key and real MFA or IdP policy are not configured, and operators now have a dedicated redacted runtime preflight command for deploy environments.",
+  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Team invite, member removal, role change and invitation cancellation management now enforce the same step-up helper after RBAC and before writes. Enterprise release remains blocked when signing configuration, Supabase auth client configuration and a real MFA/IdP policy are not configured; the runtime preflight delegates to the same release gate so deployment validation cannot drift.",
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "src/server/security/step-up.ts",
@@ -32,13 +32,15 @@
     "Team invite, team member removal, team role change and invitation cancellation require manage_team step-up after RBAC and before writes.",
     "Team role changes block self-change, non-owner owner grants/removals and last-owner demotion.",
     "Team UI uses the shared StepUpMfaDialog and sends x-eurocomply-step-up-token only to fixed protected API endpoints.",
-    "Enterprise release gate fails closed when signing configuration or real provider configuration is missing.",
-    "Runtime provider preflight reports only redacted configuration state and fails when no real Supabase MFA or enterprise IdP policy is configured."
+    "Enterprise release gate fails closed when signing configuration, Supabase auth client configuration or real provider configuration is missing.",
+    "Enterprise IdP release mode requires Supabase auth client configuration plus at least one non-empty ACR/AMR policy value after trimming.",
+    "Runtime provider preflight delegates to the enterprise release gate and never prints secret values."
   ],
   "providers": {
     "supabase_mfa": {
       "mode": "STEP_UP_PROVIDER_MODE=supabase_mfa",
       "runtimeChecks": [
+        "Supabase auth client configuration is present for session validation",
         "supabase.auth.mfa.listFactors returns enrolled verified factors",
         "supabase.auth.mfa.challenge issues a provider challenge",
         "supabase.auth.mfa.verify or challengeAndVerify validates the submitted code",
@@ -49,9 +51,11 @@
     "enterprise_idp": {
       "mode": "STEP_UP_PROVIDER_MODE=enterprise_idp",
       "runtimeChecks": [
+        "Supabase auth client configuration is present for session claim validation",
         "supabase.auth.getClaims returns verified session claims",
         "auth_time or iat must be fresh within STEP_UP_MAX_AGE_MS",
-        "acr must match STEP_UP_IDP_ACR_VALUES or amr must match STEP_UP_IDP_AMR_VALUES"
+        "acr must match STEP_UP_IDP_ACR_VALUES or amr must match STEP_UP_IDP_AMR_VALUES",
+        "ACR/AMR allowlists are trimmed and whitespace-only values are treated as missing"
       ],
       "tokenIssuedOnlyAfter": "fresh strong IdP reauthentication claim is present"
     }
@@ -116,7 +120,9 @@
     "singleUseReplayFails": true,
     "providerMissingFailsClosed": true,
     "enterpriseReleaseBlockedWithoutProvider": true,
-    "runtimePreflightFailsWithoutProvider": true
+    "runtimePreflightFailsWithoutProvider": true,
+    "blankIdpPolicyRejected": true,
+    "enterpriseIdpRequiresSupabaseAuthConfig": true
   },
   "releaseGate": {
     "script": "scripts/security/check-step-up.mjs",
@@ -125,7 +131,8 @@
     "requires": [
       "STEP_UP_SIGNING_SECRET or AUDIT_CHAIN_SIGNING_SECRET",
       "STEP_UP_PROVIDER_MODE",
-      "Supabase MFA configuration or enterprise IdP ACR/AMR policy"
+      "Supabase auth client configuration for all provider modes",
+      "Non-empty enterprise IdP ACR/AMR policy when STEP_UP_PROVIDER_MODE=enterprise_idp"
     ],
     "failClosedWithoutProvider": true,
     "redactedRuntimeOutput": true
