@@ -1,4 +1,3 @@
-```js
 #!/usr/bin/env node
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -727,7 +726,6 @@ async function main() {
       operation: 'same_tenant_read',
       ...(await sameTenantReadAllowed(tenantA, 'organization_members', ctx.memberA.id)),
     });
-
     const failed = testCases.filter((test) => !test.passed);
 
     if (failed.length > 0) {
@@ -782,4 +780,3 @@ main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
-```
