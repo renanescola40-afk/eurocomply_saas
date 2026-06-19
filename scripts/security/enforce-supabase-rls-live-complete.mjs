@@ -56,6 +56,28 @@ function registerMarksComplete() {
   return row.includes('| Complete |');
 }
 
+function validateGithubActionsProvenance(evidence) {
+  const provenance = evidence.githubActions;
+  if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance)) {
+    fail(`${evidencePath} missing githubActions provenance`);
+    return;
+  }
+
+  if (provenance.generatedInGitHubActions !== true) {
+    fail(`${evidencePath} must be stamped from GitHub Actions`);
+  }
+
+  for (const field of ['workflow', 'runId', 'runUrl', 'repository', 'commitSha', 'refName', 'actor', 'eventName', 'stampedAt']) {
+    if (!provenance[field] || typeof provenance[field] !== 'string') {
+      fail(`${evidencePath} githubActions.${field} is missing`);
+    }
+  }
+
+  if (typeof provenance.runUrl === 'string' && !/\/actions\/runs\/[0-9]+$/.test(provenance.runUrl)) {
+    fail(`${evidencePath} githubActions.runUrl must point to a GitHub Actions run`);
+  }
+}
+
 const evidence = readJson(evidencePath);
 const registerComplete = registerMarksComplete();
 
@@ -68,6 +90,7 @@ if (evidence) {
   if (!String(evidence.productionGate ?? '').toLowerCase().includes('production')) {
     fail(`${evidencePath} must include a production gate statement`);
   }
+  validateGithubActionsProvenance(evidence);
 
   const testCases = Array.isArray(evidence.testCases) ? evidence.testCases : [];
   const failedTests = testCases.filter((test) => test?.passed !== true);
@@ -90,7 +113,7 @@ if (!registerComplete) {
 if (failures.length > 0) {
   console.error('Supabase live RLS production gate failed:');
   for (const failure of failures) console.error(`- ${failure}`);
-  console.error('Public production remains blocked until scripts/security/run-supabase-live-tenant-isolation.mjs --update-register passes against the target Supabase project.');
+  console.error('Public production remains blocked until scripts/security/run-supabase-live-tenant-isolation.mjs --update-register passes against the target Supabase project and is stamped with GitHub Actions provenance.');
   process.exit(1);
 }
 
