@@ -4,18 +4,12 @@
   "generatedAt": "2026-06-19T00:00:00.000Z",
   "runner": "scripts/security/run-supabase-live-rls-validation.mjs",
   "reviewer": "security-automation",
-  "reviewedAt": null,
-  "summary": "Live Supabase RLS validation has not produced passing runtime evidence yet.",
-  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "summary": "Live Supabase tenant isolation validation is pending and must pass against the target project before this item can be completed.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "evidenceLocations": [
     "docs/security/evidence/runtime/supabase-live-rls-validation.json"
   ],
-  "controlsVerified": [],
-  "testCases": [],
-  "tablesReviewed": [],
   "outcome": "not_run",
-  "blockingReason": "Live Supabase credentials have not run scripts/security/run-supabase-live-rls-validation.mjs successfully in this repository state.",
-  "completionRule": "Status may be changed to Complete only by a successful live run of scripts/security/run-supabase-live-rls-validation.mjs against a Supabase project with applied migrations.",
-  "productionGate": "Public production remains blocked while this evidence status is Open.",
-  "nextReviewDue": null
+  "completionRule": "Run scripts/security/run-supabase-live-rls-validation.mjs with update-register after migrations are applied.",
+  "productionGate": "Public production remains blocked while this evidence status is Open."
 }
