@@ -3,14 +3,15 @@
   "id": "step-up-mfa-validation",
   "status": "Complete",
   "reviewer": "EuroComply security automation",
-  "reviewedAt": "2026-06-19T15:45:00.000Z",
-  "generatedAt": "2026-06-19T15:45:00.000Z",
+  "reviewedAt": "2026-06-19T16:30:00.000Z",
+  "generatedAt": "2026-06-19T16:30:00.000Z",
   "control": "Enterprise step-up MFA / IdP validation for critical actions",
-  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Enterprise release remains blocked when a signing key and real MFA or IdP policy are not configured.",
+  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Team invite management now enforces the same step-up helper after RBAC and before invite creation. Enterprise release remains blocked when a signing key and real MFA or IdP policy are not configured.",
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "src/server/security/step-up.ts",
     "src/app/api/security/step-up/challenge/route.ts",
+    "src/app/api/team/invites/route.ts",
     "supabase/migrations/20260619143000_step_up_token_store.sql",
     "src/server/security/step-up.test.ts",
     "scripts/security/check-step-up.mjs",
@@ -23,6 +24,7 @@
     "Tokens include server-generated nonce, issuedAt, expiresAt and verificationMethod fields.",
     "Tokens expire within five minutes and are consumed once from the server-side token store.",
     "Critical routes reject missing, expired, replayed, cross-organization and cross-action tokens.",
+    "Team invite management requires manage_team step-up after RBAC and before invite creation.",
     "Enterprise release gate fails closed when signing configuration or real provider configuration is missing."
   ],
   "providers": {
@@ -69,6 +71,9 @@
       "POST /api/billing/checkout",
       "POST /api/billing/portal"
     ],
+    "manage_team": [
+      "POST /api/team/invites"
+    ],
     "gdpr_delete": [
       "POST /api/gdpr/delete-request"
     ],
@@ -77,9 +82,6 @@
     ],
     "audit_chain_verify": [
       "GET /api/audit/chain/verify"
-    ],
-    "manage_team": [
-      "Team invite management routes must use requireStepUpForRequest before release when enabled"
     ],
     "change_security_settings": [
       "Security settings mutation routes must use requireStepUpForRequest before release when enabled"
@@ -97,6 +99,7 @@
     "tokenFromOtherOrganizationFails": true,
     "tokenForOtherActionFails": true,
     "tamperedTokenFails": true,
+    "singleUseReplayFails": true,
     "providerMissingFailsClosed": true,
     "enterpriseReleaseBlockedWithoutProvider": true
   },
@@ -111,6 +114,7 @@
     "failClosedWithoutProvider": true
   },
   "limitations": [
-    "This repository evidence validates implementation wiring and fail-closed behavior. Live provider execution must be run in an environment with real Supabase MFA or enterprise IdP credentials configured."
+    "This repository evidence validates implementation wiring and fail-closed behavior. Live provider execution must be run in an environment with real Supabase MFA or enterprise IdP credentials configured.",
+    "Team role-change, team member-removal and security-settings mutation endpoints are not present as enabled write routes in this repository snapshot; any future route for those actions must be wired into requireStepUpForRequest before release."
   ]
 }

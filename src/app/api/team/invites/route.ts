@@ -12,6 +12,7 @@ import { isPlanAtLeast } from '@/server/queries/subscription';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { requireStepUpForRequest } from '@/server/security/step-up';
 
 const inviteSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
@@ -84,6 +85,17 @@ export async function POST(request: Request) {
 
   if (!permission.ok) {
     return permissionDeniedResponse(permission);
+  }
+
+  const stepUp = await requireStepUpForRequest({
+    request,
+    action: 'manage_team',
+    userId: user.id,
+    organizationId: organization.id,
+  });
+
+  if (!stepUp.ok) {
+    return stepUp.response;
   }
 
   const entitlements = await getOrganizationEntitlements(organization.id);

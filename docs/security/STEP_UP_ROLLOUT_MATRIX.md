@@ -16,6 +16,7 @@ This matrix tracks high-risk actions that require signed, real-verification step
 | Continuity center | `GET /api/continuity-center/export` | `export_data` | Enforced | export payload and audit metadata include step-up evidence |
 | Billing checkout | `POST /api/billing/checkout` | `manage_billing` | Enforced | Stripe metadata and response include step-up evidence |
 | Billing portal | `POST /api/billing/portal` | `manage_billing` | Enforced | response includes step-up evidence |
+| Team invite management | `POST /api/team/invites` | `manage_team` | Enforced | `await requireStepUpForRequest` runs after RBAC and before invite creation |
 | GDPR delete request | `POST /api/gdpr/delete-request` | `gdpr_delete` | Enforced | audit metadata and response include step-up evidence |
 | Step-up challenge | `POST /api/security/step-up/challenge` | requested action | Real provider required | Supabase MFA or enterprise IdP, token issued only after verification |
 | Step-up UI | `src/components/security/step-up-mfa-dialog.tsx` | requested action | Available | reusable challenge UI for MFA factor, challenge and one-time code |
@@ -24,7 +25,6 @@ This matrix tracks high-risk actions that require signed, real-verification step
 
 | Area | Action | Target Status |
 | --- | --- | --- |
-| Team invite management | `manage_team` | Must call `await requireStepUpForRequest` before write route is enabled |
 | Team role changes | `manage_team` | Must call `await requireStepUpForRequest` before write route is enabled |
 | Team member removal | `manage_team` | Must call `await requireStepUpForRequest` before write route is enabled |
 | Security settings changes | `change_security_settings` | Must call `await requireStepUpForRequest` before write route is enabled |
