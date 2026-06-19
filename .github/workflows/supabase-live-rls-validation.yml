@@ -53,6 +53,9 @@ jobs:
           RLS_LIVE_UPDATE_REGISTER: ${{ inputs.update_register && '1' || '0' }}
         run: node scripts/security/run-supabase-live-tenant-isolation.mjs
 
+      - name: Stamp GitHub Actions provenance
+        run: node scripts/security/stamp-supabase-live-rls-provenance.mjs
+
       - name: Validate generated evidence before commit
         run: |
           node scripts/security/check-p0-runtime-evidence-register.mjs
