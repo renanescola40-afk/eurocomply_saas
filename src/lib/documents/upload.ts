@@ -1,4 +1,4 @@
-export const DOCUMENT_BUCKET = 'compliance-documents';
+export const DOCUMENT_BUCKET = 'controlled-documents';
 
 export const MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -9,13 +9,47 @@ export const ALLOWED_DOCUMENT_MIME_TYPES = [
   'application/pdf',
   'image/png',
   'image/jpeg',
-  'text/plain',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ] as const;
 
 export type AllowedDocumentMimeType = (typeof ALLOWED_DOCUMENT_MIME_TYPES)[number];
 
-export function isAllowedDocumentMimeType(mimeType: string) {
+const DOCUMENT_EXTENSIONS_BY_MIME_TYPE: Record<AllowedDocumentMimeType, readonly string[]> = {
+  'application/pdf': ['pdf'],
+  'image/png': ['png'],
+  'image/jpeg': ['jpg', 'jpeg'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['docx'],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['xlsx'],
+};
+
+const DANGEROUS_DOCUMENT_EXTENSIONS = new Set([
+  'app',
+  'bat',
+  'cmd',
+  'com',
+  'cpl',
+  'dll',
+  'dmg',
+  'exe',
+  'hta',
+  'html',
+  'jar',
+  'js',
+  'jse',
+  'lnk',
+  'msi',
+  'php',
+  'ps1',
+  'scr',
+  'sh',
+  'svg',
+  'vbe',
+  'vbs',
+  'wsf',
+]);
+
+export function isAllowedDocumentMimeType(mimeType: string): mimeType is AllowedDocumentMimeType {
   return ALLOWED_DOCUMENT_MIME_TYPES.includes(mimeType as AllowedDocumentMimeType);
 }
 
@@ -41,6 +75,23 @@ function normalizeDocumentFileName(fileName: string | null | undefined) {
   return asciiSafe;
 }
 
+function fileNameSegments(fileName: string | null | undefined) {
+  return normalizeDocumentFileName(fileName)
+    .toLowerCase()
+    .split('.')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
+export function getDocumentFileExtension(fileName: string | null | undefined) {
+  const segments = fileNameSegments(fileName);
+  return segments.at(-1) ?? '';
+}
+
+export function hasDangerousDocumentExtension(fileName: string | null | undefined) {
+  return fileNameSegments(fileName).some((segment) => DANGEROUS_DOCUMENT_EXTENSIONS.has(segment));
+}
+
 export function sanitizeDocumentStorageFileName(fileName: string | null | undefined) {
   return normalizeDocumentFileName(fileName)
     .toLowerCase()
@@ -54,23 +105,67 @@ export function sanitizeDocumentDownloadFileName(fileName: string | null | undef
   return normalizeDocumentFileName(fileName);
 }
 
+function sanitizeStoragePathSegment(segment: string, label: string) {
+  const normalized = segment.normalize('NFKC').replace(/[^a-zA-Z0-9_-]+/g, '').trim();
+
+  if (!normalized) {
+    throw new Error(`Invalid ${label} for document storage path`);
+  }
+
+  return normalized;
+}
+
 export function buildDocumentStoragePath(params: {
   organizationId: string;
   userId: string;
   fileName: string;
 }) {
+  const organizationId = sanitizeStoragePathSegment(params.organizationId, 'organizationId');
+  const userId = sanitizeStoragePathSegment(params.userId, 'userId');
   const safeFileName = sanitizeDocumentStorageFileName(params.fileName);
 
-  return `${params.organizationId}/${params.userId}/${Date.now()}-${safeFileName}`;
+  return `${organizationId}/${userId}/${Date.now()}-${safeFileName}`;
+}
+
+export function isDocumentStoragePathInOrganization(storagePath: string | null | undefined, organizationId: string) {
+  const normalizedPath = String(storagePath ?? '').normalize('NFKC').replace(/\\/g, '/').replace(/^\/+/, '');
+  const normalizedOrganizationId = sanitizeStoragePathSegment(organizationId, 'organizationId');
+  const segments = normalizedPath.split('/');
+
+  if (segments.length < 2) return false;
+  if (segments.some((segment) => !segment || segment === '.' || segment === '..')) return false;
+
+  return segments[0] === normalizedOrganizationId;
+}
+
+export function assertDocumentStoragePathInOrganization(storagePath: string | null | undefined, organizationId: string) {
+  if (!isDocumentStoragePathInOrganization(storagePath, organizationId)) {
+    throw new Error('Document storage path does not match organization scope');
+  }
 }
 
 export function validateDocumentFile(file: File) {
-  if (!isAllowedDocumentMimeType(file.type)) {
-    return 'Unsupported file type.';
+  if (file.size <= 0) {
+    return 'File is empty.';
   }
 
   if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
     return 'File is too large. Maximum size is 10MB.';
+  }
+
+  if (!isAllowedDocumentMimeType(file.type)) {
+    return 'Unsupported file type.';
+  }
+
+  if (hasDangerousDocumentExtension(file.name)) {
+    return 'File name contains a dangerous extension.';
+  }
+
+  const extension = getDocumentFileExtension(file.name);
+  const allowedExtensions = DOCUMENT_EXTENSIONS_BY_MIME_TYPE[file.type];
+
+  if (!allowedExtensions.includes(extension)) {
+    return 'File extension does not match the declared file type.';
   }
 
   return null;
