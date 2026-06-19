@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 20
-      - run: npm install
+      - run: npm install --ignore-scripts
       - run: npm run phase3:strict
       - run: npm run phase3:closeout
       - run: npm run phase4:check
