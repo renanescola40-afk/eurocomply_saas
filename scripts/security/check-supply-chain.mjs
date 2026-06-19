@@ -107,7 +107,6 @@ if (pkg) {
   for (const scriptName of [
     'security:npm-audit:prod',
     'security:npm-audit:json',
-    'security:npm-audit:summary',
     'security:zod-compat',
     'security:final-readiness',
     'security:final-readiness:report',
