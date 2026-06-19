@@ -1,10 +1,47 @@
 import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
+import {
+  STEP_UP_MAX_AGE_MS,
+  createStepUpTokenEnvelope,
+  getStepUpProviderMode,
+  isEnterpriseStepUpConfigured,
+  normalizeHighRiskAction,
+  persistStepUpTokenRecord,
+  recordStepUpAuditEvent,
+  type HighRiskAction,
+  type StepUpVerificationMethod,
+} from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
+
+const STEP_UP_CHALLENGE_JSON_MAX_BYTES = 4 * 1024;
+
+type StepUpChallengeBody = {
+  action?: unknown;
+  factorId?: unknown;
+  challengeId?: unknown;
+  code?: unknown;
+};
+
+type RealVerificationResult =
+  | {
+      ok: true;
+      method: StepUpVerificationMethod;
+      provider: string;
+      aal?: string | null;
+    }
+  | {
+      ok: false;
+      status: 400 | 401 | 403 | 503;
+      error: string;
+      message: string;
+      details?: Record<string, unknown>;
+    };
 
 function rateLimitDeniedResponse(result: RateLimitResult) {
   const retryAfter = Math.max(1, Math.ceil((result.resetAt - Date.now()) / 1000));
@@ -23,6 +60,200 @@ function rateLimitDeniedResponse(result: RateLimitResult) {
       },
     },
   );
+}
+
+function getString(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function splitConfiguredValues(value: string | undefined) {
+  return new Set(
+    String(value ?? '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
+}
+
+function claimValues(value: unknown) {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === 'string') return value.split(/[\s,]+/).filter(Boolean);
+  return [];
+}
+
+function readAuthTimeMs(value: unknown) {
+  const numeric = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return numeric > 10_000_000_000 ? numeric : numeric * 1000;
+}
+
+async function verifyEnterpriseIdpStepUp(): Promise<RealVerificationResult> {
+  const supabase = await createServerSupabaseClient();
+  const auth = supabase.auth as typeof supabase.auth & {
+    getClaims?: () => Promise<{ data?: { claims?: Record<string, unknown> | null } | null; error?: { message?: string } | null }>;
+  };
+
+  if (typeof auth.getClaims !== 'function') {
+    return {
+      ok: false,
+      status: 503,
+      error: 'step_up_idp_claims_unavailable',
+      message: 'Enterprise IdP step-up requires verified session claims. Upgrade Supabase auth client support before enabling enterprise release.',
+    };
+  }
+
+  const { data, error } = await auth.getClaims();
+  if (error || !data?.claims) {
+    return {
+      ok: false,
+      status: 401,
+      error: 'step_up_idp_claims_missing',
+      message: 'Could not verify enterprise IdP reauthentication claims for this session.',
+    };
+  }
+
+  const claims = data.claims;
+  const configuredAcr = splitConfiguredValues(process.env.STEP_UP_IDP_ACR_VALUES);
+  const configuredAmr = splitConfiguredValues(process.env.STEP_UP_IDP_AMR_VALUES);
+  const acrValues = claimValues(claims.acr);
+  const amrValues = claimValues(claims.amr);
+  const authTimeMs = readAuthTimeMs(claims.auth_time ?? claims.iat);
+  const fresh = authTimeMs !== null && Date.now() - authTimeMs <= STEP_UP_MAX_AGE_MS;
+  const acrOk = configuredAcr.size > 0 && acrValues.some((value) => configuredAcr.has(value));
+  const amrOk = configuredAmr.size > 0 && amrValues.some((value) => configuredAmr.has(value));
+
+  if (!fresh || (!acrOk && !amrOk)) {
+    return {
+      ok: false,
+      status: 403,
+      error: 'step_up_idp_reauthentication_required',
+      message: 'Enterprise IdP session is not fresh enough or does not contain an allowed strong authentication claim.',
+      details: {
+        fresh,
+        acrMatched: acrOk,
+        amrMatched: amrOk,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    method: 'enterprise_idp',
+    provider: 'enterprise_idp',
+    aal: acrValues[0] ?? amrValues[0] ?? null,
+  };
+}
+
+async function verifySupabaseMfaStepUp(body: StepUpChallengeBody): Promise<RealVerificationResult | Response> {
+  const factorId = getString(body.factorId);
+  const challengeId = getString(body.challengeId);
+  const code = getString(body.code);
+  const supabase = await createServerSupabaseClient();
+
+  if (!factorId) {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (error) {
+      return {
+        ok: false,
+        status: 503,
+        error: 'step_up_mfa_factors_unavailable',
+        message: 'Could not load enrolled MFA factors.',
+      };
+    }
+
+    const factors = [
+      ...((data?.totp ?? []) as Array<{ id: string; status?: string; friendly_name?: string | null; factor_type?: string }>),
+      ...((data?.phone ?? []) as Array<{ id: string; status?: string; friendly_name?: string | null; factor_type?: string }>),
+    ].filter((factor) => factor.status === 'verified');
+
+    return noStoreJson(
+      {
+        error: 'step_up_mfa_challenge_required',
+        message: 'Choose an enrolled MFA factor and submit factorId with a fresh verification code.',
+        factors: factors.map((factor) => ({
+          id: factor.id,
+          type: factor.factor_type ?? 'totp',
+          name: factor.friendly_name ?? null,
+        })),
+        maxAgeMs: STEP_UP_MAX_AGE_MS,
+      },
+      { status: 401 },
+    );
+  }
+
+  if (!code) {
+    const { data, error } = await supabase.auth.mfa.challenge({ factorId });
+    if (error || !data?.id) {
+      return {
+        ok: false,
+        status: 403,
+        error: 'step_up_mfa_challenge_denied',
+        message: 'MFA challenge could not be created for the selected factor.',
+      };
+    }
+
+    return noStoreJson(
+      {
+        status: 'mfa_challenge_issued',
+        challengeId: data.id,
+        factorId,
+        message: 'Submit challengeId, factorId and the MFA code to receive a step-up token.',
+        maxAgeMs: STEP_UP_MAX_AGE_MS,
+      },
+      { status: 200 },
+    );
+  }
+
+  const verification = challengeId
+    ? await supabase.auth.mfa.verify({ factorId, challengeId, code })
+    : await supabase.auth.mfa.challengeAndVerify({ factorId, code });
+
+  if (verification.error) {
+    return {
+      ok: false,
+      status: 403,
+      error: 'step_up_mfa_verification_denied',
+      message: 'MFA verification failed.',
+    };
+  }
+
+  const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (assurance.error || assurance.data?.currentLevel !== 'aal2') {
+    return {
+      ok: false,
+      status: 403,
+      error: 'step_up_mfa_aal2_required',
+      message: 'MFA verification did not produce an aal2 session.',
+    };
+  }
+
+  return {
+    ok: true,
+    method: 'supabase_mfa',
+    provider: 'supabase_mfa',
+    aal: assurance.data.currentLevel,
+  };
+}
+
+async function verifyRealStepUp(body: StepUpChallengeBody): Promise<RealVerificationResult | Response> {
+  const mode = getStepUpProviderMode();
+
+  if (!mode || !isEnterpriseStepUpConfigured()) {
+    return {
+      ok: false,
+      status: 503,
+      error: 'step_up_provider_not_configured',
+      message: 'Enterprise step-up is fail-closed until STEP_UP_PROVIDER_MODE and a real MFA/IdP policy are configured.',
+    };
+  }
+
+  if (mode === 'supabase_mfa') return verifySupabaseMfaStepUp(body);
+  if (mode === 'enterprise_idp') return verifyEnterpriseIdpStepUp();
+
+  const supabaseResult = await verifySupabaseMfaStepUp(body);
+  if (supabaseResult instanceof Response || supabaseResult.ok) return supabaseResult;
+
+  return verifyEnterpriseIdpStepUp();
 }
 
 export async function POST(request: Request) {
@@ -51,21 +282,120 @@ export async function POST(request: Request) {
     return rateLimitDeniedResponse(rateLimit);
   }
 
-  return noStoreJson(
-    {
-      error: 'step_up_provider_not_configured',
-      message: 'Step-up challenge issuance is intentionally disabled until a real MFA or identity-provider reauthentication flow is connected.',
-      requiredProvider: 'mfa_or_identity_provider_reauthentication',
-      supportedActions: [
-        'export_data',
-        'manage_billing',
-        'manage_team',
-        'gdpr_delete',
-        'audit_chain_verify',
-        'audit_chain_export',
-        'change_security_settings',
-      ],
+  const body = await readBoundedJsonRequest<StepUpChallengeBody>(request, {
+    maxBytes: STEP_UP_CHALLENGE_JSON_MAX_BYTES,
+  }).catch(() => null);
+  const action = normalizeHighRiskAction(body?.action);
+
+  if (!body || !action) {
+    return noStoreJson(
+      {
+        error: 'invalid_step_up_action',
+        message: 'A supported high-risk action is required before step-up can be issued.',
+        supportedActions: [
+          'export_data',
+          'manage_billing',
+          'manage_team',
+          'gdpr_delete',
+          'audit_chain_verify',
+          'audit_chain_export',
+          'change_security_settings',
+        ],
+      },
+      { status: 400 },
+    );
+  }
+
+  await recordStepUpAuditEvent({
+    event: 'step_up_requested',
+    action,
+    userId: user.id,
+    organizationId: organization.id,
+    verificationMethod: getStepUpProviderMode(),
+  });
+
+  const verification = await verifyRealStepUp(body);
+
+  if (verification instanceof Response) return verification;
+
+  if (!verification.ok) {
+    await recordStepUpAuditEvent({
+      event: 'step_up_denied',
+      action,
+      userId: user.id,
+      organizationId: organization.id,
+      reason: verification.error,
+      verificationMethod: getStepUpProviderMode(),
+    });
+
+    return noStoreJson(
+      {
+        error: verification.error,
+        message: verification.message,
+        details: verification.details,
+        requiredProvider: 'mfa_or_identity_provider_reauthentication',
+      },
+      { status: verification.status },
+    );
+  }
+
+  const envelope = createStepUpTokenEnvelope({
+    action: action as HighRiskAction,
+    userId: user.id,
+    organizationId: organization.id,
+    verifiedAt: new Date(),
+    verificationMethod: verification.method,
+  });
+  const persisted = await persistStepUpTokenRecord({
+    token: envelope.token,
+    payload: envelope.payload,
+    metadata: {
+      provider: verification.provider,
+      aal: verification.aal ?? null,
+      action,
     },
-    { status: 501 },
-  );
+  });
+
+  if (!persisted.ok) {
+    await recordStepUpAuditEvent({
+      event: 'step_up_denied',
+      action,
+      userId: user.id,
+      organizationId: organization.id,
+      reason: persisted.reason,
+      nonce: envelope.payload.nonce,
+      verificationMethod: verification.method,
+    });
+
+    return noStoreJson(
+      {
+        error: persisted.reason,
+        message: 'Step-up verification succeeded, but token persistence is unavailable. Critical actions remain blocked.',
+      },
+      { status: 503 },
+    );
+  }
+
+  await recordStepUpAuditEvent({
+    event: 'step_up_approved',
+    action,
+    userId: user.id,
+    organizationId: organization.id,
+    nonce: envelope.payload.nonce,
+    verificationMethod: verification.method,
+  });
+
+  return noStoreJson({
+    token: envelope.token,
+    tokenType: 'signed_hmac',
+    action,
+    organizationId: organization.id,
+    expiresAt: envelope.payload.expiresAt,
+    maxAgeMs: STEP_UP_MAX_AGE_MS,
+    verification: {
+      method: verification.method,
+      provider: verification.provider,
+      aal: verification.aal ?? null,
+    },
+  });
 }
