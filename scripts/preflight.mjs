@@ -1,5 +1,4 @@
 import { existsSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
 
 const required = [
   'NEXT_PUBLIC_SUPABASE_URL',
@@ -100,6 +99,18 @@ const requiredFiles = [
   'docs/BACKUP_AND_CONTINUITY.md',
 ];
 
+function readRuntimeSetting(name) {
+  return (process.env[name] ?? '').trim();
+}
+
+function hasConfiguredList(name) {
+  return readRuntimeSetting(name)
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .length > 0;
+}
+
 const missingRequired = required.filter((key) => !process.env[key]);
 const missingRecommended = recommended.filter((key) => !process.env[key]);
 const missingFiles = requiredFiles.filter((path) => !existsSync(path));
@@ -155,17 +166,26 @@ if (!process.env.SUPABASE_ACCESS_TOKEN) {
 
 if (process.env.EUROCOMPLY_ENTERPRISE_RELEASE === 'true') {
   console.log('Enterprise step-up runtime provider preflight: running');
-  const result = spawnSync(process.execPath, ['scripts/security/check-step-up-runtime-preflight.mjs'], {
-    env: process.env,
-    stdio: 'inherit',
-  });
 
-  if (typeof result.status === 'number') {
-    if (result.status !== 0) process.exitCode = 1;
-  } else if (result.error) {
-    console.error(`Enterprise step-up runtime provider preflight could not execute: ${result.error.message}`);
+  const providerMode = readRuntimeSetting('STEP_UP_PROVIDER_MODE');
+  const hasStepUpSecret = Boolean(readRuntimeSetting('STEP_UP_SIGNING_SECRET') || readRuntimeSetting('AUDIT_CHAIN_SIGNING_SECRET'));
+  const hasSupabaseAuth = Boolean(readRuntimeSetting('NEXT_PUBLIC_SUPABASE_URL') && readRuntimeSetting('NEXT_PUBLIC_SUPABASE_ANON_KEY'));
+  const hasIdpPolicy = hasConfiguredList('STEP_UP_IDP_ACR_VALUES') || hasConfiguredList('STEP_UP_IDP_AMR_VALUES');
+  const providerConfigured = providerMode === 'supabase_mfa'
+    ? hasSupabaseAuth
+    : providerMode === 'enterprise_idp'
+      ? hasSupabaseAuth && hasIdpPolicy
+      : providerMode === 'supabase_mfa_or_enterprise_idp'
+        ? hasSupabaseAuth
+        : false;
+
+  if (!hasStepUpSecret) {
+    console.error('Enterprise release requires configured step-up signing material.');
     process.exitCode = 1;
-  } else {
+  }
+
+  if (!providerConfigured) {
+    console.error('Enterprise release requires Supabase MFA or enterprise IdP step-up provider configuration.');
     process.exitCode = 1;
   }
 } else {
