@@ -43,7 +43,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
+          git checkout -- package-lock.json
 
       - name: Run strict Supabase tenant isolation validator
         env:
