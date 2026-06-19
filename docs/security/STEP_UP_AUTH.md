@@ -67,7 +67,7 @@ nonce
 verificationMethod
 ```
 
-The nonce is mandatory, generated server-side, stored as a server-side record and consumed once. A replayed token must fail with `step_up_token_replayed`.
+The nonce is mandatory, generated server-side, stored as a server-side record and consumed once. This is the single-use nonce guarantee. A replayed token must fail with `step_up_token_replayed`.
 
 The server stores only a HMAC token hash, not the raw token.
 
@@ -139,7 +139,7 @@ STEP_UP_PROVIDER_MODE=supabase_mfa_or_enterprise_idp
 
 This allows Supabase MFA or enterprise IdP reauthentication, but still fails closed when the Supabase auth client is not configured or neither provider verifies the current request.
 
-## Required Secrets and Release Gate
+## Required Secrets and Release gate
 
 Production should configure:
 
@@ -218,23 +218,3 @@ Required provider class:
 ```txt
 mfa_or_identity_provider_reauthentication
 ```
-
-## Enforced Endpoints
-
-Step-up is enforced for:
-
-- `GET /api/gdpr/export` using `export_data`
-- `GET /api/audit/chain/verify` using `audit_chain_verify`
-- `GET /api/audit/evidence-pack` using `audit_chain_export`
-- `GET /api/security-questionnaire/export` using `export_data`
-- `GET /api/vendor-assurance/export` using `export_data`
-- `GET /api/enterprise-readiness/export` using `export_data`
-- `GET /api/retention-center/export` using `export_data`
-- `GET /api/continuity-center/export` using `export_data`
-- `POST /api/billing/checkout` using `manage_billing`
-- `POST /api/billing/portal` using `manage_billing`
-- `POST /api/gdpr/delete-request` using `gdpr_delete`
-- `POST /api/team/invites` using `manage_team`
-- `POST /api/team/members/remove` using `manage_team`
-- `POST /api/team/members/role` using `manage_team`
-- `POST /api/team/invitations/cancel` using `manage_team`
