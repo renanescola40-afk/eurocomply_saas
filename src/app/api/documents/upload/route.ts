@@ -40,7 +40,7 @@ function blockedScanStatus(scan: MalwareScanResult) {
 function preScanAuditMetadata(input: {
   reason: string;
   file: File;
-  actorRole: string;
+  actorRole?: string | null;
   fileHash?: string | null;
   detectedMimeType?: string | null;
   declaredSignatureMatches?: boolean;
@@ -58,7 +58,7 @@ function preScanAuditMetadata(input: {
     scanCheckedAt: null,
     organizationId: null,
     actorUserId: null,
-    actorRole: input.actorRole,
+    actorRole: input.actorRole ?? 'unknown',
     declaredSignatureMatches: input.declaredSignatureMatches,
   };
 }
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
         sizeBytes: file.size,
         organizationId: organization.id,
         actorUserId: user.id,
-        actorRole: permission.role,
+        actorRole: permission.role ?? 'unknown',
       },
     });
 
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
       fileHash,
       checksumSha256: fileHash,
       plan: quota.entitlements.plan,
-      actorRole: permission.role,
+      actorRole: permission.role ?? 'unknown',
       documentCountBeforeUpload: quota.currentCount,
       scanStatus: scan.status,
       scanProvider: scan.provider,
