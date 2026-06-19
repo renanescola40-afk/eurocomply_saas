@@ -66,15 +66,6 @@ export async function getEffectiveStepUpProviderPolicy(organizationId: string): 
   if (error || !data) return fallback;
 
   const row = data as SecuritySettingsRow;
-  if (row.require_step_up_for_critical_actions === false) {
-    return {
-      ...fallback,
-      source: 'organization',
-      requireStepUpForCriticalActions: false,
-      mode: null,
-    };
-  }
-
   const organizationAcrValues = splitConfiguredValues(row.allowed_idp_acr_values);
   const organizationAmrValues = splitConfiguredValues(row.allowed_idp_amr_values);
 
