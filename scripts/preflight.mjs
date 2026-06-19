@@ -1,8 +1,5 @@
 import { existsSync } from 'node:fs';
 
-const stepUpPreflightCompatibilityToken = 'spawnSync';
-void stepUpPreflightCompatibilityToken;
-
 const required = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
