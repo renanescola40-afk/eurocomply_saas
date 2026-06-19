@@ -24,6 +24,7 @@ This matrix tracks high-risk actions that require signed, real-verification step
 | Step-up challenge | `POST /api/security/step-up/challenge` | requested action | Real provider required | Supabase MFA or enterprise IdP, token issued only after verification |
 | Step-up UI | `src/components/security/step-up-mfa-dialog.tsx` | requested action | Available | reusable challenge UI for MFA factor, challenge and one-time code |
 | Team settings UI | `src/components/team/team-settings-section.tsx` | `manage_team` | Enforced | calls fixed protected APIs with `x-eurocomply-step-up-token`, not direct server actions |
+| Runtime provider preflight | `scripts/security/check-step-up-runtime-preflight.mjs` | release validation | Available | redacted deploy-time check for provider mode, signing key and Supabase MFA / enterprise IdP policy |
 
 ## Remaining High-Risk Rollout
 
@@ -92,3 +93,4 @@ HTTP 503
 - Tokens are scoped to action, user and organization.
 - Tokens include a mandatory single-use nonce and are persisted as server-side hashes in `step_up_tokens`.
 - `EUROCOMPLY_ENTERPRISE_RELEASE=true node scripts/security/check-step-up.mjs` blocks release when MFA/IdP real verification is not configured.
+- `node scripts/security/check-step-up-runtime-preflight.mjs` should be run in the deploy environment before enterprise release; it prints only configured/missing status and never prints secret values.
