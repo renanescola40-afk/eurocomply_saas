@@ -1,25 +1,28 @@
 # EuroComply Step-Up Authentication Standard
 
-This document defines the step-up authentication policy for high-risk EuroComply actions.
+This document defines the enterprise step-up authentication policy for high-risk EuroComply actions.
 
 ## Purpose
 
 Step-up authentication reduces the risk of session hijacking, unattended sessions and compromised browser sessions being used to perform sensitive actions.
 
-The current implementation provides signed step-up token validation, endpoint-by-endpoint enforcement, a safe challenge placeholder, regression tests and CI guardrails.
+The implementation is no longer a symbolic timestamp or placeholder check. A step-up token is issued only after a real strong verification event: Supabase MFA with an `aal2` session, or a fresh enterprise IdP/SAML/OIDC claim that matches the configured reauthentication policy.
 
-## Current Implementation
+## Implementation
 
 | Layer | Location |
 | --- | --- |
-| Step-up helper | `src/server/security/step-up.ts` |
-| Safe challenge placeholder | `src/app/api/security/step-up/challenge/route.ts` |
+| Step-up helper and token validation | `src/server/security/step-up.ts` |
+| MFA / IdP challenge endpoint | `src/app/api/security/step-up/challenge/route.ts` |
+| Reusable step-up UI | `src/components/security/step-up-mfa-dialog.tsx` |
+| Server-side nonce/token store | `supabase/migrations/20260619143000_step_up_token_store.sql` |
 | Regression tests | `src/server/security/step-up.test.ts` |
 | Security gate | `scripts/security/check-step-up.mjs` |
+| Runtime evidence | `docs/security/evidence/runtime/step-up-mfa-validation.json` |
 
 ## High-Risk Actions
 
-The current high-risk action registry includes:
+The high-risk action registry includes:
 
 - `export_data`
 - `manage_billing`
@@ -34,7 +37,7 @@ The current high-risk action registry includes:
 High-risk endpoints use:
 
 ```txt
-requireStepUpForRequest()
+await requireStepUpForRequest()
 ```
 
 The signed token is expected in:
@@ -43,23 +46,96 @@ The signed token is expected in:
 X-EuroComply-Step-Up-Token
 ```
 
-The token is scoped to:
-
-```txt
-action
-userId
-organizationId
-verifiedAt
-nonce
-```
-
 The token type is:
 
 ```txt
 signed_hmac
 ```
 
-The dedicated production secret should be:
+The token payload is scoped to:
+
+```txt
+action
+userId
+organizationId
+verifiedAt
+issuedAt
+expiresAt
+nonce
+verificationMethod
+```
+
+The nonce is mandatory, generated server-side, stored as a server-side record and consumed once. A replayed token must fail with `step_up_token_replayed`.
+
+The server stores only a HMAC token hash, not the raw token.
+
+## Freshness Window
+
+The default accepted verification window is:
+
+```txt
+5 minutes
+```
+
+Represented in code as:
+
+```txt
+STEP_UP_MAX_AGE_MS = 5 * 60 * 1000
+```
+
+The database also enforces that `expires_at <= verified_at + interval '5 minutes'`.
+
+## Real Verification Providers
+
+### Supabase MFA
+
+Set:
+
+```txt
+STEP_UP_PROVIDER_MODE=supabase_mfa
+```
+
+Required runtime behavior:
+
+1. `POST /api/security/step-up/challenge` receives a supported high-risk `action`.
+2. The endpoint lists verified MFA factors when no `factorId` is supplied.
+3. The endpoint creates a provider challenge with `supabase.auth.mfa.challenge()`.
+4. The user submits `factorId`, `challengeId` and `code`.
+5. The endpoint verifies with `supabase.auth.mfa.verify()` or `challengeAndVerify()`.
+6. The endpoint calls `supabase.auth.mfa.getAuthenticatorAssuranceLevel()` and requires `currentLevel === 'aal2'`.
+7. Only then is a signed HMAC step-up token created and persisted.
+
+### Enterprise IdP / SAML / OIDC
+
+Set:
+
+```txt
+STEP_UP_PROVIDER_MODE=enterprise_idp
+STEP_UP_IDP_ACR_VALUES=<allowed acr values>
+# or
+STEP_UP_IDP_AMR_VALUES=<allowed amr values>
+```
+
+Required runtime behavior:
+
+1. The endpoint reads verified session claims through `supabase.auth.getClaims()`.
+2. `auth_time` or `iat` must be fresh within `STEP_UP_MAX_AGE_MS`.
+3. `acr` must match `STEP_UP_IDP_ACR_VALUES` or `amr` must match `STEP_UP_IDP_AMR_VALUES`.
+4. Only then is a signed HMAC step-up token created and persisted.
+
+### Hybrid Mode
+
+Set:
+
+```txt
+STEP_UP_PROVIDER_MODE=supabase_mfa_or_enterprise_idp
+```
+
+This allows Supabase MFA or enterprise IdP reauthentication, but still fails closed when neither provider is configured or neither verifies the current request.
+
+## Required Secrets and Release Gate
+
+Production should configure:
 
 ```txt
 STEP_UP_SIGNING_SECRET
@@ -67,34 +143,32 @@ STEP_UP_SIGNING_SECRET
 
 A fallback to `AUDIT_CHAIN_SIGNING_SECRET` exists only to avoid breaking transitional environments. Production should configure a dedicated step-up secret.
 
-## Default Freshness Window
-
-The default accepted verification window is:
+Release gate:
 
 ```txt
-10 minutes
+EUROCOMPLY_ENTERPRISE_RELEASE=true node scripts/security/check-step-up.mjs
 ```
 
-Represented in code as:
-
-```txt
-STEP_UP_MAX_AGE_MS = 10 * 60 * 1000
-```
+When `EUROCOMPLY_ENTERPRISE_RELEASE=true`, release is blocked unless the signing secret and a real provider configuration are present.
 
 ## Assessment Outcomes
 
-`assessStepUp()` and `assessStepUpToken()` return one of these rejection reasons when a recent verification is not available:
+`assessStepUpToken()` and `requireStepUpForRequest()` can reject requests with:
 
 - `missing_verification`
 - `invalid_verification`
 - `expired_verification`
 - `missing_step_up_secret`
 - `invalid_step_up_token`
+- `missing_step_up_nonce`
 - `step_up_token_scope_mismatch`
+- `step_up_token_replayed`
+- `step_up_token_revoked`
+- `step_up_token_store_unavailable`
 
 ## Response Standard
 
-When step-up is required, endpoints should return:
+When step-up is required, endpoints return:
 
 ```txt
 step_up_required
@@ -106,19 +180,19 @@ This prevents browsers, proxies or CDNs from caching sensitive authorization sta
 
 ## Challenge Endpoint Policy
 
-The placeholder endpoint is:
+The issuing endpoint is:
 
 ```txt
 POST /api/security/step-up/challenge
 ```
 
-It is intentionally fail-closed until a real MFA or identity-provider reauthentication flow is connected.
+It must not accept user-supplied timestamps as proof. It must not issue a token unless Supabase MFA or enterprise IdP verification succeeds.
 
-Current behavior:
+Fail-closed behavior when unconfigured:
 
 ```txt
 step_up_provider_not_configured
-501
+503
 ```
 
 Required provider class:
@@ -127,14 +201,13 @@ Required provider class:
 mfa_or_identity_provider_reauthentication
 ```
 
-The placeholder must not call `createStepUpToken()` and must not issue a token by itself.
-
 ## Enforced Endpoints
 
-Step-up is currently enforced for:
+Step-up is enforced for:
 
+- `GET /api/gdpr/export` using `export_data`
 - `GET /api/audit/chain/verify` using `audit_chain_verify`
-- `GET /api/audit/evidence-pack` using `export_data`
+- `GET /api/audit/evidence-pack` using `audit_chain_export`
 - `GET /api/security-questionnaire/export` using `export_data`
 - `GET /api/vendor-assurance/export` using `export_data`
 - `GET /api/enterprise-readiness/export` using `export_data`
@@ -144,20 +217,41 @@ Step-up is currently enforced for:
 - `POST /api/billing/portal` using `manage_billing`
 - `POST /api/gdpr/delete-request` using `gdpr_delete`
 
-## Rollout Plan
+Team invite management and security settings mutation endpoints must use `manage_team` and `change_security_settings` respectively before those write routes are enabled for enterprise release.
 
-Recommended remaining rollout order:
+## Audit Events
 
-1. Team role and invite management.
-2. Security settings changes.
-3. Real MFA or identity-provider reauthentication integration.
-4. Audit events for step-up success and failure.
-5. Organization-level step-up policy configuration.
+Step-up emits security audit metadata for:
 
-## Future Work
+- `step_up_requested`
+- `step_up_approved`
+- `step_up_denied`
+- `step_up_expired`
 
-- Persist verified step-up timestamps in a server-side session mechanism.
-- Add UI challenge flow for password, OTP or identity provider reauthentication.
-- Add audit events for successful and failed step-up challenges.
-- Add per-organization policy configuration for shorter or longer step-up windows.
-- Enforce step-up in all high-risk API endpoints.
+Audit events are written through `writeAuditLog()` as `security.event` and include the high-risk action, reason, nonce when safe, and verification method. Secrets and raw tokens are never logged.
+
+## UI
+
+`src/components/security/step-up-mfa-dialog.tsx` provides a reusable client dialog that:
+
+1. Starts `/api/security/step-up/challenge` for the requested action.
+2. Shows available MFA factors.
+3. Issues a provider challenge.
+4. Submits the one-time code.
+5. Returns the resulting step-up token to the caller.
+
+Critical action callers should attach the returned token to `X-EuroComply-Step-Up-Token` and immediately retry the protected operation.
+
+## Tests
+
+`src/server/security/step-up.test.ts` covers:
+
+- action without step-up fails;
+- expired verification fails;
+- token scoped to another organization fails;
+- token scoped to another action fails;
+- tampered token fails;
+- valid scoped token passes;
+- provider not configured fails closed.
+
+The security gate also checks migration, UI, runtime evidence and enterprise release blocking behavior.

@@ -8,10 +8,11 @@ import { listAuditEventsForUser, listNotificationsForUser } from '@/server/queri
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
 import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
+import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -36,6 +37,17 @@ export async function GET() {
     }, entitlementCheck.status);
   }
 
+  const stepUp = await requireStepUpForRequest({
+    request,
+    action: 'export_data',
+    userId: user.id,
+    organizationId: organization.id,
+  });
+
+  if (!stepUp.ok) {
+    return stepUp.response;
+  }
+
   const [documents, auditEvents, notifications] = await Promise.all([
     listDocuments(organization.id),
     listAuditEventsForUser(user.id),
@@ -48,7 +60,13 @@ export async function GET() {
     action: 'gdpr_export_requested',
     entityType: 'organization',
     entityId: organization.id,
-    metadata: { scope: 'organization_export', plan: entitlementCheck.entitlements.plan },
+    metadata: {
+      scope: 'organization_export',
+      plan: entitlementCheck.entitlements.plan,
+      stepUpAction: stepUp.assessment.action,
+      stepUpVerifiedAt: stepUp.assessment.verifiedAt,
+      stepUpTokenType: 'signed_hmac',
+    },
   });
 
   await createNotification({
@@ -72,6 +90,7 @@ export async function GET() {
     documents,
     auditEvents,
     notifications,
+    stepUp: publicStepUpSummary(stepUp.assessment),
     note: 'Exportação simulada para GDPR Artigo 20. Adicionar riscos, fornecedores, tarefas e ficheiros quando os schemas estiverem finalizados.',
   };
 

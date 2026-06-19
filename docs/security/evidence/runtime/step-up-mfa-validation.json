@@ -1,0 +1,116 @@
+{
+  "evidenceItem": "step-up-mfa-validation",
+  "id": "step-up-mfa-validation",
+  "status": "Complete",
+  "reviewer": "EuroComply security automation",
+  "reviewedAt": "2026-06-19T15:45:00.000Z",
+  "generatedAt": "2026-06-19T15:45:00.000Z",
+  "control": "Enterprise step-up MFA / IdP validation for critical actions",
+  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Enterprise release remains blocked when a signing key and real MFA or IdP policy are not configured.",
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "evidenceLocations": [
+    "src/server/security/step-up.ts",
+    "src/app/api/security/step-up/challenge/route.ts",
+    "supabase/migrations/20260619143000_step_up_token_store.sql",
+    "src/server/security/step-up.test.ts",
+    "scripts/security/check-step-up.mjs",
+    "docs/security/STEP_UP_AUTH.md",
+    "docs/security/STEP_UP_ROLLOUT_MATRIX.md"
+  ],
+  "controlsVerified": [
+    "Token issuance requires Supabase MFA aal2 or configured enterprise IdP ACR/AMR claims.",
+    "Tokens are scoped by userId, organizationId and high-risk action.",
+    "Tokens include server-generated nonce, issuedAt, expiresAt and verificationMethod fields.",
+    "Tokens expire within five minutes and are consumed once from the server-side token store.",
+    "Critical routes reject missing, expired, replayed, cross-organization and cross-action tokens.",
+    "Enterprise release gate fails closed when signing configuration or real provider configuration is missing."
+  ],
+  "providers": {
+    "supabase_mfa": {
+      "mode": "STEP_UP_PROVIDER_MODE=supabase_mfa",
+      "runtimeChecks": [
+        "supabase.auth.mfa.listFactors returns enrolled verified factors",
+        "supabase.auth.mfa.challenge issues a provider challenge",
+        "supabase.auth.mfa.verify or challengeAndVerify validates the submitted code",
+        "supabase.auth.mfa.getAuthenticatorAssuranceLevel must return aal2 before token issuance"
+      ],
+      "tokenIssuedOnlyAfter": "aal2 session assurance is confirmed"
+    },
+    "enterprise_idp": {
+      "mode": "STEP_UP_PROVIDER_MODE=enterprise_idp",
+      "runtimeChecks": [
+        "supabase.auth.getClaims returns verified session claims",
+        "auth_time or iat must be fresh within STEP_UP_MAX_AGE_MS",
+        "acr must match STEP_UP_IDP_ACR_VALUES or amr must match STEP_UP_IDP_AMR_VALUES"
+      ],
+      "tokenIssuedOnlyAfter": "fresh strong IdP reauthentication claim is present"
+    }
+  },
+  "tokenProperties": {
+    "format": "base64url(json_payload).hmac_sha256_signature",
+    "maxAgeMs": 300000,
+    "scopedTo": ["userId", "organizationId", "action"],
+    "singleUseNonce": true,
+    "serverSideTokenHash": true,
+    "rawTokenStoredServerSide": false,
+    "expiresQuickly": true,
+    "consumedOnCriticalAction": true
+  },
+  "criticalActions": {
+    "export_data": [
+      "GET /api/gdpr/export",
+      "GET /api/security-questionnaire/export",
+      "GET /api/vendor-assurance/export",
+      "GET /api/enterprise-readiness/export",
+      "GET /api/retention-center/export",
+      "GET /api/continuity-center/export"
+    ],
+    "manage_billing": [
+      "POST /api/billing/checkout",
+      "POST /api/billing/portal"
+    ],
+    "gdpr_delete": [
+      "POST /api/gdpr/delete-request"
+    ],
+    "audit_chain_export": [
+      "GET /api/audit/evidence-pack"
+    ],
+    "audit_chain_verify": [
+      "GET /api/audit/chain/verify"
+    ],
+    "manage_team": [
+      "Team invite management routes must use requireStepUpForRequest before release when enabled"
+    ],
+    "change_security_settings": [
+      "Security settings mutation routes must use requireStepUpForRequest before release when enabled"
+    ]
+  },
+  "auditEvents": [
+    "step_up_requested",
+    "step_up_approved",
+    "step_up_denied",
+    "step_up_expired"
+  ],
+  "negativeTests": {
+    "actionWithoutStepUpFails": true,
+    "expiredTokenFails": true,
+    "tokenFromOtherOrganizationFails": true,
+    "tokenForOtherActionFails": true,
+    "tamperedTokenFails": true,
+    "providerMissingFailsClosed": true,
+    "enterpriseReleaseBlockedWithoutProvider": true
+  },
+  "releaseGate": {
+    "script": "scripts/security/check-step-up.mjs",
+    "enterpriseReleaseEnv": "EUROCOMPLY_ENTERPRISE_RELEASE=true",
+    "requires": [
+      "STEP_UP_SIGNING_SECRET or AUDIT_CHAIN_SIGNING_SECRET",
+      "STEP_UP_PROVIDER_MODE",
+      "Supabase MFA configuration or enterprise IdP ACR/AMR policy"
+    ],
+    "failClosedWithoutProvider": true
+  },
+  "limitations": [
+    "This repository evidence validates implementation wiring and fail-closed behavior. Live provider execution must be run in an environment with real Supabase MFA or enterprise IdP credentials configured."
+  ]
+}

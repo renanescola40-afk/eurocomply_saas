@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }, entitlementCheck.status);
   }
 
-  const stepUp = requireStepUpForRequest({
+  const stepUp = await requireStepUpForRequest({
     request,
     action: 'gdpr_delete',
     userId: user.id,

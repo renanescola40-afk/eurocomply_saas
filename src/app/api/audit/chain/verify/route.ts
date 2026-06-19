@@ -76,7 +76,7 @@ export async function GET(request: Request) {
     }, plan.status);
   }
 
-  const stepUp = requireStepUpForRequest({
+  const stepUp = await requireStepUpForRequest({
     request,
     action: 'audit_chain_verify',
     userId: user.id,
@@ -135,5 +135,6 @@ export async function GET(request: Request) {
     lastHash: verification.lastHash,
     failures: verification.failures,
     stepUpVerified: true,
+    stepUpVerifiedAt: stepUp.assessment.verifiedAt,
   });
 }
