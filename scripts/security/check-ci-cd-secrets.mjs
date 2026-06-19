@@ -54,6 +54,11 @@ function lineNumberFor(source, index) {
   return source.slice(0, index).split('\n').length;
 }
 
+function asGlobalRegExp(pattern) {
+  if (pattern.global) return pattern;
+  return new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
+}
+
 const failures = [];
 const workflows = walk(workflowRoot);
 const workflowSources = workflows.map((path) => ({ path: normalizePath(path), source: readFileSync(path, 'utf8') }));
@@ -77,7 +82,7 @@ for (const token of requiredPreflightTokens) {
 
 for (const { path, source } of workflowSources) {
   for (const forbidden of forbiddenWorkflowPatterns) {
-    for (const match of source.matchAll(forbidden.pattern)) {
+    for (const match of source.matchAll(asGlobalRegExp(forbidden.pattern))) {
       failures.push(`${path}:${lineNumberFor(source, match.index ?? 0)} forbidden CI/CD secret pattern: ${forbidden.name}`);
     }
   }
