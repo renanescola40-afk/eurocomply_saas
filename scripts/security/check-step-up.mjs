@@ -96,8 +96,9 @@ const tokenChecks = {
     'revoked_at', 'enable row level security', 'grant all on public.step_up_tokens to service_role',
   ],
   [paths.runtimePreflight]: [
-    'await import', './check-step-up.mjs', enterpriseReleaseEnv, 'runtime provider preflight',
-    'Values are never printed', 'process.env.EUROCOMPLY_ENTERPRISE_RELEASE',
+    'readRuntimeSetting', 'hasConfiguredList', 'runtime provider preflight', 'Values are never printed',
+    'stepUpProviderEnv', 'stepUpSigningEnv', 'auditSigningEnv', 'supabaseUrlEnv', 'supabaseAnonEnv',
+    'stepUpAcrEnv', 'stepUpAmrEnv', 'providerConfigured',
   ],
   [paths.productionPreflight]: [
     'readRuntimeSetting', 'hasConfiguredList', 'enterpriseReleaseEnv',
