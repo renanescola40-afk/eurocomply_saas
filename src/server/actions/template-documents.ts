@@ -104,7 +104,7 @@ export async function createDocumentFromTemplate(input: TemplateDocumentInput, u
   });
 
   const { error: uploadError } = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, content, {
-    contentType: 'text/markdown; charset=utf-8',
+    contentType: 'text/markdown',
     upsert: false,
   });
 
