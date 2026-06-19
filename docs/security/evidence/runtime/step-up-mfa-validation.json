@@ -3,15 +3,18 @@
   "id": "step-up-mfa-validation",
   "status": "Complete",
   "reviewer": "EuroComply security automation",
-  "reviewedAt": "2026-06-19T16:30:00.000Z",
-  "generatedAt": "2026-06-19T16:30:00.000Z",
+  "reviewedAt": "2026-06-19T17:30:00.000Z",
+  "generatedAt": "2026-06-19T17:30:00.000Z",
   "control": "Enterprise step-up MFA / IdP validation for critical actions",
-  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Team invite management now enforces the same step-up helper after RBAC and before invite creation. Enterprise release remains blocked when a signing key and real MFA or IdP policy are not configured.",
+  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Team invite, member removal and invitation cancellation management now enforce the same step-up helper after RBAC and before writes. Enterprise release remains blocked when a signing key and real MFA or IdP policy are not configured.",
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "src/server/security/step-up.ts",
     "src/app/api/security/step-up/challenge/route.ts",
     "src/app/api/team/invites/route.ts",
+    "src/app/api/team/members/remove/route.ts",
+    "src/app/api/team/invitations/cancel/route.ts",
+    "src/components/team/team-settings-section.tsx",
     "supabase/migrations/20260619143000_step_up_token_store.sql",
     "src/server/security/step-up.test.ts",
     "scripts/security/check-step-up.mjs",
@@ -24,7 +27,8 @@
     "Tokens include server-generated nonce, issuedAt, expiresAt and verificationMethod fields.",
     "Tokens expire within five minutes and are consumed once from the server-side token store.",
     "Critical routes reject missing, expired, replayed, cross-organization and cross-action tokens.",
-    "Team invite management requires manage_team step-up after RBAC and before invite creation.",
+    "Team invite, team member removal and invitation cancellation require manage_team step-up after RBAC and before writes.",
+    "Team UI uses the shared StepUpMfaDialog and sends x-eurocomply-step-up-token only to fixed protected API endpoints.",
     "Enterprise release gate fails closed when signing configuration or real provider configuration is missing."
   ],
   "providers": {
@@ -72,7 +76,9 @@
       "POST /api/billing/portal"
     ],
     "manage_team": [
-      "POST /api/team/invites"
+      "POST /api/team/invites",
+      "POST /api/team/members/remove",
+      "POST /api/team/invitations/cancel"
     ],
     "gdpr_delete": [
       "POST /api/gdpr/delete-request"
@@ -91,7 +97,9 @@
     "step_up_requested",
     "step_up_approved",
     "step_up_denied",
-    "step_up_expired"
+    "step_up_expired",
+    "team_member_removed",
+    "team_invitation_cancelled"
   ],
   "negativeTests": {
     "actionWithoutStepUpFails": true,
@@ -115,6 +123,6 @@
   },
   "limitations": [
     "This repository evidence validates implementation wiring and fail-closed behavior. Live provider execution must be run in an environment with real Supabase MFA or enterprise IdP credentials configured.",
-    "Team role-change, team member-removal and security-settings mutation endpoints are not present as enabled write routes in this repository snapshot; any future route for those actions must be wired into requireStepUpForRequest before release."
+    "Team role-change and security-settings mutation endpoints are not present as enabled write routes in this repository snapshot; any future route for those actions must be wired into requireStepUpForRequest before release."
   ]
 }
