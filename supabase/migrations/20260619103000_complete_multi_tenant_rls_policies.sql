@@ -1,6 +1,5 @@
 -- Complete multi-tenant RLS policy coverage for EuroComply.
--- This migration is intentionally idempotent and table-aware: optional tables are
--- hardened when present, and absent tables are skipped without failing deploys.
+-- Idempotent and table-aware: optional tables are hardened when present.
 
 create extension if not exists pgcrypto;
 
@@ -44,10 +43,24 @@ revoke all on function public.has_org_role(uuid, text[]) from public;
 grant execute on function public.is_org_member(uuid) to authenticated;
 grant execute on function public.has_org_role(uuid, text[]) to authenticated;
 
+create or replace function public.app_rls_has_column(table_name text, column_name text)
+returns boolean
+language sql
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = app_rls_has_column.table_name
+      and column_name = app_rls_has_column.column_name
+  );
+$$;
+
 create or replace function public.app_rls_enable(table_name text)
 returns void
 language plpgsql
-security definer
 set search_path = public
 as $$
 begin
@@ -60,7 +73,6 @@ $$;
 create or replace function public.app_rls_drop_policy(table_name text, policy_name text)
 returns void
 language plpgsql
-security definer
 set search_path = public
 as $$
 begin
@@ -70,16 +82,72 @@ begin
 end;
 $$;
 
-create or replace function public.app_rls_exec_if_table(table_name text, sql_template text)
+create or replace function public.app_rls_org_scoped(table_name text)
 returns void
 language plpgsql
-security definer
 set search_path = public
 as $$
 begin
-  if to_regclass(format('public.%I', table_name)) is not null then
-    execute format(sql_template, table_name);
+  if to_regclass(format('public.%I', table_name)) is null or not public.app_rls_has_column(table_name, 'organization_id') then
+    return;
   end if;
+
+  perform public.app_rls_enable(table_name);
+  perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_select_member');
+  perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_insert_member');
+  perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_update_member');
+  perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_delete_admin');
+
+  execute format('create policy %I on public.%I for select to authenticated using (public.is_org_member(organization_id))', 'rls_' || table_name || '_select_member', table_name);
+  execute format('create policy %I on public.%I for insert to authenticated with check (public.is_org_member(organization_id))', 'rls_' || table_name || '_insert_member', table_name);
+  execute format('create policy %I on public.%I for update to authenticated using (public.is_org_member(organization_id)) with check (public.is_org_member(organization_id))', 'rls_' || table_name || '_update_member', table_name);
+  execute format('create policy %I on public.%I for delete to authenticated using (public.has_org_role(organization_id, array[''owner'',''admin'']))', 'rls_' || table_name || '_delete_admin', table_name);
+end;
+$$;
+
+create or replace function public.app_rls_backend_only(table_name text)
+returns void
+language plpgsql
+set search_path = public
+as $$
+begin
+  if to_regclass(format('public.%I', table_name)) is null or not public.app_rls_has_column(table_name, 'organization_id') then
+    return;
+  end if;
+
+  perform public.app_rls_enable(table_name);
+  perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_select_member');
+  perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_insert_backend_only');
+  perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_update_backend_only');
+  perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_delete_backend_only');
+
+  execute format('create policy %I on public.%I for select to authenticated using (public.is_org_member(organization_id))', 'rls_' || table_name || '_select_member', table_name);
+  execute format('create policy %I on public.%I for insert to authenticated with check (false)', 'rls_' || table_name || '_insert_backend_only', table_name);
+  execute format('create policy %I on public.%I for update to authenticated using (false) with check (false)', 'rls_' || table_name || '_update_backend_only', table_name);
+  execute format('create policy %I on public.%I for delete to authenticated using (false)', 'rls_' || table_name || '_delete_backend_only', table_name);
+end;
+$$;
+
+create or replace function public.app_rls_client_deny(table_name text)
+returns void
+language plpgsql
+set search_path = public
+as $$
+begin
+  if to_regclass(format('public.%I', table_name)) is null then
+    return;
+  end if;
+
+  perform public.app_rls_enable(table_name);
+  perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_client_read_deny');
+  perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_client_insert_deny');
+  perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_client_update_deny');
+  perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_client_delete_deny');
+
+  execute format('create policy %I on public.%I for select to authenticated using (false)', 'rls_' || table_name || '_client_read_deny', table_name);
+  execute format('create policy %I on public.%I for insert to authenticated with check (false)', 'rls_' || table_name || '_client_insert_deny', table_name);
+  execute format('create policy %I on public.%I for update to authenticated using (false) with check (false)', 'rls_' || table_name || '_client_update_deny', table_name);
+  execute format('create policy %I on public.%I for delete to authenticated using (false)', 'rls_' || table_name || '_client_delete_deny', table_name);
 end;
 $$;
 
@@ -109,19 +177,29 @@ begin
     create policy "rls_organization_members_update_admin" on public.organization_members for update to authenticated using (public.has_org_role(organization_id, array['owner','admin'])) with check (public.has_org_role(organization_id, array['owner','admin']));
     create policy "rls_organization_members_delete_admin" on public.organization_members for delete to authenticated using (public.has_org_role(organization_id, array['owner','admin']));
   end if;
+end $$;
 
+-- Profiles can be user-scoped, but only when the expected user identifier column exists.
+do $$
+begin
   if to_regclass('public.profiles') is not null then
     alter table public.profiles enable row level security;
     drop policy if exists "rls_profiles_select_self" on public.profiles;
     drop policy if exists "rls_profiles_insert_self" on public.profiles;
     drop policy if exists "rls_profiles_update_self" on public.profiles;
-    create policy "rls_profiles_select_self" on public.profiles for select to authenticated using (id = auth.uid() or user_id = auth.uid());
-    create policy "rls_profiles_insert_self" on public.profiles for insert to authenticated with check (id = auth.uid() or user_id = auth.uid());
-    create policy "rls_profiles_update_self" on public.profiles for update to authenticated using (id = auth.uid() or user_id = auth.uid()) with check (id = auth.uid() or user_id = auth.uid());
+
+    if public.app_rls_has_column('profiles', 'user_id') then
+      create policy "rls_profiles_select_self" on public.profiles for select to authenticated using (user_id = auth.uid());
+      create policy "rls_profiles_insert_self" on public.profiles for insert to authenticated with check (user_id = auth.uid());
+      create policy "rls_profiles_update_self" on public.profiles for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+    elsif public.app_rls_has_column('profiles', 'id') then
+      create policy "rls_profiles_select_self" on public.profiles for select to authenticated using (id = auth.uid());
+      create policy "rls_profiles_insert_self" on public.profiles for insert to authenticated with check (id = auth.uid());
+      create policy "rls_profiles_update_self" on public.profiles for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
+    end if;
   end if;
 end $$;
 
--- Generic tenant-owned tables: members can read; admins/members can mutate only rows in their own organization.
 do $$
 declare
   table_name text;
@@ -137,40 +215,22 @@ begin
     'organization_invites',
     'invitations'
   ] loop
-    perform public.app_rls_enable(table_name);
-    perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_select_member');
-    perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_insert_member');
-    perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_update_member');
-    perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_delete_admin');
-    perform public.app_rls_exec_if_table(table_name, 'create policy "rls_%1$I_select_member" on public.%1$I for select to authenticated using (public.is_org_member(organization_id))');
-    perform public.app_rls_exec_if_table(table_name, 'create policy "rls_%1$I_insert_member" on public.%1$I for insert to authenticated with check (public.is_org_member(organization_id))');
-    perform public.app_rls_exec_if_table(table_name, 'create policy "rls_%1$I_update_member" on public.%1$I for update to authenticated using (public.is_org_member(organization_id)) with check (public.is_org_member(organization_id))');
-    perform public.app_rls_exec_if_table(table_name, 'create policy "rls_%1$I_delete_admin" on public.%1$I for delete to authenticated using (public.has_org_role(organization_id, array[''owner'',''admin'']))');
+    perform public.app_rls_org_scoped(table_name);
   end loop;
 end $$;
 
--- Audit and subscription tables are tenant-readable but client-append/mutation is denied.
 do $$
 declare
   table_name text;
 begin
   foreach table_name in array array['audit_events', 'audit_logs', 'subscriptions'] loop
-    perform public.app_rls_enable(table_name);
-    perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_select_member');
-    perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_insert_backend_only');
-    perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_update_backend_only');
-    perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_delete_backend_only');
-    perform public.app_rls_exec_if_table(table_name, 'create policy "rls_%1$I_select_member" on public.%1$I for select to authenticated using (public.is_org_member(organization_id))');
-    perform public.app_rls_exec_if_table(table_name, 'create policy "rls_%1$I_insert_backend_only" on public.%1$I for insert to authenticated with check (false)');
-    perform public.app_rls_exec_if_table(table_name, 'create policy "rls_%1$I_update_backend_only" on public.%1$I for update to authenticated using (false) with check (false)');
-    perform public.app_rls_exec_if_table(table_name, 'create policy "rls_%1$I_delete_backend_only" on public.%1$I for delete to authenticated using (false)');
+    perform public.app_rls_backend_only(table_name);
   end loop;
 end $$;
 
--- Notifications must match both tenant and recipient user for reads/mutations.
 do $$
 begin
-  if to_regclass('public.notifications') is not null then
+  if to_regclass('public.notifications') is not null and public.app_rls_has_column('notifications', 'organization_id') and public.app_rls_has_column('notifications', 'user_id') then
     alter table public.notifications enable row level security;
     drop policy if exists "rls_notifications_select_recipient" on public.notifications;
     drop policy if exists "rls_notifications_insert_backend_only" on public.notifications;
@@ -183,7 +243,6 @@ begin
   end if;
 end $$;
 
--- Administrative/background tables must not be client-accessible.
 do $$
 declare
   table_name text;
@@ -197,18 +256,13 @@ begin
     'maintenance_jobs',
     'rate_limits'
   ] loop
-    perform public.app_rls_enable(table_name);
-    perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_client_read_deny');
-    perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_client_insert_deny');
-    perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_client_update_deny');
-    perform public.app_rls_drop_policy(table_name, 'rls_' || table_name || '_client_delete_deny');
-    perform public.app_rls_exec_if_table(table_name, 'create policy "rls_%1$I_client_read_deny" on public.%1$I for select to authenticated using (false)');
-    perform public.app_rls_exec_if_table(table_name, 'create policy "rls_%1$I_client_insert_deny" on public.%1$I for insert to authenticated with check (false)');
-    perform public.app_rls_exec_if_table(table_name, 'create policy "rls_%1$I_client_update_deny" on public.%1$I for update to authenticated using (false) with check (false)');
-    perform public.app_rls_exec_if_table(table_name, 'create policy "rls_%1$I_client_delete_deny" on public.%1$I for delete to authenticated using (false)');
+    perform public.app_rls_client_deny(table_name);
   end loop;
 end $$;
 
-drop function if exists public.app_rls_enable(text);
+drop function if exists public.app_rls_client_deny(text);
+drop function if exists public.app_rls_backend_only(text);
+drop function if exists public.app_rls_org_scoped(text);
 drop function if exists public.app_rls_drop_policy(text, text);
-drop function if exists public.app_rls_exec_if_table(text, text);
+drop function if exists public.app_rls_enable(text);
+drop function if exists public.app_rls_has_column(text, text);
