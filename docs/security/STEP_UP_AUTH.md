@@ -215,9 +215,10 @@ Step-up is enforced for:
 - `GET /api/continuity-center/export` using `export_data`
 - `POST /api/billing/checkout` using `manage_billing`
 - `POST /api/billing/portal` using `manage_billing`
+- `POST /api/team/invites` using `manage_team`
 - `POST /api/gdpr/delete-request` using `gdpr_delete`
 
-Team invite management and security settings mutation endpoints must use `manage_team` and `change_security_settings` respectively before those write routes are enabled for enterprise release.
+Team role changes, team member removals and security settings mutation endpoints must use `manage_team` and `change_security_settings` respectively before those write routes are enabled for enterprise release.
 
 ## Audit Events
 
@@ -251,6 +252,7 @@ Critical action callers should attach the returned token to `X-EuroComply-Step-U
 - token scoped to another organization fails;
 - token scoped to another action fails;
 - tampered token fails;
+- replayed single-use token fails;
 - valid scoped token passes;
 - provider not configured fails closed.
 
