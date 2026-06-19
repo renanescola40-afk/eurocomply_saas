@@ -11,20 +11,16 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   {
-    ignores: [
-      "next-env.d.ts",
-      "scripts/security/run-supabase-live-tenant-isolation.mjs",
-    ],
+    ignores: ["next-env.d.ts"],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {
       "@typescript-eslint/no-unused-vars": "off",
       "react/no-unescaped-entities": "off",
-      "prefer-const": "off",
-      "@typescript-eslint/no-explicit-any": "off",
-    },
-  },
+      "prefer-const": "off"
+    }
+  }
 ];
 
 export default eslintConfig;
