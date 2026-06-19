@@ -3,20 +3,22 @@
   "id": "step-up-mfa-validation",
   "status": "Complete",
   "reviewer": "EuroComply security automation",
-  "reviewedAt": "2026-06-19T18:25:00.000Z",
-  "generatedAt": "2026-06-19T18:25:00.000Z",
+  "reviewedAt": "2026-06-19T19:15:00.000Z",
+  "generatedAt": "2026-06-19T19:15:00.000Z",
   "control": "Enterprise step-up MFA / IdP validation for critical actions",
-  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Team invite, member removal, role change and invitation cancellation management enforce the same step-up helper after RBAC and before writes. Enterprise release remains blocked when signing configuration, Supabase auth client configuration and a real MFA/IdP policy are not configured; the runtime preflight delegates to the same release gate and the production preflight executes that runtime preflight when enterprise release mode is enabled.",
+  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Team invite, member removal, role change, invitation cancellation and security-settings management enforce the same step-up helper after RBAC and before writes. Enterprise release remains blocked when signing configuration, Supabase auth client configuration and a real MFA/IdP policy are not configured; the runtime preflight delegates to the same release gate and the production preflight executes that runtime preflight when enterprise release mode is enabled.",
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "src/server/security/step-up.ts",
     "src/app/api/security/step-up/challenge/route.ts",
+    "src/app/api/security/settings/route.ts",
     "src/app/api/team/invites/route.ts",
     "src/app/api/team/members/remove/route.ts",
     "src/app/api/team/members/role/route.ts",
     "src/app/api/team/invitations/cancel/route.ts",
     "src/components/team/team-settings-section.tsx",
     "supabase/migrations/20260619143000_step_up_token_store.sql",
+    "supabase/migrations/20260619191500_organization_security_settings.sql",
     "src/server/security/step-up.test.ts",
     "scripts/security/check-step-up.mjs",
     "scripts/security/check-step-up-runtime-preflight.mjs",
@@ -32,6 +34,7 @@
     "Critical routes reject missing, expired, replayed, cross-organization and cross-action tokens.",
     "Team invite, team member removal, team role change and invitation cancellation require manage_team step-up after RBAC and before writes.",
     "Team role changes block self-change, non-owner owner grants/removals and last-owner demotion.",
+    "Security-settings changes require manage_settings RBAC plus change_security_settings step-up before settings upsert.",
     "Team UI uses the shared StepUpMfaDialog and sends x-eurocomply-step-up-token only to fixed protected API endpoints.",
     "Enterprise release gate fails closed when signing configuration, Supabase auth client configuration or real provider configuration is missing.",
     "Enterprise IdP release mode requires Supabase auth client configuration plus at least one non-empty ACR/AMR policy value after trimming.",
@@ -101,7 +104,7 @@
       "GET /api/audit/chain/verify"
     ],
     "change_security_settings": [
-      "Security settings mutation routes must use requireStepUpForRequest before release when enabled"
+      "POST /api/security/settings"
     ]
   },
   "auditEvents": [
@@ -111,7 +114,8 @@
     "step_up_expired",
     "team_member_removed",
     "team_member_role_changed",
-    "team_invitation_cancelled"
+    "team_invitation_cancelled",
+    "security_settings_changed"
   ],
   "negativeTests": {
     "actionWithoutStepUpFails": true,
@@ -125,7 +129,8 @@
     "runtimePreflightFailsWithoutProvider": true,
     "productionPreflightRunsRuntimeProviderPreflight": true,
     "blankIdpPolicyRejected": true,
-    "enterpriseIdpRequiresSupabaseAuthConfig": true
+    "enterpriseIdpRequiresSupabaseAuthConfig": true,
+    "securitySettingsRequireStepUp": true
   },
   "releaseGate": {
     "script": "scripts/security/check-step-up.mjs",
@@ -142,7 +147,6 @@
     "redactedRuntimeOutput": true
   },
   "limitations": [
-    "This repository evidence validates implementation wiring and fail-closed behavior. Live provider execution must be run in an environment with real Supabase MFA or enterprise IdP credentials configured.",
-    "Security-settings mutation endpoints are not present as enabled write routes in this repository snapshot; any future route for those actions must be wired into requireStepUpForRequest before release."
+    "This repository evidence validates implementation wiring and fail-closed behavior. Live provider execution must be run in an environment with real Supabase MFA or enterprise IdP credentials configured."
   ]
 }
