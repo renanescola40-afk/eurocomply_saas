@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   STEP_UP_MAX_AGE_MS,
@@ -8,11 +8,91 @@ import {
   assessStepUpToken,
   createStepUpToken,
   createStepUpTokenEnvelope,
+  hashStepUpToken,
   HIGH_RISK_ACTIONS,
   isEnterpriseStepUpConfigured,
   requireStepUpForRequest,
   stepUpRequiredResponse,
 } from './step-up';
+
+type StepUpTokenStoreRecord = {
+  nonce: string;
+  token_hash: string;
+  user_id: string;
+  organization_id: string;
+  action: string;
+  status: string | null;
+  expires_at: string | null;
+  consumed_at: string | null;
+  revoked_at: string | null;
+};
+
+const stepUpTokenStore = vi.hoisted(() => ({
+  records: new Map<string, StepUpTokenStoreRecord>(),
+}));
+
+vi.mock('@/lib/supabase/admin', () => {
+  class StepUpTokenQueryBuilder {
+    private filters = new Map<string, unknown>();
+    private updatePatch: Partial<StepUpTokenStoreRecord> | null = null;
+
+    select() {
+      return this;
+    }
+
+    eq(column: string, value: unknown) {
+      this.filters.set(column, value);
+      return this;
+    }
+
+    is(column: string, value: unknown) {
+      this.filters.set(column, value);
+      return this;
+    }
+
+    update(patch: Partial<StepUpTokenStoreRecord>) {
+      this.updatePatch = patch;
+      return this;
+    }
+
+    async maybeSingle() {
+      const nonce = this.filters.get('nonce');
+      if (typeof nonce !== 'string') return { data: null, error: null };
+
+      const record = stepUpTokenStore.records.get(nonce);
+      if (!record) return { data: null, error: null };
+
+      if (!this.updatePatch) {
+        return { data: record, error: null };
+      }
+
+      const statusFilter = this.filters.get('status');
+      const consumedAtFilter = this.filters.get('consumed_at');
+      const revokedAtFilter = this.filters.get('revoked_at');
+      const matchesUpdateGuard =
+        (statusFilter === undefined || record.status === statusFilter) &&
+        (consumedAtFilter !== null || record.consumed_at === null) &&
+        (revokedAtFilter !== null || record.revoked_at === null);
+
+      if (!matchesUpdateGuard) {
+        return { data: null, error: null };
+      }
+
+      const nextRecord = { ...record, ...this.updatePatch };
+      stepUpTokenStore.records.set(nonce, nextRecord);
+      return { data: { nonce }, error: null };
+    }
+  }
+
+  return {
+    tryCreateAdminClient: () => ({
+      from: (table: string) => {
+        if (table !== 'step_up_tokens') return null;
+        return new StepUpTokenQueryBuilder();
+      },
+    }),
+  };
+});
 
 const signingKeyForTests = ['test', 'step-up', 'signing', 'key'].join('-');
 const tokenInput = {
@@ -24,7 +104,19 @@ const tokenInput = {
   secret: signingKeyForTests,
 };
 
+function requestWithStepUpToken(token: string) {
+  return new Request('https://eurocomply.example/api/audit/chain/verify', {
+    headers: {
+      [STEP_UP_TOKEN_HEADER]: token,
+    },
+  });
+}
+
 describe('step-up authentication helper', () => {
+  beforeEach(() => {
+    stepUpTokenStore.records.clear();
+  });
+
   it('lists high-risk actions that require explicit policy review', () => {
     expect(HIGH_RISK_ACTIONS).toEqual(
       expect.arrayContaining([
@@ -79,14 +171,9 @@ describe('step-up authentication helper', () => {
 
   it('accepts valid signed tokens through the reusable request helper', async () => {
     const token = createStepUpToken(tokenInput);
-    const request = new Request('https://eurocomply.example/api/audit/chain/verify', {
-      headers: {
-        [STEP_UP_TOKEN_HEADER]: token,
-      },
-    });
 
     const result = await requireStepUpForRequest({
-      request,
+      request: requestWithStepUpToken(token),
       action: 'audit_chain_verify',
       userId: 'user_123',
       organizationId: 'org_123',
@@ -99,6 +186,53 @@ describe('step-up authentication helper', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.assessment.expiresAt).toBe('2026-06-12T10:05:00.000Z');
+    }
+  });
+
+  it('rejects replayed single-use request helper tokens', async () => {
+    const envelope = createStepUpTokenEnvelope(tokenInput);
+    const tokenHash = hashStepUpToken(envelope.token, signingKeyForTests);
+    expect(tokenHash).toBeTruthy();
+
+    stepUpTokenStore.records.set(envelope.payload.nonce, {
+      nonce: envelope.payload.nonce,
+      token_hash: tokenHash ?? 'missing-token-hash',
+      user_id: envelope.payload.userId,
+      organization_id: envelope.payload.organizationId,
+      action: envelope.payload.action,
+      status: 'active',
+      expires_at: envelope.payload.expiresAt,
+      consumed_at: null,
+      revoked_at: null,
+    });
+
+    const first = await requireStepUpForRequest({
+      request: requestWithStepUpToken(envelope.token),
+      action: 'audit_chain_verify',
+      userId: 'user_123',
+      organizationId: 'org_123',
+      now: '2026-06-12T10:04:00.000Z',
+      secret: signingKeyForTests,
+      audit: false,
+    });
+
+    expect(first.ok).toBe(true);
+    expect(stepUpTokenStore.records.get(envelope.payload.nonce)?.status).toBe('used');
+
+    const replay = await requireStepUpForRequest({
+      request: requestWithStepUpToken(envelope.token),
+      action: 'audit_chain_verify',
+      userId: 'user_123',
+      organizationId: 'org_123',
+      now: '2026-06-12T10:04:10.000Z',
+      secret: signingKeyForTests,
+      audit: false,
+    });
+
+    expect(replay.ok).toBe(false);
+    if (!replay.ok) {
+      expect(replay.assessment.reason).toBe('step_up_token_replayed');
+      expect(replay.response.status).toBe(403);
     }
   });
 
