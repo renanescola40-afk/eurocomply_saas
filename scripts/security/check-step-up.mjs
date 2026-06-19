@@ -7,6 +7,10 @@ const rolloutMatrixPath = 'docs/security/STEP_UP_ROLLOUT_MATRIX.md';
 const auditChainVerifierPath = 'src/app/api/audit/chain/verify/route.ts';
 const auditChainExportPath = 'src/app/api/audit/evidence-pack/route.ts';
 const teamInvitePath = 'src/app/api/team/invites/route.ts';
+const teamRemovePath = 'src/app/api/team/members/remove/route.ts';
+const teamCancelInvitePath = 'src/app/api/team/invitations/cancel/route.ts';
+const teamPagePath = 'src/app/[locale]/dashboard/organizations/team/page.tsx';
+const teamSettingsPath = 'src/components/team/team-settings-section.tsx';
 const challengePath = 'src/app/api/security/step-up/challenge/route.ts';
 const uiPath = 'src/components/security/step-up-mfa-dialog.tsx';
 const migrationPath = 'supabase/migrations/20260619143000_step_up_token_store.sql';
@@ -104,9 +108,18 @@ const auditChainExportRequiredTokens = [
   'publicStepUpSummary',
 ];
 
-const teamInviteRequiredTokens = [
+const teamMutationRequiredTokens = [
   'await requireStepUpForRequest',
   'manage_team',
+];
+
+const teamSettingsRequiredTokens = [
+  'StepUpMfaDialog',
+  'STEP_UP_TOKEN_HEADER',
+  '/api/team/invites',
+  '/api/team/members/remove',
+  '/api/team/invitations/cancel',
+  'action="manage_team"',
 ];
 
 const challengeRequiredTokens = [
@@ -196,6 +209,10 @@ const rolloutMatrix = read(rolloutMatrixPath);
 const auditChainVerifier = read(auditChainVerifierPath);
 const auditChainExport = read(auditChainExportPath);
 const teamInvite = read(teamInvitePath);
+const teamRemove = read(teamRemovePath);
+const teamCancelInvite = read(teamCancelInvitePath);
+const teamPage = read(teamPagePath);
+const teamSettings = read(teamSettingsPath);
 const challenge = read(challengePath);
 const ui = read(uiPath);
 const migration = read(migrationPath);
@@ -207,7 +224,10 @@ if (doc) requireTokens(docPath, doc, docRequiredTokens);
 if (rolloutMatrix) requireTokens(rolloutMatrixPath, rolloutMatrix, rolloutMatrixRequiredTokens);
 if (auditChainVerifier) requireTokens(auditChainVerifierPath, auditChainVerifier, auditChainVerifierRequiredTokens);
 if (auditChainExport) requireTokens(auditChainExportPath, auditChainExport, auditChainExportRequiredTokens);
-if (teamInvite) requireTokens(teamInvitePath, teamInvite, teamInviteRequiredTokens);
+if (teamInvite) requireTokens(teamInvitePath, teamInvite, teamMutationRequiredTokens);
+if (teamRemove) requireTokens(teamRemovePath, teamRemove, teamMutationRequiredTokens);
+if (teamCancelInvite) requireTokens(teamCancelInvitePath, teamCancelInvite, teamMutationRequiredTokens);
+if (teamSettings) requireTokens(teamSettingsPath, teamSettings, teamSettingsRequiredTokens);
 if (challenge) requireTokens(challengePath, challenge, challengeRequiredTokens);
 if (ui) requireTokens(uiPath, ui, uiRequiredTokens);
 if (migration) requireTokens(migrationPath, migration, migrationRequiredTokens);
@@ -226,9 +246,15 @@ for (const routePath of [
   'src/app/api/retention-center/export/route.ts',
   'src/app/api/continuity-center/export/route.ts',
   'src/app/api/team/invites/route.ts',
+  'src/app/api/team/members/remove/route.ts',
+  'src/app/api/team/invitations/cancel/route.ts',
 ]) {
   const source = read(routePath);
   if (source) requireAwaitedStepUp(routePath, source);
+}
+
+if (teamPage && /\b(inviteOrganizationMember|removeOrganizationMember|cancelOrganizationInvitation)\b/.test(teamPage)) {
+  failures.push(`${teamPagePath} must not import or call direct team server actions; use step-up protected APIs from the client.`);
 }
 
 if (helper && helper.includes('NextResponse.json')) {
