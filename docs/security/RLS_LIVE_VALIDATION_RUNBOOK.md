@@ -30,10 +30,16 @@ NEXT_PUBLIC_SUPABASE_URL points to the target Supabase project
 SUPABASE_SERVICE_ROLE_KEY is configured for the same target project
 ```
 
-The tenant-isolation proof must additionally run:
+The tenant-isolation proof must additionally run either locally:
 
 ```txt
 node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register
+```
+
+or through the manual GitHub Actions workflow:
+
+```txt
+Supabase Live RLS Validation
 ```
 
 This script creates tenant A and tenant B, creates users/members for each tenant, seeds representative rows, signs in with both tenant clients, verifies tenant A cannot read, insert, update, or delete tenant B data, and verifies same-tenant reads still work where expected.
@@ -47,6 +53,14 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 SUPABASE_ACCESS_TOKEN
+```
+
+For the GitHub Actions workflow, configure these as repository or environment secrets:
+
+```txt
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
 ```
 
 ## Required Validation Evidence
@@ -96,12 +110,7 @@ npm run security:rls
 ```
 
 4. Confirm the gate does not run in advisory mode for Release Candidate.
-5. Run the strict live tenant isolation proof:
-
-```txt
-node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register
-```
-
+5. Run the strict live tenant isolation proof locally or run the `Supabase Live RLS Validation` workflow.
 6. Confirm `docs/security/evidence/runtime/supabase-live-rls-validation.json` has `status: Complete`, `outcome: passed`, and per-table operation flags for cross-tenant read/insert/update/delete denial plus same-tenant reads.
 7. Confirm `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md` marks only the Supabase live RLS row as `Complete` after the successful script run.
 8. Run the full Security CI workflow.
@@ -116,7 +125,7 @@ Release candidate requires:
 ```txt
 SUPABASE_ACCESS_TOKEN configured
 npm run security:rls completed against target project
-node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register completed against target project
+node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register completed against target project, or Supabase Live RLS Validation workflow completed successfully
 Security CI completed successfully
 RLS validation evidence attached to release notes
 ```
@@ -138,6 +147,7 @@ If live validation fails:
 Attach these artifacts to enterprise/security review packages:
 
 - GitHub Actions Security CI run URL
+- Supabase Live RLS Validation workflow URL or local run log
 - RLS gate logs
 - `docs/security/evidence/runtime/supabase-live-rls-validation.json`
 - Supabase project/environment identifier
