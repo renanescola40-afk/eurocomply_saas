@@ -1,60 +1,24 @@
 #!/usr/bin/env node
-
-const allowedProviderModes = new Set([
-  'supabase_mfa',
-  'enterprise_idp',
-  'supabase_mfa_or_enterprise_idp',
-]);
-
-const env = process.env;
-const providerMode = env.STEP_UP_PROVIDER_MODE ?? '';
-const stepSigningName = ['STEP', 'UP', 'SIGNING', 'SECRET'].join('_');
-const auditSigningName = ['AUDIT', 'CHAIN', 'SIGNING', 'SECRET'].join('_');
-const supabaseUrlName = ['NEXT', 'PUBLIC', 'SUPABASE', 'URL'].join('_');
-const supabaseKeyName = ['NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY'].join('_');
-const idpAcrName = ['STEP', 'UP', 'IDP', 'ACR', 'VALUES'].join('_');
-const idpAmrName = ['STEP', 'UP', 'IDP', 'AMR', 'VALUES'].join('_');
-const hasSigningKey = Boolean(env[stepSigningName] || env[auditSigningName]);
-const hasSupabaseConfig = Boolean(env[supabaseUrlName] && env[supabaseKeyName]);
-const hasIdpPolicy = Boolean(env[idpAcrName] || env[idpAmrName]);
-const issues = [];
-
-function mark(value) {
-  return value ? 'configured' : 'missing';
-}
-
-if (!allowedProviderModes.has(providerMode)) {
-  issues.push('Provider mode must be one of the supported step-up modes.');
-}
-
-if (!hasSigningKey) {
-  issues.push('Dedicated step-up signing configuration is missing.');
-}
-
-if (providerMode === 'supabase_mfa' && !hasSupabaseConfig) {
-  issues.push('Supabase MFA configuration is missing.');
-}
-
-if (providerMode === 'enterprise_idp' && !hasIdpPolicy) {
-  issues.push('Enterprise IdP ACR/AMR policy is missing.');
-}
-
-if (providerMode === 'supabase_mfa_or_enterprise_idp' && !hasSupabaseConfig && !hasIdpPolicy) {
-  issues.push('Hybrid mode requires Supabase MFA configuration or enterprise IdP policy.');
-}
+import { spawnSync } from 'node:child_process';
 
 console.log('EuroComply step-up runtime provider preflight');
 console.log('------------------------------------------------');
-console.log(`provider mode: ${providerMode || 'missing'}`);
-console.log(`signing configuration: ${mark(hasSigningKey)}`);
-console.log(`Supabase MFA configuration: ${mark(hasSupabaseConfig)}`);
-console.log(`enterprise IdP policy: ${mark(hasIdpPolicy)}`);
-console.log('note: values are redacted; this command validates configuration shape only.');
+console.log('Running the enterprise release gate with runtime provider checks enabled.');
+console.log('Values are never printed; the underlying gate only reports configured/missing failures.');
 
-if (issues.length > 0) {
-  console.error('\nStep-up runtime preflight failed:');
-  for (const issue of issues) console.error(`- ${issue}`);
+const result = spawnSync(process.execPath, ['scripts/security/check-step-up.mjs'], {
+  env: {
+    ...process.env,
+    EUROCOMPLY_ENTERPRISE_RELEASE: 'true',
+  },
+  stdio: 'inherit',
+});
+
+if (typeof result.status === 'number') {
+  process.exitCode = result.status;
+} else if (result.error) {
+  console.error(`Step-up runtime preflight could not execute: ${result.error.message}`);
   process.exitCode = 1;
 } else {
-  console.log('\nStep-up runtime preflight passed: real MFA/IdP provider configuration is present.');
+  process.exitCode = 1;
 }
