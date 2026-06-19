@@ -38,6 +38,12 @@ type StepUpMfaFactor = {
   factor_type?: string | null;
 };
 
+type PublicMfaFactor = {
+  id: string;
+  type: string;
+  name: string | null;
+};
+
 type SupabaseAuthErrorLike = {
   message?: string;
 };
@@ -132,7 +138,7 @@ function readAuthTimeMs(value: unknown) {
   return numeric > 10_000_000_000 ? numeric : numeric * 1000;
 }
 
-function publicMfaFactor(factor: StepUpMfaFactor) {
+function publicMfaFactor(factor: StepUpMfaFactor): PublicMfaFactor | null {
   if (!factor.id || factor.status !== 'verified') return null;
 
   return {
@@ -224,7 +230,7 @@ async function verifySupabaseMfaStepUp(body: StepUpChallengeBody): Promise<RealV
       ...(data?.phone ?? []),
     ]
       .map(publicMfaFactor)
-      .filter((factor): factor is NonNullable<ReturnType<typeof publicMfaFactor>> => Boolean(factor));
+      .filter((factor): factor is PublicMfaFactor => Boolean(factor));
 
     return noStoreJson(
       {
@@ -239,7 +245,8 @@ async function verifySupabaseMfaStepUp(body: StepUpChallengeBody): Promise<RealV
 
   if (!code) {
     const { data, error } = await mfa.challenge({ factorId });
-    if (error || !data?.id) {
+    const providerChallengeId = data?.id;
+    if (error || !providerChallengeId) {
       return {
         ok: false,
         status: 403,
@@ -251,7 +258,7 @@ async function verifySupabaseMfaStepUp(body: StepUpChallengeBody): Promise<RealV
     return noStoreJson(
       {
         status: 'mfa_challenge_issued',
-        challengeId: data.id,
+        challengeId: providerChallengeId,
         factorId,
         message: 'Submit challengeId, factorId and the MFA code to receive a step-up token.',
         maxAgeMs: STEP_UP_MAX_AGE_MS,
@@ -280,7 +287,8 @@ async function verifySupabaseMfaStepUp(body: StepUpChallengeBody): Promise<RealV
   }
 
   const assurance = await mfa.getAuthenticatorAssuranceLevel();
-  if (assurance.error || assurance.data?.currentLevel !== 'aal2') {
+  const currentLevel = assurance.data?.currentLevel ?? null;
+  if (assurance.error || currentLevel !== 'aal2') {
     return {
       ok: false,
       status: 403,
@@ -293,7 +301,7 @@ async function verifySupabaseMfaStepUp(body: StepUpChallengeBody): Promise<RealV
     ok: true,
     method: 'supabase_mfa',
     provider: 'supabase_mfa',
-    aal: assurance.data.currentLevel,
+    aal: currentLevel,
   };
 }
 
