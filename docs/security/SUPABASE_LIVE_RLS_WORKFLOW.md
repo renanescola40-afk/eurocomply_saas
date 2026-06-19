@@ -26,6 +26,22 @@ The preflight checks that the repository is ready for the live evidence run:
 
 A passing preflight means the remaining work is operational: apply migrations to the target Supabase project, configure GitHub Actions secrets, run the workflow, review the generated evidence PR, and merge it.
 
+## Readiness score
+
+Use the readiness report when you need a single percentage for release tracking:
+
+```txt
+node scripts/security/report-supabase-rls-readiness.mjs
+```
+
+Use strict mode in release automation when the target must already be 100% complete:
+
+```txt
+node scripts/security/report-supabase-rls-readiness.mjs --strict
+```
+
+The score is `100%` only when the runtime evidence is `Complete`, `outcome: passed`, has required table and operation coverage, includes GitHub Actions provenance, and the P0 register row is also `Complete`.
+
 ## Manual workflow
 
 Run this GitHub Actions workflow manually:
@@ -69,6 +85,7 @@ A passing run creates an evidence PR where:
 - The same JSON has `outcome: passed`.
 - The evidence includes cross-tenant read, insert, update, and delete denial.
 - The evidence includes same-tenant read coverage.
+- The evidence includes GitHub Actions workflow/run/commit provenance.
 - `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md` marks only the Supabase live RLS row as `Complete`.
 
 ## Failure rule
