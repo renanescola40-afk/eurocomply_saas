@@ -15,13 +15,16 @@ if (missing.length > 0) {
   fail(`missing GitHub Actions metadata: ${missing.join(', ')}`);
 }
 
-if (!fs.existsSync(evidencePath)) {
-  fail(`${evidencePath} does not exist`);
+let source;
+try {
+  source = fs.readFileSync(evidencePath, 'utf8');
+} catch (error) {
+  fail(`${evidencePath} cannot be read: ${error instanceof Error ? error.message : error}`);
 }
 
 let evidence;
 try {
-  evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
+  evidence = JSON.parse(source);
 } catch (error) {
   fail(`invalid JSON: ${error instanceof Error ? error.message : error}`);
 }
@@ -45,5 +48,5 @@ evidence.githubActions = {
   stampedAt: new Date().toISOString(),
 };
 
-fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, { flag: 'w' });
 console.log(`Stamped Supabase live RLS evidence provenance: ${runUrl}`);
