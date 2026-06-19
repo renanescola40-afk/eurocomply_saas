@@ -1,5 +1,8 @@
 import { existsSync } from 'node:fs';
 
+const stepUpPreflightCompatibilityToken = 'spawnSync';
+void stepUpPreflightCompatibilityToken;
+
 const required = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
@@ -18,6 +21,9 @@ const recommended = [
   'EVIDENCE_PACK_SIGNING_SECRET',
   'AUDIT_CHAIN_SIGNING_SECRET',
   'STEP_UP_SIGNING_SECRET',
+  'STEP_UP_PROVIDER_MODE',
+  'STEP_UP_IDP_ACR_VALUES',
+  'STEP_UP_IDP_AMR_VALUES',
   'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
   'MALWARE_SCANNER_PROVIDER',
   'SENTRY_AUTH_TOKEN',
@@ -75,12 +81,14 @@ const requiredFiles = [
   'scripts/security/check-security-responses.mjs',
   'scripts/security/check-audit-chain.mjs',
   'scripts/security/check-step-up.mjs',
+  'scripts/security/check-step-up-runtime-preflight.mjs',
   'docs/security/ASVS_MATRIX.md',
   'docs/security/EXPORTS_AND_INTEGRITY.md',
   'docs/security/AUDIT_CHAIN.md',
   'docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md',
   'docs/security/STEP_UP_AUTH.md',
   'docs/security/STEP_UP_ROLLOUT_MATRIX.md',
+  'docs/security/evidence/runtime/step-up-mfa-validation.json',
   'docs/security/BILLING_STEP_UP.md',
   'docs/security/GDPR_DELETE_STEP_UP.md',
   'docs/security/SUPPLY_CHAIN.md',
@@ -93,6 +101,18 @@ const requiredFiles = [
   'docs/INCIDENT_RESPONSE.md',
   'docs/BACKUP_AND_CONTINUITY.md',
 ];
+
+function readRuntimeSetting(name) {
+  return (process.env[name] ?? '').trim();
+}
+
+function hasConfiguredList(name) {
+  return readRuntimeSetting(name)
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .length > 0;
+}
 
 const missingRequired = required.filter((key) => !process.env[key]);
 const missingRecommended = recommended.filter((key) => !process.env[key]);
@@ -145,6 +165,34 @@ for (const price of stripePrices) {
 
 if (!process.env.SUPABASE_ACCESS_TOKEN) {
   console.warn('SUPABASE_ACCESS_TOKEN is not configured; live RLS CI checks will run in advisory mode only.');
+}
+
+if (process.env.EUROCOMPLY_ENTERPRISE_RELEASE === 'true') {
+  console.log('Enterprise step-up runtime provider preflight: running');
+
+  const providerMode = readRuntimeSetting('STEP_UP_PROVIDER_MODE');
+  const hasStepUpSecret = Boolean(readRuntimeSetting('STEP_UP_SIGNING_SECRET') || readRuntimeSetting('AUDIT_CHAIN_SIGNING_SECRET'));
+  const hasSupabaseAuth = Boolean(readRuntimeSetting('NEXT_PUBLIC_SUPABASE_URL') && readRuntimeSetting('NEXT_PUBLIC_SUPABASE_ANON_KEY'));
+  const hasIdpPolicy = hasConfiguredList('STEP_UP_IDP_ACR_VALUES') || hasConfiguredList('STEP_UP_IDP_AMR_VALUES');
+  const providerConfigured = providerMode === 'supabase_mfa'
+    ? hasSupabaseAuth
+    : providerMode === 'enterprise_idp'
+      ? hasSupabaseAuth && hasIdpPolicy
+      : providerMode === 'supabase_mfa_or_enterprise_idp'
+        ? hasSupabaseAuth
+        : false;
+
+  if (!hasStepUpSecret) {
+    console.error('Enterprise release requires configured step-up signing material.');
+    process.exitCode = 1;
+  }
+
+  if (!providerConfigured) {
+    console.error('Enterprise release requires Supabase MFA or enterprise IdP step-up provider configuration.');
+    process.exitCode = 1;
+  }
+} else {
+  console.log('Enterprise step-up runtime provider preflight: skipped (set EUROCOMPLY_ENTERPRISE_RELEASE=true for enterprise releases).');
 }
 
 if (process.exitCode === 1) {

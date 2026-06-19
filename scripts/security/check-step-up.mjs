@@ -16,6 +16,7 @@ const challengePath = 'src/app/api/security/step-up/challenge/route.ts';
 const uiPath = 'src/components/security/step-up-mfa-dialog.tsx';
 const migrationPath = 'supabase/migrations/20260619143000_step_up_token_store.sql';
 const runtimePreflightPath = 'scripts/security/check-step-up-runtime-preflight.mjs';
+const productionPreflightPath = 'scripts/preflight.mjs';
 const runtimeEvidencePath = 'docs/security/evidence/runtime/step-up-mfa-validation.json';
 
 const helperRequiredTokens = [
@@ -74,6 +75,7 @@ const docRequiredTokens = [
   'STEP_UP_PROVIDER_MODE',
   'Release gate',
   'check-step-up-runtime-preflight.mjs',
+  'EUROCOMPLY_ENTERPRISE_RELEASE=true node scripts/preflight.mjs',
 ];
 
 const rolloutMatrixRequiredTokens = [
@@ -180,6 +182,18 @@ const runtimePreflightRequiredTokens = [
   'process.exitCode = 1',
 ];
 
+const productionPreflightRequiredTokens = [
+  'spawnSync',
+  'scripts/security/check-step-up-runtime-preflight.mjs',
+  'EUROCOMPLY_ENTERPRISE_RELEASE',
+  'Enterprise step-up runtime provider preflight: running',
+  'Enterprise step-up runtime provider preflight: skipped',
+  'STEP_UP_PROVIDER_MODE',
+  'STEP_UP_SIGNING_SECRET',
+  'STEP_UP_IDP_ACR_VALUES',
+  'STEP_UP_IDP_AMR_VALUES',
+];
+
 const runtimeEvidenceRequiredTokens = [
   'step-up-mfa-validation',
   'supabase_mfa',
@@ -188,7 +202,9 @@ const runtimeEvidenceRequiredTokens = [
   'singleUseNonce',
   'enterpriseReleaseBlockedWithoutProvider',
   'runtimePreflightFailsWithoutProvider',
+  'productionPreflightRunsRuntimeProviderPreflight',
   'scripts/security/check-step-up-runtime-preflight.mjs',
+  'scripts/preflight.mjs',
   'POST /api/team/invites',
   'POST /api/team/members/role',
 ];
@@ -249,6 +265,7 @@ const challenge = read(challengePath);
 const ui = read(uiPath);
 const migration = read(migrationPath);
 const runtimePreflight = read(runtimePreflightPath);
+const productionPreflight = read(productionPreflightPath);
 const runtimeEvidence = read(runtimeEvidencePath);
 
 if (helper) requireTokens(helperPath, helper, helperRequiredTokens);
@@ -266,6 +283,7 @@ if (challenge) requireTokens(challengePath, challenge, challengeRequiredTokens);
 if (ui) requireTokens(uiPath, ui, uiRequiredTokens);
 if (migration) requireTokens(migrationPath, migration, migrationRequiredTokens);
 if (runtimePreflight) requireTokens(runtimePreflightPath, runtimePreflight, runtimePreflightRequiredTokens);
+if (productionPreflight) requireTokens(productionPreflightPath, productionPreflight, productionPreflightRequiredTokens);
 if (runtimeEvidence) requireTokens(runtimeEvidencePath, runtimeEvidence, runtimeEvidenceRequiredTokens);
 
 for (const routePath of [
