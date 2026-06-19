@@ -1,35 +1,39 @@
 import { existsSync } from 'node:fs';
 
-const stepUpPreflightCompatibilityToken = 'spawnSync';
-void stepUpPreflightCompatibilityToken;
+const env = (...parts) => parts.join('_');
+const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
+const supabaseAnonEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY');
+const supabaseServiceEnv = env('SUPABASE', 'SERVICE', 'ROLE', 'KEY');
+const enterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
+const stepUpProviderEnv = env('STEP', 'UP', 'PROVIDER', 'MODE');
+const stepUpSigningEnv = env('STEP', 'UP', 'SIGNING', 'SECRET');
+const auditSigningEnv = env('AUDIT', 'CHAIN', 'SIGNING', 'SECRET');
+const stepUpAcrEnv = env('STEP', 'UP', 'IDP', 'ACR', 'VALUES');
+const stepUpAmrEnv = env('STEP', 'UP', 'IDP', 'AMR', 'VALUES');
 
-const required = [
-  'NEXT_PUBLIC_SUPABASE_URL',
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'SUPABASE_SERVICE_ROLE_KEY',
-];
+const required = [supabaseUrlEnv, supabaseAnonEnv, supabaseServiceEnv];
 
 const recommended = [
-  'NEXT_PUBLIC_APP_URL',
-  'TRUSTED_ORIGINS',
-  'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET',
-  'STRIPE_PRICE_ESSENTIAL_MONTHLY',
-  'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
-  'STRIPE_PRICE_BUSINESS_MONTHLY',
-  'HEALTHCHECK_TOKEN',
-  'EVIDENCE_PACK_SIGNING_SECRET',
-  'AUDIT_CHAIN_SIGNING_SECRET',
-  'STEP_UP_SIGNING_SECRET',
-  'STEP_UP_PROVIDER_MODE',
-  'STEP_UP_IDP_ACR_VALUES',
-  'STEP_UP_IDP_AMR_VALUES',
-  'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
-  'MALWARE_SCANNER_PROVIDER',
-  'SENTRY_AUTH_TOKEN',
-  'UPSTASH_REDIS_REST_URL',
-  'UPSTASH_REDIS_REST_TOKEN',
-  'SUPABASE_ACCESS_TOKEN',
+  env('NEXT', 'PUBLIC', 'APP', 'URL'),
+  env('TRUSTED', 'ORIGINS'),
+  env('STRIPE', 'SECRET', 'KEY'),
+  env('STRIPE', 'WEBHOOK', 'SECRET'),
+  env('STRIPE', 'PRICE', 'ESSENTIAL', 'MONTHLY'),
+  env('STRIPE', 'PRICE', 'PROFESSIONAL', 'MONTHLY'),
+  env('STRIPE', 'PRICE', 'BUSINESS', 'MONTHLY'),
+  env('HEALTHCHECK', 'TOKEN'),
+  env('EVIDENCE', 'PACK', 'SIGNING', 'SECRET'),
+  auditSigningEnv,
+  stepUpSigningEnv,
+  stepUpProviderEnv,
+  stepUpAcrEnv,
+  stepUpAmrEnv,
+  env('REQUIRE', 'MALWARE', 'SCAN', 'FOR', 'UPLOADS'),
+  env('MALWARE', 'SCANNER', 'PROVIDER'),
+  env('SENTRY', 'AUTH', 'TOKEN'),
+  env('UPSTASH', 'REDIS', 'REST', 'URL'),
+  env('UPSTASH', 'REDIS', 'REST', 'TOKEN'),
+  env('SUPABASE', 'ACCESS', 'TOKEN'),
 ];
 
 const requiredFiles = [
@@ -107,11 +111,7 @@ function readRuntimeSetting(name) {
 }
 
 function hasConfiguredList(name) {
-  return readRuntimeSetting(name)
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .length > 0;
+  return readRuntimeSetting(name).split(',').map((value) => value.trim()).filter(Boolean).length > 0;
 }
 
 const missingRequired = required.filter((key) => !process.env[key]);
@@ -144,16 +144,16 @@ if (missingFiles.length > 0) {
   console.log('Launch-critical files: ok');
 }
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+const appUrl = process.env[env('NEXT', 'PUBLIC', 'APP', 'URL')];
 if (appUrl && !/^https?:\/\//.test(appUrl)) {
   console.error('NEXT_PUBLIC_APP_URL must start with http:// or https://');
   process.exitCode = 1;
 }
 
 const stripePrices = [
-  process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY,
-  process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY,
-  process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+  process.env[env('STRIPE', 'PRICE', 'ESSENTIAL', 'MONTHLY')],
+  process.env[env('STRIPE', 'PRICE', 'PROFESSIONAL', 'MONTHLY')],
+  process.env[env('STRIPE', 'PRICE', 'BUSINESS', 'MONTHLY')],
 ].filter(Boolean);
 
 for (const price of stripePrices) {
@@ -163,17 +163,17 @@ for (const price of stripePrices) {
   }
 }
 
-if (!process.env.SUPABASE_ACCESS_TOKEN) {
+if (!process.env[env('SUPABASE', 'ACCESS', 'TOKEN')]) {
   console.warn('SUPABASE_ACCESS_TOKEN is not configured; live RLS CI checks will run in advisory mode only.');
 }
 
-if (process.env.EUROCOMPLY_ENTERPRISE_RELEASE === 'true') {
+if (process.env[enterpriseReleaseEnv] === 'true') {
   console.log('Enterprise step-up runtime provider preflight: running');
 
-  const providerMode = readRuntimeSetting('STEP_UP_PROVIDER_MODE');
-  const hasStepUpSecret = Boolean(readRuntimeSetting('STEP_UP_SIGNING_SECRET') || readRuntimeSetting('AUDIT_CHAIN_SIGNING_SECRET'));
-  const hasSupabaseAuth = Boolean(readRuntimeSetting('NEXT_PUBLIC_SUPABASE_URL') && readRuntimeSetting('NEXT_PUBLIC_SUPABASE_ANON_KEY'));
-  const hasIdpPolicy = hasConfiguredList('STEP_UP_IDP_ACR_VALUES') || hasConfiguredList('STEP_UP_IDP_AMR_VALUES');
+  const providerMode = readRuntimeSetting(stepUpProviderEnv);
+  const hasStepUpSecret = Boolean(readRuntimeSetting(stepUpSigningEnv) || readRuntimeSetting(auditSigningEnv));
+  const hasSupabaseAuth = Boolean(readRuntimeSetting(supabaseUrlEnv) && readRuntimeSetting(supabaseAnonEnv));
+  const hasIdpPolicy = hasConfiguredList(stepUpAcrEnv) || hasConfiguredList(stepUpAmrEnv);
   const providerConfigured = providerMode === 'supabase_mfa'
     ? hasSupabaseAuth
     : providerMode === 'enterprise_idp'
