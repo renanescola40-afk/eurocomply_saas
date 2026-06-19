@@ -33,6 +33,32 @@ function requireArray(file, object, key, minItems = 1) {
   }
 }
 
+function checkSupabaseOpenPlaceholder(file, evidence) {
+  if (evidence.evidenceItem !== 'supabase-live-rls-validation' || evidence.status !== 'Open') return false;
+
+  requireString(file, evidence, 'reviewer', 3);
+  requireString(file, evidence, 'summary', 40);
+  requireArray(file, evidence, 'evidenceLocations', 1);
+
+  if (evidence.redactionConfirmation !== redactionText) {
+    failures.push(`${file} missing exact redaction confirmation`);
+  }
+
+  if (evidence.outcome !== 'not_run' && evidence.outcome !== 'failed') {
+    failures.push(`${file} Open Supabase evidence must have outcome not_run or failed`);
+  }
+
+  if (!String(evidence.productionGate ?? '').toLowerCase().includes('blocked')) {
+    failures.push(`${file} Open Supabase evidence must keep production blocked`);
+  }
+
+  if (!String(evidence.completionRule ?? '').includes('run')) {
+    failures.push(`${file} Open Supabase evidence must include completion rule`);
+  }
+
+  return true;
+}
+
 const files = listJsonFiles(evidenceDir);
 
 console.log('EuroComply P0 runtime evidence file check');
@@ -50,6 +76,10 @@ for (const file of files) {
 
   if (!allowedItems.has(evidence.evidenceItem)) {
     failures.push(`${file} has invalid evidenceItem: ${evidence.evidenceItem}`);
+  }
+
+  if (checkSupabaseOpenPlaceholder(file, evidence)) {
+    continue;
   }
 
   if (!['Complete', 'Exception'].includes(evidence.status)) {
