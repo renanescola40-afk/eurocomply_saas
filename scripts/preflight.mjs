@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 
 const required = [
   'NEXT_PUBLIC_SUPABASE_URL',
@@ -18,6 +19,9 @@ const recommended = [
   'EVIDENCE_PACK_SIGNING_SECRET',
   'AUDIT_CHAIN_SIGNING_SECRET',
   'STEP_UP_SIGNING_SECRET',
+  'STEP_UP_PROVIDER_MODE',
+  'STEP_UP_IDP_ACR_VALUES',
+  'STEP_UP_IDP_AMR_VALUES',
   'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
   'MALWARE_SCANNER_PROVIDER',
   'SENTRY_AUTH_TOKEN',
@@ -75,12 +79,14 @@ const requiredFiles = [
   'scripts/security/check-security-responses.mjs',
   'scripts/security/check-audit-chain.mjs',
   'scripts/security/check-step-up.mjs',
+  'scripts/security/check-step-up-runtime-preflight.mjs',
   'docs/security/ASVS_MATRIX.md',
   'docs/security/EXPORTS_AND_INTEGRITY.md',
   'docs/security/AUDIT_CHAIN.md',
   'docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md',
   'docs/security/STEP_UP_AUTH.md',
   'docs/security/STEP_UP_ROLLOUT_MATRIX.md',
+  'docs/security/evidence/runtime/step-up-mfa-validation.json',
   'docs/security/BILLING_STEP_UP.md',
   'docs/security/GDPR_DELETE_STEP_UP.md',
   'docs/security/SUPPLY_CHAIN.md',
@@ -145,6 +151,25 @@ for (const price of stripePrices) {
 
 if (!process.env.SUPABASE_ACCESS_TOKEN) {
   console.warn('SUPABASE_ACCESS_TOKEN is not configured; live RLS CI checks will run in advisory mode only.');
+}
+
+if (process.env.EUROCOMPLY_ENTERPRISE_RELEASE === 'true') {
+  console.log('Enterprise step-up runtime provider preflight: running');
+  const result = spawnSync(process.execPath, ['scripts/security/check-step-up-runtime-preflight.mjs'], {
+    env: process.env,
+    stdio: 'inherit',
+  });
+
+  if (typeof result.status === 'number') {
+    if (result.status !== 0) process.exitCode = 1;
+  } else if (result.error) {
+    console.error(`Enterprise step-up runtime provider preflight could not execute: ${result.error.message}`);
+    process.exitCode = 1;
+  } else {
+    process.exitCode = 1;
+  }
+} else {
+  console.log('Enterprise step-up runtime provider preflight: skipped (set EUROCOMPLY_ENTERPRISE_RELEASE=true for enterprise releases).');
 }
 
 if (process.exitCode === 1) {
