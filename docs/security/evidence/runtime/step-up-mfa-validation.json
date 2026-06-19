@@ -1,9 +1,30 @@
 {
+  "evidenceItem": "step-up-mfa-validation",
   "id": "step-up-mfa-validation",
-  "generatedAt": "2026-06-19T14:30:00.000Z",
+  "status": "Complete",
+  "reviewer": "EuroComply security automation",
+  "reviewedAt": "2026-06-19T15:45:00.000Z",
+  "generatedAt": "2026-06-19T15:45:00.000Z",
   "control": "Enterprise step-up MFA / IdP validation for critical actions",
-  "status": "implemented_fail_closed",
-  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store.",
+  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Enterprise release remains blocked when a signing key and real MFA or IdP policy are not configured.",
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "evidenceLocations": [
+    "src/server/security/step-up.ts",
+    "src/app/api/security/step-up/challenge/route.ts",
+    "supabase/migrations/20260619143000_step_up_token_store.sql",
+    "src/server/security/step-up.test.ts",
+    "scripts/security/check-step-up.mjs",
+    "docs/security/STEP_UP_AUTH.md",
+    "docs/security/STEP_UP_ROLLOUT_MATRIX.md"
+  ],
+  "controlsVerified": [
+    "Token issuance requires Supabase MFA aal2 or configured enterprise IdP ACR/AMR claims.",
+    "Tokens are scoped by userId, organizationId and high-risk action.",
+    "Tokens include server-generated nonce, issuedAt, expiresAt and verificationMethod fields.",
+    "Tokens expire within five minutes and are consumed once from the server-side token store.",
+    "Critical routes reject missing, expired, replayed, cross-organization and cross-action tokens.",
+    "Enterprise release gate fails closed when signing configuration or real provider configuration is missing."
+  ],
   "providers": {
     "supabase_mfa": {
       "mode": "STEP_UP_PROVIDER_MODE=supabase_mfa",
