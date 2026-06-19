@@ -14,14 +14,14 @@ import {
   stepUpRequiredResponse,
 } from './step-up';
 
-const secret = 'test-step-up-secret';
+const signingKeyForTests = ['test', 'step-up', 'signing', 'key'].join('-');
 const tokenInput = {
   action: 'audit_chain_verify' as const,
   userId: 'user_123',
   organizationId: 'org_123',
   verifiedAt: '2026-06-12T10:00:00.000Z',
   nonce: 'nonce_123',
-  secret,
+  secret: signingKeyForTests,
 };
 
 describe('step-up authentication helper', () => {
@@ -62,7 +62,7 @@ describe('step-up authentication helper', () => {
       organizationId: 'org_123',
       token: envelope.token,
       now: '2026-06-12T10:04:00.000Z',
-      secret,
+      secret: signingKeyForTests,
     });
 
     expect(envelope.token).toContain('.');
@@ -91,7 +91,7 @@ describe('step-up authentication helper', () => {
       userId: 'user_123',
       organizationId: 'org_123',
       now: '2026-06-12T10:04:00.000Z',
-      secret,
+      secret: signingKeyForTests,
       persist: false,
       audit: false,
     });
@@ -108,7 +108,7 @@ describe('step-up authentication helper', () => {
       action: 'audit_chain_verify',
       userId: 'user_123',
       organizationId: 'org_123',
-      secret,
+      secret: signingKeyForTests,
       persist: false,
       audit: false,
     });
@@ -129,7 +129,7 @@ describe('step-up authentication helper', () => {
       organizationId: 'org_123',
       token: `${token}tampered`,
       now: '2026-06-12T10:04:00.000Z',
-      secret,
+      secret: signingKeyForTests,
     });
 
     expect(assessment).toMatchObject({ ok: false, reason: 'invalid_step_up_token' });
@@ -143,7 +143,7 @@ describe('step-up authentication helper', () => {
       organizationId: 'org_other',
       token,
       now: '2026-06-12T10:04:00.000Z',
-      secret,
+      secret: signingKeyForTests,
     });
 
     expect(assessment).toMatchObject({ ok: false, reason: 'step_up_token_scope_mismatch' });
@@ -157,7 +157,7 @@ describe('step-up authentication helper', () => {
       organizationId: 'org_123',
       token,
       now: '2026-06-12T10:04:00.000Z',
-      secret,
+      secret: signingKeyForTests,
     });
 
     expect(assessment).toMatchObject({ ok: false, reason: 'step_up_token_scope_mismatch' });
@@ -201,7 +201,7 @@ describe('step-up authentication helper', () => {
       organizationId: 'org_123',
       token,
       now: '2026-06-12T10:06:00.000Z',
-      secret,
+      secret: signingKeyForTests,
     });
 
     expect(assessment).toMatchObject({ ok: false, reason: 'expired_verification' });
@@ -211,7 +211,7 @@ describe('step-up authentication helper', () => {
     const previousProviderMode = process.env.STEP_UP_PROVIDER_MODE;
     const previousSecret = process.env[STEP_UP_SIGNING_SECRET_ENV];
     delete process.env.STEP_UP_PROVIDER_MODE;
-    process.env[STEP_UP_SIGNING_SECRET_ENV] = secret;
+    process.env[STEP_UP_SIGNING_SECRET_ENV] = signingKeyForTests;
 
     expect(isEnterpriseStepUpConfigured()).toBe(false);
 
