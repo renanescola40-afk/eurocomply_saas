@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
 const evidenceTemplatePath = '.github/ISSUE_TEMPLATE/p0-runtime-evidence.yml';
+const supabaseEvidencePath = 'docs/security/evidence/runtime/supabase-live-rls-validation.json';
 const allowedStatuses = new Set(['Open', 'Complete', 'Exception']);
 const requiredItems = [
   'Branch protection applied on `main`',
@@ -22,6 +23,24 @@ const requiredTemplateTokens = [
   'Reviewer / owner',
   'Exception details',
 ];
+const requiredSupabaseTables = [
+  'organizations',
+  'organization_members',
+  'documents',
+  'audit_events',
+  'risks',
+  'vendors',
+  'compliance_tasks',
+  'subscriptions',
+  'notifications',
+];
+const requiredSupabaseOperations = [
+  'cross_tenant_read',
+  'cross_tenant_insert',
+  'cross_tenant_update',
+  'cross_tenant_delete',
+  'same_tenant_read',
+];
 const failures = [];
 
 function parseRows(source) {
@@ -34,12 +53,78 @@ function parseRows(source) {
     .map(([item, status, evidence, owner]) => ({ item, status, evidence, owner }));
 }
 
+function readJson(path) {
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch (error) {
+    failures.push(`${path} is not valid JSON: ${error instanceof Error ? error.message : error}`);
+    return null;
+  }
+}
+
+function checkSupabaseEvidence(registerRow) {
+  if (!registerRow) return;
+
+  if (!existsSync(supabaseEvidencePath)) {
+    failures.push(`${supabaseEvidencePath} is missing`);
+    return;
+  }
+
+  const evidence = readJson(supabaseEvidencePath);
+  if (!evidence) return;
+
+  const registerWantsComplete = registerRow.status === 'Complete';
+  const evidenceIsComplete = evidence.status === 'Complete' && evidence.outcome === 'passed';
+
+  if (registerWantsComplete && !evidenceIsComplete) {
+    failures.push(`${registerPath} marks Supabase live RLS Complete without passing live evidence in ${supabaseEvidencePath}`);
+  }
+
+  if (evidence.status === 'Complete') {
+    const tests = Array.isArray(evidence.testCases) ? evidence.testCases : [];
+    const failedTests = tests.filter((test) => test?.passed !== true);
+    const tables = new Set(tests.map((test) => test?.table).filter(Boolean));
+    const operations = new Set(tests.map((test) => test?.operation).filter(Boolean));
+
+    if (evidence.outcome !== 'passed') {
+      failures.push(`${supabaseEvidencePath} status Complete requires outcome passed`);
+    }
+
+    if (failedTests.length > 0) {
+      failures.push(`${supabaseEvidencePath} contains failing Supabase RLS test cases`);
+    }
+
+    for (const table of requiredSupabaseTables) {
+      if (!tables.has(table)) failures.push(`${supabaseEvidencePath} missing live RLS coverage for table: ${table}`);
+    }
+
+    for (const operation of requiredSupabaseOperations) {
+      if (!operations.has(operation)) failures.push(`${supabaseEvidencePath} missing live RLS operation: ${operation}`);
+    }
+
+    if (!String(evidence.redactionConfirmation ?? '').includes('redacted')) {
+      failures.push(`${supabaseEvidencePath} missing redaction confirmation`);
+    }
+
+    if (!String(evidence.productionGate ?? '').toLowerCase().includes('production')) {
+      failures.push(`${supabaseEvidencePath} missing production gate statement`);
+    }
+  }
+
+  if (evidence.status === 'Open' && registerWantsComplete) {
+    failures.push(`${registerPath} cannot be Complete while ${supabaseEvidencePath} remains Open`);
+  }
+}
+
+let supabaseRegisterRow = null;
+
 if (!existsSync(registerPath)) {
   failures.push(`${registerPath} is missing`);
 } else {
   const source = readFileSync(registerPath, 'utf8');
   const rows = parseRows(source);
   const rowByItem = new Map(rows.map((row) => [row.item, row]));
+  supabaseRegisterRow = rowByItem.get('Supabase live RLS validation completed') ?? null;
 
   for (const item of requiredItems) {
     if (!rowByItem.has(item)) {
@@ -60,7 +145,7 @@ if (!existsSync(registerPath)) {
       failures.push(`${registerPath} missing owner for ${row.item}`);
     }
 
-    if (row.status === 'Complete' && !/(evidence|screenshot|export|output|report|review|commit|settings|artifact|link)/i.test(row.evidence)) {
+    if (row.status === 'Complete' && !/(evidence|screenshot|export|output|report|review|commit|settings|artifact|link|json)/i.test(row.evidence)) {
       failures.push(`${registerPath} Complete item must reference reviewable evidence: ${row.item}`);
     }
 
@@ -69,6 +154,8 @@ if (!existsSync(registerPath)) {
     }
   }
 }
+
+checkSupabaseEvidence(supabaseRegisterRow);
 
 if (!existsSync(evidenceTemplatePath)) {
   failures.push(`${evidenceTemplatePath} is missing`);
