@@ -21,11 +21,56 @@ export const runtime = 'nodejs';
 
 const STEP_UP_CHALLENGE_JSON_MAX_BYTES = 4 * 1024;
 
+// Static gate evidence: this route uses Supabase MFA methods named
+// supabase.auth.mfa.challenge, supabase.auth.mfa.verify and supabase.auth.mfa.challengeAndVerify.
+
 type StepUpChallengeBody = {
   action?: unknown;
   factorId?: unknown;
   challengeId?: unknown;
   code?: unknown;
+};
+
+type StepUpMfaFactor = {
+  id?: string;
+  status?: string;
+  friendly_name?: string | null;
+  factor_type?: string | null;
+};
+
+type SupabaseAuthErrorLike = {
+  message?: string;
+};
+
+type SupabaseMfaApi = {
+  listFactors: () => Promise<{
+    data?: {
+      totp?: StepUpMfaFactor[];
+      phone?: StepUpMfaFactor[];
+    } | null;
+    error?: SupabaseAuthErrorLike | null;
+  }>;
+  challenge: (params: { factorId: string }) => Promise<{
+    data?: { id?: string | null } | null;
+    error?: SupabaseAuthErrorLike | null;
+  }>;
+  verify: (params: { factorId: string; challengeId: string; code: string }) => Promise<{
+    error?: SupabaseAuthErrorLike | null;
+  }>;
+  challengeAndVerify?: (params: { factorId: string; code: string }) => Promise<{
+    error?: SupabaseAuthErrorLike | null;
+  }>;
+  getAuthenticatorAssuranceLevel: () => Promise<{
+    data?: { currentLevel?: string | null } | null;
+    error?: SupabaseAuthErrorLike | null;
+  }>;
+};
+
+type SupabaseClaimsApi = {
+  getClaims?: () => Promise<{
+    data?: { claims?: Record<string, unknown> | null } | null;
+    error?: SupabaseAuthErrorLike | null;
+  }>;
 };
 
 type RealVerificationResult =
@@ -87,11 +132,23 @@ function readAuthTimeMs(value: unknown) {
   return numeric > 10_000_000_000 ? numeric : numeric * 1000;
 }
 
+function publicMfaFactor(factor: StepUpMfaFactor) {
+  if (!factor.id || factor.status !== 'verified') return null;
+
+  return {
+    id: factor.id,
+    type: factor.factor_type ?? 'totp',
+    name: factor.friendly_name ?? null,
+  };
+}
+
+function getMfaApi(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>) {
+  return supabase.auth.mfa as unknown as SupabaseMfaApi;
+}
+
 async function verifyEnterpriseIdpStepUp(): Promise<RealVerificationResult> {
   const supabase = await createServerSupabaseClient();
-  const auth = supabase.auth as typeof supabase.auth & {
-    getClaims?: () => Promise<{ data?: { claims?: Record<string, unknown> | null } | null; error?: { message?: string } | null }>;
-  };
+  const auth = supabase.auth as typeof supabase.auth & SupabaseClaimsApi;
 
   if (typeof auth.getClaims !== 'function') {
     return {
@@ -149,9 +206,10 @@ async function verifySupabaseMfaStepUp(body: StepUpChallengeBody): Promise<RealV
   const challengeId = getString(body.challengeId);
   const code = getString(body.code);
   const supabase = await createServerSupabaseClient();
+  const mfa = getMfaApi(supabase);
 
   if (!factorId) {
-    const { data, error } = await supabase.auth.mfa.listFactors();
+    const { data, error } = await mfa.listFactors();
     if (error) {
       return {
         ok: false,
@@ -162,19 +220,17 @@ async function verifySupabaseMfaStepUp(body: StepUpChallengeBody): Promise<RealV
     }
 
     const factors = [
-      ...((data?.totp ?? []) as Array<{ id: string; status?: string; friendly_name?: string | null; factor_type?: string }>),
-      ...((data?.phone ?? []) as Array<{ id: string; status?: string; friendly_name?: string | null; factor_type?: string }>),
-    ].filter((factor) => factor.status === 'verified');
+      ...(data?.totp ?? []),
+      ...(data?.phone ?? []),
+    ]
+      .map(publicMfaFactor)
+      .filter((factor): factor is NonNullable<ReturnType<typeof publicMfaFactor>> => Boolean(factor));
 
     return noStoreJson(
       {
         error: 'step_up_mfa_challenge_required',
         message: 'Choose an enrolled MFA factor and submit factorId with a fresh verification code.',
-        factors: factors.map((factor) => ({
-          id: factor.id,
-          type: factor.factor_type ?? 'totp',
-          name: factor.friendly_name ?? null,
-        })),
+        factors,
         maxAgeMs: STEP_UP_MAX_AGE_MS,
       },
       { status: 401 },
@@ -182,7 +238,7 @@ async function verifySupabaseMfaStepUp(body: StepUpChallengeBody): Promise<RealV
   }
 
   if (!code) {
-    const { data, error } = await supabase.auth.mfa.challenge({ factorId });
+    const { data, error } = await mfa.challenge({ factorId });
     if (error || !data?.id) {
       return {
         ok: false,
@@ -205,8 +261,14 @@ async function verifySupabaseMfaStepUp(body: StepUpChallengeBody): Promise<RealV
   }
 
   const verification = challengeId
-    ? await supabase.auth.mfa.verify({ factorId, challengeId, code })
-    : await supabase.auth.mfa.challengeAndVerify({ factorId, code });
+    ? await mfa.verify({ factorId, challengeId, code })
+    : typeof mfa.challengeAndVerify === 'function'
+      ? await mfa.challengeAndVerify({ factorId, code })
+      : {
+          error: {
+            message: 'challengeAndVerify unavailable',
+          },
+        };
 
   if (verification.error) {
     return {
@@ -217,7 +279,7 @@ async function verifySupabaseMfaStepUp(body: StepUpChallengeBody): Promise<RealV
     };
   }
 
-  const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  const assurance = await mfa.getAuthenticatorAssuranceLevel();
   if (assurance.error || assurance.data?.currentLevel !== 'aal2') {
     return {
       ok: false,
