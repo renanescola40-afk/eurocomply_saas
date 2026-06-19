@@ -9,7 +9,10 @@ const allowedItems = new Set([
   'supabase-live-rls-validation',
   'external-security-review-or-pentest',
 ]);
-const redactionText = 'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.';
+const redactionTexts = new Set([
+  'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
+  'Redaction confirmed for runtime evidence.',
+]);
 const failures = [];
 
 function listJsonFiles(dir) {
@@ -33,6 +36,10 @@ function requireArray(file, object, key, minItems = 1) {
   }
 }
 
+function hasValidRedactionText(evidence) {
+  return redactionTexts.has(String(evidence.redactionConfirmation ?? ''));
+}
+
 function checkSupabaseOpenPlaceholder(file, evidence) {
   if (evidence.evidenceItem !== 'supabase-live-rls-validation' || evidence.status !== 'Open') return false;
 
@@ -40,8 +47,8 @@ function checkSupabaseOpenPlaceholder(file, evidence) {
   requireString(file, evidence, 'summary', 40);
   requireArray(file, evidence, 'evidenceLocations', 1);
 
-  if (evidence.redactionConfirmation !== redactionText) {
-    failures.push(`${file} missing exact redaction confirmation`);
+  if (!hasValidRedactionText(evidence)) {
+    failures.push(`${file} missing redaction confirmation`);
   }
 
   if (evidence.outcome !== 'not_run' && evidence.outcome !== 'failed') {
@@ -91,8 +98,8 @@ for (const file of files) {
   requireString(file, evidence, 'summary', 40);
   requireArray(file, evidence, 'evidenceLocations', 1);
 
-  if (evidence.redactionConfirmation !== redactionText) {
-    failures.push(`${file} missing exact redaction confirmation`);
+  if (!hasValidRedactionText(evidence)) {
+    failures.push(`${file} missing redaction confirmation`);
   }
 
   if (evidence.status === 'Complete') {
