@@ -177,6 +177,10 @@ function sanitizeMetadata(metadata?: PersistStepUpTokenInput['metadata']) {
   );
 }
 
+function splitStepUpClaimValues(value: string | null | undefined) {
+  return [...new Set(String(value ?? '').split(',').map((item) => item.trim()).filter(Boolean))];
+}
+
 export function normalizeHighRiskAction(value: unknown): HighRiskAction | null {
   const action = typeof value === 'string' ? value.trim() : '';
   return HIGH_RISK_ACTION_SET.has(action) ? (action as HighRiskAction) : null;
@@ -190,6 +194,13 @@ export function getStepUpProviderMode() {
   const mode = (process.env.STEP_UP_PROVIDER_MODE ?? '').trim().toLowerCase();
   if (mode === 'supabase_mfa' || mode === 'enterprise_idp' || mode === 'supabase_mfa_or_enterprise_idp') return mode;
   return null;
+}
+
+export function getStepUpIdpClaimPolicyValues() {
+  return {
+    allowedAcrValues: splitStepUpClaimValues(process.env.STEP_UP_IDP_ACR_VALUES),
+    allowedAmrValues: splitStepUpClaimValues(process.env.STEP_UP_IDP_AMR_VALUES),
+  };
 }
 
 export function isEnterpriseStepUpConfigured() {
@@ -258,19 +269,14 @@ export function createStepUpTokenEnvelope(input: StepUpTokenInput): StepUpTokenE
   const secret = getStepUpSecret(input.secret);
 
   if (!secret) {
-    throw new Error('STEP_UP_SIGNING_SECRET is required to create step-up tokens');
+    throw new Error('Step-up signing secret is required to issue critical-action tokens.');
   }
 
   const verifiedAt = toDate(input.verifiedAt);
+  if (!verifiedAt) throw new Error('A valid verifiedAt timestamp is required.');
 
-  if (!verifiedAt) {
-    throw new Error('A valid verifiedAt timestamp is required to create a step-up token');
-  }
-
-  const issuedAt = toDate(input.issuedAt) ?? verifiedAt;
-  const maxExpiresAt = new Date(verifiedAt.getTime() + STEP_UP_MAX_AGE_MS);
-  const requestedExpiresAt = toDate(input.expiresAt);
-  const expiresAt = requestedExpiresAt && requestedExpiresAt.getTime() < maxExpiresAt.getTime() ? requestedExpiresAt : maxExpiresAt;
+  const issuedAt = toDate(input.issuedAt) ?? new Date();
+  const expiresAt = toDate(input.expiresAt) ?? new Date(issuedAt.getTime() + STEP_UP_MAX_AGE_MS);
   const payload: StepUpTokenPayload = {
     action: input.action,
     userId: input.userId,
@@ -281,286 +287,13 @@ export function createStepUpTokenEnvelope(input: StepUpTokenInput): StepUpTokenE
     nonce: input.nonce ?? randomUUID(),
     verificationMethod: input.verificationMethod ?? 'supabase_mfa',
   };
-  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
-  const signature = signPayload(encodedPayload, secret);
+
+  const payloadText = JSON.stringify(payload);
+  const payloadPart = base64UrlEncode(payloadText);
+  const signature = signPayload(payloadPart, secret);
 
   return {
-    token: `${encodedPayload}.${signature}`,
+    token: `${payloadPart}.${signature}`,
     payload,
   };
-}
-
-export function createStepUpToken(input: StepUpTokenInput) {
-  return createStepUpTokenEnvelope(input).token;
-}
-
-export function assessStepUpToken(input: StepUpTokenAssessmentInput): StepUpAssessment {
-  const maxAgeMs = input.maxAgeMs ?? STEP_UP_MAX_AGE_MS;
-  const secret = getStepUpSecret(input.secret);
-  const now = toDate(input.now ?? new Date()) ?? new Date();
-
-  if (!input.token) {
-    return { ok: false, action: input.action, reason: 'missing_verification', verifiedAt: null, expiresAt: null, maxAgeMs };
-  }
-
-  if (!secret) {
-    return { ok: false, action: input.action, reason: 'missing_step_up_secret', verifiedAt: null, expiresAt: null, maxAgeMs };
-  }
-
-  const [encodedPayload, signature] = input.token.split('.');
-
-  if (!encodedPayload || !signature) {
-    return { ok: false, action: input.action, reason: 'invalid_step_up_token', verifiedAt: null, expiresAt: null, maxAgeMs };
-  }
-
-  const expectedSignature = signPayload(encodedPayload, secret);
-
-  if (!safeEqual(signature, expectedSignature)) {
-    return { ok: false, action: input.action, reason: 'invalid_step_up_token', verifiedAt: null, expiresAt: null, maxAgeMs };
-  }
-
-  try {
-    const payload = JSON.parse(base64UrlDecode(encodedPayload)) as Partial<StepUpTokenPayload>;
-
-    if (payload.action !== input.action || payload.userId !== input.userId || payload.organizationId !== input.organizationId) {
-      return { ok: false, action: input.action, reason: 'step_up_token_scope_mismatch', verifiedAt: null, expiresAt: null, maxAgeMs };
-    }
-
-    if (!payload.nonce || typeof payload.nonce !== 'string') {
-      return { ok: false, action: input.action, reason: 'missing_step_up_nonce', verifiedAt: null, expiresAt: null, maxAgeMs };
-    }
-
-    const issuedAt = toDate(payload.issuedAt);
-    const expiresAt = toDate(payload.expiresAt);
-    const baseAssessment = assessStepUp({ action: input.action, verifiedAt: payload.verifiedAt, now, maxAgeMs });
-
-    if (!baseAssessment.ok) return { ...baseAssessment, nonce: payload.nonce, issuedAt: issuedAt?.toISOString() ?? null };
-
-    if (!issuedAt || !expiresAt) {
-      return { ok: false, action: input.action, reason: 'invalid_step_up_token', verifiedAt: null, expiresAt: null, maxAgeMs };
-    }
-
-    if (expiresAt.getTime() <= now.getTime()) {
-      return {
-        ok: false,
-        action: input.action,
-        reason: 'expired_verification',
-        verifiedAt: baseAssessment.verifiedAt,
-        issuedAt: issuedAt.toISOString(),
-        expiresAt: expiresAt.toISOString(),
-        nonce: payload.nonce,
-        verificationMethod: payload.verificationMethod ?? null,
-        maxAgeMs,
-      };
-    }
-
-    if (expiresAt.getTime() > new Date(new Date(payload.verifiedAt ?? '').getTime() + maxAgeMs).getTime()) {
-      return { ok: false, action: input.action, reason: 'invalid_step_up_token', verifiedAt: null, expiresAt: null, maxAgeMs };
-    }
-
-    return {
-      ...baseAssessment,
-      issuedAt: issuedAt.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      nonce: payload.nonce,
-      verificationMethod: payload.verificationMethod ?? null,
-    };
-  } catch {
-    return { ok: false, action: input.action, reason: 'invalid_step_up_token', verifiedAt: null, expiresAt: null, maxAgeMs };
-  }
-}
-
-export async function persistStepUpTokenRecord(input: PersistStepUpTokenInput): Promise<PersistStepUpTokenResult> {
-  const tokenHash = hashStepUpToken(input.token, input.secret);
-  if (!tokenHash) return { ok: false, reason: 'missing_step_up_secret' };
-
-  const { tryCreateAdminClient } = await import('@/lib/supabase/admin');
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return { ok: false, reason: 'step_up_token_store_unavailable' };
-
-  const { error } = await supabase.from('step_up_tokens').insert({
-    nonce: input.payload.nonce,
-    token_hash: tokenHash,
-    user_id: input.payload.userId,
-    organization_id: input.payload.organizationId,
-    action: input.payload.action,
-    verification_method: input.payload.verificationMethod,
-    status: 'active',
-    issued_at: input.payload.issuedAt,
-    verified_at: input.payload.verifiedAt,
-    expires_at: input.payload.expiresAt,
-    metadata: sanitizeMetadata(input.metadata),
-  });
-
-  if (error) return { ok: false, reason: 'step_up_token_store_unavailable' };
-  return { ok: true };
-}
-
-async function consumeStepUpToken({
-  token,
-  assessment,
-  userId,
-  organizationId,
-  action,
-  secret,
-  now,
-}: {
-  token: string;
-  assessment: StepUpAssessment;
-  userId: string;
-  organizationId: string;
-  action: HighRiskAction;
-  secret?: string;
-  now?: string | number | Date;
-}): Promise<ConsumeStepUpTokenResult> {
-  const tokenHash = hashStepUpToken(token, secret);
-  if (!tokenHash) return { ok: false, reason: 'missing_step_up_secret' };
-  if (!assessment.nonce) return { ok: false, reason: 'invalid_step_up_token' };
-
-  const { tryCreateAdminClient } = await import('@/lib/supabase/admin');
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return { ok: false, reason: 'step_up_token_store_unavailable' };
-
-  const { data, error } = await supabase
-    .from('step_up_tokens')
-    .select('nonce, token_hash, user_id, organization_id, action, status, expires_at, consumed_at, revoked_at')
-    .eq('nonce', assessment.nonce)
-    .maybeSingle();
-
-  if (error) return { ok: false, reason: 'step_up_token_store_unavailable' };
-  if (!data) return { ok: false, reason: 'invalid_step_up_token' };
-
-  const record = data as {
-    nonce: string;
-    token_hash: string;
-    user_id: string;
-    organization_id: string;
-    action: string;
-    status: string | null;
-    expires_at: string | null;
-    consumed_at: string | null;
-    revoked_at: string | null;
-  };
-
-  if (record.token_hash !== tokenHash || record.user_id !== userId || record.organization_id !== organizationId || record.action !== action) {
-    return { ok: false, reason: 'step_up_token_scope_mismatch' };
-  }
-
-  if (record.revoked_at || record.status === 'revoked') return { ok: false, reason: 'step_up_token_revoked' };
-  if (record.consumed_at || record.status === 'used') return { ok: false, reason: 'step_up_token_replayed' };
-
-  const expiresAt = toDate(record.expires_at);
-  const currentTime = toDate(now ?? new Date()) ?? new Date();
-  if (!expiresAt || expiresAt.getTime() <= currentTime.getTime()) return { ok: false, reason: 'expired_verification' };
-
-  const consumedAt = currentTime.toISOString();
-  const { data: consumed, error: updateError } = await supabase
-    .from('step_up_tokens')
-    .update({ consumed_at: consumedAt, status: 'used' })
-    .eq('nonce', assessment.nonce)
-    .eq('status', 'active')
-    .is('consumed_at', null)
-    .is('revoked_at', null)
-    .select('nonce')
-    .maybeSingle();
-
-  if (updateError) return { ok: false, reason: 'step_up_token_store_unavailable' };
-  if (!consumed) return { ok: false, reason: 'step_up_token_replayed' };
-
-  return { ok: true };
-}
-
-export async function recordStepUpAuditEvent(input: {
-  event: 'step_up_requested' | 'step_up_approved' | 'step_up_denied' | 'step_up_expired';
-  action: HighRiskAction;
-  userId?: string | null;
-  organizationId?: string | null;
-  reason?: string | null;
-  nonce?: string | null;
-  verificationMethod?: string | null;
-}) {
-  try {
-    const { writeAuditLog } = await import('@/lib/security/audit-log');
-    await writeAuditLog({
-      action: 'security.event',
-      organizationId: input.organizationId ?? null,
-      userId: input.userId ?? null,
-      entityType: 'step_up',
-      entityId: input.nonce ?? input.action,
-      metadata: {
-        stepUpEvent: input.event,
-        highRiskAction: input.action,
-        reason: input.reason ?? null,
-        nonce: input.nonce ?? null,
-        verificationMethod: input.verificationMethod ?? null,
-      },
-    });
-  } catch {
-    // Audit logging must never leak token details or mask the original authorization result.
-  }
-}
-
-export function stepUpRequiredResponse(assessment: StepUpAssessment) {
-  return noStoreJson(
-    {
-      error: 'step_up_required',
-      action: assessment.action,
-      reason: assessment.reason ?? 'missing_verification',
-      verifiedAt: assessment.verifiedAt,
-      expiresAt: assessment.expiresAt,
-      maxAgeMs: assessment.maxAgeMs,
-    },
-    { status: 403 },
-  );
-}
-
-export async function requireStepUpForRequest(input: StepUpRequestInput): Promise<StepUpRequestResult> {
-  const token = input.request.headers.get(STEP_UP_TOKEN_HEADER);
-  let assessment = assessStepUpToken({
-    action: input.action,
-    userId: input.userId,
-    organizationId: input.organizationId,
-    token,
-    now: input.now,
-    maxAgeMs: input.maxAgeMs,
-    secret: input.secret,
-  });
-
-  if (assessment.ok && input.persist !== false) {
-    const consumed = await consumeStepUpToken({
-      token: token ?? '',
-      assessment,
-      userId: input.userId,
-      organizationId: input.organizationId,
-      action: input.action,
-      secret: input.secret,
-      now: input.now,
-    });
-
-    if (!consumed.ok) {
-      assessment = { ...assessment, ok: false, reason: consumed.reason };
-    }
-  }
-
-  if (!assessment.ok) {
-    if (input.audit !== false) {
-      await recordStepUpAuditEvent({
-        event: assessment.reason === 'expired_verification' ? 'step_up_expired' : 'step_up_denied',
-        action: input.action,
-        userId: input.userId,
-        organizationId: input.organizationId,
-        reason: assessment.reason ?? 'missing_verification',
-        nonce: assessment.nonce ?? null,
-        verificationMethod: assessment.verificationMethod ?? null,
-      });
-    }
-
-    return {
-      ok: false,
-      assessment,
-      response: stepUpRequiredResponse(assessment),
-    };
-  }
-
-  return { ok: true, assessment };
 }
