@@ -121,8 +121,10 @@ function checkGithubActionsProvenance(evidence) {
     if (!provenance[field] || typeof provenance[field] !== 'string') failures.push(`${evidencePath} githubActions.${field} is missing`);
   }
 
-  if (typeof provenance.runUrl === 'string' && !provenance.runUrl.includes('/actions/runs/')) {
-    failures.push(`${evidencePath} githubActions.runUrl must point to a GitHub Actions run`);
+  const runUrl = typeof provenance.runUrl === 'string' ? provenance.runUrl : '';
+  const expectedRunUrlPattern = /^https:\/\/github\.com\/[^/]+\/[^/]+\/actions\/runs\/\d+$/;
+  if (!expectedRunUrlPattern.test(runUrl)) {
+    failures.push(`${evidencePath} githubActions.runUrl must point to a numeric GitHub Actions run URL`);
   }
 }
 
