@@ -15,6 +15,7 @@ const teamSettingsPath = 'src/components/team/team-settings-section.tsx';
 const challengePath = 'src/app/api/security/step-up/challenge/route.ts';
 const uiPath = 'src/components/security/step-up-mfa-dialog.tsx';
 const migrationPath = 'supabase/migrations/20260619143000_step_up_token_store.sql';
+const runtimePreflightPath = 'scripts/security/check-step-up-runtime-preflight.mjs';
 const runtimeEvidencePath = 'docs/security/evidence/runtime/step-up-mfa-validation.json';
 
 const helperRequiredTokens = [
@@ -72,6 +73,7 @@ const docRequiredTokens = [
   'step_up_required',
   'STEP_UP_PROVIDER_MODE',
   'Release gate',
+  'check-step-up-runtime-preflight.mjs',
 ];
 
 const rolloutMatrixRequiredTokens = [
@@ -93,6 +95,7 @@ const rolloutMatrixRequiredTokens = [
   'POST /api/team/invitations/cancel',
   'POST /api/security/step-up/challenge',
   'src/components/security/step-up-mfa-dialog.tsx',
+  'scripts/security/check-step-up-runtime-preflight.mjs',
   'signed_hmac',
   'single-use',
   'Supabase MFA or enterprise IdP',
@@ -168,6 +171,21 @@ const migrationRequiredTokens = [
   'grant all on public.step_up_tokens to service_role',
 ];
 
+const runtimePreflightRequiredTokens = [
+  'allowedProviderModes',
+  'supabase_mfa',
+  'enterprise_idp',
+  'supabase_mfa_or_enterprise_idp',
+  'STEP_UP_PROVIDER_MODE',
+  'STEP_UP_SIGNING_SECRET',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'STEP_UP_IDP_ACR_VALUES',
+  'STEP_UP_IDP_AMR_VALUES',
+  'redacted',
+  'process.exitCode = 1',
+];
+
 const runtimeEvidenceRequiredTokens = [
   'step-up-mfa-validation',
   'supabase_mfa',
@@ -175,6 +193,8 @@ const runtimeEvidenceRequiredTokens = [
   'failClosedWithoutProvider',
   'singleUseNonce',
   'enterpriseReleaseBlockedWithoutProvider',
+  'runtimePreflightFailsWithoutProvider',
+  'scripts/security/check-step-up-runtime-preflight.mjs',
   'POST /api/team/invites',
   'POST /api/team/members/role',
 ];
@@ -222,6 +242,7 @@ const teamSettings = read(teamSettingsPath);
 const challenge = read(challengePath);
 const ui = read(uiPath);
 const migration = read(migrationPath);
+const runtimePreflight = read(runtimePreflightPath);
 const runtimeEvidence = read(runtimeEvidencePath);
 
 if (helper) requireTokens(helperPath, helper, helperRequiredTokens);
@@ -238,6 +259,7 @@ if (teamSettings) requireTokens(teamSettingsPath, teamSettings, teamSettingsRequ
 if (challenge) requireTokens(challengePath, challenge, challengeRequiredTokens);
 if (ui) requireTokens(uiPath, ui, uiRequiredTokens);
 if (migration) requireTokens(migrationPath, migration, migrationRequiredTokens);
+if (runtimePreflight) requireTokens(runtimePreflightPath, runtimePreflight, runtimePreflightRequiredTokens);
 if (runtimeEvidence) requireTokens(runtimeEvidencePath, runtimeEvidence, runtimeEvidenceRequiredTokens);
 
 for (const routePath of [
