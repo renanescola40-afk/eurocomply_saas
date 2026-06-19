@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     }, plan.status);
   }
 
-  const stepUp = requireStepUpForRequest({
+  const stepUp = await requireStepUpForRequest({
     request,
     action: 'export_data',
     userId: user.id,
