@@ -134,6 +134,10 @@ export async function POST(request: Request) {
     allowedIdpAmrValues: normalizeList(parsed.data.allowedIdpAmrValues),
   };
 
+  if (!nextSettings.requireStepUpForCriticalActions) {
+    return noStoreJson({ error: 'critical_step_up_cannot_be_disabled' }, { status: 400 });
+  }
+
   if (nextSettings.stepUpProviderMode === 'enterprise_idp' && nextSettings.allowedIdpAcrValues.length === 0 && nextSettings.allowedIdpAmrValues.length === 0) {
     return noStoreJson({ error: 'idp_policy_required' }, { status: 400 });
   }
@@ -157,7 +161,7 @@ export async function POST(request: Request) {
     .upsert(
       {
         organization_id: organization.id,
-        require_step_up_for_critical_actions: nextSettings.requireStepUpForCriticalActions,
+        require_step_up_for_critical_actions: true,
         step_up_provider_mode: nextSettings.stepUpProviderMode,
         allowed_idp_acr_values: nextSettings.allowedIdpAcrValues,
         allowed_idp_amr_values: nextSettings.allowedIdpAmrValues,
@@ -189,7 +193,7 @@ export async function POST(request: Request) {
     changedKeys: changes,
     auditPersisted: audit.persisted,
     settings: {
-      requireStepUpForCriticalActions: nextSettings.requireStepUpForCriticalActions,
+      requireStepUpForCriticalActions: true,
       stepUpProviderMode: nextSettings.stepUpProviderMode,
       allowedIdpAcrValueCount: nextSettings.allowedIdpAcrValues.length,
       allowedIdpAmrValueCount: nextSettings.allowedIdpAmrValues.length,

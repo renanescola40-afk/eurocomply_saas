@@ -6,20 +6,38 @@ import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
 import {
+  assertOrganizationPermission,
+  permissionDeniedResponse,
+  type OrganizationPermission,
+} from '@/server/security/rbac';
+import {
   STEP_UP_MAX_AGE_MS,
   createStepUpTokenEnvelope,
-  getStepUpProviderMode,
-  isEnterpriseStepUpConfigured,
   normalizeHighRiskAction,
   persistStepUpTokenRecord,
   recordStepUpAuditEvent,
   type HighRiskAction,
   type StepUpVerificationMethod,
 } from '@/server/security/step-up';
+import {
+  getEffectiveStepUpProviderPolicy,
+  isEffectiveStepUpProviderPolicyConfigured,
+  type EffectiveStepUpProviderPolicy,
+} from '@/server/security/step-up-settings';
 
 export const runtime = 'nodejs';
 
 const STEP_UP_CHALLENGE_JSON_MAX_BYTES = 4 * 1024;
+
+const STEP_UP_ACTION_PERMISSIONS: Record<HighRiskAction, OrganizationPermission> = {
+  export_data: 'export_data',
+  manage_billing: 'manage_billing',
+  manage_team: 'manage_team',
+  gdpr_delete: 'export_data',
+  audit_chain_verify: 'read_audit',
+  audit_chain_export: 'export_data',
+  change_security_settings: 'manage_settings',
+};
 
 // Static gate evidence: this route uses Supabase MFA methods named
 // supabase.auth.mfa.challenge, supabase.auth.mfa.verify and supabase.auth.mfa.challengeAndVerify.
@@ -117,15 +135,6 @@ function getString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
-function splitConfiguredValues(value: string | undefined) {
-  return new Set(
-    String(value ?? '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean),
-  );
-}
-
 function claimValues(value: unknown) {
   if (Array.isArray(value)) return value.map(String);
   if (typeof value === 'string') return value.split(/[\s,]+/).filter(Boolean);
@@ -152,7 +161,7 @@ function getMfaApi(supabase: Awaited<ReturnType<typeof createServerSupabaseClien
   return supabase.auth.mfa as unknown as SupabaseMfaApi;
 }
 
-async function verifyEnterpriseIdpStepUp(): Promise<RealVerificationResult> {
+async function verifyEnterpriseIdpStepUp(policy: EffectiveStepUpProviderPolicy): Promise<RealVerificationResult> {
   const supabase = await createServerSupabaseClient();
   const auth = supabase.auth as typeof supabase.auth & SupabaseClaimsApi;
 
@@ -176,8 +185,8 @@ async function verifyEnterpriseIdpStepUp(): Promise<RealVerificationResult> {
   }
 
   const claims = data.claims;
-  const configuredAcr = splitConfiguredValues(process.env.STEP_UP_IDP_ACR_VALUES);
-  const configuredAmr = splitConfiguredValues(process.env.STEP_UP_IDP_AMR_VALUES);
+  const configuredAcr = new Set(policy.allowedAcrValues);
+  const configuredAmr = new Set(policy.allowedAmrValues);
   const acrValues = claimValues(claims.acr);
   const amrValues = claimValues(claims.amr);
   const authTimeMs = readAuthTimeMs(claims.auth_time ?? claims.iat);
@@ -202,7 +211,7 @@ async function verifyEnterpriseIdpStepUp(): Promise<RealVerificationResult> {
   return {
     ok: true,
     method: 'enterprise_idp',
-    provider: 'enterprise_idp',
+    provider: policy.source === 'organization' ? 'enterprise_idp_organization_policy' : 'enterprise_idp',
     aal: acrValues[0] ?? amrValues[0] ?? null,
   };
 }
@@ -305,25 +314,28 @@ async function verifySupabaseMfaStepUp(body: StepUpChallengeBody): Promise<RealV
   };
 }
 
-async function verifyRealStepUp(body: StepUpChallengeBody): Promise<RealVerificationResult | Response> {
-  const mode = getStepUpProviderMode();
+async function verifyRealStepUp(
+  body: StepUpChallengeBody,
+  policy: EffectiveStepUpProviderPolicy,
+): Promise<RealVerificationResult | Response> {
+  const mode = policy.mode;
 
-  if (!mode || !isEnterpriseStepUpConfigured()) {
+  if (!mode || !isEffectiveStepUpProviderPolicyConfigured(policy)) {
     return {
       ok: false,
       status: 503,
       error: 'step_up_provider_not_configured',
-      message: 'Enterprise step-up is fail-closed until STEP_UP_PROVIDER_MODE and a real MFA/IdP policy are configured.',
+      message: 'Enterprise step-up is fail-closed until a real MFA/IdP provider policy is configured.',
     };
   }
 
   if (mode === 'supabase_mfa') return verifySupabaseMfaStepUp(body);
-  if (mode === 'enterprise_idp') return verifyEnterpriseIdpStepUp();
+  if (mode === 'enterprise_idp') return verifyEnterpriseIdpStepUp(policy);
 
   const supabaseResult = await verifySupabaseMfaStepUp(body);
   if (supabaseResult instanceof Response || supabaseResult.ok) return supabaseResult;
 
-  return verifyEnterpriseIdpStepUp();
+  return verifyEnterpriseIdpStepUp(policy);
 }
 
 export async function POST(request: Request) {
@@ -376,15 +388,27 @@ export async function POST(request: Request) {
     );
   }
 
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: STEP_UP_ACTION_PERMISSIONS[action],
+  });
+
+  if (!permission.ok) {
+    return permissionDeniedResponse(permission);
+  }
+
+  const providerPolicy = await getEffectiveStepUpProviderPolicy(organization.id);
+
   await recordStepUpAuditEvent({
     event: 'step_up_requested',
     action,
     userId: user.id,
     organizationId: organization.id,
-    verificationMethod: getStepUpProviderMode(),
+    verificationMethod: providerPolicy.mode,
   });
 
-  const verification = await verifyRealStepUp(body);
+  const verification = await verifyRealStepUp(body, providerPolicy);
 
   if (verification instanceof Response) return verification;
 
@@ -395,7 +419,7 @@ export async function POST(request: Request) {
       userId: user.id,
       organizationId: organization.id,
       reason: verification.error,
-      verificationMethod: getStepUpProviderMode(),
+      verificationMethod: providerPolicy.mode,
     });
 
     return noStoreJson(
@@ -423,6 +447,7 @@ export async function POST(request: Request) {
       provider: verification.provider,
       aal: verification.aal ?? null,
       action,
+      policySource: providerPolicy.source,
     },
   });
 
@@ -466,6 +491,7 @@ export async function POST(request: Request) {
       method: verification.method,
       provider: verification.provider,
       aal: verification.aal ?? null,
+      policySource: providerPolicy.source,
     },
   });
 }
