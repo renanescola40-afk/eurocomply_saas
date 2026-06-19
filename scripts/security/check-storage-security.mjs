@@ -70,6 +70,10 @@ function lineNumberFor(source, index) {
   return source.slice(0, index).split('\n').length;
 }
 
+function toGlobalPattern(pattern) {
+  return pattern.global ? pattern : new RegExp(pattern.source, `${pattern.flags}g`);
+}
+
 const files = scanRoots.flatMap((scanRoot) => walk(join(root, scanRoot)));
 const failures = [];
 const storagePolicyEvidence = [];
@@ -90,7 +94,7 @@ for (const file of files) {
     if (!source.includes(bucket)) continue;
 
     for (const pattern of storagePublicPatterns) {
-      for (const match of source.matchAll(pattern)) {
+      for (const match of source.matchAll(toGlobalPattern(pattern))) {
         failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} sensitive bucket ${bucket} appears to be configured public; keep sensitive storage buckets private`);
       }
     }
