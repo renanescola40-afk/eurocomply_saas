@@ -17,7 +17,8 @@ The implementation is no longer a symbolic timestamp or placeholder check. A ste
 | Reusable step-up UI | `src/components/security/step-up-mfa-dialog.tsx` |
 | Server-side nonce/token store | `supabase/migrations/20260619143000_step_up_token_store.sql` |
 | Regression tests | `src/server/security/step-up.test.ts` |
-| Security gate | `scripts/security/check-step-up.mjs` |
+| Static security gate | `scripts/security/check-step-up.mjs` |
+| Runtime provider preflight | `scripts/security/check-step-up-runtime-preflight.mjs` |
 | Runtime evidence | `docs/security/evidence/runtime/step-up-mfa-validation.json` |
 
 ## High-Risk Actions
@@ -87,6 +88,8 @@ The database also enforces that `expires_at <= verified_at + interval '5 minutes
 
 ## Real Verification Providers
 
+All modes require Supabase auth client configuration because the challenge endpoint validates the current session through Supabase before issuing any step-up token.
+
 ### Supabase MFA
 
 Set:
@@ -116,6 +119,8 @@ STEP_UP_IDP_ACR_VALUES=<allowed acr values>
 STEP_UP_IDP_AMR_VALUES=<allowed amr values>
 ```
 
+The ACR/AMR values must be non-empty after trimming and comma splitting. Blank or whitespace-only values are treated as missing.
+
 Required runtime behavior:
 
 1. The endpoint reads verified session claims through `supabase.auth.getClaims()`.
@@ -131,7 +136,7 @@ Set:
 STEP_UP_PROVIDER_MODE=supabase_mfa_or_enterprise_idp
 ```
 
-This allows Supabase MFA or enterprise IdP reauthentication, but still fails closed when neither provider is configured or neither verifies the current request.
+This allows Supabase MFA or enterprise IdP reauthentication, but still fails closed when the Supabase auth client is not configured or neither provider verifies the current request.
 
 ## Required Secrets and Release Gate
 
@@ -143,13 +148,19 @@ STEP_UP_SIGNING_SECRET
 
 A fallback to `AUDIT_CHAIN_SIGNING_SECRET` exists only to avoid breaking transitional environments. Production should configure a dedicated step-up secret.
 
-Release gate:
+Static release gate:
 
 ```txt
 EUROCOMPLY_ENTERPRISE_RELEASE=true node scripts/security/check-step-up.mjs
 ```
 
-When `EUROCOMPLY_ENTERPRISE_RELEASE=true`, release is blocked unless the signing secret and a real provider configuration are present.
+Runtime provider preflight:
+
+```txt
+node scripts/security/check-step-up-runtime-preflight.mjs
+```
+
+When `EUROCOMPLY_ENTERPRISE_RELEASE=true`, release is blocked unless signing configuration, Supabase auth client configuration and a real provider configuration are present. In `enterprise_idp` mode, Supabase auth client configuration plus at least one non-empty ACR/AMR policy value are required. The runtime preflight delegates to the same release gate and never prints secret values.
 
 ## Assessment Outcomes
 
@@ -215,45 +226,8 @@ Step-up is enforced for:
 - `GET /api/continuity-center/export` using `export_data`
 - `POST /api/billing/checkout` using `manage_billing`
 - `POST /api/billing/portal` using `manage_billing`
-- `POST /api/team/invites` using `manage_team`
 - `POST /api/gdpr/delete-request` using `gdpr_delete`
-
-Team role changes, team member removals and security settings mutation endpoints must use `manage_team` and `change_security_settings` respectively before those write routes are enabled for enterprise release.
-
-## Audit Events
-
-Step-up emits security audit metadata for:
-
-- `step_up_requested`
-- `step_up_approved`
-- `step_up_denied`
-- `step_up_expired`
-
-Audit events are written through `writeAuditLog()` as `security.event` and include the high-risk action, reason, nonce when safe, and verification method. Secrets and raw tokens are never logged.
-
-## UI
-
-`src/components/security/step-up-mfa-dialog.tsx` provides a reusable client dialog that:
-
-1. Starts `/api/security/step-up/challenge` for the requested action.
-2. Shows available MFA factors.
-3. Issues a provider challenge.
-4. Submits the one-time code.
-5. Returns the resulting step-up token to the caller.
-
-Critical action callers should attach the returned token to `X-EuroComply-Step-Up-Token` and immediately retry the protected operation.
-
-## Tests
-
-`src/server/security/step-up.test.ts` covers:
-
-- action without step-up fails;
-- expired verification fails;
-- token scoped to another organization fails;
-- token scoped to another action fails;
-- tampered token fails;
-- replayed single-use token fails;
-- valid scoped token passes;
-- provider not configured fails closed.
-
-The security gate also checks migration, UI, runtime evidence and enterprise release blocking behavior.
+- `POST /api/team/invites` using `manage_team`
+- `POST /api/team/members/remove` using `manage_team`
+- `POST /api/team/members/role` using `manage_team`
+- `POST /api/team/invitations/cancel` using `manage_team`

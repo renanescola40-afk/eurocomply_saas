@@ -15,6 +15,7 @@ const teamSettingsPath = 'src/components/team/team-settings-section.tsx';
 const challengePath = 'src/app/api/security/step-up/challenge/route.ts';
 const uiPath = 'src/components/security/step-up-mfa-dialog.tsx';
 const migrationPath = 'supabase/migrations/20260619143000_step_up_token_store.sql';
+const runtimePreflightPath = 'scripts/security/check-step-up-runtime-preflight.mjs';
 const runtimeEvidencePath = 'docs/security/evidence/runtime/step-up-mfa-validation.json';
 
 const helperRequiredTokens = [
@@ -72,6 +73,7 @@ const docRequiredTokens = [
   'step_up_required',
   'STEP_UP_PROVIDER_MODE',
   'Release gate',
+  'check-step-up-runtime-preflight.mjs',
 ];
 
 const rolloutMatrixRequiredTokens = [
@@ -93,6 +95,7 @@ const rolloutMatrixRequiredTokens = [
   'POST /api/team/invitations/cancel',
   'POST /api/security/step-up/challenge',
   'src/components/security/step-up-mfa-dialog.tsx',
+  'scripts/security/check-step-up-runtime-preflight.mjs',
   'signed_hmac',
   'single-use',
   'Supabase MFA or enterprise IdP',
@@ -168,6 +171,15 @@ const migrationRequiredTokens = [
   'grant all on public.step_up_tokens to service_role',
 ];
 
+const runtimePreflightRequiredTokens = [
+  'spawnSync',
+  'scripts/security/check-step-up.mjs',
+  'EUROCOMPLY_ENTERPRISE_RELEASE',
+  'runtime provider preflight',
+  'Values are never printed',
+  'process.exitCode = 1',
+];
+
 const runtimeEvidenceRequiredTokens = [
   'step-up-mfa-validation',
   'supabase_mfa',
@@ -175,6 +187,8 @@ const runtimeEvidenceRequiredTokens = [
   'failClosedWithoutProvider',
   'singleUseNonce',
   'enterpriseReleaseBlockedWithoutProvider',
+  'runtimePreflightFailsWithoutProvider',
+  'scripts/security/check-step-up-runtime-preflight.mjs',
   'POST /api/team/invites',
   'POST /api/team/members/role',
 ];
@@ -204,6 +218,18 @@ function requireAwaitedStepUp(path, source) {
   }
 }
 
+function readRuntimeSetting(name) {
+  return (process.env[name] ?? '').trim();
+}
+
+function hasConfiguredList(name) {
+  return readRuntimeSetting(name)
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .length > 0;
+}
+
 console.log('EuroComply enterprise step-up authentication check');
 console.log('--------------------------------------------------');
 
@@ -222,6 +248,7 @@ const teamSettings = read(teamSettingsPath);
 const challenge = read(challengePath);
 const ui = read(uiPath);
 const migration = read(migrationPath);
+const runtimePreflight = read(runtimePreflightPath);
 const runtimeEvidence = read(runtimeEvidencePath);
 
 if (helper) requireTokens(helperPath, helper, helperRequiredTokens);
@@ -238,6 +265,7 @@ if (teamSettings) requireTokens(teamSettingsPath, teamSettings, teamSettingsRequ
 if (challenge) requireTokens(challengePath, challenge, challengeRequiredTokens);
 if (ui) requireTokens(uiPath, ui, uiRequiredTokens);
 if (migration) requireTokens(migrationPath, migration, migrationRequiredTokens);
+if (runtimePreflight) requireTokens(runtimePreflightPath, runtimePreflight, runtimePreflightRequiredTokens);
 if (runtimeEvidence) requireTokens(runtimeEvidencePath, runtimeEvidence, runtimeEvidenceRequiredTokens);
 
 for (const routePath of [
@@ -282,20 +310,20 @@ if (challenge && challenge.includes('verifiedAt') && challenge.includes('body.ve
 }
 
 if (process.env.EUROCOMPLY_ENTERPRISE_RELEASE === 'true') {
-  const providerMode = process.env.STEP_UP_PROVIDER_MODE;
-  const hasSecret = Boolean(process.env.STEP_UP_SIGNING_SECRET || process.env.AUDIT_CHAIN_SIGNING_SECRET);
-  const hasSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  const hasIdpPolicy = Boolean(process.env.STEP_UP_IDP_ACR_VALUES || process.env.STEP_UP_IDP_AMR_VALUES);
+  const providerMode = readRuntimeSetting('STEP_UP_PROVIDER_MODE');
+  const hasSecret = Boolean(readRuntimeSetting('STEP_UP_SIGNING_SECRET') || readRuntimeSetting('AUDIT_CHAIN_SIGNING_SECRET'));
+  const hasSupabaseAuth = Boolean(readRuntimeSetting('NEXT_PUBLIC_SUPABASE_URL') && readRuntimeSetting('NEXT_PUBLIC_SUPABASE_ANON_KEY'));
+  const hasIdpPolicy = hasConfiguredList('STEP_UP_IDP_ACR_VALUES') || hasConfiguredList('STEP_UP_IDP_AMR_VALUES');
   const providerConfigured = providerMode === 'supabase_mfa'
-    ? hasSupabase
+    ? hasSupabaseAuth
     : providerMode === 'enterprise_idp'
-      ? hasIdpPolicy
+      ? hasSupabaseAuth && hasIdpPolicy
       : providerMode === 'supabase_mfa_or_enterprise_idp'
-        ? hasSupabase || hasIdpPolicy
+        ? hasSupabaseAuth
         : false;
 
   if (!hasSecret || !providerConfigured) {
-    failures.push('Enterprise release blocked: configure STEP_UP_SIGNING_SECRET plus Supabase MFA or enterprise IdP ACR/AMR policy before release.');
+    failures.push('Enterprise release blocked: configure STEP_UP_SIGNING_SECRET plus Supabase auth configuration and a real Supabase MFA or enterprise IdP ACR/AMR policy before release.');
   }
 }
 
