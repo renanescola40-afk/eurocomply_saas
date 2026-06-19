@@ -6,6 +6,7 @@ const docPath = 'docs/security/STEP_UP_AUTH.md';
 const rolloutMatrixPath = 'docs/security/STEP_UP_ROLLOUT_MATRIX.md';
 const auditChainVerifierPath = 'src/app/api/audit/chain/verify/route.ts';
 const auditChainExportPath = 'src/app/api/audit/evidence-pack/route.ts';
+const teamInvitePath = 'src/app/api/team/invites/route.ts';
 const challengePath = 'src/app/api/security/step-up/challenge/route.ts';
 const uiPath = 'src/components/security/step-up-mfa-dialog.tsx';
 const migrationPath = 'supabase/migrations/20260619143000_step_up_token_store.sql';
@@ -53,6 +54,7 @@ const testRequiredTokens = [
   'rejects a signed token scoped to another organization',
   'rejects a signed token scoped to another action',
   'rejects an expired signed step-up token',
+  'rejects replayed single-use request helper tokens',
   'fails closed when enterprise MFA/IdP provider is not configured',
 ];
 
@@ -80,6 +82,7 @@ const rolloutMatrixRequiredTokens = [
   'POST /api/billing/checkout',
   'POST /api/billing/portal',
   'POST /api/gdpr/delete-request',
+  'POST /api/team/invites',
   'POST /api/security/step-up/challenge',
   'src/components/security/step-up-mfa-dialog.tsx',
   'signed_hmac',
@@ -99,6 +102,11 @@ const auditChainExportRequiredTokens = [
   'await requireStepUpForRequest',
   'audit_chain_export',
   'publicStepUpSummary',
+];
+
+const teamInviteRequiredTokens = [
+  'await requireStepUpForRequest',
+  'manage_team',
 ];
 
 const challengeRequiredTokens = [
@@ -150,6 +158,7 @@ const runtimeEvidenceRequiredTokens = [
   'failClosedWithoutProvider',
   'singleUseNonce',
   'enterpriseReleaseBlockedWithoutProvider',
+  'POST /api/team/invites',
 ];
 
 const failures = [];
@@ -186,6 +195,7 @@ const doc = read(docPath);
 const rolloutMatrix = read(rolloutMatrixPath);
 const auditChainVerifier = read(auditChainVerifierPath);
 const auditChainExport = read(auditChainExportPath);
+const teamInvite = read(teamInvitePath);
 const challenge = read(challengePath);
 const ui = read(uiPath);
 const migration = read(migrationPath);
@@ -197,6 +207,7 @@ if (doc) requireTokens(docPath, doc, docRequiredTokens);
 if (rolloutMatrix) requireTokens(rolloutMatrixPath, rolloutMatrix, rolloutMatrixRequiredTokens);
 if (auditChainVerifier) requireTokens(auditChainVerifierPath, auditChainVerifier, auditChainVerifierRequiredTokens);
 if (auditChainExport) requireTokens(auditChainExportPath, auditChainExport, auditChainExportRequiredTokens);
+if (teamInvite) requireTokens(teamInvitePath, teamInvite, teamInviteRequiredTokens);
 if (challenge) requireTokens(challengePath, challenge, challengeRequiredTokens);
 if (ui) requireTokens(uiPath, ui, uiRequiredTokens);
 if (migration) requireTokens(migrationPath, migration, migrationRequiredTokens);
@@ -214,6 +225,7 @@ for (const routePath of [
   'src/app/api/enterprise-readiness/export/route.ts',
   'src/app/api/retention-center/export/route.ts',
   'src/app/api/continuity-center/export/route.ts',
+  'src/app/api/team/invites/route.ts',
 ]) {
   const source = read(routePath);
   if (source) requireAwaitedStepUp(routePath, source);
@@ -258,5 +270,5 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log('Enterprise step-up authentication: ok');
+  console.log('Step-up authentication evidence present.');
 }
