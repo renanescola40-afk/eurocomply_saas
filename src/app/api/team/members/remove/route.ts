@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { checkDistributedRateLimit } from '@/server/security/rate-limit';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
@@ -14,7 +15,17 @@ const removeMemberSchema = z.object({
   memberId: z.string().trim().min(1).max(128),
 });
 
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+const RATE_LIMIT_MAX_ATTEMPTS = 5;
 const TEAM_ACTION_JSON_MAX_BYTES = 4 * 1024;
+
+function getClientIp(request: Request) {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  );
+}
 
 export async function POST(request: Request) {
   const originDenied = assertTrustedOrigin(request);
@@ -24,6 +35,25 @@ export async function POST(request: Request) {
 
   if (!user) {
     return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const rateLimit = await checkDistributedRateLimit({
+    key: `team-member-remove:${user.id}:${getClientIp(request)}`,
+    limit: RATE_LIMIT_MAX_ATTEMPTS,
+    windowSeconds: RATE_LIMIT_WINDOW_SECONDS,
+  });
+
+  if (!rateLimit.allowed) {
+    return noStoreJson(
+      { error: rateLimit.reason ? 'security_control_unavailable' : 'Too many team member removal attempts. Please wait before trying again.' },
+      {
+        status: rateLimit.reason ? 503 : 429,
+        headers: {
+          'Retry-After': String(Math.max(1, rateLimit.retryAfterSeconds)),
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+        },
+      },
+    );
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
