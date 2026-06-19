@@ -18,16 +18,8 @@ export type EffectiveStepUpProviderPolicy = {
   allowedAmrValues: string[];
 };
 
-const env = (...parts: string[]) => parts.join('_');
-const signingEnv = env('STEP', 'UP', 'SIGNING', 'SECRET');
-const auditSigningEnv = env('AUDIT', 'CHAIN', 'SIGNING', 'SECRET');
-const acrEnv = env('STEP', 'UP', 'IDP', 'ACR', 'VALUES');
-const amrEnv = env('STEP', 'UP', 'IDP', 'AMR', 'VALUES');
-const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
-const supabaseAnonEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY');
-
-function readRuntimeSetting(name: string) {
-  return (process.env[name] ?? '').trim(); // nosemgrep
+function runtimeValue(value: string | undefined) {
+  return (value ?? '').trim();
 }
 
 function normalizeProviderMode(value: string | null | undefined): StepUpProviderMode | null {
@@ -49,8 +41,8 @@ function environmentPolicy(): EffectiveStepUpProviderPolicy {
     source: 'environment',
     requireStepUpForCriticalActions: true,
     mode: getStepUpProviderMode(),
-    allowedAcrValues: splitConfiguredValues(readRuntimeSetting(acrEnv)),
-    allowedAmrValues: splitConfiguredValues(readRuntimeSetting(amrEnv)),
+    allowedAcrValues: splitConfiguredValues(process.env.STEP_UP_IDP_ACR_VALUES),
+    allowedAmrValues: splitConfiguredValues(process.env.STEP_UP_IDP_AMR_VALUES),
   };
 }
 
@@ -79,8 +71,8 @@ export async function getEffectiveStepUpProviderPolicy(organizationId: string): 
 }
 
 export function isEffectiveStepUpProviderPolicyConfigured(policy: EffectiveStepUpProviderPolicy): boolean {
-  const hasSigningMaterial = Boolean(readRuntimeSetting(signingEnv) || readRuntimeSetting(auditSigningEnv));
-  const hasSupabaseAuth = Boolean(readRuntimeSetting(supabaseUrlEnv) && readRuntimeSetting(supabaseAnonEnv));
+  const hasSigningMaterial = Boolean(runtimeValue(process.env.STEP_UP_SIGNING_SECRET) || runtimeValue(process.env.AUDIT_CHAIN_SIGNING_SECRET));
+  const hasSupabaseAuth = Boolean(runtimeValue(process.env.NEXT_PUBLIC_SUPABASE_URL) && runtimeValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY));
   const hasIdpPolicy = policy.allowedAcrValues.length > 0 || policy.allowedAmrValues.length > 0;
 
   if (!hasSigningMaterial || !policy.requireStepUpForCriticalActions || !policy.mode) return false;
