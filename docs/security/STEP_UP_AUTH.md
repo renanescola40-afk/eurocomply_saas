@@ -18,6 +18,7 @@ The implementation is no longer a symbolic timestamp or placeholder check. A ste
 | Server-side nonce/token store | `supabase/migrations/20260619143000_step_up_token_store.sql` |
 | Regression tests | `src/server/security/step-up.test.ts` |
 | Static security gate | `scripts/security/check-step-up.mjs` |
+| Production preflight integration | `scripts/preflight.mjs` |
 | Runtime provider preflight | `scripts/security/check-step-up-runtime-preflight.mjs` |
 | Runtime evidence | `docs/security/evidence/runtime/step-up-mfa-validation.json` |
 
@@ -160,7 +161,13 @@ Runtime provider preflight:
 node scripts/security/check-step-up-runtime-preflight.mjs
 ```
 
-When `EUROCOMPLY_ENTERPRISE_RELEASE=true`, release is blocked unless signing configuration, Supabase auth client configuration and a real provider configuration are present. In `enterprise_idp` mode, Supabase auth client configuration plus at least one non-empty ACR/AMR policy value are required. The runtime preflight delegates to the same release gate and never prints secret values.
+Full production preflight for enterprise releases:
+
+```txt
+EUROCOMPLY_ENTERPRISE_RELEASE=true node scripts/preflight.mjs
+```
+
+When `EUROCOMPLY_ENTERPRISE_RELEASE=true`, release is blocked unless signing configuration, Supabase auth client configuration and a real provider configuration are present. In `enterprise_idp` mode, Supabase auth client configuration plus at least one non-empty ACR/AMR policy value are required. The runtime preflight delegates to the same release gate and never prints secret values. The full production preflight also runs the runtime provider preflight when enterprise release mode is enabled, so deployment validation cannot bypass the step-up provider check.
 
 ## Assessment Outcomes
 
