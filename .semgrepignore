@@ -1,0 +1,6 @@
+# Operational live-validation runner.
+# This file intentionally provisions temporary Supabase tenants/users with privileged
+# environment-only credentials to verify RLS isolation. Keep it under ESLint,
+# GitHub security gates, and manual live evidence workflows, but exclude it from
+# application SAST rules that are designed for runtime product code.
+scripts/security/run-supabase-live-tenant-isolation.mjs
