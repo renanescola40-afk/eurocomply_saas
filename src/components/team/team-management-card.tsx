@@ -22,8 +22,8 @@ type TeamManagementCardProps = {
   members: TeamMemberItem[];
   invitations: PendingInvitationItem[];
   currentUserId?: string;
-  onRemoveMember?: (formData: FormData) => Promise<void> | void;
-  onCancelInvitation?: (formData: FormData) => Promise<void> | void;
+  onRemoveMember?: (memberId: string) => Promise<void> | void;
+  onCancelInvitation?: (invitationId: string) => Promise<void> | void;
 };
 
 export function TeamManagementCard({ members, invitations, currentUserId, onRemoveMember, onCancelInvitation }: TeamManagementCardProps) {
@@ -50,14 +50,14 @@ export function TeamManagementCard({ members, invitations, currentUserId, onRemo
                       <p className="text-sm font-medium">{displayName}</p>
                       <p className="text-xs text-muted-foreground">Role: {member.role}</p>
                     </div>
-                    {canRemove && (
-                      <form action={onRemoveMember}>
-                        <input type="hidden" name="memberId" value={member.id} />
-                        <TeamActionButton message={`Remove ${displayName} from this organization?`}>
-                          Remove
-                        </TeamActionButton>
-                      </form>
-                    )}
+                    {canRemove && onRemoveMember ? (
+                      <TeamActionButton
+                        message={`Remove ${displayName} from this organization?`}
+                        onConfirm={() => onRemoveMember(member.id)}
+                      >
+                        Remove
+                      </TeamActionButton>
+                    ) : null}
                   </div>
                 );
               })
@@ -77,14 +77,14 @@ export function TeamManagementCard({ members, invitations, currentUserId, onRemo
                     <p className="text-sm font-medium">{invitation.email}</p>
                     <p className="text-xs text-muted-foreground">Role: {invitation.role}</p>
                   </div>
-                  {onCancelInvitation && (
-                    <form action={onCancelInvitation}>
-                      <input type="hidden" name="invitationId" value={invitation.id} />
-                      <TeamActionButton message={`Cancel the invitation for ${invitation.email}?`}>
-                        Cancel
-                      </TeamActionButton>
-                    </form>
-                  )}
+                  {onCancelInvitation ? (
+                    <TeamActionButton
+                      message={`Cancel the invitation for ${invitation.email}?`}
+                      onConfirm={() => onCancelInvitation(invitation.id)}
+                    >
+                      Cancel
+                    </TeamActionButton>
+                  ) : null}
                 </div>
               ))
             )}
