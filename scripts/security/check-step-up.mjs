@@ -24,9 +24,11 @@ const paths = {
   teamCancelInvite: 'src/app/api/team/invitations/cancel/route.ts',
   teamPage: 'src/app/[locale]/dashboard/organizations/team/page.tsx',
   teamSettings: 'src/components/team/team-settings-section.tsx',
+  securitySettings: 'src/app/api/security/settings/route.ts',
   challenge: 'src/app/api/security/step-up/challenge/route.ts',
   ui: 'src/components/security/step-up-mfa-dialog.tsx',
   migration: 'supabase/migrations/20260619143000_step_up_token_store.sql',
+  securitySettingsMigration: 'supabase/migrations/20260619191500_organization_security_settings.sql',
   runtimePreflight: 'scripts/security/check-step-up-runtime-preflight.mjs',
   productionPreflight: 'scripts/preflight.mjs',
   runtimeEvidence: 'docs/security/evidence/runtime/step-up-mfa-validation.json',
@@ -66,7 +68,7 @@ const tokenChecks = {
     'GET /api/retention-center/export', 'GET /api/continuity-center/export',
     'POST /api/billing/checkout', 'POST /api/billing/portal', 'POST /api/gdpr/delete-request',
     'POST /api/team/invites', 'POST /api/team/members/remove', 'POST /api/team/members/role',
-    'POST /api/team/invitations/cancel', 'POST /api/security/step-up/challenge',
+    'POST /api/team/invitations/cancel', 'POST /api/security/settings', 'POST /api/security/step-up/challenge',
     'src/components/security/step-up-mfa-dialog.tsx', 'scripts/security/check-step-up-runtime-preflight.mjs',
     'signed_hmac', 'single-use', 'Supabase MFA or enterprise IdP', 'Team invite management',
     'Security settings changes',
@@ -77,6 +79,7 @@ const tokenChecks = {
   [paths.teamRemove]: ['await requireStepUpForRequest', 'manage_team'],
   [paths.teamRole]: ['await requireStepUpForRequest', 'manage_team'],
   [paths.teamCancelInvite]: ['await requireStepUpForRequest', 'manage_team'],
+  [paths.securitySettings]: ['await requireStepUpForRequest', 'change_security_settings', 'manage_settings', 'security_settings_changed'],
   [paths.teamSettings]: [
     'StepUpMfaDialog', 'STEP_UP_TOKEN_HEADER', '/api/team/invites', '/api/team/members/remove',
     '/api/team/invitations/cancel', 'action="manage_team"',
@@ -95,6 +98,11 @@ const tokenChecks = {
     'verification_method', "check (expires_at <= verified_at + interval '5 minutes')", 'consumed_at',
     'revoked_at', 'enable row level security', 'grant all on public.step_up_tokens to service_role',
   ],
+  [paths.securitySettingsMigration]: [
+    'create table if not exists public.organization_security_settings', 'organization_id uuid primary key',
+    'require_step_up_for_critical_actions', 'step_up_provider_mode', 'allowed_idp_acr_values',
+    'allowed_idp_amr_values', 'enable row level security', 'grant all on public.organization_security_settings to service_role',
+  ],
   [paths.runtimePreflight]: [
     'await import', './check-step-up.mjs', enterpriseReleaseEnv, 'runtime provider preflight',
     'Values are never printed', 'process.env.EUROCOMPLY_ENTERPRISE_RELEASE',
@@ -110,6 +118,7 @@ const tokenChecks = {
     'singleUseNonce', 'enterpriseReleaseBlockedWithoutProvider', 'runtimePreflightFailsWithoutProvider',
     'productionPreflightRunsRuntimeProviderPreflight', 'scripts/security/check-step-up-runtime-preflight.mjs',
     'scripts/preflight.mjs', 'POST /api/team/invites', 'POST /api/team/members/role',
+    'POST /api/security/settings', 'security_settings_changed',
   ],
 };
 
@@ -168,6 +177,7 @@ for (const routePath of [
   'src/app/api/team/members/remove/route.ts',
   'src/app/api/team/members/role/route.ts',
   'src/app/api/team/invitations/cancel/route.ts',
+  'src/app/api/security/settings/route.ts',
 ]) {
   const source = read(routePath);
   if (source) requireAwaitedStepUp(routePath, source);
