@@ -22,12 +22,20 @@ jobs:
     name: Run live tenant isolation proof
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    if: github.ref == 'refs/heads/main'
+    environment: supabase-live-rls-validation
     steps:
-      - name: Checkout repository
+      - name: Checkout trusted main
         uses: actions/checkout@v6
         with:
+          ref: main
           persist-credentials: true
           fetch-depth: 0
+
+      - name: Verify trusted workflow ref
+        run: |
+          test "${GITHUB_REF}" = "refs/heads/main"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "main"
 
       - name: Configure Git author
         run: |
@@ -74,8 +82,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EVIDENCE_BRANCH: ${{ inputs.evidence_branch }}
         run: |
-          if gh pr view "$EVIDENCE_BRANCH" --base main >/dev/null 2>&1; then
-            gh pr comment "$EVIDENCE_BRANCH" --body "Supabase live RLS validation passed again; evidence branch updated."
+          existing_pr=$(gh pr list --head "$EVIDENCE_BRANCH" --base main --json number --jq '.[0].number // empty')
+          if [ -n "$existing_pr" ]; then
+            gh pr comment "$existing_pr" --body "Supabase live RLS validation passed again; evidence branch updated."
           else
             gh pr create \
               --base main \
