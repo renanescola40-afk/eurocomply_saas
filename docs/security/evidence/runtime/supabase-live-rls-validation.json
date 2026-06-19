@@ -1,0 +1,15 @@
+{
+  "evidenceItem": "supabase-live-rls-validation",
+  "status": "Open",
+  "generatedAt": "2026-06-19T00:00:00.000Z",
+  "runner": "scripts/security/run-supabase-live-rls-validation.mjs",
+  "reviewer": "security-automation",
+  "summary": "Live Supabase tenant isolation validation is pending and must pass against the target project before this item can be completed.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "evidenceLocations": [
+    "docs/security/evidence/runtime/supabase-live-rls-validation.json"
+  ],
+  "outcome": "not_run",
+  "completionRule": "Run scripts/security/run-supabase-live-rls-validation.mjs with update-register after migrations are applied.",
+  "productionGate": "Public production remains blocked while this evidence status is Open."
+}

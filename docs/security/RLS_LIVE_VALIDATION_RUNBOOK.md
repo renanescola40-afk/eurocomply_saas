@@ -1,10 +1,10 @@
-# EuroComply Live RLS Validation Runbook
+# EuroComply RLS Live Validation Runbook
 
 This runbook defines how EuroComply validates Supabase Row Level Security before release candidate and enterprise production readiness.
 
 ## Purpose
 
-Row Level Security is a core tenant-isolation control. Static SQL review is useful, but enterprise readiness requires validating RLS against a real Supabase project using a controlled service credential and representative tenant data.
+Row Level Security is a core tenant-isolation control. Static SQL review is useful, but enterprise readiness requires validating RLS against a real Supabase project using controlled backend credentials and representative tenant data.
 
 ## Current Modes
 
@@ -18,11 +18,11 @@ SUPABASE_ACCESS_TOKEN is not configured
 
 In advisory mode, CI can still validate static migration and policy evidence, but it cannot prove live Supabase state.
 
-This mode is acceptable for local development and early preview environments only.
+This mode is acceptable for local development and early preview environments only. It is not acceptable for Release Candidate or public production approval.
 
 ### Live Validation Mode
 
-The RLS gate should run in live validation mode when:
+The RLS metadata gate should run in live validation mode when:
 
 ```txt
 SUPABASE_ACCESS_TOKEN is configured
@@ -30,7 +30,13 @@ NEXT_PUBLIC_SUPABASE_URL points to the target Supabase project
 SUPABASE_SERVICE_ROLE_KEY is configured for the same target project
 ```
 
-This mode is required before Release Candidate and enterprise production approval.
+The tenant-isolation proof must additionally run:
+
+```txt
+node scripts/security/run-supabase-live-rls-validation.mjs --update-register
+```
+
+This script creates tenant A and tenant B, creates users/members for each tenant, seeds representative rows, signs in with the tenant A anon/auth client, and verifies that tenant A cannot read, insert, update, or delete tenant B data.
 
 ## Required Environment Variables
 
@@ -48,45 +54,56 @@ Before enterprise release, collect evidence that:
 - RLS is enabled on tenant-scoped tables.
 - Anonymous access cannot read tenant-owned records.
 - Authenticated users cannot read another organization's records.
-- Service-role-only operations are restricted to server-side code paths.
+- Authenticated users cannot insert another organization's records.
+- Authenticated users cannot update another organization's records.
+- Authenticated users cannot delete another organization's records.
+- Same-tenant reads still work for the signed-in user's own organization.
+- Service-role-only operations are restricted to controlled server-side code paths.
 - Audit events preserve organization context.
 - GDPR delete/export flows remain organization scoped.
 - Evidence/export endpoints do not bypass tenant isolation.
 
-## Recommended Test Tenants
+## Critical tables
 
-Create at least two test organizations:
+The live validation and metadata gates must cover these tables when present:
 
-```txt
-org_a
-org_b
-```
-
-Create at least one user/member for each organization and representative records for:
-
+- organizations
+- organization_members
 - documents
-- audit events
-- evidence packs
-- questionnaire exports
-- vendor assurance exports
-- retention-center records
-- continuity-center records
-- GDPR requests
+- audit_events
+- audit_logs
+- risks
+- vendors
+- tasks
+- compliance_tasks
+- subscriptions
+- notifications
+- organization_invites
+- invitations
+- ai_systems
+- ai_incidents
 
 ## Manual Validation Checklist
 
-1. Configure the environment variables for the target Supabase project.
-2. Run:
+1. Apply all Supabase migrations to the target project.
+2. Configure the environment variables for the target Supabase project.
+3. Run the metadata/static RLS gate:
 
 ```txt
 npm run security:rls
 ```
 
-3. Confirm the gate does not run in advisory mode.
-4. Run the full security CI workflow.
-5. Verify that cross-tenant reads are denied.
-6. Verify that expected same-tenant reads still work.
-7. Save CI logs or GitHub Actions run URL as release evidence.
+4. Confirm the gate does not run in advisory mode for Release Candidate.
+5. Run the live tenant isolation proof:
+
+```txt
+node scripts/security/run-supabase-live-rls-validation.mjs --update-register
+```
+
+6. Confirm `docs/security/evidence/runtime/supabase-live-rls-validation.json` has `status: Complete` and `outcome: passed`.
+7. Confirm `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md` marks only the Supabase live RLS row as `Complete` after the successful script run.
+8. Run the full Security CI workflow.
+9. Save CI logs or GitHub Actions run URL as release evidence.
 
 ## Release Rule
 
@@ -97,6 +114,7 @@ Release candidate requires:
 ```txt
 SUPABASE_ACCESS_TOKEN configured
 npm run security:rls completed against target project
+node scripts/security/run-supabase-live-rls-validation.mjs --update-register completed against target project
 Security CI completed successfully
 RLS validation evidence attached to release notes
 ```
@@ -108,7 +126,8 @@ If live validation fails:
 - block release
 - identify the affected table or policy
 - add or update the Supabase migration
-- re-run the RLS gate
+- re-run the RLS metadata gate
+- re-run the live tenant isolation proof
 - re-run full Security CI
 - document the remediation in release notes
 
@@ -118,6 +137,7 @@ Attach these artifacts to enterprise/security review packages:
 
 - GitHub Actions Security CI run URL
 - RLS gate logs
+- `docs/security/evidence/runtime/supabase-live-rls-validation.json`
 - Supabase project/environment identifier
 - migration commit hash
 - list of tenant-scoped tables validated
