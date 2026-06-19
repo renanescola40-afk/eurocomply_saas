@@ -121,6 +121,7 @@
     "security:npm-audit:prod": "npm audit --omit=dev --audit-level=high",
     "security:npm-audit:all": "npm audit --audit-level=moderate",
     "security:npm-audit:json": "npm audit --json",
+    "security:npm-audit:summary": "npm run security:npm-audit:json > npm-audit.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
