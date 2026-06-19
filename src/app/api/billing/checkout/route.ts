@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     return rateLimitResponse(rateLimit);
   }
 
-  const stepUp = requireStepUpForRequest({
+  const stepUp = await requireStepUpForRequest({
     request,
     action: 'manage_billing',
     userId: user.id,
