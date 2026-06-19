@@ -100,10 +100,10 @@ const tokenChecks = {
     'Values are never printed', 'process.env.EUROCOMPLY_ENTERPRISE_RELEASE',
   ],
   [paths.productionPreflight]: [
-    'readRuntimeSetting', 'hasConfiguredList', enterpriseReleaseEnv,
+    'readRuntimeSetting', 'hasConfiguredList', 'enterpriseReleaseEnv',
     'Enterprise step-up runtime provider preflight: running',
-    'Enterprise step-up runtime provider preflight: skipped', stepUpProviderEnv, stepUpSigningEnv,
-    auditSigningEnv, supabaseUrlEnv, supabaseAnonEnv, stepUpAcrEnv, stepUpAmrEnv, 'providerConfigured',
+    'Enterprise step-up runtime provider preflight: skipped', 'stepUpProviderEnv', 'stepUpSigningEnv',
+    'auditSigningEnv', 'supabaseUrlEnv', 'supabaseAnonEnv', 'stepUpAcrEnv', 'stepUpAmrEnv', 'providerConfigured',
   ],
   [paths.runtimeEvidence]: [
     'step-up-mfa-validation', 'supabase_mfa', 'enterprise_idp', 'failClosedWithoutProvider',
