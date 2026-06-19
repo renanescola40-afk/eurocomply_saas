@@ -39,7 +39,19 @@ function getClientIp(request: Request) {
 }
 
 function normalizeList(values: string[]) {
-  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).slice(0, 20);
+  const normalized = new Set<string>();
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (trimmed) normalized.add(trimmed);
+    if (normalized.size >= 20) break;
+  }
+  return [...normalized];
+}
+
+function listChanged(previousValues: string[] | null, nextValues: string[]) {
+  const previous = previousValues ?? [];
+  if (previous.length !== nextValues.length) return true;
+  return previous.some((value, index) => value !== nextValues[index]);
 }
 
 function changedKeys(previous: SecuritySettingsRecord | null, next: z.infer<typeof settingsSchema>) {
@@ -48,8 +60,8 @@ function changedKeys(previous: SecuritySettingsRecord | null, next: z.infer<type
   const changes: string[] = [];
   if (previous.require_step_up_for_critical_actions !== next.requireStepUpForCriticalActions) changes.push('requireStepUpForCriticalActions');
   if (previous.step_up_provider_mode !== next.stepUpProviderMode) changes.push('stepUpProviderMode');
-  if (JSON.stringify(previous.allowed_idp_acr_values ?? []) !== JSON.stringify(next.allowedIdpAcrValues)) changes.push('allowedIdpAcrValues');
-  if (JSON.stringify(previous.allowed_idp_amr_values ?? []) !== JSON.stringify(next.allowedIdpAmrValues)) changes.push('allowedIdpAmrValues');
+  if (listChanged(previous.allowed_idp_acr_values, next.allowedIdpAcrValues)) changes.push('allowedIdpAcrValues');
+  if (listChanged(previous.allowed_idp_amr_values, next.allowedIdpAmrValues)) changes.push('allowedIdpAmrValues');
   return changes;
 }
 
