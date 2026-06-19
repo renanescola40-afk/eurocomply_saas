@@ -6,6 +6,11 @@ import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
 import {
+  assertOrganizationPermission,
+  permissionDeniedResponse,
+  type OrganizationPermission,
+} from '@/server/security/rbac';
+import {
   STEP_UP_MAX_AGE_MS,
   createStepUpTokenEnvelope,
   normalizeHighRiskAction,
@@ -23,6 +28,16 @@ import {
 export const runtime = 'nodejs';
 
 const STEP_UP_CHALLENGE_JSON_MAX_BYTES = 4 * 1024;
+
+const STEP_UP_ACTION_PERMISSIONS: Record<HighRiskAction, OrganizationPermission> = {
+  export_data: 'export_data',
+  manage_billing: 'manage_billing',
+  manage_team: 'manage_team',
+  gdpr_delete: 'export_data',
+  audit_chain_verify: 'read_audit',
+  audit_chain_export: 'export_data',
+  change_security_settings: 'manage_settings',
+};
 
 // Static gate evidence: this route uses Supabase MFA methods named
 // supabase.auth.mfa.challenge, supabase.auth.mfa.verify and supabase.auth.mfa.challengeAndVerify.
@@ -371,6 +386,16 @@ export async function POST(request: Request) {
       },
       { status: 400 },
     );
+  }
+
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: STEP_UP_ACTION_PERMISSIONS[action],
+  });
+
+  if (!permission.ok) {
+    return permissionDeniedResponse(permission);
   }
 
   const providerPolicy = await getEffectiveStepUpProviderPolicy(organization.id);
