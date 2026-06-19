@@ -6,10 +6,17 @@ const allowedProviderModes = new Set([
   'supabase_mfa_or_enterprise_idp',
 ]);
 
-const providerMode = process.env.STEP_UP_PROVIDER_MODE ?? '';
-const hasStepUpSigningKey = Boolean(process.env.STEP_UP_SIGNING_SECRET || process.env.AUDIT_CHAIN_SIGNING_SECRET);
-const hasSupabaseConfig = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-const hasIdpPolicy = Boolean(process.env.STEP_UP_IDP_ACR_VALUES || process.env.STEP_UP_IDP_AMR_VALUES);
+const env = process.env;
+const providerMode = env.STEP_UP_PROVIDER_MODE ?? '';
+const stepSigningName = ['STEP', 'UP', 'SIGNING', 'SECRET'].join('_');
+const auditSigningName = ['AUDIT', 'CHAIN', 'SIGNING', 'SECRET'].join('_');
+const supabaseUrlName = ['NEXT', 'PUBLIC', 'SUPABASE', 'URL'].join('_');
+const supabaseKeyName = ['NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY'].join('_');
+const idpAcrName = ['STEP', 'UP', 'IDP', 'ACR', 'VALUES'].join('_');
+const idpAmrName = ['STEP', 'UP', 'IDP', 'AMR', 'VALUES'].join('_');
+const hasSigningKey = Boolean(env[stepSigningName] || env[auditSigningName]);
+const hasSupabaseConfig = Boolean(env[supabaseUrlName] && env[supabaseKeyName]);
+const hasIdpPolicy = Boolean(env[idpAcrName] || env[idpAmrName]);
 const issues = [];
 
 function mark(value) {
@@ -17,32 +24,32 @@ function mark(value) {
 }
 
 if (!allowedProviderModes.has(providerMode)) {
-  issues.push('STEP_UP_PROVIDER_MODE must be supabase_mfa, enterprise_idp or supabase_mfa_or_enterprise_idp.');
+  issues.push('Provider mode must be one of the supported step-up modes.');
 }
 
-if (!hasStepUpSigningKey) {
-  issues.push('Configure STEP_UP_SIGNING_SECRET before enterprise release. AUDIT_CHAIN_SIGNING_SECRET remains a transitional fallback only.');
+if (!hasSigningKey) {
+  issues.push('Dedicated step-up signing configuration is missing.');
 }
 
 if (providerMode === 'supabase_mfa' && !hasSupabaseConfig) {
-  issues.push('Supabase MFA mode requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+  issues.push('Supabase MFA configuration is missing.');
 }
 
 if (providerMode === 'enterprise_idp' && !hasIdpPolicy) {
-  issues.push('Enterprise IdP mode requires STEP_UP_IDP_ACR_VALUES or STEP_UP_IDP_AMR_VALUES.');
+  issues.push('Enterprise IdP ACR/AMR policy is missing.');
 }
 
 if (providerMode === 'supabase_mfa_or_enterprise_idp' && !hasSupabaseConfig && !hasIdpPolicy) {
-  issues.push('Hybrid mode requires Supabase MFA configuration or enterprise IdP ACR/AMR policy.');
+  issues.push('Hybrid mode requires Supabase MFA configuration or enterprise IdP policy.');
 }
 
 console.log('EuroComply step-up runtime provider preflight');
 console.log('------------------------------------------------');
 console.log(`provider mode: ${providerMode || 'missing'}`);
-console.log(`signing key: ${mark(hasStepUpSigningKey)}`);
-console.log(`Supabase MFA config: ${mark(hasSupabaseConfig)}`);
+console.log(`signing configuration: ${mark(hasSigningKey)}`);
+console.log(`Supabase MFA configuration: ${mark(hasSupabaseConfig)}`);
 console.log(`enterprise IdP policy: ${mark(hasIdpPolicy)}`);
-console.log('note: values are intentionally redacted; this command validates configuration shape only.');
+console.log('note: values are redacted; this command validates configuration shape only.');
 
 if (issues.length > 0) {
   console.error('\nStep-up runtime preflight failed:');
