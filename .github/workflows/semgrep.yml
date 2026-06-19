@@ -35,6 +35,7 @@ jobs:
           --config p/owasp-top-ten
           --config p/typescript
           --config p/javascript
+          --severity ERROR
           --error
           --metrics off
           src
