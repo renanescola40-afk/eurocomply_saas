@@ -17,7 +17,8 @@ The implementation is no longer a symbolic timestamp or placeholder check. A ste
 | Reusable step-up UI | `src/components/security/step-up-mfa-dialog.tsx` |
 | Server-side nonce/token store | `supabase/migrations/20260619143000_step_up_token_store.sql` |
 | Regression tests | `src/server/security/step-up.test.ts` |
-| Security gate | `scripts/security/check-step-up.mjs` |
+| Static security gate | `scripts/security/check-step-up.mjs` |
+| Runtime provider preflight | `scripts/security/check-step-up-runtime-preflight.mjs` |
 | Runtime evidence | `docs/security/evidence/runtime/step-up-mfa-validation.json` |
 
 ## High-Risk Actions
@@ -143,13 +144,19 @@ STEP_UP_SIGNING_SECRET
 
 A fallback to `AUDIT_CHAIN_SIGNING_SECRET` exists only to avoid breaking transitional environments. Production should configure a dedicated step-up secret.
 
-Release gate:
+Static release gate:
 
 ```txt
 EUROCOMPLY_ENTERPRISE_RELEASE=true node scripts/security/check-step-up.mjs
 ```
 
-When `EUROCOMPLY_ENTERPRISE_RELEASE=true`, release is blocked unless the signing secret and a real provider configuration are present.
+Runtime provider preflight:
+
+```txt
+node scripts/security/check-step-up-runtime-preflight.mjs
+```
+
+When `EUROCOMPLY_ENTERPRISE_RELEASE=true`, release is blocked unless the signing secret and a real provider configuration are present. The runtime preflight prints only redacted configuration status and fails when provider mode, signing key or Supabase MFA / enterprise IdP policy is missing.
 
 ## Assessment Outcomes
 
@@ -216,9 +223,12 @@ Step-up is enforced for:
 - `POST /api/billing/checkout` using `manage_billing`
 - `POST /api/billing/portal` using `manage_billing`
 - `POST /api/team/invites` using `manage_team`
+- `POST /api/team/members/remove` using `manage_team`
+- `POST /api/team/members/role` using `manage_team`
+- `POST /api/team/invitations/cancel` using `manage_team`
 - `POST /api/gdpr/delete-request` using `gdpr_delete`
 
-Team role changes, team member removals and security settings mutation endpoints must use `manage_team` and `change_security_settings` respectively before those write routes are enabled for enterprise release.
+Security settings mutation endpoints must use `change_security_settings` before those write routes are enabled for enterprise release.
 
 ## Audit Events
 
@@ -256,4 +266,4 @@ Critical action callers should attach the returned token to `X-EuroComply-Step-U
 - valid scoped token passes;
 - provider not configured fails closed.
 
-The security gate also checks migration, UI, runtime evidence and enterprise release blocking behavior.
+The security gate also checks migration, UI, runtime evidence and enterprise release blocking behavior. The runtime preflight gives operators a deploy-time command to confirm that real Supabase MFA or enterprise IdP configuration is present without printing sensitive values.
