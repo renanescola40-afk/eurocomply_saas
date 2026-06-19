@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getStepUpProviderMode } from '@/server/security/step-up';
+import { getStepUpProviderMode, isEnterpriseStepUpConfigured } from '@/server/security/step-up';
 
 type StepUpProviderMode = NonNullable<ReturnType<typeof getStepUpProviderMode>>;
 
@@ -17,10 +17,6 @@ export type EffectiveStepUpProviderPolicy = {
   allowedAcrValues: string[];
   allowedAmrValues: string[];
 };
-
-function runtimeValue(value: string | undefined) {
-  return (value ?? '').trim();
-}
 
 function normalizeProviderMode(value: string | null | undefined): StepUpProviderMode | null {
   const mode = String(value ?? '').trim().toLowerCase();
@@ -41,8 +37,8 @@ function environmentPolicy(): EffectiveStepUpProviderPolicy {
     source: 'environment',
     requireStepUpForCriticalActions: true,
     mode: getStepUpProviderMode(),
-    allowedAcrValues: splitConfiguredValues(process.env.STEP_UP_IDP_ACR_VALUES),
-    allowedAmrValues: splitConfiguredValues(process.env.STEP_UP_IDP_AMR_VALUES),
+    allowedAcrValues: [],
+    allowedAmrValues: [],
   };
 }
 
@@ -65,18 +61,12 @@ export async function getEffectiveStepUpProviderPolicy(organizationId: string): 
     source: 'organization',
     requireStepUpForCriticalActions: true,
     mode: normalizeProviderMode(row.step_up_provider_mode) ?? fallback.mode,
-    allowedAcrValues: organizationAcrValues.length > 0 ? organizationAcrValues : fallback.allowedAcrValues,
-    allowedAmrValues: organizationAmrValues.length > 0 ? organizationAmrValues : fallback.allowedAmrValues,
+    allowedAcrValues: organizationAcrValues,
+    allowedAmrValues: organizationAmrValues,
   };
 }
 
 export function isEffectiveStepUpProviderPolicyConfigured(policy: EffectiveStepUpProviderPolicy): boolean {
-  const hasSigningMaterial = Boolean(runtimeValue(process.env.STEP_UP_SIGNING_SECRET) || runtimeValue(process.env.AUDIT_CHAIN_SIGNING_SECRET));
-  const hasSupabaseAuth = Boolean(runtimeValue(process.env.NEXT_PUBLIC_SUPABASE_URL) && runtimeValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY));
-  const hasIdpPolicy = policy.allowedAcrValues.length > 0 || policy.allowedAmrValues.length > 0;
-
-  if (!hasSigningMaterial || !policy.requireStepUpForCriticalActions || !policy.mode) return false;
-  if (policy.mode === 'supabase_mfa') return hasSupabaseAuth;
-  if (policy.mode === 'enterprise_idp') return hasSupabaseAuth && hasIdpPolicy;
-  return hasSupabaseAuth;
+  if (!policy.requireStepUpForCriticalActions || !policy.mode) return false;
+  return isEnterpriseStepUpConfigured();
 }
