@@ -17,16 +17,18 @@ This matrix tracks high-risk actions that require signed, real-verification step
 | Billing checkout | `POST /api/billing/checkout` | `manage_billing` | Enforced | Stripe metadata and response include step-up evidence |
 | Billing portal | `POST /api/billing/portal` | `manage_billing` | Enforced | response includes step-up evidence |
 | Team invite management | `POST /api/team/invites` | `manage_team` | Enforced | `await requireStepUpForRequest` runs after RBAC and before invite creation |
+| Team member removal | `POST /api/team/members/remove` | `manage_team` | Enforced | `await requireStepUpForRequest` runs after RBAC and before destructive membership write |
+| Team invitation cancellation | `POST /api/team/invitations/cancel` | `manage_team` | Enforced | `await requireStepUpForRequest` runs after RBAC and before invitation status change |
 | GDPR delete request | `POST /api/gdpr/delete-request` | `gdpr_delete` | Enforced | audit metadata and response include step-up evidence |
 | Step-up challenge | `POST /api/security/step-up/challenge` | requested action | Real provider required | Supabase MFA or enterprise IdP, token issued only after verification |
 | Step-up UI | `src/components/security/step-up-mfa-dialog.tsx` | requested action | Available | reusable challenge UI for MFA factor, challenge and one-time code |
+| Team settings UI | `src/components/team/team-settings-section.tsx` | `manage_team` | Enforced | calls fixed protected APIs with `x-eurocomply-step-up-token`, not direct server actions |
 
 ## Remaining High-Risk Rollout
 
 | Area | Action | Target Status |
 | --- | --- | --- |
 | Team role changes | `manage_team` | Must call `await requireStepUpForRequest` before write route is enabled |
-| Team member removal | `manage_team` | Must call `await requireStepUpForRequest` before write route is enabled |
 | Security settings changes | `change_security_settings` | Must call `await requireStepUpForRequest` before write route is enabled |
 
 ## Required Pattern
