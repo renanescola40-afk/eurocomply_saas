@@ -95,6 +95,10 @@ function isPlaceholderValue(value) {
   return value === '' || /^(undefined|null|process\.env|\$\{|<.*>|\*{3,}|x{3,}|your-|changeme|placeholder|example|dummy|redacted|ci-|test_|sk_test_|price_ci_|whsec_ci_)/i.test(value);
 }
 
+function isSymbolicEnvironmentName(value) {
+  return /^[A-Z0-9_]*(?:SECRET|PASSWORD|TOKEN|PRIVATE_KEY|SERVICE_ROLE|WEBHOOK_SECRET|AUTH_TOKEN|ACCESS_TOKEN|API_KEY|SUPABASE_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_CLIENT_SECRET)[A-Z0-9_]*;?$/.test(value);
+}
+
 function isPublicClientFile(path) {
   return publicClientFiles.some((pattern) => pattern.test(path));
 }
@@ -126,7 +130,7 @@ for (const file of new Set(files)) {
     const name = match.groups?.name ?? 'UNKNOWN_SECRET';
     const value = match.groups?.value ?? '';
     const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-    if (!allowedPublicNames.has(name) && !isPlaceholderLine(line) && !isPlaceholderValue(value)) {
+    if (!allowedPublicNames.has(name) && !isPlaceholderLine(line) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value)) {
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible hardcoded secret assignment: ${name}`);
     }
   }
