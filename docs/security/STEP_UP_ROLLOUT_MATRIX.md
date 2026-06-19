@@ -20,6 +20,7 @@ This matrix tracks high-risk actions that require signed, real-verification step
 | Team member removal | `POST /api/team/members/remove` | `manage_team` | Enforced | `await requireStepUpForRequest` runs after RBAC and before destructive membership write |
 | Team role changes | `POST /api/team/members/role` | `manage_team` | Enforced | `await requireStepUpForRequest` runs after RBAC and before role mutation; self-change and last-owner demotion are blocked |
 | Team invitation cancellation | `POST /api/team/invitations/cancel` | `manage_team` | Enforced | `await requireStepUpForRequest` runs after RBAC and before invitation status change |
+| Security settings changes | `POST /api/security/settings` | `change_security_settings` | Enforced | `await requireStepUpForRequest` runs after `manage_settings` RBAC and before settings upsert |
 | GDPR delete request | `POST /api/gdpr/delete-request` | `gdpr_delete` | Enforced | audit metadata and response include step-up evidence |
 | Step-up challenge | `POST /api/security/step-up/challenge` | requested action | Real provider required | Supabase MFA or enterprise IdP, token issued only after verification |
 | Step-up UI | `src/components/security/step-up-mfa-dialog.tsx` | requested action | Available | reusable challenge UI for MFA factor, challenge and one-time code |
@@ -28,9 +29,7 @@ This matrix tracks high-risk actions that require signed, real-verification step
 
 ## Remaining High-Risk Rollout
 
-| Area | Action | Target Status |
-| --- | --- | --- |
-| Security settings changes | `change_security_settings` | Must call `await requireStepUpForRequest` before write route is enabled |
+All currently enabled high-risk routes in the repository snapshot have step-up enforcement. Any future mutation that maps to a high-risk action must be added to this matrix and to `scripts/security/check-step-up.mjs` before release.
 
 ## Required Pattern
 

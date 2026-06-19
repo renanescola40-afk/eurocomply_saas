@@ -74,6 +74,12 @@ const rules = [
     all: ['manage_team'],
   },
   {
+    name: 'security settings endpoint',
+    match: /src\/app\/api\/security\/settings\/route\.ts$/,
+    any: [guards.auth, guards.org, guards.rbac, guards.rateLimit, guards.origin, guards.stepUp, guards.audit, guards.noStore],
+    all: ['manage_settings', 'change_security_settings', 'security_settings_changed'],
+  },
+  {
     name: 'GDPR endpoint',
     match: /src\/app\/api\/gdpr\/.*\/route\.ts$/,
     any: [guards.auth, guards.org, guards.plan, guards.audit, guards.noStore],
