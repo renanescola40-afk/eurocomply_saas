@@ -33,10 +33,12 @@ SUPABASE_SERVICE_ROLE_KEY is configured for the same target project
 The tenant-isolation proof must additionally run:
 
 ```txt
-node scripts/security/run-supabase-live-rls-validation.mjs --update-register
+node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register
 ```
 
-This script creates tenant A and tenant B, creates users/members for each tenant, seeds representative rows, signs in with the tenant A anon/auth client, and verifies that tenant A cannot read, insert, update, or delete tenant B data.
+This script creates tenant A and tenant B, creates users/members for each tenant, seeds representative rows, signs in with both tenant clients, verifies tenant A cannot read, insert, update, or delete tenant B data, and verifies same-tenant reads still work where expected.
+
+The older `scripts/security/run-supabase-live-rls-validation.mjs` remains for compatibility, but the strict release validator is `scripts/security/run-supabase-live-tenant-isolation.mjs`.
 
 ## Required Environment Variables
 
@@ -54,10 +56,10 @@ Before enterprise release, collect evidence that:
 - RLS is enabled on tenant-scoped tables.
 - Anonymous access cannot read tenant-owned records.
 - Authenticated users cannot read another organization's records.
-- Authenticated users cannot insert another organization's records.
+- Authenticated users cannot insert another organization's records with an RLS or permission denial, not merely a duplicate-key or unrelated application error.
 - Authenticated users cannot update another organization's records.
 - Authenticated users cannot delete another organization's records.
-- Same-tenant reads still work for the signed-in user's own organization.
+- Same-tenant reads still work for the signed-in user's own organization and representative seeded rows.
 - Service-role-only operations are restricted to controlled server-side code paths.
 - Audit events preserve organization context.
 - GDPR delete/export flows remain organization scoped.
@@ -94,13 +96,13 @@ npm run security:rls
 ```
 
 4. Confirm the gate does not run in advisory mode for Release Candidate.
-5. Run the live tenant isolation proof:
+5. Run the strict live tenant isolation proof:
 
 ```txt
-node scripts/security/run-supabase-live-rls-validation.mjs --update-register
+node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register
 ```
 
-6. Confirm `docs/security/evidence/runtime/supabase-live-rls-validation.json` has `status: Complete` and `outcome: passed`.
+6. Confirm `docs/security/evidence/runtime/supabase-live-rls-validation.json` has `status: Complete`, `outcome: passed`, and per-table operation flags for cross-tenant read/insert/update/delete denial plus same-tenant reads.
 7. Confirm `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md` marks only the Supabase live RLS row as `Complete` after the successful script run.
 8. Run the full Security CI workflow.
 9. Save CI logs or GitHub Actions run URL as release evidence.
@@ -114,7 +116,7 @@ Release candidate requires:
 ```txt
 SUPABASE_ACCESS_TOKEN configured
 npm run security:rls completed against target project
-node scripts/security/run-supabase-live-rls-validation.mjs --update-register completed against target project
+node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register completed against target project
 Security CI completed successfully
 RLS validation evidence attached to release notes
 ```
