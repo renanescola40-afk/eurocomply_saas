@@ -22,12 +22,25 @@ type PendingInvitation = {
   expires_at?: string | null;
 };
 
-type PendingTeamOperation = {
-  endpoint: string;
-  payload: Record<string, string>;
-  resolve: () => void;
-  reject: (error: Error) => void;
-};
+type PendingTeamOperation =
+  | {
+      type: 'invite';
+      payload: { email: string; role: string };
+      resolve: () => void;
+      reject: (error: Error) => void;
+    }
+  | {
+      type: 'remove-member';
+      payload: { memberId: string };
+      resolve: () => void;
+      reject: (error: Error) => void;
+    }
+  | {
+      type: 'cancel-invitation';
+      payload: { invitationId: string };
+      resolve: () => void;
+      reject: (error: Error) => void;
+    };
 
 type TeamSettingsSectionProps = {
   members: TeamMember[];
@@ -44,33 +57,77 @@ function toApiInviteRole(role: InviteMemberInput['role']) {
   return role === 'admin' ? 'Admin' : 'Visualizador';
 }
 
+function teamActionRequest(operation: PendingTeamOperation, token: string) {
+  const headers = {
+    'Content-Type': 'application/json',
+    [STEP_UP_TOKEN_HEADER]: token,
+  };
+
+  if (operation.type === 'invite') {
+    return fetch('/api/team/invites', {
+      method: 'POST',
+      headers,
+      credentials: 'same-origin',
+      body: JSON.stringify(operation.payload),
+    });
+  }
+
+  if (operation.type === 'remove-member') {
+    return fetch('/api/team/members/remove', {
+      method: 'POST',
+      headers,
+      credentials: 'same-origin',
+      body: JSON.stringify(operation.payload),
+    });
+  }
+
+  return fetch('/api/team/invitations/cancel', {
+    method: 'POST',
+    headers,
+    credentials: 'same-origin',
+    body: JSON.stringify(operation.payload),
+  });
+}
+
 export function TeamSettingsSection({ members, invitations, currentUserId }: TeamSettingsSectionProps) {
   const router = useRouter();
   const [pendingOperation, setPendingOperation] = useState<PendingTeamOperation | null>(null);
 
-  const enqueueOperation = useCallback((endpoint: string, payload: Record<string, string>) => {
+  const enqueueInvite = useCallback((payload: { email: string; role: string }) => {
     return new Promise<void>((resolve, reject) => {
-      setPendingOperation({ endpoint, payload, resolve, reject });
+      setPendingOperation({ type: 'invite', payload, resolve, reject });
+    });
+  }, []);
+
+  const enqueueRemoveMember = useCallback((payload: { memberId: string }) => {
+    return new Promise<void>((resolve, reject) => {
+      setPendingOperation({ type: 'remove-member', payload, resolve, reject });
+    });
+  }, []);
+
+  const enqueueCancelInvitation = useCallback((payload: { invitationId: string }) => {
+    return new Promise<void>((resolve, reject) => {
+      setPendingOperation({ type: 'cancel-invitation', payload, resolve, reject });
     });
   }, []);
 
   const handleInvite = useCallback(
     (input: InviteMemberInput) =>
-      enqueueOperation('/api/team/invites', {
+      enqueueInvite({
         email: input.email,
         role: toApiInviteRole(input.role),
       }),
-    [enqueueOperation],
+    [enqueueInvite],
   );
 
   const handleRemoveMember = useCallback(
-    (memberId: string) => enqueueOperation('/api/team/members/remove', { memberId }),
-    [enqueueOperation],
+    (memberId: string) => enqueueRemoveMember({ memberId }),
+    [enqueueRemoveMember],
   );
 
   const handleCancelInvitation = useCallback(
-    (invitationId: string) => enqueueOperation('/api/team/invitations/cancel', { invitationId }),
-    [enqueueOperation],
+    (invitationId: string) => enqueueCancelInvitation({ invitationId }),
+    [enqueueCancelInvitation],
   );
 
   const handleStepUpToken = useCallback(
@@ -79,15 +136,7 @@ export function TeamSettingsSection({ members, invitations, currentUserId }: Tea
       if (!operation) return;
 
       try {
-        const response = await fetch(operation.endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            [STEP_UP_TOKEN_HEADER]: token,
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify(operation.payload),
-        });
+        const response = await teamActionRequest(operation, token);
 
         if (!response.ok) {
           throw new Error(await parseError(response));
