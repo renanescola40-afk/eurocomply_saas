@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getStepUpProviderMode } from '@/server/security/step-up';
+import { getStepUpProviderMode, isEnterpriseStepUpConfigured } from '@/server/security/step-up';
 
 type StepUpProviderMode = NonNullable<ReturnType<typeof getStepUpProviderMode>>;
 
@@ -17,18 +17,6 @@ export type EffectiveStepUpProviderPolicy = {
   allowedAcrValues: string[];
   allowedAmrValues: string[];
 };
-
-const env = (...parts: string[]) => parts.join('_');
-const signingEnv = env('STEP', 'UP', 'SIGNING', 'SECRET');
-const auditSigningEnv = env('AUDIT', 'CHAIN', 'SIGNING', 'SECRET');
-const acrEnv = env('STEP', 'UP', 'IDP', 'ACR', 'VALUES');
-const amrEnv = env('STEP', 'UP', 'IDP', 'AMR', 'VALUES');
-const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
-const supabaseAnonEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY');
-
-function readRuntimeSetting(name: string) {
-  return (process.env[name] ?? '').trim(); // nosemgrep
-}
 
 function normalizeProviderMode(value: string | null | undefined): StepUpProviderMode | null {
   const mode = String(value ?? '').trim().toLowerCase();
@@ -49,8 +37,8 @@ function environmentPolicy(): EffectiveStepUpProviderPolicy {
     source: 'environment',
     requireStepUpForCriticalActions: true,
     mode: getStepUpProviderMode(),
-    allowedAcrValues: splitConfiguredValues(readRuntimeSetting(acrEnv)),
-    allowedAmrValues: splitConfiguredValues(readRuntimeSetting(amrEnv)),
+    allowedAcrValues: [],
+    allowedAmrValues: [],
   };
 }
 
@@ -73,18 +61,16 @@ export async function getEffectiveStepUpProviderPolicy(organizationId: string): 
     source: 'organization',
     requireStepUpForCriticalActions: true,
     mode: normalizeProviderMode(row.step_up_provider_mode) ?? fallback.mode,
-    allowedAcrValues: organizationAcrValues.length > 0 ? organizationAcrValues : fallback.allowedAcrValues,
-    allowedAmrValues: organizationAmrValues.length > 0 ? organizationAmrValues : fallback.allowedAmrValues,
+    allowedAcrValues: organizationAcrValues,
+    allowedAmrValues: organizationAmrValues,
   };
 }
 
 export function isEffectiveStepUpProviderPolicyConfigured(policy: EffectiveStepUpProviderPolicy): boolean {
-  const hasSigningMaterial = Boolean(readRuntimeSetting(signingEnv) || readRuntimeSetting(auditSigningEnv));
-  const hasSupabaseAuth = Boolean(readRuntimeSetting(supabaseUrlEnv) && readRuntimeSetting(supabaseAnonEnv));
-  const hasIdpPolicy = policy.allowedAcrValues.length > 0 || policy.allowedAmrValues.length > 0;
-
-  if (!hasSigningMaterial || !policy.requireStepUpForCriticalActions || !policy.mode) return false;
-  if (policy.mode === 'supabase_mfa') return hasSupabaseAuth;
-  if (policy.mode === 'enterprise_idp') return hasSupabaseAuth && hasIdpPolicy;
-  return hasSupabaseAuth;
+  if (!policy.requireStepUpForCriticalActions || !policy.mode) return false;
+  if (!isEnterpriseStepUpConfigured()) return false;
+  if (policy.mode === 'enterprise_idp') {
+    return policy.allowedAcrValues.length > 0 || policy.allowedAmrValues.length > 0;
+  }
+  return true;
 }
