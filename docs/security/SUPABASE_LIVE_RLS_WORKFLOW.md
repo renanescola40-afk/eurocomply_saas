@@ -6,6 +6,26 @@ This workflow is the operator path for producing final runtime evidence for Euro
 
 Repository checks prove that migrations, policies, tests, and release gates are wired correctly. Final completion requires a live Supabase run that creates tenant A and tenant B, creates users for each tenant, verifies tenant A cannot read/write/update/delete tenant B rows, and confirms same-tenant reads still work.
 
+## Preflight
+
+Before running the live workflow, run:
+
+```txt
+node scripts/security/check-supabase-live-rls-preflight.mjs
+```
+
+The preflight checks that the repository is ready for the live evidence run:
+
+- manual workflow exists
+- strict tenant-isolation validator exists
+- runtime evidence JSON is present and either `Open` or valid `Complete`
+- P0 register references the live validator and remains `Open` until evidence passes
+- required RLS migrations are present
+- required critical tables and cross-tenant operations are covered by the validator
+- workflow/runbook/evidence paths are wired together
+
+A passing preflight means the remaining work is operational: apply migrations to the target Supabase project, configure GitHub Actions secrets, run the workflow, review the generated evidence PR, and merge it.
+
 ## Manual workflow
 
 Run this GitHub Actions workflow manually:
