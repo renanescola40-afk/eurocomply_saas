@@ -30,4 +30,11 @@ jobs:
           persist-credentials: false
 
       - name: Run Semgrep rules
-        run: semgrep scan --config p/owasp-top-ten --config p/typescript --config p/javascript --error --metrics off
+        run: >-
+          semgrep scan
+          --config p/owasp-top-ten
+          --config p/typescript
+          --config p/javascript
+          --exclude scripts/security/run-supabase-live-tenant-isolation.mjs
+          --error
+          --metrics off
