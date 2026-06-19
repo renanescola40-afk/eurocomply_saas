@@ -18,10 +18,29 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Detect dependency manifest changes
+        id: dependency_changes
+        shell: bash
+        run: |
+          changed_files=$(git diff --name-only HEAD^ HEAD)
+          echo "$changed_files"
+          if echo "$changed_files" | grep -E '(^|/)(package(-lock)?\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock)$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Dependency Review
+        if: steps.dependency_changes.outputs.changed == 'true'
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
           deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, LGPL-2.0, LGPL-2.1, LGPL-3.0
           comment-summary-in-pr: always
+
+      - name: No dependency manifest changes
+        if: steps.dependency_changes.outputs.changed != 'true'
+        run: echo "No dependency manifest changes detected; dependency review is not required for this PR."
