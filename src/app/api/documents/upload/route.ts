@@ -24,6 +24,7 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const STORAGE_BUCKET = 'controlled-documents';
 
 const ALLOWED_TYPES = UPLOAD_MIME_TYPE_TO_EXTENSION;
+const SIGNATURE_MISMATCH_REASON = 'signature_mismatch';
 
 function safeDocumentTitle(name: string) {
   return sanitizeDocumentDownloadFileName(name)
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
       entityId: organization.id,
       metadata: {
         ...preScanAuditMetadata({
-          reason: validation.reason,
+          reason: validation.reason === SIGNATURE_MISMATCH_REASON ? SIGNATURE_MISMATCH_REASON : validation.reason,
           file,
           actorRole: permission.role,
           fileHash,
