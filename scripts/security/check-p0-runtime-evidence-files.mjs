@@ -8,6 +8,7 @@ const allowedItems = new Set([
   'production-secrets-provider-stores',
   'supabase-live-rls-validation',
   'external-security-review-or-pentest',
+  'step-up-mfa-validation',
 ]);
 const redactionTexts = new Set([
   'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
