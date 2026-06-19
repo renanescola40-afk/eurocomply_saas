@@ -48,6 +48,7 @@ const row = registerRow();
 const testCases = Array.isArray(evidence?.testCases) ? evidence.testCases : [];
 const tables = new Set(testCases.map((test) => test?.table).filter(Boolean));
 const operations = new Set(testCases.map((test) => test?.operation).filter(Boolean));
+const allTestCasesPassed = testCases.length > 0 && testCases.every((test) => test?.passed === true);
 
 const checks = [
   {
@@ -87,6 +88,12 @@ const checks = [
     missing: 'Run live Supabase tenant-isolation validation until evidence is Complete/passed',
   },
   {
+    id: 'test-cases-passing',
+    weight: 5,
+    passed: allTestCasesPassed,
+    missing: 'Evidence must include at least one test case and every test case must have passed: true',
+  },
+  {
     id: 'register-complete',
     weight: 10,
     passed: row.includes('| Complete |'),
@@ -116,7 +123,7 @@ const earned = checks.filter((check) => check.passed).reduce((sum, check) => sum
 const total = checks.reduce((sum, check) => sum + check.weight, 0);
 const percent = Math.round((earned / total) * 100);
 const missing = checks.filter((check) => !check.passed).map((check) => ({ id: check.id, weight: check.weight, nextStep: check.missing }));
-const complete = percent === 100;
+const complete = checks.every((check) => check.passed);
 
 const report = {
   generatedAt: new Date().toISOString(),
