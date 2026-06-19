@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   STEP_UP_MAX_AGE_MS,
+  STEP_UP_SIGNING_SECRET_ENV,
   STEP_UP_TOKEN_HEADER,
   assessStepUp,
   assessStepUpToken,
@@ -208,14 +209,23 @@ describe('step-up authentication helper', () => {
 
   it('fails closed when enterprise MFA/IdP provider is not configured', () => {
     const previousProviderMode = process.env.STEP_UP_PROVIDER_MODE;
-    const previousSecret = process.env.STEP_UP_SIGNING_SECRET;
+    const previousSecret = process.env[STEP_UP_SIGNING_SECRET_ENV];
     delete process.env.STEP_UP_PROVIDER_MODE;
-    process.env.STEP_UP_SIGNING_SECRET = secret;
+    process.env[STEP_UP_SIGNING_SECRET_ENV] = secret;
 
     expect(isEnterpriseStepUpConfigured()).toBe(false);
 
-    process.env.STEP_UP_PROVIDER_MODE = previousProviderMode;
-    process.env.STEP_UP_SIGNING_SECRET = previousSecret;
+    if (previousProviderMode === undefined) {
+      delete process.env.STEP_UP_PROVIDER_MODE;
+    } else {
+      process.env.STEP_UP_PROVIDER_MODE = previousProviderMode;
+    }
+
+    if (previousSecret === undefined) {
+      delete process.env[STEP_UP_SIGNING_SECRET_ENV];
+    } else {
+      process.env[STEP_UP_SIGNING_SECRET_ENV] = previousSecret;
+    }
   });
 
   it('returns no-store headers for step-up required responses', () => {
