@@ -1,6 +1,6 @@
 'use server';
 
-import { DOCUMENT_BUCKET, sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
+import { DOCUMENT_BUCKET, assertDocumentStoragePathInOrganization, sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
 import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
@@ -8,7 +8,7 @@ import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { requireCurrentUser } from '@/server/queries/auth';
 import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
 
-const SIGNED_URL_EXPIRES_IN_SECONDS = 60 * 5;
+const SIGNED_URL_EXPIRES_IN_SECONDS = 60;
 
 export async function createDocumentSignedDownloadUrl(documentId: string) {
   const user = await requireCurrentUser();
@@ -35,9 +35,10 @@ export async function createDocumentSignedDownloadUrl(documentId: string) {
 
   await assertCurrentUserCan(document.organization_id, user.id, 'documents:read');
 
-  if (!document.storage_path.startsWith(`${document.organization_id}/`)) {
-    const error = new Error('Document storage path does not match organization scope');
-    reportError(error, { ...context, organizationId: document.organization_id });
+  try {
+    assertDocumentStoragePathInOrganization(document.storage_path, document.organization_id);
+  } catch (error) {
+    reportError(error, { ...context, organizationId: document.organization_id, storagePath: document.storage_path });
     throw error;
   }
 
@@ -61,7 +62,11 @@ export async function createDocumentSignedDownloadUrl(documentId: string) {
     action: 'document.download_url_created',
     entityType: 'document',
     entityId: documentId,
-    metadata: { expiresInSeconds: SIGNED_URL_EXPIRES_IN_SECONDS },
+    metadata: {
+      expiresInSeconds: SIGNED_URL_EXPIRES_IN_SECONDS,
+      organizationId: document.organization_id,
+      actorUserId: user.id,
+    },
   });
 
   return {
