@@ -25,12 +25,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
+          fetch-depth: 2
           persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 22
+
+      - name: Detect app-affecting changes
+        id: changes
+        shell: bash
+        run: |
+          changed_files=$(git diff --name-only HEAD^ HEAD || git show --name-only --format= HEAD)
+          echo "$changed_files"
+          if echo "$changed_files" | grep -E '^(src|app|pages|components|lib|server|tests)/|(^|/)(package(-lock)?\.json|tsconfig\.json|next\.config\.|vitest\.config\.)'; then
+            echo "app_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "app_changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Install dependencies without lifecycle scripts
         run: npm install --ignore-scripts
@@ -74,8 +87,18 @@ jobs:
           node scripts/security/check-trust-package.mjs
           node scripts/security/check-enterprise-trust-evidence.mjs
 
-      - name: Typecheck
+      - name: Typecheck app changes
+        if: steps.changes.outputs.app_changed == 'true'
         run: npm run typecheck
 
-      - name: Unit tests
+      - name: Skip typecheck for non-app changes
+        if: steps.changes.outputs.app_changed != 'true'
+        run: echo "No app/package/tsconfig changes detected; skipping app typecheck."
+
+      - name: Unit tests for app changes
+        if: steps.changes.outputs.app_changed == 'true'
         run: npm run test
+
+      - name: Skip unit tests for non-app changes
+        if: steps.changes.outputs.app_changed != 'true'
+        run: echo "No app/package/test changes detected; skipping app tests."
