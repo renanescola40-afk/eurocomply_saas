@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 import { readBoundedJsonRequest } from '@/lib/security/validate';
-import { removeOrganizationMember } from '@/server/actions/members';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { createAuditEvent } from '@/server/queries/audit-events';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { checkDistributedRateLimit } from '@/server/security/rate-limit';
@@ -89,11 +90,65 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'invalid_team_member_payload' }, { status: 400 });
   }
 
-  try {
-    await removeOrganizationMember({ organizationId: organization.id, memberId: parsed.data.memberId }, user.id);
-  } catch {
-    return noStoreJson({ error: 'team_member_remove_failed' }, { status: 400 });
+  const supabase = createAdminClient();
+  const { data: member, error: memberError } = await supabase
+    .from('organization_members')
+    .select('id,user_id,role,organization_id')
+    .eq('id', parsed.data.memberId)
+    .eq('organization_id', organization.id)
+    .maybeSingle();
+
+  if (memberError) {
+    return noStoreJson({ error: 'team_member_lookup_failed' }, { status: 503 });
   }
 
-  return noStoreJson({ removed: true, stepUp: publicStepUpSummary(stepUp.assessment) });
+  if (!member) {
+    return noStoreJson({ error: 'team_member_not_found' }, { status: 404 });
+  }
+
+  if (member.user_id === user.id) {
+    return noStoreJson({ error: 'self_removal_blocked', message: 'You cannot remove your own access from here.' }, { status: 400 });
+  }
+
+  if (member.role === 'owner') {
+    const { count, error: ownerCountError } = await supabase
+      .from('organization_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organization.id)
+      .eq('role', 'owner');
+
+    if (ownerCountError) {
+      return noStoreJson({ error: 'owner_count_failed' }, { status: 503 });
+    }
+
+    if ((count ?? 0) <= 1) {
+      return noStoreJson({ error: 'last_owner_removal_blocked', message: 'Cannot remove the last organization owner.' }, { status: 400 });
+    }
+  }
+
+  const { error } = await supabase
+    .from('organization_members')
+    .delete()
+    .eq('id', parsed.data.memberId)
+    .eq('organization_id', organization.id);
+
+  if (error) {
+    return noStoreJson({ error: 'team_member_remove_failed' }, { status: 503 });
+  }
+
+  const audit = await createAuditEvent({
+    organizationId: organization.id,
+    actorUserId: user.id,
+    action: 'team_member_removed',
+    entityType: 'organization_member',
+    entityId: parsed.data.memberId,
+    metadata: {
+      removedUserId: member.user_id,
+      role: member.role,
+      actorRole: permission.role,
+      stepUpAction: 'manage_team',
+    },
+  });
+
+  return noStoreJson({ removed: true, auditPersisted: audit.persisted, stepUp: publicStepUpSummary(stepUp.assessment) });
 }
