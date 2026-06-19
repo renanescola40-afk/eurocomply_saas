@@ -175,7 +175,7 @@ if (securityCi) {
   const requiredTokens = [
     'npm install --ignore-scripts',
     'npm run security:ci',
-    'actions/setup-node@v4',
+    'actions/setup-node@v6',
     'node-version: 22',
     'final-security-readiness.json',
   ];
@@ -200,7 +200,7 @@ if (securityCi) {
 }
 
 if (dependencyReview) {
-  for (const token of ['actions/dependency-review-action@v4', 'fail-on-severity: high', 'deny-licenses']) {
+  for (const token of ['actions/dependency-review-action@v5', 'fail-on-severity: high', 'deny-licenses']) {
     if (!dependencyReview.includes(token)) {
       failures.push(`${dependencyReviewWorkflowPath} missing dependency review token: ${token}`);
     }
