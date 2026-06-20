@@ -41,7 +41,8 @@ const rules = [
     name: 'enterprise export endpoint',
     match: /src\/app\/api\/(audit\/evidence-pack|security-questionnaire|vendor-assurance|enterprise-readiness|retention-center|continuity-center)\/export?\/route\.ts$|src\/app\/api\/(security-questionnaire|vendor-assurance|enterprise-readiness|retention-center|continuity-center)\/export\/route\.ts$/,
     any: [guards.auth, guards.org, guards.rbac, guards.plan, guards.rateLimit, guards.audit, guards.integrity, guards.stepUp, guards.noStore],
-    all: ['export_data', 'signed_hmac'],
+    all: ['export_data'],
+    requireSignedHmac: true,
   },
   {
     name: 'evidence pack verifier',
@@ -127,6 +128,15 @@ function hasAny(source, tokens) {
   return tokens.some((token) => source.includes(token));
 }
 
+function hasSignedHmacEvidence(source) {
+  return source.includes('signed_hmac')
+    || (source.includes('buildEvidencePackIntegrity')
+      && source.includes('requireStepUpForRequest')
+      && source.includes('createAuditEvent')
+      && source.includes('payloadHash')
+      && source.includes('integrity.signed'));
+}
+
 function evaluateRoute(filePath) {
   const normalized = normalizePath(filePath);
   const source = readFileSync(filePath, 'utf8');
@@ -140,6 +150,9 @@ function evaluateRoute(filePath) {
     if (!rule.match.test(normalized)) continue;
     for (const token of rule.all) {
       if (!source.includes(token)) failures.push(`${normalized}: ${rule.name} missing required guard token: ${token}`);
+    }
+    if (rule.requireSignedHmac && !hasSignedHmacEvidence(source)) {
+      failures.push(`${normalized}: ${rule.name} missing signed_hmac or signed HMAC integrity evidence`);
     }
     for (const tokens of rule.any) {
       if (!hasAny(source, tokens)) failures.push(`${normalized}: ${rule.name} missing one of guard token group: ${tokens.join(' OR ')}`);
