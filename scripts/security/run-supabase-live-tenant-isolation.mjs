@@ -34,6 +34,7 @@ const optionalTables = ['compliance_tasks', 'audit_logs', 'ai_systems', 'ai_inci
 const backendOwnedTables = new Set(['audit_events', 'audit_logs', 'subscriptions']);
 const sameTenantWritableTables = new Set(['documents', 'risks', 'vendors', 'tasks', 'compliance_tasks', 'ai_systems', 'ai_incidents']);
 const requiredCoverageOperations = ['cross_tenant_read', 'cross_tenant_insert', 'cross_tenant_update', 'cross_tenant_delete'];
+const requiredBackendWriteDenyOperations = ['same_tenant_insert_denied', 'same_tenant_update_denied', 'same_tenant_delete_denied'];
 const authOptions = { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } };
 const expectedDenialCodes = new Set(['42501']);
 const expectedDenialText = /(row-level security|permission denied|not authorized|unauthorized|forbidden|new row violates)/i;
@@ -85,6 +86,7 @@ function tableCoverageFrom(testCases) {
         crossTenantDeleteDenied: byOperation.get('cross_tenant_delete') === true,
         sameTenantReadAllowed: byOperation.get('same_tenant_read') === true || byOperation.get('same_tenant_read_backend_only') === true,
         sameTenantInsertAllowed: byOperation.get('same_tenant_insert') === true || !sameTenantWritableTables.has(table),
+        sameTenantBackendWritesDenied: !backendOwnedTables.has(table) || requiredBackendWriteDenyOperations.every((operation) => byOperation.get(operation) === true),
       },
     };
   });
@@ -143,6 +145,10 @@ function parseEvidenceJson(source) {
   }
 }
 
+function requirePassedTest(tests, table, operation, errors, message = `missing live RLS operation coverage: ${table}:${operation}`) {
+  if (!tests.some((test) => test?.table === table && test?.operation === operation && test?.passed === true)) errors.push(message);
+}
+
 function validatePassingEvidence(evidence) {
   const errors = [];
   if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) return { valid: false, errors: ['evidence must be an object'] };
@@ -160,14 +166,25 @@ function validatePassingEvidence(evidence) {
   const tests = Array.isArray(evidence.testCases) ? evidence.testCases : [];
   if (tests.length === 0) errors.push('testCases must include live validation cases');
   if (tests.some((test) => test?.passed !== true)) errors.push('all testCases must pass');
-  const tables = new Set(tests.map((test) => test?.table).filter(Boolean));
-  const operations = new Set(tests.map((test) => test?.operation).filter(Boolean));
-  for (const table of criticalTables) if (!tables.has(table)) errors.push(`missing live RLS table coverage: ${table}`);
-  for (const operation of requiredCoverageOperations) if (!operations.has(operation)) errors.push(`missing live RLS operation coverage: ${operation}`);
-  for (const table of ['documents', 'risks', 'vendors', 'tasks']) {
-    if (!tests.some((test) => test.table === table && test.operation === 'same_tenant_insert' && test.passed === true)) errors.push(`missing same-tenant insert coverage: ${table}`);
+  for (const table of criticalTables) {
+    if (!tests.some((test) => test?.table === table)) errors.push(`missing live RLS table coverage: ${table}`);
+    for (const operation of requiredCoverageOperations) requirePassedTest(tests, table, operation, errors);
+    if (!tests.some((test) => test?.table === table && ['same_tenant_read', 'same_tenant_read_backend_only'].includes(test?.operation) && test?.passed === true)) {
+      errors.push(`missing same-tenant read coverage: ${table}`);
+    }
   }
-  if (!Array.isArray(evidence.testsRun) || evidence.testsRun.length !== tests.length) errors.push('testsRun must list every executed test case');
+  for (const table of ['documents', 'risks', 'vendors', 'tasks']) {
+    requirePassedTest(tests, table, 'same_tenant_insert', errors, `missing same-tenant insert coverage: ${table}`);
+  }
+  for (const table of ['audit_events', 'subscriptions']) {
+    for (const operation of requiredBackendWriteDenyOperations) requirePassedTest(tests, table, operation, errors);
+  }
+  if (!Array.isArray(evidence.testsRun) || evidence.testsRun.length !== tests.length) {
+    errors.push('testsRun must list every executed test case');
+  } else {
+    const expected = tests.map((test) => `${test.table}:${test.operation}`);
+    if (expected.some((name, index) => evidence.testsRun[index] !== name)) errors.push('testsRun must match every executed test case in order');
+  }
   return { valid: errors.length === 0, errors };
 }
 
@@ -249,14 +266,14 @@ function tableSpecs({ suffix, orgB, orgInsertTarget, userA, userB, memberB }) {
     organizations: { seed: orgB, insert: { name: `cross-org-${suffix}`, slug: `cross-org-${suffix}`, created_by: userA.id }, update: { name: `mutated-org-${suffix}` } },
     organization_members: { seed: memberB, insert: { organization_id: org, user_id: userA.id, role: 'viewer' }, update: { role: 'admin' } },
     documents: { seed: { organization_id: org, uploaded_by: userB.id, name: `tenant-b-doc-${suffix}`, category: 'general', storage_path: `${org}/doc-${suffix}.txt` }, insert: { organization_id: org, uploaded_by: userA.id, name: `cross-doc-${suffix}`, category: 'general', storage_path: `${org}/cross-${suffix}.txt` }, sameInsert: { organization_id: org, uploaded_by: userB.id, name: `same-doc-${suffix}`, category: 'general', storage_path: `${org}/same-${suffix}.txt` }, update: { name: `mutated-doc-${suffix}` } },
-    audit_events: { seed: { organization_id: org, actor_id: userB.id, actor_user_id: userB.id, action: 'seeded_event', entity_type: 'rls_validation', entity_id: suffix }, insert: { organization_id: org, actor_id: userA.id, actor_user_id: userA.id, action: 'cross_tenant_attempt', entity_type: 'rls_validation', entity_id: suffix }, update: { action: 'mutated_event' } },
+    audit_events: { seed: { organization_id: org, actor_id: userB.id, actor_user_id: userB.id, action: 'seeded_event', entity_type: 'rls_validation', entity_id: suffix }, insert: { organization_id: org, actor_id: userA.id, actor_user_id: userA.id, action: 'cross_tenant_attempt', entity_type: 'rls_validation', entity_id: suffix }, sameDeniedInsert: { organization_id: org, actor_id: userB.id, actor_user_id: userB.id, action: 'same_tenant_write_attempt', entity_type: 'rls_validation', entity_id: suffix }, update: { action: 'mutated_event' } },
     risks: { seed: { organization_id: org, created_by: userB.id, owner_user_id: userB.id, title: `tenant-b-risk-${suffix}`, category: 'general' }, insert: { organization_id: org, created_by: userA.id, title: `cross-risk-${suffix}`, category: 'general' }, sameInsert: { organization_id: org, created_by: userB.id, owner_user_id: userB.id, title: `same-risk-${suffix}`, category: 'general' }, update: { title: `mutated-risk-${suffix}` } },
     vendors: { seed: { organization_id: org, created_by: userB.id, name: `tenant-b-vendor-${suffix}`, category: 'general' }, insert: { organization_id: org, created_by: userA.id, name: `cross-vendor-${suffix}`, category: 'general' }, sameInsert: { organization_id: org, created_by: userB.id, name: `same-vendor-${suffix}`, category: 'general' }, update: { name: `mutated-vendor-${suffix}` } },
     tasks: { seed: { organization_id: org, created_by: userB.id, assigned_to: userB.id, title: `tenant-b-task-${suffix}`, category: 'general' }, insert: { organization_id: org, created_by: userA.id, title: `cross-task-${suffix}`, category: 'general' }, sameInsert: { organization_id: org, created_by: userB.id, assigned_to: userB.id, title: `same-task-${suffix}`, category: 'general' }, update: { title: `mutated-task-${suffix}` } },
-    subscriptions: { seed: { organization_id: org, plan: 'business', status: 'active' }, insert: { organization_id: orgInsertTarget.id, plan: 'enterprise', status: 'active' }, update: { plan: 'free' } },
+    subscriptions: { seed: { organization_id: org, plan: 'business', status: 'active' }, insert: { organization_id: orgInsertTarget.id, plan: 'enterprise', status: 'active' }, sameDeniedInsert: { organization_id: org, plan: 'enterprise', status: 'active' }, update: { plan: 'free' } },
     notifications: { seed: { organization_id: org, user_id: userB.id, title: `tenant-b-notification-${suffix}`, message: 'tenant B only', type: 'info' }, insert: { organization_id: org, user_id: userA.id, title: `cross-notification-${suffix}`, message: 'cross tenant attempt', type: 'info' }, update: { read_at: now() } },
     compliance_tasks: { seed: { organization_id: org, created_by: userB.id, assigned_to: userB.id, title: `tenant-b-compliance-task-${suffix}`, category: 'general' }, insert: { organization_id: org, created_by: userA.id, title: `cross-compliance-task-${suffix}`, category: 'general' }, sameInsert: { organization_id: org, created_by: userB.id, assigned_to: userB.id, title: `same-compliance-task-${suffix}`, category: 'general' }, update: { title: `mutated-compliance-task-${suffix}` } },
-    audit_logs: { seed: { organization_id: org, actor_user_id: userB.id, action: 'seeded_log', entity_type: 'rls_validation', entity_id: suffix }, insert: { organization_id: org, actor_user_id: userA.id, action: 'cross_tenant_attempt', entity_type: 'rls_validation', entity_id: suffix }, update: { action: 'mutated_log' } },
+    audit_logs: { seed: { organization_id: org, actor_user_id: userB.id, action: 'seeded_log', entity_type: 'rls_validation', entity_id: suffix }, insert: { organization_id: org, actor_user_id: userA.id, action: 'cross_tenant_attempt', entity_type: 'rls_validation', entity_id: suffix }, sameDeniedInsert: { organization_id: org, actor_user_id: userB.id, action: 'same_tenant_write_attempt', entity_type: 'rls_validation', entity_id: suffix }, update: { action: 'mutated_log' } },
     ai_systems: { seed: { organization_id: org, name: `tenant-b-ai-system-${suffix}`, use_case: 'rls validation', created_by: userB.id }, insert: { organization_id: org, name: `cross-ai-system-${suffix}`, use_case: 'rls validation', created_by: userA.id }, sameInsert: { organization_id: org, name: `same-ai-system-${suffix}`, use_case: 'rls validation', created_by: userB.id }, update: { name: `mutated-ai-system-${suffix}` } },
     ai_incidents: { seed: { organization_id: org, title: `tenant-b-ai-incident-${suffix}`, summary: 'tenant B only', created_by: userB.id }, insert: { organization_id: org, title: `cross-ai-incident-${suffix}`, summary: 'cross tenant attempt', created_by: userA.id }, sameInsert: { organization_id: org, title: `same-ai-incident-${suffix}`, summary: 'same tenant allowed', created_by: userB.id }, update: { title: `mutated-ai-incident-${suffix}` } },
   };
@@ -312,19 +329,19 @@ async function crossTenantReadDenied(client, table, id) {
   return { passed: noVisibleRows(error, data), error: safeError(error), returnedRows: Array.isArray(data) ? data.length : 0 };
 }
 
-async function crossTenantInsertDenied(client, table, row) {
+async function insertDenied(client, table, row) {
   const { data, error, removedColumns } = await insertWithFallback(client, table, row, 'id');
   return { passed: isExpectedDenial(error), error: safeError(error), returnedRows: Array.isArray(data) ? data.length : 0, denialMode: isExpectedDenial(error) ? 'rls_or_permission_error' : 'unexpected', removedMissingColumns: removedColumns };
 }
 
-async function crossTenantUpdateDenied(admin, client, table, id, patch) {
+async function updateDenied(admin, client, table, id, patch) {
   const before = await admin.from(table).select('*').eq('id', id).maybeSingle();
   const { data, error } = await client.from(table).update(patch).eq('id', id).select('id');
   const after = await admin.from(table).select('*').eq('id', id).maybeSingle();
   return { passed: JSON.stringify(before.data) === JSON.stringify(after.data) && (noVisibleRows(error, data) || isExpectedDenial(error)), error: safeError(error), returnedRows: Array.isArray(data) ? data.length : 0 };
 }
 
-async function crossTenantDeleteDenied(admin, client, table, id) {
+async function deleteDenied(admin, client, table, id) {
   const { data, error } = await client.from(table).delete().eq('id', id).select('id');
   const after = await admin.from(table).select('id').eq('id', id).maybeSingle();
   return { passed: Boolean(after.data?.id) && (noVisibleRows(error, data) || isExpectedDenial(error)), error: safeError(error), returnedRows: Array.isArray(data) ? data.length : 0 };
@@ -344,7 +361,7 @@ async function sameTenantInsertAllowed(client, table, row) {
 function markRegisterComplete() {
   if (!updateRegister) return false;
   const source = fs.readFileSync(registerPath, 'utf8');
-  const updated = source.replace(/\| Supabase live RLS validation completed \| Open \|[^\n]+/, '| Supabase live RLS validation completed | Complete | `docs/security/evidence/runtime/supabase-live-rls-validation.json` records status `Complete`, outcome `passed`, timestamp, redacted Supabase project reference, tables reviewed, tests run, zero failures, reviewer, command used, commit SHA, and passing live tenant A/B RLS validation for cross-tenant read, insert, update, and delete denial plus same-tenant allowed behavior | Security reviewer |');
+  const updated = source.replace(/\| Supabase live RLS validation completed \| Open \|[^\n]+/, '| Supabase live RLS validation completed | Complete | `docs/security/evidence/runtime/supabase-live-rls-validation.json` records status `Complete`, outcome `passed`, timestamp, redacted Supabase project reference, tables reviewed, tests run, zero failures, reviewer, command used, commit SHA, and passing live tenant A/B RLS validation for per-table cross-tenant read, insert, update, and delete denial plus same-tenant allowed behavior and backend-owned write denial | Security reviewer |');
   if (updated === source) throw new Error('Could not update live RLS row in P0 runtime evidence register.');
   fs.writeFileSync(registerPath, updated);
   return true;
@@ -366,14 +383,19 @@ async function main() {
       const spec = ctx.specs[table];
       if (!spec?.seed?.id) continue;
       testCases.push({ table, operation: 'cross_tenant_read', ...(await crossTenantReadDenied(tenantA, table, spec.seed.id)) });
-      testCases.push({ table, operation: 'cross_tenant_insert', ...(await crossTenantInsertDenied(tenantA, table, spec.insert)) });
-      testCases.push({ table, operation: 'cross_tenant_update', ...(await crossTenantUpdateDenied(admin, tenantA, table, spec.seed.id, spec.update)) });
-      testCases.push({ table, operation: 'cross_tenant_delete', ...(await crossTenantDeleteDenied(admin, tenantA, table, spec.seed.id)) });
+      testCases.push({ table, operation: 'cross_tenant_insert', ...(await insertDenied(tenantA, table, spec.insert)) });
+      testCases.push({ table, operation: 'cross_tenant_update', ...(await updateDenied(admin, tenantA, table, spec.seed.id, spec.update)) });
+      testCases.push({ table, operation: 'cross_tenant_delete', ...(await deleteDenied(admin, tenantA, table, spec.seed.id)) });
       testCases.push({ table, operation: backendOwnedTables.has(table) ? 'same_tenant_read_backend_only' : 'same_tenant_read', ...(await sameTenantReadAllowed(tenantB, table, spec.seed.id)) });
       if (sameTenantWritableTables.has(table) && spec.sameInsert) {
         const sameInsert = await sameTenantInsertAllowed(tenantB, table, spec.sameInsert);
         testCases.push({ table, operation: 'same_tenant_insert', ...sameInsert });
         if (sameInsert.insertedId) ctx.created.rows.push([table, sameInsert.insertedId]);
+      }
+      if (backendOwnedTables.has(table) && spec.sameDeniedInsert) {
+        testCases.push({ table, operation: 'same_tenant_insert_denied', ...(await insertDenied(tenantB, table, spec.sameDeniedInsert)) });
+        testCases.push({ table, operation: 'same_tenant_update_denied', ...(await updateDenied(admin, tenantB, table, spec.seed.id, spec.update)) });
+        testCases.push({ table, operation: 'same_tenant_delete_denied', ...(await deleteDenied(admin, tenantB, table, spec.seed.id)) });
       }
     }
     const failed = testCases.filter((test) => !test.passed);
@@ -401,4 +423,4 @@ if (isCli) {
   });
 }
 
-export { buildEvidencePayload, commandUsed, criticalTables, optionalTables, parseEvidenceJson, projectReferenceFromUrl, redactProjectReferenceFromUrl, requiredCoverageOperations, tableCoverageFrom, validatePassingEvidence };
+export { buildEvidencePayload, commandUsed, criticalTables, optionalTables, parseEvidenceJson, projectReferenceFromUrl, redactProjectReferenceFromUrl, requiredBackendWriteDenyOperations, requiredCoverageOperations, tableCoverageFrom, validatePassingEvidence };
