@@ -11,6 +11,10 @@ const auditSigningEnv = env('AUDIT', 'CHAIN', 'SIGNING', 'SECRET');
 const stepUpAcrEnv = env('STEP', 'UP', 'IDP', 'ACR', 'VALUES');
 const stepUpAmrEnv = env('STEP', 'UP', 'IDP', 'AMR', 'VALUES');
 
+// Upload malware/content scanning production envs: REQUIRE_MALWARE_SCAN_FOR_UPLOADS, MALWARE_SCANNER_PROVIDER.
+const malwareScanRequiredEnv = env('REQUIRE', 'MALWARE', 'SCAN', 'FOR', 'UPLOADS');
+const malwareScannerProviderEnv = env('MALWARE', 'SCANNER', 'PROVIDER');
+
 const required = [supabaseUrlEnv, supabaseAnonEnv, supabaseServiceEnv];
 
 const recommended = [
@@ -28,8 +32,8 @@ const recommended = [
   stepUpProviderEnv,
   stepUpAcrEnv,
   stepUpAmrEnv,
-  env('REQUIRE', 'MALWARE', 'SCAN', 'FOR', 'UPLOADS'),
-  env('MALWARE', 'SCANNER', 'PROVIDER'),
+  malwareScanRequiredEnv,
+  malwareScannerProviderEnv,
   env('SENTRY', 'AUTH', 'TOKEN'),
   env('UPSTASH', 'REDIS', 'REST', 'URL'),
   env('UPSTASH', 'REDIS', 'REST', 'TOKEN'),
