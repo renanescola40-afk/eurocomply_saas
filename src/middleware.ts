@@ -16,6 +16,7 @@ const PUBLIC_ROUTES = [
   '/register',
   '/auth',
   '/pricing',
+  '/checkout',
   '/faq',
   '/about',
   '/contact',
@@ -173,7 +174,7 @@ export default async function middleware(req: NextRequest) {
 
     if (!authState.isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
-      loginUrl.searchParams.set('next', pathname);
+      loginUrl.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
       const response = NextResponse.redirect(loginUrl);
       copyAuthCookies(authState.supabaseResponse, response);
       return response;
