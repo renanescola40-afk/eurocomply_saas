@@ -72,34 +72,81 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-      - name: Run EuroComply security gates
+      - name: Public secrets gate
         # Governance marker for legacy workflow gates: npm run security:ci
-        run: |
-          npm run security:public-secrets
-          npm run security:supply-chain
-          npm run security:ci-cd
-          npm run security:rls
-          npm run security:client-boundaries
-          npm run security:auth-tokens
-          npm run security:authorization-bola
-          npm run security:server-action-identity
-          npm run security:protected-routes
-          npm run security:headers
-          npm run security:no-store
-          npm run security:origin-guards
-          npm run security:no-open-proxy
-          npm run security:internal-maintenance
-          npm run security:ops-readiness
-          npm run security:public-verifiers
-          npm run security:public-errors
-          npm run security:csv-exports
-          npm run security:document-filenames
-          npm run security:billing-webhook-body
-          npm run security:responses
-          npm run security:logs
-          npm run security:api-endpoints
-          npm run security:api-guards
-          npm run security:enterprise-api
+        run: npm run security:public-secrets
 
-      - name: Run step-up authentication gate
+      - name: Supply-chain gate
+        run: npm run security:supply-chain
+
+      - name: CI/CD secrets gate
+        run: npm run security:ci-cd
+
+      - name: RLS gate
+        run: npm run security:rls
+
+      - name: Client boundaries gate
+        run: npm run security:client-boundaries
+
+      - name: Auth token validation gate
+        run: npm run security:auth-tokens
+
+      - name: Authorization BOLA gate
+        run: npm run security:authorization-bola
+
+      - name: Server action identity gate
+        run: npm run security:server-action-identity
+
+      - name: Protected routes gate
+        run: npm run security:protected-routes
+
+      - name: Security headers gate
+        run: npm run security:headers
+
+      - name: No-store gate
+        run: npm run security:no-store
+
+      - name: Origin guards gate
+        run: npm run security:origin-guards
+
+      - name: No open proxy gate
+        run: npm run security:no-open-proxy
+
+      - name: Internal maintenance gate
+        run: npm run security:internal-maintenance
+
+      - name: Ops readiness gate
+        run: npm run security:ops-readiness
+
+      - name: Public verifiers gate
+        run: npm run security:public-verifiers
+
+      - name: Public errors gate
+        run: npm run security:public-errors
+
+      - name: CSV exports gate
+        run: npm run security:csv-exports
+
+      - name: Document filenames gate
+        run: npm run security:document-filenames
+
+      - name: Billing webhook body gate
+        run: npm run security:billing-webhook-body
+
+      - name: Security responses gate
+        run: npm run security:responses
+
+      - name: Log sanitization gate
+        run: npm run security:logs
+
+      - name: API endpoint hardening gate
+        run: npm run security:api-endpoints
+
+      - name: API guards gate
+        run: npm run security:api-guards
+
+      - name: Enterprise API gate
+        run: npm run security:enterprise-api
+
+      - name: Step-up authentication gate
         run: node scripts/security/check-step-up.mjs
