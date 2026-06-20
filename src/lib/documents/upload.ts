@@ -145,6 +145,8 @@ export function assertDocumentStoragePathInOrganization(storagePath: string | nu
 }
 
 export function validateDocumentFile(file: File) {
+  const declaredMimeType = file.type;
+
   if (file.size <= 0) {
     return 'File is empty.';
   }
@@ -153,7 +155,7 @@ export function validateDocumentFile(file: File) {
     return 'File is too large. Maximum size is 10MB.';
   }
 
-  if (!isAllowedDocumentMimeType(file.type)) {
+  if (!isAllowedDocumentMimeType(declaredMimeType)) {
     return 'Unsupported file type.';
   }
 
@@ -162,7 +164,7 @@ export function validateDocumentFile(file: File) {
   }
 
   const extension = getDocumentFileExtension(file.name);
-  const allowedExtensions = DOCUMENT_EXTENSIONS_BY_MIME_TYPE[file.type];
+  const allowedExtensions = DOCUMENT_EXTENSIONS_BY_MIME_TYPE[declaredMimeType];
 
   if (!allowedExtensions.includes(extension)) {
     return 'File extension does not match the declared file type.';
