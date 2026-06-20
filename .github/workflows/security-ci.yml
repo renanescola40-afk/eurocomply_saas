@@ -114,7 +114,16 @@ jobs:
         run: npm run security:supply-chain
 
       - name: CI/CD secrets gate
-        run: npm run security:ci-cd
+        run: npm run security:ci-cd 2>&1 | tee cicd.log
+
+      - name: Upload CI/CD diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cicd-gate
+          path: cicd.log
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: RLS gate
         run: npm run security:rls
