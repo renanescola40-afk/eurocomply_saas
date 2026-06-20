@@ -6,11 +6,13 @@ const validatorPath = 'scripts/security/run-supabase-live-tenant-isolation.mjs';
 const evidencePath = 'docs/security/evidence/runtime/supabase-live-rls-validation.json';
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
 const runbookPath = 'docs/security/SUPABASE_LIVE_RLS_WORKFLOW.md';
+const tenantIsolationDocPath = 'docs/security/SUPABASE_RLS_TENANT_ISOLATION.md';
 const requiredMigrationFragments = [
   '20260619_multi_tenant_rls_hardening.sql',
   '20260619103000_complete_multi_tenant_rls_policies.sql',
   '20260619111500_lock_backend_owned_rls_writes.sql',
   '20260619130000_drop_legacy_permissive_rls_policies.sql',
+  '20260620120000_enterprise_multi_tenant_rls_final_lock.sql',
 ];
 const requiredTables = [
   'organizations',
@@ -19,7 +21,7 @@ const requiredTables = [
   'audit_events',
   'risks',
   'vendors',
-  'compliance_tasks',
+  'tasks',
   'subscriptions',
   'notifications',
 ];
@@ -29,15 +31,22 @@ const requiredValidatorTokens = [
   'cross_tenant_update',
   'cross_tenant_delete',
   'same_tenant_read',
+  'same_tenant_insert',
   'markRegisterComplete',
   'tableCoverageFrom',
+  'buildEvidencePayload',
+  'validatePassingEvidence',
+  'supabaseProjectReferenceRedacted',
+  'commandUsed',
+  'commitSha',
+  '--advisory',
 ];
 const requiredWorkflowTokens = [
   'workflow_dispatch',
   validatorPath,
   evidencePath,
   registerPath,
-  'create-pull-request',
+  'gh pr create',
 ];
 const failures = [];
 
@@ -60,6 +69,7 @@ const validator = read(validatorPath);
 const evidenceText = read(evidencePath);
 const register = read(registerPath);
 const runbook = read(runbookPath);
+const tenantIsolationDoc = read(tenantIsolationDocPath);
 const migrations = fs.existsSync('supabase/migrations')
   ? fs.readdirSync('supabase/migrations').join('\n')
   : '';
@@ -77,6 +87,14 @@ requireTokens(runbookPath, runbook, [
   'run-supabase-live-tenant-isolation.mjs',
   evidencePath,
   registerPath,
+]);
+requireTokens(tenantIsolationDocPath, tenantIsolationDoc, [
+  'Supabase RLS Tenant Isolation',
+  'tasks',
+  'audit_events',
+  'same-tenant inserts',
+  'advisory mode',
+  'Public production and enterprise procurement stay blocked',
 ]);
 
 try {

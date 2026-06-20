@@ -9,13 +9,15 @@ const criticalTables = new Set([
   'organization_members',
   'documents',
   'audit_events',
-  'audit_logs',
   'risks',
   'vendors',
   'tasks',
-  'compliance_tasks',
   'subscriptions',
   'notifications',
+]);
+const additionalTenantTables = new Set([
+  'audit_logs',
+  'compliance_tasks',
   'organization_invites',
   'invitations',
   'ai_systems',
@@ -68,14 +70,36 @@ function mergeMaps(maps) {
   return merged;
 }
 
+function helperUsed(sql, helperName, table) {
+  const escapedHelper = helperName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`${escapedHelper}\\('${table}'\\)`, 'i').test(sql)
+    || new RegExp(String.raw`foreach\s+table_name\s+in\s+array\s+array\[[\s\S]*'${table}'[\s\S]*\][\s\S]*perform\s+public\.${escapedHelper}\(table_name\)`, 'i').test(sql);
+}
+
+function orgScopedHelperUsed(sql, table) {
+  return helperUsed(sql, 'app_rls_org_scoped', table) || helperUsed(sql, 'app_rls_org_scoped_enterprise', table);
+}
+
+function backendOnlyHelperUsed(sql, table) {
+  return helperUsed(sql, 'app_rls_backend_only', table) || helperUsed(sql, 'app_rls_backend_only_enterprise', table);
+}
+
 function hasRlsEnable(sql, table) {
-  return new RegExp(`alter\\s+table(?:\\s+if\\s+exists)?\\s+(?:public\\.)?${table}\\s+enable\\s+row\\s+level\\s+security`, 'i').test(sql);
+  return new RegExp(`alter\\s+table(?:\\s+if\\s+exists)?\\s+(?:public\\.)?${table}\\s+enable\\s+row\\s+level\\s+security`, 'i').test(sql)
+    || orgScopedHelperUsed(sql, table)
+    || backendOnlyHelperUsed(sql, table);
 }
 
 function hasPolicy(sql, table, keyword) {
   const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`create\\s+policy[\\s\\S]+?on\\s+(?:public\\.)?${table}[\\s\\S]+?${escaped}`, 'i').test(sql)
-    || new RegExp(`create\\s+policy[\\s\\S]+?on\\s+public\\.%I[\\s\\S]+?${escaped}`, 'i').test(sql);
+  if (orgScopedHelperUsed(sql, table)) {
+    return ['select', 'insert', 'update', 'delete', 'organization_id', 'has_org_write_role'].includes(keyword);
+  }
+  if (backendOnlyHelperUsed(sql, table)) {
+    return ['select', 'insert', 'update', 'delete', 'with check (false)', 'using (false)', 'organization_id'].includes(keyword);
+  }
+
+  return new RegExp(`create\\s+policy[\\s\\S]+?on\\s+(?:public\\.)?${table}[\\s\\S]+?${escaped}`, 'i').test(sql);
 }
 
 function hasDropLegacy(sql, table) {
@@ -83,12 +107,17 @@ function hasDropLegacy(sql, table) {
     || new RegExp(`drop\\s+policy\\s+if\\s+exists[\\s\\S]+?on\\s+public\\.%I`, 'i').test(sql);
 }
 
+function hasAuditWriteProtection(sql) {
+  return backendOnlyHelperUsed(sql, 'audit_events')
+    || /rls_audit_events_insert_backend_only[\s\S]+?with check \(false\)/i.test(sql);
+}
+
 function auditMigrations() {
   const migrationFiles = listFiles(migrationDir, (file) => file.endsWith('.sql'));
   const migrationTexts = readAll(migrationFiles);
   const allSql = migrationTexts.map((entry) => entry.text).join('\n\n');
   const schemaTables = mergeMaps(migrationTexts.map((entry) => extractCreateTableColumns(entry.text)));
-  const tenantTables = new Set([...criticalTables]);
+  const tenantTables = new Set([...criticalTables, ...additionalTenantTables]);
 
   for (const [table, columns] of schemaTables.entries()) {
     if (columns.has('organization_id') || (columns.has('user_id') && !userScopedAllowList.has(table))) tenantTables.add(table);
@@ -112,12 +141,14 @@ function auditMigrations() {
     }
   }
 
+  if (!hasAuditWriteProtection(allSql)) failures.push('audit_events must be backend-only for INSERT/UPDATE/DELETE from authenticated clients');
+
   return [...tenantTables].sort();
 }
 
 function auditQueryLayer() {
   const files = sourceRoots.flatMap((root) => listFiles(root, (file) => /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(file)));
-  const tenantTableNames = [...criticalTables].filter((table) => !userScopedAllowList.has(table));
+  const tenantTableNames = [...criticalTables, ...additionalTenantTables].filter((table) => !userScopedAllowList.has(table));
   const fromPattern = /\.from\(\s*['"]([^'"]+)['"]\s*\)/g;
 
   for (const file of files) {

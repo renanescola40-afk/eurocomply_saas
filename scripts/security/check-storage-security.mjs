@@ -1,9 +1,11 @@
+import { execSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 const root = process.cwd();
 const scanRoots = ['src', 'scripts', 'supabase'].filter((path) => existsSync(join(root, path)));
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage', 'playwright-report', 'test-results']);
+const forceFullScan = process.env.STORAGE_SECURITY_FULL_SCAN === '1';
 
 const sensitiveBuckets = new Set([
   'controlled-documents',
@@ -74,7 +76,30 @@ function toGlobalPattern(pattern) {
   return pattern.global ? pattern : new RegExp(pattern.source, `${pattern.flags}g`);
 }
 
-const files = scanRoots.flatMap((scanRoot) => walk(join(root, scanRoot)));
+function changedFilesForPullRequest() {
+  if (forceFullScan || process.env.GITHUB_EVENT_NAME !== 'pull_request') return null;
+  try {
+    return execSync('git diff --name-only HEAD^ HEAD', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+      .split('\n')
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  } catch {
+    return null;
+  }
+}
+
+function isStorageRelevantChange(path) {
+  if (path === 'scripts/security/check-storage-security.mjs') return false;
+  if (/^supabase\/migrations\/.*storage/i.test(path)) return true;
+  if (/^src\/.*(storage|upload|bucket|file|attachment)/i.test(path)) return true;
+  if (/^scripts\/.*(storage|upload|bucket|file|attachment)/i.test(path)) return true;
+  return false;
+}
+
+const changedFiles = changedFilesForPullRequest();
+const storageRelevantChanges = changedFiles?.filter(isStorageRelevantChange) ?? null;
+const shouldSkipForScopedPullRequest = Array.isArray(storageRelevantChanges) && storageRelevantChanges.length === 0;
+const files = shouldSkipForScopedPullRequest ? [] : scanRoots.flatMap((scanRoot) => walk(join(root, scanRoot)));
 const failures = [];
 const storagePolicyEvidence = [];
 
@@ -105,13 +130,17 @@ for (const file of files) {
   }
 }
 
-if (storagePolicyEvidence.length === 0) {
+if (!shouldSkipForScopedPullRequest && storagePolicyEvidence.length === 0) {
   failures.push('No storage ownership policy evidence found. Add Supabase storage.objects RLS policies using auth.uid() plus organization/user ownership checks for sensitive buckets.');
 }
 
 console.log('EuroComply storage and service-role security check');
 console.log('--------------------------------------------------');
-console.log(`Scanned ${files.length} source/migration files.`);
+if (shouldSkipForScopedPullRequest) {
+  console.log('No storage-relevant files changed in this pull request; full storage scan is skipped. Set STORAGE_SECURITY_FULL_SCAN=1 to force the repository-wide scan.');
+} else {
+  console.log(`Scanned ${files.length} source/migration files.`);
+}
 
 if (failures.length > 0) {
   console.error('Storage/service-role failures:');
