@@ -1,1 +1,0 @@
-This branch hardens document uploads by using full upload security validation before malware scanning and storage. See `docs/ops/2026-06-20-upload-validation-audit.md`.
