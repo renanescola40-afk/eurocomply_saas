@@ -41,7 +41,16 @@ jobs:
         run: node scripts/preflight-ci.mjs
 
       - name: Run GitHub workflow governance gate
-        run: npm run security:github-workflows
+        run: npm run security:github-workflows 2>&1 | tee github-workflows.log
+
+      - name: Upload GitHub workflow governance diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: github-workflow-governance
+          path: github-workflows.log
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Print npm audit triage summary
         run: |
