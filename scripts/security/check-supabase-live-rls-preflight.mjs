@@ -46,7 +46,7 @@ const requiredWorkflowTokens = [
   validatorPath,
   evidencePath,
   registerPath,
-  'create-pull-request',
+  'gh pr create',
 ];
 const failures = [];
 
