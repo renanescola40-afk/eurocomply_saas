@@ -1,7 +1,7 @@
 -- Enterprise backend-only RLS explicit lock.
 -- Keeps static RLS evidence deterministic by applying backend-only helper calls per table.
 
-create or replace function public.app_rls_backend_only_enterprise(table_name text)
+create or replace function public.app_rls_backend_only(table_name text)
 returns void
 language plpgsql
 set search_path = public
@@ -37,11 +37,11 @@ $$;
 
 do $$
 begin
-  perform public.app_rls_backend_only_enterprise('audit_events');
-  perform public.app_rls_backend_only_enterprise('subscriptions');
-  perform public.app_rls_backend_only_enterprise('audit_logs');
-  perform public.app_rls_backend_only_enterprise('organization_invites');
-  perform public.app_rls_backend_only_enterprise('invitations');
+  perform public.app_rls_backend_only('audit_events');
+  perform public.app_rls_backend_only('subscriptions');
+  perform public.app_rls_backend_only('audit_logs');
+  perform public.app_rls_backend_only('organization_invites');
+  perform public.app_rls_backend_only('invitations');
 end $$;
 
-drop function if exists public.app_rls_backend_only_enterprise(text);
+drop function if exists public.app_rls_backend_only(text);
