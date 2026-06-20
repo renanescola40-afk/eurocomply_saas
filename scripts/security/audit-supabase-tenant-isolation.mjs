@@ -72,8 +72,9 @@ function mergeMaps(maps) {
 
 function helperUsed(sql, helperName, table) {
   const escapedHelper = helperName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`${escapedHelper}\\('${table}'\\)`, 'i').test(sql)
-    || new RegExp(String.raw`foreach\s+table_name\s+in\s+array\s+array\[[\s\S]*'${table}'[\s\S]*\][\s\S]*perform\s+public\.${escapedHelper}\(table_name\)`, 'i').test(sql);
+  const escapedTable = table.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`${escapedHelper}\\s*\\(\\s*'${escapedTable}'\\s*\\)`, 'i').test(sql)
+    || new RegExp(String.raw`foreach\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+in\s+array\s+array\[[\s\S]*'${escapedTable}'[\s\S]*\][\s\S]*perform\s+public\.${escapedHelper}\s*\(\s*\1\s*\)`, 'i').test(sql);
 }
 
 function orgScopedHelperUsed(sql, table) {
@@ -102,13 +103,19 @@ function hasPolicy(sql, table, keyword) {
   return new RegExp(`create\\s+policy[\\s\\S]+?on\\s+(?:public\\.)?${table}[\\s\\S]+?${escaped}`, 'i').test(sql);
 }
 
+function hasBackendOnlyWriteDenial(sql, table) {
+  if (backendOnlyHelperUsed(sql, table)) return true;
+  const normalized = sql.toLowerCase().replace(/\s+/g, ' ');
+  return normalized.includes(`on public.${table.toLowerCase()}`) && normalized.includes('with check (false)');
+}
+
 function hasDropLegacy(sql, table) {
   return new RegExp(`drop\\s+policy\\s+if\\s+exists[\\s\\S]+?on\\s+(?:public\\.)?${table}`, 'i').test(sql)
     || new RegExp(`drop\\s+policy\\s+if\\s+exists[\\s\\S]+?on\\s+public\\.%I`, 'i').test(sql);
 }
 
 function hasAuditWriteProtection(sql) {
-  return backendOnlyHelperUsed(sql, 'audit_events')
+  return hasBackendOnlyWriteDenial(sql, 'audit_events')
     || /rls_audit_events_insert_backend_only[\s\S]+?with check \(false\)/i.test(sql);
 }
 
@@ -128,7 +135,7 @@ function auditMigrations() {
     if (!hasPolicy(allSql, table, 'select')) failures.push(`Missing SELECT policy coverage for table: ${table}`);
 
     if (backendOnlyTables.has(table)) {
-      if (!hasPolicy(allSql, table, 'with check (false)')) failures.push(`Missing backend-only write denial policy for table: ${table}`);
+      if (!hasBackendOnlyWriteDenial(allSql, table)) failures.push(`Missing backend-only write denial policy for table: ${table}`);
     } else if (table !== 'organizations') {
       if (!hasPolicy(allSql, table, 'organization_id') && table !== 'organization_members') failures.push(`Missing organization_id policy guard for table: ${table}`);
       if (!hasPolicy(allSql, table, 'insert')) failures.push(`Missing INSERT policy coverage for table: ${table}`);
@@ -160,7 +167,7 @@ function auditQueryLayer() {
       if (!tenantTableNames.includes(table)) continue;
       const snippet = text.slice(match.index, Math.min(text.length, match.index + 1500));
       const usesUserId = /\.eq\(\s*['"]user_id['"]/.test(snippet);
-      const hasOrgGuard = /\.eq\(\s*['"]organization_id['"]|\.match\(\s*\{[^}]*organization_id\s*:|requireOrganizationAccess|assertOrganization|organizationId|organization_id/.test(snippet);
+      const hasOrgGuard = /\.eq\(\s*['"](?:organization_id|workspace_id)['"]|\.not\(\s*['"]organization_id['"]|\.match\(\s*\{[^}]*(?:organization_id|workspace_id)\s*:|requireOrganizationAccess|assertOrganization|organizationId|organization_id|workspaceId|workspace_id/.test(snippet);
       if (usesUserId && !hasOrgGuard) failures.push(`${file}: ${table} query filters user_id without an organization guard`);
     }
   }

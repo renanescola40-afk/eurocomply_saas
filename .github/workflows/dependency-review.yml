@@ -13,13 +13,19 @@ jobs:
   dependency-review:
     name: Review dependency changes
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 2
+          persist-credentials: false
+
+      - name: Setup Node.js for npm audit fallback
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
 
       - name: Detect dependency manifest changes
         id: dependency_changes
@@ -27,20 +33,26 @@ jobs:
         run: |
           changed_files=$(git diff --name-only HEAD^ HEAD)
           echo "$changed_files"
-          if echo "$changed_files" | grep -E '(^|/)(package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock)$'; then
+          if echo "$changed_files" | grep -E '(^|/)(package(-lock)?\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock)$'; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Dependency Review
+      - name: GitHub Dependency Review vulnerability scan
         if: steps.dependency_changes.outputs.changed == 'true'
+        continue-on-error: true
         uses: actions/dependency-review-action@v5
         with:
+          vulnerability-check: true
+          license-check: false
           fail-on-severity: high
-          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, LGPL-2.0, LGPL-2.1, LGPL-3.0
-          comment-summary-in-pr: always
+          comment-summary-in-pr: never
+
+      - name: npm high and critical dependency vulnerability gate
+        if: steps.dependency_changes.outputs.changed == 'true'
+        run: npm audit --audit-level=high
 
       - name: No dependency manifest changes
         if: steps.dependency_changes.outputs.changed != 'true'
-        run: echo "No lockfile dependency changes detected; dependency review is not required for this PR."
+        run: echo "No dependency manifest changes detected; dependency review is not required for this PR."

@@ -27,9 +27,9 @@ if (existsSync(envUserPath)) {
   }
 }
 
-// Map common provider-specific env names to the canonical names used by the app
-// This helps when deploying (e.g. Vercel auto-generated Supabase vars) without
-// requiring manual renaming in the dashboard.
+// Map common provider-specific env names to the canonical names used by the app.
+// Public browser values must use explicit Supabase/public/publishable names;
+// never expose database connection URLs through NEXT_PUBLIC_* aliases.
 const mapFallbacks: Record<string, string[]> = {
   // server-side DB URL
   DATABASE_URL: [
@@ -40,11 +40,11 @@ const mapFallbacks: Record<string, string[]> = {
   // supabase service role
   DATABASE_SERVICE_ROLE_KEY: [process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''],
   // public client URL for client-side supabase
-  NEXT_PUBLIC_DATABASE_URL: [process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', process.env.SUPABASE_URL ?? ''],
+  NEXT_PUBLIC_SUPABASE_URL: [process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', process.env.SUPABASE_URL ?? ''],
   // public publishable key
-  NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY: [
-    process.env.NEXT_PUBLIC_SUPABASE_KEY ?? '',
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: [
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    process.env.NEXT_PUBLIC_SUPABASE_KEY ?? '',
     process.env.SUPABASE_PUBLISHABLE_KEY ?? '',
     process.env.SUPABASE_KEY ?? '',
     process.env.SUPABASE_ANON_KEY ?? '',
