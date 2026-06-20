@@ -4,11 +4,12 @@ import {
   criticalTables,
   parseEvidenceJson,
   redactProjectReferenceFromUrl,
+  requiredBackendWriteDenyOperations,
   tableCoverageFrom,
   validatePassingEvidence,
 } from '../../scripts/security/run-supabase-live-tenant-isolation.mjs';
 
-const operations = [
+const baseOperations = [
   'cross_tenant_read',
   'cross_tenant_insert',
   'cross_tenant_update',
@@ -17,9 +18,11 @@ const operations = [
 ];
 
 function passingTestCases() {
-  const cases = criticalTables.flatMap((table) => operations.map((operation) => ({
+  const cases = criticalTables.flatMap((table) => baseOperations.map((operation) => ({
     table,
-    operation,
+    operation: ['audit_events', 'subscriptions'].includes(table) && operation === 'same_tenant_read'
+      ? 'same_tenant_read_backend_only'
+      : operation,
     passed: true,
     returnedRows: operation.startsWith('cross_tenant') ? 0 : 1,
     error: null,
@@ -36,7 +39,36 @@ function passingTestCases() {
     });
   }
 
+  for (const table of ['audit_events', 'subscriptions']) {
+    for (const operation of requiredBackendWriteDenyOperations) {
+      cases.push({
+        table,
+        operation,
+        passed: true,
+        returnedRows: 0,
+        error: { code: '42501', message: 'permission denied by RLS' },
+      });
+    }
+  }
+
   return cases;
+}
+
+function passingEvidence(overrides = {}) {
+  const testCases = overrides.testCases ?? passingTestCases();
+  return buildEvidencePayload({
+    status: 'Complete',
+    outcome: 'passed',
+    supabaseUrl: 'https://abcdefghijklmnopqrst.supabase.co',
+    command: 'node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register',
+    commitSha: '1234567890abcdef1234567890abcdef12345678',
+    timestamp: '2026-06-20T12:00:00Z',
+    reviewer: 'security-reviewer',
+    testCases,
+    failures: [],
+    tablesReviewed: tableCoverageFrom(testCases),
+    ...overrides,
+  });
 }
 
 describe('Supabase live RLS evidence parser and generator', () => {
@@ -54,20 +86,17 @@ describe('Supabase live RLS evidence parser and generator', () => {
     ]);
   });
 
+  it('tracks backend-owned write denial operations', () => {
+    expect(requiredBackendWriteDenyOperations).toEqual([
+      'same_tenant_insert_denied',
+      'same_tenant_update_denied',
+      'same_tenant_delete_denied',
+    ]);
+  });
+
   it('generates passing evidence with redacted project reference and required runtime fields', () => {
     const testCases = passingTestCases();
-    const evidence = buildEvidencePayload({
-      status: 'Complete',
-      outcome: 'passed',
-      supabaseUrl: 'https://abcdefghijklmnopqrst.supabase.co',
-      command: 'node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register',
-      commitSha: '1234567890abcdef1234567890abcdef12345678',
-      timestamp: '2026-06-20T12:00:00Z',
-      reviewer: 'security-reviewer',
-      testCases,
-      failures: [],
-      tablesReviewed: tableCoverageFrom(testCases),
-    });
+    const evidence = passingEvidence({ testCases });
 
     expect(evidence.status).toBe('Complete');
     expect(evidence.outcome).toBe('passed');
@@ -118,5 +147,21 @@ describe('Supabase live RLS evidence parser and generator', () => {
     expect(result.errors).toContain('outcome must be passed');
     expect(result.errors).toContain('passing evidence must not contain failures');
     expect(result.errors).toContain('missing live RLS table coverage: tasks');
+  });
+
+  it('rejects evidence that has global operations but misses a critical table operation', () => {
+    const testCases = passingTestCases().filter((test) => !(test.table === 'vendors' && test.operation === 'cross_tenant_update'));
+    const result = validatePassingEvidence(passingEvidence({ testCases }));
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('missing live RLS operation coverage: vendors:cross_tenant_update');
+  });
+
+  it('rejects evidence that omits same-tenant backend write denial for audit events', () => {
+    const testCases = passingTestCases().filter((test) => !(test.table === 'audit_events' && test.operation === 'same_tenant_update_denied'));
+    const result = validatePassingEvidence(passingEvidence({ testCases }));
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('missing live RLS operation coverage: audit_events:same_tenant_update_denied');
   });
 });
