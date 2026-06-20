@@ -88,11 +88,11 @@ function lineNumberFor(source, index) {
 }
 
 function isPlaceholderLine(line) {
-  return /(placeholder|example|changeme|your-|ci-|test_|sk_test_|price_ci_|whsec_ci_|dummy|not configured|redacted)/i.test(line);
+  return /(placeholder|example|changeme|your-|ci-|ci_|test_|sk_test_|price_ci_|whsec_ci_|dummy|not configured|redacted)/i.test(line);
 }
 
 function isPlaceholderValue(value) {
-  return value === '' || /^(undefined|null|process\.env|\$\{|<.*>|\*{3,}|x{3,}|your-|changeme|placeholder|example|dummy|redacted|ci-|test_|sk_test_|price_ci_|whsec_ci_)/i.test(value);
+  return value === '' || /^(undefined|null|process\.env|\[process\.env|\$\{|<.*>|\*{3,}|x{3,}|your-|changeme|placeholder|example|dummy|redacted|ci-|ci_|test_|sk_test_|price_ci_|whsec_ci_)/i.test(value);
 }
 
 function isSymbolicEnvironmentName(value) {
