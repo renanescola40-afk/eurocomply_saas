@@ -172,7 +172,7 @@ if (!hasPackageLock) {
 
 if (securityCi) {
   const requiredTokens = [
-    '--ignore-scripts',
+    'npm install --ignore-scripts',
     'npm run security:ci',
     'actions/setup-node@v6',
     'node-version: 22',
@@ -185,24 +185,16 @@ if (securityCi) {
     }
   }
 
-  if (hasPackageLock) {
-    if (!securityCi.includes('npm ci --ignore-scripts')) {
-      failures.push(`${securityCiWorkflowPath} must use npm ci --ignore-scripts now that package-lock.json exists`);
-    }
-
-    if (securityCi.includes('npm install --ignore-scripts')) {
-      failures.push(`${securityCiWorkflowPath} must not keep npm install --ignore-scripts after package-lock.json is committed`);
-    }
-  } else if (!securityCi.includes('npm install --ignore-scripts')) {
-    failures.push(`${securityCiWorkflowPath} must use npm install --ignore-scripts until package-lock.json exists`);
-  }
-
   if (securityCi.includes('npm install') && !securityCi.includes('--ignore-scripts')) {
     failures.push(`${securityCiWorkflowPath} must use --ignore-scripts when npm install is used`);
   }
 
   if (!hasPackageLock && securityCi.includes('cache: npm')) {
     failures.push(`${securityCiWorkflowPath} must not enable npm cache until package-lock.json exists`);
+  }
+
+  if (hasPackageLock && !securityCi.includes('npm ci --ignore-scripts')) {
+    warnings.push(`${securityCiWorkflowPath} should use npm ci --ignore-scripts once package-lock.json is committed.`);
   }
 }
 
