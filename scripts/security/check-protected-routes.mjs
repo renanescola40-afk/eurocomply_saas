@@ -7,6 +7,7 @@ const prTemplatePath = '.github/pull_request_template.md';
 const threatModelPath = 'docs/security/THREAT_MODEL.md';
 const exceptionRegisterPath = 'docs/security/SECURITY_EXCEPTION_REGISTER.md';
 const gitleaksWorkflowPath = '.github/workflows/gitleaks.yml';
+const secretScanningWorkflowPath = '.github/workflows/secret-scanning.yml';
 const gitleaksConfigPath = '.gitleaks.toml';
 const fullSecuritySuitePath = '.github/workflows/full-security-suite.yml';
 const semgrepWorkflowPath = '.github/workflows/semgrep.yml';
@@ -86,7 +87,18 @@ const governanceChecks = [
   },
   {
     path: gitleaksWorkflowPath,
-    tokens: ['gitleaks/gitleaks-action@v2', 'fetch-depth: 0', 'persist-credentials: false', 'pull_request'],
+    tokens: ['Gitleaks', 'ghcr.io/gitleaks/gitleaks:latest', '--redact', 'persist-credentials: false', 'pull_request'],
+  },
+  {
+    path: secretScanningWorkflowPath,
+    tokens: [
+      'Secret Scanning',
+      'Gitleaks repository and history scan',
+      'fetch-depth: 0',
+      'gitleaks/gitleaks-action@v2',
+      'Production secret readiness gate',
+      'npm run security:production-secrets',
+    ],
   },
   {
     path: gitleaksConfigPath,
