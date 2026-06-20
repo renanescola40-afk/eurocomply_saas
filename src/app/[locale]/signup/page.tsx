@@ -140,6 +140,25 @@ function normalizePlanId(planId: string | null) {
   return getBillingPlan(planId)?.id ?? 'professional';
 }
 
+function getSafeSignupContinuation(locale: string, nextPath: string | null, planId: string) {
+  const fallbackHref = getDashboardHref(locale, planId);
+  const normalizedNext = nextPath?.trim();
+
+  if (!normalizedNext) {
+    return fallbackHref;
+  }
+
+  if (normalizedNext.length > 240 || normalizedNext.startsWith('//') || normalizedNext.includes('://')) {
+    return fallbackHref;
+  }
+
+  if (!normalizedNext.startsWith(`/${locale}/dashboard`)) {
+    return fallbackHref;
+  }
+
+  return normalizedNext;
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const params = useParams();
@@ -148,9 +167,13 @@ export default function SignupPage() {
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const copy = signupCopy[activeLocale] ?? signupCopy.en;
   const selectedPlanId = normalizePlanId(searchParams.get('plan'));
+  const requestedNext = searchParams.get('next');
   const selectedPlan = useMemo(() => getBillingPlan(selectedPlanId) ?? BILLING_PLANS[1], [selectedPlanId]);
-  const dashboardHref = getDashboardHref(activeLocale, selectedPlan.id);
-  const googleSignupHref = `/auth/google?locale=${encodeURIComponent(activeLocale)}&next=${encodeURIComponent(dashboardHref)}`;
+  const continuationHref = useMemo(
+    () => getSafeSignupContinuation(activeLocale, requestedNext, selectedPlan.id),
+    [activeLocale, requestedNext, selectedPlan.id],
+  );
+  const googleSignupHref = `/auth/google?locale=${encodeURIComponent(activeLocale)}&next=${encodeURIComponent(continuationHref)}`;
   const { user, signUpWithEmail, loading: authLoading } = useAuth();
   const [name, setName] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -164,9 +187,9 @@ export default function SignupPage() {
     if (authLoading) return;
 
     if (user) {
-      router.replace(dashboardHref);
+      router.replace(continuationHref);
     }
-  }, [authLoading, activeLocale, dashboardHref, router, user]);
+  }, [authLoading, continuationHref, router, user]);
 
   async function handleEmailSignup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -268,7 +291,7 @@ export default function SignupPage() {
               </Button>
             </form>
 
-            <Link href={`/${activeLocale}/login`} className="block text-center text-sm text-white/50 hover:text-white">
+            <Link href={`/${activeLocale}/login?next=${encodeURIComponent(continuationHref)}`} className="block text-center text-sm text-white/50 hover:text-white">
               {copy.login}
             </Link>
           </div>
