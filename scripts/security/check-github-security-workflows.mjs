@@ -64,6 +64,19 @@ const checks = [
     ],
   },
   {
+    path: '.github/workflows/gitleaks.yml',
+    tokens: [
+      'name: Gitleaks',
+      'permissions:',
+      'contents: read',
+      'pull-requests: read',
+      'fetch-depth: 0',
+      'persist-credentials: false',
+      'gitleaks/gitleaks-action@v2',
+      'Scan repository for accidental secret exposure',
+    ],
+  },
+  {
     path: '.github/workflows/security-ci.yml',
     tokens: [
       'permissions:',
@@ -100,16 +113,12 @@ const checks = [
   {
     path: '.github/workflows/secret-scanning.yml',
     tokens: [
-      'Gitleaks repository and history scan',
-      'fetch-depth: 0',
-      'persist-credentials: false',
-      'gitleaks/gitleaks-action@v2',
       'Production secret readiness gate',
       'npm ci --ignore-scripts',
       'npm run security:production-secrets',
       'permissions:',
       'contents: read',
-      'pull-requests: read',
+      'persist-credentials: false',
     ],
   },
   {
