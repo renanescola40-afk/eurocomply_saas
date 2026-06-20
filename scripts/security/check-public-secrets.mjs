@@ -117,6 +117,16 @@ function isDangerousPublicNameDefinition(normalized, line) {
   );
 }
 
+function isDetectorDefinition(normalized, name, value, line) {
+  return (
+    normalized === 'src/lib/security/env-guard.ts'
+    || normalized === 'scripts/security/check-public-secrets.mjs'
+    || normalized.startsWith('scripts/security/')
+  )
+    && /^[\[{(]/.test(value)
+    && /(PATTERN|PATTERNS|KEYS|NAMES|TOKENS|SECRETS|serverOnlyEnvNames|secretValuePatterns|FORBIDDEN_PUBLIC_ENV_KEYS)/i.test(`${name} ${line}`);
+}
+
 function isPlaceholderValue(value) {
   return value === '' || /^(undefined|null|process\.env|\[process\.env|\$\{|<.*>|\*{3,}|x{3,}|x-[a-z0-9-]+|z(?:\.|$)|\.\.\.|[A-Za-z0-9_-]+\.\.\.|your-|sua-|changeme|placeholder|example|sample|dummy|redacted|dev-secret|ci-|ci_|test_|sk_test_|sk_live_\.\.\.|rk_live_\.\.\.|price_ci_|price_\.\.\.|whsec_ci_|whsec_\.\.\.|eyJhbGc\.\.\.)/i.test(value);
 }
@@ -155,7 +165,8 @@ for (const file of new Set(files)) {
   for (const match of source.matchAll(sensitiveAssignmentName)) {
     const name = match.groups?.name ?? 'UNKNOWN_SECRET';
     const value = match.groups?.value ?? '';
-    if (!allowedPublicNames.has(name) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value)) {
+    const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
+    if (!allowedPublicNames.has(name) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value) && !isDetectorDefinition(normalized, name, value, line)) {
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible hardcoded secret assignment: ${name}`);
     }
   }
