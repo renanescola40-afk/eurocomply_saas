@@ -69,20 +69,26 @@ Migrated reference routes:
 - `src/app/api/team/members/remove/route.ts`
 - `src/app/api/team/invitations/cancel/route.ts`
 - `src/app/api/team/members/role/route.ts`
+- `src/app/api/retention-center/export/route.ts`
 
 Added security coverage:
 
 - central helper unit tests for auth, tenant membership, RBAC, cross-tenant resource checks, Origin enforcement, Zod sanitization, and internal error sanitization;
 - BOLA/IDOR tests for team member removal;
 - BOLA/IDOR tests for team invitation cancellation;
-- security contract test for team member role changes.
+- security contract test for team member role changes;
+- security contract test for retention policy exports.
 
 Known follow-up migration backlog:
 
 - `src/app/api/team/invites/route.ts`
 - `src/app/api/billing/checkout-intent/route.ts`
+- `src/app/api/billing/checkout/route.ts`
+- `src/app/api/billing/portal/route.ts`
 - `src/app/api/gdpr/delete-request/route.ts`
 - `src/app/api/ai-systems/route.ts`
+- `src/app/api/ai-incidents/route.ts`
+- `src/app/api/continuity-center/export/route.ts`
 - remaining `src/app/api/**/route.ts` endpoints flagged by `npm run security:api-route-hardening`.
 
 ## Legitimate exceptions
