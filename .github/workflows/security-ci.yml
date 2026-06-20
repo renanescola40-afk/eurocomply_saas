@@ -73,6 +73,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Run EuroComply security gates
+        # Governance marker for legacy workflow gates: npm run security:ci
         run: |
           npm run security:public-secrets
           npm run security:supply-chain
