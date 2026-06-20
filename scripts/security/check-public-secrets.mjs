@@ -33,17 +33,17 @@ const allowedPublicNames = new Set([
 const committedEnvFile = /^\.env(\..*)?$/;
 const allowedCommittedEnvFiles = new Set(['.env.example']);
 const dangerousPublicName = /NEXT_PUBLIC_[A-Z0-9_]*(SECRET|TOKEN|SERVICE|SERVICE_ROLE|PRIVATE|PASSWORD|WEBHOOK|STRIPE_SECRET|AUTH_TOKEN|ACCESS_TOKEN|SIGNING|KEY)[A-Z0-9_]*/g;
-const sensitiveAssignmentName = /(?<name>[A-Z0-9_]*(?:SECRET|PASSWORD|TOKEN|PRIVATE_KEY|SERVICE_ROLE|WEBHOOK_SECRET|AUTH_TOKEN|ACCESS_TOKEN|API_KEY|SUPABASE_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_CLIENT_SECRET)[A-Z0-9_]*)\s*[:=]\s*(?<quote>['"]?)(?<value>[^'"\s,}#]+)/g;
+const sensitiveAssignmentName = /(?<name>[A-Z0-9_]*(?:SECRET|PASSWORD|TOKEN|PRIVATE_KEY|SERVICE_ROLE|WEBHOOK_SECRET|AUTH_TOKEN|ACCESS_TOKEN|API_KEY|SUPABASE_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_CLIENT_SECRET)[A-Z0-9_]*)[ \t]*[:=][ \t]*(?<quote>['"]?)(?<value>[^'"\s,}#]*)/g;
 const secretValuePatterns = [
-  { name: 'Supabase service role JWT-like value', pattern: /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g },
-  { name: 'Stripe live secret key', pattern: /sk_live_[A-Za-z0-9]{16,}/g },
-  { name: 'Stripe restricted key', pattern: /rk_live_[A-Za-z0-9]{16,}/g },
-  { name: 'Stripe webhook secret value', pattern: /whsec_[A-Za-z0-9]{16,}/g },
-  { name: 'GitHub token', pattern: /gh[pousr]_[A-Za-z0-9_]{20,}/g },
-  { name: 'Supabase access token style value', pattern: /sbp_[A-Za-z0-9_\-.]{20,}/g },
-  { name: 'Google OAuth client secret', pattern: /GOCSPX-[A-Za-z0-9_-]{20,}/g },
-  { name: 'Google API key', pattern: /AIza[0-9A-Za-z_-]{30,}/g },
-  { name: 'Resend API key', pattern: /re_[A-Za-z0-9_]{20,}/g },
+  { name: 'Supabase service role JWT-like value', pattern: /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g },
+  { name: 'Stripe live secret key', pattern: /(?<![A-Za-z0-9_-])sk_live_[A-Za-z0-9]{16,}/g },
+  { name: 'Stripe restricted key', pattern: /(?<![A-Za-z0-9_-])rk_live_[A-Za-z0-9]{16,}/g },
+  { name: 'Stripe webhook secret value', pattern: /(?<![A-Za-z0-9_-])whsec_[A-Za-z0-9]{16,}/g },
+  { name: 'GitHub token', pattern: /(?<![A-Za-z0-9_-])gh[pousr]_[A-Za-z0-9_]{20,}/g },
+  { name: 'Supabase access token style value', pattern: /(?<![A-Za-z0-9_-])sbp_[A-Za-z0-9_\-.]{20,}/g },
+  { name: 'Google OAuth client secret', pattern: /(?<![A-Za-z0-9_-])GOCSPX-[A-Za-z0-9_-]{20,}/g },
+  { name: 'Google API key', pattern: /(?<![A-Za-z0-9_-])AIza[0-9A-Za-z_-]{30,}/g },
+  { name: 'Resend API key', pattern: /(?<![A-Za-z0-9_-])re_[A-Za-z0-9_]{20,}/g },
 ];
 
 const publicClientFiles = [
@@ -51,6 +51,9 @@ const publicClientFiles = [
   /src\/components\/.*\.(tsx|ts)$/,
   /src\/lib\/.*client.*\.(tsx|ts)$/,
 ];
+const serverSideEnvReferenceFiles = new Set([
+  'src/lib/email/client.ts',
+]);
 const serverOnlyEnvNames = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'SUPABASE_ACCESS_TOKEN',
@@ -136,6 +139,7 @@ function isSymbolicEnvironmentName(value) {
 }
 
 function isPublicClientFile(path) {
+  if (serverSideEnvReferenceFiles.has(path)) return false;
   return publicClientFiles.some((pattern) => pattern.test(path));
 }
 
