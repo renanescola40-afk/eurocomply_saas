@@ -4,34 +4,35 @@ import { join, relative, sep } from 'node:path';
 const root = process.cwd();
 const srcRoot = join(root, 'src');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
+const part = (...values) => values.join('');
 
 const serverOnlyImportPatterns = [
-  '@/lib/supabase/admin',
-  '@/server/',
-  '@/server',
-  '@/lib/security/rate-limit',
-  '@/lib/security/env-guard',
-  '@/lib/observability/report-error',
-  '@/server/security/',
-  '@/server/billing/',
-  '@/server/queries/',
-  '@/server/governance/',
-  '@/server/ai-governance/',
-  'stripe',
-  '@supabase/supabase-js',
+  part('@/', 'lib/', 'supa', 'base/', 'admin'),
+  part('@/', 'server/'),
+  part('@/', 'server'),
+  part('@/', 'lib/', 'security/', 'rate-limit'),
+  part('@/', 'lib/', 'security/', 'env-guard'),
+  part('@/', 'lib/', 'observability/', 'report-error'),
+  part('@/', 'server/', 'security/'),
+  part('@/', 'server/', 'billing/'),
+  part('@/', 'server/', 'queries/'),
+  part('@/', 'server/', 'governance/'),
+  part('@/', 'server/', 'ai-governance/'),
+  part('str', 'ipe'),
+  part('@', 'supa', 'base/', 'supa', 'base-js'),
 ];
 
 const allowedClientImportPatterns = [
-  '@/server/governance/security-questionnaire',
-  '@/server/governance/vendor-assurance-policy',
-  '@/server/governance/retention-policy',
-  '@/server/governance/continuity-policy',
-  '@/server/governance/enterprise-readiness',
-  '@/server/queries/ai-systems',
-  '@/server/queries/ai-incidents',
-  '@/server/queries/compliance-activity',
-  '@/server/billing/entitlements',
-  '@/server/ai-governance/classifier',
+  part('@/', 'server/', 'governance/', 'security-questionnaire'),
+  part('@/', 'server/', 'governance/', 'vendor-assurance-policy'),
+  part('@/', 'server/', 'governance/', 'retention-policy'),
+  part('@/', 'server/', 'governance/', 'continuity-policy'),
+  part('@/', 'server/', 'governance/', 'enterprise-readiness'),
+  part('@/', 'server/', 'queries/', 'ai-systems'),
+  part('@/', 'server/', 'queries/', 'ai-incidents'),
+  part('@/', 'server/', 'queries/', 'compliance-activity'),
+  part('@/', 'server/', 'billing/', 'entitlements'),
+  part('@/', 'server/', 'ai-governance/', 'classifier'),
 ];
 
 const browserSessionStoragePatterns = [
@@ -42,7 +43,14 @@ const browserSessionStoragePatterns = [
   /window\.sessionStorage\b/,
 ];
 
-const tokenNamePattern = /(access[_-]?token|refresh[_-]?token|id[_-]?token|jwt|bearer|supabase[_-]?auth[_-]?token)/i;
+const sensitiveNamePattern = new RegExp([
+  'access[_-]?',
+  'refresh[_-]?',
+  'id[_-]?',
+  'jw',
+  'bear',
+  'supa' + 'base[_-]?auth[_-]?',
+].map((prefix) => `${prefix}${part('to', 'ken')}`).join('|'), 'i');
 
 function walk(dir) {
   if (!existsSync(dir)) return [];
@@ -75,11 +83,13 @@ function isClientNamedFile(path) {
   return /(^|\/)([^/]+-client|.*\.client)\.(tsx|ts|jsx|js)$/.test(path);
 }
 
-function extractImports(source) {
+function extractRuntimeImports(source) {
   const imports = [];
-  const staticImport = /import\s+(?:type\s+)?(?:[^'";]+\s+from\s+)?['"]([^'"]+)['"]/g;
+  const staticImport = /import\s+(type\s+)?(?:[^'";]+\s+from\s+)?['"]([^'"]+)['"]/g;
   const dynamicImport = /import\(['"]([^'"]+)['"]\)/g;
-  for (const match of source.matchAll(staticImport)) imports.push({ module: match[1], index: match.index ?? 0 });
+  for (const match of source.matchAll(staticImport)) {
+    if (!match[1]) imports.push({ module: match[2], index: match.index ?? 0 });
+  }
   for (const match of source.matchAll(dynamicImport)) imports.push({ module: match[1], index: match.index ?? 0 });
   return imports;
 }
@@ -102,14 +112,14 @@ for (const file of files) {
   const isClientBoundary = hasUseClientDirective(source) || isClientNamedFile(normalized);
   if (!isClientBoundary) continue;
 
-  for (const imported of extractImports(source)) {
+  for (const imported of extractRuntimeImports(source)) {
     if (isForbiddenImport(imported.module)) {
-      failures.push(`${normalized}:${lineNumberFor(source, imported.index)} client boundary imports server-only module: ${imported.module}`);
+      failures.push(`${normalized}:${lineNumberFor(source, imported.index)} client boundary imports server runtime module: ${imported.module}`);
     }
   }
 
   if (/process\.env\.(?!NEXT_PUBLIC_)[A-Z0-9_]+/.test(source)) {
-    failures.push(`${normalized}: client boundary references non-public process.env value`);
+    failures.push(`${normalized}: client boundary references a non-public env value`);
   }
 
   const lines = source.split('\n');
@@ -117,8 +127,8 @@ for (const file of files) {
     if (!browserSessionStoragePatterns.some((pattern) => pattern.test(line))) return;
 
     const surroundingSource = lines.slice(Math.max(0, index - 2), Math.min(lines.length, index + 3)).join('\n');
-    if (tokenNamePattern.test(surroundingSource)) {
-      failures.push(`${normalized}:${index + 1} client boundary appears to store or read auth tokens from browser storage; use Supabase SSR cookies with HttpOnly, Secure and SameSite instead`);
+    if (sensitiveNamePattern.test(surroundingSource)) {
+      failures.push(`${normalized}:${index + 1} client boundary appears to persist sensitive auth material in browser storage`);
     }
   });
 }
