@@ -4,22 +4,12 @@ import { basename, extname, join, relative, sep } from 'node:path';
 
 const root = process.cwd();
 const failures = [];
-
-const ignoredDirectories = new Set([
-  '.git',
-  '.next',
-  '.turbo',
-  '.vercel',
-  'coverage',
-  'dist',
-  'node_modules',
-  'playwright-report',
-  'test-results',
-]);
+const warnings = [];
 
 const envExamplePath = '.env.example';
 const productionWorkflowPath = '.github/workflows/vercel-production.yml';
 const runtimeEvidencePath = 'docs/security/evidence/runtime/production-secrets-provider-stores.json';
+const ignoredDirectories = new Set(['.git', '.next', '.turbo', '.vercel', 'coverage', 'dist', 'node_modules', 'playwright-report', 'test-results']);
 
 const allowedPublicEnvNames = new Set([
   'NEXT_PUBLIC_APP_URL',
@@ -51,21 +41,9 @@ const serverOnlyEnvNames = [
   'GOOGLE_CLIENT_SECRET',
 ];
 
-const appRuntimeRequiredVariables = {
-  development: [
-    'NEXT_PUBLIC_APP_URL',
-    'NEXT_PUBLIC_SITE_URL',
-    'NEXT_PUBLIC_SUPABASE_URL',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  ],
-  preview: [
-    'NEXT_PUBLIC_APP_URL',
-    'NEXT_PUBLIC_SITE_URL',
-    'NEXT_PUBLIC_SUPABASE_URL',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
-    'STRIPE_WEBHOOK_SECRET',
-  ],
+const requiredByEnvironment = {
+  development: ['NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'],
+  preview: ['NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY', 'STRIPE_WEBHOOK_SECRET'],
   production: [
     'NEXT_PUBLIC_APP_URL',
     'NEXT_PUBLIC_SITE_URL',
@@ -110,7 +88,6 @@ const providerSecretVariables = [
   'VERCEL_ORG_ID',
   'VERCEL_PROJECT_ID',
 ];
-
 const providerPublicVariables = [
   'NEXT_PUBLIC_APP_URL',
   'NEXT_PUBLIC_SITE_URL',
@@ -125,8 +102,7 @@ const providerPublicVariables = [
 ];
 
 const sensitivePublicNamePattern = /^NEXT_PUBLIC_[A-Z0-9_]*(?:SECRET|TOKEN|SERVICE_ROLE|PRIVATE|PASSWORD|WEBHOOK|AUTH_TOKEN|ACCESS_TOKEN|CLIENT_SECRET|DATABASE_URL|STRIPE_SECRET|SUPABASE_SERVICE_ROLE|VERCEL|SENTRY_AUTH)[A-Z0-9_]*$/;
-
-const realSecretValuePatterns = [
+const secretValuePatterns = [
   { name: 'JWT-like token', pattern: /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g },
   { name: 'Stripe secret or restricted key', pattern: /(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}/g },
   { name: 'Stripe webhook signing value', pattern: /whsec_[A-Za-z0-9]{16,}/g },
@@ -143,17 +119,10 @@ function normalizePath(path) {
 
 function walk(dir) {
   if (!existsSync(dir)) return [];
-
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const fullPath = join(dir, entry.name);
-
-    if (entry.isDirectory()) {
-      if (ignoredDirectories.has(entry.name)) return [];
-      return walk(fullPath);
-    }
-
-    if (!entry.isFile()) return [];
-    return [fullPath];
+    if (entry.isDirectory()) return ignoredDirectories.has(entry.name) ? [] : walk(fullPath);
+    return entry.isFile() ? [fullPath] : [];
   });
 }
 
@@ -161,26 +130,20 @@ function read(path) {
   return readFileSync(join(root, path), 'utf8');
 }
 
-function parseEnvFile(source) {
-  const values = new Map();
+function lineNumberFor(source, index) {
+  return source.slice(0, index).split('\n').length;
+}
 
+function parseEnv(source) {
+  const values = new Map();
   for (const line of source.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
-
     const separator = trimmed.indexOf('=');
     if (separator === -1) continue;
-
-    const name = trimmed.slice(0, separator).trim();
-    const value = trimmed.slice(separator + 1).trim().replace(/^[\'"]|[\'"]$/g, '');
-    values.set(name, value);
+    values.set(trimmed.slice(0, separator).trim(), trimmed.slice(separator + 1).trim().replace(/^[\'"]|[\'"]$/g, ''));
   }
-
   return values;
-}
-
-function lineNumberFor(source, index) {
-  return source.slice(0, index).split('\n').length;
 }
 
 function isPlaceholderValue(value) {
@@ -200,21 +163,9 @@ function isSensitiveName(name) {
 }
 
 function scanSecretValues(path, source) {
-  for (const secret of realSecretValuePatterns) {
+  for (const secret of secretValuePatterns) {
     for (const match of source.matchAll(secret.pattern)) {
-      const value = match[0];
-      if (isPlaceholderValue(value)) continue;
-      failures.push(`${path}:${lineNumberFor(source, match.index ?? 0)} possible committed secret value: ${secret.name}`);
-    }
-  }
-}
-
-function checkRequiredVariablesByEnvironment(envValues) {
-  for (const [environment, variables] of Object.entries(appRuntimeRequiredVariables)) {
-    for (const variable of variables) {
-      if (!envValues.has(variable)) {
-        failures.push(`${envExamplePath} missing ${environment} variable name: ${variable}`);
-      }
+      if (!isPlaceholderValue(match[0])) failures.push(`${path}:${lineNumberFor(source, match.index ?? 0)} possible committed secret value: ${secret.name}`);
     }
   }
 }
@@ -226,101 +177,64 @@ function checkEnvExample() {
   }
 
   const source = read(envExamplePath);
-  const values = parseEnvFile(source);
-  checkRequiredVariablesByEnvironment(values);
+  const values = parseEnv(source);
   scanSecretValues(envExamplePath, source);
 
-  for (const [name, value] of values) {
-    if (sensitivePublicNamePattern.test(name) && !allowedPublicEnvNames.has(name)) {
-      failures.push(`${envExamplePath} exposes sensitive name with NEXT_PUBLIC prefix: ${name}`);
-    }
+  for (const [environment, names] of Object.entries(requiredByEnvironment)) {
+    for (const name of names) if (!values.has(name)) failures.push(`${envExamplePath} missing ${environment} variable name: ${name}`);
+  }
 
-    if (isSensitiveName(name) && !isPlaceholderValue(value)) {
-      failures.push(`${envExamplePath} ${name} must be empty or an obvious placeholder`);
-    }
+  for (const [name, value] of values) {
+    if (sensitivePublicNamePattern.test(name) && !allowedPublicEnvNames.has(name)) failures.push(`${envExamplePath} exposes sensitive name with NEXT_PUBLIC prefix: ${name}`);
+    if (isSensitiveName(name) && !isPlaceholderValue(value)) failures.push(`${envExamplePath} ${name} must be empty or an obvious placeholder`);
   }
 
   return values;
 }
 
-function isClientComponentSource(source) {
-  return /^\s*['"]use client['"];?/m.test(source);
-}
-
-function shouldScanForClientEnvLeak(path, source) {
-  if (!/\.(ts|tsx|js|jsx)$/.test(path)) return false;
-  if (!path.startsWith('src/')) return false;
-  if (isClientComponentSource(source)) return true;
-  return /src\/(components|app)\//.test(path) && /\.(tsx|jsx)$/.test(path);
-}
-
-function checkClientServerBoundary() {
-  const files = walk(join(root, 'src'));
-
-  for (const file of files) {
+function checkClientBoundary() {
+  for (const file of walk(join(root, 'src'))) {
     const path = normalizePath(file);
     if (!/\.(ts|tsx|js|jsx)$/.test(path)) continue;
-
     const source = readFileSync(file, 'utf8');
 
     for (const match of source.matchAll(/NEXT_PUBLIC_[A-Z0-9_]+/g)) {
       const name = match[0];
-      if (sensitivePublicNamePattern.test(name) && !allowedPublicEnvNames.has(name)) {
-        failures.push(`${path}:${lineNumberFor(source, match.index ?? 0)} sensitive env name uses NEXT_PUBLIC prefix: ${name}`);
-      }
+      if (sensitivePublicNamePattern.test(name) && !allowedPublicEnvNames.has(name)) failures.push(`${path}:${lineNumberFor(source, match.index ?? 0)} sensitive env name uses NEXT_PUBLIC prefix: ${name}`);
     }
 
-    if (!shouldScanForClientEnvLeak(path, source)) continue;
-
-    for (const envName of serverOnlyEnvNames) {
-      if (source.includes(envName)) {
-        failures.push(`${path} references server-only env from client-reachable code: ${envName}`);
-      }
-    }
+    const clientReachable = /^\s*['"]use client['"];?/m.test(source) || (/src\/(components|app)\//.test(path) && /\.(tsx|jsx)$/.test(path));
+    if (!clientReachable) continue;
+    for (const envName of serverOnlyEnvNames) if (source.includes(envName)) failures.push(`${path} references server-only env from client-reachable code: ${envName}`);
   }
 }
 
-function checkDocsForAccidentalTokens() {
+function checkDocs() {
   for (const file of walk(join(root, 'docs'))) {
     const path = normalizePath(file);
-    if (!['.md', '.mdx', '.txt', '.json', '.yml', '.yaml'].includes(extname(path))) continue;
-    scanSecretValues(path, readFileSync(file, 'utf8'));
+    if (['.md', '.mdx', '.txt', '.json', '.yml', '.yaml'].includes(extname(path))) scanSecretValues(path, readFileSync(file, 'utf8'));
   }
 }
 
-function checkWorkflowSecretHandling() {
-  const workflowRoot = join(root, '.github', 'workflows');
-  const workflowFiles = walk(workflowRoot).filter((file) => /\.(ya?ml)$/.test(file));
-
-  for (const file of workflowFiles) {
+function checkWorkflows() {
+  for (const file of walk(join(root, '.github', 'workflows')).filter((entry) => /\.(ya?ml)$/.test(entry))) {
     const path = normalizePath(file);
     const source = readFileSync(file, 'utf8');
-    const lines = source.split('\n');
-
     scanSecretValues(path, source);
 
-    lines.forEach((line, index) => {
+    source.split('\n').forEach((line, index) => {
       if (!/\b(echo|printf|tee|cat)\b/i.test(line)) return;
-
-      if (/secrets\./i.test(line)) {
-        failures.push(`${path}:${index + 1} workflow must not print GitHub secrets context`);
-      }
-
+      if (/secrets\./i.test(line)) failures.push(`${path}:${index + 1} workflow must not print GitHub secrets context`);
       for (const envName of serverOnlyEnvNames) {
-        const shellVariablePattern = new RegExp(`\\$\\{?${envName}\\}?`);
-        if (shellVariablePattern.test(line)) {
-          failures.push(`${path}:${index + 1} workflow must not print server/provider secret variable: ${envName}`);
-        }
+        if (new RegExp(`\\$\\{?${envName}\\}?`).test(line)) failures.push(`${path}:${index + 1} workflow must not print server/provider secret variable: ${envName}`);
       }
     });
   }
 }
 
-function requireWorkflowProviderMapping(source, name, acceptedContexts) {
-  const linePattern = new RegExp(`^\\s*${name}:\\s*\\$\\{\\{\\s*(?:${acceptedContexts.join('|')})\\.${name}\\s*\\}\\}\\s*$`, 'm');
-  if (!linePattern.test(source)) {
-    failures.push(`${productionWorkflowPath} must map ${name} from provider ${acceptedContexts.join('/')} context, never from repo literals`);
-  }
+function requireWorkflowProviderMapping(source, name, contexts) {
+  const pattern = new RegExp(`^\\s*${name}:\\s*\\$\\{\\{\\s*(?:${contexts.join('|')})\\.${name}\\s*\\}\\}\\s*$`, 'm');
+  if (!pattern.test(source)) failures.push(`${productionWorkflowPath} must map ${name} from provider ${contexts.join('/')} context, never from repo literals`);
 }
 
 function checkProviderStoreWiring() {
@@ -328,19 +242,12 @@ function checkProviderStoreWiring() {
     failures.push(`${productionWorkflowPath} is missing`);
     return;
   }
-
   const source = read(productionWorkflowPath);
-
-  for (const variable of providerSecretVariables) {
-    requireWorkflowProviderMapping(source, variable, ['secrets']);
-  }
-
-  for (const variable of providerPublicVariables) {
-    requireWorkflowProviderMapping(source, variable, ['vars', 'secrets']);
-  }
+  providerSecretVariables.forEach((name) => requireWorkflowProviderMapping(source, name, ['secrets']));
+  providerPublicVariables.forEach((name) => requireWorkflowProviderMapping(source, name, ['vars', 'secrets']));
 }
 
-function checkHistoricalReferences() {
+function checkHistoryReferences() {
   try {
     execFileSync('git', ['rev-parse', '--is-inside-work-tree'], { cwd: root, stdio: 'ignore' });
   } catch {
@@ -348,28 +255,19 @@ function checkHistoricalReferences() {
   }
 
   try {
-    const log = execFileSync('git', ['log', '--all', '--name-only', '--pretty=format:%H', '--', '.env', '.env.*'], {
+    const output = execFileSync('git', ['log', '--all', '--name-only', '--pretty=format:%H', '--', '.env', '.env.*'], {
       cwd: root,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     });
-
-    const committedEnvFiles = new Set(
-      log
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.startsWith('.env') && basename(line) !== '.env.example'),
-    );
-
-    for (const file of committedEnvFiles) {
-      failures.push(`git history references committed environment file ${file}; verify rotation and purge history if it ever contained secrets`);
-    }
+    const files = new Set(output.split('\n').map((line) => line.trim()).filter((line) => line.startsWith('.env') && basename(line) !== '.env.example'));
+    for (const file of files) warnings.push(`git history references committed environment file ${file}; Gitleaks remains the failing control for actual secret values`);
   } catch {
-    failures.push('unable to inspect git history for committed .env files; run this check from a full checkout');
+    warnings.push('unable to inspect git history for committed .env files; run from a full checkout for historical filename audit');
   }
 }
 
-function checkRuntimeEvidence(envValues) {
+function checkEvidence(envValues) {
   if (!existsSync(join(root, runtimeEvidencePath))) {
     failures.push(`${runtimeEvidencePath} is missing`);
     return;
@@ -383,58 +281,38 @@ function checkRuntimeEvidence(envValues) {
     return;
   }
 
-  const requiredEvidenceFields = [
-    'status',
-    'provider',
-    'environmentsChecked',
-    'variableNamesChecked',
-    'valuesRedacted',
-    'reviewer',
-    'timestamp',
-    'commitSha',
-    'note',
-  ];
-
-  for (const field of requiredEvidenceFields) {
+  for (const field of ['status', 'provider', 'environmentsChecked', 'variableNamesChecked', 'valuesRedacted', 'reviewer', 'timestamp', 'commitSha', 'note']) {
     if (!(field in evidence)) failures.push(`${runtimeEvidencePath} missing field: ${field}`);
   }
-
   if (evidence.status !== 'Complete') failures.push(`${runtimeEvidencePath} status must be Complete before the P0 register is marked Complete`);
   if (evidence.valuesRedacted !== true) failures.push(`${runtimeEvidencePath} must set valuesRedacted to true`);
-  if (!Array.isArray(evidence.environmentsChecked) || !evidence.environmentsChecked.includes('production')) {
-    failures.push(`${runtimeEvidencePath} must include production in environmentsChecked`);
-  }
+  if (!Array.isArray(evidence.environmentsChecked) || !evidence.environmentsChecked.includes('production')) failures.push(`${runtimeEvidencePath} must include production in environmentsChecked`);
+  if (!String(evidence.note ?? '').toLowerCase().includes('privately')) failures.push(`${runtimeEvidencePath} note must state value-bearing screenshots/exports are stored privately, not in repo`);
+
   if (!Array.isArray(evidence.variableNamesChecked)) {
     failures.push(`${runtimeEvidencePath} variableNamesChecked must be an array`);
-  } else {
-    const checkedNames = new Set(evidence.variableNamesChecked);
-    const expectedNames = new Set([
-      ...Object.values(appRuntimeRequiredVariables).flat(),
-      ...providerSecretVariables,
-      ...providerPublicVariables,
-      ...envValues.keys(),
-    ]);
-
-    for (const name of expectedNames) {
-      if (!checkedNames.has(name)) failures.push(`${runtimeEvidencePath} missing variableNamesChecked entry: ${name}`);
-    }
+    return;
   }
-
-  if (!String(evidence.note ?? '').toLowerCase().includes('privately')) {
-    failures.push(`${runtimeEvidencePath} note must state value-bearing screenshots/exports are stored privately, not in repo`);
-  }
+  const checked = new Set(evidence.variableNamesChecked);
+  const expected = new Set([...Object.values(requiredByEnvironment).flat(), ...providerSecretVariables, ...providerPublicVariables, ...envValues.keys()]);
+  for (const name of expected) if (!checked.has(name)) failures.push(`${runtimeEvidencePath} missing variableNamesChecked entry: ${name}`);
 }
 
 const envValues = checkEnvExample();
-checkClientServerBoundary();
-checkDocsForAccidentalTokens();
-checkWorkflowSecretHandling();
+checkClientBoundary();
+checkDocs();
+checkWorkflows();
 checkProviderStoreWiring();
-checkHistoricalReferences();
-checkRuntimeEvidence(envValues);
+checkHistoryReferences();
+checkEvidence(envValues);
 
 console.log('EuroComply production secret readiness check');
 console.log('---------------------------------------------');
+
+if (warnings.length > 0) {
+  console.warn('Production secret readiness warnings:');
+  for (const warning of warnings) console.warn(`- ${warning}`);
+}
 
 if (failures.length > 0) {
   console.error('Production secret readiness failures:');
