@@ -134,12 +134,12 @@ describe('central API security guards', () => {
     expect(body).toEqual({ error: 'untrusted_origin', reason: 'untrusted_origin' });
   });
 
-  it('does not leak stack traces for internal errors', async () => {
-    const response = secureApiError(new Error('database password leaked in stack'));
+  it('does not leak internal error details', async () => {
+    const response = secureApiError(new Error('internal sentinel should be hidden'));
     const body = await response.json();
 
     expect(response.status).toBe(500);
     expect(body).toEqual({ error: 'internal_server_error' });
-    expect(JSON.stringify(body)).not.toContain('database password');
+    expect(JSON.stringify(body)).not.toContain('internal sentinel');
   });
 });
