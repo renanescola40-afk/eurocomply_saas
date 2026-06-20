@@ -19,6 +19,7 @@
  *
  *   // Para verificar se está em produção:
  *   if (isProduction) { ... }
+ * }
  */
 
 import { z } from 'zod';
@@ -182,14 +183,14 @@ NEXT_PUBLIC_DATABASE_URL=https://xxxxx.supabase.co
 # Chave publishable do Supabase ( pública — não é sensível)
 # O Vercel/Supabase pode também expor este valor como NEXT_PUBLIC_SUPABASE_KEY,
 # SUPABASE_KEY ou SUPABASE_ANON_KEY.
-NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY=eyJhbGc...
+NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY=redacted-example
 
 # ── Stripe ────────────────────────────────────────────────────────
 # Chave secreta (não mostre no frontend)
-STRIPE_SECRET_KEY=sk_live_...
+STRIPE_SECRET_KEY=redacted-example
 
 # Segredo do webhook (Configurar no dashboard Stripe > Webhooks)
-STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_WEBHOOK_SECRET=redacted-example
 
 # IDs dos preços criados no Stripe Dashboard
 STRIPE_PRICE_ESSENTIAL_MONTHLY=price_...
@@ -203,12 +204,12 @@ NEXT_PUBLIC_APP_URL=https://app.eurocomply.ai
 
 # ── Segurança ─────────────────────────────────────────────────────
 # Para produção: gere com: openssl rand -base64 32
-AUTH_SECRET=sua-chave-super-secreta-com-mais-de-32-caracteres
+AUTH_SECRET=redacted-example
 
 # ── Rate Limiting (opcional — Upstash Redis) ───────────────────────
 # Só é necessário se usar rate limiting por IP em produção serverless
 # Crie conta gratuita em https://upstash.com
 UPSTASH_REDIS_REST_URL=https://xxxxx.upstash.io
-UPSTASH_REDIS_REST_TOKEN=...
+UPSTASH_REDIS_REST_TOKEN=redacted-example
 `;
 }
