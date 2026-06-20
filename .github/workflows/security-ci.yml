@@ -78,7 +78,19 @@ jobs:
 
       - name: Public secrets gate
         # Governance marker for legacy workflow gates: npm run security:ci
-        run: npm run security:public-secrets
+        shell: bash
+        run: |
+          npm run security:public-secrets 2>&1 | tee public-secrets.log
+          test "${PIPESTATUS[0]}" -eq 0
+
+      - name: Upload public secrets diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: public-secrets-gate
+          path: public-secrets.log
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Production secret readiness gate
         run: npm run security:production-secrets
