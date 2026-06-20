@@ -95,7 +95,7 @@ function isPlaceholderLine(line) {
 }
 
 function isPlaceholderValue(value) {
-  return value === '' || /^(undefined|null|process\.env|\[process\.env|\$\{|<.*>|\*{3,}|x{3,}|z(?:\.|$)|\.\.\.|your-|sua-|changeme|placeholder|example|sample|dummy|redacted|dev-secret|ci-|ci_|test_|sk_test_|sk_live_\.\.\.|rk_live_\.\.\.|price_ci_|price_\.\.\.|whsec_ci_|whsec_\.\.\.|eyJhbGc\.\.\.)/i.test(value);
+  return value === '' || /^(undefined|null|process\.env|\[process\.env|\$\{|<.*>|\*{3,}|x{3,}|x-[a-z0-9-]+|z(?:\.|$)|\.\.\.|[A-Za-z0-9_-]+\.\.\.|your-|sua-|changeme|placeholder|example|sample|dummy|redacted|dev-secret|ci-|ci_|test_|sk_test_|sk_live_\.\.\.|rk_live_\.\.\.|price_ci_|price_\.\.\.|whsec_ci_|whsec_\.\.\.|eyJhbGc\.\.\.)/i.test(value);
 }
 
 function isSymbolicEnvironmentName(value) {
