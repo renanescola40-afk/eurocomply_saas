@@ -74,32 +74,19 @@ jobs:
 
       - name: Run EuroComply security gates
         # Governance marker for legacy workflow gates: npm run security:ci
+        shell: bash
         run: |
-          npm run security:public-secrets
-          npm run security:supply-chain
-          npm run security:ci-cd
-          npm run security:rls
-          npm run security:client-boundaries
-          npm run security:auth-tokens
-          npm run security:authorization-bola
-          npm run security:server-action-identity
-          npm run security:protected-routes
-          npm run security:headers
-          npm run security:no-store
-          npm run security:origin-guards
-          npm run security:no-open-proxy
-          npm run security:internal-maintenance
-          npm run security:ops-readiness
-          npm run security:public-verifiers
-          npm run security:public-errors
-          npm run security:csv-exports
-          npm run security:document-filenames
-          npm run security:billing-webhook-body
-          npm run security:responses
-          npm run security:logs
-          npm run security:api-endpoints
-          npm run security:api-guards
-          npm run security:enterprise-api
+          set -o pipefail
+          npm run security:ci 2>&1 | tee security-ci-gates.log
+
+      - name: Upload security CI diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: security-ci-gate-diagnostics
+          path: security-ci-gates.log
+          retention-days: 1
+          if-no-files-found: ignore
 
       - name: Run step-up authentication gate
         run: node scripts/security/check-step-up.mjs
