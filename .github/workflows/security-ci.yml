@@ -35,8 +35,8 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies deterministically
-        run: npm ci
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
 
       - name: Run CI preflight with placeholders
         run: node scripts/preflight-ci.mjs
