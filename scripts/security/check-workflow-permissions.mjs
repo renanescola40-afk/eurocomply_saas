@@ -3,7 +3,11 @@ import { join } from 'node:path';
 
 const workflowDir = '.github/workflows';
 const allowedPullRequestTargetWorkflows = new Set([]);
+const checkoutCredentialExceptions = new Set([
+  '.github/workflows/p0-commit-lockfile.yml',
+]);
 const failures = [];
+const warnings = [];
 
 function workflowFiles() {
   if (!existsSync(workflowDir)) return [];
@@ -29,6 +33,11 @@ function hasCheckoutPersistCredentialsFalse(source) {
   return source.includes('persist-credentials: false');
 }
 
+function hasJustifiedCheckoutWriteException(file, source) {
+  if (!checkoutCredentialExceptions.has(file)) return false;
+  return source.includes('contents: write') && source.includes('git push');
+}
+
 for (const file of workflowFiles()) {
   const source = readFileSync(file, 'utf8');
 
@@ -45,13 +54,18 @@ for (const file of workflowFiles()) {
   }
 
   if (!hasCheckoutPersistCredentialsFalse(source)) {
-    failures.push(`${file}: actions/checkout must set persist-credentials: false`);
+    if (hasJustifiedCheckoutWriteException(file, source)) {
+      warnings.push(`${file}: checkout credentials are persisted only because this workflow commits/pushes a lockfile.`);
+    } else {
+      failures.push(`${file}: actions/checkout must set persist-credentials: false when the workflow does not push back to the repository`);
+    }
   }
 }
 
 console.log('EuroComply workflow permissions policy check');
 console.log('---------------------------------------------');
 console.log(`Scanned ${workflowFiles().length} workflow files.`);
+for (const warning of warnings) console.warn(`Warning: ${warning}`);
 
 if (failures.length > 0) {
   console.error('Workflow permissions failures:');
