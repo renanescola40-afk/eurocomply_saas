@@ -1,9 +1,11 @@
+#!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs';
 
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
 const evidenceTemplatePath = '.github/ISSUE_TEMPLATE/p0-runtime-evidence.yml';
 const productionSecretsEvidencePath = 'docs/security/evidence/runtime/production-secrets-provider-stores.json';
 const supabaseEvidencePath = 'docs/security/evidence/runtime/supabase-live-rls-validation.json';
+const supabaseRunner = 'scripts/security/run-supabase-live-tenant-isolation.mjs';
 const allowedStatuses = new Set(['Open', 'Complete', 'Exception']);
 const requiredItems = [
   'Branch protection applied on `main`',
@@ -31,7 +33,7 @@ const requiredSupabaseTables = [
   'audit_events',
   'risks',
   'vendors',
-  'compliance_tasks',
+  'tasks',
   'subscriptions',
   'notifications',
 ];
@@ -41,6 +43,21 @@ const requiredSupabaseOperations = [
   'cross_tenant_update',
   'cross_tenant_delete',
   'same_tenant_read',
+];
+const requiredSameTenantInsertTables = ['documents', 'risks', 'vendors', 'tasks'];
+const requiredSupabaseEvidenceFields = [
+  'status',
+  'outcome',
+  'timestamp',
+  'supabaseProjectReference',
+  'supabaseProjectReferenceRedacted',
+  'tablesReviewed',
+  'testsRun',
+  'failures',
+  'reviewer',
+  'commandUsed',
+  'commitSha',
+  'testCases',
 ];
 const requiredProductionSecretEvidenceFields = [
   'status',
@@ -100,6 +117,14 @@ function readJson(path) {
   }
 }
 
+function hasIsoSeconds(value) {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(String(value ?? ''));
+}
+
+function hasFullSha(value) {
+  return /^[a-f0-9]{40}$/i.test(String(value ?? ''));
+}
+
 function checkProductionSecretEvidence(registerRow) {
   if (!registerRow) return;
 
@@ -117,49 +142,30 @@ function checkProductionSecretEvidence(registerRow) {
     failures.push(`${registerPath} marks production secrets Complete but ${productionSecretsEvidencePath} status is not Complete`);
   }
 
-  if (evidence.status === 'Complete') {
-    for (const field of requiredProductionSecretEvidenceFields) {
-      if (!(field in evidence)) failures.push(`${productionSecretsEvidencePath} missing required field: ${field}`);
-    }
+  if (evidence.status !== 'Complete') return;
 
-    if (evidence.valuesRedacted !== true) {
-      failures.push(`${productionSecretsEvidencePath} must set valuesRedacted to true`);
-    }
+  for (const field of requiredProductionSecretEvidenceFields) {
+    if (!(field in evidence)) failures.push(`${productionSecretsEvidencePath} missing required field: ${field}`);
+  }
 
-    if (!Array.isArray(evidence.provider) || evidence.provider.length === 0) {
-      failures.push(`${productionSecretsEvidencePath} must list provider stores checked`);
-    }
+  if (evidence.valuesRedacted !== true) failures.push(`${productionSecretsEvidencePath} must set valuesRedacted to true`);
+  if (!Array.isArray(evidence.provider) || evidence.provider.length === 0) failures.push(`${productionSecretsEvidencePath} must list provider stores checked`);
+  if (!Array.isArray(evidence.environmentsChecked) || !evidence.environmentsChecked.includes('production')) failures.push(`${productionSecretsEvidencePath} must include production in environmentsChecked`);
 
-    if (!Array.isArray(evidence.environmentsChecked) || !evidence.environmentsChecked.includes('production')) {
-      failures.push(`${productionSecretsEvidencePath} must include production in environmentsChecked`);
+  if (!Array.isArray(evidence.variableNamesChecked)) {
+    failures.push(`${productionSecretsEvidencePath} variableNamesChecked must be an array`);
+  } else {
+    const checkedVariables = new Set(evidence.variableNamesChecked);
+    for (const variable of requiredProductionSecretVariables) {
+      if (!checkedVariables.has(variable)) failures.push(`${productionSecretsEvidencePath} missing checked production variable: ${variable}`);
     }
+  }
 
-    if (!Array.isArray(evidence.variableNamesChecked)) {
-      failures.push(`${productionSecretsEvidencePath} variableNamesChecked must be an array`);
-    } else {
-      const checkedVariables = new Set(evidence.variableNamesChecked);
-      for (const variable of requiredProductionSecretVariables) {
-        if (!checkedVariables.has(variable)) {
-          failures.push(`${productionSecretsEvidencePath} missing checked production variable: ${variable}`);
-        }
-      }
-    }
-
-    if (!String(evidence.reviewer ?? '').trim()) {
-      failures.push(`${productionSecretsEvidencePath} missing reviewer`);
-    }
-
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(String(evidence.timestamp ?? ''))) {
-      failures.push(`${productionSecretsEvidencePath} timestamp must be UTC ISO-8601 seconds`);
-    }
-
-    if (!/^[a-f0-9]{40}$/i.test(String(evidence.commitSha ?? ''))) {
-      failures.push(`${productionSecretsEvidencePath} commitSha must be a full 40-character commit SHA`);
-    }
-
-    if (!String(evidence.note ?? '').toLowerCase().includes('privately')) {
-      failures.push(`${productionSecretsEvidencePath} must state value-bearing screenshots/exports are stored privately outside the repo`);
-    }
+  if (!String(evidence.reviewer ?? '').trim()) failures.push(`${productionSecretsEvidencePath} missing reviewer`);
+  if (!hasIsoSeconds(evidence.timestamp)) failures.push(`${productionSecretsEvidencePath} timestamp must be UTC ISO-8601 seconds`);
+  if (!hasFullSha(evidence.commitSha)) failures.push(`${productionSecretsEvidencePath} commitSha must be a full 40-character commit SHA`);
+  if (!String(evidence.note ?? '').toLowerCase().includes('privately')) {
+    failures.push(`${productionSecretsEvidencePath} must state value-bearing screenshots/exports are stored privately outside the repo`);
   }
 }
 
@@ -181,40 +187,64 @@ function checkSupabaseEvidence(registerRow) {
     failures.push(`${registerPath} marks Supabase live RLS Complete without passing live evidence in ${supabaseEvidencePath}`);
   }
 
-  if (evidence.status === 'Complete') {
-    const tests = Array.isArray(evidence.testCases) ? evidence.testCases : [];
-    const failedTests = tests.filter((test) => test?.passed !== true);
-    const tables = new Set(tests.map((test) => test?.table).filter(Boolean));
-    const operations = new Set(tests.map((test) => test?.operation).filter(Boolean));
-
-    if (evidence.outcome !== 'passed') {
-      failures.push(`${supabaseEvidencePath} status Complete requires outcome passed`);
-    }
-
-    if (failedTests.length > 0) {
-      failures.push(`${supabaseEvidencePath} contains failing Supabase RLS test cases`);
-    }
-
-    for (const table of requiredSupabaseTables) {
-      if (!tables.has(table)) failures.push(`${supabaseEvidencePath} missing live RLS coverage for table: ${table}`);
-    }
-
-    for (const operation of requiredSupabaseOperations) {
-      if (!operations.has(operation)) failures.push(`${supabaseEvidencePath} missing live RLS operation: ${operation}`);
-    }
-
-    if (!String(evidence.redactionConfirmation ?? '').includes('redacted')) {
-      failures.push(`${supabaseEvidencePath} missing redaction confirmation`);
-    }
-
-    if (!String(evidence.productionGate ?? '').toLowerCase().includes('production')) {
-      failures.push(`${supabaseEvidencePath} missing production gate statement`);
-    }
-  }
-
   if (evidence.status === 'Open' && registerWantsComplete) {
     failures.push(`${registerPath} cannot be Complete while ${supabaseEvidencePath} remains Open`);
   }
+
+  if (evidence.status !== 'Complete') return;
+
+  for (const field of requiredSupabaseEvidenceFields) {
+    if (!(field in evidence)) failures.push(`${supabaseEvidencePath} missing required field: ${field}`);
+  }
+
+  if (evidence.outcome !== 'passed') failures.push(`${supabaseEvidencePath} status Complete requires outcome passed`);
+  if (!hasIsoSeconds(evidence.timestamp)) failures.push(`${supabaseEvidencePath} timestamp must be UTC ISO-8601 seconds`);
+  if (!hasFullSha(evidence.commitSha)) failures.push(`${supabaseEvidencePath} commitSha must be a full 40-character commit SHA`);
+  if (!String(evidence.reviewer ?? '').trim()) failures.push(`${supabaseEvidencePath} missing reviewer`);
+  if (!String(evidence.commandUsed ?? '').includes(supabaseRunner)) failures.push(`${supabaseEvidencePath} commandUsed must include ${supabaseRunner}`);
+  if (evidence.supabaseProjectReferenceRedacted !== true) failures.push(`${supabaseEvidencePath} must set supabaseProjectReferenceRedacted to true`);
+  if (!String(evidence.supabaseProjectReference ?? '').startsWith('redacted:')) failures.push(`${supabaseEvidencePath} must include only a redacted Supabase project reference`);
+
+  const tests = Array.isArray(evidence.testCases) ? evidence.testCases : [];
+  const failedTests = tests.filter((test) => test?.passed !== true);
+  const tables = new Set(tests.map((test) => test?.table).filter(Boolean));
+  const operations = new Set(tests.map((test) => test?.operation).filter(Boolean));
+
+  if (failedTests.length > 0) failures.push(`${supabaseEvidencePath} contains failing Supabase RLS test cases`);
+
+  if (!Array.isArray(evidence.failures)) failures.push(`${supabaseEvidencePath} failures must be an array`);
+  else if (evidence.failures.length > 0) failures.push(`${supabaseEvidencePath} Complete evidence must have zero failures`);
+
+  if (!Array.isArray(evidence.testsRun) || evidence.testsRun.length !== tests.length) {
+    failures.push(`${supabaseEvidencePath} testsRun must list every executed test case`);
+  }
+
+  for (const table of requiredSupabaseTables) {
+    if (!tables.has(table)) failures.push(`${supabaseEvidencePath} missing live RLS coverage for table: ${table}`);
+  }
+
+  for (const operation of requiredSupabaseOperations) {
+    if (!operations.has(operation)) failures.push(`${supabaseEvidencePath} missing live RLS operation: ${operation}`);
+  }
+
+  for (const table of requiredSameTenantInsertTables) {
+    if (!tests.some((test) => test.table === table && test.operation === 'same_tenant_insert' && test.passed === true)) {
+      failures.push(`${supabaseEvidencePath} missing same-tenant insert coverage for table: ${table}`);
+    }
+  }
+
+  if (!Array.isArray(evidence.tablesReviewed)) {
+    failures.push(`${supabaseEvidencePath} tablesReviewed must be an array`);
+  } else {
+    for (const table of requiredSupabaseTables) {
+      const reviewed = evidence.tablesReviewed.find((entry) => entry?.table === table);
+      if (!reviewed) failures.push(`${supabaseEvidencePath} tablesReviewed missing table: ${table}`);
+      else if (reviewed.status !== 'passed') failures.push(`${supabaseEvidencePath} table did not pass: ${table}`);
+    }
+  }
+
+  if (!String(evidence.redactionConfirmation ?? '').toLowerCase().includes('redacted')) failures.push(`${supabaseEvidencePath} missing redaction confirmation`);
+  if (!String(evidence.productionGate ?? '').toLowerCase().includes('production')) failures.push(`${supabaseEvidencePath} missing production gate statement`);
 }
 
 let productionSecretsRegisterRow = null;
@@ -230,28 +260,16 @@ if (!existsSync(registerPath)) {
   supabaseRegisterRow = rowByItem.get('Supabase live RLS validation completed') ?? null;
 
   for (const item of requiredItems) {
-    if (!rowByItem.has(item)) {
-      failures.push(`${registerPath} missing required evidence item: ${item}`);
-    }
+    if (!rowByItem.has(item)) failures.push(`${registerPath} missing required evidence item: ${item}`);
   }
 
   for (const row of rows) {
-    if (!allowedStatuses.has(row.status)) {
-      failures.push(`${registerPath} invalid status for ${row.item}: ${row.status}`);
-    }
-
-    if (!row.evidence || row.evidence.length < 12) {
-      failures.push(`${registerPath} missing useful evidence requirement for ${row.item}`);
-    }
-
-    if (!row.owner || row.owner.length < 5) {
-      failures.push(`${registerPath} missing owner for ${row.item}`);
-    }
-
+    if (!allowedStatuses.has(row.status)) failures.push(`${registerPath} invalid status for ${row.item}: ${row.status}`);
+    if (!row.evidence || row.evidence.length < 12) failures.push(`${registerPath} missing useful evidence requirement for ${row.item}`);
+    if (!row.owner || row.owner.length < 5) failures.push(`${registerPath} missing owner for ${row.item}`);
     if (row.status === 'Complete' && !/(evidence|screenshot|export|output|report|review|commit|settings|artifact|link|json)/i.test(row.evidence)) {
       failures.push(`${registerPath} Complete item must reference reviewable evidence: ${row.item}`);
     }
-
     if (row.status === 'Exception' && !/(exception|risk|owner|due|expiry|approval)/i.test(row.evidence)) {
       failures.push(`${registerPath} Exception item must reference risk acceptance evidence: ${row.item}`);
     }
@@ -266,9 +284,7 @@ if (!existsSync(evidenceTemplatePath)) {
 } else {
   const template = readFileSync(evidenceTemplatePath, 'utf8');
   for (const token of requiredTemplateTokens) {
-    if (!template.includes(token)) {
-      failures.push(`${evidenceTemplatePath} missing required template token: ${token}`);
-    }
+    if (!template.includes(token)) failures.push(`${evidenceTemplatePath} missing required template token: ${token}`);
   }
 }
 
