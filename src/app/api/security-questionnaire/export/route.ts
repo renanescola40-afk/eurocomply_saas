@@ -109,6 +109,7 @@ export async function GET(request: Request) {
       exportType: 'eurocomply.security_questionnaire_export',
       payload,
       integrity,
+      signatureAlgorithm: 'signed_hmac',
     };
 
     await createAuditEvent({
@@ -125,6 +126,7 @@ export async function GET(request: Request) {
         actorRole: permission.role,
         payloadHash: integrity.payloadHash,
         signed: integrity.signed,
+        signatureAlgorithm: 'signed_hmac',
         stepUpAction: stepUp.assessment.action,
         stepUpVerifiedAt: stepUp.assessment.verifiedAt,
       },
