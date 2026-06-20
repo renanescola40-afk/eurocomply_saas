@@ -17,7 +17,7 @@ const PUBLIC_SAFE_PATTERNS = [
 
 const WEBHOOK_PATTERNS = [/\/webhook\//, /\/webhooks\//, /stripe\/webhook/, /billing\/webhook/];
 const INTERNAL_PATTERNS = [/src\/app\/api\/(cron|internal|maintenance)\//];
-const TENANT_KEYWORDS = [
+const TENANT_TERMS = [
   'organization',
   'organizationId',
   'organization_id',
@@ -34,8 +34,8 @@ const TENANT_KEYWORDS = [
   'continuity',
   'reports',
 ];
-const ADMIN_KEYWORDS = ['manage_team', 'manage_billing', 'manage_settings', 'admin', 'owner'];
-const HIGH_RISK_KEYWORDS = ['delete', 'approval', 'export', 'upload', 'checkout', 'billing', 'invite', 'members/remove'];
+const ADMIN_TERMS = ['manage_team', 'manage_billing', 'manage_settings', 'admin', 'owner'];
+const HIGH_RISK_TERMS = ['delete', 'approval', 'export', 'upload', 'checkout', 'billing', 'invite', 'members/remove'];
 
 function walk(dir) {
   if (!existsSync(dir)) return [];
@@ -65,9 +65,9 @@ function classify(relativePath, source) {
   if (WEBHOOK_PATTERNS.some((pattern) => pattern.test(relativePath))) return 'webhook';
   if (INTERNAL_PATTERNS.some((pattern) => pattern.test(relativePath))) return 'health/internal';
   if (PUBLIC_SAFE_PATTERNS.some((pattern) => pattern.test(relativePath))) return 'public safe';
-  if (hasAny(source, ADMIN_KEYWORDS) || /\/admin\//.test(relativePath)) return 'admin-only';
-  if (hasAny(relativePath, HIGH_RISK_KEYWORDS) || hasAny(source, HIGH_RISK_KEYWORDS)) return 'high-risk action';
-  if (hasAny(source, TENANT_KEYWORDS) || hasAny(relativePath, TENANT_KEYWORDS)) return 'tenant-scoped';
+  if (hasAny(source, ADMIN_TERMS) || /\/admin\//.test(relativePath)) return 'admin-only';
+  if (hasAny(relativePath, HIGH_RISK_TERMS) || hasAny(source, HIGH_RISK_TERMS)) return 'high-risk action';
+  if (hasAny(source, TENANT_TERMS) || hasAny(relativePath, TENANT_TERMS)) return 'tenant-scoped';
   return 'authenticated';
 }
 
