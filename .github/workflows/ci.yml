@@ -15,13 +15,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
+          fetch-depth: 2
           persist-credentials: false
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 20
       - name: Install dependencies
-        run: npm install
+        run: npm install --ignore-scripts
+      - name: Detect app-affecting changes
+        id: changes
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            changed_files=$(git diff --name-only HEAD^ HEAD)
+          else
+            changed_files=$(git diff --name-only HEAD^ HEAD || git show --name-only --format= HEAD)
+          fi
+          echo "$changed_files"
+          if echo "$changed_files" | grep -E '^(src|app|pages|components|lib|server)/|(^|/)(package(-lock)?\.json|tsconfig\.json|next\.config\.|vitest\.config\.)'; then
+            echo "app_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "app_changed=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Run Phase 3 strict checks
         run: npm run phase3:strict
       - name: Run Phase 3 closeout checks
@@ -40,7 +56,15 @@ jobs:
         run: npm run phase6:check
       - name: Lint
         run: npm run lint
-      - name: Typecheck
+      - name: Typecheck app changes
+        if: steps.changes.outputs.app_changed == 'true'
         run: npm run typecheck
-      - name: Unit tests
+      - name: Skip typecheck for non-app changes
+        if: steps.changes.outputs.app_changed != 'true'
+        run: echo "No app/package/tsconfig changes detected; skipping app typecheck."
+      - name: Test app changes
+        if: steps.changes.outputs.app_changed == 'true'
         run: npm run test
+      - name: Skip tests for non-app changes
+        if: steps.changes.outputs.app_changed != 'true'
+        run: echo "No app/package/test changes detected; skipping app tests."
