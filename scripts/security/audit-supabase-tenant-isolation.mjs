@@ -72,8 +72,9 @@ function mergeMaps(maps) {
 
 function helperUsed(sql, helperName, table) {
   const escapedHelper = helperName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`${escapedHelper}\\('${table}'\\)`, 'i').test(sql)
-    || new RegExp(String.raw`foreach\s+table_name\s+in\s+array\s+array\[[\s\S]*'${table}'[\s\S]*\][\s\S]*perform\s+public\.${escapedHelper}\(table_name\)`, 'i').test(sql);
+  const escapedTable = table.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`${escapedHelper}\\s*\\(\\s*'${escapedTable}'\\s*\\)`, 'i').test(sql)
+    || new RegExp(String.raw`foreach\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+in\s+array\s+array\[[\s\S]*'${escapedTable}'[\s\S]*\][\s\S]*perform\s+public\.${escapedHelper}\s*\(\s*\1\s*\)`, 'i').test(sql);
 }
 
 function orgScopedHelperUsed(sql, table) {
@@ -160,7 +161,7 @@ function auditQueryLayer() {
       if (!tenantTableNames.includes(table)) continue;
       const snippet = text.slice(match.index, Math.min(text.length, match.index + 1500));
       const usesUserId = /\.eq\(\s*['"]user_id['"]/.test(snippet);
-      const hasOrgGuard = /\.eq\(\s*['"]organization_id['"]|\.match\(\s*\{[^}]*organization_id\s*:|requireOrganizationAccess|assertOrganization|organizationId|organization_id/.test(snippet);
+      const hasOrgGuard = /\.eq\(\s*['"](?:organization_id|workspace_id)['"]|\.not\(\s*['"]organization_id['"]|\.match\(\s*\{[^}]*(?:organization_id|workspace_id)\s*:|requireOrganizationAccess|assertOrganization|organizationId|organization_id|workspaceId|workspace_id/.test(snippet);
       if (usesUserId && !hasOrgGuard) failures.push(`${file}: ${table} query filters user_id without an organization guard`);
     }
   }
