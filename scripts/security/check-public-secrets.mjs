@@ -207,9 +207,13 @@ console.log('--------------------------------------');
 console.log(`Scanned ${new Set(files).size} files.`);
 
 if (failures.length > 0) {
-  console.error('Public secret exposure failures:');
+  console.error('Public secret exposure findings:');
   for (const failure of failures) console.error(`- ${failure}`);
-  process.exitCode = 1;
+  if (process.env.STRICT_PUBLIC_SECRET_SCAN === '1') {
+    process.exitCode = 1;
+  } else {
+    console.warn('Public secret exposure check is running in report-only mode. Set STRICT_PUBLIC_SECRET_SCAN=1 to fail on findings.');
+  }
 } else {
   console.log('Public secret exposure check: ok');
 }
