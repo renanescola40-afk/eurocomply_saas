@@ -4,7 +4,10 @@ import path from 'node:path';
 
 const workflowPath = path.join('.github', 'workflows', 'p1-sbom-attestation.yml');
 const requiredSnippets = [
-  'permissions: write-all',
+  'permissions:',
+  'contents: read',
+  'attestations: write',
+  'id-token: write',
   '@cyclonedx/cyclonedx-npm@1.19.3',
   'sbom.cdx.json',
   'actions/upload-artifact@v7',
@@ -28,6 +31,10 @@ for (const snippet of requiredSnippets) {
   if (!workflow.includes(snippet)) {
     fail(`workflow must include: ${snippet}`);
   }
+}
+
+if (workflow.includes('permissions: write-all')) {
+  fail('workflow must not use permissions: write-all');
 }
 
 const forbiddenCredentialContext = new RegExp('sec' + 'rets\\s*\\.');
