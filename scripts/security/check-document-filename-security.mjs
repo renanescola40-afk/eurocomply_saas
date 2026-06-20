@@ -15,6 +15,15 @@ function has(source, tokens) {
   return tokens.every((token) => source.includes(token));
 }
 
+function hasFilenameGateBeforeResponses(packageSource) {
+  const scriptMatch = packageSource.match(/"security:ci"\s*:\s*"(?<command>[^"]+)"/);
+  const command = scriptMatch?.groups?.command ?? '';
+  const filenameIndex = command.indexOf('security:document-filenames');
+  const responsesIndex = command.indexOf('security:responses');
+
+  return filenameIndex >= 0 && responsesIndex > filenameIndex;
+}
+
 console.log('EuroComply file name guard check');
 console.log('----------------------------------');
 
@@ -56,7 +65,7 @@ if (!packageSource.includes('"security:document-filenames"')) {
   failures.push(`${packagePath} must expose security:document-filenames`);
 }
 
-if (!packageSource.includes('security:document-filenames && npm run security:responses')) {
+if (!hasFilenameGateBeforeResponses(packageSource)) {
   failures.push('security:ci must run security:document-filenames before response checks');
 }
 
