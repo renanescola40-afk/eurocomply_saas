@@ -1,6 +1,11 @@
 name: P0 Commit Lockfile
 
 on:
+  push:
+    branches:
+      - security/enterprise-full-security-suite
+    paths:
+      - .github/workflows/p0-commit-lockfile.yml
   workflow_dispatch:
 
 permissions:
@@ -19,12 +24,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
+          fetch-depth: 0
           persist-credentials: true
 
       - name: Show runner Node.js and npm versions
         run: |
           node --version
           npm --version
+
+      - name: Sync with current main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git merge --no-edit -X ours origin/main
 
       - name: Generate lockfile without lifecycle scripts
         run: npm install --package-lock-only --ignore-scripts
@@ -43,12 +56,10 @@ jobs:
 
       - name: Commit deterministic lockfile
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package-lock.json
           if git diff --cached --quiet; then
             echo "No package-lock.json changes to commit."
           else
-            git commit -m "security: commit deterministic npm lockfile"
+            git commit -m "security: sync main and commit deterministic npm lockfile"
             git push
           fi
