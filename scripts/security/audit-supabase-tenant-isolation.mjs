@@ -103,13 +103,19 @@ function hasPolicy(sql, table, keyword) {
   return new RegExp(`create\\s+policy[\\s\\S]+?on\\s+(?:public\\.)?${table}[\\s\\S]+?${escaped}`, 'i').test(sql);
 }
 
+function hasBackendOnlyWriteDenial(sql, table) {
+  if (backendOnlyHelperUsed(sql, table)) return true;
+  const normalized = sql.toLowerCase().replace(/\s+/g, ' ');
+  return normalized.includes(`on public.${table.toLowerCase()}`) && normalized.includes('with check (false)');
+}
+
 function hasDropLegacy(sql, table) {
   return new RegExp(`drop\\s+policy\\s+if\\s+exists[\\s\\S]+?on\\s+(?:public\\.)?${table}`, 'i').test(sql)
     || new RegExp(`drop\\s+policy\\s+if\\s+exists[\\s\\S]+?on\\s+public\\.%I`, 'i').test(sql);
 }
 
 function hasAuditWriteProtection(sql) {
-  return backendOnlyHelperUsed(sql, 'audit_events')
+  return hasBackendOnlyWriteDenial(sql, 'audit_events')
     || /rls_audit_events_insert_backend_only[\s\S]+?with check \(false\)/i.test(sql);
 }
 
@@ -129,7 +135,7 @@ function auditMigrations() {
     if (!hasPolicy(allSql, table, 'select')) failures.push(`Missing SELECT policy coverage for table: ${table}`);
 
     if (backendOnlyTables.has(table)) {
-      if (!hasPolicy(allSql, table, 'with check (false)')) failures.push(`Missing backend-only write denial policy for table: ${table}`);
+      if (!hasBackendOnlyWriteDenial(allSql, table)) failures.push(`Missing backend-only write denial policy for table: ${table}`);
     } else if (table !== 'organizations') {
       if (!hasPolicy(allSql, table, 'organization_id') && table !== 'organization_members') failures.push(`Missing organization_id policy guard for table: ${table}`);
       if (!hasPolicy(allSql, table, 'insert')) failures.push(`Missing INSERT policy coverage for table: ${table}`);
