@@ -16,7 +16,10 @@ on:
       - 'docs/security/P1_SBOM_ATTESTATION_USAGE.md'
       - 'scripts/security/check-p1-sbom-attestation-evidence.mjs'
 
-permissions: write-all
+permissions:
+  contents: read
+  attestations: write
+  id-token: write
 
 concurrency:
   group: p1-sbom-attestation-${{ github.ref }}
