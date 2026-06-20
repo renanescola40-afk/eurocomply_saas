@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { noStoreJson } from '@/server/security/no-store';
 
 const mocks = vi.hoisted(() => ({
   requireApiUser: vi.fn(),
@@ -20,7 +19,14 @@ vi.mock('@/server/security/api-guards', () => ({
   requireApiUser: mocks.requireApiUser,
   requirePermission: mocks.requirePermission,
   requireTrustedMutation: mocks.requireTrustedMutation,
-  secureApiError: (error: unknown) => noStoreJson({ error: error instanceof Error ? 'internal_server_error' : 'unknown' }, { status: 500 }),
+  secureApiError: (error: unknown) =>
+    new Response(JSON.stringify({ error: error instanceof Error ? 'internal_server_error' : 'unknown' }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+      },
+    }),
 }));
 
 vi.mock('@/server/queries/organizations', () => ({
