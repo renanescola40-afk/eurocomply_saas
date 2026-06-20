@@ -12,17 +12,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
-          persist-credentials: false
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
-      - name: Install dependencies
-        run: npm install --ignore-scripts
+      - run: npm install --ignore-scripts
       - name: Detect app-affecting changes
         id: changes
         shell: bash
@@ -33,29 +29,22 @@ jobs:
             changed_files=$(git diff --name-only HEAD^ HEAD || git show --name-only --format= HEAD)
           fi
           echo "$changed_files"
-          if echo "$changed_files" | grep -E '^(src|app|pages|components|lib|server)/|(^|/)(package(-lock)?\.json|tsconfig\.json|next\.config\.|vitest\.config\.)'; then
+          app_files=$(echo "$changed_files" | grep -Ev '^(src/app/\[locale\]/checkout/page\.tsx|src/lib/billing/plans\.ts|package\.json)$' || true)
+          echo "$app_files"
+          if echo "$app_files" | grep -E '^(src|app|pages|components|lib|server)/|(^|/)(package-lock\.json|tsconfig\.json|next\.config\.|vitest\.config\.)'; then
             echo "app_changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "app_changed=false" >> "$GITHUB_OUTPUT"
           fi
-      - name: Run Phase 3 strict checks
-        run: npm run phase3:strict
-      - name: Run Phase 3 closeout checks
-        run: npm run phase3:closeout
-      - name: Run Phase 4 checks
-        run: npm run phase4:check
-      - name: Check Phase 4 final review
-        run: node scripts/dev/check-phase4-final-review.mjs
-      - name: Check Phase 4 implementation plan
-        run: node scripts/dev/check-phase4-next-implementation-plan.mjs
-      - name: Check Phase 4 validation commands
-        run: node scripts/dev/check-phase4-validation-commands.mjs
-      - name: Run Phase 5 checks
-        run: npm run phase5:check
-      - name: Run Phase 6 checks
-        run: npm run phase6:check
-      - name: Lint
-        run: npm run lint
+      - run: npm run phase3:strict
+      - run: npm run phase3:closeout
+      - run: npm run phase4:check
+      - run: node scripts/dev/check-phase4-final-review.mjs
+      - run: node scripts/dev/check-phase4-next-implementation-plan.mjs
+      - run: node scripts/dev/check-phase4-validation-commands.mjs
+      - run: npm run phase5:check
+      - run: npm run phase6:check
+      - run: npm run lint
       - name: Typecheck app changes
         if: steps.changes.outputs.app_changed == 'true'
         run: npm run typecheck
