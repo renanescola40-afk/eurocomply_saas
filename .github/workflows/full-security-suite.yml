@@ -123,7 +123,7 @@ jobs:
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
   semgrep:
     name: Semgrep SAST
@@ -270,7 +270,7 @@ jobs:
           check_gate "Secret scanning (Gitleaks)" "${{ needs.gitleaks.result }}"
           check_gate "Semgrep SAST" "${{ needs.semgrep.result }}"
           check_gate "CodeQL" "${{ needs.codeql.result }}"
-          check_gate "Dependency Review" "${{ needs.dependency-review.result }}"
+          check_gate "Dependency Review" "${{ needs['dependency-review'].result }}"
           check_gate "OSSF Scorecard" "${{ needs.scorecard.result }}"
 
           if [ "$failed" -ne 0 ]; then
