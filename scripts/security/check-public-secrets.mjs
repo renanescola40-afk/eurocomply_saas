@@ -111,6 +111,14 @@ function isProviderExpressionValue(value, line) {
   return /^\$\{\{/.test(value) || /\$\{\{\s*(secrets|vars|env|github)\./.test(line);
 }
 
+function isReferenceOnlyContext(normalized, line, value = '') {
+  if (containsConcreteSecretValue(line)) return false;
+  if (normalized === 'scripts/security/check-public-secrets.mjs') return true;
+  if (normalized.startsWith('docs/security/')) return true;
+  if (normalized.startsWith('.github/workflows/') && (isProviderExpressionValue(value, line) || /\$\{\{/.test(line))) return true;
+  return false;
+}
+
 function isDangerousPublicNameDefinition(normalized, line) {
   return (
     normalized === 'src/lib/security/env-guard.ts'
@@ -161,7 +169,7 @@ for (const file of new Set(files)) {
   for (const match of source.matchAll(dangerousPublicName)) {
     const name = match[0];
     const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-    if (!allowedPublicNames.has(name) && !isPlaceholderContextLine(line) && !isDangerousPublicNameDefinition(normalized, line)) {
+    if (!allowedPublicNames.has(name) && !isReferenceOnlyContext(normalized, line) && !isPlaceholderContextLine(line) && !isDangerousPublicNameDefinition(normalized, line)) {
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} dangerous public env name: ${name}`);
     }
   }
@@ -170,7 +178,7 @@ for (const file of new Set(files)) {
     const name = match.groups?.name ?? 'UNKNOWN_SECRET';
     const value = match.groups?.value ?? '';
     const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-    if (!allowedPublicNames.has(name) && !isProviderExpressionValue(value, line) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value) && !isDetectorDefinition(normalized, name, value, line)) {
+    if (!allowedPublicNames.has(name) && !isReferenceOnlyContext(normalized, line, value) && !isProviderExpressionValue(value, line) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value) && !isDetectorDefinition(normalized, name, value, line)) {
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible hardcoded secret assignment: ${name}`);
     }
   }
