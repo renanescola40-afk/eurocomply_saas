@@ -4,7 +4,6 @@ const secretScope = 'sec' + 'rets';
 const varScope = 'va' + 'rs';
 const scopeRef = (scope, name = '') => `${scope}.${name}`;
 const indexedScopeRef = (scope, name) => `${scope}['${name}']`;
-const secretRef = (name) => scopeRef(secretScope, name);
 const indexedSecretRef = (name) => indexedScopeRef(secretScope, name);
 const varRef = (name) => scopeRef(varScope, name);
 
@@ -45,7 +44,7 @@ const checks = [
       'permissions:',
       'contents: read',
       'persist-credentials: false',
-      'npm ci',
+      'npm ci --ignore-scripts',
       'npm run lint',
       'npm run typecheck',
       'npm run test',
@@ -70,7 +69,7 @@ const checks = [
       'permissions:',
       'contents: read',
       'persist-credentials: false',
-      'npm ci',
+      'npm ci --ignore-scripts',
       'node scripts/preflight-ci.mjs',
       'npm run security:github-workflows',
       'npm run security:ci',
@@ -105,9 +104,8 @@ const checks = [
       'fetch-depth: 0',
       'persist-credentials: false',
       'gitleaks/gitleaks-action@v2',
-      'github.token',
       'Production secret readiness gate',
-      'npm ci',
+      'npm ci --ignore-scripts',
       'npm run security:production-secrets',
       'permissions:',
       'contents: read',
@@ -143,7 +141,7 @@ const checks = [
     tokens: [
       'environment: production',
       'persist-credentials: false',
-      'npm ci',
+      'npm ci --ignore-scripts',
       'npm run preflight',
       'npm run security:ci',
       'npm run build',
