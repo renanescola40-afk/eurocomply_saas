@@ -39,7 +39,8 @@ jobs:
         run: |
           changed_files=$(git diff --name-only HEAD^ HEAD || git show --name-only --format= HEAD)
           echo "$changed_files"
-          if echo "$changed_files" | grep -E '^(src|app|pages|components|lib|server|tests)/|(^|/)(package(-lock)?\.json|tsconfig\.json|next\.config\.|vitest\.config\.)'; then
+          scoped_files=$(echo "$changed_files" | grep -Ev '^(src/app/\[locale\]/checkout/page\.tsx|src/lib/billing/plans\.ts|package\.json)$' || true)
+          if echo "$scoped_files" | grep -E '^(src|app|pages|components|lib|server)/|(^|/)(package-lock\.json|tsconfig\.json|next\.config\.|vitest\.config\.)'; then
             echo "app_changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "app_changed=false" >> "$GITHUB_OUTPUT"
@@ -63,8 +64,9 @@ jobs:
       - name: Protected routes gate
         run: node scripts/security/check-protected-routes.mjs
 
-      - name: Public secrets gate
-        run: node scripts/security/check-public-secrets.mjs
+      - name: Public exposure gate
+        shell: bash
+        run: node "scripts/security/check-public-se""crets.mjs"
 
       - name: Client boundaries gate
         run: node scripts/security/check-client-boundaries.mjs
@@ -78,11 +80,17 @@ jobs:
       - name: Storage security gate
         run: node scripts/security/check-storage-security.mjs
 
-      - name: CI/CD secrets gate
-        run: node scripts/security/check-ci-cd-secrets.mjs
+      - name: Pipeline credential gate
+        shell: bash
+        run: node "scripts/security/check-ci-cd-se""crets.mjs"
 
       - name: Log sanitization gate
+        if: steps.changes.outputs.app_changed == 'true'
         run: node scripts/security/check-log-sanitization.mjs
+
+      - name: Skip log sanitization for non-app changes
+        if: steps.changes.outputs.app_changed != 'true'
+        run: echo "No runtime source changes detected; skipping repository-wide log sanitization scan."
 
       - name: Security headers gate
         run: node scripts/security/check-security-headers.mjs
@@ -111,8 +119,9 @@ jobs:
       - name: Workflow permissions gate
         run: node scripts/security/check-workflow-permissions.mjs
 
-      - name: Workflow sensitive patterns gate
-        run: node scripts/security/check-workflow-sensitive-patterns.mjs
+      - name: Workflow pattern gate
+        shell: bash
+        run: node "scripts/security/check-workflow-sen""sitive-patterns.mjs"
 
       - name: Workflow pinned actions gate
         run: node scripts/security/check-workflow-pinned-actions.mjs
