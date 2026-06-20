@@ -33,7 +33,7 @@ const allowedPublicNames = new Set([
 const committedEnvFile = /^\.env(\..*)?$/;
 const allowedCommittedEnvFiles = new Set(['.env.example']);
 const dangerousPublicName = /NEXT_PUBLIC_[A-Z0-9_]*(SECRET|TOKEN|SERVICE|SERVICE_ROLE|PRIVATE|PASSWORD|WEBHOOK|STRIPE_SECRET|AUTH_TOKEN|ACCESS_TOKEN|SIGNING|KEY)[A-Z0-9_]*/g;
-const sensitiveAssignmentName = /(?<name>[A-Z0-9_]*(?:SECRET|PASSWORD|TOKEN|PRIVATE_KEY|SERVICE_ROLE|WEBHOOK_SECRET|AUTH_TOKEN|ACCESS_TOKEN|API_KEY|SUPABASE_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_CLIENT_SECRET)[A-Z0-9_]*)[ \t]*[:=][ \t]*(?<quote>['"]?)(?<value>[^'"\s,}#]*)/g;
+const sensitiveAssignmentName = /(?<name>[A-Z0-9_]*(?:SECRET|PASSWORD|TOKEN|PRIVATE_KEY|SERVICE_ROLE|WEBHOOK_SECRET|AUTH_TOKEN|ACCESS_TOKEN|API_KEY|SUPABASE_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_CLIENT_SECRET)[A-Z0-9_]*)[ \t]*(?<![=!<>])[:=](?![=>])[ \t]*(?<quote>['"]?)(?<value>[^'"\s,}#]*)/g;
 const secretValuePatterns = [
   { name: 'Supabase service role JWT-like value', pattern: /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g },
   { name: 'Stripe live secret key', pattern: /(?<![A-Za-z0-9_-])sk_live_[A-Za-z0-9]{16,}/g },
@@ -131,11 +131,18 @@ function isDetectorDefinition(normalized, name, value, line) {
 }
 
 function isPlaceholderValue(value) {
-  return value === '' || /^(undefined|null|process\.env|\[process\.env|\$\{|<.*>|\*{3,}|x{3,}|x-[a-z0-9-]+|z(?:\.|$)|\.\.\.|[A-Za-z0-9_-]+\.\.\.|your-|sua-|changeme|placeholder|example|sample|dummy|redacted|dev-secret|ci-|ci_|test_|sk_test_|sk_live_\.\.\.|rk_live_\.\.\.|price_ci_|price_\.\.\.|whsec_ci_|whsec_\.\.\.|eyJhbGc\.\.\.)/i.test(value);
+  return value === '' || /^(undefined|null|process\.env|\[process\.env|\$\{|<.*>|\*{3,}|x{3,}|x-[a-z0-9-]+|z(?:\.|$)|\.\.\.|[A-Za-z0-9_-]+\.\.\.|your-|sua-|changeme|placeholder|example|sample|dummy|redacted|dev-secret|ci-|ci_|test_|original[A-Za-z0-9_]*;?$|sk_test_|sk_live_\.\.\.|rk_live_\.\.\.|price_ci_|price_\.\.\.|whsec_ci_|whsec_\.\.\.|eyJhbGc\.\.\.)/i.test(value);
 }
 
 function isSymbolicEnvironmentName(value) {
   return /^[A-Z0-9_]*(?:SECRET|PASSWORD|TOKEN|PRIVATE_KEY|SERVICE_ROLE|WEBHOOK_SECRET|AUTH_TOKEN|ACCESS_TOKEN|API_KEY|SUPABASE_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_CLIENT_SECRET)[A-Z0-9_]*;?$/.test(value);
+}
+
+function isSafeProcessEnvOperation(line) {
+  const trimmed = line.trim();
+  return !containsConcreteSecretValue(line)
+    && (/^(const|let|var)\s+[A-Za-z0-9_]+\s*=\s*process\.env\.[A-Z0-9_]+;?$/.test(trimmed)
+      || /^process\.env\.[A-Z0-9_]+\s*=\s*(original[A-Za-z0-9_]*|undefined|null);?$/.test(trimmed));
 }
 
 function isPublicClientFile(path) {
@@ -170,7 +177,7 @@ for (const file of new Set(files)) {
     const name = match.groups?.name ?? 'UNKNOWN_SECRET';
     const value = match.groups?.value ?? '';
     const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-    if (!allowedPublicNames.has(name) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value) && !isDetectorDefinition(normalized, name, value, line)) {
+    if (!allowedPublicNames.has(name) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value) && !isSafeProcessEnvOperation(line) && !isDetectorDefinition(normalized, name, value, line)) {
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible hardcoded secret assignment: ${name}`);
     }
   }
