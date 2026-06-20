@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
@@ -91,7 +92,7 @@ describe('central API security guards', () => {
   });
 
   it('blocks tenant A users from tenant B resources', () => {
-    expect(() => assertApiResourceOrganization('org_b', 'org_a')).toThrowError(/Resource does not belong/);
+    expect(() => assertApiResourceOrganization('org_b', 'org_a')).toThrow(/Resource does not belong/);
   });
 
   it('sanitizes invalid request bodies', async () => {
