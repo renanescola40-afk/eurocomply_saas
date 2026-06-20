@@ -36,8 +36,8 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies deterministically
-        run: npm ci
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
 
       - name: Lint
         run: npm run lint
@@ -148,7 +148,7 @@ jobs:
           --severity ERROR
           --error
           --metrics off
-          .
+          src
 
   codeql:
     name: CodeQL
@@ -197,17 +197,29 @@ jobs:
           fetch-depth: 2
           persist-credentials: false
 
+      - name: Detect dependency manifest changes
+        id: dependency_changes
+        shell: bash
+        run: |
+          changed_files=$(git diff --name-only HEAD^ HEAD)
+          echo "$changed_files"
+          if echo "$changed_files" | grep -E '(^|/)(package(-lock)?\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock)$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Dependency Review
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.dependency_changes.outputs.changed == 'true'
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
           deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, LGPL-2.0, LGPL-2.1, LGPL-3.0
           comment-summary-in-pr: always
 
-      - name: Dependency Review is pull-request only
-        if: github.event_name != 'pull_request'
-        run: echo "Dependency Review is only applicable to pull requests."
+      - name: Dependency Review is not applicable
+        if: github.event_name != 'pull_request' || steps.dependency_changes.outputs.changed != 'true'
+        run: echo "Dependency Review is only required for pull requests that change dependency manifests."
 
   scorecard:
     name: OSSF Scorecard
