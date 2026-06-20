@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -75,6 +77,9 @@ jobs:
       - name: Public secrets gate
         # Governance marker for legacy workflow gates: npm run security:ci
         run: npm run security:public-secrets
+
+      - name: Production secret readiness gate
+        run: npm run security:production-secrets
 
       - name: Supply-chain gate
         run: npm run security:supply-chain

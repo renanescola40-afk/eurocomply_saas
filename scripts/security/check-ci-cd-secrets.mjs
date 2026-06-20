@@ -7,6 +7,7 @@ const workflowRoot = join(root, '.github', 'workflows');
 const requiredWorkflowFiles = [
   '.github/workflows/ci.yml',
   '.github/workflows/security-ci.yml',
+  '.github/workflows/secret-scanning.yml',
   '.github/workflows/vercel-production.yml',
 ];
 
@@ -22,6 +23,27 @@ const requiredSecretReferences = [
 const requiredPreflightTokens = [
   'npm run preflight',
   'npm run security:ci',
+  'npm run security:production-secrets',
+];
+
+const sensitiveWorkflowEnvNames = [
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_ACCESS_TOKEN',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'RESEND_API_KEY',
+  'HEALTHCHECK_TOKEN',
+  'AUDIT_CHAIN_SIGNING_SECRET',
+  'EVIDENCE_PACK_SIGNING_SECRET',
+  'STEP_UP_SIGNING_SECRET',
+  'CRON_SECRET',
+  'INTERNAL_CRON_SECRET',
+  'UPSTASH_REDIS_REST_TOKEN',
+  'SENTRY_DSN',
+  'SENTRY_AUTH_TOKEN',
+  'VERCEL_TOKEN',
+  'VERCEL_ORG_ID',
+  'VERCEL_PROJECT_ID',
 ];
 
 const forbiddenWorkflowPatterns = [
@@ -29,6 +51,7 @@ const forbiddenWorkflowPatterns = [
   { name: 'hardcoded Stripe secret key', pattern: /sk_(live|test)_[A-Za-z0-9_]+/ },
   { name: 'hardcoded Stripe webhook secret', pattern: /whsec_[A-Za-z0-9_]+/ },
   { name: 'hardcoded GitHub token', pattern: /gh[pousr]_[A-Za-z0-9_]{20,}/ },
+  { name: 'hardcoded Supabase access token', pattern: /sbp_[A-Za-z0-9_.-]{20,}/ },
   { name: 'hardcoded Vercel token-like value', pattern: /vercel[_-]?token\s*[:=]\s*['"]?[A-Za-z0-9_\-]{20,}/i },
   { name: 'test service role placeholder', pattern: /(test|ci)-service-role-key/i },
   { name: 'test anon key placeholder', pattern: /(test|ci)-anon-key/i },
@@ -81,11 +104,28 @@ for (const token of requiredPreflightTokens) {
 }
 
 for (const { path, source } of workflowSources) {
+  const lines = source.split('\n');
+
   for (const forbidden of forbiddenWorkflowPatterns) {
     for (const match of source.matchAll(asGlobalRegExp(forbidden.pattern))) {
       failures.push(`${path}:${lineNumberFor(source, match.index ?? 0)} forbidden CI/CD secret pattern: ${forbidden.name}`);
     }
   }
+
+  lines.forEach((line, index) => {
+    if (!/\b(echo|printf|tee|cat)\b/i.test(line)) return;
+
+    if (/secrets\./i.test(line)) {
+      failures.push(`${path}:${index + 1} workflow must not print the GitHub secrets context`);
+    }
+
+    for (const envName of sensitiveWorkflowEnvNames) {
+      const shellVariablePattern = new RegExp(`\\$\\{?${envName}\\}?`);
+      if (shellVariablePattern.test(line)) {
+        failures.push(`${path}:${index + 1} workflow must not print provider secret variable: ${envName}`);
+      }
+    }
+  });
 
   if (/vercel\s+(deploy|pull|build)/i.test(source) && !source.includes('environment: production')) {
     failures.push(`${path}: Vercel deploy workflow must use a protected GitHub Environment such as production`);
