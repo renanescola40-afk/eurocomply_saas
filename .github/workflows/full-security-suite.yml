@@ -61,7 +61,16 @@ jobs:
         run: node scripts/security/check-api-guards.mjs
 
       - name: Protected routes gate
-        run: node scripts/security/check-protected-routes.mjs
+        run: node scripts/security/check-protected-routes.mjs 2>&1 | tee protected-routes.log
+
+      - name: Upload protected routes diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: protected-routes-gate
+          path: protected-routes.log
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Public secrets gate
         run: node scripts/security/check-public-secrets.mjs
