@@ -16,7 +16,8 @@ const CURRENT_PLAN_BLOCKING_STATUSES = new Set([
   'incomplete',
 ]);
 
-type CheckoutSearchParams = { plan?: string; checkout?: string };
+type CheckoutSearchParamValue = string | string[] | undefined;
+type CheckoutSearchParams = { plan?: CheckoutSearchParamValue; checkout?: CheckoutSearchParamValue };
 
 const checkoutProof = [
   ['Stripe secure billing', 'Card, invoice details and tax data are handled by Stripe Checkout.'],
@@ -37,6 +38,10 @@ type CheckoutPageProps = {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-US').format(value);
+}
+
+function firstSearchParam(value: CheckoutSearchParamValue) {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 function isCurrentPlanSubscription(status: string | null | undefined) {
@@ -68,12 +73,14 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
     params,
     searchParams ?? Promise.resolve({} satisfies CheckoutSearchParams),
   ]);
-  const selectedPlan = getBillingPlan(resolvedSearchParams.plan) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];
+  const requestedPlanId = firstSearchParam(resolvedSearchParams.plan);
+  const checkoutStatus = firstSearchParam(resolvedSearchParams.checkout);
+  const selectedPlan = getBillingPlan(requestedPlanId) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];
   const user = await getCurrentUser();
   const organization = user ? await getCurrentOrganizationForUser(user.id).catch(() => null) : null;
   const billing = organization ? await getOrganizationBillingContext(organization.id).catch(() => null) : null;
   const selectedPlanIsCurrent = billing?.plan === selectedPlan.id && isCurrentPlanSubscription(billing.status);
-  const message = checkoutMessage(resolvedSearchParams.checkout);
+  const message = checkoutMessage(checkoutStatus);
   const authContinuationPath = `/${locale}/dashboard/organizations/billing`;
 
   async function startCheckout(formData: FormData) {
