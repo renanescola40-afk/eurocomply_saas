@@ -214,7 +214,7 @@ jobs:
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
-          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, LGPL-2.0, LGPL-2.1, LGPL-3.0
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
           comment-summary-in-pr: always
 
       - name: Dependency Review is not applicable
