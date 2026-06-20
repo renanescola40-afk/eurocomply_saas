@@ -6,10 +6,10 @@ import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getRetentionSummary, RETENTION_POLICIES } from '@/server/governance/retention-policy';
 import { createAuditEvent } from '@/server/queries/audit-events';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { requireApiUser, requirePermission, secureApiError } from '@/server/security/api-guards';
 import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
-import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
 import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
-import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
@@ -32,65 +32,58 @@ function getRetentionExportStatus(readinessScore: number) {
 }
 
 export async function GET(request: Request) {
-  let context: Awaited<ReturnType<typeof requireOrganizationContext>>;
-
   try {
-    context = await requireOrganizationContext();
-  } catch (error) {
-    return guardErrorResponse(error);
-  }
+    const user = await requireApiUser();
+    const organization = await getCurrentOrganizationForUser(user.id);
 
-  const { user, organization } = context;
+    if (!organization) {
+      return noStoreJson({ error: 'organization_required' }, { status: 403 });
+    }
 
-  const permission = await assertOrganizationPermission({
-    userId: user.id,
-    organizationId: organization.id,
-    permission: 'export_data',
-  });
-
-  if (!permission.ok) {
-    return permissionDeniedResponse(permission);
-  }
-
-  const planCheck = await assertPlanAtLeast(organization.id, 'business');
-
-  if (!planCheck.ok) {
-    return upgradeRequiredResponse({
-      error: planCheck.error,
-      message: planCheck.message,
-      plan: planCheck.entitlements.plan,
-      requiredPlan: 'business',
-      entitlements: planCheck.entitlements,
-    }, planCheck.status);
-  }
-
-  const stepUp = await requireStepUpForRequest({
-    request,
-    action: 'export_data',
-    userId: user.id,
-    organizationId: organization.id,
-  });
-
-  if (!stepUp.ok) {
-    return stepUp.response;
-  }
-
-  const rateLimit = await checkDistributedRateLimit({
-    key: `export:retention-policy:${organization.id}:${user.id}`,
-    limit: 8,
-    windowMs: 60_000,
-  });
-
-  if (!rateLimit.allowed) {
-    reportError(new Error('Retention policy export rate limit exceeded'), {
-      area: 'retention_policy_export_rate_limit',
-      organizationId: organization.id,
+    const permission = await requirePermission({
       userId: user.id,
+      organizationId: organization.id,
+      permission: 'export_data',
     });
-    return rateLimitResponse(rateLimit);
-  }
 
-  try {
+    const planCheck = await assertPlanAtLeast(organization.id, 'business');
+
+    if (!planCheck.ok) {
+      return upgradeRequiredResponse({
+        error: planCheck.error,
+        message: planCheck.message,
+        plan: planCheck.entitlements.plan,
+        requiredPlan: 'business',
+        entitlements: planCheck.entitlements,
+      }, planCheck.status);
+    }
+
+    const stepUp = await requireStepUpForRequest({
+      request,
+      action: 'export_data',
+      userId: user.id,
+      organizationId: organization.id,
+    });
+
+    if (!stepUp.ok) {
+      return stepUp.response;
+    }
+
+    const rateLimit = await checkDistributedRateLimit({
+      key: `export:retention-policy:${organization.id}:${user.id}`,
+      limit: 8,
+      windowMs: 60_000,
+    });
+
+    if (!rateLimit.allowed) {
+      reportError(new Error('Retention policy export rate limit exceeded'), {
+        area: 'retention_policy_export_rate_limit',
+        organizationId: organization.id,
+        userId: user.id,
+      });
+      return rateLimitResponse(rateLimit);
+    }
+
     const summary = getRetentionSummary();
     const status = getRetentionExportStatus(summary.readinessScore);
     const payload = {
@@ -150,10 +143,9 @@ export async function GET(request: Request) {
   } catch (error) {
     reportError(error, {
       area: 'retention_policy_export',
-      organizationId: organization.id,
-      userId: user.id,
+      error: error instanceof Error ? error.name : 'unknown',
     });
 
-    return noStoreJson({ error: 'retention_policy_export_failed' }, { status: 500 });
+    return secureApiError(error);
   }
 }
