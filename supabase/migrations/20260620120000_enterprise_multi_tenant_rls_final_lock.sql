@@ -3,6 +3,22 @@
 
 create extension if not exists pgcrypto;
 
+create table if not exists public.tasks (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  created_by uuid references auth.users(id) on delete set null,
+  assigned_to uuid references auth.users(id) on delete set null,
+  title text not null,
+  description text,
+  category text not null default 'general',
+  status text not null default 'todo',
+  priority text not null default 'medium',
+  due_date date,
+  completed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create or replace function public.has_org_write_role(target_organization_id uuid)
 returns boolean
 language sql
@@ -21,6 +37,8 @@ returns void
 language plpgsql
 set search_path = public
 as $$
+declare
+  legacy_policy_name text;
 begin
   if to_regclass(format('public.%I', table_name)) is null then
     return;
@@ -44,6 +62,21 @@ begin
   execute format('drop policy if exists %I on public.%I', 'rls_' || table_name || '_update_member', table_name);
   execute format('drop policy if exists %I on public.%I', 'rls_' || table_name || '_update_writer', table_name);
   execute format('drop policy if exists %I on public.%I', 'rls_' || table_name || '_delete_admin', table_name);
+
+  foreach legacy_policy_name in array array[
+    'Members can read documents',
+    'Managers can create documents',
+    'Managers can update documents',
+    'Members can read risks',
+    'Managers can manage risks',
+    'Members can read vendors',
+    'Managers can manage vendors',
+    'Members can read compliance tasks',
+    'Managers can create compliance tasks',
+    'Managers can update compliance tasks'
+  ] loop
+    execute format('drop policy if exists %I on public.%I', legacy_policy_name, table_name);
+  end loop;
 
   execute format(
     'create policy %I on public.%I for select to authenticated using (public.is_org_member(organization_id))',
