@@ -254,12 +254,11 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Secure document storage is not configured.' }, { status: 503 });
   }
 
-  const { error: uploadError } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .upload(storagePath, buffer, {
-      contentType: validation.mimeType,
-      upsert: false,
-    });
+  const storage = supabase.storage.from(STORAGE_BUCKET);
+  const { error: uploadError } = await storage.upload(storagePath, buffer, {
+    contentType: validation.mimeType,
+    upsert: false,
+  });
 
   if (uploadError) {
     console.warn('[documents] upload_failed', { code: uploadError.message ? 'storage_error' : 'unknown' });
@@ -281,7 +280,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (documentError) {
-    await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
+    await storage.remove([storagePath]);
     console.warn('[documents] metadata_create_failed', { code: documentError.code ?? 'unknown' });
 
     return noStoreJson({ error: 'Unable to register document metadata.' }, { status: 500 });
