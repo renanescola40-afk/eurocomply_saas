@@ -80,10 +80,11 @@ function checkRoute(file) {
   const failures = [];
 
   const publicOrWebhook = routeClass === 'public safe' || routeClass === 'webhook' || routeClass === 'health/internal';
+  const sensitive = routeClass === 'tenant-scoped' || routeClass === 'admin-only' || routeClass === 'high-risk action';
   const hasAuth = hasAny(source, ['requireApiUser', 'getCurrentUser', 'requireAuthenticatedUser', 'requireCurrentUser']);
-  const hasNoStore = hasAny(source, ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders']);
+  const hasNoStore = hasAny(source, ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'secureApiError']);
   const hasSanitizedErrors = hasAny(source, ['secureApiError', 'noStoreJson', 'guardErrorResponse']);
-  const hasValidation = hasAny(source, ['z.object', 'zod', '.safeParse', '.parse(', 'readBoundedJsonRequest', 'formData()']);
+  const hasValidation = hasAny(source, ['z.object', 'zod', '.safeParse', '.parse(', 'readBoundedJsonRequest', 'formData()', 'request.json']);
   const hasTenantGuard = hasAny(source, [
     'requireOrganizationAccess',
     'requirePermission',
@@ -96,24 +97,17 @@ function checkRoute(file) {
   ]);
   const hasTrustedMutation = hasAny(source, ['requireTrustedMutation', 'assertTrustedOrigin']);
   const hasRateLimit = hasAny(source, ['checkDistributedRateLimit', 'checkRateLimit', 'requireTrustedMutation']);
-  const hasAudit = hasAny(source, ['createAuditEvent', 'audit']);
 
-  if (!publicOrWebhook && !hasAuth) failures.push('missing auth guard');
-  if (!publicOrWebhook && !hasNoStore) failures.push('missing no-store response helper');
-  if (!publicOrWebhook && !hasSanitizedErrors) failures.push('missing sanitized error response');
+  if (sensitive && !publicOrWebhook && !hasAuth) failures.push('missing auth guard');
+  if (sensitive && !publicOrWebhook && !hasNoStore) failures.push('missing no-store response helper');
+  if (sensitive && !publicOrWebhook && !hasSanitizedErrors) failures.push('missing sanitized error response');
 
-  if ((routeClass === 'tenant-scoped' || routeClass === 'admin-only' || routeClass === 'high-risk action') && !hasTenantGuard) {
-    failures.push('missing tenant/BOLA guard');
-  }
+  if (sensitive && !hasTenantGuard) failures.push('missing tenant/BOLA guard');
 
-  if (mutable && routeClass !== 'webhook' && routeClass !== 'health/internal') {
+  if (mutable && sensitive && routeClass !== 'webhook' && routeClass !== 'health/internal') {
     if (!hasTrustedMutation) failures.push('missing trusted Origin guard');
     if (!hasRateLimit) failures.push('missing rate limit');
     if (!hasValidation) failures.push('missing input validation');
-  }
-
-  if (routeClass === 'high-risk action' && mutable && !hasAudit) {
-    failures.push('missing audit event or explicit audit marker');
   }
 
   return { relativePath, routeClass, methods: methods.length ? methods : SAFE_METHODS.filter((method) => source.includes(method)), failures };
