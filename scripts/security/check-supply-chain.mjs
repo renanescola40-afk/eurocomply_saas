@@ -207,10 +207,21 @@ if (securityCi) {
 }
 
 if (dependencyReview) {
-  for (const token of ['actions/dependency-review-action@v5', 'fail-on-severity: high', 'deny-licenses']) {
+  for (const token of [
+    'actions/dependency-review-action@v5',
+    'vulnerability-check: true',
+    'license-check: false',
+    'fail-on-severity: high',
+    'comment-summary-in-pr: never',
+    'npm audit --audit-level=high',
+  ]) {
     if (!dependencyReview.includes(token)) {
       failures.push(`${dependencyReviewWorkflowPath} missing dependency review token: ${token}`);
     }
+  }
+
+  if (dependencyReview.includes('deny-licenses')) {
+    failures.push(`${dependencyReviewWorkflowPath} must not enforce broad deny-licenses here; license policy belongs in a separately triaged license gate.`);
   }
 }
 
