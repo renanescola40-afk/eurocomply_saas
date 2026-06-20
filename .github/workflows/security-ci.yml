@@ -40,6 +40,9 @@ jobs:
       - name: Run CI preflight with placeholders
         run: node scripts/preflight-ci.mjs
 
+      - name: Production secret readiness gate
+        run: npm run security:production-secrets
+
       - name: Run GitHub workflow governance gate
         run: npm run security:github-workflows 2>&1 | tee github-workflows.log
 
@@ -96,9 +99,6 @@ jobs:
           path: public-secrets.log
           retention-days: 7
           if-no-files-found: warn
-
-      - name: Production secret readiness gate
-        run: npm run security:production-secrets
 
       - name: Supply-chain gate
         run: npm run security:supply-chain
