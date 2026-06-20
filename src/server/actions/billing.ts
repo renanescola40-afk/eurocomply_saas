@@ -28,6 +28,14 @@ const portalInputSchema = z.object({
   returnPath: safeReturnPathSchema,
 });
 
+const DUPLICATE_CHECKOUT_BLOCKING_STATUSES = new Set([
+  'active',
+  'trialing',
+  'past_due',
+  'unpaid',
+  'incomplete',
+]);
+
 type CheckoutInput = z.infer<typeof checkoutInputSchema>;
 type PortalInput = z.infer<typeof portalInputSchema>;
 
@@ -40,6 +48,10 @@ async function requireBillingContext() {
   }
 
   return { user, organization };
+}
+
+function isDuplicateCheckoutStatus(status: string | null | undefined) {
+  return Boolean(status && DUPLICATE_CHECKOUT_BLOCKING_STATUSES.has(status));
 }
 
 function getAppUrl() {
@@ -96,6 +108,21 @@ export async function createCheckoutSession(input: CheckoutInput) {
     const appUrl = getAppUrl();
 
     await assertCurrentUserCan(organization.id, user.id, 'billing:manage');
+
+    const supabase = createAdminClient();
+    const { data: subscription, error: subscriptionError } = await supabase
+      .from('subscriptions')
+      .select('plan,status')
+      .eq('organization_id', organization.id)
+      .maybeSingle();
+
+    if (subscriptionError) {
+      throw subscriptionError;
+    }
+
+    if (subscription?.plan === plan.id && isDuplicateCheckoutStatus(subscription.status)) {
+      throw new Error('Organization is already subscribed to this billing plan');
+    }
 
     const stripe = getStripeClient();
 
