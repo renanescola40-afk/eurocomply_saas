@@ -1,0 +1,61 @@
+{
+  "evidenceItem": "upload-production-readiness",
+  "status": "PendingRuntimeValidation",
+  "reviewer": "security-automation",
+  "reviewedAt": "2026-06-20T00:00:00.000Z",
+  "generatedAt": "2026-06-20T00:00:00.000Z",
+  "summary": "Production readiness checklist for enterprise upload, malware scanning and controlled-document tenant isolation. Code controls are implemented; production readiness requires live environment configuration and runtime validation before marking complete.",
+  "redactionConfirmation": "No secrets, tokens, credentials, scanner endpoints or access-granting values are stored in this evidence file.",
+  "requiredEnvironment": {
+    "REQUIRE_MALWARE_SCAN_FOR_UPLOADS": "true",
+    "MALWARE_SCANNER_PROVIDER": "clamav|clamd|http|generic-http|webhook",
+    "MALWARE_SCANNER_ENDPOINT_OR_CLAMAV_HOST": "configured-in-runtime-secret-store",
+    "SUPABASE_MIGRATIONS": [
+      "20260620090000_upload_malware_scan_hardening.sql",
+      "20260620120000_controlled_document_storage_read_lockdown.sql"
+    ]
+  },
+  "productionValidationScenarios": [
+    {
+      "id": "clean-upload-accepted",
+      "expected": "A valid PDF upload is accepted only after the scanner returns a clean verdict.",
+      "status": "pending_runtime_validation"
+    },
+    {
+      "id": "scanner-unavailable-blocked",
+      "expected": "When REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true and the scanner is unreachable, upload is blocked before storage.",
+      "status": "pending_runtime_validation"
+    },
+    {
+      "id": "unsafe-verdict-blocked",
+      "expected": "Infected, suspicious or scanner error verdicts block upload before storage.",
+      "status": "pending_runtime_validation"
+    },
+    {
+      "id": "mime-spoofing-blocked",
+      "expected": "Files whose claimed MIME, extension and magic number do not agree are rejected before scanning/storage.",
+      "status": "pending_runtime_validation"
+    },
+    {
+      "id": "cross-tenant-download-blocked",
+      "expected": "An actor from another organization cannot receive a signed URL for a controlled document.",
+      "status": "pending_runtime_validation"
+    },
+    {
+      "id": "direct-storage-access-blocked",
+      "expected": "Authenticated clients cannot directly read, upload, update or delete controlled document objects through Supabase storage policies.",
+      "status": "pending_runtime_validation"
+    },
+    {
+      "id": "audit-events-present",
+      "expected": "Upload scan outcomes and denied signed-download attempts emit structured audit events with organizationId and actorUserId.",
+      "status": "pending_runtime_validation"
+    }
+  ],
+  "goNoGoRule": "Do not mark enterprise upload/document readiness as 100% until every productionValidationScenarios item is Complete in the target production environment and the two required Supabase migrations are applied.",
+  "relatedEvidence": [
+    "docs/security/evidence/runtime/upload-malware-scan-validation.json",
+    "docs/security/UPLOAD_CONTENT_SCAN.md",
+    "tests/security/upload-malware-scan-validation.test.ts"
+  ]
+}
