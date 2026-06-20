@@ -27,14 +27,16 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 22
+          cache: npm
 
-      - name: Install dependencies without lifecycle scripts
-        run: npm install --ignore-scripts
+      - name: Install dependencies deterministically
+        run: npm ci
 
       - name: Run CI preflight with placeholders
         run: node scripts/preflight-ci.mjs
@@ -48,7 +50,7 @@ jobs:
           echo "## npm audit triage summary" > npm-audit-summary.md
           echo "" >> npm-audit-summary.md
           echo '```text' >> npm-audit-summary.md
-          npm run security:npm-audit:summary | tee -a npm-audit-summary.md || true
+          npm audit --audit-level=moderate 2>&1 | tee -a npm-audit-summary.md || true
           echo '```' >> npm-audit-summary.md
           cat npm-audit-summary.md >> "$GITHUB_STEP_SUMMARY"
 
