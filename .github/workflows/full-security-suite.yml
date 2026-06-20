@@ -215,7 +215,7 @@ jobs:
         with:
           fail-on-severity: high
           deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
-          comment-summary-in-pr: always
+          comment-summary-in-pr: never
 
       - name: Dependency Review is not applicable
         if: github.event_name != 'pull_request' || steps.dependency_changes.outputs.changed != 'true'
