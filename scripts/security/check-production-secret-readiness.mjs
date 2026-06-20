@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { basename, extname, join, relative, sep } from 'node:path';
+import { basename, dirname, extname, join, relative, sep } from 'node:path';
 
 const root = process.cwd();
 const failures = [];
@@ -117,6 +117,10 @@ function normalizePath(path) {
   return relative(root, path).split(sep).join('/');
 }
 
+function normalizeRepoPath(path) {
+  return path.split(sep).join('/');
+}
+
 function walk(dir) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -192,20 +196,84 @@ function checkEnvExample() {
   return values;
 }
 
-function checkClientBoundary() {
-  for (const file of walk(join(root, 'src'))) {
-    const path = normalizePath(file);
-    if (!/\.(ts|tsx|js|jsx)$/.test(path)) continue;
-    const source = readFileSync(file, 'utf8');
+function hasClientDirective(source) {
+  return /^\s*['"]use client['"];?/m.test(source);
+}
 
+function parseImportSpecifiers(source) {
+  const specifiers = [];
+  const importPattern = /(?:import\s+(?:[^'";]*?\s+from\s+)?|export\s+(?:[^'";]*?\s+from\s+)|import\s*\()\s*['"]([^'"]+)['"]/g;
+  for (const match of source.matchAll(importPattern)) specifiers.push(match[1]);
+  return specifiers;
+}
+
+function resolveSourceImport(fromPath, specifier, sourceByPath) {
+  let basePath;
+  if (specifier.startsWith('.')) {
+    basePath = normalizeRepoPath(join(dirname(fromPath), specifier));
+  } else if (specifier.startsWith('@/')) {
+    basePath = normalizeRepoPath(join('src', specifier.slice(2)));
+  } else {
+    return null;
+  }
+
+  const candidates = [
+    basePath,
+    `${basePath}.ts`,
+    `${basePath}.tsx`,
+    `${basePath}.js`,
+    `${basePath}.jsx`,
+    `${basePath}/index.ts`,
+    `${basePath}/index.tsx`,
+    `${basePath}/index.js`,
+    `${basePath}/index.jsx`,
+  ];
+
+  return candidates.find((candidate) => sourceByPath.has(candidate)) ?? null;
+}
+
+function findClientReachableFiles(sourceEntries, sourceByPath) {
+  const clientReachable = new Set();
+  const queue = [];
+
+  for (const { path, source } of sourceEntries) {
+    if (hasClientDirective(source) || /\.client\.(?:ts|tsx|js|jsx)$/.test(path)) {
+      clientReachable.add(path);
+      queue.push(path);
+    }
+  }
+
+  while (queue.length > 0) {
+    const path = queue.shift();
+    const source = sourceByPath.get(path) ?? '';
+    for (const specifier of parseImportSpecifiers(source)) {
+      const resolved = resolveSourceImport(path, specifier, sourceByPath);
+      if (!resolved || clientReachable.has(resolved)) continue;
+      clientReachable.add(resolved);
+      queue.push(resolved);
+    }
+  }
+
+  return clientReachable;
+}
+
+function checkClientBoundary() {
+  const sourceEntries = walk(join(root, 'src'))
+    .map((file) => ({ file, path: normalizePath(file), source: readFileSync(file, 'utf8') }))
+    .filter(({ path }) => /\.(ts|tsx|js|jsx)$/.test(path));
+  const sourceByPath = new Map(sourceEntries.map(({ path, source }) => [path, source]));
+  const clientReachable = findClientReachableFiles(sourceEntries, sourceByPath);
+
+  for (const { path, source } of sourceEntries) {
     for (const match of source.matchAll(/NEXT_PUBLIC_[A-Z0-9_]+/g)) {
       const name = match[0];
       if (sensitivePublicNamePattern.test(name) && !allowedPublicEnvNames.has(name)) failures.push(`${path}:${lineNumberFor(source, match.index ?? 0)} sensitive env name uses NEXT_PUBLIC prefix: ${name}`);
     }
 
-    const clientReachable = /^\s*['"]use client['"];?/m.test(source) || (/src\/(components|app)\//.test(path) && /\.(tsx|jsx)$/.test(path));
-    if (!clientReachable) continue;
-    for (const envName of serverOnlyEnvNames) if (source.includes(envName)) failures.push(`${path} references server-only env from client-reachable code: ${envName}`);
+    if (!clientReachable.has(path)) continue;
+    for (const envName of serverOnlyEnvNames) {
+      if (source.includes(envName)) failures.push(`${path} is reachable from a client component and references server-only env: ${envName}`);
+    }
   }
 }
 
