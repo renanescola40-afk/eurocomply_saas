@@ -271,9 +271,9 @@ export async function deleteDocument(documentId: string, organizationId: string,
     throw new Error('Document not found');
   }
 
-  assertDocumentStoragePathInOrganization(document.storage_path, organizationId);
-
   if (document.storage_path) {
+    assertDocumentStoragePathInOrganization(document.storage_path, organizationId);
+
     const { error: storageError } = await supabase.storage.from(DOCUMENT_BUCKET).remove([document.storage_path]);
 
     if (storageError) {
