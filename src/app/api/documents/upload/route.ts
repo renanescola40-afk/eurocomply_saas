@@ -12,7 +12,7 @@ import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
-import { validateUploadFileSignature } from '@/server/security/file-signature';
+import { validateUploadFileSecurity } from '@/server/security/file-signature';
 import { scanUploadForMalware, shouldBlockUploadForMalwareScan } from '@/server/security/malware-scan';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -111,7 +111,15 @@ export async function POST(request: NextRequest) {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  if (!validateUploadFileSignature(file.type, buffer)) {
+  const uploadSecurity = validateUploadFileSecurity({
+    fileName: file.name,
+    claimedMimeType: file.type,
+    sizeBytes: file.size,
+    bytes: buffer,
+    maxBytes: MAX_UPLOAD_BYTES,
+  });
+
+  if (!uploadSecurity.ok) {
     await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
@@ -119,14 +127,17 @@ export async function POST(request: NextRequest) {
       entityType: 'document',
       entityId: organization.id,
       metadata: {
-        reason: 'signature_mismatch',
+        reason: uploadSecurity.reason,
         claimedMimeType: file.type,
+        fileName: file.name,
         sizeBytes: file.size,
         actorRole: permission.role,
       },
     });
 
-    return noStoreJson({ error: 'File signature does not match the declared file type.' }, { status: 415 });
+    const status = uploadSecurity.reason === 'file_too_large' ? 413 : 415;
+
+    return noStoreJson({ error: uploadSecurity.message }, { status });
   }
 
   const scan = await scanUploadForMalware({
