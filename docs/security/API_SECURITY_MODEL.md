@@ -59,7 +59,31 @@ Except for signed webhooks and explicit health/internal endpoints, all POST/PUT/
 
 ## CI enforcement
 
-`npm run security:api-route-hardening` runs `scripts/security/check-api-route-hardening.mjs`. The check inventories every App Router API route, classifies it, and fails when sensitive routes miss auth, tenant/BOLA protection, mutation Origin/rate-limit/input validation, or high-risk audit coverage. It is included in `security:ci` so new sensitive API routes cannot land without guards.
+`npm run security:api-route-hardening` runs `scripts/security/check-api-route-hardening.mjs`. The check inventories every App Router API route, classifies it, and fails when sensitive routes miss auth, tenant/BOLA protection, mutation Origin/rate-limit/input validation, or high-risk audit coverage. The current PR wires it through `security:api-guards`, which is already part of `security:ci`; adding a dedicated `package.json` alias is still recommended for readability.
+
+## Migration status in this PR
+
+Migrated reference routes:
+
+- `src/app/api/documents/[id]/approval/route.ts`
+- `src/app/api/team/members/remove/route.ts`
+- `src/app/api/team/invitations/cancel/route.ts`
+- `src/app/api/team/members/role/route.ts`
+
+Added security coverage:
+
+- central helper unit tests for auth, tenant membership, RBAC, cross-tenant resource checks, Origin enforcement, Zod sanitization, and internal error sanitization;
+- BOLA/IDOR tests for team member removal;
+- BOLA/IDOR tests for team invitation cancellation;
+- security contract test for team member role changes.
+
+Known follow-up migration backlog:
+
+- `src/app/api/team/invites/route.ts`
+- `src/app/api/billing/checkout-intent/route.ts`
+- `src/app/api/gdpr/delete-request/route.ts`
+- `src/app/api/ai-systems/route.ts`
+- remaining `src/app/api/**/route.ts` endpoints flagged by `npm run security:api-route-hardening`.
 
 ## Legitimate exceptions
 
