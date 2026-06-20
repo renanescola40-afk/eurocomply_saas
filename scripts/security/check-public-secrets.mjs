@@ -24,8 +24,6 @@ const allowedPublicNames = new Set([
   'NEXT_PUBLIC_SITE_URL',
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'NEXT_PUBLIC_SUPABASE_KEY',
-  'NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY',
   'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
   'NEXT_PUBLIC_SENTRY_DSN',
 ]);
@@ -90,11 +88,11 @@ function lineNumberFor(source, index) {
 }
 
 function isPlaceholderLine(line) {
-  return /(placeholder|example|changeme|your-|ci-|ci_|test_|sk_test_|price_ci_|whsec_ci_|dummy|not configured|redacted)/i.test(line);
+  return /(placeholder|example|sample|changeme|change-me|your-|ci-|ci_|test_|sk_test_|price_ci_|whsec_ci_|dummy|not configured|redacted|fallback de desenvolvimento|Copie para \.env)/i.test(line);
 }
 
 function isPlaceholderValue(value) {
-  return value === '' || /^(undefined|null|process\.env|\[process\.env|\$\{|<.*>|\*{3,}|x{3,}|your-|changeme|placeholder|example|dummy|redacted|ci-|ci_|test_|sk_test_|price_ci_|whsec_ci_)/i.test(value);
+  return value === '' || /^(undefined|null|process\.env|\[process\.env|\$\{|<.*>|\*{3,}|x{3,}|\.\.\.|your-|sua-|dev-secret-|placeholder|example|sample|dummy|redacted|ci-|ci_|test_|sk_test_|sk_live_\.\.\.|rk_live_\.\.\.|price_ci_|price_\.\.\.|whsec_ci_|whsec_\.\.\.|eyJhbGc\.\.\.)/i.test(value);
 }
 
 function isSymbolicEnvironmentName(value) {
