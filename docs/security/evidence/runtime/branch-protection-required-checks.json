@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "branch": "main",
+  "evidence_type": "branch-protection-required-checks",
+  "captured_at": "2026-06-20T00:00:00.000+01:00",
+  "source": "repo-policy-evidence",
+  "policy_document": "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
+  "branch_protection": {
+    "protect_branch": true,
+    "require_pull_request": true,
+    "required_approving_reviews": 1,
+    "require_code_owner_review": true,
+    "dismiss_stale_reviews": true,
+    "require_conversation_resolution": true,
+    "require_status_checks": true,
+    "require_up_to_date_branch": true,
+    "block_force_pushes": true,
+    "block_deletions": true,
+    "restrict_direct_pushes": true
+  },
+  "required_status_checks": [
+    "Full Security Suite / Core CI, build and npm audit",
+    "Full Security Suite / Actionlint",
+    "Full Security Suite / Secret scanning (Gitleaks)",
+    "Full Security Suite / Semgrep SAST",
+    "Full Security Suite / CodeQL",
+    "Full Security Suite / Dependency Review",
+    "Full Security Suite / OSSF Scorecard",
+    "Full Security Suite / Enterprise merge/deploy gate",
+    "CI / quality",
+    "EuroComply Security CI / Run security gates, typecheck and tests",
+    "Secret Scanning / Gitleaks repository and history scan",
+    "Secret Scanning / Production secret readiness gate"
+  ],
+  "release_blockers": {
+    "full_security_suite_required": true,
+    "lint_failure_blocks": true,
+    "typecheck_failure_blocks": true,
+    "test_failure_blocks": true,
+    "build_failure_blocks": true,
+    "security_ci_failure_blocks": true,
+    "secret_scanning_failure_blocks": true,
+    "untriaged_high_or_critical_npm_audit_blocks": true
+  },
+  "sbom": {
+    "generated_by_ci": true,
+    "artifact_name": "eurocomply-sbom",
+    "runtime_path": "docs/security/evidence/runtime/sbom.json"
+  },
+  "verification_note": "This file records the required policy and evidence contract. Repository administrators must keep the GitHub branch protection or ruleset configuration aligned with this file before release promotion."
+}
