@@ -2,55 +2,14 @@ name: Sync Security Branch From Main
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - security/enterprise-full-security-suite
-    paths:
-      - '.github/workflows/sync-security-branch-from-main.yml'
 
 permissions:
-  contents: write
-
-concurrency:
-  group: sync-security-branch-from-main-${{ github.ref }}
-  cancel-in-progress: true
+  contents: read
 
 jobs:
-  sync-from-main:
-    name: Merge latest main and refresh lockfile
+  disabled:
+    name: Disabled temporary workflow
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
-      - name: Checkout branch
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-
-      - name: Merge latest main preferring security branch conflict resolution
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          git merge --no-ff -X ours origin/main -m "chore: merge latest main into enterprise security suite"
-
-      - name: Refresh deterministic lockfile after sync
-        run: npm install --package-lock-only --ignore-scripts
-
-      - name: Verify synced lockfile works with npm ci
-        run: npm ci --ignore-scripts
-
-      - name: Commit and push sync result
-        run: |
-          git add package-lock.json
-          if git diff --cached --quiet; then
-            echo "No lockfile changes after main sync."
-          else
-            git commit -m "security: refresh lockfile after main sync"
-          fi
-          git push
+      - name: Explain disabled workflow
+        run: echo "Temporary branch sync workflow is disabled and retained only so it can be removed after the branch is synced with main."
