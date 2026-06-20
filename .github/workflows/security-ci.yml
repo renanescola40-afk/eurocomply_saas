@@ -105,7 +105,19 @@ jobs:
           if-no-files-found: warn
 
       - name: Production secret readiness gate
-        run: npm run security:production-secrets
+        shell: bash
+        run: |
+          npm run security:production-secrets 2>&1 | tee production-secret-readiness.log
+          test "${PIPESTATUS[0]}" -eq 0
+
+      - name: Upload production secret readiness diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-secret-readiness-security-ci
+          path: production-secret-readiness.log
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Supply-chain gate
         run: npm run security:supply-chain
