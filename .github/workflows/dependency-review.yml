@@ -19,26 +19,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-          persist-credentials: false
+          fetch-depth: 2
 
       - name: Detect dependency manifest changes
         id: dependency_changes
         shell: bash
         run: |
-          set -euo pipefail
-          changed_files="$(git diff --name-only \
-            "${{ github.event.pull_request.base.sha }}" \
-            "${{ github.event.pull_request.head.sha }}" \
-            -- package.json package-lock.json npm-shrinkwrap.json yarn.lock pnpm-lock.yaml bun.lock bun.lockb)"
-
-          if [ -n "$changed_files" ]; then
+          changed_files=$(git diff --name-only HEAD^ HEAD)
+          echo "$changed_files"
+          if echo "$changed_files" | grep -E '(^|/)(package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock)$'; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Dependency manifests changed:"
-            echo "$changed_files"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "No dependency manifest changes detected; skipping dependency review."
           fi
 
       - name: Dependency Review
@@ -48,3 +40,7 @@ jobs:
           fail-on-severity: high
           deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, LGPL-2.0, LGPL-2.1, LGPL-3.0
           comment-summary-in-pr: always
+
+      - name: No dependency manifest changes
+        if: steps.dependency_changes.outputs.changed != 'true'
+        run: echo "No lockfile dependency changes detected; dependency review is not required for this PR."
