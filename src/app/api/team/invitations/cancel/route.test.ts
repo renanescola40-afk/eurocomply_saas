@@ -59,36 +59,6 @@ function buildRequest(body: unknown) {
   });
 }
 
-function installSupabaseMock(invitationResult: unknown, updateResult = { error: null }) {
-  const builder = {
-    select: mocks.select,
-    update: mocks.update,
-    eq: mocks.eq,
-    maybeSingle: mocks.maybeSingle,
-  };
-
-  mocks.select.mockReturnValue(builder);
-  mocks.update.mockReturnValue(builder);
-  mocks.eq.mockReturnValue(builder);
-  mocks.maybeSingle.mockResolvedValue(invitationResult);
-  mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => builder) });
-  mocks.eq.mockImplementation(() => builder);
-  mocks.update.mockImplementation(() => ({ ...builder, eq: mocks.eq }));
-  mocks.eq.mockReturnValue({ ...builder, maybeSingle: mocks.maybeSingle, eq: mocks.eq });
-  mocks.maybeSingle.mockResolvedValue(invitationResult);
-
-  builder.update.mockReturnValue({
-    eq: vi.fn().mockReturnThis(),
-    then: undefined,
-  });
-
-  mocks.update.mockReturnValue({
-    eq: vi.fn().mockReturnThis(),
-  });
-
-  return { builder, updateResult };
-}
-
 describe('team invitation cancel API hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
