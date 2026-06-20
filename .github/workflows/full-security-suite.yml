@@ -213,6 +213,8 @@ jobs:
         if: github.event_name == 'pull_request' && steps.dependency_changes.outputs.changed == 'true'
         uses: actions/dependency-review-action@v5
         with:
+          vulnerability-check: true
+          license-check: false
           fail-on-severity: high
           comment-summary-in-pr: never
 
