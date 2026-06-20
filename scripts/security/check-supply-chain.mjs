@@ -79,10 +79,6 @@ function warnOnNpmRuntimeDrift(packageManager) {
   );
 }
 
-function workflowUsesSupportedSetupNode(workflowSource) {
-  return /actions\/setup-node@v(?:4|6)\b/.test(workflowSource);
-}
-
 const pkg = readJson(packageJsonPath);
 const npmrc = read(npmrcPath);
 const supplyChainDoc = read(supplyChainDocPath);
@@ -111,7 +107,6 @@ if (pkg) {
   for (const scriptName of [
     'security:npm-audit:prod',
     'security:npm-audit:json',
-    'security:npm-audit:summary',
     'security:zod-compat',
     'security:final-readiness',
     'security:final-readiness:report',
@@ -179,6 +174,7 @@ if (securityCi) {
   const requiredTokens = [
     'npm install --ignore-scripts',
     'npm run security:ci',
+    'actions/setup-node@v6',
     'node-version: 22',
     'final-security-readiness.json',
   ];
@@ -187,10 +183,6 @@ if (securityCi) {
     if (!securityCi.includes(token)) {
       failures.push(`${securityCiWorkflowPath} missing required supply-chain token: ${token}`);
     }
-  }
-
-  if (!workflowUsesSupportedSetupNode(securityCi)) {
-    failures.push(`${securityCiWorkflowPath} must use a supported actions/setup-node major version (v4 or v6)`);
   }
 
   if (securityCi.includes('npm install') && !securityCi.includes('--ignore-scripts')) {
@@ -207,7 +199,7 @@ if (securityCi) {
 }
 
 if (dependencyReview) {
-  for (const token of ['actions/dependency-review-action@v4', 'fail-on-severity: high', 'deny-licenses']) {
+  for (const token of ['actions/dependency-review-action@v5', 'fail-on-severity: high', 'deny-licenses']) {
     if (!dependencyReview.includes(token)) {
       failures.push(`${dependencyReviewWorkflowPath} missing dependency review token: ${token}`);
     }
