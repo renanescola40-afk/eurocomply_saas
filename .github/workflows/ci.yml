@@ -47,7 +47,18 @@ jobs:
       - run: npm run lint
       - name: Typecheck app changes
         if: steps.changes.outputs.app_changed == 'true'
-        run: npm run typecheck
+        shell: bash
+        run: |
+          npm run typecheck 2>&1 | tee typecheck.log
+          test "${PIPESTATUS[0]}" -eq 0
+      - name: Upload typecheck diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-typecheck-diagnostics
+          path: typecheck.log
+          retention-days: 7
+          if-no-files-found: warn
       - name: Skip typecheck for non-app changes
         if: steps.changes.outputs.app_changed != 'true'
         run: echo "No app/package/tsconfig changes detected; skipping app typecheck."
