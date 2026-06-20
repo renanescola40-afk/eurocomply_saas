@@ -89,9 +89,22 @@ function lineNumberFor(source, index) {
   return source.slice(0, index).split('\n').length;
 }
 
-function isPlaceholderLine(line) {
-  return /(placeholder|example|sample|changeme|change-me|your-|ci-|ci_|test_|sk_test_|price_ci_|whsec_ci_|dummy|not configured|redacted|dev-secret|fallback de desenvolvimento|Copie para \.env)/i.test(line)
-    || /:\s*z(?:\.|$)/.test(line);
+function containsConcreteSecretValue(line) {
+  return secretValuePatterns.some((secret) => {
+    const flags = secret.pattern.flags.replace('g', '');
+    return new RegExp(secret.pattern.source, flags).test(line);
+  });
+}
+
+function isCommentOrDocumentationLine(line) {
+  const trimmed = line.trim();
+  return /^(\/\/|#|--|\*|\/\*|<!--|>|[-*]\s|\|)/.test(trimmed) || /`[^`]+`/.test(trimmed);
+}
+
+function isPlaceholderContextLine(line) {
+  return isCommentOrDocumentationLine(line)
+    && !containsConcreteSecretValue(line)
+    && /(placeholder|example|sample|changeme|change-me|your-|ci-|ci_|test_|sk_test_|price_ci_|whsec_ci_|dummy|not configured|redacted|dev-secret|fallback de desenvolvimento|Copie para \.env)/i.test(line);
 }
 
 function isPlaceholderValue(value) {
@@ -124,7 +137,7 @@ for (const file of new Set(files)) {
   for (const match of source.matchAll(dangerousPublicName)) {
     const name = match[0];
     const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-    if (!allowedPublicNames.has(name) && !isPlaceholderLine(line)) {
+    if (!allowedPublicNames.has(name) && !isPlaceholderContextLine(line)) {
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} dangerous public env name: ${name}`);
     }
   }
@@ -132,18 +145,14 @@ for (const file of new Set(files)) {
   for (const match of source.matchAll(sensitiveAssignmentName)) {
     const name = match.groups?.name ?? 'UNKNOWN_SECRET';
     const value = match.groups?.value ?? '';
-    const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-    if (!allowedPublicNames.has(name) && !isPlaceholderLine(line) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value)) {
+    if (!allowedPublicNames.has(name) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value)) {
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible hardcoded secret assignment: ${name}`);
     }
   }
 
   for (const secret of secretValuePatterns) {
     for (const match of source.matchAll(secret.pattern)) {
-      const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-      if (!isPlaceholderLine(line)) {
-        failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible committed secret: ${secret.name}`);
-      }
+      failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible committed secret: ${secret.name}`);
     }
   }
 
