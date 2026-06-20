@@ -11,6 +11,7 @@ const requiredUploadTokens = [
   'assertOrganizationPermission',
   'manage_documents',
   'assertDocumentQuota',
+  'validateUploadFileSecurity',
   'validateUploadFileSignature',
   'scanUploadForMalware',
   'shouldBlockUploadForMalwareScan',
@@ -36,7 +37,14 @@ const requiredSignatureTokens = [
   'PNG_HEADER',
   'JPEG_HEADER',
   'ZIP_HEADER',
+  'WINDOWS_EXECUTABLE_HEADER',
+  'ALLOWED_UPLOAD_EXTENSIONS',
+  'DANGEROUS_UPLOAD_EXTENSIONS',
+  'validateUploadFileSecurity',
   'validateUploadFileSignature',
+  'dangerous_extension',
+  'extension_mismatch',
+  'mime_spoofing',
   '[Content_Types].xml',
   'word/',
   'xl/',
@@ -84,6 +92,10 @@ if (contentScanSource) assertTokens(contentScanSource, requiredContentScanTokens
 
 if (uploadSource.includes('contentType: file.type') && !uploadSource.includes('validateUploadFileSignature(file.type, buffer)')) {
   failures.push(`${uploadRoute} sets storage contentType from client MIME without prior file signature validation`);
+}
+
+if (uploadSource.includes('supabase.storage') && uploadSource.indexOf('validateUploadFileSecurity') > uploadSource.indexOf('supabase.storage')) {
+  failures.push(`${uploadRoute} validates file security after storage access; complete validation must happen before upload`);
 }
 
 if (uploadSource.includes('supabase.storage') && uploadSource.indexOf('validateUploadFileSignature') > uploadSource.indexOf('supabase.storage')) {
