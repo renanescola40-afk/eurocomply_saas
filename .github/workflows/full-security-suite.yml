@@ -51,104 +51,41 @@ jobs:
       - name: Report P0 enterprise progress
         run: node scripts/security/write-p0-enterprise-progress.mjs
 
-      - name: Gate route links
-        run: node scripts/quality/check-route-links.mjs
-
-      - name: Gate RLS coverage
-        run: node scripts/security/check-rls.mjs
-
-      - name: Gate API guards
-        run: node scripts/security/check-api-guards.mjs
-
-      - name: Gate protected routes
-        run: node scripts/security/check-protected-routes.mjs
-
-      - name: Gate public secrets
-        run: node scripts/security/check-public-secrets.mjs
-
-      - name: Gate client boundaries
-        run: node scripts/security/check-client-boundaries.mjs
-
-      - name: Gate authorization BOLA
-        run: node scripts/security/check-authorization-bola.mjs
-
-      - name: Gate API endpoint hardening
-        run: node scripts/security/check-api-endpoint-hardening.mjs
-
-      - name: Gate storage security
-        run: node scripts/security/check-storage-security.mjs
-
-      - name: Gate CI/CD secrets
-        run: node scripts/security/check-ci-cd-secrets.mjs
-
-      - name: Gate log sanitization
-        run: node scripts/security/check-log-sanitization.mjs
-
-      - name: Gate security headers
-        run: node scripts/security/check-security-headers.mjs
-
-      - name: Gate no-store coverage
-        run: node scripts/security/check-no-store.mjs
-
-      - name: Gate origin guards
-        run: ENFORCE_ORIGIN_GUARDS=true node scripts/security/check-origin-guards.mjs
-
-      - name: Gate upload security
-        run: node scripts/security/check-upload-security.mjs
-
-      - name: Gate upload content scan
-        run: node scripts/security/check-upload-content-scan.mjs
-
-      - name: Gate security responses
-        run: node scripts/security/check-security-responses.mjs
-
-      - name: Gate audit chain
-        run: node scripts/security/check-audit-chain.mjs
-
-      - name: Gate GitHub security workflows
-        run: node scripts/security/check-github-security-workflows.mjs
-
-      - name: Gate workflow permissions
-        run: node scripts/security/check-workflow-permissions.mjs
-
-      - name: Gate workflow sensitive patterns
-        run: node scripts/security/check-workflow-sensitive-patterns.mjs
-
-      - name: Gate workflow pinned actions
-        run: node scripts/security/check-workflow-pinned-actions.mjs
-
-      - name: Gate lockfile required
-        run: node scripts/security/check-lockfile-required.mjs
-
-      - name: Report floating dependencies
-        run: node scripts/security/list-floating-dependencies.mjs
-
-      - name: Gate npm package sources
-        run: node scripts/security/check-npm-package-sources.mjs
-
-      - name: Gate npm script safety
-        run: node scripts/security/check-npm-script-safety.mjs
-
-      - name: Gate env example policy
-        run: node scripts/security/check-env-example-policy.mjs
-
-      - name: Gate release environment evidence
-        run: node scripts/security/check-release-environment-evidence.mjs
-
-      - name: Gate P0 enterprise blockers
-        run: node scripts/security/check-p0-enterprise-blockers.mjs
-
-      - name: Gate supply chain
-        run: node scripts/security/check-supply-chain.mjs
-
-      - name: Gate Zod error usage
-        run: node scripts/security/check-zod-error-usage.mjs
-
-      - name: Gate trust package
-        run: node scripts/security/check-trust-package.mjs
-
-      - name: Gate enterprise trust evidence
-        run: node scripts/security/check-enterprise-trust-evidence.mjs
+      - name: Run repository security gates
+        run: |
+          node scripts/quality/check-route-links.mjs
+          node scripts/security/check-rls.mjs
+          node scripts/security/check-api-guards.mjs
+          node scripts/security/check-protected-routes.mjs
+          node scripts/security/check-public-secrets.mjs
+          node scripts/security/check-client-boundaries.mjs
+          node scripts/security/check-authorization-bola.mjs
+          node scripts/security/check-api-endpoint-hardening.mjs
+          node scripts/security/check-storage-security.mjs
+          node scripts/security/check-ci-cd-secrets.mjs
+          node scripts/security/check-log-sanitization.mjs
+          node scripts/security/check-security-headers.mjs
+          node scripts/security/check-no-store.mjs
+          ENFORCE_ORIGIN_GUARDS=true node scripts/security/check-origin-guards.mjs
+          node scripts/security/check-upload-security.mjs
+          node scripts/security/check-upload-content-scan.mjs
+          node scripts/security/check-security-responses.mjs
+          node scripts/security/check-audit-chain.mjs
+          node scripts/security/check-github-security-workflows.mjs
+          node scripts/security/check-workflow-permissions.mjs
+          node scripts/security/check-workflow-sensitive-patterns.mjs
+          node scripts/security/check-workflow-pinned-actions.mjs
+          node scripts/security/check-lockfile-required.mjs
+          node scripts/security/list-floating-dependencies.mjs
+          node scripts/security/check-npm-package-sources.mjs
+          node scripts/security/check-npm-script-safety.mjs
+          node scripts/security/check-env-example-policy.mjs
+          node scripts/security/check-release-environment-evidence.mjs
+          node scripts/security/check-p0-enterprise-blockers.mjs
+          node scripts/security/check-supply-chain.mjs
+          node scripts/security/check-zod-error-usage.mjs
+          node scripts/security/check-trust-package.mjs
+          node scripts/security/check-enterprise-trust-evidence.mjs
 
       - name: Typecheck app changes
         if: steps.changes.outputs.app_changed == 'true'
