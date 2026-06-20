@@ -96,7 +96,11 @@ Allowed document MIME types are PDF, PNG, JPEG, DOCX and XLSX. TXT, SVG, HTML, s
 
 ## Tenant Isolation and Download Policy
 
-Stored document paths must start with the owning `organizationId`. Supabase storage policies and application guards both enforce the same `<organizationId>/...` prefix. Signed download URLs are created only after the user is confirmed as a member of the document organization and has `documents:read`; URLs expire after 60 seconds.
+Stored document paths must start with the owning `organizationId`. Application guards enforce the same `<organizationId>/...` prefix before storage writes, deletes or signed URL creation. Authenticated clients must not read, upload, update or delete `controlled-documents` storage objects directly; storage policies intentionally return false for direct authenticated access so every document read is backend-mediated.
+
+Signed download URLs are created only after the user is confirmed as a member of the document organization and has `documents:read`; URLs expire after 60 seconds. This prevents direct storage reads from bypassing RBAC, audit events or tenant-scoped document lookup.
+
+Backend-generated template documents may use `text/markdown` in the bucket because they are created by trusted server actions, not accepted from user upload forms. User-submitted uploads remain restricted to PDF, PNG, JPEG, DOCX and XLSX.
 
 ## Expected Upload Evidence
 
@@ -138,4 +142,5 @@ MALWARE_SCANNER_PROVIDER points to a real scanning provider
 upload rejection audit events include scan status and provider
 security:ci delegates to upload security gates
 cross-tenant signed URL tests pass
+direct authenticated storage reads and writes remain blocked
 ```
