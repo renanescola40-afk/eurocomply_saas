@@ -42,7 +42,16 @@ jobs:
         run: node scripts/preflight-ci.mjs
 
       - name: Production secret readiness gate
-        run: npm run security:production-secrets
+        run: npm run security:production-secrets 2>&1 | tee ready.log
+
+      - name: Upload readiness diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ready-gate
+          path: ready.log
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Run GitHub workflow governance gate
         run: npm run security:github-workflows 2>&1 | tee github-workflows.log
