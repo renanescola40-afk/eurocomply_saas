@@ -23,7 +23,7 @@
 
 import { z } from 'zod';
 
-const DEFAULT_DEV_AUTH_SECRET = 'dev-secret-min-32-chars-please-change';
+const DEFAULT_DEV_AUTH_SECRET = 'placeholder-dev-secret-min-32-chars-change-me';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Esquema de validação — define TODAS as envs esperadas
@@ -182,33 +182,33 @@ NEXT_PUBLIC_DATABASE_URL=https://xxxxx.supabase.co
 # Chave publishable do Supabase ( pública — não é sensível)
 # O Vercel/Supabase pode também expor este valor como NEXT_PUBLIC_SUPABASE_KEY,
 # SUPABASE_KEY ou SUPABASE_ANON_KEY.
-NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY=eyJhbGc...
+NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY=placeholder_publishable_key
 
 # ── Stripe ────────────────────────────────────────────────────────
 # Chave secreta (não mostre no frontend)
-STRIPE_SECRET_KEY=sk_live_...
+STRIPE_SECRET_KEY=placeholder_stripe_secret_key
 
 # Segredo do webhook (Configurar no dashboard Stripe > Webhooks)
-STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_WEBHOOK_SECRET=placeholder_stripe_webhook_secret
 
 # IDs dos preços criados no Stripe Dashboard
-STRIPE_PRICE_ESSENTIAL_MONTHLY=price_...
-STRIPE_PRICE_PROFESSIONAL_MONTHLY=price_...
-STRIPE_PRICE_BUSINESS_MONTHLY=price_...
+STRIPE_PRICE_ESSENTIAL_MONTHLY=price_placeholder_essential
+STRIPE_PRICE_PROFESSIONAL_MONTHLY=price_placeholder_professional
+STRIPE_PRICE_BUSINESS_MONTHLY=price_placeholder_business
 # Opcional: apenas se o fluxo Enterprise usar checkout direto no futuro.
-STRIPE_PRICE_ENTERPRISE_MONTHLY=price_...
+STRIPE_PRICE_ENTERPRISE_MONTHLY=price_placeholder_enterprise
 
 # URL pública da aplicação (sem trailing slash)
 NEXT_PUBLIC_APP_URL=https://app.eurocomply.ai
 
 # ── Segurança ─────────────────────────────────────────────────────
 # Para produção: gere com: openssl rand -base64 32
-AUTH_SECRET=sua-chave-super-secreta-com-mais-de-32-caracteres
+AUTH_SECRET=placeholder_auth_secret_min_32_chars_change_me
 
 # ── Rate Limiting (opcional — Upstash Redis) ───────────────────────
 # Só é necessário se usar rate limiting por IP em produção serverless
 # Crie conta gratuita em https://upstash.com
 UPSTASH_REDIS_REST_URL=https://xxxxx.upstash.io
-UPSTASH_REDIS_REST_TOKEN=...
+UPSTASH_REDIS_REST_TOKEN=placeholder_upstash_token
 `;
 }
