@@ -132,7 +132,19 @@ jobs:
         run: npm run security:ci-cd
 
       - name: RLS gate
-        run: npm run security:rls
+        shell: bash
+        run: |
+          npm run security:rls 2>&1 | tee rls-gate.log
+          test "${PIPESTATUS[0]}" -eq 0
+
+      - name: Upload RLS diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rls-gate
+          path: rls-gate.log
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Client boundaries gate
         run: npm run security:client-boundaries
