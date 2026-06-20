@@ -106,7 +106,7 @@ npx license-checker --onlyAllow="MIT;ISC;BSD-3-Clause;Apache-2.0"
 
 - [ ] `npm audit` passa sem vulnerabilidades HIGH/CRITICAL
 - [ ] `npm run build` passa
-- [ ] Nenhum secret no código (verificar com `git log --all --full-history -S "sk_live"`)
+- [ ] Nenhum secret no código; validar com Gitleaks e `npm run security:public-secrets`
 - [ ] CSP headers ativos em produção
 - [ ] Rate limiting configurado
 - [ ] `.env` não está no git (verificar .gitignore)
@@ -117,24 +117,23 @@ npx license-checker --onlyAllow="MIT;ISC;BSD-3-Clause;Apache-2.0"
 
 ## Configurar GitHub Secrets para CI/CD
 
-No repositório GitHub → Settings → Secrets → Actions:
+No repositório GitHub → Settings → Secrets → Actions / Environments:
 
-```
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-NEXT_PUBLIC_DATABASE_URL=https://...
-NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY=eyJ...
-NEXT_PUBLIC_APP_URL=https://app.eurocomply.ai
-AUTH_SECRET=sua-chave-super-secreta-32chars
+```text
+STRIPE_SECRET_KEY=<configure-no-provider-secret-store>
+STRIPE_WEBHOOK_SECRET=<configure-no-provider-secret-store>
+NEXT_PUBLIC_APP_URL=<configure-no-provider-variable-store>
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=<configure-no-provider-variable-store>
+AUTH_SECRET=<configure-no-provider-secret-store>
 ```
 
-**Nunca ponha estas secrets no código ou no .git.**
+**Nunca ponha valores reais no código, em docs, em screenshots versionadas ou no .git.** Use apenas provider secret stores e evidências redigidas no repositório.
 
 ---
 
 ## GitHub Actions — Pipeline de Segurança
 
-Criar em `.github/workflows/security.yml`:
+Criar ou manter workflow dedicado de segurança:
 
 ```yaml
 name: Security Checks
@@ -165,7 +164,7 @@ jobs:
       # Build
       - run: npm run build
 
-      # Snyk (opcional —需 API key)
+      # Snyk opcional. Configure o token apenas em GitHub Secrets.
       # - uses: snyk/actions/node@master
       #   env:
       #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -177,7 +176,7 @@ jobs:
 
 O teu `.gitignore` deve incluir:
 
-```
+```text
 # Environment
 .env
 .env.local
