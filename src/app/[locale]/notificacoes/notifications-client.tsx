@@ -6,8 +6,9 @@ import { AlertTriangle, Bell, CheckCircle2, FileText, MailPlus, ShieldCheck, Spa
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { NotificationItem } from '@/server/queries/compliance-activity';
+import type { NotificationClientItem } from '@/lib/ai-governance/client-types';
 
+type NotificationItem = NotificationClientItem;
 type NotificationType = 'convites' | 'documentos' | 'sistema' | 'alertas';
 type Filter = 'todas' | 'nao-lidas' | NotificationType;
 
