@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import { normalizeLocale } from '@/lib/i18n/locales';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
@@ -6,6 +8,10 @@ import { getStripeClient } from '@/server/billing/stripe';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireApiUser, requirePermission, requireTrustedMutation, secureApiError } from '@/server/security/api-guards';
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
+
+const billingPortalQuerySchema = z.object({
+  locale: z.string().trim().max(16).nullable().optional(),
+});
 
 export async function POST(request: Request) {
   try {
@@ -68,7 +74,13 @@ export async function POST(request: Request) {
     }
 
     const url = new URL(request.url);
-    const locale = normalizeLocale(url.searchParams.get('locale'));
+    const parsedQuery = billingPortalQuerySchema.safeParse({ locale: url.searchParams.get('locale') });
+
+    if (!parsedQuery.success) {
+      return noStoreJson({ error: 'invalid_billing_portal_query' }, { status: 400 });
+    }
+
+    const locale = normalizeLocale(parsedQuery.data.locale);
     const returnUrl = `${returnBaseUrl.appUrl}/${locale}/settings/billing`;
 
     const stripe = getStripeClient();
