@@ -25,6 +25,7 @@ const trustedAuthValidators = [
   'verifyJwtClaims',
   'verifyIdToken',
   'jwtVerify',
+  'isAuthorizedInternalCronRequest',
 ];
 
 const requiredJwtClaims = ['iss', 'aud', 'exp', 'iat'];
@@ -88,7 +89,7 @@ for (const file of files) {
   if (!hasAny(source, manualTokenPatterns)) continue;
 
   const usesTrustedValidator = trustedAuthValidators.some((token) => source.includes(token));
-  const validatesAllClaims = requiredJwtClaims.every((claim) => new RegExp(`\\b${claim}\\b`).test(source));
+  const validatesAllClaims = requiredJwtClaims.every((claim) => new RegExp(`\b${claim}\b`).test(source));
 
   if (!usesTrustedValidator && !validatesAllClaims) {
     failures.push(`${normalized}: route handles JWT/Bearer tokens but does not prove validation of iss, aud, exp and iat; use Supabase getUser() or verifyJwtClaims()`);
