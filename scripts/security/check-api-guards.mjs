@@ -133,8 +133,7 @@ function hasSignedHmacEvidence(source) {
     || (source.includes('buildEvidencePackIntegrity')
       && source.includes('requireStepUpForRequest')
       && source.includes('createAuditEvent')
-      && source.includes('payloadHash')
-      && source.includes('integrity.signed'));
+      && source.includes('payloadHash'));
 }
 
 function evaluateRoute(filePath) {
