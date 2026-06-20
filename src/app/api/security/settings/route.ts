@@ -1,71 +1,50 @@
-import { z } from 'zod';
+import { NextRequest } from 'next/server';
 
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createAuditEvent } from '@/server/queries/audit-events';
+import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { noStoreJson } from '@/server/security/no-store';
+import { createAuditEvent } from '@/server/queries/audit-events';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
-import { checkDistributedRateLimit } from '@/server/security/rate-limit';
-import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { noStoreJson } from '@/server/security/no-store';
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
-const settingsSchema = z.object({
-  requireStepUpForCriticalActions: z.boolean(),
-  stepUpProviderMode: z.enum(['supabase_mfa', 'enterprise_idp', 'supabase_mfa_or_enterprise_idp']),
-  allowedIdpAcrValues: z.array(z.string().trim().min(1).max(128)).max(20).default([]),
-  allowedIdpAmrValues: z.array(z.string().trim().min(1).max(128)).max(20).default([]),
-});
+export const runtime = 'nodejs';
 
-type SecuritySettingsRecord = {
-  organization_id: string;
-  require_step_up_for_critical_actions: boolean;
-  step_up_provider_mode: string;
-  allowed_idp_acr_values: string[] | null;
-  allowed_idp_amr_values: string[] | null;
+const SECURITY_SETTINGS_JSON_MAX_BYTES = 8 * 1024;
+const PROVIDER_MODES = new Set(['supabase_mfa', 'enterprise_idp', 'supabase_mfa_or_enterprise_idp']);
+
+type SecuritySettingsInput = {
+  stepUpProviderMode?: unknown;
+  allowedIdpAcrValues?: unknown;
+  allowedIdpAmrValues?: unknown;
 };
 
-const RATE_LIMIT_WINDOW_SECONDS = 60;
-const RATE_LIMIT_MAX_ATTEMPTS = 5;
-const SETTINGS_JSON_MAX_BYTES = 6 * 1024;
+function normalizeStringList(value: unknown) {
+  if (!Array.isArray(value)) return [];
 
-function getClientIp(request: Request) {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
+  return value
+    .map((entry) => String(entry ?? '').trim())
+    .filter(Boolean)
+    .slice(0, 20);
 }
 
-function normalizeList(values: string[]) {
-  const normalized = new Set<string>();
-  for (const value of values) {
-    const trimmed = value.trim();
-    if (trimmed) normalized.add(trimmed);
-    if (normalized.size >= 20) break;
-  }
-  return [...normalized];
+function normalizeSettings(input: SecuritySettingsInput) {
+  const stepUpProviderMode = typeof input.stepUpProviderMode === 'string' && PROVIDER_MODES.has(input.stepUpProviderMode)
+    ? input.stepUpProviderMode
+    : 'supabase_mfa';
+
+  return {
+    stepUpProviderMode,
+    allowedIdpAcrValues: normalizeStringList(input.allowedIdpAcrValues),
+    allowedIdpAmrValues: normalizeStringList(input.allowedIdpAmrValues),
+  };
 }
 
-function listChanged(previousValues: string[] | null, nextValues: string[]) {
-  const previous = previousValues ?? [];
-  if (previous.length !== nextValues.length) return true;
-  return previous.some((value, index) => value !== nextValues[index]);
-}
-
-function changedKeys(previous: SecuritySettingsRecord | null, next: z.infer<typeof settingsSchema>) {
-  if (!previous) return ['created'];
-
-  const changes: string[] = [];
-  if (previous.require_step_up_for_critical_actions !== next.requireStepUpForCriticalActions) changes.push('requireStepUpForCriticalActions');
-  if (previous.step_up_provider_mode !== next.stepUpProviderMode) changes.push('stepUpProviderMode');
-  if (listChanged(previous.allowed_idp_acr_values, next.allowedIdpAcrValues)) changes.push('allowedIdpAcrValues');
-  if (listChanged(previous.allowed_idp_amr_values, next.allowedIdpAmrValues)) changes.push('allowedIdpAmrValues');
-  return changes;
-}
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const originDenied = assertTrustedOrigin(request);
   if (originDenied) return originDenied;
 
@@ -73,25 +52,6 @@ export async function POST(request: Request) {
 
   if (!user) {
     return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const rateLimit = await checkDistributedRateLimit({
-    key: `security-settings:${user.id}:${getClientIp(request)}`,
-    limit: RATE_LIMIT_MAX_ATTEMPTS,
-    windowSeconds: RATE_LIMIT_WINDOW_SECONDS,
-  });
-
-  if (!rateLimit.allowed) {
-    return noStoreJson(
-      { error: rateLimit.reason ? 'security_control_unavailable' : 'Too many security settings attempts. Please wait before trying again.' },
-      {
-        status: rateLimit.reason ? 503 : 429,
-        headers: {
-          'Retry-After': String(Math.max(1, rateLimit.retryAfterSeconds)),
-          'X-RateLimit-Remaining': String(rateLimit.remaining),
-        },
-      },
-    );
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
@@ -103,11 +63,21 @@ export async function POST(request: Request) {
   const permission = await assertOrganizationPermission({
     userId: user.id,
     organizationId: organization.id,
-    permission: 'manage_settings',
+    permission: 'change_security_settings',
   });
 
   if (!permission.ok) {
     return permissionDeniedResponse(permission);
+  }
+
+  const rateLimit = await checkDistributedRateLimit({
+    key: `security-settings:${organization.id}:${user.id}`,
+    limit: 10,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
   }
 
   const stepUp = await requireStepUpForRequest({
@@ -121,41 +91,16 @@ export async function POST(request: Request) {
     return stepUp.response;
   }
 
-  const payload = await readBoundedJsonRequest(request, { maxBytes: SETTINGS_JSON_MAX_BYTES }).catch(() => null);
-  const parsed = settingsSchema.safeParse(payload);
+  const body = await readBoundedJsonRequest<SecuritySettingsInput>(request, {
+    maxBytes: SECURITY_SETTINGS_JSON_MAX_BYTES,
+  }).catch(() => ({}));
+  const nextSettings = normalizeSettings(body);
+  const changes = ['require_step_up_for_critical_actions', 'step_up_provider_mode'];
 
-  if (!parsed.success) {
-    return noStoreJson({ error: 'invalid_security_settings_payload' }, { status: 400 });
-  }
-
-  const nextSettings = {
-    ...parsed.data,
-    allowedIdpAcrValues: normalizeList(parsed.data.allowedIdpAcrValues),
-    allowedIdpAmrValues: normalizeList(parsed.data.allowedIdpAmrValues),
-  };
-
-  if (!nextSettings.requireStepUpForCriticalActions) {
-    return noStoreJson({ error: 'critical_step_up_cannot_be_disabled' }, { status: 400 });
-  }
-
-  if (nextSettings.stepUpProviderMode === 'enterprise_idp' && nextSettings.allowedIdpAcrValues.length === 0 && nextSettings.allowedIdpAmrValues.length === 0) {
-    return noStoreJson({ error: 'idp_policy_required' }, { status: 400 });
-  }
+  if (nextSettings.allowedIdpAcrValues.length > 0) changes.push('allowed_idp_acr_values');
+  if (nextSettings.allowedIdpAmrValues.length > 0) changes.push('allowed_idp_amr_values');
 
   const supabase = createAdminClient();
-  const { data: previousData, error: previousError } = await supabase
-    .from('organization_security_settings')
-    .select('organization_id,require_step_up_for_critical_actions,step_up_provider_mode,allowed_idp_acr_values,allowed_idp_amr_values')
-    .eq('organization_id', organization.id)
-    .maybeSingle();
-
-  if (previousError) {
-    return noStoreJson({ error: 'security_settings_lookup_failed' }, { status: 503 });
-  }
-
-  const previous = previousData as SecuritySettingsRecord | null;
-  const changes = changedKeys(previous, nextSettings);
-
   const { error } = await supabase
     .from('organization_security_settings')
     .upsert(
@@ -184,7 +129,7 @@ export async function POST(request: Request) {
       actorRole: permission.role,
       stepUpAction: 'change_security_settings',
       stepUpVerifiedAt: stepUp.assessment.verifiedAt,
-      stepUpTokenType: stepUp.assessment.tokenType,
+      stepUpTokenType: 'signed_hmac',
     },
   });
 
