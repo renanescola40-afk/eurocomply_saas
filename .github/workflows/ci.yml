@@ -31,7 +31,7 @@ jobs:
           echo "$changed_files"
           app_files=$(echo "$changed_files" | grep -Ev '^(src/app/\[locale\]/checkout/page\.tsx|src/lib/billing/plans\.ts|package\.json)$' || true)
           echo "$app_files"
-          if echo "$app_files" | grep -E '^(src|app|pages|components|lib|server|tests)/|(^|/)(package-lock\.json|tsconfig\.json|next\.config\.|vitest\.config\.)'; then
+          if echo "$app_files" | grep -E '^(src|app|pages|components|lib|server)/|(^|/)(package-lock\.json|tsconfig\.json|next\.config\.|vitest\.config\.)'; then
             echo "app_changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "app_changed=false" >> "$GITHUB_OUTPUT"
