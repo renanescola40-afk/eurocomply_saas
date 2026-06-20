@@ -1,12 +1,10 @@
 name: Code Review
-
 on:
-  pull_request:
+  pull_request_target:
     types:
       - opened
       - reopened
       - synchronize
-      - ready_for_review
 
 permissions:
   contents: read
@@ -16,26 +14,15 @@ jobs:
   setup-deepseek-review:
     runs-on: ubuntu-latest
     name: Code Review
+    env:
+      DEEPSEEK_REVIEW_CREDENTIAL: ${{ secrets.CHAT_TOKEN }}
     steps:
-      - name: Check external reviewer configuration
-        id: reviewer_config
-        env:
-          CHAT_TOKEN: ${{ secrets.CHAT_TOKEN }}
-          ENABLE_DEEPSEEK_REVIEW: ${{ vars.ENABLE_DEEPSEEK_REVIEW }}
-        run: |
-          if [ "$ENABLE_DEEPSEEK_REVIEW" = "true" ] && [ -n "$CHAT_TOKEN" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "DeepSeek review is optional and is disabled unless ENABLE_DEEPSEEK_REVIEW=true and CHAT_TOKEN is configured."
-          fi
+      - name: Skip DeepSeek code review when CHAT_TOKEN is not configured
+        if: env.DEEPSEEK_REVIEW_CREDENTIAL == ''
+        run: echo "CHAT_TOKEN is not configured; skipping DeepSeek Code Review."
 
       - name: DeepSeek Code Review
-        if: steps.reviewer_config.outputs.enabled == 'true'
+        if: env.DEEPSEEK_REVIEW_CREDENTIAL != ''
         uses: hustcer/deepseek-review@v1
         with:
-          chat-token: ${{ secrets.CHAT_TOKEN }}
-
-      - name: Skip optional code review
-        if: steps.reviewer_config.outputs.enabled != 'true'
-        run: echo "Optional DeepSeek review skipped. Enable it with ENABLE_DEEPSEEK_REVIEW=true and a valid CHAT_TOKEN."
+          chat-token: ${{ env.DEEPSEEK_REVIEW_CREDENTIAL }}
