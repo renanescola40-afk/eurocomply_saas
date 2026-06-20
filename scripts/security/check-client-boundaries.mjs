@@ -27,6 +27,11 @@ const allowedClientImportPatterns = [
   '@/server/governance/retention-policy',
   '@/server/governance/continuity-policy',
   '@/server/governance/enterprise-readiness',
+  '@/server/queries/ai-systems',
+  '@/server/queries/ai-incidents',
+  '@/server/queries/compliance-activity',
+  '@/server/billing/entitlements',
+  '@/server/ai-governance/classifier',
 ];
 
 const browserSessionStoragePatterns = [
