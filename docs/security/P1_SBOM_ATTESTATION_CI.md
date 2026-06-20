@@ -20,7 +20,16 @@ The workflow:
 
 ## Required GitHub permissions
 
-The workflow uses `permissions: write-all` because older actionlint releases may not recognize the newer artifact-attestation permission scope even though GitHub Actions supports artifact attestations.
+The workflow uses least-privilege permissions for SBOM generation and artifact attestation:
+
+```yaml
+permissions:
+  contents: read
+  attestations: write
+  id-token: write
+```
+
+`contents: read` allows checkout, `attestations: write` allows provenance attestation creation, and `id-token: write` allows the attestation action to request an OpenID Connect token. `permissions: write-all` is forbidden.
 
 This workflow is intentionally isolated and must not reference repository credential contexts or production credentials. Its contract checker fails if the workflow references credential contexts.
 
