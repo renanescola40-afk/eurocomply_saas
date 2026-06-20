@@ -52,40 +52,53 @@ jobs:
         run: node scripts/security/write-p0-enterprise-progress.mjs
 
       - name: Run repository security gates
+        shell: bash
         run: |
-          node scripts/quality/check-route-links.mjs
-          node scripts/security/check-rls.mjs
-          node scripts/security/check-api-guards.mjs
-          node scripts/security/check-protected-routes.mjs
-          node scripts/security/check-public-secrets.mjs
-          node scripts/security/check-client-boundaries.mjs
-          node scripts/security/check-authorization-bola.mjs
-          node scripts/security/check-api-endpoint-hardening.mjs
-          node scripts/security/check-storage-security.mjs
-          node scripts/security/check-ci-cd-secrets.mjs
-          node scripts/security/check-log-sanitization.mjs
-          node scripts/security/check-security-headers.mjs
-          node scripts/security/check-no-store.mjs
-          ENFORCE_ORIGIN_GUARDS=true node scripts/security/check-origin-guards.mjs
-          node scripts/security/check-upload-security.mjs
-          node scripts/security/check-upload-content-scan.mjs
-          node scripts/security/check-security-responses.mjs
-          node scripts/security/check-audit-chain.mjs
-          node scripts/security/check-github-security-workflows.mjs
-          node scripts/security/check-workflow-permissions.mjs
-          node scripts/security/check-workflow-sensitive-patterns.mjs
-          node scripts/security/check-workflow-pinned-actions.mjs
-          node scripts/security/check-lockfile-required.mjs
-          node scripts/security/list-floating-dependencies.mjs
-          node scripts/security/check-npm-package-sources.mjs
-          node scripts/security/check-npm-script-safety.mjs
-          node scripts/security/check-env-example-policy.mjs
-          node scripts/security/check-release-environment-evidence.mjs
-          node scripts/security/check-p0-enterprise-blockers.mjs
-          node scripts/security/check-supply-chain.mjs
-          node scripts/security/check-zod-error-usage.mjs
-          node scripts/security/check-trust-package.mjs
-          node scripts/security/check-enterprise-trust-evidence.mjs
+          set -o pipefail
+          {
+            node scripts/quality/check-route-links.mjs
+            node scripts/security/check-rls.mjs
+            node scripts/security/check-api-guards.mjs
+            node scripts/security/check-protected-routes.mjs
+            node scripts/security/check-public-secrets.mjs
+            node scripts/security/check-client-boundaries.mjs
+            node scripts/security/check-authorization-bola.mjs
+            node scripts/security/check-api-endpoint-hardening.mjs
+            node scripts/security/check-storage-security.mjs
+            node scripts/security/check-ci-cd-secrets.mjs
+            node scripts/security/check-log-sanitization.mjs
+            node scripts/security/check-security-headers.mjs
+            node scripts/security/check-no-store.mjs
+            ENFORCE_ORIGIN_GUARDS=true node scripts/security/check-origin-guards.mjs
+            node scripts/security/check-upload-security.mjs
+            node scripts/security/check-upload-content-scan.mjs
+            node scripts/security/check-security-responses.mjs
+            node scripts/security/check-audit-chain.mjs
+            node scripts/security/check-github-security-workflows.mjs
+            node scripts/security/check-workflow-permissions.mjs
+            node scripts/security/check-workflow-sensitive-patterns.mjs
+            node scripts/security/check-workflow-pinned-actions.mjs
+            node scripts/security/check-lockfile-required.mjs
+            node scripts/security/list-floating-dependencies.mjs
+            node scripts/security/check-npm-package-sources.mjs
+            node scripts/security/check-npm-script-safety.mjs
+            node scripts/security/check-env-example-policy.mjs
+            node scripts/security/check-release-environment-evidence.mjs
+            node scripts/security/check-p0-enterprise-blockers.mjs
+            node scripts/security/check-supply-chain.mjs
+            node scripts/security/check-zod-error-usage.mjs
+            node scripts/security/check-trust-package.mjs
+            node scripts/security/check-enterprise-trust-evidence.mjs
+          } 2>&1 | tee security-gates.log
+
+      - name: Upload security gate diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: full-security-gate-diagnostics
+          path: security-gates.log
+          retention-days: 1
+          if-no-files-found: ignore
 
       - name: Typecheck app changes
         if: steps.changes.outputs.app_changed == 'true'
