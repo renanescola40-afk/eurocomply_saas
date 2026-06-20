@@ -28,10 +28,19 @@ const implementationSteps = [
   'Return to the Risck Comply dashboard with the plan connected to your workspace.',
 ];
 
+type CheckoutSearchParams = {
+  plan?: string | string[];
+  checkout?: string | string[];
+};
+
 type CheckoutPageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ plan?: string; checkout?: string }>;
+  searchParams?: Promise<CheckoutSearchParams>;
 };
+
+function firstSearchParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-US').format(value);
@@ -64,14 +73,16 @@ function checkoutMessage(status?: string) {
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
   const [{ locale }, resolvedSearchParams] = await Promise.all([
     params,
-    searchParams ?? Promise.resolve({}),
+    searchParams ?? Promise.resolve({} as CheckoutSearchParams),
   ]);
-  const selectedPlan = getBillingPlan(resolvedSearchParams.plan) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];
+  const selectedPlanId = firstSearchParam(resolvedSearchParams.plan);
+  const checkoutStatus = firstSearchParam(resolvedSearchParams.checkout);
+  const selectedPlan = getBillingPlan(selectedPlanId) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];
   const user = await getCurrentUser();
   const organization = user ? await getCurrentOrganizationForUser(user.id).catch(() => null) : null;
   const billing = organization ? await getOrganizationBillingContext(organization.id).catch(() => null) : null;
   const selectedPlanIsCurrent = billing?.plan === selectedPlan.id && isCurrentPlanSubscription(billing.status);
-  const message = checkoutMessage(resolvedSearchParams.checkout);
+  const message = checkoutMessage(checkoutStatus);
   const authContinuationPath = `/${locale}/dashboard/organizations/billing`;
 
   async function startCheckout(formData: FormData) {
