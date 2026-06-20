@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
+import type { BillingPlan } from '@/lib/billing/plans';
 import { createCheckoutSession } from '@/server/actions/billing';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
@@ -44,6 +45,16 @@ function firstSearchParam(value: CheckoutSearchParamValue) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function getFallbackBillingPlan(): BillingPlan {
+  const fallbackPlan = getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[0];
+
+  if (!fallbackPlan) {
+    throw new Error('Billing plan catalog is empty.');
+  }
+
+  return fallbackPlan;
+}
+
 function isCurrentPlanSubscription(status: string | null | undefined) {
   return Boolean(status && CURRENT_PLAN_BLOCKING_STATUSES.has(status));
 }
@@ -75,7 +86,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   ]);
   const requestedPlanId = firstSearchParam(resolvedSearchParams.plan);
   const checkoutStatus = firstSearchParam(resolvedSearchParams.checkout);
-  const selectedPlan = getBillingPlan(requestedPlanId) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];
+  const selectedPlan = getBillingPlan(requestedPlanId) ?? getFallbackBillingPlan();
   const user = await getCurrentUser();
   const organization = user ? await getCurrentOrganizationForUser(user.id).catch(() => null) : null;
   const billing = organization ? await getOrganizationBillingContext(organization.id).catch(() => null) : null;
