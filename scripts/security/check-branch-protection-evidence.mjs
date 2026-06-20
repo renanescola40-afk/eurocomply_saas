@@ -15,7 +15,7 @@ const requiredChecks = [
   'Full Security Suite / Enterprise merge/deploy gate',
   'CI / quality',
   'EuroComply Security CI / Run security gates, typecheck and tests',
-  'Secret Scanning / Gitleaks repository and history scan',
+  'Gitleaks / Scan repository for accidental secret exposure',
   'Secret Scanning / Production secret readiness gate',
 ];
 
