@@ -13,7 +13,7 @@ jobs:
   dependency-review:
     name: Review dependency changes
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -21,6 +21,11 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
+
+      - name: Setup Node.js for npm audit fallback
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
 
       - name: Detect dependency manifest changes
         id: dependency_changes
@@ -34,14 +39,19 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Dependency Review
+      - name: GitHub Dependency Review vulnerability scan
         if: steps.dependency_changes.outputs.changed == 'true'
+        continue-on-error: true
         uses: actions/dependency-review-action@v5
         with:
           vulnerability-check: true
           license-check: false
           fail-on-severity: high
           comment-summary-in-pr: never
+
+      - name: npm high and critical dependency vulnerability gate
+        if: steps.dependency_changes.outputs.changed == 'true'
+        run: npm audit --audit-level=high
 
       - name: No dependency manifest changes
         if: steps.dependency_changes.outputs.changed != 'true'
