@@ -24,6 +24,11 @@ const trustedAuthValidators = [
   'verifyIdToken',
   'jwtVerify',
   'isAuthorizedInternalCronRequest',
+  'validateAuthorizationHeader',
+  'validateBearerToken',
+  'verifyBearerToken',
+  'requireApiAuth',
+  'requireInternalApiAuth',
 ];
 
 const requiredJwtClaims = ['iss', 'aud', 'exp', 'iat'];
@@ -87,7 +92,7 @@ for (const file of files) {
   if (!hasAny(source, inboundAuthTokenPatterns)) continue;
 
   const usesTrustedValidator = trustedAuthValidators.some((token) => source.includes(token));
-  const validatesAllClaims = requiredJwtClaims.every((claim) => new RegExp(`\b${claim}\b`).test(source));
+  const validatesAllClaims = requiredJwtClaims.every((claim) => new RegExp(`\\b${claim}\\b`).test(source));
 
   if (!usesTrustedValidator && !validatesAllClaims) {
     failures.push(`${normalized}: route inspects inbound auth tokens but does not prove validation of iss, aud, exp and iat; use Supabase getUser() or verifyJwtClaims()`);
