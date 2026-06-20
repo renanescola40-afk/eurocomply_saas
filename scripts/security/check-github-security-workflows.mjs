@@ -3,7 +3,9 @@ import { existsSync, readFileSync } from 'node:fs';
 const secretScope = 'sec' + 'rets';
 const varScope = 'va' + 'rs';
 const scopeRef = (scope, name = '') => `${scope}.${name}`;
+const indexedScopeRef = (scope, name) => `${scope}['${name}']`;
 const secretRef = (name) => scopeRef(secretScope, name);
+const indexedSecretRef = (name) => indexedScopeRef(secretScope, name);
 const varRef = (name) => scopeRef(varScope, name);
 
 const checks = [
@@ -14,6 +16,7 @@ const checks = [
       'actions: read',
       'contents: read',
       'security-events: write',
+      'persist-credentials: false',
       'github/codeql-action/init@v3',
       'github/codeql-action/analyze@v3',
       'security-extended',
@@ -27,6 +30,7 @@ const checks = [
       'permissions:',
       'contents: read',
       'pull-requests: read',
+      'persist-credentials: false',
       'actions/dependency-review-action@v5',
       'fail-on-severity: high',
       'deny-licenses',
@@ -35,11 +39,38 @@ const checks = [
     ],
   },
   {
+    path: '.github/workflows/full-security-suite.yml',
+    tokens: [
+      'name: Full Security Suite',
+      'permissions:',
+      'contents: read',
+      'persist-credentials: false',
+      'npm ci',
+      'npm run lint',
+      'npm run typecheck',
+      'npm run test',
+      'npm run test:e2e',
+      'npm run build',
+      'npm audit --audit-level=moderate',
+      'npm run security:ci',
+      'npm run quality:routes',
+      'raven-actions/actionlint@v2',
+      'gitleaks/gitleaks-action@v2',
+      'semgrep scan',
+      'github/codeql-action/analyze@v3',
+      'actions/dependency-review-action@v5',
+      'ossf/scorecard-action@v2.4.2',
+      'npm sbom --json',
+      'Enterprise merge/deploy gate',
+    ],
+  },
+  {
     path: '.github/workflows/security-ci.yml',
     tokens: [
       'permissions:',
       'contents: read',
-      'npm install --ignore-scripts',
+      'persist-credentials: false',
+      'npm ci',
       'node scripts/preflight-ci.mjs',
       'npm run security:github-workflows',
       'npm run security:ci',
@@ -64,6 +95,7 @@ const checks = [
       'UPSTASH_REDIS_REST_TOKEN:',
       'STRIPE_SECRET_KEY:',
       'STRIPE_WEBHOOK_SECRET:',
+      'npm install --ignore-scripts',
     ],
   },
   {
@@ -71,9 +103,11 @@ const checks = [
     tokens: [
       'Gitleaks repository and history scan',
       'fetch-depth: 0',
+      'persist-credentials: false',
       'gitleaks/gitleaks-action@v2',
-      secretRef('GITHUB_TOKEN'),
+      'github.token',
       'Production secret readiness gate',
+      'npm ci',
       'npm run security:production-secrets',
       'permissions:',
       'contents: read',
@@ -108,18 +142,20 @@ const checks = [
     path: '.github/workflows/vercel-production.yml',
     tokens: [
       'environment: production',
+      'persist-credentials: false',
+      'npm ci',
       'npm run preflight',
       'npm run security:ci',
       'npm run build',
-      secretRef('VERCEL_TOKEN'),
-      secretRef('VERCEL_ORG_ID'),
-      secretRef('VERCEL_PROJECT_ID'),
-      secretRef('NEXT_PUBLIC_SUPABASE_URL'),
-      secretRef('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
-      secretRef('SUPABASE_SERVICE_ROLE_KEY'),
-      secretRef('STRIPE_SECRET_KEY'),
-      secretRef('SENTRY_AUTH_TOKEN'),
-      secretRef('CRON_SECRET'),
+      indexedSecretRef('VERCEL_TOKEN'),
+      indexedSecretRef('VERCEL_ORG_ID'),
+      indexedSecretRef('VERCEL_PROJECT_ID'),
+      indexedSecretRef('NEXT_PUBLIC_SUPABASE_URL'),
+      indexedSecretRef('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+      indexedSecretRef('SUPABASE_SERVICE_ROLE_KEY'),
+      indexedSecretRef('STRIPE_SECRET_KEY'),
+      indexedSecretRef('SENTRY_AUTH_TOKEN'),
+      indexedSecretRef('CRON_SECRET'),
       'vercel pull',
       'vercel build --prod',
       'vercel deploy --prebuilt --prod',
