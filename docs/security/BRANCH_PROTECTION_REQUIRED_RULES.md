@@ -35,7 +35,7 @@ Configure these checks as required in GitHub branch protection or a repository r
 | Full Security Suite | Enterprise merge/deploy gate |
 | CI | quality |
 | EuroComply Security CI | Run security gates, typecheck and tests |
-| Secret Scanning | Gitleaks repository and history scan |
+| Gitleaks | Scan repository for accidental secret exposure |
 | Secret Scanning | Production secret readiness gate |
 
 The final blocking signal is `Full Security Suite / Enterprise merge/deploy gate`. It depends on every Full Security Suite security and quality job. Keep the individual checks required as defense in depth so a renamed or removed final gate is visible during review.
