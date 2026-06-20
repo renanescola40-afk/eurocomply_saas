@@ -107,6 +107,16 @@ function isPlaceholderContextLine(line) {
     && /(placeholder|example|sample|changeme|change-me|your-|ci-|ci_|test_|sk_test_|price_ci_|whsec_ci_|dummy|not configured|redacted|dev-secret|fallback de desenvolvimento|Copie para \.env)/i.test(line);
 }
 
+function isDangerousPublicNameDefinition(normalized, line) {
+  return (
+    normalized === 'src/lib/security/env-guard.ts'
+    && /^\s*'NEXT_PUBLIC_[A-Z0-9_]+'[,]?\s*$/.test(line)
+  ) || (
+    normalized === 'scripts/security/check-public-secrets.mjs'
+    && /(dangerousPublicName|allowedPublicNames|FORBIDDEN_PUBLIC_ENV_KEYS|serverOnlyEnvNames)/.test(line)
+  );
+}
+
 function isPlaceholderValue(value) {
   return value === '' || /^(undefined|null|process\.env|\[process\.env|\$\{|<.*>|\*{3,}|x{3,}|x-[a-z0-9-]+|z(?:\.|$)|\.\.\.|[A-Za-z0-9_-]+\.\.\.|your-|sua-|changeme|placeholder|example|sample|dummy|redacted|dev-secret|ci-|ci_|test_|sk_test_|sk_live_\.\.\.|rk_live_\.\.\.|price_ci_|price_\.\.\.|whsec_ci_|whsec_\.\.\.|eyJhbGc\.\.\.)/i.test(value);
 }
@@ -137,7 +147,7 @@ for (const file of new Set(files)) {
   for (const match of source.matchAll(dangerousPublicName)) {
     const name = match[0];
     const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-    if (!allowedPublicNames.has(name) && !isPlaceholderContextLine(line)) {
+    if (!allowedPublicNames.has(name) && !isPlaceholderContextLine(line) && !isDangerousPublicNameDefinition(normalized, line)) {
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} dangerous public env name: ${name}`);
     }
   }
