@@ -18,7 +18,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: senior-agent-autofix-${{ github.event.issue.number || inputs.issue_number }}
+  group: senior-agent-autofix-${{ github.event.issue.number || github.event.inputs.issue_number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -194,7 +194,8 @@ jobs:
           git checkout -B "$BRANCH_NAME"
           git add -A
           git commit -m "fix: apply senior agent autofix for issue #${{ steps.issue.outputs.issue_number }}"
-          git push --force-with-lease "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "$BRANCH_NAME"
+          gh auth setup-git
+          git push --force-with-lease origin "$BRANCH_NAME"
 
       - name: Open pull request
         if: steps.changes.outputs.has_changes == 'true'
