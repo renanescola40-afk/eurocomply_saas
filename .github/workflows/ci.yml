@@ -51,18 +51,7 @@ jobs:
         run: echo "No app/package/tsconfig changes detected; skipping app typecheck."
       - name: Test app changes
         if: steps.changes.outputs.app_changed == 'true'
-        shell: bash
-        run: |
-          set -o pipefail
-          npm run test 2>&1 | tee test.log
-      - name: Save test log
-        if: failure() && steps.changes.outputs.app_changed == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-log
-          path: test.log
-          retention-days: 1
-          if-no-files-found: ignore
+        run: npm run test
       - name: Skip tests for non-app changes
         if: steps.changes.outputs.app_changed != 'true'
         run: echo "No app/package/test changes detected; skipping app tests."
