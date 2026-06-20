@@ -1,1 +1,0 @@
-Temporary audit note: upload validation branch prepared. Primary note is `docs/ops/2026-06-20-upload-validation-audit.md`.
