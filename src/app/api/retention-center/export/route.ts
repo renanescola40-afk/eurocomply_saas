@@ -13,7 +13,6 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
-// Enterprise export integrity uses buildEvidencePackIntegrity, which returns signed_hmac evidence.
 
 function jsonDownloadResponse(payload: unknown, filename: string) {
   return noStoreDownload(JSON.stringify(payload, null, 2), {
