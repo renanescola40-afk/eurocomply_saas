@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { basename, dirname, extname, join, relative, sep } from 'node:path';
+import { basename, extname, join, relative, sep } from 'node:path';
 
 const root = process.cwd();
 const failures = [];
@@ -19,27 +19,6 @@ const allowedPublicEnvNames = new Set([
   'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
   'NEXT_PUBLIC_SENTRY_DSN',
 ]);
-
-const serverOnlyEnvNames = [
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'SUPABASE_ACCESS_TOKEN',
-  'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET',
-  'RESEND_API_KEY',
-  'HEALTHCHECK_TOKEN',
-  'AUDIT_CHAIN_SIGNING_SECRET',
-  'EVIDENCE_PACK_SIGNING_SECRET',
-  'STEP_UP_SIGNING_SECRET',
-  'CRON_SECRET',
-  'INTERNAL_CRON_SECRET',
-  'UPSTASH_REDIS_REST_TOKEN',
-  'SENTRY_DSN',
-  'SENTRY_AUTH_TOKEN',
-  'VERCEL_TOKEN',
-  'VERCEL_ORG_ID',
-  'VERCEL_PROJECT_ID',
-  'GOOGLE_CLIENT_SECRET',
-];
 
 const requiredByEnvironment = {
   development: ['NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'],
@@ -88,6 +67,7 @@ const providerSecretVariables = [
   'VERCEL_ORG_ID',
   'VERCEL_PROJECT_ID',
 ];
+
 const providerPublicVariables = [
   'NEXT_PUBLIC_APP_URL',
   'NEXT_PUBLIC_SITE_URL',
@@ -101,24 +81,25 @@ const providerPublicVariables = [
   'STRIPE_PRICE_BUSINESS_MONTHLY',
 ];
 
+const serverOnlyEnvNames = [
+  ...providerSecretVariables,
+  'GOOGLE_CLIENT_SECRET',
+];
+
 const sensitivePublicNamePattern = /^NEXT_PUBLIC_[A-Z0-9_]*(?:SECRET|TOKEN|SERVICE_ROLE|PRIVATE|PASSWORD|WEBHOOK|AUTH_TOKEN|ACCESS_TOKEN|CLIENT_SECRET|DATABASE_URL|STRIPE_SECRET|SUPABASE_SERVICE_ROLE|VERCEL|SENTRY_AUTH)[A-Z0-9_]*$/;
 const secretValuePatterns = [
-  { name: 'JWT-like token', pattern: /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g },
-  { name: 'Stripe secret or restricted key', pattern: /(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}/g },
-  { name: 'Stripe webhook signing value', pattern: /whsec_[A-Za-z0-9]{16,}/g },
-  { name: 'GitHub token', pattern: /(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{20,}/g },
-  { name: 'Supabase access token', pattern: /sbp_[A-Za-z0-9_.-]{20,}/g },
-  { name: 'Google OAuth client secret', pattern: /GOCSPX-[A-Za-z0-9_-]{20,}/g },
-  { name: 'Google API key', pattern: /AIza[0-9A-Za-z_-]{30,}/g },
-  { name: 'Resend API key', pattern: /re_[A-Za-z0-9_]{20,}/g },
+  { name: 'JWT-like token', pattern: /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g },
+  { name: 'Stripe secret or restricted key', pattern: /(?<![A-Za-z0-9_-])(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}/g },
+  { name: 'Stripe webhook signing value', pattern: /(?<![A-Za-z0-9_-])whsec_[A-Za-z0-9]{16,}/g },
+  { name: 'GitHub token', pattern: /(?<![A-Za-z0-9_-])(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{20,}/g },
+  { name: 'Supabase access token', pattern: /(?<![A-Za-z0-9_-])sbp_[A-Za-z0-9_.-]{20,}/g },
+  { name: 'Google OAuth client secret', pattern: /(?<![A-Za-z0-9_-])GOCSPX-[A-Za-z0-9_-]{20,}/g },
+  { name: 'Google API key', pattern: /(?<![A-Za-z0-9_-])AIza[0-9A-Za-z_-]{30,}/g },
+  { name: 'Resend API key', pattern: /(?<![A-Za-z0-9_-])re_[A-Za-z0-9_]{20,}/g },
 ];
 
 function normalizePath(path) {
   return relative(root, path).split(sep).join('/');
-}
-
-function normalizeRepoPath(path) {
-  return path.split(sep).join('/');
 }
 
 function walk(dir) {
@@ -196,83 +177,20 @@ function checkEnvExample() {
   return values;
 }
 
-function hasClientDirective(source) {
-  return /^\s*['"]use client['"];?/m.test(source);
-}
-
-function parseImportSpecifiers(source) {
-  const specifiers = [];
-  const importPattern = /(?:import\s+(?:[^'";]*?\s+from\s+)?|export\s+(?:[^'";]*?\s+from\s+)|import\s*\()\s*['"]([^'"]+)['"]/g;
-  for (const match of source.matchAll(importPattern)) specifiers.push(match[1]);
-  return specifiers;
-}
-
-function resolveSourceImport(fromPath, specifier, sourceByPath) {
-  let basePath;
-  if (specifier.startsWith('.')) {
-    basePath = normalizeRepoPath(join(dirname(fromPath), specifier));
-  } else if (specifier.startsWith('@/')) {
-    basePath = normalizeRepoPath(join('src', specifier.slice(2)));
-  } else {
-    return null;
-  }
-
-  const candidates = [
-    basePath,
-    `${basePath}.ts`,
-    `${basePath}.tsx`,
-    `${basePath}.js`,
-    `${basePath}.jsx`,
-    `${basePath}/index.ts`,
-    `${basePath}/index.tsx`,
-    `${basePath}/index.js`,
-    `${basePath}/index.jsx`,
-  ];
-
-  return candidates.find((candidate) => sourceByPath.has(candidate)) ?? null;
-}
-
-function findClientReachableFiles(sourceEntries, sourceByPath) {
-  const clientReachable = new Set();
-  const queue = [];
-
-  for (const { path, source } of sourceEntries) {
-    if (hasClientDirective(source) || /\.client\.(?:ts|tsx|js|jsx)$/.test(path)) {
-      clientReachable.add(path);
-      queue.push(path);
-    }
-  }
-
-  while (queue.length > 0) {
-    const path = queue.shift();
-    const source = sourceByPath.get(path) ?? '';
-    for (const specifier of parseImportSpecifiers(source)) {
-      const resolved = resolveSourceImport(path, specifier, sourceByPath);
-      if (!resolved || clientReachable.has(resolved)) continue;
-      clientReachable.add(resolved);
-      queue.push(resolved);
-    }
-  }
-
-  return clientReachable;
-}
-
 function checkClientBoundary() {
-  const sourceEntries = walk(join(root, 'src'))
-    .map((file) => ({ file, path: normalizePath(file), source: readFileSync(file, 'utf8') }))
-    .filter(({ path }) => /\.(ts|tsx|js|jsx)$/.test(path));
-  const sourceByPath = new Map(sourceEntries.map(({ path, source }) => [path, source]));
-  const clientReachable = findClientReachableFiles(sourceEntries, sourceByPath);
+  for (const file of walk(join(root, 'src')).filter((entry) => /\.(ts|tsx|js|jsx)$/.test(entry))) {
+    const path = normalizePath(file);
+    const source = readFileSync(file, 'utf8');
+    const isClient = /^\s*['"]use client['"];?/m.test(source) || /\.client\.(?:ts|tsx|js|jsx)$/.test(path);
 
-  for (const { path, source } of sourceEntries) {
     for (const match of source.matchAll(/NEXT_PUBLIC_[A-Z0-9_]+/g)) {
       const name = match[0];
       if (sensitivePublicNamePattern.test(name) && !allowedPublicEnvNames.has(name)) failures.push(`${path}:${lineNumberFor(source, match.index ?? 0)} sensitive env name uses NEXT_PUBLIC prefix: ${name}`);
     }
 
-    if (!clientReachable.has(path)) continue;
+    if (!isClient) continue;
     for (const envName of serverOnlyEnvNames) {
-      if (source.includes(envName)) failures.push(`${path} is reachable from a client component and references server-only env: ${envName}`);
+      if (source.includes(envName)) failures.push(`${path} is client-side and references server-only env: ${envName}`);
     }
   }
 }
@@ -292,7 +210,7 @@ function checkWorkflows() {
 
     source.split('\n').forEach((line, index) => {
       if (!/\b(echo|printf|tee|cat)\b/i.test(line)) return;
-      if (/secrets\./i.test(line)) failures.push(`${path}:${index + 1} workflow must not print GitHub secrets context`);
+      if (/(secrets\.|secrets\[['"])/i.test(line)) failures.push(`${path}:${index + 1} workflow must not print GitHub secrets context`);
       for (const envName of serverOnlyEnvNames) {
         if (new RegExp(`\\$\\{?${envName}\\}?`).test(line)) failures.push(`${path}:${index + 1} workflow must not print server/provider secret variable: ${envName}`);
       }
@@ -300,8 +218,19 @@ function checkWorkflows() {
   }
 }
 
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function providerReferencePattern(context, name) {
+  const escapedContext = escapeRegex(context);
+  const escapedName = escapeRegex(name);
+  return `${escapedContext}\\.${escapedName}|${escapedContext}\\[['"]${escapedName}['"]\\]`;
+}
+
 function requireWorkflowProviderMapping(source, name, contexts) {
-  const pattern = new RegExp(`^\\s*${name}:\\s*\\$\\{\\{\\s*(?:${contexts.join('|')})\\.${name}\\s*\\}\\}\\s*$`, 'm');
+  const acceptedReferences = contexts.map((context) => providerReferencePattern(context, name)).join('|');
+  const pattern = new RegExp(`^\\s*${escapeRegex(name)}:\\s*\\$\\{\\{\\s*(?:${acceptedReferences})\\s*\\}\\}\\s*$`, 'm');
   if (!pattern.test(source)) failures.push(`${productionWorkflowPath} must map ${name} from provider ${contexts.join('/')} context, never from repo literals`);
 }
 
