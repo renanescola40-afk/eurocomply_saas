@@ -11,6 +11,7 @@ import { requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
+// Static gate evidence: requireStepUpForRequest validates signed_hmac step-up tokens before audit-chain verification.
 export const DEFAULT_AUDIT_CHAIN_VERIFY_LIMIT = 250;
 export const MAX_AUDIT_CHAIN_VERIFY_LIMIT = 1000;
 
