@@ -91,6 +91,10 @@ function credentialReferenceForms(name) {
   ];
 }
 
+function printsGitHubSecretContext(line) {
+  return new RegExp(`\\$\\{\\{\\s*${secretScope}(?:\\.|\\[['"])`).test(line);
+}
+
 const failures = [];
 const workflows = walk(workflowRoot);
 const workflowSources = workflows.map((path) => ({ path: normalizePath(path), source: readFileSync(path, 'utf8') }));
@@ -125,7 +129,7 @@ for (const { path, source } of workflowSources) {
   lines.forEach((line, index) => {
     if (!/\b(echo|printf|tee|cat)\b/i.test(line)) return;
 
-    if (new RegExp(`${secretScope}\\.`).test(line)) {
+    if (printsGitHubSecretContext(line)) {
       failures.push(`${path}:${index + 1} workflow must not print the GitHub credential context`);
     }
 
