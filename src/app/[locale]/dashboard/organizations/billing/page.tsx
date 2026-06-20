@@ -8,9 +8,6 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
-// NOTE: This file was typechecked by the upload hardening PR CI and fixed to use
-// BillingPlan.features, which is the canonical plan metadata field.
-
 type BillingPageProps = {
   params: { locale: string };
   searchParams?: { checkout?: string; billing_error?: string };
@@ -126,26 +123,32 @@ async function startCheckout(formData: FormData) {
 
   const locale = String(formData.get('locale') ?? 'en');
   const planId = String(formData.get('planId') ?? '');
-  const result = await createCheckoutSession(planId, locale);
 
-  if (!result.ok) {
+  try {
+    const url = await createCheckoutSession({
+      planId,
+      successPath: `/${locale}/dashboard/organizations/billing?checkout=success`,
+      cancelPath: `/${locale}/dashboard/organizations/billing?checkout=cancelled`,
+    });
+    redirect(url);
+  } catch {
     billingErrorRedirect(locale);
   }
-
-  redirect(result.url);
 }
 
 async function openCustomerPortal(formData: FormData) {
   'use server';
 
   const locale = String(formData.get('locale') ?? 'en');
-  const result = await createCustomerPortalSession(locale);
 
-  if (!result.ok) {
+  try {
+    const url = await createCustomerPortalSession({
+      returnPath: `/${locale}/dashboard/organizations/billing`,
+    });
+    redirect(url);
+  } catch {
     billingErrorRedirect(locale);
   }
-
-  redirect(result.url);
 }
 
 export default async function BillingPage({ params, searchParams }: BillingPageProps) {
