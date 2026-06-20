@@ -1,4 +1,5 @@
 name: Code Review
+
 on:
   pull_request_target:
     types:
@@ -7,14 +8,15 @@ on:
       - synchronize
 
 permissions:
-  pull-requests: write
+  contents: read
+  pull-requests: read
 
 jobs:
-  setup-deepseek-review:
+  code-review:
     runs-on: ubuntu-latest
     name: Code Review
     steps:
-      - name: DeepSeek Code Review
-        uses: hustcer/deepseek-review@v1
-        with:
-          chat-token: ${{ secrets.CHAT_TOKEN }}
+      - name: Record review policy
+        run: |
+          echo "Automated third-party code review is disabled for deterministic CI."
+          echo "Use GitHub branch protection, CODEOWNERS and required checks for merge review."
