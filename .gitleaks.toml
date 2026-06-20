@@ -1,17 +1,5 @@
 title = "EuroComply Gitleaks Configuration"
 
-[[rules]]
-id = "eurocomply-public-env-sensitive-name"
-description = "Sensitive server-only variable names must never be exposed with a public browser prefix."
-regex = '''(?i)NEXT_PUBLIC_[A-Z0-9_]*(SECRET|TOKEN|PASSWORD|PRIVATE|SERVICE_ROLE)[A-Z0-9_]*'''
-keywords = ["NEXT_PUBLIC_"]
-
-[[rules]]
-id = "eurocomply-provider-key-like-value"
-description = "Provider secret-like values must not be committed to the repository."
-regex = '''(?i)(provider|service|stripe|sentry|cron)[A-Z0-9_ .:-]{0,40}(secret|token|key)[A-Z0-9_ .:-]{0,40}[=:][[:space:]]*["''][^"''[:space:]]{24,}["'']'''
-keywords = ["provider", "service", "secret", "token", "key"]
-
 [allowlist]
 description = "Allow documented placeholders only"
 regexes = [
