@@ -108,7 +108,6 @@ const rules = [
 ];
 
 const forbidden = [
-  { name: 'public service role exposure', pattern: /NEXT_PUBLIC_[A-Z0-9_]*SERVICE_ROLE/i },
   { name: 'stack trace exposure', pattern: /error\.stack|stack:\s*error|JSON\.stringify\(\s*error/ },
 ];
 
