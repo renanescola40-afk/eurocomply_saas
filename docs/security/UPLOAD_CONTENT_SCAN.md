@@ -116,7 +116,7 @@ Blocked uploads should record a `document_upload_rejected` event with scan conte
 
 ## CI Coverage
 
-`npm run security:enterprise-api` delegates to both upload gates so the normal `npm run security:ci` path fails if upload signature validation, content scanning, fail-closed behavior or audit evidence coverage regresses.
+`npm run security:enterprise-api` delegates to both upload gates so the normal `npm run security:ci` path fails if upload signature validation, content scanning, fail-closed behavior or audit evidence coverage regresses. The expanded suite also runs the upload gates as named steps so failures identify the exact upload control that regressed.
 
 The upload gates must remain runnable on their own for focused investigations:
 
