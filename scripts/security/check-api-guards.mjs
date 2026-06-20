@@ -41,7 +41,7 @@ const rules = [
     name: 'enterprise export endpoint',
     match: /src\/app\/api\/(audit\/evidence-pack|security-questionnaire|vendor-assurance|enterprise-readiness|retention-center|continuity-center)\/export?\/route\.ts$|src\/app\/api\/(security-questionnaire|vendor-assurance|enterprise-readiness|retention-center|continuity-center)\/export\/route\.ts$/,
     any: [guards.auth, guards.org, guards.rbac, guards.plan, guards.rateLimit, guards.audit, guards.integrity, guards.stepUp, guards.noStore],
-    all: ['export_data'],
+    all: ['export_data', 'signed_hmac'],
   },
   {
     name: 'evidence pack verifier',
