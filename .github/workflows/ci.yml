@@ -15,10 +15,12 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 2
+          persist-credentials: false
       - uses: actions/setup-node@v6
         with:
           node-version: 20
-      - run: npm install --ignore-scripts
+          cache: npm
+      - run: npm ci --ignore-scripts
       - name: Detect app-affecting changes
         id: changes
         shell: bash
@@ -29,9 +31,7 @@ jobs:
             changed_files=$(git diff --name-only HEAD^ HEAD || git show --name-only --format= HEAD)
           fi
           echo "$changed_files"
-          app_files=$(echo "$changed_files" | grep -Ev '^(src/app/\[locale\]/checkout/page\.tsx|src/lib/billing/plans\.ts|package\.json)$' || true)
-          echo "$app_files"
-          if echo "$app_files" | grep -E '^(src|app|pages|components|lib|server)/|(^|/)(package-lock\.json|tsconfig\.json|next\.config\.|vitest\.config\.)'; then
+          if echo "$changed_files" | grep -E '^(src|app|pages|components|lib|server|tests)/|(^|/)(package(-lock)?\.json|tsconfig\.json|next\.config\.|vitest\.config\.)'; then
             echo "app_changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "app_changed=false" >> "$GITHUB_OUTPUT"
@@ -47,7 +47,18 @@ jobs:
       - run: npm run lint
       - name: Typecheck app changes
         if: steps.changes.outputs.app_changed == 'true'
-        run: npm run typecheck
+        shell: bash
+        run: |
+          npm run typecheck 2>&1 | tee typecheck.log
+          test "${PIPESTATUS[0]}" -eq 0
+      - name: Upload typecheck diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-typecheck-diagnostics
+          path: typecheck.log
+          retention-days: 7
+          if-no-files-found: warn
       - name: Skip typecheck for non-app changes
         if: steps.changes.outputs.app_changed != 'true'
         run: echo "No app/package/tsconfig changes detected; skipping app typecheck."

@@ -172,7 +172,7 @@ if (!hasPackageLock) {
 
 if (securityCi) {
   const requiredTokens = [
-    'npm install --ignore-scripts',
+    'npm ci --ignore-scripts',
     'npm run security:ci',
     'actions/setup-node@v6',
     'node-version: 22',
@@ -185,6 +185,18 @@ if (securityCi) {
     }
   }
 
+  if (hasPackageLock) {
+    if (!securityCi.includes('npm ci --ignore-scripts')) {
+      failures.push(`${securityCiWorkflowPath} must use npm ci --ignore-scripts now that package-lock.json exists`);
+    }
+
+    if (securityCi.includes('npm install --ignore-scripts')) {
+      failures.push(`${securityCiWorkflowPath} must not keep npm install --ignore-scripts after package-lock.json is committed`);
+    }
+  } else if (!securityCi.includes('npm install --ignore-scripts')) {
+    failures.push(`${securityCiWorkflowPath} must use npm install --ignore-scripts until package-lock.json exists`);
+  }
+
   if (securityCi.includes('npm install') && !securityCi.includes('--ignore-scripts')) {
     failures.push(`${securityCiWorkflowPath} must use --ignore-scripts when npm install is used`);
   }
@@ -192,17 +204,24 @@ if (securityCi) {
   if (!hasPackageLock && securityCi.includes('cache: npm')) {
     failures.push(`${securityCiWorkflowPath} must not enable npm cache until package-lock.json exists`);
   }
-
-  if (hasPackageLock && !securityCi.includes('npm ci --ignore-scripts')) {
-    warnings.push(`${securityCiWorkflowPath} should use npm ci --ignore-scripts once package-lock.json is committed.`);
-  }
 }
 
 if (dependencyReview) {
-  for (const token of ['actions/dependency-review-action@v5', 'fail-on-severity: high', 'deny-licenses']) {
+  for (const token of [
+    'actions/dependency-review-action@v5',
+    'vulnerability-check: true',
+    'license-check: false',
+    'fail-on-severity: high',
+    'comment-summary-in-pr: never',
+    'npm audit --audit-level=high',
+  ]) {
     if (!dependencyReview.includes(token)) {
       failures.push(`${dependencyReviewWorkflowPath} missing dependency review token: ${token}`);
     }
+  }
+
+  if (dependencyReview.includes('deny-licenses')) {
+    failures.push(`${dependencyReviewWorkflowPath} must not enforce broad deny-licenses here; license policy belongs in a separately triaged license gate.`);
   }
 }
 

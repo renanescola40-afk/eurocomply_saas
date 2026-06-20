@@ -17,151 +17,288 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  full-security-suite:
-    name: Run expanded security gates
+  core:
+    name: Core CI, build and npm audit
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 2
           persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 22
+          cache: npm
 
-      - name: Detect app-affecting changes
-        id: changes
-        shell: bash
-        run: |
-          changed_files=$(git diff --name-only HEAD^ HEAD || git show --name-only --format= HEAD)
-          echo "$changed_files"
-          if echo "$changed_files" | grep -E '^(src|app|pages|components|lib|server|tests)/|(^|/)(package(-lock)?\.json|tsconfig\.json|next\.config\.|vitest\.config\.)'; then
-            echo "app_changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "app_changed=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
 
-      - name: Install dependencies without lifecycle scripts
-        run: npm install --ignore-scripts
+      - name: Lint
+        run: npm run lint
 
-      - name: Report P0 enterprise progress
-        run: node scripts/security/write-p0-enterprise-progress.mjs
-
-      - name: Route links gate
-        run: node scripts/quality/check-route-links.mjs
-
-      - name: RLS gate
-        run: node scripts/security/check-rls.mjs
-
-      - name: API guards gate
-        run: node scripts/security/check-api-guards.mjs
-
-      - name: Protected routes gate
-        run: node scripts/security/check-protected-routes.mjs
-
-      - name: Public secrets gate
-        run: node scripts/security/check-public-secrets.mjs
-
-      - name: Client boundaries gate
-        run: node scripts/security/check-client-boundaries.mjs
-
-      - name: Authorization BOLA gate
-        run: node scripts/security/check-authorization-bola.mjs
-
-      - name: API endpoint hardening gate
-        run: node scripts/security/check-api-endpoint-hardening.mjs
-
-      - name: Storage security gate
-        run: node scripts/security/check-storage-security.mjs
-
-      - name: CI/CD secrets gate
-        run: node scripts/security/check-ci-cd-secrets.mjs
-
-      - name: Log sanitization gate
-        run: node scripts/security/check-log-sanitization.mjs
-
-      - name: Security headers gate
-        run: node scripts/security/check-security-headers.mjs
-
-      - name: No-store gate
-        run: node scripts/security/check-no-store.mjs
-
-      - name: Origin guards gate
-        run: ENFORCE_ORIGIN_GUARDS=true node scripts/security/check-origin-guards.mjs
-
-      - name: Upload security gate
-        run: node scripts/security/check-upload-security.mjs
-
-      - name: Upload content scan gate
-        run: node scripts/security/check-upload-content-scan.mjs
-
-      - name: Security responses gate
-        run: node scripts/security/check-security-responses.mjs
-
-      - name: Audit chain gate
-        run: node scripts/security/check-audit-chain.mjs
-
-      - name: GitHub security workflows gate
-        run: node scripts/security/check-github-security-workflows.mjs
-
-      - name: Workflow permissions gate
-        run: node scripts/security/check-workflow-permissions.mjs
-
-      - name: Workflow sensitive patterns gate
-        run: node scripts/security/check-workflow-sensitive-patterns.mjs
-
-      - name: Workflow pinned actions gate
-        run: node scripts/security/check-workflow-pinned-actions.mjs
-
-      - name: Lockfile policy gate
-        run: node scripts/security/check-lockfile-required.mjs
-
-      - name: Floating dependencies report
-        run: node scripts/security/list-floating-dependencies.mjs
-
-      - name: npm package sources gate
-        run: node scripts/security/check-npm-package-sources.mjs
-
-      - name: npm script safety gate
-        run: node scripts/security/check-npm-script-safety.mjs
-
-      - name: Env example policy gate
-        run: node scripts/security/check-env-example-policy.mjs
-
-      - name: Release environment evidence gate
-        run: node scripts/security/check-release-environment-evidence.mjs
-
-      - name: P0 enterprise blockers gate
-        run: node scripts/security/check-p0-enterprise-blockers.mjs
-
-      - name: Supply-chain gate
-        run: node scripts/security/check-supply-chain.mjs
-
-      - name: Zod compatibility gate
-        run: node scripts/security/check-zod-error-usage.mjs
-
-      - name: Trust package gate
-        run: node scripts/security/check-trust-package.mjs
-
-      - name: Enterprise trust evidence gate
-        run: node scripts/security/check-enterprise-trust-evidence.mjs
-
-      - name: Typecheck app changes
-        if: steps.changes.outputs.app_changed == 'true'
+      - name: Typecheck
         run: npm run typecheck
 
-      - name: Skip typecheck for non-app changes
-        if: steps.changes.outputs.app_changed != 'true'
-        run: echo "No app/package/tsconfig changes detected; skipping app typecheck."
-
-      - name: Unit tests for app changes
-        if: steps.changes.outputs.app_changed == 'true'
+      - name: Unit tests
         run: npm run test
 
-      - name: Skip unit tests for non-app changes
-        if: steps.changes.outputs.app_changed != 'true'
-        run: echo "No app/package/test changes detected; skipping app tests."
+      - name: E2E tests when Playwright runtime is configured
+        shell: bash
+        run: |
+          if ! node -e "const p=require('./package.json'); process.exit(p.scripts?.['test:e2e'] ? 0 : 1)" \
+            || ! ls playwright.config.* >/dev/null 2>&1; then
+            echo "No Playwright test:e2e configuration detected; skipping E2E gate."
+          elif [ "${RUN_E2E:-}" = "true" ] || [ -n "${E2E_BASE_URL:-}" ]; then
+            npx playwright install --with-deps chromium
+            npm run test:e2e
+          else
+            echo "Playwright E2E tests are present, but no configured E2E runtime was provided."
+            echo "Set RUN_E2E=true for local/webServer E2E or E2E_BASE_URL for an existing deployment."
+            echo "Skipping E2E because this CI context has no production-like E2E runtime."
+          fi
+
+      - name: Build
+        run: npm run build
+
+      - name: npm audit moderate gate
+        run: npm audit --audit-level=moderate
+
+      - name: Application security CI
+        run: npm run security:ci
+
+      - name: Route quality gate
+        run: npm run quality:routes
+
+      - name: Branch protection evidence gate
+        run: node scripts/security/check-branch-protection-evidence.mjs
+
+      - name: Generate SBOM
+        run: |
+          mkdir -p docs/security/evidence/runtime
+          npm sbom --json > docs/security/evidence/runtime/sbom.json
+          test -s docs/security/evidence/runtime/sbom.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: eurocomply-sbom
+          path: docs/security/evidence/runtime/sbom.json
+          retention-days: 30
+          if-no-files-found: error
+
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run actionlint
+        uses: raven-actions/actionlint@v2
+
+  gitleaks:
+    name: Secret scanning (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    container:
+      image: semgrep/semgrep:1.97.0
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run Semgrep rules
+        run: >-
+          semgrep scan
+          --config p/owasp-top-ten
+          --config p/typescript
+          --config p/javascript
+          --severity ERROR
+          --error
+          --metrics off
+          src
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - javascript-typescript
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Setup Node.js for npm audit fallback
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Detect dependency manifest changes
+        id: dependency_changes
+        shell: bash
+        run: |
+          changed_files=$(git diff --name-only HEAD^ HEAD)
+          echo "$changed_files"
+          if echo "$changed_files" | grep -E '(^|/)(package(-lock)?\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock)$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: GitHub Dependency Review vulnerability scan
+        if: github.event_name == 'pull_request' && steps.dependency_changes.outputs.changed == 'true'
+        continue-on-error: true
+        uses: actions/dependency-review-action@v5
+        with:
+          vulnerability-check: true
+          license-check: false
+          fail-on-severity: high
+          comment-summary-in-pr: never
+
+      - name: npm high and critical dependency vulnerability gate
+        if: steps.dependency_changes.outputs.changed == 'true'
+        run: npm audit --audit-level=high
+
+      - name: Dependency Review is not applicable
+        if: github.event_name != 'pull_request' || steps.dependency_changes.outputs.changed != 'true'
+        run: echo "Dependency Review is only required for pull requests that change dependency manifests."
+
+  scorecard:
+    name: OSSF Scorecard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run OSSF Scorecard
+        uses: ossf/scorecard-action@v2.4.2
+        with:
+          results_file: scorecard-results.json
+          results_format: json
+          publish_results: false
+
+      - name: Upload Scorecard results
+        uses: actions/upload-artifact@v7
+        with:
+          name: ossf-scorecard
+          path: scorecard-results.json
+          retention-days: 30
+          if-no-files-found: error
+
+  enterprise-gate:
+    name: Enterprise merge/deploy gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - core
+      - actionlint
+      - gitleaks
+      - semgrep
+      - codeql
+      - dependency-review
+      - scorecard
+    permissions:
+      contents: read
+    steps:
+      - name: Fail unless every enterprise gate is green
+        shell: bash
+        run: |
+          failed=0
+          check_gate() {
+            gate_name="$1"
+            gate_result="$2"
+            if [ "$gate_result" != "success" ]; then
+              echo "::error title=${gate_name} failed::Result was ${gate_result}; this PR/deploy is not enterprise-ready."
+              failed=1
+            fi
+          }
+
+          check_gate "Core CI, build and npm audit" "${{ needs.core.result }}"
+          check_gate "Actionlint" "${{ needs.actionlint.result }}"
+          check_gate "Secret scanning (Gitleaks)" "${{ needs.gitleaks.result }}"
+          check_gate "Semgrep SAST" "${{ needs.semgrep.result }}"
+          check_gate "CodeQL" "${{ needs.codeql.result }}"
+          check_gate "Dependency Review" "${{ needs['dependency-review'].result }}"
+          check_gate "OSSF Scorecard" "${{ needs.scorecard.result }}"
+
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+
+          echo "Full Security Suite is green. Merge/deploy can be considered enterprise-ready."

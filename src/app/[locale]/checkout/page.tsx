@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
-import type { BillingPlan } from '@/lib/billing/plans';
 import { createCheckoutSession } from '@/server/actions/billing';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
@@ -17,9 +16,6 @@ const CURRENT_PLAN_BLOCKING_STATUSES = new Set([
   'incomplete',
 ]);
 
-type CheckoutSearchParamValue = string | string[] | undefined;
-type CheckoutSearchParams = { plan?: CheckoutSearchParamValue; checkout?: CheckoutSearchParamValue };
-
 const checkoutProof = [
   ['Stripe secure billing', 'Card, invoice details and tax data are handled by Stripe Checkout.'],
   ['Workspace-linked subscription', 'The selected plan is connected to your organization after Stripe confirms the subscription.'],
@@ -32,27 +28,22 @@ const implementationSteps = [
   'Return to the Risck Comply dashboard with the plan connected to your workspace.',
 ];
 
+type CheckoutSearchParams = {
+  plan?: string | string[];
+  checkout?: string | string[];
+};
+
 type CheckoutPageProps = {
   params: Promise<{ locale: string }>;
   searchParams?: Promise<CheckoutSearchParams>;
 };
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat('en-US').format(value);
-}
-
-function firstSearchParam(value: CheckoutSearchParamValue) {
+function firstSearchParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function getFallbackBillingPlan(): BillingPlan {
-  const fallbackPlan = getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[0];
-
-  if (!fallbackPlan) {
-    throw new Error('Billing plan catalog is empty.');
-  }
-
-  return fallbackPlan;
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('en-US').format(value);
 }
 
 function isCurrentPlanSubscription(status: string | null | undefined) {
@@ -82,11 +73,11 @@ function checkoutMessage(status?: string) {
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
   const [{ locale }, resolvedSearchParams] = await Promise.all([
     params,
-    searchParams ?? Promise.resolve({} satisfies CheckoutSearchParams),
+    searchParams ?? Promise.resolve({} as CheckoutSearchParams),
   ]);
-  const requestedPlanId = firstSearchParam(resolvedSearchParams.plan);
+  const selectedPlanId = firstSearchParam(resolvedSearchParams.plan);
   const checkoutStatus = firstSearchParam(resolvedSearchParams.checkout);
-  const selectedPlan = getBillingPlan(requestedPlanId) ?? getFallbackBillingPlan();
+  const selectedPlan = getBillingPlan(selectedPlanId) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];
   const user = await getCurrentUser();
   const organization = user ? await getCurrentOrganizationForUser(user.id).catch(() => null) : null;
   const billing = organization ? await getOrganizationBillingContext(organization.id).catch(() => null) : null;
