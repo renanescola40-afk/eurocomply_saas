@@ -72,8 +72,83 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-      - name: Run EuroComply security CI
-        run: npm run security:ci
+      - name: Gate npm audit
+        run: npm run security:npm-audit:all
+
+      - name: Gate public secrets
+        run: npm run security:public-secrets
+
+      - name: Gate supply chain
+        run: npm run security:supply-chain
+
+      - name: Gate CI/CD secrets
+        run: npm run security:ci-cd
+
+      - name: Gate RLS
+        run: npm run security:rls
+
+      - name: Gate client boundaries
+        run: npm run security:client-boundaries
+
+      - name: Gate auth tokens
+        run: npm run security:auth-tokens
+
+      - name: Gate authorization BOLA
+        run: npm run security:authorization-bola
+
+      - name: Gate server action identity
+        run: npm run security:server-action-identity
+
+      - name: Gate protected routes
+        run: npm run security:protected-routes
+
+      - name: Gate security headers
+        run: npm run security:headers
+
+      - name: Gate no-store
+        run: npm run security:no-store
+
+      - name: Gate origin guards
+        run: npm run security:origin-guards
+
+      - name: Gate no open proxy
+        run: npm run security:no-open-proxy
+
+      - name: Gate internal maintenance
+        run: npm run security:internal-maintenance
+
+      - name: Gate ops readiness
+        run: npm run security:ops-readiness
+
+      - name: Gate public verifiers
+        run: npm run security:public-verifiers
+
+      - name: Gate public errors
+        run: npm run security:public-errors
+
+      - name: Gate CSV exports
+        run: npm run security:csv-exports
+
+      - name: Gate document filenames
+        run: npm run security:document-filenames
+
+      - name: Gate billing webhook body
+        run: npm run security:billing-webhook-body
+
+      - name: Gate security responses
+        run: npm run security:responses
+
+      - name: Gate logs
+        run: npm run security:logs
+
+      - name: Gate API endpoints
+        run: npm run security:api-endpoints
+
+      - name: Gate API guards
+        run: npm run security:api-guards
+
+      - name: Gate enterprise API
+        run: npm run security:enterprise-api
 
       - name: Run step-up authentication gate
         run: node scripts/security/check-step-up.mjs
