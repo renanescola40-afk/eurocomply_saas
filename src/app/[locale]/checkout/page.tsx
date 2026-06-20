@@ -16,6 +16,8 @@ const CURRENT_PLAN_BLOCKING_STATUSES = new Set([
   'incomplete',
 ]);
 
+type CheckoutSearchParams = { plan?: string; checkout?: string };
+
 const checkoutProof = [
   ['Stripe secure billing', 'Card, invoice details and tax data are handled by Stripe Checkout.'],
   ['Workspace-linked subscription', 'The selected plan is connected to your organization after Stripe confirms the subscription.'],
@@ -30,7 +32,7 @@ const implementationSteps = [
 
 type CheckoutPageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ plan?: string; checkout?: string }>;
+  searchParams?: Promise<CheckoutSearchParams>;
 };
 
 function formatNumber(value: number) {
@@ -64,7 +66,7 @@ function checkoutMessage(status?: string) {
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
   const [{ locale }, resolvedSearchParams] = await Promise.all([
     params,
-    searchParams ?? Promise.resolve({}),
+    searchParams ?? Promise.resolve({} satisfies CheckoutSearchParams),
   ]);
   const selectedPlan = getBillingPlan(resolvedSearchParams.plan) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];
   const user = await getCurrentUser();
