@@ -4,9 +4,17 @@ import { PublicFooter } from '@/components/marketing/public-footer';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
 import { createCheckoutSession } from '@/server/actions/billing';
 import { getCurrentUser } from '@/server/queries/auth';
+import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
 const DEFAULT_PLAN_ID = 'professional';
+const CURRENT_PLAN_BLOCKING_STATUSES = new Set([
+  'active',
+  'trialing',
+  'past_due',
+  'unpaid',
+  'incomplete',
+]);
 
 const checkoutProof = [
   ['Stripe secure billing', 'Card, invoice details and tax data are handled by Stripe Checkout.'],
@@ -27,6 +35,10 @@ type CheckoutPageProps = {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-US').format(value);
+}
+
+function isCurrentPlanSubscription(status: string | null | undefined) {
+  return Boolean(status && CURRENT_PLAN_BLOCKING_STATUSES.has(status));
 }
 
 function checkoutMessage(status?: string) {
@@ -57,6 +69,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const selectedPlan = getBillingPlan(resolvedSearchParams.plan) ?? getBillingPlan(DEFAULT_PLAN_ID) ?? BILLING_PLANS[1];
   const user = await getCurrentUser();
   const organization = user ? await getCurrentOrganizationForUser(user.id).catch(() => null) : null;
+  const billing = organization ? await getOrganizationBillingContext(organization.id).catch(() => null) : null;
+  const selectedPlanIsCurrent = billing?.plan === selectedPlan.id && isCurrentPlanSubscription(billing.status);
   const message = checkoutMessage(resolvedSearchParams.checkout);
   const authContinuationPath = `/${locale}/dashboard/organizations/billing`;
 
@@ -115,6 +129,13 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
               </div>
             )}
 
+            {selectedPlanIsCurrent && (
+              <div className="mt-6 rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-4 text-emerald-100">
+                <p className="font-semibold">This is already your current plan</p>
+                <p className="mt-1 text-sm opacity-85">Open the billing portal if you need to manage invoices, payment details or subscription changes.</p>
+              </div>
+            )}
+
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               {checkoutProof.map(([title, description]) => (
                 <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -133,7 +154,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                   <h2 className="text-3xl font-semibold">{selectedPlan.name}</h2>
                   <p className="mt-2 text-sm leading-6 text-blue-100/80">Monthly subscription for your compliance workspace.</p>
                 </div>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-950">Selected</span>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-950">{selectedPlanIsCurrent ? 'Current' : 'Selected'}</span>
               </div>
               <p className="mt-6 text-5xl font-bold">€{selectedPlan.priceMonthly}<span className="text-base font-normal text-blue-100/70">/mo</span></p>
             </div>
@@ -166,8 +187,12 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
             {organization ? (
               <form action={startCheckout} className="mt-6">
                 <input type="hidden" name="planId" value={selectedPlan.id} />
-                <button type="submit" className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
-                  Continue to secure checkout
+                <button
+                  type="submit"
+                  disabled={selectedPlanIsCurrent}
+                  className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40"
+                >
+                  {selectedPlanIsCurrent ? 'Current plan' : 'Continue to secure checkout'}
                 </button>
                 <p className="mt-3 text-center text-xs text-slate-500">Workspace: {organization.name}</p>
               </form>
