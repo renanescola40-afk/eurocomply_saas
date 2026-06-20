@@ -65,6 +65,9 @@ const serverOnlyEnvNames = [
   'INTERNAL_CRON_SECRET',
   'UPSTASH_REDIS_REST_TOKEN',
   'GOOGLE_CLIENT_SECRET',
+  'VERCEL_TOKEN',
+  'VERCEL_ORG_ID',
+  'VERCEL_PROJECT_ID',
 ];
 
 function walk(dir) {
@@ -114,6 +117,9 @@ function isDangerousPublicNameDefinition(normalized, line) {
   ) || (
     normalized === 'scripts/security/check-public-secrets.mjs'
     && /(dangerousPublicName|allowedPublicNames|FORBIDDEN_PUBLIC_ENV_KEYS|serverOnlyEnvNames)/.test(line)
+  ) || (
+    normalized === 'scripts/security/check-production-secret-readiness.mjs'
+    && /(sensitivePublicNamePattern|allowedPublicEnvNames)/.test(line)
   );
 }
 
@@ -125,6 +131,11 @@ function isDetectorDefinition(normalized, name, value, line) {
   )
     && /^[\[{(]/.test(value)
     && /(PATTERN|PATTERNS|KEYS|NAMES|TOKENS|SECRETS|serverOnlyEnvNames|secretValuePatterns|FORBIDDEN_PUBLIC_ENV_KEYS)/i.test(`${name} ${line}`);
+}
+
+function isDetectorPatternLine(normalized, line) {
+  return normalized.startsWith('scripts/security/')
+    && /(secretValuePatterns|forbiddenValuePatterns|pattern:\s*\/|dangerousPublicName|sensitiveAssignmentName|sensitivePublicNamePattern|serverOnlyEnvNames)/.test(line);
 }
 
 function isPlaceholderValue(value) {
@@ -173,6 +184,8 @@ for (const file of new Set(files)) {
 
   for (const secret of secretValuePatterns) {
     for (const match of source.matchAll(secret.pattern)) {
+      const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
+      if (isDetectorPatternLine(normalized, line)) continue;
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible committed secret: ${secret.name}`);
     }
   }
