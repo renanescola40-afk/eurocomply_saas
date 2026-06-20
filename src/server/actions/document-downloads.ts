@@ -10,6 +10,31 @@ import { getUserOrganizationMemberships } from '@/server/queries/current-organiz
 
 const SIGNED_URL_EXPIRES_IN_SECONDS = 60;
 
+async function auditRejectedDownloadUrl(input: {
+  documentId: string;
+  userId: string;
+  reason: string;
+  organizationId?: string | null;
+  storagePath?: string | null;
+  membershipCount?: number;
+}) {
+  await logAuditEvent({
+    organizationId: input.organizationId ?? null,
+    actorUserId: input.userId,
+    action: 'document.download_url_rejected',
+    entityType: 'document',
+    entityId: input.documentId,
+    metadata: {
+      reason: input.reason,
+      organizationId: input.organizationId ?? null,
+      actorUserId: input.userId,
+      documentId: input.documentId,
+      hasStoragePath: Boolean(input.storagePath),
+      membershipCount: input.membershipCount ?? null,
+    },
+  });
+}
+
 export async function createDocumentSignedDownloadUrl(documentId: string) {
   const user = await requireCurrentUser();
   const memberships = await getUserOrganizationMemberships(user.id);
@@ -17,6 +42,12 @@ export async function createDocumentSignedDownloadUrl(documentId: string) {
   const context = { area: 'document_signed_download_url', documentId, userId: user.id };
 
   if (organizationIds.length === 0) {
+    await auditRejectedDownloadUrl({
+      documentId,
+      userId: user.id,
+      reason: 'no_organization_access',
+      membershipCount: 0,
+    });
     throw new Error('Organization access required');
   }
 
@@ -30,15 +61,43 @@ export async function createDocumentSignedDownloadUrl(documentId: string) {
 
   if (documentError || !document?.storage_path) {
     reportError(documentError ?? new Error('Document not found'), context);
+    await auditRejectedDownloadUrl({
+      documentId,
+      userId: user.id,
+      reason: 'document_not_found_or_cross_tenant',
+      organizationId: organizationIds[0] ?? null,
+      membershipCount: organizationIds.length,
+    });
     throw new Error('Document not found');
   }
 
-  await assertCurrentUserCan(document.organization_id, user.id, 'documents:read');
+  try {
+    await assertCurrentUserCan(document.organization_id, user.id, 'documents:read');
+  } catch (error) {
+    reportError(error, { ...context, organizationId: document.organization_id });
+    await auditRejectedDownloadUrl({
+      documentId,
+      userId: user.id,
+      reason: 'permission_denied',
+      organizationId: document.organization_id,
+      storagePath: document.storage_path,
+      membershipCount: organizationIds.length,
+    });
+    throw error;
+  }
 
   try {
     assertDocumentStoragePathInOrganization(document.storage_path, document.organization_id);
   } catch (error) {
     reportError(error, { ...context, organizationId: document.organization_id, storagePath: document.storage_path });
+    await auditRejectedDownloadUrl({
+      documentId,
+      userId: user.id,
+      reason: 'invalid_storage_path',
+      organizationId: document.organization_id,
+      storagePath: document.storage_path,
+      membershipCount: organizationIds.length,
+    });
     throw error;
   }
 
@@ -52,6 +111,14 @@ export async function createDocumentSignedDownloadUrl(documentId: string) {
     reportError(error ?? new Error('Unable to create signed download URL'), {
       ...context,
       organizationId: document.organization_id,
+    });
+    await auditRejectedDownloadUrl({
+      documentId,
+      userId: user.id,
+      reason: 'signed_url_create_failed',
+      organizationId: document.organization_id,
+      storagePath: document.storage_path,
+      membershipCount: organizationIds.length,
     });
     throw new Error('Unable to create signed download URL');
   }
