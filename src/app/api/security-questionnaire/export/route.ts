@@ -107,7 +107,6 @@ export async function GET(request: Request) {
     const exportPayload = {
       schemaVersion: '2026-06-10',
       exportType: 'eurocomply.security_questionnaire_export',
-      signatureAlgorithm: 'signed_hmac',
       payload,
       integrity,
     };
@@ -126,7 +125,6 @@ export async function GET(request: Request) {
         actorRole: permission.role,
         payloadHash: integrity.payloadHash,
         signed: integrity.signed,
-        signatureAlgorithm: 'signed_hmac',
         stepUpAction: stepUp.assessment.action,
         stepUpVerifiedAt: stepUp.assessment.verifiedAt,
       },
