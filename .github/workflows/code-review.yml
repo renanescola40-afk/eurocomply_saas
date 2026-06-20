@@ -7,14 +7,22 @@ on:
       - synchronize
 
 permissions:
+  contents: read
   pull-requests: write
 
 jobs:
   setup-deepseek-review:
     runs-on: ubuntu-latest
     name: Code Review
+    env:
+      CHAT_TOKEN: ${{ secrets.CHAT_TOKEN }}
     steps:
+      - name: Skip DeepSeek code review when CHAT_TOKEN is not configured
+        if: env.CHAT_TOKEN == ''
+        run: echo "CHAT_TOKEN is not configured; skipping DeepSeek Code Review."
+
       - name: DeepSeek Code Review
+        if: env.CHAT_TOKEN != ''
         uses: hustcer/deepseek-review@v1
         with:
-          chat-token: ${{ secrets.CHAT_TOKEN }}
+          chat-token: ${{ env.CHAT_TOKEN }}
