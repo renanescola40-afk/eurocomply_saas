@@ -3,23 +3,20 @@ import { createBrowserClient } from '@supabase/ssr';
 // ==========================================
 // SUPABASE CLIENT INITIALIZATION
 // ==========================================
-// Priority: NEXT_PUBLIC_SUPABASE_* > NEXT_PUBLIC_DATABASE_* > Fallbacks
+// Public browser config must use explicit Supabase public/publishable env names.
+// Database URLs and service-role keys remain server-only.
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_DATABASE_URL || '';
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY || '';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 const isLikelySupabaseUrl = (url: string) => /\.supabase\.(co|in|app)/.test(url);
 
 const resolvedSupabaseUrlName = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? 'NEXT_PUBLIC_SUPABASE_URL'
-  : process.env.NEXT_PUBLIC_DATABASE_URL
-  ? 'NEXT_PUBLIC_DATABASE_URL'
   : 'UNSET';
 
 const resolvedSupabaseKeyName = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ? 'NEXT_PUBLIC_SUPABASE_ANON_KEY'
-  : process.env.NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY
-  ? 'NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY'
   : 'UNSET';
 
 function makeStubClient() {
@@ -55,7 +52,7 @@ function makeStubClient() {
 export const supabase = (() => {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     if (typeof window !== 'undefined') {
-      console.warn('[supabase] public URL/key not found in environment — returning stub client. Set NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_DATABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY / NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY in Vercel.');
+      console.warn('[supabase] public URL/key not found in environment — returning stub client. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel.');
     } else {
       console.warn('[supabase] public URL/key not found in environment — server will use supabaseAdmin instead.');
     }
