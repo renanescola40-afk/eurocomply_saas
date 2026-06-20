@@ -107,6 +107,10 @@ function isPlaceholderContextLine(line) {
     && /(placeholder|example|sample|changeme|change-me|your-|ci-|ci_|test_|sk_test_|price_ci_|whsec_ci_|dummy|not configured|redacted|dev-secret|fallback de desenvolvimento|Copie para \.env)/i.test(line);
 }
 
+function isProviderExpressionValue(value, line) {
+  return /^\$\{\{/.test(value) || /\$\{\{\s*(secrets|vars|env|github)\./.test(line);
+}
+
 function isDangerousPublicNameDefinition(normalized, line) {
   return (
     normalized === 'src/lib/security/env-guard.ts'
@@ -166,7 +170,7 @@ for (const file of new Set(files)) {
     const name = match.groups?.name ?? 'UNKNOWN_SECRET';
     const value = match.groups?.value ?? '';
     const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-    if (!allowedPublicNames.has(name) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value) && !isDetectorDefinition(normalized, name, value, line)) {
+    if (!allowedPublicNames.has(name) && !isProviderExpressionValue(value, line) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value) && !isDetectorDefinition(normalized, name, value, line)) {
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible hardcoded secret assignment: ${name}`);
     }
   }
