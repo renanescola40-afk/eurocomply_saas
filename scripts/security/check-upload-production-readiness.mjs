@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 
-const evidencePath = 'docs/security/evidence/runtime/upload-production-readiness.json';
+const evidencePath = 'docs/security/evidence/operational/upload-production-readiness.json';
 const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
 
 const failures = [];
