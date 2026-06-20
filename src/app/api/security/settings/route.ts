@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
   const permission = await assertOrganizationPermission({
     userId: user.id,
     organizationId: organization.id,
-    permission: 'change_security_settings',
+    permission: 'manage_settings',
   });
 
   if (!permission.ok) {
