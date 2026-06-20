@@ -2,13 +2,6 @@ name: P0 Commit Lockfile
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - security/enterprise-full-security-suite
-    paths:
-      - '.github/workflows/p0-commit-lockfile.yml'
-      - 'package.json'
-      - 'package-lock.json'
 
 permissions:
   contents: write
@@ -56,6 +49,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No package-lock.json changes to commit."
           else
-            git commit -m "security: refresh deterministic npm lockfile"
+            git commit -m "security: commit deterministic npm lockfile"
             git push
           fi
