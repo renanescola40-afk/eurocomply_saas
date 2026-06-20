@@ -15,8 +15,8 @@ const guards = {
   noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'Cache-Control', 'no-store', 'secureApiError'],
   origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   stepUp: ['requireStepUpForRequest'],
-  internal: ['isAuthorizedInternalCronRequest', 'HEALTHCHECK_TOKEN', 'CRON_SECRET', 'INTERNAL_CRON_SECRET'],
-  webhook: ['constructEvent', 'STRIPE_WEBHOOK_SECRET', 'stripe-signature'],
+  internal: ['isAuthorizedInternalCronRequest', 'isAuthorizedInternalMaintenanceRequest', 'noStoreJson'],
+  webhook: ['constructEvent', 'stripe-signature', 'noStoreJson'],
 };
 
 const rules = [
