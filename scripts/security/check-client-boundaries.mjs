@@ -67,7 +67,7 @@ function hasUseClientDirective(source) {
 }
 
 function isClientNamedFile(path) {
-  return /(^|\/)([^/]+-client|client|.*\.client)\.(tsx|ts|jsx|js)$/.test(path);
+  return /(^|\/)([^/]+-client|.*\.client)\.(tsx|ts|jsx|js)$/.test(path);
 }
 
 function extractImports(source) {
