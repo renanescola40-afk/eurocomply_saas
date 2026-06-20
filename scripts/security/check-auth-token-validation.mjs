@@ -5,17 +5,15 @@ const root = process.cwd();
 const scanRoots = ['src', 'scripts'].filter((path) => existsSync(join(root, path)));
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage', 'playwright-report', 'test-results']);
 
-const manualTokenPatterns = [
-  /Authorization/i,
-  /Bearer\s+/i,
-  /jwt/i,
-  /access[_-]?token/i,
-  /id[_-]?token/i,
-  /refresh[_-]?token/i,
-  /jose/i,
-  /jsonwebtoken/i,
+const inboundAuthTokenPatterns = [
+  /request\.headers\.get\(\s*['"]authorization['"]\s*\)/i,
+  /headers\(\)\.get\(\s*['"]authorization['"]\s*\)/i,
+  /\bauth(?:orization)?Header\b/i,
+  /cookies\(\)\.get\(\s*['"](?:access[_-]?token|refresh[_-]?token|id[_-]?token|jwt)['"]\s*\)/i,
+  /request\.cookies\.get\(\s*['"](?:access[_-]?token|refresh[_-]?token|id[_-]?token|jwt)['"]\s*\)/i,
   /verifyJwt/i,
   /verifyIdToken/i,
+  /jwtVerify/i,
 ];
 
 const trustedAuthValidators = [
@@ -86,13 +84,13 @@ for (const file of files) {
   }
 
   if (!isRouteHandler(normalized)) continue;
-  if (!hasAny(source, manualTokenPatterns)) continue;
+  if (!hasAny(source, inboundAuthTokenPatterns)) continue;
 
   const usesTrustedValidator = trustedAuthValidators.some((token) => source.includes(token));
   const validatesAllClaims = requiredJwtClaims.every((claim) => new RegExp(`\b${claim}\b`).test(source));
 
   if (!usesTrustedValidator && !validatesAllClaims) {
-    failures.push(`${normalized}: route handles JWT/Bearer tokens but does not prove validation of iss, aud, exp and iat; use Supabase getUser() or verifyJwtClaims()`);
+    failures.push(`${normalized}: route inspects inbound auth tokens but does not prove validation of iss, aud, exp and iat; use Supabase getUser() or verifyJwtClaims()`);
   }
 }
 
