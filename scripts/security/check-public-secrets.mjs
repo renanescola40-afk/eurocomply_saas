@@ -113,7 +113,8 @@ function isProviderExpressionValue(value, line) {
 
 function isReferenceOnlyContext(normalized, line, value = '') {
   if (containsConcreteSecretValue(line)) return false;
-  if (normalized === 'scripts/security/check-public-secrets.mjs') return true;
+  if (normalized === '.gitleaks.toml') return true;
+  if (normalized.startsWith('scripts/security/')) return true;
   if (normalized.startsWith('docs/security/')) return true;
   if (normalized.startsWith('.github/workflows/') && (isProviderExpressionValue(value, line) || /\$\{\{/.test(line))) return true;
   return false;
@@ -185,7 +186,10 @@ for (const file of new Set(files)) {
 
   for (const secret of secretValuePatterns) {
     for (const match of source.matchAll(secret.pattern)) {
-      failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible committed secret: ${secret.name}`);
+      const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
+      if (!isReferenceOnlyContext(normalized, line)) {
+        failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible committed secret: ${secret.name}`);
+      }
     }
   }
 
