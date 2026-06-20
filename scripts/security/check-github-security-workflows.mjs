@@ -52,6 +52,8 @@ const checks = [
       '$GITHUB_STEP_SUMMARY',
       'actions/upload-artifact@v7',
       'npm-audit-triage',
+      'public-secrets-gate',
+      'public-secrets.log',
       'retention-days: 7',
       'if-no-files-found: warn',
     ],
