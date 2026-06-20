@@ -9,7 +9,14 @@
   "requiredEnvironment": {
     "REQUIRE_MALWARE_SCAN_FOR_UPLOADS": "true",
     "MALWARE_SCANNER_PROVIDER": "clamav|clamd|http|generic-http|webhook",
-    "MALWARE_SCANNER_ENDPOINT_OR_CLAMAV_HOST": "configured-in-runtime-secret-store",
+    "httpOrWebhookProvider": {
+      "MALWARE_SCANNER_ENDPOINT": "configured-in-runtime-secret-store",
+      "MALWARE_SCANNER_URL": "configured-in-runtime-secret-store"
+    },
+    "clamavOrClamdProvider": {
+      "MALWARE_SCANNER_CLAMAV_HOST": "configured-in-runtime-secret-store",
+      "MALWARE_SCANNER_CLAMAV_PORT": "configured-in-runtime-secret-store"
+    },
     "SUPABASE_MIGRATIONS": [
       "20260620090000_upload_malware_scan_hardening.sql",
       "20260620120000_controlled_document_storage_read_lockdown.sql"
