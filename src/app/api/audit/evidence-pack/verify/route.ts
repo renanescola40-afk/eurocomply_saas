@@ -9,8 +9,8 @@ export const runtime = 'nodejs';
 const MAX_EVIDENCE_PACK_BYTES = 1_000_000;
 
 type EvidencePackExport = {
-  payload?: unknown;
-  integrity?: EvidencePackIntegrity;
+  payload: unknown;
+  integrity: EvidencePackIntegrity;
 };
 
 function isIntegrity(value: unknown): value is EvidencePackIntegrity {
@@ -53,12 +53,12 @@ export async function readBoundedEvidencePackExport(request: Request): Promise<E
     return null;
   }
 
-  const body = JSON.parse(rawBody) as EvidencePackExport;
-  if (!body || !body.payload || !isIntegrity(body.integrity)) {
+  const body = JSON.parse(rawBody) as { payload?: unknown; integrity?: unknown };
+  if (!body || body.payload === undefined || !isIntegrity(body.integrity)) {
     return null;
   }
 
-  return body;
+  return { payload: body.payload, integrity: body.integrity };
 }
 
 export async function POST(request: Request) {

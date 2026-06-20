@@ -118,7 +118,40 @@ function billingErrorRedirect(locale: string): never {
   redirect(`/${locale}/dashboard/organizations/billing?billing_error=${encodeURIComponent('Billing action could not be completed. Please try again later.')}`);
 }
 
-export default async function OrganizationBillingPage({ params, searchParams }: BillingPageProps) {
+async function startCheckout(formData: FormData) {
+  'use server';
+
+  const locale = String(formData.get('locale') ?? 'en');
+  const planId = String(formData.get('planId') ?? '');
+
+  try {
+    const url = await createCheckoutSession({
+      planId,
+      successPath: `/${locale}/dashboard/organizations/billing?checkout=success`,
+      cancelPath: `/${locale}/dashboard/organizations/billing?checkout=cancelled`,
+    });
+    redirect(url);
+  } catch {
+    billingErrorRedirect(locale);
+  }
+}
+
+async function openCustomerPortal(formData: FormData) {
+  'use server';
+
+  const locale = String(formData.get('locale') ?? 'en');
+
+  try {
+    const url = await createCustomerPortalSession({
+      returnPath: `/${locale}/dashboard/organizations/billing`,
+    });
+    redirect(url);
+  } catch {
+    billingErrorRedirect(locale);
+  }
+}
+
+export default async function BillingPage({ params, searchParams }: BillingPageProps) {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -128,93 +161,34 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    redirect(`/${params.locale}/onboarding`);
+    redirect(`/${params.locale}/dashboard`);
   }
 
   const billing = await getOrganizationBillingContext(organization.id);
   const currentPlan = getBillingPlan(billing.plan) ?? BILLING_PLANS[0];
   const message = checkoutMessage(searchParams?.checkout, searchParams?.billing_error);
   const usageMeters = [
-    { label: 'Team members', current: billing.usage.users, limit: currentPlan.limits.users },
+    { label: 'Users', current: billing.usage.users, limit: currentPlan.limits.users },
     { label: 'Documents', current: billing.usage.documents, limit: currentPlan.limits.documents },
     { label: 'Vendors', current: billing.usage.vendors, limit: currentPlan.limits.vendors },
     { label: 'Risks', current: billing.usage.risks, limit: currentPlan.limits.risks },
   ];
-  const highestUsage = Math.max(...usageMeters.map((meter) => getUsagePercent(meter.current, meter.limit)));
-  const upgradeRecommended = highestUsage >= 80;
+  const upgradeRecommended = usageMeters.some((meter) => getUsagePercent(meter.current, meter.limit) >= 80);
 
-  async function startCheckout(formData: FormData) {
+  async function refreshBilling() {
     'use server';
-
-    const currentUser = await getCurrentUser();
-
-    if (!currentUser) {
-      redirect(`/${params.locale}/login`);
-    }
-
-    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
-
-    if (!currentOrganization) {
-      redirect(`/${params.locale}/onboarding`);
-    }
-
-    const planId = String(formData.get('planId') ?? '');
-    let url: string;
-
-    try {
-      url = await createCheckoutSession({
-        planId,
-        successPath: `/${params.locale}/dashboard/organizations/billing?checkout=success`,
-        cancelPath: `/${params.locale}/dashboard/organizations/billing?checkout=cancelled`,
-      });
-    } catch {
-      billingErrorRedirect(params.locale);
-    }
-
     revalidatePath(`/${params.locale}/dashboard/organizations/billing`);
-    redirect(url!);
-  }
-
-  async function openCustomerPortal() {
-    'use server';
-
-    const currentUser = await getCurrentUser();
-
-    if (!currentUser) {
-      redirect(`/${params.locale}/login`);
-    }
-
-    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
-
-    if (!currentOrganization) {
-      redirect(`/${params.locale}/onboarding`);
-    }
-
-    let url: string;
-
-    try {
-      url = await createCustomerPortalSession({
-        returnPath: `/${params.locale}/dashboard/organizations/billing`,
-      });
-    } catch {
-      billingErrorRedirect(params.locale);
-    }
-
-    redirect(url!);
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10">
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-6 text-white shadow-2xl md:p-8">
-        <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-        <div className="absolute bottom-0 left-10 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
-
-        <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+    <main className="space-y-8">
+      <section className="rounded-3xl bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-8 text-white shadow-xl">
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-primary/80">Billing command center</p>
-            <h1 className="mt-4 max-w-4xl text-4xl font-bold tracking-tight md:text-6xl">Plan, usage and upgrades</h1>
-            <p className="mt-5 max-w-2xl text-lg text-white/70">
-              Manage EuroComply subscription status, usage limits and add-ons for {organization.name}.
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary-foreground/70">Billing</p>
+            <h1 className="mt-3 text-4xl font-bold tracking-tight">Manage your EuroComply plan</h1>
+            <p className="mt-3 max-w-2xl text-white/70">
+              Review usage, upgrade your subscription and open the Stripe billing portal.
             </p>
             {message && (
               <div className={`mt-6 rounded-2xl border p-4 ${message.className}`}>
@@ -248,11 +222,13 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
       <section className="grid gap-5 lg:grid-cols-3">
         {BILLING_PLANS.map((plan) => {
           const isCurrent = plan.id === currentPlan.id;
+          const description = `${plan.limits.users} users, ${plan.limits.documents} documents and ${plan.limits.vendors} vendors included.`;
+
           return (
             <Card key={plan.id} className={`flex flex-col ${isCurrent ? 'border-primary' : ''}`}>
               <CardHeader>
                 <CardTitle>{plan.name}</CardTitle>
-                <CardDescription>{plan.description}</CardDescription>
+                <CardDescription>{description}</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-1 flex-col gap-5">
                 <p className="text-3xl font-bold">
@@ -260,11 +236,12 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
                   <span className="text-sm font-normal text-muted-foreground">/month</span>
                 </p>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  {plan.highlights.map((highlight) => (
+                  {plan.features.map((highlight) => (
                     <li key={highlight}>• {highlight}</li>
                   ))}
                 </ul>
                 <form action={startCheckout} className="mt-auto">
+                  <input type="hidden" name="locale" value={params.locale} />
                   <input type="hidden" name="planId" value={plan.id} />
                   <Button type="submit" className="w-full" variant={isCurrent ? 'outline' : 'default'} disabled={isCurrent}>
                     {isCurrent ? 'Current plan' : 'Upgrade'}
@@ -282,8 +259,10 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
           <CardDescription>Open Stripe-hosted billing management to update payment methods, invoices and subscription details.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={openCustomerPortal}>
+          <form action={openCustomerPortal} className="flex gap-3">
+            <input type="hidden" name="locale" value={params.locale} />
             <Button type="submit">Open billing portal</Button>
+            <Button type="submit" variant="outline" formAction={refreshBilling}>Refresh status</Button>
           </form>
         </CardContent>
       </Card>

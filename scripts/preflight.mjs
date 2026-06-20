@@ -4,12 +4,17 @@ const env = (...parts) => parts.join('_');
 const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
 const supabaseAnonEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY');
 const supabaseServiceEnv = env('SUPABASE', 'SERVICE', 'ROLE', 'KEY');
+const supabaseAccessTokenEnv = env('SUPABASE', 'ACCESS', 'TOKEN');
 const enterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
 const stepUpProviderEnv = env('STEP', 'UP', 'PROVIDER', 'MODE');
 const stepUpSigningEnv = env('STEP', 'UP', 'SIGNING', 'SECRET');
 const auditSigningEnv = env('AUDIT', 'CHAIN', 'SIGNING', 'SECRET');
 const stepUpAcrEnv = env('STEP', 'UP', 'IDP', 'ACR', 'VALUES');
 const stepUpAmrEnv = env('STEP', 'UP', 'IDP', 'AMR', 'VALUES');
+
+// Upload malware/content scanning production envs: REQUIRE_MALWARE_SCAN_FOR_UPLOADS, MALWARE_SCANNER_PROVIDER.
+const malwareScanRequiredEnv = env('REQUIRE', 'MALWARE', 'SCAN', 'FOR', 'UPLOADS');
+const malwareScannerProviderEnv = env('MALWARE', 'SCANNER', 'PROVIDER');
 
 const required = [supabaseUrlEnv, supabaseAnonEnv, supabaseServiceEnv];
 
@@ -28,12 +33,12 @@ const recommended = [
   stepUpProviderEnv,
   stepUpAcrEnv,
   stepUpAmrEnv,
-  env('REQUIRE', 'MALWARE', 'SCAN', 'FOR', 'UPLOADS'),
-  env('MALWARE', 'SCANNER', 'PROVIDER'),
+  malwareScanRequiredEnv,
+  malwareScannerProviderEnv,
   env('SENTRY', 'AUTH', 'TOKEN'),
   env('UPSTASH', 'REDIS', 'REST', 'URL'),
   env('UPSTASH', 'REDIS', 'REST', 'TOKEN'),
-  env('SUPABASE', 'ACCESS', 'TOKEN'),
+  supabaseAccessTokenEnv,
 ];
 
 const requiredFiles = [
@@ -163,8 +168,8 @@ for (const price of stripePrices) {
   }
 }
 
-if (!process.env[env('SUPABASE', 'ACCESS', 'TOKEN')]) {
-  console.warn('SUPABASE_ACCESS_TOKEN is not configured; live RLS CI checks will run in advisory mode only.');
+if (!process.env[supabaseAccessTokenEnv]) {
+  console.warn('Runtime preflight warning', { code: 'supabase_access_token_missing' });
 }
 
 if (process.env[enterpriseReleaseEnv] === 'true') {

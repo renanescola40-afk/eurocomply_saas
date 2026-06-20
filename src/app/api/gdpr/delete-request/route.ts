@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     return stepUp.response;
   }
 
-  const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
+  const body: Record<string, unknown> = await readBoundedJsonRequest<Record<string, unknown>>(request, {
     maxBytes: DELETE_REQUEST_JSON_MAX_BYTES,
   }).catch(() => ({}));
   const reason = typeof body.reason === 'string' && body.reason.trim().length > 0 ? body.reason.trim().slice(0, 500) : 'No reason provided';
@@ -90,12 +90,12 @@ export async function POST(request: NextRequest) {
     organizationId: organization.id,
     userId: user.id,
     type: 'system',
-    message: 'Pedido de apagamento GDPR recebido e enviado para revisão.',
+    message: 'Pedido GDPR recebido e enviado para revisão.',
   });
 
   return noStoreJson({
     status: 'pending_review',
-    message: 'Deletion request received. A compliance administrator must review retention, legal hold, billing and audit requirements before deletion.',
+    message: 'Request received. A compliance administrator must review retention, legal hold, billing and audit requirements before completion.',
     stepUp: publicStepUpSummary(stepUp.assessment),
   });
 }

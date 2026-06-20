@@ -4,7 +4,10 @@ export type BillingReturnBaseUrlResult =
   | { ok: true; appUrl: string }
   | { ok: false; error: 'billing_app_url_unavailable' };
 
-type BillingReturnBaseUrlEnv = Pick<NodeJS.ProcessEnv, 'NEXT_PUBLIC_APP_URL' | 'NODE_ENV'>;
+type BillingReturnBaseUrlEnv = {
+  NEXT_PUBLIC_APP_URL?: string;
+  NODE_ENV?: string;
+};
 
 function normalizeConfiguredAppUrl(value: string | undefined) {
   const trimmed = value?.trim();

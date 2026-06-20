@@ -36,13 +36,15 @@ export function sanitizeContext(context: ReportErrorContext = {}) {
 
 export function reportError(error: unknown, context: ReportErrorContext = {}) {
   const sanitizedContext = sanitizeContext(context);
+  const report = { error, context: sanitizedContext };
 
   if (process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN) {
     Sentry.captureException(error, {
       extra: sanitizedContext,
     });
-    return;
+    return report;
   }
 
   console.error('[EuroComply]', error, sanitizedContext);
+  return report;
 }
