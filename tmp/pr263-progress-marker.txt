@@ -1,0 +1,1 @@
+PR263 conflict resolution progress marker. Safe to delete after merge.
