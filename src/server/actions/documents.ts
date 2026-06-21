@@ -223,7 +223,21 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
   }
 
   try {
-    return await createDocument(
+    const auditMetadata = {
+      fileHash,
+      checksumSha256: fileHash,
+      claimedMimeType: file.type,
+      mimeType: contentValidation.mimeType,
+      sizeBytes: file.size,
+      storagePath,
+      scanStatus: scan.status,
+      scanProvider: scan.provider,
+      scanRequired: scan.required,
+      scanCheckedAt: scan.scannedAt,
+      organizationId: payload.organizationId,
+      actorUserId: userId,
+    };
+    const document = await createDocument(
       {
         organizationId: payload.organizationId,
         name: payload.name,
@@ -232,20 +246,25 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
         mimeType: contentValidation.mimeType,
         sizeBytes: file.size,
         expiresAt: payload.expiresAt ?? null,
-        metadata: {
-          fileHash,
-          checksumSha256: fileHash,
-          claimedMimeType: file.type,
-          scanStatus: scan.status,
-          scanProvider: scan.provider,
-          scanRequired: scan.required,
-          scanCheckedAt: scan.scannedAt,
-          organizationId: payload.organizationId,
-          actorUserId: userId,
-        },
+        metadata: auditMetadata,
       },
       userId,
     );
+
+    await createAuditEvent({
+      organizationId: payload.organizationId,
+      actorUserId: userId,
+      action: 'document_uploaded',
+      entityType: 'document',
+      entityId: document.id,
+      metadata: {
+        name: payload.name,
+        category: payload.category,
+        ...auditMetadata,
+      },
+    });
+
+    return document;
   } catch (error) {
     reportError(error, { ...context, fileType: contentValidation.mimeType, fileSize: file.size });
     await supabase.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
