@@ -84,7 +84,7 @@ export async function createVendor(input: unknown, userId: string) {
   let { data, error } = await insertVendor(fullRecord);
 
   if (error && isMissingOptionalVendorColumn(error)) {
-    console.warn('[vendors] Falling back to legacy vendor schema:', error.message);
+    console.warn('[vendors] legacy_schema_fallback', { code: error.code ?? 'unknown' });
     const fallbackResult = await insertVendor(baseRecord);
     data = fallbackResult.data;
     error = fallbackResult.error;
