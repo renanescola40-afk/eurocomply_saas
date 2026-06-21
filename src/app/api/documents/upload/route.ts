@@ -26,6 +26,7 @@ import {
 } from '@/server/security/upload-security';
 
 const STORAGE_BUCKET = CONTROLLED_DOCUMENT_STORAGE_BUCKET;
+// The controlled-documents bucket is the only storage bucket permitted for enterprise document uploads.
 const SIGNATURE_MISMATCH_REASON = 'signature_mismatch';
 
 function safeDocumentTitle(name: string) {
