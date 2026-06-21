@@ -82,6 +82,7 @@ const checks = [
   {
     path: '.github/workflows/security-ci.yml',
     tokens: [
+      'name: RISCK COMPLY Security CI',
       'permissions:',
       'contents: read',
       'persist-credentials: false',
@@ -235,8 +236,8 @@ for (const check of checks) {
   }
 }
 
-console.log('EuroComply GitHub security workflow and governance check');
-console.log('--------------------------------------------------------');
+console.log('RISCK COMPLY GitHub security workflow and governance check');
+console.log('----------------------------------------------------------');
 
 if (failures.length > 0) {
   console.error('GitHub security workflow/governance failures:');
