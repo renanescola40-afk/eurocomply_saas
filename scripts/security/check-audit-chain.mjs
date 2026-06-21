@@ -45,7 +45,7 @@ const auditEventsRequiredTokens = [
   'p_previous_hash',
   'p_event_hash',
   'p_hash_signature',
-  'isPreviousHashMismatch',
+  'isAuditChainPreviousHashMismatch',
   'isMissingAuditChainRpc',
   'previous_hash',
   'event_hash',
@@ -93,7 +93,7 @@ const chainedRpcMigrationRequiredTokens = [
   'event_hash',
   'hash_algorithm',
   'hash_signature',
-  'order by created_at desc',
+  'order by ae.created_at desc',
   'limit 1',
   'security definer',
 ];
@@ -105,8 +105,8 @@ const concurrencyRunbookRequiredTokens = [
   'same organization',
   'previous_hash',
   'event_hash',
-  'concurrent writes',
-  'Enterprise Release Rule',
+  'concurrent event ingestion',
+  'Release Rule',
 ];
 
 const verifierRequiredTokens = [
@@ -169,8 +169,8 @@ if (chainedRpcMigration) requireTokens(chainedRpcMigrationPath, chainedRpcMigrat
 if (concurrencyRunbook) requireTokens(concurrencyRunbookPath, concurrencyRunbook, concurrencyRunbookRequiredTokens);
 if (verifierRoute) requireTokens(verifierRoutePath, verifierRoute, verifierRequiredTokens);
 
-if (preflight && !preflight.includes('AUDIT_CHAIN_SIGNING_SECRET')) {
-  failures.push(`${preflightPath} must recommend AUDIT_CHAIN_SIGNING_SECRET`);
+if (preflight && !(preflight.includes('AUDIT_CHAIN_SIGNING_SECRET') || preflight.includes('auditSigningEnv'))) {
+  failures.push(`${preflightPath} must recommend audit-chain signing material`);
 }
 
 if (preflight && !preflight.includes(migrationPath)) {
