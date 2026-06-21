@@ -7,7 +7,7 @@
   "generatedAt": "2026-06-21T12:00:00.000Z",
   "control": "Enterprise audit logging and tamper-evident audit chain",
   "summary": "EuroComply audit events are appended to an organization-scoped hash chain with deterministic canonical payload hashing, optional HMAC signatures, transactional Supabase RPC append, RBAC plus step-up protected verification, and signed audit evidence export. The enterprise hardening migration persists the same id and created_at values used to compute event_hash.",
-  "redactionConfirmation": "Audit metadata is sanitized before persistence and hashing; credential-like fields are excluded.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "evidenceLocation": "docs/security/evidence/runtime/audit-chain-live-validation.json",
   "evidenceLocations": [
     "src/server/security/audit-chain.ts",
@@ -30,6 +30,7 @@
   "controlsVerified": [
     "Each chained audit event stores organizationId, actorUserId, action, entityType, entityId, sanitized metadata, previousHash, eventHash, hash algorithm and optional HMAC signature.",
     "Audit event canonicalization sorts object keys recursively and removes undefined values before hashing.",
+    "Audit event canonicalization normalizes database timestamptz strings before hashing so rows read back from Postgres verify against the originally persisted event_hash.",
     "eventHash includes the canonicalized payload and previousHash.",
     "The enterprise append RPC uses pg_advisory_xact_lock per organization and validates p_previous_hash inside the transaction before insert.",
     "The enterprise append RPC persists p_id and p_created_at so the stored row matches the canonical payload that was hashed.",
@@ -81,6 +82,10 @@
     "verifyWithStepUp": {
       "status": "covered_by_test",
       "test": "src/app/api/audit/chain/verify/route.test.ts::verifies the chain only after RBAC and signed step-up"
+    },
+    "postgresTimestampReadback": {
+      "status": "covered_by_test",
+      "test": "src/server/security/audit-chain.test.ts::verifies records read back with Postgres timestamp formatting"
     }
   },
   "acceptanceCriteria": {
