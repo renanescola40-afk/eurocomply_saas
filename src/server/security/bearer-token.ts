@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { timingSafeEqual } from 'node:crypto';
 
 export type BearerTokenValidationOptions = {
