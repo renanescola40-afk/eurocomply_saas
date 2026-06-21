@@ -1,31 +1,65 @@
 'use server';
 
-import { DOCUMENT_BUCKET, assertDocumentStoragePathInOrganization, sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
+import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
 import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { requireCurrentUser } from '@/server/queries/auth';
 import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
-import { SIGNED_URL_EXPIRES_IN_SECONDS, UPLOAD_AUDIT_EVENTS, isShortLivedSignedUrlExpiry } from '@/server/security/upload-security';
+import {
+  CONTROLLED_DOCUMENT_STORAGE_BUCKET as DOCUMENT_BUCKET,
+  SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS,
+  UPLOAD_SECURITY_AUDIT_EVENTS,
+  assertTenantStoragePathInOrganization,
+  buildUploadSecurityAuditMetadata,
+} from '@/server/security/upload-security';
 
-type DocumentAccessMode = 'download' | 'preview';
+const SIGNED_URL_EXPIRES_IN_SECONDS = SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS;
+
+type DocumentUrlAccessPurpose = 'download' | 'preview';
+
+async function auditDownloadRequested(input: {
+  documentId: string;
+  userId: string;
+  organizationId?: string | null;
+  membershipCount?: number;
+  accessPurpose: DocumentUrlAccessPurpose;
+}) {
+  await logAuditEvent({
+    organizationId: input.organizationId ?? null,
+    actorUserId: input.userId,
+    action: UPLOAD_SECURITY_AUDIT_EVENTS.downloadRequested,
+    entityType: 'document',
+    entityId: input.documentId,
+    metadata: buildUploadSecurityAuditMetadata({
+      organizationId: input.organizationId ?? null,
+      actorUserId: input.userId,
+      documentId: input.documentId,
+      accessPurpose: input.accessPurpose,
+      expiresInSeconds: SIGNED_URL_EXPIRES_IN_SECONDS,
+    }),
+  });
+}
 
 async function auditRejectedDownloadUrl(input: {
   documentId: string;
   userId: string;
   reason: string;
-  accessMode: DocumentAccessMode;
   organizationId?: string | null;
   storagePath?: string | null;
   membershipCount?: number;
+  accessPurpose: DocumentUrlAccessPurpose;
 }) {
   const metadata = {
-    reason: input.reason,
-    accessMode: input.accessMode,
-    organizationId: input.organizationId ?? null,
-    actorUserId: input.userId,
-    documentId: input.documentId,
+    ...buildUploadSecurityAuditMetadata({
+      reason: input.reason,
+      organizationId: input.organizationId ?? null,
+      actorUserId: input.userId,
+      documentId: input.documentId,
+      accessPurpose: input.accessPurpose,
+      expiresInSeconds: SIGNED_URL_EXPIRES_IN_SECONDS,
+    }),
     hasStoragePath: Boolean(input.storagePath),
     membershipCount: input.membershipCount ?? null,
   };
@@ -34,7 +68,7 @@ async function auditRejectedDownloadUrl(input: {
     logAuditEvent({
       organizationId: input.organizationId ?? null,
       actorUserId: input.userId,
-      action: UPLOAD_AUDIT_EVENTS.downloadDenied,
+      action: UPLOAD_SECURITY_AUDIT_EVENTS.downloadDenied,
       entityType: 'document',
       entityId: input.documentId,
       metadata,
@@ -50,25 +84,18 @@ async function auditRejectedDownloadUrl(input: {
   ]);
 }
 
-async function createDocumentSignedAccessUrl(documentId: string, accessMode: DocumentAccessMode) {
+async function createDocumentSignedUrl(documentId: string, accessPurpose: DocumentUrlAccessPurpose) {
   const user = await requireCurrentUser();
   const memberships = await getUserOrganizationMemberships(user.id);
   const organizationIds = memberships.map((membership) => membership.organization_id);
-  const context = { area: 'document_signed_download_url', documentId, userId: user.id, accessMode };
+  const context = { area: 'document_signed_download_url', documentId, userId: user.id, accessPurpose };
 
-  await logAuditEvent({
+  await auditDownloadRequested({
+    documentId,
+    userId: user.id,
     organizationId: organizationIds[0] ?? null,
-    actorUserId: user.id,
-    action: UPLOAD_AUDIT_EVENTS.downloadRequested,
-    entityType: 'document',
-    entityId: documentId,
-    metadata: {
-      documentId,
-      accessMode,
-      organizationId: organizationIds[0] ?? null,
-      actorUserId: user.id,
-      membershipCount: organizationIds.length,
-    },
+    membershipCount: organizationIds.length,
+    accessPurpose,
   });
 
   if (organizationIds.length === 0) {
@@ -76,8 +103,8 @@ async function createDocumentSignedAccessUrl(documentId: string, accessMode: Doc
       documentId,
       userId: user.id,
       reason: 'no_organization_access',
-      accessMode,
       membershipCount: 0,
+      accessPurpose,
     });
     throw new Error('Organization access required');
   }
@@ -96,9 +123,9 @@ async function createDocumentSignedAccessUrl(documentId: string, accessMode: Doc
       documentId,
       userId: user.id,
       reason: 'document_not_found_or_cross_tenant',
-      accessMode,
       organizationId: organizationIds[0] ?? null,
       membershipCount: organizationIds.length,
+      accessPurpose,
     });
     throw new Error('Document not found');
   }
@@ -111,57 +138,39 @@ async function createDocumentSignedAccessUrl(documentId: string, accessMode: Doc
       documentId,
       userId: user.id,
       reason: 'permission_denied',
-      accessMode,
       organizationId: document.organization_id,
       storagePath: document.storage_path,
       membershipCount: organizationIds.length,
+      accessPurpose,
     });
     throw error;
   }
 
   try {
-    assertDocumentStoragePathInOrganization(document.storage_path, document.organization_id);
+    assertTenantStoragePathInOrganization(document.storage_path, document.organization_id);
   } catch (error) {
-    reportError(error, {
-      ...context,
-      organizationId: document.organization_id,
-      hasStoragePath: Boolean(document.storage_path),
-    });
+    reportError(error, { ...context, organizationId: document.organization_id, storagePath: document.storage_path });
     await auditRejectedDownloadUrl({
       documentId,
       userId: user.id,
       reason: 'invalid_storage_path',
-      accessMode,
       organizationId: document.organization_id,
       storagePath: document.storage_path,
       membershipCount: organizationIds.length,
+      accessPurpose,
     });
     throw error;
   }
 
-  if (!isShortLivedSignedUrlExpiry(SIGNED_URL_EXPIRES_IN_SECONDS)) {
-    await auditRejectedDownloadUrl({
-      documentId,
-      userId: user.id,
-      reason: 'invalid_signed_url_expiry',
-      accessMode,
-      organizationId: document.organization_id,
-      storagePath: document.storage_path,
-      membershipCount: organizationIds.length,
-    });
-    throw new Error('Signed URL expiry policy is invalid');
-  }
-
-  const storage = supabase.storage.from(DOCUMENT_BUCKET);
-  const signedUrlResult = accessMode === 'download'
-    ? await storage.createSignedUrl(document.storage_path, SIGNED_URL_EXPIRES_IN_SECONDS, {
-        download: sanitizeDocumentDownloadFileName(document.name),
-      })
-    : await storage.createSignedUrl(document.storage_path, SIGNED_URL_EXPIRES_IN_SECONDS);
-  const { data, error } = signedUrlResult;
+  const signedUrlOptions = accessPurpose === 'download'
+    ? { download: sanitizeDocumentDownloadFileName(document.name) }
+    : undefined;
+  const { data, error } = await supabase.storage
+    .from(DOCUMENT_BUCKET)
+    .createSignedUrl(document.storage_path, SIGNED_URL_EXPIRES_IN_SECONDS, signedUrlOptions);
 
   if (error || !data?.signedUrl) {
-    reportError(error ?? new Error('Unable to create signed document URL'), {
+    reportError(error ?? new Error('Unable to create signed download URL'), {
       ...context,
       organizationId: document.organization_id,
     });
@@ -169,26 +178,27 @@ async function createDocumentSignedAccessUrl(documentId: string, accessMode: Doc
       documentId,
       userId: user.id,
       reason: 'signed_url_create_failed',
-      accessMode,
       organizationId: document.organization_id,
       storagePath: document.storage_path,
       membershipCount: organizationIds.length,
+      accessPurpose,
     });
-    throw new Error('Unable to create signed document URL');
+    throw new Error('Unable to create signed download URL');
   }
 
   await logAuditEvent({
     organizationId: document.organization_id,
     actorUserId: user.id,
-    action: accessMode === 'download' ? 'document.download_url_created' : 'document.preview_url_created',
+    action: 'document.download_url_created',
     entityType: 'document',
     entityId: documentId,
-    metadata: {
-      accessMode,
-      expiresInSeconds: SIGNED_URL_EXPIRES_IN_SECONDS,
+    metadata: buildUploadSecurityAuditMetadata({
       organizationId: document.organization_id,
       actorUserId: user.id,
-    },
+      documentId,
+      accessPurpose,
+      expiresInSeconds: SIGNED_URL_EXPIRES_IN_SECONDS,
+    }),
   });
 
   return {
@@ -198,9 +208,9 @@ async function createDocumentSignedAccessUrl(documentId: string, accessMode: Doc
 }
 
 export async function createDocumentSignedDownloadUrl(documentId: string) {
-  return createDocumentSignedAccessUrl(documentId, 'download');
+  return createDocumentSignedUrl(documentId, 'download');
 }
 
 export async function createDocumentSignedPreviewUrl(documentId: string) {
-  return createDocumentSignedAccessUrl(documentId, 'preview');
+  return createDocumentSignedUrl(documentId, 'preview');
 }

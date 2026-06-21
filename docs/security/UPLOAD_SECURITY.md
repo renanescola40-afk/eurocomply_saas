@@ -1,79 +1,108 @@
-# Enterprise upload/download/preview security standard
+# Enterprise Upload Security Standard
 
-This standard covers document upload, storage, signed download and preview flows for enterprise tenants.
+This standard covers upload, storage, download and preview handling for controlled customer documents.
 
-## Scope
+## Security objective
 
-User-submitted controlled documents must flow through `src/server/security/upload-security.ts` before any storage write. The module centralizes size checks, filename sanitization, path traversal prevention, extension allow-listing, declared MIME validation, magic-number/file-signature validation, SHA-256 hashing, malware scanner invocation, tenant-scoped storage path construction and signed URL expiry policy.
+Enterprise uploads must fail closed. A user-submitted document is stored only after all local validation succeeds and the configured malware scanner returns `clean` for the exact bytes that will be written to storage.
 
-## Enterprise fail-closed rule
+## Central module
 
-Enterprise deployments must set:
+The authoritative runtime module is `src/server/security/upload-security.ts`. Upload code should call that module instead of reimplementing ad-hoc checks in routes or server actions.
+
+The module provides:
+
+- maximum size enforcement through `MAX_UPLOAD_BYTES`;
+- extension and MIME allow-listing through `ALLOWED_TYPES`;
+- declared MIME validation;
+- magic number/file signature validation;
+- SHA-256 hashing through `fileHash` / `checksumSha256`;
+- filename sanitization through `sanitizeUploadFileName`;
+- path traversal prevention through tenant path assertions;
+- executable/script blocking through dangerous extension and active-content detection;
+- scan orchestration through `scanValidatedUploadForMalware`;
+- short signed URL expiry helpers through `SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS` and `isSignedUrlExpired`.
+
+## Allowed upload types
+
+User-submitted controlled document uploads are limited to:
+
+| Type | MIME |
+| --- | --- |
+| PDF | `application/pdf` |
+| PNG | `image/png` |
+| JPEG | `image/jpeg` |
+| Word OpenXML | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
+| Excel OpenXML | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
+
+Scripts, executables, HTML/SVG, macro-enabled Office formats, generic ZIP archives and double-extension names such as `invoice.pdf.exe` are blocked before malware scanning and before storage.
+
+## Enterprise malware scanner contract
+
+Required enterprise configuration:
 
 ```txt
 REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true
-MALWARE_SCANNER_PROVIDER=<real provider>
-MALWARE_SCANNER_API_KEY=<server-only secret when the provider needs one>
+MALWARE_SCANNER_PROVIDER=clamav
+# or: MALWARE_SCANNER_PROVIDER=http
 ```
 
-An enterprise upload is allowed only when the malware scanner returns `clean`. Scanner unavailable, timeout, unsupported provider, malformed provider response, `suspicious`, `infected`, `error` and `not_configured` all block the upload before storage or document metadata writes. Mock scanner providers are limited to test/development and must never be configured in production.
+Provider secrets are server-only. HTTP/webhook integrations must use `MALWARE_SCANNER_ENDPOINT` or `MALWARE_SCANNER_URL` and `MALWARE_SCANNER_API_KEY` or equivalent server-side authorization. ClamAV integrations use `MALWARE_SCANNER_CLAMAV_HOST` and `MALWARE_SCANNER_CLAMAV_PORT`.
 
-## Allowed uploaded content
+Supported real providers are `clamav`, `clamd`, `http`, `generic-http` and `webhook`. Mock providers are restricted to test/development through `registerMalwareScannerProviderForTest`; they are unavailable in enterprise production.
 
-Allowed user upload MIME types:
+## Fail-closed decision table
 
-```txt
-application/pdf
-image/png
-image/jpeg
-application/vnd.openxmlformats-officedocument.wordprocessingml.document
-application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
-```
+| Scanner condition | Enterprise result |
+| --- | --- |
+| `clean` | allow upload |
+| scanner unavailable | block upload |
+| scanner timeout | block upload |
+| scanner not configured | block upload |
+| `suspicious` | block upload |
+| `infected` | block upload |
+| scanner error or malformed provider response | block upload |
 
-Uploads are blocked for empty files, files over 10 MB, path traversal filenames, unsupported extensions, dangerous double extensions, executables/scripts, MIME spoofing, invalid magic numbers, extension/content mismatch, PDF active content and OpenXML macro/OLE/ActiveX/embedded package markers.
+Upload storage and document metadata insertion happen only after a clean verdict.
 
 ## Tenant isolation
 
-Storage paths must include the organization id as the first path segment and the actor user id as the second segment:
+Storage paths must include the owning `organizationId` as the first path segment:
 
 ```txt
-<organizationId>/<actorUserId>/<uuid>.<ext>
+<organizationId>/<actorUserId>/<uuid>.<extension>
 ```
 
-The application must call tenant-prefix guards before storage writes, deletes, downloads or previews. Supabase storage policies keep `controlled-documents` private and block direct authenticated client reads/writes so RBAC, audit logging and malware scanning cannot be bypassed.
+The application validates this prefix before upload, delete, download or preview operations. User-supplied filenames are not used as storage path authority. Path traversal segments, empty segments and cross-tenant prefixes are rejected.
 
-## Signed download and preview URLs
+## Download and preview
 
-Downloads and previews are backend-mediated through `src/server/actions/document-downloads.ts`:
+Downloads and previews are backend mediated. The signed URL action performs:
 
-1. Require authenticated user.
-2. Resolve the user's organization memberships.
-3. Select the document by `id` and allowed `organization_id` list.
-4. Require `documents:read` with RBAC.
-5. Assert the storage path still starts with the document's organization id.
-6. Create a signed URL with short expiry only after those checks pass.
+1. authenticated user lookup;
+2. organization membership lookup;
+3. tenant-scoped document query;
+4. `documents:read` RBAC check;
+5. storage path prefix validation;
+6. short-lived signed URL creation.
 
-Signed URLs expire after 60 seconds. Preview URLs use the same membership, RBAC and tenant storage-prefix validation as download URLs.
+signed URLs expire after 60 seconds. Preview uses the same membership/RBAC/storage checks as download, with a preview access purpose and without exposing direct client storage reads.
 
 ## Audit events
 
-The following redacted events must be emitted without file content, secrets or raw provider payloads:
+The upload/download security audit event names are:
 
-| Event | When |
+| Event | When emitted |
 | --- | --- |
-| `upload_requested` | After authenticated tenant/RBAC upload request is received. |
-| `upload_scanned` | After the scanner returns a verdict. |
-| `upload_blocked` | Before rejecting an upload for validation or scan policy. |
-| `document_upload_rejected` | Compatibility event for existing document upload rejection evidence. |
-| `document_uploaded` | After a scanned, tenant-scoped object and metadata record are created. |
-| `download_requested` | Before a signed download or preview lookup. |
-| `download_denied` | Before refusing cross-tenant, missing-permission, invalid-path or URL-creation-failed access. |
+| `upload_requested` | authenticated upload attempt accepted for validation |
+| `upload_scanned` | malware scanner returned a verdict |
+| `upload_blocked` | validation, scanner or policy blocked an upload |
+| `download_requested` | signed download/preview request started |
+| `download_denied` | membership, RBAC, tenant scope or signed URL creation denied access |
 
-Logs and audit metadata must never contain document bytes, raw file contents, `MALWARE_SCANNER_API_KEY`, bearer tokens or unredacted scanner payloads.
+Legacy document events such as `document_upload_rejected`, `document_uploaded` and `document.download_url_rejected` may still be emitted for compatibility, but new controls should key off the events above.
 
-## Required metadata
-
-Audit metadata and persisted document metadata must include:
+Audit/log metadata must not include file bytes or extracted document content. It should include only control evidence and safe identifiers:
 
 ```txt
 scanStatus
@@ -83,22 +112,41 @@ scanCheckedAt
 fileHash
 fileSize
 mimeDetected
+organizationId
+actorUserId
 ```
 
-Database columns mirror the camelCase metadata using `scan_status`, `scan_provider`, `scan_required`, `scan_checked_at`, `file_hash`, `file_size`, `mime_detected` and `upload_security_metadata`.
+## Persisted metadata
 
-## CI gates
+The `documents` table stores upload security evidence when the migration is applied:
 
-The upload security gate must fail if enterprise scanning is bypassed or key controls are removed:
+```txt
+scan_status
+scan_provider
+scan_required
+scan_checked_at
+file_hash
+file_size
+mime_detected
+```
+
+The application also keeps compatibility fields such as `checksum_sha256`, `mime_type` and `size_bytes`.
+
+## CI/security gates
+
+The following commands must stay green before enterprise release:
 
 ```bash
+npm run lint
+npm run typecheck
+npm run test
 npm run security:upload
 npm run security:upload-content-scan
-npm run test -- tests/security/upload-malware-scan-validation.test.ts tests/security/upload-security-module.test.ts src/server/security/file-signature.test.ts
+npm run build
 ```
 
-`npm run security:ci` reaches these gates through `security:enterprise-api`; direct gate execution remains mandatory during focused upload-security changes.
+`npm run security:ci` includes `security:upload` and `security:upload-content-scan`, so enterprise upload scanning bypasses fail the security CI path.
 
-## Release checklist
+## Evidence
 
-Before enabling enterprise uploads, verify that the target environment has a reachable real scanner provider, `REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true`, provider credentials in a server-only secret store, Supabase migrations applied, direct storage access locked down, and the runtime evidence file updated.
+Runtime evidence is tracked in `docs/security/evidence/runtime/upload-malware-scan-validation.json`. The evidence must mention `src/server/security/upload-security.ts`, fail-closed scanner behavior, tenant-scoped storage paths, RBAC-validated download/preview and the audit events listed above.

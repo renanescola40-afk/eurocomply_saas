@@ -3,9 +3,11 @@ import { existsSync, readFileSync } from 'node:fs';
 const helperPath = 'src/server/security/malware-scan.ts';
 const uploadSecurityPath = 'src/server/security/upload-security.ts';
 const uploadRoutePath = 'src/app/api/documents/upload/route.ts';
+const serverActionPath = 'src/server/actions/documents.ts';
 const preflightPath = 'scripts/preflight.mjs';
 const docPath = 'docs/security/UPLOAD_CONTENT_SCAN.md';
 const uploadSecurityDocPath = 'docs/security/UPLOAD_SECURITY.md';
+const packagePath = 'package.json';
 
 const failures = [];
 
@@ -32,27 +34,27 @@ console.log('-------------------------------------');
 const helper = read(helperPath);
 const uploadSecurity = read(uploadSecurityPath);
 const uploadRoute = read(uploadRoutePath);
+const serverAction = read(serverActionPath);
 const preflight = read(preflightPath);
 const doc = read(docPath);
 const uploadSecurityDoc = read(uploadSecurityDocPath);
+const packageJson = read(packagePath);
 
 if (helper) {
   requireTokens(helperPath, helper, [
     'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
     'MALWARE_SCANNER_PROVIDER',
     'MALWARE_SCANNER_API_KEY',
-    'MALWARE_SCANNER_TIMEOUT_MS',
     'MalwareScannerProvider',
-    'createConfiguredMalwareScannerProvider',
+    'registerMalwareScannerProviderForTest',
+    'Mock malware scanner providers are disabled outside test/development',
     'scanUploadForMalware',
     'shouldBlockUploadForMalwareScan',
     'clean',
     'not_configured',
     'unavailable',
-    'suspicious',
     'infected',
-    'mock',
-    'test or development',
+    'suspicious',
   ]);
 
   if (
@@ -65,20 +67,17 @@ if (helper) {
   if (!helper.includes('return result.required && result.status !==')) {
     failures.push(`${helperPath} must fail closed when upload scanning is required and not clean`);
   }
+
+  if (!helper.includes('TEST_ONLY_PROVIDER_NAMES') || !helper.includes('canUseMockProvider')) {
+    failures.push(`${helperPath} must keep mock malware scanner providers test/development only`);
+  }
 }
 
 if (uploadSecurity) {
   requireTokens(uploadSecurityPath, uploadSecurity, [
-    'configuredMalwareScannerProvider',
-    'createMockMalwareScannerProvider',
-    'isMockMalwareScannerAllowed',
-    'validateEnterpriseUploadScan',
-    'buildUploadSecurityMetadata',
-    'upload_requested',
-    'upload_scanned',
-    'upload_blocked',
-    'download_requested',
-    'download_denied',
+    'scanValidatedUploadForMalware',
+    'shouldBlockUploadForMalwareScan',
+    'buildUploadSecurityAuditMetadata',
     'scanStatus',
     'scanProvider',
     'scanRequired',
@@ -86,35 +85,47 @@ if (uploadSecurity) {
     'fileHash',
     'fileSize',
     'mimeDetected',
+    'SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS',
   ]);
 }
 
 if (uploadRoute) {
   requireTokens(uploadRoutePath, uploadRoute, [
-    'validateUploadPayload',
-    'scanUploadForMalware',
+    'scanValidatedUploadForMalware',
     'shouldBlockUploadForMalwareScan',
-    'buildUploadSecurityMetadata',
+    'uploadRequested',
+    'uploadScanned',
+    'uploadBlocked',
     'document_upload_rejected',
-    'UPLOAD_AUDIT_EVENTS.uploadRequested',
-    'UPLOAD_AUDIT_EVENTS.uploadScanned',
-    'UPLOAD_AUDIT_EVENTS.uploadBlocked',
-    'fileHash',
-    'fileSize',
-    'mimeDetected',
+    'scanStatus',
+    'scanProvider',
+    'scanRequired',
+    'scanCheckedAt',
+  ]);
+
+  const scanIndex = uploadRoute.indexOf('scanValidatedUploadForMalware');
+  const storageIndex = uploadRoute.indexOf('.storage.from');
+  if (scanIndex === -1 || storageIndex === -1 || scanIndex > storageIndex) {
+    failures.push(`${uploadRoutePath} must run content scan before storage upload`);
+  }
+}
+
+if (serverAction) {
+  requireTokens(serverActionPath, serverAction, [
+    'scanValidatedUploadForMalware',
+    'shouldBlockUploadForMalwareScan',
+    'uploadScanned',
+    'uploadBlocked',
     'scan_status',
     'scan_provider',
     'scan_required',
     'scan_checked_at',
-    'file_hash',
-    'file_size',
-    'mime_detected',
   ]);
 
-  const scanIndex = uploadRoute.indexOf('scanUploadForMalware');
-  const storageIndex = uploadRoute.indexOf('.storage.from');
+  const scanIndex = serverAction.indexOf('scanValidatedUploadForMalware');
+  const storageIndex = serverAction.indexOf('.storage.from');
   if (scanIndex === -1 || storageIndex === -1 || scanIndex > storageIndex) {
-    failures.push(`${uploadRoutePath} must run content scan before storage upload`);
+    failures.push(`${serverActionPath} must run content scan before storage upload`);
   }
 }
 
@@ -123,8 +134,8 @@ if (preflight) {
     'src/server/security/upload-security.ts',
     'src/server/security/malware-scan.ts',
     'scripts/security/check-upload-content-scan.mjs',
-    'docs/security/UPLOAD_CONTENT_SCAN.md',
     'docs/security/UPLOAD_SECURITY.md',
+    'docs/security/UPLOAD_CONTENT_SCAN.md',
     'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
     'MALWARE_SCANNER_PROVIDER',
   ]);
@@ -133,42 +144,33 @@ if (preflight) {
 if (doc) {
   requireTokens(docPath, doc, [
     'Upload Content Scan Security Standard',
-    'src/server/security/upload-security.ts',
     'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
     'MALWARE_SCANNER_PROVIDER',
-    'MALWARE_SCANNER_API_KEY',
     'advisory',
     'fail-closed',
     'scanStatus',
     'scanProvider',
     'scanRequired',
     'scanCheckedAt',
-    'fileHash',
-    'fileSize',
-    'mimeDetected',
-    'upload_requested',
-    'upload_scanned',
-    'upload_blocked',
-    'download_requested',
-    'download_denied',
+    'document_upload_rejected',
     'Enterprise Release Rule',
   ]);
 }
 
 if (uploadSecurityDoc) {
   requireTokens(uploadSecurityDocPath, uploadSecurityDoc, [
-    'Enterprise upload/download/preview security standard',
-    'fail-closed',
-    'Tenant isolation',
-    'MALWARE_SCANNER_API_KEY',
-    'scanStatus',
-    'scanProvider',
-    'scanRequired',
-    'scanCheckedAt',
-    'fileHash',
-    'fileSize',
-    'mimeDetected',
+    'Enterprise Upload Security Standard',
+    'scanner unavailable',
+    'timeout',
+    'suspicious',
+    'clean',
+    'cross-tenant',
+    'download_denied',
   ]);
+}
+
+if (packageJson && !/"security:ci"\s*:\s*"[^"]*security:upload[^"]*security:upload-content-scan/.test(packageJson)) {
+  failures.push(`${packagePath} security:ci must include security:upload and security:upload-content-scan so enterprise upload scanning cannot be bypassed`);
 }
 
 if (failures.length > 0) {
