@@ -54,7 +54,7 @@ const requiredUploadTokens = [
   'scanValidatedUploadForMalware',
   'shouldBlockUploadForMalwareScan',
   'tryCreateAdminClient',
-  'controlled-documents',
+  'CONTROLLED_DOCUMENT_STORAGE_BUCKET',
   'createAuditEvent',
   'uploadRequested',
   'uploadScanned',
@@ -175,7 +175,7 @@ const requiredDocTokens = [
   'upload_requested',
   'download_denied',
   'organizationId',
-  'signed URLs expire after 60 seconds',
+  'Signed URLs expire after 60 seconds',
 ];
 
 const failures = [];
