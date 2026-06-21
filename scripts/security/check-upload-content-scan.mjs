@@ -93,9 +93,9 @@ if (uploadRoute) {
   requireTokens(uploadRoutePath, uploadRoute, [
     'scanValidatedUploadForMalware',
     'shouldBlockUploadForMalwareScan',
-    'upload_requested',
-    'upload_scanned',
-    'upload_blocked',
+    'uploadRequested',
+    'uploadScanned',
+    'uploadBlocked',
     'document_upload_rejected',
     'scanStatus',
     'scanProvider',
@@ -114,8 +114,8 @@ if (serverAction) {
   requireTokens(serverActionPath, serverAction, [
     'scanValidatedUploadForMalware',
     'shouldBlockUploadForMalwareScan',
-    'upload_scanned',
-    'upload_blocked',
+    'uploadScanned',
+    'uploadBlocked',
     'scan_status',
     'scan_provider',
     'scan_required',
