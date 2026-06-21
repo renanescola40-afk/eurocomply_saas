@@ -18,6 +18,7 @@ export type AuditAction =
   | 'billing.checkout_start'
   | 'billing.portal_start'
   | 'billing.webhook_received'
+  | 'billing.webhook_failed'
   | 'billing.subscription_updated'
   | 'export.created'
   | 'report.export'
@@ -44,6 +45,7 @@ export type AuditAction =
   | 'task.create'
   | 'task.update'
   | 'task.delete'
+  | 'security.settings_changed'
   | 'security.event'
   | 'security.failure';
 
