@@ -122,7 +122,11 @@ async function createDocumentSignedAccessUrl(documentId: string, accessMode: Doc
   try {
     assertDocumentStoragePathInOrganization(document.storage_path, document.organization_id);
   } catch (error) {
-    reportError(error, { ...context, organizationId: document.organization_id, storagePath: document.storage_path });
+    reportError(error, {
+      ...context,
+      organizationId: document.organization_id,
+      hasStoragePath: Boolean(document.storage_path),
+    });
     await auditRejectedDownloadUrl({
       documentId,
       userId: user.id,
