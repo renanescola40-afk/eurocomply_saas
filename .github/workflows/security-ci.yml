@@ -232,7 +232,25 @@ jobs:
         run: npm run security:api-guards
 
       - name: Enterprise API gate
-        run: npm run security:enterprise-api
+        shell: bash
+        run: |
+          npm run security:enterprise-api >enterprise-api-gate.out 2>enterprise-api-gate.err || status=$?
+          cat enterprise-api-gate.out
+          if [ -n "${status:-}" ]; then
+            cat enterprise-api-gate.err >&2
+            exit 1
+          fi
+
+      - name: Upload enterprise API diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: enterprise-api-gate
+          path: |
+            enterprise-api-gate.out
+            enterprise-api-gate.err
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Step-up authentication gate
         run: node scripts/security/check-step-up.mjs
