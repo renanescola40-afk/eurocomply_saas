@@ -1,4 +1,4 @@
-/** Runtime environment validation for EuroComply. */
+/** Runtime environment validation for RISCK COMPLY. */
 
 import { z } from 'zod';
 
@@ -98,11 +98,11 @@ export const isPreview = process.env.VERCEL_ENV === 'preview';
 
 export function generateEnvExample(): string {
   return [
-    '# EuroComply AI — Variáveis de Ambiente',
+    '# RISCK COMPLY — Variáveis de Ambiente',
     '# Consulte .env.example na raiz do repositório para o inventário completo.',
     '# Não gere nem cole valores reais neste output.',
     `${NEXT_PUBLIC_SUPABASE_URL}=https://xxxxx.supabase.co`,
     `${NEXT_PUBLIC_SUPABASE_ANON_KEY}=redacted-example`,
-    `${NEXT_PUBLIC_APP_URL}=https://app.eurocomply.ai`,
+    `${NEXT_PUBLIC_APP_URL}=https://app.risckcomply.com`,
   ].join('\n');
 }
