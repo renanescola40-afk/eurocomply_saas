@@ -29,6 +29,13 @@ type SupabaseError = {
 
 type StripeMetadata = Stripe.Metadata | null | undefined;
 
+type SubscriptionWithPeriod = Stripe.Subscription & {
+  current_period_end?: number | null;
+  items?: {
+    data?: Array<{ current_period_end?: number | null }>;
+  };
+};
+
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 }
@@ -65,8 +72,10 @@ function getStripeObjectId(value: string | { id?: string | null } | null | undef
 }
 
 function getSubscriptionCurrentPeriodEnd(subscription: Stripe.Subscription) {
-  const currentPeriodEnd = subscription.current_period_end;
-  return typeof currentPeriodEnd === 'number' ? new Date(currentPeriodEnd * 1000).toISOString() : null;
+  const typedSubscription = subscription as SubscriptionWithPeriod;
+  const periodEnd = typedSubscription.current_period_end ?? typedSubscription.items?.data?.[0]?.current_period_end ?? null;
+
+  return typeof periodEnd === 'number' ? new Date(periodEnd * 1000).toISOString() : null;
 }
 
 function getInvoiceSubscriptionId(invoice: Stripe.Invoice) {
@@ -103,9 +112,41 @@ export async function claimStripeEventForProcessing(event: Stripe.Event) {
   });
 
   if (!error) return true;
-  if (isUniqueViolation(error)) return false;
+  if (!isUniqueViolation(error)) throw error;
 
-  throw error;
+  const { data: existingEvent, error: lookupError } = await supabase
+    .from('stripe_events_processed')
+    .select('id,status')
+    .eq('id', event.id)
+    .maybeSingle<{ id: string; status: string | null }>();
+
+  if (lookupError) throw lookupError;
+
+  if (existingEvent?.status !== 'failed') {
+    return false;
+  }
+
+  const { data: reclaimedEvent, error: reclaimError } = await supabase
+    .from('stripe_events_processed')
+    .update({
+      status: 'processing',
+      processed_at: null,
+      failed_at: null,
+      error: null,
+      type: event.type,
+      stripe_created_at: stripeEventCreatedAt(event),
+      livemode: event.livemode,
+      api_version: event.api_version ?? null,
+      payload: event as unknown as Record<string, unknown>,
+    })
+    .eq('id', event.id)
+    .eq('status', 'failed')
+    .select('id')
+    .maybeSingle<{ id: string }>();
+
+  if (reclaimError) throw reclaimError;
+
+  return Boolean(reclaimedEvent?.id);
 }
 
 export async function markStripeEventProcessed(event: Stripe.Event) {
@@ -134,11 +175,11 @@ export async function hasProcessedStripeEvent(eventId: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from('stripe_events_processed')
-    .select('id')
+    .select('id,status')
     .eq('id', eventId)
-    .maybeSingle();
+    .maybeSingle<{ id: string; status: string | null }>();
 
-  return Boolean(data?.id);
+  return data?.status === 'processed';
 }
 
 export async function recordStripeEvent(event: Stripe.Event) {
