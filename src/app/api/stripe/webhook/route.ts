@@ -8,6 +8,7 @@ import { noStoreJson } from '@/server/security/no-store';
 export const runtime = 'nodejs';
 
 export const MAX_STRIPE_WEBHOOK_BYTES = 1_000_000;
+export const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
 
 function getWebhookRateLimitKey(request: Request) {
   const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
@@ -72,10 +73,15 @@ export async function POST(request: Request) {
   const stripe = getStripeClient();
 
   try {
-    const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    const event = stripe.webhooks.constructEvent(body, signature, webhookSecret, STRIPE_WEBHOOK_TOLERANCE_SECONDS);
     const result = await handleStripeWebhookEvent(event);
 
-    return noStoreJson({ received: true, skipped: result.skipped });
+    return noStoreJson({
+      received: true,
+      skipped: result.skipped,
+      duplicate: result.duplicate ?? false,
+      unsupported: result.unsupported ?? false,
+    });
   } catch (error) {
     reportError(error, { area: 'stripe_webhook' });
 
