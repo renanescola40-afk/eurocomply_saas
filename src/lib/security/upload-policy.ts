@@ -1,44 +1,70 @@
 const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 const BLOCKED_EXTENSIONS = new Set([
-  'exe',
-  'dll',
+  'apk',
+  'app',
   'bat',
+  'bin',
   'cmd',
   'com',
-  'scr',
-  'ps1',
-  'sh',
-  'bash',
-  'zsh',
-  'js',
-  'mjs',
-  'cjs',
-  'ts',
-  'tsx',
-  'jsx',
-  'php',
-  'py',
-  'rb',
-  'pl',
-  'jar',
-  'war',
-  'svg',
+  'cpl',
+  'deb',
+  'dll',
+  'dmg',
+  'docm',
+  'exe',
+  'gadget',
+  'hta',
   'html',
   'htm',
-  'xml',
+  'ipa',
+  'iso',
+  'jar',
+  'js',
+  'jse',
+  'lnk',
+  'mht',
+  'mhtml',
+  'msi',
+  'msp',
+  'pif',
+  'php',
+  'ps1',
+  'psd1',
+  'psm1',
+  'reg',
+  'rpm',
+  'scf',
+  'scr',
+  'sct',
+  'sh',
+  'svg',
+  'url',
+  'vbe',
+  'vbs',
+  'ws',
+  'wsc',
+  'wsf',
+  'wsh',
+  'xlam',
+  'xll',
+  'xlsm',
 ]);
 
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'text/plain',
-  'text/csv',
   'image/png',
   'image/jpeg',
-  'image/webp',
+]);
+
+const ALLOWED_EXTENSIONS_BY_MIME_TYPE = new Map([
+  ['application/pdf', ['pdf']],
+  ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', ['docx']],
+  ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', ['xlsx']],
+  ['image/png', ['png']],
+  ['image/jpeg', ['jpg', 'jpeg']],
 ]);
 
 export type UploadPolicyInput = {
@@ -52,17 +78,44 @@ export type UploadPolicyResult =
   | { allowed: true; safeFileName: string; extension: string }
   | { allowed: false; reason: string };
 
+function fileNameSegments(fileName: string) {
+  return sanitizeFileName(fileName)
+    .toLowerCase()
+    .split('.')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
 function getExtension(fileName: string) {
-  const parts = fileName.toLowerCase().split('.');
-  if (parts.length < 2) return '';
+  const parts = fileNameSegments(fileName);
   return parts.at(-1)?.trim() ?? '';
 }
 
+function hasBlockedExtension(fileName: string) {
+  const parts = fileNameSegments(fileName);
+  if (parts.length === 0) return true;
+  return parts.some((part) => BLOCKED_EXTENSIONS.has(part));
+}
+
+function normalizeMimeType(mimeType: string) {
+  return String(mimeType ?? '')
+    .split(';')[0]
+    .trim()
+    .toLowerCase();
+}
+
 export function sanitizeFileName(fileName: string) {
-  const normalized = fileName
-    .normalize('NFKD')
+  const baseName = String(fileName ?? '')
+    .normalize('NFKC')
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .split(/[\\/]/)
+    .pop() ?? '';
+
+  const normalized = baseName
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9._-]/g, '-')
+    .replace(/[\\/:"*?<>|]+/g, '-')
+    .replace(/[^a-zA-Z0-9._ -]/g, '-')
+    .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^[-.]+|[-.]+$/g, '')
     .slice(0, 140);
@@ -74,17 +127,23 @@ export function validateUploadPolicy(input: UploadPolicyInput): UploadPolicyResu
   const maxBytes = input.maxBytes ?? DEFAULT_MAX_UPLOAD_BYTES;
   const safeFileName = sanitizeFileName(input.fileName);
   const extension = getExtension(safeFileName);
+  const mimeType = normalizeMimeType(input.mimeType);
+  const allowedExtensions = ALLOWED_EXTENSIONS_BY_MIME_TYPE.get(mimeType) ?? [];
 
   if (!extension) {
     return { allowed: false, reason: 'File extension is required' };
   }
 
-  if (BLOCKED_EXTENSIONS.has(extension)) {
+  if (hasBlockedExtension(safeFileName)) {
     return { allowed: false, reason: 'File type is blocked for security reasons' };
   }
 
-  if (!ALLOWED_MIME_TYPES.has(input.mimeType)) {
+  if (!ALLOWED_MIME_TYPES.has(mimeType)) {
     return { allowed: false, reason: 'MIME type is not allowed' };
+  }
+
+  if (!allowedExtensions.includes(extension)) {
+    return { allowed: false, reason: 'File extension does not match MIME type' };
   }
 
   if (!Number.isFinite(input.sizeBytes) || input.sizeBytes <= 0) {
