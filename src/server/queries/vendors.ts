@@ -13,7 +13,7 @@ export async function listVendors(organizationId: string) {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.warn('[vendors] Failed to list vendors:', error.message);
+    console.warn('[vendors] list_failed', { code: error.code ?? 'unknown' });
     return [];
   }
 
