@@ -1,4 +1,4 @@
-# EuroComply production deployment checklist
+# RISCK COMPLY production deployment checklist
 
 Use this before enabling real customer traffic.
 
