@@ -15,7 +15,12 @@ import {
   type UploadFileSecurityValidation,
   type UploadFileType,
 } from '@/server/security/file-signature';
-import { scanUploadForMalware, shouldBlockUploadForMalwareScan, type MalwareScanResult } from '@/server/security/malware-scan';
+import {
+  scanUploadForMalware,
+  shouldBlockUploadForMalwareScan,
+  type MalwareScanResult,
+  type MalwareScannerProvider,
+} from '@/server/security/malware-scan';
 
 export const REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV = 'REQUIRE_MALWARE_SCAN_FOR_UPLOADS';
 export const MALWARE_SCANNER_PROVIDER_ENV = 'MALWARE_SCANNER_PROVIDER';
@@ -28,6 +33,7 @@ export const MAX_UPLOAD_BYTES = MAX_DOCUMENT_SIZE_BYTES;
 export const ALLOWED_TYPES = UPLOAD_MIME_TYPE_TO_EXTENSION;
 export const CONTROLLED_DOCUMENT_STORAGE_BUCKET = DOCUMENT_BUCKET;
 export const SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS = 60;
+export const SIGNED_URL_EXPIRES_IN_SECONDS = SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS;
 
 export const UPLOAD_SECURITY_AUDIT_EVENTS = {
   uploadRequested: 'upload_requested',
@@ -152,6 +158,8 @@ export async function validateUploadSecurityFile(file: File, options: { maxBytes
   };
 }
 
+export const validateUploadPayload = validateUploadSecurityFile;
+
 export async function scanValidatedUploadForMalware(input: {
   validation: Extract<UploadSecurityValidationResult, { ok: true }>;
   organizationId: string;
@@ -180,12 +188,50 @@ export function buildTenantScopedUploadPath(input: {
   return storagePath;
 }
 
+export function buildTenantIsolatedUploadStoragePath(input: {
+  organizationId: string;
+  actorUserId: string;
+  extension: UploadFileType['extension'];
+}) {
+  return buildTenantScopedUploadPath({ organizationId: input.organizationId, userId: input.actorUserId, extension: input.extension });
+}
+
 export function isTenantScopedStoragePath(storagePath: string | null | undefined, organizationId: string) {
   return isDocumentStoragePathInOrganization(storagePath, organizationId);
 }
 
 export function assertTenantStoragePathInOrganization(storagePath: string | null | undefined, organizationId: string) {
   return assertDocumentStoragePathInOrganization(storagePath, organizationId);
+}
+
+export const assertTenantScopedStoragePath = assertTenantStoragePathInOrganization;
+
+export function isShortLivedSignedUrlExpiry(expiresInSeconds: number) {
+  return Number.isFinite(expiresInSeconds) && expiresInSeconds > 0 && expiresInSeconds <= SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS;
+}
+
+export function createMockMalwareScannerProvider(input: {
+  status: MalwareScanResult['status'];
+  required?: boolean;
+  reason?: string;
+  signature?: string;
+  provider?: string;
+}): MalwareScannerProvider {
+  const provider = input.provider ?? 'mock';
+
+  return {
+    name: provider,
+    scan(_scanInput, context) {
+      return {
+        status: input.status,
+        provider,
+        required: input.required ?? context.required,
+        scannedAt: context.scannedAt,
+        reason: input.reason,
+        signature: input.signature,
+      };
+    },
+  };
 }
 
 export function buildUploadSecurityAuditMetadata(input: UploadSecurityAuditMetadataInput) {
@@ -231,5 +277,5 @@ export function isSignedUrlExpired(input: { issuedAt: string | Date; expiresInSe
   return now.getTime() >= issuedAt.getTime() + input.expiresInSeconds * 1000;
 }
 
-export { shouldBlockUploadForMalwareScan };
+export { scanUploadForMalware, shouldBlockUploadForMalwareScan };
 export type { MalwareScanResult };
