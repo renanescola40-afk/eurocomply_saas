@@ -6,6 +6,7 @@ const faqs = [
     items: [
       ['What does RISCK COMPLY manage?', 'RISCK COMPLY centralizes compliance tasks, documents, vendors, risks, templates, audit logs, team access and executive reporting.'],
       ['What type of product is RISCK COMPLY?', 'RISCK COMPLY is compliance operations software for structured workflows, documentation and reporting.'],
+      ['Is RISCK COMPLY legal advice?', 'No. RISCK COMPLY is compliance operations software. Legal interpretation should be reviewed by qualified counsel.'],
       ['Can we generate reports for leadership?', 'Yes. The product includes executive reports, printable reports and CSV exports for operational review.'],
     ],
   },
