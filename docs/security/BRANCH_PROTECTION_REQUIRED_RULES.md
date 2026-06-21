@@ -1,6 +1,6 @@
 # Branch Protection Required Rules
 
-This document is the canonical branch protection policy for EuroComply `main` and every production release branch.
+This document is the canonical branch protection policy for RISCK COMPLY `main` and every production release branch.
 
 A pull request or deployment **must not** be described as enterprise-ready unless the Full Security Suite is green and the branch protection evidence in `docs/security/evidence/runtime/branch-protection-required-checks.json` validates successfully.
 
@@ -34,7 +34,7 @@ Configure these checks as required in GitHub branch protection or a repository r
 | Full Security Suite | OSSF Scorecard |
 | Full Security Suite | Enterprise merge/deploy gate |
 | CI | quality |
-| EuroComply Security CI | Run security gates, typecheck and tests |
+| RISCK COMPLY Security CI | Run security gates, typecheck and tests |
 | Gitleaks | Scan repository for accidental secret exposure |
 | Secret Scanning | Production secret readiness gate |
 
@@ -68,7 +68,7 @@ Before release promotion, attach or update:
 
 - `docs/security/evidence/runtime/branch-protection-required-checks.json`
 - Full Security Suite run URL and commit SHA
-- SBOM artifact named `eurocomply-sbom`
+- SBOM artifact named `risck-comply-sbom`
 - npm audit artifact or triage record
 - Release approval / Go-No-Go record
 
