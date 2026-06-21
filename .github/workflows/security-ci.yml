@@ -195,7 +195,19 @@ jobs:
         run: npm run security:public-verifiers
 
       - name: Public errors gate
-        run: npm run security:public-errors
+        shell: bash
+        run: |
+          npm run security:public-errors 2>&1 | tee public-errors-gate.log
+          test "${PIPESTATUS[0]}" -eq 0
+
+      - name: Upload public errors diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: public-errors-gate
+          path: public-errors-gate.log
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: CSV exports gate
         run: npm run security:csv-exports
