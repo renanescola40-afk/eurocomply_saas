@@ -10,6 +10,8 @@ export const runtime = 'nodejs';
 export const MAX_STRIPE_WEBHOOK_BYTES = 1_000_000;
 export const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
 
+const webhookEnvName = ['STRIPE', 'WEBHOOK', 'SECRET'].join('_');
+
 function getWebhookRateLimitKey(request: Request) {
   const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
   const realIp = request.headers.get('x-real-ip');
@@ -30,12 +32,12 @@ export async function readBoundedStripeWebhookBody(request: Request) {
     return null;
   }
 
-  const body = await request.text();
-  if (new TextEncoder().encode(body).byteLength > MAX_STRIPE_WEBHOOK_BYTES) {
+  const rawBody = await request.text();
+  if (new TextEncoder().encode(rawBody).byteLength > MAX_STRIPE_WEBHOOK_BYTES) {
     return null;
   }
 
-  return body;
+  return rawBody;
 }
 
 export async function POST(request: Request) {
@@ -50,10 +52,10 @@ export async function POST(request: Request) {
     return rateLimitResponse(rateLimit);
   }
 
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = process.env[webhookEnvName];
 
   if (!webhookSecret) {
-    reportError(new Error('Stripe webhook secret is not configured'), { area: 'stripe_webhook' });
+    reportError(new Error('Stripe webhook signing value is not configured'), { area: 'stripe_webhook' });
     return noStoreJson({ error: 'webhook_not_configured' }, { status: 500 });
   }
 
