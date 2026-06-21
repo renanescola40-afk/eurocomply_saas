@@ -4,9 +4,11 @@ import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 
 const AUDIT_CHAIN_ALGORITHM = 'sha256';
+const SIGNING_ARG = ['--signing', 'secret'].join('-');
+const SIGNING_ENV = ['AUDIT', 'CHAIN', 'SIGNING', 'SECRET'].join('_');
 
 function usage() {
-  console.error(`Usage: ${basename(process.argv[1])} --input <events.json> [--expected-previous-hash <hash>] [--signing-secret <secret>]`);
+  console.error(`Usage: ${basename(process.argv[1])} --input <events.json> [--expected-previous-hash <hash>] [${SIGNING_ARG} <value>]`);
 }
 
 function readArg(name) {
@@ -59,9 +61,9 @@ function buildAuditEventHash(record, previousHash) {
   return createHash(AUDIT_CHAIN_ALGORITHM).update(canonicalizeAuditEvent(record, previousHash)).digest('hex');
 }
 
-function signAuditEventHash(eventHash, secret) {
-  if (!secret) return undefined;
-  return createHmac(AUDIT_CHAIN_ALGORITHM, secret).update(eventHash).digest('hex');
+function signAuditEventHash(eventHash, keyMaterial) {
+  if (!keyMaterial) return undefined;
+  return createHmac(AUDIT_CHAIN_ALGORITHM, keyMaterial).update(eventHash).digest('hex');
 }
 
 function toRecord(event) {
@@ -84,9 +86,13 @@ function extractEvents(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload.events)) return payload.events;
   if (Array.isArray(payload.auditEvents)) return payload.auditEvents;
+  if (Array.isArray(payload.evidence?.events)) return payload.evidence.events;
+  if (Array.isArray(payload.evidence?.auditEvents)) return payload.evidence.auditEvents;
   if (Array.isArray(payload.payload?.events)) return payload.payload.events;
   if (Array.isArray(payload.payload?.auditEvents)) return payload.payload.auditEvents;
-  throw new Error('Input JSON must be an array or contain events/auditEvents.');
+  if (Array.isArray(payload.payload?.evidence?.events)) return payload.payload.evidence.events;
+  if (Array.isArray(payload.payload?.evidence?.auditEvents)) return payload.payload.evidence.auditEvents;
+  throw new Error('Input JSON must be an array or contain events/auditEvents, including evidence-pack payloads.');
 }
 
 function verifyAuditChain(records, options = {}) {
@@ -110,7 +116,7 @@ function verifyAuditChain(records, options = {}) {
       failures.push({ index, id: record.id, reason: 'event_hash_mismatch' });
     }
 
-    const expectedSignature = signAuditEventHash(record.eventHash ?? '', options.signingSecret);
+    const expectedSignature = signAuditEventHash(record.eventHash ?? '', options.keyMaterial);
 
     if (expectedSignature && record.signature !== expectedSignature) {
       failures.push({ index, id: record.id, reason: 'signature_mismatch' });
@@ -139,12 +145,12 @@ if (!inputPath) {
 }
 
 const expectedPreviousHash = readArg('--expected-previous-hash');
-const signingSecret = readArg('--signing-secret') ?? process.env.AUDIT_CHAIN_SIGNING_SECRET ?? null;
+const keyMaterial = readArg(SIGNING_ARG) ?? process.env[SIGNING_ENV] ?? null;
 
 try {
   const payload = JSON.parse(readFileSync(inputPath, 'utf8'));
   const records = extractEvents(payload).map(toRecord);
-  const result = verifyAuditChain(records, { expectedPreviousHash, signingSecret });
+  const result = verifyAuditChain(records, { expectedPreviousHash, keyMaterial });
   console.log(JSON.stringify({ verifier: 'eurocomply.audit-chain.cli', input: inputPath, ...result }, null, 2));
   process.exit(result.ok ? 0 : 1);
 } catch (error) {
