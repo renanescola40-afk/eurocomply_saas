@@ -104,6 +104,15 @@ describe('audit chain', () => {
     );
   });
 
+  it('detects a missing previous hash in a non-root chain segment', () => {
+    const first = buildAuditChainRecord(baseEvent, null);
+    const second = buildAuditChainRecord({ ...baseEvent, id: 'evt_002' }, first.eventHash);
+
+    expect(verifyAuditChain([{ ...second, previousHash: null }], { expectedPreviousHash: first.eventHash }).failures).toEqual(
+      expect.arrayContaining([expect.objectContaining({ reason: 'previous_hash_mismatch' })]),
+    );
+  });
+
   it('detects previous hash tampering', () => {
     const first = buildAuditChainRecord(baseEvent, null);
     const second = buildAuditChainRecord({ ...baseEvent, id: 'evt_002' }, first.eventHash);

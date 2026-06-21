@@ -16,9 +16,14 @@ export type AuditAction =
   | 'auth.step_up_denied'
   | 'auth.step_up_expired'
   | 'billing.checkout_start'
+  | 'billing.checkout_completed'
   | 'billing.portal_start'
   | 'billing.webhook_received'
+  | 'billing.webhook_failed'
+  | 'billing.subscription_created'
   | 'billing.subscription_updated'
+  | 'billing.subscription_deleted'
+  | 'billing.payment_failed'
   | 'export.created'
   | 'report.export'
   | 'audit_chain.verified'
@@ -44,6 +49,7 @@ export type AuditAction =
   | 'task.create'
   | 'task.update'
   | 'task.delete'
+  | 'security.settings_changed'
   | 'security.event'
   | 'security.failure';
 

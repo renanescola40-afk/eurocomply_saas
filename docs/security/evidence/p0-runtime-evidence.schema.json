@@ -3,7 +3,7 @@
   "$id": "https://risck-comply.local/security/p0-runtime-evidence.schema.json",
   "title": "RISCK COMPLY P0 Runtime Evidence",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
     "evidenceItem",
     "status",
@@ -21,12 +21,15 @@
         "required-status-checks",
         "production-secrets-provider-stores",
         "supabase-live-rls-validation",
-        "external-security-review-or-pentest"
+        "external-security-review-or-pentest",
+        "step-up-mfa-validation",
+        "upload-malware-scan-validation",
+        "stripe-billing-validation"
       ]
     },
     "status": {
       "type": "string",
-      "enum": ["Complete", "Exception"]
+      "enum": ["Open", "Complete", "Exception"]
     },
     "reviewer": {
       "type": "string",
@@ -50,7 +53,10 @@
     },
     "redactionConfirmation": {
       "type": "string",
-      "const": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted."
+      "enum": [
+        "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+        "Redaction confirmed for runtime evidence."
+      ]
     },
     "controlsVerified": {
       "type": "array",

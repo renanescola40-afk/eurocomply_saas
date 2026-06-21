@@ -4,7 +4,7 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
-import { createAuditEvent } from '@/server/queries/audit-events';
+import { buildAuditRequestContextFromRequest, createAuditEvent } from '@/server/queries/audit-events';
 import { buildAuditEvidencePack } from '@/server/queries/audit-evidence-pack';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
 import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
@@ -43,6 +43,7 @@ export async function GET(request: Request) {
   }
 
   const { user, organization } = context;
+  const requestContext = buildAuditRequestContextFromRequest(request);
 
   const permission = await assertOrganizationPermission({
     userId: user.id,
@@ -124,6 +125,7 @@ export async function GET(request: Request) {
           stepUpAction: stepUp.assessment.action,
           stepUpVerifiedAt: stepUp.assessment.verifiedAt,
         },
+        requestContext,
       });
 
       return noStoreJson({ error: 'audit_evidence_pack_signing_unavailable' }, { status: 503 });
@@ -158,6 +160,7 @@ export async function GET(request: Request) {
         stepUpAction: stepUp.assessment.action,
         stepUpVerifiedAt: stepUp.assessment.verifiedAt,
       },
+      requestContext,
     });
 
     const date = new Date().toISOString().slice(0, 10);

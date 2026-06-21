@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   assertPlanAtLeast: vi.fn(),
   upgradeRequiredResponse: vi.fn(),
   getCurrentUser: vi.fn(),
+  buildAuditRequestContextFromRequest: vi.fn(() => ({ ipAddress: '203.0.113.10', userAgent: 'Vitest' })),
   createAuditEvent: vi.fn(),
   listAuditEvents: vi.fn(),
   getCurrentOrganizationForUser: vi.fn(),
@@ -27,6 +28,7 @@ vi.mock('@/server/queries/auth', () => ({
 }));
 
 vi.mock('@/server/queries/audit-events', () => ({
+  buildAuditRequestContextFromRequest: mocks.buildAuditRequestContextFromRequest,
   createAuditEvent: mocks.createAuditEvent,
   listAuditEvents: mocks.listAuditEvents,
 }));
@@ -66,6 +68,7 @@ describe('audit chain verification request contract', () => {
     vi.clearAllMocks();
     mocks.getCurrentUser.mockResolvedValue({ id: 'user_123' });
     mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_123', name: 'Acme', slug: 'acme' });
+    mocks.assertOrganizationPermission.mockResolvedValue({ ok: true, status: 200, role: 'admin', permission: 'read_audit' });
     mocks.assertPlanAtLeast.mockResolvedValue({ ok: true, entitlements: { plan: 'business' } });
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
     mocks.requireStepUpForRequest.mockResolvedValue({
@@ -141,13 +144,32 @@ describe('audit chain verification request contract', () => {
     expect(mocks.verifyAuditChain).not.toHaveBeenCalled();
   });
 
-  it('verifies the chain only after RBAC and signed step-up', async () => {
-    mocks.assertOrganizationPermission.mockResolvedValue({ ok: true, status: 200, role: 'admin', permission: 'read_audit' });
+  it('rejects verification without a valid step-up token', async () => {
+    mocks.requireStepUpForRequest.mockResolvedValue({
+      ok: false,
+      assessment: {
+        action: 'audit_chain_verify',
+        reason: 'missing_verification',
+        verifiedAt: null,
+        expiresAt: null,
+      },
+      response: Response.json({ error: 'step_up_required' }, { status: 403 }),
+    });
 
-    const response = await GET(new Request(`${baseUrl}?limit=10`, { headers: { 'x-eurocomply-step-up-token': 'token' } }));
+    const response = await GET(new Request(`${baseUrl}?limit=10`));
+
+    expect(response.status).toBe(403);
+    expect(mocks.verifyAuditChain).not.toHaveBeenCalled();
+    expect(mocks.createAuditEvent).not.toHaveBeenCalledWith(expect.objectContaining({ action: 'audit_chain.verified' }));
+  });
+
+  it('verifies the chain only after RBAC and signed step-up', async () => {
+    const request = new Request(`${baseUrl}?limit=10`, { headers: { 'x-eurocomply-step-up-token': 'token' } });
+    const response = await GET(request);
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(mocks.buildAuditRequestContextFromRequest).toHaveBeenCalledWith(request);
     expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'audit_chain_verify',
@@ -165,6 +187,7 @@ describe('audit chain verification request contract', () => {
         actorUserId: 'user_123',
         action: 'audit_chain.verified',
         entityType: 'audit_chain',
+        requestContext: { ipAddress: '203.0.113.10', userAgent: 'Vitest' },
         metadata: expect.objectContaining({
           ok: true,
           chainedEventsChecked: 1,
