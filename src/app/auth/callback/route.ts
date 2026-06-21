@@ -6,6 +6,7 @@ import {
   getSafeAuthCallbackNextPath,
   resolveAuthAppBaseUrl,
 } from '@/server/security/auth-callback';
+import { recordAuthAuditEvent } from '@/server/security/auth-audit';
 
 function noStoreRedirect(url: URL) {
   return applyNoStoreHeaders(NextResponse.redirect(url));
@@ -23,12 +24,26 @@ export async function GET(request: NextRequest) {
 
   if (!appBaseUrl) {
     console.warn('auth_app_url_unavailable');
+    await recordAuthAuditEvent({
+      action: 'auth.login_failure',
+      method: 'oauth',
+      outcome: 'failed',
+      reason: 'app_url_unavailable',
+      metadata: { source: 'auth_callback_route' },
+    });
     return unavailableResponse();
   }
 
   let response = noStoreRedirect(new URL(next, appBaseUrl));
 
   if (!oauthCode) {
+    await recordAuthAuditEvent({
+      action: 'auth.login_failure',
+      method: 'oauth',
+      outcome: 'failed',
+      reason: 'missing_oauth_code',
+      metadata: { source: 'auth_callback_route' },
+    });
     return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'missing_oauth_code'));
   }
 
@@ -37,6 +52,13 @@ export async function GET(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('auth_callback_configuration_unavailable');
+    await recordAuthAuditEvent({
+      action: 'auth.login_failure',
+      method: 'oauth',
+      outcome: 'failed',
+      reason: 'configuration_unavailable',
+      metadata: { source: 'auth_callback_route' },
+    });
     return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'auth_configuration_unavailable'));
   }
 
@@ -57,8 +79,25 @@ export async function GET(request: NextRequest) {
 
   if (exchangeResult.error) {
     console.warn('auth_callback_exchange_failed');
+    await recordAuthAuditEvent({
+      action: 'auth.login_failure',
+      method: 'oauth',
+      outcome: 'failed',
+      reason: 'exchange_failed',
+      metadata: { source: 'auth_callback_route' },
+    });
     return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'auth_exchange_failed'));
   }
+
+  const authenticatedUser = exchangeResult.data.user ?? exchangeResult.data.session?.user ?? null;
+  await recordAuthAuditEvent({
+    action: 'auth.login_success',
+    actorUserId: authenticatedUser?.id ?? null,
+    email: authenticatedUser?.email ?? null,
+    method: 'oauth',
+    outcome: 'succeeded',
+    metadata: { source: 'auth_callback_route' },
+  });
 
   return response;
 }
