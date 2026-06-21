@@ -162,7 +162,7 @@ if (uploadSecurityDoc) {
   requireTokens(uploadSecurityDocPath, uploadSecurityDoc, [
     'Enterprise upload/download/preview security standard',
     'fail-closed',
-    'tenant isolation',
+    'Tenant isolation',
     'MALWARE_SCANNER_API_KEY',
     'scanStatus',
     'scanProvider',
