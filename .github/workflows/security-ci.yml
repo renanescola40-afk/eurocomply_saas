@@ -200,21 +200,30 @@ jobs:
       - name: Log sanitization gate
         shell: bash
         run: |
-          npm run security:logs 2>log-sanitization.err || status=$?
+          npm run security:logs >log-sanitization.out 2>log-sanitization.err || status=$?
+          cat log-sanitization.out
           if [ -n "${status:-}" ]; then
             if grep -v 'src/lib/email/client.ts' log-sanitization.err | grep -q '^- '; then
               cat log-sanitization.err >&2
-              rm -f log-sanitization.err
               exit 1
             fi
             if ! grep -q 'src/lib/email/client.ts' log-sanitization.err; then
               cat log-sanitization.err >&2
-              rm -f log-sanitization.err
               exit 1
             fi
             cat log-sanitization.err >&2
           fi
-          rm -f log-sanitization.err
+
+      - name: Upload log sanitization diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: log-sanitization-gate
+          path: |
+            log-sanitization.out
+            log-sanitization.err
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: API endpoint hardening gate
         run: npm run security:api-endpoints
