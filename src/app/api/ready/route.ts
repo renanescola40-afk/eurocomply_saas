@@ -16,7 +16,7 @@ type ReadyEnvironmentGroup = {
   missingCount: number;
 };
 
-function hasBearerToken(request: Request) {
+function validateBearerToken(request: Request) {
   const token = process.env.HEALTHCHECK_TOKEN;
 
   if (process.env.NODE_ENV !== 'production' && !token) {
@@ -43,7 +43,7 @@ export function readyEnvironmentCheck(): ReadyEnvironmentGroup[] {
 }
 
 export async function GET(request: Request) {
-  if (!hasBearerToken(request)) {
+  if (!validateBearerToken(request)) {
     return noStoreJson({ status: 'unauthorized' }, { status: 401 });
   }
 
