@@ -10,7 +10,7 @@ EuroComply accepts customer documents that may contain sensitive compliance evid
 
 | Control | Location |
 | --- | --- |
-| File signature and real MIME validation | `src/server/security/file-signature.ts` |
+| File signature, real MIME and active-content validation | `src/server/security/file-signature.ts` |
 | Upload content scan helper | `src/server/security/malware-scan.ts` |
 | Upload endpoint | `src/app/api/documents/upload/route.ts` |
 | Server action upload path | `src/server/actions/documents.ts` |
@@ -88,6 +88,8 @@ unsafe/double extension such as .pdf.exe
 unsupported real MIME/magic number
 claimed MIME does not match detected MIME
 extension does not match detected content
+PDF active content such as /JavaScript, /OpenAction, /Launch, /RichMedia or embedded files
+OpenXML active content such as vbaProject.bin, macro sheets, ActiveX, OLE or embedded packages
 malware scan is required and not clean
 provider reports infected, suspicious or scan error
 ```
@@ -96,7 +98,7 @@ Allowed document MIME types are PDF, PNG, JPEG, DOCX and XLSX. TXT, SVG, HTML, s
 
 ## Tenant Isolation and Download Policy
 
-Stored document paths must start with the owning `organizationId`. Application guards enforce the same `<organizationId>/...` prefix before storage writes, deletes or signed URL creation. Authenticated clients must not read, upload, update or delete `controlled-documents` storage objects directly; storage policies intentionally return false for direct authenticated access so every document read is backend-mediated.
+Stored document paths must start with the owning `organizationId`. Application guards enforce the same `<organizationId>/...` prefix before storage writes, deletes or signed URL creation. Upload paths include the actor user id under the organization prefix: `<organizationId>/<actorUserId>/<uuid>.<ext>`. Authenticated clients must not read, upload, update or delete `controlled-documents` storage objects directly; storage policies intentionally return false for direct authenticated access so every document read is backend-mediated.
 
 Signed download URLs are created only after the user is confirmed as a member of the document organization and has `documents:read`; URLs expire after 60 seconds. This prevents direct storage reads from bypassing RBAC, audit events or tenant-scoped document lookup.
 
@@ -127,7 +129,7 @@ The upload gates must remain runnable on their own for focused investigations:
 ```bash
 npm run security:upload
 npm run security:upload-content-scan
-npm run test -- tests/security/upload-malware-scan-validation.test.ts
+npm run test -- tests/security/upload-malware-scan-validation.test.ts src/server/security/file-signature.test.ts
 ```
 
 ## Enterprise Release Rule
@@ -139,6 +141,7 @@ scanUploadForMalware is called before storage upload
 shouldBlockUploadForMalwareScan is enforced
 REQUIRE_MALWARE_SCAN_FOR_UPLOADS is enabled in enterprise production
 MALWARE_SCANNER_PROVIDER points to a real scanning provider
+active content blocking tests pass for PDF and OpenXML
 upload rejection audit events include scan status and provider
 security:ci delegates to upload security gates
 cross-tenant signed URL tests pass
