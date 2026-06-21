@@ -1,0 +1,113 @@
+{
+  "schema": "eurocomply.runtime.observability-readiness.v1",
+  "status": "implemented_pending_ci_validation",
+  "generatedAt": "2026-06-21T00:00:00.000Z",
+  "ownerRequiredBeforeRelease": true,
+  "releaseGate": {
+    "requiresIncidentOwner": true,
+    "requiresRollbackOwner": true,
+    "noGoIfMissing": [
+      "incidentOwner",
+      "rollbackOwner",
+      "customerCommunicationOwner",
+      "previousKnownGoodDeployment"
+    ]
+  },
+  "sentry": {
+    "client": {
+      "file": "instrumentation-client.ts",
+      "sendDefaultPii": false,
+      "requestAndUserStrippedInBeforeSend": true,
+      "dsn": "NEXT_PUBLIC_SENTRY_DSN"
+    },
+    "server": {
+      "file": "instrumentation.ts",
+      "sendDefaultPii": false,
+      "requestAndUserStrippedInBeforeSend": true,
+      "dsn": "SENTRY_DSN with NEXT_PUBLIC_SENTRY_DSN fallback"
+    },
+    "edge": {
+      "file": "instrumentation.ts",
+      "sendDefaultPii": false,
+      "requestAndUserStrippedInBeforeSend": true,
+      "dsn": "NEXT_PUBLIC_SENTRY_DSN"
+    },
+    "sourceMaps": {
+      "file": "next.config.ts",
+      "uploadRequires": [
+        "SENTRY_AUTH_TOKEN",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT"
+      ],
+      "accidentalUploadGuard": "Next config is not wrapped with withSentryConfig unless all release-upload credentials are present."
+    }
+  },
+  "logging": {
+    "centralLogger": "src/server/observability/logger.ts",
+    "redacts": [
+      "secrets",
+      "tokens",
+      "authorization headers",
+      "cookies",
+      "sessions",
+      "emails",
+      "phones",
+      "addresses",
+      "payment/card-like fields"
+    ],
+    "includesRequestId": true,
+    "safeOrganizationIdOnly": true,
+    "standardEvents": [
+      "security_denied",
+      "rbac_denied",
+      "origin_denied",
+      "rate_limit_blocked",
+      "step_up_failed",
+      "webhook_failed",
+      "upload_blocked",
+      "rls_validation_failed",
+      "audit_chain_invalid"
+    ]
+  },
+  "healthEndpoints": {
+    "health": {
+      "path": "/api/health",
+      "public": true,
+      "dependencyChecks": false
+    },
+    "ready": {
+      "path": "/api/ready",
+      "protectedBy": "HEALTHCHECK_TOKEN bearer token",
+      "checks": [
+        "Supabase admin connectivity",
+        "Stripe server config",
+        "Redis server config",
+        "Sentry runtime config",
+        "Sentry source-map upload credentials present when release uploads are expected"
+      ]
+    }
+  },
+  "runbooks": [
+    "docs/operations/ALERTING.md",
+    "docs/operations/INCIDENT_RESPONSE_RUNBOOK.md",
+    "docs/operations/ROLLBACK_RUNBOOK.md",
+    "docs/operations/CUSTOMER_COMMUNICATION_RUNBOOK.md"
+  ],
+  "tests": [
+    "src/server/observability/logger.test.ts",
+    "src/app/api/ready/route.test.ts",
+    "src/lib/observability/report-error.test.ts",
+    "tests/unit/observability.test.ts"
+  ],
+  "requiredValidationCommands": [
+    "npm run lint",
+    "npm run typecheck",
+    "npm run test",
+    "npm run security:logs",
+    "npm run build"
+  ],
+  "notes": [
+    "This evidence file intentionally contains no secrets, tokens, customer PII, cookie values or stack traces.",
+    "CI must attach command output before production release sign-off."
+  ]
+}
