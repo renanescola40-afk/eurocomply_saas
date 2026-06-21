@@ -40,7 +40,7 @@ const requiredProtectedSegments = [
   '/audit-pack',
   '/notificacoes',
   '/auditoria',
-  '/eurocomply-home',
+  '/risck-comply-home',
   '/riscos',
   '/documentos',
   '/raci',
@@ -90,7 +90,7 @@ const governanceChecks = [
   },
   {
     path: gitleaksConfigPath,
-    tokens: ['EuroComply Gitleaks Configuration', 'eurocomply-public-env-sensitive-name', 'eurocomply-provider-key-like-value'],
+    tokens: ['RISCK COMPLY Gitleaks Configuration', 'risck-comply-public-env-sensitive-name', 'risck-comply-provider-key-like-value'],
   },
   {
     path: fullSecuritySuitePath,
@@ -122,7 +122,7 @@ const governanceChecks = [
   },
   {
     path: p0RuntimeEvidenceSchemaPath,
-    tokens: ['EuroComply P0 Runtime Evidence', 'branch-protection-main', 'required-status-checks', 'production-secrets-provider-stores', 'supabase-live-rls-validation', 'external-security-review-or-pentest', 'redactionConfirmation'],
+    tokens: ['RISCK COMPLY P0 Runtime Evidence', 'branch-protection-main', 'required-status-checks', 'production-secrets-provider-stores', 'supabase-live-rls-validation', 'external-security-review-or-pentest', 'redactionConfirmation'],
   },
   {
     path: p0RuntimeEvidenceExamplesPath,
@@ -160,8 +160,8 @@ const governanceChecks = [
 
 const failures = [];
 
-console.log('EuroComply protected route and release governance check');
-console.log('-------------------------------------------------------');
+console.log('RISCK COMPLY protected route and release governance check');
+console.log('----------------------------------------------------------');
 
 if (!existsSync(proxyPath)) {
   failures.push('proxy.ts is missing. Next 16 proxy-based route protection is required.');
