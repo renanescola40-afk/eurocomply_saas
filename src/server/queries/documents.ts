@@ -13,10 +13,30 @@ type DocumentRow = {
   updated_at?: string | null;
 };
 
-function normalizeDocumentRow(document: DocumentRow) {
+type NormalizedDocumentRow = Omit<Required<DocumentRow>, 'name' | 'category' | 'status' | 'expires_at' | 'created_at' | 'updated_at'> & {
+  name: string | null;
+  category: string | null;
+  status: string | null;
+  expires_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  title: string;
+  version: number;
+};
+
+function normalizeDocumentRow(document: DocumentRow): NormalizedDocumentRow {
+  const name = document.name ?? null;
+
   return {
-    ...document,
-    title: document.name ?? 'Documento sem título',
+    id: document.id,
+    organization_id: document.organization_id,
+    name,
+    category: document.category ?? null,
+    status: document.status ?? null,
+    expires_at: document.expires_at ?? null,
+    created_at: document.created_at ?? null,
+    updated_at: document.updated_at ?? null,
+    title: name ?? 'Documento sem título',
     version: 1,
   };
 }
