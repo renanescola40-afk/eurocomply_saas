@@ -16,6 +16,8 @@ export type CreateVendorFormInput = {
 
 type CreateVendorActionResult = { error?: string } | undefined;
 
+const GENERIC_VENDOR_ERROR = 'Não foi possível guardar o fornecedor. Tente novamente.';
+
 export function CreateVendorForm({ onCreate }: { onCreate: (input: CreateVendorFormInput) => Promise<CreateVendorActionResult> }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -39,12 +41,12 @@ export function CreateVendorForm({ onCreate }: { onCreate: (input: CreateVendorF
       try {
         const result = await onCreate(input);
         if (result?.error) {
-          setError(result.error);
+          setError(GENERIC_VENDOR_ERROR);
           return;
         }
         setSuccess('Fornecedor guardado com sucesso.');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not create vendor.');
+      } catch {
+        setError(GENERIC_VENDOR_ERROR);
       }
     });
   }
