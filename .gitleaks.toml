@@ -1,13 +1,13 @@
-title = "EuroComply Gitleaks Configuration"
+title = "RISCK COMPLY Gitleaks Configuration"
 
 [[rules]]
-id = "eurocomply-public-env-sensitive-name"
+id = "risck-comply-public-env-sensitive-name"
 description = "Detect sensitive variable names accidentally exposed through NEXT_PUBLIC_* keys."
 regex = '''NEXT_PUBLIC_[A-Z0-9_]*(SECRET|TOKEN|SERVICE|SERVICE_ROLE|PRIVATE|PASSWORD|WEBHOOK|AUTH_TOKEN|ACCESS_TOKEN|SIGNING)[A-Z0-9_]*'''
 tags = ["env", "public-secret"]
 
 [[rules]]
-id = "eurocomply-provider-key-like-value"
+id = "risck-comply-provider-key-like-value"
 description = "Detect provider key-like values that must stay in secret stores."
 regex = '''(?i)(sk_live_[a-z0-9]{16,}|rk_live_[a-z0-9]{16,}|whsec_[a-z0-9]{16,}|gh[pousr]_[a-z0-9_]{20,}|sbp_[a-z0-9_.-]{20,})'''
 tags = ["provider", "secret"]
