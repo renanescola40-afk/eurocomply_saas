@@ -2,42 +2,52 @@ const DEFAULT_MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
-  'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'text/csv',
-  'text/plain',
   'image/png',
   'image/jpeg',
-  'image/webp',
 ]);
 
 const BLOCKED_EXTENSIONS = new Set([
+  'apk',
   'app',
   'bat',
   'bin',
   'cmd',
   'com',
   'cpl',
+  'deb',
   'dll',
   'dmg',
+  'docm',
   'exe',
   'gadget',
   'hta',
+  'html',
+  'htm',
+  'ipa',
+  'iso',
   'jar',
   'js',
   'jse',
   'lnk',
+  'mht',
+  'mhtml',
   'msi',
   'msp',
   'pif',
+  'php',
   'ps1',
+  'psd1',
+  'psm1',
+  'reg',
+  'rpm',
+  'scf',
   'scr',
+  'sct',
   'sh',
   'svg',
+  'url',
   'vb',
   'vbe',
   'vbs',
@@ -45,6 +55,9 @@ const BLOCKED_EXTENSIONS = new Set([
   'wsc',
   'wsf',
   'wsh',
+  'xlam',
+  'xll',
+  'xlsm',
 ]);
 
 type UploadLike = {
@@ -63,17 +76,47 @@ export class UploadValidationError extends Error {
   }
 }
 
+function normalizeFilename(filename: string) {
+  const baseName = filename
+    .normalize('NFKC')
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .split(/[\\/]/)
+    .pop() ?? '';
+
+  return baseName
+    .replace(/[\\/:"*?<>|]+/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/[^a-zA-Z0-9. _-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[.\s_-]+|[.\s_-]+$/g, '')
+    .slice(0, 120)
+    .replace(/[.\s_-]+$/g, '');
+}
+
+function fileNameSegments(filename: string) {
+  return normalizeFilename(filename)
+    .toLowerCase()
+    .split('.')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
 function getExtension(filename: string) {
-  const parts = filename.toLowerCase().split('.');
-  if (parts.length < 2) return '';
+  const parts = fileNameSegments(filename);
   return parts.at(-1) ?? '';
+}
+
+function hasBlockedExtension(filename: string) {
+  const parts = fileNameSegments(filename);
+  if (parts.length === 0) return true;
+  return parts.some((part) => BLOCKED_EXTENSIONS.has(part));
 }
 
 export function assertSafeUpload(file: UploadLike, options?: { maxSizeBytes?: number; allowedMimeTypes?: Set<string> }) {
   const maxSizeBytes = options?.maxSizeBytes ?? DEFAULT_MAX_UPLOAD_SIZE_BYTES;
   const allowedMimeTypes = options?.allowedMimeTypes ?? ALLOWED_MIME_TYPES;
-  const filename = file.name?.trim() ?? '';
-  const mimeType = file.type?.trim().toLowerCase() ?? '';
+  const filename = normalizeFilename(file.name?.trim() ?? '');
+  const mimeType = file.type?.split(';')[0]?.trim().toLowerCase() ?? '';
   const size = file.size ?? 0;
   const extension = getExtension(filename);
 
@@ -85,8 +128,8 @@ export function assertSafeUpload(file: UploadLike, options?: { maxSizeBytes?: nu
     throw new UploadValidationError('Invalid filename');
   }
 
-  if (BLOCKED_EXTENSIONS.has(extension)) {
-    throw new UploadValidationError(`.${extension} files are not allowed`);
+  if (hasBlockedExtension(filename)) {
+    throw new UploadValidationError('File type is blocked for security reasons');
   }
 
   if (!mimeType || !allowedMimeTypes.has(mimeType)) {
