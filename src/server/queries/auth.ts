@@ -1,14 +1,26 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export async function getCurrentUser() {
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.auth.getUser();
+function isSupabaseRuntimeConfigured() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
 
-  if (error || !data.user) {
+export async function getCurrentUser() {
+  if (!isSupabaseRuntimeConfigured()) {
     return null;
   }
 
-  return data.user;
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data.user) {
+      return null;
+    }
+
+    return data.user;
+  } catch {
+    return null;
+  }
 }
 
 export async function requireCurrentUser() {
