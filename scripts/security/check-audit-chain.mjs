@@ -8,8 +8,10 @@ const migrationPath = 'supabase/migrations/20260612_audit_event_hash_chain.sql';
 const chainedRpcMigrationPath = 'supabase/migrations/20260613_audit_event_chained_rpc.sql';
 const enterpriseRpcMigrationPath = 'supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql';
 const concurrencyRunbookPath = 'docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md';
+const auditChainModelPath = 'docs/security/AUDIT_CHAIN_MODEL.md';
 const verifierRoutePath = 'src/app/api/audit/chain/verify/route.ts';
 const evidencePackRoutePath = 'src/app/api/audit/evidence-pack/route.ts';
+const verifierCliPath = 'scripts/security/verify-audit-chain.mjs';
 const verifierRouteTestPath = 'src/app/api/audit/chain/verify/route.test.ts';
 const evidencePackRouteTestPath = 'src/app/api/audit/evidence-pack/route.test.ts';
 const runtimeEvidencePath = 'docs/security/evidence/runtime/audit-chain-live-validation.json';
@@ -45,6 +47,8 @@ const testRequiredTokens = [
 const auditEventsRequiredTokens = [
   'buildAuditChainRecord',
   'sanitizeAuditMetadata',
+  'requestContext',
+  'buildAuditRequestContextFromRequest',
   'getPreviousAuditHash',
   'buildChainedPayload',
   'append_audit_event_chained',
@@ -74,6 +78,7 @@ const auditEventsTestRequiredTokens = [
   'fails closed instead of using non-transactional append when the RPC is unavailable by default',
   'allows direct chained insert only through an explicit non-enterprise fallback flag',
   'sanitizes audit metadata before hashing and persistence',
+  'request context',
   'append_audit_event_chained',
   'audit chain previous hash mismatch',
   '40001',
@@ -139,6 +144,21 @@ const concurrencyRunbookRequiredTokens = [
   'Release Rule',
 ];
 
+const auditChainModelRequiredTokens = [
+  'Enterprise Audit Chain Model',
+  'Required Event Payload',
+  'organizationId',
+  'actorUserId',
+  'requestContext',
+  'Critical Event Coverage',
+  'Transactional Append',
+  'Verification',
+  'Evidence Pack Export',
+  'Release Gate',
+  'scripts/security/verify-audit-chain.mjs',
+  'docs/security/evidence/runtime/audit-chain-live-validation.json',
+];
+
 const verifierRequiredTokens = [
   'getCurrentUser',
   'getCurrentOrganizationForUser',
@@ -153,6 +173,8 @@ const verifierRequiredTokens = [
   'verifyAuditChain',
   'createAuditEvent',
   'audit_chain.verified',
+  'buildAuditRequestContextFromRequest',
+  'requestContext',
   'noStoreJson',
   'legacyEvents',
   'chainedEventsChecked',
@@ -173,20 +195,40 @@ const evidencePackRouteRequiredTokens = [
   'audit_chain.evidence_exported',
   'security.failure',
   'signatureAlgorithm',
+  'buildAuditRequestContextFromRequest',
+  'requestContext',
+];
+
+const verifierCliRequiredTokens = [
+  'eurocomply.audit-chain.cli',
+  '--input',
+  '--expected-previous-hash',
+  'AUDIT_CHAIN_SIGNING_SECRET',
+  'canonicalizeAuditEvent',
+  'buildAuditEventHash',
+  'missing_previous_hash',
+  'previous_hash_mismatch',
+  'event_hash_mismatch',
+  'signature_mismatch',
+  'process.exit(result.ok ? 0 : 1)',
 ];
 
 const verifierRouteTestRequiredTokens = [
   'rejects verification before step-up when RBAC is missing',
   'verifies the chain only after RBAC and signed step-up',
+  'rejects verification without a valid step-up token',
   'audit_chain.verified',
   'verificationAuditEvent',
+  'buildAuditRequestContextFromRequest',
 ];
 
 const evidencePackRouteTestRequiredTokens = [
   'returns a signed export only after RBAC and step-up',
+  'rejects export when RBAC is missing',
   'fails closed when the evidence export cannot be signed',
   'audit_chain.evidence_exported',
   'audit_evidence_pack_signing_unavailable',
+  'buildAuditRequestContextFromRequest',
 ];
 
 const runtimeEvidenceRequiredTokens = [
@@ -194,10 +236,16 @@ const runtimeEvidenceRequiredTokens = [
   'appendNormal',
   'appendConcurrent',
   'tamperDetection',
+  'missingPreviousHash',
   'signedExport',
+  'exportWithoutPermission',
   'verifyWithoutPermission',
+  'verifyWithoutStepUp',
   'verifyWithStepUp',
   'criticalEventCoverage',
+  'cliVerifier',
+  'docs/security/AUDIT_CHAIN_MODEL.md',
+  'scripts/security/verify-audit-chain.mjs',
   'docs/security/evidence/runtime/audit-chain-live-validation.json',
 ];
 
@@ -231,8 +279,10 @@ const migration = read(migrationPath);
 const chainedRpcMigration = read(chainedRpcMigrationPath);
 const enterpriseRpcMigration = read(enterpriseRpcMigrationPath);
 const concurrencyRunbook = read(concurrencyRunbookPath);
+const auditChainModel = read(auditChainModelPath);
 const verifierRoute = read(verifierRoutePath);
 const evidencePackRoute = read(evidencePackRoutePath);
+const verifierCli = read(verifierCliPath);
 const verifierRouteTest = read(verifierRouteTestPath);
 const evidencePackRouteTest = read(evidencePackRouteTestPath);
 const runtimeEvidence = read(runtimeEvidencePath);
@@ -246,8 +296,10 @@ if (migration) requireTokens(migrationPath, migration, migrationRequiredTokens);
 if (chainedRpcMigration) requireTokens(chainedRpcMigrationPath, chainedRpcMigration, chainedRpcMigrationRequiredTokens);
 if (enterpriseRpcMigration) requireTokens(enterpriseRpcMigrationPath, enterpriseRpcMigration, enterpriseRpcMigrationRequiredTokens);
 if (concurrencyRunbook) requireTokens(concurrencyRunbookPath, concurrencyRunbook, concurrencyRunbookRequiredTokens);
+if (auditChainModel) requireTokens(auditChainModelPath, auditChainModel, auditChainModelRequiredTokens);
 if (verifierRoute) requireTokens(verifierRoutePath, verifierRoute, verifierRequiredTokens);
 if (evidencePackRoute) requireTokens(evidencePackRoutePath, evidencePackRoute, evidencePackRouteRequiredTokens);
+if (verifierCli) requireTokens(verifierCliPath, verifierCli, verifierCliRequiredTokens);
 if (verifierRouteTest) requireTokens(verifierRouteTestPath, verifierRouteTest, verifierRouteTestRequiredTokens);
 if (evidencePackRouteTest) requireTokens(evidencePackRouteTestPath, evidencePackRouteTest, evidencePackRouteTestRequiredTokens);
 if (runtimeEvidence) requireTokens(runtimeEvidencePath, runtimeEvidence, runtimeEvidenceRequiredTokens);
@@ -256,24 +308,22 @@ if (preflight && !(preflight.includes('AUDIT_CHAIN_SIGNING_SECRET') || preflight
   failures.push(`${preflightPath} must recommend audit-chain signing material`);
 }
 
-if (preflight && !preflight.includes(migrationPath)) {
-  failures.push(`${preflightPath} must require the audit chain migration`);
+for (const requiredPath of [
+  migrationPath,
+  chainedRpcMigrationPath,
+  enterpriseRpcMigrationPath,
+  concurrencyRunbookPath,
+  auditChainModelPath,
+  verifierCliPath,
+  runtimeEvidencePath,
+]) {
+  if (preflight && !preflight.includes(requiredPath)) {
+    failures.push(`${preflightPath} must require ${requiredPath}`);
+  }
 }
 
-if (preflight && !preflight.includes(chainedRpcMigrationPath)) {
-  failures.push(`${preflightPath} must require the transactional audit chain RPC migration`);
-}
-
-if (preflight && !preflight.includes(enterpriseRpcMigrationPath)) {
-  failures.push(`${preflightPath} must require the enterprise audit chain hardening migration`);
-}
-
-if (preflight && !preflight.includes(concurrencyRunbookPath)) {
-  failures.push(`${preflightPath} must require the audit chain concurrency runbook`);
-}
-
-if (preflight && !preflight.includes(runtimeEvidencePath)) {
-  failures.push(`${preflightPath} must require audit-chain runtime evidence`);
+if (preflight && !preflight.includes('audit-chain runtime evidence')) {
+  failures.push(`${preflightPath} must block enterprise release without audit-chain runtime evidence`);
 }
 
 if (helper && !helper.includes('.sort(([left], [right]) => left.localeCompare(right))')) {
