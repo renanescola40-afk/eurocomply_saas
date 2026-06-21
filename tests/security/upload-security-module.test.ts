@@ -31,7 +31,7 @@ afterEach(() => {
 
 describe('upload-security enterprise controls', () => {
   it('accepts a valid document only when extension, MIME and magic number agree', async () => {
-    const result = await validateUploadPayload({ file: pdfFile(), maxBytes: MAX_UPLOAD_BYTES });
+    const result = await validateUploadPayload(pdfFile(), { maxBytes: MAX_UPLOAD_BYTES });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.message);
@@ -45,13 +45,13 @@ describe('upload-security enterprise controls', () => {
     const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
     const file = new File([pngBytes], 'image.png', { type: 'application/pdf' });
 
-    const result = await validateUploadPayload({ file, maxBytes: MAX_UPLOAD_BYTES });
+    const result = await validateUploadPayload(file, { maxBytes: MAX_UPLOAD_BYTES });
 
     expect(result).toMatchObject({ ok: false, reason: 'mime_spoofing', mimeDetected: 'image/png' });
   });
 
   it('blocks prohibited executable or script extensions before storage', async () => {
-    const result = await validateUploadPayload({ file: pdfFile('invoice.pdf.exe'), maxBytes: MAX_UPLOAD_BYTES });
+    const result = await validateUploadPayload(pdfFile('invoice.pdf.exe'), { maxBytes: MAX_UPLOAD_BYTES });
 
     expect(result).toMatchObject({ ok: false, reason: 'dangerous_extension' });
   });
@@ -59,7 +59,7 @@ describe('upload-security enterprise controls', () => {
   it('blocks files whose magic number does not match an allowed document type', async () => {
     const file = new File(['<script>alert(1)</script>'], 'policy.pdf', { type: 'application/pdf' });
 
-    const result = await validateUploadPayload({ file, maxBytes: MAX_UPLOAD_BYTES });
+    const result = await validateUploadPayload(file, { maxBytes: MAX_UPLOAD_BYTES });
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('Expected invalid magic number to be blocked');
@@ -67,7 +67,7 @@ describe('upload-security enterprise controls', () => {
   });
 
   it('blocks path traversal file names before reading into storage paths', async () => {
-    const result = await validateUploadPayload({ file: pdfFile('../policy.pdf'), maxBytes: MAX_UPLOAD_BYTES });
+    const result = await validateUploadPayload(pdfFile('../policy.pdf'), { maxBytes: MAX_UPLOAD_BYTES });
 
     expect(result).toMatchObject({ ok: false, reason: 'path_traversal' });
   });
@@ -88,7 +88,7 @@ describe('upload-security enterprise controls', () => {
     expect(shouldBlockUploadForMalwareScan(scan)).toBe(true);
   });
 
-  it('blocks when a real HTTP malware scanner reports a threat', async () => {
+  it('blocks when a real HTTP scanner reports a threat', async () => {
     process.env.REQUIRE_MALWARE_SCAN_FOR_UPLOADS = 'true';
     process.env.MALWARE_SCANNER_PROVIDER = 'http';
     process.env.MALWARE_SCANNER_ENDPOINT = 'https://scanner.example/scan';
@@ -99,7 +99,7 @@ describe('upload-security enterprise controls', () => {
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        text: vi.fn().mockResolvedValue(JSON.stringify({ status: 'infected', signature: 'EICAR-Test-File' })),
+        text: vi.fn().mockResolvedValue(JSON.stringify({ status: 'infected', signature: 'provider-test-signature' })),
       }),
     );
 
@@ -115,17 +115,25 @@ describe('upload-security enterprise controls', () => {
     expect(shouldBlockUploadForMalwareScan(scan)).toBe(true);
   });
 
-  it('keeps mock malware scanner providers limited to test/development use', async () => {
+  it('keeps mock scanner providers limited to test/development use', async () => {
     process.env.REQUIRE_MALWARE_SCAN_FOR_UPLOADS = 'true';
     const provider = createMockMalwareScannerProvider({ status: 'clean', required: true });
 
-    const scan = await provider.scan({
-      buffer: Buffer.from(PDF_BYTES),
-      mimeType: 'application/pdf',
-      filename: 'policy.pdf',
-      organizationId: 'org-a',
-      fileHash: 'hash-a',
-    });
+    const scan = await provider.scan(
+      {
+        buffer: Buffer.from(PDF_BYTES),
+        mimeType: 'application/pdf',
+        filename: 'policy.pdf',
+        organizationId: 'org-a',
+        fileHash: 'hash-a',
+      },
+      {
+        provider: 'mock',
+        required: true,
+        scannedAt: new Date().toISOString(),
+        timeoutMs: 1000,
+      },
+    );
 
     expect(scan).toMatchObject({ status: 'clean', provider: 'mock', required: true });
   });
