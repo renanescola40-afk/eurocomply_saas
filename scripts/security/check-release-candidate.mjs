@@ -57,7 +57,6 @@ const packageJsonTokens = [
   'security:audit-chain',
   'security:release-candidate',
   'security:npm-audit:json',
-  'security:npm-audit:summary',
   'supply-chain:lockfile',
   'supply-chain:floating-deps',
 ];
