@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowRight, BarChart3, Bell, CheckCircle2, Clock3, Crown, FileText, Gauge, LockKeyhole, ShieldCheck, Sparkles, TimerReset, UsersRound } from 'lucide-react';
+import { ArrowRight, BarChart3, Bell, CheckCircle2, Clock3, Crown, FileText, Gauge, LockKeyhole, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,22 +13,15 @@ const quickActions = [
   { label: 'Abrir notificações', description: 'Ver feed premium de atividades da equipa.', href: '/notificacoes', icon: Bell },
 ];
 
-function userHasPaidAccess(user: Awaited<ReturnType<typeof getCurrentUser>>) {
-  // PONTO DE PERMISSÃO: trocar esta condição pela regra real de billing.
-  // Exemplo futuro:
-  // return ['pro', 'enterprise'].includes(user.subscriptionPlan) && user.subscriptionStatus === 'active';
-  return Boolean(user);
-}
-
 export default async function RisckComplyHomePage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
 
   if (!user) redirect(`/${params.locale}/login`);
-  if (!userHasPaidAccess(user)) redirect(`/${params.locale}/billing`);
 
   const data = await getOrganizationDashboardData(user.id);
   if (!data) redirect(`/${params.locale}/onboarding`);
 
+  const currentPlan = data.entitlements.plan;
   const pendingDocuments = data.summary.missingDocuments;
   const upcomingTasks = data.tasks.filter((task) => Boolean(task.dueDate)).length;
 
@@ -49,7 +42,7 @@ export default async function RisckComplyHomePage({ params }: { params: { locale
             <div className="space-y-6">
               <div className="flex flex-wrap items-center gap-3">
                 <Badge className="gap-2 rounded-full px-3 py-1 text-xs uppercase tracking-[0.2em]"><Crown className="h-3.5 w-3.5" /> Cliente RISCK COMPLY</Badge>
-                <Badge variant="outline" className="gap-2 rounded-full px-3 py-1 text-xs"><LockKeyhole className="h-3.5 w-3.5" /> Pós-login pagante</Badge>
+                <Badge variant="outline" className="gap-2 rounded-full px-3 py-1 text-xs"><LockKeyhole className="h-3.5 w-3.5" /> Plano {currentPlan}</Badge>
               </div>
               <div className="space-y-3">
                 <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.04em] md:text-6xl">Bem-vindo, {data.organization.name}.</h1>
@@ -92,10 +85,10 @@ export default async function RisckComplyHomePage({ params }: { params: { locale
           </article>
 
           <article className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur md:p-8">
-            <div className="flex items-center gap-3 text-primary"><TimerReset className="h-5 w-5" /><p className="text-sm font-semibold uppercase tracking-[0.2em]">Promoção simulada</p></div>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight">Clientes Enterprise economizam 40% de tempo em compliance.</h2>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">Oferta interna expira em 02:14:39. Use isto como gatilho visual; no produto final, substitua por lógica real de campanha.</p>
-            <div className="mt-5 rounded-2xl bg-muted/40 p-4 text-sm italic text-muted-foreground">“Migramos para Enterprise e reduzimos reuniões manuais entre Legal, Security e Finance.” — Cliente europeu fictício</div>
+            <div className="flex items-center gap-3 text-primary"><ShieldCheck className="h-5 w-5" /><p className="text-sm font-semibold uppercase tracking-[0.2em]">Próximo passo Enterprise</p></div>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight">Prepare a operação para auditoria, procurement e expansão europeia.</h2>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">Use este painel para revisar evidências, gaps e workflows antes de ativar módulos avançados ou envolver equipes adicionais.</p>
+            <div className="mt-5 rounded-2xl bg-muted/40 p-4 text-sm text-muted-foreground">Revise o plano atual, confirme requisitos internos e avance para Enterprise apenas quando a assinatura e as permissões estiverem alinhadas.</div>
           </article>
         </section>
 
