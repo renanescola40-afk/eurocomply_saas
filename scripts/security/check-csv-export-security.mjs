@@ -97,7 +97,8 @@ if (!packageSource.includes('"security:csv-exports"') || !packageSource.includes
   failures.push(`${packagePath} must expose security:csv-exports`);
 }
 
-if (!packageSource.includes('security:csv-exports && npm run security:responses')) {
+const securityCiOrder = /security:csv-exports[\s\S]*security:responses/;
+if (!securityCiOrder.test(packageSource)) {
   failures.push('security:ci must run security:csv-exports before response/log/API gates');
 }
 

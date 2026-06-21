@@ -39,12 +39,12 @@ export function CreateVendorForm({ onCreate }: { onCreate: (input: CreateVendorF
       try {
         const result = await onCreate(input);
         if (result?.error) {
-          setError(result.error);
+          setError('Could not create vendor. Please review the details and try again.');
           return;
         }
         setSuccess('Fornecedor guardado com sucesso.');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not create vendor.');
+      } catch {
+        setError('Could not create vendor. Please review the details and try again.');
       }
     });
   }

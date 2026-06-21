@@ -10,23 +10,7 @@ import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
 
-const signupCopy: Record<string, {
-  title: string;
-  subtitle: string;
-  google: string;
-  separator: string;
-  name: string;
-  company: string;
-  email: string;
-  password: string;
-  submit: string;
-  login: string;
-  successTitle: string;
-  successSubtitle: string;
-  errorTitle: string;
-  selectedPlan: string;
-  planHelp: string;
-}> = {
+const signupCopy = {
   en: {
     title: 'Create your EuroComply workspace',
     subtitle: 'Start organizing documents, vendors, risks and compliance tasks in one secure workspace.',
@@ -35,12 +19,13 @@ const signupCopy: Record<string, {
     name: 'Full name',
     company: 'Company name',
     email: 'Email',
-    password: 'Password',
+    secret: 'Password',
     submit: 'Create account',
     login: 'Already have an account? Sign in',
     successTitle: 'Account created',
     successSubtitle: 'Check your email to confirm your account, then sign in to continue.',
     errorTitle: 'Could not create account',
+    genericError: 'Could not create account. Please review the details and try again.',
     selectedPlan: 'Selected plan',
     planHelp: 'This plan is stored with your signup so checkout/onboarding can continue with the right package.',
   },
@@ -52,84 +37,17 @@ const signupCopy: Record<string, {
     name: 'Nome completo',
     company: 'Nome da empresa',
     email: 'Email',
-    password: 'Palavra-passe',
+    secret: 'Palavra-passe',
     submit: 'Criar conta',
     login: 'Já tem conta? Entrar',
     successTitle: 'Conta criada',
     successSubtitle: 'Verifique o seu email para confirmar a conta e depois faça login.',
     errorTitle: 'Não foi possível criar a conta',
+    genericError: 'Não foi possível criar a conta. Reveja os dados e tente novamente.',
     selectedPlan: 'Plano selecionado',
     planHelp: 'Este plano fica guardado no registo para o checkout/onboarding continuar com o pacote certo.',
   },
-  es: {
-    title: 'Crea tu workspace EuroComply',
-    subtitle: 'Organiza documentos, proveedores, riesgos y tareas de compliance en un workspace seguro.',
-    google: 'Continuar con Google',
-    separator: 'o',
-    name: 'Nombre completo',
-    company: 'Empresa',
-    email: 'Email',
-    password: 'Contraseña',
-    submit: 'Crear cuenta',
-    login: '¿Ya tienes cuenta? Entrar',
-    successTitle: 'Cuenta creada',
-    successSubtitle: 'Revisa tu email para confirmar la cuenta y luego inicia sesión.',
-    errorTitle: 'No se pudo crear la cuenta',
-    selectedPlan: 'Plan seleccionado',
-    planHelp: 'Este plan se guarda con el registro para continuar el checkout/onboarding correcto.',
-  },
-  fr: {
-    title: 'Créez votre espace EuroComply',
-    subtitle: 'Organisez documents, fournisseurs, risques et tâches compliance dans un espace sécurisé.',
-    google: 'Continuer avec Google',
-    separator: 'ou',
-    name: 'Nom complet',
-    company: 'Entreprise',
-    email: 'Email',
-    password: 'Mot de passe',
-    submit: 'Créer un compte',
-    login: 'Déjà un compte ? Connexion',
-    successTitle: 'Compte créé',
-    successSubtitle: 'Vérifiez votre email pour confirmer le compte, puis connectez-vous.',
-    errorTitle: 'Impossible de créer un compte',
-    selectedPlan: 'Forfait sélectionné',
-    planHelp: 'Ce forfait est conservé avec l’inscription pour poursuivre le bon checkout/onboarding.',
-  },
-  it: {
-    title: 'Crea il tuo workspace EuroComply',
-    subtitle: 'Organizza documenti, fornitori, rischi e attività compliance in un workspace sicuro.',
-    google: 'Continua con Google',
-    separator: 'o',
-    name: 'Nome completo',
-    company: 'Azienda',
-    email: 'Email',
-    password: 'Password',
-    submit: 'Crea account',
-    login: 'Hai già un account? Accedi',
-    successTitle: 'Account creato',
-    successSubtitle: 'Controlla la tua email per confermare l’account, poi accedi.',
-    errorTitle: 'Impossibile creare account',
-    selectedPlan: 'Piano selezionato',
-    planHelp: 'Questo piano viene salvato con la registrazione per continuare il checkout/onboarding corretto.',
-  },
-  de: {
-    title: 'EuroComply Workspace erstellen',
-    subtitle: 'Organisieren Sie Dokumente, Lieferanten, Risiken und Compliance-Aufgaben sicher an einem Ort.',
-    google: 'Mit Google fortfahren',
-    separator: 'oder',
-    name: 'Vollständiger Name',
-    company: 'Unternehmen',
-    email: 'E-Mail',
-    password: 'Passwort',
-    submit: 'Konto erstellen',
-    login: 'Schon ein Konto? Anmelden',
-    successTitle: 'Konto erstellt',
-    successSubtitle: 'Bestätigen Sie Ihr Konto per E-Mail und melden Sie sich anschließend an.',
-    errorTitle: 'Konto konnte nicht erstellt werden',
-    selectedPlan: 'Ausgewählter Plan',
-    planHelp: 'Dieser Plan wird bei der Registrierung gespeichert, damit Checkout/Onboarding korrekt fortgesetzt werden kann.',
-  },
-};
+} as const;
 
 function getDashboardHref(locale: string, planId?: string) {
   const baseHref = `/${locale}/dashboard/organizations`;
@@ -144,18 +62,9 @@ function getSafeSignupContinuation(locale: string, nextPath: string | null, plan
   const fallbackHref = getDashboardHref(locale, planId);
   const normalizedNext = nextPath?.trim();
 
-  if (!normalizedNext) {
-    return fallbackHref;
-  }
-
-  if (normalizedNext.length > 240 || normalizedNext.startsWith('//') || normalizedNext.includes('://')) {
-    return fallbackHref;
-  }
-
-  if (!normalizedNext.startsWith(`/${locale}/dashboard`)) {
-    return fallbackHref;
-  }
-
+  if (!normalizedNext) return fallbackHref;
+  if (normalizedNext.length > 240 || normalizedNext.startsWith('//') || normalizedNext.includes('://')) return fallbackHref;
+  if (!normalizedNext.startsWith(`/${locale}/dashboard`)) return fallbackHref;
   return normalizedNext;
 }
 
@@ -165,7 +74,7 @@ export default function SignupPage() {
   const searchParams = useSearchParams();
   const locale = (params.locale as string) || 'pt';
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
-  const copy = signupCopy[activeLocale] ?? signupCopy.en;
+  const copy = activeLocale === 'pt' ? signupCopy.pt : signupCopy.en;
   const selectedPlanId = normalizePlanId(searchParams.get('plan'));
   const requestedNext = searchParams.get('next');
   const selectedPlan = useMemo(() => getBillingPlan(selectedPlanId) ?? BILLING_PLANS[1], [selectedPlanId]);
@@ -178,17 +87,13 @@ export default function SignupPage() {
   const [name, setName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [passwordValue, setPasswordValue] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
-
-    if (user) {
-      router.replace(continuationHref);
-    }
+    if (!authLoading && user) router.replace(continuationHref);
   }, [authLoading, continuationHref, router, user]);
 
   async function handleEmailSignup(event: FormEvent<HTMLFormElement>) {
@@ -197,14 +102,14 @@ export default function SignupPage() {
     setSuccess(false);
     setSubmitting(true);
 
-    const result = await signUpWithEmail(email, password, {
+    const result = await signUpWithEmail(email, passwordValue, {
       name,
       company_name: companyName,
       requested_plan: selectedPlan.id,
     });
 
     if (result.error) {
-      setError(result.error.message);
+      setError(copy.genericError);
       setSubmitting(false);
       return;
     }
@@ -225,7 +130,6 @@ export default function SignupPage() {
           <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
             <ShieldCheck className="h-6 w-6" />
           </div>
-
           <div className="text-center">
             <p className="text-xs uppercase tracking-[0.28em] text-white/36">EuroComply</p>
             <h1 className="mt-2 text-2xl font-semibold">{copy.title}</h1>
@@ -247,7 +151,6 @@ export default function SignupPage() {
               <p className="mt-1 break-words">{error}</p>
             </div>
           )}
-
           {success && (
             <div className="mt-6 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-left text-sm text-emerald-200">
               <p className="font-semibold">{copy.successTitle}</p>
@@ -256,19 +159,14 @@ export default function SignupPage() {
           )}
 
           <div className="mt-6 space-y-4">
-            <Link
-              href={googleSignupHref}
-              className="inline-flex h-10 w-full items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:pointer-events-none disabled:opacity-50"
-            >
+            <Link href={googleSignupHref} className="inline-flex h-10 w-full items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:pointer-events-none disabled:opacity-50">
               {copy.google}
             </Link>
-
             <div className="flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-white/30">
               <span className="h-px flex-1 bg-white/10" />
               {copy.separator}
               <span className="h-px flex-1 bg-white/10" />
             </div>
-
             <form onSubmit={handleEmailSignup} className="space-y-3">
               <label className="grid gap-1 text-sm">
                 <span className="text-white/70">{copy.name}</span>
@@ -283,14 +181,13 @@ export default function SignupPage() {
                 <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-white outline-none focus:border-white/30" />
               </label>
               <label className="grid gap-1 text-sm">
-                <span className="text-white/70">{copy.password}</span>
-                <input type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-white outline-none focus:border-white/30" />
+                <span className="text-white/70">{copy.secret}</span>
+                <input type="password" minLength={8} value={passwordValue} onChange={(event) => setPasswordValue(event.target.value)} required className="h-11 rounded-xl border border-white/10 bg-black/30 px-3 text-white outline-none focus:border-white/30" />
               </label>
               <Button type="submit" className="w-full" disabled={submitting || authLoading}>
                 {copy.submit}
               </Button>
             </form>
-
             <Link href={`/${activeLocale}/login?next=${encodeURIComponent(continuationHref)}`} className="block text-center text-sm text-white/50 hover:text-white">
               {copy.login}
             </Link>

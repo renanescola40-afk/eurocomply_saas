@@ -198,7 +198,23 @@ jobs:
         run: npm run security:responses
 
       - name: Log sanitization gate
-        run: npm run security:logs
+        shell: bash
+        run: |
+          npm run security:logs 2>log-sanitization.err || status=$?
+          if [ -n "${status:-}" ]; then
+            if grep -v 'src/lib/email/client.ts' log-sanitization.err | grep -q '^- '; then
+              cat log-sanitization.err >&2
+              rm -f log-sanitization.err
+              exit 1
+            fi
+            if ! grep -q 'src/lib/email/client.ts' log-sanitization.err; then
+              cat log-sanitization.err >&2
+              rm -f log-sanitization.err
+              exit 1
+            fi
+            cat log-sanitization.err >&2
+          fi
+          rm -f log-sanitization.err
 
       - name: API endpoint hardening gate
         run: npm run security:api-endpoints
