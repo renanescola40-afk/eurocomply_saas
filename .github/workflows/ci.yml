@@ -69,7 +69,18 @@ jobs:
         run: echo "No app/package/tsconfig changes detected; skipping app typecheck."
       - name: Test app changes
         if: steps.changes.outputs.app_changed == 'true'
-        run: npm run test
+        shell: bash
+        run: |
+          npm run test 2>&1 | tee test.log
+          test "${PIPESTATUS[0]}" -eq 0
+      - name: Upload test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-test-diagnostics
+          path: test.log
+          retention-days: 7
+          if-no-files-found: ignore
       - name: Skip tests for non-app changes
         if: steps.changes.outputs.app_changed != 'true'
         run: echo "No app/package/test changes detected; skipping app tests."
