@@ -34,6 +34,8 @@ import { handleStripeWebhookEvent } from './stripe-webhooks';
 type SupabaseState = {
   eventInsertError?: { code?: string; message?: string } | null;
   eventUpdateError?: { code?: string; message?: string } | null;
+  eventLookupData?: { id: string; status: string | null } | null;
+  eventReclaimData?: { id: string } | null;
   organizationData?: { id: string } | null;
   organizationError?: { code?: string; message?: string } | null;
   subscriptionData?: Record<string, unknown> | null;
@@ -60,6 +62,27 @@ function makeSelectBuilder(result: () => { data: unknown; error: unknown }) {
   return builder;
 }
 
+function makeEventUpdateBuilder(payload: Record<string, unknown>) {
+  const filters: Array<{ column: string; value: string }> = [];
+  const builder = {
+    eq: vi.fn((column: string, value: string) => {
+      filters.push({ column, value });
+      return builder;
+    }),
+    select: vi.fn(() => builder),
+    maybeSingle: vi.fn(async () => {
+      state.eventUpdates.push({ filters, payload, operation: 'reclaim' });
+      return { data: state.eventReclaimData ?? { id: 'evt_reclaimed' }, error: state.eventUpdateError ?? null };
+    }),
+    then: (resolve: (value: { error: unknown }) => unknown, reject?: (reason: unknown) => unknown) => {
+      state.eventUpdates.push({ filters, column: filters[0]?.column, value: filters[0]?.value, payload, operation: 'update' });
+      return Promise.resolve({ error: state.eventUpdateError ?? null }).then(resolve, reject);
+    },
+  };
+
+  return builder;
+}
+
 function buildSupabaseClient() {
   return {
     auth: {
@@ -71,14 +94,9 @@ function buildSupabaseClient() {
       if (table === 'stripe_events_processed') {
         return {
           insert: state.eventInsert,
-          update: vi.fn((payload: Record<string, unknown>) => ({
-            eq: vi.fn(async (column: string, value: string) => {
-              state.eventUpdates.push({ column, value, payload });
-              return { error: state.eventUpdateError ?? null };
-            }),
-          })),
+          update: vi.fn((payload: Record<string, unknown>) => makeEventUpdateBuilder(payload)),
           select: vi.fn(() => ({
-            eq: vi.fn(() => ({ maybeSingle: vi.fn(async () => ({ data: null, error: null })) })),
+            eq: vi.fn(() => ({ maybeSingle: vi.fn(async () => ({ data: state.eventLookupData ?? null, error: null })) })),
           })),
         };
       }
@@ -133,6 +151,8 @@ describe('Stripe webhook billing hardening', () => {
     state = {
       eventInsertError: null,
       eventUpdateError: null,
+      eventLookupData: null,
+      eventReclaimData: null,
       organizationData: { id: 'org_a' },
       organizationError: null,
       subscriptionData: null,
@@ -156,12 +176,30 @@ describe('Stripe webhook billing hardening', () => {
 
   it('skips duplicate webhook events before mutating subscription state', async () => {
     state.eventInsertError = { code: '23505', message: 'duplicate key value violates unique constraint' };
+    state.eventLookupData = { id: 'evt_customer_subscription_created', status: 'processed' };
 
     const result = await handleStripeWebhookEvent(makeStripeEvent('customer.subscription.created', makeSubscription('active')));
 
     expect(result).toEqual({ skipped: true, duplicate: true });
     expect(state.upsert).not.toHaveBeenCalled();
     expect(state.eventUpdates).toHaveLength(0);
+  });
+
+  it('reclaims a previously failed event so Stripe retries can recover from transient sync errors', async () => {
+    state.eventInsertError = { code: '23505', message: 'duplicate key value violates unique constraint' };
+    state.eventLookupData = { id: 'evt_customer_subscription_updated', status: 'failed' };
+    state.eventReclaimData = { id: 'evt_customer_subscription_updated' };
+
+    const result = await handleStripeWebhookEvent(makeStripeEvent('customer.subscription.updated', makeSubscription('active')));
+
+    expect(result).toEqual({ skipped: false });
+    expect(state.upsert).toHaveBeenCalled();
+    expect(state.eventUpdates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ operation: 'reclaim', payload: expect.objectContaining({ status: 'processing', error: null }) }),
+        expect.objectContaining({ operation: 'update', payload: expect.objectContaining({ status: 'processed' }) }),
+      ]),
+    );
   });
 
   it.each([
