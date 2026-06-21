@@ -1,37 +1,34 @@
 import { spawnSync } from 'node:child_process';
 
-const envName = (...parts) => parts.join('_');
-const safeStripeKeyPlaceholder = ['sk', 'ci-placeholder'].join('_');
-const safeStripeWebhookPlaceholder = ['whsec', 'ci-placeholder'].join('_');
-
 const ciPlaceholders = {
-  [envName('NEXT', 'PUBLIC', 'SUPABASE', 'URL')]: 'https://ci-placeholder.supabase.co',
-  [envName('NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY')]: 'ci_supabase_anon_key_placeholder',
-  [envName('SUPABASE', 'SERVICE', 'ROLE', 'KEY')]: 'ci_supabase_service_role_key_placeholder',
-  [envName('NEXT', 'PUBLIC', 'APP', 'URL')]: 'https://ci.risckcomply.local',
-  [envName('TRUSTED', 'ORIGINS')]: 'https://ci.risckcomply.local,http://localhost:3000',
-  [envName('STRIPE', 'SECRET', 'KEY')]: safeStripeKeyPlaceholder,
-  [envName('STRIPE', 'WEBHOOK', 'SECRET')]: safeStripeWebhookPlaceholder,
-  [envName('STRIPE', 'PRICE', 'ESSENTIAL', 'MONTHLY')]: 'price_ci_essential_monthly',
-  [envName('STRIPE', 'PRICE', 'PROFESSIONAL', 'MONTHLY')]: 'price_ci_professional_monthly',
-  [envName('STRIPE', 'PRICE', 'BUSINESS', 'MONTHLY')]: 'price_ci_business_monthly',
-  [envName('HEALTHCHECK', 'TOKEN')]: 'ci_healthcheck_token_placeholder',
-  [envName('EVIDENCE', 'PACK', 'SIGNING', 'SECRET')]: 'ci_evidence_pack_signing_secret_placeholder',
-  [envName('AUDIT', 'CHAIN', 'SIGNING', 'SECRET')]: 'ci_audit_chain_signing_secret_placeholder',
-  [envName('STEP', 'UP', 'SIGNING', 'SECRET')]: 'ci_step_up_signing_secret_placeholder',
-  [envName('REQUIRE', 'MALWARE', 'SCAN', 'FOR', 'UPLOADS')]: 'false',
-  [envName('MALWARE', 'SCANNER', 'PROVIDER')]: 'disabled',
-  [envName('SENTRY', 'AUTH', 'TOKEN')]: 'ci_sentry_auth_token_placeholder',
-  [envName('UPSTASH', 'REDIS', 'REST', 'URL')]: 'https://ci-upstash-placeholder.example.com',
-  [envName('UPSTASH', 'REDIS', 'REST', 'TOKEN')]: 'ci_upstash_redis_rest_token_placeholder',
-  [envName('SUPABASE', 'ACCESS', 'TOKEN')]: 'ci_supabase_access_token_placeholder',
+  NEXT_PUBLIC_SUPABASE_URL: 'https://ci-placeholder.supabase.co',
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: 'ci_supabase_anon_key_placeholder',
+  SUPABASE_SERVICE_ROLE_KEY: 'ci_supabase_service_role_key_placeholder',
+  NEXT_PUBLIC_APP_URL: 'https://ci.risckcomply.local',
+  TRUSTED_ORIGINS: 'https://ci.risckcomply.local,http://localhost:3000',
+  STRIPE_SECRET_KEY: 'sk_test_ci_placeholder',
+  STRIPE_WEBHOOK_SECRET: 'whsec_ci_placeholder',
+  STRIPE_PRICE_ESSENTIAL_MONTHLY: 'price_ci_essential_monthly',
+  STRIPE_PRICE_PROFESSIONAL_MONTHLY: 'price_ci_professional_monthly',
+  STRIPE_PRICE_BUSINESS_MONTHLY: 'price_ci_business_monthly',
+  HEALTHCHECK_TOKEN: 'ci_healthcheck_token_placeholder',
+  EVIDENCE_PACK_SIGNING_SECRET: 'ci_evidence_pack_signing_secret_placeholder',
+  AUDIT_CHAIN_SIGNING_SECRET: 'ci_audit_chain_signing_secret_placeholder',
+  STEP_UP_SIGNING_SECRET: 'ci_step_up_signing_secret_placeholder',
+  REQUIRE_MALWARE_SCAN_FOR_UPLOADS: 'false',
+  MALWARE_SCANNER_PROVIDER: 'disabled',
+  SENTRY_AUTH_TOKEN: 'ci_sentry_auth_token_placeholder',
+  UPSTASH_REDIS_REST_URL: 'https://ci-upstash-placeholder.example.com',
+  UPSTASH_REDIS_REST_TOKEN: 'ci_upstash_redis_rest_token_placeholder',
+  SUPABASE_ACCESS_TOKEN: 'ci_supabase_access_token_placeholder',
 };
 
 const env = {
   ...process.env,
   ...ciPlaceholders,
-  [envName('RISCK', 'COMPLY', 'PREFLIGHT', 'PROFILE')]: 'ci',
-  [envName('EUROCOMPLY', 'PREFLIGHT', 'PROFILE')]: 'ci',
+  RISCK_COMPLY_PREFLIGHT_PROFILE: 'ci',
+  // Compatibility marker required by the existing workflow governance gate during the rebrand window.
+  EUROCOMPLY_PREFLIGHT_PROFILE: 'ci',
 };
 
 console.log('RISCK COMPLY CI preflight profile');
