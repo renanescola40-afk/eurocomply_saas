@@ -41,7 +41,7 @@
     "Full Security Suite / OSSF Scorecard",
     "Full Security Suite / Enterprise merge/deploy gate",
     "CI / quality",
-    "EuroComply Security CI / Run security gates, typecheck and tests",
+    "RISCK COMPLY Security CI / Run security gates, typecheck and tests",
     "Gitleaks / Scan repository for accidental secret exposure",
     "Secret Scanning / Production secret readiness gate"
   ],
@@ -57,7 +57,7 @@
   },
   "sbom": {
     "generated_by_ci": true,
-    "artifact_name": "eurocomply-sbom",
+    "artifact_name": "risck-comply-sbom",
     "runtime_path": "docs/security/evidence/runtime/sbom.json"
   },
   "exception": {

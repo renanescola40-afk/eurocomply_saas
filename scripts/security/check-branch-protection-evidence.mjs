@@ -14,7 +14,7 @@ const requiredChecks = [
   'Full Security Suite / OSSF Scorecard',
   'Full Security Suite / Enterprise merge/deploy gate',
   'CI / quality',
-  'EuroComply Security CI / Run security gates, typecheck and tests',
+  'RISCK COMPLY Security CI / Run security gates, typecheck and tests',
   'Gitleaks / Scan repository for accidental secret exposure',
   'Secret Scanning / Production secret readiness gate',
 ];
@@ -119,16 +119,16 @@ if (evidence.sbom?.generated_by_ci !== true) {
   failures.push('sbom.generated_by_ci must be true');
 }
 
-if (evidence.sbom?.artifact_name !== 'eurocomply-sbom') {
-  failures.push('sbom.artifact_name must be eurocomply-sbom');
+if (evidence.sbom?.artifact_name !== 'risck-comply-sbom') {
+  failures.push('sbom.artifact_name must be risck-comply-sbom');
 }
 
 if (evidence.sbom?.runtime_path !== 'docs/security/evidence/runtime/sbom.json') {
   failures.push('sbom.runtime_path must be docs/security/evidence/runtime/sbom.json');
 }
 
-console.log('EuroComply branch protection evidence check');
-console.log('--------------------------------------------');
+console.log('RISCK COMPLY branch protection evidence check');
+console.log('------------------------------------------------');
 
 if (failures.length > 0) {
   console.error('Branch protection evidence failures:');
