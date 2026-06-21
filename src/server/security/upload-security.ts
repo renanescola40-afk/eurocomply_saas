@@ -108,7 +108,7 @@ export function createMockMalwareScannerProvider(result?: Partial<MalwareScanRes
       return {
         status: result?.status ?? 'clean',
         provider: result?.provider ?? 'mock',
-        required: result?.required ?? process.env[REQUIRE_MALWARE_SCAN_ENV] === 'true',
+        required: result?.required ?? (process.env[REQUIRE_MALWARE_SCAN_ENV] === 'true'),
         scannedAt: result?.scannedAt ?? scannedAt,
         reason: result?.reason ?? 'Mock malware scanner verdict for test/development only.',
         signature: result?.signature,
@@ -228,7 +228,7 @@ export function buildUploadSecurityMetadata(input: {
 }): UploadSecurityMetadata {
   const scan = input.scan;
   const scanProvider = scan?.provider ?? (process.env[MALWARE_SCANNER_PROVIDER_ENV]?.trim() || 'not_configured');
-  const scanRequired = scan?.required ?? process.env[REQUIRE_MALWARE_SCAN_ENV] === 'true';
+  const scanRequired = scan?.required ?? (process.env[REQUIRE_MALWARE_SCAN_ENV] === 'true');
   const mimeDetected = input.mimeDetected ?? null;
   const fileHash = input.fileHash ?? null;
 
