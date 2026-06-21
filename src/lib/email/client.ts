@@ -23,7 +23,12 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const from = input.from ?? getDefaultFromAddress();
 
   if (!apiKey) {
-    console.info('[RISCK COMPLY email skipped]');
+    console.info('[RISCK COMPLY email skipped]', {
+      to: input.to,
+      subject: input.subject,
+      from,
+    });
+
     return { sent: false, provider: 'console' };
   }
 
@@ -43,8 +48,9 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   });
 
   if (!response.ok) {
+    const body = await response.text();
     const error = new Error(`Resend email failed with status ${response.status}`);
-    reportError(error, { area: 'email_send', status: response.status, provider: 'resend' });
+    reportError(error, { area: 'email_send', status: response.status, body: body.slice(0, 300), to: input.to, subject: input.subject });
     throw error;
   }
 
