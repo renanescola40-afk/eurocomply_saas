@@ -104,6 +104,31 @@ export async function GET(request: Request) {
       entitlements: planCheck.entitlements,
     });
     const integrity = buildEvidencePackIntegrity(pack);
+
+    if (!integrity.signed) {
+      reportError(new Error('Audit evidence pack signing secret is unavailable'), {
+        area: 'audit_evidence_pack_signing',
+        organizationId: organization.id,
+        userId: user.id,
+      });
+
+      await createAuditEvent({
+        organizationId: organization.id,
+        actorUserId: user.id,
+        action: 'security.failure',
+        entityType: 'audit_evidence_pack',
+        entityId: organization.id,
+        metadata: {
+          reason: 'audit_evidence_pack_signing_unavailable',
+          actorRole: permission.role,
+          stepUpAction: stepUp.assessment.action,
+          stepUpVerifiedAt: stepUp.assessment.verifiedAt,
+        },
+      });
+
+      return noStoreJson({ error: 'audit_evidence_pack_signing_unavailable' }, { status: 503 });
+    }
+
     const exportPayload = {
       schemaVersion: '2026-06-10',
       exportType: 'eurocomply.audit_evidence_pack',
@@ -115,7 +140,7 @@ export async function GET(request: Request) {
     await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
-      action: 'audit_evidence_pack.exported',
+      action: 'audit_chain.evidence_exported',
       entityType: 'audit_evidence_pack',
       entityId: organization.id,
       metadata: {
@@ -129,6 +154,7 @@ export async function GET(request: Request) {
         actorRole: permission.role,
         payloadHash: integrity.payloadHash,
         signed: integrity.signed,
+        signatureAlgorithm: integrity.hmacAlgorithm,
         stepUpAction: stepUp.assessment.action,
         stepUpVerifiedAt: stepUp.assessment.verifiedAt,
       },

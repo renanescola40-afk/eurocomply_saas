@@ -6,8 +6,13 @@ const auditEventsPath = 'src/server/queries/audit-events.ts';
 const auditEventsTestPath = 'src/server/queries/audit-events.test.ts';
 const migrationPath = 'supabase/migrations/20260612_audit_event_hash_chain.sql';
 const chainedRpcMigrationPath = 'supabase/migrations/20260613_audit_event_chained_rpc.sql';
+const enterpriseRpcMigrationPath = 'supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql';
 const concurrencyRunbookPath = 'docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md';
 const verifierRoutePath = 'src/app/api/audit/chain/verify/route.ts';
+const evidencePackRoutePath = 'src/app/api/audit/evidence-pack/route.ts';
+const verifierRouteTestPath = 'src/app/api/audit/chain/verify/route.test.ts';
+const evidencePackRouteTestPath = 'src/app/api/audit/evidence-pack/route.test.ts';
+const runtimeEvidencePath = 'docs/security/evidence/runtime/audit-chain-live-validation.json';
 const preflightPath = 'scripts/preflight.mjs';
 
 const helperRequiredTokens = [
@@ -39,9 +44,12 @@ const testRequiredTokens = [
 
 const auditEventsRequiredTokens = [
   'buildAuditChainRecord',
+  'sanitizeAuditMetadata',
   'getPreviousAuditHash',
   'buildChainedPayload',
   'append_audit_event_chained',
+  'p_id',
+  'p_created_at',
   'p_previous_hash',
   'p_event_hash',
   'p_hash_signature',
@@ -52,7 +60,9 @@ const auditEventsRequiredTokens = [
   'hash_algorithm',
   'hash_signature',
   'sha256',
-  'legacy',
+  'transactional_append_unavailable',
+  'AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK',
+  'AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK',
   'actor_id',
   'actor_user_id',
   'isMissingAuditChainColumns',
@@ -61,15 +71,20 @@ const auditEventsRequiredTokens = [
 const auditEventsTestRequiredTokens = [
   'persists through the transactional audit-chain RPC when available',
   'retries the transactional RPC when Supabase reports a previous hash mismatch',
-  'falls back to direct chained insert only when the transactional RPC is unavailable',
+  'fails closed instead of using non-transactional append when the RPC is unavailable by default',
+  'allows direct chained insert only through an explicit non-enterprise fallback flag',
+  'sanitizes audit metadata before hashing and persistence',
   'append_audit_event_chained',
   'audit chain previous hash mismatch',
   '40001',
+  'p_id',
+  'p_created_at',
   'p_previous_hash',
   'p_event_hash',
   'transactional: true',
   'transactional: false',
   'rpcUnavailable: true',
+  'transactional_append_unavailable',
 ];
 
 const migrationRequiredTokens = [
@@ -98,6 +113,21 @@ const chainedRpcMigrationRequiredTokens = [
   'security definer',
 ];
 
+const enterpriseRpcMigrationRequiredTokens = [
+  'drop function if exists public.append_audit_event_chained',
+  'p_id uuid',
+  'p_created_at timestamptz',
+  'id,',
+  'created_at,',
+  'p_id,',
+  'p_created_at,',
+  'pg_advisory_xact_lock',
+  'hashtext(p_organization_id::text)',
+  'audit chain previous hash mismatch',
+  'security definer',
+  'service_role',
+];
+
 const concurrencyRunbookRequiredTokens = [
   'Audit Chain Concurrency Runbook',
   'pg_advisory_xact_lock',
@@ -116,9 +146,13 @@ const verifierRequiredTokens = [
   'read_audit',
   'assertPlanAtLeast',
   'business',
+  'requireStepUpForRequest',
+  'audit_chain_verify',
   'checkDistributedRateLimit',
   'listAuditEvents',
   'verifyAuditChain',
+  'createAuditEvent',
+  'audit_chain.verified',
   'noStoreJson',
   'legacyEvents',
   'chainedEventsChecked',
@@ -126,6 +160,45 @@ const verifierRequiredTokens = [
   'DEFAULT_AUDIT_CHAIN_VERIFY_LIMIT',
   'MAX_AUDIT_CHAIN_VERIFY_LIMIT',
   'invalid_limit',
+];
+
+const evidencePackRouteRequiredTokens = [
+  'assertOrganizationPermission',
+  'export_data',
+  'requireStepUpForRequest',
+  'audit_chain_export',
+  'buildEvidencePackIntegrity',
+  '!integrity.signed',
+  'audit_evidence_pack_signing_unavailable',
+  'audit_chain.evidence_exported',
+  'security.failure',
+  'signatureAlgorithm',
+];
+
+const verifierRouteTestRequiredTokens = [
+  'rejects verification before step-up when RBAC is missing',
+  'verifies the chain only after RBAC and signed step-up',
+  'audit_chain.verified',
+  'verificationAuditEvent',
+];
+
+const evidencePackRouteTestRequiredTokens = [
+  'returns a signed export only after RBAC and step-up',
+  'fails closed when the evidence export cannot be signed',
+  'audit_chain.evidence_exported',
+  'audit_evidence_pack_signing_unavailable',
+];
+
+const runtimeEvidenceRequiredTokens = [
+  'audit-chain-live-validation',
+  'appendNormal',
+  'appendConcurrent',
+  'tamperDetection',
+  'signedExport',
+  'verifyWithoutPermission',
+  'verifyWithStepUp',
+  'criticalEventCoverage',
+  'docs/security/evidence/runtime/audit-chain-live-validation.json',
 ];
 
 const failures = [];
@@ -156,8 +229,13 @@ const auditEvents = read(auditEventsPath);
 const auditEventsTest = read(auditEventsTestPath);
 const migration = read(migrationPath);
 const chainedRpcMigration = read(chainedRpcMigrationPath);
+const enterpriseRpcMigration = read(enterpriseRpcMigrationPath);
 const concurrencyRunbook = read(concurrencyRunbookPath);
 const verifierRoute = read(verifierRoutePath);
+const evidencePackRoute = read(evidencePackRoutePath);
+const verifierRouteTest = read(verifierRouteTestPath);
+const evidencePackRouteTest = read(evidencePackRouteTestPath);
+const runtimeEvidence = read(runtimeEvidencePath);
 const preflight = read(preflightPath);
 
 if (helper) requireTokens(helperPath, helper, helperRequiredTokens);
@@ -166,8 +244,13 @@ if (auditEvents) requireTokens(auditEventsPath, auditEvents, auditEventsRequired
 if (auditEventsTest) requireTokens(auditEventsTestPath, auditEventsTest, auditEventsTestRequiredTokens);
 if (migration) requireTokens(migrationPath, migration, migrationRequiredTokens);
 if (chainedRpcMigration) requireTokens(chainedRpcMigrationPath, chainedRpcMigration, chainedRpcMigrationRequiredTokens);
+if (enterpriseRpcMigration) requireTokens(enterpriseRpcMigrationPath, enterpriseRpcMigration, enterpriseRpcMigrationRequiredTokens);
 if (concurrencyRunbook) requireTokens(concurrencyRunbookPath, concurrencyRunbook, concurrencyRunbookRequiredTokens);
 if (verifierRoute) requireTokens(verifierRoutePath, verifierRoute, verifierRequiredTokens);
+if (evidencePackRoute) requireTokens(evidencePackRoutePath, evidencePackRoute, evidencePackRouteRequiredTokens);
+if (verifierRouteTest) requireTokens(verifierRouteTestPath, verifierRouteTest, verifierRouteTestRequiredTokens);
+if (evidencePackRouteTest) requireTokens(evidencePackRouteTestPath, evidencePackRouteTest, evidencePackRouteTestRequiredTokens);
+if (runtimeEvidence) requireTokens(runtimeEvidencePath, runtimeEvidence, runtimeEvidenceRequiredTokens);
 
 if (preflight && !(preflight.includes('AUDIT_CHAIN_SIGNING_SECRET') || preflight.includes('auditSigningEnv'))) {
   failures.push(`${preflightPath} must recommend audit-chain signing material`);
@@ -181,8 +264,16 @@ if (preflight && !preflight.includes(chainedRpcMigrationPath)) {
   failures.push(`${preflightPath} must require the transactional audit chain RPC migration`);
 }
 
+if (preflight && !preflight.includes(enterpriseRpcMigrationPath)) {
+  failures.push(`${preflightPath} must require the enterprise audit chain hardening migration`);
+}
+
 if (preflight && !preflight.includes(concurrencyRunbookPath)) {
   failures.push(`${preflightPath} must require the audit chain concurrency runbook`);
+}
+
+if (preflight && !preflight.includes(runtimeEvidencePath)) {
+  failures.push(`${preflightPath} must require audit-chain runtime evidence`);
 }
 
 if (helper && !helper.includes('.sort(([left], [right]) => left.localeCompare(right))')) {
@@ -205,7 +296,13 @@ if (auditEvents && !auditEvents.includes('randomUUID')) {
   failures.push(`${auditEventsPath} must assign the audit event id before hashing`);
 }
 
-if (verifierRoute && verifierRoute.includes('Math.min(Math.max')) {
+if (auditEvents && !auditEvents.includes('MAX_CHAIN_APPEND_ATTEMPTS = 4')) {
+  failures.push(`${auditEventsPath} must retry concurrent previous-hash conflicts more than once`);
+}
+
+const routeSilentlyClampsLimit = verifierRoute.includes('Math.min(Math.max');
+
+if (verifierRoute && routeSilentlyClampsLimit) {
   failures.push(`${verifierRoutePath} must reject invalid verification limits instead of silently clamping them`);
 }
 

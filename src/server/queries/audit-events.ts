@@ -5,11 +5,20 @@ import { buildAuditChainRecord } from '@/server/security/audit-chain';
 
 type AuditEventInput = {
   organizationId: string;
-  actorUserId: string;
+  actorUserId?: string | null;
   action: string;
-  entityType: string;
+  entityType?: string | null;
   entityId?: string | null;
   metadata?: Record<string, unknown>;
+};
+
+type NormalizedAuditEventInput = {
+  organizationId: string;
+  actorUserId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  metadata: Record<string, unknown>;
 };
 
 export type AuditEventRecord = {
@@ -33,7 +42,31 @@ type SupabaseError = { code?: string; message?: string };
 const AUDIT_EVENT_COLUMNS = 'id,organization_id,actor_user_id,action,entity_type,entity_id,metadata,created_at,previous_hash,event_hash,hash_algorithm,hash_signature';
 const LEGACY_AUDIT_EVENT_COLUMNS = 'id,organization_id,actor_user_id:actor_id,action,entity_type,entity_id,metadata,created_at';
 const CHAIN_APPEND_RPC = 'append_audit_event_chained';
-const MAX_CHAIN_APPEND_ATTEMPTS = 2;
+const MAX_CHAIN_APPEND_ATTEMPTS = 4;
+const NON_TRANSACTIONAL_FALLBACK_ENV = 'AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK';
+const LEGACY_FALLBACK_ENV = 'AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK';
+const MAX_METADATA_DEPTH = 6;
+const MAX_METADATA_ARRAY_LENGTH = 50;
+const MAX_METADATA_KEYS = 80;
+const MAX_METADATA_STRING_LENGTH = 2048;
+
+const BLOCKED_METADATA_KEYS = [
+  'password',
+  'passwd',
+  'token',
+  'secret',
+  'apikey',
+  'api_key',
+  'authorization',
+  'cookie',
+  'set-cookie',
+  'jwt',
+  'session',
+  'csrf',
+  'mfa_code',
+  'otp',
+  'private_key',
+];
 
 function isMissingAuditEventsTable(error: SupabaseError) {
   return error.code === '42P01' || error.code === 'PGRST205' || /audit_events/i.test(error.message ?? '');
@@ -53,6 +86,74 @@ function isAuditChainPreviousHashMismatch(error: SupabaseError) {
 
 const isPreviousHashMismatch = isAuditChainPreviousHashMismatch;
 
+function isFallbackEnabled(name: string) {
+  return (process.env[name] ?? '').trim().toLowerCase() === 'true';
+}
+
+export function isNonTransactionalAuditAppendFallbackAllowed() {
+  return isFallbackEnabled(NON_TRANSACTIONAL_FALLBACK_ENV);
+}
+
+function isLegacyAuditAppendFallbackAllowed() {
+  return isFallbackEnabled(LEGACY_FALLBACK_ENV);
+}
+
+function isBlockedMetadataKey(key: string) {
+  const normalized = key.trim().toLowerCase();
+  return BLOCKED_METADATA_KEYS.some((blocked) => normalized.includes(blocked));
+}
+
+function sanitizeString(value: string) {
+  return value.length > MAX_METADATA_STRING_LENGTH ? `${value.slice(0, MAX_METADATA_STRING_LENGTH)}…[truncated]` : value;
+}
+
+function sanitizeAuditValue(value: unknown, depth: number): unknown {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') return sanitizeString(value);
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
+
+  if (Array.isArray(value)) {
+    if (depth >= MAX_METADATA_DEPTH) return '[max-depth]';
+    return value.slice(0, MAX_METADATA_ARRAY_LENGTH).map((entry) => sanitizeAuditValue(entry, depth + 1));
+  }
+
+  if (typeof value === 'object') {
+    if (depth >= MAX_METADATA_DEPTH) return '[max-depth]';
+
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([key]) => !isBlockedMetadataKey(key))
+        .slice(0, MAX_METADATA_KEYS)
+        .map(([key, entryValue]) => [key, sanitizeAuditValue(entryValue, depth + 1)]),
+    );
+  }
+
+  return null;
+}
+
+export function sanitizeAuditMetadata(metadata?: Record<string, unknown>): Record<string, unknown> {
+  if (!metadata) return {};
+  return sanitizeAuditValue(metadata, 0) as Record<string, unknown>;
+}
+
+function normalizeAuditEventInput(input: AuditEventInput): NormalizedAuditEventInput | null {
+  const organizationId = input.organizationId?.trim();
+  const action = input.action?.trim();
+
+  if (!organizationId || !action) return null;
+
+  return {
+    organizationId,
+    actorUserId: input.actorUserId?.trim() || null,
+    action,
+    entityType: input.entityType?.trim() || 'system',
+    entityId: input.entityId?.trim() || null,
+    metadata: sanitizeAuditMetadata(input.metadata),
+  };
+}
+
 async function getPreviousAuditHash(supabase: SupabaseAdminClient, organizationId: string) {
   const { data, error } = await supabase
     .from('audit_events')
@@ -69,7 +170,7 @@ async function getPreviousAuditHash(supabase: SupabaseAdminClient, organizationI
   return typeof hash === 'string' ? hash : null;
 }
 
-function buildChainedPayload(input: AuditEventInput, previousHash: string | null) {
+function buildChainedPayload(input: NormalizedAuditEventInput, previousHash: string | null) {
   const id = randomUUID();
   const createdAt = new Date().toISOString();
   const chain = buildAuditChainRecord(
@@ -79,14 +180,16 @@ function buildChainedPayload(input: AuditEventInput, previousHash: string | null
       actorUserId: input.actorUserId,
       action: input.action,
       entityType: input.entityType,
-      entityId: input.entityId ?? null,
-      metadata: input.metadata ?? {},
+      entityId: input.entityId,
+      metadata: input.metadata,
       createdAt,
     },
     previousHash,
   );
 
   return {
+    id,
+    createdAt,
     chain,
     payload: {
       id,
@@ -94,8 +197,8 @@ function buildChainedPayload(input: AuditEventInput, previousHash: string | null
       actor_user_id: input.actorUserId,
       action: input.action,
       entity_type: input.entityType,
-      entity_id: input.entityId ?? null,
-      metadata: input.metadata ?? {},
+      entity_id: input.entityId,
+      metadata: input.metadata,
       created_at: createdAt,
       previous_hash: chain.previousHash,
       event_hash: chain.eventHash,
@@ -105,25 +208,27 @@ function buildChainedPayload(input: AuditEventInput, previousHash: string | null
   };
 }
 
-function buildLegacyPayload(input: AuditEventInput) {
+function buildLegacyPayload(input: NormalizedAuditEventInput) {
   return {
     organization_id: input.organizationId,
     actor_id: input.actorUserId,
     action: input.action,
     entity_type: input.entityType,
-    entity_id: input.entityId ?? null,
-    metadata: input.metadata ?? {},
+    entity_id: input.entityId,
+    metadata: input.metadata,
   };
 }
 
-function buildAuditChainRpcParams(input: AuditEventInput, chain: ReturnType<typeof buildAuditChainRecord>) {
+function buildAuditChainRpcParams(input: NormalizedAuditEventInput, chain: ReturnType<typeof buildAuditChainRecord>, id: string, createdAt: string) {
   return {
+    p_id: id,
     p_organization_id: input.organizationId,
     p_actor_user_id: input.actorUserId,
     p_action: input.action,
     p_entity_type: input.entityType,
-    p_entity_id: input.entityId ?? null,
-    p_metadata: input.metadata ?? {},
+    p_entity_id: input.entityId,
+    p_metadata: input.metadata,
+    p_created_at: createdAt,
     p_previous_hash: chain.previousHash,
     p_event_hash: chain.eventHash,
     p_hash_signature: chain.signature ?? null,
@@ -131,14 +236,14 @@ function buildAuditChainRpcParams(input: AuditEventInput, chain: ReturnType<type
   };
 }
 
-async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: AuditEventInput) {
+async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: NormalizedAuditEventInput) {
   let lastError: SupabaseError | null = null;
 
   for (let attempt = 1; attempt <= MAX_CHAIN_APPEND_ATTEMPTS; attempt += 1) {
     const previousHash = await getPreviousAuditHash(supabase, input.organizationId);
-    const { chain } = buildChainedPayload(input, previousHash);
+    const { id, createdAt, chain } = buildChainedPayload(input, previousHash);
 
-    const { error } = await supabase.rpc(CHAIN_APPEND_RPC, buildAuditChainRpcParams(input, chain));
+    const { error } = await supabase.rpc(CHAIN_APPEND_RPC, buildAuditChainRpcParams(input, chain, id, createdAt));
 
     if (!error) {
       return { ok: true as const, eventHash: chain.eventHash, previousHash: chain.previousHash, viaRpc: true as const };
@@ -156,7 +261,7 @@ async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: Aud
   return { ok: false as const, error: lastError };
 }
 
-async function appendAuditEventWithDirectInsert(supabase: SupabaseAdminClient, input: AuditEventInput) {
+async function appendAuditEventWithDirectInsert(supabase: SupabaseAdminClient, input: NormalizedAuditEventInput) {
   const previousHash = await getPreviousAuditHash(supabase, input.organizationId);
   const { chain, payload } = buildChainedPayload(input, previousHash);
   const { error } = await supabase.from('audit_events').insert(payload);
@@ -169,13 +274,19 @@ async function appendAuditEventWithDirectInsert(supabase: SupabaseAdminClient, i
 }
 
 export async function createAuditEvent(input: AuditEventInput) {
+  const normalizedInput = normalizeAuditEventInput(input);
+
+  if (!normalizedInput) {
+    return { persisted: false, reason: 'invalid_audit_event_input' as const };
+  }
+
   const supabase = tryCreateAdminClient();
 
   if (!supabase) {
-    return { persisted: false };
+    return { persisted: false, reason: 'admin_client_unavailable' as const };
   }
 
-  const rpcAppend = await appendAuditEventWithRpc(supabase, input);
+  const rpcAppend = await appendAuditEventWithRpc(supabase, normalizedInput);
 
   if (rpcAppend.ok) {
     return {
@@ -186,36 +297,41 @@ export async function createAuditEvent(input: AuditEventInput) {
     };
   }
 
-  if (rpcAppend.error && !isMissingAuditChainRpc(rpcAppend.error)) {
-    console.warn('[audit] create_event_rpc_failed', { code: rpcAppend.error.code ?? 'unknown' });
-    return { persisted: false };
+  if (rpcAppend.error && isMissingAuditChainRpc(rpcAppend.error) && isNonTransactionalAuditAppendFallbackAllowed()) {
+    const directAppend = await appendAuditEventWithDirectInsert(supabase, normalizedInput);
+
+    if (directAppend.ok) {
+      return {
+        persisted: true,
+        eventHash: directAppend.eventHash,
+        previousHash: directAppend.previousHash,
+        transactional: false,
+        rpcUnavailable: true,
+      };
+    }
+
+    if (directAppend.error && !isMissingAuditChainColumns(directAppend.error)) {
+      console.warn('[audit] create_event_direct_append_failed', { code: directAppend.error.code ?? 'unknown' });
+      return { persisted: false, reason: 'direct_append_failed' as const };
+    }
   }
 
-  const directAppend = await appendAuditEventWithDirectInsert(supabase, input);
+  if (rpcAppend.error && isMissingAuditChainRpc(rpcAppend.error) && isLegacyAuditAppendFallbackAllowed()) {
+    const { error: legacyError } = await supabase.from('audit_events').insert(buildLegacyPayload(normalizedInput));
 
-  if (directAppend.ok) {
-    return {
-      persisted: true,
-      eventHash: directAppend.eventHash,
-      previousHash: directAppend.previousHash,
-      transactional: false,
-      rpcUnavailable: true,
-    };
+    if (!legacyError) {
+      return { persisted: true, legacy: true };
+    }
+
+    console.warn('[audit] create_event_legacy_failed', { code: legacyError.code ?? 'unknown' });
+    return { persisted: false, reason: 'legacy_append_failed' as const };
   }
 
-  if (directAppend.error && !isMissingAuditChainColumns(directAppend.error)) {
-    console.warn('[audit] create_event_failed', { code: directAppend.error.code ?? 'unknown' });
-    return { persisted: false };
+  if (rpcAppend.error) {
+    console.warn('[audit] create_event_transactional_append_failed', { code: rpcAppend.error.code ?? 'unknown' });
   }
 
-  const { error: legacyError } = await supabase.from('audit_events').insert(buildLegacyPayload(input));
-
-  if (legacyError) {
-    console.warn('[audit] create_event_failed', { code: legacyError.code ?? 'unknown' });
-    return { persisted: false };
-  }
-
-  return { persisted: true, legacy: true };
+  return { persisted: false, reason: 'transactional_append_unavailable' as const };
 }
 
 export async function listAuditEvents(organizationId: string, limit = 100): Promise<AuditEventRecord[]> {

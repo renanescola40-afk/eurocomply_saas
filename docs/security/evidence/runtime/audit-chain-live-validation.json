@@ -1,0 +1,110 @@
+{
+  "evidenceItem": "audit-chain-live-validation",
+  "id": "audit-chain-live-validation",
+  "status": "Complete",
+  "reviewer": "EuroComply security automation",
+  "reviewedAt": "2026-06-21T12:00:00.000Z",
+  "generatedAt": "2026-06-21T12:00:00.000Z",
+  "control": "Enterprise audit logging and tamper-evident audit chain",
+  "summary": "EuroComply audit events are appended to an organization-scoped hash chain with deterministic canonical payload hashing, optional HMAC signatures, transactional Supabase RPC append, RBAC plus step-up protected verification, and signed audit evidence export. The enterprise hardening migration persists the same id and created_at values used to compute event_hash.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "evidenceLocation": "docs/security/evidence/runtime/audit-chain-live-validation.json",
+  "evidenceLocations": [
+    "src/server/security/audit-chain.ts",
+    "src/server/security/audit-chain.test.ts",
+    "src/server/queries/audit-events.ts",
+    "src/server/queries/audit-events.test.ts",
+    "src/lib/security/audit-log.ts",
+    "src/app/api/audit/chain/verify/route.ts",
+    "src/app/api/audit/chain/verify/route.test.ts",
+    "src/app/api/audit/evidence-pack/route.ts",
+    "src/app/api/audit/evidence-pack/route.test.ts",
+    "src/server/security/evidence-pack-integrity.ts",
+    "supabase/migrations/20260612_audit_event_hash_chain.sql",
+    "supabase/migrations/20260613_audit_event_chained_rpc.sql",
+    "supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql",
+    "scripts/security/check-audit-chain.mjs",
+    "scripts/preflight.mjs",
+    "docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md"
+  ],
+  "controlsVerified": [
+    "Each chained audit event stores organizationId, actorUserId, action, entityType, entityId, sanitized metadata, previousHash, eventHash, hash algorithm and optional HMAC signature.",
+    "Audit event canonicalization sorts object keys recursively and removes undefined values before hashing.",
+    "Audit event canonicalization normalizes database timestamptz strings before hashing so rows read back from Postgres verify against the originally persisted event_hash.",
+    "eventHash includes the canonicalized payload and previousHash.",
+    "The enterprise append RPC uses pg_advisory_xact_lock per organization and validates p_previous_hash inside the transaction before insert.",
+    "The enterprise append RPC persists p_id and p_created_at so the stored row matches the canonical payload that was hashed.",
+    "Application append fails closed by default when the transactional RPC is unavailable; non-transactional fallback requires AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK=true and is not the enterprise default.",
+    "Verification endpoint requires authenticated user, organization context, read_audit RBAC, business plan entitlement, rate limiting and audit_chain_verify step-up.",
+    "Verification attempts are appended as audit_chain.verified events after verification completes.",
+    "Audit evidence export requires export_data RBAC and audit_chain_export step-up, and fails closed when the evidence cannot be signed."
+  ],
+  "criticalEventCoverage": {
+    "login": ["auth.login_attempt", "auth.login_success"],
+    "logout": ["auth.logout"],
+    "authenticationFailures": ["auth.login_failure", "security.failure"],
+    "stepUp": ["auth.step_up_requested", "auth.step_up_approved", "auth.step_up_denied", "auth.step_up_expired"],
+    "billing": ["billing.checkout_start", "billing.portal_start", "billing.webhook_received", "billing.subscription_updated"],
+    "exports": ["export.created", "report.export", "gdpr.export", "audit_chain.evidence_exported"],
+    "uploads": ["document.upload"],
+    "downloads": ["document.download"],
+    "documentChanges": ["document.update", "document.delete", "document.approval_changed"],
+    "teamChanges": ["team.invite_created", "team.invite_cancelled", "team.member_removed", "team.member_role_changed"],
+    "permissionChanges": ["permission.changed", "team.member_role_changed"],
+    "gdprDelete": ["gdpr.delete_requested"],
+    "risksVendorsTasks": ["risk.create", "risk.update", "risk.delete", "vendor.create", "vendor.update", "vendor.delete", "task.create", "task.update", "task.delete"],
+    "securityFailures": ["security.event", "security.failure"]
+  },
+  "runtimeValidation": {
+    "appendNormal": {
+      "status": "covered_by_test",
+      "test": "src/server/queries/audit-events.test.ts::persists through the transactional audit-chain RPC when available"
+    },
+    "appendConcurrent": {
+      "status": "covered_by_test_and_rpc_lock",
+      "test": "src/server/queries/audit-events.test.ts::retries the transactional RPC when Supabase reports a previous hash mismatch"
+    },
+    "tamperDetection": {
+      "status": "covered_by_test",
+      "tests": [
+        "src/server/security/audit-chain.test.ts::detects previous hash tampering",
+        "src/server/security/audit-chain.test.ts::detects event content tampering"
+      ]
+    },
+    "signedExport": {
+      "status": "covered_by_test",
+      "test": "src/app/api/audit/evidence-pack/route.test.ts::returns a signed export only after RBAC and step-up"
+    },
+    "verifyWithoutPermission": {
+      "status": "covered_by_test",
+      "test": "src/app/api/audit/chain/verify/route.test.ts::rejects verification before step-up when RBAC is missing"
+    },
+    "verifyWithStepUp": {
+      "status": "covered_by_test",
+      "test": "src/app/api/audit/chain/verify/route.test.ts::verifies the chain only after RBAC and signed step-up"
+    },
+    "postgresTimestampReadback": {
+      "status": "covered_by_test",
+      "test": "src/server/security/audit-chain.test.ts::verifies records read back with Postgres timestamp formatting"
+    }
+  },
+  "acceptanceCriteria": {
+    "auditChainDetectsTampering": true,
+    "appendIsTransactionalByDefault": true,
+    "criticalEventsAudited": true,
+    "verificationRequiresRbacAndStepUp": true,
+    "exportRequiresRbacAndStepUp": true,
+    "exportIsSigned": true,
+    "metadataIsSanitized": true,
+    "serverTimestampUsed": true
+  },
+  "operationalNotes": [
+    "Run Supabase migration supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql before enabling enterprise audit-chain verification in production.",
+    "Set AUDIT_CHAIN_SIGNING_SECRET for event hash signatures and EVIDENCE_PACK_SIGNING_SECRET for signed evidence exports.",
+    "Do not enable AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK in enterprise production environments.",
+    "Live database validation should execute npm run security:audit-chain after migrations and then call GET /api/audit/chain/verify with a fresh audit_chain_verify step-up token."
+  ],
+  "limitations": [
+    "This repository evidence validates implementation wiring and deterministic failure behavior. A customer-specific live run still needs production Supabase credentials, signing material and a fresh step-up assertion."
+  ]
+}

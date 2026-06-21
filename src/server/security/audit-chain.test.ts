@@ -4,6 +4,7 @@ import {
   buildAuditChainRecord,
   buildAuditEventHash,
   canonicalizeAuditEvent,
+  canonicalizeAuditTimestamp,
   verifyAuditChain,
   type AuditChainInput,
 } from './audit-chain';
@@ -33,6 +34,16 @@ describe('audit chain', () => {
     expect(left).toBe(right);
   });
 
+  it('canonicalizes Postgres timestamptz strings before hashing', () => {
+    expect(canonicalizeAuditTimestamp('2026-06-12 10:00:00+00')).toBe('2026-06-12T10:00:00.000Z');
+    expect(canonicalizeAuditEvent(baseEvent, null)).toBe(
+      canonicalizeAuditEvent({ ...baseEvent, createdAt: '2026-06-12 10:00:00+00' }, null),
+    );
+    expect(buildAuditEventHash(baseEvent, null)).toBe(
+      buildAuditEventHash({ ...baseEvent, createdAt: '2026-06-12 10:00:00+00' }, null),
+    );
+  });
+
   it('builds deterministic hashes for the same event and previous hash', () => {
     expect(buildAuditEventHash(baseEvent, null)).toBe(buildAuditEventHash(baseEvent, null));
   });
@@ -59,6 +70,38 @@ describe('audit chain', () => {
     );
 
     expect(verifyAuditChain([first, second])).toMatchObject({ ok: true, checked: 2, lastHash: second.eventHash });
+  });
+
+  it('verifies records read back with Postgres timestamp formatting', () => {
+    const first = buildAuditChainRecord(baseEvent, null);
+    const fromDatabase = {
+      ...first,
+      createdAt: '2026-06-12 10:00:00+00',
+    };
+
+    expect(verifyAuditChain([fromDatabase])).toMatchObject({ ok: true, checked: 1, lastHash: first.eventHash });
+  });
+
+  it('verifies a bounded hash-chain segment with a trusted anchor', () => {
+    const first = buildAuditChainRecord(baseEvent, null);
+    const second = buildAuditChainRecord({ ...baseEvent, id: 'evt_002', createdAt: '2026-06-12T11:00:00.000Z' }, first.eventHash);
+    const third = buildAuditChainRecord({ ...baseEvent, id: 'evt_003', createdAt: '2026-06-12T12:00:00.000Z' }, second.eventHash);
+
+    expect(verifyAuditChain([second, third], { expectedPreviousHash: first.eventHash })).toMatchObject({
+      ok: true,
+      checked: 2,
+      expectedPreviousHash: first.eventHash,
+      lastHash: third.eventHash,
+    });
+  });
+
+  it('detects a bounded segment anchor mismatch', () => {
+    const first = buildAuditChainRecord(baseEvent, null);
+    const second = buildAuditChainRecord({ ...baseEvent, id: 'evt_002' }, first.eventHash);
+
+    expect(verifyAuditChain([second], { expectedPreviousHash: 'wrong-anchor' }).failures).toEqual(
+      expect.arrayContaining([expect.objectContaining({ reason: 'previous_hash_mismatch' })]),
+    );
   });
 
   it('detects previous hash tampering', () => {
