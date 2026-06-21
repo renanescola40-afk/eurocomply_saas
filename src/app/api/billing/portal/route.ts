@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { normalizeLocale } from '@/lib/i18n/locales';
+import { writeAuditLog } from '@/lib/security/audit-log';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'organization_required' }, { status: 403 });
     }
 
-    await requirePermission({
+    const permission = await requirePermission({
       userId: user.id,
       organizationId: organization.id,
       permission: 'manage_billing',
@@ -87,6 +88,19 @@ export async function POST(request: Request) {
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,
       return_url: returnUrl,
+    });
+
+    await writeAuditLog({
+      action: 'billing.portal_start',
+      organizationId: organization.id,
+      userId: user.id,
+      entityType: 'stripe_customer_portal_session',
+      entityId: portalSession.id,
+      metadata: {
+        stripeCustomerId: subscription.stripe_customer_id,
+        actorRole: permission.role ?? 'unknown',
+        stepUpAction: stepUp.assessment.action,
+      },
     });
 
     return noStoreJson({
