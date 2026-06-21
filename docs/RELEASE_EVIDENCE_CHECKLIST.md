@@ -142,15 +142,22 @@ Attach evidence for:
 
 - Checkout flow works in the target environment
 - Billing portal flow works in the target environment
-- Webhook signing is configured
-- Subscription state changes are reflected in the app
+- Webhook signing is configured and invalid signatures fail closed
+- Webhook duplicates are idempotent through `public.stripe_events_processed`
+- Unsupported Stripe events are ignored without mutating billing state
+- Subscription created, updated, and deleted events are reflected in the app
+- Stripe `organization_id`, customer, subscription, and plan metadata are validated before local mutation
+- Billing actions require `manage_billing`, trusted origin/mutation checks, and step-up verification
+- Billing changes produce audit events
 
 Accepted evidence:
 
+- `docs/security/evidence/runtime/stripe-billing-validation.json`
 - Stripe test event logs
 - Webhook delivery logs
 - Checkout session evidence
 - Billing portal evidence
+- Focused test output for webhook signature, duplicate webhook, subscription sync, invalid plan, missing step-up, and portal permission denial
 
 ## Observability evidence
 
