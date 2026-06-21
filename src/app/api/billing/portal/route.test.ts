@@ -98,7 +98,7 @@ describe('billing portal API security gates', () => {
     });
     mocks.publicStepUpSummary.mockReturnValue({ verified: true });
     mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => makeSubscriptionLookup()) });
-    mocks.stripePortalCreate.mockResolvedValue({ id: 'bps_123', url: 'https://billing.stripe.test/session/bps_123' });
+    mocks.stripePortalCreate.mockResolvedValue({ id: 'portal_session_fixture', url: 'https://billing.stripe.test/session-fixture' });
     mocks.writeAuditLog.mockResolvedValue(undefined);
   });
 
@@ -121,7 +121,7 @@ describe('billing portal API security gates', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ url: 'https://billing.stripe.test/session/bps_123', stepUp: { verified: true } });
+    expect(body).toEqual({ url: 'https://billing.stripe.test/session-fixture', stepUp: { verified: true } });
     expect(mocks.requirePermission).toHaveBeenCalledWith({
       userId: 'user_admin',
       organizationId: 'org_a',
@@ -139,7 +139,7 @@ describe('billing portal API security gates', () => {
         organizationId: 'org_a',
         userId: 'user_admin',
         entityType: 'stripe_customer_portal_session',
-        entityId: 'bps_123',
+        entityId: 'portal_session_fixture',
       }),
     );
   });
