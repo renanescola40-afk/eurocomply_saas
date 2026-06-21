@@ -2,15 +2,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   MAX_UPLOAD_BYTES,
-  SIGNED_URL_EXPIRES_IN_SECONDS,
-  assertTenantScopedStoragePath,
-  buildTenantIsolatedUploadStoragePath,
-  createMockMalwareScannerProvider,
-  isShortLivedSignedUrlExpiry,
-  scanUploadForMalware,
+  SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS,
+  assertTenantStoragePathInOrganization,
+  buildTenantScopedUploadPath,
+  isSignedUrlExpired,
+  sanitizeUploadFileName,
   shouldBlockUploadForMalwareScan,
-  validateUploadPayload,
+  validateUploadSecurityFile,
 } from '@/server/security/upload-security';
+import { registerMalwareScannerProviderForTest, scanUploadForMalware } from '@/server/security/malware-scan';
 
 const PDF_BYTES = '%PDF-1.7\nbody';
 
@@ -25,19 +25,22 @@ afterEach(() => {
   delete process.env.MALWARE_SCANNER_URL;
   delete process.env.MALWARE_SCANNER_API_KEY;
   delete process.env.MALWARE_SCANNER_ALLOWED_HOSTS;
+  registerMalwareScannerProviderForTest(null);
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
 describe('upload-security enterprise controls', () => {
   it('accepts a valid document only when extension, MIME and magic number agree', async () => {
-    const result = await validateUploadPayload({ file: pdfFile(), maxBytes: MAX_UPLOAD_BYTES });
+    const result = await validateUploadSecurityFile(pdfFile(), { maxBytes: MAX_UPLOAD_BYTES });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.message);
     expect(result.fileHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.checksumSha256).toBe(result.fileHash);
     expect(result.fileSize).toBe(PDF_BYTES.length);
     expect(result.mimeDetected).toBe('application/pdf');
+    expect(result.extension).toBe('pdf');
     expect(result.validation.extension).toBe('pdf');
   });
 
@@ -45,13 +48,13 @@ describe('upload-security enterprise controls', () => {
     const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
     const file = new File([pngBytes], 'image.png', { type: 'application/pdf' });
 
-    const result = await validateUploadPayload({ file, maxBytes: MAX_UPLOAD_BYTES });
+    const result = await validateUploadSecurityFile(file, { maxBytes: MAX_UPLOAD_BYTES });
 
     expect(result).toMatchObject({ ok: false, reason: 'mime_spoofing', mimeDetected: 'image/png' });
   });
 
   it('blocks prohibited executable or script extensions before storage', async () => {
-    const result = await validateUploadPayload({ file: pdfFile('invoice.pdf.exe'), maxBytes: MAX_UPLOAD_BYTES });
+    const result = await validateUploadSecurityFile(pdfFile('invoice.pdf.exe'), { maxBytes: MAX_UPLOAD_BYTES });
 
     expect(result).toMatchObject({ ok: false, reason: 'dangerous_extension' });
   });
@@ -59,17 +62,19 @@ describe('upload-security enterprise controls', () => {
   it('blocks files whose magic number does not match an allowed document type', async () => {
     const file = new File(['<script>alert(1)</script>'], 'policy.pdf', { type: 'application/pdf' });
 
-    const result = await validateUploadPayload({ file, maxBytes: MAX_UPLOAD_BYTES });
+    const result = await validateUploadSecurityFile(file, { maxBytes: MAX_UPLOAD_BYTES });
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('Expected invalid magic number to be blocked');
     expect(['unsupported_mime_type', 'signature_mismatch']).toContain(result.reason);
   });
 
-  it('blocks path traversal file names before reading into storage paths', async () => {
-    const result = await validateUploadPayload({ file: pdfFile('../policy.pdf'), maxBytes: MAX_UPLOAD_BYTES });
+  it('sanitizes traversal-like file names before they can be used as display names', () => {
+    const sanitized = sanitizeUploadFileName('../policy.pdf');
 
-    expect(result).toMatchObject({ ok: false, reason: 'path_traversal' });
+    expect(sanitized).not.toContain('/');
+    expect(sanitized).not.toContain('..');
+    expect(sanitized).toMatch(/policy\.pdf$/);
   });
 
   it('fails closed when enterprise malware scanning is required and scanner is unavailable', async () => {
@@ -117,9 +122,20 @@ describe('upload-security enterprise controls', () => {
 
   it('keeps mock malware scanner providers limited to test/development use', async () => {
     process.env.REQUIRE_MALWARE_SCAN_FOR_UPLOADS = 'true';
-    const provider = createMockMalwareScannerProvider({ status: 'clean', required: true });
+    process.env.MALWARE_SCANNER_PROVIDER = 'mock';
+    registerMalwareScannerProviderForTest({
+      name: 'mock',
+      async scan(_input, context) {
+        return {
+          status: 'clean',
+          provider: context.provider,
+          required: context.required,
+          scannedAt: context.scannedAt,
+        };
+      },
+    });
 
-    const scan = await provider.scan({
+    const scan = await scanUploadForMalware({
       buffer: Buffer.from(PDF_BYTES),
       mimeType: 'application/pdf',
       filename: 'policy.pdf',
@@ -131,20 +147,36 @@ describe('upload-security enterprise controls', () => {
   });
 
   it('rejects cross-tenant storage paths and builds tenant-prefixed upload paths', () => {
-    const storagePath = buildTenantIsolatedUploadStoragePath({
+    const storagePath = buildTenantScopedUploadPath({
       organizationId: 'org-a',
-      actorUserId: 'user-a',
+      userId: 'user-a',
       extension: 'pdf',
     });
 
     expect(storagePath).toMatch(/^org-a\/user-a\/[0-9a-f-]+\.pdf$/);
-    expect(() => assertTenantScopedStoragePath('org-b/user-a/policy.pdf', 'org-a')).toThrow('Document storage path does not match organization scope');
+    expect(() => assertTenantStoragePathInOrganization('org-b/user-a/policy.pdf', 'org-a')).toThrow(
+      'Document storage path does not match organization scope',
+    );
   });
 
   it('enforces short-lived signed URL expiry policy', () => {
-    expect(SIGNED_URL_EXPIRES_IN_SECONDS).toBeLessThanOrEqual(60);
-    expect(isShortLivedSignedUrlExpiry(SIGNED_URL_EXPIRES_IN_SECONDS)).toBe(true);
-    expect(isShortLivedSignedUrlExpiry(61)).toBe(false);
-    expect(isShortLivedSignedUrlExpiry(0)).toBe(false);
+    const issuedAt = new Date('2026-01-01T00:00:00.000Z');
+
+    expect(SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS).toBeLessThanOrEqual(60);
+    expect(
+      isSignedUrlExpired({
+        issuedAt,
+        expiresInSeconds: SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS,
+        now: new Date('2026-01-01T00:00:59.000Z'),
+      }),
+    ).toBe(false);
+    expect(
+      isSignedUrlExpired({
+        issuedAt,
+        expiresInSeconds: SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS,
+        now: new Date('2026-01-01T00:01:00.000Z'),
+      }),
+    ).toBe(true);
+    expect(isSignedUrlExpired({ issuedAt, expiresInSeconds: 0, now: issuedAt })).toBe(true);
   });
 });
