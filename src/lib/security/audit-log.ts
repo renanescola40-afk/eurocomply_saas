@@ -91,28 +91,27 @@ export async function writeAuditLog(input: AuditLogInput) {
       userAgent,
     },
   });
-
-  const payload = {
-    organization_id: input.organizationId ?? null,
-    user_id: actorUserId,
-    action: input.action,
-    entity_type: input.entityType ?? 'system',
-    entity_id: input.entityId ?? null,
-    ip_address: ip,
-    user_agent: userAgent,
-    metadata,
-  };
+  let legacyPersisted = false;
 
   if (supabase) {
-    const { error } = await supabase.from('audit_logs').insert(payload);
+    const { error } = await supabase.from('audit_logs').insert({
+      organization_id: input.organizationId ?? null,
+      actor_user_id: actorUserId,
+      action: input.action,
+      entity_type: input.entityType ?? 'system',
+      entity_id: input.entityId ?? null,
+      metadata,
+    });
 
     if (error) {
       reportError(error, { area: 'audit_log_write', action: input.action, organizationId: input.organizationId ?? undefined, userId: actorUserId ?? undefined });
+    } else {
+      legacyPersisted = true;
     }
   }
 
   if (!input.organizationId) {
-    return { persisted: Boolean(supabase), chained: false as const, reason: 'organization_required_for_chain' as const };
+    return { persisted: legacyPersisted, legacyPersisted, chained: false as const, reason: 'organization_required_for_chain' as const };
   }
 
   const chainResult = await createAuditEvent({
@@ -134,5 +133,5 @@ export async function writeAuditLog(input: AuditLogInput) {
     });
   }
 
-  return { ...chainResult, chained: true as const };
+  return { ...chainResult, legacyPersisted, chained: true as const };
 }
