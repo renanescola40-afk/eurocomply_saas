@@ -1,6 +1,25 @@
 import { createAdminClient, tryCreateAdminClient } from '@/lib/supabase/admin';
 
-const DOCUMENT_COLUMNS = 'id,organization_id,title,status,version,expires_at,created_at,updated_at';
+const DOCUMENT_COLUMNS = 'id,organization_id,name,category,status,expires_at,created_at,updated_at';
+
+type DocumentRow = {
+  id: string;
+  organization_id: string;
+  name?: string | null;
+  category?: string | null;
+  status?: string | null;
+  expires_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+function normalizeDocumentRow(document: DocumentRow) {
+  return {
+    ...document,
+    title: document.name ?? 'Documento sem título',
+    version: 1,
+  };
+}
 
 export async function listDocuments(organizationId: string) {
   const supabase = tryCreateAdminClient();
@@ -17,7 +36,7 @@ export async function listDocuments(organizationId: string) {
     return [];
   }
 
-  return data ?? [];
+  return (data ?? []).map((document) => normalizeDocumentRow(document as DocumentRow));
 }
 
 export async function getDocument(documentId: string, organizationId: string) {
@@ -35,5 +54,5 @@ export async function getDocument(documentId: string, organizationId: string) {
     throw error;
   }
 
-  return data;
+  return normalizeDocumentRow(data as DocumentRow);
 }
