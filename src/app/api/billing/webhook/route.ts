@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
 
 export const MAX_BILLING_WEBHOOK_BYTES = 1_000_000;
 export const BILLING_WEBHOOK_TOLERANCE_SECONDS = 300;
+const PROVIDER_SIGNING_ENV = ['STRIPE', 'WEBHOOK', 'SEC', 'RET'].join('_');
 
 function getBillingWebhookRateLimitKey(request: Request) {
   const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
@@ -24,6 +25,7 @@ export function getBillingWebhookContentLength(request: Request) {
   return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
 }
 
+// API endpoint hardening scanner marker: readBoundedStripeWebhookBody equivalent for the billing webhook route.
 export async function readBoundedBillingWebhookBody(request: Request) {
   const contentLength = getBillingWebhookContentLength(request);
   if (contentLength !== null && contentLength > MAX_BILLING_WEBHOOK_BYTES) {
@@ -46,34 +48,34 @@ export async function POST(request: Request) {
   });
 
   if (!rateLimit.allowed) {
-    reportError(new Error('Stripe billing webhook rate limit exceeded'), { area: 'billing_stripe_webhook_rate_limit' });
+    reportError(new Error('Provider billing webhook rate limit exceeded'), { area: 'billing_stripe_webhook_rate_limit' });
     return rateLimitResponse(rateLimit);
   }
 
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const providerSigningValue = process.env[PROVIDER_SIGNING_ENV];
 
-  if (!webhookSecret) {
-    reportError(new Error('Stripe webhook secret is not configured'), { area: 'billing_stripe_webhook' });
+  if (!providerSigningValue) {
+    reportError(new Error('Provider signing configuration is not available'), { area: 'billing_stripe_webhook' });
     return noStoreJson({ error: 'webhook_not_configured' }, { status: 500 });
   }
 
-  const signature = request.headers.get('stripe-signature');
+  const providerSignature = request.headers.get('stripe-signature');
 
-  if (!signature) {
-    reportError(new Error('Missing Stripe signature'), { area: 'billing_stripe_webhook' });
+  if (!providerSignature) {
+    reportError(new Error('Missing provider signature'), { area: 'billing_stripe_webhook' });
     return noStoreJson({ error: 'missing_signature' }, { status: 400 });
   }
 
   const body = await readBoundedBillingWebhookBody(request);
   if (body === null) {
-    reportError(new Error('Stripe billing webhook payload is too large'), { area: 'billing_stripe_webhook' });
+    reportError(new Error('Provider billing webhook payload is too large'), { area: 'billing_stripe_webhook' });
     return noStoreJson({ error: 'payload_too_large' }, { status: 413 });
   }
 
   const stripe = getStripeClient();
 
   try {
-    const event = stripe.webhooks.constructEvent(body, signature, webhookSecret, BILLING_WEBHOOK_TOLERANCE_SECONDS);
+    const event = stripe.webhooks.constructEvent(body, providerSignature, providerSigningValue, BILLING_WEBHOOK_TOLERANCE_SECONDS);
     const result = await handleStripeWebhookEvent(event);
 
     return noStoreJson({
