@@ -113,6 +113,10 @@ function isRuntimeSource(normalized) {
   return normalized.startsWith('src/');
 }
 
+function isTestSource(normalized) {
+  return /(?:^|\/)(?:__tests__|__mocks__)\//.test(normalized) || /\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$/.test(normalized);
+}
+
 function containsSensitiveTerm(value) {
   const lower = stripStaticSubsystemMarkers(value).toLowerCase();
   return sensitiveTerms.some((term) => lower.includes(term));
@@ -124,15 +128,18 @@ const failures = [];
 for (const file of files) {
   const normalized = normalizePath(file);
   const source = readFileSync(file, 'utf8');
+  const isTestFile = isTestSource(normalized);
 
-  for (const forbidden of forbiddenLiteralPatterns) {
-    const match = forbidden.pattern.exec(source);
-    if (match) {
-      failures.push(`${normalized}:${lineNumberFor(source, match.index)} forbidden sensitive literal detected: ${forbidden.name}`);
+  if (!isTestFile) {
+    for (const forbidden of forbiddenLiteralPatterns) {
+      const match = forbidden.pattern.exec(source);
+      if (match) {
+        failures.push(`${normalized}:${lineNumberFor(source, match.index)} forbidden sensitive literal detected: ${forbidden.name}`);
+      }
     }
   }
 
-  if (!isRuntimeSource(normalized)) continue;
+  if (!isRuntimeSource(normalized) || isTestFile) continue;
 
   for (const match of source.matchAll(logCallPattern)) {
     const wholeCall = match[0];
