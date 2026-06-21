@@ -1,6 +1,6 @@
-# EuroComply Architecture
+# RISCK COMPLY Architecture
 
-EuroComply is a multi-tenant SaaS platform focused on compliance operations.
+RISCK COMPLY is a multi-tenant SaaS platform focused on compliance operations.
 
 ## Core Principles
 
