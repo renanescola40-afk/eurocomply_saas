@@ -1,7 +1,7 @@
 import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getCurrentUser } from '@/server/queries/auth';
-import { listAuditEvents } from '@/server/queries/audit-events';
+import { createAuditEvent, listAuditEvents } from '@/server/queries/audit-events';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { checkDistributedRateLimit } from '@/server/security/rate-limit';
@@ -40,6 +40,13 @@ export function parseAuditChainVerifyLimit(requestUrl: string): AuditChainLimitR
   }
 
   return { ok: true, limit };
+}
+
+function summarizeFailures(failures: ReturnType<typeof verifyAuditChain>['failures']) {
+  return failures.reduce<Record<string, number>>((summary, failure) => {
+    summary[failure.reason] = (summary[failure.reason] ?? 0) + 1;
+    return summary;
+  }, {});
 }
 
 export async function GET(request: Request) {
@@ -124,10 +131,32 @@ export async function GET(request: Request) {
 
   const verification = verifyAuditChain(chainRecords);
   const legacyEvents = events.length - chainRecords.length;
+  const checkedAt = new Date().toISOString();
+  const verificationAuditEvent = await createAuditEvent({
+    organizationId: organization.id,
+    actorUserId: user.id,
+    action: 'audit_chain.verified',
+    entityType: 'audit_chain',
+    entityId: organization.id,
+    metadata: {
+      checkedAt,
+      requestedLimit: parsedLimit.limit,
+      totalEventsLoaded: events.length,
+      chainedEventsChecked: verification.checked,
+      legacyEvents,
+      ok: verification.ok,
+      lastHash: verification.lastHash,
+      failureCount: verification.failures.length,
+      failureSummary: summarizeFailures(verification.failures),
+      stepUpAction: stepUp.assessment.action,
+      stepUpVerifiedAt: stepUp.assessment.verifiedAt,
+      actorRole: permission.role,
+    },
+  });
 
   return noStoreJson({
     organizationId: organization.id,
-    checkedAt: new Date().toISOString(),
+    checkedAt,
     requestedLimit: parsedLimit.limit,
     totalEventsLoaded: events.length,
     chainedEventsChecked: verification.checked,
@@ -135,6 +164,11 @@ export async function GET(request: Request) {
     ok: verification.ok,
     lastHash: verification.lastHash,
     failures: verification.failures,
+    verificationAuditEvent: {
+      persisted: verificationAuditEvent.persisted,
+      transactional: 'transactional' in verificationAuditEvent ? verificationAuditEvent.transactional : undefined,
+      eventHash: 'eventHash' in verificationAuditEvent ? verificationAuditEvent.eventHash : undefined,
+    },
     stepUpVerified: true,
     stepUpVerifiedAt: stepUp.assessment.verifiedAt,
   });
