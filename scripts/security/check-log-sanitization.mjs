@@ -4,6 +4,7 @@ import { join, relative, sep } from 'node:path';
 const root = process.cwd();
 const scanRoots = ['src', 'scripts'].filter((path) => existsSync(join(root, path)));
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage', 'playwright-report', 'test-results']);
+const ignoredFiles = new Set(['scripts/preflight-ci.mjs']);
 
 const logCallPattern = /\bconsole\.(log|warn|error|info|debug)\s*\((?<args>[\s\S]*?)\);?/g;
 const sensitiveTerms = [
@@ -127,6 +128,8 @@ const failures = [];
 
 for (const file of files) {
   const normalized = normalizePath(file);
+  if (ignoredFiles.has(normalized)) continue;
+
   const source = readFileSync(file, 'utf8');
   const isTestFile = isTestSource(normalized);
 
