@@ -59,6 +59,12 @@ function uploadSecurityColumns(metadata: Record<string, unknown> | undefined, fa
   };
 }
 
+function withoutRawStoragePath(metadata: Record<string, unknown> | undefined) {
+  const safeMetadata = { ...(metadata ?? {}) };
+  delete safeMetadata.storagePath;
+  return safeMetadata;
+}
+
 async function auditUploadRequested(input: {
   organizationId: string;
   actorUserId: string;
@@ -201,6 +207,7 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
   await assertCurrentUserCan(payload.organizationId, userId, 'documents:write');
   assertTenantStoragePathInOrganization(payload.storagePath, payload.organizationId);
 
+  const uploadSecurityMetadata = withoutRawStoragePath(payload.metadata);
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
@@ -214,7 +221,7 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
       mime_type: payload.mimeType ?? null,
       size_bytes: payload.sizeBytes ?? null,
       expires_at: payload.expiresAt ?? null,
-      ...uploadSecurityColumns(payload.metadata, payload.mimeType ?? null, payload.sizeBytes ?? null),
+      ...uploadSecurityColumns(uploadSecurityMetadata, payload.mimeType ?? null, payload.sizeBytes ?? null),
     })
     .select('*')
     .single();
@@ -227,7 +234,12 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
     action: 'document.created',
     entityType: 'document',
     entityId: data.id,
-    metadata: { category: payload.category, ...(payload.metadata ?? {}) },
+    metadata: {
+      name: payload.name,
+      category: payload.category,
+      ...uploadSecurityMetadata,
+      hasStoragePath: Boolean(payload.storagePath),
+    },
   });
 
   return data;
@@ -332,7 +344,8 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
         accessPurpose: 'upload',
       }),
       mimeType: uploadValidation.mimeDetected,
-      storagePath,
+      hasStoragePath: true,
+      storagePathTenantPrefixValidated: true,
     };
     const document = await createDocument(
       {
@@ -355,6 +368,7 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
       entityType: 'document',
       entityId: document.id,
       metadata: {
+        name: payload.name,
         category: payload.category,
         ...auditMetadata,
       },
