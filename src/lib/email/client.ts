@@ -23,8 +23,6 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const from = input.from ?? getDefaultFromAddress();
 
   if (!apiKey) {
-    console.info('[RISCK COMPLY email skipped]');
-
     return { sent: false, provider: 'console' };
   }
 
