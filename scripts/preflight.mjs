@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const env = (...parts) => parts.join('_');
 const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
@@ -12,6 +12,7 @@ const stepUpSigningEnv = env('STEP', 'UP', 'SIGNING', 'SECRET');
 const auditSigningEnv = env('AUDIT', 'CHAIN', 'SIGNING', 'SECRET');
 const stepUpAcrEnv = env('STEP', 'UP', 'IDP', 'ACR', 'VALUES');
 const stepUpAmrEnv = env('STEP', 'UP', 'IDP', 'AMR', 'VALUES');
+const auditChainRuntimeEvidencePath = 'docs/security/evidence/runtime/audit-chain-live-validation.json';
 
 // Upload malware/content scanning production envs: REQUIRE_MALWARE_SCAN_FOR_UPLOADS, MALWARE_SCANNER_PROVIDER.
 const malwareScanRequiredEnv = env('REQUIRE', 'MALWARE', 'SCAN', 'FOR', 'UPLOADS');
@@ -93,16 +94,18 @@ const requiredFiles = [
   'scripts/security/check-upload-content-scan.mjs',
   'scripts/security/check-security-responses.mjs',
   'scripts/security/check-audit-chain.mjs',
+  'scripts/security/verify-audit-chain.mjs',
   'scripts/security/check-step-up.mjs',
   'scripts/security/check-step-up-runtime-preflight.mjs',
   'docs/security/ASVS_MATRIX.md',
   'docs/security/EXPORTS_AND_INTEGRITY.md',
   'docs/security/AUDIT_CHAIN.md',
+  'docs/security/AUDIT_CHAIN_MODEL.md',
   'docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md',
   'docs/security/STEP_UP_AUTH.md',
   'docs/security/STEP_UP_ROLLOUT_MATRIX.md',
   'docs/security/evidence/runtime/step-up-mfa-validation.json',
-  'docs/security/evidence/runtime/audit-chain-live-validation.json',
+  auditChainRuntimeEvidencePath,
   'docs/security/BILLING_STEP_UP.md',
   'docs/security/GDPR_DELETE_STEP_UP.md',
   'docs/security/SUPPLY_CHAIN.md',
@@ -129,10 +132,58 @@ function isEnterpriseReleaseEnabled() {
   return process.env[enterpriseReleaseEnv] === 'true' || process.env[legacyEnterpriseReleaseEnv] === 'true';
 }
 
+function readAuditChainRuntimeEvidence() {
+  if (!existsSync(auditChainRuntimeEvidencePath)) {
+    return { ok: false, reason: 'audit_chain_runtime_evidence_missing' };
+  }
+
+  try {
+    const evidence = JSON.parse(readFileSync(auditChainRuntimeEvidencePath, 'utf8'));
+    const acceptance = evidence.acceptanceCriteria ?? {};
+    const runtime = evidence.runtimeValidation ?? {};
+    const requiredRuntimeChecks = [
+      'appendNormal',
+      'appendConcurrent',
+      'tamperDetection',
+      'missingPreviousHash',
+      'signedExport',
+      'exportWithoutPermission',
+      'verifyWithoutPermission',
+      'verifyWithoutStepUp',
+      'verifyWithStepUp',
+      'cliVerifier',
+    ];
+    const missingRuntimeChecks = requiredRuntimeChecks.filter((key) => !runtime[key]?.status);
+    const requiredAcceptance = [
+      'auditChainDetectsTampering',
+      'appendIsTransactionalByDefault',
+      'concurrencySafeAppend',
+      'criticalEventsAudited',
+      'verificationRequiresRbacAndStepUp',
+      'exportRequiresRbacAndStepUp',
+      'exportIsSigned',
+      'metadataIsSanitized',
+      'serverTimestampUsed',
+      'requestContextSanitized',
+      'releaseGateLinked',
+    ];
+    const failedAcceptance = requiredAcceptance.filter((key) => acceptance[key] !== true);
+
+    if (evidence.status !== 'Complete') return { ok: false, reason: 'audit_chain_runtime_evidence_incomplete' };
+    if (missingRuntimeChecks.length > 0) return { ok: false, reason: `audit_chain_runtime_checks_missing:${missingRuntimeChecks.join(',')}` };
+    if (failedAcceptance.length > 0) return { ok: false, reason: `audit_chain_acceptance_missing:${failedAcceptance.join(',')}` };
+
+    return { ok: true, evidence };
+  } catch {
+    return { ok: false, reason: 'audit_chain_runtime_evidence_invalid_json' };
+  }
+}
+
 const missingRequired = required.filter((key) => !process.env[key]);
 const missingRecommended = recommended.filter((key) => !process.env[key]);
 const missingFiles = requiredFiles.filter((path) => !existsSync(path));
 const enterpriseReleaseEnabled = isEnterpriseReleaseEnabled();
+const auditChainEvidence = readAuditChainRuntimeEvidence();
 
 console.log('RISCK COMPLY production preflight');
 console.log('----------------------------------');
@@ -207,8 +258,18 @@ if (enterpriseReleaseEnabled) {
     console.error('Enterprise release requires Supabase MFA or enterprise IdP step-up provider configuration.');
     process.exitCode = 1;
   }
+
+  console.log('Enterprise audit-chain runtime evidence: running');
+
+  if (!auditChainEvidence.ok) {
+    console.error(`Enterprise release requires audit-chain runtime evidence: ${auditChainEvidence.reason}`);
+    process.exitCode = 1;
+  } else {
+    console.log('Enterprise audit-chain runtime evidence: ok');
+  }
 } else {
   console.log(`Enterprise step-up runtime provider preflight: skipped (set ${enterpriseReleaseEnv}=true for enterprise releases; ${legacyEnterpriseReleaseEnv}=true is still accepted during migration).`);
+  console.log('Enterprise audit-chain runtime evidence: skipped (enterprise release flag is disabled).');
 }
 
 if (process.exitCode === 1) {
