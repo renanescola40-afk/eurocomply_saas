@@ -1,6 +1,6 @@
 # Phase 3 Evidence Pack
 
-This evidence pack summarizes the repository-side evidence for EuroComply SaaS Phase 3.
+This evidence pack summarizes the repository-side evidence for RISCK COMPLY SaaS Phase 3.
 
 ## Scope
 

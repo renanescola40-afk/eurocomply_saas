@@ -1,6 +1,6 @@
 # JSON body limit policy
 
-EuroComply API routes must not parse mutable JSON request bodies with `request.json()` directly. Direct parsing skips route-level byte limits and can turn authenticated or public endpoints into avoidable memory/CPU abuse surfaces.
+RISCK COMPLY API routes must not parse mutable JSON request bodies with `request.json()` directly. Direct parsing skips route-level byte limits and can turn authenticated or public endpoints into avoidable memory/CPU abuse surfaces.
 
 ## Required pattern
 

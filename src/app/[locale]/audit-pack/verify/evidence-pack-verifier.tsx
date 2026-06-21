@@ -31,7 +31,7 @@ const copy: Record<Locale, {
 }> = {
   en: {
     paste: 'Paste exported JSON',
-    placeholder: 'Paste the full EuroComply evidence pack export here...',
+    placeholder: 'Paste the full RISCK COMPLY evidence pack export here...',
     verify: 'Verify package',
     verifying: 'Verifying...',
     valid: 'Evidence pack is valid',
@@ -45,7 +45,7 @@ const copy: Record<Locale, {
   },
   pt: {
     paste: 'Cole o JSON exportado',
-    placeholder: 'Cole aqui o export completo do pacote de evidências EuroComply...',
+    placeholder: 'Cole aqui o export completo do pacote de evidências RISCK COMPLY...',
     verify: 'Verificar pacote',
     verifying: 'A verificar...',
     valid: 'O pacote de evidências é válido',
@@ -59,7 +59,7 @@ const copy: Record<Locale, {
   },
   es: {
     paste: 'Pega el JSON exportado',
-    placeholder: 'Pega aquí el export completo del paquete de evidencias EuroComply...',
+    placeholder: 'Pega aquí el export completo del paquete de evidencias RISCK COMPLY...',
     verify: 'Verificar paquete',
     verifying: 'Verificando...',
     valid: 'El paquete de evidencias es válido',
@@ -73,7 +73,7 @@ const copy: Record<Locale, {
   },
   fr: {
     paste: 'Coller le JSON exporté',
-    placeholder: 'Collez ici l’export complet du pack de preuves EuroComply...',
+    placeholder: 'Collez ici l’export complet du pack de preuves RISCK COMPLY...',
     verify: 'Vérifier le pack',
     verifying: 'Vérification...',
     valid: 'Le pack de preuves est valide',
@@ -87,7 +87,7 @@ const copy: Record<Locale, {
   },
   it: {
     paste: 'Incolla il JSON esportato',
-    placeholder: 'Incolla qui l’export completo del pacchetto evidenze EuroComply...',
+    placeholder: 'Incolla qui l’export completo del pacchetto evidenze RISCK COMPLY...',
     verify: 'Verifica pacchetto',
     verifying: 'Verifica...',
     valid: 'Il pacchetto evidenze è valido',
@@ -101,7 +101,7 @@ const copy: Record<Locale, {
   },
   de: {
     paste: 'Exportiertes JSON einfügen',
-    placeholder: 'Fügen Sie hier den vollständigen EuroComply Evidence-Pack-Export ein...',
+    placeholder: 'Fügen Sie hier den vollständigen RISCK COMPLY Evidence-Pack-Export ein...',
     verify: 'Paket prüfen',
     verifying: 'Prüfung...',
     valid: 'Das Evidence Pack ist gültig',

@@ -1,6 +1,6 @@
 # npm Audit Triage
 
-EuroComply treats `npm audit --audit-level=moderate` as a blocking CI control. High and critical findings are release blockers until fixed or explicitly triaged with owner-approved evidence.
+RISCK COMPLY treats `npm audit --audit-level=moderate` as a blocking CI control. High and critical findings are release blockers until fixed or explicitly triaged with owner-approved evidence.
 
 ## CI command
 
@@ -58,4 +58,4 @@ Attach these artifacts to the release evidence package:
 - `npm-audit.json` or GitHub Actions audit artifact;
 - this triage document when any advisory remains open;
 - dependency review result for manifest or lockfile changes;
-- SBOM artifact `eurocomply-sbom`.
+- SBOM artifact `risck-comply-sbom`.
