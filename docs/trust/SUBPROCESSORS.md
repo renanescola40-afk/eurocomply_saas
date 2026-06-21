@@ -4,7 +4,7 @@ Status: draft. This file must be reviewed before being shared with customers.
 
 ## Purpose
 
-This register lists third-party providers that may process customer data or operational metadata for EuroComply. Keep it current before signing a DPA or answering security questionnaires.
+This register lists third-party providers that may process customer data or operational metadata for RISCK COMPLY. Keep it current before signing a DPA or answering security questionnaires.
 
 ## Current draft list
 

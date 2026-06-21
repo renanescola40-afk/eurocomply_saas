@@ -10,11 +10,12 @@ EuroComply accepts customer documents that may contain sensitive compliance evid
 
 | Control | Location |
 | --- | --- |
-| File signature and real MIME validation | `src/server/security/file-signature.ts` |
-| Upload content scan helper | `src/server/security/malware-scan.ts` |
+| Central upload/download/preview security module | `src/server/security/upload-security.ts` |
+| File signature, real MIME and active-content validation | `src/server/security/file-signature.ts` |
+| Malware scanner providers | `src/server/security/malware-scan.ts` |
 | Upload endpoint | `src/app/api/documents/upload/route.ts` |
 | Server action upload path | `src/server/actions/documents.ts` |
-| Signed URL download guard | `src/server/actions/document-downloads.ts` |
+| Signed download/preview guard | `src/server/actions/document-downloads.ts` |
 | Upload security gate | `scripts/security/check-upload-security.mjs` |
 | Upload content scan gate | `scripts/security/check-upload-content-scan.mjs` |
 | Runtime evidence | `docs/security/evidence/runtime/upload-malware-scan-validation.json` |
@@ -24,12 +25,12 @@ EuroComply accepts customer documents that may contain sensitive compliance evid
 
 | Variable | Purpose |
 | --- | --- |
-| `REQUIRE_MALWARE_SCAN_FOR_UPLOADS` | When `true`, uploads must fail-closed if scanning is unavailable or not clean. Enterprise production must set this to `true`. |
-| `MALWARE_SCANNER_PROVIDER` | Identifies the configured scanning provider. Supported values are `clamav`, `clamd`, `http`, `generic-http` and `webhook`. |
-| `MALWARE_SCANNER_TIMEOUT_MS` | Optional scanner timeout. Defaults to 10 seconds. |
+| `REQUIRE_MALWARE_SCAN_FOR_UPLOADS` | When `true`, uploads fail-closed unless a scan returns `clean`. Enterprise production must set this to `true`. |
+| `MALWARE_SCANNER_PROVIDER` | Selects the scanner provider. Supported real providers are `clamav`, `clamd`, `http`, `generic-http` and `webhook`; `mock` is limited to test/development. |
+| `MALWARE_SCANNER_API_KEY` | Server-only bearer token for HTTP scanner integrations. Keep it in the provider secret store. |
+| `MALWARE_SCANNER_TIMEOUT_MS` | Optional scanner timeout. Defaults to 10 seconds. Timeout means unavailable and blocks enterprise uploads. |
 | `MALWARE_SCANNER_CLAMAV_HOST` / `MALWARE_SCANNER_CLAMAV_PORT` | ClamAV/clamd TCP endpoint. Defaults to `127.0.0.1:3310`. |
 | `MALWARE_SCANNER_ENDPOINT` or `MALWARE_SCANNER_URL` | HTTP scanner endpoint for `http`, `generic-http` or `webhook` provider modes. |
-| `MALWARE_SCANNER_API_KEY` | Optional bearer token for HTTP scanner integrations. |
 
 ## Deployment Modes
 
@@ -54,7 +55,7 @@ MALWARE_SCANNER_PROVIDER=clamav
 # or: MALWARE_SCANNER_PROVIDER=http
 ```
 
-In this fail-closed mode upload is rejected unless the scan status is `clean`. `not_configured`, `unavailable`, `suspicious`, `infected` and `error` all block storage.
+In this fail-closed mode upload is rejected unless the scan status is `clean`. `not_configured`, `unavailable`, `suspicious`, `infected`, `error` and scanner timeout all block storage and metadata writes.
 
 ## Provider Contracts
 
@@ -83,28 +84,31 @@ Uploads are rejected before storage if any of the following checks fail:
 ```txt
 size > 10 MB
 empty file
+path traversal in filename
 unsupported extension
 unsafe/double extension such as .pdf.exe
 unsupported real MIME/magic number
 claimed MIME does not match detected MIME
 extension does not match detected content
+PDF active content such as /JavaScript, /OpenAction, /Launch, /RichMedia or embedded files
+OpenXML active content such as vbaProject.bin, macro sheets, ActiveX, OLE or embedded packages
 malware scan is required and not clean
 provider reports infected, suspicious or scan error
 ```
 
 Allowed document MIME types are PDF, PNG, JPEG, DOCX and XLSX. TXT, SVG, HTML, scripts, executables, archives and generic ZIP files are not accepted as controlled document uploads.
 
-## Tenant Isolation and Download Policy
+## Tenant Isolation and Download/Preview Policy
 
-Stored document paths must start with the owning `organizationId`. Application guards enforce the same `<organizationId>/...` prefix before storage writes, deletes or signed URL creation. Authenticated clients must not read, upload, update or delete `controlled-documents` storage objects directly; storage policies intentionally return false for direct authenticated access so every document read is backend-mediated.
+Stored document paths must start with the owning `organizationId`. Application guards enforce the same `<organizationId>/...` prefix before storage writes, deletes, previews or signed URL creation. Upload paths include the actor user id under the organization prefix: `<organizationId>/<actorUserId>/<uuid>.<ext>`. Authenticated clients must not read, upload, update or delete `controlled-documents` storage objects directly; storage policies intentionally return false for direct authenticated access so every document read is backend-mediated.
 
-Signed download URLs are created only after the user is confirmed as a member of the document organization and has `documents:read`; URLs expire after 60 seconds. This prevents direct storage reads from bypassing RBAC, audit events or tenant-scoped document lookup.
+Signed download and preview URLs are created only after the user is confirmed as a member of the document organization and has `documents:read`; URLs expire after 60 seconds. This prevents direct storage reads from bypassing RBAC, audit events or tenant-scoped document lookup.
 
 Backend-generated template documents may use `text/markdown` in the bucket because they are created by trusted server actions, not accepted from user upload forms. User-submitted uploads remain restricted to PDF, PNG, JPEG, DOCX and XLSX.
 
 ## Expected Upload Evidence
 
-Upload audit metadata should include:
+Upload audit metadata and document metadata should include:
 
 ```txt
 scanStatus
@@ -112,11 +116,13 @@ scanProvider
 scanRequired
 scanCheckedAt
 fileHash
+fileSize
+mimeDetected
 organizationId
 actorUserId
 ```
 
-Blocked uploads should record a `document_upload_rejected` event with scan context before returning an error response.
+Blocked uploads should record `upload_blocked` and `document_upload_rejected` events with scan context before returning an error response. Successful scans should record `upload_scanned`; attempts should record `upload_requested`. Download and preview attempts should record `download_requested`; denied access should record `download_denied`.
 
 ## CI Coverage
 
@@ -127,7 +133,7 @@ The upload gates must remain runnable on their own for focused investigations:
 ```bash
 npm run security:upload
 npm run security:upload-content-scan
-npm run test -- tests/security/upload-malware-scan-validation.test.ts
+npm run test -- tests/security/upload-malware-scan-validation.test.ts tests/security/upload-security-module.test.ts src/server/security/file-signature.test.ts
 ```
 
 ## Enterprise Release Rule
@@ -135,12 +141,16 @@ npm run test -- tests/security/upload-malware-scan-validation.test.ts
 Do not claim enterprise upload readiness until:
 
 ```txt
+validateUploadPayload runs before storage upload
 scanUploadForMalware is called before storage upload
 shouldBlockUploadForMalwareScan is enforced
 REQUIRE_MALWARE_SCAN_FOR_UPLOADS is enabled in enterprise production
 MALWARE_SCANNER_PROVIDER points to a real scanning provider
+MALWARE_SCANNER_API_KEY or equivalent server-only credentials are stored outside the repository
+active content blocking tests pass for PDF and OpenXML
 upload rejection audit events include scan status and provider
 security:ci delegates to upload security gates
 cross-tenant signed URL tests pass
+preview signed URLs use the same membership/RBAC/storage prefix checks as downloads
 direct authenticated storage reads and writes remain blocked
 ```

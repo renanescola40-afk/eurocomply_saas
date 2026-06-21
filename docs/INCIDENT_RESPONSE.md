@@ -1,6 +1,6 @@
-# EuroComply Incident Response Playbook
+# RISCK COMPLY Incident Response Playbook
 
-This document defines the operational incident response baseline for EuroComply. It is intended for internal use before and during production launch.
+This document defines the operational incident response baseline for RISCK COMPLY. It is intended for internal use before and during production launch.
 
 ## Severity levels
 

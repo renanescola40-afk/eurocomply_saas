@@ -1,6 +1,45 @@
 import { createAdminClient, tryCreateAdminClient } from '@/lib/supabase/admin';
 
-const DOCUMENT_COLUMNS = 'id,organization_id,title,status,version,expires_at,created_at,updated_at';
+const DOCUMENT_COLUMNS = 'id,organization_id,name,category,status,expires_at,created_at,updated_at';
+
+type DocumentRow = {
+  id: string;
+  organization_id: string;
+  name?: string | null;
+  category?: string | null;
+  status?: string | null;
+  expires_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+type NormalizedDocumentRow = Omit<Required<DocumentRow>, 'name' | 'category' | 'status' | 'expires_at' | 'created_at' | 'updated_at'> & {
+  name: string | null;
+  category: string | null;
+  status: string | null;
+  expires_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  title: string;
+  version: number;
+};
+
+function normalizeDocumentRow(document: DocumentRow): NormalizedDocumentRow {
+  const name = document.name ?? null;
+
+  return {
+    id: document.id,
+    organization_id: document.organization_id,
+    name,
+    category: document.category ?? null,
+    status: document.status ?? null,
+    expires_at: document.expires_at ?? null,
+    created_at: document.created_at ?? null,
+    updated_at: document.updated_at ?? null,
+    title: name ?? 'Documento sem título',
+    version: 1,
+  };
+}
 
 export async function listDocuments(organizationId: string) {
   const supabase = tryCreateAdminClient();
@@ -17,7 +56,7 @@ export async function listDocuments(organizationId: string) {
     return [];
   }
 
-  return data ?? [];
+  return (data ?? []).map((document) => normalizeDocumentRow(document as DocumentRow));
 }
 
 export async function getDocument(documentId: string, organizationId: string) {
@@ -35,5 +74,5 @@ export async function getDocument(documentId: string, organizationId: string) {
     throw error;
   }
 
-  return data;
+  return normalizeDocumentRow(data as DocumentRow);
 }

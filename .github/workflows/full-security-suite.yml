@@ -93,13 +93,57 @@ jobs:
       - name: Generate SBOM
         run: |
           mkdir -p docs/security/evidence/runtime
-          npm sbom --json > docs/security/evidence/runtime/sbom.json
+          node - <<'NODE'
+          const fs = require('fs');
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          const rootPackage = lock.packages?.[''] ?? {};
+          const packageNameFromPath = (lockfilePath) => {
+            const marker = 'node_modules/';
+            const index = lockfilePath.lastIndexOf(marker);
+            if (index === -1) return null;
+            return lockfilePath.slice(index + marker.length);
+          };
+          const components = Object.entries(lock.packages ?? {})
+            .map(([path, pkg]) => ({ path, pkg, name: pkg?.name ?? packageNameFromPath(path) }))
+            .filter(({ path, pkg, name }) => path && pkg && typeof name === 'string' && name.length > 0 && typeof pkg.version === 'string')
+            .map(({ path, pkg, name }) => ({
+              type: 'library',
+              name,
+              version: pkg.version,
+              scope: pkg.dev ? 'optional' : 'required',
+              properties: [
+                { name: 'eurocomply:lockfilePath', value: path },
+              ],
+            }))
+            .sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`));
+
+          const sbom = {
+            bomFormat: 'CycloneDX',
+            specVersion: '1.5',
+            version: 1,
+            metadata: {
+              component: {
+                type: 'application',
+                name: rootPackage.name ?? 'eurocomply-saas',
+                version: rootPackage.version ?? '0.0.0',
+              },
+            },
+            components,
+          };
+
+          if (components.length === 0) {
+            throw new Error('SBOM generation produced no components');
+          }
+
+          fs.writeFileSync('docs/security/evidence/runtime/sbom.json', `${JSON.stringify(sbom, null, 2)}\n`);
+          console.log(`CycloneDX SBOM components: ${components.length}`);
+          NODE
           test -s docs/security/evidence/runtime/sbom.json
 
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v7
         with:
-          name: eurocomply-sbom
+          name: risck-comply-sbom
           path: docs/security/evidence/runtime/sbom.json
           retention-days: 30
           if-no-files-found: error
@@ -136,7 +180,7 @@ jobs:
       - name: Run Gitleaks repository and history scan
         uses: gitleaks/gitleaks-action@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
   semgrep:
     name: Semgrep SAST

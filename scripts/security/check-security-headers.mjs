@@ -32,7 +32,7 @@ function assertContains(source, token, file) {
   if (!source.includes(token)) failures.push(`${file} missing required security token: ${token}`);
 }
 
-console.log('EuroComply security headers regression check');
+console.log('RISCK COMPLY security headers regression check');
 console.log('---------------------------------------------');
 
 if (!existsSync(proxyPath)) {

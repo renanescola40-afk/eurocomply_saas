@@ -90,7 +90,7 @@ export async function buildAuditPackData(params: { userId: string; workspaceId?:
 
 export function auditPackToText(data: AuditPackData) {
   const lines = [
-    'EuroComply AI - EU AI Act Audit Pack',
+    'RISCK COMPLY AI - EU AI Act Audit Pack',
     `Generated: ${new Date(data.generatedAt).toLocaleString()}`,
     '',
     'Executive Summary',

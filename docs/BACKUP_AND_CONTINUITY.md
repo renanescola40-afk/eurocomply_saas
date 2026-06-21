@@ -1,6 +1,6 @@
-# EuroComply Backup and Continuity Plan
+# RISCK COMPLY Backup and Continuity Plan
 
-This document defines the minimum backup and continuity expectations for EuroComply production launch.
+This document defines the minimum backup and continuity expectations for RISCK COMPLY production launch.
 
 ## Scope
 

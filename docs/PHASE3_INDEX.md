@@ -1,6 +1,6 @@
 # Phase 3 Index
 
-This index maps the EuroComply SaaS Phase 3 repository artifacts.
+This index maps the RISCK COMPLY SaaS Phase 3 repository artifacts.
 
 ## Scope
 

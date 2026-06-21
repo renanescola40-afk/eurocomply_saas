@@ -84,7 +84,7 @@ export async function createVendor(input: unknown, userId: string) {
   let { data, error } = await insertVendor(fullRecord);
 
   if (error && isMissingOptionalVendorColumn(error)) {
-    console.warn('[vendors] Falling back to legacy vendor schema:', error.message);
+    console.warn('[vendors] legacy_schema_fallback', { code: error.code ?? 'unknown' });
     const fallbackResult = await insertVendor(baseRecord);
     data = fallbackResult.data;
     error = fallbackResult.error;
@@ -97,7 +97,7 @@ export async function createVendor(input: unknown, userId: string) {
   await logAuditEvent({
     organizationId: payload.organizationId,
     actorUserId: userId,
-    action: 'vendor.created',
+    action: 'vendor.create',
     entityType: 'vendor',
     entityId: data.id,
     metadata: { name: payload.name, riskLevel: payload.riskLevel },
@@ -123,7 +123,7 @@ export async function deleteVendor(vendorId: string, organizationId: string, use
   await logAuditEvent({
     organizationId,
     actorUserId: userId,
-    action: 'vendor.deleted',
+    action: 'vendor.delete',
     entityType: 'vendor',
     entityId: vendorId,
     metadata: { name: data.name, riskLevel: data.risk_level },

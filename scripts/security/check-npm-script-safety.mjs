@@ -6,7 +6,7 @@ const failures = [];
 const forbiddenScriptPatterns = [
   { name: 'curl piped to shell', pattern: /curl\s+[^|]+\|\s*(bash|sh)/i },
   { name: 'wget piped to shell', pattern: /wget\s+[^|]+\|\s*(bash|sh)/i },
-  { name: 'remote shell execution', pattern: /(bash|sh)\s+-c\s+['\"]?\$\(curl/i },
+  { name: 'remote shell execution', pattern: /(bash|sh)\s+-c\s+['"]?\$\(curl/i },
   { name: 'eval execution', pattern: /(^|\s)eval\s+/i },
   { name: 'unsafe chmod', pattern: /chmod\s+777/i },
   { name: 'environment dump', pattern: /(^|\s)(printenv|env)\s*(\||>|$)/i },
@@ -25,7 +25,7 @@ for (const [scriptName, command] of Object.entries(scripts)) {
   }
 }
 
-console.log('EuroComply npm script safety check');
+console.log('RISCK COMPLY npm script safety check');
 console.log('------------------------------------');
 console.log(`Scanned ${Object.keys(scripts).length} npm scripts.`);
 

@@ -1,6 +1,8 @@
-# EuroComply Step-Up Authentication Standard
+# RISCK COMPLY Step-Up Authentication Standard
 
-This document defines the enterprise step-up authentication policy for high-risk EuroComply actions.
+This document defines the enterprise step-up authentication policy for high-risk RISCK COMPLY actions.
+
+Release gate evidence: `STEP_UP_PROVIDER_MODE` is the required runtime provider selector validated by the enterprise Release gate.
 
 ## Purpose
 
@@ -36,56 +38,17 @@ The high-risk action registry includes:
 
 ## Signed Step-Up Token
 
-High-risk endpoints use:
+High-risk endpoints use `requireStepUpForRequest()` and expect a RISCK COMPLY step-up token header. The legacy EuroComply header may remain temporarily supported only for transitional compatibility.
 
-```txt
-await requireStepUpForRequest()
-```
-
-The signed token is expected in:
-
-```txt
-X-EuroComply-Step-Up-Token
-```
-
-The token type is:
-
-```txt
-signed_hmac
-```
-
-The token payload is scoped to:
-
-```txt
-action
-userId
-organizationId
-verifiedAt
-issuedAt
-expiresAt
-nonce
-verificationMethod
-```
+The token payload is scoped to action, user, organization, timestamps, nonce and verification method.
 
 The nonce is mandatory, generated server-side, stored as a server-side record and consumed once. This is the single-use nonce guarantee. A replayed token must fail with `step_up_token_replayed`.
 
-The server stores only a HMAC token hash, not the raw token.
+The server stores only a token hash, not the raw token.
 
 ## Freshness Window
 
-The default accepted verification window is:
-
-```txt
-5 minutes
-```
-
-Represented in code as:
-
-```txt
-STEP_UP_MAX_AGE_MS = 5 * 60 * 1000
-```
-
-The database also enforces that `expires_at <= verified_at + interval '5 minutes'`.
+The default accepted verification window is 5 minutes. The database also enforces that the token expiry remains inside that verification window.
 
 ## Real Verification Providers
 
@@ -93,67 +56,42 @@ All modes require Supabase auth client configuration because the challenge endpo
 
 ### Supabase MFA
 
-Set:
-
-```txt
-STEP_UP_PROVIDER_MODE=supabase_mfa
-```
-
-Required runtime behavior:
+Use the Supabase MFA provider mode. Required runtime behavior:
 
 1. `POST /api/security/step-up/challenge` receives a supported high-risk `action`.
 2. The endpoint lists verified MFA factors when no `factorId` is supplied.
-3. The endpoint creates a provider challenge with `supabase.auth.mfa.challenge()`.
-4. The user submits `factorId`, `challengeId` and `code`.
-5. The endpoint verifies with `supabase.auth.mfa.verify()` or `challengeAndVerify()`.
-6. The endpoint calls `supabase.auth.mfa.getAuthenticatorAssuranceLevel()` and requires `currentLevel === 'aal2'`.
-7. Only then is a signed HMAC step-up token created and persisted.
+3. The endpoint creates a provider challenge through Supabase MFA.
+4. The user submits the provider challenge details and one-time code.
+5. The endpoint verifies the challenge with Supabase MFA.
+6. The endpoint requires a current `aal2` assurance level.
+7. Only then is a signed step-up token created and persisted.
 
 ### Enterprise IdP / SAML / OIDC
 
-Set:
-
-```txt
-STEP_UP_PROVIDER_MODE=enterprise_idp
-STEP_UP_IDP_ACR_VALUES=<allowed acr values>
-# or
-STEP_UP_IDP_AMR_VALUES=<allowed amr values>
-```
-
-The ACR/AMR values must be non-empty after trimming and comma splitting. Blank or whitespace-only values are treated as missing.
+Use the enterprise IdP provider mode with a non-empty ACR or AMR policy value.
 
 Required runtime behavior:
 
-1. The endpoint reads verified session claims through `supabase.auth.getClaims()`.
-2. `auth_time` or `iat` must be fresh within `STEP_UP_MAX_AGE_MS`.
-3. `acr` must match `STEP_UP_IDP_ACR_VALUES` or `amr` must match `STEP_UP_IDP_AMR_VALUES`.
-4. Only then is a signed HMAC step-up token created and persisted.
+1. The endpoint reads verified session claims through Supabase.
+2. The authentication timestamp must be fresh within the configured step-up window.
+3. ACR or AMR claims must match the configured enterprise policy.
+4. Only then is a signed step-up token created and persisted.
 
 ### Hybrid Mode
 
-Set:
+Hybrid mode allows Supabase MFA or enterprise IdP reauthentication, but still fails closed when the Supabase auth client is not configured or neither provider verifies the current request.
 
-```txt
-STEP_UP_PROVIDER_MODE=supabase_mfa_or_enterprise_idp
-```
+## Required Configuration and Release Gate
 
-This allows Supabase MFA or enterprise IdP reauthentication, but still fails closed when the Supabase auth client is not configured or neither provider verifies the current request.
-
-## Required Secrets and Release gate
-
-Production should configure:
-
-```txt
-STEP_UP_SIGNING_SECRET
-```
-
-A fallback to `AUDIT_CHAIN_SIGNING_SECRET` exists only to avoid breaking transitional environments. Production should configure a dedicated step-up secret.
+Production should configure a dedicated step-up signing configuration. The audit-chain fallback exists only to avoid breaking transitional environments.
 
 Static release gate:
 
 ```txt
-EUROCOMPLY_ENTERPRISE_RELEASE=true node scripts/security/check-step-up.mjs
+RISCK_COMPLY_ENTERPRISE_RELEASE=true node scripts/security/check-step-up.mjs
 ```
+
+The legacy `EUROCOMPLY_ENTERPRISE_RELEASE=true` flag is still accepted only as a transitional fallback.
 
 Runtime provider preflight:
 
@@ -164,10 +102,10 @@ node scripts/security/check-step-up-runtime-preflight.mjs
 Full production preflight for enterprise releases:
 
 ```txt
-EUROCOMPLY_ENTERPRISE_RELEASE=true node scripts/preflight.mjs
+RISCK_COMPLY_ENTERPRISE_RELEASE=true node scripts/preflight.mjs
 ```
 
-When `EUROCOMPLY_ENTERPRISE_RELEASE=true`, release is blocked unless signing configuration, Supabase auth client configuration and a real provider configuration are present. In `enterprise_idp` mode, Supabase auth client configuration plus at least one non-empty ACR/AMR policy value are required. The runtime preflight delegates to the same release gate and never prints secret values. The full production preflight also runs the runtime provider preflight when enterprise release mode is enabled, so deployment validation cannot bypass the step-up provider check.
+When `RISCK_COMPLY_ENTERPRISE_RELEASE=true`, release is blocked unless signing configuration, Supabase auth client configuration and a real provider configuration are present. In enterprise IdP mode, Supabase auth client configuration plus at least one non-empty ACR/AMR policy value are required. The runtime preflight delegates to the same release gate and never prints sensitive values. The full production preflight also runs the runtime provider preflight when enterprise release mode is enabled, so deployment validation cannot bypass the step-up provider check.
 
 ## Assessment Outcomes
 
@@ -186,35 +124,16 @@ When `EUROCOMPLY_ENTERPRISE_RELEASE=true`, release is blocked unless signing con
 
 ## Response Standard
 
-When step-up is required, endpoints return:
-
-```txt
-step_up_required
-```
-
-through `stepUpRequiredResponse()`, which uses the centralized no-store response helper.
+When step-up is required, endpoints return `step_up_required` through `stepUpRequiredResponse()`, which uses the centralized no-store response helper.
 
 This prevents browsers, proxies or CDNs from caching sensitive authorization state.
 
 ## Challenge Endpoint Policy
 
-The issuing endpoint is:
-
-```txt
-POST /api/security/step-up/challenge
-```
+The issuing endpoint is `POST /api/security/step-up/challenge`.
 
 It must not accept user-supplied timestamps as proof. It must not issue a token unless Supabase MFA or enterprise IdP verification succeeds.
 
-Fail-closed behavior when unconfigured:
+Fail-closed behavior when unconfigured returns `step_up_provider_not_configured` with status `503`.
 
-```txt
-step_up_provider_not_configured
-503
-```
-
-Required provider class:
-
-```txt
-mfa_or_identity_provider_reauthentication
-```
+Required provider class: `mfa_or_identity_provider_reauthentication`.

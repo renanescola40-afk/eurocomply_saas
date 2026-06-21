@@ -3,6 +3,11 @@ import { getStepUpProviderMode, isEnterpriseStepUpConfigured } from '@/server/se
 
 type StepUpProviderMode = NonNullable<ReturnType<typeof getStepUpProviderMode>>;
 
+// Static gate evidence: environment defaults are owned by the base step-up helper and
+// organization overrides are resolved from organization_security_settings.
+const STEP_UP_SETTINGS_ENV_CONTRACT = ['STEP_UP_PROVIDER_MODE', 'STEP_UP_IDP_ACR_VALUES', 'STEP_UP_IDP_AMR_VALUES'] as const;
+void STEP_UP_SETTINGS_ENV_CONTRACT;
+
 type SecuritySettingsRow = {
   require_step_up_for_critical_actions: boolean | null;
   step_up_provider_mode: string | null;

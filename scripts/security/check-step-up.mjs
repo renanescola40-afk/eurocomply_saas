@@ -8,11 +8,13 @@ const stepUpAcrEnv = env('STEP', 'UP', 'IDP', 'ACR', 'VALUES');
 const stepUpAmrEnv = env('STEP', 'UP', 'IDP', 'AMR', 'VALUES');
 const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
 const supabaseAnonEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY');
-const enterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
+const enterpriseReleaseEnv = env('RISCK', 'COMPLY', 'ENTERPRISE', 'RELEASE');
+const legacyEnterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
 const forbiddenSubprocessToken = ['spawn', 'Sync'].join('');
 
 const paths = {
   helper: 'src/server/security/step-up.ts',
+  settingsHelper: 'src/server/security/step-up-settings.ts',
   test: 'src/server/security/step-up.test.ts',
   doc: 'docs/security/STEP_UP_AUTH.md',
   rolloutMatrix: 'docs/security/STEP_UP_ROLLOUT_MATRIX.md',
@@ -43,6 +45,12 @@ const tokenChecks = {
     'step_up_requested', 'step_up_approved', 'step_up_denied', 'step_up_expired', 'createHmac',
     'timingSafeEqual', 'randomUUID', 'nonce', 'expiresAt', stepUpSigningEnv, auditSigningEnv,
     'step_up_token_replayed', 'step_up_token_store_unavailable',
+  ],
+  [paths.settingsHelper]: [
+    'getEffectiveStepUpProviderPolicy', 'isEffectiveStepUpProviderPolicyConfigured', 'STEP_UP_PROVIDER_MODE',
+    'STEP_UP_IDP_ACR_VALUES', 'STEP_UP_IDP_AMR_VALUES', 'organization_security_settings',
+    'allowed_idp_acr_values', 'allowed_idp_amr_values', 'supabase_mfa', 'enterprise_idp',
+    'supabase_mfa_or_enterprise_idp',
   ],
   [paths.test]: [
     'uses a short enterprise step-up window',
@@ -89,7 +97,7 @@ const tokenChecks = {
     'normalizeHighRiskAction', 'createStepUpTokenEnvelope', 'persistStepUpTokenRecord',
     'recordStepUpAuditEvent', 'supabase.auth.mfa.challenge', 'supabase.auth.mfa.verify',
     'supabase.auth.mfa.challengeAndVerify', 'getAuthenticatorAssuranceLevel', 'getClaims',
-    stepUpProviderEnv, stepUpAcrEnv, stepUpAmrEnv, 'step_up_provider_not_configured',
+    'getEffectiveStepUpProviderPolicy', 'isEffectiveStepUpProviderPolicyConfigured', 'step_up_provider_not_configured',
     'mfa_or_identity_provider_reauthentication',
   ],
   [paths.ui]: ['StepUpMfaDialog', '/api/security/step-up/challenge', 'factorId', 'challengeId', 'one-time-code', 'STEP_UP_TOKEN_HEADER'],
@@ -104,11 +112,11 @@ const tokenChecks = {
     'allowed_idp_amr_values', 'enable row level security', 'grant all on public.organization_security_settings to service_role',
   ],
   [paths.runtimePreflight]: [
-    'await import', './check-step-up.mjs', enterpriseReleaseEnv, 'runtime provider preflight',
-    'Values are never printed', 'process.env.EUROCOMPLY_ENTERPRISE_RELEASE',
+    'await import', './check-step-up.mjs', enterpriseReleaseEnv, legacyEnterpriseReleaseEnv, 'runtime provider preflight',
+    'Values are never printed', 'process.env.RISCK_COMPLY_ENTERPRISE_RELEASE', 'process.env.EUROCOMPLY_ENTERPRISE_RELEASE',
   ],
   [paths.productionPreflight]: [
-    'readRuntimeSetting', 'hasConfiguredList', 'enterpriseReleaseEnv',
+    'readRuntimeSetting', 'hasConfiguredList', 'enterpriseReleaseEnv', 'legacyEnterpriseReleaseEnv',
     'Enterprise step-up runtime provider preflight: running',
     'Enterprise step-up runtime provider preflight: skipped', 'stepUpProviderEnv', 'stepUpSigningEnv',
     'auditSigningEnv', 'supabaseUrlEnv', 'supabaseAnonEnv', 'stepUpAcrEnv', 'stepUpAmrEnv', 'providerConfigured',
@@ -152,8 +160,12 @@ function hasConfiguredList(name) {
   return readRuntimeSetting(name).split(',').map((value) => value.trim()).filter(Boolean).length > 0;
 }
 
-console.log('EuroComply enterprise step-up authentication check');
-console.log('--------------------------------------------------');
+function isEnterpriseReleaseEnabled() {
+  return process.env[enterpriseReleaseEnv] === 'true' || process.env[legacyEnterpriseReleaseEnv] === 'true';
+}
+
+console.log('RISCK COMPLY enterprise step-up authentication check');
+console.log('----------------------------------------------------');
 
 const sources = Object.fromEntries(Object.values(paths).map((path) => [path, read(path)]));
 
@@ -202,7 +214,7 @@ for (const path of [paths.runtimePreflight, paths.productionPreflight]) {
   if (sources[path] && sources[path].includes(forbiddenSubprocessToken)) failures.push(`${path} must not use subprocess execution for step-up preflight validation`);
 }
 
-if (process.env[enterpriseReleaseEnv] === 'true') {
+if (isEnterpriseReleaseEnabled()) {
   const providerMode = readRuntimeSetting(stepUpProviderEnv);
   const hasSecret = Boolean(readRuntimeSetting(stepUpSigningEnv) || readRuntimeSetting(auditSigningEnv));
   const hasSupabaseAuth = Boolean(readRuntimeSetting(supabaseUrlEnv) && readRuntimeSetting(supabaseAnonEnv));

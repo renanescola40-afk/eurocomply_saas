@@ -5,7 +5,8 @@ const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
 const supabaseAnonEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY');
 const supabaseServiceEnv = env('SUPABASE', 'SERVICE', 'ROLE', 'KEY');
 const supabaseAccessTokenEnv = env('SUPABASE', 'ACCESS', 'TOKEN');
-const enterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
+const enterpriseReleaseEnv = env('RISCK', 'COMPLY', 'ENTERPRISE', 'RELEASE');
+const legacyEnterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
 const stepUpProviderEnv = env('STEP', 'UP', 'PROVIDER', 'MODE');
 const stepUpSigningEnv = env('STEP', 'UP', 'SIGNING', 'SECRET');
 const auditSigningEnv = env('AUDIT', 'CHAIN', 'SIGNING', 'SECRET');
@@ -48,6 +49,8 @@ const requiredFiles = [
   'supabase/migrations/20260610_ai_incident_register.sql',
   'supabase/migrations/20260612_audit_event_hash_chain.sql',
   'supabase/migrations/20260613_audit_event_chained_rpc.sql',
+  'supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql',
+  'supabase/migrations/20260621160000_upload_scan_metadata.sql',
   'src/app/api/ops/enterprise-readiness/route.ts',
   'src/server/governance/enterprise-readiness.ts',
   'src/app/[locale]/enterprise-readiness/page.tsx',
@@ -71,6 +74,7 @@ const requiredFiles = [
   'src/server/security/file-signature.ts',
   'src/server/security/file-signature.test.ts',
   'src/server/security/malware-scan.ts',
+  'src/server/security/upload-security.ts',
   'src/server/security/security-scenarios.ts',
   'src/server/security/security-scenarios.test.ts',
   'src/server/security/audit-chain.ts',
@@ -98,11 +102,13 @@ const requiredFiles = [
   'docs/security/STEP_UP_AUTH.md',
   'docs/security/STEP_UP_ROLLOUT_MATRIX.md',
   'docs/security/evidence/runtime/step-up-mfa-validation.json',
+  'docs/security/evidence/runtime/audit-chain-live-validation.json',
   'docs/security/BILLING_STEP_UP.md',
   'docs/security/GDPR_DELETE_STEP_UP.md',
   'docs/security/SUPPLY_CHAIN.md',
   'docs/security/LOCKFILE_TRIAGE_RUNBOOK.md',
   'docs/security/UPLOAD_CONTENT_SCAN.md',
+  'docs/security/UPLOAD_SECURITY.md',
   'docs/security/RLS_LIVE_VALIDATION_RUNBOOK.md',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
@@ -119,12 +125,17 @@ function hasConfiguredList(name) {
   return readRuntimeSetting(name).split(',').map((value) => value.trim()).filter(Boolean).length > 0;
 }
 
+function isEnterpriseReleaseEnabled() {
+  return process.env[enterpriseReleaseEnv] === 'true' || process.env[legacyEnterpriseReleaseEnv] === 'true';
+}
+
 const missingRequired = required.filter((key) => !process.env[key]);
 const missingRecommended = recommended.filter((key) => !process.env[key]);
 const missingFiles = requiredFiles.filter((path) => !existsSync(path));
+const enterpriseReleaseEnabled = isEnterpriseReleaseEnabled();
 
-console.log('EuroComply production preflight');
-console.log('--------------------------------');
+console.log('RISCK COMPLY production preflight');
+console.log('----------------------------------');
 
 if (missingRequired.length > 0) {
   console.error('Missing required environment variables:');
@@ -172,7 +183,7 @@ if (!process.env[supabaseAccessTokenEnv]) {
   console.warn('Runtime preflight warning', { code: 'supabase_access_token_missing' });
 }
 
-if (process.env[enterpriseReleaseEnv] === 'true') {
+if (enterpriseReleaseEnabled) {
   console.log('Enterprise step-up runtime provider preflight: running');
 
   const providerMode = readRuntimeSetting(stepUpProviderEnv);
@@ -197,7 +208,7 @@ if (process.env[enterpriseReleaseEnv] === 'true') {
     process.exitCode = 1;
   }
 } else {
-  console.log('Enterprise step-up runtime provider preflight: skipped (set EUROCOMPLY_ENTERPRISE_RELEASE=true for enterprise releases).');
+  console.log(`Enterprise step-up runtime provider preflight: skipped (set ${enterpriseReleaseEnv}=true for enterprise releases; ${legacyEnterpriseReleaseEnv}=true is still accepted during migration).`);
 }
 
 if (process.exitCode === 1) {

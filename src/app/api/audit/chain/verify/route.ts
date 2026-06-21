@@ -1,7 +1,7 @@
 import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getCurrentUser } from '@/server/queries/auth';
-import { listAuditEvents } from '@/server/queries/audit-events';
+import { createAuditEvent, listAuditEvents } from '@/server/queries/audit-events';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { checkDistributedRateLimit } from '@/server/security/rate-limit';
@@ -40,6 +40,13 @@ export function parseAuditChainVerifyLimit(requestUrl: string): AuditChainLimitR
   }
 
   return { ok: true, limit };
+}
+
+function summarizeFailures(failures: ReturnType<typeof verifyAuditChain>['failures']) {
+  return failures.reduce<Record<string, number>>((summary, failure) => {
+    summary[failure.reason] = (summary[failure.reason] ?? 0) + 1;
+    return summary;
+  }, {});
 }
 
 export async function GET(request: Request) {
@@ -104,9 +111,11 @@ export async function GET(request: Request) {
     return noStoreJson({ error: parsedLimit.error }, { status: 400 });
   }
 
-  const events = await listAuditEvents(organization.id, parsedLimit.limit);
-  const chronological = [...events].reverse();
-  const chainRecords = chronological
+  const events = await listAuditEvents(organization.id, parsedLimit.limit + 1);
+  const chronologicalWindow = [...events].reverse();
+  const anchorEvent = chronologicalWindow.length > parsedLimit.limit ? chronologicalWindow.shift() : null;
+  const expectedPreviousHash = anchorEvent?.event_hash ?? null;
+  const chainRecords = chronologicalWindow
     .filter((event) => event.event_hash)
     .map((event) => ({
       id: event.id,
@@ -122,19 +131,51 @@ export async function GET(request: Request) {
       signature: event.hash_signature ?? undefined,
     })) satisfies AuditChainRecord[];
 
-  const verification = verifyAuditChain(chainRecords);
-  const legacyEvents = events.length - chainRecords.length;
+  const verification = verifyAuditChain(chainRecords, { expectedPreviousHash });
+  const legacyEvents = events.length - chainRecords.length - (anchorEvent?.event_hash ? 1 : 0);
+  const checkedAt = new Date().toISOString();
+  const verificationAuditEvent = await createAuditEvent({
+    organizationId: organization.id,
+    actorUserId: user.id,
+    action: 'audit_chain.verified',
+    entityType: 'audit_chain',
+    entityId: organization.id,
+    metadata: {
+      checkedAt,
+      requestedLimit: parsedLimit.limit,
+      loadedForAnchor: events.length,
+      totalEventsLoaded: events.length,
+      chainedEventsChecked: verification.checked,
+      legacyEvents,
+      anchorEventId: anchorEvent?.id ?? null,
+      expectedPreviousHash,
+      ok: verification.ok,
+      lastHash: verification.lastHash,
+      failureCount: verification.failures.length,
+      failureSummary: summarizeFailures(verification.failures),
+      stepUpAction: stepUp.assessment.action,
+      stepUpVerifiedAt: stepUp.assessment.verifiedAt,
+      actorRole: permission.role,
+    },
+  });
 
   return noStoreJson({
     organizationId: organization.id,
-    checkedAt: new Date().toISOString(),
+    checkedAt,
     requestedLimit: parsedLimit.limit,
     totalEventsLoaded: events.length,
     chainedEventsChecked: verification.checked,
     legacyEvents,
+    anchorEventId: anchorEvent?.id ?? null,
+    expectedPreviousHash,
     ok: verification.ok,
     lastHash: verification.lastHash,
     failures: verification.failures,
+    verificationAuditEvent: {
+      persisted: verificationAuditEvent.persisted,
+      transactional: 'transactional' in verificationAuditEvent ? verificationAuditEvent.transactional : undefined,
+      eventHash: 'eventHash' in verificationAuditEvent ? verificationAuditEvent.eventHash : undefined,
+    },
     stepUpVerified: true,
     stepUpVerifiedAt: stepUp.assessment.verifiedAt,
   });
