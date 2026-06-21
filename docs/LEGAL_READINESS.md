@@ -1,4 +1,4 @@
-# EuroComply Legal Readiness
+# RISCK COMPLY Legal Readiness
 
 This document tracks the legal and trust materials required before a broad public launch.
 
@@ -18,7 +18,7 @@ The public website should expose localized legal pages for:
 Before accepting production customers, confirm:
 
 - The Privacy Policy names the controller, contact address, processing purposes, retention periods, rights and complaint channels.
-- The DPA defines EuroComply as processor where customers upload third-party or employee data.
+- The DPA defines RISCK COMPLY as processor where customers upload third-party or employee data.
 - Subprocessors include at minimum Vercel, Supabase, Stripe and Sentry when enabled.
 - Stripe billing terms match the product pricing page.
 - GDPR export and deletion workflows are operational and audited.
@@ -28,4 +28,4 @@ Before accepting production customers, confirm:
 
 ## Recommended launch stance
 
-EuroComply can launch as a controlled beta with legal pages marked as production drafts reviewed by counsel. For enterprise procurement, these documents should be reviewed by a European technology/privacy lawyer before signing regulated customers.
+RISCK COMPLY can launch as a controlled beta with legal pages marked as production drafts reviewed by counsel. For enterprise procurement, these documents should be reviewed by a European technology/privacy lawyer before signing regulated customers.
