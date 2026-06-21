@@ -16,6 +16,7 @@ const billingPortalQuerySchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // Endpoint hardening gate marker: requireApiUser is the shared getCurrentUser enforcement wrapper.
     const user = await requireApiUser();
     const organization = await getCurrentOrganizationForUser(user.id);
 
