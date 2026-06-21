@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog, type AuditAction } from '@/lib/security/audit-log';
 import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
@@ -19,30 +17,11 @@ export type AuthAuditInput = {
     | 'auth.oauth_callback'
   >;
   actorUserId?: string | null;
-  email?: string | null;
   method?: AuthAuditMethod;
   outcome?: AuthAuditOutcome;
   reason?: string | null;
   metadata?: Record<string, unknown>;
 };
-
-function normalizeEmail(email: string | null | undefined) {
-  const normalized = email?.trim().toLowerCase() ?? '';
-  return normalized.length > 0 && normalized.includes('@') ? normalized : null;
-}
-
-function emailDomain(email: string | null | undefined) {
-  const normalized = normalizeEmail(email);
-  if (!normalized) return null;
-  const domain = normalized.split('@')[1]?.trim() ?? '';
-  return domain.length > 0 && domain.length <= 255 ? domain : null;
-}
-
-function emailFingerprint(email: string | null | undefined) {
-  const normalized = normalizeEmail(email);
-  if (!normalized) return null;
-  return createHash('sha256').update(normalized).digest('hex');
-}
 
 function safeReason(reason: string | null | undefined) {
   const normalized = reason?.trim() ?? '';
@@ -74,8 +53,7 @@ export async function recordAuthAuditEvent(input: AuthAuditInput) {
       method: input.method ?? 'unknown',
       outcome: input.outcome ?? 'completed',
       reason: safeReason(input.reason),
-      emailDomain: emailDomain(input.email),
-      emailFingerprint: emailFingerprint(input.email),
+      identifiers: 'omitted',
     },
   };
 
