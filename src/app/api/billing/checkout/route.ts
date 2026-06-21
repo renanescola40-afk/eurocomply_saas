@@ -1,7 +1,6 @@
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
-import { writeAuditLog } from '@/lib/security/audit-log';
 import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan } from '@/server/billing/plans';
@@ -107,20 +106,6 @@ export async function POST(request: Request) {
       },
     },
     allow_promotion_codes: true,
-  });
-
-  await writeAuditLog({
-    action: 'billing.checkout_start',
-    organizationId: organization.id,
-    userId: user.id,
-    entityType: 'stripe_checkout_session',
-    entityId: session.id,
-    metadata: {
-      plan,
-      actorRole: permission.role ?? 'unknown',
-      stepUpAction: stepUp.assessment.action,
-      stripeSessionCreated: Boolean(session.id),
-    },
   });
 
   return noStoreJson({
