@@ -1,6 +1,6 @@
 # Testing Strategy
 
-EuroComply should treat tests as a production-readiness requirement.
+RISCK COMPLY should treat tests as a production-readiness requirement.
 
 ## Test Layers
 
