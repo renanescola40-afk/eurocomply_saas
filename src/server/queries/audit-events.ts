@@ -51,6 +51,8 @@ function isAuditChainPreviousHashMismatch(error: SupabaseError) {
   return error.code === '40001' || /previous hash mismatch/i.test(error.message ?? '');
 }
 
+const isPreviousHashMismatch = isAuditChainPreviousHashMismatch;
+
 async function getPreviousAuditHash(supabase: SupabaseAdminClient, organizationId: string) {
   const { data, error } = await supabase
     .from('audit_events')
@@ -144,7 +146,7 @@ async function appendAuditEventWithRpc(supabase: SupabaseAdminClient, input: Aud
 
     lastError = error;
 
-    if (isAuditChainPreviousHashMismatch(error) && attempt < MAX_CHAIN_APPEND_ATTEMPTS) {
+    if (isPreviousHashMismatch(error) && attempt < MAX_CHAIN_APPEND_ATTEMPTS) {
       continue;
     }
 
@@ -218,10 +220,7 @@ export async function createAuditEvent(input: AuditEventInput) {
 
 export async function listAuditEvents(organizationId: string, limit = 100): Promise<AuditEventRecord[]> {
   const supabase = tryCreateAdminClient();
-
-  if (!supabase) {
-    return [];
-  }
+  if (!supabase) return [];
 
   const { data, error } = await supabase
     .from('audit_events')
@@ -230,26 +229,31 @@ export async function listAuditEvents(organizationId: string, limit = 100): Prom
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  if (!error) {
-    return (data ?? []) as unknown as AuditEventRecord[];
+  if (!error) return data ?? [];
+
+  if (isMissingAuditChainColumns(error)) {
+    const { data: legacyData, error: legacyError } = await supabase
+      .from('audit_events')
+      .select(LEGACY_AUDIT_EVENT_COLUMNS)
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (!legacyError) {
+      return (legacyData ?? []).map((event) => ({
+        id: event.id,
+        organization_id: event.organization_id,
+        actor_user_id: event.actor_user_id ?? null,
+        action: event.action,
+        entity_type: event.entity_type,
+        entity_id: event.entity_id,
+        metadata: event.metadata,
+        created_at: event.created_at,
+      }));
+    }
   }
 
-  if (!isMissingAuditChainColumns(error)) {
-    if (!isMissingAuditEventsTable(error)) console.warn('[audit] list_events_failed', { code: error.code ?? 'unknown' });
-    return [];
-  }
-
-  const { data: legacyData, error: legacyError } = await supabase
-    .from('audit_events')
-    .select(LEGACY_AUDIT_EVENT_COLUMNS)
-    .eq('organization_id', organizationId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (legacyError) {
-    if (!isMissingAuditEventsTable(legacyError)) console.warn('[audit] list_events_failed', { code: legacyError.code ?? 'unknown' });
-    return [];
-  }
-
-  return (legacyData ?? []) as unknown as AuditEventRecord[];
+  if (isMissingAuditEventsTable(error)) return [];
+  console.warn('[audit] list_events_failed', { code: error.code ?? 'unknown' });
+  return [];
 }
