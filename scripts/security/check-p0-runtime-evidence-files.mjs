@@ -10,6 +10,7 @@ const allowedItems = new Set([
   'external-security-review-or-pentest',
   'step-up-mfa-validation',
   'upload-malware-scan-validation',
+  'stripe-billing-validation',
 ]);
 const redactionTexts = new Set([
   'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
