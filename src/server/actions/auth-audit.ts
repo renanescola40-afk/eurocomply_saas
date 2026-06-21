@@ -11,7 +11,6 @@ type ClientAuthAuditAction = typeof AUTH_ACTIONS[number];
 type ClientAuthAuditInput = {
   action: ClientAuthAuditAction;
   method?: AuthAuditMethod;
-  email?: string | null;
   reason?: string | null;
 };
 
@@ -49,7 +48,6 @@ export async function auditClientAuthEvent(input: ClientAuthAuditInput) {
   const result = await recordAuthAuditEvent({
     action: input.action,
     actorUserId: user?.id ?? null,
-    email: input.action === 'auth.login_failure' ? normalizeText(input.email, 320) : user?.email ?? null,
     method: normalizeMethod(input.method),
     outcome: outcomeForAction(input.action),
     reason: normalizeText(input.reason, 120),
