@@ -29,7 +29,6 @@ const trustedAuthValidators = [
   'verifyBearerToken',
   'requireApiAuth',
   'requireInternalApiAuth',
-  'hasBearerToken',
 ];
 
 const requiredJwtClaims = ['iss', 'aud', 'exp', 'iat'];
