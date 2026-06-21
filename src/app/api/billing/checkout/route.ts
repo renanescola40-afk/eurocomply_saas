@@ -13,10 +13,7 @@ import { noStoreJson } from '@/server/security/no-store';
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 const CHECKOUT_JSON_MAX_BYTES = 2 * 1024;
-const BILLING_APP_URL_UNAVAILABLE = 'billing_app_url_unavailable';
 
-// Enterprise API gate marker: this route performs requireEnterpriseApiAccess-equivalent auth, tenant,
-// RBAC, trusted-origin and distributed rate-limit guards before any Stripe billing mutation.
 export async function POST(request: Request) {
   const originDenied = assertTrustedOrigin(request);
   if (originDenied) return originDenied;
@@ -78,7 +75,7 @@ export async function POST(request: Request) {
   const returnBaseUrl = resolveBillingReturnBaseUrl(request.url);
 
   if (!returnBaseUrl.ok) {
-    return noStoreJson({ error: BILLING_APP_URL_UNAVAILABLE }, { status: 503 });
+    return noStoreJson({ error: 'billing_app_url_unavailable' }, { status: 503 });
   }
 
   const stripe = getStripeClient();
