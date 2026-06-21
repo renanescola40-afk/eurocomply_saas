@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   rateLimitResponse: vi.fn(),
   assertPlanAtLeast: vi.fn(),
   upgradeRequiredResponse: vi.fn(),
+  buildAuditRequestContextFromRequest: vi.fn(() => ({ ipAddress: '203.0.113.10', userAgent: 'Vitest' })),
   createAuditEvent: vi.fn(),
   buildAuditEvidencePack: vi.fn(),
   requireOrganizationContext: vi.fn(),
@@ -43,6 +44,7 @@ vi.mock('@/server/billing/upgrade-response', () => ({
 }));
 
 vi.mock('@/server/queries/audit-events', () => ({
+  buildAuditRequestContextFromRequest: mocks.buildAuditRequestContextFromRequest,
   createAuditEvent: mocks.createAuditEvent,
 }));
 
@@ -127,13 +129,15 @@ describe('audit evidence pack export', () => {
   });
 
   it('returns a signed export only after RBAC and step-up', async () => {
-    const response = await GET(new Request('https://app.example.test/api/audit/evidence-pack', { headers: { 'x-eurocomply-step-up-token': 'token' } }));
+    const request = new Request('https://app.example.test/api/audit/evidence-pack', { headers: { 'x-eurocomply-step-up-token': 'token' } });
+    const response = await GET(request);
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Disposition')).toContain('eurocomply-audit-evidence-pack-acme');
     expect(body.integrity).toEqual(expect.objectContaining({ signed: true, signature: 'signature' }));
     expect(body.stepUp).toEqual({ verified: true });
+    expect(mocks.buildAuditRequestContextFromRequest).toHaveBeenCalledWith(request);
     expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'audit_chain_export',
@@ -147,9 +151,25 @@ describe('audit evidence pack export', () => {
         actorUserId: 'user_123',
         action: 'audit_chain.evidence_exported',
         entityType: 'audit_evidence_pack',
+        requestContext: { ipAddress: '203.0.113.10', userAgent: 'Vitest' },
         metadata: expect.objectContaining({ payloadHash: 'payload-hash', signed: true, stepUpAction: 'audit_chain_export' }),
       }),
     );
+  });
+
+  it('rejects export when RBAC is missing', async () => {
+    mocks.assertOrganizationPermission.mockResolvedValue({
+      ok: false,
+      status: 403,
+      error: 'insufficient_role_permission',
+      permission: 'export_data',
+    });
+
+    const response = await GET(new Request('https://app.example.test/api/audit/evidence-pack'));
+
+    expect(response.status).toBe(403);
+    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
+    expect(mocks.buildAuditEvidencePack).not.toHaveBeenCalled();
   });
 
   it('fails closed when the evidence export cannot be signed', async () => {
@@ -170,6 +190,7 @@ describe('audit evidence pack export', () => {
       expect.objectContaining({
         action: 'security.failure',
         entityType: 'audit_evidence_pack',
+        requestContext: { ipAddress: '203.0.113.10', userAgent: 'Vitest' },
         metadata: expect.objectContaining({ reason: 'audit_evidence_pack_signing_unavailable' }),
       }),
     );
