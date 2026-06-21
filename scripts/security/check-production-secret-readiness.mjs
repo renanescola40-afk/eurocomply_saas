@@ -22,6 +22,20 @@ const allowedPublicEnvNames = new Set([
   pub('SENTRY', 'DSN'),
 ]);
 
+const malwareScannerProviderSecretVariables = [
+  n('MALWARE', 'SCANNER', 'ENDPOINT'),
+  n('MALWARE', 'SCANNER', 'URL'),
+  n('MALWARE', 'SCANNER', 'API', 'KEY'),
+  n('MALWARE', 'SCANNER', 'CLAMAV', 'HOST'),
+];
+
+const malwareScannerProviderPublicVariables = [
+  n('REQUIRE', 'MALWARE', 'SCAN', 'FOR', 'UPLOADS'),
+  n('MALWARE', 'SCANNER', 'PROVIDER'),
+  n('MALWARE', 'SCANNER', 'CLAMAV', 'PORT'),
+  n('MALWARE', 'SCANNER', 'TIMEOUT', 'MS'),
+];
+
 const providerSecretVariables = [
   n('SUPABASE', 'SERVICE', 'ROLE', 'KEY'),
   n('SUPABASE', 'ACCESS', 'TOKEN'),
@@ -41,6 +55,7 @@ const providerSecretVariables = [
   n('VERCEL', 'TOKEN'),
   n('VERCEL', 'ORG', 'ID'),
   n('VERCEL', 'PROJECT', 'ID'),
+  ...malwareScannerProviderSecretVariables,
 ];
 
 const providerPublicVariables = [
@@ -54,6 +69,7 @@ const providerPublicVariables = [
   n('STRIPE', 'PRICE', 'ESSENTIAL', 'MONTHLY'),
   n('STRIPE', 'PRICE', 'PROFESSIONAL', 'MONTHLY'),
   n('STRIPE', 'PRICE', 'BUSINESS', 'MONTHLY'),
+  ...malwareScannerProviderPublicVariables,
 ];
 
 const requiredByEnvironment = {
@@ -80,6 +96,8 @@ const requiredByEnvironment = {
     pub('SENTRY', 'DSN'),
     n('SENTRY', 'DSN'),
     n('SENTRY', 'AUTH', 'TOKEN'),
+    ...malwareScannerProviderSecretVariables,
+    ...malwareScannerProviderPublicVariables,
   ],
 };
 
@@ -171,18 +189,78 @@ function checkEnvExample() {
   return values;
 }
 
+function resolveRelativeImport(fromPath, specifier, knownFiles) {
+  if (!specifier.startsWith('.')) return null;
+  const fromParts = fromPath.split('/');
+  fromParts.pop();
+  const baseParts = [];
+  for (const part of [...fromParts, ...specifier.split('/')]) {
+    if (!part || part === '.') continue;
+    if (part === '..') baseParts.pop();
+    else baseParts.push(part);
+  }
+  const base = baseParts.join('/');
+  const candidates = [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    `${base}.js`,
+    `${base}.jsx`,
+    `${base}/index.ts`,
+    `${base}/index.tsx`,
+    `${base}/index.js`,
+    `${base}/index.jsx`,
+  ];
+  return candidates.find((candidate) => knownFiles.has(candidate)) ?? null;
+}
+
+function importedSpecifiers(source) {
+  const specifiers = [];
+  const patterns = [
+    /import\s+(?:type\s+)?(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/g,
+    /export\s+(?:type\s+)?[\s\S]*?\s+from\s+['"]([^'"]+)['"]/g,
+  ];
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) specifiers.push(match[1]);
+  }
+  return specifiers;
+}
+
 function checkClientBoundary() {
-  for (const file of walk(join(root, 'src')).filter((entry) => /\.(ts|tsx|js|jsx)$/.test(entry))) {
-    const path = normalizePath(file);
-    const source = readFileSync(file, 'utf8');
-    const isClient = /^\s*['"]use client['"];?/m.test(source) || /\.client\.(?:ts|tsx|js|jsx)$/.test(path);
+  const sourceFiles = walk(join(root, 'src')).filter((entry) => /\.(ts|tsx|js|jsx)$/.test(entry));
+  const files = new Map(sourceFiles.map((file) => [normalizePath(file), readFileSync(file, 'utf8')]));
+  const clientReachable = new Set();
+  const queue = [];
+
+  for (const [path, source] of files.entries()) {
     for (const match of source.matchAll(/NEXT_PUBLIC_[A-Z0-9_]+/g)) {
       const name = match[0];
       if (sensitivePublicNamePattern.test(name) && !allowedPublicEnvNames.has(name)) failures.push(`${path}:${lineNumberFor(source, match.index ?? 0)} sensitive env name uses NEXT_PUBLIC prefix: ${name}`);
     }
-    if (!isClient) continue;
+
+    const isClient = /^\s*['"]use client['"];?/m.test(source) || /\.client\.(?:ts|tsx|js|jsx)$/.test(path);
+    if (isClient) {
+      clientReachable.add(path);
+      queue.push(path);
+    }
+  }
+
+  for (let index = 0; index < queue.length; index += 1) {
+    const path = queue[index];
+    const source = files.get(path) ?? '';
+    for (const specifier of importedSpecifiers(source)) {
+      const resolved = resolveRelativeImport(path, specifier, files);
+      if (resolved && !clientReachable.has(resolved)) {
+        clientReachable.add(resolved);
+        queue.push(resolved);
+      }
+    }
+  }
+
+  for (const path of clientReachable) {
+    const source = files.get(path) ?? '';
     for (const envName of serverOnlyEnvNames) {
-      if (source.includes(envName)) failures.push(`${path} is client-side and references server-only env: ${envName}`);
+      if (source.includes(envName)) failures.push(`${path} is client-reachable and references server-only env: ${envName}`);
     }
   }
 }
