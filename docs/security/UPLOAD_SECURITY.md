@@ -86,7 +86,7 @@ Downloads and previews are backend mediated. The signed URL action performs:
 5. storage path prefix validation;
 6. short-lived signed URL creation.
 
-Signed URLs expire after 60 seconds. Preview uses the same membership/RBAC/storage checks as download, with a preview access purpose and without exposing direct client storage reads.
+signed URLs expire after 60 seconds. Preview uses the same membership/RBAC/storage checks as download, with a preview access purpose and without exposing direct client storage reads.
 
 ## Audit events
 
