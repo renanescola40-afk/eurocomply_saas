@@ -204,7 +204,7 @@ export default function SignupPage() {
     });
 
     if (result.error) {
-      setError(result.error.message);
+      setError(copy.errorTitle);
       setSubmitting(false);
       return;
     }
