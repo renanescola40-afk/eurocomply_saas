@@ -4,7 +4,6 @@ import { join, relative, sep } from 'node:path';
 const root = process.cwd();
 const scanRoots = ['src', 'scripts'].filter((path) => existsSync(join(root, path)));
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage', 'playwright-report', 'test-results']);
-const ignoredFiles = new Set(['scripts/preflight-ci.mjs']);
 
 const logCallPattern = /\bconsole\.(log|warn|error|info|debug)\s*\((?<args>[\s\S]*?)\);?/g;
 const sensitiveTerms = [
@@ -55,6 +54,19 @@ const forbiddenLiteralPatterns = [
   { name: 'Google OAuth client secret in log/source', pattern: /GOCSPX-[A-Za-z0-9_-]{20,}/ },
 ];
 
+const allowedDeterministicPlaceholders = [
+  {
+    path: 'scripts/preflight-ci.mjs',
+    name: 'Stripe secret key in log/source',
+    value: ['sk', 'test', 'ci', 'placeholder'].join('_'),
+  },
+  {
+    path: 'scripts/preflight-ci.mjs',
+    name: 'Stripe webhook secret in log/source',
+    value: ['whsec', 'ci', 'placeholder'].join('_'),
+  },
+];
+
 function walk(dir) {
   const entries = readdirSync(dir, { withFileTypes: true });
   return entries.flatMap((entry) => {
@@ -83,6 +95,12 @@ function stripStaticSubsystemMarkers(value) {
 
 function isAllowedSafeLog(args, wholeCall) {
   return allowedSafeLogMarkers.some((marker) => args.includes(marker) || wholeCall.includes(marker));
+}
+
+function isAllowedDeterministicPlaceholder(normalized, forbiddenName, source, matchIndex) {
+  return allowedDeterministicPlaceholders.some(
+    (placeholder) => placeholder.path === normalized && placeholder.name === forbiddenName && source.startsWith(placeholder.value, matchIndex),
+  );
 }
 
 function isSingleStaticStringLiteral(args) {
@@ -114,10 +132,6 @@ function isRuntimeSource(normalized) {
   return normalized.startsWith('src/');
 }
 
-function isTestSource(normalized) {
-  return /(?:^|\/)(?:__tests__|__mocks__)\//.test(normalized) || /\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs)$/.test(normalized);
-}
-
 function containsSensitiveTerm(value) {
   const lower = stripStaticSubsystemMarkers(value).toLowerCase();
   return sensitiveTerms.some((term) => lower.includes(term));
@@ -128,21 +142,17 @@ const failures = [];
 
 for (const file of files) {
   const normalized = normalizePath(file);
-  if (ignoredFiles.has(normalized)) continue;
-
   const source = readFileSync(file, 'utf8');
-  const isTestFile = isTestSource(normalized);
 
-  if (!isTestFile) {
-    for (const forbidden of forbiddenLiteralPatterns) {
-      const match = forbidden.pattern.exec(source);
-      if (match) {
-        failures.push(`${normalized}:${lineNumberFor(source, match.index)} forbidden sensitive literal detected: ${forbidden.name}`);
-      }
+  for (const forbidden of forbiddenLiteralPatterns) {
+    const match = forbidden.pattern.exec(source);
+    if (match) {
+      if (isAllowedDeterministicPlaceholder(normalized, forbidden.name, source, match.index)) continue;
+      failures.push(`${normalized}:${lineNumberFor(source, match.index)} forbidden sensitive literal detected: ${forbidden.name}`);
     }
   }
 
-  if (!isRuntimeSource(normalized) || isTestFile) continue;
+  if (!isRuntimeSource(normalized)) continue;
 
   for (const match of source.matchAll(logCallPattern)) {
     const wholeCall = match[0];
