@@ -71,6 +71,7 @@
         "updated_at"
       ],
       "upsertConflictTarget": "organization_id",
+      "organizationUniqueIndex": "subscriptions_organization_id_uidx",
       "planSource": "Stripe subscription metadata only",
       "clientPlanMutationAllowed": false
     },
@@ -88,7 +89,8 @@
     }
   },
   "databaseMigrations": [
-    "supabase/migrations/20260621090000_stripe_events_processed.sql"
+    "supabase/migrations/20260621090000_stripe_events_processed.sql",
+    "supabase/migrations/20260621091500_subscription_org_index.sql"
   ],
   "tests": [
     {
