@@ -19,8 +19,8 @@ type MenuItem = MenuLink & {
 
 export const dashboardNavigation: MenuItem[] = [
   {
-    label: 'EuroComply',
-    href: '/eurocomply-home',
+    label: 'RISCK COMPLY',
+    href: '/risck-comply-home',
     description: 'Home pós-login para clientes pagantes',
   },
   {
@@ -98,25 +98,33 @@ function isActiveNavigationItem(item: MenuItem, activePage: string) {
   );
 }
 
-export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }: DashboardCommandNavigationProps) {
+function applyBrandNavigation(item: MenuItem): MenuItem {
+  if (item.href === '/eurocomply-home') {
+    return { ...item, label: 'RISCK COMPLY', href: '/risck-comply-home' };
+  }
+
+  return item;
+}
+
+export function DashboardCommandNavigation({ locale, activePage = 'RISCK COMPLY' }: DashboardCommandNavigationProps) {
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
-  const navigation = getLocalizedDashboardNavigation(activeLocale);
+  const navigation = getLocalizedDashboardNavigation(activeLocale).map(applyBrandNavigation);
   const navCopy = getAppDictionary(activeLocale).nav;
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/92 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/78">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 md:px-8">
-        <input id="eurocomply-mobile-menu" type="checkbox" className="peer sr-only" aria-hidden="true" />
+        <input id="risck-comply-mobile-menu" type="checkbox" className="peer sr-only" aria-hidden="true" />
 
         <Link
-          href={localizeHref(activeLocale, '/eurocomply-home')}
-          className="shrink-0 rounded-full bg-foreground px-4 py-2 text-sm font-semibold tracking-tight text-background shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          href={localizeHref(activeLocale, '/risck-comply-home')}
+          className="shrink-0 rounded-full bg-black px-4 py-2 text-sm font-semibold tracking-tight text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
         >
-          EuroComply
+          RISCK COMPLY
         </Link>
 
         <nav aria-label={navCopy.mainNavigation} className="hidden w-full items-center gap-2 whitespace-nowrap text-sm md:flex md:overflow-visible">
-          {navigation.filter((item) => item.href !== '/eurocomply-home').map((item) => {
+          {navigation.filter((item) => item.href !== '/risck-comply-home').map((item) => {
             const isActive = isActiveNavigationItem(item, activePage);
             const hasSubmenu = Boolean(item.sections?.length);
 
@@ -160,7 +168,7 @@ export function DashboardCommandNavigation({ locale, activePage = 'EuroComply' }
         </div>
 
         <label
-          htmlFor="eurocomply-mobile-menu"
+          htmlFor="risck-comply-mobile-menu"
           className="ml-auto inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border bg-background text-muted-foreground transition hover:bg-muted md:hidden"
           aria-label={navCopy.openMenu}
         >
