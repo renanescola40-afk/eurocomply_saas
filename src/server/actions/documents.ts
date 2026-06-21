@@ -11,7 +11,6 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
-import { createAuditEvent } from '@/server/queries/audit-events';
 import { validateUploadFileSecurity, validateUploadFileSignature } from '@/server/security/file-signature';
 import { scanUploadForMalware, shouldBlockUploadForMalwareScan, type MalwareScanResult } from '@/server/security/malware-scan';
 
@@ -36,6 +35,8 @@ const uploadDocumentSchema = z.object({
 export type CreateDocumentInput = z.input<typeof createDocumentSchema>;
 export type UploadDocumentInput = z.input<typeof uploadDocumentSchema>;
 
+const SECURITY_FAILURE_AUDIT_ACTION = 'security.failure';
+
 function blockedScanError(scan: MalwareScanResult) {
   if (scan.status === 'infected' || scan.status === 'suspicious') {
     return new Error('Document upload was blocked because the scanner reported unsafe content.');
@@ -56,6 +57,7 @@ async function auditUploadRejection(input: {
 }) {
   const scan = input.scan;
   const metadata = {
+    action: 'document.upload',
     reason: input.reason,
     claimedMimeType: input.file.type,
     detectedMimeType: input.detectedMimeType ?? null,
@@ -72,24 +74,14 @@ async function auditUploadRejection(input: {
     declaredSignatureMatches: input.declaredSignatureMatches,
   };
 
-  await Promise.all([
-    createAuditEvent({
-      organizationId: input.organizationId,
-      actorUserId: input.actorUserId,
-      action: 'document_upload_rejected',
-      entityType: 'document',
-      entityId: input.organizationId,
-      metadata,
-    }),
-    logAuditEvent({
-      organizationId: input.organizationId,
-      actorUserId: input.actorUserId,
-      action: 'document.upload_rejected',
-      entityType: 'document',
-      entityId: input.organizationId,
-      metadata,
-    }),
-  ]);
+  await logAuditEvent({
+    organizationId: input.organizationId,
+    actorUserId: input.actorUserId,
+    action: SECURITY_FAILURE_AUDIT_ACTION,
+    entityType: 'document',
+    entityId: input.organizationId,
+    metadata,
+  });
 }
 
 export async function createDocument(input: CreateDocumentInput, userId: string) {
@@ -119,7 +111,7 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
   await logAuditEvent({
     organizationId: payload.organizationId,
     actorUserId: userId,
-    action: 'document.created',
+    action: 'document.upload',
     entityType: 'document',
     entityId: data.id,
     metadata: { name: payload.name, category: payload.category, ...(payload.metadata ?? {}) },
@@ -251,19 +243,6 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
       userId,
     );
 
-    await createAuditEvent({
-      organizationId: payload.organizationId,
-      actorUserId: userId,
-      action: 'document_uploaded',
-      entityType: 'document',
-      entityId: document.id,
-      metadata: {
-        name: payload.name,
-        category: payload.category,
-        ...auditMetadata,
-      },
-    });
-
     return document;
   } catch (error) {
     reportError(error, { ...context, fileType: contentValidation.mimeType, fileSize: file.size });
@@ -317,7 +296,7 @@ export async function deleteDocument(documentId: string, organizationId: string,
   await logAuditEvent({
     organizationId,
     actorUserId: userId,
-    action: 'document.deleted',
+    action: 'document.delete',
     entityType: 'document',
     entityId: documentId,
     metadata: { name: deletedDocument.name, category: deletedDocument.category },
