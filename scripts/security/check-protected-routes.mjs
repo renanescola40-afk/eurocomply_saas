@@ -40,7 +40,7 @@ const requiredProtectedSegments = [
   '/audit-pack',
   '/notificacoes',
   '/auditoria',
-  '/eurocomply-home',
+  '/risck-comply-home',
   '/riscos',
   '/documentos',
   '/raci',
