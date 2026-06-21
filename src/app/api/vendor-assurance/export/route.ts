@@ -87,7 +87,7 @@ export async function GET(request: Request) {
   try {
     const payload = {
       schemaVersion: '2026-06-10',
-      exportType: 'eurocomply.vendor_assurance',
+      exportType: 'risck_comply.vendor_assurance',
       generatedAt: new Date().toISOString(),
       generatedBy: {
         userId: user.id,
@@ -106,7 +106,7 @@ export async function GET(request: Request) {
     const integrity = buildEvidencePackIntegrity(payload);
     const exportPayload = {
       schemaVersion: '2026-06-10',
-      exportType: 'eurocomply.vendor_assurance_export',
+      exportType: 'risck_comply.vendor_assurance_export',
       signatureAlgorithm: 'signed_hmac',
       payload,
       integrity,
@@ -134,7 +134,7 @@ export async function GET(request: Request) {
 
     const date = new Date().toISOString().slice(0, 10);
     const filename = sanitizeDocumentDownloadFileName(
-      `eurocomply-vendor-assurance-${organization.slug ?? organization.name ?? organization.id}-${date}.json`,
+      `risck-comply-vendor-assurance-${organization.slug ?? organization.name ?? organization.id}-${date}.json`,
     );
 
     return jsonDownloadResponse(exportPayload, filename);
