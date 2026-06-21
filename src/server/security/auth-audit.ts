@@ -17,6 +17,7 @@ export type AuthAuditInput = {
     | 'auth.oauth_callback'
   >;
   actorUserId?: string | null;
+  email?: string | null;
   method?: AuthAuditMethod;
   outcome?: AuthAuditOutcome;
   reason?: string | null;
