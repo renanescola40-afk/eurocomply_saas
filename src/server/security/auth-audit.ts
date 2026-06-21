@@ -44,7 +44,7 @@ async function resolveActorOrganizationIds(actorUserId: string | null | undefine
   }
 }
 
-export async function recordAuthAuditEvent(input: AuthAuditInput) {
+export async function recordAuthAuditEvent(input: AuthAuditInput & Record<string, unknown>) {
   const actorUserId = input.actorUserId ?? null;
   const organizationIds = await resolveActorOrganizationIds(actorUserId);
   const metadata = {
