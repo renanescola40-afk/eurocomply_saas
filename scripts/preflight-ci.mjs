@@ -27,6 +27,8 @@ const env = {
   ...process.env,
   ...ciPlaceholders,
   RISCK_COMPLY_PREFLIGHT_PROFILE: 'ci',
+  // Compatibility marker required by the existing workflow governance gate during the rebrand window.
+  EUROCOMPLY_PREFLIGHT_PROFILE: 'ci',
 };
 
 console.log('RISCK COMPLY CI preflight profile');
