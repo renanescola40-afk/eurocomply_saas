@@ -184,7 +184,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
   const addOns = getAddOnsCopy(locale);
 
   return [
-    { label: nav.eurocomply, href: '/eurocomply-home', description: nav.eurocomplyDescription },
+    { label: nav.eurocomply, href: '/risck-comply-home', description: nav.eurocomplyDescription },
     {
       label: nav.commandCenter,
       href: `${dashboardRoot}/command-center`,
