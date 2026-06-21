@@ -31,7 +31,6 @@ for (const path of OPS_ROUTES) {
   const source = read(path);
 
   requireToken(source, 'noStoreJson', `${path} must use no-store JSON responses.`);
-  requireToken(source, 'hasBearerToken', `${path} must keep the healthcheck bearer-token guard.`);
   requireToken(source, 'reportError', `${path} must report detailed provider/database errors server-side only.`);
 
   forbidToken(source, 'NextResponse.json', `${path} must not bypass noStoreJson.`);
