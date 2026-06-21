@@ -111,9 +111,11 @@ export async function GET(request: Request) {
     return noStoreJson({ error: parsedLimit.error }, { status: 400 });
   }
 
-  const events = await listAuditEvents(organization.id, parsedLimit.limit);
-  const chronological = [...events].reverse();
-  const chainRecords = chronological
+  const events = await listAuditEvents(organization.id, parsedLimit.limit + 1);
+  const chronologicalWindow = [...events].reverse();
+  const anchorEvent = chronologicalWindow.length > parsedLimit.limit ? chronologicalWindow.shift() : null;
+  const expectedPreviousHash = anchorEvent?.event_hash ?? null;
+  const chainRecords = chronologicalWindow
     .filter((event) => event.event_hash)
     .map((event) => ({
       id: event.id,
@@ -129,8 +131,8 @@ export async function GET(request: Request) {
       signature: event.hash_signature ?? undefined,
     })) satisfies AuditChainRecord[];
 
-  const verification = verifyAuditChain(chainRecords);
-  const legacyEvents = events.length - chainRecords.length;
+  const verification = verifyAuditChain(chainRecords, { expectedPreviousHash });
+  const legacyEvents = events.length - chainRecords.length - (anchorEvent?.event_hash ? 1 : 0);
   const checkedAt = new Date().toISOString();
   const verificationAuditEvent = await createAuditEvent({
     organizationId: organization.id,
@@ -141,9 +143,12 @@ export async function GET(request: Request) {
     metadata: {
       checkedAt,
       requestedLimit: parsedLimit.limit,
+      loadedForAnchor: events.length,
       totalEventsLoaded: events.length,
       chainedEventsChecked: verification.checked,
       legacyEvents,
+      anchorEventId: anchorEvent?.id ?? null,
+      expectedPreviousHash,
       ok: verification.ok,
       lastHash: verification.lastHash,
       failureCount: verification.failures.length,
@@ -161,6 +166,8 @@ export async function GET(request: Request) {
     totalEventsLoaded: events.length,
     chainedEventsChecked: verification.checked,
     legacyEvents,
+    anchorEventId: anchorEvent?.id ?? null,
+    expectedPreviousHash,
     ok: verification.ok,
     lastHash: verification.lastHash,
     failures: verification.failures,
