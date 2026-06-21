@@ -4,8 +4,8 @@ const ciPlaceholders = {
   NEXT_PUBLIC_SUPABASE_URL: 'https://ci-placeholder.supabase.co',
   NEXT_PUBLIC_SUPABASE_ANON_KEY: 'ci_supabase_anon_key_placeholder',
   SUPABASE_SERVICE_ROLE_KEY: 'ci_supabase_service_role_key_placeholder',
-  NEXT_PUBLIC_APP_URL: 'https://ci.eurocomply.local',
-  TRUSTED_ORIGINS: 'https://ci.eurocomply.local,http://localhost:3000',
+  NEXT_PUBLIC_APP_URL: 'https://ci.risckcomply.local',
+  TRUSTED_ORIGINS: 'https://ci.risckcomply.local,http://localhost:3000',
   STRIPE_SECRET_KEY: 'sk_test_ci_placeholder',
   STRIPE_WEBHOOK_SECRET: 'whsec_ci_placeholder',
   STRIPE_PRICE_ESSENTIAL_MONTHLY: 'price_ci_essential_monthly',
@@ -26,11 +26,11 @@ const ciPlaceholders = {
 const env = {
   ...process.env,
   ...ciPlaceholders,
-  EUROCOMPLY_PREFLIGHT_PROFILE: 'ci',
+  RISCK_COMPLY_PREFLIGHT_PROFILE: 'ci',
 };
 
-console.log('EuroComply CI preflight profile');
-console.log('--------------------------------');
+console.log('RISCK COMPLY CI preflight profile');
+console.log('----------------------------------');
 console.log('Using deterministic non-secret placeholder values for environment-dependent production preflight checks.');
 console.log('Any similarly named secrets passed by the workflow are intentionally overwritten in this CI-only profile.');
 console.log('Deployment workflows must still run npm run preflight with real production secrets and variables.');
