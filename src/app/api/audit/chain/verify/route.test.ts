@@ -90,7 +90,7 @@ describe('audit chain verification request contract', () => {
         hash_signature: 'sig-1',
       },
     ]);
-    mocks.verifyAuditChain.mockReturnValue({ ok: true, checked: 1, lastHash: 'hash-1', failures: [] });
+    mocks.verifyAuditChain.mockReturnValue({ ok: true, checked: 1, lastHash: 'hash-1', failures: [], expectedPreviousHash: null });
     mocks.createAuditEvent.mockResolvedValue({ persisted: true, transactional: true, eventHash: 'hash-verify' });
     mocks.permissionDeniedResponse.mockReturnValue(Response.json({ error: 'permission_denied' }, { status: 403 }));
     mocks.upgradeRequiredResponse.mockReturnValue(Response.json({ error: 'upgrade_required' }, { status: 402 }));
@@ -155,9 +155,10 @@ describe('audit chain verification request contract', () => {
         organizationId: 'org_123',
       }),
     );
-    expect(mocks.verifyAuditChain).toHaveBeenCalledWith([
-      expect.objectContaining({ id: 'evt_001', organizationId: 'org_123', eventHash: 'hash-1' }),
-    ]);
+    expect(mocks.verifyAuditChain).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: 'evt_001', organizationId: 'org_123', eventHash: 'hash-1' })],
+      { expectedPreviousHash: null },
+    );
     expect(mocks.createAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         organizationId: 'org_123',
