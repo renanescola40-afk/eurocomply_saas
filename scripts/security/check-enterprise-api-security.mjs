@@ -11,12 +11,12 @@ const MUTATING_HANDLER = /export\s+async\s+function\s+(POST|PUT|PATCH|DELETE)\b/
 const ALL_HANDLER = /export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)\b/g;
 
 const guardGroups = {
-  auth: ['getCurrentUser', 'requireCurrentUser', 'requireEnterpriseApiAccess'],
+  auth: ['getCurrentUser', 'requireCurrentUser', 'requireApiUser', 'requireEnterpriseApiAccess'],
   organization: ['getCurrentOrganizationForUser', 'requireOrganizationContext', 'requireEnterpriseApiAccess'],
-  rbac: ['assertOrganizationPermission', 'requireEnterpriseApiAccess'],
-  origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireEnterpriseApiAccess'],
+  rbac: ['assertOrganizationPermission', 'requirePermission', 'requireEnterpriseApiAccess'],
+  origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'no-store'],
-  rateLimit: ['checkDistributedRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireEnterpriseApiAccess'],
+  rateLimit: ['checkDistributedRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   internalAuth: ['isAuthorizedInternalCronRequest', 'HEALTHCHECK_TOKEN', 'CRON_SECRET', 'INTERNAL_CRON_SECRET'],
   tenant: ['organization.id', 'organizationId', 'organization_id', 'resourceOrganizationId', 'requireEnterpriseApiAccess'],
   webhookAuth: ['constructEvent', 'STRIPE_WEBHOOK_SECRET', 'stripe-signature'],
@@ -312,18 +312,22 @@ for (const scriptPath of delegatedGateScripts) {
 
 const adminClientPath = join(root, 'src', 'lib', 'supabase', 'admin.ts');
 if (!existsSync(adminClientPath)) {
-  failures.push('src/lib/supabase/admin.ts is missing; service-role usage must stay centralized server-side.');
+  failures.push('src/lib/supabase/admin.ts is missing; server-side admin client boundary cannot be verified');
 } else {
-  const adminClient = readFileSync(adminClientPath, 'utf8');
-  if (!adminClient.includes("import 'server-only'")) {
-    failures.push('src/lib/supabase/admin.ts must import server-only to block client bundling.');
+  const adminSource = readFileSync(adminClientPath, 'utf8');
+  if (!adminSource.includes("import 'server-only'")) {
+    failures.push('src/lib/supabase/admin.ts must import server-only to prevent client bundle leakage');
   }
 }
 
-if (failures.length > 0) {
-  console.error('Enterprise API security check failed:');
-  for (const failure of failures) console.error(`- ${failure}`);
-  process.exit(1);
-}
+console.log('EuroComply enterprise API security check');
+console.log('----------------------------------------');
+console.log(`Scanned ${routeFiles.length} API route handlers and ${sourceFiles.length} source files.`);
 
-console.log('Enterprise API security checks passed.');
+if (failures.length > 0) {
+  console.error('Enterprise API security failures:');
+  for (const failure of failures) console.error(`- ${failure}`);
+  process.exitCode = 1;
+} else {
+  console.log('Enterprise API security: ok');
+}

@@ -31,6 +31,10 @@ function logDashboardPreviewError(label: string, error: QueryError) {
   }
 }
 
+function getErrorCode(error: unknown) {
+  return error instanceof Error ? error.name : 'unknown';
+}
+
 function getEmptyDashboardSummary(): DashboardSummary {
   return {
     complianceScore: 0,
@@ -89,7 +93,7 @@ async function withDashboardTimeout<T>(label: string, promise: Promise<T>, fallb
 
   const timeout = new Promise<T>((resolve) => {
     timeoutId = setTimeout(() => {
-      console.warn('[dashboard] query_timeout', { label, timeoutMs });
+      console.warn('[dashboard] query_timeout', { label, code: 'timeout', timeoutMs });
       resolve(fallback);
     }, timeoutMs);
   });
@@ -97,10 +101,7 @@ async function withDashboardTimeout<T>(label: string, promise: Promise<T>, fallb
   try {
     return await Promise.race([promise, timeout]);
   } catch (error) {
-    console.warn('[dashboard] query_failed', {
-      label,
-      message: error instanceof Error ? error.message : 'unknown',
-    });
+    console.warn('[dashboard] query_failed', { label, code: getErrorCode(error) });
     return fallback;
   } finally {
     if (timeoutId) {
@@ -214,9 +215,7 @@ export async function getOrganizationDashboardData(userId: string, organizationS
   ]);
 
   void recordDashboardMetricSnapshot(organization.id, summary).catch((error) => {
-    console.warn('[dashboard] metric_snapshot_background_failed', {
-      message: error instanceof Error ? error.message : 'unknown',
-    });
+    console.warn('[dashboard] metric_snapshot_background_failed', { code: getErrorCode(error) });
   });
 
   return {

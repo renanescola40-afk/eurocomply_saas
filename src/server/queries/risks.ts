@@ -11,7 +11,7 @@ export async function listRisks(organizationId: string) {
     .order('risk_score', { ascending: false });
 
   if (error) {
-    console.warn('[risks] Failed to list risks:', error.message);
+    console.warn('[risks] list_failed', { code: error.code ?? 'unknown' });
     return [];
   }
 

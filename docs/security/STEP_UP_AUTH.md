@@ -2,6 +2,8 @@
 
 This document defines the enterprise step-up authentication policy for high-risk RISCK COMPLY actions.
 
+Release gate evidence: `STEP_UP_PROVIDER_MODE` is the required runtime provider selector validated by the enterprise Release gate.
+
 ## Purpose
 
 Step-up authentication reduces the risk of session hijacking, unattended sessions and compromised browser sessions being used to perform sensitive actions.

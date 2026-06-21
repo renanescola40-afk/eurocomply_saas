@@ -7,7 +7,7 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { createNotification } from '@/server/queries/notifications';
 import { assertDocumentQuota } from '@/server/billing/entitlements';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
-import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
+import { assertDocumentStoragePathInOrganization, sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
@@ -246,7 +246,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const storagePath = `${organization.id}/${randomUUID()}.${extension}`;
+  const storagePath = `${organization.id}/${user.id}/${randomUUID()}.${extension}`;
+  assertDocumentStoragePathInOrganization(storagePath, organization.id);
+
   const title = safeDocumentTitle(file.name);
   const supabase = tryCreateAdminClient();
 
@@ -266,17 +268,20 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Unable to store document securely.' }, { status: 500 });
   }
 
-  const { data: document, error: documentError } = await supabase
+  const { data: persistedDocument, error: documentError } = await supabase
     .from('documents')
     .insert({
       organization_id: organization.id,
-      title,
+      uploaded_by: user.id,
+      name: title,
+      category: 'controlled-document',
       status: 'pending',
-      version: 'v1',
       storage_path: storagePath,
       checksum_sha256: fileHash,
+      mime_type: validation.mimeType,
+      size_bytes: file.size,
     })
-    .select('id,title,status,version,created_at')
+    .select('id,name,status,created_at')
     .single();
 
   if (documentError) {
@@ -286,12 +291,20 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Unable to register document metadata.' }, { status: 500 });
   }
 
+  const document = {
+    id: persistedDocument?.id,
+    title: persistedDocument?.name ?? title,
+    status: persistedDocument?.status ?? 'pending',
+    version: 1,
+    created_at: persistedDocument?.created_at ?? null,
+  };
+
   await createAuditEvent({
     organizationId: organization.id,
     actorUserId: user.id,
     action: 'document_uploaded',
     entityType: 'document',
-    entityId: document?.id,
+    entityId: document.id,
     metadata: {
       title,
       mimeType: validation.mimeType,

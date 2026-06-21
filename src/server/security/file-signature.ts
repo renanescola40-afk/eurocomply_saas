@@ -4,6 +4,19 @@ const JPEG_HEADER = [0xff, 0xd8, 0xff];
 const PDF_HEADER = [0x25, 0x50, 0x44, 0x46, 0x2d];
 const WINDOWS_EXECUTABLE_HEADER = [0x4d, 0x5a];
 
+const PDF_ACTIVE_CONTENT_PATTERN = /\/(?:JavaScript|JS|OpenAction|AA|Launch|RichMedia|EmbeddedFile|SubmitForm|ImportData)\b/i;
+const OPENXML_ACTIVE_CONTENT_MARKERS = [
+  'vbaProject.bin',
+  'macrosheets/',
+  'xl4Macrosheets/',
+  'activeX/',
+  'embeddings/oleObject',
+  'embeddings/package',
+  'word/vbaData.xml',
+  'xl/vbaProject.bin',
+  'ppt/vbaProject.bin',
+];
+
 export type SupportedUploadMimeType =
   | 'application/pdf'
   | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -33,7 +46,8 @@ export type UploadFileSecurityValidation =
         | 'unsupported_mime_type'
         | 'extension_mismatch'
         | 'mime_spoofing'
-        | 'signature_mismatch';
+        | 'signature_mismatch'
+        | 'active_content_detected';
       message: string;
       detectedType?: UploadFileType | null;
     };
@@ -48,29 +62,54 @@ export const UPLOAD_MIME_TYPE_TO_EXTENSION = new Map<SupportedUploadMimeType, Up
 
 const ALLOWED_UPLOAD_EXTENSIONS = new Set(['pdf', 'docx', 'xlsx', 'png', 'jpg', 'jpeg']);
 const DANGEROUS_UPLOAD_EXTENSIONS = new Set([
+  'apk',
   'app',
   'bat',
+  'bin',
   'cmd',
   'com',
   'cpl',
+  'deb',
   'dll',
   'dmg',
+  'docm',
   'exe',
+  'gadget',
   'hta',
   'html',
+  'htm',
+  'ipa',
+  'iso',
   'jar',
   'js',
   'jse',
   'lnk',
+  'mht',
+  'mhtml',
   'msi',
+  'msp',
+  'pif',
   'php',
   'ps1',
+  'psd1',
+  'psm1',
+  'reg',
+  'rpm',
+  'scf',
   'scr',
+  'sct',
   'sh',
   'svg',
+  'url',
   'vbe',
   'vbs',
+  'ws',
+  'wsc',
   'wsf',
+  'wsh',
+  'xlam',
+  'xll',
+  'xlsm',
 ]);
 
 function startsWith(bytes: Buffer, signature: number[]) {
@@ -78,8 +117,19 @@ function startsWith(bytes: Buffer, signature: number[]) {
   return signature.every((value, index) => bytes[index] === value);
 }
 
+function normalizeMimeType(mimeType: string) {
+  return String(mimeType ?? '')
+    .split(';')[0]
+    .trim()
+    .toLowerCase();
+}
+
 function bufferIncludesAscii(bytes: Buffer, text: string) {
   return bytes.includes(Buffer.from(text, 'ascii'));
+}
+
+function bufferIncludesAsciiInsensitive(bytes: Buffer, text: string) {
+  return bytes.toString('latin1').toLowerCase().includes(text.toLowerCase());
 }
 
 function hasZipOpenXmlSignature(bytes: Buffer, expectedContentType: 'word' | 'spreadsheet') {
@@ -91,10 +141,25 @@ function hasZipOpenXmlSignature(bytes: Buffer, expectedContentType: 'word' | 'sp
   if (!bufferIncludesAscii(head, '[Content_Types].xml')) return false;
 
   if (expectedContentType === 'word') {
-    return bufferIncludesAscii(head, 'word/');
+    return bufferIncludesAscii(head, 'word/document.xml') || bufferIncludesAscii(head, 'word/');
   }
 
-  return bufferIncludesAscii(head, 'xl/');
+  return bufferIncludesAscii(head, 'xl/workbook.xml') || bufferIncludesAscii(head, 'xl/');
+}
+
+function hasPdfActiveContent(bytes: Buffer) {
+  if (!startsWith(bytes, PDF_HEADER)) return false;
+
+  return PDF_ACTIVE_CONTENT_PATTERN.test(bytes.toString('latin1'));
+}
+
+function hasOpenXmlActiveContent(bytes: Buffer) {
+  if (!startsWith(bytes, ZIP_HEADER)) return false;
+
+  const maxScanBytes = Math.min(bytes.length, 10 * 1024 * 1024);
+  const scanWindow = bytes.subarray(0, maxScanBytes);
+
+  return OPENXML_ACTIVE_CONTENT_MARKERS.some((marker) => bufferIncludesAsciiInsensitive(scanWindow, marker));
 }
 
 function fileNameSegments(fileName: string) {
@@ -158,7 +223,7 @@ export function detectUploadFileType(bytes: Buffer): UploadFileType | null {
 
 export function validateUploadFileSignature(mimeType: string, bytes: Buffer) {
   const detectedType = detectUploadFileType(bytes);
-  return detectedType?.mimeType === mimeType;
+  return detectedType?.mimeType === normalizeMimeType(mimeType);
 }
 
 export function validateUploadFileSecurity(input: {
@@ -186,6 +251,12 @@ export function validateUploadFileSecurity(input: {
     return { ok: false, reason: 'unsupported_extension', message: 'File extension is not allowed.' };
   }
 
+  const claimedMimeType = normalizeMimeType(input.claimedMimeType);
+
+  if (!UPLOAD_MIME_TYPE_TO_EXTENSION.has(claimedMimeType as SupportedUploadMimeType)) {
+    return { ok: false, reason: 'unsupported_mime_type', message: 'Claimed MIME type is not allowed.' };
+  }
+
   const detectedType = detectUploadFileType(input.bytes);
 
   if (!detectedType) {
@@ -203,7 +274,7 @@ export function validateUploadFileSecurity(input: {
     };
   }
 
-  if (input.claimedMimeType !== detectedType.mimeType) {
+  if (claimedMimeType !== detectedType.mimeType) {
     return {
       ok: false,
       reason: 'mime_spoofing',
@@ -212,11 +283,33 @@ export function validateUploadFileSecurity(input: {
     };
   }
 
-  if (!validateUploadFileSignature(input.claimedMimeType, input.bytes)) {
+  if (!validateUploadFileSignature(claimedMimeType, input.bytes)) {
     return {
       ok: false,
       reason: 'signature_mismatch',
       message: 'File signature does not match the declared file type.',
+      detectedType,
+    };
+  }
+
+  if (detectedType.mimeType === 'application/pdf' && hasPdfActiveContent(input.bytes)) {
+    return {
+      ok: false,
+      reason: 'active_content_detected',
+      message: 'PDF files with active content are not allowed.',
+      detectedType,
+    };
+  }
+
+  if (
+    (detectedType.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      detectedType.mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') &&
+    hasOpenXmlActiveContent(input.bytes)
+  ) {
+    return {
+      ok: false,
+      reason: 'active_content_detected',
+      message: 'Office documents with macros, OLE objects or active content are not allowed.',
       detectedType,
     };
   }

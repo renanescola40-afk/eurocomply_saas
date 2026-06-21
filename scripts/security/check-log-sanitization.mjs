@@ -54,6 +54,19 @@ const forbiddenLiteralPatterns = [
   { name: 'Google OAuth client secret in log/source', pattern: /GOCSPX-[A-Za-z0-9_-]{20,}/ },
 ];
 
+const allowedDeterministicPlaceholders = [
+  {
+    path: 'scripts/preflight-ci.mjs',
+    name: 'Stripe secret key in log/source',
+    value: ['sk', 'test', 'ci', 'placeholder'].join('_'),
+  },
+  {
+    path: 'scripts/preflight-ci.mjs',
+    name: 'Stripe webhook secret in log/source',
+    value: ['whsec', 'ci', 'placeholder'].join('_'),
+  },
+];
+
 function walk(dir) {
   const entries = readdirSync(dir, { withFileTypes: true });
   return entries.flatMap((entry) => {
@@ -82,6 +95,12 @@ function stripStaticSubsystemMarkers(value) {
 
 function isAllowedSafeLog(args, wholeCall) {
   return allowedSafeLogMarkers.some((marker) => args.includes(marker) || wholeCall.includes(marker));
+}
+
+function isAllowedDeterministicPlaceholder(normalized, forbiddenName, source, matchIndex) {
+  return allowedDeterministicPlaceholders.some(
+    (placeholder) => placeholder.path === normalized && placeholder.name === forbiddenName && source.startsWith(placeholder.value, matchIndex),
+  );
 }
 
 function isSingleStaticStringLiteral(args) {
@@ -128,6 +147,7 @@ for (const file of files) {
   for (const forbidden of forbiddenLiteralPatterns) {
     const match = forbidden.pattern.exec(source);
     if (match) {
+      if (isAllowedDeterministicPlaceholder(normalized, forbidden.name, source, match.index)) continue;
       failures.push(`${normalized}:${lineNumberFor(source, match.index)} forbidden sensitive literal detected: ${forbidden.name}`);
     }
   }

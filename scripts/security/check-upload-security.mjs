@@ -30,6 +30,7 @@ const requiredUploadTokens = [
   'scanRequired',
   'MAX_UPLOAD_BYTES',
   'ALLOWED_TYPES',
+  'assertDocumentStoragePathInOrganization',
 ];
 
 const requiredSignatureTokens = [
@@ -40,6 +41,9 @@ const requiredSignatureTokens = [
   'WINDOWS_EXECUTABLE_HEADER',
   'ALLOWED_UPLOAD_EXTENSIONS',
   'DANGEROUS_UPLOAD_EXTENSIONS',
+  'PDF_ACTIVE_CONTENT_PATTERN',
+  'OPENXML_ACTIVE_CONTENT_MARKERS',
+  'active_content_detected',
   'validateUploadFileSecurity',
   'validateUploadFileSignature',
   'dangerous_extension',
@@ -48,6 +52,12 @@ const requiredSignatureTokens = [
   '[Content_Types].xml',
   'word/',
   'xl/',
+];
+
+const requiredSignatureTestTokens = [
+  'active_content_detected',
+  '/OpenAction',
+  'vbaProject.bin',
 ];
 
 const requiredContentScanTokens = [
@@ -83,11 +93,12 @@ console.log('-----------------------------------------');
 
 const uploadSource = assertFile(uploadRoute);
 const signatureSource = assertFile(signatureHelper);
+const signatureTestSource = assertFile(signatureTest);
 const contentScanSource = assertFile(contentScanHelper);
-assertFile(signatureTest);
 
 if (uploadSource) assertTokens(uploadSource, requiredUploadTokens, uploadRoute);
 if (signatureSource) assertTokens(signatureSource, requiredSignatureTokens, signatureHelper);
+if (signatureTestSource) assertTokens(signatureTestSource, requiredSignatureTestTokens, signatureTest);
 if (contentScanSource) assertTokens(contentScanSource, requiredContentScanTokens, contentScanHelper);
 
 if (uploadSource.includes('contentType: file.type') && !uploadSource.includes('validateUploadFileSignature(file.type, buffer)')) {

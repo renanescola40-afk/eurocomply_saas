@@ -25,6 +25,17 @@ function sanitizeValue(value: unknown): unknown {
   return String(value);
 }
 
+function sanitizeError(error: unknown) {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      code: error.name,
+    };
+  }
+
+  return { name: 'UnknownError', code: 'unknown' };
+}
+
 export function sanitizeContext(context: ReportErrorContext = {}) {
   return Object.fromEntries(
     Object.entries(context).map(([key, value]) => [
@@ -36,6 +47,7 @@ export function sanitizeContext(context: ReportErrorContext = {}) {
 
 export function reportError(error: unknown, context: ReportErrorContext = {}) {
   const sanitizedContext = sanitizeContext(context);
+  const sanitizedError = sanitizeError(error);
   const report = { error, context: sanitizedContext };
 
   if (process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN) {
@@ -45,6 +57,6 @@ export function reportError(error: unknown, context: ReportErrorContext = {}) {
     return report;
   }
 
-  console.error('[RISCK COMPLY]', error, sanitizedContext);
+  console.error('[RISCK COMPLY]', { sanitizedError, sanitizedContext });
   return report;
 }

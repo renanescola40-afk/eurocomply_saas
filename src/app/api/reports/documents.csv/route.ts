@@ -70,7 +70,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('documents')
-    .select('title,status,version,expires_at,created_at,updated_at')
+    .select('name,status,expires_at,created_at,updated_at')
     .eq('organization_id', organization.id)
     .order('created_at', { ascending: false });
 
@@ -82,9 +82,9 @@ export async function GET() {
   const rows = [
     DOCUMENTS_CSV_HEADER,
     ...((data ?? []).map((document) => [
-      document.title,
+      document.name,
       document.status,
-      document.version,
+      1,
       document.expires_at,
       document.created_at,
       document.updated_at,
