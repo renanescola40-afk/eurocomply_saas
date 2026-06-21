@@ -1,6 +1,6 @@
 # Observability Baseline
 
-EuroComply handles compliance data, billing events, uploads and tenant-scoped workflows. Production observability must make failures visible without exposing sensitive customer data.
+RISCK COMPLY handles compliance data, billing events, uploads and tenant-scoped workflows. Production observability must make failures visible without exposing sensitive customer data.
 
 ## Required Signals
 
