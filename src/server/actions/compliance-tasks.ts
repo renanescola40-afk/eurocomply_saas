@@ -29,7 +29,7 @@ export async function createComplianceTask(input: CreateComplianceTaskInput, use
   await logAuditEvent({
     organizationId: payload.organizationId,
     actorUserId: userId,
-    action: 'compliance_task.created',
+    action: 'task.create',
     entityType: 'compliance_task',
     entityId: task.id,
     metadata: { title: payload.title },
@@ -66,7 +66,7 @@ export async function updateComplianceTask(taskId: string, organizationId: strin
   await logAuditEvent({
     organizationId,
     actorUserId: userId,
-    action: 'compliance_task.updated',
+    action: 'task.update',
     entityType: 'compliance_task',
     entityId: taskId,
     metadata: payload,
@@ -92,7 +92,7 @@ export async function deleteComplianceTask(taskId: string, organizationId: strin
   await logAuditEvent({
     organizationId,
     actorUserId: userId,
-    action: 'compliance_task.deleted',
+    action: 'task.delete',
     entityType: 'compliance_task',
     entityId: taskId,
     metadata: { title: task.title },
