@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://eurocomply.local/security/p0-runtime-evidence.schema.json",
-  "title": "EuroComply P0 Runtime Evidence",
+  "$id": "https://risck-comply.local/security/p0-runtime-evidence.schema.json",
+  "title": "RISCK COMPLY P0 Runtime Evidence",
   "type": "object",
   "additionalProperties": false,
   "required": [
