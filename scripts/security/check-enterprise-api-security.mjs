@@ -6,21 +6,20 @@ const root = process.cwd();
 const srcRoot = join(root, 'src');
 const apiRoot = join(srcRoot, 'app', 'api');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
-const env = (...parts) => parts.join('_');
 
 const MUTATING_HANDLER = /export\s+async\s+function\s+(POST|PUT|PATCH|DELETE)\b/g;
 const ALL_HANDLER = /export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)\b/g;
 
 const guardGroups = {
   auth: ['getCurrentUser', 'requireCurrentUser', 'requireApiUser', 'requireEnterpriseApiAccess'],
-  organization: ['getCurrentOrganizationForUser', 'requireOrganizationContext', 'requireOrganizationAccess', 'requireEnterpriseApiAccess'],
+  organization: ['getCurrentOrganizationForUser', 'requireOrganizationContext', 'requireEnterpriseApiAccess'],
   rbac: ['assertOrganizationPermission', 'requirePermission', 'requireEnterpriseApiAccess'],
   origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'no-store'],
   rateLimit: ['checkDistributedRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
-  internalAuth: ['isAuthorizedInternalCronRequest', env('HEALTHCHECK', 'TOKEN'), env('CRON', 'SECRET'), env('INTERNAL', 'CRON', 'SECRET')],
-  tenant: ['organization.id', 'organizationId', 'organization_id', 'resourceOrganizationId', 'requireOrganizationAccess', 'requireEnterpriseApiAccess'],
-  webhookAuth: ['constructEvent', env('STRIPE', 'WEBHOOK', 'SECRET'), 'stripe-signature'],
+  internalAuth: ['isAuthorizedInternalCronRequest', 'HEALTHCHECK_TOKEN', 'CRON_SECRET', 'INTERNAL_CRON_SECRET'],
+  tenant: ['organization.id', 'organizationId', 'organization_id', 'resourceOrganizationId', 'requireEnterpriseApiAccess'],
+  webhookAuth: ['constructEvent', 'STRIPE_WEBHOOK_SECRET', 'stripe-signature'],
 };
 
 const delegatedGateScripts = [
@@ -229,7 +228,7 @@ function evaluateClientBoundary(filePath) {
   if (!isClientBoundary(path, source)) return failures;
 
   const forbiddenClientTokens = [
-    env('SUPABASE', 'SERVICE', 'ROLE', 'KEY'),
+    'SUPABASE_SERVICE_ROLE_KEY',
     'service_role',
     'createAdminClient',
     '@/lib/supabase/admin',
@@ -247,6 +246,7 @@ function evaluateClientBoundary(filePath) {
 function evaluateAuditEvidencePackExportContract() {
   const routePath = join(apiRoot, 'audit', 'evidence-pack', 'route.ts');
   if (!existsSync(routePath)) return ['src/app/api/audit/evidence-pack/route.ts is missing'];
+
   const source = readFileSync(routePath, 'utf8');
   const path = normalizePath(routePath);
   const failures = [];
@@ -312,18 +312,22 @@ for (const scriptPath of delegatedGateScripts) {
 
 const adminClientPath = join(root, 'src', 'lib', 'supabase', 'admin.ts');
 if (!existsSync(adminClientPath)) {
-  failures.push('src/lib/supabase/admin.ts is missing; service-role usage must stay centralized server-side.');
+  failures.push('src/lib/supabase/admin.ts is missing; server-side admin client boundary cannot be verified');
 } else {
-  const adminClient = readFileSync(adminClientPath, 'utf8');
-  if (!adminClient.includes("import 'server-only'")) {
-    failures.push('src/lib/supabase/admin.ts must import server-only to block client bundling.');
+  const adminSource = readFileSync(adminClientPath, 'utf8');
+  if (!adminSource.includes("import 'server-only'")) {
+    failures.push('src/lib/supabase/admin.ts must import server-only to prevent client bundle leakage');
   }
 }
 
-if (failures.length > 0) {
-  console.error('Enterprise API security check failed:');
-  for (const failure of failures) console.error(`- ${failure}`);
-  process.exit(1);
-}
+console.log('EuroComply enterprise API security check');
+console.log('----------------------------------------');
+console.log(`Scanned ${routeFiles.length} API route handlers and ${sourceFiles.length} source files.`);
 
-console.log('Enterprise API security checks passed.');
+if (failures.length > 0) {
+  console.error('Enterprise API security failures:');
+  for (const failure of failures) console.error(`- ${failure}`);
+  process.exitCode = 1;
+} else {
+  console.log('Enterprise API security: ok');
+}
