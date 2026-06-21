@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://eurocomply-saas.vercel.app';
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://risckcomply.app';
 
 export default function robots(): MetadataRoute.Robots {
   return {
