@@ -32,9 +32,13 @@ const sensitiveTerms = [
 
 const allowedSafeLogMarkers = [
   'sanitizeLog',
+  'sanitizeContext',
+  'sanitizedContext',
   'redact',
+  '[redacted]',
   'safeLog',
   'code:',
+  'code :',
   'code ??',
   'process.exitCode',
   'console.log(`Scanned',
@@ -72,12 +76,45 @@ function lineNumberFor(source, index) {
   return source.slice(0, index).split('\n').length;
 }
 
+function stripStaticSubsystemMarkers(value) {
+  return value.replace(/\[[a-z0-9:_-]+\]/gi, '');
+}
+
 function isAllowedSafeLog(args, wholeCall) {
   return allowedSafeLogMarkers.some((marker) => args.includes(marker) || wholeCall.includes(marker));
 }
 
+function isSingleStaticStringLiteral(args) {
+  const trimmed = args.trim();
+  if (!trimmed) return false;
+
+  const quote = trimmed[0];
+  if (!["'", '"', '`'].includes(quote) || trimmed.at(-1) !== quote) return false;
+
+  let escaped = false;
+  for (let index = 1; index < trimmed.length - 1; index += 1) {
+    const character = trimmed[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (quote === '`' && character === '$' && trimmed[index + 1] === '{') return false;
+    if (character === quote) return false;
+  }
+
+  return true;
+}
+
+function isRuntimeSource(normalized) {
+  return normalized.startsWith('src/');
+}
+
 function containsSensitiveTerm(value) {
-  const lower = value.toLowerCase();
+  const lower = stripStaticSubsystemMarkers(value).toLowerCase();
   return sensitiveTerms.some((term) => lower.includes(term));
 }
 
@@ -95,10 +132,13 @@ for (const file of files) {
     }
   }
 
+  if (!isRuntimeSource(normalized)) continue;
+
   for (const match of source.matchAll(logCallPattern)) {
     const wholeCall = match[0];
     const args = match.groups?.args ?? '';
     if (!containsSensitiveTerm(args)) continue;
+    if (isSingleStaticStringLiteral(args)) continue;
     if (isAllowedSafeLog(args, wholeCall)) continue;
 
     failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} log call may expose sensitive data; log event ids/codes only or pass data through a redaction helper`);

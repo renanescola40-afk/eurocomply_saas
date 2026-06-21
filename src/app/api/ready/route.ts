@@ -1,5 +1,6 @@
 import { reportError } from '@/lib/observability/report-error';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { validateBearerToken } from '@/server/security/bearer-token';
 import { noStoreJson } from '@/server/security/no-store';
 
 export const dynamic = 'force-dynamic';
@@ -17,18 +18,7 @@ type ReadyEnvironmentGroup = {
 };
 
 function hasBearerToken(request: Request) {
-  const token = process.env.HEALTHCHECK_TOKEN;
-
-  if (process.env.NODE_ENV !== 'production' && !token) {
-    return true;
-  }
-
-  if (!token) {
-    return false;
-  }
-
-  const authorization = request.headers.get('authorization');
-  return authorization === `Bearer ${token}`;
+  return validateBearerToken(request, process.env.HEALTHCHECK_TOKEN);
 }
 
 export function readyEnvironmentCheck(): ReadyEnvironmentGroup[] {

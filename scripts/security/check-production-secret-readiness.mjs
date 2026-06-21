@@ -22,6 +22,20 @@ const allowedPublicEnvNames = new Set([
   pub('SENTRY', 'DSN'),
 ]);
 
+const malwareScannerProviderSecretVariables = [
+  n('MALWARE', 'SCANNER', 'ENDPOINT'),
+  n('MALWARE', 'SCANNER', 'URL'),
+  n('MALWARE', 'SCANNER', 'API', 'KEY'),
+  n('MALWARE', 'SCANNER', 'CLAMAV', 'HOST'),
+];
+
+const malwareScannerProviderPublicVariables = [
+  n('REQUIRE', 'MALWARE', 'SCAN', 'FOR', 'UPLOADS'),
+  n('MALWARE', 'SCANNER', 'PROVIDER'),
+  n('MALWARE', 'SCANNER', 'CLAMAV', 'PORT'),
+  n('MALWARE', 'SCANNER', 'TIMEOUT', 'MS'),
+];
+
 const providerSecretVariables = [
   n('SUPABASE', 'SERVICE', 'ROLE', 'KEY'),
   n('SUPABASE', 'ACCESS', 'TOKEN'),
@@ -41,6 +55,7 @@ const providerSecretVariables = [
   n('VERCEL', 'TOKEN'),
   n('VERCEL', 'ORG', 'ID'),
   n('VERCEL', 'PROJECT', 'ID'),
+  ...malwareScannerProviderSecretVariables,
 ];
 
 const providerPublicVariables = [
@@ -54,6 +69,7 @@ const providerPublicVariables = [
   n('STRIPE', 'PRICE', 'ESSENTIAL', 'MONTHLY'),
   n('STRIPE', 'PRICE', 'PROFESSIONAL', 'MONTHLY'),
   n('STRIPE', 'PRICE', 'BUSINESS', 'MONTHLY'),
+  ...malwareScannerProviderPublicVariables,
 ];
 
 const requiredByEnvironment = {
@@ -80,6 +96,8 @@ const requiredByEnvironment = {
     pub('SENTRY', 'DSN'),
     n('SENTRY', 'DSN'),
     n('SENTRY', 'AUTH', 'TOKEN'),
+    ...malwareScannerProviderSecretVariables,
+    ...malwareScannerProviderPublicVariables,
   ],
 };
 
