@@ -16,6 +16,11 @@ const stepUpAmrEnv = env('STEP', 'UP', 'IDP', 'AMR', 'VALUES');
 // Upload malware/content scanning production envs: REQUIRE_MALWARE_SCAN_FOR_UPLOADS, MALWARE_SCANNER_PROVIDER.
 const malwareScanRequiredEnv = env('REQUIRE', 'MALWARE', 'SCAN', 'FOR', 'UPLOADS');
 const malwareScannerProviderEnv = env('MALWARE', 'SCANNER', 'PROVIDER');
+const malwareScannerEndpointEnv = env('MALWARE', 'SCANNER', 'ENDPOINT');
+const malwareScannerUrlEnv = env('MALWARE', 'SCANNER', 'URL');
+const malwareScannerApiKeyEnv = env('MALWARE', 'SCANNER', 'API', 'KEY');
+const malwareScannerClamAvHostEnv = env('MALWARE', 'SCANNER', 'CLAMAV', 'HOST');
+const malwareScannerClamAvPortEnv = env('MALWARE', 'SCANNER', 'CLAMAV', 'PORT');
 
 const required = [supabaseUrlEnv, supabaseAnonEnv, supabaseServiceEnv];
 
@@ -36,6 +41,7 @@ const recommended = [
   stepUpAmrEnv,
   malwareScanRequiredEnv,
   malwareScannerProviderEnv,
+  malwareScannerApiKeyEnv,
   env('SENTRY', 'AUTH', 'TOKEN'),
   env('UPSTASH', 'REDIS', 'REST', 'URL'),
   env('UPSTASH', 'REDIS', 'REST', 'TOKEN'),
@@ -50,6 +56,7 @@ const requiredFiles = [
   'supabase/migrations/20260612_audit_event_hash_chain.sql',
   'supabase/migrations/20260613_audit_event_chained_rpc.sql',
   'supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql',
+  'supabase/migrations/20260621143000_upload_security_metadata.sql',
   'src/app/api/ops/enterprise-readiness/route.ts',
   'src/server/governance/enterprise-readiness.ts',
   'src/app/[locale]/enterprise-readiness/page.tsx',
@@ -73,6 +80,7 @@ const requiredFiles = [
   'src/server/security/file-signature.ts',
   'src/server/security/file-signature.test.ts',
   'src/server/security/malware-scan.ts',
+  'src/server/security/upload-security.ts',
   'src/server/security/security-scenarios.ts',
   'src/server/security/security-scenarios.test.ts',
   'src/server/security/audit-chain.ts',
@@ -106,6 +114,7 @@ const requiredFiles = [
   'docs/security/SUPPLY_CHAIN.md',
   'docs/security/LOCKFILE_TRIAGE_RUNBOOK.md',
   'docs/security/UPLOAD_CONTENT_SCAN.md',
+  'docs/security/UPLOAD_SECURITY.md',
   'docs/security/RLS_LIVE_VALIDATION_RUNBOOK.md',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
@@ -124,6 +133,14 @@ function hasConfiguredList(name) {
 
 function isEnterpriseReleaseEnabled() {
   return process.env[enterpriseReleaseEnv] === 'true' || process.env[legacyEnterpriseReleaseEnv] === 'true';
+}
+
+function isHttpScannerProvider(provider) {
+  return ['http', 'generic-http', 'webhook'].includes(provider);
+}
+
+function isClamAvScannerProvider(provider) {
+  return ['clamav', 'clamd'].includes(provider);
 }
 
 const missingRequired = required.filter((key) => !process.env[key]);
@@ -181,6 +198,45 @@ if (!process.env[supabaseAccessTokenEnv]) {
 }
 
 if (enterpriseReleaseEnabled) {
+  console.log('Enterprise upload malware scan preflight: running');
+
+  const scanRequired = readRuntimeSetting(malwareScanRequiredEnv) === 'true';
+  const scannerProvider = readRuntimeSetting(malwareScannerProviderEnv).toLowerCase();
+  const scannerApiKey = readRuntimeSetting(malwareScannerApiKeyEnv);
+  const scannerEndpoint = readRuntimeSetting(malwareScannerEndpointEnv) || readRuntimeSetting(malwareScannerUrlEnv);
+  const clamAvHost = readRuntimeSetting(malwareScannerClamAvHostEnv);
+  const clamAvPort = readRuntimeSetting(malwareScannerClamAvPortEnv) || '3310';
+  const invalidProvider = !scannerProvider || ['none', 'disabled', 'mock', 'test', 'dev-mock'].includes(scannerProvider);
+
+  if (!scanRequired) {
+    console.error('Enterprise release requires REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true.');
+    process.exitCode = 1;
+  }
+
+  if (invalidProvider) {
+    console.error('Enterprise release requires MALWARE_SCANNER_PROVIDER to name a real provider, not a bypass/mock provider.');
+    process.exitCode = 1;
+  }
+
+  if (isHttpScannerProvider(scannerProvider) && !scannerEndpoint) {
+    console.error('Enterprise HTTP upload scanning requires MALWARE_SCANNER_ENDPOINT or MALWARE_SCANNER_URL.');
+    process.exitCode = 1;
+  }
+
+  if (isHttpScannerProvider(scannerProvider) && !scannerApiKey) {
+    console.error('Enterprise HTTP upload scanning requires MALWARE_SCANNER_API_KEY or equivalent server-only authorization.');
+    process.exitCode = 1;
+  }
+
+  if (isClamAvScannerProvider(scannerProvider) && !Number.isFinite(Number.parseInt(clamAvPort, 10))) {
+    console.error('Enterprise ClamAV upload scanning requires a valid MALWARE_SCANNER_CLAMAV_PORT.');
+    process.exitCode = 1;
+  }
+
+  if (isClamAvScannerProvider(scannerProvider) && !clamAvHost) {
+    console.warn('Enterprise ClamAV scanner host not set; runtime will use 127.0.0.1. Confirm this is intentional.');
+  }
+
   console.log('Enterprise step-up runtime provider preflight: running');
 
   const providerMode = readRuntimeSetting(stepUpProviderEnv);
@@ -205,7 +261,7 @@ if (enterpriseReleaseEnabled) {
     process.exitCode = 1;
   }
 } else {
-  console.log(`Enterprise step-up runtime provider preflight: skipped (set ${enterpriseReleaseEnv}=true for enterprise releases; ${legacyEnterpriseReleaseEnv}=true is still accepted during migration).`);
+  console.log(`Enterprise step-up and upload scan runtime provider preflight: skipped (set ${enterpriseReleaseEnv}=true for enterprise releases; ${legacyEnterpriseReleaseEnv}=true is still accepted during migration).`);
 }
 
 if (process.exitCode === 1) {
