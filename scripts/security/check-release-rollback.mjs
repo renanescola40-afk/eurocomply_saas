@@ -42,11 +42,22 @@ const requiredTokens = new Map([
   ],
   [
     'docs/RELEASE_APPROVAL_RECORD.md',
-    ['rollback', 'accepted exceptions', 'Final sign-off'],
+    ['rollback', 'accepted exceptions', 'Final sign-off', 'Rollback owner:'],
   ],
 ]);
 
 const failures = [];
+let approvalRecord = '';
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function ownerValueFromApprovalRecord(content, label) {
+  const pattern = new RegExp(`^-\\s*${escapeRegExp(label)}:\\s*(?<value>.+)$`, 'im');
+  const value = content.match(pattern)?.groups?.value?.trim() ?? '';
+  return value && !/^tbd|todo|n\/a|none|placeholder$/i.test(value) ? value : '';
+}
 
 for (const filePath of requiredFiles) {
   let content = '';
@@ -57,12 +68,21 @@ for (const filePath of requiredFiles) {
     continue;
   }
 
+  if (filePath === 'docs/RELEASE_APPROVAL_RECORD.md') {
+    approvalRecord = content;
+  }
+
   const tokens = requiredTokens.get(filePath) ?? [];
   for (const token of tokens) {
     if (!content.includes(token)) {
       failures.push(`${filePath}: missing token ${JSON.stringify(token)}`);
     }
   }
+}
+
+const rollbackOwner = process.env.RELEASE_ROLLBACK_OWNER?.trim() ?? ownerValueFromApprovalRecord(approvalRecord, 'Rollback owner');
+if (!rollbackOwner) {
+  failures.push('Release rollback readiness requires Rollback owner. Set RELEASE_ROLLBACK_OWNER or fill "Rollback owner:" in docs/RELEASE_APPROVAL_RECORD.md.');
 }
 
 if (failures.length > 0) {
