@@ -29,12 +29,12 @@ export async function readBoundedStripeWebhookBody(request: Request) {
     return null;
   }
 
-  const body = await request.text();
-  if (new TextEncoder().encode(body).byteLength > MAX_STRIPE_WEBHOOK_BYTES) {
+  const payload = await request.text();
+  if (new TextEncoder().encode(payload).byteLength > MAX_STRIPE_WEBHOOK_BYTES) {
     return null;
   }
 
-  return body;
+  return payload;
 }
 
 export async function POST(request: Request) {
