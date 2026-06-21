@@ -35,6 +35,8 @@ vi.mock('@/lib/security/rate-limit-response', () => ({
 
 import { BILLING_WEBHOOK_TOLERANCE_SECONDS, POST, getBillingWebhookContentLength, readBoundedBillingWebhookBody } from './route';
 
+const TEST_STRIPE_WEBHOOK_SECRET = 'test_webhook_signing_secret';
+
 function makeWebhookRequest(body: string, headers: HeadersInit = {}) {
   return new Request('https://app.eurocomply.test/api/billing/webhook', {
     method: 'POST',
@@ -50,7 +52,7 @@ function makeWebhookRequest(body: string, headers: HeadersInit = {}) {
 describe('legacy billing webhook route hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret';
+    process.env.STRIPE_WEBHOOK_SECRET = TEST_STRIPE_WEBHOOK_SECRET;
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
     mocks.handleStripeWebhookEvent.mockResolvedValue({ skipped: false });
   });
@@ -77,7 +79,7 @@ describe('legacy billing webhook route hardening', () => {
     expect(response.status).toBe(400);
     expect(body).toEqual({ error: 'invalid_webhook' });
     expect(mocks.handleStripeWebhookEvent).not.toHaveBeenCalled();
-    expect(mocks.constructEvent).toHaveBeenCalledWith(expect.any(String), 't=1800000000,v1=bad', 'whsec_test_secret', BILLING_WEBHOOK_TOLERANCE_SECONDS);
+    expect(mocks.constructEvent).toHaveBeenCalledWith(expect.any(String), 't=1800000000,v1=bad', TEST_STRIPE_WEBHOOK_SECRET, BILLING_WEBHOOK_TOLERANCE_SECONDS);
   });
 
   it('routes valid legacy billing webhook events through the hardened idempotent handler', async () => {
