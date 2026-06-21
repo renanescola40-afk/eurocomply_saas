@@ -61,6 +61,28 @@ describe('audit chain', () => {
     expect(verifyAuditChain([first, second])).toMatchObject({ ok: true, checked: 2, lastHash: second.eventHash });
   });
 
+  it('verifies a bounded hash-chain segment with a trusted anchor', () => {
+    const first = buildAuditChainRecord(baseEvent, null);
+    const second = buildAuditChainRecord({ ...baseEvent, id: 'evt_002', createdAt: '2026-06-12T11:00:00.000Z' }, first.eventHash);
+    const third = buildAuditChainRecord({ ...baseEvent, id: 'evt_003', createdAt: '2026-06-12T12:00:00.000Z' }, second.eventHash);
+
+    expect(verifyAuditChain([second, third], { expectedPreviousHash: first.eventHash })).toMatchObject({
+      ok: true,
+      checked: 2,
+      expectedPreviousHash: first.eventHash,
+      lastHash: third.eventHash,
+    });
+  });
+
+  it('detects a bounded segment anchor mismatch', () => {
+    const first = buildAuditChainRecord(baseEvent, null);
+    const second = buildAuditChainRecord({ ...baseEvent, id: 'evt_002' }, first.eventHash);
+
+    expect(verifyAuditChain([second], { expectedPreviousHash: 'wrong-anchor' }).failures).toEqual(
+      expect.arrayContaining([expect.objectContaining({ reason: 'previous_hash_mismatch' })]),
+    );
+  });
+
   it('detects previous hash tampering', () => {
     const first = buildAuditChainRecord(baseEvent, null);
     const second = buildAuditChainRecord({ ...baseEvent, id: 'evt_002' }, first.eventHash);
