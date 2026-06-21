@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs';
 
+const auditChainRuntimeEvidencePath = 'docs/security/evidence/runtime/audit-chain-live-validation.json';
+
 const requiredFiles = [
   'docs/RELEASE_CANDIDATE_VALIDATION.md',
   'docs/security/LOCKFILE_TRIAGE_RUNBOOK.md',
   'docs/security/RLS_LIVE_VALIDATION_RUNBOOK.md',
   'docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md',
   'docs/security/AUDIT_CHAIN_MODEL.md',
-  'docs/security/evidence/runtime/audit-chain-live-validation.json',
+  auditChainRuntimeEvidencePath,
   'docs/security/UPLOAD_CONTENT_SCAN.md',
   'docs/security/STEP_UP_ROLLOUT_MATRIX.md',
   'scripts/security/check-audit-chain.mjs',
@@ -88,6 +90,36 @@ const runtimeEvidenceTokens = [
   'releaseGateLinked',
 ];
 
+const requiredRuntimeValidation = [
+  'appendNormal',
+  'appendConcurrent',
+  'tamperDetection',
+  'missingPreviousHash',
+  'signedExport',
+  'exportWithoutPermission',
+  'verifyWithoutPermission',
+  'verifyWithoutStepUp',
+  'verifyWithStepUp',
+  'requestContextSanitization',
+  'postgresTimestampReadback',
+  'cliVerifier',
+  'releaseGate',
+];
+
+const requiredAcceptanceCriteria = [
+  'auditChainDetectsTampering',
+  'appendIsTransactionalByDefault',
+  'concurrencySafeAppend',
+  'criticalEventsAudited',
+  'verificationRequiresRbacAndStepUp',
+  'exportRequiresRbacAndStepUp',
+  'exportIsSigned',
+  'metadataIsSanitized',
+  'requestContextSanitized',
+  'serverTimestampUsed',
+  'releaseGateLinked',
+];
+
 const failures = [];
 
 function readRequired(path) {
@@ -103,6 +135,52 @@ function requireTokens(label, source, tokens) {
   for (const token of tokens) {
     if (!source.includes(token)) {
       failures.push(`${label} missing token: ${token}`);
+    }
+  }
+}
+
+function readJsonRequired(path) {
+  const source = readRequired(path);
+  if (!source) return null;
+
+  try {
+    return JSON.parse(source);
+  } catch (error) {
+    failures.push(`${path} is not valid JSON: ${error instanceof Error ? error.message : error}`);
+    return null;
+  }
+}
+
+function validateAuditChainRuntimeEvidence(evidence) {
+  if (!evidence) return;
+
+  if (evidence.evidenceItem !== 'audit-chain-live-validation') {
+    failures.push(`${auditChainRuntimeEvidencePath} evidenceItem must be audit-chain-live-validation`);
+  }
+
+  if (evidence.status !== 'Complete') {
+    failures.push(`${auditChainRuntimeEvidencePath} status must be Complete before enterprise release`);
+  }
+
+  if (!Array.isArray(evidence.controlsVerified) || evidence.controlsVerified.length === 0) {
+    failures.push(`${auditChainRuntimeEvidencePath} must include controlsVerified`);
+  }
+
+  if (!evidence.criticalEventCoverage || typeof evidence.criticalEventCoverage !== 'object' || Array.isArray(evidence.criticalEventCoverage)) {
+    failures.push(`${auditChainRuntimeEvidencePath} must include criticalEventCoverage`);
+  }
+
+  const runtime = evidence.runtimeValidation ?? {};
+  for (const key of requiredRuntimeValidation) {
+    if (!runtime[key]?.status) {
+      failures.push(`${auditChainRuntimeEvidencePath} missing runtimeValidation.${key}.status`);
+    }
+  }
+
+  const acceptance = evidence.acceptanceCriteria ?? {};
+  for (const key of requiredAcceptanceCriteria) {
+    if (acceptance[key] !== true) {
+      failures.push(`${auditChainRuntimeEvidencePath} acceptanceCriteria.${key} must be true`);
     }
   }
 }
@@ -123,8 +201,9 @@ requireTokens('Security CI workflow', securityCi, securityCiTokens);
 const preflight = readRequired('scripts/preflight.mjs');
 requireTokens('preflight', preflight, preflightTokens);
 
-const runtimeEvidence = readRequired('docs/security/evidence/runtime/audit-chain-live-validation.json');
+const runtimeEvidence = readRequired(auditChainRuntimeEvidencePath);
 requireTokens('audit-chain runtime evidence', runtimeEvidence, runtimeEvidenceTokens);
+validateAuditChainRuntimeEvidence(readJsonRequired(auditChainRuntimeEvidencePath));
 
 if (failures.length > 0) {
   console.error('Release Candidate validation failures:');
