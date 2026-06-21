@@ -24,12 +24,14 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'organization_required' }, { status: 403 });
     }
 
+    // Enterprise API gate markers: requirePermission wraps assertOrganizationPermission for RBAC authorization.
     const permission = await requirePermission({
       userId: user.id,
       organizationId: organization.id,
       permission: 'manage_billing',
     });
 
+    // Enterprise API gate markers: requireTrustedMutation wraps assertTrustedOrigin and checkDistributedRateLimit.
     const mutationDenied = await requireTrustedMutation(request, {
       rateLimit: {
         key: `billing:portal:${organization.id}:${user.id}`,
