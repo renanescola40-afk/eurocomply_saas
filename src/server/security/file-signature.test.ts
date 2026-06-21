@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { validateUploadFileSignature } from './file-signature';
+import { validateUploadFileSecurity, validateUploadFileSignature } from './file-signature';
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 describe('validateUploadFileSignature', () => {
   it('accepts PDF header', () => {
@@ -43,5 +45,36 @@ describe('validateUploadFileSignature', () => {
     ]);
 
     expect(validateUploadFileSignature('application/vnd.openxmlformats-officedocument.wordprocessingml.document', bytes)).toBe(false);
+  });
+
+  it('rejects PDFs with active JavaScript or open actions', () => {
+    const bytes = Buffer.from('%PDF-1.7\n1 0 obj << /OpenAction 2 0 R /JavaScript 3 0 R >>\n%%EOF', 'ascii');
+
+    expect(
+      validateUploadFileSecurity({
+        fileName: 'policy.pdf',
+        claimedMimeType: 'application/pdf',
+        sizeBytes: bytes.length,
+        bytes,
+        maxBytes: MAX_UPLOAD_BYTES,
+      }),
+    ).toMatchObject({ ok: false, reason: 'active_content_detected' });
+  });
+
+  it('rejects OpenXML documents containing macro or OLE payload markers', () => {
+    const bytes = Buffer.concat([
+      Buffer.from([0x50, 0x4b, 0x03, 0x04]),
+      Buffer.from('...[Content_Types].xml...word/document.xml...word/vbaProject.bin...word/embeddings/oleObject1.bin...', 'ascii'),
+    ]);
+
+    expect(
+      validateUploadFileSecurity({
+        fileName: 'policy.docx',
+        claimedMimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        sizeBytes: bytes.length,
+        bytes,
+        maxBytes: MAX_UPLOAD_BYTES,
+      }),
+    ).toMatchObject({ ok: false, reason: 'active_content_detected' });
   });
 });
