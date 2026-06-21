@@ -300,7 +300,9 @@ if (auditEvents && !auditEvents.includes('MAX_CHAIN_APPEND_ATTEMPTS = 4')) {
   failures.push(`${auditEventsPath} must retry concurrent previous-hash conflicts more than once`);
 }
 
-if (verifierRoute && verifierRoute.includes('Math.min(Math.max')) {
+const routeSilentlyClampsLimit = verifierRoute.includes('Math.min(Math.max');
+
+if (verifierRoute && routeSilentlyClampsLimit) {
   failures.push(`${verifierRoutePath} must reject invalid verification limits instead of silently clamping them`);
 }
 
