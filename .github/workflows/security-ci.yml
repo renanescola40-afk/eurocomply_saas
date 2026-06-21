@@ -150,7 +150,19 @@ jobs:
         run: npm run security:client-boundaries
 
       - name: Auth token validation gate
-        run: npm run security:auth-tokens
+        shell: bash
+        run: |
+          npm run security:auth-tokens 2>&1 | tee auth-token-gate.log
+          test "${PIPESTATUS[0]}" -eq 0
+
+      - name: Upload auth token diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: auth-token-gate
+          path: auth-token-gate.log
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Authorization BOLA gate
         run: npm run security:authorization-bola
