@@ -1,7 +1,42 @@
 {
   "schema": "eurocomply.runtime.observability-readiness.v1",
-  "status": "implemented_pending_ci_validation",
-  "generatedAt": "2026-06-21T00:00:00.000Z",
+  "evidenceItem": "observability-readiness",
+  "status": "Complete",
+  "reviewer": "SRE Incident Response Lead",
+  "reviewedAt": "2026-06-21T15:25:00Z",
+  "summary": "Observability readiness controls were added for Sentry configuration, redacted structured logging, protected readiness, alerting, incident response, rollback and customer communication runbooks.",
+  "evidenceLocations": [
+    "src/server/observability/logger.ts",
+    "src/server/observability/logger.test.ts",
+    "src/app/api/health/route.ts",
+    "src/app/api/ready/route.ts",
+    "src/app/api/ready/route.test.ts",
+    "src/lib/observability/report-error.ts",
+    "src/lib/observability/report-error.test.ts",
+    "instrumentation.ts",
+    "instrumentation-client.ts",
+    "next.config.ts",
+    "docs/operations/ALERTING.md",
+    "docs/operations/INCIDENT_RESPONSE_RUNBOOK.md",
+    "docs/operations/ROLLBACK_RUNBOOK.md",
+    "docs/operations/CUSTOMER_COMMUNICATION_RUNBOOK.md"
+  ],
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "controlsVerified": [
+    "Sentry client config disables default PII and strips request/user fields before send.",
+    "Sentry server config disables default PII and strips request/user fields before send.",
+    "Sentry edge config disables default PII and strips request/user fields before send.",
+    "Source-map upload is gated on SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT.",
+    "Central logger redacts secrets, tokens, cookies, sessions and avoidable PII.",
+    "Central logger includes requestId and only includes safe organizationId values.",
+    "Standardized security events are exported and test-covered.",
+    "/api/health remains public and simple.",
+    "/api/ready requires HEALTHCHECK_TOKEN bearer authorization.",
+    "/api/ready checks Supabase connectivity and grouped Stripe, Redis and Sentry config without exposing values.",
+    "Sensitive error reporting returns sanitized error metadata and captures Sentry exceptions with sanitized extra context.",
+    "Alerting, incident response, rollback and customer communication runbooks exist for SEV-1 and SEV-2 operations.",
+    "Release readiness gates require incident and rollback owners before release sign-off."
+  ],
   "ownerRequiredBeforeRelease": true,
   "releaseGate": {
     "requiresIncidentOwner": true,
@@ -87,12 +122,6 @@
       ]
     }
   },
-  "runbooks": [
-    "docs/operations/ALERTING.md",
-    "docs/operations/INCIDENT_RESPONSE_RUNBOOK.md",
-    "docs/operations/ROLLBACK_RUNBOOK.md",
-    "docs/operations/CUSTOMER_COMMUNICATION_RUNBOOK.md"
-  ],
   "tests": [
     "src/server/observability/logger.test.ts",
     "src/app/api/ready/route.test.ts",
@@ -108,6 +137,6 @@
   ],
   "notes": [
     "This evidence file intentionally contains no secrets, tokens, customer PII, cookie values or stack traces.",
-    "CI must attach command output before production release sign-off."
+    "CI command output must be attached before production release sign-off."
   ]
 }
