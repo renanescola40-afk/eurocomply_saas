@@ -227,7 +227,7 @@ export function buildUploadSecurityMetadata(input: {
   actorUserId?: string | null;
 }): UploadSecurityMetadata {
   const scan = input.scan;
-  const scanProvider = scan?.provider ?? process.env[MALWARE_SCANNER_PROVIDER_ENV]?.trim() || 'not_configured';
+  const scanProvider = scan?.provider ?? (process.env[MALWARE_SCANNER_PROVIDER_ENV]?.trim() || 'not_configured');
   const scanRequired = scan?.required ?? process.env[REQUIRE_MALWARE_SCAN_ENV] === 'true';
   const mimeDetected = input.mimeDetected ?? null;
   const fileHash = input.fileHash ?? null;
@@ -263,3 +263,4 @@ export function validateEnterpriseUploadScan(scan: MalwareScanResult) {
 
 export { shouldBlockUploadForMalwareScan, validateUploadFileSignature };
 export const validateUploadFileSecurity = validateUploadFileSecurityInternal;
+export type { MalwareScanResult, MalwareScanStatus };
