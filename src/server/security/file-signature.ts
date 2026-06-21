@@ -41,6 +41,7 @@ export type UploadFileSecurityValidation =
       reason:
         | 'empty_file'
         | 'file_too_large'
+        | 'path_traversal'
         | 'dangerous_extension'
         | 'unsupported_extension'
         | 'unsupported_mime_type'
@@ -162,6 +163,13 @@ function hasOpenXmlActiveContent(bytes: Buffer) {
   return OPENXML_ACTIVE_CONTENT_MARKERS.some((marker) => bufferIncludesAsciiInsensitive(scanWindow, marker));
 }
 
+function hasPathTraversalUploadFileName(fileName: string) {
+  const normalized = String(fileName ?? '').normalize('NFKC').replace(/[\u0000-\u001f\u007f]+/g, '');
+  const segments = normalized.split(/[\\/]+/).map((segment) => segment.trim());
+
+  return normalized.includes('\\') || normalized.includes('/') || segments.some((segment) => segment === '..' || segment === '.');
+}
+
 function fileNameSegments(fileName: string) {
   const baseName = String(fileName ?? '')
     .normalize('NFKC')
@@ -239,6 +247,10 @@ export function validateUploadFileSecurity(input: {
 
   if (input.sizeBytes > input.maxBytes || input.bytes.length > input.maxBytes) {
     return { ok: false, reason: 'file_too_large', message: 'File exceeds the maximum allowed size.' };
+  }
+
+  if (hasPathTraversalUploadFileName(input.fileName)) {
+    return { ok: false, reason: 'path_traversal', message: 'File name must not contain path traversal segments.' };
   }
 
   const extension = getUploadFileExtension(input.fileName);
