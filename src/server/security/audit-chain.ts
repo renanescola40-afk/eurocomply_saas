@@ -23,6 +23,16 @@ export type AuditChainVerificationOptions = {
 
 const AUDIT_CHAIN_ALGORITHM = 'sha256';
 
+export function canonicalizeAuditTimestamp(value: string) {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toISOString();
+}
+
 function normalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalize);
 
@@ -48,7 +58,7 @@ export function canonicalizeAuditEvent(input: AuditChainInput, previousHash: str
       entityType: input.entityType ?? null,
       entityId: input.entityId ?? null,
       metadata: input.metadata ?? null,
-      createdAt: input.createdAt,
+      createdAt: canonicalizeAuditTimestamp(input.createdAt),
       previousHash,
     }),
   );
@@ -67,11 +77,15 @@ export function signAuditEventHash(eventHash: string, secret = process.env.AUDIT
 }
 
 export function buildAuditChainRecord(input: AuditChainInput, previousHash: string | null): AuditChainRecord {
-  const eventHash = buildAuditEventHash(input, previousHash);
+  const canonicalInput = {
+    ...input,
+    createdAt: canonicalizeAuditTimestamp(input.createdAt),
+  };
+  const eventHash = buildAuditEventHash(canonicalInput, previousHash);
   const signature = signAuditEventHash(eventHash);
 
   return {
-    ...input,
+    ...canonicalInput,
     previousHash,
     eventHash,
     ...(signature ? { signature } : {}),
