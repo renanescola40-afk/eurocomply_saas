@@ -45,7 +45,7 @@ export async function createRisk(input: unknown, userId: string) {
   await logAuditEvent({
     organizationId: payload.organizationId,
     actorUserId: userId,
-    action: 'risk.created',
+    action: 'risk.create',
     entityType: 'risk',
     entityId: data.id,
     metadata: { title: payload.title, likelihood: payload.likelihood, impact: payload.impact },
@@ -71,7 +71,7 @@ export async function deleteRisk(riskId: string, organizationId: string, userId:
   await logAuditEvent({
     organizationId,
     actorUserId: userId,
-    action: 'risk.deleted',
+    action: 'risk.delete',
     entityType: 'risk',
     entityId: riskId,
     metadata: { title: data.title, likelihood: data.likelihood, impact: data.impact },

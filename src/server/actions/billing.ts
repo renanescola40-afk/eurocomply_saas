@@ -147,7 +147,7 @@ export async function createCheckoutSession(input: CheckoutInput) {
     await logAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
-      action: 'billing.checkout_created',
+      action: 'billing.checkout_start',
       entityType: 'subscription',
       entityId: session.id,
       metadata: { planId: plan.id },
@@ -217,7 +217,7 @@ export async function createCustomerPortalSession(input: PortalInput) {
     await logAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
-      action: 'billing.customer_portal_opened',
+      action: 'billing.portal_start',
       entityType: 'subscription',
       metadata: {},
     });

@@ -97,7 +97,7 @@ export async function createVendor(input: unknown, userId: string) {
   await logAuditEvent({
     organizationId: payload.organizationId,
     actorUserId: userId,
-    action: 'vendor.created',
+    action: 'vendor.create',
     entityType: 'vendor',
     entityId: data.id,
     metadata: { name: payload.name, riskLevel: payload.riskLevel },
@@ -123,7 +123,7 @@ export async function deleteVendor(vendorId: string, organizationId: string, use
   await logAuditEvent({
     organizationId,
     actorUserId: userId,
-    action: 'vendor.deleted',
+    action: 'vendor.delete',
     entityType: 'vendor',
     entityId: vendorId,
     metadata: { name: data.name, riskLevel: data.risk_level },

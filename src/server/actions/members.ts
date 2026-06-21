@@ -76,7 +76,7 @@ export async function inviteOrganizationMember(input: InviteMemberInput, invited
   await logAuditEvent({
     organizationId: payload.organizationId,
     actorUserId: invitedByUserId,
-    action: 'member.invited',
+    action: 'team.invite_created',
     entityType: 'invitation',
     entityId: data.id,
     metadata: { email: payload.email.toLowerCase(), role: payload.role, emailAttempted: true },
@@ -120,7 +120,7 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
   await logAuditEvent({
     organizationId: input.organizationId,
     actorUserId,
-    action: 'member.invitation_cancelled',
+    action: 'team.invite_cancelled',
     entityType: 'invitation',
     entityId: input.invitationId,
     metadata: { email: invitation.email, role: invitation.role },
@@ -182,7 +182,7 @@ export async function removeOrganizationMember(input: { organizationId: string; 
   await logAuditEvent({
     organizationId: input.organizationId,
     actorUserId,
-    action: 'member.removed',
+    action: 'team.member_removed',
     entityType: 'organization_member',
     entityId: input.memberId,
     metadata: { removedUserId: member.user_id, role: member.role },

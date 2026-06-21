@@ -9,6 +9,7 @@ import { requireCurrentUser } from '@/server/queries/auth';
 import { getUserOrganizationMemberships } from '@/server/queries/current-organization';
 
 const SIGNED_URL_EXPIRES_IN_SECONDS = 60;
+const SECURITY_FAILURE_AUDIT_ACTION = 'security.failure';
 
 async function auditRejectedDownloadUrl(input: {
   documentId: string;
@@ -21,10 +22,11 @@ async function auditRejectedDownloadUrl(input: {
   await logAuditEvent({
     organizationId: input.organizationId ?? null,
     actorUserId: input.userId,
-    action: 'document.download_url_rejected',
+    action: SECURITY_FAILURE_AUDIT_ACTION,
     entityType: 'document',
     entityId: input.documentId,
     metadata: {
+      action: 'document.download',
       reason: input.reason,
       organizationId: input.organizationId ?? null,
       actorUserId: input.userId,
@@ -126,7 +128,7 @@ export async function createDocumentSignedDownloadUrl(documentId: string) {
   await logAuditEvent({
     organizationId: document.organization_id,
     actorUserId: user.id,
-    action: 'document.download_url_created',
+    action: 'document.download',
     entityType: 'document',
     entityId: documentId,
     metadata: {
