@@ -157,7 +157,19 @@ Release evidence must include:
 - customer portal session creation
 - webhook delivery proof
 - failed webhook signature test
+- duplicate webhook/idempotency test using `public.stripe_events_processed`
+- subscription created, updated, and deleted sync tests
+- metadata validation proof for `organization_id`, `customer`, `subscription`, and `plan`
+- proof that unsupported Stripe events are ignored without mutating billing state
 - step-up validation for billing actions
+- billing audit event proof for checkout, portal, subscription changes, and payment failures
+- `docs/security/evidence/runtime/stripe-billing-validation.json`
+
+Required focused command:
+
+```bash
+npm run test -- src/app/api/stripe/webhook/route.test.ts src/server/billing/stripe-webhooks.test.ts src/app/api/billing/checkout/route.test.ts src/app/api/billing/portal/route.test.ts
+```
 
 ### 10. Release evidence package
 
@@ -218,43 +230,4 @@ The preflight file should include at least:
 - audit-chain concurrency runbook coverage
 - upload content scan runbook coverage
 - step-up rollout coverage
-
-If preflight cannot be updated because of platform restrictions, the release owner must attach a manual evidence note explaining the restriction and confirming that `npm run security:release-candidate` was run successfully.
-
-### 13. External review
-
-Before public enterprise procurement, attach evidence for:
-
-- dependency audit triage
-- basic penetration test or external security review
-- privacy/data-retention review
-- incident response owner and escalation path
-- customer communication owner and escalation path
-
-## Release decision
-
-EuroComply may be called a Release Candidate only when all required evidence sections above are complete and the Go/No-Go checklist has been completed.
-
-EuroComply may be called enterprise-ready only when:
-
-- Security CI is green
-- lockfile is committed
-- npm audit is triaged
-- Supabase RLS live validation is complete
-- audit-chain RPC is applied and validated
-- step-up uses a real MFA/IdP provider
-- upload scanning uses a real provider in fail-closed mode
-- Stripe webhooks are validated
-- customer communication plan is assigned and ready
-- external security review is complete
-- release evidence package is attached and approved
-- the final decision in `docs/RELEASE_GO_NO_GO_CHECKLIST.md` is Go or explicitly approved Conditional Go
-
-## Failure handling
-
-If any Release Candidate validation fails:
-
-1. block release
-2. create an issue with owner and deadline
-3. attach failing evidence
-4. rerun the full validation after remediation
+- Stripe billing runtime validation coverage
