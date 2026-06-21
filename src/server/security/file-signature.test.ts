@@ -3,6 +3,18 @@ import { validateUploadFileSecurity, validateUploadFileSignature } from './file-
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
+function validatePdfName(fileName: string) {
+  const bytes = Buffer.from('%PDF-1.7\nbody');
+
+  return validateUploadFileSecurity({
+    fileName,
+    claimedMimeType: 'application/pdf',
+    sizeBytes: bytes.length,
+    bytes,
+    maxBytes: MAX_UPLOAD_BYTES,
+  });
+}
+
 describe('validateUploadFileSignature', () => {
   it('accepts PDF header', () => {
     expect(validateUploadFileSignature('application/pdf', Buffer.from('%PDF-1.7\nbody'))).toBe(true);
@@ -45,6 +57,17 @@ describe('validateUploadFileSignature', () => {
     ]);
 
     expect(validateUploadFileSignature('application/vnd.openxmlformats-officedocument.wordprocessingml.document', bytes)).toBe(false);
+  });
+
+  it('rejects upload filenames containing path separators or traversal-only segments', () => {
+    expect(validatePdfName('../policy.pdf')).toMatchObject({ ok: false, reason: 'path_traversal' });
+    expect(validatePdfName('..\\policy.pdf')).toMatchObject({ ok: false, reason: 'path_traversal' });
+    expect(validatePdfName('reports/../policy.pdf')).toMatchObject({ ok: false, reason: 'path_traversal' });
+    expect(validatePdfName('./policy.pdf')).toMatchObject({ ok: false, reason: 'path_traversal' });
+  });
+
+  it('still accepts safe flat filenames after traversal hardening', () => {
+    expect(validatePdfName('policy-final.2026.pdf')).toMatchObject({ ok: true, extension: 'pdf' });
   });
 
   it('rejects PDFs with active JavaScript or open actions', () => {
