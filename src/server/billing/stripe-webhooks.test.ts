@@ -1,0 +1,230 @@
+/* eslint-disable */
+// @ts-nocheck
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+  createAdminClient: vi.fn(),
+  writeAuditLog: vi.fn(),
+  reportError: vi.fn(),
+  sendEmail: vi.fn(),
+}));
+
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: mocks.createAdminClient,
+}));
+
+vi.mock('@/lib/security/audit-log', () => ({
+  writeAuditLog: mocks.writeAuditLog,
+}));
+
+vi.mock('@/lib/observability/report-error', () => ({
+  reportError: mocks.reportError,
+}));
+
+vi.mock('@/lib/email/client', () => ({
+  sendEmail: mocks.sendEmail,
+}));
+
+vi.mock('@/lib/email/templates', () => ({
+  paymentFailedEmail: () => ({ subject: 'Payment failed', html: '<p>Payment failed</p>', text: 'Payment failed' }),
+}));
+
+import { handleStripeWebhookEvent } from './stripe-webhooks';
+
+type SupabaseState = {
+  eventInsertError?: { code?: string; message?: string } | null;
+  eventUpdateError?: { code?: string; message?: string } | null;
+  organizationData?: { id: string } | null;
+  organizationError?: { code?: string; message?: string } | null;
+  subscriptionData?: Record<string, unknown> | null;
+  subscriptionError?: { code?: string; message?: string } | null;
+  upsertError?: { code?: string; message?: string } | null;
+  eventInsert: ReturnType<typeof vi.fn>;
+  eventUpdates: Array<Record<string, unknown>>;
+  upsert: ReturnType<typeof vi.fn>;
+};
+
+let state: SupabaseState;
+
+function makeSelectBuilder(result: () => { data: unknown; error: unknown }) {
+  const builder = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    not: vi.fn(() => builder),
+    order: vi.fn(() => builder),
+    limit: vi.fn(() => builder),
+    single: vi.fn(async () => result()),
+    maybeSingle: vi.fn(async () => result()),
+  };
+
+  return builder;
+}
+
+function buildSupabaseClient() {
+  return {
+    auth: {
+      admin: {
+        getUserById: vi.fn(async () => ({ data: { user: { email: 'billing@example.test' } }, error: null })),
+      },
+    },
+    from: vi.fn((table: string) => {
+      if (table === 'stripe_events_processed') {
+        return {
+          insert: state.eventInsert,
+          update: vi.fn((payload: Record<string, unknown>) => ({
+            eq: vi.fn(async (column: string, value: string) => {
+              state.eventUpdates.push({ column, value, payload });
+              return { error: state.eventUpdateError ?? null };
+            }),
+          })),
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ maybeSingle: vi.fn(async () => ({ data: null, error: null })) })),
+          })),
+        };
+      }
+
+      if (table === 'organizations') {
+        return makeSelectBuilder(() => ({ data: state.organizationData ?? { id: 'org_a' }, error: state.organizationError ?? null }));
+      }
+
+      if (table === 'subscriptions') {
+        const builder = makeSelectBuilder(() => ({ data: state.subscriptionData ?? null, error: state.subscriptionError ?? null }));
+        return {
+          ...builder,
+          upsert: state.upsert,
+        };
+      }
+
+      return makeSelectBuilder(() => ({ data: null, error: null }));
+    }),
+  };
+}
+
+function makeStripeEvent(type: string, object: Record<string, unknown>, id = `evt_${type.replace(/[^a-z0-9]/gi, '_')}`) {
+  return {
+    id,
+    object: 'event',
+    type,
+    created: 1_800_000_000,
+    livemode: false,
+    api_version: '2025-02-24.acacia',
+    data: { object },
+  };
+}
+
+function makeSubscription(status: string, plan = 'business') {
+  return {
+    id: 'sub_123',
+    object: 'subscription',
+    customer: 'cus_123',
+    status,
+    current_period_end: 1_900_000_000,
+    metadata: {
+      organization_id: 'org_a',
+      user_id: 'user_admin',
+      plan,
+    },
+  };
+}
+
+describe('Stripe webhook billing hardening', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    state = {
+      eventInsertError: null,
+      eventUpdateError: null,
+      organizationData: { id: 'org_a' },
+      organizationError: null,
+      subscriptionData: null,
+      subscriptionError: null,
+      upsertError: null,
+      eventUpdates: [],
+      eventInsert: vi.fn(async () => ({ error: state.eventInsertError ?? null })),
+      upsert: vi.fn(async () => ({ error: state.upsertError ?? null })),
+    };
+    mocks.createAdminClient.mockImplementation(buildSupabaseClient);
+    mocks.writeAuditLog.mockResolvedValue(undefined);
+  });
+
+  it('ignores unsupported Stripe events without claiming idempotency', async () => {
+    const result = await handleStripeWebhookEvent(makeStripeEvent('customer.created', { id: 'cus_123' }));
+
+    expect(result).toEqual({ skipped: true, unsupported: true });
+    expect(state.eventInsert).not.toHaveBeenCalled();
+    expect(state.upsert).not.toHaveBeenCalled();
+  });
+
+  it('skips duplicate webhook events before mutating subscription state', async () => {
+    state.eventInsertError = { code: '23505', message: 'duplicate key value violates unique constraint' };
+
+    const result = await handleStripeWebhookEvent(makeStripeEvent('customer.subscription.created', makeSubscription('active')));
+
+    expect(result).toEqual({ skipped: true, duplicate: true });
+    expect(state.upsert).not.toHaveBeenCalled();
+    expect(state.eventUpdates).toHaveLength(0);
+  });
+
+  it.each([
+    ['customer.subscription.created', 'active', 'billing.subscription_created'],
+    ['customer.subscription.updated', 'past_due', 'billing.subscription_updated'],
+    ['customer.subscription.deleted', 'canceled', 'billing.subscription_deleted'],
+  ])('syncs %s into the local subscription authority', async (eventType, status, auditAction) => {
+    const result = await handleStripeWebhookEvent(makeStripeEvent(eventType, makeSubscription(status)));
+
+    expect(result).toEqual({ skipped: false });
+    expect(state.eventInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: expect.stringContaining('evt_customer_subscription'),
+        type: eventType,
+        status: 'processing',
+      }),
+    );
+    expect(state.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organization_id: 'org_a',
+        stripe_customer_id: 'cus_123',
+        stripe_subscription_id: 'sub_123',
+        plan: 'business',
+        tier: 'business',
+        status,
+      }),
+      { onConflict: 'organization_id' },
+    );
+    expect(state.eventUpdates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          column: 'id',
+          payload: expect.objectContaining({ status: 'processed' }),
+        }),
+      ]),
+    );
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: auditAction,
+        organizationId: 'org_a',
+        userId: 'user_admin',
+        entityType: 'stripe_subscription',
+        entityId: 'sub_123',
+      }),
+    );
+  });
+
+  it('rejects subscription events whose Stripe customer conflicts with the organization profile', async () => {
+    state.subscriptionData = {
+      organization_id: 'org_a',
+      stripe_customer_id: 'cus_other',
+      stripe_subscription_id: 'sub_existing',
+      status: 'active',
+    };
+
+    await expect(handleStripeWebhookEvent(makeStripeEvent('customer.subscription.updated', makeSubscription('active')))).rejects.toThrow(
+      'Stripe customer does not match organization billing profile',
+    );
+    expect(state.upsert).not.toHaveBeenCalled();
+    expect(state.eventUpdates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ payload: expect.objectContaining({ status: 'failed' }) }),
+      ]),
+    );
+  });
+});
