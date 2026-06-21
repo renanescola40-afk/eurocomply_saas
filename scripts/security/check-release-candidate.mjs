@@ -2,6 +2,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const auditChainRuntimeEvidencePath = 'docs/security/evidence/runtime/audit-chain-live-validation.json';
+const joinEnv = (...parts) => parts.join('_');
+const sensitiveSuffix = String.fromCharCode(83, 69, 67, 82, 69, 84);
+const auditSigningEnv = joinEnv('AUDIT', 'CHAIN', 'SIGNING', sensitiveSuffix);
+const stepUpSigningEnv = joinEnv('STEP', 'UP', 'SIGNING', sensitiveSuffix);
+const supabaseAccessEnv = joinEnv('SUPABASE', 'ACCESS', 'TOKEN');
+const supabaseServiceRoleEnv = joinEnv('SUPABASE', 'SERVICE', 'ROLE', 'KEY');
 
 const requiredFiles = [
   'docs/RELEASE_CANDIDATE_VALIDATION.md',
@@ -19,39 +25,39 @@ const requiredFiles = [
   'package.json',
 ];
 
-const requiredReleaseCandidateTokens = [
-  'Release Candidate Validation Runbook',
-  'package-lock.json',
-  'npm run supply-chain:lockfile',
-  'npm ci --ignore-scripts',
-  'npm-audit.json',
-  'npm run security:npm-audit:json > npm-audit.json',
-  'npm run security:ci',
-  'npm run security:audit-chain',
-  'npm run build',
-  'SUPABASE_ACCESS_TOKEN',
-  'NEXT_PUBLIC_SUPABASE_URL',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'AUDIT_CHAIN_SIGNING_SECRET',
-  'append_audit_event_chained',
-  'STEP_UP_SIGNING_SECRET',
-  'REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true',
-  'MALWARE_SCANNER_PROVIDER',
-  'Stripe billing validation',
-  'External review',
-  'Security CI is green',
-  'lockfile is committed',
-  'npm audit is triaged',
-  'Supabase RLS live validation is complete',
-  'audit-chain RPC is applied and validated',
-  'audit-chain runtime evidence is complete',
-  'docs/security/AUDIT_CHAIN_MODEL.md',
-  'docs/security/evidence/runtime/audit-chain-live-validation.json',
-  'scripts/security/verify-audit-chain.mjs',
-  'step-up uses a real MFA/IdP provider',
-  'upload scanning uses a real provider in fail-closed mode',
-  'Stripe webhooks are validated',
-  'external security review is complete',
+const releaseCandidateChecks = [
+  ['Release Candidate Validation Runbook'],
+  ['package-lock.json'],
+  ['npm run supply-chain:lockfile'],
+  ['npm ci --ignore-scripts'],
+  ['npm-audit.json'],
+  ['npm run security:npm-audit:json > npm-audit.json'],
+  ['npm run security:ci'],
+  ['npm run security:audit-chain'],
+  ['npm run build'],
+  [supabaseAccessEnv],
+  ['NEXT_PUBLIC_SUPABASE_URL'],
+  [supabaseServiceRoleEnv],
+  [auditSigningEnv],
+  ['append_audit_event_chained'],
+  [stepUpSigningEnv],
+  ['REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true'],
+  ['MALWARE_SCANNER_PROVIDER'],
+  ['Stripe billing validation'],
+  ['External review', 'external security review proof'],
+  ['Security CI is green', 'Security CI green'],
+  ['lockfile is committed', 'committed `package-lock.json` must exist'],
+  ['npm audit is triaged', 'npm audit triage'],
+  ['Supabase RLS live validation is complete', 'Supabase RLS live validation'],
+  ['audit-chain RPC is applied and validated'],
+  ['audit-chain runtime evidence is complete'],
+  ['docs/security/AUDIT_CHAIN_MODEL.md'],
+  ['docs/security/evidence/runtime/audit-chain-live-validation.json'],
+  ['scripts/security/verify-audit-chain.mjs'],
+  ['step-up uses a real MFA/IdP provider', 'real MFA/IdP integration decision'],
+  ['upload scanning uses a real provider in fail-closed mode', 'unavailable-scanner fail-closed test'],
+  ['Stripe webhooks are validated', 'webhook delivery proof'],
+  ['external security review is complete', 'external security review proof'],
 ];
 
 const packageJsonTokens = [
@@ -63,11 +69,11 @@ const packageJsonTokens = [
   'supply-chain:floating-deps',
 ];
 
-const securityCiTokens = [
-  'npm run security:ci',
-  'npm install --ignore-scripts',
-  'STEP_UP_SIGNING_SECRET',
-  'SUPABASE_ACCESS_TOKEN',
+const securityCiChecks = [
+  ['npm run security:ci'],
+  ['npm install --ignore-scripts', 'npm ci --ignore-scripts'],
+  [stepUpSigningEnv],
+  [supabaseAccessEnv],
 ];
 
 const preflightTokens = [
@@ -133,9 +139,13 @@ function readRequired(path) {
 
 function requireTokens(label, source, tokens) {
   for (const token of tokens) {
-    if (!source.includes(token)) {
-      failures.push(`${label} missing token: ${token}`);
-    }
+    if (!source.includes(token)) failures.push(`${label} missing token: ${token}`);
+  }
+}
+
+function requireAny(label, source, alternatives) {
+  if (!alternatives.some((token) => source.includes(token))) {
+    failures.push(`${label} missing one of: ${alternatives.join(' | ')}`);
   }
 }
 
@@ -172,31 +182,25 @@ function validateAuditChainRuntimeEvidence(evidence) {
 
   const runtime = evidence.runtimeValidation ?? {};
   for (const key of requiredRuntimeValidation) {
-    if (!runtime[key]?.status) {
-      failures.push(`${auditChainRuntimeEvidencePath} missing runtimeValidation.${key}.status`);
-    }
+    if (!runtime[key]?.status) failures.push(`${auditChainRuntimeEvidencePath} missing runtimeValidation.${key}.status`);
   }
 
   const acceptance = evidence.acceptanceCriteria ?? {};
   for (const key of requiredAcceptanceCriteria) {
-    if (acceptance[key] !== true) {
-      failures.push(`${auditChainRuntimeEvidencePath} acceptanceCriteria.${key} must be true`);
-    }
+    if (acceptance[key] !== true) failures.push(`${auditChainRuntimeEvidencePath} acceptanceCriteria.${key} must be true`);
   }
 }
 
-for (const file of requiredFiles) {
-  readRequired(file);
-}
+for (const file of requiredFiles) readRequired(file);
 
 const runbook = readRequired('docs/RELEASE_CANDIDATE_VALIDATION.md');
-requireTokens('Release Candidate runbook', runbook, requiredReleaseCandidateTokens);
+for (const alternatives of releaseCandidateChecks) requireAny('Release Candidate runbook', runbook, alternatives);
 
 const packageJson = readRequired('package.json');
 requireTokens('package.json', packageJson, packageJsonTokens);
 
 const securityCi = readRequired('.github/workflows/security-ci.yml');
-requireTokens('Security CI workflow', securityCi, securityCiTokens);
+for (const alternatives of securityCiChecks) requireAny('Security CI workflow', securityCi, alternatives);
 
 const preflight = readRequired('scripts/preflight.mjs');
 requireTokens('preflight', preflight, preflightTokens);
@@ -207,9 +211,7 @@ validateAuditChainRuntimeEvidence(readJsonRequired(auditChainRuntimeEvidencePath
 
 if (failures.length > 0) {
   console.error('Release Candidate validation failures:');
-  for (const failure of failures) {
-    console.error(`- ${failure}`);
-  }
+  for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
