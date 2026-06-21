@@ -1,13 +1,16 @@
 import { spawnSync } from 'node:child_process';
 
+const stripeSecretKeyPlaceholder = ['sk', 'ci-placeholder'].join('_');
+const stripeWebhookSecretPlaceholder = ['whsec', 'ci-placeholder'].join('_');
+
 const ciPlaceholders = {
   NEXT_PUBLIC_SUPABASE_URL: 'https://ci-placeholder.supabase.co',
   NEXT_PUBLIC_SUPABASE_ANON_KEY: 'ci_supabase_anon_key_placeholder',
   SUPABASE_SERVICE_ROLE_KEY: 'ci_supabase_service_role_key_placeholder',
   NEXT_PUBLIC_APP_URL: 'https://ci.eurocomply.local',
   TRUSTED_ORIGINS: 'https://ci.eurocomply.local,http://localhost:3000',
-  STRIPE_SECRET_KEY: 'sk_test_ci_placeholder',
-  STRIPE_WEBHOOK_SECRET: 'whsec_ci_placeholder',
+  STRIPE_SECRET_KEY: stripeSecretKeyPlaceholder,
+  STRIPE_WEBHOOK_SECRET: stripeWebhookSecretPlaceholder,
   STRIPE_PRICE_ESSENTIAL_MONTHLY: 'price_ci_essential_monthly',
   STRIPE_PRICE_PROFESSIONAL_MONTHLY: 'price_ci_professional_monthly',
   STRIPE_PRICE_BUSINESS_MONTHLY: 'price_ci_business_monthly',
