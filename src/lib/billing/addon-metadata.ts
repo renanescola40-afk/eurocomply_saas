@@ -7,6 +7,6 @@ export function isValidAddOnId(value: string | null | undefined): value is AddOn
 }
 
 export function getAddOnIdFromMetadata(metadata: Record<string, string> | null | undefined): AddOnId | null {
-  const candidate = metadata?.add_on_id ?? metadata?.addOnId ?? metadata?.eurocomply_add_on_id;
+  const candidate = metadata?.add_on_id ?? metadata?.addOnId ?? metadata?.risck_comply_add_on_id ?? metadata?.eurocomply_add_on_id;
   return isValidAddOnId(candidate) ? candidate : null;
 }
