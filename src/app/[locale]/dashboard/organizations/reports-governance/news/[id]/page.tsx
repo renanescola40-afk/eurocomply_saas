@@ -54,7 +54,7 @@ export default async function IntelligenceDetailPage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.14),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.42))] text-foreground">
       <div className="mx-auto max-w-5xl space-y-8 px-4 py-8 md:px-8 md:py-12">
-        <Link href={`/${locale}/dashboard/organizations/reports-governance/news`} className="text-sm font-semibold text-muted-foreground transition hover:text-foreground">← Voltar ao EuroComply Intelligence</Link>
+        <Link href={`/${locale}/dashboard/organizations/reports-governance/news`} className="text-sm font-semibold text-muted-foreground transition hover:text-foreground">← Voltar ao RISCK COMPLY Intelligence</Link>
 
         <article className="rounded-[2rem] border bg-background/92 p-6 shadow-xl shadow-primary/5 backdrop-blur md:p-9">
           <div className="flex flex-wrap gap-2">
@@ -87,7 +87,7 @@ export default async function IntelligenceDetailPage({ params }: PageProps) {
             <div className="mt-8 space-y-8">
               <section className="rounded-[1.5rem] border bg-background/70 p-6 md:p-8">
                 <div className="border-b pb-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">Matéria original EuroComply Intelligence</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">Matéria original RISCK COMPLY Intelligence</p>
                   <p className="mt-2 text-sm text-muted-foreground">{item.persona.tagline}</p>
                 </div>
                 <div className="mt-6 space-y-6 text-lg leading-9 text-foreground/88">
@@ -98,9 +98,9 @@ export default async function IntelligenceDetailPage({ params }: PageProps) {
               </section>
 
               <section className="rounded-[1.5rem] border bg-muted/20 p-6">
-                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">Análise EuroComply</h2>
-                <p className="mt-3 text-sm leading-7 text-foreground/85 md:text-base">{item.eurocomplyAnalysis}</p>
-                <p className="mt-4 rounded-2xl border bg-background/70 p-3 text-xs leading-5 text-muted-foreground">Nota editorial: o EuroComply mantém metadados, referência e análise própria. Conteúdo completo só deve ser armazenado para fontes oficiais, abertas ou licenciadas. Para mídia comercial, o jornal publica síntese e análise próprias com referência ao original.</p>
+                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">Análise RISCK COMPLY</h2>
+                <p className="mt-3 text-sm leading-7 text-foreground/85 md:text-base">{item.risckComplyAnalysis}</p>
+                <p className="mt-4 rounded-2xl border bg-background/70 p-3 text-xs leading-5 text-muted-foreground">Nota editorial: o RISCK COMPLY mantém metadados, referência e análise própria. Conteúdo completo só deve ser armazenado para fontes oficiais, abertas ou licenciadas. Para mídia comercial, o jornal publica síntese e análise próprias com referência ao original.</p>
               </section>
 
               <section className="grid gap-4 md:grid-cols-2">

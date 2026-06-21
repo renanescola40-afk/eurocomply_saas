@@ -4,7 +4,7 @@ Status: draft for commercial and legal review. Do not offer as a contractual SLA
 
 ## Purpose
 
-Define a future enterprise SLA framework for EuroComply customers.
+Define a future enterprise SLA framework for RISCK COMPLY customers.
 
 ## Draft service availability target
 
@@ -19,7 +19,7 @@ Potential exclusions include:
 
 - Scheduled maintenance with advance notice.
 - Customer-caused downtime or misconfiguration.
-- Third-party provider outages outside EuroComply control.
+- Third-party provider outages outside RISCK COMPLY control.
 - Force majeure events.
 - Beta features and non-production environments.
 - Security suspensions or abuse prevention actions.
@@ -45,4 +45,4 @@ Potential exclusions include:
 
 ## Customer-safe answer while draft
 
-EuroComply does not currently offer a contractual SLA. A draft enterprise SLA framework exists and will be offered only after monitoring, incident response, and legal terms are finalized.
+RISCK COMPLY does not currently offer a contractual SLA. A draft enterprise SLA framework exists and will be offered only after monitoring, incident response, and legal terms are finalized.

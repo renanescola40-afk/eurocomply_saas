@@ -1,6 +1,6 @@
 # Security Policy
 
-EuroComply is a European B2B compliance SaaS. Security reports are taken seriously and should be handled privately.
+RISCK COMPLY is a European B2B compliance SaaS. Security reports are taken seriously and should be handled privately.
 
 ## Supported versions
 
@@ -44,7 +44,7 @@ Out of scope unless combined with a real exploit:
 - missing security headers already documented in the roadmap;
 - social engineering;
 - denial-of-service without a practical abuse path;
-- vulnerabilities in third-party services outside EuroComply configuration.
+- vulnerabilities in third-party services outside RISCK COMPLY configuration.
 
 ## Production security posture
 

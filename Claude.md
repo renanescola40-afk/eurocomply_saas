@@ -1,7 +1,7 @@
 # Project Structure
 
 ## Overview
-EuroComply AI is a premium European enterprise SaaS for AI governance, EU AI Act readiness, compliance documentation, AI inventory management, procurement support, recurring monitoring, and subscription billing.
+RISCK COMPLY AI is a premium European enterprise SaaS for AI governance, EU AI Act readiness, compliance documentation, AI inventory management, procurement support, recurring monitoring, and subscription billing.
 
 ## Tech Stack
 - Framework: Next.js 15 App Router
@@ -88,7 +88,7 @@ src/
 - Description: RLS-enabled tables for profiles, workspaces, members, assessments, tools, documents, procurement, audit logs, subscriptions, payments, invoices, monitoring preferences, and regulatory updates. Helper functions now include workspace membership, workspace management, and monitoring entitlement checks. Indexes, uniqueness constraints, plan/risk/role checks, explicit `WITH CHECK` policies, and paid-plan monitoring preference restrictions were added.
 
 ## Current State
-- [x] Dark premium cinematic landing page for EuroComply AI
+- [x] Dark premium cinematic landing page for RISCK COMPLY AI
 - [x] Authentication and onboarding
 - [x] Protected dashboard
 - [x] AI inventory module
@@ -104,6 +104,6 @@ src/
 - [ ] Real AI document generation and PDF export can be expanded
 
 ## Maintenance Log
-- 2026-05-28: Implemented EuroComply AI SaaS foundation with landing page, auth, dashboard, Nubase schema, Stripe routes, and continuous monitoring module.
+- 2026-05-28: Implemented RISCK COMPLY AI SaaS foundation with landing page, auth, dashboard, Nubase schema, Stripe routes, and continuous monitoring module.
 - 2026-05-28: Rebuilt the visual system into a dark premium enterprise template with cinematic landing composition, glass surfaces, tech grid layers, animated borders, and upgraded dashboard styling.
 - 2026-05-28: Hardened security posture with safe error handling, restrictive headers, authenticated Stripe checkout/customer routes, validated Stripe webhook writes, membership-based dashboard loading, RBAC-aware actions, paid-plan monitoring enforcement, strengthened RLS policies/functions/indexes, and minimal Supabase schema types.
