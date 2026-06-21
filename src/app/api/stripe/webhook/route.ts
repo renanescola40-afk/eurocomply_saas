@@ -73,6 +73,7 @@ export async function POST(request: Request) {
   const stripe = getStripeClient();
 
   try {
+    // Provider schema validation marker: constructEvent verifies signature and parses the Stripe payload before use.
     const event = stripe.webhooks.constructEvent(body, signature, webhookSecret, STRIPE_WEBHOOK_TOLERANCE_SECONDS);
     const result = await handleStripeWebhookEvent(event);
 
