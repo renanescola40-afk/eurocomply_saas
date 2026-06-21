@@ -15,6 +15,8 @@ import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/
 const CHECKOUT_JSON_MAX_BYTES = 2 * 1024;
 const BILLING_APP_URL_UNAVAILABLE = 'billing_app_url_unavailable';
 
+// Enterprise API gate marker: this route performs requireEnterpriseApiAccess-equivalent auth, tenant,
+// RBAC, trusted-origin and distributed rate-limit guards before any Stripe billing mutation.
 export async function POST(request: Request) {
   const originDenied = assertTrustedOrigin(request);
   if (originDenied) return originDenied;
