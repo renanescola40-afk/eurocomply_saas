@@ -36,7 +36,7 @@ export type IntelligenceItem = {
   reliability: IntelligenceReliability;
   impact: IntelligenceImpact;
   executiveSummary: string;
-  eurocomplyAnalysis: string;
+  risckComplyAnalysis: string;
   affectedCompanies: string[];
   recommendedActions: string[];
   calendarSuggestion: string;
@@ -46,16 +46,16 @@ export type IntelligenceItem = {
   articleParagraphs: string[];
 };
 
-function buildArticleParagraphs(item: Pick<IntelligenceItem, 'title' | 'category' | 'jurisdiction' | 'source' | 'executiveSummary' | 'eurocomplyAnalysis' | 'affectedCompanies' | 'recommendedActions'>): string[] {
+function buildArticleParagraphs(item: Pick<IntelligenceItem, 'title' | 'category' | 'jurisdiction' | 'source' | 'executiveSummary' | 'risckComplyAnalysis' | 'affectedCompanies' | 'recommendedActions'>): string[] {
   const affected = item.affectedCompanies.length ? item.affectedCompanies.join(', ') : 'empresas com operação digital, fornecedores tecnológicos e times de compliance';
   const firstAction = item.recommendedActions[0] ?? 'abrir uma revisão interna e documentar a decisão tomada';
 
   return [
-    `${item.title} deixou de ser apenas uma atualização de mercado: para empresas que compram, vendem ou operam tecnologia, o tema passa a tocar governança, orçamento e exposição regulatória. A leitura do EuroComply é que a notícia precisa ser tratada como sinal de decisão, não como ruído informativo.`,
+    `${item.title} deixou de ser apenas uma atualização de mercado: para empresas que compram, vendem ou operam tecnologia, o tema passa a tocar governança, orçamento e exposição regulatória. A leitura do RISCK COMPLY é que a notícia precisa ser tratada como sinal de decisão, não como ruído informativo.`,
     `A fonte monitorada nesta edição é ${item.source}, com foco em ${item.jurisdiction}. O ponto central é simples: ${item.executiveSummary}`,
     `Para ${affected}, o impacto aparece em contratos, fornecedores, evidências, políticas internas e capacidade de responder a auditorias. Uma empresa que deixa esse tipo de mudança fora do radar tende a descobrir tarde demais que uma decisão técnica virou risco jurídico, operacional ou financeiro.`,
-    `${item.eurocomplyAnalysis} O primeiro movimento recomendado pela redação é ${firstAction.toLowerCase()}.`,
-    'Esta matéria é uma síntese editorial própria do EuroComply Intelligence: ela preserva referência, data, fonte e contexto, mas não republica textos integrais de terceiros. Quando a origem for mídia comercial ou paywall, o produto deve manter metadados e análise própria, apontando o leitor para a fonte original.',
+    `${item.risckComplyAnalysis} O primeiro movimento recomendado pela redação é ${firstAction.toLowerCase()}.`,
+    'Esta matéria é uma síntese editorial própria do RISCK COMPLY Intelligence: ela preserva referência, data, fonte e contexto, mas não republica textos integrais de terceiros. Quando a origem for mídia comercial ou paywall, o produto deve manter metadados e análise própria, apontando o leitor para a fonte original.',
   ];
 }
 
@@ -72,11 +72,11 @@ export const fallbackIntelligenceItems: IntelligenceItem[] = [
     publishedAt: '2026-06-10',
     source: 'European Commission / EU AI Act policy pages',
     sourceType: 'Instituição europeia',
-    author: 'EuroComply Intelligence Desk',
+    author: 'RISCK COMPLY Intelligence Desk',
     reliability: 'Alta',
     impact: 'Alto',
     executiveSummary: 'Empresas que usam ou fornecem sistemas de IA com impacto em pessoas precisam manter inventário, gestão de risco, documentação, supervisão humana e logs auditáveis.',
-    eurocomplyAnalysis: 'A organização deve mapear sistemas de IA, confirmar o papel contratual e anexar evidências por obrigação. O maior risco é tratar uso operacional externo como simples ferramenta interna.',
+    risckComplyAnalysis: 'A organização deve mapear sistemas de IA, confirmar o papel contratual e anexar evidências por obrigação. O maior risco é tratar uso operacional externo como simples ferramenta interna.',
     affectedCompanies: ['SaaS B2B', 'Fintech', 'RH e recrutamento', 'Educação', 'Healthtech'],
     recommendedActions: ['Atualizar inventário de IA.', 'Classificar risco AI Act.', 'Criar revisão para sistemas com clientes.', 'Separar evidências de logs e transparência.'],
     calendarSuggestion: 'Criar tarefa de revisão do inventário de IA em 30 dias, prioridade alta.',
@@ -89,7 +89,7 @@ export const fallbackIntelligenceItems: IntelligenceItem[] = [
       jurisdiction: 'União Europeia',
       source: 'European Commission / EU AI Act policy pages',
       executiveSummary: 'Empresas que usam ou fornecem sistemas de IA com impacto em pessoas precisam manter inventário, gestão de risco, documentação, supervisão humana e logs auditáveis.',
-      eurocomplyAnalysis: 'A organização deve mapear sistemas de IA, confirmar o papel contratual e anexar evidências por obrigação. O maior risco é tratar uso operacional externo como simples ferramenta interna.',
+      risckComplyAnalysis: 'A organização deve mapear sistemas de IA, confirmar o papel contratual e anexar evidências por obrigação. O maior risco é tratar uso operacional externo como simples ferramenta interna.',
       affectedCompanies: ['SaaS B2B', 'Fintech', 'RH e recrutamento', 'Educação', 'Healthtech'],
       recommendedActions: ['Atualizar inventário de IA.'],
     }),
@@ -102,11 +102,11 @@ export const fallbackIntelligenceItems: IntelligenceItem[] = [
     publishedAt: '2026-06-08',
     source: 'EDPB / autoridades europeias de proteção de dados',
     sourceType: 'Regulador',
-    author: 'EuroComply Intelligence Desk',
+    author: 'RISCK COMPLY Intelligence Desk',
     reliability: 'Alta',
     impact: 'Médio',
     executiveSummary: 'Empresas que usam IA com dados pessoais precisam demonstrar finalidade, minimização, transparência, controle de acesso, retenção e base legal adequada.',
-    eurocomplyAnalysis: 'O cliente deve revisar política de uso aceitável de IA, DPIA quando houver alto risco e fornecedores que processam dados fora da empresa.',
+    risckComplyAnalysis: 'O cliente deve revisar política de uso aceitável de IA, DPIA quando houver alto risco e fornecedores que processam dados fora da empresa.',
     affectedCompanies: ['E-commerce', 'SaaS com suporte ao cliente', 'Consultorias', 'Empresas com CRM'],
     recommendedActions: ['Revisar política interna de IA.', 'Adicionar fornecedores de IA ao registro de terceiros.', 'Criar evidência de base legal.', 'Treinar equipes que usam prompts.'],
     calendarSuggestion: 'Criar revisão de política de IA generativa e RGPD em 45 dias.',
@@ -119,7 +119,7 @@ export const fallbackIntelligenceItems: IntelligenceItem[] = [
       jurisdiction: 'União Europeia',
       source: 'EDPB / autoridades europeias de proteção de dados',
       executiveSummary: 'Empresas que usam IA com dados pessoais precisam demonstrar finalidade, minimização, transparência, controle de acesso, retenção e base legal adequada.',
-      eurocomplyAnalysis: 'O cliente deve revisar política de uso aceitável de IA, DPIA quando houver alto risco e fornecedores que processam dados fora da empresa.',
+      risckComplyAnalysis: 'O cliente deve revisar política de uso aceitável de IA, DPIA quando houver alto risco e fornecedores que processam dados fora da empresa.',
       affectedCompanies: ['E-commerce', 'SaaS com suporte ao cliente', 'Consultorias', 'Empresas com CRM'],
       recommendedActions: ['Revisar política interna de IA.'],
     }),
@@ -132,11 +132,11 @@ export const fallbackIntelligenceItems: IntelligenceItem[] = [
     publishedAt: '2026-06-05',
     source: 'ENISA / autoridades nacionais competentes',
     sourceType: 'Fonte oficial',
-    author: 'EuroComply Intelligence Desk',
+    author: 'RISCK COMPLY Intelligence Desk',
     reliability: 'Alta',
     impact: 'Alto',
     executiveSummary: 'Empresas reguladas e fornecedores críticos precisam mostrar rastreabilidade de incidentes, continuidade operacional, fornecedores essenciais e evidências de resposta.',
-    eurocomplyAnalysis: 'A notícia deve acionar revisão de vendors críticos, SLAs, DPA, incident response e continuidade. O calendário inteligente deve sugerir revisão periódica.',
+    risckComplyAnalysis: 'A notícia deve acionar revisão de vendors críticos, SLAs, DPA, incident response e continuidade. O calendário inteligente deve sugerir revisão periódica.',
     affectedCompanies: ['Fintech', 'SaaS corporativo', 'Cloud providers', 'Empresas com fornecedores críticos'],
     recommendedActions: ['Marcar fornecedores críticos.', 'Validar plano de continuidade.', 'Testar resposta a incidentes.', 'Atualizar subprocessadores.'],
     calendarSuggestion: 'Criar revisão de terceiros críticos e continuidade operacional em 30 dias.',
@@ -149,7 +149,7 @@ export const fallbackIntelligenceItems: IntelligenceItem[] = [
       jurisdiction: 'União Europeia',
       source: 'ENISA / autoridades nacionais competentes',
       executiveSummary: 'Empresas reguladas e fornecedores críticos precisam mostrar rastreabilidade de incidentes, continuidade operacional, fornecedores essenciais e evidências de resposta.',
-      eurocomplyAnalysis: 'A notícia deve acionar revisão de vendors críticos, SLAs, DPA, incident response e continuidade. O calendário inteligente deve sugerir revisão periódica.',
+      risckComplyAnalysis: 'A notícia deve acionar revisão de vendors críticos, SLAs, DPA, incident response e continuidade. O calendário inteligente deve sugerir revisão periódica.',
       affectedCompanies: ['Fintech', 'SaaS corporativo', 'Cloud providers', 'Empresas com fornecedores críticos'],
       recommendedActions: ['Marcar fornecedores críticos.'],
     }),
@@ -191,11 +191,11 @@ function mapDatabaseItem(item: IntelligenceDatabaseRow): IntelligenceItem {
     publishedAt: item.published_at ?? new Date().toISOString(),
     source: item.source_name,
     sourceType: mapSourceType(item.source_type),
-    author: item.author ?? 'EuroComply Intelligence Desk',
+    author: item.author ?? 'RISCK COMPLY Intelligence Desk',
     reliability: mapReliability(item.reliability),
     impact: mapImpact(item.impact),
     executiveSummary: item.executive_summary,
-    eurocomplyAnalysis: item.internal_analysis,
+    risckComplyAnalysis: item.internal_analysis,
     affectedCompanies: normalizeStringArray(item.affected_companies),
     recommendedActions: normalizeStringArray(item.recommended_actions),
     calendarSuggestion: item.impact === 'high' || item.impact === 'critical' ? 'Criar revisão no calendário inteligente em até 30 dias.' : 'Monitorar e criar tarefa se houver impacto direto na empresa.',
@@ -225,7 +225,6 @@ export async function listPublishedIntelligenceItems(): Promise<IntelligenceItem
     .limit(50);
 
   if (error || !data?.length) return fallbackIntelligenceItems;
-
   return (data as IntelligenceDatabaseRow[]).map((item) => mapDatabaseItem(item));
 }
 
@@ -252,7 +251,7 @@ export async function getPublishedIntelligenceItem(id: string): Promise<Intellig
     .eq('id', id)
     .maybeSingle();
 
-  if (uuidError || !uuidMatch) return fallback ?? null;
+  if (uuidError || !uuidMatch) return null;
 
   return mapDatabaseItem(uuidMatch as IntelligenceDatabaseRow);
 }
