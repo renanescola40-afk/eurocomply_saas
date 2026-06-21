@@ -60,6 +60,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No package-lock.json changes to commit."
           else
-            git commit -m "security: sync main and commit deterministic npm lockfile"
+            git commit -m "security: commit deterministic npm lockfile"
             git push
           fi
