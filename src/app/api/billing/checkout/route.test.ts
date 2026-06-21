@@ -96,7 +96,7 @@ describe('billing checkout API security gates', () => {
       assessment: { action: 'manage_billing', verifiedAt: '2026-06-21T09:00:00.000Z' },
     });
     mocks.publicStepUpSummary.mockReturnValue({ verified: true });
-    mocks.stripeCheckoutCreate.mockResolvedValue({ id: 'cs_test_123', url: 'https://checkout.stripe.test/cs_test_123' });
+    mocks.stripeCheckoutCreate.mockResolvedValue({ id: 'checkout_session_fixture', url: 'https://checkout.stripe.test/session-fixture' });
     mocks.writeAuditLog.mockResolvedValue(undefined);
   });
 
@@ -130,7 +130,7 @@ describe('billing checkout API security gates', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ url: 'https://checkout.stripe.test/cs_test_123', stepUp: { verified: true } });
+    expect(body).toEqual({ url: 'https://checkout.stripe.test/session-fixture', stepUp: { verified: true } });
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: 'subscription',
@@ -156,7 +156,7 @@ describe('billing checkout API security gates', () => {
         organizationId: 'org_a',
         userId: 'user_admin',
         entityType: 'stripe_checkout_session',
-        entityId: 'cs_test_123',
+        entityId: 'checkout_session_fixture',
       }),
     );
   });
