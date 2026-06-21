@@ -45,6 +45,6 @@ export function reportError(error: unknown, context: ReportErrorContext = {}) {
     return report;
   }
 
-  console.error('[EuroComply]', error, sanitizedContext);
+  console.error('[RISCK COMPLY]', error, sanitizedContext);
   return report;
 }
