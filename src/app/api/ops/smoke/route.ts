@@ -15,7 +15,7 @@ const REQUIRED_ENV_GROUPS = {
 
 type EnvGroupName = keyof typeof REQUIRED_ENV_GROUPS;
 
-function hasBearerToken(request: Request) {
+function validateBearerToken(request: Request) {
   const configuredToken = process.env.HEALTHCHECK_TOKEN;
 
   if (process.env.NODE_ENV !== 'production' && !configuredToken) {
@@ -42,7 +42,7 @@ export function envGroupCheck() {
 }
 
 export async function GET(request: Request) {
-  if (!hasBearerToken(request)) {
+  if (!validateBearerToken(request)) {
     return noStoreJson({ status: 'unauthorized' }, { status: 401 });
   }
 
