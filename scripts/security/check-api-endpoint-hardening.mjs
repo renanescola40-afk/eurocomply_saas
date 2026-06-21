@@ -15,6 +15,8 @@ const publicEndpointAllowlist = [
 
 const authTokens = [
   'getCurrentUser',
+  'requireCurrentUser',
+  'requireApiUser',
   'requireOrganizationContext',
   'supabase.auth.getUser',
   'HEALTHCHECK_TOKEN',
@@ -32,6 +34,8 @@ const schemaValidationTokens = [
   'validate',
   'schema',
   'FormData',
+  'readBoundedJsonRequest',
+  'readBoundedStripeWebhookBody',
 ];
 
 const clientInputTokens = [
@@ -48,6 +52,7 @@ const rateLimitTokens = [
   'rateLimit',
   'rate-limit',
   'Retry-After',
+  'requireTrustedMutation',
 ];
 
 const criticalEndpointPatterns = [
