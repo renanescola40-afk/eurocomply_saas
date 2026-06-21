@@ -30,27 +30,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const labels: Record<Locale, { title: string; description: string }> = {
     en: {
-      title: 'EuroComply - European Compliance Operating System',
+      title: 'RISCK COMPLY - European Compliance Operating System',
       description: 'Control deadlines, risks, documents, audit logs and fiscal identifiers across Europe.',
     },
     pt: {
-      title: 'EuroComply - Sistema Operacional de Compliance Europeu',
+      title: 'RISCK COMPLY - Sistema Operacional de Compliance Europeu',
       description: 'Controle prazos, riscos, documentos, logs de auditoria e identificações fiscais na Europa.',
     },
     es: {
-      title: 'EuroComply - Sistema Operativo de Compliance Europeo',
+      title: 'RISCK COMPLY - Sistema Operativo de Compliance Europeo',
       description: 'Controle plazos, riesgos, documentos, registros de auditoría e identificadores fiscales en Europa.',
     },
     fr: {
-      title: 'EuroComply - Système Opérationnel de Conformité Européenne',
+      title: 'RISCK COMPLY - Système Opérationnel de Conformité Européenne',
       description: 'Pilotez échéances, risques, documents, journaux d’audit et identifiants fiscaux en Europe.',
     },
     it: {
-      title: 'EuroComply - Sistema Operativo di Compliance Europea',
+      title: 'RISCK COMPLY - Sistema Operativo di Compliance Europea',
       description: 'Gestisci scadenze, rischi, documenti, registri di audit e identificativi fiscali in Europa.',
     },
     de: {
-      title: 'EuroComply - Europäisches Compliance-Betriebssystem',
+      title: 'RISCK COMPLY - Europäisches Compliance-Betriebssystem',
       description: 'Steuern Sie Fristen, Risiken, Dokumente, Audit-Logs und Steuerkennungen in Europa.',
     },
   };

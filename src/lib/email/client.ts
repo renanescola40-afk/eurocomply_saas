@@ -15,7 +15,7 @@ type SendEmailResult = {
 };
 
 function getDefaultFromAddress() {
-  return process.env.EMAIL_FROM ?? 'EuroComply <no-reply@eurocomply.app>';
+  return process.env.EMAIL_FROM ?? 'RISCK COMPLY <no-reply@risckcomply.app>';
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
@@ -23,7 +23,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const from = input.from ?? getDefaultFromAddress();
 
   if (!apiKey) {
-    console.info('[EuroComply email skipped]', {
+    console.info('[RISCK COMPLY email skipped]', {
       to: input.to,
       subject: input.subject,
       from,
