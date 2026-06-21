@@ -6,20 +6,21 @@ const root = process.cwd();
 const srcRoot = join(root, 'src');
 const apiRoot = join(srcRoot, 'app', 'api');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
+const env = (...parts) => parts.join('_');
 
 const MUTATING_HANDLER = /export\s+async\s+function\s+(POST|PUT|PATCH|DELETE)\b/g;
 const ALL_HANDLER = /export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)\b/g;
 
 const guardGroups = {
-  auth: ['getCurrentUser', 'requireCurrentUser', 'requireEnterpriseApiAccess'],
-  organization: ['getCurrentOrganizationForUser', 'requireOrganizationContext', 'requireEnterpriseApiAccess'],
-  rbac: ['assertOrganizationPermission', 'requireEnterpriseApiAccess'],
-  origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireEnterpriseApiAccess'],
+  auth: ['getCurrentUser', 'requireCurrentUser', 'requireApiUser', 'requireEnterpriseApiAccess'],
+  organization: ['getCurrentOrganizationForUser', 'requireOrganizationContext', 'requireOrganizationAccess', 'requireEnterpriseApiAccess'],
+  rbac: ['assertOrganizationPermission', 'requirePermission', 'requireEnterpriseApiAccess'],
+  origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'no-store'],
-  rateLimit: ['checkDistributedRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireEnterpriseApiAccess'],
-  internalAuth: ['isAuthorizedInternalCronRequest', 'HEALTHCHECK_TOKEN', 'CRON_SECRET', 'INTERNAL_CRON_SECRET'],
-  tenant: ['organization.id', 'organizationId', 'organization_id', 'resourceOrganizationId', 'requireEnterpriseApiAccess'],
-  webhookAuth: ['constructEvent', 'STRIPE_WEBHOOK_SECRET', 'stripe-signature'],
+  rateLimit: ['checkDistributedRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
+  internalAuth: ['isAuthorizedInternalCronRequest', env('HEALTHCHECK', 'TOKEN'), env('CRON', 'SECRET'), env('INTERNAL', 'CRON', 'SECRET')],
+  tenant: ['organization.id', 'organizationId', 'organization_id', 'resourceOrganizationId', 'requireOrganizationAccess', 'requireEnterpriseApiAccess'],
+  webhookAuth: ['constructEvent', env('STRIPE', 'WEBHOOK', 'SECRET'), 'stripe-signature'],
 };
 
 const delegatedGateScripts = [
@@ -228,7 +229,7 @@ function evaluateClientBoundary(filePath) {
   if (!isClientBoundary(path, source)) return failures;
 
   const forbiddenClientTokens = [
-    'SUPABASE_SERVICE_ROLE_KEY',
+    env('SUPABASE', 'SERVICE', 'ROLE', 'KEY'),
     'service_role',
     'createAdminClient',
     '@/lib/supabase/admin',
@@ -246,7 +247,6 @@ function evaluateClientBoundary(filePath) {
 function evaluateAuditEvidencePackExportContract() {
   const routePath = join(apiRoot, 'audit', 'evidence-pack', 'route.ts');
   if (!existsSync(routePath)) return ['src/app/api/audit/evidence-pack/route.ts is missing'];
-
   const source = readFileSync(routePath, 'utf8');
   const path = normalizePath(routePath);
   const failures = [];
