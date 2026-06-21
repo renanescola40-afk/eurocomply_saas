@@ -65,6 +65,12 @@ function metadataBoolean(metadata: Record<string, unknown> | undefined, key: str
   return typeof value === 'boolean' ? value : null;
 }
 
+function withoutRawStoragePath(metadata: Record<string, unknown> | undefined) {
+  const safeMetadata = { ...(metadata ?? {}) };
+  delete safeMetadata.storagePath;
+  return safeMetadata;
+}
+
 async function auditUploadRejection(input: {
   organizationId: string;
   actorUserId: string;
@@ -120,7 +126,7 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
   await assertCurrentUserCan(payload.organizationId, userId, 'documents:write');
   assertDocumentStoragePathInOrganization(payload.storagePath, payload.organizationId);
 
-  const uploadSecurityMetadata = payload.metadata ?? {};
+  const uploadSecurityMetadata = withoutRawStoragePath(payload.metadata);
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
@@ -154,7 +160,12 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
     action: 'document.created',
     entityType: 'document',
     entityId: data.id,
-    metadata: { name: payload.name, category: payload.category, ...(payload.metadata ?? {}) },
+    metadata: {
+      name: payload.name,
+      category: payload.category,
+      ...uploadSecurityMetadata,
+      hasStoragePath: Boolean(payload.storagePath),
+    },
   });
 
   return data;
@@ -282,7 +293,8 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
   try {
     const auditMetadata = {
       ...scanMetadata,
-      storagePath,
+      hasStoragePath: true,
+      storagePathTenantPrefixValidated: true,
     };
     const document = await createDocument(
       {
