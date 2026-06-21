@@ -15,7 +15,7 @@ export function OnboardingProgressCard({ state }: OnboardingProgressCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Get EuroComply audit-ready</CardTitle>
+        <CardTitle>Get RISCK COMPLY audit-ready</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="space-y-2">
