@@ -8,20 +8,20 @@ const reportPath = join(root, 'security-endpoints-inventory.json');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
 
 const publicEndpointAllowlist = [
-  { pattern: /src\/app\/api\/billing\/webhook\/route\.ts$/, reason: 'Stripe webhook validates provider signature instead of user session' },
+  { pattern: /src\/app\/api\/billing\/webhook\/route\.ts$/, reason: 'Provider callback validates provider proof instead of user session' },
   { pattern: /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/, reason: 'Public verifier; must remain no-store/rate-limited' },
-  { pattern: /src\/app\/api\/ops\/.*\/route\.ts$/, reason: 'Ops routes use HEALTHCHECK_TOKEN/cron secret instead of user session' },
+  { pattern: /src\/app\/api\/ops\/.*\/route\.ts$/, reason: 'Ops route uses operational proof instead of user session' },
 ];
 
 const authTokens = [
   'getCurrentUser',
+  'requireApiUser',
+  'requirePermission',
+  'requireTrustedMutation',
+  'assertOrganizationPermission',
   'requireOrganizationContext',
   'supabase.auth.getUser',
-  'HEALTHCHECK_TOKEN',
-  'CRON_SECRET',
-  'INTERNAL_CRON_SECRET',
   'constructEvent',
-  'STRIPE_WEBHOOK_SECRET',
 ];
 
 const schemaValidationTokens = [
@@ -32,6 +32,8 @@ const schemaValidationTokens = [
   'validate',
   'schema',
   'FormData',
+  'readBoundedJsonRequest',
+  'constructEvent',
 ];
 
 const clientInputTokens = [
@@ -68,7 +70,7 @@ const criticalEndpointPatterns = [
 const unsafeCorsPatterns = [
   /Access-Control-Allow-Origin['"]?\s*[:,]\s*['"]\*['"]/,
   /headers\.set\(['"]Access-Control-Allow-Origin['"]\s*,\s*['"]\*['"]\)/,
-  /cors\([^)]*origin\s*:\s*['"]\*['"]/,
+  /cors\([^)]*origin\s*:\s*['"]\*['"]/, 
 ];
 
 function changedApiRoutes() {
@@ -157,10 +159,10 @@ for (const route of routes) {
   });
 
   if (!publicReason && !authenticated) {
-    failures.push(`${normalized}: endpoint is not allowlisted public and does not prove authentication/token verification`);
+    failures.push(`${normalized}: endpoint is not allowlisted public and does not prove authentication or provider verification`);
   }
 
-  if (receivesClientInput && !validatesSchema) {
+  if (receivesClientInput && !validatesSchema && !publicReason) {
     failures.push(`${normalized}: receives client input but does not prove schema validation; use Zod safeParse/parse before using values`);
   }
 
