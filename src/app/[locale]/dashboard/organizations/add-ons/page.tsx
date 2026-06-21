@@ -47,7 +47,7 @@ export default async function AddOnsAndCreditsPage({ params, searchParams }: Pag
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization?.id) {
-    redirect(`/${locale}/eurocomply-home`);
+    redirect(`/${locale}/risck-comply-home`);
   }
 
   const entitlements = await getOrganizationEntitlements(organization.id);
