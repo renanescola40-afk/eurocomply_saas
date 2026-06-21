@@ -10,6 +10,7 @@ import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
+import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
@@ -30,6 +31,16 @@ export async function POST(request: NextRequest) {
 
   if (!organization) {
     return noStoreJson({ error: 'Organization not found' }, { status: 404 });
+  }
+
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: 'manage_settings',
+  });
+
+  if (!permission.ok) {
+    return permissionDeniedResponse(permission);
   }
 
   const rateLimit = await checkDistributedRateLimit({
