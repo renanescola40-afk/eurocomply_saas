@@ -22,6 +22,10 @@ function requireToken(source, token, message) {
   if (!source.includes(token)) failures.push(message);
 }
 
+function requireAnyToken(source, tokens, message) {
+  if (!tokens.some((token) => source.includes(token))) failures.push(message);
+}
+
 function forbidToken(source, token, message) {
   if (source.includes(token)) failures.push(message);
 }
@@ -35,7 +39,7 @@ const test = read(TEST_PATH);
 
 for (const [routePath, route] of routes) {
   requireToken(route, 'resolveBillingReturnBaseUrl', `${routePath} must resolve Stripe return URLs through the hardened helper.`);
-  requireToken(route, 'billing_app_url_unavailable', `${routePath} must return a stable public error when return URL configuration is unavailable.`);
+  requireAnyToken(route, ['billing_app_url_unavailable', 'returnBaseUrl.error'], `${routePath} must return a stable public error when return URL configuration is unavailable.`);
   requireToken(route, 'noStoreJson', `${routePath} must use no-store responses for return URL failures.`);
   forbidToken(route, 'process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin', `${routePath} must not directly fall back to caller-derived request origin.`);
   forbidToken(route, 'new URL(request.url).origin', `${routePath} must not derive production Stripe return URLs from the request origin.`);

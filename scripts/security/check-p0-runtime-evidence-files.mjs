@@ -11,6 +11,7 @@ const allowedItems = new Set([
   'step-up-mfa-validation',
   'upload-malware-scan-validation',
   'audit-chain-live-validation',
+  'stripe-billing-validation',
 ]);
 const redactionTexts = new Set([
   'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
