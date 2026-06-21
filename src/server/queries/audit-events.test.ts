@@ -193,4 +193,49 @@ describe('audit event persistence', () => {
       },
     });
   });
+
+  it('sanitizes audit request context before hashing and persistence', async () => {
+    const queryBuilder = createQueryBuilder(['hash-a']);
+    const rpc = vi.fn(async () => ({ error: null }));
+    const supabase = {
+      from: vi.fn(() => queryBuilder),
+      rpc,
+    };
+
+    tryCreateAdminClient.mockReturnValue(supabase);
+
+    const { buildAuditRequestContextFromRequest, createAuditEvent } = await import('./audit-events');
+    const requestContext = buildAuditRequestContextFromRequest(
+      new Request('https://app.example.test/api/audit/chain/verify?limit=10', {
+        method: 'GET',
+        headers: {
+          'x-forwarded-for': '203.0.113.10, 10.0.0.1',
+          'user-agent': 'Vitest Audit Agent',
+          'x-request-id': 'req_123',
+          origin: 'https://app.example.test',
+          authorization: 'Bearer must-not-persist',
+          cookie: 'session=must-not-persist',
+        },
+      }),
+    );
+
+    await createAuditEvent({ ...baseInput, requestContext });
+
+    expect(rpc).toHaveBeenCalledWith(
+      'append_audit_event_chained',
+      expect.objectContaining({
+        p_metadata: expect.objectContaining({
+          source: 'test',
+          requestContext: {
+            ipAddress: '203.0.113.10',
+            userAgent: 'Vitest Audit Agent',
+            requestId: 'req_123',
+            origin: 'https://app.example.test',
+            method: 'GET',
+            path: '/api/audit/chain/verify',
+          },
+        }),
+      }),
+    );
+  });
 });
