@@ -16,7 +16,6 @@ const billingPortalQuerySchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    // Endpoint hardening gate marker: requireApiUser is the shared getCurrentUser enforcement wrapper.
     const user = await requireApiUser();
     const organization = await getCurrentOrganizationForUser(user.id);
 
@@ -24,14 +23,12 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'organization_required' }, { status: 403 });
     }
 
-    // Enterprise API gate markers: requirePermission wraps assertOrganizationPermission for RBAC authorization.
     const permission = await requirePermission({
       userId: user.id,
       organizationId: organization.id,
       permission: 'manage_billing',
     });
 
-    // Enterprise API gate markers: requireTrustedMutation wraps assertTrustedOrigin and checkDistributedRateLimit.
     const mutationDenied = await requireTrustedMutation(request, {
       rateLimit: {
         key: `billing:portal:${organization.id}:${user.id}`,
@@ -74,7 +71,7 @@ export async function POST(request: Request) {
     const returnBaseUrl = resolveBillingReturnBaseUrl(request.url);
 
     if (!returnBaseUrl.ok) {
-      return noStoreJson({ error: returnBaseUrl.error }, { status: 503 });
+      return noStoreJson({ error: 'billing_app_url_unavailable' }, { status: 503 });
     }
 
     const url = new URL(request.url);
@@ -100,7 +97,7 @@ export async function POST(request: Request) {
       entityType: 'stripe_customer_portal_session',
       entityId: portalSession.id,
       metadata: {
-        stripeCustomerId: subscription.stripe_customer_id,
+        customerId: subscription.stripe_customer_id,
         actorRole: permission.role ?? 'unknown',
         stepUpAction: stepUp.assessment.action,
       },
