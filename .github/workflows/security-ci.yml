@@ -253,4 +253,22 @@ jobs:
           if-no-files-found: warn
 
       - name: Step-up authentication gate
-        run: node scripts/security/check-step-up.mjs
+        shell: bash
+        run: |
+          node scripts/security/check-step-up.mjs >step-up-gate.out 2>step-up-gate.err || status=$?
+          cat step-up-gate.out
+          if [ -n "${status:-}" ]; then
+            cat step-up-gate.err >&2
+            exit 1
+          fi
+
+      - name: Upload step-up diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: step-up-gate
+          path: |
+            step-up-gate.out
+            step-up-gate.err
+          retention-days: 7
+          if-no-files-found: warn
