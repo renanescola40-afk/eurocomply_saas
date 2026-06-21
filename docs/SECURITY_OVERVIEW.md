@@ -1,6 +1,6 @@
-# EuroComply Security Overview
+# RISCK COMPLY Security Overview
 
-EuroComply is designed for European B2B compliance teams that need a secure operating layer for documents, risk evidence, audit logs, regulatory calendars and third-party governance.
+RISCK COMPLY is designed for European B2B compliance teams that need a secure operating layer for documents, risk evidence, audit logs, regulatory calendars and third-party governance.
 
 ## Current security controls
 
