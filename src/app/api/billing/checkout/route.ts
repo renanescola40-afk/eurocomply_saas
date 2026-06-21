@@ -74,7 +74,7 @@ export async function POST(request: Request) {
   const returnBaseUrl = resolveBillingReturnBaseUrl(request.url);
 
   if (!returnBaseUrl.ok) {
-    return noStoreJson({ error: returnBaseUrl.error }, { status: 503 });
+    return noStoreJson({ error: 'billing_app_url_unavailable' }, { status: 503 });
   }
 
   const stripe = getStripeClient();
