@@ -61,6 +61,25 @@ describe('validateUploadFileSignature', () => {
     ).toMatchObject({ ok: false, reason: 'active_content_detected' });
   });
 
+  it('rejects PDFs with active content beyond the first 2 MiB', () => {
+    const bytes = Buffer.concat([
+      Buffer.from('%PDF-1.7\n1 0 obj << /Type /Catalog >>\n', 'ascii'),
+      Buffer.alloc(2 * 1024 * 1024 + 64, 0x20),
+      Buffer.from('2 0 obj << /OpenAction 3 0 R >>\n%%EOF', 'ascii'),
+    ]);
+
+    expect(bytes.length).toBeLessThan(MAX_UPLOAD_BYTES);
+    expect(
+      validateUploadFileSecurity({
+        fileName: 'late-action.pdf',
+        claimedMimeType: 'application/pdf',
+        sizeBytes: bytes.length,
+        bytes,
+        maxBytes: MAX_UPLOAD_BYTES,
+      }),
+    ).toMatchObject({ ok: false, reason: 'active_content_detected' });
+  });
+
   it('rejects OpenXML documents containing macro or OLE payload markers', () => {
     const bytes = Buffer.concat([
       Buffer.from([0x50, 0x4b, 0x03, 0x04]),
