@@ -35,6 +35,8 @@ vi.mock('@/lib/security/rate-limit-response', () => ({
 
 import { POST, STRIPE_WEBHOOK_TOLERANCE_SECONDS, getStripeWebhookContentLength, readBoundedStripeWebhookBody } from './route';
 
+const TEST_STRIPE_WEBHOOK_SECRET = 'test_webhook_signing_secret';
+
 function makeWebhookRequest(body: string, headers: HeadersInit = {}) {
   return new Request('https://app.eurocomply.example/api/stripe/webhook', {
     method: 'POST',
@@ -82,7 +84,7 @@ describe('Stripe webhook body hardening', () => {
 describe('Stripe webhook route signature validation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret';
+    process.env.STRIPE_WEBHOOK_SECRET = TEST_STRIPE_WEBHOOK_SECRET;
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
     mocks.constructEvent.mockImplementation(() => {
       throw new Error('No signatures found matching the expected signature for payload');
@@ -99,7 +101,7 @@ describe('Stripe webhook route signature validation', () => {
     expect(mocks.constructEvent).toHaveBeenCalledWith(
       expect.any(String),
       't=1800000000,v1=bad',
-      'whsec_test_secret',
+      TEST_STRIPE_WEBHOOK_SECRET,
       STRIPE_WEBHOOK_TOLERANCE_SECONDS,
     );
   });
