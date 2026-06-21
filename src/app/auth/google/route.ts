@@ -7,6 +7,7 @@ import {
   getSafeAuthCallbackNextPathForLocale,
   resolveAuthAppBaseUrl,
 } from '@/server/security/auth-callback';
+import { recordAuthAuditEvent } from '@/server/security/auth-audit';
 
 function getLocale(rawLocale: string | null): Locale {
   return rawLocale && locales.includes(rawLocale as Locale) ? rawLocale as Locale : defaultLocale;
@@ -30,6 +31,13 @@ export async function GET(request: NextRequest) {
 
   if (!appBaseUrl) {
     console.warn('google_oauth_app_url_unavailable');
+    await recordAuthAuditEvent({
+      action: 'auth.oauth_start',
+      method: 'google',
+      outcome: 'failed',
+      reason: 'app_url_unavailable',
+      metadata: { source: 'google_oauth_route' },
+    });
     return noStoreJson({ error: 'auth_app_url_unavailable' }, { status: 503 });
   }
 
@@ -41,6 +49,13 @@ export async function GET(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('google_oauth_configuration_unavailable');
+    await recordAuthAuditEvent({
+      action: 'auth.oauth_start',
+      method: 'google',
+      outcome: 'failed',
+      reason: 'configuration_unavailable',
+      metadata: { source: 'google_oauth_route' },
+    });
     return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'auth_configuration_unavailable'));
   }
 
@@ -67,8 +82,22 @@ export async function GET(request: NextRequest) {
 
   if (signInResult.error || !signInResult.data.url) {
     console.warn('google_oauth_start_failed');
+    await recordAuthAuditEvent({
+      action: 'auth.oauth_start',
+      method: 'google',
+      outcome: 'failed',
+      reason: 'oauth_start_failed',
+      metadata: { source: 'google_oauth_route' },
+    });
     return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'auth_exchange_failed'));
   }
+
+  await recordAuthAuditEvent({
+    action: 'auth.oauth_start',
+    method: 'google',
+    outcome: 'attempted',
+    metadata: { source: 'google_oauth_route' },
+  });
 
   const redirectResponse = noStoreRedirect(signInResult.data.url);
   cookiesToSet.forEach(({ name, value, options }) => {
