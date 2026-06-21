@@ -150,10 +150,7 @@ function hasZipOpenXmlSignature(bytes: Buffer, expectedContentType: 'word' | 'sp
 function hasPdfActiveContent(bytes: Buffer) {
   if (!startsWith(bytes, PDF_HEADER)) return false;
 
-  const maxScanBytes = Math.min(bytes.length, 2 * 1024 * 1024);
-  const pdfHead = bytes.subarray(0, maxScanBytes).toString('latin1');
-
-  return PDF_ACTIVE_CONTENT_PATTERN.test(pdfHead);
+  return PDF_ACTIVE_CONTENT_PATTERN.test(bytes.toString('latin1'));
 }
 
 function hasOpenXmlActiveContent(bytes: Buffer) {
