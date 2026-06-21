@@ -1,4 +1,4 @@
-# EuroComply Billing Step-Up Control
+# RISCK COMPLY Billing Step-Up Control
 
 This document defines the step-up requirement for billing-sensitive actions.
 
