@@ -97,11 +97,18 @@ jobs:
           const fs = require('fs');
           const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
           const rootPackage = lock.packages?.[''] ?? {};
+          const packageNameFromPath = (lockfilePath) => {
+            const marker = 'node_modules/';
+            const index = lockfilePath.lastIndexOf(marker);
+            if (index === -1) return null;
+            return lockfilePath.slice(index + marker.length);
+          };
           const components = Object.entries(lock.packages ?? {})
-            .filter(([path, pkg]) => path && pkg && typeof pkg.name === 'string' && typeof pkg.version === 'string')
-            .map(([path, pkg]) => ({
+            .map(([path, pkg]) => ({ path, pkg, name: pkg?.name ?? packageNameFromPath(path) }))
+            .filter(({ path, pkg, name }) => path && pkg && typeof name === 'string' && name.length > 0 && typeof pkg.version === 'string')
+            .map(({ path, pkg, name }) => ({
               type: 'library',
-              name: pkg.name,
+              name,
               version: pkg.version,
               scope: pkg.dev ? 'optional' : 'required',
               properties: [
