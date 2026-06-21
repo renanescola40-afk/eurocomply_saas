@@ -8,20 +8,22 @@ const reportPath = join(root, 'security-endpoints-inventory.json');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
 
 const publicEndpointAllowlist = [
-  { pattern: /src\/app\/api\/billing\/webhook\/route\.ts$/, reason: 'Provider callback validates provider proof instead of user session' },
+  { pattern: /src\/app\/api\/billing\/webhook\/route\.ts$/, reason: 'Stripe webhook validates provider signature instead of user session' },
   { pattern: /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/, reason: 'Public verifier; must remain no-store/rate-limited' },
-  { pattern: /src\/app\/api\/ops\/.*\/route\.ts$/, reason: 'Ops route uses operational proof instead of user session' },
+  { pattern: /src\/app\/api\/ops\/.*\/route\.ts$/, reason: 'Ops routes use HEALTHCHECK_TOKEN/cron secret instead of user session' },
 ];
 
 const authTokens = [
   'getCurrentUser',
+  'requireCurrentUser',
   'requireApiUser',
-  'requirePermission',
-  'requireTrustedMutation',
-  'assertOrganizationPermission',
   'requireOrganizationContext',
   'supabase.auth.getUser',
+  'HEALTHCHECK_TOKEN',
+  'CRON_SECRET',
+  'INTERNAL_CRON_SECRET',
   'constructEvent',
+  'STRIPE_WEBHOOK_SECRET',
 ];
 
 const schemaValidationTokens = [
@@ -33,7 +35,7 @@ const schemaValidationTokens = [
   'schema',
   'FormData',
   'readBoundedJsonRequest',
-  'constructEvent',
+  'readBoundedStripeWebhookBody',
 ];
 
 const clientInputTokens = [
@@ -50,6 +52,7 @@ const rateLimitTokens = [
   'rateLimit',
   'rate-limit',
   'Retry-After',
+  'requireTrustedMutation',
 ];
 
 const criticalEndpointPatterns = [
@@ -68,7 +71,7 @@ const criticalEndpointPatterns = [
 ];
 
 const unsafeCorsPatterns = [
-  /Access-Control-Allow-Origin['"]?\s*[:,]\s*['"]\*['"]/,
+  /Access-Control-Allow-Origin['"]?\s*[:,]\s*['"]\*['"]/, 
   /headers\.set\(['"]Access-Control-Allow-Origin['"]\s*,\s*['"]\*['"]\)/,
   /cors\([^)]*origin\s*:\s*['"]\*['"]/, 
 ];
@@ -159,10 +162,10 @@ for (const route of routes) {
   });
 
   if (!publicReason && !authenticated) {
-    failures.push(`${normalized}: endpoint is not allowlisted public and does not prove authentication or provider verification`);
+    failures.push(`${normalized}: endpoint is not allowlisted public and does not prove authentication/token verification`);
   }
 
-  if (receivesClientInput && !validatesSchema && !publicReason) {
+  if (receivesClientInput && !validatesSchema) {
     failures.push(`${normalized}: receives client input but does not prove schema validation; use Zod safeParse/parse before using values`);
   }
 
