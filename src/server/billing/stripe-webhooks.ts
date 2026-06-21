@@ -67,7 +67,7 @@ function getActorUserIdFromMetadata(metadata: StripeMetadata) {
 
 function getStripeObjectId(value: string | { id?: string | null } | null | undefined) {
   if (typeof value === 'string' && value.trim()) return value.trim();
-  if (value && typeof value.id === 'string' && value.id.trim()) return value.id.trim();
+  if (value && typeof value === 'object' && typeof value.id === 'string' && value.id.trim()) return value.id.trim();
   return null;
 }
 
