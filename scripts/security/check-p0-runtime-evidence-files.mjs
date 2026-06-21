@@ -10,6 +10,7 @@ const allowedItems = new Set([
   'external-security-review-or-pentest',
   'step-up-mfa-validation',
   'upload-malware-scan-validation',
+  'audit-chain-live-validation',
   'stripe-billing-validation',
 ]);
 const redactionTexts = new Set([
