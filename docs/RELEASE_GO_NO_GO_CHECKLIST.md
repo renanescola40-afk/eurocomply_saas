@@ -30,6 +30,7 @@ A release may be marked **Go** only when all of these are true:
 - Upload security evidence is attached, including signature validation and content scanning policy.
 - Step-up authentication coverage is reviewed for protected actions.
 - Billing and webhook behavior are validated for the target environment.
+- Incident owner, rollback owner and customer communication owner are recorded.
 - Rollback owner and rollback trigger are recorded.
 - External review, penetration test, or compensating review decision is recorded.
 
@@ -55,6 +56,7 @@ A release is **No-Go** if any of the following is true:
 - Audit-chain append behavior is known to be non-transactional in the target production database.
 - A billing webhook or checkout flow is unverified for the target environment.
 - A required malware/content scanning policy is enabled but no provider or fail-closed behavior is verified.
+- The incident owner is missing or unowned.
 - The rollback plan is missing or unowned.
 - A high or critical vulnerability is untriaged.
 
@@ -81,6 +83,7 @@ The final decision must be copied into `docs/RELEASE_APPROVAL_RECORD.md` with:
 - decision outcome
 - commit SHA
 - release owner
+- incident owner
 - final approver
 - exception list
 - rollback owner
