@@ -17,6 +17,7 @@ export type AuthAuditInput = {
     | 'auth.oauth_callback'
   >;
   actorUserId?: string | null;
+  email?: string | null;
   method?: AuthAuditMethod;
   outcome?: AuthAuditOutcome;
   reason?: string | null;
@@ -44,7 +45,7 @@ async function resolveActorOrganizationIds(actorUserId: string | null | undefine
   }
 }
 
-export async function recordAuthAuditEvent(input: AuthAuditInput & Record<string, unknown>) {
+export async function recordAuthAuditEvent(input: AuthAuditInput) {
   const actorUserId = input.actorUserId ?? null;
   const organizationIds = await resolveActorOrganizationIds(actorUserId);
   const metadata = {
