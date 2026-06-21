@@ -1,5 +1,6 @@
 import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { validateBearerToken } from '@/server/security/bearer-token';
 import { noStoreJson } from '@/server/security/no-store';
 
 const REQUIRED_ENV_GROUPS = {
@@ -16,18 +17,7 @@ const REQUIRED_ENV_GROUPS = {
 type EnvGroupName = keyof typeof REQUIRED_ENV_GROUPS;
 
 function hasBearerToken(request: Request) {
-  const configuredToken = process.env.HEALTHCHECK_TOKEN;
-
-  if (process.env.NODE_ENV !== 'production' && !configuredToken) {
-    return true;
-  }
-
-  if (!configuredToken) {
-    return false;
-  }
-
-  const authorization = request.headers.get('authorization');
-  return authorization === `Bearer ${configuredToken}`;
+  return validateBearerToken(request, process.env.HEALTHCHECK_TOKEN);
 }
 
 export function envGroupCheck() {
