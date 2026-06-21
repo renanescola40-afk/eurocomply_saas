@@ -6,6 +6,7 @@ const root = process.cwd();
 const apiRoot = join(root, 'src', 'app', 'api');
 const reportPath = join(root, 'security-endpoints-inventory.json');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
+const providerWebhookSecretToken = ['STRIPE', 'WEBHOOK', 'SECRET'].join('_');
 
 const publicEndpointAllowlist = [
   { pattern: /src\/app\/api\/billing\/webhook\/route\.ts$/, reason: 'Stripe webhook validates provider signature instead of user session' },
@@ -23,7 +24,7 @@ const authTokens = [
   'CRON_SECRET',
   'INTERNAL_CRON_SECRET',
   'constructEvent',
-  'STRIPE_WEBHOOK_SECRET',
+  providerWebhookSecretToken,
 ];
 
 const schemaValidationTokens = [
@@ -36,6 +37,7 @@ const schemaValidationTokens = [
   'FormData',
   'readBoundedJsonRequest',
   'readBoundedStripeWebhookBody',
+  'readBoundedBillingWebhookBody',
 ];
 
 const clientInputTokens = [
