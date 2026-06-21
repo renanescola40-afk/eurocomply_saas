@@ -1,29 +1,35 @@
 import { createHash, randomUUID } from 'crypto';
 
-import { assertDocumentStoragePathInOrganization, sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
-
+import {
+  DOCUMENT_BUCKET,
+  MAX_DOCUMENT_SIZE_BYTES,
+  assertDocumentStoragePathInOrganization,
+  isDocumentStoragePathInOrganization,
+  sanitizeDocumentDownloadFileName,
+} from '@/lib/documents/upload';
 import {
   UPLOAD_MIME_TYPE_TO_EXTENSION,
-  validateUploadFileSecurity as validateUploadFileSecurityInternal,
+  validateUploadFileSecurity,
   validateUploadFileSignature,
   type SupportedUploadMimeType,
   type UploadFileSecurityValidation,
-} from './file-signature';
-import {
-  MALWARE_SCANNER_PROVIDER_ENV,
-  REQUIRE_MALWARE_SCAN_ENV,
-  scanUploadForMalware as scanUploadForMalwareInternal,
-  shouldBlockUploadForMalwareScan,
-  type MalwareScanInput,
-  type MalwareScanResult,
-  type MalwareScanStatus,
-} from './malware-scan';
+  type UploadFileType,
+} from '@/server/security/file-signature';
+import { scanUploadForMalware, shouldBlockUploadForMalwareScan, type MalwareScanResult } from '@/server/security/malware-scan';
 
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV = 'REQUIRE_MALWARE_SCAN_FOR_UPLOADS';
+export const MALWARE_SCANNER_PROVIDER_ENV = 'MALWARE_SCANNER_PROVIDER';
+export const MALWARE_SCANNER_API_KEY_ENV = 'MALWARE_SCANNER_API_KEY';
+export const MALWARE_SCANNER_TIMEOUT_MS_ENV = 'MALWARE_SCANNER_TIMEOUT_MS';
+export const MALWARE_SCANNER_ENDPOINT_ENV = 'MALWARE_SCANNER_ENDPOINT';
+export const MALWARE_SCANNER_URL_ENV = 'MALWARE_SCANNER_URL';
+
+export const MAX_UPLOAD_BYTES = MAX_DOCUMENT_SIZE_BYTES;
 export const ALLOWED_TYPES = UPLOAD_MIME_TYPE_TO_EXTENSION;
-export const SIGNED_URL_EXPIRES_IN_SECONDS = 60;
+export const CONTROLLED_DOCUMENT_STORAGE_BUCKET = DOCUMENT_BUCKET;
+export const SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS = 60;
 
-export const UPLOAD_AUDIT_EVENTS = {
+export const UPLOAD_SECURITY_AUDIT_EVENTS = {
   uploadRequested: 'upload_requested',
   uploadScanned: 'upload_scanned',
   uploadBlocked: 'upload_blocked',
@@ -31,159 +37,85 @@ export const UPLOAD_AUDIT_EVENTS = {
   downloadDenied: 'download_denied',
 } as const;
 
-export type UploadAuditEvent = (typeof UPLOAD_AUDIT_EVENTS)[keyof typeof UPLOAD_AUDIT_EVENTS];
+export type UploadSecurityAuditEvent = (typeof UPLOAD_SECURITY_AUDIT_EVENTS)[keyof typeof UPLOAD_SECURITY_AUDIT_EVENTS];
 
-export type MalwareScannerProvider = {
-  name: string;
-  scan(input: MalwareScanInput): Promise<MalwareScanResult>;
-};
-
-type SuccessfulUploadFileSecurityValidation = Extract<UploadFileSecurityValidation, { ok: true }>;
-type FailedUploadFileSecurityValidation = Extract<UploadFileSecurityValidation, { ok: false }>;
-
-export type UploadSecurityMetadata = {
-  scanStatus: MalwareScanStatus | 'not_run';
-  scanProvider: string;
-  scanRequired: boolean;
-  scanCheckedAt: string | null;
-  fileHash: string | null;
-  checksumSha256: string | null;
-  fileSize: number;
-  fileSizeBytes: number;
-  sizeBytes: number;
-  mimeDetected: string | null;
-  mimeType: string | null;
-  claimedMimeType: string | null;
-  declaredSignatureMatches: boolean | null;
-  organizationId: string | null;
-  actorUserId: string | null;
-  reason?: string | null;
-  scanReason?: string | null;
-};
-
-export type UploadPayloadValidationResult =
+export type UploadSecurityValidationResult =
   | {
       ok: true;
       buffer: Buffer;
       fileHash: string;
+      checksumSha256: string;
       fileSize: number;
+      fileNameSanitized: string;
+      claimedMimeType: string;
       mimeDetected: SupportedUploadMimeType;
-      sanitizedFileName: string;
+      extension: UploadFileType['extension'];
       declaredSignatureMatches: boolean;
-      validation: SuccessfulUploadFileSecurityValidation;
+      validation: Extract<UploadFileSecurityValidation, { ok: true }>;
     }
   | {
       ok: false;
-      reason: FailedUploadFileSecurityValidation['reason'] | 'path_traversal';
+      reason: Extract<UploadFileSecurityValidation, { ok: false }>['reason'];
       message: string;
-      buffer?: Buffer;
-      fileHash?: string;
+      buffer: Buffer;
+      fileHash: string;
+      checksumSha256: string;
       fileSize: number;
+      fileNameSanitized: string;
+      claimedMimeType: string;
       mimeDetected: string | null;
-      sanitizedFileName: string;
-      declaredSignatureMatches: boolean | null;
-      validation?: FailedUploadFileSecurityValidation;
+      declaredSignatureMatches: boolean;
+      validation: Extract<UploadFileSecurityValidation, { ok: false }>;
     };
 
-export function configuredMalwareScannerProvider(): MalwareScannerProvider {
-  return {
-    name: process.env[MALWARE_SCANNER_PROVIDER_ENV]?.trim() || 'not_configured',
-    scan: scanUploadForMalwareInternal,
-  };
-}
-
-export function isMockMalwareScannerAllowed() {
-  return process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development';
-}
-
-export function createMockMalwareScannerProvider(result?: Partial<MalwareScanResult>): MalwareScannerProvider {
-  if (!isMockMalwareScannerAllowed()) {
-    throw new Error('Mock malware scanner providers are allowed only in test or development environments.');
-  }
-
-  return {
-    name: result?.provider ?? 'mock',
-    async scan() {
-      const scannedAt = new Date().toISOString();
-      return {
-        status: result?.status ?? 'clean',
-        provider: result?.provider ?? 'mock',
-        required: result?.required ?? (process.env[REQUIRE_MALWARE_SCAN_ENV] === 'true'),
-        scannedAt: result?.scannedAt ?? scannedAt,
-        reason: result?.reason ?? 'Mock malware scanner verdict for test/development only.',
-        signature: result?.signature,
-      };
-    },
-  };
-}
-
-export function sanitizeUploadFilename(fileName: string | null | undefined) {
-  return sanitizeDocumentDownloadFileName(fileName);
-}
-
-export function hasPathTraversal(input: string | null | undefined) {
-  const normalized = String(input ?? '').normalize('NFKC').replace(/\\/g, '/');
-  return normalized.startsWith('/') || normalized.split('/').some((segment) => segment === '..' || segment === '.');
-}
+export type UploadSecurityAuditMetadataInput = {
+  organizationId?: string | null;
+  actorUserId?: string | null;
+  actorRole?: string | null;
+  reason?: string | null;
+  scan?: MalwareScanResult | null;
+  fileHash?: string | null;
+  fileSize?: number | null;
+  claimedMimeType?: string | null;
+  mimeDetected?: string | null;
+  declaredSignatureMatches?: boolean | null;
+  documentId?: string | null;
+  accessPurpose?: 'download' | 'preview' | 'upload' | null;
+  expiresInSeconds?: number | null;
+};
 
 function sanitizeStoragePathSegment(segment: string, label: string) {
   const normalized = String(segment ?? '').normalize('NFKC').replace(/[^a-zA-Z0-9_-]+/g, '').trim();
 
   if (!normalized) {
-    throw new Error(`Invalid ${label} for upload storage path`);
+    throw new Error(`Invalid ${label} for document storage path`);
   }
 
   return normalized;
 }
 
-export function buildTenantIsolatedUploadStoragePath(input: {
-  organizationId: string;
-  actorUserId: string;
-  extension: string;
-}) {
-  const organizationId = sanitizeStoragePathSegment(input.organizationId, 'organizationId');
-  const actorUserId = sanitizeStoragePathSegment(input.actorUserId, 'actorUserId');
-  const extension = sanitizeStoragePathSegment(input.extension, 'extension').toLowerCase();
-  const storagePath = `${organizationId}/${actorUserId}/${randomUUID()}.${extension}`;
-
-  assertDocumentStoragePathInOrganization(storagePath, organizationId);
-  return storagePath;
+export function isUploadMalwareScanRequired() {
+  return process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true';
 }
 
-export function assertTenantScopedStoragePath(storagePath: string | null | undefined, organizationId: string) {
-  assertDocumentStoragePathInOrganization(storagePath, organizationId);
+export function currentUploadMalwareScannerProvider() {
+  return process.env[MALWARE_SCANNER_PROVIDER_ENV]?.trim() || 'not_configured';
 }
 
-export function isShortLivedSignedUrlExpiry(seconds: number) {
-  return Number.isInteger(seconds) && seconds > 0 && seconds <= SIGNED_URL_EXPIRES_IN_SECONDS;
+export function sanitizeUploadFileName(fileName: string | null | undefined) {
+  return sanitizeDocumentDownloadFileName(fileName);
 }
 
-export async function validateUploadPayload(input: {
-  file: File;
-  maxBytes?: number;
-}): Promise<UploadPayloadValidationResult> {
-  const maxBytes = input.maxBytes ?? MAX_UPLOAD_BYTES;
-  const sanitizedFileName = sanitizeUploadFilename(input.file.name);
-
-  if (hasPathTraversal(input.file.name)) {
-    return {
-      ok: false,
-      reason: 'path_traversal',
-      message: 'File name must not contain path traversal segments.',
-      fileSize: input.file.size,
-      mimeDetected: null,
-      sanitizedFileName,
-      declaredSignatureMatches: null,
-    };
-  }
-
-  const buffer = Buffer.from(await input.file.arrayBuffer());
+export async function validateUploadSecurityFile(file: File, options: { maxBytes?: number } = {}): Promise<UploadSecurityValidationResult> {
+  const maxBytes = options.maxBytes ?? MAX_UPLOAD_BYTES;
+  const buffer = Buffer.from(await file.arrayBuffer());
   const fileHash = createHash('sha256').update(buffer).digest('hex');
-  const declaredSignatureMatches = validateUploadFileSignature(input.file.type, buffer);
-  const validation = validateUploadFileSecurityInternal({
-    fileName: input.file.name,
-    claimedMimeType: input.file.type,
-    sizeBytes: input.file.size,
+  const declaredSignatureMatches = validateUploadFileSignature(file.type, buffer);
+  const fileNameSanitized = sanitizeUploadFileName(file.name);
+  const validation = validateUploadFileSecurity({
+    fileName: file.name,
+    claimedMimeType: file.type,
+    sizeBytes: file.size,
     bytes: buffer,
     maxBytes,
   });
@@ -195,9 +127,11 @@ export async function validateUploadPayload(input: {
       message: validation.message,
       buffer,
       fileHash,
-      fileSize: input.file.size,
+      checksumSha256: fileHash,
+      fileSize: file.size,
+      fileNameSanitized,
+      claimedMimeType: file.type,
       mimeDetected: validation.detectedType?.mimeType ?? null,
-      sanitizedFileName,
       declaredSignatureMatches,
       validation,
     };
@@ -207,60 +141,95 @@ export async function validateUploadPayload(input: {
     ok: true,
     buffer,
     fileHash,
-    fileSize: input.file.size,
+    checksumSha256: fileHash,
+    fileSize: file.size,
+    fileNameSanitized,
+    claimedMimeType: file.type,
     mimeDetected: validation.mimeType,
-    sanitizedFileName,
+    extension: validation.extension,
     declaredSignatureMatches,
     validation,
   };
 }
 
-export function buildUploadSecurityMetadata(input: {
-  fileHash?: string | null;
-  fileSize: number;
-  mimeDetected?: string | null;
-  claimedMimeType?: string | null;
-  declaredSignatureMatches?: boolean | null;
-  scan?: MalwareScanResult | null;
-  reason?: string | null;
-  organizationId?: string | null;
-  actorUserId?: string | null;
-}): UploadSecurityMetadata {
-  const scan = input.scan;
-  const scanProvider = scan?.provider ?? (process.env[MALWARE_SCANNER_PROVIDER_ENV]?.trim() || 'not_configured');
-  const scanRequired = scan?.required ?? (process.env[REQUIRE_MALWARE_SCAN_ENV] === 'true');
-  const mimeDetected = input.mimeDetected ?? null;
+export async function scanValidatedUploadForMalware(input: {
+  validation: Extract<UploadSecurityValidationResult, { ok: true }>;
+  organizationId: string;
+}) {
+  return scanUploadForMalware({
+    buffer: input.validation.buffer,
+    mimeType: input.validation.mimeDetected,
+    filename: input.validation.fileNameSanitized,
+    organizationId: input.organizationId,
+    fileHash: input.validation.fileHash,
+  });
+}
+
+export function buildTenantScopedUploadPath(input: {
+  organizationId: string;
+  userId: string;
+  extension: UploadFileType['extension'];
+}) {
+  const organizationId = sanitizeStoragePathSegment(input.organizationId, 'organizationId');
+  const userId = sanitizeStoragePathSegment(input.userId, 'userId');
+  const extension = sanitizeStoragePathSegment(input.extension, 'extension').toLowerCase();
+  const storagePath = `${organizationId}/${userId}/${randomUUID()}.${extension}`;
+
+  assertDocumentStoragePathInOrganization(storagePath, input.organizationId);
+
+  return storagePath;
+}
+
+export function isTenantScopedStoragePath(storagePath: string | null | undefined, organizationId: string) {
+  return isDocumentStoragePathInOrganization(storagePath, organizationId);
+}
+
+export function assertTenantStoragePathInOrganization(storagePath: string | null | undefined, organizationId: string) {
+  return assertDocumentStoragePathInOrganization(storagePath, organizationId);
+}
+
+export function buildUploadSecurityAuditMetadata(input: UploadSecurityAuditMetadataInput) {
+  const scan = input.scan ?? null;
+  const scanStatus = scan?.status ?? 'not_run';
+  const scanProvider = scan?.provider ?? currentUploadMalwareScannerProvider();
+  const scanRequired = scan?.required ?? isUploadMalwareScanRequired();
+  const scanCheckedAt = scan?.scannedAt ?? null;
   const fileHash = input.fileHash ?? null;
+  const fileSize = input.fileSize ?? null;
+  const mimeDetected = input.mimeDetected ?? null;
 
   return {
-    scanStatus: scan?.status ?? 'not_run',
+    reason: input.reason ?? null,
+    scanStatus,
     scanProvider,
     scanRequired,
-    scanCheckedAt: scan?.scannedAt ?? null,
+    scanCheckedAt,
     fileHash,
     checksumSha256: fileHash,
-    fileSize: input.fileSize,
-    fileSizeBytes: input.fileSize,
-    sizeBytes: input.fileSize,
-    mimeDetected,
-    mimeType: mimeDetected,
+    fileSize,
+    sizeBytes: fileSize,
     claimedMimeType: input.claimedMimeType ?? null,
-    declaredSignatureMatches: input.declaredSignatureMatches ?? null,
+    mimeDetected,
+    detectedMimeType: mimeDetected,
     organizationId: input.organizationId ?? null,
     actorUserId: input.actorUserId ?? null,
-    reason: input.reason ?? null,
-    scanReason: scan?.reason ?? null,
+    actorRole: input.actorRole ?? 'unknown',
+    documentId: input.documentId ?? null,
+    accessPurpose: input.accessPurpose ?? null,
+    expiresInSeconds: input.expiresInSeconds ?? null,
+    declaredSignatureMatches: input.declaredSignatureMatches ?? null,
   };
 }
 
-export async function scanUploadForMalware(input: MalwareScanInput) {
-  return configuredMalwareScannerProvider().scan(input);
+export function isSignedUrlExpired(input: { issuedAt: string | Date; expiresInSeconds: number; now?: Date }) {
+  const issuedAt = input.issuedAt instanceof Date ? input.issuedAt : new Date(input.issuedAt);
+  const now = input.now ?? new Date();
+
+  if (!Number.isFinite(issuedAt.getTime()) || !Number.isFinite(now.getTime())) return true;
+  if (!Number.isFinite(input.expiresInSeconds) || input.expiresInSeconds <= 0) return true;
+
+  return now.getTime() >= issuedAt.getTime() + input.expiresInSeconds * 1000;
 }
 
-export function validateEnterpriseUploadScan(scan: MalwareScanResult) {
-  return !shouldBlockUploadForMalwareScan(scan);
-}
-
-export { shouldBlockUploadForMalwareScan, validateUploadFileSignature };
-export const validateUploadFileSecurity = validateUploadFileSecurityInternal;
-export type { MalwareScanResult, MalwareScanStatus };
+export { shouldBlockUploadForMalwareScan };
+export type { MalwareScanResult };
