@@ -55,7 +55,7 @@ export default async function IntelligenceEditorialPage({ params }: PageProps) {
 
         <section className="rounded-[2rem] border bg-background/92 p-6 shadow-xl shadow-primary/5 backdrop-blur md:p-9">
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-primary">Painel editorial</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.045em] md:text-6xl">Auditoria do EuroComply Intelligence.</h1>
+          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.045em] md:text-6xl">Auditoria do RISCK COMPLY Intelligence.</h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
             Use este painel para validar a prontidão editorial dos dossiês antes de automatizar a ingestão 24/7: impacto, premium, fonte, análise, ações e calendário.
           </p>
@@ -101,7 +101,7 @@ export default async function IntelligenceEditorialPage({ params }: PageProps) {
               const locked = item.premium && !canUsePremiumNews;
               const readiness = [
                 item.executiveSummary ? 'Resumo' : null,
-                item.eurocomplyAnalysis ? 'Análise' : null,
+                item.risckComplyAnalysis ? 'Análise' : null,
                 item.recommendedActions.length ? 'Ações' : null,
                 item.calendarSuggestion ? 'Calendário' : null,
               ].filter(Boolean);
