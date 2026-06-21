@@ -78,6 +78,12 @@ jobs:
       - name: Application security CI
         run: npm run security:ci
 
+      - name: Run expanded security gates
+        run: |
+          node scripts/security/check-api-endpoint-hardening.mjs
+          node scripts/security/check-storage-security.mjs
+          node scripts/security/check-enterprise-trust-evidence.mjs
+
       - name: Route quality gate
         run: npm run quality:routes
 
