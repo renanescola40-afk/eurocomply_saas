@@ -148,12 +148,13 @@ async function createDocumentSignedAccessUrl(documentId: string, accessMode: Doc
     throw new Error('Signed URL expiry policy is invalid');
   }
 
-  const signedUrlOptions = accessMode === 'download'
-    ? { download: sanitizeDocumentDownloadFileName(document.name) }
-    : undefined;
-  const { data, error } = await supabase.storage
-    .from(DOCUMENT_BUCKET)
-    .createSignedUrl(document.storage_path, SIGNED_URL_EXPIRES_IN_SECONDS, signedUrlOptions);
+  const storage = supabase.storage.from(DOCUMENT_BUCKET);
+  const signedUrlResult = accessMode === 'download'
+    ? await storage.createSignedUrl(document.storage_path, SIGNED_URL_EXPIRES_IN_SECONDS, {
+        download: sanitizeDocumentDownloadFileName(document.name),
+      })
+    : await storage.createSignedUrl(document.storage_path, SIGNED_URL_EXPIRES_IN_SECONDS);
+  const { data, error } = signedUrlResult;
 
   if (error || !data?.signedUrl) {
     reportError(error ?? new Error('Unable to create signed document URL'), {
