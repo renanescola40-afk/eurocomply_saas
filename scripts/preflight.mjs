@@ -261,7 +261,8 @@ if (enterpriseReleaseEnabled) {
     process.exitCode = 1;
   }
 } else {
-  console.log(`Enterprise step-up and upload scan runtime provider preflight: skipped (set ${enterpriseReleaseEnv}=true for enterprise releases; ${legacyEnterpriseReleaseEnv}=true is still accepted during migration).`);
+  console.log(`Enterprise step-up runtime provider preflight: skipped (set ${enterpriseReleaseEnv}=true for enterprise releases; ${legacyEnterpriseReleaseEnv}=true is still accepted during migration).`);
+  console.log(`Enterprise upload scan runtime provider preflight: skipped (set ${enterpriseReleaseEnv}=true for enterprise releases; ${legacyEnterpriseReleaseEnv}=true is still accepted during migration).`);
 }
 
 if (process.exitCode === 1) {
