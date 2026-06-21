@@ -15,6 +15,7 @@ Repository gates can prove that controls are documented and wired into CI. Runti
 | External security review or pentest completed | Open | Pentest report, finding triage, critical/high resolution evidence, and retest evidence where applicable | Security reviewer |
 | Deterministic npm lockfile committed | Complete | `package-lock.json` committed with npm lockfile version 3 after P0 Commit Lockfile workflow | Engineering owner |
 | Floating dependency specs removed | Complete | `node scripts/security/list-floating-dependencies.mjs` output showing no forbidden specs | Engineering owner |
+| Stripe billing runtime validation | Complete | `docs/security/evidence/runtime/stripe-billing-validation.json` records reviewable JSON evidence for checkout, billing portal, canonical and legacy webhook routes, idempotency, metadata validation, subscription sync, plan enforcement, tests, and billing audit events | Engineering owner |
 
 ## Evidence storage rule
 
