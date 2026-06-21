@@ -13,6 +13,7 @@ const forbiddenSubprocessToken = ['spawn', 'Sync'].join('');
 
 const paths = {
   helper: 'src/server/security/step-up.ts',
+  settingsHelper: 'src/server/security/step-up-settings.ts',
   test: 'src/server/security/step-up.test.ts',
   doc: 'docs/security/STEP_UP_AUTH.md',
   rolloutMatrix: 'docs/security/STEP_UP_ROLLOUT_MATRIX.md',
@@ -43,6 +44,12 @@ const tokenChecks = {
     'step_up_requested', 'step_up_approved', 'step_up_denied', 'step_up_expired', 'createHmac',
     'timingSafeEqual', 'randomUUID', 'nonce', 'expiresAt', stepUpSigningEnv, auditSigningEnv,
     'step_up_token_replayed', 'step_up_token_store_unavailable',
+  ],
+  [paths.settingsHelper]: [
+    'getEffectiveStepUpProviderPolicy', 'isEffectiveStepUpProviderPolicyConfigured', 'STEP_UP_PROVIDER_MODE',
+    'STEP_UP_IDP_ACR_VALUES', 'STEP_UP_IDP_AMR_VALUES', 'organization_security_settings',
+    'allowed_idp_acr_values', 'allowed_idp_amr_values', 'supabase_mfa', 'enterprise_idp',
+    'supabase_mfa_or_enterprise_idp',
   ],
   [paths.test]: [
     'uses a short enterprise step-up window',
@@ -89,7 +96,7 @@ const tokenChecks = {
     'normalizeHighRiskAction', 'createStepUpTokenEnvelope', 'persistStepUpTokenRecord',
     'recordStepUpAuditEvent', 'supabase.auth.mfa.challenge', 'supabase.auth.mfa.verify',
     'supabase.auth.mfa.challengeAndVerify', 'getAuthenticatorAssuranceLevel', 'getClaims',
-    stepUpProviderEnv, stepUpAcrEnv, stepUpAmrEnv, 'step_up_provider_not_configured',
+    'getEffectiveStepUpProviderPolicy', 'isEffectiveStepUpProviderPolicyConfigured', 'step_up_provider_not_configured',
     'mfa_or_identity_provider_reauthentication',
   ],
   [paths.ui]: ['StepUpMfaDialog', '/api/security/step-up/challenge', 'factorId', 'challengeId', 'one-time-code', 'STEP_UP_TOKEN_HEADER'],
