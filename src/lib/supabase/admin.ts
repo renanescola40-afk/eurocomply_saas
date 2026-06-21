@@ -25,7 +25,7 @@ export function tryCreateAdminClient() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
-    console.warn(`[supabase] ${missingAdminEnvMessage}`);
+    console.warn('[supabase] admin client unavailable');
     return null;
   }
 
