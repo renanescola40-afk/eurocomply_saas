@@ -7,7 +7,8 @@
   "generatedAt": "2026-06-21T12:00:00.000Z",
   "control": "Enterprise audit logging and tamper-evident audit chain",
   "summary": "EuroComply audit events are appended to an organization-scoped hash chain with deterministic canonical payload hashing, optional HMAC signatures, sanitized metadata, sanitized request context, transactional Supabase RPC append, RBAC plus step-up protected verification, CLI verification, and signed audit evidence export. The enterprise hardening migration persists the same id and created_at values used to compute event_hash.",
-  "redactionConfirmation": "Redaction confirmed for runtime evidence. Evidence contains only synthetic ids, paths and test references.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "redactionScope": "Evidence contains only synthetic ids, paths and test references; all secrets, tokens, credentials, connection strings and access-granting values are excluded.",
   "evidenceLocation": "docs/security/evidence/runtime/audit-chain-live-validation.json",
   "evidenceLocations": [
     "src/server/security/audit-chain.ts",
@@ -60,7 +61,7 @@
     "teamChanges": ["team.invite_created", "team.invite_cancelled", "team.member_removed", "team.member_role_changed", "permission.changed"],
     "gdpr": ["gdpr.export", "gdpr.delete_requested"],
     "securitySettings": ["security.settings_changed", "change_security_settings"],
-    "risksVendorsTasks": ["risk.create", "risk.update", "risk.delete", "vendor.create", "vendor.update", "vendor.delete", "task.create", "task.update", "task.delete"],
+    "risksVendorsTasks": ["risk.create", "risk.update", "risk.delete", "vendor.create", "vendor.delete", "task.create", "task.update", "task.delete"],
     "securityFailures": ["security.event", "security.failure"]
   },
   "runtimeValidation": {
