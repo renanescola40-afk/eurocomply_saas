@@ -1,7 +1,7 @@
 import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getCurrentUser } from '@/server/queries/auth';
-import { createAuditEvent, listAuditEvents } from '@/server/queries/audit-events';
+import { buildAuditRequestContextFromRequest, createAuditEvent, listAuditEvents } from '@/server/queries/audit-events';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { checkDistributedRateLimit } from '@/server/security/rate-limit';
@@ -111,6 +111,7 @@ export async function GET(request: Request) {
     return noStoreJson({ error: parsedLimit.error }, { status: 400 });
   }
 
+  const requestContext = buildAuditRequestContextFromRequest(request);
   const events = await listAuditEvents(organization.id, parsedLimit.limit + 1);
   const chronologicalWindow = [...events].reverse();
   const anchorEvent = chronologicalWindow.length > parsedLimit.limit ? chronologicalWindow.shift() : null;
@@ -157,6 +158,7 @@ export async function GET(request: Request) {
       stepUpVerifiedAt: stepUp.assessment.verifiedAt,
       actorRole: permission.role,
     },
+    requestContext,
   });
 
   return noStoreJson({

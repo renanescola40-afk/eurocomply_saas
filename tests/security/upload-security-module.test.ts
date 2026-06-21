@@ -24,6 +24,7 @@ afterEach(() => {
   delete process.env.MALWARE_SCANNER_ENDPOINT;
   delete process.env.MALWARE_SCANNER_URL;
   delete process.env.MALWARE_SCANNER_API_KEY;
+  delete process.env.MALWARE_SCANNER_ALLOWED_HOSTS;
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -91,6 +92,7 @@ describe('upload-security enterprise controls', () => {
     process.env.REQUIRE_MALWARE_SCAN_FOR_UPLOADS = 'true';
     process.env.MALWARE_SCANNER_PROVIDER = 'http';
     process.env.MALWARE_SCANNER_ENDPOINT = 'https://scanner.example/scan';
+    process.env.MALWARE_SCANNER_ALLOWED_HOSTS = 'scanner.example';
 
     vi.stubGlobal(
       'fetch',

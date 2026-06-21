@@ -120,13 +120,23 @@ The following must be applied to the target Supabase project:
 
 - `supabase/migrations/20260612_audit_event_hash_chain.sql`
 - `supabase/migrations/20260613_audit_event_chained_rpc.sql`
+- `supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql`
 
 Release evidence must include:
 
+- `AUDIT_CHAIN_SIGNING_SECRET` configured for signed audit hashes
 - successful migration application
 - proof that `append_audit_event_chained(...)` exists
 - proof that `createAuditEvent()` uses the transactional RPC path
 - a concurrency/retry test or controlled manual validation
+- `npm run security:audit-chain` output
+- `docs/security/AUDIT_CHAIN_MODEL.md` reviewed
+- `docs/security/evidence/runtime/audit-chain-live-validation.json` with status `Complete`
+- `scripts/security/verify-audit-chain.mjs` CLI tamper-detection output
+- proof that audit-chain runtime evidence is complete
+- proof that audit-chain RPC is applied and validated
+
+Enterprise release is blocked when audit-chain runtime evidence is missing, incomplete, not linked to release gates, or does not confirm tamper detection, transactional append, concurrency-safe append, signed export, RBAC/step-up protected verification, and request-context sanitization.
 
 ### 7. Step-up security validation
 
@@ -157,19 +167,7 @@ Release evidence must include:
 - customer portal session creation
 - webhook delivery proof
 - failed webhook signature test
-- duplicate webhook/idempotency test using `public.stripe_events_processed`
-- subscription created, updated, and deleted sync tests
-- metadata validation proof for `organization_id`, `customer`, `subscription`, and `plan`
-- proof that unsupported Stripe events are ignored without mutating billing state
 - step-up validation for billing actions
-- billing audit event proof for checkout, portal, subscription changes, and payment failures
-- `docs/security/evidence/runtime/stripe-billing-validation.json`
-
-Required focused command:
-
-```bash
-npm run test -- src/app/api/stripe/webhook/route.test.ts src/server/billing/stripe-webhooks.test.ts src/app/api/billing/checkout/route.test.ts src/app/api/billing/portal/route.test.ts
-```
 
 ### 10. Release evidence package
 
@@ -193,7 +191,7 @@ The evidence package must include:
 - observability proof
 - customer communication owner and customer notice decision
 - status page decision and evidence, when applicable
-- external review proof when applicable
+- external security review proof when applicable
 - documented exceptions and approvals
 - final Go, Conditional Go, or No-Go decision
 
@@ -228,6 +226,6 @@ The preflight file should include at least:
 - lockfile and supply-chain runbook coverage
 - RLS live validation runbook coverage
 - audit-chain concurrency runbook coverage
+- audit-chain model and runtime evidence coverage
 - upload content scan runbook coverage
 - step-up rollout coverage
-- Stripe billing runtime validation coverage

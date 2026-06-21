@@ -3,6 +3,15 @@ import { randomUUID } from 'crypto';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { buildAuditChainRecord } from '@/server/security/audit-chain';
 
+type AuditRequestContextInput = {
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  requestId?: string | null;
+  origin?: string | null;
+  method?: string | null;
+  path?: string | null;
+};
+
 type AuditEventInput = {
   organizationId: string;
   actorUserId?: string | null;
@@ -10,6 +19,7 @@ type AuditEventInput = {
   entityType?: string | null;
   entityId?: string | null;
   metadata?: Record<string, unknown>;
+  requestContext?: AuditRequestContextInput | null;
 };
 
 type NormalizedAuditEventInput = {
@@ -49,6 +59,8 @@ const MAX_METADATA_DEPTH = 6;
 const MAX_METADATA_ARRAY_LENGTH = 50;
 const MAX_METADATA_KEYS = 80;
 const MAX_METADATA_STRING_LENGTH = 2048;
+const MAX_REQUEST_CONTEXT_STRING_LENGTH = 512;
+const MAX_REQUEST_PATH_LENGTH = 2048;
 
 const BLOCKED_METADATA_KEYS = [
   'password',
@@ -138,6 +150,72 @@ export function sanitizeAuditMetadata(metadata?: Record<string, unknown>): Recor
   return sanitizeAuditValue(metadata, 0) as Record<string, unknown>;
 }
 
+function normalizeRequestContextString(value: string | null | undefined, maxLength = MAX_REQUEST_CONTEXT_STRING_LENGTH) {
+  const normalized = value?.trim() ?? '';
+  return normalized.length > 0 ? normalized.slice(0, maxLength) : null;
+}
+
+function normalizeRequestIpAddress(value: string | null | undefined) {
+  const normalized = normalizeRequestContextString(value?.split(',')[0], 128);
+  if (!normalized) return null;
+  return /^[a-zA-Z0-9:.,\-_[\] ]+$/.test(normalized) ? normalized : null;
+}
+
+function sanitizeAuditRequestContext(context?: AuditRequestContextInput | null) {
+  if (!context) return {};
+
+  const safeContext = {
+    ipAddress: normalizeRequestIpAddress(context.ipAddress),
+    userAgent: normalizeRequestContextString(context.userAgent),
+    requestId: normalizeRequestContextString(context.requestId, 128),
+    origin: normalizeRequestContextString(context.origin),
+    method: normalizeRequestContextString(context.method, 16),
+    path: normalizeRequestContextString(context.path, MAX_REQUEST_PATH_LENGTH),
+  };
+
+  return Object.fromEntries(Object.entries(safeContext).filter(([, value]) => value !== null));
+}
+
+function isPlainAuditMetadataObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function mergeAuditMetadata(metadata?: Record<string, unknown>, requestContext?: AuditRequestContextInput | null) {
+  const sanitizedMetadata = sanitizeAuditMetadata(metadata);
+  const sanitizedRequestContext = sanitizeAuditRequestContext(requestContext);
+
+  if (Object.keys(sanitizedRequestContext).length === 0) return sanitizedMetadata;
+
+  const existingRequestContext = isPlainAuditMetadataObject(sanitizedMetadata.requestContext) ? sanitizedMetadata.requestContext : {};
+
+  return sanitizeAuditMetadata({
+    ...sanitizedMetadata,
+    requestContext: {
+      ...existingRequestContext,
+      ...sanitizedRequestContext,
+    },
+  });
+}
+
+export function buildAuditRequestContextFromRequest(request: Request): AuditRequestContextInput {
+  let path: string | null = null;
+
+  try {
+    path = new URL(request.url).pathname;
+  } catch {
+    path = null;
+  }
+
+  return {
+    ipAddress: request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip'),
+    userAgent: request.headers.get('user-agent'),
+    requestId: request.headers.get('x-request-id') ?? request.headers.get('x-correlation-id'),
+    origin: request.headers.get('origin'),
+    method: request.method,
+    path,
+  };
+}
+
 function normalizeAuditEventInput(input: AuditEventInput): NormalizedAuditEventInput | null {
   const organizationId = input.organizationId?.trim();
   const action = input.action?.trim();
@@ -150,7 +228,7 @@ function normalizeAuditEventInput(input: AuditEventInput): NormalizedAuditEventI
     action,
     entityType: input.entityType?.trim() || 'system',
     entityId: input.entityId?.trim() || null,
-    metadata: sanitizeAuditMetadata(input.metadata),
+    metadata: mergeAuditMetadata(input.metadata, input.requestContext),
   };
 }
 

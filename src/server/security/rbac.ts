@@ -144,6 +144,37 @@ export function roleHasPermission(role: string | null | undefined, permission: O
   return ROLE_PERMISSIONS[normalizedRole].includes(permission);
 }
 
+async function recordRbacDeniedAuditEvent({
+  userId,
+  organizationId,
+  result,
+}: {
+  userId: string;
+  organizationId: string;
+  result: PermissionCheckResult;
+}) {
+  try {
+    const { writeAuditLog } = await import('@/lib/security/audit-log');
+    await writeAuditLog({
+      action: 'security.failure',
+      organizationId,
+      actorUserId: userId,
+      entityType: 'rbac_denial',
+      entityId: result.permission,
+      metadata: {
+        securityEvent: 'rbac.denied',
+        permission: result.permission,
+        reason: result.error ?? 'permission_denied',
+        status: result.status,
+        role: result.role ?? null,
+        rawRole: result.rawRole ?? null,
+      },
+    });
+  } catch {
+    // Authorization failures must never be masked by best-effort audit logging.
+  }
+}
+
 export async function getOrganizationMembership(userId: string, organizationId: string) {
   const supabase = createAdminClient();
 
@@ -173,29 +204,33 @@ export async function assertOrganizationPermission({
   const { membership, error } = await getOrganizationMembership(userId, organizationId);
 
   if (error) {
-    return {
+    const result: PermissionCheckResult = {
       ok: false,
       status: 503,
       error: 'rbac_check_failed',
       message: 'Could not verify organization permissions.',
       permission,
     };
+    await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+    return result;
   }
 
   if (!membership) {
-    return {
+    const result: PermissionCheckResult = {
       ok: false,
       status: 403,
       error: 'organization_membership_required',
       message: 'You are not a member of this organization.',
       permission,
     };
+    await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+    return result;
   }
 
   const role = normalizeOrganizationRole(membership.role);
 
   if (!roleHasPermission(role, permission)) {
-    return {
+    const result: PermissionCheckResult = {
       ok: false,
       status: 403,
       error: 'insufficient_role_permission',
@@ -204,6 +239,8 @@ export async function assertOrganizationPermission({
       rawRole: membership.role,
       permission,
     };
+    await recordRbacDeniedAuditEvent({ userId, organizationId, result });
+    return result;
   }
 
   return {
