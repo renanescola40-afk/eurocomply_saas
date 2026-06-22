@@ -5,6 +5,7 @@ const uploadSecurityPath = 'src/server/security/upload-security.ts';
 const uploadRoutePath = 'src/app/api/documents/upload/route.ts';
 const serverActionPath = 'src/server/actions/documents.ts';
 const preflightPath = 'scripts/preflight.mjs';
+const enterpriseApiGatePath = 'scripts/security/check-enterprise-api-security.mjs';
 const docPath = 'docs/security/UPLOAD_CONTENT_SCAN.md';
 const uploadSecurityDocPath = 'docs/security/UPLOAD_SECURITY.md';
 const packagePath = 'package.json';
@@ -36,6 +37,7 @@ const uploadSecurity = read(uploadSecurityPath);
 const uploadRoute = read(uploadRoutePath);
 const serverAction = read(serverActionPath);
 const preflight = read(preflightPath);
+const enterpriseApiGate = read(enterpriseApiGatePath);
 const doc = read(docPath);
 const uploadSecurityDoc = read(uploadSecurityDocPath);
 const packageJson = read(packagePath);
@@ -141,6 +143,10 @@ if (preflight) {
   ]);
 }
 
+if (enterpriseApiGate) {
+  requireTokens(enterpriseApiGatePath, enterpriseApiGate, ['scripts/security/check-upload-content-scan.mjs']);
+}
+
 if (doc) {
   requireTokens(docPath, doc, [
     'Upload Content Scan Security Standard',
@@ -169,8 +175,14 @@ if (uploadSecurityDoc) {
   ]);
 }
 
-if (packageJson && !/"security:ci"\s*:\s*"[^"]*security:upload[^"]*security:upload-content-scan/.test(packageJson)) {
-  failures.push(`${packagePath} security:ci must include security:upload and security:upload-content-scan so enterprise upload scanning cannot be bypassed`);
+if (packageJson) {
+  const securityCiRunsEnterpriseGate = /"security:ci"\s*:\s*"[^"]*security:enterprise-api/.test(packageJson);
+  const enterpriseGateDelegatesUploadScan = enterpriseApiGate.includes('scripts/security/check-upload-content-scan.mjs');
+  const securityCiRunsUploadScanDirectly = /"security:ci"\s*:\s*"[^"]*security:upload[^"]*security:upload-content-scan/.test(packageJson);
+
+  if (!securityCiRunsUploadScanDirectly && !(securityCiRunsEnterpriseGate && enterpriseGateDelegatesUploadScan)) {
+    failures.push(`${packagePath} security:ci must cover security:upload and security:upload-content-scan directly or via security:enterprise-api delegated coverage`);
+  }
 }
 
 if (failures.length > 0) {
