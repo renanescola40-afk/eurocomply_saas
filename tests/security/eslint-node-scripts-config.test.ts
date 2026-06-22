@@ -9,6 +9,6 @@ const configSource = readFileSync(resolve(repoRoot, 'eslint.config.mjs'), 'utf8'
 describe('ESLint Node script configuration', () => {
   it('scopes Node environment support to repository scripts and config files', () => {
     expect(configSource).toContain('files: ["scripts/**/*.{js,mjs,cjs}", "*.config.{js,mjs,cjs}", "eslint.config.mjs"]');
-    expect(configSource).toContain('...compat.env({ node: true })[0]');
+    expect(configSource).toContain('...compat.env({ es2022: true, node: true })[0]');
   });
 });
