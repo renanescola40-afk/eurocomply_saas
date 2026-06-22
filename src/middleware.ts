@@ -84,6 +84,11 @@ function hasSupabaseAuthCookie(req: NextRequest) {
   });
 }
 
+function withPrivateNoStore(response: NextResponse) {
+  response.headers.set('Cache-Control', 'private, no-store, max-age=0');
+  return response;
+}
+
 function detectLocale(req: NextRequest): string {
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
   if (cookieLocale && locales.includes(cookieLocale as 'en')) {
@@ -195,14 +200,14 @@ export default async function middleware(req: NextRequest) {
     if (!authState.isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
       loginUrl.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
-      const response = NextResponse.redirect(loginUrl);
+      const response = withPrivateNoStore(NextResponse.redirect(loginUrl));
       copyAuthCookies(authState.supabaseResponse, response);
       return response;
     }
 
     if (authState.isAuthenticated && (isAuthEntryRoute || isMarketingHome)) {
       const dashboardUrl = new URL(`/${locale}${ORGANIZATION_DASHBOARD_PATH}`, req.url);
-      const response = NextResponse.redirect(dashboardUrl);
+      const response = withPrivateNoStore(NextResponse.redirect(dashboardUrl));
       copyAuthCookies(authState.supabaseResponse, response);
       return response;
     }
