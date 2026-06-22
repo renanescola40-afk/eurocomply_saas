@@ -1,3 +1,3 @@
-export default function TasksPage() {
-  return null;
+export default function Page() {
+  return 'Tasks';
 }
