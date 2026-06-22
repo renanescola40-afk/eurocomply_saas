@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const evidencePath = 'docs/security/evidence/runtime/external-security-review-or-pentest.json';
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
+const placeholderValuePattern = /REPLACE_|YYYY-MM-DD|TODO|placeholder/i;
 
 const requiredDocs = {
   'docs/security/PENTEST_SCOPE.md': [
@@ -68,30 +69,30 @@ const enterpriseRelease = process.argv.includes('--enterprise')
 
 const failures = [];
 
-function readText(path) {
-  if (!existsSync(path)) {
-    failures.push(`${path} is missing`);
+function readText(filePath) {
+  if (!existsSync(filePath)) {
+    failures.push(`${filePath} is missing`);
     return '';
   }
 
-  return readFileSync(path, 'utf8');
+  return readFileSync(filePath, 'utf8');
 }
 
-function readJson(path) {
-  const content = readText(path);
+function readJson(filePath) {
+  const content = readText(filePath);
   if (!content) return null;
 
   try {
     return JSON.parse(content);
   } catch (error) {
-    failures.push(`${path} is invalid JSON: ${error instanceof Error ? error.message : error}`);
+    failures.push(`${filePath} is invalid JSON: ${error instanceof Error ? error.message : error}`);
     return null;
   }
 }
 
-function requireTokens(path, content, tokens) {
+function requireTokens(filePath, content, tokens) {
   for (const token of tokens) {
-    if (!content.includes(token)) failures.push(`${path} missing required token: ${token}`);
+    if (!content.includes(token)) failures.push(`${filePath} missing required token: ${token}`);
   }
 }
 
@@ -99,8 +100,15 @@ function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-function requireNonEmptyString(path, object, field, label = field) {
-  if (!isNonEmptyString(object?.[field])) failures.push(`${path} ${label} must be a non-empty string`);
+function hasPlaceholderString(value) {
+  if (typeof value === 'string') return placeholderValuePattern.test(value);
+  if (Array.isArray(value)) return value.some((entry) => hasPlaceholderString(entry));
+  if (value && typeof value === 'object') return Object.values(value).some((entry) => hasPlaceholderString(entry));
+  return false;
+}
+
+function requireNonEmptyString(filePath, object, field, label = field) {
+  if (!isNonEmptyString(object?.[field])) failures.push(`${filePath} ${label} must be a non-empty string`);
 }
 
 function normalize(value) {
@@ -108,9 +116,9 @@ function normalize(value) {
 }
 
 function validateRequiredDocs() {
-  for (const [path, tokens] of Object.entries(requiredDocs)) {
-    const content = readText(path);
-    if (content) requireTokens(path, content, tokens);
+  for (const [filePath, tokens] of Object.entries(requiredDocs)) {
+    const content = readText(filePath);
+    if (content) requireTokens(filePath, content, tokens);
   }
 }
 
@@ -139,6 +147,10 @@ function validatePlaceholderSafety(evidence) {
 
   if (evidence.evidenceItem !== 'external-security-review-or-pentest') {
     failures.push(`${evidencePath} evidenceItem must be external-security-review-or-pentest`);
+  }
+
+  if (evidence.status === 'Complete' && hasPlaceholderString(evidence)) {
+    failures.push(`${evidencePath} Complete evidence must not contain placeholder strings such as REPLACE_, YYYY-MM-DD, TODO, or placeholder`);
   }
 
   if (evidence.status === 'Complete' && evidence.evidenceIntegrity?.placeholderOnly === true) {
@@ -227,8 +239,8 @@ function validateFindings(evidence) {
       }
     }
 
-    if (enterpriseRelease && severity === 'critical' && ['pending', 'required_pending', 'not_started', 'failed'].includes(retestStatus)) {
-      failures.push(`${evidencePath} critical finding ${id} has pending or failed retest`);
+    if (enterpriseRelease && severity === 'critical' && ['pending', 'required_pending', 'not_started', 'failed', 'missing'].includes(retestStatus)) {
+      failures.push(`${evidencePath} critical finding ${id} has pending, failed, or missing retest`);
     }
   }
 }
