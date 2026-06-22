@@ -99,8 +99,8 @@ function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-function requireNonEmptyString(path, object, field) {
-  if (!isNonEmptyString(object?.[field])) failures.push(`${path} ${field} must be a non-empty string`);
+function requireNonEmptyString(path, object, field, label = field) {
+  if (!isNonEmptyString(object?.[field])) failures.push(`${path} ${label} must be a non-empty string`);
 }
 
 function normalize(value) {
@@ -167,7 +167,7 @@ function requireRealReviewEvidence(evidence) {
   }
 
   for (const field of ['reviewType', 'provider', 'reportDate', 'reportReference', 'reviewedBy', 'reviewedAt']) {
-    requireNonEmptyString(evidencePath, evidence.review ?? {}, `review.${field}`);
+    requireNonEmptyString(evidencePath, evidence.review ?? {}, field, `review.${field}`);
   }
 
   if (evidence.evidenceIntegrity?.placeholderOnly !== false) {
