@@ -50,7 +50,7 @@ function inferLegacyRateLimitCategory(key: string | undefined): RateLimitCategor
 
 export function checkDistributedRateLimit(options: RateLimitOptions) {
   return checkServerDistributedRateLimit({
-    category: inferLegacyRateLimitCategory(options.key),
     ...options,
+    category: options.category ?? inferLegacyRateLimitCategory(options.key),
   });
 }
