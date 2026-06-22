@@ -59,9 +59,9 @@ Except for signed webhooks and explicit health/internal endpoints, all POST/PUT/
 
 ## CI enforcement
 
-`npm run security:api-route-hardening` runs `scripts/security/check-api-route-hardening.mjs`. The check inventories every App Router API route, classifies it, and fails when sensitive routes miss auth, tenant/BOLA protection, mutation Origin/rate-limit/input validation, or high-risk audit coverage. The current PR wires it through `security:api-guards`, which is already part of `security:ci`; adding a dedicated `package.json` alias is still recommended for readability.
+`npm run security:api-guards` runs `scripts/security/check-api-guards.mjs`, which inventories every App Router API route and delegates to `scripts/security/check-api-route-hardening.mjs`. The check fails on missing explicit guard tokens for routes with committed strict rules and reports any broader hardening inventory findings for follow-up. Do not mark a route migration complete until the route has a dedicated test that proves the intended fail-closed behavior.
 
-## Migration status in this PR
+## Migration status
 
 Migrated reference routes:
 
@@ -70,6 +70,8 @@ Migrated reference routes:
 - `src/app/api/team/invitations/cancel/route.ts`
 - `src/app/api/team/members/role/route.ts`
 - `src/app/api/retention-center/export/route.ts`
+- `src/app/api/billing/portal/route.ts`
+- `src/app/api/billing/checkout/route.ts`
 
 Added security coverage:
 
@@ -77,19 +79,19 @@ Added security coverage:
 - BOLA/IDOR tests for team member removal;
 - BOLA/IDOR tests for team invitation cancellation;
 - security contract test for team member role changes;
-- security contract test for retention policy exports.
+- security contract test for retention policy exports;
+- billing portal security contract coverage for RBAC, trusted mutation, and step-up;
+- billing checkout security contract coverage for invalid plan fail-closed behavior, RBAC, trusted mutation/rate-limit denial, step-up gating, and Stripe session metadata.
 
 Known follow-up migration backlog:
 
 - `src/app/api/team/invites/route.ts`
 - `src/app/api/billing/checkout-intent/route.ts`
-- `src/app/api/billing/checkout/route.ts`
-- `src/app/api/billing/portal/route.ts`
 - `src/app/api/gdpr/delete-request/route.ts`
 - `src/app/api/ai-systems/route.ts`
 - `src/app/api/ai-incidents/route.ts`
 - `src/app/api/continuity-center/export/route.ts`
-- remaining `src/app/api/**/route.ts` endpoints flagged by `npm run security:api-route-hardening`.
+- remaining `src/app/api/**/route.ts` endpoints flagged by `npm run security:api-guards` or `scripts/security/check-api-route-hardening.mjs`.
 
 ## Legitimate exceptions
 
