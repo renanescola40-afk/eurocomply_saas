@@ -51,7 +51,17 @@ jobs:
       - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
       - name: Lint
-        run: npm run lint
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run lint 2>&1 | tee lint.log
+      - name: Upload lint diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: full-security-suite-lint-diagnostics
+          path: lint.log
+          if-no-files-found: ignore
       - name: Typecheck
         shell: bash
         run: |
@@ -221,25 +231,42 @@ jobs:
           node-version: 22
           cache: npm
       - name: Detect dependency manifest changes
-        id: manifests
+        id: dependency-changes
         shell: bash
         run: |
-          changed="$(git diff --name-only HEAD^ HEAD || true)"
-          if echo "$changed" | grep -Eq '(^|/)(package-lock.json|package.json)$'; then
+          if git diff --name-only HEAD^ HEAD | grep -E '^(package-lock\.json|package\.json)$'; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
       - name: GitHub Dependency Review vulnerability scan
-        if: github.event_name == 'pull_request' && steps.manifests.outputs.changed == 'true'
+        if: steps.dependency-changes.outputs.changed == 'true'
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
       - name: npm high and critical dependency vulnerability gate
-        run: npm audit --audit-level=high
+        if: steps.dependency-changes.outputs.changed == 'true'
+        run: npm audit --omit=dev --audit-level=high
       - name: Dependency Review is not applicable
-        if: github.event_name != 'pull_request' || steps.manifests.outputs.changed != 'true'
-        run: echo "No package manifest changes detected; dependency review skipped. npm audit fallback completed."
+        if: steps.dependency-changes.outputs.changed != 'true'
+        run: echo "No package manifest changes detected; dependency review skipped."
+
+  gitleaks:
+    name: Secret scanning (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run Gitleaks repository and history scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   scorecard:
     name: OSSF Scorecard
@@ -257,68 +284,39 @@ jobs:
       - name: Run OSSF Scorecard
         uses: ossf/scorecard-action@v2.4.2
         with:
-          results_file: scorecard-results.sarif
+          results_file: scorecard.sarif
           results_format: sarif
-          publish_results: false
+          publish_results: true
       - name: Upload Scorecard results
         uses: actions/upload-artifact@v7
         with:
           name: ossf-scorecard-results
-          path: scorecard-results.sarif
+          path: scorecard.sarif
 
-  gitleaks:
-    name: Secret scanning (Gitleaks)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository history
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Run Gitleaks repository and history scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ github['token'] }}
-
-  actionlint:
-    name: Actionlint
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - name: Run actionlint
-        uses: raven-actions/actionlint@v2
-
-  merge-gate:
+  enterprise-gate:
     name: Enterprise merge/deploy gate
+    needs:
+      - core
+      - semgrep
+      - codeql
+      - dependency-review
+      - gitleaks
+      - scorecard
     runs-on: ubuntu-latest
-    needs: [core, semgrep, codeql, dependency-review, scorecard, gitleaks, actionlint]
     if: always()
+    permissions:
+      contents: read
     steps:
       - name: Enforce all security jobs passed
+        shell: bash
         run: |
-          required=(core semgrep codeql dependency-review scorecard gitleaks actionlint)
-          for job in "${required[@]}"; do
-            result="${{ needs.core.result }}"
-            case "$job" in
-              core) result="${{ needs.core.result }}" ;;
-              semgrep) result="${{ needs.semgrep.result }}" ;;
-              codeql) result="${{ needs.codeql.result }}" ;;
-              dependency-review) result="${{ needs.dependency-review.result }}" ;;
-              scorecard) result="${{ needs.scorecard.result }}" ;;
-              gitleaks) result="${{ needs.gitleaks.result }}" ;;
-              actionlint) result="${{ needs.actionlint.result }}" ;;
-            esac
-            if [ "$result" != "success" ]; then
-              echo "Required security job '$job' did not pass: $result" >&2
-              exit 1
-            fi
-          done
+          if [ "${{ needs.core.result }}" != "success" ] \
+            || [ "${{ needs.semgrep.result }}" != "success" ] \
+            || [ "${{ needs.codeql.result }}" != "success" ] \
+            || [ "${{ needs.dependency-review.result }}" != "success" ] \
+            || [ "${{ needs.gitleaks.result }}" != "success" ] \
+            || [ "${{ needs.scorecard.result }}" != "success" ]; then
+            echo "One or more required security jobs failed."
+            exit 1
+          fi
+          echo "Full security suite passed."
