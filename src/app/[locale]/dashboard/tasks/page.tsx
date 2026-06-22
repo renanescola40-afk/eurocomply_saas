@@ -1,3 +1,5 @@
-export default function Page() {
-  return <h1>Tasks</h1>;
+export default function Page({ params }: { params: { locale: string } }) {
+  const title = params.locale === 'pt' ? 'Tarefas' : 'Tasks';
+
+  return <h1>{title}</h1>;
 }
