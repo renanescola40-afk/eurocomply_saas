@@ -177,8 +177,9 @@ export default async function middleware(req: NextRequest) {
   if (pathnameHasLocale) {
     const locale = pathname.split('/')[1];
     const isPublic = isPublicRoute(pathname, locale);
+    const isMarketingHome = pathname === `/${locale}`;
     const isAuthEntryRoute = pathname === `/${locale}/login` || pathname === `/${locale}/signup`;
-    const shouldCheckAuth = !isPublic || isAuthEntryRoute;
+    const shouldCheckAuth = !isPublic || isAuthEntryRoute || isMarketingHome;
     const authState = shouldCheckAuth
       ? await getAuthState(req)
       : { isAuthenticated: false, supabaseResponse: NextResponse.next({ request: req }) };
@@ -191,7 +192,7 @@ export default async function middleware(req: NextRequest) {
       return response;
     }
 
-    if (authState.isAuthenticated && isAuthEntryRoute) {
+    if (authState.isAuthenticated && (isAuthEntryRoute || isMarketingHome)) {
       const dashboardUrl = new URL(`/${locale}${ORGANIZATION_DASHBOARD_PATH}`, req.url);
       const response = NextResponse.redirect(dashboardUrl);
       copyAuthCookies(authState.supabaseResponse, response);
