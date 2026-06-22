@@ -33,7 +33,7 @@ const STEP_UP_ACTION_PERMISSIONS: Record<HighRiskAction, OrganizationPermission>
   export_data: 'export_data',
   manage_billing: 'manage_billing',
   manage_team: 'manage_team',
-  gdpr_delete: 'export_data',
+  gdpr_delete: 'manage_settings',
   audit_chain_verify: 'read_audit',
   audit_chain_export: 'export_data',
   change_security_settings: 'manage_settings',
