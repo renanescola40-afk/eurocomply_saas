@@ -105,7 +105,7 @@ const TRUST_COPY: Record<SupportedLocale, TrustCopy> = {
 export default async function TrustCenterPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isSupportedLocale(locale)) notFound();
-  const copy = TRUST_COPY[locale];
+  const page = copy[locale];
 
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white">

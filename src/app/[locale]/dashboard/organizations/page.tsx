@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Building2, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
@@ -9,6 +10,9 @@ import { getBillingPlan } from '@/lib/billing/plans';
 import { formatLimit } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
+
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 const quickLinks = [
   { href: '/aprovacoes', label: 'Tasks', description: 'Assign owners and unblock overdue work', icon: FileCheck2 },
@@ -34,6 +38,8 @@ function getSafeLocale(locale: string): Locale {
 }
 
 export default async function OrganizationDashboardPage({ params, searchParams }: PageProps) {
+  noStore();
+
   const { locale } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const safeLocale = getSafeLocale(locale);

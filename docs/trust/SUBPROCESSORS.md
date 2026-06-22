@@ -8,7 +8,7 @@ This register lists providers that may process customer data or operational meta
 
 ## Current draft list
 
-| Provider | Service category | Data category | Region / hosting notes | Status |
+| Provider | Service category | Data category | Region / hosting notes | Current status |
 | --- | --- | --- | --- | --- |
 | Vercel | Application hosting and deployment | Application traffic, deployment metadata, logs | Confirm project region and data residency settings | Needs review |
 | Supabase | Database, authentication and storage if enabled | Customer data, organization data, documents, auth metadata | Confirm project region, backups and tenant-isolation evidence | Needs review |
@@ -20,13 +20,18 @@ This register lists providers that may process customer data or operational meta
 
 Customers should receive notice before adding a material subprocessor that processes customer personal data. Final notice period and approval process must be agreed with legal counsel.
 
-## Maintenance procedure
+## Guardrail
 
-1. Review subprocessors before each enterprise contract.
-2. Confirm provider DPA and security documentation.
-3. Confirm data categories and region.
-4. Update this register before customer disclosure.
-5. Keep an archived copy for each signed customer DPA version.
+1. Review this register before each enterprise contract or security questionnaire.
+2. Confirm which providers are actually enabled in the target environment.
+3. Confirm provider DPA, security documentation, region, and retention posture.
+4. Confirm data categories and whether customer personal data is processed.
+5. Update the public Trust Center and procurement packet before customer disclosure.
+6. Archive the version disclosed to each customer with the related DPA version.
+
+## Customer-safe answer
+
+"EuroComply maintains a subprocessor register for infrastructure, authentication/database/storage, billing, source control/CI, and conditional observability/cache/email providers. The register is reviewed before enterprise disclosure and final contractual commitments depend on the signed DPA and enabled production services."
 
 ## Guardrail
 

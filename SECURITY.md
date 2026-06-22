@@ -27,6 +27,8 @@ Initial triage targets are operational goals, not contractual SLAs unless agreed
 - Medium: 5 business days
 - Low: next planned maintenance window
 
+These are operational targets, not a contractual SLA unless separately agreed in writing.
+
 ## Security scope
 
 In scope:
