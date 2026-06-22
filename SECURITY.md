@@ -6,13 +6,11 @@ EuroComply is a European B2B compliance SaaS. Security reports are taken serious
 
 The production deployment on the `main` branch is currently supported.
 
-## Reporting a vulnerability
+## Reporting a security issue
 
-Please do not create a public GitHub issue for security vulnerabilities.
+Please do not create a public GitHub issue for private security reports.
 
-Current responsible disclosure contact: `renansilva2002@gmail.com`.
-
-Send a private report with:
+Send a private report to `renansilva2002@gmail.com` with:
 
 - affected URL, endpoint, or component;
 - steps to reproduce;
@@ -22,7 +20,7 @@ Send a private report with:
 
 ## Response targets
 
-Initial triage targets:
+Initial triage targets are operational goals, not contractual SLAs unless agreed separately:
 
 - Critical: 24 hours
 - High: 2 business days
@@ -43,25 +41,6 @@ In scope:
 - document upload and controlled document storage;
 - audit logs and notification integrity.
 
-Out of scope unless combined with a real exploit:
-
-- missing security headers already documented in the roadmap;
-- social engineering;
-- denial-of-service without a practical abuse path;
-- vulnerabilities in third-party services outside EuroComply configuration.
-
-## Production security posture
-
-Before public launch, confirm:
-
-- Supabase migrations are applied;
-- storage bucket `controlled-documents` is private;
-- RLS policies are active;
-- Stripe webhook signature verification is enabled;
-- Sentry source maps and alerting are configured if Sentry is enabled;
-- `HEALTHCHECK_TOKEN` protects readiness and smoke endpoints;
-- production secrets are rotated when personnel or deployment context changes.
-
 ## Claims guardrail
 
-Do not claim SOC 2, ISO 27001 certification, completed third-party penetration testing, end-to-end encryption, immutable/WORM audit storage, 24/7 staffed monitoring, tested disaster recovery, tested backup restore, or guaranteed RTO/RPO unless approved evidence exists.
+Do not claim SOC 2, ISO 27001 certification, completed external review, tested disaster recovery, guaranteed RTO/RPO, or 24/7 staffed monitoring unless approved evidence exists. Use `designed to support` for evidence-dependent capabilities.
