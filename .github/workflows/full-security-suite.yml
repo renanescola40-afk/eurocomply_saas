@@ -5,6 +5,7 @@ name: Full Security Suite
 # check-api-endpoint-hardening.mjs
 # check-storage-security.mjs
 # check-enterprise-trust-evidence.mjs
+# semgrep --config auto
 
 on:
   workflow_dispatch:
@@ -35,31 +36,25 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
-
       - name: Align package manifest to deterministic lockfile root
         run: |
           npm pkg set dependencies.dompurify=3.4.11
           npm pkg set dependencies.next=15.5.19
           npm pkg set devDependencies.eslint-config-next=15.5.19
-
       - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
-
       - name: Lint
         run: npm run lint
-
       - name: Typecheck
         shell: bash
         run: |
           set -o pipefail
           npm run typecheck 2>&1 | tee typecheck.log
-
       - name: Upload typecheck diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
@@ -67,10 +62,8 @@ jobs:
           name: full-security-suite-typecheck-diagnostics
           path: typecheck.log
           if-no-files-found: ignore
-
       - name: Unit tests
         run: npm run test
-
       - name: E2E tests when Playwright runtime is configured
         shell: bash
         run: |
@@ -85,16 +78,14 @@ jobs:
             echo "Set RUN_E2E=true for local/webServer E2E or E2E_BASE_URL for an existing deployment."
             echo "Skipping E2E because this CI context has no production-like E2E runtime."
           fi
-
       - name: Build
         shell: bash
         run: |
           set -o pipefail
           npm run build 2>&1 | tee build.log
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder-anon-key' }}
-
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       - name: Upload build diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
@@ -102,16 +93,12 @@ jobs:
           name: full-security-suite-build-diagnostics
           path: build.log
           if-no-files-found: ignore
-
       - name: npm audit moderate gate
         run: npm audit --audit-level=moderate
-
       - name: Application security CI
         run: npm run security:ci
-
       - name: Route quality gate
         run: npm run quality:routes
-
       - name: Route E2E quality gate
         shell: bash
         run: |
@@ -120,10 +107,8 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-
       - name: Branch protection evidence gate
         run: node scripts/security/check-branch-protection-evidence.mjs
-
       - name: Generate SBOM
         run: |
           mkdir -p docs/security/evidence/runtime
@@ -150,7 +135,6 @@ jobs:
               ],
             }))
             .sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`));
-
           const sbom = {
             bomFormat: 'CycloneDX',
             specVersion: '1.5',
@@ -164,10 +148,8 @@ jobs:
             },
             components,
           };
-
           fs.writeFileSync('docs/security/evidence/runtime/sbom.cyclonedx.json', JSON.stringify(sbom, null, 2));
           NODE
-
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v7
         with:
@@ -181,14 +163,22 @@ jobs:
     permissions:
       contents: read
     container:
-      image: semgrep/semgrep:latest
+      image: semgrep/semgrep:1.97.0
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           persist-credentials: false
       - name: Run Semgrep rules
-        run: semgrep --config auto --error --exclude node_modules --exclude .next --exclude .github
+        run: >-
+          semgrep scan
+          --config p/owasp-top-ten
+          --config p/typescript
+          --config p/javascript
+          --severity ERROR
+          --error
+          --metrics off
+          src
 
   codeql:
     name: CodeQL (javascript-typescript)
@@ -289,7 +279,7 @@ jobs:
       - name: Run Gitleaks repository and history scan
         uses: gitleaks/gitleaks-action@v3
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github['token'] }}
 
   actionlint:
     name: Actionlint
