@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
   const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
     maxBytes: DELETE_REQUEST_JSON_MAX_BYTES,
-  }).catch(() => ({}));
+  }).catch((): Record<string, unknown> => ({}));
 
   if (!validateDeleteConfirmation(body)) {
     await createAuditEvent({
