@@ -1,6 +1,12 @@
+import { createHash } from 'node:crypto';
+
 import { noStoreJson } from '@/server/security/no-store';
 import { logAuditEvent } from '@/server/actions/audit';
 import { getRateLimitHeaders, type RateLimitResult } from './rate-limit';
+
+function hashAuditKey(key: string) {
+  return createHash('sha256').update(key).digest('hex').slice(0, 24);
+}
 
 function auditRateLimitBlock(result: RateLimitResult) {
   if (!result.audit) return;
@@ -17,8 +23,7 @@ function auditRateLimitBlock(result: RateLimitResult) {
       reason: result.reason ?? 'limit_exceeded',
       remaining: result.remaining,
       retryAfterSeconds: result.retryAfterSeconds,
-      // The limiter key contains sanitized user/org/action/route components and hashed IP material only.
-      key: result.key,
+      keyHash: hashAuditKey(result.key),
     },
   }).catch((error: unknown) => {
     console.error('[security:rate-limit] failed to write audit event', {
