@@ -1,8 +1,8 @@
 import Link from 'next/link';
+import type { LucideIcon } from 'lucide-react';
 import {
   AlertTriangle,
   ArrowRight,
-  BarChart3,
   CheckCircle2,
   Clock3,
   CreditCard,
@@ -213,7 +213,7 @@ function normalizeLocale(locale: string): Locale {
   return locales.includes(locale as Locale) ? (locale as Locale) : 'en';
 }
 
-function MetricCard({ title, value, detail, icon: Icon }: { title: string; value: string; detail: string; icon: typeof ShieldCheck }) {
+function MetricCard({ title, value, detail, icon: Icon }: { title: string; value: string; detail: string; icon: LucideIcon }) {
   return (
     <Card className="border-white/10 bg-white/[0.045] text-white shadow-xl shadow-black/10">
       <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
@@ -311,7 +311,7 @@ export default function DashboardPage({ params }: { params: { locale: string } }
               <CardDescription className="text-white/52">loading, empty, error, permission denied, success e offline/network issue.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3">
-              <EnterpriseState kind="success" title="Success" description="{t.statusReady}" className="bg-emerald-500/5" />
+              <EnterpriseState kind="success" title="Success" description={t.statusReady} className="bg-emerald-500/5" />
               <EnterpriseState kind="empty" title="Empty" description={t.stateEmpty} />
               <EnterpriseState kind="error" title="Error" description={t.stateError} />
               <EnterpriseState kind="permission-denied" title="Permission denied" description={t.statePermission} />
