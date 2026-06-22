@@ -7,7 +7,7 @@ export type PrivacyInventoryTable = {
   key: string;
   table: string;
   columns: string;
-  scopeColumn: 'organization_id' | 'id' | 'user_id' | 'none';
+  scopeColumn: 'organization_id' | 'id' | 'user_id';
   retentionClass: 'active_customer_data' | 'legal_billing_record' | 'audit_chain' | 'operational_log';
   exportable: boolean;
   deletable: 'delete' | 'anonymize' | 'preserve';
@@ -23,7 +23,7 @@ export const ORGANIZATION_EXPORT_TABLES: PrivacyInventoryTable[] = [
   { key: 'notifications', table: 'notifications', columns: 'id,organization_id,user_id,type,message,read_at,created_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
   { key: 'subscriptions', table: 'subscriptions', columns: 'id,organization_id,stripe_customer_id,stripe_subscription_id,status,plan,current_period_end,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'legal_billing_record', exportable: true, deletable: 'preserve' },
   { key: 'billing_metadata', table: 'billing_metadata', columns: 'id,organization_id,provider,customer_id,subscription_id,status,metadata,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'legal_billing_record', exportable: true, deletable: 'preserve' },
-  { key: 'audit_events', table: 'audit_events', columns: 'id,organization_id,actor_user_id,action,entity_type,entity_id,metadata,created_at,hash,previous_hash', scopeColumn: 'organization_id', retentionClass: 'audit_chain', exportable: true, deletable: 'preserve' },
+  { key: 'audit_events', table: 'audit_events', columns: 'id,organization_id,actor_user_id,action,entity_type,entity_id,metadata,created_at,previous_hash,event_hash,hash_algorithm,hash_signature', scopeColumn: 'organization_id', retentionClass: 'audit_chain', exportable: true, deletable: 'preserve' },
   { key: 'audit_logs', table: 'audit_logs', columns: 'id,organization_id,actor_user_id,action,entity_type,entity_id,metadata,created_at', scopeColumn: 'organization_id', retentionClass: 'audit_chain', exportable: true, deletable: 'preserve' },
   { key: 'logs', table: 'application_logs', columns: 'id,organization_id,level,message,metadata,created_at', scopeColumn: 'organization_id', retentionClass: 'operational_log', exportable: true, deletable: 'anonymize' },
 ];
@@ -47,16 +47,20 @@ export type OrganizationDataExport = {
   unavailableTables: Array<{ key: string; table: string; reason: string }>;
 };
 
-type QueryResult = { data: unknown[] | null; error: { code?: string; message?: string } | null };
+type QueryError = { code?: string; message?: string } | null;
+type QueryResult = { data: unknown[] | null; error: QueryError };
+type ScopedQuery = Promise<QueryResult> & {
+  order?: (column: string, options: { ascending: boolean }) => Promise<QueryResult>;
+};
 type SupabaseLike = {
   from: (table: string) => {
     select: (columns: string) => {
-      eq: (column: string, value: string) => Promise<QueryResult> & { order?: (column: string, options: { ascending: boolean }) => Promise<QueryResult> };
+      eq: (column: string, value: string) => ScopedQuery;
     };
   };
 };
 
-function isExpectedMissingTable(error: { code?: string; message?: string } | null | undefined) {
+function isExpectedMissingTable(error: QueryError) {
   return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST204' || error?.code === 'PGRST205';
 }
 
