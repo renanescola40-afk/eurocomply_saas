@@ -77,13 +77,6 @@ function isPublicRoute(pathname: string, locale: string): boolean {
   );
 }
 
-function hasSupabaseAuthCookie(req: NextRequest) {
-  return req.cookies.getAll().some((cookie) => {
-    const name = cookie.name.toLowerCase();
-    return name.startsWith('sb-') || name.includes('supabase');
-  });
-}
-
 function withPrivateNoStore(response: NextResponse) {
   response.headers.set('Cache-Control', 'private, no-store, max-age=0');
   return response;
@@ -238,3 +231,7 @@ export default async function middleware(req: NextRequest) {
 
   return response;
 }
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+};
