@@ -14,6 +14,8 @@ const allowedItems = new Set([
   'stripe-billing-validation',
   'observability-readiness',
   'rate-limit-validation',
+  // GDPR privacy evidence added by the enterprise privacy controls package.
+  'gdpr-privacy-validation',
 ]);
 const redactionTexts = new Set([
   'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
