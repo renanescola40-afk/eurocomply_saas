@@ -40,6 +40,16 @@ const REQUIRED_FILES = [
   'src/components/marketing/public-info-page.tsx',
   'src/components/marketing/public-footer.tsx',
   'scripts/security/check-enterprise-trust-evidence.mjs',
+  'docs/trust/SECURITY_OVERVIEW.md',
+  'docs/trust/ARCHITECTURE_OVERVIEW.md',
+  'docs/trust/DATA_PROTECTION.md',
+  'docs/trust/ACCESS_CONTROL.md',
+  'docs/trust/ENCRYPTION.md',
+  'docs/trust/INCIDENT_RESPONSE.md',
+  'docs/trust/BACKUP_AND_RECOVERY.md',
+  'docs/trust/SECURITY_FAQ.md',
+  'docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md',
+  'src/app/[locale]/trust/page.tsx',
 ];
 
 const REQUIRED_PHRASES = new Map([
@@ -69,6 +79,17 @@ const REQUIRED_PHRASES = new Map([
   ['src/components/marketing/public-info-page.tsx', ['Trust Center', 'renansilva2002@gmail.com']],
   ['src/components/marketing/public-footer.tsx', ['/trust', '/security']],
   ['scripts/security/check-enterprise-trust-evidence.mjs', ['CLAIMS_REQUIRING_EXTERNAL_EVIDENCE', 'externally_validated']],
+  ['docs/trust/SECURITY_OVERVIEW.md', ['designed to support', 'SOC 2', 'ISO 27001', 'renansilva2002@gmail.com']],
+  ['docs/trust/ARCHITECTURE_OVERVIEW.md', ['authenticated organization workspaces', 'tenant boundaries', 'release evidence']],
+  ['docs/trust/DATA_PROTECTION.md', ['account data', 'Retention', 'customer agreement']],
+  ['docs/trust/ACCESS_CONTROL.md', ['RBAC', 'RLS', 'owner']],
+  ['docs/trust/ENCRYPTION.md', ['managed providers', 'does not currently claim']],
+  ['docs/trust/INCIDENT_RESPONSE.md', ['incident', 'does not currently claim']],
+  ['docs/trust/BACKUP_AND_RECOVERY.md', ['backup', 'must not be claimed']],
+  ['docs/trust/SUBPROCESSORS.md', ['Vercel', 'Supabase', 'Stripe']],
+  ['docs/trust/SECURITY_FAQ.md', ['SOC 2', 'ISO 27001', 'renansilva2002@gmail.com']],
+  ['docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md', ['buyer-facing checklist', 'Avoid unavailable claims']],
+  ['src/app/[locale]/trust/page.tsx', ['Trust Center', 'SOC 2', 'ISO 27001']],
 ]);
 
 const failures = [];
@@ -77,14 +98,14 @@ for (const relativePath of REQUIRED_FILES) {
   const fullPath = path.join(ROOT_DIR, relativePath);
 
   if (!fs.existsSync(fullPath)) {
-    failures.push(`${relativePath}: missing required trust package document`);
+    failures.push(`${relativePath}: missing required trust package artifact`);
     continue;
   }
 
   const content = fs.readFileSync(fullPath, 'utf8');
 
   if (content.trim().length < 200) {
-    failures.push(`${relativePath}: document is unexpectedly short`);
+    failures.push(`${relativePath}: artifact is unexpectedly short`);
   }
 
   const requiredPhrases = REQUIRED_PHRASES.get(relativePath) ?? [];
@@ -95,8 +116,8 @@ for (const relativePath of REQUIRED_FILES) {
   }
 }
 
-console.log('EuroComply trust package check');
-console.log('--------------------------------');
+console.log('EuroComply enterprise Trust Center package check');
+console.log('------------------------------------------------');
 
 if (failures.length > 0) {
   console.error('Trust package failures:');

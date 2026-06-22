@@ -134,19 +134,19 @@ const TRUST_COPY: Record<SupportedLocale, TrustCopy> = {
   },
 };
 
-const iconMap = {
-  shield: ShieldCheck,
-  scale: Scale,
-  database: Database,
-  activity: Activity,
-  file: FileCheck2,
-  lock: LockKeyhole,
+const copy: Record<SupportedLocale, Copy> = {
+  en: { title: 'Trust Center', body: 'Security, privacy and operational transparency without compliance washing.', assurance: 'EuroComply does not currently claim SOC 2, ISO 27001 certification or completed third-party testing. The platform is designed to support enterprise review through RBAC, RLS, audit logging and release evidence gates.', resource: 'Open resource', cards: cardSets.en },
+  pt: { title: 'Centro de Confiança', body: 'Segurança, privacidade e transparência operacional sem compliance washing.', assurance: 'O EuroComply não afirma SOC 2, certificação ISO 27001 ou teste externo concluído. A plataforma foi desenhada para apoiar avaliação enterprise com RBAC, RLS, audit logs e release gates.', resource: 'Abrir recurso', cards: cardSets.pt },
+  es: { title: 'Centro de Confianza', body: 'Seguridad, privacidad y transparencia operacional sin compliance washing.', assurance: 'EuroComply no afirma SOC 2, certificación ISO 27001 ni revisión externa completada. Está diseñado para apoyar revisión enterprise con RBAC, RLS, auditoría y evidencia de release.', resource: 'Abrir recurso', cards: cardSets.es },
+  fr: { title: 'Centre de Confiance', body: 'Sécurité, confidentialité et transparence opérationnelle sans compliance washing.', assurance: 'EuroComply ne revendique pas SOC 2, certification ISO 27001 ou revue externe terminée. La plateforme est conçue pour soutenir les revues enterprise avec RBAC, RLS, audit logs et preuves de release.', resource: 'Ouvrir la ressource', cards: cardSets.fr },
+  it: { title: 'Centro Fiducia', body: 'Sicurezza, privacy e trasparenza operativa senza compliance washing.', assurance: 'EuroComply non dichiara SOC 2, certificazione ISO 27001 o review esterna completata. È progettato per supportare review enterprise con RBAC, RLS, audit log ed evidenze di release.', resource: 'Apri risorsa', cards: cardSets.it },
+  de: { title: 'Trust Center', body: 'Sicherheit, Datenschutz und operative Transparenz ohne Compliance Washing.', assurance: 'EuroComply beansprucht derzeit weder SOC 2, ISO 27001-Zertifizierung noch eine abgeschlossene externe Prüfung. Die Plattform ist für Enterprise Reviews mit RBAC, RLS, Audit Logs und Release Evidence Gates ausgelegt.', resource: 'Ressource öffnen', cards: cardSets.de },
 };
 
 export default async function TrustCenterPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isSupportedLocale(locale)) notFound();
-  const copy = TRUST_COPY[locale];
+  const page = copy[locale];
 
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white">

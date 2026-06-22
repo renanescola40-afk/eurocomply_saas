@@ -11,7 +11,7 @@ const BLOCKED_PATTERNS = [
   /\/undefined(?:["'`\s)>]|$)/,
   /\$\{[^}]*undefined[^}]*\}/,
 ];
-const SUSPICIOUS_PATTERNS = [
+const ADVISORY_PATTERNS = [
   /dashboard\/organizations\/vendors/,
   /dashboard\/organizations\/risks/,
   /dashboard\/organizations\/documents/,
@@ -46,7 +46,7 @@ function walk(dir) {
 
 const files = SCAN_DIRS.flatMap(walk);
 const failures = [];
-const warnings = [];
+const advisories = [];
 
 for (const file of files) {
   const source = readFileSync(file, 'utf8');
@@ -60,18 +60,18 @@ for (const file of files) {
       }
     }
 
-    for (const pattern of SUSPICIOUS_PATTERNS) {
+    for (const pattern of ADVISORY_PATTERNS) {
       if (pattern.test(line)) {
-        warnings.push({ file: rel, line: index + 1, reason: `legacy organization route pattern ${pattern}` });
+        advisories.push({ file: rel, line: index + 1, reason: `legacy organization route pattern ${pattern}` });
       }
     }
   });
 }
 
-if (warnings.length > 0) {
-  console.warn('Route link warnings:');
-  for (const warning of warnings) {
-    console.warn(`- ${warning.file}:${warning.line} ${warning.reason}`);
+if (advisories.length > 0) {
+  console.log('Route link advisories:');
+  for (const advisory of advisories) {
+    console.log(`- ${advisory.file}:${advisory.line} ${advisory.reason}`);
   }
 }
 

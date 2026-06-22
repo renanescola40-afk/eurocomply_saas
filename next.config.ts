@@ -5,6 +5,33 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/i18n.ts');
 const isProduction = process.env.NODE_ENV === 'production';
 
+const DEFAULT_IMAGE_REMOTE_HOSTS = [
+  'images.unsplash.com',
+  'avatars.githubusercontent.com',
+  'lh3.googleusercontent.com',
+  'flagcdn.com',
+] as const;
+
+function getSupabaseImageHost() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) return [];
+
+  try {
+    return [new URL(supabaseUrl).hostname];
+  } catch {
+    return [];
+  }
+}
+
+function getTrustedImageHostnames() {
+  const configuredHosts = (process.env.NEXT_IMAGE_REMOTE_HOSTS ?? '')
+    .split(',')
+    .map((host) => host.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set([...DEFAULT_IMAGE_REMOTE_HOSTS, ...getSupabaseImageHost(), ...configuredHosts]));
+}
+
 const securityHeaders = [
   {
     key: 'Content-Security-Policy',
@@ -42,15 +69,22 @@ const nextConfig: NextConfig = {
         source: '/(.*)',
         headers: securityHeaders,
       },
+      {
+        source: '/:locale(en|pt|es|fr|it|de)/(pricing|resources|faq|about|contact|trust|security|compliance|privacy|terms|data-processing|sla|dpa|subprocessors|status)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=300, stale-while-revalidate=3600',
+          },
+        ],
+      },
     ];
   },
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-    ],
+    remotePatterns: getTrustedImageHostnames().map((hostname) => ({
+      protocol: 'https',
+      hostname,
+    })),
   },
 };
 

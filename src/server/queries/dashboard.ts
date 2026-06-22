@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 export type DashboardSummary = Awaited<ReturnType<typeof getDashboardSummary>>;
@@ -78,6 +79,8 @@ function areDashboardSnapshotsEnabled() {
 }
 
 export async function getDashboardSummary(organizationId: string) {
+  noStore();
+
   const supabase = tryCreateAdminClient();
   if (!supabase) return emptyDashboardSummary();
 
@@ -159,8 +162,10 @@ export async function recordDashboardMetricSnapshot(organizationId: string, summ
 }
 
 export async function getDashboardTrendHistory(organizationId: string, limit = 12): Promise<DashboardTrendSnapshot[]> {
+  noStore();
   if (!areDashboardSnapshotsEnabled()) return [];
 
+  const safeLimit = Math.max(1, Math.min(limit, 52));
   const supabase = tryCreateAdminClient();
   if (!supabase) return [];
 
@@ -169,7 +174,7 @@ export async function getDashboardTrendHistory(organizationId: string, limit = 1
     .select('created_at, compliance_score, open_tasks, open_risks, critical_risks, high_risk_vendors, missing_documents')
     .eq('organization_id', organizationId)
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .range(0, safeLimit - 1);
 
   if (error) {
     if (!isExpectedSchemaFallback(error)) {

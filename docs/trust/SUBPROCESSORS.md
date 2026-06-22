@@ -18,11 +18,11 @@ This register lists third-party providers that may process customer data, custom
 | Upstash | Redis, rate limiting, cache, queue-like operational metadata | Rate-limit keys, cache keys, operational metadata | Include only if enabled; confirm region and retention | Conditional |
 | Resend or email provider | Transactional email | Recipient email, message metadata, notification content | Include only if enabled; confirm DPA and region | Conditional |
 
-## Customer notice policy draft
+## Maintenance
 
 Customers should receive notice before adding a material subprocessor that processes customer personal data. The final notice period, objection process, and emergency replacement language must be approved by legal counsel and reflected in the signed DPA.
 
-## Maintenance procedure
+## Guardrail
 
 1. Review this register before each enterprise contract or security questionnaire.
 2. Confirm which providers are actually enabled in the target environment.
