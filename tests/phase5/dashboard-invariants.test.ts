@@ -11,12 +11,16 @@ describe('Phase 5 dashboard invariants', () => {
     expect(content).toContain("'/pt'");
   });
 
-  it('routes authenticated localized users to the organization dashboard', () => {
-    const content = read('src/app/[locale]/page.tsx');
+  it('keeps localized home static while middleware handles authenticated redirects safely', () => {
+    const home = read('src/app/[locale]/page.tsx');
+    const middleware = read('src/middleware.ts');
 
-    expect(content).toContain('getCurrentUser');
-    expect(content).toContain('dashboard/organizations');
-    expect(content).toContain('EnterpriseHome');
+    expect(home).toContain('force-static');
+    expect(home).toContain('revalidate = 300');
+    expect(home).toContain('EnterpriseHome');
+    expect(middleware).toContain('shouldCheckMarketingHomeAuth');
+    expect(middleware).toContain('ORGANIZATION_DASHBOARD_PATH');
+    expect(middleware).toContain('withPrivateNoStore');
   });
 
   it('keeps organization dashboard auth and onboarding routing in place', () => {

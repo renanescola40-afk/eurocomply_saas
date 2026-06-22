@@ -77,6 +77,18 @@ function isPublicRoute(pathname: string, locale: string): boolean {
   );
 }
 
+function hasSupabaseAuthCookie(req: NextRequest) {
+  return req.cookies.getAll().some((cookie) => {
+    const name = cookie.name.toLowerCase();
+    return name.startsWith('sb-') || name.includes('supabase');
+  });
+}
+
+function withPrivateNoStore(response: NextResponse) {
+  response.headers.set('Cache-Control', 'private, no-store, max-age=0');
+  return response;
+}
+
 function detectLocale(req: NextRequest): string {
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
   if (cookieLocale && locales.includes(cookieLocale as 'en')) {
@@ -177,8 +189,10 @@ export default async function middleware(req: NextRequest) {
   if (pathnameHasLocale) {
     const locale = pathname.split('/')[1];
     const isPublic = isPublicRoute(pathname, locale);
+    const isMarketingHome = pathname === `/${locale}`;
     const isAuthEntryRoute = pathname === `/${locale}/login` || pathname === `/${locale}/signup`;
-    const shouldCheckAuth = !isPublic || isAuthEntryRoute;
+    const shouldCheckMarketingHomeAuth = isMarketingHome && hasSupabaseAuthCookie(req);
+    const shouldCheckAuth = !isPublic || isAuthEntryRoute || shouldCheckMarketingHomeAuth;
     const authState = shouldCheckAuth
       ? await getAuthState(req)
       : { isAuthenticated: false, supabaseResponse: NextResponse.next({ request: req }) };
@@ -186,14 +200,14 @@ export default async function middleware(req: NextRequest) {
     if (!authState.isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
       loginUrl.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
-      const response = NextResponse.redirect(loginUrl);
+      const response = withPrivateNoStore(NextResponse.redirect(loginUrl));
       copyAuthCookies(authState.supabaseResponse, response);
       return response;
     }
 
-    if (authState.isAuthenticated && isAuthEntryRoute) {
+    if (authState.isAuthenticated && (isAuthEntryRoute || isMarketingHome)) {
       const dashboardUrl = new URL(`/${locale}${ORGANIZATION_DASHBOARD_PATH}`, req.url);
-      const response = NextResponse.redirect(dashboardUrl);
+      const response = withPrivateNoStore(NextResponse.redirect(dashboardUrl));
       copyAuthCookies(authState.supabaseResponse, response);
       return response;
     }

@@ -1,0 +1,57 @@
+{
+  "evidenceItem": "rate-limit-validation",
+  "status": "Complete",
+  "reviewer": "Security Engineering",
+  "reviewedAt": "2026-06-22T16:30:00.000Z",
+  "summary": "Enterprise rate limiting and abuse protection were implemented for sensitive backend surfaces, including fail-closed production behavior for high-risk policies, hashed IP key material, standard response headers, and redacted audit metadata.",
+  "evidenceLocations": [
+    "src/server/security/rate-limit.ts",
+    "src/lib/security/rate-limit.ts",
+    "src/lib/security/rate-limit-response.ts",
+    "src/server/security/rate-limit.enterprise.test.ts",
+    "src/lib/security/rate-limit.test.ts",
+    "tests/unit/rate-limit.test.ts",
+    "docs/security/RATE_LIMITING.md"
+  ],
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "controlsVerified": [
+    "High-risk production policies fail closed when Redis is missing or unavailable.",
+    "Low-risk health/internal and general-api policies degrade according to explicit policy.",
+    "Legacy sensitive keys infer fail-closed enterprise categories through the compatibility wrapper.",
+    "Uncategorized direct server limiter calls default to the fail-closed auth policy.",
+    "Limiter keys use hashed IP material and avoid raw client IP disclosure.",
+    "Rate-limit audit events store keyHash instead of raw limiter keys.",
+    "Blocked responses emit Retry-After, RateLimit-Limit, RateLimit-Remaining, and RateLimit-Reset headers."
+  ],
+  "validationCommands": [
+    "npm run test -- src/server/security/rate-limit.enterprise.test.ts src/lib/security/rate-limit.test.ts tests/unit/rate-limit.test.ts",
+    "npm run security:enterprise-api",
+    "npm run lint",
+    "npm run typecheck"
+  ],
+  "control": "enterprise-rate-limiting-and-abuse-protection",
+  "generatedAt": "2026-06-22T16:30:00.000Z",
+  "implementation": {
+    "module": "src/server/security/rate-limit.ts",
+    "compatibilityExport": "src/lib/security/rate-limit.ts",
+    "responseHelper": "src/lib/security/rate-limit-response.ts",
+    "docs": "docs/security/RATE_LIMITING.md"
+  },
+  "runtime": {
+    "productionStore": "Upstash Redis REST pipeline using INCR, EXPIRE NX and TTL",
+    "devTestStore": "in-memory buckets",
+    "highRiskProductionFailureMode": "fail-closed",
+    "lowRiskProductionFailureMode": "policy based fail-open for health/internal and general-api",
+    "pipelineResponseParsing": "accepts object-style REST result fields and tuple-style result entries"
+  },
+  "auditEvents": {
+    "action": "security.rate_limit.blocked",
+    "rawIpLogged": false,
+    "rawLimiterKeyLogged": false,
+    "metadata": ["category", "failureMode", "reason", "remaining", "retryAfterSeconds", "keyHash"]
+  },
+  "notes": [
+    "This evidence file follows the P0 runtime evidence hygiene schema and contains no secret values.",
+    "Follow-up work can migrate the route-local step-up challenge deny response to the shared rateLimitResponse helper, but the limiter policy is already applied."
+  ]
+}
