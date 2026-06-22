@@ -16,7 +16,7 @@ const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     files: ["scripts/**/*.{js,mjs,cjs}", "*.config.{js,mjs,cjs}", "eslint.config.mjs"],
-    ...compat.env({ node: true })[0],
+    ...compat.env({ es2022: true, node: true })[0],
   },
   {
     rules: {
