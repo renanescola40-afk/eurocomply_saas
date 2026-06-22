@@ -1,4 +1,5 @@
 import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getContinuitySummary, CONTINUITY_CONTROLS } from '@/server/governance/continuity-policy';
 import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
   });
 
   if (!rateLimit.allowed) {
-    return noStoreJson({ error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds }, { status: 429 });
+    return rateLimitResponse(rateLimit);
   }
 
   const summary = getContinuitySummary();
