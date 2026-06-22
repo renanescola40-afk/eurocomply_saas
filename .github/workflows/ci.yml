@@ -49,7 +49,19 @@ jobs:
       - run: node scripts/dev/check-phase4-validation-commands.mjs
       - run: npm run phase5:check
       - run: npm run phase6:check
-      - run: npm run lint
+      - name: Lint
+        shell: bash
+        run: |
+          npm run lint 2>&1 | tee lint.log
+          test "${PIPESTATUS[0]}" -eq 0
+      - name: Upload lint diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-lint-diagnostics
+          path: lint.log
+          retention-days: 7
+          if-no-files-found: warn
       - name: Typecheck app changes
         if: steps.changes.outputs.app_changed == 'true'
         shell: bash
