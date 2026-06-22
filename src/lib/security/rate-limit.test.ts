@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { checkDistributedRateLimit, clearRateLimitBuckets } from './rate-limit';
 
+function setNodeEnv(value: string) {
+  (process.env as Record<string, string | undefined>).NODE_ENV = value;
+}
+
 describe('checkDistributedRateLimit local fallback', () => {
   beforeEach(() => {
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
-    process.env.NODE_ENV = 'test';
+    setNodeEnv('test');
     clearRateLimitBuckets();
   });
 
