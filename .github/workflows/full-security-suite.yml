@@ -253,7 +253,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Run OSSF Scorecard
-        uses: ossf/scorecard-action@v2.4.3
+        uses: ossf/scorecard-action@v2.4.2
         with:
           results_file: scorecard-results.sarif
           results_format: sarif
@@ -277,7 +277,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Run Gitleaks repository and history scan
-        uses: gitleaks/gitleaks-action@v3
+        uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ github['token'] }}
 
