@@ -9,7 +9,7 @@ const strictRedactionText = [
   'creden' + 'tials',
   'connection strings',
   'and access-granting values are redacted.',
-].join(', ').replace(', and access-granting', ' and access-granting');
+].join(', ');
 const allowedRedactionTexts = new Set([
   strictRedactionText,
   'Redaction confirmed for runtime evidence.',
