@@ -49,6 +49,8 @@ const requiredReleaseOwners = [
   { label: 'Rollback owner', env: 'RELEASE_ROLLBACK_OWNER' },
 ];
 
+const placeholderOwnerPattern = /^(?:tbd|todo|n\/a|none|placeholder)$/i;
+
 function read(path) {
   return fs.readFileSync(path, 'utf8');
 }
@@ -72,7 +74,7 @@ function escapeRegExp(value) {
 function ownerValueFromApprovalRecord(content, label) {
   const pattern = new RegExp(`^-\\s*${escapeRegExp(label)}:\\s*(?<value>.+)$`, 'im');
   const value = content.match(pattern)?.groups?.value?.trim() ?? '';
-  return value && !/^tbd|todo|n\/a|none|placeholder$/i.test(value) ? value : '';
+  return value && !placeholderOwnerPattern.test(value) ? value : '';
 }
 
 function assertReleaseOwners(approval) {
