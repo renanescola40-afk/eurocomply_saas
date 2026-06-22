@@ -175,7 +175,12 @@ function normalizeRedisKey(key: string) {
 }
 
 function getPolicy(category: RateLimitCategory | undefined): RateLimitPolicy {
-  return RATE_LIMIT_POLICIES[category ?? 'general-api'];
+  if (category) return RATE_LIMIT_POLICIES[category];
+
+  return {
+    ...RATE_LIMIT_POLICIES.auth,
+    description: 'Uncategorized legacy server limiter calls remain fail-closed unless callers explicitly select a lower-risk policy.',
+  };
 }
 
 function resolveWindowMs(options: RateLimitOptions, policy: RateLimitPolicy) {
