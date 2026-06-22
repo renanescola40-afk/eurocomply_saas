@@ -1,4 +1,6 @@
 import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { collectOrganizationDataExport } from '@/server/privacy/gdpr';
@@ -11,6 +13,12 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
+
+function validateRequestedOrganizationId(value: string | null) {
+  if (value === null) return null;
+  const trimmed = value.trim();
+  return /^[a-zA-Z0-9_-]{1,128}$/.test(trimmed) ? trimmed : 'invalid';
+}
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -25,7 +33,21 @@ export async function GET(request: Request) {
     return noStoreJson({ error: 'organization_required' }, { status: 404 });
   }
 
-  const requestedOrganizationId = new URL(request.url).searchParams.get('organizationId');
+  const rateLimit = await checkDistributedRateLimit({
+    key: `gdpr:export:${organization.id}:${user.id}`,
+    limit: 10,
+    windowMs: 60 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
+  }
+
+  const requestedOrganizationId = validateRequestedOrganizationId(new URL(request.url).searchParams.get('organizationId'));
+  if (requestedOrganizationId === 'invalid') {
+    return noStoreJson({ error: 'invalid_organization_id' }, { status: 400 });
+  }
+
   if (requestedOrganizationId && requestedOrganizationId !== organization.id) {
     await createAuditEvent({
       organizationId: organization.id,
