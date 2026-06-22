@@ -49,7 +49,7 @@ const pageContent = {
     sections: [
       commonSections.security,
       { title: 'RBAC boundaries', body: 'Owner, admin, editor and viewer journeys are validated so visual actions match the expected permission model.' },
-      { title: 'Route health', body: 'Public and private surfaces are covered by Playwright route checks for unexpected 404, 500 and undefined links.' },
+      { title: 'Route health', body: 'Public and private surfaces are covered by Playwright route checks for unexpected 404, 500 and malformed dynamic links.' },
     ],
   },
   compliance: {
@@ -81,7 +81,7 @@ const pageContent = {
     sections: [
       { title: 'Can I start without a sales call?', body: 'Yes. Pricing and signup are public routes and remain part of the route health gate.' },
       { title: 'Are private pages protected?', body: 'Private workspace routes redirect anonymous visitors to localized login pages with the requested destination preserved.' },
-      { title: 'How is broken navigation prevented?', body: 'Critical public links, private redirects, /undefined patterns and stack traces are checked by CI.' },
+      { title: 'How is broken navigation prevented?', body: 'Critical public links, private redirects, malformed dynamic links and stack traces are checked by CI.' },
     ],
   },
   about: {
