@@ -15,7 +15,7 @@ function resetEnv() {
   delete process.env.UPSTASH_REDIS_REST_URL;
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
   delete process.env.VERCEL_ENV;
-  process.env.NODE_ENV = 'test';
+  Object.assign(process.env, { NODE_ENV: 'test' });
 }
 
 async function hit(category: RateLimitCategory, organizationId = 'org-a') {
@@ -65,7 +65,7 @@ describe('enterprise rate limiting', () => {
   });
 
   it('fails closed for high-risk production routes when Redis is not configured', async () => {
-    process.env.NODE_ENV = 'production';
+    Object.assign(process.env, { NODE_ENV: 'production' });
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     const result = await checkDistributedRateLimit({
@@ -83,7 +83,7 @@ describe('enterprise rate limiting', () => {
   });
 
   it('degrades open for low-risk production routes when Redis is not configured', async () => {
-    process.env.NODE_ENV = 'production';
+    Object.assign(process.env, { NODE_ENV: 'production' });
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     const result = await checkDistributedRateLimit({
