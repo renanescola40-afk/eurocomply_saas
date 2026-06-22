@@ -19,22 +19,22 @@ type PublicInfoContent = {
 const commonSections = {
   evidence: {
     title: 'Evidence-first assurance',
-    body: 'Critical controls are represented as routes, reports, audit entries and operational workflows rather than scattered spreadsheet notes.',
+    body: 'Security, compliance and operational claims must map to implementation, runtime evidence, provider evidence, legal review or a clearly disclosed limitation.',
   },
   security: {
     title: 'Security baseline',
-    body: 'Authentication, authorization, audit logging, document handling and public error boundaries are treated as release gates.',
+    body: 'Authentication, organization-scoped RBAC, RLS migrations, audit events, private document handling and release gates are treated as buyer-facing trust controls.',
   },
   operations: {
     title: 'Operational readiness',
-    body: 'Pricing, support, service commitments, privacy and processor information stay visible so buyers are not forced into a dead-end flow.',
+    body: 'Pricing, support, service commitments, privacy and subprocessor information stay reachable so buyers are not forced into a dead-end flow.',
   },
 };
 
 const pageContent = {
   trust: {
     eyebrow: 'Trust Center',
-    title: 'Compliance trust starts with predictable routes.',
+    title: 'Security and compliance transparency without compliance washing.',
     summary: 'EuroComply keeps security, compliance and operational assurance information reachable before procurement or customer review cycles begin.',
     primaryCta: 'Review security',
     secondaryCta: 'See pricing',
@@ -43,13 +43,13 @@ const pageContent = {
   security: {
     eyebrow: 'Security',
     title: 'Security controls for European compliance operations.',
-    summary: 'The platform is designed around authenticated workspaces, RBAC, protected routes, controlled errors and release gates that block broken critical paths.',
-    primaryCta: 'View compliance posture',
+    summary: 'The platform is designed around authenticated workspaces, organization-scoped RBAC, RLS, audit events and release gates. Certifications and external reviews are disclosed separately.',
+    primaryCta: 'Open trust center',
     secondaryCta: 'Contact team',
     sections: [
       commonSections.security,
-      { title: 'RBAC boundaries', body: 'Owner, admin, editor and viewer journeys are validated so visual actions match the expected permission model.' },
-      { title: 'Route health', body: 'Public and private surfaces are covered by Playwright route checks for unexpected 404, 500 and malformed dynamic links.' },
+      { title: 'RBAC boundaries', body: 'Owner, admin, editor, member and viewer roles map to explicit permissions in the server-side RBAC module.' },
+      { title: 'No unsupported claims', body: 'EuroComply does not currently claim SOC 2, ISO 27001 certification or completed third-party penetration testing.' },
     ],
   },
   compliance: {
@@ -64,7 +64,7 @@ const pageContent = {
     eyebrow: 'Resources',
     title: 'Practical guidance for operating compliance without route chaos.',
     summary: 'Use EuroComply to turn security questionnaires, reports, risks and audit evidence into repeatable operating workflows.',
-    primaryCta: 'Start free',
+    primaryCta: 'Open trust center',
     secondaryCta: 'See pricing',
     sections: [
       { title: 'Route inventory', body: 'Critical public and private routes are documented so teams know what must stay healthy before release.' },
@@ -74,14 +74,14 @@ const pageContent = {
   },
   faq: {
     eyebrow: 'FAQ',
-    title: 'Frequently asked route, trust and billing questions.',
+    title: 'Frequently asked trust, route and billing questions.',
     summary: 'Quick answers for visitors, buyers and workspace operators evaluating EuroComply.',
     primaryCta: 'View pricing',
-    secondaryCta: 'Contact team',
+    secondaryCta: 'Open trust center',
     sections: [
       { title: 'Can I start without a sales call?', body: 'Yes. Pricing and signup are public routes and remain part of the route health gate.' },
       { title: 'Are private pages protected?', body: 'Private workspace routes redirect anonymous visitors to localized login pages with the requested destination preserved.' },
-      { title: 'How is broken navigation prevented?', body: 'Critical public links, private redirects, malformed dynamic links and stack traces are checked by CI.' },
+      { title: 'Where are security answers?', body: 'The Trust Center and Security pages disclose current controls, gaps and procurement-safe documentation.' },
     ],
   },
   about: {
@@ -99,15 +99,15 @@ const pageContent = {
     primaryCta: 'Email contact',
     secondaryCta: 'View trust center',
     sections: [
-      { title: 'Security reviews', body: 'Send questionnaire, evidence and procurement questions to the team for review.' },
-      { title: 'Billing questions', body: 'Plan and subscription questions can start from public pricing and continue inside the workspace billing area.' },
-      { title: 'Support', body: 'Operational support routes are tracked as part of the public route inventory.' },
+      { title: 'Security reviews', body: 'Send questionnaires, evidence requests and procurement questions for review before relying on any claim.' },
+      { title: 'Responsible disclosure', body: 'Security vulnerabilities should be reported privately to renansilva2002@gmail.com.' },
+      { title: 'Support', body: 'Operational support expectations depend on the signed plan and any customer-specific agreement.' },
     ],
   },
   sla: {
     eyebrow: 'Service commitments',
     title: 'Reliability commitments start with reachable product surfaces.',
-    summary: 'Service readiness covers customer-facing information, private workspace flows and CI gates for critical route regressions.',
+    summary: 'Service readiness covers customer-facing information, private workspace flows and CI gates for critical route regressions. Contractual SLA terms require commercial and legal approval.',
     primaryCta: 'Check status',
     secondaryCta: 'Open trust center',
     sections: [commonSections.operations, commonSections.security, commonSections.evidence],
@@ -115,7 +115,7 @@ const pageContent = {
   privacy: {
     eyebrow: 'Privacy',
     title: 'Privacy information for compliance workspaces.',
-    summary: 'EuroComply keeps privacy, processing and subprocessors information accessible from public routes across supported locales.',
+    summary: 'EuroComply keeps privacy, processing and subprocessor information accessible from public routes across supported locales.',
     primaryCta: 'Data processing',
     secondaryCta: 'Subprocessors',
     sections: [commonSections.operations, commonSections.security, commonSections.evidence],
@@ -131,7 +131,7 @@ const pageContent = {
   dpa: {
     eyebrow: 'Data Processing Addendum',
     title: 'Data processing terms for European teams.',
-    summary: 'DPA information is part of the trust surface and is kept reachable from localized public routes.',
+    summary: 'DPA information is part of the trust surface and requires legal review before customer signature.',
     primaryCta: 'Privacy',
     secondaryCta: 'Subprocessors',
     sections: [commonSections.operations, commonSections.security, commonSections.evidence],
@@ -147,7 +147,7 @@ const pageContent = {
   status: {
     eyebrow: 'Status',
     title: 'Operational status and readiness.',
-    summary: 'Status information remains public and localizable so buyers and workspace users can find it without a dead route.',
+    summary: 'Status information remains public and localizable so buyers and workspace users can find it without a dead route. 24/7 staffed monitoring is not currently claimed.',
     primaryCta: 'Trust center',
     secondaryCta: 'Contact team',
     sections: [commonSections.operations, commonSections.security, commonSections.evidence],
@@ -166,13 +166,14 @@ const ctaHref: Record<string, string> = {
   'Start free': '/signup',
   'View pricing': '/pricing',
   'Explore trust': '/trust',
-  'Email contact': 'mailto:security@eurocomply.example',
+  'Email contact': 'mailto:renansilva2002@gmail.com',
   'Check status': '/status',
   'Data processing': '/data-processing',
   Subprocessors: '/subprocessors',
   Privacy: '/privacy',
   'Vendor assurance': '/vendor-assurance',
   'Trust center': '/trust',
+  'View trust center': '/trust',
 };
 
 function getHref(locale: string, label: string) {
@@ -192,6 +193,7 @@ export function PublicInfoPage({ locale, pageKey }: { locale: string; pageKey: P
           <Link href={`/${activeLocale}`} className="text-lg font-bold tracking-tight">EuroComply</Link>
           <nav className="flex items-center gap-2 text-sm">
             <Link href={`/${activeLocale}/pricing`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Pricing</Link>
+            <Link href={`/${activeLocale}/trust`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Trust Center</Link>
             <Link href={`/${activeLocale}/login`} className="rounded-full bg-white px-4 py-2 font-semibold text-black hover:bg-white/90">Sign in</Link>
           </nav>
         </div>
