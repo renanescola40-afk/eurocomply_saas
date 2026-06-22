@@ -1,227 +1,60 @@
 # Release Evidence Checklist
 
-This checklist defines the evidence package that must be attached to a EuroComply release before promoting it beyond private beta.
-
-It complements `docs/RELEASE_CANDIDATE_VALIDATION.md` by focusing on artifacts that cannot be proven by static source checks alone.
+This checklist defines the evidence package that must be attached to a EuroComply release before promoting it beyond private beta. It complements `docs/RELEASE_CANDIDATE_VALIDATION.md` by focusing on artifacts that cannot be proven by static source checks alone.
 
 ## Release identity
 
-For every release candidate, record:
-
-- Release version or tag
-- Commit SHA
-- Deployment target
-- Deployment URL
-- Release owner
-- Approval date
-- Rollback owner
-- Customer communication owner
+Record release version or tag, commit SHA, deployment target, deployment URL, release owner, approval date, rollback owner and customer communication owner.
 
 ## Build and CI evidence
 
-Attach evidence for:
-
-- Security CI completed successfully
-- Production build completed successfully
-- Vercel deployment completed successfully
-- No required security gate was skipped
-- Any failed run was triaged and rerun successfully
-
-Accepted evidence:
-
-- CI run URL or exported logs
-- Vercel deployment URL
-- Build output summary
-- Release approval note
+Attach CI run URL or logs, build output, deployment evidence, release approval note and confirmation that no required gate was skipped.
 
 ## Production environment evidence
 
-Attach evidence for:
-
-- `.env.example` matches the variables required by the release candidate
-- Production environment variables are configured in Vercel or the target hosting provider
-- Secret values are stored only in the provider secret store, not in source control
-- `AUDIT_CHAIN_SIGNING_SECRET` is configured before enabling audit-chain verification evidence
-- `EVIDENCE_PACK_SIGNING_SECRET` is configured before sharing Audit Evidence Packs externally
-- `HEALTHCHECK_TOKEN`, `CRON_SECRET`, and `INTERNAL_CRON_SECRET` are configured for protected operational routes
-- `SUPABASE_SERVICE_ROLE_KEY` is configured only as a server-side secret
-- Stripe, Resend, Upstash, and Sentry environment variables are set for the target release tier
-
-Accepted evidence:
-
-- Hosting-provider environment variable screenshot or export with values redacted
-- Release owner confirmation that all secrets are provider-managed
-- `.env.example` policy check output
-- Audit-chain signing smoke-test output
-- Evidence Pack signing smoke-test output
+Attach provider configuration evidence with values redacted, owner confirmation that sensitive settings are provider-managed, and smoke-test output for release-critical operational routes.
 
 ## Supply-chain evidence
 
-Attach evidence for:
-
-- Lockfile exists for the release candidate
-- Install command uses deterministic dependency resolution
-- Dependency audit output was generated
-- Audit findings were triaged
-- Any accepted vulnerability has owner, severity, rationale, and due date
-
-Accepted evidence:
-
-- Committed lockfile
-- Audit report artifact
-- Audit triage notes
-- Approved exception record
+Attach lockfile evidence, deterministic install output, dependency audit output, triage notes and approved exception records.
 
 ## Supabase and RLS evidence
 
-Attach evidence for:
+Attach live RLS validation output, project identifier, tenant-isolation review notes and confirmation that service-role paths were reviewed separately from user-session paths.
 
-- Live RLS validation completed against the target Supabase project
-- Critical tenant tables were checked
-- No cross-tenant read/write path was found
-- Service-role paths were reviewed separately from user-session paths
+## Audit and authorization evidence
 
-Accepted evidence:
+Attach evidence that critical authorization paths, role checks, audit event creation and audit listing are working in the target environment.
 
-- RLS validation output
-- Supabase project identifier
-- Screenshot or log excerpt showing validation success
-- Manual review note for critical tables
+## Billing evidence
 
-## Audit-chain evidence
+Attach checkout, portal and webhook validation evidence for the target environment. Billing changes should produce audit events and respect organization permissions.
 
-Attach evidence for:
+## Trust Center readiness
 
-- Hash-chain schema migration has been applied
-- Transactional append RPC migration has been applied
-- Audit-chain verification endpoint works on target environment
-- Concurrency behavior is covered by tests or manual validation
+Attach evidence that the public Trust Center and Security pages exist, footer and commercial routes link to Trust Center material, critical docs exist in `docs/trust/`, responsible disclosure contact is present, and `npm run security:trust-package` passes.
 
-Accepted evidence:
+Required Trust Center artifacts:
 
-- Migration deployment record
-- Verification endpoint output
-- Test run output
-- Manual concurrency validation note
+- `docs/trust/SECURITY_OVERVIEW.md`
+- `docs/trust/ARCHITECTURE_OVERVIEW.md`
+- `docs/trust/DATA_PROTECTION.md`
+- `docs/trust/ACCESS_CONTROL.md`
+- `docs/trust/ENCRYPTION.md`
+- `docs/trust/INCIDENT_RESPONSE.md`
+- `docs/trust/BACKUP_AND_RECOVERY.md`
+- `docs/trust/SUBPROCESSORS.md`
+- `docs/trust/SECURITY_FAQ.md`
+- `docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md`
 
-## Step-up authentication evidence
+## Claims guardrail evidence
 
-Attach evidence for:
-
-- Sensitive exports require step-up verification
-- Billing actions require step-up verification
-- GDPR delete requests require step-up verification
-- Production step-up provider is configured, or release explicitly remains private beta
-
-Accepted evidence:
-
-- Step-up test output
-- Provider configuration note
-- Manual request/response evidence
-- Exception record if provider is not configured
-
-## Upload content scanning evidence
-
-Attach evidence for:
-
-- Upload file type validation is active
-- Malware/content scan policy is configured for the target release tier
-- Enterprise releases fail closed when scanning is required and unavailable
-- Rejected uploads are audited
-
-Accepted evidence:
-
-- Upload security test output
-- Configuration note for scanning mode
-- Manual rejected-upload evidence
-- Audit event excerpt
-
-## Stripe and billing evidence
-
-Attach evidence for:
-
-- Checkout flow works in the target environment
-- Billing portal flow works in the target environment
-- Webhook signing is configured and invalid signatures fail closed
-- Webhook duplicates are idempotent through `public.stripe_events_processed`
-- Unsupported Stripe events are ignored without mutating billing state
-- Subscription created, updated, and deleted events are reflected in the app
-- Stripe `organization_id`, customer, subscription, and plan metadata are validated before local mutation
-- Billing actions require `manage_billing`, trusted origin/mutation checks, and step-up verification
-- Billing changes produce audit events
-
-Accepted evidence:
-
-- `docs/security/evidence/runtime/stripe-billing-validation.json`
-- Stripe test event logs
-- Webhook delivery logs
-- Checkout session evidence
-- Billing portal evidence
-- Focused test output for webhook signature, duplicate webhook, subscription sync, invalid plan, missing step-up, and portal permission denial
-
-## Observability evidence
-
-Attach evidence for:
-
-- Error reporting is configured
-- Production logs are accessible to the release owner
-- Security-sensitive failures are observable without leaking secrets
-- Rollback procedure is known and tested or documented
-
-Accepted evidence:
-
-- Monitoring dashboard link or screenshot
-- Error reporting test event
-- Logging access confirmation
-- Rollback runbook reference
+Before release, confirm public pages and sales/procurement documents do not claim unavailable certifications, completed external reviews, tested disaster recovery, guaranteed RTO/RPO, 24/7 staffed monitoring, or other evidence-dependent controls. Use `designed to support` when a control is planned or requires customer/provider evidence.
 
 ## Customer communication evidence
 
-Attach evidence for:
-
-- Customer communication owner assigned
-- Status page owner assigned or explicit exception recorded
-- Support owner assigned
-- Support macros or response guidance prepared
-- Security/compliance reviewer assigned for security, privacy, audit-chain, RLS, authorization, billing, or data integrity communications
-- SEV-1 and SEV-2 communication timing targets acknowledged
-- Customer communication plan reviewed before Go/No-Go
-
-Accepted evidence:
-
-- Completed `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md` review note
-- Release approval record naming the customer communication owner
-- Status page decision
-- Support readiness note
-- Customer notice draft, if applicable
-- Post-incident customer summary decision, if applicable
-
-## External review evidence
-
-For public production or enterprise procurement, attach evidence for:
-
-- External security review or pentest completed
-- Critical findings resolved
-- High findings resolved or formally accepted
-- Retest evidence attached where applicable
-
-Accepted evidence:
-
-- Pentest report
-- Finding triage spreadsheet
-- Retest confirmation
-- Risk acceptance sign-off
+Attach customer communication owner, support owner, status-page decision and reviewer sign-off for security, privacy, billing, data integrity and incident communications.
 
 ## Release decision
 
-A release may be promoted only when every required evidence section is either:
-
-- Complete
-- Not applicable to the target release tier
-- Explicitly accepted as a documented risk by the release owner
-
-Private beta may accept more documented exceptions.
-
-Public production should not accept exceptions for build, CI, RLS, audit-chain integrity, billing correctness, or customer communication ownership.
-
-Enterprise procurement should not accept exceptions for supply-chain triage, live RLS validation, step-up authentication, upload scanning policy, audit-chain integrity, customer communication readiness, or external review.
+A release may be promoted only when every required evidence section is complete, not applicable to the target release tier, or explicitly accepted as a documented risk by the release owner. Enterprise procurement should not accept exceptions for Trust Center readiness, supply-chain triage, live RLS validation, authorization, audit evidence, billing correctness or customer communication ownership.
