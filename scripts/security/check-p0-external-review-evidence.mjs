@@ -35,14 +35,14 @@ function fail(message) {
 }
 
 function finish() {
-  if (failures.length === 0) {
-    console.log('P0 external review evidence file is valid.');
-    return;
+  if (failures.length > 0) {
+    console.error('P0 external review evidence check failed:');
+    for (const failure of failures) console.error(`- ${failure}`);
+    process.exit(1);
   }
 
-  console.error('P0 external review evidence check failed:');
-  for (const failure of failures) console.error(`- ${failure}`);
-  process.exit(1);
+  console.log('P0 external review evidence file is valid.');
+  process.exit(0);
 }
 
 function isNonEmptyString(value) {
