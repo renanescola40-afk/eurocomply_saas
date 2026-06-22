@@ -1,0 +1,102 @@
+# EuroComply Performance Baseline
+
+Baseline date: 2026-06-22  
+Scope: public enterprise launch readiness for landing, authenticated dashboard, critical APIs, Supabase query posture and cache policy.
+
+## Production performance goals
+
+| Area | Target | Hard guardrail |
+| --- | ---: | ---: |
+| Landing DOMContentLoaded | <= 2.5s on warm production edge | <= 8s in Playwright smoke/dev |
+| Landing LCP | <= 2.5s p75 mobile | <= 4.0s p75 mobile |
+| Dashboard DOMContentLoaded | <= 3.5s warm authenticated org | <= 10s in Playwright smoke/dev |
+| Critical API health | HTTP 200 | no-store response headers |
+| Readiness API | protected by bearer token | unauthorized response is no-store |
+| Dashboard query previews | 5 rows per panel | all tenant-scoped by organization or user membership |
+| Supabase ordered lists | explicit range/limit | no unbounded ordered dashboard query |
+| Image optimization | trusted host allowlist | no `hostname: '**'` |
+
+## Current implementation baseline
+
+### Landing
+
+- `src/app/[locale]/page.tsx` renders the marketing homepage as a static ISR route with `revalidate = 300` and no direct Supabase user lookup.
+- Authenticated-user redirect from the landing page is handled in middleware, keeping the page itself cacheable.
+- Public marketing routes have `Cache-Control: public, s-maxage=300, stale-while-revalidate=3600` in `next.config.ts`.
+- Remote image optimization is restricted to an explicit allowlist plus `NEXT_IMAGE_REMOTE_HOSTS` and the configured Supabase hostname.
+
+### Dashboard
+
+- `src/app/[locale]/dashboard/organizations/page.tsx` is `force-dynamic` and `force-no-store`.
+- Dashboard data fetches call `noStore()` to avoid accidental App Router caching of tenant data.
+- Dashboard preview queries select explicit columns, scope by organization, and use `range(0, 4)`.
+- Organization membership lookup is bounded with `range(0, safeLimit - 1)`.
+- Metric history is bounded to a safe maximum of 52 points.
+
+### Supabase indexes
+
+Added migration:
+
+- `supabase/migrations/20260622120000_dashboard_performance_indexes.sql`
+
+Indexes are tenant-first and support the dashboard's common filters/sorts:
+
+- `organization_members(user_id, created_at, organization_id)`
+- `compliance_tasks(organization_id, status, due_date)`
+- `risks(organization_id, status, risk_score desc)`
+- `vendors(organization_id, review_status, risk_level, updated_at)`
+- `documents(organization_id, status, expires_at)`
+- `compliance_metric_snapshots(organization_id, created_at desc)`
+
+## Checks to run before public enterprise launch
+
+```bash
+npm ci
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+npm run security:no-store
+npm run security:rls
+node scripts/performance/audit.mjs
+npx playwright test tests/e2e/performance-smoke.spec.ts --project=chromium
+```
+
+For strict timing assertions in CI or a production-preview environment:
+
+```bash
+PERFORMANCE_SMOKE_STRICT=true \
+LANDING_DCL_BUDGET_MS=2500 \
+DASHBOARD_DCL_BUDGET_MS=3500 \
+npx playwright test tests/e2e/performance-smoke.spec.ts --project=chromium
+```
+
+## Lighthouse smoke
+
+Recommended production-preview command after deploy:
+
+```bash
+npx lighthouse "$E2E_BASE_URL/pt" \
+  --preset=desktop \
+  --only-categories=performance,accessibility,best-practices,seo \
+  --chrome-flags="--headless" \
+  --output=json \
+  --output-path=docs/operations/lighthouse-landing.json
+```
+
+Minimum launch gate:
+
+- Performance score >= 0.85 on desktop preview.
+- No Best Practices or SEO regressions caused by cache/image/config changes.
+- Landing LCP p75 from Vercel/Web Vitals remains <= 2.5s after warm traffic.
+
+## Follow-up monitoring
+
+- Track Vercel Web Vitals p75 and p95 for `/[locale]` and `/[locale]/dashboard/organizations`.
+- Monitor Supabase slow query logs for the indexed dashboard tables after migration.
+- Watch 401/503 rates for `/api/ready`; readiness failures should be actionable and protected from public cache.
+- Re-run `node scripts/performance/audit.mjs` after any new dashboard/API query or new client component added under `src/app`.
+
+## Known limitations of this baseline
+
+This document records code-level and smoke-test baselines. Real p75 mobile Core Web Vitals require production or preview telemetry after deployment; local Next dev timings are not a substitute for launch SLOs.
