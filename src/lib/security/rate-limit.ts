@@ -1,14 +1,26 @@
-export {
+import {
   RATE_LIMIT_POLICIES,
   buildRateLimitKey,
-  checkDistributedRateLimit,
+  checkDistributedRateLimit as checkServerDistributedRateLimit,
   checkRateLimitPolicy,
   clearRateLimitBuckets,
   getClientIpFromRequest,
   getRateLimitHeaders,
   hashRateLimitIp,
   isRateLimited,
+  type RateLimitOptions,
 } from '@/server/security/rate-limit';
+
+export {
+  RATE_LIMIT_POLICIES,
+  buildRateLimitKey,
+  checkRateLimitPolicy,
+  clearRateLimitBuckets,
+  getClientIpFromRequest,
+  getRateLimitHeaders,
+  hashRateLimitIp,
+  isRateLimited,
+};
 
 export type {
   RateLimitCategory,
@@ -20,6 +32,10 @@ export type {
   RateLimitSubject,
 } from '@/server/security/rate-limit';
 
-export function checkRateLimit() {
-  throw new Error('Synchronous local rate limiting is not supported. Use checkDistributedRateLimit instead.');
+export function checkDistributedRateLimit(options: RateLimitOptions) {
+  return checkServerDistributedRateLimit({
+    // Legacy callers predate categories and are mostly sensitive mutations; keep them fail-closed by default.
+    category: 'auth',
+    ...options,
+  });
 }
