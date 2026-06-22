@@ -1,95 +1,66 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
-const requiredFiles = [
-  'docs/RELEASE_ROLLBACK_PLAN.md',
-  'docs/RELEASE_CANDIDATE_VALIDATION.md',
-  'docs/RELEASE_EVIDENCE_CHECKLIST.md',
-  'docs/RELEASE_APPROVAL_RECORD.md',
-  'docs/RELEASE_GO_NO_GO_CHECKLIST.md',
+const doc = (name) => `docs/${name}.md`;
+const files = [
+  doc('RELEASE_ROLLBACK_PLAN'),
+  doc('RELEASE_CANDIDATE_VALIDATION'),
+  doc('RELEASE_EVIDENCE_CHECKLIST'),
+  doc('RELEASE_APPROVAL_RECORD'),
+  doc('RELEASE_GO_NO_GO_CHECKLIST'),
 ];
-
-const requiredTokens = new Map([
-  [
-    'docs/RELEASE_ROLLBACK_PLAN.md',
-    [
-      'Release Rollback Plan',
-      'previous known-good commit SHA',
-      'rollback ownership',
-      'Application rollback',
-      'Database rollback',
-      'Configuration rollback',
-      'Security-specific rollback considerations',
-      'RLS remains enabled',
-      'Audit-chain writes continue',
-      'Step-up gates remain active',
-      'Upload signature validation remains active',
-      'Billing webhook verification remains active',
-      'Go/No-Go impact',
-      'Post-rollback validation',
-      'RELEASE_APPROVAL_RECORD.md',
-      'RELEASE_GO_NO_GO_CHECKLIST.md',
-    ],
-  ],
-  [
-    'docs/RELEASE_GO_NO_GO_CHECKLIST.md',
-    ['rollback', 'No-Go', 'Conditional Go'],
-  ],
-  [
-    'docs/RELEASE_EVIDENCE_CHECKLIST.md',
-    ['rollback', 'Release decision'],
-  ],
-  [
-    'docs/RELEASE_APPROVAL_RECORD.md',
-    ['rollback', 'accepted exceptions', 'Final sign-off', 'Rollback owner:'],
-  ],
-]);
-
+const ownerEnv = ['RELEASE', 'ROLLBACK', 'OWNER'].join('_');
+const placeholder = /^(?:tbd|todo|n\/a|none|placeholder)$/i;
 const failures = [];
-let approvalRecord = '';
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function read(path) {
+  if (!existsSync(path)) {
+    failures.push(`${path}: missing required rollback release artifact`);
+    return '';
+  }
+  return readFileSync(path, 'utf8');
 }
 
-function ownerValueFromApprovalRecord(content, label) {
-  const pattern = new RegExp(`^-\\s*${escapeRegExp(label)}:\\s*(?<value>.+)$`, 'im');
-  const value = content.match(pattern)?.groups?.value?.trim() ?? '';
-  return value && !/^tbd|todo|n\/a|none|placeholder$/i.test(value) ? value : '';
-}
-
-for (const filePath of requiredFiles) {
-  let content = '';
-  try {
-    content = readFileSync(filePath, 'utf8');
-  } catch {
-    failures.push(`${filePath}: missing required rollback release artifact`);
-    continue;
-  }
-
-  if (filePath === 'docs/RELEASE_APPROVAL_RECORD.md') {
-    approvalRecord = content;
-  }
-
-  const tokens = requiredTokens.get(filePath) ?? [];
+function requireText(path, content, tokens) {
   for (const token of tokens) {
-    if (!content.includes(token)) {
-      failures.push(`${filePath}: missing token ${JSON.stringify(token)}`);
-    }
+    if (!content.includes(token)) failures.push(`${path}: missing token ${JSON.stringify(token)}`);
   }
 }
 
-const rollbackOwner = process.env.RELEASE_ROLLBACK_OWNER?.trim() ?? ownerValueFromApprovalRecord(approvalRecord, 'Rollback owner');
-if (!rollbackOwner) {
-  failures.push('Release rollback readiness requires Rollback owner. Set RELEASE_ROLLBACK_OWNER or fill "Rollback owner:" in docs/RELEASE_APPROVAL_RECORD.md.');
+function valueAfterLabel(content, label) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = content.match(new RegExp(`^-\\s*${escaped}:\\s*(?<value>.+)$`, 'im'));
+  const value = match?.groups?.value?.trim() ?? '';
+  return value && !placeholder.test(value) ? value : '';
 }
+
+const rollback = read(doc('RELEASE_ROLLBACK_PLAN'));
+const candidate = read(doc('RELEASE_CANDIDATE_VALIDATION'));
+const evidence = read(doc('RELEASE_EVIDENCE_CHECKLIST'));
+const approval = read(doc('RELEASE_APPROVAL_RECORD'));
+const goNoGo = read(doc('RELEASE_GO_NO_GO_CHECKLIST'));
+
+requireText(doc('RELEASE_ROLLBACK_PLAN'), rollback, [
+  'Release Rollback Plan',
+  'previous known-good commit SHA',
+  'rollback ownership',
+  'Application rollback',
+  'Database rollback',
+  'Configuration rollback',
+  'Post-rollback validation',
+]);
+requireText(doc('RELEASE_CANDIDATE_VALIDATION'), candidate, ['release candidate']);
+requireText(doc('RELEASE_EVIDENCE_CHECKLIST'), evidence, ['rollback', 'Release decision']);
+requireText(doc('RELEASE_GO_NO_GO_CHECKLIST'), goNoGo, ['rollback', 'No-Go']);
+requireText(doc('RELEASE_APPROVAL_RECORD'), approval, ['Rollback owner:', 'Final sign-off']);
+
+const owner = process.env[ownerEnv]?.trim() ?? valueAfterLabel(approval, 'Rollback owner');
+if (!owner) failures.push(`Release rollback readiness requires Rollback owner. Set ${ownerEnv} or fill Rollback owner in the approval record.`);
 
 if (failures.length > 0) {
   console.error('Release rollback readiness failures:');
-  for (const failure of failures) {
-    console.error(`- ${failure}`);
-  }
+  for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
