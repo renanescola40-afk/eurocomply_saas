@@ -45,7 +45,7 @@ const REQUIRED_FILES = [
 const REQUIRED_PHRASES = new Map([
   ['docs/trust/README.md', ['not currently ISO 27001 certified', 'does not currently have a SOC 2']],
   ['docs/trust/SECURITY_OVERVIEW.md', ['not currently ISO 27001 certified', 'does not currently have a SOC 2', 'renansilva2002@gmail.com']],
-  ['docs/trust/ARCHITECTURE_OVERVIEW.md', ['trust boundaries', 'designed to support enterprise review']],
+  ['docs/trust/ARCHITECTURE_OVERVIEW.md', ['Trust boundaries', 'designed to support enterprise review']],
   ['docs/trust/DATA_PROTECTION.md', ['Data categories', 'Retention', 'Customer-safe answers']],
   ['docs/trust/ACCESS_CONTROL.md', ['owner', 'admin', 'editor', 'member', 'viewer']],
   ['docs/trust/ENCRYPTION.md', ['does not currently offer end-to-end encryption', 'provider-managed encryption']],
