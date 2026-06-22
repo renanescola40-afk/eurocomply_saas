@@ -22,11 +22,6 @@
         "Recorded this blocked audit state directly in agent_log.json on the PR #311 branch.",
         "Did not merge PR #311."
       ],
-      "commits": [
-        "56293e972fdb7ae25c84c88a66e3d78d76fcee2e",
-        "f9580f48217f15f65f0d596007896239232d6d73",
-        "051907d0b5fee47f9c647564d31033159a6728c8"
-      ],
       "next_cycle_focus": [
         "Restore complete agent_log.json from main on fix/route-link-copy.",
         "Append this PR #311 audit entry without deleting historical entries.",
