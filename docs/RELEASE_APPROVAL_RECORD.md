@@ -5,20 +5,22 @@ This document is the release owner record used to approve or reject a EuroComply
 ## Release identity
 
 - Release name: EuroComply Final Release Readiness - 2026-06-22
-- Commit SHA: `7794d552d44784f906451b308b367d30c06ecc4c`
-- Date: 2026-06-22
+- Commit SHA: `9c9aef8987f9b4a63a6a76914c2bec88100f6f90`
+- Date: 2026-06-23
 - Release owner: @renansilva2002 / renanescola40-afk
-- Incident owner: **Not approved / must be assigned before release**
-- Rollback owner: **Not approved / must be assigned before release**
-- Customer communication owner: **Not approved / must be assigned before release**
-- Support owner: **Not approved / must be assigned before release**
+- Incident owner: tbd
+- Rollback owner: tbd
+- Customer communication owner: tbd
+- Support owner: tbd
 - Security owner: @renansilva2002 / renanescola40-afk
-- Approver: **No approval granted**
+- Approver: tbd
 - Target environment: Production / enterprise candidate
 - Deployment URL: **Missing; no successful deployment URL attached**
-- CI run URL: **Missing; no GitHub Actions run found for assessed merge commit**
-- Build log: **Missing; commit status records Vercel failure**
+- CI run URL: GitHub PR checks on `9c9aef8987f9b4a63a6a76914c2bec88100f6f90`; dedicated final validation bundle still missing
+- Build log: GitHub Full Security Suite passed build on prior observed run; Vercel deployment still rate-limited/failed
 - Decision report: `docs/RELEASE_FINAL_READINESS_REPORT.md`
+
+`tbd` is intentionally used for missing owner/approver fields because release gate scripts reject it. Do not replace these values with prose; use named accountable owners only when they have formally accepted the role.
 
 ## Required checks
 
@@ -32,31 +34,31 @@ The release owner must confirm each item before approval.
 | Release evidence checklist completed | Complete for assessment | `docs/RELEASE_EVIDENCE_CHECKLIST.md` updated with No-Go evidence map |
 | Release candidate validation runbook reviewed | Partial | Required docs exist, but command execution evidence is missing |
 | Exceptions have owner and expiration date | Complete for current No-Go | Exceptions below have owner and expiry date |
-| Incident owner named | Missing | Blocks Go |
-| Rollback owner named | Missing | Blocks Go |
-| Customer communication owner named | Missing | Blocks public/enterprise Go |
-| Support owner named | Missing | Blocks public/enterprise Go |
+| Incident owner named | Missing | `tbd`; blocks Go |
+| Rollback owner named | Missing | `tbd`; blocks Go |
+| Customer communication owner named | Missing | `tbd`; blocks public/enterprise Go |
+| Support owner named | Missing | `tbd`; blocks public/enterprise Go |
 
 ### Build and CI
 
 | Gate | Status | Evidence / note |
 | --- | --- | --- |
-| `npm ci` | Missing evidence | No install log attached |
-| `npm run lint` | Missing evidence | No lint log attached |
-| `npm run typecheck` | Missing evidence | No typecheck log attached |
-| `npm run test` | Missing evidence | No unit test log attached |
-| `npm run test:e2e` | Missing evidence | No Playwright log attached |
-| `npm run build` | Failed / missing evidence | Vercel status is failure; no successful build log attached |
-| `npm run security:ci` | Missing evidence | No security CI log attached |
-| `npm run release:readiness` | Missing evidence | No release readiness log attached |
+| `npm ci` | Passed in PR CI | GitHub PR checks passed dependency install, but dedicated release-validation bundle is still missing |
+| `npm run lint` | Passed in PR CI | GitHub PR checks passed lint |
+| `npm run typecheck` | Passed in PR CI | GitHub PR checks passed typecheck |
+| `npm run test` | Passed in PR CI | GitHub PR checks passed unit tests |
+| `npm run test:e2e` | Passed in Full Security Suite | Full Security Suite route/e2e gates passed in observed PR checks |
+| `npm run build` | Passed in GitHub CI / failed Vercel deploy | Full Security Suite build passed; Vercel status remains failure due deployment rate limit |
+| `npm run security:ci` | Passed in PR CI | RISCK COMPLY Security CI / Full Security Suite security gates passed |
+| `npm run release:readiness` | Missing dedicated artifact | No release-validation `summary.json`, `summary.md`, and command logs attached |
 
 ### Supply-chain
 
 | Gate | Status | Evidence / note |
 | --- | --- | --- |
-| Lockfile status reviewed | Partial | Register says Complete; no current `npm ci` log attached |
-| Dependency audit status reviewed | Missing release artifact | No `npm audit` output for assessed commit attached |
-| High-risk findings fixed or accepted | Missing release artifact | Cannot verify without audit output and triage notes |
+| Lockfile status reviewed | Complete in PR CI | Dependency install and dependency review checks passed |
+| Dependency audit status reviewed | Passed in Full Security Suite | Core CI, build and npm audit passed in observed PR checks |
+| High-risk findings fixed or accepted | Passed in PR CI | Dependency Review and npm audit checks passed for the PR branch |
 
 ### Database and tenant isolation
 
@@ -105,9 +107,9 @@ The release owner must confirm each item before approval.
 | Error monitoring reviewed | Complete as repository evidence | `docs/security/evidence/runtime/observability-readiness.json` |
 | Audit logging reviewed | Partial | Audit-chain evidence exists; target live verification missing |
 | Alerting runbook reviewed | Complete as repository evidence | `docs/operations/ALERTING.md` referenced by evidence |
-| Incident response owner confirmed | Missing | Blocks Go |
-| Rollback owner confirmed | Missing | Blocks Go |
-| Customer communication owner confirmed | Missing | Blocks public/enterprise Go |
+| Incident response owner confirmed | Missing | `tbd`; blocks Go |
+| Rollback owner confirmed | Missing | `tbd`; blocks Go |
+| Customer communication owner confirmed | Missing | `tbd`; blocks public/enterprise Go |
 
 ### External review
 
@@ -141,7 +143,7 @@ These exceptions are documented for remediation tracking only. They are not appr
 
 | Area | Exception | Owner | Expiration | Mitigation |
 | --- | --- | --- | --- | --- |
-| CI/build/deploy | Full validation command logs are missing and Vercel status is failure | @renansilva2002 / renanescola40-afk | 2026-06-23 | Run full command chain in CI, fix Vercel build-rate-limit failure, attach successful build log and deployment URL |
+| CI/build/deploy | Dedicated final validation command logs are missing and Vercel status is failure | @renansilva2002 / renanescola40-afk | 2026-06-23 | Run full command chain in CI, fix Vercel build-rate-limit failure, attach successful build log and deployment URL |
 | RLS live validation | Supabase live RLS validation is Open/not run | @renansilva2002 / renanescola40-afk | 2026-06-25 | Run `scripts/security/run-supabase-live-tenant-isolation.mjs --update-register` against target project and attach output |
 | External review | External review/pentest is Open/not started | @renansilva2002 / renanescola40-afk | 2026-07-06 | Complete real external review/pentest, triage findings, attach retest/risk acceptance evidence |
 | Stripe execution | Stripe evidence is implementation-complete but CI execution is pending | @renansilva2002 / renanescola40-afk | 2026-06-24 | Run focused Stripe tests and webhook gates in CI and attach logs |
@@ -165,11 +167,11 @@ Minimum rollback plan before Go:
 ## Final sign-off
 
 - Release owner: @renansilva2002 / renanescola40-afk
-- Incident owner: **Missing**
-- Rollback owner: **Missing**
-- Customer communication owner: **Missing**
-- Support owner: **Missing**
+- Incident owner: tbd
+- Rollback owner: tbd
+- Customer communication owner: tbd
+- Support owner: tbd
 - Security owner: @renansilva2002 / renanescola40-afk
-- Approver: **No approval granted**
-- Date: 2026-06-22
-- Notes: Release blocked by missing CI/build/deployment evidence, open RLS live validation, missing external review, missing owner sign-off, missing live provider evidence for enterprise MFA/IdP, and pending Stripe CI execution.
+- Approver: tbd
+- Date: 2026-06-23
+- Notes: Release blocked by missing dedicated final validation bundle, Vercel deployment rate limit/failure, open RLS live validation, missing external review, missing owner sign-off, missing live provider evidence for enterprise MFA/IdP, and pending focused Stripe runtime execution.
