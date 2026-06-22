@@ -182,13 +182,8 @@ export function ProfileClient({ locale }: { locale: string }) {
     showToast('Exportação GDPR descarregada.');
   }
 
-  async function requestGdprDelete() {
-    const response = await fetch('/api/gdpr/delete-request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason: 'Pedido iniciado pelo painel de perfil.' }),
-    });
-    showToast(response.ok ? 'Pedido GDPR enviado para revisão.' : 'Não foi possível criar o pedido GDPR.');
+  function requestGdprDelete() {
+    window.location.href = `/${locale}/dashboard/privacy`;
   }
 
   return (
@@ -250,7 +245,7 @@ export function ProfileClient({ locale }: { locale: string }) {
         </section>
 
         <section id="privacy" className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div className="flex items-start gap-3"><div className="rounded-2xl bg-primary/10 p-3 text-primary"><ShieldCheck className="h-5 w-5" /></div><div><h2 className="text-2xl font-semibold">Privacidade & GDPR</h2><p className="mt-1 text-sm text-muted-foreground">Ações protegidas por sessão. Exportação gera auditoria e notificação; apagamento fica pendente para revisão legal.</p></div></div><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" className="rounded-full" onClick={downloadGdprExport}><Download className="h-4 w-4" /> Exportar dados</Button><Button type="button" variant="destructive" className="rounded-full" onClick={requestGdprDelete}><Trash2 className="h-4 w-4" /> Solicitar apagamento</Button></div></div>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div className="flex items-start gap-3"><div className="rounded-2xl bg-primary/10 p-3 text-primary"><ShieldCheck className="h-5 w-5" /></div><div><h2 className="text-2xl font-semibold">Privacidade & GDPR</h2><p className="mt-1 text-sm text-muted-foreground">Ações protegidas por sessão. Exportação gera auditoria e notificação; apagamento fica pendente para revisão legal.</p></div></div><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" className="rounded-full" onClick={downloadGdprExport}><Download className="h-4 w-4" /> Exportar dados</Button><Button type="button" variant="destructive" className="rounded-full" onClick={requestGdprDelete}><Trash2 className="h-4 w-4" /> Abrir centro GDPR</Button></div></div>
         </section>
       </form>
     </main>
