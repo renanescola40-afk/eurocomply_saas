@@ -22,11 +22,11 @@ Current normalized organization roles are:
 | --- | --- |
 | `owner` | Full organization administration, billing, team, settings, read/write/export. |
 | `admin` | Full operational administration similar to owner. |
-| `editor` | Operational write access for documents, vendors, risks, AI governance/incidents, and export. |
+| `editor` | Target role for operational write access in the Trust Center RBAC model. Some legacy server paths may still rely on owner/admin/member checks until they are migrated to the shared RBAC helper. |
 | `member` | Limited operational contribution and read access. |
-| `viewer` | Read-only access to selected organization resources. |
+| `viewer` | Target role for read-only access in the Trust Center RBAC model. Some legacy server paths may still rely on owner/admin/member checks until they are migrated to the shared RBAC helper. |
 
-Unknown or unsupported role labels normalize to `viewer` to avoid privilege escalation.
+Unknown or unsupported role labels normalize to `viewer` to avoid privilege escalation. Customer-facing claims about `editor` and `viewer` must be scoped to flows that use the shared RBAC helper and must not describe legacy owner/admin/member-only paths as fully migrated.
 
 ## Permissions
 
@@ -54,8 +54,8 @@ Application RBAC and Supabase RLS are complementary. RBAC is used in server-side
 
 ## Enterprise gaps
 
-Enterprise SSO/SAML is planned but not currently available. Tenant-enforced MFA is planned but not currently available as an organization policy. Fine-grained custom roles are not currently documented as available beyond the implemented role matrix.
+Enterprise SSO/SAML is planned but not currently available. Tenant-enforced MFA is planned but not currently available as an organization policy. Fine-grained custom roles are not currently documented as available beyond the implemented Trust Center RBAC model, and legacy owner/admin/member-only flows must be treated as migration gaps until they explicitly use the shared RBAC helper.
 
 ## Customer-safe answer
 
-Use: "EuroComply currently implements organization-scoped roles and permissions for owner, admin, editor, member, and viewer, backed by server-side membership checks and Supabase RLS migrations. Enterprise SSO/SAML and tenant-enforced MFA are roadmap items and must not be presented as available until implemented."
+Use: "EuroComply currently implements organization-scoped roles and permissions for owner, admin, member, and Trust Center RBAC-model editor/viewer access where flows use the shared RBAC helper, backed by server-side membership checks and Supabase RLS migrations. Some legacy server paths are still owner/admin/member-only and are tracked as migration gaps. Enterprise SSO/SAML and tenant-enforced MFA are roadmap items and must not be presented as available until implemented."

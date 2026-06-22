@@ -95,7 +95,11 @@ export async function GET(request: Request) {
   }
 
   const exportBody = await collectOrganizationDataExport({
-    organization,
+    organization: {
+      id: organization.id,
+      name: organization.name ?? null,
+      slug: organization.slug ?? null,
+    },
     subject: {
       userId: user.id,
       email: user.email,
