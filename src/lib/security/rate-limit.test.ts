@@ -34,4 +34,16 @@ describe('checkDistributedRateLimit local fallback', () => {
     expect(afterReset.allowed).toBe(true);
     expect(afterReset.remaining).toBe(0);
   });
+
+  it('infers enterprise policy categories for legacy sensitive keys', async () => {
+    const billing = await checkDistributedRateLimit({ key: 'billing:checkout:org:user', limit: 5, windowMs: 1000, now: 0 });
+    const upload = await checkDistributedRateLimit({ key: 'documents:upload:org:user', limit: 5, windowMs: 1000, now: 0 });
+    const stepUp = await checkDistributedRateLimit({ key: 'step-up:challenge:org:user', limit: 5, windowMs: 1000, now: 0 });
+    const exportLimit = await checkDistributedRateLimit({ key: 'evidence-pack:export:org:user', limit: 5, windowMs: 1000, now: 0 });
+
+    expect(billing.category).toBe('billing');
+    expect(upload.category).toBe('upload');
+    expect(stepUp.category).toBe('step-up');
+    expect(exportLimit.category).toBe('export');
+  });
 });
