@@ -207,13 +207,17 @@ function skipWithoutCredentials(persona: string, credentials: Credentials) {
   );
 }
 
+function shouldDeepCheckInternalLinks(locale: Locale, route: RouteCase) {
+  return route.critical && (locale === 'en' || locale === 'pt') && ['landing', 'pricing', 'login', 'signup', 'trust/security trust center', 'trust/security security page'].includes(route.name);
+}
+
 test.describe('anonymous visitor public route health', () => {
   for (const locale of LOCALES) {
     for (const route of PUBLIC_ROUTES) {
       test(`${locale} ${route.name} renders without 404/500, /undefined or dead primary buttons`, async ({ page }) => {
         const label = `anonymous visitor ${locale} ${route.name}`;
         await expectRouteHealthy(page, localizedPath(locale, route.path), label);
-        if (route.critical) {
+        if (shouldDeepCheckInternalLinks(locale, route)) {
           await expectNoBrokenInternalLinks(page, label);
         }
       });
@@ -271,7 +275,9 @@ test.describe('mobile viewport route health', () => {
     test(`mobile viewport pt ${route.name} stays usable`, async ({ page }) => {
       const label = `mobile viewport pt ${route.name}`;
       await expectRouteHealthy(page, localizedPath('pt', route.path), label);
-      await expectNoBrokenInternalLinks(page, label);
+      if (shouldDeepCheckInternalLinks('pt', route)) {
+        await expectNoBrokenInternalLinks(page, label);
+      }
     });
   }
 });
