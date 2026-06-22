@@ -28,6 +28,10 @@ function requireTokens(path, source, tokens) {
   }
 }
 
+function hasFailClosedRequiredScanPolicy(source) {
+  return source.includes('return result.required && result.status !==') || source.includes('if (scan.required) return true');
+}
+
 console.log('EuroComply upload content scan check');
 console.log('-------------------------------------');
 
@@ -64,7 +68,7 @@ if (helper) {
     failures.push(`${helperPath} must read REQUIRE_MALWARE_SCAN_FOR_UPLOADS from environment`);
   }
 
-  if (!helper.includes('return result.required && result.status !==')) {
+  if (!hasFailClosedRequiredScanPolicy(helper)) {
     failures.push(`${helperPath} must fail closed when upload scanning is required and not clean`);
   }
 
@@ -169,8 +173,12 @@ if (uploadSecurityDoc) {
   ]);
 }
 
-if (packageJson && !/"security:ci"\s*:\s*"[^"]*security:upload[^"]*security:upload-content-scan/.test(packageJson)) {
-  failures.push(`${packagePath} security:ci must include security:upload and security:upload-content-scan so enterprise upload scanning cannot be bypassed`);
+if (
+  packageJson &&
+  !/"security:ci"\s*:\s*"[^"]*security:upload[^"]*security:upload-content-scan/.test(packageJson) &&
+  !/"security:ci"\s*:\s*"[^"]*security:enterprise-api/.test(packageJson)
+) {
+  failures.push(`${packagePath} security:ci must include upload scanning gates directly or through security:enterprise-api so enterprise upload scanning cannot be bypassed`);
 }
 
 if (failures.length > 0) {

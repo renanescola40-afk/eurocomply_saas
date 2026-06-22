@@ -3,7 +3,6 @@ import { dirname, resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
-const testSetupFile = resolve(rootDir, 'tests/setup-env.ts');
 
 export default defineConfig({
   resolve: {
@@ -14,6 +13,6 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
-    setupFiles: [testSetupFile],
+    setupFiles: [resolve(rootDir, 'tests/setup-env.ts')],
   },
 });

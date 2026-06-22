@@ -17,19 +17,30 @@ const PUBLIC_ROUTES = [
   '/auth',
   '/pricing',
   '/checkout',
+  '/resources',
   '/faq',
   '/about',
   '/contact',
   '/recuperar-senha',
   '/atualizar-senha',
+  '/trust',
+  '/security',
+  '/compliance',
+  '/data-processing',
+  '/sla',
+  '/privacy',
+  '/terms',
+  '/dpa',
+  '/subprocessors',
+  '/status',
   '/politica-privacidade',
   '/termos-servico',
 ];
 
 const LEGACY_UNDEFINED_ROUTES: Record<string, string> = {
   '/dashboard/organizations/vendors': '/vendor-assurance',
-  '/dashboard/organizations/risks': '/riscos',
-  '/dashboard/organizations/documents': '/documentos',
+  '/dashboard/organizations/risks': '/dashboard/organizations/risks',
+  '/dashboard/organizations/documents': '/dashboard/organizations/documents',
   '/dashboard/organizations/tasks': '/aprovacoes',
   '/dashboard/organizations/reports': '/dashboard/organizations/reports-governance',
   '/pricing': '/pricing',
@@ -215,5 +226,5 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api|next_api|.*\\..*).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };

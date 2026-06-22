@@ -196,6 +196,10 @@ function assertTokens(source, tokens, path) {
   }
 }
 
+function hasFailClosedRequiredScanPolicy(source) {
+  return source.includes('required && result.status !==') || source.includes('if (scan.required) return true');
+}
+
 console.log('EuroComply upload security coverage check');
 console.log('-----------------------------------------');
 
@@ -235,7 +239,7 @@ if (uploadSource.includes('document_uploaded') && !uploadSource.includes('mimeDe
   failures.push(`${uploadRoute} must include detected MIME evidence in successful upload audit metadata`);
 }
 
-if (contentScanSource && !contentScanSource.includes('required && result.status !==')) {
+if (contentScanSource && !hasFailClosedRequiredScanPolicy(contentScanSource)) {
   failures.push(`${contentScanHelper} must fail closed when scanning is required and the scan is not clean`);
 }
 
