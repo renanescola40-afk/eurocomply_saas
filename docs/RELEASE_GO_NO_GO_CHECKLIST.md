@@ -8,6 +8,10 @@ It complements:
 - `docs/RELEASE_EVIDENCE_CHECKLIST.md`
 - `docs/RELEASE_APPROVAL_RECORD.md`
 - `docs/RELEASE_APPROVAL_LINKAGE.md`
+- `docs/security/PENTEST_SCOPE.md`
+- `docs/security/PRE_PENTEST_CHECKLIST.md`
+- `docs/security/PENTEST_FINDINGS_TRIAGE.md`
+- `docs/security/PENTEST_RETEST_RECORD.md`
 
 ## Decision outcomes
 
@@ -33,6 +37,9 @@ A release may be marked **Go** only when all of these are true:
 - Incident owner, rollback owner and customer communication owner are recorded.
 - Rollback owner and rollback trigger are recorded.
 - External review, penetration test, or compensating review decision is recorded.
+- For enterprise release, `docs/security/evidence/runtime/external-security-review-or-pentest.json` records `status: Complete` from a real external report, not the placeholder.
+- For enterprise release, critical/high external findings are resolved or formally accepted.
+- For enterprise release, no critical external finding has pending, failed, or missing retest evidence.
 
 ## Conditional Go criteria
 
@@ -43,6 +50,8 @@ A **Conditional Go** may be approved only when:
 - No open exception disables payment integrity controls for paid plans.
 - Every exception has an owner, severity, target fix date, and customer-impact note.
 - The approver explicitly accepts the remaining risk in `docs/RELEASE_APPROVAL_RECORD.md`.
+
+Enterprise release cannot use **Conditional Go** to bypass the external security review gate. Formal acceptance of individual findings is allowed only when recorded with approver, expiry, rationale, and compensating controls.
 
 ## Automatic No-Go criteria
 
@@ -59,6 +68,9 @@ A release is **No-Go** if any of the following is true:
 - The incident owner is missing or unowned.
 - The rollback plan is missing or unowned.
 - A high or critical vulnerability is untriaged.
+- Enterprise release is attempted while external security review evidence is missing, `Open`, or not `Complete`.
+- Enterprise release is attempted while a critical/high external finding is neither resolved nor formally accepted.
+- Enterprise release is attempted while a critical external finding has pending, failed, or missing retest evidence.
 
 ## Evidence mapping
 
@@ -74,7 +86,7 @@ The final release reviewer should map each decision area to evidence:
 | Step-up auth | protected action coverage and provider status | Go / Conditional Go / No-Go |
 | Billing | Stripe checkout, portal, webhook evidence | Go / Conditional Go / No-Go |
 | Observability | logging, alerting, incident owner | Go / Conditional Go / No-Go |
-| External review | pentest/review report or accepted deferral | Go / Conditional Go / No-Go |
+| External review | `docs/security/evidence/runtime/external-security-review-or-pentest.json`, report reference, finding triage, retest record | Go / Conditional Go / No-Go |
 
 ## Final decision record
 
@@ -91,4 +103,10 @@ The final decision must be copied into `docs/RELEASE_APPROVAL_RECORD.md` with:
 
 ## Enterprise rule
 
-For enterprise procurement, **Conditional Go** is acceptable only for operational or evidence-timing gaps. It is not acceptable for unresolved tenant isolation, RBAC, audit-chain, billing integrity, or customer data protection gaps.
+For enterprise procurement, **Conditional Go** is acceptable only for operational or evidence-timing gaps. It is not acceptable for unresolved tenant isolation, RBAC, audit-chain, billing integrity, customer data protection gaps, or missing external security review evidence.
+
+Before enterprise release, run:
+
+```bash
+npm run release:enterprise-readiness
+```

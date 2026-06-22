@@ -74,6 +74,36 @@ function checkSupabaseOpenPlaceholder(file, evidence) {
   return true;
 }
 
+function checkExternalReviewOpenPlaceholder(file, evidence) {
+  if (evidence.evidenceItem !== 'external-security-review-or-pentest' || evidence.status !== 'Open') return false;
+
+  requireString(file, evidence, 'reviewer', 3);
+  requireString(file, evidence, 'summary', 40);
+  requireArray(file, evidence, 'evidenceLocations', 1);
+
+  if (!hasValidRedactionText(evidence)) {
+    failures.push(`${file} missing redaction confirmation`);
+  }
+
+  if (evidence.outcome !== 'not_started' && evidence.outcome !== 'not_run') {
+    failures.push(`${file} Open external review evidence must have outcome not_started or not_run`);
+  }
+
+  if (!String(evidence.releaseGate ?? '').toLowerCase().includes('blocked')) {
+    failures.push(`${file} Open external review evidence must keep enterprise release blocked`);
+  }
+
+  if (evidence.evidenceIntegrity?.placeholderOnly !== true) {
+    failures.push(`${file} Open external review evidence must be marked placeholderOnly`);
+  }
+
+  if (evidence.evidenceIntegrity?.realExternalReportAttached !== false) {
+    failures.push(`${file} Open external review evidence must confirm no real external report is attached`);
+  }
+
+  return true;
+}
+
 const files = listJsonFiles(evidenceDir);
 
 console.log('EuroComply P0 runtime evidence file check');
@@ -93,7 +123,7 @@ for (const file of files) {
     failures.push(`${file} has invalid evidenceItem: ${evidence.evidenceItem}`);
   }
 
-  if (checkSupabaseOpenPlaceholder(file, evidence)) {
+  if (checkSupabaseOpenPlaceholder(file, evidence) || checkExternalReviewOpenPlaceholder(file, evidence)) {
     continue;
   }
 
