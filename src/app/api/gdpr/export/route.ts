@@ -1,13 +1,13 @@
 import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
-import { getCurrentUser } from '@/server/queries/auth';
-import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { listDocuments } from '@/server/queries/documents';
-import { listAuditEventsForUser, listNotificationsForUser } from '@/server/queries/compliance-activity';
+import { collectOrganizationDataExport } from '@/server/privacy/gdpr';
 import { createAuditEvent } from '@/server/queries/audit-events';
+import { getCurrentUser } from '@/server/queries/auth';
 import { createNotification } from '@/server/queries/notifications';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
+import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
@@ -23,6 +23,30 @@ export async function GET(request: Request) {
 
   if (!organization) {
     return noStoreJson({ error: 'organization_required' }, { status: 404 });
+  }
+
+  const requestedOrganizationId = new URL(request.url).searchParams.get('organizationId');
+  if (requestedOrganizationId && requestedOrganizationId !== organization.id) {
+    await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'gdpr_export_denied',
+      entityType: 'organization',
+      entityId: requestedOrganizationId,
+      metadata: { reason: 'cross_tenant_export_denied', currentOrganizationId: organization.id },
+    });
+
+    return noStoreJson({ error: 'cross_tenant_export_denied' }, { status: 403 });
+  }
+
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: 'export_data',
+  });
+
+  if (!permission.ok) {
+    return permissionDeniedResponse(permission);
   }
 
   const entitlementCheck = await assertGdprSelfServiceEnabled(organization.id);
@@ -48,11 +72,13 @@ export async function GET(request: Request) {
     return stepUp.response;
   }
 
-  const [documents, auditEvents, notifications] = await Promise.all([
-    listDocuments(organization.id),
-    listAuditEventsForUser(user.id),
-    listNotificationsForUser(user.id),
-  ]);
+  const exportBody = await collectOrganizationDataExport({
+    organization,
+    subject: {
+      userId: user.id,
+      email: user.email,
+    },
+  });
 
   await createAuditEvent({
     organizationId: organization.id,
@@ -63,6 +89,9 @@ export async function GET(request: Request) {
     metadata: {
       scope: 'organization_export',
       plan: entitlementCheck.entitlements.plan,
+      role: permission.role,
+      tableKeys: Object.keys(exportBody.tables),
+      unavailableTables: exportBody.unavailableTables,
       stepUpAction: stepUp.assessment.action,
       stepUpVerifiedAt: stepUp.assessment.verifiedAt,
       stepUpTokenType: 'signed_hmac',
@@ -77,21 +106,8 @@ export async function GET(request: Request) {
   });
 
   const body = {
-    generatedAt: new Date().toISOString(),
-    subject: {
-      userId: user.id,
-      email: user.email,
-    },
-    organization: {
-      id: organization.id,
-      name: organization.name,
-      slug: organization.slug,
-    },
-    documents,
-    auditEvents,
-    notifications,
+    ...exportBody,
     stepUp: publicStepUpSummary(stepUp.assessment),
-    note: 'Exportação simulada para GDPR Artigo 20. Adicionar riscos, fornecedores, tarefas e ficheiros quando os schemas estiverem finalizados.',
   };
 
   const fileName = sanitizeDocumentDownloadFileName(
@@ -104,6 +120,7 @@ export async function GET(request: Request) {
       'Content-Type': 'application/json; charset=utf-8',
       'Content-Disposition': `attachment; filename="${fileName}"`,
       'X-Content-Type-Options': 'nosniff',
+      'X-Robots-Tag': 'noindex, nofollow',
     },
   });
 }
