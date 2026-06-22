@@ -8,6 +8,7 @@ EuroComply applies centralized server-side rate limiting from `src/server/securi
 - Development and test use an in-memory bucket so local iteration and unit tests do not require Redis.
 - High-risk production policies fail closed when Redis is missing or unavailable.
 - Low-risk production policies fail open according to policy so health/read-only surfaces do not become an outage amplifier.
+- The Upstash pipeline parser accepts both REST object results and tuple-style results so production enforcement does not silently undercount when client response shapes differ.
 
 ## Policies
 
@@ -81,3 +82,5 @@ npm run security:enterprise-api
 ```
 
 The tests verify requests below the limit pass, requests over the limit block, high-risk production routes fail closed without Redis, low-risk routes degrade according to policy, tenant-scoped keys do not interfere with one another, legacy sensitive keys map to the intended enterprise policy, and raw IP addresses are not exposed in limiter keys.
+
+CI should also exercise a mocked Upstash REST pipeline response with object-style `result` fields and verify that counts above policy limit block rather than undercounting.
