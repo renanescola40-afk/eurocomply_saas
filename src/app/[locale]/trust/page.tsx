@@ -28,7 +28,7 @@ const TRUST_COPY: Record<SupportedLocale, TrustCopy> = {
     eyebrow: 'Trust Center',
     title: 'Security, privacy and operational transparency without compliance washing.',
     description: 'EuroComply publishes current controls, open gaps and procurement-ready documentation so enterprise buyers can evaluate the platform honestly.',
-    assurance: 'EuroComply makes no external assurance claims at this time. The platform publishes current controls, open gaps and release evidence for enterprise review.',
+    assurance: 'EuroComply makes no SOC 2 or ISO 27001 claim at this time. The platform publishes current controls, open gaps and release evidence for enterprise review.',
     resourceLabel: 'Open resource',
     cards: baseCards,
   },
