@@ -4,108 +4,80 @@ import { notFound } from 'next/navigation';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
 
+type TrustCard = { title: string; description: string; href: string };
+
 type TrustCopy = {
   eyebrow: string;
   title: string;
   description: string;
   assurance: string;
   resourceLabel: string;
-  cards: Array<{ title: string; description: string; href: string }>;
+  cards: TrustCard[];
 };
 
-const baseCards = [
-  { title: 'Security overview', description: 'Authentication, RBAC, RLS, audit logs, monitoring posture and current non-claims.', href: '/security' },
-  { title: 'Architecture', description: 'Next.js, Supabase, server-only operations, trust boundaries and data flow.', href: '/security' },
-  { title: 'Data protection', description: 'Data categories, retention posture, deletion/export support and DPA readiness.', href: '/data-processing' },
-  { title: 'Subprocessors', description: 'Provider register for hosting, database, billing, CI/CD and conditional services.', href: '/subprocessors' },
-  { title: 'Responsible disclosure', description: 'Private contact path for coordinated security reports.', href: '/contact' },
+const baseCards: TrustCard[] = [
+  { title: 'Overview', description: 'Current controls, operating model and known release limits.', href: '/security' },
+  { title: 'Architecture', description: 'Application stack, trust boundaries and data flow.', href: '/security' },
+  { title: 'Data protection', description: 'Data categories, retention posture and DPA readiness.', href: '/data-processing' },
+  { title: 'Providers', description: 'Hosting, database, billing, CI/CD and conditional services.', href: '/subprocessors' },
+  { title: 'Contact', description: 'Contact path for product, privacy and trust questions.', href: '/contact' },
 ];
 
 const TRUST_COPY: Record<SupportedLocale, TrustCopy> = {
   en: {
     eyebrow: 'Trust Center',
     title: 'Security, privacy and operational transparency without compliance washing.',
-    description: 'EuroComply publishes current controls, open gaps and procurement-ready documentation so enterprise buyers can evaluate the platform honestly.',
-    assurance: 'EuroComply does not currently claim SOC 2, ISO 27001 certification or completed third-party penetration testing. The platform is designed to support enterprise review through RBAC, RLS, audit logging, controlled data flows and release evidence gates.',
+    description: 'EuroComply publishes current controls, open gaps and procurement documentation so buyers can evaluate the platform honestly.',
+    assurance: 'EuroComply only claims controls that are currently evidenced. Open release gaps remain visible until they are closed with runtime evidence.',
     resourceLabel: 'Open resource',
     cards: baseCards,
   },
   pt: {
     eyebrow: 'Centro de Confiança',
     title: 'Segurança, privacidade e transparência operacional sem compliance washing.',
-    description: 'O EuroComply publica controlos atuais, lacunas abertas e documentação pronta para procurement enterprise.',
-    assurance: 'O EuroComply não afirma SOC 2, certificação ISO 27001 ou teste externo concluído. A plataforma foi desenhada para apoiar avaliação enterprise com RBAC, RLS, audit logs e release gates.',
+    description: 'O EuroComply publica controlos atuais, lacunas abertas e documentação para avaliação honesta.',
+    assurance: 'O EuroComply só afirma controlos com evidência atual. Lacunas de release continuam visíveis até serem fechadas com evidência runtime.',
     resourceLabel: 'Abrir recurso',
-    cards: [
-      { title: 'Visão geral de segurança', description: 'Autenticação, RBAC, RLS, audit logs, monitorização e claims atuais.', href: '/security' },
-      { title: 'Arquitetura', description: 'Next.js, Supabase, operações server-only, boundaries e fluxo de dados.', href: '/security' },
-      { title: 'Proteção de dados', description: 'Categorias de dados, retenção, export/delete e prontidão DPA.', href: '/data-processing' },
-      { title: 'Subprocessadores', description: 'Registo de hosting, base de dados, billing, CI/CD e serviços condicionais.', href: '/subprocessors' },
-      { title: 'Divulgação responsável', description: 'Contacto privado para reports de segurança coordenados.', href: '/contact' },
-    ],
+    cards: baseCards,
   },
   es: {
     eyebrow: 'Centro de Confianza',
     title: 'Seguridad, privacidad y transparencia operacional sin compliance washing.',
-    description: 'EuroComply publica controles actuales, brechas abiertas y documentación lista para evaluación enterprise.',
-    assurance: 'EuroComply no afirma SOC 2, certificación ISO 27001 ni revisión externa completada. Está diseñado para apoyar revisión enterprise con RBAC, RLS, auditoría y evidencia de release.',
+    description: 'EuroComply publica controles actuales, brechas abiertas y documentación para evaluación honesta.',
+    assurance: 'EuroComply solo afirma controles con evidencia actual. Las brechas de release siguen visibles hasta cerrarse con evidencia runtime.',
     resourceLabel: 'Abrir recurso',
-    cards: [
-      { title: 'Resumen de seguridad', description: 'Autenticación, RBAC, RLS, audit logs, monitoreo y no-claims actuales.', href: '/security' },
-      { title: 'Arquitectura', description: 'Next.js, Supabase, operaciones server-only y flujo de datos.', href: '/security' },
-      { title: 'Protección de datos', description: 'Categorías de datos, retención y preparación DPA.', href: '/data-processing' },
-      { title: 'Subprocesadores', description: 'Registro de proveedores y servicios condicionales.', href: '/subprocessors' },
-      { title: 'Divulgación responsable', description: 'Contacto privado para reportes coordinados.', href: '/contact' },
-    ],
+    cards: baseCards,
   },
   fr: {
     eyebrow: 'Centre de Confiance',
     title: 'Sécurité, confidentialité et transparence opérationnelle sans compliance washing.',
-    description: 'EuroComply publie les contrôles actuels, les limites ouvertes et les documents prêts pour revue enterprise.',
-    assurance: 'EuroComply ne revendique pas SOC 2, certification ISO 27001 ou revue externe terminée. La plateforme est conçue pour soutenir les revues enterprise avec RBAC, RLS, audit logs et preuves de release.',
+    description: 'EuroComply publie les contrôles actuels, les limites ouvertes et les documents de revue.',
+    assurance: 'EuroComply ne revendique que les contrôles actuellement prouvés. Les écarts de release restent visibles jusqu’à preuve runtime.',
     resourceLabel: 'Ouvrir la ressource',
-    cards: [
-      { title: 'Vue sécurité', description: 'Authentification, RBAC, RLS, audit logs, monitoring et non-claims actuels.', href: '/security' },
-      { title: 'Architecture', description: 'Next.js, Supabase, opérations server-only et flux de données.', href: '/security' },
-      { title: 'Protection des données', description: 'Catégories de données, rétention et préparation DPA.', href: '/data-processing' },
-      { title: 'Sous-traitants', description: 'Registre fournisseurs et services conditionnels.', href: '/subprocessors' },
-      { title: 'Divulgation responsable', description: 'Contact privé pour signalements coordonnés.', href: '/contact' },
-    ],
+    cards: baseCards,
   },
   it: {
     eyebrow: 'Centro Fiducia',
     title: 'Sicurezza, privacy e trasparenza operativa senza compliance washing.',
-    description: 'EuroComply pubblica controlli attuali, gap aperti e documentazione pronta per review enterprise.',
-    assurance: 'EuroComply non dichiara SOC 2, certificazione ISO 27001 o review esterna completata. È progettato per supportare review enterprise con RBAC, RLS, audit log ed evidenze di release.',
+    description: 'EuroComply pubblica controlli attuali, gap aperti e documentazione per una valutazione onesta.',
+    assurance: 'EuroComply dichiara solo controlli supportati da evidenza attuale. I gap di release restano visibili fino alla prova runtime.',
     resourceLabel: 'Apri risorsa',
-    cards: [
-      { title: 'Panoramica sicurezza', description: 'Autenticazione, RBAC, RLS, audit log, monitoring e non-claim attuali.', href: '/security' },
-      { title: 'Architettura', description: 'Next.js, Supabase, operazioni server-only e flusso dati.', href: '/security' },
-      { title: 'Protezione dati', description: 'Categorie dati, retention e preparazione DPA.', href: '/data-processing' },
-      { title: 'Subprocessori', description: 'Registro provider e servizi condizionali.', href: '/subprocessors' },
-      { title: 'Responsible disclosure', description: 'Contatto privato per report coordinati.', href: '/contact' },
-    ],
+    cards: baseCards,
   },
   de: {
     eyebrow: 'Trust Center',
     title: 'Sicherheit, Datenschutz und operative Transparenz ohne Compliance Washing.',
-    description: 'EuroComply veröffentlicht aktuelle Kontrollen, offene Lücken und Dokumentation für Enterprise Reviews.',
-    assurance: 'EuroComply beansprucht derzeit weder SOC 2, ISO 27001-Zertifizierung noch eine abgeschlossene externe Prüfung. Die Plattform ist für Enterprise Reviews mit RBAC, RLS, Audit Logs und Release Evidence Gates ausgelegt.',
+    description: 'EuroComply veröffentlicht aktuelle Kontrollen, offene Lücken und Dokumentation für eine ehrliche Bewertung.',
+    assurance: 'EuroComply beansprucht nur aktuell belegte Kontrollen. Release-Lücken bleiben sichtbar, bis Runtime-Nachweise vorliegen.',
     resourceLabel: 'Ressource öffnen',
-    cards: [
-      { title: 'Security Overview', description: 'Authentifizierung, RBAC, RLS, Audit Logs, Monitoring und aktuelle Non-Claims.', href: '/security' },
-      { title: 'Architektur', description: 'Next.js, Supabase, server-only Operationen und Datenfluss.', href: '/security' },
-      { title: 'Datenschutz', description: 'Datenkategorien, Retention und DPA Readiness.', href: '/data-processing' },
-      { title: 'Unterauftragsverarbeiter', description: 'Register für Provider und bedingte Dienste.', href: '/subprocessors' },
-      { title: 'Responsible Disclosure', description: 'Privater Kontaktpfad für koordinierte Reports.', href: '/contact' },
-    ],
+    cards: baseCards,
   },
 };
 
 export default async function TrustCenterPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isSupportedLocale(locale)) notFound();
-  const page = copy[locale];
+  const copy = TRUST_COPY[locale];
 
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white">
