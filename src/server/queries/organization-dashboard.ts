@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { normalizeOrganization } from '@/lib/dashboard/organization-adapter';
 import { getOrganizationEntitlements, getPlanEntitlements } from '@/server/billing/entitlements';
@@ -10,6 +11,9 @@ import {
   type DashboardSummary,
   type DashboardTrendSnapshot,
 } from './dashboard';
+
+const DASHBOARD_PREVIEW_PAGE_SIZE = 5;
+const DASHBOARD_PREVIEW_LAST_INDEX = DASHBOARD_PREVIEW_PAGE_SIZE - 1;
 
 type QueryError = {
   code?: string;
@@ -120,7 +124,7 @@ async function listDashboardTasks(organizationId: string) {
     .eq('organization_id', organizationId)
     .neq('status', 'done')
     .order('due_date', { ascending: true })
-    .limit(5);
+    .range(0, DASHBOARD_PREVIEW_LAST_INDEX);
 
   if (error) {
     logDashboardPreviewError('tasks', error);
@@ -143,7 +147,7 @@ async function listDashboardTopRisks(organizationId: string) {
     .eq('organization_id', organizationId)
     .neq('status', 'closed')
     .order('risk_score', { ascending: false })
-    .limit(5);
+    .range(0, DASHBOARD_PREVIEW_LAST_INDEX);
 
   if (error) {
     logDashboardPreviewError('risks', error);
@@ -163,7 +167,7 @@ async function listDashboardVendorsRequiringReview(organizationId: string) {
     .eq('organization_id', organizationId)
     .or('review_status.neq.approved,risk_level.eq.high')
     .order('updated_at', { ascending: true })
-    .limit(5);
+    .range(0, DASHBOARD_PREVIEW_LAST_INDEX);
 
   if (error) {
     logDashboardPreviewError('vendors', error);
@@ -184,7 +188,7 @@ async function listDashboardDocumentsExpiringSoon(organizationId: string) {
     .not('expires_at', 'is', null)
     .neq('status', 'archived')
     .order('expires_at', { ascending: true })
-    .limit(5);
+    .range(0, DASHBOARD_PREVIEW_LAST_INDEX);
 
   if (error) {
     logDashboardPreviewError('documents', error);
@@ -195,6 +199,8 @@ async function listDashboardDocumentsExpiringSoon(organizationId: string) {
 }
 
 export async function getOrganizationDashboardData(userId: string, organizationSlug?: string) {
+  noStore();
+
   const organization = await getCurrentOrganizationForUser(userId, organizationSlug);
 
   if (!organization) {
