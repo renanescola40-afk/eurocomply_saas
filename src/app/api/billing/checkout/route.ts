@@ -1,101 +1,93 @@
-import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
-import { rateLimitResponse } from '@/lib/security/rate-limit-response';
+import { z } from 'zod';
+
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan } from '@/server/billing/plans';
-import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
-import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
+import {
+  requireApiUser,
+  requirePermission,
+  requireTrustedMutation,
+  secureApiError,
+} from '@/server/security/api-guards';
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 const CHECKOUT_JSON_MAX_BYTES = 2 * 1024;
 
+const checkoutBodySchema = z.object({
+  plan: z.string().trim().min(1).max(64),
+  locale: z.string().trim().max(16).optional().default('en'),
+});
+
+function normalizeCheckoutLocale(locale: string) {
+  return locale.match(/^(en|pt|es|fr|it|de)$/) ? locale : 'en';
+}
+
 export async function POST(request: Request) {
-  const originDenied = assertTrustedOrigin(request);
-  if (originDenied) return originDenied;
+  try {
+    const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
+      maxBytes: CHECKOUT_JSON_MAX_BYTES,
+    }).catch(() => null);
+    const parsedBody = checkoutBodySchema.safeParse(body);
 
-  const user = await getCurrentUser();
+    if (!parsedBody.success || !isSelfServePlan(parsedBody.data.plan)) {
+      return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
+    }
 
-  if (!user) {
-    return noStoreJson({ error: 'authentication_required' }, { status: 401 });
-  }
+    const user = await requireApiUser();
+    const organization = await getCurrentOrganizationForUser(user.id);
 
-  const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
-    maxBytes: CHECKOUT_JSON_MAX_BYTES,
-  }).catch(() => null);
-  const plan = typeof body?.plan === 'string' ? body.plan : undefined;
-  const localeValue = typeof body?.locale === 'string' ? body.locale : '';
-  const locale = localeValue.match(/^(en|pt|es|fr|it|de)$/) ? localeValue : 'en';
+    if (!organization?.id) {
+      return noStoreJson({ error: 'organization_required' }, { status: 400 });
+    }
 
-  if (!plan || !isSelfServePlan(plan)) {
-    return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
-  }
+    const permission = await requirePermission({
+      userId: user.id,
+      organizationId: organization.id,
+      permission: 'manage_billing',
+    });
 
-  const organization = await getCurrentOrganizationForUser(user.id);
+    const mutationDenied = await requireTrustedMutation(request, {
+      rateLimit: {
+        key: `billing:checkout:${organization.id}:${user.id}`,
+        limit: 10,
+        windowMs: 60 * 1000,
+      },
+    });
 
-  if (!organization?.id) {
-    return noStoreJson({ error: 'organization_required' }, { status: 400 });
-  }
+    if (mutationDenied) return mutationDenied;
 
-  const permission = await assertOrganizationPermission({
-    userId: user.id,
-    organizationId: organization.id,
-    permission: 'manage_billing',
-  });
+    const stepUp = await requireStepUpForRequest({
+      request,
+      action: 'manage_billing',
+      userId: user.id,
+      organizationId: organization.id,
+    });
 
-  if (!permission.ok) {
-    return permissionDeniedResponse(permission);
-  }
+    if (!stepUp.ok) {
+      return stepUp.response;
+    }
 
-  const rateLimit = await checkDistributedRateLimit({
-    key: `billing:checkout:${organization.id}:${user.id}`,
-    limit: 10,
-    windowMs: 60 * 1000,
-  });
+    const returnBaseUrl = resolveBillingReturnBaseUrl(request.url);
 
-  if (!rateLimit.allowed) {
-    return rateLimitResponse(rateLimit);
-  }
+    if (!returnBaseUrl.ok) {
+      return noStoreJson({ error: 'billing_app_url_unavailable' }, { status: 503 });
+    }
 
-  const stepUp = await requireStepUpForRequest({
-    request,
-    action: 'manage_billing',
-    userId: user.id,
-    organizationId: organization.id,
-  });
+    const { plan } = parsedBody.data;
+    const locale = normalizeCheckoutLocale(parsedBody.data.locale);
+    const stripe = getStripeClient();
+    const priceId = getStripePriceId(plan);
 
-  if (!stepUp.ok) {
-    return stepUp.response;
-  }
-
-  const returnBaseUrl = resolveBillingReturnBaseUrl(request.url);
-
-  if (!returnBaseUrl.ok) {
-    return noStoreJson({ error: 'billing_app_url_unavailable' }, { status: 503 });
-  }
-
-  const stripe = getStripeClient();
-  const priceId = getStripePriceId(plan);
-
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    customer_email: user.email ?? undefined,
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
-    cancel_url: `${returnBaseUrl.appUrl}/${locale}/pricing?checkout=cancelled`,
-    client_reference_id: organization.id,
-    metadata: {
-      organization_id: organization.id,
-      user_id: user.id,
-      plan,
-      actor_role: permission.role ?? 'unknown',
-      step_up_action: stepUp.assessment.action,
-      step_up_verified_at: stepUp.assessment.verifiedAt ?? '',
-    },
-    subscription_data: {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer_email: user.email ?? undefined,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
+      cancel_url: `${returnBaseUrl.appUrl}/${locale}/pricing?checkout=cancelled`,
+      client_reference_id: organization.id,
       metadata: {
         organization_id: organization.id,
         user_id: user.id,
@@ -104,12 +96,24 @@ export async function POST(request: Request) {
         step_up_action: stepUp.assessment.action,
         step_up_verified_at: stepUp.assessment.verifiedAt ?? '',
       },
-    },
-    allow_promotion_codes: true,
-  });
+      subscription_data: {
+        metadata: {
+          organization_id: organization.id,
+          user_id: user.id,
+          plan,
+          actor_role: permission.role ?? 'unknown',
+          step_up_action: stepUp.assessment.action,
+          step_up_verified_at: stepUp.assessment.verifiedAt ?? '',
+        },
+      },
+      allow_promotion_codes: true,
+    });
 
-  return noStoreJson({
-    url: session.url,
-    stepUp: publicStepUpSummary(stepUp.assessment),
-  });
+    return noStoreJson({
+      url: session.url,
+      stepUp: publicStepUpSummary(stepUp.assessment),
+    });
+  } catch (error) {
+    return secureApiError(error);
+  }
 }
