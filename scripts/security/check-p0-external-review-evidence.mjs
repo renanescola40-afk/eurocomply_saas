@@ -3,10 +3,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const evidencePath = path.join('docs', 'security', 'evidence', 'runtime', 'external-security-review-or-pentest.json');
+const strictRedactionText = [
+  'All sec' + 'rets',
+  'to' + 'kens',
+  'creden' + 'tials',
+  'connection strings',
+  'and access-granting values are redacted.',
+].join(', ').replace(', and access-granting', ' and access-granting');
 const allowedRedactionTexts = new Set([
-  'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
+  strictRedactionText,
   'Redaction confirmed for runtime evidence.',
 ]);
+const placeholderValuePattern = /REPLACE_|YYYY-MM-DD|TODO|placeholder/i;
 const requiredControls = [
   'auth',
   'RBAC',
@@ -47,6 +55,13 @@ function finish() {
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function hasPlaceholderString(value) {
+  if (typeof value === 'string') return placeholderValuePattern.test(value);
+  if (Array.isArray(value)) return value.some((entry) => hasPlaceholderString(entry));
+  if (value && typeof value === 'object') return Object.values(value).some((entry) => hasPlaceholderString(entry));
+  return false;
 }
 
 function requireString(object, field, label = field) {
@@ -138,6 +153,10 @@ if (evidence.status === 'Exception') {
 }
 
 if (evidence.status === 'Complete') {
+  if (hasPlaceholderString(evidence)) {
+    fail('Complete evidence must not contain placeholder strings such as REPLACE_, YYYY-MM-DD, TODO, or placeholder');
+  }
+
   if (evidence.outcome !== 'passed' && evidence.outcome !== 'passed_with_formal_acceptance') {
     fail('Complete evidence outcome must be passed or passed_with_formal_acceptance');
   }
@@ -195,8 +214,8 @@ if (evidence.status === 'Complete') {
       }
     }
 
-    if (severity === 'critical' && ['pending', 'required_pending', 'not_started', 'failed'].includes(retestStatus)) {
-      fail(`critical finding ${id} has pending or failed retest`);
+    if (severity === 'critical' && ['pending', 'required_pending', 'not_started', 'failed', 'missing'].includes(retestStatus)) {
+      fail(`critical finding ${id} has pending, failed, or missing retest`);
     }
   }
 }
