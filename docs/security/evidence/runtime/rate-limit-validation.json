@@ -40,7 +40,8 @@
   "auditEvents": {
     "action": "security.rate_limit.blocked",
     "rawIpLogged": false,
-    "metadata": ["category", "failureMode", "reason", "remaining", "retryAfterSeconds", "sanitizedKey"]
+    "rawLimiterKeyLogged": false,
+    "metadata": ["category", "failureMode", "reason", "remaining", "retryAfterSeconds", "keyHash"]
   },
   "tests": [
     {
@@ -80,6 +81,6 @@
   ],
   "notes": [
     "This evidence file records expected validation coverage. CI/runtime command output should be attached by the pipeline after execution.",
-    "The implementation avoids logging full IP addresses; only salted hashes are used in limiter keys and audit metadata."
+    "The implementation avoids logging full IP addresses and raw limiter keys. Audit metadata stores only keyHash."
   ]
 }
