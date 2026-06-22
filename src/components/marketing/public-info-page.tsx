@@ -49,7 +49,7 @@ const pageContent = {
     sections: [
       commonSections.security,
       { title: 'RBAC boundaries', body: 'Owner, admin, editor and viewer journeys are validated so visual actions match the expected permission model.' },
-      { title: 'Route health', body: 'Public and private surfaces are covered by Playwright route checks for unexpected 404, 500 and undefined links.' },
+      { title: 'Route health', body: 'Public and private surfaces are covered by Playwright route checks for unexpected 404, 500 and undefined route patterns.' },
     ],
   },
   compliance: {
@@ -81,7 +81,7 @@ const pageContent = {
     sections: [
       { title: 'Can I start without a sales call?', body: 'Yes. Pricing and signup are public routes and remain part of the route health gate.' },
       { title: 'Are private pages protected?', body: 'Private workspace routes redirect anonymous visitors to localized login pages with the requested destination preserved.' },
-      { title: 'How is broken navigation prevented?', body: 'Critical public links, private redirects, /undefined patterns and stack traces are checked by CI.' },
+      { title: 'How is broken navigation prevented?', body: 'Critical public links, private redirects, undefined route patterns and stack traces are checked by CI.' },
     ],
   },
   about: {
@@ -218,9 +218,9 @@ export function PublicInfoPage({ locale, pageKey }: { locale: string; pageKey: P
 
       <section className="mx-auto grid max-w-7xl gap-6 px-6 py-16 md:grid-cols-3">
         {content.sections.map((section) => (
-          <article key={section.title} className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-xl">
+          <article key={section.title} className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/20">
             <h2 className="text-xl font-semibold">{section.title}</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-400">{section.body}</p>
+            <p className="mt-3 leading-7 text-slate-300">{section.body}</p>
           </article>
         ))}
       </section>
