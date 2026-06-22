@@ -191,8 +191,7 @@ export default async function middleware(req: NextRequest) {
     const isPublic = isPublicRoute(pathname, locale);
     const isMarketingHome = pathname === `/${locale}`;
     const isAuthEntryRoute = pathname === `/${locale}/login` || pathname === `/${locale}/signup`;
-    const shouldCheckMarketingHomeAuth = isMarketingHome && hasSupabaseAuthCookie(req);
-    const shouldCheckAuth = !isPublic || isAuthEntryRoute || shouldCheckMarketingHomeAuth;
+    const shouldCheckAuth = !isPublic || isAuthEntryRoute || isMarketingHome;
     const authState = shouldCheckAuth
       ? await getAuthState(req)
       : { isAuthenticated: false, supabaseResponse: NextResponse.next({ request: req }) };
