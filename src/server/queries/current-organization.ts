@@ -57,12 +57,6 @@ function normalizeMembership(membership: RawOrganizationMembership): CurrentOrga
   };
 }
 
-export async function getUserOrganizationMemberships(userId: string, limit = 25) {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
-
-  const safeLimit = Math.max(1, Math.min(limit, 100));
-  const { data, error } = await supabase
 export async function getUserOrganizationMemberships(
   userId: string,
   options: GetUserOrganizationMembershipsOptions = {},
@@ -70,19 +64,13 @@ export async function getUserOrganizationMemberships(
   const supabase = tryCreateAdminClient();
   if (!supabase) return [];
 
-  let query = supabase
+  const safeLimit = Math.max(1, Math.min(options.limit ?? 25, 100));
+  const { data, error } = await supabase
     .from('organization_members')
     .select('organization_id, role, organizations(id, name, slug)')
     .eq('user_id', userId)
     .order('created_at', { ascending: true })
     .range(0, safeLimit - 1);
-
-  if (typeof options.limit === 'number') {
-    const safeLimit = Math.max(1, Math.min(options.limit, 100));
-    query = query.range(0, safeLimit - 1);
-  }
-
-  const { data, error } = await query;
 
   if (error) {
     console.warn('[organization] memberships_lookup_failed', { code: error.code ?? 'unknown' });
