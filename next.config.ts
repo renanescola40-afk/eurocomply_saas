@@ -70,15 +70,6 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       {
-        source: '/:locale(en|pt|es|fr|it|de)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, s-maxage=300, stale-while-revalidate=3600',
-          },
-        ],
-      },
-      {
         source: '/:locale(en|pt|es|fr|it|de)/(pricing|resources|faq|about|contact|trust|security|compliance|privacy|terms|data-processing|sla|dpa|subprocessors|status)',
         headers: [
           {
