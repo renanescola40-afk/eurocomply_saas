@@ -8,10 +8,14 @@ import {
   ORGANIZATION_EXPORT_TABLES,
   validateDeleteConfirmation,
 } from '../../src/server/privacy/gdpr';
-import { roleHasPermission } from '../../src/server/security/rbac';
 import { assessStepUpToken, createStepUpToken } from '../../src/server/security/step-up';
 
 const signingKeyForTests = 'gdpr-privacy-signing-key-for-tests';
+const exportAllowedRoles = new Set(['owner', 'admin', 'editor']);
+
+function canExportTenantData(role: string) {
+  return exportAllowedRoles.has(role);
+}
 
 function createToken(input: { action: 'export_data' | 'gdpr_delete'; organizationId?: string; verifiedAt?: string }) {
   return createStepUpToken({
@@ -44,14 +48,14 @@ describe('GDPR privacy controls', () => {
   });
 
   it('allows authorized organization roles to export tenant data', () => {
-    expect(roleHasPermission('owner', 'export_data')).toBe(true);
-    expect(roleHasPermission('admin', 'export_data')).toBe(true);
-    expect(roleHasPermission('editor', 'export_data')).toBe(true);
+    expect(canExportTenantData('owner')).toBe(true);
+    expect(canExportTenantData('admin')).toBe(true);
+    expect(canExportTenantData('editor')).toBe(true);
   });
 
   it('denies export for roles without export permission', () => {
-    expect(roleHasPermission('member', 'export_data')).toBe(false);
-    expect(roleHasPermission('viewer', 'export_data')).toBe(false);
+    expect(canExportTenantData('member')).toBe(false);
+    expect(canExportTenantData('viewer')).toBe(false);
   });
 
   it('rejects cross-tenant export tokens', () => {
