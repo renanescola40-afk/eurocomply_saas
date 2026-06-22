@@ -66,7 +66,11 @@ const pageContent = {
     summary: 'Use EuroComply to turn security questionnaires, reports, risks and audit evidence into repeatable operating workflows.',
     primaryCta: 'Open trust center',
     secondaryCta: 'See pricing',
-    sections: [commonSections.evidence, commonSections.security, commonSections.operations],
+    sections: [
+      { title: 'Route inventory', body: 'Critical public and private routes are documented so teams know what must stay healthy before release.' },
+      { title: 'Quality gates', body: 'Static link checks and Playwright E2E tests guard against broken links, dead flows and unexpected errors.' },
+      commonSections.evidence,
+    ],
   },
   faq: {
     eyebrow: 'FAQ',
@@ -104,8 +108,8 @@ const pageContent = {
     eyebrow: 'Service commitments',
     title: 'Reliability commitments start with reachable product surfaces.',
     summary: 'Service readiness covers customer-facing information, private workspace flows and CI gates for critical route regressions. Contractual SLA terms require commercial and legal approval.',
-    primaryCta: 'Open trust center',
-    secondaryCta: 'Contact team',
+    primaryCta: 'Check status',
+    secondaryCta: 'Open trust center',
     sections: [commonSections.operations, commonSections.security, commonSections.evidence],
   },
   privacy: {
@@ -136,7 +140,7 @@ const pageContent = {
     eyebrow: 'Subprocessors',
     title: 'Subprocessor transparency for security reviews.',
     summary: 'Vendor and processor visibility is a core trust requirement for procurement and customer assurance.',
-    primaryCta: 'Data processing',
+    primaryCta: 'Vendor assurance',
     secondaryCta: 'Trust center',
     sections: [commonSections.evidence, commonSections.operations, commonSections.security],
   },
@@ -155,17 +159,21 @@ export type PublicInfoPageKey = keyof typeof pageContent;
 const ctaHref: Record<string, string> = {
   'Review security': '/security',
   'See pricing': '/pricing',
-  'Open trust center': '/trust',
+  'View compliance posture': '/compliance',
   'Contact team': '/contact',
+  'Open trust center': '/trust',
   'Create account': '/signup',
+  'Start free': '/signup',
   'View pricing': '/pricing',
   'Explore trust': '/trust',
   'Email contact': 'mailto:renansilva2002@gmail.com',
-  'View trust center': '/trust',
+  'Check status': '/status',
   'Data processing': '/data-processing',
   Subprocessors: '/subprocessors',
   Privacy: '/privacy',
+  'Vendor assurance': '/vendor-assurance',
   'Trust center': '/trust',
+  'View trust center': '/trust',
 };
 
 function getHref(locale: string, label: string) {
