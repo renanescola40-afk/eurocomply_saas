@@ -1,5 +1,6 @@
-export default function Page({ params }: { params: { locale: string } }) {
-  const title = params.locale === 'pt' ? 'Tarefas' : 'Tasks';
+export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const title = locale === 'pt' ? 'Tarefas' : 'Tasks';
 
   return <h1>{title}</h1>;
 }
