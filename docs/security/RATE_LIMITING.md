@@ -54,6 +54,8 @@ Blocked HTTP routes return either `429` for normal exhaustion or `503` when a fa
 
 `RateLimit-Reset` is emitted as seconds until reset to keep the response compatible with retry clients and avoid leaking internal wall-clock details.
 
+Known exception: `/api/security/step-up/challenge` still has a route-local deny response using legacy `X-RateLimit-*` headers. The limiter policy is applied, but the response helper should be migrated to `rateLimitResponse()` in a checkout/CI environment because connector-side editing of that route was blocked.
+
 ## Audit events
 
 `rateLimitResponse()` writes `security.rate_limit.blocked` audit events for policies marked `auditOnBlock`. Metadata includes category, failure mode, reason, remaining count, retry-after seconds, and `keyHash`. The audit event never stores the raw limiter key or raw IP address.
