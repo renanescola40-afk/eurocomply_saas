@@ -111,9 +111,6 @@ function runCommand(step) {
 
 const results = [];
 for (const command of commands) {
-  // Run every step even after a failure so the release evidence package shows the full blast radius.
-  // The process exits non-zero at the end when any requested command or prerequisite fails.
-  // eslint-disable-next-line no-await-in-loop
   results.push(await runCommand(command));
 }
 
