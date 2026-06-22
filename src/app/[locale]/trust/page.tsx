@@ -1,119 +1,105 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Activity, Database, FileCheck2, Globe2, LockKeyhole, Scale, ShieldCheck } from 'lucide-react';
+
+import { PublicFooter } from '@/components/marketing/public-footer';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
 
-const TRUST_COPY: Record<SupportedLocale, {
+type TrustCopy = {
   eyebrow: string;
   title: string;
   description: string;
-  cards: Array<{ title: string; description: string; href: string; icon: 'shield' | 'scale' | 'database' | 'activity' | 'file' | 'lock' }>;
-}> = {
+  assurance: string;
+  resourceLabel: string;
+  cards: Array<{ title: string; description: string; href: string }>;
+};
+
+const baseCards = [
+  { title: 'Security overview', description: 'Authentication, RBAC, RLS, audit logs, monitoring posture and current non-claims.', href: '/security' },
+  { title: 'Architecture', description: 'Next.js, Supabase, server-only operations, trust boundaries and data flow.', href: '/security' },
+  { title: 'Data protection', description: 'Data categories, retention posture, deletion/export support and DPA readiness.', href: '/data-processing' },
+  { title: 'Subprocessors', description: 'Provider register for hosting, database, billing, CI/CD and conditional services.', href: '/subprocessors' },
+  { title: 'Responsible disclosure', description: 'Private contact path for coordinated security reports.', href: '/contact' },
+];
+
+const TRUST_COPY: Record<SupportedLocale, TrustCopy> = {
   en: {
     eyebrow: 'Trust Center',
-    title: 'Security, privacy and operational transparency for European companies.',
-    description: 'RISCK COMPLY is built for organizations that need control, evidence and confidence before expanding across Europe.',
-    cards: [
-      { title: 'Security overview', description: 'Authentication, tenant isolation, audit logs, secure storage and operational safeguards.', href: '/security', icon: 'shield' },
-      { title: 'Compliance posture', description: 'European compliance workflows, evidence readiness and regulatory roadmap.', href: '/compliance', icon: 'shield' },
-      { title: 'Data processing', description: 'How RISCK COMPLY processes customer data, access controls and document storage.', href: '/data-processing', icon: 'database' },
-      { title: 'Service commitments', description: 'Availability posture, incident handling, support expectations and enterprise service commitments.', href: '/sla', icon: 'activity' },
-      { title: 'Privacy policy', description: 'How RISCK COMPLY handles personal data, legal bases and GDPR rights.', href: '/privacy', icon: 'lock' },
-      { title: 'Data Processing Addendum', description: 'Processor commitments for customers that use RISCK COMPLY with personal data.', href: '/dpa', icon: 'scale' },
-      { title: 'Subprocessors', description: 'Infrastructure and service providers involved in operating RISCK COMPLY.', href: '/subprocessors', icon: 'database' },
-      { title: 'Service status', description: 'Public operational status and availability overview.', href: '/status', icon: 'activity' },
-      { title: 'Terms of service', description: 'Commercial and acceptable-use terms for the platform.', href: '/terms', icon: 'file' },
-    ],
+    title: 'Security, privacy and operational transparency without compliance washing.',
+    description: 'EuroComply publishes current controls, open gaps and procurement-ready documentation so enterprise buyers can evaluate the platform honestly.',
+    assurance: 'EuroComply does not currently claim SOC 2, ISO 27001 certification or completed third-party penetration testing. The platform is designed to support enterprise review through RBAC, RLS, audit logging, controlled data flows and release evidence gates.',
+    resourceLabel: 'Open resource',
+    cards: baseCards,
   },
   pt: {
     eyebrow: 'Centro de Confiança',
-    title: 'Segurança, privacidade e transparência operacional para empresas europeias.',
-    description: 'O RISCK COMPLY foi criado para organizações que precisam de controlo, evidência e confiança antes de crescer na Europa.',
+    title: 'Segurança, privacidade e transparência operacional sem compliance washing.',
+    description: 'O EuroComply publica controlos atuais, lacunas abertas e documentação pronta para procurement enterprise.',
+    assurance: 'O EuroComply não afirma SOC 2, certificação ISO 27001 ou teste externo concluído. A plataforma foi desenhada para apoiar avaliação enterprise com RBAC, RLS, audit logs e release gates.',
+    resourceLabel: 'Abrir recurso',
     cards: [
-      { title: 'Visão geral de segurança', description: 'Autenticação, isolamento por empresa, auditoria, armazenamento seguro e controlos operacionais.', href: '/security', icon: 'shield' },
-      { title: 'Postura de compliance', description: 'Workflows europeus, prontidão de evidências e roadmap regulatório.', href: '/compliance', icon: 'shield' },
-      { title: 'Tratamento de dados', description: 'Como o RISCK COMPLY trata dados de clientes, controlos de acesso e armazenamento documental.', href: '/data-processing', icon: 'database' },
-      { title: 'Compromissos de serviço', description: 'Disponibilidade, resposta a incidentes, expectativas de suporte e compromissos enterprise.', href: '/sla', icon: 'activity' },
-      { title: 'Política de privacidade', description: 'Como o RISCK COMPLY trata dados pessoais, bases legais e direitos GDPR.', href: '/privacy', icon: 'lock' },
-      { title: 'Acordo de tratamento de dados', description: 'Compromissos como subcontratante para clientes que usam dados pessoais.', href: '/dpa', icon: 'scale' },
-      { title: 'Subprocessadores', description: 'Infraestrutura e fornecedores usados para operar o RISCK COMPLY.', href: '/subprocessors', icon: 'database' },
-      { title: 'Estado do serviço', description: 'Resumo público da disponibilidade operacional.', href: '/status', icon: 'activity' },
-      { title: 'Termos de serviço', description: 'Termos comerciais e de utilização aceitável da plataforma.', href: '/terms', icon: 'file' },
+      { title: 'Visão geral de segurança', description: 'Autenticação, RBAC, RLS, audit logs, monitorização e claims atuais.', href: '/security' },
+      { title: 'Arquitetura', description: 'Next.js, Supabase, operações server-only, boundaries e fluxo de dados.', href: '/security' },
+      { title: 'Proteção de dados', description: 'Categorias de dados, retenção, export/delete e prontidão DPA.', href: '/data-processing' },
+      { title: 'Subprocessadores', description: 'Registo de hosting, base de dados, billing, CI/CD e serviços condicionais.', href: '/subprocessors' },
+      { title: 'Divulgação responsável', description: 'Contacto privado para reports de segurança coordenados.', href: '/contact' },
     ],
   },
   es: {
     eyebrow: 'Centro de Confianza',
-    title: 'Seguridad, privacidad y transparencia operativa para empresas europeas.',
-    description: 'RISCK COMPLY está diseñado para organizaciones que necesitan control, evidencia y confianza antes de expandirse por Europa.',
+    title: 'Seguridad, privacidad y transparencia operacional sin compliance washing.',
+    description: 'EuroComply publica controles actuales, brechas abiertas y documentación lista para evaluación enterprise.',
+    assurance: 'EuroComply no afirma SOC 2, certificación ISO 27001 ni revisión externa completada. Está diseñado para apoyar revisión enterprise con RBAC, RLS, auditoría y evidencia de release.',
+    resourceLabel: 'Abrir recurso',
     cards: [
-      { title: 'Resumen de seguridad', description: 'Autenticación, aislamiento por empresa, auditoría, almacenamiento seguro y controles operativos.', href: '/security', icon: 'shield' },
-      { title: 'Postura de compliance', description: 'Workflows europeos, preparación de evidencias y roadmap regulatorio.', href: '/compliance', icon: 'shield' },
-      { title: 'Tratamiento de datos', description: 'Cómo RISCK COMPLY trata datos de clientes, controles de acceso y almacenamiento documental.', href: '/data-processing', icon: 'database' },
-      { title: 'Compromisos de servicio', description: 'Disponibilidad, respuesta a incidentes, expectativas de soporte y compromisos enterprise.', href: '/sla', icon: 'activity' },
-      { title: 'Política de privacidad', description: 'Cómo RISCK COMPLY gestiona datos personales, bases legales y derechos GDPR.', href: '/privacy', icon: 'lock' },
-      { title: 'Acuerdo de tratamiento de datos', description: 'Compromisos como encargado del tratamiento para clientes con datos personales.', href: '/dpa', icon: 'scale' },
-      { title: 'Subprocesadores', description: 'Infraestructura y proveedores utilizados para operar RISCK COMPLY.', href: '/subprocessors', icon: 'database' },
-      { title: 'Estado del servicio', description: 'Resumen público de disponibilidad operativa.', href: '/status', icon: 'activity' },
-      { title: 'Términos de servicio', description: 'Términos comerciales y uso aceptable de la plataforma.', href: '/terms', icon: 'file' },
+      { title: 'Resumen de seguridad', description: 'Autenticación, RBAC, RLS, audit logs, monitoreo y no-claims actuales.', href: '/security' },
+      { title: 'Arquitectura', description: 'Next.js, Supabase, operaciones server-only y flujo de datos.', href: '/security' },
+      { title: 'Protección de datos', description: 'Categorías de datos, retención y preparación DPA.', href: '/data-processing' },
+      { title: 'Subprocesadores', description: 'Registro de proveedores y servicios condicionales.', href: '/subprocessors' },
+      { title: 'Divulgación responsable', description: 'Contacto privado para reportes coordinados.', href: '/contact' },
     ],
   },
   fr: {
     eyebrow: 'Centre de Confiance',
-    title: 'Sécurité, confidentialité et transparence opérationnelle pour les entreprises européennes.',
-    description: 'RISCK COMPLY est conçu pour les organisations qui ont besoin de contrôle, de preuves et de confiance avant de se développer en Europe.',
+    title: 'Sécurité, confidentialité et transparence opérationnelle sans compliance washing.',
+    description: 'EuroComply publie les contrôles actuels, les limites ouvertes et les documents prêts pour revue enterprise.',
+    assurance: 'EuroComply ne revendique pas SOC 2, certification ISO 27001 ou revue externe terminée. La plateforme est conçue pour soutenir les revues enterprise avec RBAC, RLS, audit logs et preuves de release.',
+    resourceLabel: 'Ouvrir la ressource',
     cards: [
-      { title: 'Vue sécurité', description: 'Authentification, isolation par entreprise, journaux d’audit, stockage sécurisé et contrôles opérationnels.', href: '/security', icon: 'shield' },
-      { title: 'Posture conformité', description: 'Workflows européens, préparation des preuves et feuille de route réglementaire.', href: '/compliance', icon: 'shield' },
-      { title: 'Traitement des données', description: 'Traitement des données client, contrôles d’accès et stockage documentaire.', href: '/data-processing', icon: 'database' },
-      { title: 'Engagements de service', description: 'Disponibilité, réponse aux incidents, attentes de support et engagements enterprise.', href: '/sla', icon: 'activity' },
-      { title: 'Politique de confidentialité', description: 'Traitement des données personnelles, bases légales et droits GDPR.', href: '/privacy', icon: 'lock' },
-      { title: 'Accord de traitement des données', description: 'Engagements de sous-traitant pour les clients utilisant des données personnelles.', href: '/dpa', icon: 'scale' },
-      { title: 'Sous-traitants', description: 'Infrastructure et prestataires utilisés pour exploiter RISCK COMPLY.', href: '/subprocessors', icon: 'database' },
-      { title: 'Statut du service', description: 'Vue publique de la disponibilité opérationnelle.', href: '/status', icon: 'activity' },
-      { title: 'Conditions de service', description: 'Conditions commerciales et d’utilisation acceptable de la plateforme.', href: '/terms', icon: 'file' },
+      { title: 'Vue sécurité', description: 'Authentification, RBAC, RLS, audit logs, monitoring et non-claims actuels.', href: '/security' },
+      { title: 'Architecture', description: 'Next.js, Supabase, opérations server-only et flux de données.', href: '/security' },
+      { title: 'Protection des données', description: 'Catégories de données, rétention et préparation DPA.', href: '/data-processing' },
+      { title: 'Sous-traitants', description: 'Registre fournisseurs et services conditionnels.', href: '/subprocessors' },
+      { title: 'Divulgation responsable', description: 'Contact privé pour signalements coordonnés.', href: '/contact' },
     ],
   },
   it: {
     eyebrow: 'Centro Fiducia',
-    title: 'Sicurezza, privacy e trasparenza operativa per aziende europee.',
-    description: 'RISCK COMPLY è progettato per organizzazioni che richiedono controllo, prove e fiducia prima di crescere in Europa.',
+    title: 'Sicurezza, privacy e trasparenza operativa senza compliance washing.',
+    description: 'EuroComply pubblica controlli attuali, gap aperti e documentazione pronta per review enterprise.',
+    assurance: 'EuroComply non dichiara SOC 2, certificazione ISO 27001 o review esterna completata. È progettato per supportare review enterprise con RBAC, RLS, audit log ed evidenze di release.',
+    resourceLabel: 'Apri risorsa',
     cards: [
-      { title: 'Panoramica sicurezza', description: 'Autenticazione, isolamento tenant, audit log, storage sicuro e controlli operativi.', href: '/security', icon: 'shield' },
-      { title: 'Postura compliance', description: 'Workflow europei, evidenze pronte e roadmap regolatoria.', href: '/compliance', icon: 'shield' },
-      { title: 'Trattamento dati', description: 'Come RISCK COMPLY tratta dati cliente, controlli di accesso e storage documentale.', href: '/data-processing', icon: 'database' },
-      { title: 'Impegni di servizio', description: 'Disponibilità, risposta agli incidenti, aspettative di supporto e impegni enterprise.', href: '/sla', icon: 'activity' },
-      { title: 'Privacy policy', description: 'Come RISCK COMPLY tratta dati personali, basi legali e diritti GDPR.', href: '/privacy', icon: 'lock' },
-      { title: 'Accordo trattamento dati', description: 'Impegni come responsabile del trattamento per clienti con dati personali.', href: '/dpa', icon: 'scale' },
-      { title: 'Subprocessori', description: 'Infrastruttura e provider usati per operare RISCK COMPLY.', href: '/subprocessors', icon: 'database' },
-      { title: 'Stato servizio', description: 'Panoramica pubblica della disponibilità operativa.', href: '/status', icon: 'activity' },
-      { title: 'Termini di servizio', description: 'Termini commerciali e uso accettabile della piattaforma.', href: '/terms', icon: 'file' },
+      { title: 'Panoramica sicurezza', description: 'Autenticazione, RBAC, RLS, audit log, monitoring e non-claim attuali.', href: '/security' },
+      { title: 'Architettura', description: 'Next.js, Supabase, operazioni server-only e flusso dati.', href: '/security' },
+      { title: 'Protezione dati', description: 'Categorie dati, retention e preparazione DPA.', href: '/data-processing' },
+      { title: 'Subprocessori', description: 'Registro provider e servizi condizionali.', href: '/subprocessors' },
+      { title: 'Responsible disclosure', description: 'Contatto privato per report coordinati.', href: '/contact' },
     ],
   },
   de: {
     eyebrow: 'Trust Center',
-    title: 'Sicherheit, Datenschutz und operative Transparenz für europäische Unternehmen.',
-    description: 'RISCK COMPLY wurde für Organisationen entwickelt, die Kontrolle, Nachweise und Vertrauen für Wachstum in Europa benötigen.',
+    title: 'Sicherheit, Datenschutz und operative Transparenz ohne Compliance Washing.',
+    description: 'EuroComply veröffentlicht aktuelle Kontrollen, offene Lücken und Dokumentation für Enterprise Reviews.',
+    assurance: 'EuroComply beansprucht derzeit weder SOC 2, ISO 27001-Zertifizierung noch eine abgeschlossene externe Prüfung. Die Plattform ist für Enterprise Reviews mit RBAC, RLS, Audit Logs und Release Evidence Gates ausgelegt.',
+    resourceLabel: 'Ressource öffnen',
     cards: [
-      { title: 'Sicherheitsübersicht', description: 'Authentifizierung, Mandantentrennung, Audit-Logs, sichere Speicherung und operative Kontrollen.', href: '/security', icon: 'shield' },
-      { title: 'Compliance-Position', description: 'Europäische Workflows, Nachweisbereitschaft und regulatorische Roadmap.', href: '/compliance', icon: 'shield' },
-      { title: 'Datenverarbeitung', description: 'Wie RISCK COMPLY Kundendaten, Zugriffskontrollen und Dokumentenspeicherung verarbeitet.', href: '/data-processing', icon: 'database' },
-      { title: 'Service Commitments', description: 'Verfügbarkeit, Incident Handling, Support-Erwartungen und Enterprise-Zusagen.', href: '/sla', icon: 'activity' },
-      { title: 'Datenschutzerklärung', description: 'Wie RISCK COMPLY personenbezogene Daten, Rechtsgrundlagen und GDPR-Rechte behandelt.', href: '/privacy', icon: 'lock' },
-      { title: 'Datenverarbeitungsvereinbarung', description: 'Auftragsverarbeiterpflichten für Kunden mit personenbezogenen Daten.', href: '/dpa', icon: 'scale' },
-      { title: 'Unterauftragsverarbeiter', description: 'Infrastruktur und Anbieter, die für den Betrieb von RISCK COMPLY genutzt werden.', href: '/subprocessors', icon: 'database' },
-      { title: 'Service-Status', description: 'Öffentliche Übersicht der operativen Verfügbarkeit.', href: '/status', icon: 'activity' },
-      { title: 'Nutzungsbedingungen', description: 'Kommerzielle Bedingungen und akzeptable Nutzung der Plattform.', href: '/terms', icon: 'file' },
+      { title: 'Security Overview', description: 'Authentifizierung, RBAC, RLS, Audit Logs, Monitoring und aktuelle Non-Claims.', href: '/security' },
+      { title: 'Architektur', description: 'Next.js, Supabase, server-only Operationen und Datenfluss.', href: '/security' },
+      { title: 'Datenschutz', description: 'Datenkategorien, Retention und DPA Readiness.', href: '/data-processing' },
+      { title: 'Unterauftragsverarbeiter', description: 'Register für Provider und bedingte Dienste.', href: '/subprocessors' },
+      { title: 'Responsible Disclosure', description: 'Privater Kontaktpfad für koordinierte Reports.', href: '/contact' },
     ],
   },
-};
-
-const iconMap = {
-  shield: ShieldCheck,
-  scale: Scale,
-  database: Database,
-  activity: Activity,
-  file: FileCheck2,
-  lock: LockKeyhole,
 };
 
 export default async function TrustCenterPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -122,32 +108,30 @@ export default async function TrustCenterPage({ params }: { params: Promise<{ lo
   const copy = TRUST_COPY[locale];
 
   return (
-    <main className="min-h-screen bg-[#0A0A0F] px-6 py-24 text-white">
-      <section className="mx-auto max-w-6xl">
-        <Link href={`/${locale}`} className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-white/70 transition hover:border-white/30 hover:text-white">
-          <Globe2 className="h-4 w-4" /> RISCK COMPLY
-        </Link>
-        <div className="mt-12 max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-white/50">{copy.eyebrow}</p>
-          <h1 className="mt-5 text-4xl font-semibold tracking-tight md:text-6xl">{copy.title}</h1>
-          <p className="mt-6 text-lg leading-8 text-white/65">{copy.description}</p>
-        </div>
-        <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {copy.cards.map((card) => {
-            const Icon = iconMap[card.icon];
-            return (
-              <Link key={card.href} href={`/${locale}${card.href}`} className="group rounded-3xl border border-white/10 bg-white/[0.04] p-6 transition hover:-translate-y-1 hover:border-white/30 hover:bg-white/[0.08]">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h2 className="mt-6 text-xl font-semibold">{card.title}</h2>
-                <p className="mt-3 text-sm leading-6 text-white/60">{card.description}</p>
-                <span className="mt-6 inline-flex text-sm font-semibold text-white/80 transition group-hover:text-white">Open resource</span>
-              </Link>
-            );
-          })}
+    <main className="min-h-screen bg-[#0A0A0F] text-white">
+      <section className="px-6 py-20">
+        <div className="mx-auto max-w-6xl">
+          <Link href={`/${locale}`} className="text-sm text-white/70 hover:text-white">← EuroComply</Link>
+          <p className="mt-10 text-sm font-semibold uppercase tracking-[0.24em] text-blue-200">{copy.eyebrow}</p>
+          <h1 className="mt-4 max-w-4xl text-5xl font-semibold tracking-[-0.05em]">{copy.title}</h1>
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">{copy.description}</p>
+          <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-sm leading-7 text-slate-300">
+            {copy.assurance}
+          </div>
         </div>
       </section>
+
+      <section className="mx-auto grid max-w-6xl gap-5 px-6 pb-20 md:grid-cols-2 lg:grid-cols-3">
+        {copy.cards.map((card) => (
+          <Link key={card.title} href={`/${locale}${card.href}`} className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 transition hover:border-blue-300/40 hover:bg-white/[0.07]">
+            <h2 className="text-xl font-semibold">{card.title}</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-400">{card.description}</p>
+            <span className="mt-5 inline-flex text-sm font-semibold text-blue-200">{copy.resourceLabel}</span>
+          </Link>
+        ))}
+      </section>
+
+      <PublicFooter locale={locale} />
     </main>
   );
 }
