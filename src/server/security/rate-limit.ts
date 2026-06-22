@@ -59,7 +59,8 @@ type LocalRateLimitEntry = {
   resetAt: number;
 };
 
-type UpstashPipelineResponse = Array<[unknown, unknown]>;
+type UpstashPipelineItem = [unknown, unknown] | { result?: unknown; error?: unknown };
+type UpstashPipelineResponse = UpstashPipelineItem[];
 
 const localAttempts = new Map<string, LocalRateLimitEntry>();
 
@@ -209,6 +210,7 @@ function createResult({
   audit,
   key,
   reason,
+  now = Date.now(),
 }: {
   allowed: boolean;
   limit: number;
@@ -219,13 +221,14 @@ function createResult({
   audit: boolean;
   key: string;
   reason?: RateLimitFailureReason;
+  now?: number;
 }): RateLimitResult {
   return {
     allowed,
     limit,
     remaining,
     resetAt,
-    retryAfterSeconds: Math.max(0, Math.ceil((resetAt - Date.now()) / 1000)),
+    retryAfterSeconds: Math.max(0, Math.ceil((resetAt - now) / 1000)),
     category,
     failureMode,
     audit,
@@ -256,6 +259,7 @@ function failClosed(
     audit: options.audit,
     key: options.key,
     reason,
+    now: options.now,
   });
 }
 
@@ -281,6 +285,7 @@ function failOpen(
     audit: false,
     key: options.key,
     reason,
+    now: options.now,
   });
 }
 
@@ -298,12 +303,20 @@ function incrementLocal(key: string, windowMs: number, now: number) {
   return next;
 }
 
+function readUpstashResult(item: UpstashPipelineItem | undefined) {
+  if (!item) return undefined;
+  if (Array.isArray(item)) return item[1];
+  if (item.error) return undefined;
+  return item.result;
+}
+
 async function incrementUpstash(key: string, windowSeconds: number) {
   const url = process.env.UPSTASH_REDIS_REST_URL?.replace(/\/$/, '');
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!url || !token) return { configured: false as const };
 
+  const redisKey = normalizeRedisKey(key);
   const response = await fetch(`${url}/pipeline`, {
     method: 'POST',
     headers: {
@@ -311,9 +324,9 @@ async function incrementUpstash(key: string, windowSeconds: number) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify([
-      ['INCR', normalizeRedisKey(key)],
-      ['EXPIRE', normalizeRedisKey(key), windowSeconds, 'NX'],
-      ['TTL', normalizeRedisKey(key)],
+      ['INCR', redisKey],
+      ['EXPIRE', redisKey, windowSeconds, 'NX'],
+      ['TTL', redisKey],
     ]),
     cache: 'no-store',
     signal: AbortSignal.timeout(3000),
@@ -322,16 +335,17 @@ async function incrementUpstash(key: string, windowSeconds: number) {
   if (!response.ok) return { configured: true as const, ok: false as const };
 
   const payload = (await response.json()) as UpstashPipelineResponse;
-  const count = Number(payload[0]?.[1] ?? 0);
-  const ttlSeconds = Number(payload[2]?.[1] ?? windowSeconds);
+  const count = Number(readUpstashResult(payload[0]));
+  const ttlValue = Number(readUpstashResult(payload[2]));
+  const ttlSeconds = Number.isFinite(ttlValue) && ttlValue > 0 ? ttlValue : windowSeconds;
 
-  if (!Number.isFinite(count)) return { configured: true as const, ok: false as const };
+  if (!Number.isFinite(count) || count < 0) return { configured: true as const, ok: false as const };
 
   return {
     configured: true as const,
     ok: true as const,
     count,
-    resetAt: Date.now() + Math.max(1, Number.isFinite(ttlSeconds) ? ttlSeconds : windowSeconds) * 1000,
+    resetAt: Date.now() + Math.max(1, ttlSeconds) * 1000,
   };
 }
 
@@ -343,6 +357,7 @@ function fromCount({
   failureMode,
   audit,
   key,
+  now,
 }: {
   count: number;
   resetAt: number;
@@ -351,6 +366,7 @@ function fromCount({
   failureMode: RateLimitFailureMode;
   audit: boolean;
   key: string;
+  now?: number;
 }) {
   const allowed = count <= limit;
 
@@ -363,6 +379,7 @@ function fromCount({
     failureMode,
     audit: !allowed && audit,
     key,
+    now,
   });
 }
 
@@ -389,7 +406,7 @@ export async function checkDistributedRateLimit(options: RateLimitOptions): Prom
       }
 
       const local = incrementLocal(key, windowMs, now);
-      return fromCount({ count: local.count, resetAt: local.resetAt, limit, category, failureMode, audit: policy.auditOnBlock, key });
+      return fromCount({ count: local.count, resetAt: local.resetAt, limit, category, failureMode, audit: policy.auditOnBlock, key, now });
     }
 
     if (upstash.ok) {
@@ -412,7 +429,7 @@ export async function checkDistributedRateLimit(options: RateLimitOptions): Prom
   }
 
   const local = incrementLocal(key, windowMs, now);
-  return fromCount({ count: local.count, resetAt: local.resetAt, limit, category, failureMode, audit: policy.auditOnBlock, key });
+  return fromCount({ count: local.count, resetAt: local.resetAt, limit, category, failureMode, audit: policy.auditOnBlock, key, now });
 }
 
 export async function checkRateLimitPolicy(category: RateLimitCategory, subject: RateLimitSubject, overrides: Omit<RateLimitOptions, keyof RateLimitSubject | 'category' | 'key'> = {}) {
