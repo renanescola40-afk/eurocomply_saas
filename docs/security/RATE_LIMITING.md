@@ -36,6 +36,12 @@ Use `buildRateLimitKey(category, subject)` or `checkRateLimitPolicy(category, su
 
 Raw IP addresses are never logged by the limiter. IP material is hashed with `RATE_LIMIT_IP_HASH_SALT`, falling back to `NEXTAUTH_SECRET`, `AUTH_SECRET`, or a development-only salt.
 
+## Legacy compatibility
+
+Existing call sites importing `checkDistributedRateLimit` from `src/lib/security/rate-limit.ts` remain supported. The compatibility layer infers a policy category from legacy keys such as `billing:*`, `documents:upload:*`, `step-up:*`, `*:export:*`, `webhook:*`, `health:*`, `password:*`, and `auth:*`. Unknown legacy keys default to the fail-closed `auth` policy rather than silently becoming low-risk API traffic.
+
+New code should prefer category-aware calls with explicit `userId`, `organizationId`, `ip`, `action`, and `route` fields instead of opaque keys.
+
 ## Response contract
 
 Blocked HTTP routes return either `429` for normal exhaustion or `503` when a fail-closed production dependency failure prevents safe enforcement. The response helper emits:
@@ -74,4 +80,4 @@ npm run test -- src/server/security/rate-limit.enterprise.test.ts src/lib/securi
 npm run security:enterprise-api
 ```
 
-The tests verify requests below the limit pass, requests over the limit block, high-risk production routes fail closed without Redis, low-risk routes degrade according to policy, and tenant-scoped keys do not interfere with one another.
+The tests verify requests below the limit pass, requests over the limit block, high-risk production routes fail closed without Redis, low-risk routes degrade according to policy, tenant-scoped keys do not interfere with one another, legacy sensitive keys map to the intended enterprise policy, and raw IP addresses are not exposed in limiter keys.
