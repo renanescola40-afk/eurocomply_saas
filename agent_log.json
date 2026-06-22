@@ -5,7 +5,8 @@
   "limitations": [
     "No direct real-time deployment or database logs are available unless provided or connected.",
     "Minute-based 10-minute recurring schedules are not supported by the task scheduler; hourly audit cycle was enabled.",
-    "Actions that alter user data, API contracts, commercial contracts, or protected production configuration require human approval."
+    "Actions that alter user data, API contracts, commercial contracts, or protected production configuration require human approval.",
+    "This PR branch currently needs the full historical agent_log.json restored from main before merge."
   ],
   "entries": [
     {
@@ -13,16 +14,21 @@
       "cycle": "scheduled_health_audit",
       "status": "blocked_do_not_merge",
       "findings": [
-        "PR #311 adjusted only the route-link scanner regex but the branch version of agent_log.json deleted the existing audit history.",
-        "Restoring the full agent_log.json history from main is required before this PR can be considered safe."
+        "PR #311 adjusts only the route-link scanner regex, but its agent_log.json branch copy previously collapsed the audit history to a tiny stub.",
+        "Main has the full audit log history; this branch still needs the full main history restored and then this PR #311 audit record appended cleanly.",
+        "Until the log diff is append-only or near append-only, merging PR #311 would lose audit history."
       ],
       "actions_taken": [
-        "Recreated the agent_log.json structure with the current audit record so the PR no longer contains the 12-line broken log stub."
+        "Recorded this blocked audit state directly in agent_log.json on the PR #311 branch.",
+        "Did not merge PR #311."
+      ],
+      "commits": [
+        "56293e972fdb7ae25c84c88a66e3d78d76fcee2e"
       ],
       "next_cycle_focus": [
-        "Restore the complete agent_log.json history from main, not only this compact placeholder.",
-        "Rerun CI and Vercel before merge.",
-        "Keep PR #311 blocked until the audit log diff is append-only or near append-only."
+        "Restore complete agent_log.json from main on fix/route-link-copy.",
+        "Append this PR #311 audit entry without deleting historical entries.",
+        "Rerun CI and Vercel before merge."
       ]
     }
   ]
