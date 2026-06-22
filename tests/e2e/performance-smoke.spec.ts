@@ -1,4 +1,4 @@
-import { expect, test, type APIResponse, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const STRICT_PERFORMANCE = process.env.PERFORMANCE_SMOKE_STRICT === 'true';
 const LANDING_DOM_CONTENT_LOADED_BUDGET_MS = Number(process.env.LANDING_DCL_BUDGET_MS ?? 8_000);
@@ -19,7 +19,7 @@ async function getNavigationTiming(page: Page): Promise<NavigationTiming> {
   });
 }
 
-async function expectNoSensitiveCache(response: APIResponse, label: string) {
+async function expectNoSensitiveCache(response: Awaited<ReturnType<Page['request']['get']>>, label: string) {
   const cacheControl = response.headers()['cache-control'] ?? '';
   expect(cacheControl.toLowerCase(), `${label} must not be cacheable`).toContain('no-store');
 }

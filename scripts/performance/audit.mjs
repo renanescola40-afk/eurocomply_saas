@@ -10,7 +10,8 @@ function walk(dir, predicate = () => true) {
   const absolute = join(ROOT, dir);
   if (!existsSync(absolute)) return [];
 
-  return readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
+  const entries = readdirSync(absolute, { withFileTypes: true });
+  return entries.flatMap((entry) => {
     const fullPath = join(absolute, entry.name);
     const normalized = relative(ROOT, fullPath).split(sep).join('/');
 
@@ -19,7 +20,8 @@ function walk(dir, predicate = () => true) {
       return walk(normalized, predicate);
     }
 
-    return entry.isFile() && predicate(normalized) ? [normalized] : [];
+    if (!entry.isFile()) return [];
+    return predicate(normalized) ? [normalized] : [];
   });
 }
 
@@ -33,7 +35,7 @@ function uniq(values) {
 
 function auditClientComponents() {
   const files = SOURCE_ROOTS.flatMap((root) => walk(root, (path) => /\.(ts|tsx)$/.test(path)));
-  const clientFiles = files.filter((path) => /^['\"]use client['\"];?/.test(read(path).trimStart()));
+  const clientFiles = files.filter((path) => /^["']use client["'];?/.test(read(path).trimStart()));
   const clientPages = clientFiles.filter((path) => /src\/app\/.*\/(page|layout)\.tsx$/.test(path));
 
   return { totalSourceFiles: files.length, clientFiles, clientPages };
@@ -47,7 +49,7 @@ function auditImageRemotePatterns() {
   const source = read(NEXT_CONFIG);
   const failures = [];
 
-  if (/hostname\s*:\s*['\"]\*\*['\"]/.test(source)) {
+  if (/hostname\s*:\s*["']\*\*["']/.test(source)) {
     failures.push('next.config images.remotePatterns still allows hostname "**"');
   }
 
@@ -68,7 +70,7 @@ function auditSupabaseQueries() {
     const source = read(path);
     if (!source.includes('.from(')) continue;
 
-    if (/\.select\(\s*['\"]\*['\"]/.test(source)) {
+    if (/\.select\(\s*["']\*["']/.test(source)) {
       selectStar.push(path);
     }
 
@@ -76,7 +78,7 @@ function auditSupabaseQueries() {
     for (const block of queryBlocks) {
       if (!block.includes('.from(')) continue;
       const normalizedBlock = block.replace(/\s+/g, ' ');
-      const tableName = normalizedBlock.match(/\.from\(\s*['\"]([^'\"]+)['\"]/)?.[1] ?? 'unknown';
+      const tableName = normalizedBlock.match(/\.from\(\s*["']([^"']+)["']/)?.[1] ?? 'unknown';
       const tenantScopedByOrganization = normalizedBlock.includes(".eq('organization_id'") || normalizedBlock.includes('.eq("organization_id"');
       const tenantScopedByUser = tableName === 'organization_members' && (normalizedBlock.includes(".eq('user_id'") || normalizedBlock.includes('.eq("user_id"'));
       const routeOrServerQuery = path.startsWith('src/server/') || path.startsWith('src/app/api/') || path.startsWith('src/lib/');
@@ -112,7 +114,9 @@ function auditBuildManifest() {
     const values = Object.values(manifest.pages ?? manifest.pagesBrowser ?? manifest).flat().filter((value) => typeof value === 'string');
     for (const assetPath of values) {
       const diskPath = join(ROOT, '.next', assetPath.replace(/^\/_next\//, ''));
-      if (existsSync(diskPath)) files.push({ assetPath, bytes: statSync(diskPath).size });
+      if (existsSync(diskPath)) {
+        files.push({ assetPath, bytes: statSync(diskPath).size });
+      }
     }
   }
 

@@ -4,12 +4,13 @@ import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
-import { getCurrentUser } from '@/server/queries/auth';
-import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { buildGdprDeletePlan, GDPR_DELETE_CONFIRMATION, normalizeDeleteReason, validateDeleteConfirmation } from '@/server/privacy/gdpr';
 import { createAuditEvent } from '@/server/queries/audit-events';
+import { getCurrentUser } from '@/server/queries/auth';
 import { createNotification } from '@/server/queries/notifications';
-import { assertTrustedOrigin } from '@/server/security/origin-guard';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
+import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
@@ -76,10 +77,33 @@ export async function POST(request: NextRequest) {
     return stepUp.response;
   }
 
-  const body: Record<string, unknown> = await readBoundedJsonRequest<Record<string, unknown>>(request, {
+  const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
     maxBytes: DELETE_REQUEST_JSON_MAX_BYTES,
-  }).catch(() => ({}));
-  const reason = typeof body.reason === 'string' && body.reason.trim().length > 0 ? body.reason.trim().slice(0, 500) : 'No reason provided';
+  }).catch((): Record<string, unknown> => ({}));
+
+  if (!validateDeleteConfirmation(body)) {
+    await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'gdpr_delete_denied',
+      entityType: 'organization',
+      entityId: organization.id,
+      metadata: {
+        reason: 'missing_delete_confirmation',
+        requiredConfirmation: GDPR_DELETE_CONFIRMATION,
+        role: permission.role,
+      },
+    });
+
+    return noStoreJson({
+      error: 'delete_confirmation_required',
+      message: `Send confirmation exactly as: ${GDPR_DELETE_CONFIRMATION}`,
+      requiredConfirmation: GDPR_DELETE_CONFIRMATION,
+    }, { status: 400 });
+  }
+
+  const reason = normalizeDeleteReason(body.reason);
+  const deletePlan = buildGdprDeletePlan();
 
   await createAuditEvent({
     organizationId: organization.id,
@@ -89,8 +113,9 @@ export async function POST(request: NextRequest) {
     entityId: organization.id,
     metadata: {
       reason,
-      status: 'pending_review',
+      role: permission.role,
       plan: entitlementCheck.entitlements.plan,
+      deletePlan,
       stepUpAction: stepUp.assessment.action,
       stepUpVerifiedAt: stepUp.assessment.verifiedAt,
       stepUpTokenType: 'signed_hmac',
@@ -105,7 +130,7 @@ export async function POST(request: NextRequest) {
   });
 
   return noStoreJson({
-    status: 'pending_review',
+    ...deletePlan,
     message: 'Request received. A compliance administrator must review retention, legal hold, billing and audit requirements before completion.',
     stepUp: publicStepUpSummary(stepUp.assessment),
   });

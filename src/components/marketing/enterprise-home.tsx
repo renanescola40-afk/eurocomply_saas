@@ -1,7 +1,5 @@
 import Link from 'next/link';
 import {
-  Award,
-  Bell,
   Building2,
   CalendarDays,
   Check,
@@ -14,8 +12,8 @@ import {
   Lock,
   Network,
   Server,
-  ShieldCheck,
   ShieldAlert,
+  ShieldCheck,
   Users,
 } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
@@ -38,11 +36,11 @@ type SecurityItem = [string, typeof ShieldCheck, string];
 type FeatureCard = [string, string, typeof CalendarDays];
 
 type LandingCopy = {
-  nav: { features: string; security: string; plans: string; login: string; subscribe: string };
+  nav: { features: string; security: string; plans: string; trust: string; login: string; subscribe: string };
   badge: string;
   heroTitle: string;
   heroSubtitle: string;
-  cta: { start: string; demo: string; learnMore: string };
+  cta: { start: string; demo: string; trust: string; learnMore: string };
   cockpit: { eyebrow: string; title: string; live: string; metrics: [string, string][]; events: string[] };
   security: { eyebrow: string; title: string; subtitle: string; items: SecurityItem[] };
   features: { eyebrow: string; title: string; cards: FeatureCard[] };
@@ -51,259 +49,268 @@ type LandingCopy = {
   finalCta: { title: string; button: string; subtitle: string };
 };
 
+const englishCopy: LandingCopy = {
+  nav: { features: 'Features', security: 'Security', plans: 'Plans', trust: 'Trust Center', login: 'Log in', subscribe: 'Subscribe now' },
+  badge: 'European compliance operations platform',
+  heroTitle: 'Compliance evidence, risk and vendor operations without procurement surprises.',
+  heroSubtitle: 'EuroComply helps European teams centralize evidence, risks, vendors, roles and audit trails while keeping security claims tied to documented implementation.',
+  cta: { start: 'Subscribe now', demo: 'View demo', trust: 'Review Trust Center', learnMore: 'Learn more' },
+  cockpit: {
+    eyebrow: 'Executive cockpit',
+    title: 'Compliance workspace',
+    live: 'Workspace view',
+    metrics: [['RBAC', 'role-based access'], ['RLS', 'tenant isolation design'], ['Audit', 'traceable events'], ['Docs', 'enterprise packet']],
+    events: ['Policy approved and recorded as an audit event', 'Vendor risk ready for review', 'Security questionnaire response needs evidence check'],
+  },
+  security: {
+    eyebrow: 'Security architecture',
+    title: 'Security posture with honest evidence boundaries',
+    subtitle: 'Controls implemented in the platform plus clearly disclosed roadmap or evidence gaps for enterprise procurement.',
+    items: [
+      ['Provider-managed encryption', ShieldCheck, 'Designed to use TLS in transit and managed-provider encryption at rest.'],
+      ['Privacy workflows', Lock, 'Supports privacy and data subject request workflows without claiming legal certification.'],
+      ['Audit event integrity', FileText, 'Audit events can use SHA-256 hash chains and optional HMAC signatures.'],
+      ['Organization isolation', Building2, 'Organization membership checks and Supabase RLS migrations support tenant boundaries.'],
+      ['Supabase Auth', Fingerprint, 'Protected sessions and server-side user checks for private routes.'],
+      ['Vercel + Supabase architecture', Server, 'Managed hosting, database, authentication and storage configuration.'],
+      ['Organization-level RLS', Database, 'RLS evidence must pass against the target Supabase project before production claims.'],
+      ['Permission controls', KeyRound, 'Owner, admin, editor, member and viewer roles map to explicit permissions.'],
+      ['Operational monitoring posture', Network, 'Logging and release evidence are tracked; 24/7 staffed monitoring is not claimed.'],
+      ['Trust documentation', ShieldAlert, 'SOC 2, ISO 27001 and pentest are disclosed as not currently completed.'],
+    ],
+  },
+  features: {
+    eyebrow: 'Features',
+    title: 'What teams operate in EuroComply',
+    cards: [
+      ['Compliance calendar', 'Track obligations, deadlines and owners in one workspace.', CalendarDays],
+      ['Multilingual operations', 'Support cross-border teams with localized public and product surfaces.', Globe2],
+      ['Risk matrix', 'Identify, assess and mitigate risks before reviews or incidents.', ShieldAlert],
+      ['Team invitations', 'Align people with organization roles and permissions.', Users],
+      ['Multi-country entities', 'Track operating context across European markets.', Building2],
+      ['Audit trail', 'Record critical workflow activity for review and investigation.', FileText],
+    ],
+  },
+  infrastructure: {
+    eyebrow: 'Infrastructure',
+    title: 'Architecture designed to support enterprise review.',
+    subtitle: 'Next.js, Supabase Auth, organization-scoped RBAC, RLS migrations, server-only admin operations, audit events and release evidence checks are documented in the Trust Center.',
+    cta: 'Open security overview',
+  },
+  pricing: {
+    eyebrow: 'Plans',
+    title: 'Choose the right plan for your company',
+    subtitle: 'Start with operational compliance workflows and scale into enterprise procurement materials when needed.',
+    popular: 'Best balance',
+    consultive: 'Enterprise review',
+    note: 'Enterprise security commitments depend on the signed agreement and available evidence. EuroComply does not currently claim SOC 2, ISO 27001 certification, completed third-party pentesting or tested backup restore.',
+    plans: [
+      { name: 'Essential', planKey: 'essential', price: '€49', period: '/month', text: 'Entry plan for small teams moving evidence and deadlines out of spreadsheets.', cta: 'Start Essential', features: ['1 fiscal country', '1 user', 'Basic legal calendar', 'Basic regulatory news', 'Company profile', 'Up to 10 documents', 'Simple risk matrix', 'Basic notifications'] },
+      { name: 'Professional', planKey: 'professional', price: '€149', period: '/month', text: 'For SMEs with real obligations, documents, risks and review cycles.', cta: 'Choose Professional', features: ['Up to 2 fiscal countries', 'Compliance calendar', 'Controlled documents', 'Versioning', 'Risk matrix', 'Audit events', 'Basic reports', 'Up to 3 users'] },
+      { name: 'Business', planKey: 'business', price: '€399', period: '/month', text: 'For companies growing across Europe with teams, approvals and reporting needs.', cta: 'Choose Business', highlighted: true, features: ['Up to 5 fiscal countries', 'Tax IDs by country', 'Approval workflows', 'Executive reports', 'Audit packs', 'Country-specific news', 'RACI matrix', 'Up to 10 users'] },
+      { name: 'Enterprise', price: 'From €990', period: '/month', text: 'Consultive plan for regulated companies and B2B vendors that need procurement support.', cta: 'Talk to sales', enterprise: true, features: ['Expanded limits', 'Advanced users', 'Role-based permissions', 'Trust documentation packet', 'Assisted onboarding', 'Support terms by agreement', 'DPA and subprocessor review', 'Security questionnaire support'] },
+    ],
+  },
+  finalCta: { title: 'Give buyers evidence they can evaluate, not claims they have to decode.', button: 'Subscribe to EuroComply', subtitle: 'Review the Trust Center before procurement.' },
+};
+
+const portugueseCopy: LandingCopy = {
+  ...englishCopy,
+  nav: { features: 'Funcionalidades', security: 'Segurança', plans: 'Planos', trust: 'Trust Center', login: 'Entrar', subscribe: 'Assinar agora' },
+  badge: 'Plataforma europeia de operações de compliance',
+  heroTitle: 'Evidências, riscos e fornecedores sem surpresas em procurement.',
+  heroSubtitle: 'O EuroComply ajuda equipas europeias a centralizar evidências, riscos, fornecedores, papéis e trilhas de auditoria mantendo claims de segurança ligados à implementação documentada.',
+  cta: { start: 'Assinar agora', demo: 'Ver demonstração', trust: 'Ver Trust Center', learnMore: 'Saiba mais' },
+  cockpit: { eyebrow: 'Cockpit executivo', title: 'Workspace de compliance', live: 'Vista do workspace', metrics: [['RBAC', 'acesso por função'], ['RLS', 'desenho de isolamento'], ['Auditoria', 'eventos rastreáveis'], ['Docs', 'pacote enterprise']], events: ['Política aprovada e registada como evento de auditoria', 'Risco de fornecedor pronto para revisão', 'Resposta de questionário de segurança requer validação de evidência'] },
+  security: { ...englishCopy.security, eyebrow: 'Arquitetura de segurança', title: 'Postura de segurança com limites honestos de evidência', subtitle: 'Controlos implementados na plataforma e lacunas de roadmap/evidência claramente divulgadas para procurement enterprise.', items: [
+    ['Criptografia gerida pelo fornecedor', ShieldCheck, 'Desenhado para usar TLS em trânsito e criptografia gerida em repouso.'],
+    ['Workflows de privacidade', Lock, 'Suporta fluxos de privacidade e pedidos de titulares sem afirmar certificação legal.'],
+    ['Integridade de eventos de auditoria', FileText, 'Eventos de auditoria podem usar cadeia hash SHA-256 e assinaturas HMAC opcionais.'],
+    ['Isolamento por organização', Building2, 'Membership e migrações RLS do Supabase apoiam fronteiras entre tenants.'],
+    ['Supabase Auth', Fingerprint, 'Sessões protegidas e verificações server-side para rotas privadas.'],
+    ['Arquitetura Vercel + Supabase', Server, 'Hosting, base de dados, autenticação e storage geridos.'],
+    ['RLS por organização', Database, 'Evidência RLS deve passar no projeto Supabase alvo antes de claims de produção.'],
+    ['Controlo de permissões', KeyRound, 'Owner, admin, editor, member e viewer mapeiam para permissões explícitas.'],
+    ['Postura de monitorização operacional', Network, 'Logs e evidência de release são acompanhados; monitorização 24/7 com equipa dedicada não é afirmada.'],
+    ['Documentação de confiança', ShieldAlert, 'SOC 2, ISO 27001 e pentest são divulgados como não concluídos atualmente.'],
+  ] },
+  features: { ...englishCopy.features, eyebrow: 'Funcionalidades', title: 'O que as equipas operam no EuroComply', cards: [
+    ['Calendário de compliance', 'Acompanhe obrigações, prazos e responsáveis num workspace.', CalendarDays],
+    ['Operações multilíngues', 'Apoie equipas cross-border com superfícies públicas e de produto localizadas.', Globe2],
+    ['Matriz de riscos', 'Identifique, avalie e mitigue riscos antes de revisões ou incidentes.', ShieldAlert],
+    ['Convites de equipa', 'Alinhe pessoas com funções e permissões da organização.', Users],
+    ['Entidades multi-país', 'Acompanhe contexto operacional em mercados europeus.', Building2],
+    ['Trilha de auditoria', 'Registe atividade crítica para revisão e investigação.', FileText],
+  ] },
+  infrastructure: { ...englishCopy.infrastructure, eyebrow: 'Infraestrutura', title: 'Arquitetura desenhada para apoiar avaliação enterprise.', subtitle: 'Next.js, Supabase Auth, RBAC por organização, migrações RLS, operações admin server-only, eventos de auditoria e checks de evidência estão documentados no Trust Center.', cta: 'Abrir visão de segurança' },
+  pricing: { ...englishCopy.pricing, eyebrow: 'Planos', title: 'Escolha o plano certo para a sua empresa', subtitle: 'Comece com workflows operacionais e evolua para materiais de procurement enterprise.', popular: 'Melhor equilíbrio', consultive: 'Avaliação enterprise', note: 'Compromissos enterprise dependem do contrato assinado e da evidência disponível. O EuroComply não afirma SOC 2, certificação ISO 27001, pentest terceiro concluído ou restore de backup testado.', plans: [
+    { name: 'Essential', planKey: 'essential', price: '€49', period: '/mês', text: 'Plano de entrada para pequenas equipas que querem sair das folhas de cálculo.', cta: 'Começar Essential', features: ['1 país fiscal', '1 utilizador', 'Calendário legal básico', 'Notícias regulatórias básicas', 'Perfil da empresa', 'Até 10 documentos', 'Matriz de riscos simples', 'Notificações básicas'] },
+    { name: 'Professional', planKey: 'professional', price: '€149', period: '/mês', text: 'Para PMEs com obrigações, documentos, riscos e ciclos de revisão reais.', cta: 'Escolher Professional', features: ['Até 2 países fiscais', 'Calendário de compliance', 'Documentos controlados', 'Versionamento', 'Matriz de riscos', 'Eventos de auditoria', 'Relatórios básicos', 'Até 3 utilizadores'] },
+    { name: 'Business', planKey: 'business', price: '€399', period: '/mês', text: 'Para empresas em crescimento europeu com equipas, aprovações e reporting.', cta: 'Escolher Business', highlighted: true, features: ['Até 5 países fiscais', 'NIFs por país', 'Workflows de aprovação', 'Relatórios executivos', 'Audit packs', 'Notícias por país', 'Matriz RACI', 'Até 10 utilizadores'] },
+    { name: 'Enterprise', price: 'Desde €990', period: '/mês', text: 'Plano consultivo para empresas reguladas e fornecedores B2B com procurement.', cta: 'Falar com vendas', enterprise: true, features: ['Limites expandidos', 'Utilizadores avançados', 'Permissões por função', 'Pacote de documentação Trust', 'Onboarding assistido', 'Termos de suporte por acordo', 'Revisão de DPA e subprocessadores', 'Apoio a questionários de segurança'] },
+  ] },
+  finalCta: { title: 'Dê aos compradores evidência avaliável, não claims para decifrar.', button: 'Assinar EuroComply', subtitle: 'Revise o Trust Center antes do procurement.' },
+};
+
+const spanishCopy: LandingCopy = {
+  ...englishCopy,
+  nav: { features: 'Funcionalidades', security: 'Seguridad', plans: 'Planes', trust: 'Trust Center', login: 'Iniciar sesión', subscribe: 'Suscribirse ahora' },
+  badge: 'Plataforma europea de operaciones de compliance',
+  heroTitle: 'Evidencias, riesgos y proveedores sin sorpresas de procurement.',
+  heroSubtitle: 'EuroComply ayuda a equipos europeos a centralizar evidencias, riesgos, proveedores, roles y trazas de auditoría manteniendo los claims de seguridad ligados a implementación documentada.',
+  cta: { start: 'Suscribirse ahora', demo: 'Ver demo', trust: 'Revisar Trust Center', learnMore: 'Más información' },
+  cockpit: { eyebrow: 'Cockpit ejecutivo', title: 'Workspace de compliance', live: 'Vista del workspace', metrics: [['RBAC', 'acceso por rol'], ['RLS', 'diseño de aislamiento'], ['Auditoría', 'eventos trazables'], ['Docs', 'paquete enterprise']], events: ['Política aprobada y registrada como evento de auditoría', 'Riesgo de proveedor listo para revisión', 'Respuesta de cuestionario de seguridad requiere evidencia'] },
+  security: { ...englishCopy.security, eyebrow: 'Arquitectura de seguridad', title: 'Postura de seguridad con límites de evidencia claros', subtitle: 'Controles implementados en la plataforma y brechas de roadmap o evidencia comunicadas claramente para procurement enterprise.', items: [
+    ['Cifrado gestionado por proveedor', ShieldCheck, 'Diseñado para usar TLS en tránsito y cifrado gestionado en reposo.'],
+    ['Workflows de privacidad', Lock, 'Soporta flujos de privacidad y solicitudes de titulares sin afirmar certificación legal.'],
+    ['Integridad de eventos de auditoría', FileText, 'Los eventos pueden usar cadenas hash SHA-256 y firmas HMAC opcionales.'],
+    ['Aislamiento por organización', Building2, 'Membership y migraciones RLS de Supabase apoyan límites entre tenants.'],
+    ['Supabase Auth', Fingerprint, 'Sesiones protegidas y verificaciones server-side para rutas privadas.'],
+    ['Arquitectura Vercel + Supabase', Server, 'Hosting, base de datos, autenticación y storage gestionados.'],
+    ['RLS por organización', Database, 'La evidencia RLS debe pasar en el proyecto Supabase objetivo antes de claims de producción.'],
+    ['Controles de permisos', KeyRound, 'Owner, admin, editor, member y viewer mapean a permisos explícitos.'],
+    ['Postura de monitoreo operacional', Network, 'Logs y evidencia de release se mantienen; no se afirma monitoreo 24/7 con equipo dedicado.'],
+    ['Documentación de confianza', ShieldAlert, 'SOC 2, ISO 27001 y pentest se divulgan como no completados actualmente.'],
+  ] },
+  features: { ...englishCopy.features, eyebrow: 'Funcionalidades', title: 'Qué operan los equipos en EuroComply', cards: [
+    ['Calendario de compliance', 'Gestiona obligaciones, plazos y responsables en un workspace.', CalendarDays],
+    ['Operaciones multilingües', 'Apoya equipos transfronterizos con superficies públicas y de producto localizadas.', Globe2],
+    ['Matriz de riesgos', 'Identifica, evalúa y mitiga riesgos antes de revisiones o incidentes.', ShieldAlert],
+    ['Invitaciones de equipo', 'Alinea personas con roles y permisos de organización.', Users],
+    ['Entidades multi-país', 'Gestiona contexto operativo en mercados europeos.', Building2],
+    ['Traza de auditoría', 'Registra actividad crítica para revisión e investigación.', FileText],
+  ] },
+  infrastructure: { ...englishCopy.infrastructure, eyebrow: 'Infraestructura', title: 'Arquitectura diseñada para apoyar evaluación enterprise.', subtitle: 'Next.js, Supabase Auth, RBAC por organización, migraciones RLS, operaciones admin server-only, eventos de auditoría y checks de evidencia están documentados en el Trust Center.', cta: 'Abrir visión de seguridad' },
+  pricing: { ...englishCopy.pricing, eyebrow: 'Planes', title: 'Elige el plan adecuado para tu empresa', subtitle: 'Empieza con workflows operacionales y escala hacia materiales de procurement enterprise.', popular: 'Mejor equilibrio', consultive: 'Evaluación enterprise', note: 'Los compromisos enterprise dependen del contrato firmado y de la evidencia disponible. EuroComply no afirma SOC 2, certificación ISO 27001, pentest tercero completado ni restore de backup probado.', plans: [
+    { name: 'Essential', planKey: 'essential', price: '€49', period: '/mes', text: 'Plan de entrada para equipos pequeños que quieren sacar evidencias y plazos de hojas de cálculo.', cta: 'Empezar Essential', features: ['1 país fiscal', '1 usuario', 'Calendario legal básico', 'Noticias regulatorias básicas', 'Perfil de empresa', 'Hasta 10 documentos', 'Matriz de riesgos simple', 'Notificaciones básicas'] },
+    { name: 'Professional', planKey: 'professional', price: '€149', period: '/mes', text: 'Para pymes con obligaciones, documentos, riesgos y ciclos de revisión reales.', cta: 'Elegir Professional', features: ['Hasta 2 países fiscales', 'Calendario de compliance', 'Documentos controlados', 'Versionado', 'Matriz de riesgos', 'Eventos de auditoría', 'Informes básicos', 'Hasta 3 usuarios'] },
+    { name: 'Business', planKey: 'business', price: '€399', period: '/mes', text: 'Para empresas que crecen en Europa con equipos, aprobaciones y reporting.', cta: 'Elegir Business', highlighted: true, features: ['Hasta 5 países fiscales', 'NIF por país', 'Workflows de aprobación', 'Informes ejecutivos', 'Audit packs', 'Noticias por país', 'Matriz RACI', 'Hasta 10 usuarios'] },
+    { name: 'Enterprise', price: 'Desde €990', period: '/mes', text: 'Plan consultivo para empresas reguladas y proveedores B2B que necesitan procurement.', cta: 'Hablar con ventas', enterprise: true, features: ['Límites ampliados', 'Usuarios avanzados', 'Permisos por rol', 'Paquete de documentación Trust', 'Onboarding asistido', 'Términos de soporte por acuerdo', 'Revisión de DPA y subprocesadores', 'Soporte para cuestionarios de seguridad'] },
+  ] },
+  finalCta: { title: 'Entrega a los compradores evidencia evaluable, no claims difíciles de descifrar.', button: 'Suscribirse a EuroComply', subtitle: 'Revisa el Trust Center antes del procurement.' },
+};
+
+const frenchCopy: LandingCopy = {
+  ...englishCopy,
+  nav: { features: 'Fonctionnalités', security: 'Sécurité', plans: 'Offres', trust: 'Trust Center', login: 'Connexion', subscribe: 'Souscrire' },
+  badge: 'Plateforme européenne d’opérations compliance',
+  heroTitle: 'Preuves, risques et fournisseurs sans surprises procurement.',
+  heroSubtitle: 'EuroComply aide les équipes européennes à centraliser preuves, risques, fournisseurs, rôles et traces d’audit tout en liant les claims sécurité à l’implémentation documentée.',
+  cta: { start: 'Souscrire', demo: 'Voir la démo', trust: 'Consulter le Trust Center', learnMore: 'En savoir plus' },
+  cockpit: { eyebrow: 'Cockpit exécutif', title: 'Workspace compliance', live: 'Vue workspace', metrics: [['RBAC', 'accès par rôle'], ['RLS', 'design d’isolation'], ['Audit', 'événements traçables'], ['Docs', 'paquet enterprise']], events: ['Politique approuvée et enregistrée comme événement d’audit', 'Risque fournisseur prêt pour revue', 'Réponse au questionnaire sécurité à valider avec preuves'] },
+  security: { ...englishCopy.security, eyebrow: 'Architecture sécurité', title: 'Posture sécurité avec limites de preuve explicites', subtitle: 'Contrôles implémentés et écarts de roadmap ou de preuve clairement indiqués pour le procurement enterprise.', items: [
+    ['Chiffrement géré par fournisseur', ShieldCheck, 'Conçu pour utiliser TLS en transit et le chiffrement géré au repos.'],
+    ['Workflows confidentialité', Lock, 'Prend en charge les workflows privacy et demandes des personnes sans affirmer de certification juridique.'],
+    ['Intégrité des événements d’audit', FileText, 'Les événements peuvent utiliser des chaînes hash SHA-256 et des signatures HMAC optionnelles.'],
+    ['Isolation par organisation', Building2, 'Les memberships et migrations RLS Supabase soutiennent les frontières entre tenants.'],
+    ['Supabase Auth', Fingerprint, 'Sessions protégées et contrôles server-side pour routes privées.'],
+    ['Architecture Vercel + Supabase', Server, 'Hébergement, base de données, authentification et stockage gérés.'],
+    ['RLS par organisation', Database, 'La preuve RLS doit réussir sur le projet Supabase cible avant tout claim de production.'],
+    ['Contrôles de permissions', KeyRound, 'Owner, admin, editor, member et viewer correspondent à des permissions explicites.'],
+    ['Posture de monitoring opérationnel', Network, 'Logs et preuves de release sont suivis; aucun monitoring 24/7 staffé n’est affirmé.'],
+    ['Documentation de confiance', ShieldAlert, 'SOC 2, ISO 27001 et pentest sont indiqués comme non finalisés actuellement.'],
+  ] },
+  features: { ...englishCopy.features, eyebrow: 'Fonctionnalités', title: 'Ce que les équipes opèrent dans EuroComply', cards: [
+    ['Calendrier compliance', 'Suivez obligations, échéances et responsables dans un workspace.', CalendarDays],
+    ['Opérations multilingues', 'Soutenez les équipes transfrontalières avec des surfaces publiques et produit localisées.', Globe2],
+    ['Matrice des risques', 'Identifiez, évaluez et atténuez les risques avant revues ou incidents.', ShieldAlert],
+    ['Invitations équipe', 'Alignez les personnes avec les rôles et permissions de l’organisation.', Users],
+    ['Entités multi-pays', 'Suivez le contexte opérationnel sur les marchés européens.', Building2],
+    ['Trace d’audit', 'Enregistrez les activités critiques pour revue et investigation.', FileText],
+  ] },
+  infrastructure: { ...englishCopy.infrastructure, eyebrow: 'Infrastructure', title: 'Architecture conçue pour soutenir l’évaluation enterprise.', subtitle: 'Next.js, Supabase Auth, RBAC par organisation, migrations RLS, opérations admin server-only, événements d’audit et checks de preuve sont documentés dans le Trust Center.', cta: 'Ouvrir la vue sécurité' },
+  pricing: { ...englishCopy.pricing, eyebrow: 'Offres', title: 'Choisissez l’offre adaptée à votre entreprise', subtitle: 'Commencez avec des workflows opérationnels puis évoluez vers les matériaux procurement enterprise.', popular: 'Meilleur équilibre', consultive: 'Évaluation enterprise', note: 'Les engagements enterprise dépendent du contrat signé et des preuves disponibles. EuroComply ne revendique pas SOC 2, certification ISO 27001, pentest tiers finalisé ni restauration de backup testée.', plans: [
+    { name: 'Essential', planKey: 'essential', price: '€49', period: '/mois', text: 'Offre d’entrée pour petites équipes qui sortent preuves et échéances des tableurs.', cta: 'Commencer Essential', features: ['1 pays fiscal', '1 utilisateur', 'Calendrier légal basique', 'Actualités réglementaires basiques', 'Profil entreprise', 'Jusqu’à 10 documents', 'Matrice simple', 'Notifications basiques'] },
+    { name: 'Professional', planKey: 'professional', price: '€149', period: '/mois', text: 'Pour PME avec obligations, documents, risques et cycles de revue réels.', cta: 'Choisir Professional', features: ['Jusqu’à 2 pays fiscaux', 'Calendrier compliance', 'Documents contrôlés', 'Versioning', 'Matrice des risques', 'Événements d’audit', 'Rapports basiques', 'Jusqu’à 3 utilisateurs'] },
+    { name: 'Business', planKey: 'business', price: '€399', period: '/mois', text: 'Pour entreprises en croissance européenne avec équipes, approbations et reporting.', cta: 'Choisir Business', highlighted: true, features: ['Jusqu’à 5 pays fiscaux', 'Identifiants fiscaux par pays', 'Workflows d’approbation', 'Rapports exécutifs', 'Audit packs', 'Actualités par pays', 'Matrice RACI', 'Jusqu’à 10 utilisateurs'] },
+    { name: 'Enterprise', price: 'Dès €990', period: '/mois', text: 'Offre consultative pour entreprises réglementées et fournisseurs B2B soumis au procurement.', cta: 'Parler aux ventes', enterprise: true, features: ['Limites étendues', 'Utilisateurs avancés', 'Permissions par rôle', 'Paquet documentaire Trust', 'Onboarding assisté', 'Conditions support par accord', 'Revue DPA et sous-traitants', 'Support questionnaire sécurité'] },
+  ] },
+  finalCta: { title: 'Donnez aux acheteurs des preuves évaluables, pas des claims à décoder.', button: 'Souscrire à EuroComply', subtitle: 'Consultez le Trust Center avant le procurement.' },
+};
+
+const italianCopy: LandingCopy = {
+  ...englishCopy,
+  nav: { features: 'Funzionalità', security: 'Sicurezza', plans: 'Piani', trust: 'Trust Center', login: 'Accedi', subscribe: 'Abbonati ora' },
+  badge: 'Piattaforma europea per operazioni di compliance',
+  heroTitle: 'Evidenze, rischi e fornitori senza sorprese di procurement.',
+  heroSubtitle: 'EuroComply aiuta i team europei a centralizzare evidenze, rischi, fornitori, ruoli e audit trail mantenendo i claim di sicurezza collegati all’implementazione documentata.',
+  cta: { start: 'Abbonati ora', demo: 'Vedi demo', trust: 'Consulta il Trust Center', learnMore: 'Scopri di più' },
+  cockpit: { eyebrow: 'Cockpit executive', title: 'Workspace compliance', live: 'Vista workspace', metrics: [['RBAC', 'accesso per ruolo'], ['RLS', 'design isolamento'], ['Audit', 'eventi tracciabili'], ['Docs', 'pacchetto enterprise']], events: ['Policy approvata e registrata come evento audit', 'Rischio fornitore pronto per revisione', 'Risposta al questionario sicurezza da validare con evidenze'] },
+  security: { ...englishCopy.security, eyebrow: 'Architettura sicurezza', title: 'Postura di sicurezza con limiti di evidenza chiari', subtitle: 'Controlli implementati nella piattaforma e gap di roadmap o evidenza dichiarati chiaramente per procurement enterprise.', items: [
+    ['Cifratura gestita dal provider', ShieldCheck, 'Progettato per usare TLS in transito e cifratura gestita a riposo.'],
+    ['Workflow privacy', Lock, 'Supporta flussi privacy e richieste degli interessati senza affermare certificazione legale.'],
+    ['Integrità degli eventi audit', FileText, 'Gli eventi possono usare catene hash SHA-256 e firme HMAC opzionali.'],
+    ['Isolamento per organizzazione', Building2, 'Membership e migrazioni RLS Supabase supportano confini tra tenant.'],
+    ['Supabase Auth', Fingerprint, 'Sessioni protette e controlli server-side per route private.'],
+    ['Architettura Vercel + Supabase', Server, 'Hosting, database, autenticazione e storage gestiti.'],
+    ['RLS per organizzazione', Database, 'Le evidenze RLS devono passare sul progetto Supabase target prima di claim di produzione.'],
+    ['Controlli permessi', KeyRound, 'Owner, admin, editor, member e viewer mappano permessi espliciti.'],
+    ['Postura di monitoraggio operativo', Network, 'Log ed evidenze di release sono tracciati; non si afferma monitoraggio 24/7 con team dedicato.'],
+    ['Documentazione trust', ShieldAlert, 'SOC 2, ISO 27001 e pentest sono dichiarati come non completati attualmente.'],
+  ] },
+  features: { ...englishCopy.features, eyebrow: 'Funzionalità', title: 'Cosa gestiscono i team in EuroComply', cards: [
+    ['Calendario compliance', 'Monitora obblighi, scadenze e responsabili in un workspace.', CalendarDays],
+    ['Operazioni multilingue', 'Supporta team cross-border con superfici pubbliche e prodotto localizzate.', Globe2],
+    ['Matrice rischi', 'Identifica, valuta e mitiga rischi prima di revisioni o incidenti.', ShieldAlert],
+    ['Inviti team', 'Allinea persone con ruoli e permessi dell’organizzazione.', Users],
+    ['Entità multi-paese', 'Monitora il contesto operativo nei mercati europei.', Building2],
+    ['Audit trail', 'Registra attività critiche per revisione e indagine.', FileText],
+  ] },
+  infrastructure: { ...englishCopy.infrastructure, eyebrow: 'Infrastruttura', title: 'Architettura progettata per supportare valutazioni enterprise.', subtitle: 'Next.js, Supabase Auth, RBAC per organizzazione, migrazioni RLS, operazioni admin server-only, eventi audit e controlli evidenza sono documentati nel Trust Center.', cta: 'Apri panoramica sicurezza' },
+  pricing: { ...englishCopy.pricing, eyebrow: 'Piani', title: 'Scegli il piano giusto per la tua azienda', subtitle: 'Inizia con workflow operativi e scala verso materiali di procurement enterprise.', popular: 'Miglior equilibrio', consultive: 'Valutazione enterprise', note: 'Gli impegni enterprise dipendono dal contratto firmato e dalle evidenze disponibili. EuroComply non afferma SOC 2, certificazione ISO 27001, pentest di terze parti completato o restore backup testato.', plans: [
+    { name: 'Essential', planKey: 'essential', price: '€49', period: '/mese', text: 'Piano di ingresso per piccoli team che spostano evidenze e scadenze fuori dai fogli di calcolo.', cta: 'Inizia Essential', features: ['1 paese fiscale', '1 utente', 'Calendario legale base', 'Notizie normative base', 'Profilo azienda', 'Fino a 10 documenti', 'Matrice rischi semplice', 'Notifiche base'] },
+    { name: 'Professional', planKey: 'professional', price: '€149', period: '/mese', text: 'Per PMI con obblighi, documenti, rischi e cicli di revisione reali.', cta: 'Scegli Professional', features: ['Fino a 2 paesi fiscali', 'Calendario compliance', 'Documenti controllati', 'Versioning', 'Matrice rischi', 'Eventi audit', 'Report base', 'Fino a 3 utenti'] },
+    { name: 'Business', planKey: 'business', price: '€399', period: '/mese', text: 'Per aziende che crescono in Europa con team, approvazioni e reporting.', cta: 'Scegli Business', highlighted: true, features: ['Fino a 5 paesi fiscali', 'ID fiscali per paese', 'Workflow approvazione', 'Report executive', 'Audit pack', 'Notizie per paese', 'Matrice RACI', 'Fino a 10 utenti'] },
+    { name: 'Enterprise', price: 'Da €990', period: '/mese', text: 'Piano consultivo per aziende regolamentate e fornitori B2B con procurement.', cta: 'Parla con vendite', enterprise: true, features: ['Limiti estesi', 'Utenti avanzati', 'Permessi per ruolo', 'Pacchetto documentazione Trust', 'Onboarding assistito', 'Termini supporto per accordo', 'Revisione DPA e subprocessori', 'Supporto questionari sicurezza'] },
+  ] },
+  finalCta: { title: 'Dai ai buyer evidenze valutabili, non claim da decifrare.', button: 'Abbonati a EuroComply', subtitle: 'Consulta il Trust Center prima del procurement.' },
+};
+
+const germanCopy: LandingCopy = {
+  ...englishCopy,
+  nav: { features: 'Funktionen', security: 'Sicherheit', plans: 'Pläne', trust: 'Trust Center', login: 'Anmelden', subscribe: 'Jetzt abonnieren' },
+  badge: 'Europäische Plattform für Compliance-Operationen',
+  heroTitle: 'Compliance-Evidenz, Risiken und Lieferanten ohne Procurement-Überraschungen.',
+  heroSubtitle: 'EuroComply hilft europäischen Teams, Evidenz, Risiken, Lieferanten, Rollen und Audit Trails zu zentralisieren und Security Claims an dokumentierte Umsetzung zu binden.',
+  cta: { start: 'Jetzt abonnieren', demo: 'Demo ansehen', trust: 'Trust Center prüfen', learnMore: 'Mehr erfahren' },
+  cockpit: { eyebrow: 'Executive Cockpit', title: 'Compliance Workspace', live: 'Workspace-Ansicht', metrics: [['RBAC', 'rollenbasierter Zugriff'], ['RLS', 'Isolationsdesign'], ['Audit', 'nachvollziehbare Events'], ['Docs', 'Enterprise-Paket']], events: ['Richtlinie genehmigt und als Audit-Event erfasst', 'Lieferantenrisiko bereit zur Prüfung', 'Antwort auf Security-Fragebogen benötigt Evidenzprüfung'] },
+  security: { ...englishCopy.security, eyebrow: 'Sicherheitsarchitektur', title: 'Security Posture mit ehrlichen Evidenzgrenzen', subtitle: 'Implementierte Kontrollen sowie klar offengelegte Roadmap- oder Evidenzlücken für Enterprise Procurement.', items: [
+    ['Provider-verwaltete Verschlüsselung', ShieldCheck, 'Ausgelegt auf TLS in Transit und provider-verwaltete Verschlüsselung im Ruhezustand.'],
+    ['Datenschutz-Workflows', Lock, 'Unterstützt Privacy- und Betroffenenanfragen ohne rechtliche Zertifizierung zu behaupten.'],
+    ['Integrität von Audit-Events', FileText, 'Audit-Events können SHA-256 Hash Chains und optionale HMAC-Signaturen nutzen.'],
+    ['Isolation pro Organisation', Building2, 'Membership Checks und Supabase RLS Migrationen unterstützen Tenant-Grenzen.'],
+    ['Supabase Auth', Fingerprint, 'Geschützte Sessions und serverseitige Nutzerprüfungen für private Routen.'],
+    ['Vercel + Supabase Architektur', Server, 'Managed Hosting, Datenbank, Authentifizierung und Storage-Konfiguration.'],
+    ['RLS pro Organisation', Database, 'RLS-Evidenz muss im Ziel-Supabase-Projekt bestehen, bevor Production Claims gemacht werden.'],
+    ['Berechtigungskontrollen', KeyRound, 'Owner, admin, editor, member und viewer sind expliziten Berechtigungen zugeordnet.'],
+    ['Operative Monitoring-Posture', Network, 'Logs und Release-Evidenz werden verfolgt; 24/7 Staffed Monitoring wird nicht behauptet.'],
+    ['Trust-Dokumentation', ShieldAlert, 'SOC 2, ISO 27001 und Pentest werden als aktuell nicht abgeschlossen offengelegt.'],
+  ] },
+  features: { ...englishCopy.features, eyebrow: 'Funktionen', title: 'Was Teams in EuroComply betreiben', cards: [
+    ['Compliance-Kalender', 'Verfolgen Sie Pflichten, Fristen und Verantwortliche in einem Workspace.', CalendarDays],
+    ['Mehrsprachige Operationen', 'Unterstützen Sie grenzüberschreitende Teams mit lokalisierten Public- und Produktflächen.', Globe2],
+    ['Risikomatrix', 'Risiken identifizieren, bewerten und mindern, bevor Reviews oder Incidents entstehen.', ShieldAlert],
+    ['Team-Einladungen', 'Richten Sie Personen an Rollen und Berechtigungen der Organisation aus.', Users],
+    ['Multi-Land-Entitäten', 'Verfolgen Sie operativen Kontext in europäischen Märkten.', Building2],
+    ['Audit Trail', 'Erfassen Sie kritische Aktivitäten für Review und Untersuchung.', FileText],
+  ] },
+  infrastructure: { ...englishCopy.infrastructure, eyebrow: 'Infrastruktur', title: 'Architektur zur Unterstützung von Enterprise Reviews.', subtitle: 'Next.js, Supabase Auth, organisationsbezogenes RBAC, RLS Migrationen, server-only Admin Operationen, Audit Events und Evidenzprüfungen sind im Trust Center dokumentiert.', cta: 'Security-Übersicht öffnen' },
+  pricing: { ...englishCopy.pricing, eyebrow: 'Pläne', title: 'Wählen Sie den richtigen Plan für Ihr Unternehmen', subtitle: 'Starten Sie mit operativen Compliance Workflows und skalieren Sie zu Enterprise Procurement Materialien.', popular: 'Beste Balance', consultive: 'Enterprise Review', note: 'Enterprise Security Commitments hängen vom unterschriebenen Vertrag und verfügbarer Evidenz ab. EuroComply behauptet derzeit weder SOC 2 noch ISO 27001 Zertifizierung, abgeschlossenen Drittanbieter-Pentest oder getestete Backup-Wiederherstellung.', plans: [
+    { name: 'Essential', planKey: 'essential', price: '€49', period: '/Monat', text: 'Einstiegsplan für kleine Teams, die Evidenz und Fristen aus Tabellen herauslösen.', cta: 'Essential starten', features: ['1 Steuerland', '1 Nutzer', 'Basiskalender', 'Basis-Regulatory-News', 'Unternehmensprofil', 'Bis 10 Dokumente', 'Einfache Risikomatrix', 'Basisbenachrichtigungen'] },
+    { name: 'Professional', planKey: 'professional', price: '€149', period: '/Monat', text: 'Für KMU mit echten Pflichten, Dokumenten, Risiken und Review-Zyklen.', cta: 'Professional wählen', features: ['Bis 2 Steuerländer', 'Compliance-Kalender', 'Kontrollierte Dokumente', 'Versionierung', 'Risikomatrix', 'Audit Events', 'Basisberichte', 'Bis 3 Nutzer'] },
+    { name: 'Business', planKey: 'business', price: '€399', period: '/Monat', text: 'Für Unternehmen, die in Europa mit Teams, Freigaben und Reporting wachsen.', cta: 'Business wählen', highlighted: true, features: ['Bis 5 Steuerländer', 'Steuer-IDs je Land', 'Freigabe-Workflows', 'Executive Reports', 'Audit Packs', 'Länderspezifische News', 'RACI-Matrix', 'Bis 10 Nutzer'] },
+    { name: 'Enterprise', price: 'Ab €990', period: '/Monat', text: 'Beratender Plan für regulierte Unternehmen und B2B-Anbieter mit Procurement-Anforderungen.', cta: 'Mit Vertrieb sprechen', enterprise: true, features: ['Erweiterte Limits', 'Fortgeschrittene Nutzer', 'Rollenbasierte Berechtigungen', 'Trust-Dokumentationspaket', 'Begleitetes Onboarding', 'Support-Bedingungen nach Vereinbarung', 'DPA- und Subprocessor-Review', 'Support für Security-Fragebögen'] },
+  ] },
+  finalCta: { title: 'Geben Sie Käufern bewertbare Evidenz statt Claims zum Entschlüsseln.', button: 'EuroComply abonnieren', subtitle: 'Prüfen Sie das Trust Center vor dem Procurement.' },
+};
+
 const landingCopy: Record<Locale, LandingCopy> = {
-  en: {
-    nav: { features: 'Features', security: 'Security', plans: 'Plans', login: 'Log in', subscribe: 'Subscribe now' },
-    badge: 'European compliance intelligence platform',
-    heroTitle: 'Compliance that accelerates your business. Not slows it down.',
-    heroSubtitle: 'Companies using EuroComply reduce fiscal risk by 73% and save 40h/month in bureaucracy.',
-    cta: { start: 'Subscribe now', demo: 'View demo', learnMore: 'Learn more' },
-    cockpit: {
-      eyebrow: 'Executive cockpit',
-      title: 'Compliance status',
-      live: 'Live',
-      metrics: [['73%', 'fiscal risk reduced'], ['40h', 'saved per month'], ['12k', 'euros in avoided fines'], ['8', 'upcoming obligations']],
-      events: ['New fiscal deadline identified for France', 'Policy approved and recorded in the audit log', 'Executive report ready for review'],
-    },
-    security: {
-      eyebrow: 'Security architecture',
-      title: 'Security your company requires',
-      subtitle: 'Controls already applied in the platform and additional layers planned for Business and Enterprise customers.',
-      items: [
-        ['End-to-end encryption', ShieldCheck, 'Sensitive data protected in transit and at rest.'],
-        ['GDPR compliant', Lock, 'Flows aligned with privacy and data subject rights.'],
-        ['Immutable audit log', FileText, 'Every critical action is recorded for inspections.'],
-        ['Multi-company isolation', Building2, 'Strict data separation between organizations.'],
-        ['Secure authentication', Fingerprint, 'Protected sessions with Supabase Auth and RLS policies.'],
-        ['Vercel + Supabase infrastructure', Server, 'Global deployment, managed database and server-side security.'],
-        ['Organization-level RLS policies', Database, 'Access based on membership and business context.'],
-        ['Permission controls', KeyRound, 'Profiles and roles for sensitive operations.'],
-        ['Event monitoring', Bell, 'Alerts for activity, approvals and critical deadlines.'],
-        ['Backups and continuity planning', Network, 'Resilience roadmap for enterprise operations.'],
-        ['ISO 27001 in preparation', Award, 'Security maturity and governance program.'],
-        ['Annual penetration testing', ShieldAlert, 'Planned control for enterprise security.'],
-      ],
-    },
-    features: {
-      eyebrow: 'Features',
-      title: 'What you gain by subscribing to EuroComply',
-      cards: [
-        ['AI calendar', 'Never miss a fiscal deadline again. Automatic alerts for new obligations.', CalendarDays],
-        ['Multilingual news', 'Compliance news in PT, FR, ES, EN, IT and DE, updated by AI.', Globe2],
-        ['Risk matrix', 'Identify, assess and mitigate risks before they become fines.', ShieldAlert],
-        ['Employee invitations', 'Keep the whole team aligned with permissions and secure access.', Users],
-        ['Multiple tax IDs by country', 'Expand into France, Germany, Italy, Spain and Portugal with less fiscal friction.', Building2],
-        ['Audit log', 'Every action recorded and ready for inspections.', FileText],
-      ],
-    },
-    infrastructure: {
-      eyebrow: 'Infrastructure',
-      title: 'Our team works to protect your data and reduce operational risk.',
-      subtitle: 'Continuous updates, server-side architecture, secure authentication and organization isolation for companies treating compliance as critical infrastructure.',
-      cta: 'Explore our infrastructure',
-    },
-    pricing: {
-      eyebrow: 'Plans',
-      title: 'Choose the right plan for your company',
-      subtitle: 'How much are you losing without a structured compliance operation?',
-      popular: 'Best balance',
-      consultive: 'Premium consultive',
-      note: 'Essential reduces the entry barrier. Professional captures SMEs with real obligations. Business sells operations, team and European expansion. Enterprise preserves premium value for regulated and multi-country companies.',
-      plans: [
-        { name: 'Essential', planKey: 'essential', price: '€49', period: '/month', text: 'Entry plan for micro-businesses, consultants and small teams that want to leave spreadsheets behind.', cta: 'Start Essential', features: ['1 fiscal country', '1 user', 'Basic legal calendar', 'Basic regulatory news', 'Company profile', 'Up to 10 documents', 'Simple risk matrix', 'Basic notifications'] },
-        { name: 'Professional', planKey: 'professional', price: '€149', period: '/month', text: 'For SMEs with real obligations, documents, risks and deadlines that need consistent control.', cta: 'Choose Professional', features: ['Up to 2 fiscal countries', 'AI calendar', 'Controlled documents', 'Versioning', 'Complete risk matrix', 'Audit log', 'Basic reports', 'Up to 3 users'] },
-        { name: 'Business', planKey: 'business', price: '€399', period: '/month', text: 'For companies growing across Europe with multi-country operations, internal teams and executive reporting.', cta: 'Choose Business', highlighted: true, features: ['Up to 5 fiscal countries', 'Tax IDs by country', 'Approval workflows', 'Executive reports', 'Audit packs', 'AI news by country', 'RACI matrix', 'Up to 10 users'] },
-        { name: 'Enterprise', price: 'From €990', period: '/month', text: 'Consultive plan for regulated companies, groups, fintechs, healthtechs and enterprise B2B suppliers.', cta: 'Talk to sales', enterprise: true, features: ['Unlimited countries', 'Advanced users', 'Role-based permissions', 'White-label reports', 'Assisted onboarding', 'SLA and priority support', 'DORA, NIS2, ISO 27001 and AI Act modules', 'Full audit trail'] },
-      ],
-    },
-    finalCta: { title: 'Compliance does not need to be a nightmare. Leave it with people who understand it.', button: 'Subscribe to EuroComply now', subtitle: '14-day free trial. No commitment.' },
-  },
-  pt: {
-    nav: { features: 'Funcionalidades', security: 'Segurança', plans: 'Planos', login: 'Entrar', subscribe: 'Assinar agora' },
-    badge: 'Plataforma europeia de inteligência de compliance',
-    heroTitle: 'Compliance que acelera o seu negócio. Não atrasa.',
-    heroSubtitle: 'Empresas que usam EuroComply reduzem riscos fiscais em 73% e poupam 40h/mês em burocracia.',
-    cta: { start: 'Assinar agora', demo: 'Ver demonstração', learnMore: 'Saiba mais' },
-    cockpit: {
-      eyebrow: 'Cockpit executivo',
-      title: 'Estado de compliance',
-      live: 'Ao vivo',
-      metrics: [['73%', 'risco fiscal reduzido'], ['40h', 'poupadas por mês'], ['12k', 'euros em multas evitadas'], ['8', 'obrigações próximas']],
-      events: ['Novo prazo fiscal identificado para França', 'Política aprovada e registada no log de auditoria', 'Relatório executivo pronto para revisão'],
-    },
-    security: {
-      eyebrow: 'Arquitetura de segurança',
-      title: 'Segurança que a sua empresa exige',
-      subtitle: 'Controlos já aplicados na plataforma e camadas adicionais planeadas para clientes Business e Enterprise.',
-      items: [
-        ['Criptografia ponta a ponta', ShieldCheck, 'Dados sensíveis protegidos em trânsito e repouso.'],
-        ['GDPR compliant', Lock, 'Fluxos alinhados com privacidade e direitos do titular.'],
-        ['Log de auditoria imutável', FileText, 'Toda ação crítica fica registada para fiscalização.'],
-        ['Isolamento multiempresa', Building2, 'Separação rígida de dados entre organizações.'],
-        ['Autenticação segura', Fingerprint, 'Sessões protegidas com Supabase Auth e políticas RLS.'],
-        ['Infraestrutura Vercel + Supabase', Server, 'Deploy global, base de dados gerida e segurança server-side.'],
-        ['Políticas RLS por organização', Database, 'Acesso baseado em membership e contexto empresarial.'],
-        ['Controlo de permissões', KeyRound, 'Perfis e roles para operações sensíveis.'],
-        ['Monitorização de eventos', Bell, 'Alertas para atividades, aprovações e prazos críticos.'],
-        ['Backups e continuidade planeados', Network, 'Roadmap de resiliência para operações enterprise.'],
-        ['ISO 27001 em preparação', Award, 'Programa de maturidade e governação de segurança.'],
-        ['Testes de penetração anuais', ShieldAlert, 'Controlo previsto no plano de segurança enterprise.'],
-      ],
-    },
-    features: {
-      eyebrow: 'Funcionalidades',
-      title: 'O que ganha ao assinar o EuroComply',
-      cards: [
-        ['Calendário com IA', 'Nunca mais perca um prazo fiscal. Alertas automáticos de novas obrigações.', CalendarDays],
-        ['Notícias multilíngues', 'Notícias de compliance em PT, FR, ES, EN, IT e DE, sempre atualizadas por IA.', Globe2],
-        ['Matriz de riscos', 'Identifique, avalie e mitigue riscos antes de virarem multas.', ShieldAlert],
-        ['Convite de funcionários', 'Equipa alinhada com permissões e acesso seguro.', Users],
-        ['Múltiplos NIFs por país', 'Expanda para França, Alemanha, Itália e Espanha com menos atrito fiscal.', Building2],
-        ['Log de auditoria', 'Toda ação registada e pronta para fiscalização.', FileText],
-      ],
-    },
-    infrastructure: {
-      eyebrow: 'Infraestrutura',
-      title: 'A nossa equipa trabalha para proteger os seus dados e reduzir risco operacional.',
-      subtitle: 'Atualizações contínuas, arquitetura server-side, autenticação segura e isolamento por organização para empresas que tratam compliance como infraestrutura crítica.',
-      cta: 'Conheça a nossa infraestrutura',
-    },
-    pricing: {
-      eyebrow: 'Planos',
-      title: 'Escolha o plano certo para a sua empresa',
-      subtitle: 'Quanto está a perder por não ter uma operação de compliance estruturada?',
-      popular: 'Melhor equilíbrio',
-      consultive: 'Consultivo premium',
-      note: 'Essential reduz a barreira de entrada. Professional captura PMEs com obrigações reais. Business vende operação, equipa e expansão europeia. Enterprise preserva valor premium para empresas reguladas e multi-país.',
-      plans: [
-        { name: 'Essential', planKey: 'essential', price: '€49', period: '/mês', text: 'Plano de acesso para microempresas, consultores e equipas pequenas que querem sair do Excel sem medo.', cta: 'Começar Essential', features: ['1 país fiscal', '1 utilizador', 'Calendário legal básico', 'Notícias regulatórias básicas', 'Perfil da empresa', 'Até 10 documentos', 'Matriz de riscos simples', 'Notificações básicas'] },
-        { name: 'Professional', planKey: 'professional', price: '€149', period: '/mês', text: 'Para PMEs com obrigações reais, documentos, riscos e prazos que precisam de controlo consistente.', cta: 'Assinar Professional', features: ['Até 2 países fiscais', 'Calendário com IA', 'Documentos controlados', 'Versionamento', 'Matriz de riscos completa', 'Log de auditoria', 'Relatórios básicos', 'Até 3 utilizadores'] },
-        { name: 'Business', planKey: 'business', price: '€399', period: '/mês', text: 'Para empresas em crescimento europeu com operação multi-país, equipa interna e reporting executivo.', cta: 'Assinar Business', highlighted: true, features: ['Até 5 países fiscais', 'NIFs por país', 'Workflows de aprovação', 'Relatórios executivos', 'Audit packs', 'Notícias IA por país', 'Matriz RACI', 'Até 10 utilizadores'] },
-        { name: 'Enterprise', price: 'Desde €990', period: '/mês', text: 'Plano consultivo para empresas reguladas, grupos, fintechs, healthtechs e fornecedores B2B enterprise.', cta: 'Falar com vendas', enterprise: true, features: ['Países ilimitados', 'Utilizadores avançados', 'Permissões por função', 'Relatórios white-label', 'Onboarding assistido', 'SLA e suporte prioritário', 'Módulos DORA, NIS2, ISO 27001 e AI Act', 'Trilha de auditoria completa'] },
-      ],
-    },
-    finalCta: { title: 'O compliance não precisa ser um pesadelo. Deixe com quem entende.', button: 'Assinar EuroComply agora', subtitle: 'Teste grátis por 14 dias. Sem compromisso.' },
-  },
-  es: {
-    nav: { features: 'Funcionalidades', security: 'Seguridad', plans: 'Planes', login: 'Entrar', subscribe: 'Suscribirse ahora' },
-    badge: 'Plataforma europea de inteligencia de compliance',
-    heroTitle: 'Compliance que acelera tu negocio. No lo frena.',
-    heroSubtitle: 'Las empresas que usan EuroComply reducen el riesgo fiscal en un 73% y ahorran 40h/mes en burocracia.',
-    cta: { start: 'Suscribirse ahora', demo: 'Ver demostración', learnMore: 'Saber más' },
-    cockpit: {
-      eyebrow: 'Cockpit ejecutivo',
-      title: 'Estado de compliance',
-      live: 'En vivo',
-      metrics: [['73%', 'riesgo fiscal reducido'], ['40h', 'ahorradas al mes'], ['12k', 'euros en multas evitadas'], ['8', 'obligaciones próximas']],
-      events: ['Nuevo plazo fiscal identificado para Francia', 'Política aprobada y registrada en el log de auditoría', 'Informe ejecutivo listo para revisión'],
-    },
-    security: {
-      eyebrow: 'Arquitectura de seguridad',
-      title: 'La seguridad que tu empresa exige',
-      subtitle: 'Controles ya aplicados en la plataforma y capas adicionales planificadas para clientes Business y Enterprise.',
-      items: [
-        ['Cifrado de extremo a extremo', ShieldCheck, 'Datos sensibles protegidos en tránsito y en reposo.'],
-        ['GDPR compliant', Lock, 'Flujos alineados con privacidad y derechos del titular.'],
-        ['Log de auditoría inmutable', FileText, 'Toda acción crítica queda registrada para inspecciones.'],
-        ['Aislamiento multiempresa', Building2, 'Separación estricta de datos entre organizaciones.'],
-        ['Autenticación segura', Fingerprint, 'Sesiones protegidas con Supabase Auth y políticas RLS.'],
-        ['Infraestructura Vercel + Supabase', Server, 'Despliegue global, base de datos gestionada y seguridad server-side.'],
-        ['Políticas RLS por organización', Database, 'Acceso basado en membresía y contexto empresarial.'],
-        ['Control de permisos', KeyRound, 'Perfiles y roles para operaciones sensibles.'],
-        ['Monitorización de eventos', Bell, 'Alertas para actividades, aprobaciones y plazos críticos.'],
-        ['Backups y continuidad planificados', Network, 'Roadmap de resiliencia para operaciones enterprise.'],
-        ['ISO 27001 en preparación', Award, 'Programa de madurez y gobernanza de seguridad.'],
-        ['Pruebas de penetración anuales', ShieldAlert, 'Control previsto para seguridad enterprise.'],
-      ],
-    },
-    features: {
-      eyebrow: 'Funcionalidades',
-      title: 'Lo que ganas al suscribirte a EuroComply',
-      cards: [
-        ['Calendario con IA', 'No vuelvas a perder un plazo fiscal. Alertas automáticas de nuevas obligaciones.', CalendarDays],
-        ['Noticias multilingües', 'Noticias de compliance en PT, FR, ES, EN, IT y DE, actualizadas por IA.', Globe2],
-        ['Matriz de riesgos', 'Identifica, evalúa y mitiga riesgos antes de que se conviertan en multas.', ShieldAlert],
-        ['Invitación de empleados', 'Equipo alineado con permisos y acceso seguro.', Users],
-        ['Múltiples NIF por país', 'Expándete a Francia, Alemania, Italia y España con menos fricción fiscal.', Building2],
-        ['Log de auditoría', 'Toda acción registrada y lista para inspecciones.', FileText],
-      ],
-    },
-    infrastructure: {
-      eyebrow: 'Infraestructura',
-      title: 'Nuestro equipo trabaja para proteger tus datos y reducir el riesgo operativo.',
-      subtitle: 'Actualizaciones continuas, arquitectura server-side, autenticación segura y aislamiento por organización para empresas que tratan compliance como infraestructura crítica.',
-      cta: 'Explorar nuestra infraestructura',
-    },
-    pricing: {
-      eyebrow: 'Planes',
-      title: 'Elige el plan adecuado para tu empresa',
-      subtitle: '¿Cuánto estás perdiendo por no tener una operación de compliance estructurada?',
-      popular: 'Mejor equilibrio',
-      consultive: 'Consultivo premium',
-      note: 'Essential reduce la barrera de entrada. Professional captura pymes con obligaciones reales. Business vende operación, equipo y expansión europea. Enterprise conserva valor premium para empresas reguladas y multi-país.',
-      plans: [
-        { name: 'Essential', planKey: 'essential', price: '€49', period: '/mes', text: 'Plan de entrada para microempresas, consultores y equipos pequeños que quieren dejar Excel atrás.', cta: 'Empezar Essential', features: ['1 país fiscal', '1 usuario', 'Calendario legal básico', 'Noticias regulatorias básicas', 'Perfil de empresa', 'Hasta 10 documentos', 'Matriz de riesgos simple', 'Notificaciones básicas'] },
-        { name: 'Professional', planKey: 'professional', price: '€149', period: '/mes', text: 'Para pymes con obligaciones reales, documentos, riesgos y plazos que necesitan control consistente.', cta: 'Elegir Professional', features: ['Hasta 2 países fiscales', 'Calendario con IA', 'Documentos controlados', 'Versionado', 'Matriz de riesgos completa', 'Log de auditoría', 'Informes básicos', 'Hasta 3 usuarios'] },
-        { name: 'Business', planKey: 'business', price: '€399', period: '/mes', text: 'Para empresas en crecimiento europeo con operación multi-país, equipo interno y reporting ejecutivo.', cta: 'Elegir Business', highlighted: true, features: ['Hasta 5 países fiscales', 'NIF por país', 'Workflows de aprobación', 'Informes ejecutivos', 'Audit packs', 'Noticias IA por país', 'Matriz RACI', 'Hasta 10 usuarios'] },
-        { name: 'Enterprise', price: 'Desde €990', period: '/mes', text: 'Plan consultivo para empresas reguladas, grupos, fintechs, healthtechs y proveedores B2B enterprise.', cta: 'Hablar con ventas', enterprise: true, features: ['Países ilimitados', 'Usuarios avanzados', 'Permisos por rol', 'Informes white-label', 'Onboarding asistido', 'SLA y soporte prioritario', 'Módulos DORA, NIS2, ISO 27001 y AI Act', 'Trazabilidad completa'] },
-      ],
-    },
-    finalCta: { title: 'El compliance no tiene que ser una pesadilla. Déjalo con quienes lo entienden.', button: 'Suscribirse a EuroComply ahora', subtitle: 'Prueba gratuita de 14 días. Sin compromiso.' },
-  },
-  fr: {
-    nav: { features: 'Fonctionnalités', security: 'Sécurité', plans: 'Offres', login: 'Connexion', subscribe: 'Souscrire' },
-    badge: 'Plateforme européenne d’intelligence compliance',
-    heroTitle: 'Une conformité qui accélère votre activité. Sans la ralentir.',
-    heroSubtitle: 'Les entreprises utilisant EuroComply réduisent le risque fiscal de 73% et économisent 40h/mois de bureaucratie.',
-    cta: { start: 'Souscrire', demo: 'Voir la démonstration', learnMore: 'En savoir plus' },
-    cockpit: { eyebrow: 'Cockpit exécutif', title: 'Statut compliance', live: 'Live', metrics: [['73%', 'risque fiscal réduit'], ['40h', 'économisées par mois'], ['12k', 'euros d’amendes évitées'], ['8', 'obligations à venir']], events: ['Nouvelle échéance fiscale identifiée pour la France', 'Politique approuvée et enregistrée dans le journal d’audit', 'Rapport exécutif prêt pour revue'] },
-    security: { eyebrow: 'Architecture sécurité', title: 'La sécurité que votre entreprise exige', subtitle: 'Contrôles déjà appliqués et couches supplémentaires prévues pour Business et Enterprise.', items: [['Chiffrement de bout en bout', ShieldCheck, 'Données sensibles protégées en transit et au repos.'], ['GDPR compliant', Lock, 'Flux alignés avec la confidentialité et les droits des personnes.'], ['Journal d’audit immuable', FileText, 'Chaque action critique est enregistrée.'], ['Isolation multi-entreprise', Building2, 'Séparation stricte des données entre organisations.'], ['Authentification sécurisée', Fingerprint, 'Sessions protégées avec Supabase Auth et politiques RLS.'], ['Infrastructure Vercel + Supabase', Server, 'Déploiement global, base gérée et sécurité server-side.'], ['Politiques RLS par organisation', Database, 'Accès basé sur l’appartenance et le contexte.'], ['Contrôle des permissions', KeyRound, 'Profils et rôles pour opérations sensibles.'], ['Monitoring des événements', Bell, 'Alertes pour activités, approbations et échéances critiques.'], ['Backups et continuité planifiés', Network, 'Roadmap de résilience enterprise.'], ['ISO 27001 en préparation', Award, 'Programme de maturité sécurité.'], ['Tests d’intrusion annuels', ShieldAlert, 'Contrôle prévu pour la sécurité enterprise.']] },
-    features: { eyebrow: 'Fonctionnalités', title: 'Ce que vous gagnez avec EuroComply', cards: [['Calendrier IA', 'Ne manquez plus aucune échéance fiscale.', CalendarDays], ['Actualités multilingues', 'Actualités compliance en PT, FR, ES, EN, IT et DE, mises à jour par IA.', Globe2], ['Matrice des risques', 'Identifiez et atténuez les risques avant les amendes.', ShieldAlert], ['Invitations employés', 'Équipe alignée avec permissions et accès sécurisé.', Users], ['Identifiants fiscaux multi-pays', 'Développez-vous en Europe avec moins de friction fiscale.', Building2], ['Journal d’audit', 'Chaque action enregistrée et prête pour inspection.', FileText]] },
-    infrastructure: { eyebrow: 'Infrastructure', title: 'Notre équipe protège vos données et réduit le risque opérationnel.', subtitle: 'Mises à jour continues, architecture server-side, authentification sécurisée et isolation par organisation.', cta: 'Découvrir notre infrastructure' },
-    pricing: { eyebrow: 'Offres', title: 'Choisissez l’offre adaptée à votre entreprise', subtitle: 'Combien perdez-vous sans opération compliance structurée ?', popular: 'Meilleur équilibre', consultive: 'Consultatif premium', note: 'Essential réduit la barrière d’entrée. Professional sert les PME. Business couvre l’opération et l’expansion européenne. Enterprise garde la valeur premium.', plans: [
-      { name: 'Essential', planKey: 'essential', price: '€49', period: '/mois', text: 'Pour microentreprises, consultants et petites équipes.', cta: 'Commencer Essential', features: ['1 pays fiscal', '1 utilisateur', 'Calendrier légal basique', 'Actualités réglementaires basiques', 'Profil entreprise', 'Jusqu’à 10 documents', 'Matrice simple', 'Notifications basiques'] },
-      { name: 'Professional', planKey: 'professional', price: '€149', period: '/mois', text: 'Pour PME avec obligations, documents et délais réels.', cta: 'Choisir Professional', features: ['Jusqu’à 2 pays fiscaux', 'Calendrier IA', 'Documents contrôlés', 'Versioning', 'Matrice complète', 'Journal d’audit', 'Rapports basiques', 'Jusqu’à 3 utilisateurs'] },
-      { name: 'Business', planKey: 'business', price: '€399', period: '/mois', text: 'Pour entreprises en croissance européenne avec équipe interne.', cta: 'Choisir Business', highlighted: true, features: ['Jusqu’à 5 pays fiscaux', 'Identifiants par pays', 'Workflows d’approbation', 'Rapports exécutifs', 'Audit packs', 'Actualités IA par pays', 'Matrice RACI', 'Jusqu’à 10 utilisateurs'] },
-      { name: 'Enterprise', price: 'Dès €990', period: '/mois', text: 'Pour entreprises réglementées, groupes et fournisseurs B2B enterprise.', cta: 'Parler aux ventes', enterprise: true, features: ['Pays illimités', 'Utilisateurs avancés', 'Permissions par rôle', 'Rapports white-label', 'Onboarding assisté', 'SLA et support prioritaire', 'Modules DORA, NIS2, ISO 27001 et AI Act', 'Traçabilité complète'] },
-    ] },
-    finalCta: { title: 'La conformité ne doit pas être un cauchemar. Confiez-la à ceux qui la comprennent.', button: 'Souscrire à EuroComply', subtitle: 'Essai gratuit de 14 jours. Sans engagement.' },
-  },
-  it: {
-    nav: { features: 'Funzionalità', security: 'Sicurezza', plans: 'Piani', login: 'Accedi', subscribe: 'Abbonati ora' },
-    badge: 'Piattaforma europea di intelligence compliance',
-    heroTitle: 'Compliance che accelera il business. Non lo rallenta.',
-    heroSubtitle: 'Le aziende che usano EuroComply riducono il rischio fiscale del 73% e risparmiano 40h/mese di burocrazia.',
-    cta: { start: 'Abbonati ora', demo: 'Vedi demo', learnMore: 'Scopri di più' },
-    cockpit: { eyebrow: 'Cockpit executive', title: 'Stato compliance', live: 'Live', metrics: [['73%', 'rischio fiscale ridotto'], ['40h', 'risparmiate al mese'], ['12k', 'euro di multe evitate'], ['8', 'obblighi imminenti']], events: ['Nuova scadenza fiscale identificata per la Francia', 'Policy approvata e registrata nell’audit log', 'Report executive pronto per revisione'] },
-    security: { eyebrow: 'Architettura sicurezza', title: 'La sicurezza che la tua azienda richiede', subtitle: 'Controlli già applicati e livelli aggiuntivi pianificati per Business ed Enterprise.', items: [['Crittografia end-to-end', ShieldCheck, 'Dati sensibili protetti in transito e a riposo.'], ['GDPR compliant', Lock, 'Flussi allineati a privacy e diritti degli interessati.'], ['Audit log immutabile', FileText, 'Ogni azione critica viene registrata.'], ['Isolamento multi-azienda', Building2, 'Separazione rigorosa dei dati tra organizzazioni.'], ['Autenticazione sicura', Fingerprint, 'Sessioni protette con Supabase Auth e policy RLS.'], ['Infrastruttura Vercel + Supabase', Server, 'Deploy globale, database gestito e sicurezza server-side.'], ['Policy RLS per organizzazione', Database, 'Accesso basato su membership e contesto.'], ['Controllo permessi', KeyRound, 'Profili e ruoli per operazioni sensibili.'], ['Monitoraggio eventi', Bell, 'Alert per attività, approvazioni e scadenze critiche.'], ['Backup e continuità pianificati', Network, 'Roadmap di resilienza enterprise.'], ['ISO 27001 in preparazione', Award, 'Programma di maturità sicurezza.'], ['Penetration test annuali', ShieldAlert, 'Controllo previsto per sicurezza enterprise.']] },
-    features: { eyebrow: 'Funzionalità', title: 'Cosa ottieni con EuroComply', cards: [['Calendario IA', 'Non perdere più una scadenza fiscale.', CalendarDays], ['Notizie multilingue', 'Notizie compliance in PT, FR, ES, EN, IT e DE, aggiornate da IA.', Globe2], ['Matrice rischi', 'Identifica e mitiga i rischi prima delle multe.', ShieldAlert], ['Inviti dipendenti', 'Team allineato con permessi e accesso sicuro.', Users], ['ID fiscali multi-paese', 'Espanditi in Europa con meno frizione fiscale.', Building2], ['Audit log', 'Ogni azione registrata e pronta per ispezioni.', FileText]] },
-    infrastructure: { eyebrow: 'Infrastruttura', title: 'Il nostro team protegge i tuoi dati e riduce il rischio operativo.', subtitle: 'Aggiornamenti continui, architettura server-side, autenticazione sicura e isolamento per organizzazione.', cta: 'Esplora la nostra infrastruttura' },
-    pricing: { eyebrow: 'Piani', title: 'Scegli il piano giusto per la tua azienda', subtitle: 'Quanto perdi senza una compliance strutturata?', popular: 'Miglior equilibrio', consultive: 'Consultivo premium', note: 'Essential riduce la barriera d’ingresso. Professional serve le PMI. Business copre operazioni, team ed espansione europea. Enterprise preserva valore premium.', plans: [
-      { name: 'Essential', planKey: 'essential', price: '€49', period: '/mese', text: 'Per microimprese, consulenti e piccoli team.', cta: 'Inizia Essential', features: ['1 paese fiscale', '1 utente', 'Calendario legale base', 'Notizie normative base', 'Profilo azienda', 'Fino a 10 documenti', 'Matrice semplice', 'Notifiche base'] },
-      { name: 'Professional', planKey: 'professional', price: '€149', period: '/mese', text: 'Per PMI con obblighi, documenti e scadenze reali.', cta: 'Scegli Professional', features: ['Fino a 2 paesi fiscali', 'Calendario IA', 'Documenti controllati', 'Versioning', 'Matrice completa', 'Audit log', 'Report base', 'Fino a 3 utenti'] },
-      { name: 'Business', planKey: 'business', price: '€399', period: '/mese', text: 'Per aziende in crescita europea con team interno.', cta: 'Scegli Business', highlighted: true, features: ['Fino a 5 paesi fiscali', 'ID fiscali per paese', 'Workflow approvazione', 'Report executive', 'Audit pack', 'Notizie IA per paese', 'Matrice RACI', 'Fino a 10 utenti'] },
-      { name: 'Enterprise', price: 'Da €990', period: '/mese', text: 'Per aziende regolamentate, gruppi e fornitori B2B enterprise.', cta: 'Parla con vendite', enterprise: true, features: ['Paesi illimitati', 'Utenti avanzati', 'Permessi per ruolo', 'Report white-label', 'Onboarding assistito', 'SLA e supporto prioritario', 'Moduli DORA, NIS2, ISO 27001 e AI Act', 'Tracciabilità completa'] },
-    ] },
-    finalCta: { title: 'La compliance non deve essere un incubo. Lasciala a chi la capisce.', button: 'Abbonati a EuroComply', subtitle: 'Prova gratuita di 14 giorni. Senza impegno.' },
-  },
-  de: {
-    nav: { features: 'Funktionen', security: 'Sicherheit', plans: 'Pläne', login: 'Anmelden', subscribe: 'Jetzt abonnieren' },
-    badge: 'Europäische Compliance-Intelligence-Plattform',
-    heroTitle: 'Compliance, die Ihr Geschäft beschleunigt. Nicht bremst.',
-    heroSubtitle: 'Unternehmen mit EuroComply reduzieren fiskalische Risiken um 73% und sparen 40h/Monat Bürokratie.',
-    cta: { start: 'Jetzt abonnieren', demo: 'Demo ansehen', learnMore: 'Mehr erfahren' },
-    cockpit: { eyebrow: 'Executive Cockpit', title: 'Compliance-Status', live: 'Live', metrics: [['73%', 'fiskalisches Risiko reduziert'], ['40h', 'pro Monat gespart'], ['12k', 'Euro Bußgelder vermieden'], ['8', 'anstehende Pflichten']], events: ['Neue Steuerfrist für Frankreich erkannt', 'Richtlinie genehmigt und im Audit-Log erfasst', 'Executive Report bereit zur Prüfung'] },
-    security: { eyebrow: 'Sicherheitsarchitektur', title: 'Sicherheit, die Ihr Unternehmen verlangt', subtitle: 'Bereits angewandte Kontrollen und zusätzliche Ebenen für Business und Enterprise.', items: [['End-to-End-Verschlüsselung', ShieldCheck, 'Sensible Daten in Übertragung und Speicherung geschützt.'], ['GDPR compliant', Lock, 'Abläufe ausgerichtet auf Datenschutz und Betroffenenrechte.'], ['Unveränderliches Audit-Log', FileText, 'Jede kritische Aktion wird aufgezeichnet.'], ['Multi-Unternehmens-Isolation', Building2, 'Strikte Datentrennung zwischen Organisationen.'], ['Sichere Authentifizierung', Fingerprint, 'Geschützte Sitzungen mit Supabase Auth und RLS.'], ['Vercel + Supabase Infrastruktur', Server, 'Globales Deployment, verwaltete Datenbank und serverseitige Sicherheit.'], ['RLS pro Organisation', Database, 'Zugriff nach Mitgliedschaft und Kontext.'], ['Berechtigungskontrolle', KeyRound, 'Profile und Rollen für sensible Vorgänge.'], ['Event-Monitoring', Bell, 'Alarme für Aktivitäten, Freigaben und kritische Fristen.'], ['Backups und Kontinuität geplant', Network, 'Resilienz-Roadmap für Enterprise-Betrieb.'], ['ISO 27001 in Vorbereitung', Award, 'Programm für Sicherheitsreife.'], ['Jährliche Penetrationstests', ShieldAlert, 'Geplante Kontrolle für Enterprise-Sicherheit.']] },
-    features: { eyebrow: 'Funktionen', title: 'Was Sie mit EuroComply gewinnen', cards: [['KI-Kalender', 'Verpassen Sie keine Steuerfrist mehr.', CalendarDays], ['Mehrsprachige News', 'Compliance-News in PT, FR, ES, EN, IT und DE, per KI aktualisiert.', Globe2], ['Risikomatrix', 'Risiken identifizieren und mindern, bevor Bußgelder entstehen.', ShieldAlert], ['Mitarbeitereinladungen', 'Team mit Berechtigungen und sicherem Zugriff ausrichten.', Users], ['Mehrere Steuer-IDs je Land', 'Expansion in Europa mit weniger fiskalischer Reibung.', Building2], ['Audit-Log', 'Jede Aktion aufgezeichnet und prüfbereit.', FileText]] },
-    infrastructure: { eyebrow: 'Infrastruktur', title: 'Unser Team schützt Ihre Daten und reduziert operative Risiken.', subtitle: 'Kontinuierliche Updates, serverseitige Architektur, sichere Authentifizierung und Organisation-Isolation.', cta: 'Infrastruktur ansehen' },
-    pricing: { eyebrow: 'Pläne', title: 'Wählen Sie den richtigen Plan für Ihr Unternehmen', subtitle: 'Wie viel verlieren Sie ohne strukturierte Compliance?', popular: 'Beste Balance', consultive: 'Premium-Beratung', note: 'Essential senkt die Einstiegshürde. Professional bedient KMU. Business deckt Betrieb, Team und europäische Expansion ab. Enterprise bewahrt Premium-Wert.', plans: [
-      { name: 'Essential', planKey: 'essential', price: '€49', period: '/Monat', text: 'Für Kleinstunternehmen, Berater und kleine Teams.', cta: 'Essential starten', features: ['1 Steuerland', '1 Nutzer', 'Basiskalender', 'Basis-Regulatory-News', 'Unternehmensprofil', 'Bis 10 Dokumente', 'Einfache Matrix', 'Basisbenachrichtigungen'] },
-      { name: 'Professional', planKey: 'professional', price: '€149', period: '/Monat', text: 'Für KMU mit echten Pflichten, Dokumenten und Fristen.', cta: 'Professional wählen', features: ['Bis 2 Steuerländer', 'KI-Kalender', 'Kontrollierte Dokumente', 'Versionierung', 'Vollständige Matrix', 'Audit-Log', 'Basisberichte', 'Bis 3 Nutzer'] },
-      { name: 'Business', planKey: 'business', price: '€399', period: '/Monat', text: 'Für europäisch wachsende Unternehmen mit internem Team.', cta: 'Business wählen', highlighted: true, features: ['Bis 5 Steuerländer', 'Steuer-IDs je Land', 'Freigabe-Workflows', 'Executive Reports', 'Audit Packs', 'KI-News je Land', 'RACI-Matrix', 'Bis 10 Nutzer'] },
-      { name: 'Enterprise', price: 'Ab €990', period: '/Monat', text: 'Für regulierte Unternehmen, Gruppen und B2B-Enterprise-Anbieter.', cta: 'Mit Vertrieb sprechen', enterprise: true, features: ['Unbegrenzte Länder', 'Erweiterte Nutzer', 'Rollenbasierte Rechte', 'White-Label-Reports', 'Begleitetes Onboarding', 'SLA und Priority Support', 'DORA, NIS2, ISO 27001 und AI Act Module', 'Vollständige Nachverfolgung'] },
-    ] },
-    finalCta: { title: 'Compliance muss kein Albtraum sein. Überlassen Sie sie denen, die sie verstehen.', button: 'EuroComply abonnieren', subtitle: '14 Tage kostenlos testen. Keine Verpflichtung.' },
-  },
+  en: englishCopy,
+  pt: portugueseCopy,
+  es: spanishCopy,
+  fr: frenchCopy,
+  it: italianCopy,
+  de: germanCopy,
 };
 
 function href(locale: Locale, path: string) {
@@ -333,6 +340,7 @@ export function EnterpriseHome({ locale }: { locale: string }) {
             <a href="#features" className="transition hover:text-white">{copy.nav.features}</a>
             <a href="#security" className="transition hover:text-white">{copy.nav.security}</a>
             <a href="#plans" className="transition hover:text-white">{copy.nav.plans}</a>
+            <Link href={href(activeLocale, '/trust')} className="transition hover:text-white">{copy.nav.trust}</Link>
             <span className="text-zinc-500">{localeName}</span>
           </div>
           <div className="flex items-center gap-3">
@@ -344,13 +352,7 @@ export function EnterpriseHome({ locale }: { locale: string }) {
       </header>
 
       <section className="relative isolate min-h-screen overflow-hidden pt-24">
-        <video className="absolute inset-0 -z-30 hidden h-full w-full object-cover opacity-70 md:block" autoPlay muted loop playsInline poster="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=2400&q=90">
-          <source src="https://videos.pexels.com/video-files/3209828/3209828-uhd_2560_1440_25fps.mp4" type="video/mp4" />
-        </video>
-        <div className="absolute inset-0 -z-30 bg-[url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=2400&q=90')] bg-cover bg-center md:hidden" />
-        <div className="absolute inset-0 -z-20 bg-[linear-gradient(105deg,rgba(10,10,15,.98)_0%,rgba(10,10,15,.88)_46%,rgba(10,10,15,.38)_100%)]" />
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_30%,rgba(255,255,255,.10),transparent_32%),radial-gradient(circle_at_70%_20%,rgba(255,255,255,.08),transparent_28%),linear-gradient(to_bottom,transparent_0%,#0A0A0F_94%)]" />
-
+        <div className="absolute inset-0 -z-30 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,.14),transparent_32%),radial-gradient(circle_at_70%_20%,rgba(255,255,255,.08),transparent_28%),linear-gradient(to_bottom,#0A0A0F_0%,#050508_100%)]" />
         <div className="mx-auto grid max-w-7xl gap-16 px-6 pb-28 pt-24 lg:grid-cols-[1.05fr_.95fr] lg:items-center">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-white shadow-2xl backdrop-blur-xl">
@@ -364,7 +366,7 @@ export function EnterpriseHome({ locale }: { locale: string }) {
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link href={href(activeLocale, '/billing/checkout/essential')} className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-4 text-base font-bold text-black shadow-[0_0_50px_rgba(255,255,255,.18)] transition hover:-translate-y-1 hover:bg-zinc-200">{copy.cta.start} <ChevronRight className="h-4 w-4" /></Link>
-              <a href="#demo" className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-7 py-4 text-base font-bold text-white backdrop-blur transition hover:-translate-y-1 hover:bg-white/10">{copy.cta.demo}</a>
+              <Link href={href(activeLocale, '/trust')} className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-7 py-4 text-base font-bold text-white backdrop-blur transition hover:-translate-y-1 hover:bg-white/10">{copy.cta.trust}</Link>
             </div>
           </div>
 
@@ -440,24 +442,23 @@ export function EnterpriseHome({ locale }: { locale: string }) {
         <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:items-center">
           <div className="rounded-3xl border border-white/10 bg-[#09090E] p-6 font-mono text-sm text-zinc-300 shadow-2xl">
             <div className="mb-5 flex gap-2"><span className="h-3 w-3 rounded-full bg-zinc-700" /><span className="h-3 w-3 rounded-full bg-zinc-700" /><span className="h-3 w-3 rounded-full bg-white" /></div>
-            <pre className="whitespace-pre-wrap leading-7 text-zinc-400"><code>{`type ComplianceControl = {
-  company: EuropeanEntity;
-  fiscalIds: CountryTaxProfile[];
-  auditTrail: ImmutableEvent[];
-  riskScore: LiveMetric;
+            <pre className="whitespace-pre-wrap leading-7 text-zinc-400"><code>{`type TrustClaim = {
+  statement: string;
+  status: 'implemented' | 'evidence_pending' | 'designed_to_support' | 'planned';
+  evidencePath?: string;
 };
 
-await EuroComply.monitor({
-  deadlines: 'real-time',
-  evidence: 'controlled',
-  security: 'enterprise',
+await EuroComply.procurement.review({
+  claims: 'evidence-bound',
+  controls: ['RBAC', 'RLS', 'audit-events'],
+  disclosure: 'no-compliance-washing',
 });`}</code></pre>
           </div>
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-500">{copy.infrastructure.eyebrow}</p>
             <h2 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">{copy.infrastructure.title}</h2>
             <p className="mt-6 text-lg leading-8 text-zinc-400">{copy.infrastructure.subtitle}</p>
-            <a href="#security" className="mt-8 inline-flex rounded-full border border-white/15 px-7 py-4 font-bold text-white transition hover:-translate-y-1 hover:bg-white/10">{copy.infrastructure.cta}</a>
+            <Link href={href(activeLocale, '/security')} className="mt-8 inline-flex rounded-full border border-white/15 px-7 py-4 font-bold text-white transition hover:-translate-y-1 hover:bg-white/10">{copy.infrastructure.cta}</Link>
           </div>
         </div>
       </section>
