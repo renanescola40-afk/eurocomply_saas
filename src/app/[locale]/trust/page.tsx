@@ -84,21 +84,21 @@ export default async function TrustCenterPage({ params }: { params: Promise<{ lo
       <section className="px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <Link href={`/${locale}`} className="text-sm text-white/70 hover:text-white">← EuroComply</Link>
-          <p className="mt-10 text-sm font-semibold uppercase tracking-[0.24em] text-blue-200">{copy.eyebrow}</p>
-          <h1 className="mt-4 max-w-4xl text-5xl font-semibold tracking-[-0.05em]">{copy.title}</h1>
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">{copy.description}</p>
+          <p className="mt-10 text-sm font-semibold uppercase tracking-[0.24em] text-blue-200">{page.eyebrow}</p>
+          <h1 className="mt-4 max-w-4xl text-5xl font-semibold tracking-[-0.05em]">{page.title}</h1>
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">{page.description}</p>
           <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-sm leading-7 text-slate-300">
-            {copy.assurance}
+            {page.assurance}
           </div>
         </div>
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-5 px-6 pb-20 md:grid-cols-2 lg:grid-cols-3">
-        {copy.cards.map((card) => (
+        {page.cards.map((card) => (
           <Link key={card.title} href={`/${locale}${card.href}`} className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 transition hover:border-blue-300/40 hover:bg-white/[0.07]">
             <h2 className="text-xl font-semibold">{card.title}</h2>
             <p className="mt-3 text-sm leading-6 text-slate-400">{card.description}</p>
-            <span className="mt-5 inline-flex text-sm font-semibold text-blue-200">{copy.resourceLabel}</span>
+            <span className="mt-5 inline-flex text-sm font-semibold text-blue-200">{page.resourceLabel}</span>
           </Link>
         ))}
       </section>

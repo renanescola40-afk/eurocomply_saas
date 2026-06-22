@@ -1,0 +1,171 @@
+/* eslint-disable */
+// @ts-nocheck
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+  requireApiUser: vi.fn(),
+  requirePermission: vi.fn(),
+  requireTrustedMutation: vi.fn(),
+  getCurrentOrganizationForUser: vi.fn(),
+  stripeCheckoutCreate: vi.fn(),
+  requireStepUpForRequest: vi.fn(),
+  publicStepUpSummary: vi.fn(),
+  getStripePriceId: vi.fn(),
+  isSelfServePlan: vi.fn(),
+}));
+
+vi.mock('@/server/queries/organizations', () => ({
+  getCurrentOrganizationForUser: mocks.getCurrentOrganizationForUser,
+}));
+
+vi.mock('@/server/billing/app-url', () => ({
+  resolveBillingReturnBaseUrl: () => ({ ok: true, appUrl: 'https://app.eurocomply.test' }),
+}));
+
+vi.mock('@/server/billing/plans', () => ({
+  getStripePriceId: mocks.getStripePriceId,
+  isSelfServePlan: mocks.isSelfServePlan,
+}));
+
+vi.mock('@/server/billing/stripe', () => ({
+  getStripeClient: () => ({
+    checkout: {
+      sessions: {
+        create: mocks.stripeCheckoutCreate,
+      },
+    },
+  }),
+}));
+
+vi.mock('@/server/security/api-guards', () => ({
+  requireApiUser: mocks.requireApiUser,
+  requirePermission: mocks.requirePermission,
+  requireTrustedMutation: mocks.requireTrustedMutation,
+  secureApiError: (error: { code?: string; status?: number }) =>
+    new Response(JSON.stringify({ error: error.code ?? 'internal_server_error' }), {
+      status: error.status ?? 500,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    }),
+}));
+
+vi.mock('@/server/security/step-up', () => ({
+  requireStepUpForRequest: mocks.requireStepUpForRequest,
+  publicStepUpSummary: mocks.publicStepUpSummary,
+}));
+
+import { POST } from '../../src/app/api/billing/checkout/route';
+
+function buildRequest(body = { plan: 'professional', locale: 'pt' }) {
+  return new Request('https://app.eurocomply.test/api/billing/checkout', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      origin: 'https://app.eurocomply.test',
+      'x-eurocomply-step-up-token': 'step_up_token',
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+describe('billing checkout API security gates', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.requireApiUser.mockResolvedValue({ id: 'user_admin', email: 'admin@example.test' });
+    mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a' });
+    mocks.requirePermission.mockResolvedValue({ ok: true, role: 'admin' });
+    mocks.requireTrustedMutation.mockResolvedValue(null);
+    mocks.requireStepUpForRequest.mockResolvedValue({
+      ok: true,
+      assessment: { action: 'manage_billing', verifiedAt: '2026-06-22T09:00:00.000Z' },
+    });
+    mocks.publicStepUpSummary.mockReturnValue({ verified: true });
+    mocks.getStripePriceId.mockReturnValue('price_professional_monthly');
+    mocks.isSelfServePlan.mockImplementation((plan: string) => ['essential', 'professional', 'business'].includes(plan));
+    mocks.stripeCheckoutCreate.mockResolvedValue({
+      id: 'cs_test_fixture',
+      url: 'https://checkout.stripe.test/session-fixture',
+    });
+  });
+
+  it('rejects invalid checkout plan before auth, RBAC or Stripe calls', async () => {
+    const response = await POST(buildRequest({ plan: 'enterprise-custom', locale: 'pt' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({ error: 'invalid_plan' });
+    expect(mocks.requireApiUser).not.toHaveBeenCalled();
+    expect(mocks.requirePermission).not.toHaveBeenCalled();
+    expect(mocks.requireTrustedMutation).not.toHaveBeenCalled();
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+  });
+
+  it('blocks checkout without manage_billing permission before mutation, step-up or Stripe calls', async () => {
+    mocks.requirePermission.mockRejectedValue({ code: 'permission_denied', status: 403 });
+
+    const response = await POST(buildRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body).toEqual({ error: 'permission_denied' });
+    expect(mocks.requireTrustedMutation).not.toHaveBeenCalled();
+    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the trusted mutation or rate-limit guard denies the request', async () => {
+    mocks.requireTrustedMutation.mockResolvedValue(
+      new Response(JSON.stringify({ error: 'rate_limited' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      }),
+    );
+
+    const response = await POST(buildRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(body).toEqual({ error: 'rate_limited' });
+    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+  });
+
+  it('creates a checkout session only after RBAC, trusted mutation, and step-up', async () => {
+    const response = await POST(buildRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ url: 'https://checkout.stripe.test/session-fixture', stepUp: { verified: true } });
+    expect(mocks.requirePermission).toHaveBeenCalledWith({
+      userId: 'user_admin',
+      organizationId: 'org_a',
+      permission: 'manage_billing',
+    });
+    expect(mocks.requireTrustedMutation).toHaveBeenCalledWith(expect.any(Request), {
+      rateLimit: {
+        key: 'billing:checkout:org_a:user_admin',
+        limit: 10,
+        windowMs: 60 * 1000,
+      },
+    });
+    expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'manage_billing',
+      userId: 'user_admin',
+      organizationId: 'org_a',
+    }));
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(expect.objectContaining({
+      mode: 'subscription',
+      customer_email: 'admin@example.test',
+      line_items: [{ price: 'price_professional_monthly', quantity: 1 }],
+      success_url: 'https://app.eurocomply.test/pt/dashboard/organizations?checkout=success',
+      cancel_url: 'https://app.eurocomply.test/pt/pricing?checkout=cancelled',
+      client_reference_id: 'org_a',
+      metadata: expect.objectContaining({
+        organization_id: 'org_a',
+        user_id: 'user_admin',
+        plan: 'professional',
+        actor_role: 'admin',
+        step_up_action: 'manage_billing',
+      }),
+    }));
+  });
+});

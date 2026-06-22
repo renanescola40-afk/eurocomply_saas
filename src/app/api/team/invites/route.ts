@@ -1,17 +1,19 @@
 import { z } from 'zod';
 
-import { checkDistributedRateLimit } from '@/server/security/rate-limit';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
-import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createOrganizationInvite } from '@/server/queries/invites';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { isPlanAtLeast } from '@/server/queries/subscription';
-import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
-import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import {
+  requireApiUser,
+  requirePermission,
+  requireTrustedMutation,
+  secureApiError,
+} from '@/server/security/api-guards';
 import { requireStepUpForRequest } from '@/server/security/step-up';
 
 const inviteSchema = z.object({
@@ -23,14 +25,6 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
 const INVITE_JSON_MAX_BYTES = 4 * 1024;
 
-function getClientIp(request: Request) {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
-
 function getInviteEntityId(invite: unknown) {
   if (!invite || typeof invite !== 'object' || !('id' in invite)) {
     return undefined;
@@ -41,130 +35,111 @@ function getInviteEntityId(invite: unknown) {
 }
 
 export async function POST(request: Request) {
-  const originDenied = assertTrustedOrigin(request);
-  if (originDenied) return originDenied;
+  try {
+    const payload = await readBoundedJsonRequest(request, { maxBytes: INVITE_JSON_MAX_BYTES }).catch(() => null);
+    const parsed = inviteSchema.safeParse(payload);
 
-  const user = await getCurrentUser();
+    if (!parsed.success) {
+      return noStoreJson({ error: 'invalid_invite_payload' }, { status: 400 });
+    }
 
-  if (!user) {
-    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
-  }
+    const user = await requireApiUser();
+    const organization = await getCurrentOrganizationForUser(user.id);
 
-  const clientIp = getClientIp(request);
-  const rateLimitKey = `team-invite:${user.id}:${clientIp}`;
-  const rateLimit = await checkDistributedRateLimit({
-    key: rateLimitKey,
-    limit: RATE_LIMIT_MAX_ATTEMPTS,
-    windowSeconds: Math.ceil(RATE_LIMIT_WINDOW_MS / 1000),
-  });
+    if (!organization) {
+      return noStoreJson({ error: 'Organization not found' }, { status: 404 });
+    }
 
-  if (!rateLimit.allowed) {
-    return noStoreJson(
-      { error: rateLimit.reason ? 'security_control_unavailable' : 'Too many invite attempts. Please wait before trying again.' },
-      {
-        status: rateLimit.reason ? 503 : 429,
-        headers: {
-          'Retry-After': String(Math.max(1, rateLimit.retryAfterSeconds)),
-          'X-RateLimit-Remaining': String(rateLimit.remaining),
-        },
-      },
-    );
-  }
-
-  const organization = await getCurrentOrganizationForUser(user.id);
-
-  if (!organization) {
-    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
-  }
-
-  const permission = await assertOrganizationPermission({
-    userId: user.id,
-    organizationId: organization.id,
-    permission: 'manage_team',
-  });
-
-  if (!permission.ok) {
-    return permissionDeniedResponse(permission);
-  }
-
-  const stepUp = await requireStepUpForRequest({
-    request,
-    action: 'manage_team',
-    userId: user.id,
-    organizationId: organization.id,
-  });
-
-  if (!stepUp.ok) {
-    return stepUp.response;
-  }
-
-  const entitlements = await getOrganizationEntitlements(organization.id);
-
-  if (!entitlements.employeeInvites) {
-    await createAuditEvent({
+    const permission = await requirePermission({
+      userId: user.id,
       organizationId: organization.id,
-      actorUserId: user.id,
-      action: 'team_invite_blocked',
-      entityType: 'team_invite',
-      metadata: { reason: 'business_required', plan: entitlements.plan, role: permission.role },
+      permission: 'manage_team',
     });
 
-    return noStoreJson(
-      { error: 'business_plan_required', message: 'Team invites require the Business plan or higher.' },
-      { status: 402 },
-    );
-  }
+    const mutationDenied = await requireTrustedMutation(request, {
+      rateLimit: {
+        key: `team-invite:${organization.id}:${user.id}`,
+        limit: RATE_LIMIT_MAX_ATTEMPTS,
+        windowMs: RATE_LIMIT_WINDOW_MS,
+      },
+    });
 
-  const payload = await readBoundedJsonRequest(request, { maxBytes: INVITE_JSON_MAX_BYTES }).catch(() => null);
-  const parsed = inviteSchema.safeParse(payload);
+    if (mutationDenied) return mutationDenied;
 
-  if (!parsed.success) {
-    return noStoreJson({ error: 'invalid_invite_payload' }, { status: 400 });
-  }
+    const stepUp = await requireStepUpForRequest({
+      request,
+      action: 'manage_team',
+      userId: user.id,
+      organizationId: organization.id,
+    });
 
-  const { email, role } = parsed.data;
+    if (!stepUp.ok) {
+      return stepUp.response;
+    }
 
-  if (role === 'Admin' && !isPlanAtLeast(entitlements.plan, 'enterprise')) {
-    return noStoreJson(
-      { error: 'enterprise_plan_required', message: 'Admin invitations require the Enterprise plan.' },
-      { status: 402 },
-    );
-  }
+    const entitlements = await getOrganizationEntitlements(organization.id);
 
-  const result = await createOrganizationInvite({
-    organizationId: organization.id,
-    invitedBy: user.id,
-    email,
-    role,
-  });
+    if (!entitlements.employeeInvites) {
+      await createAuditEvent({
+        organizationId: organization.id,
+        actorUserId: user.id,
+        action: 'team_invite_blocked',
+        entityType: 'team_invite',
+        metadata: { reason: 'business_required', plan: entitlements.plan, role: permission.role },
+      });
 
-  const audit = await createAuditEvent({
-    organizationId: organization.id,
-    actorUserId: user.id,
-    action: 'team_invite_created',
-    entityType: 'team_invite',
-    entityId: getInviteEntityId(result.invite),
-    metadata: {
-      emailDomain: email.split('@')[1] ?? 'unknown',
+      return noStoreJson(
+        { error: 'business_plan_required', message: 'Team invites require the Business plan or higher.' },
+        { status: 402 },
+      );
+    }
+
+    const { email, role } = parsed.data;
+
+    if (role === 'Admin' && !isPlanAtLeast(entitlements.plan, 'enterprise')) {
+      return noStoreJson(
+        { error: 'enterprise_plan_required', message: 'Admin invitations require the Enterprise plan.' },
+        { status: 402 },
+      );
+    }
+
+    const result = await createOrganizationInvite({
+      organizationId: organization.id,
+      invitedBy: user.id,
+      email,
       role,
-      actorRole: permission.role,
-      plan: entitlements.plan,
+    });
+
+    const audit = await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'team_invite_created',
+      entityType: 'team_invite',
+      entityId: getInviteEntityId(result.invite),
+      metadata: {
+        emailDomain: email.split('@')[1] ?? 'unknown',
+        role,
+        actorRole: permission.role,
+        plan: entitlements.plan,
+        persisted: result.persisted,
+      },
+    });
+
+    const notification = await createNotification({
+      organizationId: organization.id,
+      userId: user.id,
+      type: 'invite',
+      message: `Convite de equipa enviado com permissão ${role}.`,
+    });
+
+    return noStoreJson({
+      invite: result.invite,
       persisted: result.persisted,
-    },
-  });
-
-  const notification = await createNotification({
-    organizationId: organization.id,
-    userId: user.id,
-    type: 'invite',
-    message: `Convite de equipa enviado com permissão ${role}.`,
-  });
-
-  return noStoreJson({
-    invite: result.invite,
-    persisted: result.persisted,
-    auditPersisted: audit.persisted,
-    notificationPersisted: notification.persisted,
-    plan: entitlements.plan,
-  });
+      auditPersisted: audit.persisted,
+      notificationPersisted: notification.persisted,
+      plan: entitlements.plan,
+    });
+  } catch (error) {
+    return secureApiError(error);
+  }
 }
