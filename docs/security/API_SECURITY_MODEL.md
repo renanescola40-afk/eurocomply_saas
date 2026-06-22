@@ -69,6 +69,7 @@ Migrated reference routes:
 - `src/app/api/team/members/remove/route.ts`
 - `src/app/api/team/invitations/cancel/route.ts`
 - `src/app/api/team/members/role/route.ts`
+- `src/app/api/team/invites/route.ts`
 - `src/app/api/retention-center/export/route.ts`
 - `src/app/api/billing/portal/route.ts`
 - `src/app/api/billing/checkout/route.ts`
@@ -79,13 +80,13 @@ Added security coverage:
 - BOLA/IDOR tests for team member removal;
 - BOLA/IDOR tests for team invitation cancellation;
 - security contract test for team member role changes;
+- security contract test for team invite creation covering invalid payload fail-closed behavior, RBAC, trusted mutation/rate-limit denial, step-up gating, and audit metadata;
 - security contract test for retention policy exports;
 - billing portal security contract coverage for RBAC, trusted mutation, and step-up;
 - billing checkout security contract coverage for invalid plan fail-closed behavior, RBAC, trusted mutation/rate-limit denial, step-up gating, and Stripe session metadata.
 
 Known follow-up migration backlog:
 
-- `src/app/api/team/invites/route.ts`
 - `src/app/api/billing/checkout-intent/route.ts`
 - `src/app/api/gdpr/delete-request/route.ts`
 - `src/app/api/ai-systems/route.ts`
