@@ -1,14 +1,17 @@
-import { describe, expect, it, beforeEach } from 'vitest';
-import { checkRateLimit, clearRateLimitBuckets } from './rate-limit';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { checkDistributedRateLimit, clearRateLimitBuckets } from './rate-limit';
 
-describe('checkRateLimit', () => {
+describe('checkDistributedRateLimit local fallback', () => {
   beforeEach(() => {
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    process.env.NODE_ENV = 'test';
     clearRateLimitBuckets();
   });
 
-  it('allows requests below the limit', () => {
-    const first = checkRateLimit({ key: 'user:1', limit: 2, windowMs: 1000, now: 0 });
-    const second = checkRateLimit({ key: 'user:1', limit: 2, windowMs: 1000, now: 100 });
+  it('allows requests below the limit', async () => {
+    const first = await checkDistributedRateLimit({ key: 'user:1', limit: 2, windowMs: 1000, now: 0 });
+    const second = await checkDistributedRateLimit({ key: 'user:1', limit: 2, windowMs: 1000, now: 100 });
 
     expect(first.allowed).toBe(true);
     expect(first.remaining).toBe(1);
@@ -16,17 +19,17 @@ describe('checkRateLimit', () => {
     expect(second.remaining).toBe(0);
   });
 
-  it('blocks requests after the limit is reached', () => {
-    checkRateLimit({ key: 'user:1', limit: 1, windowMs: 1000, now: 0 });
-    const blocked = checkRateLimit({ key: 'user:1', limit: 1, windowMs: 1000, now: 100 });
+  it('blocks requests after the limit is reached', async () => {
+    await checkDistributedRateLimit({ key: 'user:1', limit: 1, windowMs: 1000, now: 0 });
+    const blocked = await checkDistributedRateLimit({ key: 'user:1', limit: 1, windowMs: 1000, now: 100 });
 
     expect(blocked.allowed).toBe(false);
     expect(blocked.remaining).toBe(0);
   });
 
-  it('resets the bucket after the window expires', () => {
-    checkRateLimit({ key: 'user:1', limit: 1, windowMs: 1000, now: 0 });
-    const afterReset = checkRateLimit({ key: 'user:1', limit: 1, windowMs: 1000, now: 1001 });
+  it('resets the bucket after the window expires', async () => {
+    await checkDistributedRateLimit({ key: 'user:1', limit: 1, windowMs: 1000, now: 0 });
+    const afterReset = await checkDistributedRateLimit({ key: 'user:1', limit: 1, windowMs: 1000, now: 1001 });
 
     expect(afterReset.allowed).toBe(true);
     expect(afterReset.remaining).toBe(0);
