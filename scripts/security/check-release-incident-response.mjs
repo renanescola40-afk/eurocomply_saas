@@ -38,6 +38,19 @@ const requiredGoNoGoTokens = [
   'rollback',
 ];
 
+const requiredApprovalTokens = [
+  'Incident owner:',
+  'Rollback owner:',
+  'Customer communication owner:',
+];
+
+const requiredReleaseOwners = [
+  { label: 'Incident owner', env: 'RELEASE_INCIDENT_OWNER' },
+  { label: 'Rollback owner', env: 'RELEASE_ROLLBACK_OWNER' },
+];
+
+const placeholderOwnerPattern = /^(?:tbd|todo|n\/a|none|placeholder)$/i;
+
 function read(path) {
   return fs.readFileSync(path, 'utf8');
 }
@@ -54,6 +67,28 @@ function assertIncludes(content, token, path) {
   }
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function ownerValueFromApprovalRecord(content, label) {
+  const pattern = new RegExp(`^-\\s*${escapeRegExp(label)}:\\s*(?<value>.+)$`, 'im');
+  const value = content.match(pattern)?.groups?.value?.trim() ?? '';
+  return value && !placeholderOwnerPattern.test(value) ? value : '';
+}
+
+function assertReleaseOwners(approval) {
+  for (const owner of requiredReleaseOwners) {
+    const fromEnv = process.env[owner.env]?.trim() ?? '';
+    const fromApprovalRecord = ownerValueFromApprovalRecord(approval, owner.label);
+    if (!fromEnv && !fromApprovalRecord) {
+      throw new Error(
+        `Release readiness requires ${owner.label}. Set ${owner.env} or fill "${owner.label}:" in docs/RELEASE_APPROVAL_RECORD.md.`,
+      );
+    }
+  }
+}
+
 try {
   for (const file of requiredFiles) {
     assertFile(file);
@@ -62,6 +97,7 @@ try {
   const incident = read('docs/RELEASE_INCIDENT_RESPONSE_PLAN.md');
   const rollback = read('docs/RELEASE_ROLLBACK_PLAN.md');
   const goNoGo = read('docs/RELEASE_GO_NO_GO_CHECKLIST.md');
+  const approval = read('docs/RELEASE_APPROVAL_RECORD.md');
   const packageJson = read('package.json');
 
   for (const token of requiredIncidentTokens) {
@@ -75,6 +111,12 @@ try {
   for (const token of requiredGoNoGoTokens) {
     assertIncludes(goNoGo, token, 'docs/RELEASE_GO_NO_GO_CHECKLIST.md');
   }
+
+  for (const token of requiredApprovalTokens) {
+    assertIncludes(approval, token, 'docs/RELEASE_APPROVAL_RECORD.md');
+  }
+
+  assertReleaseOwners(approval);
 
   assertIncludes(packageJson, 'security:release-incident-response', 'package.json');
   assertIncludes(packageJson, 'release:readiness', 'package.json');

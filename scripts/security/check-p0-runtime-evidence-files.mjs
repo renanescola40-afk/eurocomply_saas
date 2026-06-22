@@ -12,6 +12,7 @@ const allowedItems = new Set([
   'upload-malware-scan-validation',
   'audit-chain-live-validation',
   'stripe-billing-validation',
+  'observability-readiness',
 ]);
 const redactionTexts = new Set([
   'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
