@@ -55,7 +55,7 @@ Blocked HTTP routes return either `429` for normal exhaustion or `503` when a fa
 
 ## Audit events
 
-`rateLimitResponse()` writes `security.rate_limit.blocked` audit events for policies marked `auditOnBlock`. Metadata includes category, failure mode, reason, remaining count, retry-after seconds, and the sanitized limiter key. The key contains hashed IP material only and does not contain raw IP addresses.
+`rateLimitResponse()` writes `security.rate_limit.blocked` audit events for policies marked `auditOnBlock`. Metadata includes category, failure mode, reason, remaining count, retry-after seconds, and `keyHash`. The audit event never stores the raw limiter key or raw IP address.
 
 ## Sensitive endpoint coverage
 
