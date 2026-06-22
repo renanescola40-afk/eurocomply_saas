@@ -45,7 +45,7 @@ Attach evidence for:
 - `EVIDENCE_PACK_SIGNING_SECRET` is configured before sharing Audit Evidence Packs externally
 - `HEALTHCHECK_TOKEN`, `CRON_SECRET`, and `INTERNAL_CRON_SECRET` are configured for protected operational routes
 - `SUPABASE_SERVICE_ROLE_KEY` is configured only as a server-side secret
-- Stripe, Resend, Upstash, and Sentry environment variables are set for the target release tier
+- Stripe, Resend, Upstash, and Sentry environment variables are set only when those services are enabled for the target release tier
 
 Accepted evidence:
 
@@ -96,6 +96,7 @@ Attach evidence for:
 - Transactional append RPC migration has been applied
 - Audit-chain verification endpoint works on target environment
 - Concurrency behavior is covered by tests or manual validation
+- Signing status is recorded, including whether `AUDIT_CHAIN_SIGNING_SECRET` is configured
 
 Accepted evidence:
 
@@ -103,6 +104,7 @@ Accepted evidence:
 - Verification endpoint output
 - Test run output
 - Manual concurrency validation note
+- Signing configuration note with secret values redacted
 
 ## Step-up authentication evidence
 
@@ -163,10 +165,11 @@ Accepted evidence:
 
 Attach evidence for:
 
-- Error reporting is configured
+- Error reporting is configured when enabled for the target environment
 - Production logs are accessible to the release owner
 - Security-sensitive failures are observable without leaking secrets
 - Rollback procedure is known and tested or documented
+- Any monitoring claim in public pages matches the actual provider configuration
 
 Accepted evidence:
 
@@ -174,6 +177,35 @@ Accepted evidence:
 - Error reporting test event
 - Logging access confirmation
 - Rollback runbook reference
+- Public claims review note
+
+## Trust Center readiness evidence
+
+Attach evidence for:
+
+- Public Trust Center route is reachable at `/{locale}/trust`
+- Public Security route is reachable at `/{locale}/security`
+- Footer includes links to Trust Center and Security
+- Commercial pages include a Trust Center path for enterprise buyers before a sales call
+- `docs/trust/SECURITY_OVERVIEW.md` exists and reflects current implementation
+- `docs/trust/ARCHITECTURE_OVERVIEW.md` exists and reflects current architecture
+- `docs/trust/DATA_PROTECTION.md` exists and includes retention and deletion posture
+- `docs/trust/ACCESS_CONTROL.md` exists and matches the RBAC implementation
+- `docs/trust/ENCRYPTION.md` exists and avoids unsupported encryption claims
+- `docs/trust/INCIDENT_RESPONSE.md` exists and includes responsible disclosure contact
+- `docs/trust/BACKUP_AND_RECOVERY.md` exists and distinguishes plans from tested evidence
+- `docs/trust/SUBPROCESSORS.md` exists and lists actual/conditional subprocessors honestly
+- `docs/trust/SECURITY_FAQ.md` exists with customer-safe answers
+- `docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md` exists with procurement response checklist
+- Public and commercial copy does not claim SOC 2, ISO 27001 certification, completed pentest, end-to-end encryption, WORM immutability, 24/7 staffed monitoring, tested disaster recovery, or tested backup restore unless evidence is attached
+
+Accepted evidence:
+
+- `npm run security:trust-package` output
+- Route health output for `/trust` and `/security`
+- Screenshot or deployment URL for Trust Center and Security pages
+- Diff review confirming no compliance-washing claims
+- Procurement packet review note from release owner
 
 ## Customer communication evidence
 
@@ -200,17 +232,19 @@ Accepted evidence:
 
 For public production or enterprise procurement, attach evidence for:
 
-- External security review or pentest completed
+- External security review or pentest completed, or a clear deferral is disclosed
 - Critical findings resolved
 - High findings resolved or formally accepted
 - Retest evidence attached where applicable
 
 Accepted evidence:
 
-- Pentest report
+- Pentest report when available
+- External review report when available
 - Finding triage spreadsheet
 - Retest confirmation
 - Risk acceptance sign-off
+- Customer-safe disclosure if external review has not been completed
 
 ## Release decision
 
@@ -222,6 +256,6 @@ A release may be promoted only when every required evidence section is either:
 
 Private beta may accept more documented exceptions.
 
-Public production should not accept exceptions for build, CI, RLS, audit-chain integrity, billing correctness, or customer communication ownership.
+Public production should not accept exceptions for build, CI, RLS, audit-chain integrity, billing correctness, customer communication ownership, or Trust Center claim accuracy.
 
-Enterprise procurement should not accept exceptions for supply-chain triage, live RLS validation, step-up authentication, upload scanning policy, audit-chain integrity, customer communication readiness, or external review.
+Enterprise procurement should not accept exceptions for supply-chain triage, live RLS validation, step-up authentication, upload scanning policy, audit-chain integrity, customer communication readiness, Trust Center readiness, or external review disclosure.
