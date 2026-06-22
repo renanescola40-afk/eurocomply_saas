@@ -6,8 +6,9 @@ import { Download, ShieldCheck, Trash2 } from 'lucide-react';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { GDPR_DELETE_CONFIRMATION } from '@/server/privacy/gdpr';
-import { STEP_UP_TOKEN_HEADER } from '@/server/security/step-up';
+
+const GDPR_DELETE_CONFIRMATION = 'DELETE ORGANIZATION DATA';
+const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
 
 export default function PrivacyAdminPage({ params }: { params: { locale: string } }) {
   const [exportToken, setExportToken] = useState('');
