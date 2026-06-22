@@ -8,7 +8,7 @@ const SCAN_DIRS = ['src/app', 'src/components', 'src/lib', 'src/server'];
 const EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs']);
 const BLOCKED_PATTERNS = [
   /\/undefined\//,
-  /\/undefined(?:["'`\s)>]|$)/,
+  /\/undefined(?:["'`)>]|$)/,
   /\$\{[^}]*undefined[^}]*\}/,
 ];
 const SUSPICIOUS_PATTERNS = [
