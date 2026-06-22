@@ -4,12 +4,18 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const source = readFileSync(resolve(repoRoot, 'src/server/queries/current-organization.ts'), 'utf8');
+const organizationSource = readFileSync(resolve(repoRoot, 'src/server/queries/current-organization.ts'), 'utf8');
+const marketingSource = readFileSync(resolve(repoRoot, 'src/app/[locale]/trust/page.tsx'), 'utf8');
 
 describe('organization source integrity', () => {
   it('keeps one memberships query export', () => {
-    const exports = source.match(/export async function getUserOrganizationMemberships/g) ?? [];
+    const exports = organizationSource.match(/export async function getUserOrganizationMemberships/g) ?? [];
 
     expect(exports).toHaveLength(1);
+  });
+
+  it('keeps localized marketing content bound before render', () => {
+    expect(marketingSource).toContain('const copy = TRUST_COPY[locale];');
+    expect(marketingSource).not.toContain('const page = copy[locale];');
   });
 });
