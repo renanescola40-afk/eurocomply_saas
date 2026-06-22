@@ -4,23 +4,27 @@ import { useState } from 'react';
 import { Download, ShieldCheck, Trash2 } from 'lucide-react';
 
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
+import { StepUpMfaDialog, STEP_UP_TOKEN_HEADER, type StepUpAction } from '@/components/security/step-up-mfa-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 const GDPR_DELETE_CONFIRMATION = 'DELETE ORGANIZATION DATA';
-const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
+
+type PendingAction = 'export_data' | 'gdpr_delete' | null;
 
 export function PrivacyAdminClient({ locale }: { locale: string }) {
   const [exportToken, setExportToken] = useState('');
   const [deleteToken, setDeleteToken] = useState('');
   const [deleteReason, setDeleteReason] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [status, setStatus] = useState('');
 
-  async function downloadExport() {
+  async function downloadExport(token = exportToken) {
     setStatus('');
+    const trimmedToken = token.trim();
     const response = await fetch('/api/gdpr/export', {
-      headers: exportToken.trim() ? { [STEP_UP_TOKEN_HEADER]: exportToken.trim() } : {},
+      headers: trimmedToken ? { [STEP_UP_TOKEN_HEADER]: trimmedToken } : {},
     });
 
     if (!response.ok) {
@@ -41,13 +45,14 @@ export function PrivacyAdminClient({ locale }: { locale: string }) {
     setStatus('Exportação GDPR descarregada com headers no-store.');
   }
 
-  async function requestDelete() {
+  async function requestDelete(token = deleteToken) {
     setStatus('');
+    const trimmedToken = token.trim();
     const response = await fetch('/api/gdpr/delete-request', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(deleteToken.trim() ? { [STEP_UP_TOKEN_HEADER]: deleteToken.trim() } : {}),
+        ...(trimmedToken ? { [STEP_UP_TOKEN_HEADER]: trimmedToken } : {}),
       },
       body: JSON.stringify({ reason: deleteReason, confirmation }),
     });
@@ -60,6 +65,22 @@ export function PrivacyAdminClient({ locale }: { locale: string }) {
     }
 
     setStatus(`Pedido criado. Revisão permitida a partir de ${payload.reviewNotBefore ?? 'após safety delay'}.`);
+  }
+
+  function handleStepUpToken(token: string) {
+    const action = pendingAction;
+    setPendingAction(null);
+
+    if (action === 'export_data') {
+      setExportToken(token);
+      void downloadExport(token);
+      return;
+    }
+
+    if (action === 'gdpr_delete') {
+      setDeleteToken(token);
+      void requestDelete(token);
+    }
   }
 
   return (
@@ -80,14 +101,17 @@ export function PrivacyAdminClient({ locale }: { locale: string }) {
               <div className="rounded-2xl bg-primary/10 p-3 text-primary"><Download className="h-5 w-5" /></div>
               <div>
                 <h2 className="text-2xl font-semibold">Exportar dados da organização</h2>
-                <p className="text-sm text-muted-foreground">Use um token step-up emitido para a ação `export_data`.</p>
+                <p className="text-sm text-muted-foreground">O botão inicia step-up real via MFA/IdP e descarrega a exportação no-store.</p>
               </div>
             </div>
             <label className="mt-6 block text-sm font-medium">
-              Token step-up
+              Token step-up manual opcional
               <input value={exportToken} onChange={(event) => setExportToken(event.target.value)} placeholder="x-eurocomply-step-up-token" className="mt-2 w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
             </label>
-            <Button type="button" onClick={downloadExport} className="mt-5 rounded-full"><Download className="h-4 w-4" /> Descarregar exportação</Button>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Button type="button" onClick={() => setPendingAction('export_data')} className="rounded-full"><ShieldCheck className="h-4 w-4" /> Verificar e descarregar</Button>
+              <Button type="button" variant="outline" onClick={() => void downloadExport()} className="rounded-full"><Download className="h-4 w-4" /> Usar token manual</Button>
+            </div>
           </section>
 
           <section className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
@@ -99,7 +123,7 @@ export function PrivacyAdminClient({ locale }: { locale: string }) {
               </div>
             </div>
             <label className="mt-6 block text-sm font-medium">
-              Token step-up para `gdpr_delete`
+              Token step-up manual opcional para `gdpr_delete`
               <input value={deleteToken} onChange={(event) => setDeleteToken(event.target.value)} className="mt-2 w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
             </label>
             <label className="mt-4 block text-sm font-medium">
@@ -110,10 +134,22 @@ export function PrivacyAdminClient({ locale }: { locale: string }) {
               Confirmação literal: <code>{GDPR_DELETE_CONFIRMATION}</code>
               <input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} className="mt-2 w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
             </label>
-            <Button type="button" variant="destructive" onClick={requestDelete} className="mt-5 rounded-full"><ShieldCheck className="h-4 w-4" /> Criar pedido pendente</Button>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Button type="button" variant="destructive" onClick={() => setPendingAction('gdpr_delete')} className="rounded-full"><ShieldCheck className="h-4 w-4" /> Verificar e criar pedido</Button>
+              <Button type="button" variant="outline" onClick={() => void requestDelete()} className="rounded-full"><Trash2 className="h-4 w-4" /> Usar token manual</Button>
+            </div>
           </section>
         </div>
       </section>
+
+      <StepUpMfaDialog
+        action={(pendingAction ?? 'export_data') as StepUpAction}
+        open={pendingAction !== null}
+        title="Verificação enterprise necessária"
+        description="Confirme a sessão com MFA ou IdP antes de exportar ou solicitar apagamento GDPR."
+        onCancel={() => setPendingAction(null)}
+        onToken={handleStepUpToken}
+      />
     </main>
   );
 }
