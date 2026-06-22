@@ -1,4 +1,6 @@
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
+type AdminClientFactory = {
+  tryCreateAdminClient: () => SupabaseLike | null;
+};
 
 export const GDPR_DELETE_CONFIRMATION = 'DELETE ORGANIZATION DATA';
 export const GDPR_DELETE_SAFETY_DELAY_HOURS = 72;
@@ -17,9 +19,10 @@ export const ORGANIZATION_EXPORT_TABLES: PrivacyInventoryTable[] = [
   { key: 'organizations', table: 'organizations', columns: 'id,name,slug,created_at,updated_at', scopeColumn: 'id', retentionClass: 'active_customer_data', exportable: true, deletable: 'anonymize' },
   { key: 'organization_members', table: 'organization_members', columns: 'id,organization_id,user_id,role,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
   { key: 'documents', table: 'documents', columns: 'id,organization_id,name,category,status,expires_at,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
-  { key: 'risks', table: 'risks', columns: 'id,organization_id,title,description,category,status,severity,owner_id,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
-  { key: 'vendors', table: 'vendors', columns: 'id,organization_id,name,contact_email,status,risk_level,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
-  { key: 'tasks', table: 'tasks', columns: 'id,organization_id,title,description,status,assignee_id,due_date,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
+  { key: 'risks', table: 'risks', columns: 'id,organization_id,title,description,category,status,risk_score,owner_user_id,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
+  { key: 'vendors', table: 'vendors', columns: 'id,organization_id,name,review_status,risk_level,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
+  { key: 'tasks', table: 'tasks', columns: 'id,organization_id,title,description,status,assigned_to,due_date,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
+  { key: 'compliance_tasks', table: 'compliance_tasks', columns: 'id,organization_id,title,description,status,assigned_to,due_date,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
   { key: 'notifications', table: 'notifications', columns: 'id,organization_id,user_id,type,message,read_at,created_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
   { key: 'subscriptions', table: 'subscriptions', columns: 'id,organization_id,stripe_customer_id,stripe_subscription_id,status,plan,current_period_end,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'legal_billing_record', exportable: true, deletable: 'preserve' },
   { key: 'billing_metadata', table: 'billing_metadata', columns: 'id,organization_id,provider,customer_id,subscription_id,status,metadata,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'legal_billing_record', exportable: true, deletable: 'preserve' },
@@ -64,6 +67,11 @@ function isExpectedMissingTable(error: QueryError) {
   return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST204' || error?.code === 'PGRST205';
 }
 
+async function getAdminClient() {
+  const { tryCreateAdminClient } = await import('@/lib/supabase/admin') as AdminClientFactory;
+  return tryCreateAdminClient() as unknown as SupabaseLike | null;
+}
+
 async function safeListScopedRows(client: SupabaseLike, descriptor: PrivacyInventoryTable, organizationId: string, userId: string) {
   try {
     const query = client.from(descriptor.table).select(descriptor.columns);
@@ -85,7 +93,7 @@ async function safeListScopedRows(client: SupabaseLike, descriptor: PrivacyInven
 }
 
 export async function collectOrganizationDataExport(context: OrganizationExportContext): Promise<OrganizationDataExport> {
-  const supabase = tryCreateAdminClient() as unknown as SupabaseLike | null;
+  const supabase = await getAdminClient();
   const tables: Record<string, unknown[]> = {};
   const unavailableTables: OrganizationDataExport['unavailableTables'] = [];
 
