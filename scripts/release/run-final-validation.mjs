@@ -1,30 +1,33 @@
 #!/usr/bin/env node
-import { createWriteStream, mkdirSync, writeFileSync } from 'node:fs';
-import { spawn } from 'node:child_process';
+
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const outputDir = process.env.RELEASE_VALIDATION_DIR || 'release-validation';
 const logDir = join(outputDir, 'logs');
 const releaseTarget = process.env.RELEASE_TARGET || 'production';
+const maxBuffer = 128 * 1024 * 1024;
 
 mkdirSync(logDir, { recursive: true });
 
 const commands = [
-  { slug: '00-npm-ci', label: 'npm ci', command: 'npm ci', requested: true },
-  { slug: '01-lint', label: 'npm run lint', command: 'npm run lint', requested: true },
-  { slug: '02-typecheck', label: 'npm run typecheck', command: 'npm run typecheck', requested: true },
-  { slug: '03-test', label: 'npm run test', command: 'npm run test', requested: true },
+  { slug: '00-npm-ci', label: 'npm ci', command: 'npm', args: ['ci'], requested: true },
+  { slug: '01-lint', label: 'npm run lint', command: 'npm', args: ['run', 'lint'], requested: true },
+  { slug: '02-typecheck', label: 'npm run typecheck', command: 'npm', args: ['run', 'typecheck'], requested: true },
+  { slug: '03-test', label: 'npm run test', command: 'npm', args: ['run', 'test'], requested: true },
   {
     slug: '04-playwright-install',
     label: 'Playwright browser dependency install',
-    command: 'npx playwright install --with-deps',
+    command: 'npx',
+    args: ['playwright', 'install', '--with-deps'],
     requested: false,
     prerequisiteFor: 'npm run test:e2e',
   },
-  { slug: '05-test-e2e', label: 'npm run test:e2e', command: 'npm run test:e2e', requested: true },
-  { slug: '06-build', label: 'npm run build', command: 'npm run build', requested: true },
-  { slug: '07-security-ci', label: 'npm run security:ci', command: 'npm run security:ci', requested: true },
-  { slug: '08-release-readiness', label: 'npm run release:readiness', command: 'npm run release:readiness', requested: true },
+  { slug: '05-test-e2e', label: 'npm run test:e2e', command: 'npm', args: ['run', 'test:e2e'], requested: true },
+  { slug: '06-build', label: 'npm run build', command: 'npm', args: ['run', 'build'], requested: true },
+  { slug: '07-security-ci', label: 'npm run security:ci', command: 'npm', args: ['run', 'security:ci'], requested: true },
+  { slug: '08-release-readiness', label: 'npm run release:readiness', command: 'npm', args: ['run', 'release:readiness'], requested: true },
 ];
 
 function now() {
@@ -38,82 +41,65 @@ function githubRunUrl() {
   return `https://github.com/${repository}/actions/runs/${runId}`;
 }
 
+function commandLine(step) {
+  return [step.command, ...step.args].join(' ');
+}
+
 function runCommand(step) {
-  return new Promise((resolve) => {
-    const startedAt = now();
-    const logPath = join(logDir, `${step.slug}.log`);
-    const stream = createWriteStream(logPath, { flags: 'w' });
+  const startedAt = now();
+  const logPath = join(logDir, `${step.slug}.log`);
+  const header = [
+    `# ${step.label}`,
+    `Command: ${commandLine(step)}`,
+    `Started: ${startedAt}`,
+    `Release target: ${releaseTarget}`,
+    '',
+  ].join('\n');
 
-    const header = [
-      `# ${step.label}`,
-      `Command: ${step.command}`,
-      `Started: ${startedAt}`,
-      `Release target: ${releaseTarget}`,
-      '',
-    ].join('\n');
+  process.stdout.write(`${header}\n`);
 
-    process.stdout.write(`${header}\n`);
-    stream.write(`${header}\n`);
-
-    const child = spawn(step.command, {
-      shell: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        CI: 'true',
-        NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED || '1',
-        RELEASE_TARGET: releaseTarget,
-      },
-    });
-
-    child.stdout.on('data', (chunk) => {
-      process.stdout.write(chunk);
-      stream.write(chunk);
-    });
-
-    child.stderr.on('data', (chunk) => {
-      process.stderr.write(chunk);
-      stream.write(chunk);
-    });
-
-    child.on('error', (error) => {
-      const message = `\nRunner error: ${error instanceof Error ? error.message : String(error)}\n`;
-      process.stderr.write(message);
-      stream.write(message);
-    });
-
-    child.on('close', (status, signal) => {
-      const finishedAt = now();
-      const normalizedStatus = typeof status === 'number' ? status : 1;
-      const footer = [
-        '',
-        `Finished: ${finishedAt}`,
-        `Exit status: ${normalizedStatus}`,
-        signal ? `Signal: ${signal}` : null,
-        '',
-      ].filter(Boolean).join('\n');
-
-      process.stdout.write(`${footer}\n`);
-      stream.write(`${footer}\n`);
-      stream.end();
-
-      resolve({
-        ...step,
-        startedAt,
-        finishedAt,
-        exitStatus: normalizedStatus,
-        result: normalizedStatus === 0 ? 'passed' : 'failed',
-        log: logPath,
-      });
-    });
+  const result = spawnSync(step.command, step.args, {
+    encoding: 'utf8',
+    maxBuffer,
+    env: {
+      ...process.env,
+      CI: 'true',
+      NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED || '1',
+      RELEASE_TARGET: releaseTarget,
+    },
   });
+
+  const stdout = result.stdout || '';
+  const stderr = result.stderr || '';
+  if (stdout) process.stdout.write(stdout);
+  if (stderr) process.stderr.write(stderr);
+
+  const finishedAt = now();
+  const exitStatus = typeof result.status === 'number' ? result.status : 1;
+  const diagnostics = result.error ? `\nRunner error: ${result.error.message}\n` : '';
+  const footer = [
+    '',
+    diagnostics.trim() ? diagnostics.trim() : null,
+    `Finished: ${finishedAt}`,
+    `Exit status: ${exitStatus}`,
+    result.signal ? `Signal: ${result.signal}` : null,
+    '',
+  ].filter(Boolean).join('\n');
+
+  process.stdout.write(`${footer}\n`);
+  writeFileSync(logPath, `${header}\n${stdout}${stderr}${footer}\n`);
+
+  return {
+    ...step,
+    startedAt,
+    finishedAt,
+    exitStatus,
+    result: exitStatus === 0 ? 'passed' : 'failed',
+    log: logPath,
+  };
 }
 
-const results = [];
-for (const command of commands) {
-  results.push(await runCommand(command));
-}
-
+const results = commands.map((command) => runCommand(command));
 const requestedResults = results.filter((result) => result.requested);
 const prerequisiteFailures = results.filter((result) => !result.requested && result.exitStatus !== 0);
 const requestedFailures = requestedResults.filter((result) => result.exitStatus !== 0);
