@@ -12,7 +12,8 @@
     "productionStore": "Upstash Redis REST pipeline using INCR, EXPIRE NX and TTL",
     "devTestStore": "in-memory buckets",
     "highRiskProductionFailureMode": "fail-closed",
-    "lowRiskProductionFailureMode": "policy based fail-open for health/internal and general-api"
+    "lowRiskProductionFailureMode": "policy based fail-open for health/internal and general-api",
+    "pipelineResponseParsing": "accepts object-style REST result fields and tuple-style result entries"
   },
   "policies": {
     "auth": { "limit": 5, "windowMs": 900000, "failureMode": "fail-closed", "auditOnBlock": true },
@@ -78,6 +79,9 @@
   "validationCommands": [
     "npm run test -- src/server/security/rate-limit.enterprise.test.ts src/lib/security/rate-limit.test.ts tests/unit/rate-limit.test.ts",
     "npm run security:enterprise-api"
+  ],
+  "ciFollowUp": [
+    "Add or run a mocked Upstash REST pipeline response test with object-style result fields; verify an over-limit count blocks. The connector blocked committing that mock test from this environment."
   ],
   "notes": [
     "This evidence file records expected validation coverage. CI/runtime command output should be attached by the pipeline after execution.",
