@@ -1,3 +1,5 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import { AlertTriangle, CheckCircle2, CloudOff, EyeOff, FileSearch, Loader2, ShieldCheck } from 'lucide-react';
 
