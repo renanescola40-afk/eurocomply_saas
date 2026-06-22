@@ -3,13 +3,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const doc = (name) => `docs/${name}.md`;
-const files = [
-  doc('RELEASE_ROLLBACK_PLAN'),
-  doc('RELEASE_CANDIDATE_VALIDATION'),
-  doc('RELEASE_EVIDENCE_CHECKLIST'),
-  doc('RELEASE_APPROVAL_RECORD'),
-  doc('RELEASE_GO_NO_GO_CHECKLIST'),
-];
 const ownerEnv = ['RELEASE', 'ROLLBACK', 'OWNER'].join('_');
 const placeholder = /^(?:tbd|todo|n\/a|none|placeholder)$/i;
 const failures = [];
