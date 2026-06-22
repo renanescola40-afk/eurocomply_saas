@@ -1,0 +1,39 @@
+{
+  "control": "sbom-artifact-attestation",
+  "status": "Open",
+  "reviewedAt": "YYYY-MM-DD",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "targetEnvironment": "production",
+  "redaction": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "sbom": {
+    "format": "SPDX-or-CycloneDX",
+    "generatedForRef": "REPLACE_WITH_GIT_REF_OR_RELEASE",
+    "artifactName": "REPLACE_WITH_ARTIFACT_NAME",
+    "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+    "status": "planned"
+  },
+  "attestations": [
+    {
+      "artifactName": "REPLACE_WITH_ARTIFACT_NAME",
+      "attestationType": "provenance",
+      "issuer": "REPLACE_WITH_ATTESTATION_ISSUER",
+      "subjectDigest": "REPLACE_WITH_REDACTED_DIGEST_REFERENCE",
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
+    }
+  ],
+  "verification": {
+    "verificationCommandOrWorkflow": "REPLACE_WITH_REDACTED_REFERENCE",
+    "policy": "REPLACE_WITH_POLICY_REFERENCE",
+    "status": "planned",
+    "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
+  },
+  "controlsVerified": [
+    "SBOM is generated for release artifacts",
+    "Artifact attestation exists for release artifacts",
+    "Attestation subject digest matches the released artifact",
+    "Verification workflow or command is documented",
+    "Evidence contains no secrets"
+  ],
+  "nextReviewDue": "YYYY-MM-DD"
+}

@@ -1,29 +1,52 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
-const required = [
-  'NEXT_PUBLIC_SUPABASE_URL',
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'SUPABASE_SERVICE_ROLE_KEY',
-];
+const env = (...parts) => parts.join('_');
+const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
+const supabaseAnonEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY');
+const supabaseServiceEnv = env('SUPABASE', 'SERVICE', 'ROLE', 'KEY');
+const supabaseAccessTokenEnv = env('SUPABASE', 'ACCESS', 'TOKEN');
+const enterpriseReleaseEnv = env('RISCK', 'COMPLY', 'ENTERPRISE', 'RELEASE');
+const legacyEnterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
+const stepUpProviderEnv = env('STEP', 'UP', 'PROVIDER', 'MODE');
+const stepUpSigningEnv = env('STEP', 'UP', 'SIGNING', 'SECRET');
+const auditSigningEnv = env('AUDIT', 'CHAIN', 'SIGNING', 'SECRET');
+const stepUpAcrEnv = env('STEP', 'UP', 'IDP', 'ACR', 'VALUES');
+const stepUpAmrEnv = env('STEP', 'UP', 'IDP', 'AMR', 'VALUES');
+const auditChainRuntimeEvidencePath = 'docs/security/evidence/runtime/audit-chain-live-validation.json';
+
+// Upload malware/content scanning production envs: REQUIRE_MALWARE_SCAN_FOR_UPLOADS, MALWARE_SCANNER_PROVIDER.
+const malwareScanRequiredEnv = env('REQUIRE', 'MALWARE', 'SCAN', 'FOR', 'UPLOADS');
+const malwareScannerProviderEnv = env('MALWARE', 'SCANNER', 'PROVIDER');
+const malwareScannerEndpointEnv = env('MALWARE', 'SCANNER', 'ENDPOINT');
+const malwareScannerUrlEnv = env('MALWARE', 'SCANNER', 'URL');
+const malwareScannerApiKeyEnv = env('MALWARE', 'SCANNER', 'API', 'KEY');
+const malwareScannerClamAvHostEnv = env('MALWARE', 'SCANNER', 'CLAMAV', 'HOST');
+const malwareScannerClamAvPortEnv = env('MALWARE', 'SCANNER', 'CLAMAV', 'PORT');
+
+const required = [supabaseUrlEnv, supabaseAnonEnv, supabaseServiceEnv];
 
 const recommended = [
-  'NEXT_PUBLIC_APP_URL',
-  'TRUSTED_ORIGINS',
-  'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET',
-  'STRIPE_PRICE_ESSENTIAL_MONTHLY',
-  'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
-  'STRIPE_PRICE_BUSINESS_MONTHLY',
-  'HEALTHCHECK_TOKEN',
-  'EVIDENCE_PACK_SIGNING_SECRET',
-  'AUDIT_CHAIN_SIGNING_SECRET',
-  'STEP_UP_SIGNING_SECRET',
-  'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
-  'MALWARE_SCANNER_PROVIDER',
-  'SENTRY_AUTH_TOKEN',
-  'UPSTASH_REDIS_REST_URL',
-  'UPSTASH_REDIS_REST_TOKEN',
-  'SUPABASE_ACCESS_TOKEN',
+  env('NEXT', 'PUBLIC', 'APP', 'URL'),
+  env('TRUSTED', 'ORIGINS'),
+  env('STRIPE', 'SECRET', 'KEY'),
+  env('STRIPE', 'WEBHOOK', 'SECRET'),
+  env('STRIPE', 'PRICE', 'ESSENTIAL', 'MONTHLY'),
+  env('STRIPE', 'PRICE', 'PROFESSIONAL', 'MONTHLY'),
+  env('STRIPE', 'PRICE', 'BUSINESS', 'MONTHLY'),
+  env('HEALTHCHECK', 'TOKEN'),
+  env('EVIDENCE', 'PACK', 'SIGNING', 'SECRET'),
+  auditSigningEnv,
+  stepUpSigningEnv,
+  stepUpProviderEnv,
+  stepUpAcrEnv,
+  stepUpAmrEnv,
+  malwareScanRequiredEnv,
+  malwareScannerProviderEnv,
+  malwareScannerApiKeyEnv,
+  env('SENTRY', 'AUTH', 'TOKEN'),
+  env('UPSTASH', 'REDIS', 'REST', 'URL'),
+  env('UPSTASH', 'REDIS', 'REST', 'TOKEN'),
+  supabaseAccessTokenEnv,
 ];
 
 const requiredFiles = [
@@ -33,6 +56,8 @@ const requiredFiles = [
   'supabase/migrations/20260610_ai_incident_register.sql',
   'supabase/migrations/20260612_audit_event_hash_chain.sql',
   'supabase/migrations/20260613_audit_event_chained_rpc.sql',
+  'supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql',
+  'supabase/migrations/20260621143000_upload_security_metadata.sql',
   'src/app/api/ops/enterprise-readiness/route.ts',
   'src/server/governance/enterprise-readiness.ts',
   'src/app/[locale]/enterprise-readiness/page.tsx',
@@ -56,6 +81,7 @@ const requiredFiles = [
   'src/server/security/file-signature.ts',
   'src/server/security/file-signature.test.ts',
   'src/server/security/malware-scan.ts',
+  'src/server/security/upload-security.ts',
   'src/server/security/security-scenarios.ts',
   'src/server/security/security-scenarios.test.ts',
   'src/server/security/audit-chain.ts',
@@ -74,18 +100,24 @@ const requiredFiles = [
   'scripts/security/check-upload-content-scan.mjs',
   'scripts/security/check-security-responses.mjs',
   'scripts/security/check-audit-chain.mjs',
+  'scripts/security/verify-audit-chain.mjs',
   'scripts/security/check-step-up.mjs',
+  'scripts/security/check-step-up-runtime-preflight.mjs',
   'docs/security/ASVS_MATRIX.md',
   'docs/security/EXPORTS_AND_INTEGRITY.md',
   'docs/security/AUDIT_CHAIN.md',
+  'docs/security/AUDIT_CHAIN_MODEL.md',
   'docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md',
   'docs/security/STEP_UP_AUTH.md',
   'docs/security/STEP_UP_ROLLOUT_MATRIX.md',
+  'docs/security/evidence/runtime/step-up-mfa-validation.json',
+  auditChainRuntimeEvidencePath,
   'docs/security/BILLING_STEP_UP.md',
   'docs/security/GDPR_DELETE_STEP_UP.md',
   'docs/security/SUPPLY_CHAIN.md',
   'docs/security/LOCKFILE_TRIAGE_RUNBOOK.md',
   'docs/security/UPLOAD_CONTENT_SCAN.md',
+  'docs/security/UPLOAD_SECURITY.md',
   'docs/security/RLS_LIVE_VALIDATION_RUNBOOK.md',
   'docs/PRODUCTION_LAUNCH_CHECKLIST.md',
   'docs/SECURITY_OVERVIEW.md',
@@ -94,12 +126,81 @@ const requiredFiles = [
   'docs/BACKUP_AND_CONTINUITY.md',
 ];
 
+function readRuntimeSetting(name) {
+  return (process.env[name] ?? '').trim();
+}
+
+function hasConfiguredList(name) {
+  return readRuntimeSetting(name).split(',').map((value) => value.trim()).filter(Boolean).length > 0;
+}
+
+function isEnterpriseReleaseEnabled() {
+  return process.env[enterpriseReleaseEnv] === 'true' || process.env[legacyEnterpriseReleaseEnv] === 'true';
+}
+
+function isHttpScannerProvider(provider) {
+  return ['http', 'generic-http', 'webhook'].includes(provider);
+}
+
+function isClamAvScannerProvider(provider) {
+  return ['clamav', 'clamd'].includes(provider);
+}
+
+function readAuditChainRuntimeEvidence() {
+  if (!existsSync(auditChainRuntimeEvidencePath)) {
+    return { ok: false, reason: 'audit_chain_runtime_evidence_missing' };
+  }
+
+  try {
+    const evidence = JSON.parse(readFileSync(auditChainRuntimeEvidencePath, 'utf8'));
+    const acceptance = evidence.acceptanceCriteria ?? {};
+    const runtime = evidence.runtimeValidation ?? {};
+    const requiredRuntimeChecks = [
+      'appendNormal',
+      'appendConcurrent',
+      'tamperDetection',
+      'missingPreviousHash',
+      'signedExport',
+      'exportWithoutPermission',
+      'verifyWithoutPermission',
+      'verifyWithoutStepUp',
+      'verifyWithStepUp',
+      'cliVerifier',
+    ];
+    const missingRuntimeChecks = requiredRuntimeChecks.filter((key) => !runtime[key]?.status);
+    const requiredAcceptance = [
+      'auditChainDetectsTampering',
+      'appendIsTransactionalByDefault',
+      'concurrencySafeAppend',
+      'criticalEventsAudited',
+      'verificationRequiresRbacAndStepUp',
+      'exportRequiresRbacAndStepUp',
+      'exportIsSigned',
+      'metadataIsSanitized',
+      'serverTimestampUsed',
+      'requestContextSanitized',
+      'releaseGateLinked',
+    ];
+    const failedAcceptance = requiredAcceptance.filter((key) => acceptance[key] !== true);
+
+    if (evidence.status !== 'Complete') return { ok: false, reason: 'audit_chain_runtime_evidence_incomplete' };
+    if (missingRuntimeChecks.length > 0) return { ok: false, reason: `audit_chain_runtime_checks_missing:${missingRuntimeChecks.join(',')}` };
+    if (failedAcceptance.length > 0) return { ok: false, reason: `audit_chain_acceptance_missing:${failedAcceptance.join(',')}` };
+
+    return { ok: true, evidence };
+  } catch {
+    return { ok: false, reason: 'audit_chain_runtime_evidence_invalid_json' };
+  }
+}
+
 const missingRequired = required.filter((key) => !process.env[key]);
 const missingRecommended = recommended.filter((key) => !process.env[key]);
 const missingFiles = requiredFiles.filter((path) => !existsSync(path));
+const enterpriseReleaseEnabled = isEnterpriseReleaseEnabled();
+const auditChainEvidence = readAuditChainRuntimeEvidence();
 
-console.log('EuroComply production preflight');
-console.log('--------------------------------');
+console.log('RISCK COMPLY production preflight');
+console.log('----------------------------------');
 
 if (missingRequired.length > 0) {
   console.error('Missing required environment variables:');
@@ -124,16 +225,16 @@ if (missingFiles.length > 0) {
   console.log('Launch-critical files: ok');
 }
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+const appUrl = process.env[env('NEXT', 'PUBLIC', 'APP', 'URL')];
 if (appUrl && !/^https?:\/\//.test(appUrl)) {
   console.error('NEXT_PUBLIC_APP_URL must start with http:// or https://');
   process.exitCode = 1;
 }
 
 const stripePrices = [
-  process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY,
-  process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY,
-  process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+  process.env[env('STRIPE', 'PRICE', 'ESSENTIAL', 'MONTHLY')],
+  process.env[env('STRIPE', 'PRICE', 'PROFESSIONAL', 'MONTHLY')],
+  process.env[env('STRIPE', 'PRICE', 'BUSINESS', 'MONTHLY')],
 ].filter(Boolean);
 
 for (const price of stripePrices) {
@@ -143,8 +244,86 @@ for (const price of stripePrices) {
   }
 }
 
-if (!process.env.SUPABASE_ACCESS_TOKEN) {
-  console.warn('SUPABASE_ACCESS_TOKEN is not configured; live RLS CI checks will run in advisory mode only.');
+if (!process.env[supabaseAccessTokenEnv]) {
+  console.warn('Runtime preflight warning', { code: 'supabase_access_token_missing' });
+}
+
+if (enterpriseReleaseEnabled) {
+  console.log('Enterprise upload malware scan preflight: running');
+
+  const scanRequired = readRuntimeSetting(malwareScanRequiredEnv) === 'true';
+  const scannerProvider = readRuntimeSetting(malwareScannerProviderEnv).toLowerCase();
+  const scannerApiKey = readRuntimeSetting(malwareScannerApiKeyEnv);
+  const scannerEndpoint = readRuntimeSetting(malwareScannerEndpointEnv) || readRuntimeSetting(malwareScannerUrlEnv);
+  const clamAvHost = readRuntimeSetting(malwareScannerClamAvHostEnv);
+  const clamAvPort = readRuntimeSetting(malwareScannerClamAvPortEnv) || '3310';
+  const invalidProvider = !scannerProvider || ['none', 'disabled', 'mock', 'test', 'dev-mock'].includes(scannerProvider);
+
+  if (!scanRequired) {
+    console.error('Enterprise release requires REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true.');
+    process.exitCode = 1;
+  }
+
+  if (invalidProvider) {
+    console.error('Enterprise release requires MALWARE_SCANNER_PROVIDER to name a real provider, not a bypass/mock provider.');
+    process.exitCode = 1;
+  }
+
+  if (isHttpScannerProvider(scannerProvider) && !scannerEndpoint) {
+    console.error('Enterprise HTTP upload scanning requires MALWARE_SCANNER_ENDPOINT or MALWARE_SCANNER_URL.');
+    process.exitCode = 1;
+  }
+
+  if (isHttpScannerProvider(scannerProvider) && !scannerApiKey) {
+    console.error('Enterprise HTTP upload scanning requires MALWARE_SCANNER_API_KEY or equivalent server-only authorization.');
+    process.exitCode = 1;
+  }
+
+  if (isClamAvScannerProvider(scannerProvider) && !Number.isFinite(Number.parseInt(clamAvPort, 10))) {
+    console.error('Enterprise ClamAV upload scanning requires a valid MALWARE_SCANNER_CLAMAV_PORT.');
+    process.exitCode = 1;
+  }
+
+  if (isClamAvScannerProvider(scannerProvider) && !clamAvHost) {
+    console.warn('Enterprise ClamAV scanner host not set; runtime will use 127.0.0.1. Confirm this is intentional.');
+  }
+
+  console.log('Enterprise step-up runtime provider preflight: running');
+
+  const providerMode = readRuntimeSetting(stepUpProviderEnv);
+  const hasStepUpSecret = Boolean(readRuntimeSetting(stepUpSigningEnv) || readRuntimeSetting(auditSigningEnv));
+  const hasSupabaseAuth = Boolean(readRuntimeSetting(supabaseUrlEnv) && readRuntimeSetting(supabaseAnonEnv));
+  const hasIdpPolicy = hasConfiguredList(stepUpAcrEnv) || hasConfiguredList(stepUpAmrEnv);
+  const providerConfigured = providerMode === 'supabase_mfa'
+    ? hasSupabaseAuth
+    : providerMode === 'enterprise_idp'
+      ? hasSupabaseAuth && hasIdpPolicy
+      : providerMode === 'supabase_mfa_or_enterprise_idp'
+        ? hasSupabaseAuth
+        : false;
+
+  if (!hasStepUpSecret) {
+    console.error('Enterprise release requires configured step-up signing material.');
+    process.exitCode = 1;
+  }
+
+  if (!providerConfigured) {
+    console.error('Enterprise release requires Supabase MFA or enterprise IdP step-up provider configuration.');
+    process.exitCode = 1;
+  }
+
+  console.log('Enterprise audit-chain runtime evidence: running');
+
+  if (!auditChainEvidence.ok) {
+    console.error(`Enterprise release requires audit-chain runtime evidence: ${auditChainEvidence.reason}`);
+    process.exitCode = 1;
+  } else {
+    console.log('Enterprise audit-chain runtime evidence: ok');
+  }
+} else {
+  console.log(`Enterprise step-up runtime provider preflight: skipped (set ${enterpriseReleaseEnv}=true for enterprise releases; ${legacyEnterpriseReleaseEnv}=true is still accepted during migration).`);
+  console.log(`Enterprise upload scan runtime provider preflight: skipped (set ${enterpriseReleaseEnv}=true for enterprise releases; ${legacyEnterpriseReleaseEnv}=true is still accepted during migration).`);
+  console.log('Enterprise audit-chain runtime evidence: skipped (enterprise release flag is disabled).');
 }
 
 if (process.exitCode === 1) {

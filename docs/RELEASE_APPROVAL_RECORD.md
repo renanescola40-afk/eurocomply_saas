@@ -8,6 +8,9 @@ This document is the release owner record used to approve or reject a EuroComply
 - Commit SHA:
 - Date:
 - Release owner:
+- Incident owner:
+- Rollback owner:
+- Customer communication owner:
 - Approver:
 - Target environment:
 
@@ -21,6 +24,7 @@ The release owner must confirm each item before approval.
 - Release evidence checklist completed.
 - Release candidate validation runbook reviewed.
 - Any exceptions have an owner and expiration date.
+- Incident owner, rollback owner and customer communication owner are named before release approval.
 
 ### Build and CI
 
@@ -68,7 +72,10 @@ The release owner must confirm each item before approval.
 
 - Error monitoring reviewed.
 - Audit logging reviewed.
+- Alerting runbook reviewed.
 - Incident response owner confirmed.
+- Rollback owner confirmed.
+- Customer communication owner confirmed for SEV-1/SEV-2.
 
 ### External review
 
@@ -93,6 +100,9 @@ Choose one:
 ## Final sign-off
 
 - Release owner:
+- Incident owner:
+- Rollback owner:
+- Customer communication owner:
 - Approver:
 - Date:
 - Notes:

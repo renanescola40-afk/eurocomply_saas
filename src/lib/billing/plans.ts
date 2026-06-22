@@ -16,6 +16,8 @@ export type BillingPlan = {
   features: string[];
 };
 
+export type BillingPlanCatalog = [BillingPlan, ...BillingPlan[]];
+
 const BILLING_PLAN_IDS: BillingPlanId[] = ['essential', 'professional', 'business', 'enterprise'];
 
 const BILLING_PLAN_ALIASES: Record<string, BillingPlanId> = {
@@ -26,7 +28,7 @@ const BILLING_PLAN_ALIASES: Record<string, BillingPlanId> = {
   pro: 'professional',
 };
 
-export const BILLING_PLANS: BillingPlan[] = [
+export const BILLING_PLANS: BillingPlanCatalog = [
   {
     id: 'essential',
     name: 'Essential',

@@ -1,52 +1,65 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
+import { applyNoStoreHeaders, noStoreJson } from '@/server/security/no-store';
+import {
+  getAuthCallbackLoginUrl,
+  getSafeAuthCallbackNextPath,
+  resolveAuthAppBaseUrl,
+} from '@/server/security/auth-callback';
+import { recordAuthAuditEvent } from '@/server/security/auth-audit';
 
-const DASHBOARD_PATH = '/dashboard/organizations';
-
-function getLocaleFromNextPath(nextPath: string) {
-  const firstSegment = nextPath.split('/').filter(Boolean)[0] as Locale | undefined;
-  return firstSegment && locales.includes(firstSegment) ? firstSegment : defaultLocale;
+function noStoreRedirect(url: URL) {
+  return applyNoStoreHeaders(NextResponse.redirect(url));
 }
 
-function getSafeNextPath(rawNext: string | null) {
-  if (!rawNext || rawNext === '/' || rawNext.includes('://') || rawNext.startsWith('//')) {
-    return `/${defaultLocale}${DASHBOARD_PATH}`;
-  }
-
-  const locale = getLocaleFromNextPath(rawNext);
-
-  if (!rawNext.startsWith(`/${locale}/dashboard`)) {
-    return `/${locale}${DASHBOARD_PATH}`;
-  }
-
-  return rawNext;
-}
-
-function getLoginUrl(request: NextRequest, nextPath: string, error: string) {
-  const locale = getLocaleFromNextPath(nextPath);
-  const loginUrl = new URL(`/${locale}/login`, request.url);
-  loginUrl.searchParams.set('error', error);
-  loginUrl.searchParams.set('next', nextPath);
-  return loginUrl;
+function unavailableResponse() {
+  return noStoreJson({ error: 'auth_app_url_unavailable' }, { status: 503 });
 }
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get('code');
-  const next = getSafeNextPath(requestUrl.searchParams.get('next'));
+  const appBaseUrl = resolveAuthAppBaseUrl(request.url);
+  const oauthCode = requestUrl.searchParams.get('code');
+  const next = getSafeAuthCallbackNextPath(requestUrl.searchParams.get('next'));
 
-  let response = NextResponse.redirect(new URL(next, request.url));
+  if (!appBaseUrl) {
+    console.warn('auth_app_url_unavailable');
+    await recordAuthAuditEvent({
+      action: 'auth.login_failure',
+      method: 'oauth',
+      outcome: 'failed',
+      reason: 'app_url_unavailable',
+      metadata: { source: 'auth_callback_route' },
+    });
+    return unavailableResponse();
+  }
 
-  if (!code) {
-    return NextResponse.redirect(getLoginUrl(request, next, 'missing_oauth_code'));
+  let response = noStoreRedirect(new URL(next, appBaseUrl));
+
+  if (!oauthCode) {
+    await recordAuthAuditEvent({
+      action: 'auth.login_failure',
+      method: 'oauth',
+      outcome: 'failed',
+      reason: 'missing_oauth_code',
+      metadata: { source: 'auth_callback_route' },
+    });
+    return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'missing_oauth_code'));
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.redirect(getLoginUrl(request, next, 'supabase_env_missing'));
+    console.warn('auth_callback_configuration_unavailable');
+    await recordAuthAuditEvent({
+      action: 'auth.login_failure',
+      method: 'oauth',
+      outcome: 'failed',
+      reason: 'configuration_unavailable',
+      metadata: { source: 'auth_callback_route' },
+    });
+    return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'auth_configuration_unavailable'));
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -62,11 +75,29 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const exchangeResult = await supabase.auth.exchangeCodeForSession(oauthCode);
 
-  if (error) {
-    return NextResponse.redirect(getLoginUrl(request, next, error.message));
+  if (exchangeResult.error) {
+    console.warn('auth_callback_exchange_failed');
+    await recordAuthAuditEvent({
+      action: 'auth.login_failure',
+      method: 'oauth',
+      outcome: 'failed',
+      reason: 'exchange_failed',
+      metadata: { source: 'auth_callback_route' },
+    });
+    return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'auth_exchange_failed'));
   }
+
+  const authenticatedUser = exchangeResult.data.user ?? exchangeResult.data.session?.user ?? null;
+  await recordAuthAuditEvent({
+    action: 'auth.login_success',
+    actorUserId: authenticatedUser?.id ?? null,
+    email: authenticatedUser?.email ?? null,
+    method: 'oauth',
+    outcome: 'succeeded',
+    metadata: { source: 'auth_callback_route' },
+  });
 
   return response;
 }

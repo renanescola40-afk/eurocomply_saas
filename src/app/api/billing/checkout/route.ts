@@ -1,3 +1,7 @@
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
+import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan } from '@/server/billing/plans';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -5,7 +9,9 @@ import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
-import { requireStepUpForRequest } from '@/server/security/step-up';
+import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
+
+const CHECKOUT_JSON_MAX_BYTES = 2 * 1024;
 
 export async function POST(request: Request) {
   const originDenied = assertTrustedOrigin(request);
@@ -17,9 +23,12 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'authentication_required' }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => null) as { plan?: string; locale?: string } | null;
-  const plan = body?.plan;
-  const locale = body?.locale?.match(/^(en|pt|es|fr|it|de)$/) ? body.locale : 'en';
+  const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
+    maxBytes: CHECKOUT_JSON_MAX_BYTES,
+  }).catch(() => null);
+  const plan = typeof body?.plan === 'string' ? body.plan : undefined;
+  const localeValue = typeof body?.locale === 'string' ? body.locale : '';
+  const locale = localeValue.match(/^(en|pt|es|fr|it|de)$/) ? localeValue : 'en';
 
   if (!plan || !isSelfServePlan(plan)) {
     return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
@@ -41,7 +50,17 @@ export async function POST(request: Request) {
     return permissionDeniedResponse(permission);
   }
 
-  const stepUp = requireStepUpForRequest({
+  const rateLimit = await checkDistributedRateLimit({
+    key: `billing:checkout:${organization.id}:${user.id}`,
+    limit: 10,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
+  }
+
+  const stepUp = await requireStepUpForRequest({
     request,
     action: 'manage_billing',
     userId: user.id,
@@ -52,7 +71,12 @@ export async function POST(request: Request) {
     return stepUp.response;
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
+  const returnBaseUrl = resolveBillingReturnBaseUrl(request.url);
+
+  if (!returnBaseUrl.ok) {
+    return noStoreJson({ error: 'billing_app_url_unavailable' }, { status: 503 });
+  }
+
   const stripe = getStripeClient();
   const priceId = getStripePriceId(plan);
 
@@ -60,8 +84,8 @@ export async function POST(request: Request) {
     mode: 'subscription',
     customer_email: user.email ?? undefined,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/${locale}/dashboard/organizations?checkout=success`,
-    cancel_url: `${appUrl}/${locale}/pricing?checkout=cancelled`,
+    success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
+    cancel_url: `${returnBaseUrl.appUrl}/${locale}/pricing?checkout=cancelled`,
     client_reference_id: organization.id,
     metadata: {
       organization_id: organization.id,
@@ -86,11 +110,6 @@ export async function POST(request: Request) {
 
   return noStoreJson({
     url: session.url,
-    stepUp: {
-      action: stepUp.assessment.action,
-      verifiedAt: stepUp.assessment.verifiedAt,
-      expiresAt: stepUp.assessment.expiresAt,
-      tokenType: 'signed_hmac',
-    },
+    stepUp: publicStepUpSummary(stepUp.assessment),
   });
 }

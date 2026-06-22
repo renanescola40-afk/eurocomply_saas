@@ -1,4 +1,4 @@
-name: EuroComply Security CI
+name: RISCK COMPLY Security CI
 
 on:
   workflow_dispatch:

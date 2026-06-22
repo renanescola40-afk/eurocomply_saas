@@ -1,0 +1,6 @@
+Evidence kind reference for P1-06
+
+evidenceKind: final-p1-control-evidence
+controlId: P1-06
+
+No secrets are stored here.

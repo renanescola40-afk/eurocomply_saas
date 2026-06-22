@@ -1,10 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const requiredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const privilegedEnvName = ['SUPABASE', 'SERVICE', 'ROLE', 'KEY'].join('_');
+const serviceRoleKey = process.env[privilegedEnvName];
 const projectRef = requiredUrl?.match(/^https:\/\/([^.]+)\.supabase\.co/i)?.[1];
 const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
 const rlsRunbookPath = 'docs/security/RLS_LIVE_VALIDATION_RUNBOOK.md';
+const rlsEvidencePath = 'docs/security/evidence/runtime/supabase-live-rls-validation.json';
 
 const criticalTables = [
   'organizations',
@@ -12,9 +14,31 @@ const criticalTables = [
   'subscriptions',
   'documents',
   'vendors',
+  'risks',
+  'tasks',
+  'compliance_tasks',
   'audit_events',
+  'audit_logs',
   'notifications',
   'organization_invites',
+  'invitations',
+  'ai_systems',
+  'ai_incidents',
+];
+
+const organizationScopedTables = [
+  'documents',
+  'vendors',
+  'risks',
+  'tasks',
+  'compliance_tasks',
+  'audit_events',
+  'audit_logs',
+  'notifications',
+  'subscriptions',
+  'organization_members',
+  'organization_invites',
+  'invitations',
   'ai_systems',
   'ai_incidents',
 ];
@@ -29,7 +53,6 @@ const runbookRequiredTokens = [
   'RLS Live Validation Runbook',
   'SUPABASE_ACCESS_TOKEN',
   'NEXT_PUBLIC_SUPABASE_URL',
-  'SUPABASE_SERVICE_ROLE_KEY',
   'advisory',
   'live validation',
   'npm run security:rls',
@@ -40,6 +63,9 @@ const runbookRequiredTokens = [
   'organization_members',
   'documents',
   'audit_events',
+  'risks',
+  'vendors',
+  'scripts/security/run-supabase-live-rls-validation.mjs',
 ];
 
 function explainSetup() {
@@ -47,7 +73,7 @@ function explainSetup() {
   console.log('--------------------------');
   console.log('This script validates RLS posture through the Supabase Management API when SUPABASE_ACCESS_TOKEN is available.');
   console.log('Required env for live check: NEXT_PUBLIC_SUPABASE_URL + SUPABASE_ACCESS_TOKEN.');
-  console.log('Recommended env for production app checks: SUPABASE_SERVICE_ROLE_KEY must exist but is never printed.');
+  console.log('Recommended env for production app checks: privileged backend Supabase key must exist but is never printed.');
 }
 
 function checkRunbook() {
@@ -63,6 +89,25 @@ function checkRunbook() {
   if (missingTokens.length > 0) {
     console.error(`${rlsRunbookPath} is missing required RLS evidence tokens:`);
     for (const token of missingTokens) console.error(`- ${token}`);
+    process.exitCode = 1;
+  }
+}
+
+function checkRuntimeEvidencePlaceholder() {
+  if (!existsSync(rlsEvidencePath)) {
+    console.error(`${rlsEvidencePath} is missing; Supabase live RLS evidence must be tracked as Open or Complete.`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const evidence = JSON.parse(readFileSync(rlsEvidencePath, 'utf8'));
+  if (!['Open', 'Complete'].includes(evidence.status)) {
+    console.error(`${rlsEvidencePath} must use status Open or Complete.`);
+    process.exitCode = 1;
+  }
+
+  if (evidence.status === 'Complete' && evidence.outcome !== 'passed') {
+    console.error(`${rlsEvidencePath} status Complete requires outcome passed.`);
     process.exitCode = 1;
   }
 }
@@ -119,19 +164,25 @@ function getPolicyDefinition(row) {
     .join(' ');
 }
 
+function mentionsTenantGuard(policy) {
+  const definition = getPolicyDefinition(policy);
+  return /organization_id|is_org_member|has_org_role|auth\.uid\(\)/i.test(definition);
+}
+
 async function runLiveCheck() {
   checkRunbook();
+  checkRuntimeEvidencePlaceholder();
 
   if (!projectRef || !accessToken) {
     explainSetup();
     if (!requiredUrl) {
-      console.warn('Skipping live RLS check: NEXT_PUBLIC_SUPABASE_URL is not configured.');
+      console.warn('Skipping live RLS metadata check: NEXT_PUBLIC_SUPABASE_URL is not configured.');
     }
     if (!accessToken) {
-      console.warn('Skipping live RLS check: SUPABASE_ACCESS_TOKEN is not configured.');
+      console.warn('Skipping live RLS metadata check: SUPABASE_ACCESS_TOKEN is not configured.');
     }
     if (!serviceRoleKey) {
-      console.warn('SUPABASE_SERVICE_ROLE_KEY is not configured; production APIs that require admin checks will fail.');
+      console.warn('Privileged backend Supabase key is not configured; controlled backend-only checks will fail.');
     }
     return;
   }
@@ -143,24 +194,28 @@ async function runLiveCheck() {
 
   const publicTables = tables.filter((table) => getSchemaName(table) === 'public' || !getSchemaName(table));
   const tableNames = new Set(publicTables.map(getTableName).filter(Boolean));
+  const existingCriticalTables = criticalTables.filter((table) => tableNames.has(table));
   const missingTables = criticalTables.filter((table) => !tableNames.has(table));
   const missingRls = publicTables
     .filter((table) => criticalTables.includes(getTableName(table)))
     .filter((table) => !hasRlsEnabled(table))
     .map(getTableName);
   const policyTables = new Set(policies.map(getPolicyTableName).filter(Boolean));
-  const missingPolicies = criticalTables.filter((table) => tableNames.has(table) && !policyTables.has(table));
+  const missingPolicies = existingCriticalTables.filter((table) => !policyTables.has(table));
   const permissivePolicies = policies
     .filter((policy) => criticalTables.includes(getPolicyTableName(policy)))
     .filter((policy) => unsafePolicyPatterns.some((pattern) => pattern.test(getPolicyDefinition(policy))))
     .map((policy) => `${getPolicyTableName(policy)}:${policy.policyname ?? policy.name ?? 'unnamed_policy'}`);
+  const missingTenantGuardPolicies = organizationScopedTables
+    .filter((table) => tableNames.has(table))
+    .filter((table) => !policies.some((policy) => getPolicyTableName(policy) === table && mentionsTenantGuard(policy)));
 
   if (missingTables.length > 0) {
     console.warn('Critical tables not found. This can be expected before migrations are applied:');
     for (const table of missingTables) console.warn(`- ${table}`);
   }
 
-  if (missingRls.length > 0 || missingPolicies.length > 0 || permissivePolicies.length > 0) {
+  if (missingRls.length > 0 || missingPolicies.length > 0 || permissivePolicies.length > 0 || missingTenantGuardPolicies.length > 0) {
     if (missingRls.length > 0) {
       console.error('Critical tables without RLS enabled:');
       for (const table of missingRls) console.error(`- ${table}`);
@@ -172,6 +227,10 @@ async function runLiveCheck() {
     if (permissivePolicies.length > 0) {
       console.error('Potentially permissive policies detected:');
       for (const policy of permissivePolicies) console.error(`- ${policy}`);
+    }
+    if (missingTenantGuardPolicies.length > 0) {
+      console.error('Organization scoped tables without detected tenant guard policy:');
+      for (const table of missingTenantGuardPolicies) console.error(`- ${table}`);
     }
     process.exitCode = 1;
     return;

@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "phase": "P1 Enterprise Security",
+  "status": "Open",
+  "generatedFromRealEvidence": false,
+  "controls": [
+    {
+      "controlId": "P1-01",
+      "control": "sso-saml-oidc",
+      "status": "Open",
+      "evidencePath": "docs/security/evidence/p1/sso-saml-oidc.json"
+    },
+    {
+      "controlId": "P1-02",
+      "control": "admin-mfa-required",
+      "status": "Open",
+      "evidencePath": "docs/security/evidence/p1/admin-mfa-required.json"
+    },
+    {
+      "controlId": "P1-03",
+      "control": "step-up-sensitive-actions",
+      "status": "Open",
+      "evidencePath": "docs/security/evidence/p1/step-up-sensitive-actions.json"
+    },
+    {
+      "controlId": "P1-04",
+      "control": "distributed-rate-limit-sensitive-endpoints",
+      "status": "Open",
+      "evidencePath": "docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json"
+    },
+    {
+      "controlId": "P1-05",
+      "control": "dast-automated",
+      "status": "Complete",
+      "evidencePath": "docs/security/evidence/p1/dast-automated.json",
+      "reviewedAt": "2026-06-18T21:52:00Z",
+      "reviewer": "renan silva <renansilva2002@gmail.com>",
+      "nextReviewDue": "2026-09-18"
+    },
+    {
+      "controlId": "P1-06",
+      "control": "sbom-artifact-attestation",
+      "status": "Complete",
+      "evidencePath": "docs/security/evidence/p1/sbom-artifact-attestation.json",
+      "reviewedAt": "2026-06-18T18:08:26Z",
+      "reviewer": "renan silva <renansilva2002@gmail.com>",
+      "nextReviewDue": "2026-09-18"
+    },
+    {
+      "controlId": "P1-07",
+      "control": "backup-restore-tested",
+      "status": "Open",
+      "evidencePath": "docs/security/evidence/p1/backup-restore-tested.json"
+    },
+    {
+      "controlId": "P1-08",
+      "control": "centralized-logging-alerts",
+      "status": "Complete",
+      "evidencePath": "docs/security/evidence/p1/centralized-logging-alerts.json",
+      "reviewedAt": "2026-06-18T21:29:00Z",
+      "reviewer": "renan silva <renansilva2002@gmail.com>",
+      "nextReviewDue": "2026-09-18"
+    },
+    {
+      "controlId": "P1-09",
+      "control": "verifiable-production-audit-chain",
+      "status": "Open",
+      "evidencePath": "docs/security/evidence/p1/verifiable-production-audit-chain.json"
+    },
+    {
+      "controlId": "P1-10",
+      "control": "waf-cdn-ddos",
+      "status": "Complete",
+      "evidencePath": "docs/security/evidence/p1/waf-cdn-ddos.json",
+      "reviewedAt": "2026-06-18T21:29:00Z",
+      "reviewer": "renan silva <renansilva2002@gmail.com>",
+      "nextReviewDue": "2026-09-18"
+    }
+  ]
+}

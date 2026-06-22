@@ -8,8 +8,9 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { requireCurrentUser } from '@/server/queries/auth';
+import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
-const uuidSchema = z.string().uuid();
 const safeReturnPathSchema = z
   .string()
   .trim()
@@ -18,21 +19,40 @@ const safeReturnPathSchema = z
   .refine((value) => !value || (value.startsWith('/') && !value.startsWith('//') && !value.includes('://')), 'Return path must be a relative internal path');
 
 const checkoutInputSchema = z.object({
-  organizationId: uuidSchema,
-  userId: uuidSchema,
   planId: z.string().trim().min(1).max(64),
   successPath: safeReturnPathSchema,
   cancelPath: safeReturnPathSchema,
 });
 
 const portalInputSchema = z.object({
-  organizationId: uuidSchema,
-  userId: uuidSchema,
   returnPath: safeReturnPathSchema,
 });
 
+const DUPLICATE_CHECKOUT_BLOCKING_STATUSES = new Set([
+  'active',
+  'trialing',
+  'past_due',
+  'unpaid',
+  'incomplete',
+]);
+
 type CheckoutInput = z.infer<typeof checkoutInputSchema>;
 type PortalInput = z.infer<typeof portalInputSchema>;
+
+async function requireBillingContext() {
+  const user = await requireCurrentUser();
+  const organization = await getCurrentOrganizationForUser(user.id);
+
+  if (!organization) {
+    throw new Error('Organization access required');
+  }
+
+  return { user, organization };
+}
+
+function isDuplicateCheckoutStatus(status: string | null | undefined) {
+  return Boolean(status && DUPLICATE_CHECKOUT_BLOCKING_STATUSES.has(status));
+}
 
 function getAppUrl() {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -58,9 +78,10 @@ export async function createCheckoutSession(input: CheckoutInput) {
   }
 
   const safeInput = parsed.data;
-  const context = { area: 'billing_checkout', organizationId: safeInput.organizationId, userId: safeInput.userId, planId: safeInput.planId };
+  const { user, organization } = await requireBillingContext();
+  const context = { area: 'billing_checkout', organizationId: organization.id, userId: user.id, planId: safeInput.planId };
   const rateLimit = await checkDistributedRateLimit({
-    key: `checkout:${safeInput.organizationId}:${safeInput.userId}`,
+    key: `checkout:${organization.id}:${user.id}`,
     limit: 5,
     windowMs: 60 * 60 * 1000,
   });
@@ -81,12 +102,27 @@ export async function createCheckoutSession(input: CheckoutInput) {
     const priceId = getStripePriceId(plan);
 
     if (!priceId) {
-      throw new Error(`${plan.stripePriceEnvKey} is required`);
+      throw new Error('Billing plan is not configured');
     }
 
     const appUrl = getAppUrl();
 
-    await assertCurrentUserCan(safeInput.organizationId, safeInput.userId, 'billing:manage');
+    await assertCurrentUserCan(organization.id, user.id, 'billing:manage');
+
+    const supabase = createAdminClient();
+    const { data: subscription, error: subscriptionError } = await supabase
+      .from('subscriptions')
+      .select('plan,status')
+      .eq('organization_id', organization.id)
+      .maybeSingle();
+
+    if (subscriptionError) {
+      throw subscriptionError;
+    }
+
+    if (subscription?.plan === plan.id && isDuplicateCheckoutStatus(subscription.status)) {
+      throw new Error('Organization is already subscribed to this billing plan');
+    }
 
     const stripe = getStripeClient();
 
@@ -96,22 +132,22 @@ export async function createCheckoutSession(input: CheckoutInput) {
       success_url: `${appUrl}${safeInput.successPath ?? '/dashboard/organizations/billing?checkout=success'}`,
       cancel_url: `${appUrl}${safeInput.cancelPath ?? '/dashboard/organizations/billing?checkout=cancelled'}`,
       metadata: {
-        organizationId: safeInput.organizationId,
+        organizationId: organization.id,
         planId: plan.id,
-        userId: safeInput.userId,
+        userId: user.id,
       },
       subscription_data: {
         metadata: {
-          organizationId: safeInput.organizationId,
+          organizationId: organization.id,
           planId: plan.id,
         },
       },
     });
 
     await logAuditEvent({
-      organizationId: safeInput.organizationId,
-      actorUserId: safeInput.userId,
-      action: 'billing.checkout_created',
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'billing.checkout_start',
       entityType: 'subscription',
       entityId: session.id,
       metadata: { planId: plan.id },
@@ -124,7 +160,7 @@ export async function createCheckoutSession(input: CheckoutInput) {
     return session.url;
   } catch (error) {
     reportError(error, context);
-    throw error;
+    throw new Error('Unable to create checkout session');
   }
 }
 
@@ -136,9 +172,10 @@ export async function createCustomerPortalSession(input: PortalInput) {
   }
 
   const safeInput = parsed.data;
-  const context = { area: 'billing_customer_portal', organizationId: safeInput.organizationId, userId: safeInput.userId };
+  const { user, organization } = await requireBillingContext();
+  const context = { area: 'billing_customer_portal', organizationId: organization.id, userId: user.id };
   const rateLimit = await checkDistributedRateLimit({
-    key: `customer_portal:${safeInput.organizationId}:${safeInput.userId}`,
+    key: `customer_portal:${organization.id}:${user.id}`,
     limit: 10,
     windowMs: 60 * 60 * 1000,
   });
@@ -152,14 +189,14 @@ export async function createCustomerPortalSession(input: PortalInput) {
   try {
     const appUrl = getAppUrl();
 
-    await assertCurrentUserCan(safeInput.organizationId, safeInput.userId, 'billing:manage');
+    await assertCurrentUserCan(organization.id, user.id, 'billing:manage');
 
     const supabase = createAdminClient();
 
     const { data: subscription, error: subscriptionError } = await supabase
       .from('subscriptions')
       .select('stripe_customer_id')
-      .eq('organization_id', safeInput.organizationId)
+      .eq('organization_id', organization.id)
       .maybeSingle();
 
     if (subscriptionError) {
@@ -178,9 +215,9 @@ export async function createCustomerPortalSession(input: PortalInput) {
     });
 
     await logAuditEvent({
-      organizationId: safeInput.organizationId,
-      actorUserId: safeInput.userId,
-      action: 'billing.customer_portal_opened',
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'billing.portal_start',
       entityType: 'subscription',
       metadata: {},
     });
@@ -188,6 +225,6 @@ export async function createCustomerPortalSession(input: PortalInput) {
     return session.url;
   } catch (error) {
     reportError(error, context);
-    throw error;
+    throw new Error('Unable to create customer portal session');
   }
 }

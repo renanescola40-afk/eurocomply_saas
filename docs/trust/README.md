@@ -1,4 +1,4 @@
-# EuroComply Trust Center
+# RISCK COMPLY Trust Center
 
 Status: draft operational trust package. This repository material documents current controls, gaps, and evidence required for enterprise security reviews. It is not a substitute for external certifications, legal review, or an independent penetration test.
 
@@ -6,8 +6,8 @@ Status: draft operational trust package. This repository material documents curr
 
 | Control / document | Current status | Customer-safe answer |
 | --- | --- | --- |
-| ISO 27001 | Not certified | EuroComply is not currently ISO 27001 certified. ISO 27001 readiness is tracked as a roadmap item. |
-| SOC 2 | Not audited | EuroComply does not currently have a SOC 2 Type I or Type II report. SOC 2 readiness is tracked as a roadmap item. |
+| ISO 27001 | Not certified | RISCK COMPLY is not currently ISO 27001 certified. ISO 27001 readiness is tracked as a roadmap item. |
+| SOC 2 | Not audited | RISCK COMPLY does not currently have a SOC 2 Type I or Type II report. SOC 2 readiness is tracked as a roadmap item. |
 | Independent pentest | Not completed | An independent third-party penetration test has not yet been completed. |
 | SSO / SAML | Not available | Enterprise SSO/SAML is planned but not currently available. |
 | Mandatory MFA | Not available as an enterprise policy | Mandatory MFA enforcement is planned but not currently available as a tenant policy. |

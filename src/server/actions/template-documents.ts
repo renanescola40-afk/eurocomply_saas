@@ -35,7 +35,7 @@ function templateToMarkdown(template: NonNullable<ReturnType<typeof getComplianc
   return [
     `# ${title}`,
     '',
-    '> Generated from the EuroComply compliance template library. Review and adapt before approval.',
+    '> Generated from the RISCK COMPLY compliance template library. Review and adapt before approval.',
     '',
     '## Document metadata',
     '',
@@ -76,7 +76,7 @@ function templateToMarkdown(template: NonNullable<ReturnType<typeof getComplianc
     '',
     '| Date | Author | Change |',
     '| --- | --- | --- |',
-    `| ${generatedAt.slice(0, 10)} | EuroComply | Initial draft generated from template |`,
+    `| ${generatedAt.slice(0, 10)} | RISCK COMPLY | Initial draft generated from template |`,
   ].join('\n');
 }
 
@@ -104,7 +104,7 @@ export async function createDocumentFromTemplate(input: TemplateDocumentInput, u
   });
 
   const { error: uploadError } = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, content, {
-    contentType: 'text/markdown; charset=utf-8',
+    contentType: 'text/markdown',
     upsert: false,
   });
 

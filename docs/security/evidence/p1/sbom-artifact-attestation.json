@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "controlId": "P1-06",
+  "control": "sbom-artifact-attestation",
+  "status": "Complete",
+  "evidenceKind": "final-p1-control-evidence",
+  "generatedFromRealEvidence": true,
+  "productionValidated": true,
+  "generatedAt": "2026-06-18T18:08:26Z",
+  "reviewedAt": "2026-06-18T18:08:26Z",
+  "reviewer": "renan silva <renansilva2002@gmail.com>",
+  "targetEnvironment": "production",
+  "environment": "production",
+  "nextReviewDue": "2026-09-18",
+  "redaction": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "validation": {
+    "result": "pass",
+    "validatedAt": "2026-06-18T18:08:26Z",
+    "validator": "GitHub Actions P1 SBOM and Artifact Attestation workflow",
+    "method": "Reviewed successful GitHub Actions run 27779627063 on merged commit, including SBOM generation, CycloneDX validation, artifact upload, SHA-256 digest generation, and GitHub build provenance attestation step."
+  },
+  "sbom": {
+    "format": "CycloneDX",
+    "generatedForRef": "merged commit validated by GitHub Actions run 27779627063",
+    "artifactName": "sbom.cdx.json",
+    "evidenceLocation": "GitHub Actions artifact p1-sbom-cyclonedx artifact id 7731847352",
+    "status": "generated"
+  },
+  "attestations": [
+    {
+      "artifactName": "sbom.cdx.json",
+      "attestationType": "GitHub build provenance",
+      "issuer": "actions/attest-build-provenance@v3",
+      "subjectDigest": "sha256:23dfdfe29e24cdba79ff00f92b5fe436b2c671802ec2764ecaea7046cb1eeb3d",
+      "status": "verified",
+      "evidenceLocation": "GitHub Actions run 27779627063: Generate SBOM and attest provenance job"
+    }
+  ],
+  "verification": {
+    "verificationCommandOrWorkflow": "node scripts/security/check-p1-sbom-attestation-evidence.mjs",
+    "policy": "P1 SBOM evidence must be generated, attested, verified, and redacted before production release evidence is Complete.",
+    "status": "passed",
+    "evidenceLocation": "docs/security/evidence/p1/sbom-artifact-attestation.json"
+  },
+  "controlsVerified": [
+    "SBOM is generated for release artifacts",
+    "Artifact attestation exists for release artifacts",
+    "Attestation subject digest matches the released artifact",
+    "Verification workflow or command is documented",
+    "Evidence contains no secrets"
+  ],
+  "artifacts": [
+    {
+      "type": "workflow-run",
+      "reference": "GitHub Actions run 27779627063: P1 SBOM and Artifact Attestation",
+      "description": "Successful workflow run for P1 SBOM and Artifact Attestation on the merged branch, generating and validating the CycloneDX SBOM.",
+      "collectedAt": "2026-06-18T18:08:26Z"
+    },
+    {
+      "type": "workflow-artifact",
+      "reference": "p1-sbom-cyclonedx artifact id 7731847352",
+      "description": "GitHub Actions artifact containing sbom.cdx.json and sbom.cdx.sha256 for the production application dependency graph.",
+      "collectedAt": "2026-06-18T18:08:26Z"
+    },
+    {
+      "type": "artifact-digest",
+      "reference": "sha256:23dfdfe29e24cdba79ff00f92b5fe436b2c671802ec2764ecaea7046cb1eeb3d",
+      "description": "Digest reported by GitHub for the uploaded p1-sbom-cyclonedx artifact.",
+      "collectedAt": "2026-06-18T18:08:26Z"
+    },
+    {
+      "type": "workflow-job-step",
+      "reference": "Generate SBOM and attest provenance job: Attest SBOM provenance step",
+      "description": "Successful GitHub Actions job step using build provenance attestation for sbom.cdx.json.",
+      "collectedAt": "2026-06-18T18:08:26Z"
+    }
+  ]
+}

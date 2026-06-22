@@ -1,3 +1,5 @@
+import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getContinuitySummary, CONTINUITY_CONTROLS } from '@/server/governance/continuity-policy';
 import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
@@ -8,7 +10,7 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 import { checkDistributedRateLimit } from '@/server/security/rate-limit';
 import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
 import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
-import { requireStepUpForRequest } from '@/server/security/step-up';
+import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
@@ -47,7 +49,7 @@ export async function GET(request: Request) {
     }, plan.status);
   }
 
-  const stepUp = requireStepUpForRequest({
+  const stepUp = await requireStepUpForRequest({
     request,
     action: 'export_data',
     userId: user.id,
@@ -59,13 +61,14 @@ export async function GET(request: Request) {
   }
 
   const rateLimit = await checkDistributedRateLimit({
+    category: 'export',
     key: `continuity-export:${organization.id}:${user.id}`,
     limit: 5,
     windowSeconds: 60 * 60,
   });
 
   if (!rateLimit.allowed) {
-    return noStoreJson({ error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds }, { status: 429 });
+    return rateLimitResponse(rateLimit);
   }
 
   const summary = getContinuitySummary();
@@ -92,12 +95,7 @@ export async function GET(request: Request) {
       openCriticalControls: summary.openCriticalControls,
       nextActions: summary.nextActions,
     },
-    stepUp: {
-      action: stepUp.assessment.action,
-      verifiedAt: stepUp.assessment.verifiedAt,
-      expiresAt: stepUp.assessment.expiresAt,
-      tokenType: 'signed_hmac',
-    },
+    stepUp: publicStepUpSummary(stepUp.assessment),
   };
 
   const integrity = buildEvidencePackIntegrity(payload);
@@ -126,7 +124,7 @@ export async function GET(request: Request) {
     },
   });
 
-  const fileName = `eurocomply-continuity-center-${organization.slug ?? organization.id}.json`;
+  const fileName = sanitizeDocumentDownloadFileName(`eurocomply-continuity-center-${organization.slug ?? organization.id}.json`);
 
   return noStoreDownload(JSON.stringify(envelope, null, 2), {
     status: 200,

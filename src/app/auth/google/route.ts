@@ -1,8 +1,21 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
+import { applyNoStoreHeaders, noStoreJson } from '@/server/security/no-store';
+import {
+  getAuthCallbackLoginUrl,
+  getSafeAuthCallbackNextPathForLocale,
+  resolveAuthAppBaseUrl,
+} from '@/server/security/auth-callback';
+import { recordAuthAuditEvent } from '@/server/security/auth-audit';
 
-const DASHBOARD_PATH = '/dashboard/organizations';
+function getLocale(rawLocale: string | null): Locale {
+  return rawLocale && locales.includes(rawLocale as Locale) ? rawLocale as Locale : defaultLocale;
+}
+
+function noStoreRedirect(url: string | URL) {
+  return applyNoStoreHeaders(NextResponse.redirect(url));
+}
 
 type CookieToSet = {
   name: string;
@@ -10,41 +23,40 @@ type CookieToSet = {
   options?: Parameters<NextResponse['cookies']['set']>[2];
 };
 
-function getLocale(rawLocale: string | null): Locale {
-  return rawLocale && locales.includes(rawLocale as Locale) ? rawLocale as Locale : defaultLocale;
-}
-
-function getSafeNextPath(rawNext: string | null, locale: Locale) {
-  if (!rawNext || rawNext.includes('://') || rawNext.startsWith('//')) {
-    return `/${locale}${DASHBOARD_PATH}`;
-  }
-
-  if (!rawNext.startsWith(`/${locale}/dashboard`)) {
-    return `/${locale}${DASHBOARD_PATH}`;
-  }
-
-  return rawNext;
-}
-
-function getLoginUrl(request: NextRequest, locale: Locale, error: string) {
-  const loginUrl = new URL(`/${locale}/login`, request.url);
-  loginUrl.searchParams.set('error', error);
-  return loginUrl;
-}
-
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
+  const appBaseUrl = resolveAuthAppBaseUrl(request.url);
   const locale = getLocale(requestUrl.searchParams.get('locale'));
-  const next = getSafeNextPath(requestUrl.searchParams.get('next'), locale);
-  const origin = requestUrl.origin;
-  const callbackUrl = new URL('/auth/callback', origin);
+  const next = getSafeAuthCallbackNextPathForLocale(requestUrl.searchParams.get('next'), locale);
+
+  if (!appBaseUrl) {
+    console.warn('google_oauth_app_url_unavailable');
+    await recordAuthAuditEvent({
+      action: 'auth.oauth_start',
+      method: 'google',
+      outcome: 'failed',
+      reason: 'app_url_unavailable',
+      metadata: { source: 'google_oauth_route' },
+    });
+    return noStoreJson({ error: 'auth_app_url_unavailable' }, { status: 503 });
+  }
+
+  const callbackUrl = new URL('/auth/callback', appBaseUrl);
   callbackUrl.searchParams.set('next', next);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.redirect(getLoginUrl(request, locale, 'Supabase env missing'));
+    console.warn('google_oauth_configuration_unavailable');
+    await recordAuthAuditEvent({
+      action: 'auth.oauth_start',
+      method: 'google',
+      outcome: 'failed',
+      reason: 'configuration_unavailable',
+      metadata: { source: 'google_oauth_route' },
+    });
+    return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'auth_configuration_unavailable'));
   }
 
   const cookiesToSet: CookieToSet[] = [];
@@ -61,19 +73,33 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const { data, error } = await supabase.auth.signInWithOAuth({
+  const signInResult = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: callbackUrl.toString(),
     },
   });
 
-  if (error || !data.url) {
-    const message = error?.message ?? 'Could not start Google login';
-    return NextResponse.redirect(getLoginUrl(request, locale, message));
+  if (signInResult.error || !signInResult.data.url) {
+    console.warn('google_oauth_start_failed');
+    await recordAuthAuditEvent({
+      action: 'auth.oauth_start',
+      method: 'google',
+      outcome: 'failed',
+      reason: 'oauth_start_failed',
+      metadata: { source: 'google_oauth_route' },
+    });
+    return noStoreRedirect(getAuthCallbackLoginUrl(appBaseUrl, next, 'auth_exchange_failed'));
   }
 
-  const redirectResponse = NextResponse.redirect(data.url);
+  await recordAuthAuditEvent({
+    action: 'auth.oauth_start',
+    method: 'google',
+    outcome: 'attempted',
+    metadata: { source: 'google_oauth_route' },
+  });
+
+  const redirectResponse = noStoreRedirect(signInResult.data.url);
   cookiesToSet.forEach(({ name, value, options }) => {
     redirectResponse.cookies.set(name, value, options);
   });

@@ -1,26 +1,26 @@
-import { NextResponse } from 'next/server';
-
+import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
-import { createAuditEvent } from '@/server/queries/audit-events';
+import { buildAuditRequestContextFromRequest, createAuditEvent } from '@/server/queries/audit-events';
 import { buildAuditEvidencePack } from '@/server/queries/audit-evidence-pack';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
+import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
 import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
-import { requireStepUpForRequest } from '@/server/security/step-up';
+import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
 function jsonDownloadResponse(payload: unknown, filename: string) {
-  return new NextResponse(JSON.stringify(payload, null, 2), {
+  return noStoreDownload(JSON.stringify(payload, null, 2), {
     status: 200,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'Cache-Control': 'no-store',
+      'Content-Disposition': `attachment; filename="${sanitizeDocumentDownloadFileName(filename)}"`,
+      'X-Content-Type-Options': 'nosniff',
     },
   });
 }
@@ -43,6 +43,7 @@ export async function GET(request: Request) {
   }
 
   const { user, organization } = context;
+  const requestContext = buildAuditRequestContextFromRequest(request);
 
   const permission = await assertOrganizationPermission({
     userId: user.id,
@@ -66,9 +67,9 @@ export async function GET(request: Request) {
     }, planCheck.status);
   }
 
-  const stepUp = requireStepUpForRequest({
+  const stepUp = await requireStepUpForRequest({
     request,
-    action: 'export_data',
+    action: 'audit_chain_export',
     userId: user.id,
     organizationId: organization.id,
   });
@@ -104,23 +105,44 @@ export async function GET(request: Request) {
       entitlements: planCheck.entitlements,
     });
     const integrity = buildEvidencePackIntegrity(pack);
+
+    if (!integrity.signed) {
+      reportError(new Error('Audit evidence pack signing secret is unavailable'), {
+        area: 'audit_evidence_pack_signing',
+        organizationId: organization.id,
+        userId: user.id,
+      });
+
+      await createAuditEvent({
+        organizationId: organization.id,
+        actorUserId: user.id,
+        action: 'security.failure',
+        entityType: 'audit_evidence_pack',
+        entityId: organization.id,
+        metadata: {
+          reason: 'audit_evidence_pack_signing_unavailable',
+          actorRole: permission.role,
+          stepUpAction: stepUp.assessment.action,
+          stepUpVerifiedAt: stepUp.assessment.verifiedAt,
+        },
+        requestContext,
+      });
+
+      return noStoreJson({ error: 'audit_evidence_pack_signing_unavailable' }, { status: 503 });
+    }
+
     const exportPayload = {
       schemaVersion: '2026-06-10',
       exportType: 'eurocomply.audit_evidence_pack',
       payload: pack,
       integrity,
-      stepUp: {
-        action: stepUp.assessment.action,
-        verifiedAt: stepUp.assessment.verifiedAt,
-        expiresAt: stepUp.assessment.expiresAt,
-        tokenType: 'signed_hmac',
-      },
+      stepUp: publicStepUpSummary(stepUp.assessment),
     };
 
     await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
-      action: 'audit_evidence_pack.exported',
+      action: 'audit_chain.evidence_exported',
       entityType: 'audit_evidence_pack',
       entityId: organization.id,
       metadata: {
@@ -134,9 +156,11 @@ export async function GET(request: Request) {
         actorRole: permission.role,
         payloadHash: integrity.payloadHash,
         signed: integrity.signed,
+        signatureAlgorithm: integrity.hmacAlgorithm,
         stepUpAction: stepUp.assessment.action,
         stepUpVerifiedAt: stepUp.assessment.verifiedAt,
       },
+      requestContext,
     });
 
     const date = new Date().toISOString().slice(0, 10);
@@ -150,6 +174,6 @@ export async function GET(request: Request) {
       userId: user.id,
     });
 
-    return NextResponse.json({ error: 'Unable to generate audit evidence pack.' }, { status: 500 });
+    return noStoreJson({ error: 'audit_evidence_pack_export_failed' }, { status: 500 });
   }
 }

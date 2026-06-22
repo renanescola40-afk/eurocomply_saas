@@ -1,3 +1,5 @@
+import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
 import {
   classifyAiSystem,
   normalizeAiRiskDomain,
@@ -13,6 +15,8 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
 
+const AI_SYSTEM_JSON_MAX_BYTES = 64 * 1024;
+
 function asText(value: unknown, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
 }
@@ -27,6 +31,25 @@ function getErrorCode(error: unknown) {
     return typeof code === 'string' ? code : 'unknown';
   }
   return 'unknown';
+}
+
+function rateLimitDeniedResponse(result: RateLimitResult) {
+  const retryAfter = Math.max(1, Math.ceil((result.resetAt - Date.now()) / 1000));
+
+  return noStoreJson(
+    {
+      error: result.reason ? 'security_control_unavailable' : 'rate_limit_exceeded',
+      retryAfter,
+    },
+    {
+      status: result.reason ? 503 : 429,
+      headers: {
+        'Retry-After': String(retryAfter),
+        'X-RateLimit-Remaining': String(result.remaining),
+        'X-RateLimit-Reset': String(Math.ceil(result.resetAt / 1000)),
+      },
+    },
+  );
 }
 
 export async function GET() {
@@ -82,15 +105,25 @@ export async function POST(request: Request) {
     return permissionDeniedResponse(permission);
   }
 
-  let payload: unknown;
+  const rateLimit = await checkDistributedRateLimit({
+    key: `ai-systems:create:${organization.id}`,
+    limit: 20,
+    windowMs: 60 * 1000,
+  });
 
-  try {
-    payload = await request.json();
-  } catch {
-    return noStoreJson({ error: 'Invalid JSON body' }, { status: 400 });
+  if (!rateLimit.allowed) {
+    return rateLimitDeniedResponse(rateLimit);
   }
 
-  const body = payload as Record<string, unknown>;
+  const payload = await readBoundedJsonRequest<Record<string, unknown>>(request, {
+    maxBytes: AI_SYSTEM_JSON_MAX_BYTES,
+  }).catch(() => null);
+
+  if (!payload) {
+    return noStoreJson({ error: 'invalid_json_body' }, { status: 400 });
+  }
+
+  const body = payload;
   const name = asText(body.name);
   const useCase = asText(body.useCase);
 

@@ -1,0 +1,48 @@
+{
+  "control": "waf-cdn-ddos",
+  "status": "Complete",
+  "reviewedAt": "YYYY-MM-DDTHH:mm:ssZ",
+  "reviewer": "REPLACE_WITH_REVIEWER",
+  "targetEnvironment": "production",
+  "redactionStatement": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "edgeProtectionReviewed": {
+    "provider": "REPLACE_WITH_PROVIDER",
+    "zonesOrApplications": [
+      "REPLACE_WITH_ZONE_OR_APP"
+    ],
+    "evidenceLocation": "REPLACE_WITH_EVIDENCE_LOCATION"
+  },
+  "wafControlsReviewed": [
+    {
+      "controlName": "REPLACE_WITH_CONTROL_NAME",
+      "scope": "REPLACE_WITH_SCOPE",
+      "mode": "enforce",
+      "enabled": true,
+      "evidenceLocation": "REPLACE_WITH_EVIDENCE_LOCATION"
+    }
+  ],
+  "cdnControlsReviewed": [
+    {
+      "controlName": "REPLACE_WITH_CONTROL_NAME",
+      "scope": "REPLACE_WITH_SCOPE",
+      "enabled": true,
+      "evidenceLocation": "REPLACE_WITH_EVIDENCE_LOCATION"
+    }
+  ],
+  "ddosControlsReviewed": [
+    {
+      "controlName": "REPLACE_WITH_CONTROL_NAME",
+      "scope": "REPLACE_WITH_SCOPE",
+      "enabled": true,
+      "evidenceLocation": "REPLACE_WITH_EVIDENCE_LOCATION"
+    }
+  ],
+  "controlsVerified": [
+    "WAF is enabled for production traffic",
+    "CDN or edge routing is enabled for production traffic",
+    "DDoS protection is enabled for production traffic",
+    "Security events or mitigations are observable",
+    "Evidence contains no secrets"
+  ],
+  "nextReviewDue": "YYYY-MM-DD"
+}

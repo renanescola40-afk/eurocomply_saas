@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-
+import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
@@ -7,30 +6,23 @@ import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getRetentionSummary, RETENTION_POLICIES } from '@/server/governance/retention-policy';
 import { createAuditEvent } from '@/server/queries/audit-events';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { requireApiUser, requirePermission, secureApiError } from '@/server/security/api-guards';
 import { buildEvidencePackIntegrity } from '@/server/security/evidence-pack-integrity';
-import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
-import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
-import { requireStepUpForRequest } from '@/server/security/step-up';
+import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
+import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
 function jsonDownloadResponse(payload: unknown, filename: string) {
-  return new NextResponse(JSON.stringify(payload, null, 2), {
+  return noStoreDownload(JSON.stringify(payload, null, 2), {
     status: 200,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"`,
-      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
     },
   });
-}
-
-function safeFilenamePart(value: string | null | undefined) {
-  return String(value ?? 'organization')
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || 'organization';
 }
 
 function getRetentionExportStatus(readinessScore: number) {
@@ -40,65 +32,58 @@ function getRetentionExportStatus(readinessScore: number) {
 }
 
 export async function GET(request: Request) {
-  let context: Awaited<ReturnType<typeof requireOrganizationContext>>;
-
   try {
-    context = await requireOrganizationContext();
-  } catch (error) {
-    return guardErrorResponse(error);
-  }
+    const user = await requireApiUser();
+    const organization = await getCurrentOrganizationForUser(user.id);
 
-  const { user, organization } = context;
+    if (!organization) {
+      return noStoreJson({ error: 'organization_required' }, { status: 403 });
+    }
 
-  const permission = await assertOrganizationPermission({
-    userId: user.id,
-    organizationId: organization.id,
-    permission: 'export_data',
-  });
-
-  if (!permission.ok) {
-    return permissionDeniedResponse(permission);
-  }
-
-  const planCheck = await assertPlanAtLeast(organization.id, 'business');
-
-  if (!planCheck.ok) {
-    return upgradeRequiredResponse({
-      error: planCheck.error,
-      message: planCheck.message,
-      plan: planCheck.entitlements.plan,
-      requiredPlan: 'business',
-      entitlements: planCheck.entitlements,
-    }, planCheck.status);
-  }
-
-  const stepUp = requireStepUpForRequest({
-    request,
-    action: 'export_data',
-    userId: user.id,
-    organizationId: organization.id,
-  });
-
-  if (!stepUp.ok) {
-    return stepUp.response;
-  }
-
-  const rateLimit = await checkDistributedRateLimit({
-    key: `export:retention-policy:${organization.id}:${user.id}`,
-    limit: 8,
-    windowMs: 60_000,
-  });
-
-  if (!rateLimit.allowed) {
-    reportError(new Error('Retention policy export rate limit exceeded'), {
-      area: 'retention_policy_export_rate_limit',
-      organizationId: organization.id,
+    const permission = await requirePermission({
       userId: user.id,
+      organizationId: organization.id,
+      permission: 'export_data',
     });
-    return rateLimitResponse(rateLimit);
-  }
 
-  try {
+    const planCheck = await assertPlanAtLeast(organization.id, 'business');
+
+    if (!planCheck.ok) {
+      return upgradeRequiredResponse({
+        error: planCheck.error,
+        message: planCheck.message,
+        plan: planCheck.entitlements.plan,
+        requiredPlan: 'business',
+        entitlements: planCheck.entitlements,
+      }, planCheck.status);
+    }
+
+    const stepUp = await requireStepUpForRequest({
+      request,
+      action: 'export_data',
+      userId: user.id,
+      organizationId: organization.id,
+    });
+
+    if (!stepUp.ok) {
+      return stepUp.response;
+    }
+
+    const rateLimit = await checkDistributedRateLimit({
+      key: `export:retention-policy:${organization.id}:${user.id}`,
+      limit: 8,
+      windowMs: 60_000,
+    });
+
+    if (!rateLimit.allowed) {
+      reportError(new Error('Retention policy export rate limit exceeded'), {
+        area: 'retention_policy_export_rate_limit',
+        organizationId: organization.id,
+        userId: user.id,
+      });
+      return rateLimitResponse(rateLimit);
+    }
+
     const summary = getRetentionSummary();
     const status = getRetentionExportStatus(summary.readinessScore);
     const payload = {
@@ -120,12 +105,7 @@ export async function GET(request: Request) {
         status,
       },
       policies: RETENTION_POLICIES,
-      stepUp: {
-        action: stepUp.assessment.action,
-        verifiedAt: stepUp.assessment.verifiedAt,
-        expiresAt: stepUp.assessment.expiresAt,
-        tokenType: 'signed_hmac',
-      },
+      stepUp: publicStepUpSummary(stepUp.assessment),
     };
     const integrity = buildEvidencePackIntegrity(payload);
     const exportPayload = {
@@ -155,16 +135,17 @@ export async function GET(request: Request) {
     });
 
     const date = new Date().toISOString().slice(0, 10);
-    const filename = `eurocomply-retention-policy-${safeFilenamePart(organization.slug ?? organization.name)}-${date}.json`;
+    const filename = sanitizeDocumentDownloadFileName(
+      `eurocomply-retention-policy-${organization.slug ?? organization.name ?? organization.id}-${date}.json`,
+    );
 
     return jsonDownloadResponse(exportPayload, filename);
   } catch (error) {
     reportError(error, {
       area: 'retention_policy_export',
-      organizationId: organization.id,
-      userId: user.id,
+      error: error instanceof Error ? error.name : 'unknown',
     });
 
-    return NextResponse.json({ error: 'Unable to generate retention policy export.' }, { status: 500 });
+    return secureApiError(error);
   }
 }

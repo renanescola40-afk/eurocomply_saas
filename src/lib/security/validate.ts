@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { z, type ZodSchema } from 'zod';
 
+export const DEFAULT_JSON_BODY_MAX_BYTES = 64 * 1024;
+
+export type JsonRequestOptions = {
+  maxBytes?: number;
+  requireJsonContentType?: boolean;
+};
+
 export class ValidationError extends Error {
   issues: z.ZodIssue[];
 
@@ -11,21 +18,75 @@ export class ValidationError extends Error {
   }
 }
 
-export async function validateJsonRequest<T>(request: Request, schema: ZodSchema<T>): Promise<T> {
-  let payload: unknown;
+function validationIssue(message: string): z.ZodIssue[] {
+  return [
+    {
+      code: 'custom',
+      path: [],
+      message,
+    },
+  ];
+}
 
-  try {
-    payload = await request.json();
-  } catch {
-    throw new ValidationError([
-      {
-        code: 'custom',
-        path: [],
-        message: 'Request body must be valid JSON',
-      },
-    ]);
+function isJsonContentType(contentType: string | null) {
+  if (!contentType) return false;
+  const mediaType = contentType.split(';', 1)[0]?.trim().toLowerCase();
+  return mediaType === 'application/json' || mediaType?.endsWith('+json') === true;
+}
+
+function getContentLength(request: Request) {
+  const value = request.headers.get('content-length');
+  if (!value) return null;
+
+  const length = Number(value);
+  return Number.isFinite(length) && length >= 0 ? length : null;
+}
+
+function byteLength(value: string) {
+  return new TextEncoder().encode(value).byteLength;
+}
+
+export async function readBoundedJsonRequest<T = unknown>(
+  request: Request,
+  options: JsonRequestOptions = {},
+): Promise<T> {
+  const maxBytes = options.maxBytes ?? DEFAULT_JSON_BODY_MAX_BYTES;
+  const requireJsonContentType = options.requireJsonContentType ?? true;
+
+  if (!Number.isFinite(maxBytes) || maxBytes <= 0) {
+    throw new ValidationError(validationIssue('JSON body limit is invalid'));
   }
 
+  if (requireJsonContentType && !isJsonContentType(request.headers.get('content-type'))) {
+    throw new ValidationError(validationIssue('Request body must be application/json'));
+  }
+
+  const contentLength = getContentLength(request);
+  if (contentLength !== null && contentLength > maxBytes) {
+    throw new ValidationError(validationIssue('Request body is too large'));
+  }
+
+  let text: string;
+
+  try {
+    text = await request.text();
+  } catch {
+    throw new ValidationError(validationIssue('Request body could not be read'));
+  }
+
+  if (byteLength(text) > maxBytes) {
+    throw new ValidationError(validationIssue('Request body is too large'));
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ValidationError(validationIssue('Request body must be valid JSON'));
+  }
+}
+
+export async function validateJsonRequest<T>(request: Request, schema: ZodSchema<T>, options?: JsonRequestOptions): Promise<T> {
+  const payload = await readBoundedJsonRequest(request, options);
   const result = schema.safeParse(payload);
 
   if (!result.success) {
@@ -39,13 +100,21 @@ export function validationErrorResponse(error: unknown) {
   if (error instanceof ValidationError) {
     return NextResponse.json(
       {
-        error: 'Invalid request payload',
+        error: 'invalid_request_payload',
         issues: error.issues.map((issue) => ({
           path: issue.path.join('.'),
-          message: issue.message,
+          code: issue.code,
         })),
       },
-      { status: 400 },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+          Pragma: 'no-cache',
+          Expires: '0',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      },
     );
   }
 

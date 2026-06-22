@@ -114,12 +114,44 @@ function checkoutMessage(checkout?: string, billingError?: string) {
   return null;
 }
 
-function billingErrorRedirect(locale: string, error: unknown): never {
-  const message = error instanceof Error ? error.message : 'Unexpected billing error';
-  redirect(`/${locale}/dashboard/organizations/billing?billing_error=${encodeURIComponent(message)}`);
+function billingErrorRedirect(locale: string): never {
+  redirect(`/${locale}/dashboard/organizations/billing?billing_error=${encodeURIComponent('Billing action could not be completed. Please try again later.')}`);
 }
 
-export default async function OrganizationBillingPage({ params, searchParams }: BillingPageProps) {
+async function startCheckout(formData: FormData) {
+  'use server';
+
+  const locale = String(formData.get('locale') ?? 'en');
+  const planId = String(formData.get('planId') ?? '');
+
+  try {
+    const url = await createCheckoutSession({
+      planId,
+      successPath: `/${locale}/dashboard/organizations/billing?checkout=success`,
+      cancelPath: `/${locale}/dashboard/organizations/billing?checkout=cancelled`,
+    });
+    redirect(url);
+  } catch {
+    billingErrorRedirect(locale);
+  }
+}
+
+async function openCustomerPortal(formData: FormData) {
+  'use server';
+
+  const locale = String(formData.get('locale') ?? 'en');
+
+  try {
+    const url = await createCustomerPortalSession({
+      returnPath: `/${locale}/dashboard/organizations/billing`,
+    });
+    redirect(url);
+  } catch {
+    billingErrorRedirect(locale);
+  }
+}
+
+export default async function BillingPage({ params, searchParams }: BillingPageProps) {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -129,209 +161,111 @@ export default async function OrganizationBillingPage({ params, searchParams }: 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    redirect(`/${params.locale}/onboarding`);
+    redirect(`/${params.locale}/dashboard`);
   }
 
   const billing = await getOrganizationBillingContext(organization.id);
   const currentPlan = getBillingPlan(billing.plan) ?? BILLING_PLANS[0];
   const message = checkoutMessage(searchParams?.checkout, searchParams?.billing_error);
   const usageMeters = [
-    { label: 'Team members', current: billing.usage.users, limit: currentPlan.limits.users },
+    { label: 'Users', current: billing.usage.users, limit: currentPlan.limits.users },
     { label: 'Documents', current: billing.usage.documents, limit: currentPlan.limits.documents },
     { label: 'Vendors', current: billing.usage.vendors, limit: currentPlan.limits.vendors },
     { label: 'Risks', current: billing.usage.risks, limit: currentPlan.limits.risks },
   ];
-  const highestUsage = Math.max(...usageMeters.map((meter) => getUsagePercent(meter.current, meter.limit)));
-  const upgradeRecommended = highestUsage >= 80;
+  const upgradeRecommended = usageMeters.some((meter) => getUsagePercent(meter.current, meter.limit) >= 80);
 
-  async function startCheckout(formData: FormData) {
+  async function refreshBilling() {
     'use server';
-
-    const currentUser = await getCurrentUser();
-
-    if (!currentUser) {
-      redirect(`/${params.locale}/login`);
-    }
-
-    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
-
-    if (!currentOrganization) {
-      redirect(`/${params.locale}/onboarding`);
-    }
-
-    const planId = String(formData.get('planId') ?? '');
-    let url: string;
-
-    try {
-      url = await createCheckoutSession({
-        organizationId: currentOrganization.id,
-        planId,
-        userId: currentUser.id,
-        successPath: `/${params.locale}/dashboard/organizations/billing?checkout=success`,
-        cancelPath: `/${params.locale}/dashboard/organizations/billing?checkout=cancelled`,
-      });
-    } catch (error) {
-      billingErrorRedirect(params.locale, error);
-    }
-
     revalidatePath(`/${params.locale}/dashboard/organizations/billing`);
-    redirect(url!);
-  }
-
-  async function openCustomerPortal() {
-    'use server';
-
-    const currentUser = await getCurrentUser();
-
-    if (!currentUser) {
-      redirect(`/${params.locale}/login`);
-    }
-
-    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
-
-    if (!currentOrganization) {
-      redirect(`/${params.locale}/onboarding`);
-    }
-
-    let url: string;
-
-    try {
-      url = await createCustomerPortalSession({
-        organizationId: currentOrganization.id,
-        userId: currentUser.id,
-        returnPath: `/${params.locale}/dashboard/organizations/billing`,
-      });
-    } catch (error) {
-      billingErrorRedirect(params.locale, error);
-    }
-
-    redirect(url!);
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10">
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 p-6 text-white shadow-2xl md:p-8">
-        <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-        <div className="absolute bottom-0 left-10 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
-
-        <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+    <main className="space-y-8">
+      <section className="rounded-3xl bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-8 text-white shadow-xl">
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-primary/80">Billing command center</p>
-            <h1 className="mt-4 max-w-4xl text-4xl font-bold tracking-tight md:text-6xl">Plan, usage and upgrades</h1>
-            <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300">
-              Manage subscription access for {organization.name}. Stripe handles checkout and the customer portal, while EuroComply enforces plan limits across the workspace.
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary-foreground/70">Billing</p>
+            <h1 className="mt-3 text-4xl font-bold tracking-tight">Manage your EuroComply plan</h1>
+            <p className="mt-3 max-w-2xl text-white/70">
+              Review usage, upgrade your subscription and open the Stripe billing portal.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <form action={openCustomerPortal}>
-                <Button type="submit" className="rounded-full bg-white px-5 text-slate-950 hover:bg-slate-100">Manage subscription</Button>
-              </form>
-              {upgradeRecommended && (
-                <span className="inline-flex h-10 items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-4 text-sm font-semibold text-amber-200">
-                  Upgrade recommended
-                </span>
-              )}
-            </div>
+            {message && (
+              <div className={`mt-6 rounded-2xl border p-4 ${message.className}`}>
+                <p className="font-semibold">{message.title}</p>
+                <p className="mt-1 text-sm opacity-85">{message.description}</p>
+              </div>
+            )}
           </div>
 
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-6 shadow-xl backdrop-blur">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Current plan</p>
-            <p className="mt-3 text-5xl font-bold tracking-tight">{currentPlan.name}</p>
-            <p className="mt-2 text-slate-300">€{currentPlan.priceMonthly}/month</p>
-            <div className={`mt-5 rounded-2xl border p-4 ${getStatusTone(billing.status)}`}>
-              <p className="text-xs font-medium uppercase tracking-[0.18em] opacity-80">Subscription status</p>
-              <p className="mt-2 text-2xl font-semibold capitalize">{formatStatus(billing.status)}</p>
-              {(billing.status === 'past_due' || billing.status === 'unpaid') && (
-                <p className="mt-2 text-sm">Payment attention is required. Open Stripe billing to update the payment method.</p>
-              )}
-              {billing.status === 'canceled' && (
-                <p className="mt-2 text-sm">This subscription is canceled. Choose a plan to restore paid access.</p>
-              )}
-            </div>
-          </div>
+          <Card className="border-white/10 bg-white/10 text-white backdrop-blur">
+            <CardHeader>
+              <CardTitle>Current plan: {currentPlan.name}</CardTitle>
+              <CardDescription className="text-white/60">Subscription status and usage summary.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <span className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${getStatusTone(billing.status)}`}>
+                {formatStatus(billing.status)}
+              </span>
+              <p className="text-sm text-white/60">{upgradeRecommended ? 'Usage is approaching plan limits. Consider upgrading.' : 'Usage is within current plan limits.'}</p>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
-      {message && (
-        <div className={`rounded-2xl border p-4 ${message.className}`}>
-          <p className="font-semibold">{message.title}</p>
-          <p className="mt-1 text-sm opacity-90">{message.description}</p>
-        </div>
-      )}
-
-      <section>
-        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Plan usage</p>
-            <h2 className="text-2xl font-semibold tracking-tight">Current limits</h2>
-          </div>
-          <p className="text-sm text-muted-foreground">Warnings appear automatically when usage approaches 80% of the current plan.</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {usageMeters.map((meter) => (
-            <UsageMeter key={meter.label} {...meter} />
-          ))}
-        </div>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {usageMeters.map((meter) => (
+          <UsageMeter key={meter.label} {...meter} />
+        ))}
       </section>
 
-      <section>
-        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Plans</p>
-            <h2 className="text-2xl font-semibold tracking-tight">Choose the right tier</h2>
-          </div>
-          <p className="text-sm text-muted-foreground">Upgrade when your team, evidence library or vendor program outgrows the current tier.</p>
-        </div>
+      <section className="grid gap-5 lg:grid-cols-3">
+        {BILLING_PLANS.map((plan) => {
+          const isCurrent = plan.id === currentPlan.id;
+          const description = `${plan.limits.users} users, ${plan.limits.documents} documents and ${plan.limits.vendors} vendors included.`;
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {BILLING_PLANS.map((plan) => {
-            const isCurrent = plan.id === currentPlan.id;
-            const isUpgrade = plan.priceMonthly > currentPlan.priceMonthly;
-
-            return (
-              <Card key={plan.id} className={`overflow-hidden rounded-3xl transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg ${isCurrent ? 'border-primary shadow-md' : ''}`}>
-                <CardHeader className="border-b bg-muted/30">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                      <CardDescription className="mt-2 text-base">€{plan.priceMonthly}/month</CardDescription>
-                    </div>
-                    {isCurrent && <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Current</span>}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-5 p-6">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-2xl border bg-background p-3"><p className="text-muted-foreground">Users</p><p className="font-semibold">{plan.limits.users}</p></div>
-                    <div className="rounded-2xl border bg-background p-3"><p className="text-muted-foreground">Documents</p><p className="font-semibold">{plan.limits.documents}</p></div>
-                    <div className="rounded-2xl border bg-background p-3"><p className="text-muted-foreground">Vendors</p><p className="font-semibold">{plan.limits.vendors}</p></div>
-                    <div className="rounded-2xl border bg-background p-3"><p className="text-muted-foreground">Risks</p><p className="font-semibold">{plan.limits.risks}</p></div>
-                  </div>
-
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    {plan.features.map((feature) => (
-                      <li key={feature}>• {feature}</li>
-                    ))}
-                  </ul>
-
-                  {isCurrent ? (
-                    <form action={openCustomerPortal}>
-                      <Button type="submit" className="w-full rounded-full" variant="outline">
-                        Manage current plan
-                      </Button>
-                    </form>
-                  ) : (
-                    <form action={startCheckout}>
-                      <input type="hidden" name="planId" value={plan.id} />
-                      <Button type="submit" className="w-full rounded-full">
-                        {isUpgrade ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`}
-                      </Button>
-                    </form>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+          return (
+            <Card key={plan.id} className={`flex flex-col ${isCurrent ? 'border-primary' : ''}`}>
+              <CardHeader>
+                <CardTitle>{plan.name}</CardTitle>
+                <CardDescription>{description}</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-1 flex-col gap-5">
+                <p className="text-3xl font-bold">
+                  €{plan.priceMonthly}
+                  <span className="text-sm font-normal text-muted-foreground">/month</span>
+                </p>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  {plan.features.map((highlight) => (
+                    <li key={highlight}>• {highlight}</li>
+                  ))}
+                </ul>
+                <form action={startCheckout} className="mt-auto">
+                  <input type="hidden" name="locale" value={params.locale} />
+                  <input type="hidden" name="planId" value={plan.id} />
+                  <Button type="submit" className="w-full" variant={isCurrent ? 'outline' : 'default'} disabled={isCurrent}>
+                    {isCurrent ? 'Current plan' : 'Upgrade'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          );
+        })}
       </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Stripe customer portal</CardTitle>
+          <CardDescription>Open Stripe-hosted billing management to update payment methods, invoices and subscription details.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={openCustomerPortal} className="flex gap-3">
+            <input type="hidden" name="locale" value={params.locale} />
+            <Button type="submit">Open billing portal</Button>
+            <Button type="submit" variant="outline" formAction={refreshBilling}>Refresh status</Button>
+          </form>
+        </CardContent>
+      </Card>
     </main>
   );
 }

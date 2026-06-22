@@ -1,0 +1,30 @@
+name: P0 Runtime Gap Report
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  p0-runtime-gap-report:
+    name: Report P0 runtime evidence gap
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Generate gap report
+        run: node scripts/security/report-p0-runtime-evidence-gap.mjs
+
+      - name: Strict report for release-ready branches
+        if: >-
+          contains(github.head_ref || github.ref_name, 'final-evidence') ||
+          contains(github.head_ref || github.ref_name, 'release-ready')
+        run: node scripts/security/report-p0-runtime-evidence-gap.mjs --strict

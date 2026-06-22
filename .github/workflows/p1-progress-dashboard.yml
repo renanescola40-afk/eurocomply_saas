@@ -1,0 +1,27 @@
+name: P1 Progress Dashboard
+
+on:
+  pull_request:
+    paths:
+      - 'docs/security/evidence/p1/P1_EVIDENCE_INDEX.json'
+      - 'docs/security/evidence/p1/P1_PROGRESS.md'
+      - 'scripts/security/generate-p1-progress-dashboard.mjs'
+      - '.github/workflows/p1-progress-dashboard.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-p1-progress-dashboard:
+    name: Validate P1 progress dashboard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Regenerate P1 progress dashboard
+        run: node scripts/security/generate-p1-progress-dashboard.mjs
+
+      - name: Ensure generated dashboard is committed
+        run: git diff --exit-code docs/security/evidence/p1/P1_PROGRESS.md

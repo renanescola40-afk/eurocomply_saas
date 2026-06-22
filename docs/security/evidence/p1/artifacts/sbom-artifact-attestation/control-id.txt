@@ -1,0 +1,6 @@
+Control: P1-06 SBOM + artifact attestation
+Evidence file: docs/security/evidence/p1/sbom-artifact-attestation.json
+Status after merge: Complete
+Progress after merge: 3/10
+
+This file does not contain secrets.

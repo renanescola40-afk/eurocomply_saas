@@ -15,7 +15,7 @@ export function GoogleLoginButton() {
     const result = await signInWithGoogle();
 
     if (result.error) {
-      setError(result.error.message);
+      setError('Não foi possível iniciar sessão com Google. Tente novamente.');
       setLoading(false);
     }
   };

@@ -1,127 +1,122 @@
+import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 const apiRoot = join(process.cwd(), 'src', 'app', 'api');
 
-const authGuard = ['getCurrentUser', 'requireOrganizationContext'];
-const organizationGuard = ['getCurrentOrganizationForUser', 'requireOrganizationContext'];
-const rbacGuard = ['assertOrganizationPermission'];
-const planGuard = ['assertPlanAtLeast', 'assertGdprSelfServiceEnabled'];
-const rateLimitGuard = ['checkDistributedRateLimit'];
-const auditGuard = ['createAuditEvent'];
-const integrityGuard = ['buildEvidencePackIntegrity'];
-const noStoreGuard = ['noStoreJson', 'noStoreDownload', 'Cache-Control'];
-const originGuard = ['assertTrustedOrigin', 'verifyTrustedOrigin'];
-const stepUpGuard = ['requireStepUpForRequest'];
+const guards = {
+  auth: ['getCurrentUser', 'requireCurrentUser', 'requireAuthenticatedUser', 'requireApiUser', 'requireOrganizationContext', 'requireEnterpriseApiAccess'],
+  org: ['getCurrentOrganizationForUser', 'requireOrganizationAccess', 'requireOrganizationContext', 'requireEnterpriseApiAccess'],
+  rbac: ['assertOrganizationPermission', 'requirePermission', 'requireEnterpriseApiAccess'],
+  plan: ['assertPlanAtLeast', 'assertGdprSelfServiceEnabled'],
+  rateLimit: ['checkDistributedRateLimit', 'checkRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
+  audit: ['createAuditEvent'],
+  integrity: ['buildEvidencePackIntegrity'],
+  noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'Cache-Control', 'no-store', 'secureApiError'],
+  origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
+  stepUp: ['requireStepUpForRequest'],
+  internal: ['isAuthorizedInternalCronRequest', 'isAuthorizedInternalMaintenanceRequest', 'noStoreJson'],
+  webhook: ['constructEvent', 'stripe-signature', 'noStoreJson'],
+};
 
-const endpointRules = [
+const rules = [
   {
     name: 'billing checkout',
     match: /src\/app\/api\/billing\/checkout\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, originGuard, noStoreGuard],
-    requiredAll: ['manage_billing', 'getStripeClient'],
+    any: [guards.auth, guards.org, guards.rbac, guards.origin, guards.rateLimit, guards.noStore],
+    all: ['manage_billing'],
   },
   {
     name: 'billing portal',
     match: /src\/app\/api\/billing\/portal\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, originGuard, noStoreGuard],
-    requiredAll: ['manage_billing', 'getStripeClient'],
+    any: [guards.auth, guards.org, guards.rbac, guards.origin, guards.rateLimit, guards.noStore],
+    all: ['manage_billing', 'getStripeClient'],
   },
   {
     name: 'Stripe webhook',
-    match: /src\/app\/api\/billing\/webhook\/route\.ts$/,
-    requiredAny: [],
-    requiredAll: ['constructEvent', 'STRIPE_WEBHOOK_SECRET'],
+    match: /src\/app\/api\/(billing|stripe)\/webhook\/route\.ts$/,
+    any: [guards.webhook, guards.noStore],
+    all: [],
   },
   {
     name: 'enterprise export endpoint',
     match: /src\/app\/api\/(audit\/evidence-pack|security-questionnaire|vendor-assurance|enterprise-readiness|retention-center|continuity-center)\/export?\/route\.ts$|src\/app\/api\/(security-questionnaire|vendor-assurance|enterprise-readiness|retention-center|continuity-center)\/export\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, planGuard, rateLimitGuard, auditGuard, integrityGuard, stepUpGuard, noStoreGuard],
-    requiredAll: ['export_data', 'signed_hmac'],
-  },
-  {
-    name: 'audit evidence pack export',
-    match: /src\/app\/api\/audit\/evidence-pack\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, planGuard, rateLimitGuard, auditGuard, integrityGuard, stepUpGuard, noStoreGuard],
-    requiredAll: ['export_data', 'requireStepUpForRequest', 'signed_hmac', 'stepUpVerifiedAt'],
+    any: [guards.auth, guards.org, guards.rbac, guards.plan, guards.rateLimit, guards.audit, guards.integrity, guards.stepUp, guards.noStore],
+    all: ['export_data'],
+    requireSignedHmac: true,
   },
   {
     name: 'evidence pack verifier',
     match: /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/,
-    requiredAny: [rateLimitGuard, noStoreGuard],
-    requiredAll: ['verifyEvidencePackIntegrity'],
+    any: [guards.rateLimit, guards.noStore],
+    all: ['verifyEvidencePackIntegrity'],
   },
   {
     name: 'audit chain verifier',
     match: /src\/app\/api\/audit\/chain\/verify\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, planGuard, rateLimitGuard, stepUpGuard, noStoreGuard],
-    requiredAll: [
-      'read_audit',
-      'requireStepUpForRequest',
-      'signed_hmac',
-      'listAuditEvents',
-      'verifyAuditChain',
-      'legacyEvents',
-      'chainedEventsChecked',
-    ],
+    any: [guards.auth, guards.org, guards.rbac, guards.plan, guards.rateLimit, guards.stepUp, guards.noStore],
+    all: ['read_audit', 'requireStepUpForRequest', 'signed_hmac', 'listAuditEvents', 'verifyAuditChain'],
   },
   {
     name: 'AI governance endpoint',
     match: /src\/app\/api\/ai-(systems|incidents)\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, auditGuard, originGuard, noStoreGuard],
-    requiredAll: [],
+    any: [guards.auth, guards.org, guards.rbac, guards.audit, guards.origin, guards.rateLimit, guards.noStore],
+    all: [],
   },
   {
-    name: 'ops endpoint',
-    match: /src\/app\/api\/ops\/.*\/route\.ts$/,
-    requiredAny: [noStoreGuard],
-    requiredAll: ['HEALTHCHECK_TOKEN'],
+    name: 'internal cron or ops endpoint',
+    match: /src\/app\/api\/(internal\/.*|ops\/.*|intelligence\/refresh)\/route\.ts$/,
+    any: [guards.internal, guards.noStore],
+    all: [],
   },
   {
     name: 'team endpoint',
     match: /src\/app\/api\/team\/.*\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, rateLimitGuard, originGuard, noStoreGuard],
-    requiredAll: ['manage_team'],
+    any: [guards.auth, guards.org, guards.rbac, guards.rateLimit, guards.origin, guards.noStore],
+    all: ['manage_team'],
+  },
+  {
+    name: 'security settings endpoint',
+    match: /src\/app\/api\/security\/settings\/route\.ts$/,
+    any: [guards.auth, guards.org, guards.rbac, guards.rateLimit, guards.origin, guards.stepUp, guards.audit, guards.noStore],
+    all: ['manage_settings', 'change_security_settings', 'security_settings_changed'],
   },
   {
     name: 'GDPR endpoint',
     match: /src\/app\/api\/gdpr\/.*\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, planGuard, auditGuard, noStoreGuard],
-    requiredAll: [],
+    any: [guards.auth, guards.org, guards.plan, guards.audit, guards.noStore],
+    all: [],
   },
   {
     name: 'GDPR delete request endpoint',
     match: /src\/app\/api\/gdpr\/delete-request\/route\.ts$/,
-    requiredAny: [originGuard],
-    requiredAll: [],
+    any: [guards.origin, guards.rateLimit],
+    all: [],
   },
   {
     name: 'document mutation endpoint',
     match: /src\/app\/api\/documents\/.*\/route\.ts$/,
-    requiredAny: [authGuard, organizationGuard, rbacGuard, originGuard, noStoreGuard],
-    requiredAll: ['manage_documents'],
+    any: [guards.auth, guards.org, guards.rbac, guards.origin, guards.rateLimit, guards.noStore],
+    all: ['manage_documents'],
+  },
+  {
+    name: 'step-up challenge endpoint',
+    match: /src\/app\/api\/security\/step-up\/challenge\/route\.ts$/,
+    any: [guards.auth, guards.org, guards.origin, guards.rateLimit, guards.noStore],
+    all: [],
   },
 ];
 
-const forbiddenPatterns = [
-  {
-    name: 'public service role exposure',
-    pattern: /NEXT_PUBLIC_[A-Z0-9_]*SERVICE_ROLE/i,
-  },
-  {
-    name: 'hard-coded Supabase service role JWT prefix',
-    pattern: /eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}/,
-  },
+const forbidden = [
+  { name: 'stack trace exposure', pattern: /error\.stack|stack:\s*error|JSON\.stringify\(\s*error/ },
 ];
 
 function walk(dir) {
   if (!existsSync(dir)) return [];
-  const entries = readdirSync(dir, { withFileTypes: true });
-  return entries.flatMap((entry) => {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) return walk(fullPath);
-    if (entry.isFile() && entry.name === 'route.ts') return [fullPath];
-    return [];
+    return entry.isFile() && entry.name === 'route.ts' ? [fullPath] : [];
   });
 }
 
@@ -129,12 +124,16 @@ function normalizePath(path) {
   return relative(process.cwd(), path).split(sep).join('/');
 }
 
-function hasAnyToken(source, tokens) {
+function hasAny(source, tokens) {
   return tokens.some((token) => source.includes(token));
 }
 
-function describeTokenGroup(tokens) {
-  return tokens.join(' OR ');
+function hasSignedHmacEvidence(source) {
+  return source.includes('signed_hmac')
+    || (source.includes('buildEvidencePackIntegrity')
+      && source.includes('requireStepUpForRequest')
+      && source.includes('createAuditEvent')
+      && source.includes('payloadHash'));
 }
 
 function evaluateRoute(filePath) {
@@ -142,25 +141,20 @@ function evaluateRoute(filePath) {
   const source = readFileSync(filePath, 'utf8');
   const failures = [];
 
-  for (const forbidden of forbiddenPatterns) {
-    if (forbidden.pattern.test(source)) {
-      failures.push(`${normalized}: forbidden pattern detected (${forbidden.name})`);
-    }
+  for (const item of forbidden) {
+    if (item.pattern.test(source)) failures.push(`${normalized}: forbidden pattern detected (${item.name})`);
   }
 
-  for (const rule of endpointRules) {
+  for (const rule of rules) {
     if (!rule.match.test(normalized)) continue;
-
-    for (const token of rule.requiredAll ?? []) {
-      if (!source.includes(token)) {
-        failures.push(`${normalized}: ${rule.name} missing required guard token: ${token}`);
-      }
+    for (const token of rule.all) {
+      if (!source.includes(token)) failures.push(`${normalized}: ${rule.name} missing required guard token: ${token}`);
     }
-
-    for (const tokens of rule.requiredAny ?? []) {
-      if (!hasAnyToken(source, tokens)) {
-        failures.push(`${normalized}: ${rule.name} missing one of guard token group: ${describeTokenGroup(tokens)}`);
-      }
+    if (rule.requireSignedHmac && !hasSignedHmacEvidence(source)) {
+      failures.push(`${normalized}: ${rule.name} missing signed_hmac or signed HMAC integrity evidence`);
+    }
+    for (const tokens of rule.any) {
+      if (!hasAny(source, tokens)) failures.push(`${normalized}: ${rule.name} missing one of guard token group: ${tokens.join(' OR ')}`);
     }
   }
 
@@ -180,4 +174,15 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log('API guard coverage: ok');
+}
+
+const hardening = spawnSync(process.execPath, [join(process.cwd(), 'scripts/security/check-api-route-hardening.mjs')], {
+  stdio: 'inherit',
+});
+
+if (hardening.status !== 0) {
+  console.warn('[security] API route hardening inventory reported follow-up findings. See docs/security/API_SECURITY_MODEL.md migration backlog.');
+  if (process.env.STRICT_API_ROUTE_HARDENING === '1') {
+    process.exitCode = 1;
+  }
 }

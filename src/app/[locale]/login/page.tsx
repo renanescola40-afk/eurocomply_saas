@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { locales, type Locale } from '@/lib/i18n/routing';
+import { normalizePublicAuthErrorCode, type PublicAuthErrorCode } from '@/lib/auth/public-errors';
 
 const loginCopy: Record<string, {
   title: string;
@@ -20,6 +21,7 @@ const loginCopy: Record<string, {
   submit: string;
   signup: string;
   errorTitle: string;
+  publicErrors: Record<PublicAuthErrorCode, string>;
 }> = {
   en: {
     title: 'Sign in to EuroComply',
@@ -31,6 +33,12 @@ const loginCopy: Record<string, {
     submit: 'Sign in with email',
     signup: 'Create an account',
     errorTitle: 'Could not complete sign-in',
+    publicErrors: {
+      missing_oauth_code: 'The sign-in request could not be verified. Please try again.',
+      auth_configuration_unavailable: 'Sign-in is temporarily unavailable. Please try again later.',
+      auth_exchange_failed: 'The sign-in request expired or could not be completed. Please try again.',
+      email_sign_in_failed: 'The email or password could not be verified. Please try again.',
+    },
   },
   pt: {
     title: 'Entrar no EuroComply',
@@ -42,6 +50,12 @@ const loginCopy: Record<string, {
     submit: 'Entrar com email',
     signup: 'Criar conta',
     errorTitle: 'Não foi possível concluir o login',
+    publicErrors: {
+      missing_oauth_code: 'Não foi possível validar o pedido de login. Tente novamente.',
+      auth_configuration_unavailable: 'O login está temporariamente indisponível. Tente novamente mais tarde.',
+      auth_exchange_failed: 'O pedido de login expirou ou não pôde ser concluído. Tente novamente.',
+      email_sign_in_failed: 'Não foi possível validar o email ou a palavra-passe. Tente novamente.',
+    },
   },
   es: {
     title: 'Entrar en EuroComply',
@@ -53,6 +67,12 @@ const loginCopy: Record<string, {
     submit: 'Entrar con email',
     signup: 'Crear cuenta',
     errorTitle: 'No se pudo completar el inicio de sesión',
+    publicErrors: {
+      missing_oauth_code: 'No se pudo verificar la solicitud de inicio de sesión. Inténtalo de nuevo.',
+      auth_configuration_unavailable: 'El inicio de sesión no está disponible temporalmente. Inténtalo más tarde.',
+      auth_exchange_failed: 'La solicitud expiró o no pudo completarse. Inténtalo de nuevo.',
+      email_sign_in_failed: 'No se pudo verificar el email o la contraseña. Inténtalo de nuevo.',
+    },
   },
   fr: {
     title: 'Connexion à EuroComply',
@@ -64,6 +84,12 @@ const loginCopy: Record<string, {
     submit: 'Connexion par email',
     signup: 'Créer un compte',
     errorTitle: 'Impossible de terminer la connexion',
+    publicErrors: {
+      missing_oauth_code: 'La demande de connexion n’a pas pu être vérifiée. Réessayez.',
+      auth_configuration_unavailable: 'La connexion est temporairement indisponible. Réessayez plus tard.',
+      auth_exchange_failed: 'La demande de connexion a expiré ou n’a pas pu aboutir. Réessayez.',
+      email_sign_in_failed: 'L’email ou le mot de passe n’a pas pu être vérifié. Réessayez.',
+    },
   },
   it: {
     title: 'Accedi a EuroComply',
@@ -75,6 +101,12 @@ const loginCopy: Record<string, {
     submit: 'Accedi con email',
     signup: 'Crea account',
     errorTitle: 'Impossibile completare l’accesso',
+    publicErrors: {
+      missing_oauth_code: 'La richiesta di accesso non può essere verificata. Riprova.',
+      auth_configuration_unavailable: 'L’accesso è temporaneamente non disponibile. Riprova più tardi.',
+      auth_exchange_failed: 'La richiesta di accesso è scaduta o non può essere completata. Riprova.',
+      email_sign_in_failed: 'Non è stato possibile verificare email o password. Riprova.',
+    },
   },
   de: {
     title: 'Bei EuroComply anmelden',
@@ -86,6 +118,12 @@ const loginCopy: Record<string, {
     submit: 'Mit E-Mail anmelden',
     signup: 'Konto erstellen',
     errorTitle: 'Anmeldung konnte nicht abgeschlossen werden',
+    publicErrors: {
+      missing_oauth_code: 'Die Anmeldung konnte nicht verifiziert werden. Bitte versuchen Sie es erneut.',
+      auth_configuration_unavailable: 'Die Anmeldung ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.',
+      auth_exchange_failed: 'Die Anmeldung ist abgelaufen oder konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.',
+      email_sign_in_failed: 'E-Mail oder Passwort konnten nicht verifiziert werden. Bitte versuchen Sie es erneut.',
+    },
   },
 };
 
@@ -105,6 +143,12 @@ function getSafeNextPath(next: string | null, locale: string) {
   return next;
 }
 
+function getPublicAuthErrorMessage(rawError: string | null, copy: (typeof loginCopy)[string]) {
+  if (!rawError) return '';
+  const code = normalizePublicAuthErrorCode(rawError);
+  return copy.publicErrors[code];
+}
+
 export default function LoginPage() {
   const t = useTranslations('auth');
   const router = useRouter();
@@ -113,11 +157,11 @@ export default function LoginPage() {
   const locale = (params.locale as string) || 'pt';
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const copy = loginCopy[activeLocale] ?? loginCopy.en;
-  const urlError = searchParams.get('error');
+  const urlError = getPublicAuthErrorMessage(searchParams.get('error'), copy);
   const nextPath = getSafeNextPath(searchParams.get('next'), activeLocale);
   const googleLoginHref = `/auth/google?locale=${encodeURIComponent(activeLocale)}&next=${encodeURIComponent(nextPath)}`;
   const { user, signInWithEmail, loading: authLoading } = useAuth();
-  const [error, setError] = useState(urlError ? decodeURIComponent(urlError) : '');
+  const [error, setError] = useState(urlError);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -138,7 +182,7 @@ export default function LoginPage() {
     const result = await signInWithEmail(email, password);
 
     if (result.error) {
-      setError(result.error.message);
+      setError(copy.publicErrors.email_sign_in_failed);
       setSubmitting(false);
       return;
     }

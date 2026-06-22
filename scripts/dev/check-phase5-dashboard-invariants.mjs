@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const files = {
   root: 'src/app/page.tsx',
   localeHome: 'src/app/[locale]/page.tsx',
+  middleware: 'src/middleware.ts',
   orgDashboard: 'src/app/[locale]/dashboard/organizations/page.tsx',
   dashboardHomeOverview: 'src/components/dashboard/dashboard-home-overview.tsx',
   nextBestActions: 'src/components/dashboard/next-best-actions.tsx',
@@ -14,7 +15,8 @@ const files = {
 
 const expectations = [
   [files.root, ['redirect', "'/pt'"]],
-  [files.localeHome, ['getCurrentUser', 'dashboard/organizations', 'EnterpriseHome']],
+  [files.localeHome, ['force-static', 'revalidate = 300', 'EnterpriseHome']],
+  [files.middleware, ['shouldCheckMarketingHomeAuth', 'ORGANIZATION_DASHBOARD_PATH', 'withPrivateNoStore']],
   [files.orgDashboard, ['getCurrentUser', 'redirect(`/${safeLocale}/login`)', 'getOrganizationDashboardData', 'redirect(`/${safeLocale}/onboarding', 'workflowReadiness={data.workflowReadiness}']],
   [files.dashboardHomeOverview, ['OrganizationWorkflowReadiness', 'workflowReadiness', 'NextBestActions']],
   [files.nextBestActions, ['OrganizationWorkflowReadiness', 'buildWorkflowReadinessAction', 'workflowReadiness', 'current workflow readiness']],

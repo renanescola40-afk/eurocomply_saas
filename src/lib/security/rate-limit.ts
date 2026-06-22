@@ -1,125 +1,56 @@
-type Bucket = {
-  count: number;
-  resetAt: number;
+import {
+  RATE_LIMIT_POLICIES,
+  buildRateLimitKey,
+  checkDistributedRateLimit as checkServerDistributedRateLimit,
+  checkRateLimitPolicy,
+  clearRateLimitBuckets,
+  getClientIpFromRequest,
+  getRateLimitHeaders,
+  hashRateLimitIp,
+  isRateLimited,
+  type RateLimitCategory,
+  type RateLimitOptions,
+} from '@/server/security/rate-limit';
+
+export {
+  RATE_LIMIT_POLICIES,
+  buildRateLimitKey,
+  checkRateLimitPolicy,
+  clearRateLimitBuckets,
+  getClientIpFromRequest,
+  getRateLimitHeaders,
+  hashRateLimitIp,
+  isRateLimited,
 };
 
-const buckets = new Map<string, Bucket>();
+export type {
+  RateLimitCategory,
+  RateLimitFailureMode,
+  RateLimitFailureReason,
+  RateLimitOptions,
+  RateLimitPolicy,
+  RateLimitResult,
+  RateLimitSubject,
+} from '@/server/security/rate-limit';
 
-export type RateLimitResult = {
-  allowed: boolean;
-  remaining: number;
-  resetAt: number;
-};
+function inferLegacyRateLimitCategory(key: string | undefined): RateLimitCategory {
+  const normalized = key?.toLowerCase() ?? '';
 
-export type RateLimitOptions = {
-  key: string;
-  limit: number;
-  windowMs: number;
-  now?: number;
-};
+  if (normalized.includes('billing') || normalized.includes('checkout') || normalized.includes('portal')) return 'billing';
+  if (normalized.includes('upload') || normalized.includes('document')) return 'upload';
+  if (normalized.includes('export') || normalized.includes('.csv') || normalized.includes('evidence-pack')) return 'export';
+  if (normalized.includes('step-up') || normalized.includes('step_up') || normalized.includes('mfa')) return 'step-up';
+  if (normalized.includes('webhook') || normalized.includes('stripe')) return 'webhook';
+  if (normalized.includes('health') || normalized.includes('internal') || normalized.includes('ready')) return 'health/internal';
+  if (normalized.includes('auth') || normalized.includes('login') || normalized.includes('password') || normalized.includes('reset')) return 'auth';
 
-type UpstashPipelineResponse = Array<[unknown, unknown]>;
-
-function getRedisConfig() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-  if (!url || !token) return null;
-
-  return {
-    url: url.replace(/\/$/, ''),
-    token,
-  };
+  // Legacy callers predate categories and are mostly sensitive mutations; keep unknown keys fail-closed.
+  return 'auth';
 }
 
-function normalizeKey(key: string) {
-  return `eurocomply:rate-limit:${key.replace(/[^a-zA-Z0-9:_-]/g, '_')}`;
-}
-
-function localRateLimit(options: RateLimitOptions): RateLimitResult {
-  const now = options.now ?? Date.now();
-  const existing = buckets.get(options.key);
-
-  if (!existing || existing.resetAt <= now) {
-    const resetAt = now + options.windowMs;
-    buckets.set(options.key, { count: 1, resetAt });
-
-    return {
-      allowed: true,
-      remaining: Math.max(options.limit - 1, 0),
-      resetAt,
-    };
-  }
-
-  if (existing.count >= options.limit) {
-    return {
-      allowed: false,
-      remaining: 0,
-      resetAt: existing.resetAt,
-    };
-  }
-
-  existing.count += 1;
-  buckets.set(options.key, existing);
-
-  return {
-    allowed: true,
-    remaining: Math.max(options.limit - existing.count, 0),
-    resetAt: existing.resetAt,
-  };
-}
-
-export async function checkDistributedRateLimit(options: RateLimitOptions): Promise<RateLimitResult> {
-  const config = getRedisConfig();
-
-  if (!config) {
-    return localRateLimit(options);
-  }
-
-  const now = options.now ?? Date.now();
-  const redisKey = normalizeKey(options.key);
-  const windowSeconds = Math.max(1, Math.ceil(options.windowMs / 1000));
-
-  try {
-    const response = await fetch(`${config.url}/pipeline`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify([
-        ['INCR', redisKey],
-        ['EXPIRE', redisKey, windowSeconds, 'NX'],
-        ['TTL', redisKey],
-      ]),
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      console.error('Upstash rate limit request failed', response.status);
-      return localRateLimit(options);
-    }
-
-    const results = (await response.json()) as UpstashPipelineResponse;
-    const count = Number(results[0]?.[1] ?? 1);
-    const ttlSeconds = Number(results[2]?.[1] ?? windowSeconds);
-    const resetAt = now + Math.max(ttlSeconds, 0) * 1000;
-
-    return {
-      allowed: count <= options.limit,
-      remaining: Math.max(options.limit - count, 0),
-      resetAt,
-    };
-  } catch (error) {
-    console.error('Upstash rate limit fallback triggered', error);
-    return localRateLimit(options);
-  }
-}
-
-export function checkRateLimit(options: RateLimitOptions): RateLimitResult {
-  return localRateLimit(options);
-}
-
-export function clearRateLimitBuckets() {
-  buckets.clear();
+export function checkDistributedRateLimit(options: RateLimitOptions) {
+  return checkServerDistributedRateLimit({
+    ...options,
+    category: options.category ?? inferLegacyRateLimitCategory(options.key),
+  });
 }

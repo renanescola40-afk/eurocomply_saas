@@ -1,0 +1,7 @@
+P1 progress marker
+
+After this branch merges:
+- Complete: 3/10
+- Open: 7/10
+
+This file does not contain secrets.

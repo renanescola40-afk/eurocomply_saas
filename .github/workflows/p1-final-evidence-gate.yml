@@ -1,0 +1,33 @@
+name: P1 Final Evidence Gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'docs/security/evidence/p1/**.json'
+      - 'docs/security/evidence/p1/P1_PROGRESS.md'
+      - 'scripts/security/check-p1-evidence-index.mjs'
+      - 'scripts/security/check-p1-final-evidence-files.mjs'
+      - 'scripts/security/report-p1-evidence-gap.mjs'
+      - 'scripts/security/generate-p1-progress-dashboard.mjs'
+      - 'scripts/security/run-p1-final-evidence-gate.mjs'
+      - '.github/workflows/p1-final-evidence-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p1-final-evidence-gate:
+    name: Validate final P1 evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run P1 final evidence gate
+        run: node scripts/security/run-p1-final-evidence-gate.mjs
+
+      - name: Enforce strict P1 final evidence on manual runs
+        if: github.event_name == 'workflow_dispatch'
+        run: node scripts/security/run-p1-final-evidence-gate.mjs --strict

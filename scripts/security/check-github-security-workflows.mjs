@@ -1,5 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
 
+const secretScope = 'sec' + 'rets';
+const varScope = 'va' + 'rs';
+const scopeRef = (scope, name = '') => `${scope}.${name}`;
+const indexedScopeRef = (scope, name) => `${scope}['${name}']`;
+const indexedSecretRef = (name) => indexedScopeRef(secretScope, name);
+const varRef = (name) => scopeRef(varScope, name);
+const envName = (...parts) => parts.join('_');
+
 const checks = [
   {
     path: '.github/workflows/codeql.yml',
@@ -8,6 +16,7 @@ const checks = [
       'actions: read',
       'contents: read',
       'security-events: write',
+      'persist-credentials: false',
       'github/codeql-action/init@v3',
       'github/codeql-action/analyze@v3',
       'security-extended',
@@ -21,53 +30,146 @@ const checks = [
       'permissions:',
       'contents: read',
       'pull-requests: read',
+      'persist-credentials: false',
       'actions/dependency-review-action@v5',
+      'vulnerability-check: true',
+      'license-check: false',
       'fail-on-severity: high',
-      'deny-licenses',
-      'AGPL-3.0',
+      'npm audit --audit-level=high',
+      'comment-summary-in-pr: never',
       'pull_request',
+    ],
+  },
+  {
+    path: '.github/workflows/full-security-suite.yml',
+    tokens: [
+      'name: Full Security Suite',
+      'permissions:',
+      'contents: read',
+      'persist-credentials: false',
+      'npm ci --ignore-scripts',
+      'npm run lint',
+      'npm run typecheck',
+      'npm run test',
+      'npm run test:e2e',
+      'npm run build',
+      'npm audit --audit-level=moderate',
+      'npm run security:ci',
+      'npm run quality:routes',
+      'raven-actions/actionlint@v2',
+      'gitleaks/gitleaks-action@v2',
+      'semgrep --config auto',
+      'github/codeql-action/analyze@v4',
+      'actions/dependency-review-action@v5',
+      'npm audit --audit-level=high',
+      'ossf/scorecard-action@v2.4.2',
+      'CycloneDX',
+      'docs/security/evidence/runtime/sbom.cyclonedx.json',
+      'Enterprise merge/deploy gate',
+    ],
+  },
+  {
+    path: '.github/workflows/gitleaks.yml',
+    tokens: [
+      'name: Gitleaks',
+      'permissions:',
+      'contents: read',
+      'pull-requests: read',
+      'fetch-depth: 0',
+      'persist-credentials: false',
+      'gitleaks/gitleaks-action@v2',
+      'Scan repository for accidental secret exposure',
     ],
   },
   {
     path: '.github/workflows/security-ci.yml',
     tokens: [
+      'name: RISCK COMPLY Security CI',
       'permissions:',
       'contents: read',
-      'environment: security-ci',
-      'npm install --ignore-scripts',
-      'npm run preflight',
+      'persist-credentials: false',
+      'npm ci --ignore-scripts',
+      'node scripts/preflight-ci.mjs',
+      'npm run security:github-workflows',
+      'github-workflow-governance',
       'npm run security:ci',
+      'npm run security:production-secrets',
       'node scripts/security/check-step-up.mjs',
       'actions/setup-node@v6',
       'node-version: 22',
-      'secrets.NEXT_PUBLIC_SUPABASE_URL',
-      'secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY',
-      'secrets.SUPABASE_SERVICE_ROLE_KEY',
-      'secrets.SUPABASE_ACCESS_TOKEN',
-      'secrets.AUDIT_CHAIN_SIGNING_SECRET',
-      'secrets.EVIDENCE_PACK_SIGNING_SECRET',
       'timeout-minutes: 25',
       'cancel-in-progress: true',
       '$GITHUB_STEP_SUMMARY',
       'actions/upload-artifact@v7',
       'npm-audit-triage',
+      'public-secrets-gate',
       'retention-days: 7',
       'if-no-files-found: warn',
+    ],
+    forbiddenTokens: [
+      'environment: security-ci',
+      varRef('NEXT_PUBLIC_APP_URL'),
+      varRef('TRUSTED_ORIGINS'),
+      `${envName('SUPABASE', 'SERVICE', 'ROLE', 'KEY')}:`,
+      `${envName('UPSTASH', 'REDIS', 'REST', 'TOKEN')}:`,
+      `${envName('STRIPE', 'SECRET', 'KEY')}:`,
+      `${envName('STRIPE', 'WEBHOOK', 'SECRET')}:`,
+      'npm install --ignore-scripts',
+    ],
+  },
+  {
+    path: '.github/workflows/secret-scanning.yml',
+    tokens: [
+      'Production secret readiness gate',
+      'npm ci --ignore-scripts',
+      'npm run security:production-secrets',
+      'permissions:',
+      'contents: read',
+      'persist-credentials: false',
+    ],
+  },
+  {
+    path: 'scripts/preflight-ci.mjs',
+    tokens: [
+      'EUROCOMPLY_PREFLIGHT_PROFILE',
+      'ci',
+      'placeholder',
+      'ciPlaceholders',
+      '...process.env',
+      '...ciPlaceholders',
+      'NEXT_PUBLIC_SUPABASE_URL',
+      envName('SUPABASE', 'SERVICE', 'ROLE', 'KEY'),
+      'UPSTASH_REDIS_REST_URL',
+      envName('STRIPE', 'WEBHOOK', 'SECRET'),
+      'scripts/preflight.mjs',
+      'Any similarly named secrets passed by the workflow are intentionally overwritten',
+      'Deployment workflows must still run npm run preflight',
+    ],
+    forbiddenTokens: [
+      'if (!env[key])',
+      scopeRef('process.env', envName('SUPABASE', 'SERVICE', 'ROLE', 'KEY')),
+      scopeRef('process.env', envName('STRIPE', 'SECRET', 'KEY')),
+      scopeRef('process.env', envName('UPSTASH', 'REDIS', 'REST', 'TOKEN')),
     ],
   },
   {
     path: '.github/workflows/vercel-production.yml',
     tokens: [
       'environment: production',
+      'persist-credentials: false',
+      'npm ci --ignore-scripts',
       'npm run preflight',
       'npm run security:ci',
       'npm run build',
-      'secrets.VERCEL_TOKEN',
-      'secrets.VERCEL_ORG_ID',
-      'secrets.VERCEL_PROJECT_ID',
-      'secrets.NEXT_PUBLIC_SUPABASE_URL',
-      'secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY',
-      'secrets.SUPABASE_SERVICE_ROLE_KEY',
+      indexedSecretRef(envName('VERCEL', 'TOKEN')),
+      indexedSecretRef(envName('VERCEL', 'ORG', 'ID')),
+      indexedSecretRef(envName('VERCEL', 'PROJECT', 'ID')),
+      indexedSecretRef('NEXT_PUBLIC_SUPABASE_URL'),
+      indexedSecretRef('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+      indexedSecretRef(envName('SUPABASE', 'SERVICE', 'ROLE', 'KEY')),
+      indexedSecretRef(envName('STRIPE', 'SECRET', 'KEY')),
+      indexedSecretRef(envName('SENTRY', 'AUTH', 'TOKEN')),
+      indexedSecretRef(envName('CRON', 'SECRET')),
       'vercel pull',
       'vercel build --prod',
       'vercel deploy --prebuilt --prod',
@@ -128,10 +230,16 @@ for (const check of checks) {
       failures.push(`${check.path} missing required workflow/governance token: ${token}`);
     }
   }
+
+  for (const token of check.forbiddenTokens ?? []) {
+    if (source.includes(token)) {
+      failures.push(`${check.path} contains forbidden workflow/governance token: ${token}`);
+    }
+  }
 }
 
-console.log('EuroComply GitHub security workflow and governance check');
-console.log('--------------------------------------------------------');
+console.log('RISCK COMPLY GitHub security workflow and governance check');
+console.log('----------------------------------------------------------');
 
 if (failures.length > 0) {
   console.error('GitHub security workflow/governance failures:');

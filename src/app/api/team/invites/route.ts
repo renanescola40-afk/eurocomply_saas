@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { checkDistributedRateLimit } from '@/server/security/rate-limit';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createOrganizationInvite } from '@/server/queries/invites';
@@ -7,10 +9,10 @@ import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { isPlanAtLeast } from '@/server/queries/subscription';
-import { isRateLimited } from '@/server/security/rate-limit';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { requireStepUpForRequest } from '@/server/security/step-up';
 
 const inviteSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
@@ -19,6 +21,7 @@ const inviteSchema = z.object({
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
+const INVITE_JSON_MAX_BYTES = 4 * 1024;
 
 function getClientIp(request: Request) {
   return (
@@ -49,17 +52,22 @@ export async function POST(request: Request) {
 
   const clientIp = getClientIp(request);
   const rateLimitKey = `team-invite:${user.id}:${clientIp}`;
+  const rateLimit = await checkDistributedRateLimit({
+    key: rateLimitKey,
+    limit: RATE_LIMIT_MAX_ATTEMPTS,
+    windowSeconds: Math.ceil(RATE_LIMIT_WINDOW_MS / 1000),
+  });
 
-  if (
-    await isRateLimited({
-      key: rateLimitKey,
-      limit: RATE_LIMIT_MAX_ATTEMPTS,
-      windowMs: RATE_LIMIT_WINDOW_MS,
-    })
-  ) {
+  if (!rateLimit.allowed) {
     return noStoreJson(
-      { error: 'Too many invite attempts. Please wait before trying again.' },
-      { status: 429 },
+      { error: rateLimit.reason ? 'security_control_unavailable' : 'Too many invite attempts. Please wait before trying again.' },
+      {
+        status: rateLimit.reason ? 503 : 429,
+        headers: {
+          'Retry-After': String(Math.max(1, rateLimit.retryAfterSeconds)),
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+        },
+      },
     );
   }
 
@@ -79,6 +87,17 @@ export async function POST(request: Request) {
     return permissionDeniedResponse(permission);
   }
 
+  const stepUp = await requireStepUpForRequest({
+    request,
+    action: 'manage_team',
+    userId: user.id,
+    organizationId: organization.id,
+  });
+
+  if (!stepUp.ok) {
+    return stepUp.response;
+  }
+
   const entitlements = await getOrganizationEntitlements(organization.id);
 
   if (!entitlements.employeeInvites) {
@@ -96,7 +115,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const payload = await request.json().catch(() => null);
+  const payload = await readBoundedJsonRequest(request, { maxBytes: INVITE_JSON_MAX_BYTES }).catch(() => null);
   const parsed = inviteSchema.safeParse(payload);
 
   if (!parsed.success) {

@@ -120,13 +120,23 @@ The following must be applied to the target Supabase project:
 
 - `supabase/migrations/20260612_audit_event_hash_chain.sql`
 - `supabase/migrations/20260613_audit_event_chained_rpc.sql`
+- `supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql`
 
 Release evidence must include:
 
+- `AUDIT_CHAIN_SIGNING_SECRET` configured for signed audit hashes
 - successful migration application
 - proof that `append_audit_event_chained(...)` exists
 - proof that `createAuditEvent()` uses the transactional RPC path
 - a concurrency/retry test or controlled manual validation
+- `npm run security:audit-chain` output
+- `docs/security/AUDIT_CHAIN_MODEL.md` reviewed
+- `docs/security/evidence/runtime/audit-chain-live-validation.json` with status `Complete`
+- `scripts/security/verify-audit-chain.mjs` CLI tamper-detection output
+- proof that audit-chain runtime evidence is complete
+- proof that audit-chain RPC is applied and validated
+
+Enterprise release is blocked when audit-chain runtime evidence is missing, incomplete, not linked to release gates, or does not confirm tamper detection, transactional append, concurrency-safe append, signed export, RBAC/step-up protected verification, and request-context sanitization.
 
 ### 7. Step-up security validation
 
@@ -181,7 +191,7 @@ The evidence package must include:
 - observability proof
 - customer communication owner and customer notice decision
 - status page decision and evidence, when applicable
-- external review proof when applicable
+- external security review proof when applicable
 - documented exceptions and approvals
 - final Go, Conditional Go, or No-Go decision
 
@@ -216,45 +226,6 @@ The preflight file should include at least:
 - lockfile and supply-chain runbook coverage
 - RLS live validation runbook coverage
 - audit-chain concurrency runbook coverage
+- audit-chain model and runtime evidence coverage
 - upload content scan runbook coverage
 - step-up rollout coverage
-
-If preflight cannot be updated because of platform restrictions, the release owner must attach a manual evidence note explaining the restriction and confirming that `npm run security:release-candidate` was run successfully.
-
-### 13. External review
-
-Before public enterprise procurement, attach evidence for:
-
-- dependency audit triage
-- basic penetration test or external security review
-- privacy/data-retention review
-- incident response owner and escalation path
-- customer communication owner and escalation path
-
-## Release decision
-
-EuroComply may be called a Release Candidate only when all required evidence sections above are complete and the Go/No-Go checklist has been completed.
-
-EuroComply may be called enterprise-ready only when:
-
-- Security CI is green
-- lockfile is committed
-- npm audit is triaged
-- Supabase RLS live validation is complete
-- audit-chain RPC is applied and validated
-- step-up uses a real MFA/IdP provider
-- upload scanning uses a real provider in fail-closed mode
-- Stripe webhooks are validated
-- customer communication plan is assigned and ready
-- external security review is complete
-- release evidence package is attached and approved
-- the final decision in `docs/RELEASE_GO_NO_GO_CHECKLIST.md` is Go or explicitly approved Conditional Go
-
-## Failure handling
-
-If any Release Candidate validation fails:
-
-1. block release
-2. create an issue with owner and deadline
-3. attach failing evidence
-4. rerun the full validation after remediation

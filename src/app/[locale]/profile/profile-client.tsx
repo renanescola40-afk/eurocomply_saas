@@ -9,15 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 const defaultCompany = {
-  legalName: 'EuroComply Europe GmbH',
-  tradeName: 'EuroComply',
-  email: 'compliance@eurocomply.eu',
+  legalName: 'RISCK COMPLY Europe GmbH',
+  tradeName: 'RISCK COMPLY',
+  email: 'compliance@risckcomply.com',
   phone: '+351 910 000 000',
   street: 'Avenida da Liberdade',
   number: '110',
   postalCode: '1250-146',
   city: 'Lisboa',
-  logoUrl: 'https://dummyimage.com/180x180/111827/ffffff&text=EC',
+  logoUrl: 'https://dummyimage.com/180x180/111827/ffffff&text=RC',
 };
 
 const fiscalCountries = {
@@ -47,8 +47,8 @@ const initialFiscalIds: FiscalId[] = [
 ];
 
 const initialEmployees = [
-  { id: 'employee-ana', name: 'Ana Martins', email: 'ana@eurocomply.eu', role: 'Admin', status: 'ativo' },
-  { id: 'employee-miguel', name: 'Miguel Costa', email: 'miguel@eurocomply.eu', role: 'Visualizador', status: 'pendente' },
+  { id: 'employee-ana', name: 'Ana Martins', email: 'ana@risckcomply.com', role: 'Admin', status: 'ativo' },
+  { id: 'employee-miguel', name: 'Miguel Costa', email: 'miguel@risckcomply.com', role: 'Visualizador', status: 'pendente' },
 ];
 
 function createId(prefix: string) {
@@ -119,7 +119,7 @@ export function ProfileClient({ locale }: { locale: string }) {
       showToast('Corrija os identificadores fiscais antes de guardar.');
       return;
     }
-    localStorage.setItem('eurocomply-profile-demo', JSON.stringify({ company, fiscalIds, plan, employees }));
+    localStorage.setItem('risck-comply-profile-demo', JSON.stringify({ company, fiscalIds, plan, employees }));
     setSaved(true);
     showToast('Perfil guardado localmente.');
   }
@@ -174,7 +174,7 @@ export function ProfileClient({ locale }: { locale: string }) {
     const url = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'eurocomply-gdpr-export.json';
+    anchor.download = 'risck-comply-gdpr-export.json';
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -182,13 +182,8 @@ export function ProfileClient({ locale }: { locale: string }) {
     showToast('Exportação GDPR descarregada.');
   }
 
-  async function requestGdprDelete() {
-    const response = await fetch('/api/gdpr/delete-request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason: 'Pedido iniciado pelo painel de perfil.' }),
-    });
-    showToast(response.ok ? 'Pedido GDPR enviado para revisão.' : 'Não foi possível criar o pedido GDPR.');
+  function requestGdprDelete() {
+    window.location.href = `/${locale}/dashboard/privacy`;
   }
 
   return (
@@ -227,7 +222,7 @@ export function ProfileClient({ locale }: { locale: string }) {
                 <label key={field} className={field === 'logoUrl' ? 'md:col-span-2' : ''}><span className="text-sm font-medium">{label}</span><input value={company[field as keyof typeof company]} onChange={(event) => updateCompany(field as keyof typeof company, event.target.value)} className="mt-1 w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10" /></label>
               ))}
             </div>
-            <div className="mt-6 flex flex-wrap gap-3"><Button type="submit" disabled={!allFiscalIdsValid} className="rounded-full"><Save className="h-4 w-4" /> Guardar alterações</Button><Button type="button" variant="outline" className="rounded-full" onClick={() => { updateCompany('logoUrl', 'https://dummyimage.com/180x180/d4af37/111827&text=EC'); showToast('Upload de logo simulado.'); }}><UploadCloud className="h-4 w-4" /> Simular upload de logo</Button>{saved ? <span className="inline-flex items-center gap-2 text-sm text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Guardado no localStorage demo.</span> : null}</div>
+            <div className="mt-6 flex flex-wrap gap-3"><Button type="submit" disabled={!allFiscalIdsValid} className="rounded-full"><Save className="h-4 w-4" /> Guardar alterações</Button><Button type="button" variant="outline" className="rounded-full" onClick={() => { updateCompany('logoUrl', 'https://dummyimage.com/180x180/d4af37/111827&text=RC'); showToast('Upload de logo simulado.'); }}><UploadCloud className="h-4 w-4" /> Simular upload de logo</Button>{saved ? <span className="inline-flex items-center gap-2 text-sm text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Guardado no localStorage demo.</span> : null}</div>
           </section>
 
           <aside id="enterprise-status" className="space-y-6">
@@ -250,7 +245,7 @@ export function ProfileClient({ locale }: { locale: string }) {
         </section>
 
         <section id="privacy" className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div className="flex items-start gap-3"><div className="rounded-2xl bg-primary/10 p-3 text-primary"><ShieldCheck className="h-5 w-5" /></div><div><h2 className="text-2xl font-semibold">Privacidade & GDPR</h2><p className="mt-1 text-sm text-muted-foreground">Ações protegidas por sessão. Exportação gera auditoria e notificação; apagamento fica pendente para revisão legal.</p></div></div><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" className="rounded-full" onClick={downloadGdprExport}><Download className="h-4 w-4" /> Exportar dados</Button><Button type="button" variant="destructive" className="rounded-full" onClick={requestGdprDelete}><Trash2 className="h-4 w-4" /> Solicitar apagamento</Button></div></div>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div className="flex items-start gap-3"><div className="rounded-2xl bg-primary/10 p-3 text-primary"><ShieldCheck className="h-5 w-5" /></div><div><h2 className="text-2xl font-semibold">Privacidade & GDPR</h2><p className="mt-1 text-sm text-muted-foreground">Ações protegidas por sessão. Exportação gera auditoria e notificação; apagamento fica pendente para revisão legal.</p></div></div><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" className="rounded-full" onClick={downloadGdprExport}><Download className="h-4 w-4" /> Exportar dados</Button><Button type="button" variant="destructive" className="rounded-full" onClick={requestGdprDelete}><Trash2 className="h-4 w-4" /> Abrir centro GDPR</Button></div></div>
         </section>
       </form>
     </main>

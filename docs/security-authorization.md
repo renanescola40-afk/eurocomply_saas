@@ -1,6 +1,6 @@
-# EuroComply Authorization Matrix
+# RISCK COMPLY Authorization Matrix
 
-EuroComply is organization-first. Every protected business object must be scoped by `organization_id`, and every request must verify that the current user belongs to the organization before reading or mutating data.
+RISCK COMPLY is organization-first. Every protected business object must be scoped by `organization_id`, and every request must verify that the current user belongs to the organization before reading or mutating data.
 
 ## Roles
 

@@ -16,19 +16,31 @@ const PUBLIC_ROUTES = [
   '/register',
   '/auth',
   '/pricing',
+  '/checkout',
+  '/resources',
   '/faq',
   '/about',
   '/contact',
   '/recuperar-senha',
   '/atualizar-senha',
+  '/trust',
+  '/security',
+  '/compliance',
+  '/data-processing',
+  '/sla',
+  '/privacy',
+  '/terms',
+  '/dpa',
+  '/subprocessors',
+  '/status',
   '/politica-privacidade',
   '/termos-servico',
 ];
 
 const LEGACY_UNDEFINED_ROUTES: Record<string, string> = {
   '/dashboard/organizations/vendors': '/vendor-assurance',
-  '/dashboard/organizations/risks': '/riscos',
-  '/dashboard/organizations/documents': '/documentos',
+  '/dashboard/organizations/risks': '/dashboard/organizations/risks',
+  '/dashboard/organizations/documents': '/dashboard/organizations/documents',
   '/dashboard/organizations/tasks': '/aprovacoes',
   '/dashboard/organizations/reports': '/dashboard/organizations/reports-governance',
   '/pricing': '/pricing',
@@ -63,6 +75,18 @@ function isPublicRoute(pathname: string, locale: string): boolean {
     path.startsWith('/auth/') ||
     path.startsWith('/api/auth/')
   );
+}
+
+function hasSupabaseAuthCookie(req: NextRequest) {
+  return req.cookies.getAll().some((cookie) => {
+    const name = cookie.name.toLowerCase();
+    return name.startsWith('sb-') || name.includes('supabase');
+  });
+}
+
+function withPrivateNoStore(response: NextResponse) {
+  response.headers.set('Cache-Control', 'private, no-store, max-age=0');
+  return response;
 }
 
 function detectLocale(req: NextRequest): string {
@@ -146,7 +170,6 @@ export default async function middleware(req: NextRequest) {
     pathname.startsWith('/api') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/next_api') ||
-    pathname.startsWith('/zoer_proxy') ||
     pathname.includes('.')
   ) {
     return NextResponse.next();
@@ -166,23 +189,24 @@ export default async function middleware(req: NextRequest) {
   if (pathnameHasLocale) {
     const locale = pathname.split('/')[1];
     const isPublic = isPublicRoute(pathname, locale);
+    const isMarketingHome = pathname === `/${locale}`;
     const isAuthEntryRoute = pathname === `/${locale}/login` || pathname === `/${locale}/signup`;
-    const shouldCheckAuth = !isPublic || isAuthEntryRoute;
+    const shouldCheckAuth = !isPublic || isAuthEntryRoute || isMarketingHome;
     const authState = shouldCheckAuth
       ? await getAuthState(req)
       : { isAuthenticated: false, supabaseResponse: NextResponse.next({ request: req }) };
 
     if (!authState.isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
-      loginUrl.searchParams.set('next', pathname);
-      const response = NextResponse.redirect(loginUrl);
+      loginUrl.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
+      const response = withPrivateNoStore(NextResponse.redirect(loginUrl));
       copyAuthCookies(authState.supabaseResponse, response);
       return response;
     }
 
-    if (authState.isAuthenticated && isAuthEntryRoute) {
+    if (authState.isAuthenticated && (isAuthEntryRoute || isMarketingHome)) {
       const dashboardUrl = new URL(`/${locale}${ORGANIZATION_DASHBOARD_PATH}`, req.url);
-      const response = NextResponse.redirect(dashboardUrl);
+      const response = withPrivateNoStore(NextResponse.redirect(dashboardUrl));
       copyAuthCookies(authState.supabaseResponse, response);
       return response;
     }
@@ -215,5 +239,5 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api|next_api|zoer_proxy|.*\\..*).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };

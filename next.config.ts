@@ -5,6 +5,33 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/i18n.ts');
 const isProduction = process.env.NODE_ENV === 'production';
 
+const DEFAULT_IMAGE_REMOTE_HOSTS = [
+  'images.unsplash.com',
+  'avatars.githubusercontent.com',
+  'lh3.googleusercontent.com',
+  'flagcdn.com',
+] as const;
+
+function getSupabaseImageHost() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) return [];
+
+  try {
+    return [new URL(supabaseUrl).hostname];
+  } catch {
+    return [];
+  }
+}
+
+function getTrustedImageHostnames() {
+  const configuredHosts = (process.env.NEXT_IMAGE_REMOTE_HOSTS ?? '')
+    .split(',')
+    .map((host) => host.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set([...DEFAULT_IMAGE_REMOTE_HOSTS, ...getSupabaseImageHost(), ...configuredHosts]));
+}
+
 const securityHeaders = [
   {
     key: 'Content-Security-Policy',
@@ -42,24 +69,34 @@ const nextConfig: NextConfig = {
         source: '/(.*)',
         headers: securityHeaders,
       },
+      {
+        source: '/:locale(en|pt|es|fr|it|de)/(pricing|resources|faq|about|contact|trust|security|compliance|privacy|terms|data-processing|sla|dpa|subprocessors|status)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=300, stale-while-revalidate=3600',
+          },
+        ],
+      },
     ];
   },
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-    ],
+    remotePatterns: getTrustedImageHostnames().map((hostname) => ({
+      protocol: 'https',
+      hostname,
+    })),
   },
 };
 
 const nextIntlConfig = withNextIntl(nextConfig);
-const shouldUploadSentryArtifacts = Boolean(
+const hasSentryReleaseUploadCredentials = Boolean(
   process.env.SENTRY_ORG && process.env.SENTRY_PROJECT && process.env.SENTRY_AUTH_TOKEN,
 );
 
-export default shouldUploadSentryArtifacts
+// Source maps and release artifacts are uploaded only when the server-side
+// SENTRY_AUTH_TOKEN plus org/project are available in the build environment.
+// Local/dev builds keep the Next config unwrapped, preventing accidental uploads.
+export default hasSentryReleaseUploadCredentials
   ? withSentryConfig(nextIntlConfig, {
       org: process.env.SENTRY_ORG,
       project: process.env.SENTRY_PROJECT,
@@ -67,5 +104,6 @@ export default shouldUploadSentryArtifacts
       silent: !process.env.CI,
       widenClientFileUpload: true,
       tunnelRoute: '/monitoring',
+      disableLogger: true,
     })
   : nextIntlConfig;

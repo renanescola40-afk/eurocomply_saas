@@ -1,0 +1,7 @@
+P1-06 reviewer reference
+
+Reviewer: renan silva <renansilva2002@gmail.com>
+Reviewed evidence: workflow run 27779627063, p1-sbom-cyclonedx artifact, artifact digest, and successful attestation step.
+Next review due: 2026-09-18
+
+This file does not contain secrets.

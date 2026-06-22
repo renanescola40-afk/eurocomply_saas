@@ -17,7 +17,21 @@ export type AuditChainRecord = AuditChainInput & {
   signature?: string;
 };
 
+export type AuditChainVerificationOptions = {
+  expectedPreviousHash?: string | null;
+};
+
 const AUDIT_CHAIN_ALGORITHM = 'sha256';
+
+export function canonicalizeAuditTimestamp(value: string) {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toISOString();
+}
 
 function normalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalize);
@@ -44,7 +58,7 @@ export function canonicalizeAuditEvent(input: AuditChainInput, previousHash: str
       entityType: input.entityType ?? null,
       entityId: input.entityId ?? null,
       metadata: input.metadata ?? null,
-      createdAt: input.createdAt,
+      createdAt: canonicalizeAuditTimestamp(input.createdAt),
       previousHash,
     }),
   );
@@ -63,22 +77,27 @@ export function signAuditEventHash(eventHash: string, secret = process.env.AUDIT
 }
 
 export function buildAuditChainRecord(input: AuditChainInput, previousHash: string | null): AuditChainRecord {
-  const eventHash = buildAuditEventHash(input, previousHash);
+  const canonicalInput = {
+    ...input,
+    createdAt: canonicalizeAuditTimestamp(input.createdAt),
+  };
+  const eventHash = buildAuditEventHash(canonicalInput, previousHash);
   const signature = signAuditEventHash(eventHash);
 
   return {
-    ...input,
+    ...canonicalInput,
     previousHash,
     eventHash,
     ...(signature ? { signature } : {}),
   };
 }
 
-export function verifyAuditChain(records: AuditChainRecord[]) {
+export function verifyAuditChain(records: AuditChainRecord[], options: AuditChainVerificationOptions = {}) {
   const failures: Array<{ index: number; id: string; reason: 'previous_hash_mismatch' | 'event_hash_mismatch' | 'signature_mismatch' }> = [];
+  const initialPreviousHash = options.expectedPreviousHash ?? null;
 
   records.forEach((record, index) => {
-    const expectedPreviousHash = index === 0 ? null : records[index - 1]?.eventHash ?? null;
+    const expectedPreviousHash = index === 0 ? initialPreviousHash : records[index - 1]?.eventHash ?? null;
 
     if (record.previousHash !== expectedPreviousHash) {
       failures.push({ index, id: record.id, reason: 'previous_hash_mismatch' });
@@ -102,5 +121,6 @@ export function verifyAuditChain(records: AuditChainRecord[]) {
     failures,
     checked: records.length,
     lastHash: records.at(-1)?.eventHash ?? null,
+    expectedPreviousHash: initialPreviousHash,
   };
 }

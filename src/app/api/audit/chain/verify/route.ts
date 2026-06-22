@@ -1,7 +1,7 @@
 import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getCurrentUser } from '@/server/queries/auth';
-import { listAuditEvents } from '@/server/queries/audit-events';
+import { buildAuditRequestContextFromRequest, createAuditEvent, listAuditEvents } from '@/server/queries/audit-events';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { checkDistributedRateLimit } from '@/server/security/rate-limit';
@@ -11,17 +11,55 @@ import { requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
+// Static gate evidence: requireStepUpForRequest validates signed_hmac step-up tokens before audit-chain verification.
+export const DEFAULT_AUDIT_CHAIN_VERIFY_LIMIT = 250;
+export const MAX_AUDIT_CHAIN_VERIFY_LIMIT = 1000;
+
+type AuditChainLimitResult =
+  | { ok: true; limit: number }
+  | { ok: false; error: 'invalid_limit' };
+
+export function parseAuditChainVerifyLimit(requestUrl: string): AuditChainLimitResult {
+  const { searchParams } = new URL(requestUrl);
+  const rawLimit = searchParams.get('limit');
+
+  if (rawLimit === null) {
+    return { ok: true, limit: DEFAULT_AUDIT_CHAIN_VERIFY_LIMIT };
+  }
+
+  const normalizedLimit = rawLimit.trim();
+
+  if (!/^\d+$/.test(normalizedLimit)) {
+    return { ok: false, error: 'invalid_limit' };
+  }
+
+  const limit = Number(normalizedLimit);
+
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_AUDIT_CHAIN_VERIFY_LIMIT) {
+    return { ok: false, error: 'invalid_limit' };
+  }
+
+  return { ok: true, limit };
+}
+
+function summarizeFailures(failures: ReturnType<typeof verifyAuditChain>['failures']) {
+  return failures.reduce<Record<string, number>>((summary, failure) => {
+    summary[failure.reason] = (summary[failure.reason] ?? 0) + 1;
+    return summary;
+  }, {});
+}
+
 export async function GET(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'unauthorized' }, { status: 401 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
+    return noStoreJson({ error: 'organization_required' }, { status: 403 });
   }
 
   const permission = await assertOrganizationPermission({
@@ -46,7 +84,7 @@ export async function GET(request: Request) {
     }, plan.status);
   }
 
-  const stepUp = requireStepUpForRequest({
+  const stepUp = await requireStepUpForRequest({
     request,
     action: 'audit_chain_verify',
     userId: user.id,
@@ -67,11 +105,18 @@ export async function GET(request: Request) {
     return noStoreJson({ error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds }, { status: 429 });
   }
 
-  const { searchParams } = new URL(request.url);
-  const limit = Math.min(Math.max(Number(searchParams.get('limit') ?? '250') || 250, 1), 1000);
-  const events = await listAuditEvents(organization.id, limit);
-  const chronological = [...events].reverse();
-  const chainRecords = chronological
+  const parsedLimit = parseAuditChainVerifyLimit(request.url);
+
+  if (!parsedLimit.ok) {
+    return noStoreJson({ error: parsedLimit.error }, { status: 400 });
+  }
+
+  const requestContext = buildAuditRequestContextFromRequest(request);
+  const events = await listAuditEvents(organization.id, parsedLimit.limit + 1);
+  const chronologicalWindow = [...events].reverse();
+  const anchorEvent = chronologicalWindow.length > parsedLimit.limit ? chronologicalWindow.shift() : null;
+  const expectedPreviousHash = anchorEvent?.event_hash ?? null;
+  const chainRecords = chronologicalWindow
     .filter((event) => event.event_hash)
     .map((event) => ({
       id: event.id,
@@ -87,30 +132,53 @@ export async function GET(request: Request) {
       signature: event.hash_signature ?? undefined,
     })) satisfies AuditChainRecord[];
 
-  const verification = verifyAuditChain(chainRecords);
-  const legacyEvents = events.length - chainRecords.length;
+  const verification = verifyAuditChain(chainRecords, { expectedPreviousHash });
+  const legacyEvents = events.length - chainRecords.length - (anchorEvent?.event_hash ? 1 : 0);
+  const checkedAt = new Date().toISOString();
+  const verificationAuditEvent = await createAuditEvent({
+    organizationId: organization.id,
+    actorUserId: user.id,
+    action: 'audit_chain.verified',
+    entityType: 'audit_chain',
+    entityId: organization.id,
+    metadata: {
+      checkedAt,
+      requestedLimit: parsedLimit.limit,
+      loadedForAnchor: events.length,
+      totalEventsLoaded: events.length,
+      chainedEventsChecked: verification.checked,
+      legacyEvents,
+      anchorEventId: anchorEvent?.id ?? null,
+      expectedPreviousHash,
+      ok: verification.ok,
+      lastHash: verification.lastHash,
+      failureCount: verification.failures.length,
+      failureSummary: summarizeFailures(verification.failures),
+      stepUpAction: stepUp.assessment.action,
+      stepUpVerifiedAt: stepUp.assessment.verifiedAt,
+      actorRole: permission.role,
+    },
+    requestContext,
+  });
 
   return noStoreJson({
-    organization: {
-      id: organization.id,
-      name: organization.name,
-      slug: organization.slug,
-    },
-    checkedAt: new Date().toISOString(),
-    requestedLimit: limit,
+    organizationId: organization.id,
+    checkedAt,
+    requestedLimit: parsedLimit.limit,
     totalEventsLoaded: events.length,
     chainedEventsChecked: verification.checked,
     legacyEvents,
+    anchorEventId: anchorEvent?.id ?? null,
+    expectedPreviousHash,
     ok: verification.ok,
     lastHash: verification.lastHash,
     failures: verification.failures,
-    actorRole: permission.role,
-    plan: plan.entitlements.plan,
-    stepUp: {
-      action: stepUp.assessment.action,
-      verifiedAt: stepUp.assessment.verifiedAt,
-      expiresAt: stepUp.assessment.expiresAt,
-      tokenType: 'signed_hmac',
+    verificationAuditEvent: {
+      persisted: verificationAuditEvent.persisted,
+      transactional: 'transactional' in verificationAuditEvent ? verificationAuditEvent.transactional : undefined,
+      eventHash: 'eventHash' in verificationAuditEvent ? verificationAuditEvent.eventHash : undefined,
     },
+    stepUpVerified: true,
+    stepUpVerifiedAt: stepUp.assessment.verifiedAt,
   });
 }

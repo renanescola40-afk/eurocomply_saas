@@ -4,8 +4,8 @@ const faqs = [
   {
     group: 'Product',
     items: [
-      ['What does EuroComply manage?', 'EuroComply centralizes compliance tasks, documents, vendors, risks, templates, audit logs, team access and executive reporting.'],
-      ['Is EuroComply legal advice?', 'No. EuroComply is compliance operations software. Legal interpretation should be reviewed by qualified counsel.'],
+      ['What does RISCK COMPLY manage?', 'RISCK COMPLY centralizes compliance tasks, documents, vendors, risks, templates, audit logs, team access and executive reporting.'],
+      ['Is RISCK COMPLY legal advice?', 'No. RISCK COMPLY is compliance operations software. Legal interpretation should be reviewed by qualified counsel.'],
       ['Can we generate reports for leadership?', 'Yes. The product includes executive reports, printable reports and CSV exports for operational review.'],
     ],
   },
@@ -32,9 +32,9 @@ export default function FaqPage({ params }: { params: { locale: string } }) {
     <main className="min-h-screen bg-background">
       <section className="mx-auto max-w-5xl px-6 py-20">
         <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">FAQ</p>
-        <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-6xl">Questions before adopting EuroComply</h1>
+        <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-6xl">Questions before adopting RISCK COMPLY</h1>
         <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
-          A practical overview for founders, compliance leads and operations teams evaluating EuroComply for V1 compliance operations.
+          A practical overview for founders, compliance leads and operations teams evaluating RISCK COMPLY for V1 compliance operations.
         </p>
       </section>
 

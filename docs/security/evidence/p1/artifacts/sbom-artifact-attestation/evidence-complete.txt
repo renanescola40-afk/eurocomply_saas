@@ -1,0 +1,5 @@
+Evidence complete marker
+
+P1-06 SBOM + artifact attestation evidence is complete after review of workflow run 27779627063 and artifact id 7731847352.
+
+No secrets are stored here.

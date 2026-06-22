@@ -1,0 +1,41 @@
+name: P1 Enterprise Security
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/security/P1_ENTERPRISE_SECURITY_REGISTER.md'
+      - 'docs/security/P1_ENTERPRISE_SECURITY_ROADMAP.md'
+      - 'docs/security/evidence/p1/**'
+      - 'scripts/security/check-p1-enterprise-security-register.mjs'
+      - '.github/workflows/p1-enterprise-security.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p1-enterprise-security:
+    name: Validate P1 enterprise security register
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Show runner Node.js and npm versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Validate P1 register structure
+        run: node scripts/security/check-p1-enterprise-security-register.mjs
+
+      - name: Strict P1 release-ready check
+        if: >-
+          contains(github.head_ref || github.ref_name, 'p1-final') ||
+          contains(github.head_ref || github.ref_name, 'enterprise-ready')
+        run: node scripts/security/check-p1-enterprise-security-register.mjs --strict

@@ -1,0 +1,24 @@
+{
+  "evidenceItem": "gdpr-privacy-validation",
+  "status": "Complete",
+  "reviewer": "EuroComply Engineering",
+  "reviewedAt": "2026-06-22T00:00:00.000Z",
+  "summary": "Enterprise GDPR privacy controls were reviewed for organization export coverage, delete request safeguards, retention planning, audit record preservation, and admin privacy workflow coverage.",
+  "evidenceLocations": [
+    "docs/privacy/DATA_INVENTORY.md",
+    "docs/privacy/DATA_RETENTION_POLICY.md",
+    "src/server/privacy/gdpr.ts",
+    "src/app/api/gdpr/export/route.ts",
+    "src/app/api/gdpr/delete-request/route.ts",
+    "src/app/[locale]/dashboard/privacy/page.tsx",
+    "tests/privacy/gdpr.test.ts"
+  ],
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "controlsVerified": [
+    "Organization export coverage is documented.",
+    "Delete request safeguards are documented.",
+    "Retention planning is documented.",
+    "Audit record preservation is documented.",
+    "Admin privacy workflow coverage is documented."
+  ]
+}

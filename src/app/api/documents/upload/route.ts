@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { createHash, randomUUID } from 'crypto';
 
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -7,29 +6,80 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { createNotification } from '@/server/queries/notifications';
 import { assertDocumentQuota } from '@/server/billing/entitlements';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
-import { validateUploadFileSignature } from '@/server/security/file-signature';
-import { scanUploadForMalware, shouldBlockUploadForMalwareScan } from '@/server/security/malware-scan';
+import {
+  ALLOWED_TYPES,
+  CONTROLLED_DOCUMENT_STORAGE_BUCKET,
+  MAX_UPLOAD_BYTES,
+  UPLOAD_SECURITY_AUDIT_EVENTS,
+  buildTenantScopedUploadPath,
+  buildUploadSecurityAuditMetadata,
+  sanitizeUploadFileName,
+  scanValidatedUploadForMalware,
+  shouldBlockUploadForMalwareScan,
+  validateUploadSecurityFile,
+  type MalwareScanResult,
+} from '@/server/security/upload-security';
 
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const STORAGE_BUCKET = 'controlled-documents';
-
-const ALLOWED_TYPES = new Map([
-  ['application/pdf', 'pdf'],
-  ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'docx'],
-  ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx'],
-  ['image/png', 'png'],
-  ['image/jpeg', 'jpg'],
-]);
+const STORAGE_BUCKET = CONTROLLED_DOCUMENT_STORAGE_BUCKET;
+// The controlled-documents bucket is the only storage bucket permitted for enterprise document uploads.
+const SIGNATURE_MISMATCH_REASON = 'signature_mismatch';
 
 function safeDocumentTitle(name: string) {
-  return name
+  return sanitizeUploadFileName(name)
     .replace(/\.[^.]+$/, '')
-    .replace(/[^\p{L}\p{N}\s._-]/gu, '')
     .trim()
     .slice(0, 120) || 'Controlled document';
+}
+
+function blockedScanStatus(scan: MalwareScanResult) {
+  if (scan.status === 'not_configured' || scan.status === 'unavailable') return 503;
+  return 422;
+}
+
+function preScanAuditMetadata(input: {
+  reason?: string | null;
+  file: File;
+  organizationId?: string | null;
+  actorUserId?: string | null;
+  actorRole?: string | null;
+  fileHash?: string | null;
+  detectedMimeType?: string | null;
+  declaredSignatureMatches?: boolean | null;
+}) {
+  return buildUploadSecurityAuditMetadata({
+    reason: input.reason ?? null,
+    organizationId: input.organizationId ?? null,
+    actorUserId: input.actorUserId ?? null,
+    actorRole: input.actorRole ?? 'unknown',
+    fileHash: input.fileHash ?? null,
+    fileSize: input.file.size,
+    claimedMimeType: input.file.type,
+    mimeDetected: input.detectedMimeType ?? null,
+    declaredSignatureMatches: input.declaredSignatureMatches ?? null,
+    accessPurpose: 'upload',
+  });
+}
+
+async function auditUploadSecurityEvent(input: {
+  action: string;
+  organizationId: string;
+  actorUserId: string;
+  entityId?: string | null;
+  metadata: Record<string, unknown>;
+}) {
+  await createAuditEvent({
+    organizationId: input.organizationId,
+    actorUserId: input.actorUserId,
+    action: input.action,
+    entityType: 'document',
+    entityId: input.entityId ?? input.organizationId,
+    metadata: input.metadata,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -56,6 +106,16 @@ export async function POST(request: NextRequest) {
 
   if (!permission.ok) {
     return permissionDeniedResponse(permission);
+  }
+
+  const rateLimit = await checkDistributedRateLimit({
+    key: `documents:upload:${organization.id}:${user.id}`,
+    limit: 10,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
   }
 
   const quota = await assertDocumentQuota(organization.id);
@@ -86,78 +146,174 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'File is required.' }, { status: 400 });
   }
 
-  const extension = ALLOWED_TYPES.get(file.type);
-
-  if (!extension) {
-    return noStoreJson({ error: 'Unsupported file type. Use PDF, DOCX, XLSX, PNG or JPG.' }, { status: 415 });
-  }
+  await auditUploadSecurityEvent({
+    action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadRequested,
+    organizationId: organization.id,
+    actorUserId: user.id,
+    metadata: preScanAuditMetadata({
+      file,
+      organizationId: organization.id,
+      actorUserId: user.id,
+      actorRole: permission.role,
+    }),
+  });
 
   if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
+    const metadata = preScanAuditMetadata({
+      reason: 'invalid_size',
+      file,
+      organizationId: organization.id,
+      actorUserId: user.id,
+      actorRole: permission.role,
+    });
+
+    await Promise.all([
+      auditUploadSecurityEvent({
+        action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadBlocked,
+        organizationId: organization.id,
+        actorUserId: user.id,
+        metadata,
+      }),
+      auditUploadSecurityEvent({
+        action: 'document_upload_rejected',
+        organizationId: organization.id,
+        actorUserId: user.id,
+        metadata,
+      }),
+    ]);
+
     return noStoreJson({ error: 'File must be between 1 byte and 10 MB.' }, { status: 413 });
   }
 
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const uploadValidation = await validateUploadSecurityFile(file, { maxBytes: MAX_UPLOAD_BYTES });
 
-  if (!validateUploadFileSignature(file.type, buffer)) {
-    await createAuditEvent({
+  if (!uploadValidation.ok) {
+    const metadata = preScanAuditMetadata({
+      reason: uploadValidation.reason === SIGNATURE_MISMATCH_REASON ? SIGNATURE_MISMATCH_REASON : uploadValidation.reason,
+      file,
       organizationId: organization.id,
       actorUserId: user.id,
-      action: 'document_upload_rejected',
-      entityType: 'document',
-      entityId: organization.id,
-      metadata: {
-        reason: 'signature_mismatch',
-        claimedMimeType: file.type,
-        sizeBytes: file.size,
-        actorRole: permission.role,
-      },
+      actorRole: permission.role,
+      fileHash: uploadValidation.fileHash,
+      detectedMimeType: uploadValidation.mimeDetected,
+      declaredSignatureMatches: uploadValidation.declaredSignatureMatches,
     });
 
-    return noStoreJson({ error: 'File signature does not match the declared file type.' }, { status: 415 });
+    await Promise.all([
+      auditUploadSecurityEvent({
+        action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadBlocked,
+        organizationId: organization.id,
+        actorUserId: user.id,
+        metadata,
+      }),
+      auditUploadSecurityEvent({
+        action: 'document_upload_rejected',
+        organizationId: organization.id,
+        actorUserId: user.id,
+        metadata,
+      }),
+    ]);
+
+    return noStoreJson({ error: uploadValidation.message }, { status: uploadValidation.reason === 'file_too_large' ? 413 : 415 });
   }
 
-  const scan = await scanUploadForMalware({
-    buffer,
-    mimeType: file.type,
-    filename: file.name,
+  const extension = ALLOWED_TYPES.get(uploadValidation.mimeDetected) ?? uploadValidation.extension;
+
+  if (!extension) {
+    const metadata = preScanAuditMetadata({
+      reason: 'unsupported_mime_type',
+      file,
+      organizationId: organization.id,
+      actorUserId: user.id,
+      actorRole: permission.role,
+      fileHash: uploadValidation.fileHash,
+      detectedMimeType: uploadValidation.mimeDetected,
+      declaredSignatureMatches: uploadValidation.declaredSignatureMatches,
+    });
+
+    await Promise.all([
+      auditUploadSecurityEvent({
+        action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadBlocked,
+        organizationId: organization.id,
+        actorUserId: user.id,
+        metadata,
+      }),
+      auditUploadSecurityEvent({
+        action: 'document_upload_rejected',
+        organizationId: organization.id,
+        actorUserId: user.id,
+        metadata,
+      }),
+    ]);
+
+    return noStoreJson({ error: 'Unsupported file type. Use PDF, DOCX, XLSX, PNG or JPG.' }, { status: 415 });
+  }
+
+  const scan = await scanValidatedUploadForMalware({
+    validation: uploadValidation,
     organizationId: organization.id,
+  });
+  const scanMetadata = buildUploadSecurityAuditMetadata({
+    scan,
+    fileHash: uploadValidation.fileHash,
+    fileSize: uploadValidation.fileSize,
+    claimedMimeType: uploadValidation.claimedMimeType,
+    mimeDetected: uploadValidation.mimeDetected,
+    organizationId: organization.id,
+    actorUserId: user.id,
+    actorRole: permission.role,
+    declaredSignatureMatches: uploadValidation.declaredSignatureMatches,
+    accessPurpose: 'upload',
+  });
+
+  await auditUploadSecurityEvent({
+    action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadScanned,
+    organizationId: organization.id,
+    actorUserId: user.id,
+    metadata: scanMetadata,
   });
 
   if (shouldBlockUploadForMalwareScan(scan)) {
-    await createAuditEvent({
-      organizationId: organization.id,
-      actorUserId: user.id,
-      action: 'document_upload_rejected',
-      entityType: 'document',
-      entityId: organization.id,
-      metadata: {
-        reason: 'malware_scan_not_clean',
-        scanStatus: scan.status,
-        scanProvider: scan.provider,
-        scanRequired: scan.required,
-        scanReason: scan.reason,
-        mimeType: file.type,
-        sizeBytes: file.size,
-        actorRole: permission.role,
-      },
-    });
+    const metadata = {
+      ...scanMetadata,
+      reason: 'malware_scan_not_clean',
+      scanReason: scan.reason ?? null,
+    };
+
+    await Promise.all([
+      auditUploadSecurityEvent({
+        action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadBlocked,
+        organizationId: organization.id,
+        actorUserId: user.id,
+        metadata,
+      }),
+      auditUploadSecurityEvent({
+        action: 'document_upload_rejected',
+        organizationId: organization.id,
+        actorUserId: user.id,
+        metadata,
+      }),
+    ]);
 
     return noStoreJson(
       {
-        error: 'Document upload cannot be accepted until content scanning is available.',
+        error: 'Document upload was blocked by content scanning policy.',
         scan: {
           status: scan.status,
           provider: scan.provider,
           required: scan.required,
         },
       },
-      { status: 503 },
+      { status: blockedScanStatus(scan) },
     );
   }
 
-  const checksum = createHash('sha256').update(buffer).digest('hex');
-  const storagePath = `${organization.id}/${randomUUID()}.${extension}`;
+  const storagePath = buildTenantScopedUploadPath({
+    organizationId: organization.id,
+    userId: user.id,
+    extension,
+  });
+
   const title = safeDocumentTitle(file.name);
   const supabase = tryCreateAdminClient();
 
@@ -165,12 +321,11 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Secure document storage is not configured.' }, { status: 503 });
   }
 
-  const { error: uploadError } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .upload(storagePath, buffer, {
-      contentType: file.type,
-      upsert: false,
-    });
+  const storage = supabase.storage.from(STORAGE_BUCKET);
+  const { error: uploadError } = await storage.upload(storagePath, uploadValidation.buffer, {
+    contentType: uploadValidation.mimeDetected,
+    upsert: false,
+  });
 
   if (uploadError) {
     console.warn('[documents] upload_failed', { code: uploadError.message ? 'storage_error' : 'unknown' });
@@ -178,44 +333,68 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Unable to store document securely.' }, { status: 500 });
   }
 
-  const { data: document, error: documentError } = await supabase
+  const { data: persistedDocument, error: documentError } = await supabase
     .from('documents')
     .insert({
       organization_id: organization.id,
-      title,
+      uploaded_by: user.id,
+      name: title,
+      category: 'controlled-document',
       status: 'pending',
-      version: 'v1',
       storage_path: storagePath,
-      checksum_sha256: checksum,
+      checksum_sha256: uploadValidation.fileHash,
+      mime_type: uploadValidation.mimeDetected,
+      size_bytes: uploadValidation.fileSize,
+      scan_status: scan.status,
+      scan_provider: scan.provider,
+      scan_required: scan.required,
+      scan_checked_at: scan.scannedAt,
+      file_hash: uploadValidation.fileHash,
+      file_size: uploadValidation.fileSize,
+      mime_detected: uploadValidation.mimeDetected,
     })
-    .select('id,title,status,version,created_at')
+    .select('id,name,status,created_at')
     .single();
 
   if (documentError) {
-    await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
+    await storage.remove([storagePath]);
     console.warn('[documents] metadata_create_failed', { code: documentError.code ?? 'unknown' });
 
     return noStoreJson({ error: 'Unable to register document metadata.' }, { status: 500 });
   }
+
+  const document = {
+    id: persistedDocument?.id,
+    title: persistedDocument?.name ?? title,
+    status: persistedDocument?.status ?? 'pending',
+    version: 1,
+    created_at: persistedDocument?.created_at ?? null,
+  };
 
   await createAuditEvent({
     organizationId: organization.id,
     actorUserId: user.id,
     action: 'document_uploaded',
     entityType: 'document',
-    entityId: document?.id,
+    entityId: document.id,
     metadata: {
       title,
-      mimeType: file.type,
-      sizeBytes: file.size,
-      checksumSha256: checksum,
+      mimeType: uploadValidation.mimeDetected,
+      claimedMimeType: uploadValidation.claimedMimeType,
+      mimeDetected: uploadValidation.mimeDetected,
+      sizeBytes: uploadValidation.fileSize,
+      fileSize: uploadValidation.fileSize,
+      fileHash: uploadValidation.fileHash,
+      checksumSha256: uploadValidation.fileHash,
       plan: quota.entitlements.plan,
-      actorRole: permission.role,
+      actorRole: permission.role ?? 'unknown',
       documentCountBeforeUpload: quota.currentCount,
       scanStatus: scan.status,
       scanProvider: scan.provider,
       scanRequired: scan.required,
       scanCheckedAt: scan.scannedAt,
+      organizationId: organization.id,
+      actorUserId: user.id,
     },
   });
 
@@ -228,7 +407,7 @@ export async function POST(request: NextRequest) {
 
   return noStoreJson({
     document,
-    checksum,
+    checksum: uploadValidation.fileHash,
     scan: {
       status: scan.status,
       provider: scan.provider,

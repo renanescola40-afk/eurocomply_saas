@@ -49,7 +49,7 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
 
   const visibleNews = intelligenceItems.filter((item) => !item.premium || canUsePremiumNews || wantsPremium);
   const filtered = visibleNews.filter((item) => {
-    const haystack = `${item.title} ${item.category} ${item.jurisdiction} ${item.executiveSummary} ${item.eurocomplyAnalysis}`.toLowerCase();
+    const haystack = `${item.title} ${item.category} ${item.jurisdiction} ${item.executiveSummary} ${item.risckComplyAnalysis}`.toLowerCase();
     return (!term || haystack.includes(term)) && (jurisdiction === 'all' || item.jurisdiction === jurisdiction) && (category === 'all' || item.category === category);
   });
   const jurisdictions = Array.from(new Set(intelligenceItems.map((item) => item.jurisdiction)));
@@ -62,7 +62,7 @@ export default async function ComplianceNewsPage({ params, searchParams }: { par
         <Link href={`/${locale}/dashboard/organizations/reports-governance`} className="text-sm font-semibold text-muted-foreground transition hover:text-foreground">← Reports & Governance</Link>
 
         <section className="rounded-[2rem] border bg-background/92 p-6 shadow-xl shadow-primary/5 backdrop-blur md:p-9">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-primary">EuroComply Intelligence</p>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-primary">RISCK COMPLY Intelligence</p>
           <h1 className="mt-3 max-w-4xl text-4xl font-semibold tracking-[-0.045em] md:text-6xl">The Compliance Intelligence Journal.</h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">Jornal global de tecnologia, IA, negócios, regulação e geopolítica para empresas que precisam transformar notícia em decisão, evidência e calendário.</p>
           <div className="mt-6 flex flex-wrap gap-3">

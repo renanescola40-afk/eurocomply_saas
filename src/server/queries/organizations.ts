@@ -5,8 +5,9 @@ export async function listUserOrganizations(userId: string) {
 
   const { data, error } = await supabase
     .from('organization_members')
-    .select('role, organizations(id, name, slug, created_at)')
+    .select('role, organization_id, organizations(id, name, slug, created_at)')
     .eq('user_id', userId)
+    .not('organization_id', 'is', null)
     .order('created_at', { ascending: true });
 
   if (error) {

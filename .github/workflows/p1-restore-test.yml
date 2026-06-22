@@ -1,0 +1,32 @@
+name: P1 Restore Test Evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/security/evidence/p1/backup-restore-tested.json"
+      - "docs/security/evidence/p1/backup-restore-tested.template.json"
+      - "docs/security/P1_RESTORE_TEST_USAGE.md"
+      - "scripts/security/check-p1-restore-test-evidence.mjs"
+      - ".github/workflows/p1-restore-test.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "docs/security/evidence/p1/backup-restore-tested.json"
+      - "docs/security/evidence/p1/backup-restore-tested.template.json"
+      - "docs/security/P1_RESTORE_TEST_USAGE.md"
+      - "scripts/security/check-p1-restore-test-evidence.mjs"
+      - ".github/workflows/p1-restore-test.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  p1-restore-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: node scripts/security/check-p1-restore-test-evidence.mjs

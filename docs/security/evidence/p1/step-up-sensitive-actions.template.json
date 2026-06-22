@@ -1,0 +1,50 @@
+{
+  "control": "step-up-sensitive-actions",
+  "status": "Open",
+  "reviewedAt": "YYYY-MM-DD",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "targetEnvironment": "production",
+  "redaction": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "sensitiveActionsReviewed": [
+    {
+      "action": "billing",
+      "routeOrOperation": "REPLACE_WITH_REDACTED_ROUTE_OR_OPERATION",
+      "stepUpMethod": "REPLACE_WITH_STEP_UP_METHOD",
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    },
+    {
+      "action": "exports",
+      "routeOrOperation": "REPLACE_WITH_REDACTED_ROUTE_OR_OPERATION",
+      "stepUpMethod": "REPLACE_WITH_STEP_UP_METHOD",
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    },
+    {
+      "action": "team-management",
+      "routeOrOperation": "REPLACE_WITH_REDACTED_ROUTE_OR_OPERATION",
+      "stepUpMethod": "REPLACE_WITH_STEP_UP_METHOD",
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    },
+    {
+      "action": "gdpr-delete",
+      "routeOrOperation": "REPLACE_WITH_REDACTED_ROUTE_OR_OPERATION",
+      "stepUpMethod": "REPLACE_WITH_STEP_UP_METHOD",
+      "status": "planned",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "controlsVerified": [
+    "Sensitive actions require step-up authentication",
+    "Step-up state expires and cannot be reused indefinitely",
+    "Authorization is rechecked after step-up",
+    "Audit event is emitted for sensitive actions",
+    "Evidence contains no secrets"
+  ],
+  "nextReviewDue": "YYYY-MM-DD"
+}

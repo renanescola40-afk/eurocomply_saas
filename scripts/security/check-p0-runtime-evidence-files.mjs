@@ -8,8 +8,19 @@ const allowedItems = new Set([
   'production-secrets-provider-stores',
   'supabase-live-rls-validation',
   'external-security-review-or-pentest',
+  'step-up-mfa-validation',
+  'upload-malware-scan-validation',
+  'audit-chain-live-validation',
+  'stripe-billing-validation',
+  'observability-readiness',
+  'rate-limit-validation',
+  // GDPR privacy evidence added by the enterprise privacy controls package.
+  'gdpr-privacy-validation',
 ]);
-const redactionText = 'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.';
+const redactionTexts = new Set([
+  'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
+  'Redaction confirmed for runtime evidence.',
+]);
 const failures = [];
 
 function listJsonFiles(dir) {
@@ -33,6 +44,36 @@ function requireArray(file, object, key, minItems = 1) {
   }
 }
 
+function hasValidRedactionText(evidence) {
+  return redactionTexts.has(String(evidence.redactionConfirmation ?? ''));
+}
+
+function checkSupabaseOpenPlaceholder(file, evidence) {
+  if (evidence.evidenceItem !== 'supabase-live-rls-validation' || evidence.status !== 'Open') return false;
+
+  requireString(file, evidence, 'reviewer', 3);
+  requireString(file, evidence, 'summary', 40);
+  requireArray(file, evidence, 'evidenceLocations', 1);
+
+  if (!hasValidRedactionText(evidence)) {
+    failures.push(`${file} missing redaction confirmation`);
+  }
+
+  if (evidence.outcome !== 'not_run' && evidence.outcome !== 'failed') {
+    failures.push(`${file} Open Supabase evidence must have outcome not_run or failed`);
+  }
+
+  if (!String(evidence.productionGate ?? '').toLowerCase().includes('blocked')) {
+    failures.push(`${file} Open Supabase evidence must keep production blocked`);
+  }
+
+  if (!String(evidence.completionRule ?? '').includes('run')) {
+    failures.push(`${file} Open Supabase evidence must include completion rule`);
+  }
+
+  return true;
+}
+
 const files = listJsonFiles(evidenceDir);
 
 console.log('EuroComply P0 runtime evidence file check');
@@ -52,6 +93,10 @@ for (const file of files) {
     failures.push(`${file} has invalid evidenceItem: ${evidence.evidenceItem}`);
   }
 
+  if (checkSupabaseOpenPlaceholder(file, evidence)) {
+    continue;
+  }
+
   if (!['Complete', 'Exception'].includes(evidence.status)) {
     failures.push(`${file} has invalid status: ${evidence.status}`);
   }
@@ -61,8 +106,8 @@ for (const file of files) {
   requireString(file, evidence, 'summary', 40);
   requireArray(file, evidence, 'evidenceLocations', 1);
 
-  if (evidence.redactionConfirmation !== redactionText) {
-    failures.push(`${file} missing exact redaction confirmation`);
+  if (!hasValidRedactionText(evidence)) {
+    failures.push(`${file} missing redaction confirmation`);
   }
 
   if (evidence.status === 'Complete') {

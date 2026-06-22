@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "controlId": "P1-02",
+  "control": "admin-mfa-required",
+  "status": "Complete",
+  "evidenceKind": "final-p1-control-evidence",
+  "generatedFromRealEvidence": true,
+  "productionValidated": true,
+  "generatedAt": "YYYY-MM-DDTHH:mm:ssZ",
+  "reviewedAt": "YYYY-MM-DDTHH:mm:ssZ",
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "nextReviewDue": "YYYY-MM-DD",
+  "environment": "production",
+  "validation": {
+    "result": "pass",
+    "validatedAt": "YYYY-MM-DDTHH:mm:ssZ",
+    "validator": "REPLACE_WITH_VALIDATOR_NAME",
+    "method": "REPLACE_WITH_VALIDATION_METHOD"
+  },
+  "artifacts": [
+    {
+      "type": "screenshot-or-report",
+      "reference": "REPLACE_WITH_REDACTED_REFERENCE",
+      "description": "Redacted production evidence showing admin MFA enforcement.",
+      "collectedAt": "YYYY-MM-DDTHH:mm:ssZ"
+    }
+  ],
+  "identityProvidersReviewed": [
+    {
+      "provider": "REPLACE_WITH_IDENTITY_PROVIDER",
+      "adminPopulation": "REPLACE_WITH_ADMIN_GROUP_OR_ROLE",
+      "mfaPolicy": "REPLACE_WITH_POLICY_NAME_OR_REFERENCE",
+      "status": "enforced",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "reviewedAt": "YYYY-MM-DDTHH:mm:ssZ",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "adminSurfacesReviewed": [
+    {
+      "surface": "REPLACE_WITH_ADMIN_SURFACE",
+      "accessPath": "REPLACE_WITH_REDACTED_ACCESS_PATH",
+      "mfaEnforced": true,
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE",
+      "reviewedAt": "YYYY-MM-DDTHH:mm:ssZ",
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "breakGlassAccounts": [
+    {
+      "accountReference": "REPLACE_WITH_REDACTED_REFERENCE",
+      "mfaEnforced": true,
+      "storageReviewed": true,
+      "rotationReviewed": true,
+      "notes": "REPLACE_WITH_REDACTED_NOTES"
+    }
+  ],
+  "controlsVerified": [
+    "Admin users require MFA",
+    "Admin groups or roles are reviewed",
+    "Admin surfaces require MFA",
+    "Break-glass accounts are documented and protected",
+    "Evidence contains no access-granting values"
+  ]
+}

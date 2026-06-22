@@ -9,9 +9,19 @@ const expectedPackageManager = 'npm@10.8.2';
 const blockers = [];
 const notes = [];
 
+function parsePossiblyWrappedJson(raw) {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('{')) return JSON.parse(trimmed);
+
+  const jsonStart = trimmed.indexOf('{');
+  if (jsonStart === -1) throw new Error('No JSON object found');
+
+  return JSON.parse(trimmed.slice(jsonStart));
+}
+
 function readJson(path) {
   try {
-    return JSON.parse(readFileSync(path, 'utf8'));
+    return parsePossiblyWrappedJson(readFileSync(path, 'utf8'));
   } catch (error) {
     blockers.push(`${path} could not be read as JSON: ${error.message}`);
     return null;

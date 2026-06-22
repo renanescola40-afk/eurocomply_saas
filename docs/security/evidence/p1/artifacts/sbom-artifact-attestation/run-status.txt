@@ -1,0 +1,7 @@
+Run status reference for P1-06
+
+Workflow run id: 27779627063
+Conclusion: success
+Control: P1-06 SBOM + artifact attestation
+
+No secrets are stored here.

@@ -1,26 +1,74 @@
+import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
-import { getCurrentUser } from '@/server/queries/auth';
-import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { listDocuments } from '@/server/queries/documents';
-import { listAuditEventsForUser, listNotificationsForUser } from '@/server/queries/compliance-activity';
+import { collectOrganizationDataExport } from '@/server/privacy/gdpr';
 import { createAuditEvent } from '@/server/queries/audit-events';
+import { getCurrentUser } from '@/server/queries/auth';
 import { createNotification } from '@/server/queries/notifications';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreDownload, noStoreJson } from '@/server/security/no-store';
+import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
 
-export async function GET() {
+function validateRequestedOrganizationId(value: string | null) {
+  if (value === null) return null;
+  const trimmed = value.trim();
+  return /^[a-zA-Z0-9_-]{1,128}$/.test(trimmed) ? trimmed : 'invalid';
+}
+
+export async function GET(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ error: 'unauthorized' }, { status: 401 });
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
+    return noStoreJson({ error: 'organization_required' }, { status: 404 });
+  }
+
+  const rateLimit = await checkDistributedRateLimit({
+    key: `gdpr:export:${organization.id}:${user.id}`,
+    limit: 10,
+    windowMs: 60 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit);
+  }
+
+  const requestedOrganizationId = validateRequestedOrganizationId(new URL(request.url).searchParams.get('organizationId'));
+  if (requestedOrganizationId === 'invalid') {
+    return noStoreJson({ error: 'invalid_organization_id' }, { status: 400 });
+  }
+
+  if (requestedOrganizationId && requestedOrganizationId !== organization.id) {
+    await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'gdpr_export_denied',
+      entityType: 'organization',
+      entityId: requestedOrganizationId,
+      metadata: { reason: 'cross_tenant_export_denied', currentOrganizationId: organization.id },
+    });
+
+    return noStoreJson({ error: 'cross_tenant_export_denied' }, { status: 403 });
+  }
+
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: 'export_data',
+  });
+
+  if (!permission.ok) {
+    return permissionDeniedResponse(permission);
   }
 
   const entitlementCheck = await assertGdprSelfServiceEnabled(organization.id);
@@ -35,11 +83,24 @@ export async function GET() {
     }, entitlementCheck.status);
   }
 
-  const [documents, auditEvents, notifications] = await Promise.all([
-    listDocuments(organization.id),
-    listAuditEventsForUser(user.id),
-    listNotificationsForUser(user.id),
-  ]);
+  const stepUp = await requireStepUpForRequest({
+    request,
+    action: 'export_data',
+    userId: user.id,
+    organizationId: organization.id,
+  });
+
+  if (!stepUp.ok) {
+    return stepUp.response;
+  }
+
+  const exportBody = await collectOrganizationDataExport({
+    organization,
+    subject: {
+      userId: user.id,
+      email: user.email,
+    },
+  });
 
   await createAuditEvent({
     organizationId: organization.id,
@@ -47,7 +108,16 @@ export async function GET() {
     action: 'gdpr_export_requested',
     entityType: 'organization',
     entityId: organization.id,
-    metadata: { scope: 'organization_export', plan: entitlementCheck.entitlements.plan },
+    metadata: {
+      scope: 'organization_export',
+      plan: entitlementCheck.entitlements.plan,
+      role: permission.role,
+      tableKeys: Object.keys(exportBody.tables),
+      unavailableTables: exportBody.unavailableTables,
+      stepUpAction: stepUp.assessment.action,
+      stepUpVerifiedAt: stepUp.assessment.verifiedAt,
+      stepUpTokenType: 'signed_hmac',
+    },
   });
 
   await createNotification({
@@ -58,23 +128,21 @@ export async function GET() {
   });
 
   const body = {
-    generatedAt: new Date().toISOString(),
-    subject: {
-      userId: user.id,
-      email: user.email,
-    },
-    organization,
-    documents,
-    auditEvents,
-    notifications,
-    note: 'Exportação simulada para GDPR Artigo 20. Adicionar riscos, fornecedores, tarefas e ficheiros quando os schemas estiverem finalizados.',
+    ...exportBody,
+    stepUp: publicStepUpSummary(stepUp.assessment),
   };
+
+  const fileName = sanitizeDocumentDownloadFileName(
+    `eurocomply-gdpr-export-${organization.slug ?? organization.id}.json`,
+  );
 
   return noStoreDownload(JSON.stringify(body, null, 2), {
     status: 200,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Content-Disposition': `attachment; filename="eurocomply-gdpr-export-${organization.slug ?? organization.id}.json"`,
+      'Content-Disposition': `attachment; filename="${fileName}"`,
+      'X-Content-Type-Options': 'nosniff',
+      'X-Robots-Tag': 'noindex, nofollow',
     },
   });
 }

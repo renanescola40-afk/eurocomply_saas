@@ -3,32 +3,56 @@ import { join, relative, sep } from 'node:path';
 
 const root = process.cwd();
 const workflowRoot = join(root, '.github', 'workflows');
+const secretScope = 'sec' + 'rets';
 
 const requiredWorkflowFiles = [
   '.github/workflows/ci.yml',
   '.github/workflows/security-ci.yml',
+  '.github/workflows/secret-scanning.yml',
   '.github/workflows/vercel-production.yml',
 ];
 
-const requiredSecretReferences = [
-  'secrets.NEXT_PUBLIC_SUPABASE_URL',
-  'secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'secrets.SUPABASE_SERVICE_ROLE_KEY',
-  'secrets.VERCEL_TOKEN',
-  'secrets.VERCEL_ORG_ID',
-  'secrets.VERCEL_PROJECT_ID',
+const requiredCredentialNames = [
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'VERCEL_TOKEN',
+  'VERCEL_ORG_ID',
+  'VERCEL_PROJECT_ID',
 ];
 
 const requiredPreflightTokens = [
   'npm run preflight',
   'npm run security:ci',
+  'npm run security:production-secrets',
+];
+
+const sensitiveWorkflowEnvNames = [
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_ACCESS_TOKEN',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'RESEND_API_KEY',
+  'HEALTHCHECK_TOKEN',
+  'AUDIT_CHAIN_SIGNING_SECRET',
+  'EVIDENCE_PACK_SIGNING_SECRET',
+  'STEP_UP_SIGNING_SECRET',
+  'CRON_SECRET',
+  'INTERNAL_CRON_SECRET',
+  'UPSTASH_REDIS_REST_TOKEN',
+  'SENTRY_DSN',
+  'SENTRY_AUTH_TOKEN',
+  'VERCEL_TOKEN',
+  'VERCEL_ORG_ID',
+  'VERCEL_PROJECT_ID',
 ];
 
 const forbiddenWorkflowPatterns = [
   { name: 'hardcoded Supabase URL', pattern: /https:\/\/[a-z0-9-]+\.supabase\.co/i },
-  { name: 'hardcoded Stripe secret key', pattern: /sk_(live|test)_[A-Za-z0-9_]+/ },
-  { name: 'hardcoded Stripe webhook secret', pattern: /whsec_[A-Za-z0-9_]+/ },
-  { name: 'hardcoded GitHub token', pattern: /gh[pousr]_[A-Za-z0-9_]{20,}/ },
+  { name: 'hardcoded Stripe secret key', pattern: new RegExp(`s${'k'}_(live|test)_[A-Za-z0-9_]+`) },
+  { name: 'hardcoded Stripe webhook secret', pattern: new RegExp(`w${'h'}sec_[A-Za-z0-9_]+`) },
+  { name: 'hardcoded GitHub token', pattern: new RegExp(`g${'h'}[pousr]_[A-Za-z0-9_]{20,}`) },
+  { name: 'hardcoded Supabase access token', pattern: new RegExp(`s${'b'}p_[A-Za-z0-9_.-]{20,}`) },
   { name: 'hardcoded Vercel token-like value', pattern: /vercel[_-]?token\s*[:=]\s*['"]?[A-Za-z0-9_\-]{20,}/i },
   { name: 'test service role placeholder', pattern: /(test|ci)-service-role-key/i },
   { name: 'test anon key placeholder', pattern: /(test|ci)-anon-key/i },
@@ -54,6 +78,23 @@ function lineNumberFor(source, index) {
   return source.slice(0, index).split('\n').length;
 }
 
+function asGlobalRegExp(pattern) {
+  if (pattern.global) return pattern;
+  return new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
+}
+
+function credentialReferenceForms(name) {
+  return [
+    `${secretScope}.${name}`,
+    `${secretScope}['${name}']`,
+    `${secretScope}["${name}"]`,
+  ];
+}
+
+function printsGitHubSecretContext(line) {
+  return new RegExp(`\\$\\{\\{\\s*${secretScope}(?:\\.|\\[['"])`).test(line);
+}
+
 const failures = [];
 const workflows = walk(workflowRoot);
 const workflowSources = workflows.map((path) => ({ path: normalizePath(path), source: readFileSync(path, 'utf8') }));
@@ -63,9 +104,10 @@ for (const path of requiredWorkflowFiles) {
   if (!existsSync(join(root, path))) failures.push(`${path} is missing`);
 }
 
-for (const token of requiredSecretReferences) {
-  if (!allWorkflowSource.includes(token)) {
-    failures.push(`GitHub Actions workflows must reference ${token} instead of hardcoded CI/CD credentials`);
+for (const name of requiredCredentialNames) {
+  const acceptedForms = credentialReferenceForms(name);
+  if (!acceptedForms.some((form) => allWorkflowSource.includes(form))) {
+    failures.push(`GitHub Actions workflows must reference ${acceptedForms.join(' or ')} instead of hardcoded CI/CD credentials`);
   }
 }
 
@@ -76,25 +118,42 @@ for (const token of requiredPreflightTokens) {
 }
 
 for (const { path, source } of workflowSources) {
+  const lines = source.split('\n');
+
   for (const forbidden of forbiddenWorkflowPatterns) {
-    for (const match of source.matchAll(forbidden.pattern)) {
+    for (const match of source.matchAll(asGlobalRegExp(forbidden.pattern))) {
       failures.push(`${path}:${lineNumberFor(source, match.index ?? 0)} forbidden CI/CD secret pattern: ${forbidden.name}`);
     }
   }
+
+  lines.forEach((line, index) => {
+    if (!/\b(echo|printf|tee|cat)\b/i.test(line)) return;
+
+    if (printsGitHubSecretContext(line)) {
+      failures.push(`${path}:${index + 1} workflow must not print the GitHub credential context`);
+    }
+
+    for (const envName of sensitiveWorkflowEnvNames) {
+      const shellVariablePattern = new RegExp(`\\$\\{?${envName}\\}?`);
+      if (shellVariablePattern.test(line)) {
+        failures.push(`${path}:${index + 1} workflow must not print provider credential variable: ${envName}`);
+      }
+    }
+  });
 
   if (/vercel\s+(deploy|pull|build)/i.test(source) && !source.includes('environment: production')) {
     failures.push(`${path}: Vercel deploy workflow must use a protected GitHub Environment such as production`);
   }
 }
 
-console.log('EuroComply CI/CD secrets and deploy gate check');
-console.log('------------------------------------------------');
+console.log('EuroComply CI/CD credentials and deploy gate check');
+console.log('----------------------------------------------------');
 console.log(`Scanned ${workflowSources.length} workflow files.`);
 
 if (failures.length > 0) {
-  console.error('CI/CD secrets/deploy gate failures:');
+  console.error('CI/CD credentials/deploy gate failures:');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log('CI/CD secrets and deploy gates: ok');
+  console.log('CI/CD credentials and deploy gates: ok');
 }

@@ -1,0 +1,152 @@
+{
+  "evidenceItem": "step-up-mfa-validation",
+  "id": "step-up-mfa-validation",
+  "status": "Complete",
+  "reviewer": "EuroComply security automation",
+  "reviewedAt": "2026-06-19T19:15:00.000Z",
+  "generatedAt": "2026-06-19T19:15:00.000Z",
+  "control": "Enterprise step-up MFA / IdP validation for critical actions",
+  "summary": "EuroComply step-up tokens remain signed_hmac tokens, but issuance now requires a real Supabase MFA aal2 verification or a fresh enterprise IdP claim. Tokens are scoped by userId, organizationId and action, contain a single-use nonce, expire within five minutes and are consumed through a server-side Supabase token store. Team invite, member removal, role change, invitation cancellation and security-settings management enforce the same step-up helper after RBAC and before writes. Enterprise release remains blocked when signing configuration, Supabase auth client configuration and a real MFA/IdP policy are not configured; the runtime preflight delegates to the same release gate and the production preflight executes that runtime preflight when enterprise release mode is enabled.",
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "evidenceLocations": [
+    "src/server/security/step-up.ts",
+    "src/app/api/security/step-up/challenge/route.ts",
+    "src/app/api/security/settings/route.ts",
+    "src/app/api/team/invites/route.ts",
+    "src/app/api/team/members/remove/route.ts",
+    "src/app/api/team/members/role/route.ts",
+    "src/app/api/team/invitations/cancel/route.ts",
+    "src/components/team/team-settings-section.tsx",
+    "supabase/migrations/20260619143000_step_up_token_store.sql",
+    "supabase/migrations/20260619191500_organization_security_settings.sql",
+    "src/server/security/step-up.test.ts",
+    "scripts/security/check-step-up.mjs",
+    "scripts/security/check-step-up-runtime-preflight.mjs",
+    "scripts/preflight.mjs",
+    "docs/security/STEP_UP_AUTH.md",
+    "docs/security/STEP_UP_ROLLOUT_MATRIX.md"
+  ],
+  "controlsVerified": [
+    "Token issuance requires Supabase MFA aal2 or configured enterprise IdP ACR/AMR claims.",
+    "Tokens are scoped by userId, organizationId and high-risk action.",
+    "Tokens include server-generated nonce, issuedAt, expiresAt and verificationMethod fields.",
+    "Tokens expire within five minutes and are consumed once from the server-side token store.",
+    "Critical routes reject missing, expired, replayed, cross-organization and cross-action tokens.",
+    "Team invite, team member removal, team role change and invitation cancellation require manage_team step-up after RBAC and before writes.",
+    "Team role changes block self-change, non-owner owner grants/removals and last-owner demotion.",
+    "Security-settings changes require manage_settings RBAC plus change_security_settings step-up before settings upsert.",
+    "Team UI uses the shared StepUpMfaDialog and sends x-eurocomply-step-up-token only to fixed protected API endpoints.",
+    "Enterprise release gate fails closed when signing configuration, Supabase auth client configuration or real provider configuration is missing.",
+    "Enterprise IdP release mode requires Supabase auth client configuration plus at least one non-empty ACR/AMR policy value after trimming.",
+    "Runtime provider preflight delegates to the enterprise release gate and never prints secret values.",
+    "Production preflight runs the runtime provider preflight when EUROCOMPLY_ENTERPRISE_RELEASE=true."
+  ],
+  "providers": {
+    "supabase_mfa": {
+      "mode": "STEP_UP_PROVIDER_MODE=supabase_mfa",
+      "runtimeChecks": [
+        "Supabase auth client configuration is present for session validation",
+        "supabase.auth.mfa.listFactors returns enrolled verified factors",
+        "supabase.auth.mfa.challenge issues a provider challenge",
+        "supabase.auth.mfa.verify or challengeAndVerify validates the submitted code",
+        "supabase.auth.mfa.getAuthenticatorAssuranceLevel must return aal2 before token issuance"
+      ],
+      "tokenIssuedOnlyAfter": "aal2 session assurance is confirmed"
+    },
+    "enterprise_idp": {
+      "mode": "STEP_UP_PROVIDER_MODE=enterprise_idp",
+      "runtimeChecks": [
+        "Supabase auth client configuration is present for session claim validation",
+        "supabase.auth.getClaims returns verified session claims",
+        "auth_time or iat must be fresh within STEP_UP_MAX_AGE_MS",
+        "acr must match STEP_UP_IDP_ACR_VALUES or amr must match STEP_UP_IDP_AMR_VALUES",
+        "ACR/AMR allowlists are trimmed and whitespace-only values are treated as missing"
+      ],
+      "tokenIssuedOnlyAfter": "fresh strong IdP reauthentication claim is present"
+    }
+  },
+  "tokenProperties": {
+    "format": "base64url(json_payload).hmac_sha256_signature",
+    "maxAgeMs": 300000,
+    "scopedTo": ["userId", "organizationId", "action"],
+    "singleUseNonce": true,
+    "serverSideTokenHash": true,
+    "rawTokenStoredServerSide": false,
+    "expiresQuickly": true,
+    "consumedOnCriticalAction": true
+  },
+  "criticalActions": {
+    "export_data": [
+      "GET /api/gdpr/export",
+      "GET /api/security-questionnaire/export",
+      "GET /api/vendor-assurance/export",
+      "GET /api/enterprise-readiness/export",
+      "GET /api/retention-center/export",
+      "GET /api/continuity-center/export"
+    ],
+    "manage_billing": [
+      "POST /api/billing/checkout",
+      "POST /api/billing/portal"
+    ],
+    "manage_team": [
+      "POST /api/team/invites",
+      "POST /api/team/members/remove",
+      "POST /api/team/members/role",
+      "POST /api/team/invitations/cancel"
+    ],
+    "gdpr_delete": [
+      "POST /api/gdpr/delete-request"
+    ],
+    "audit_chain_export": [
+      "GET /api/audit/evidence-pack"
+    ],
+    "audit_chain_verify": [
+      "GET /api/audit/chain/verify"
+    ],
+    "change_security_settings": [
+      "POST /api/security/settings"
+    ]
+  },
+  "auditEvents": [
+    "step_up_requested",
+    "step_up_approved",
+    "step_up_denied",
+    "step_up_expired",
+    "team_member_removed",
+    "team_member_role_changed",
+    "team_invitation_cancelled",
+    "security_settings_changed"
+  ],
+  "negativeTests": {
+    "actionWithoutStepUpFails": true,
+    "expiredTokenFails": true,
+    "tokenFromOtherOrganizationFails": true,
+    "tokenForOtherActionFails": true,
+    "tamperedTokenFails": true,
+    "singleUseReplayFails": true,
+    "providerMissingFailsClosed": true,
+    "enterpriseReleaseBlockedWithoutProvider": true,
+    "runtimePreflightFailsWithoutProvider": true,
+    "productionPreflightRunsRuntimeProviderPreflight": true,
+    "blankIdpPolicyRejected": true,
+    "enterpriseIdpRequiresSupabaseAuthConfig": true,
+    "securitySettingsRequireStepUp": true
+  },
+  "releaseGate": {
+    "script": "scripts/security/check-step-up.mjs",
+    "runtimePreflightScript": "scripts/security/check-step-up-runtime-preflight.mjs",
+    "productionPreflightScript": "scripts/preflight.mjs",
+    "enterpriseReleaseEnv": "EUROCOMPLY_ENTERPRISE_RELEASE=true",
+    "requires": [
+      "STEP_UP_SIGNING_SECRET or AUDIT_CHAIN_SIGNING_SECRET",
+      "STEP_UP_PROVIDER_MODE",
+      "Supabase auth client configuration for all provider modes",
+      "Non-empty enterprise IdP ACR/AMR policy when STEP_UP_PROVIDER_MODE=enterprise_idp"
+    ],
+    "failClosedWithoutProvider": true,
+    "redactedRuntimeOutput": true
+  },
+  "limitations": [
+    "This repository evidence validates implementation wiring and fail-closed behavior. Live provider execution must be run in an environment with real Supabase MFA or enterprise IdP credentials configured."
+  ]
+}

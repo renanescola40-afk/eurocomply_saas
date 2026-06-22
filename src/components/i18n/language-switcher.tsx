@@ -14,6 +14,8 @@ const languageLabels: Record<Locale, string> = {
   de: 'Sprache auswählen',
 };
 
+const localeStorageKey = 'risck-comply-locale';
+
 function switchLocalePath(pathname: string, nextLocale: Locale) {
   const parts = pathname.split('/').filter(Boolean);
   if (parts.length > 0 && locales.includes(parts[0] as Locale)) {
@@ -30,13 +32,13 @@ function withCurrentLocationState(path: string) {
 
 function persistLocale(locale: Locale) {
   try {
-    localStorage.setItem('eurocomply-locale', locale);
+    localStorage.setItem(localeStorageKey, locale);
     document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax`;
   } catch {}
 }
 
 function persistLocaleScript(locale: Locale) {
-  return `try{localStorage.setItem('eurocomply-locale','${locale}');document.cookie='NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax'}catch(e){}`;
+  return `try{localStorage.setItem('${localeStorageKey}','${locale}');document.cookie='NEXT_LOCALE=${locale};path=/;max-age=31536000;samesite=lax'}catch(e){}`;
 }
 
 type LanguageSwitcherProps = {

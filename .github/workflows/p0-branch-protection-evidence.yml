@@ -21,6 +21,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Validate committed branch protection evidence policy
+        run: node scripts/security/check-branch-protection-evidence.mjs
+
       - name: Generate branch protection evidence JSON
         uses: actions/github-script@v7
         with:
@@ -40,14 +43,18 @@ jobs:
             }
 
             const requiredChecks = [
-              'Full Security Suite / Run expanded security gates',
-              'Semgrep / Run Semgrep SAST',
+              'Full Security Suite / Core CI, build and npm audit',
+              'Full Security Suite / Actionlint',
+              'Full Security Suite / Secret scanning (Gitleaks)',
+              'Full Security Suite / Semgrep SAST',
+              'Full Security Suite / CodeQL',
+              'Full Security Suite / Dependency Review',
+              'Full Security Suite / OSSF Scorecard',
+              'Full Security Suite / Enterprise merge/deploy gate',
+              'CI / quality',
+              'EuroComply Security CI / Run security gates, typecheck and tests',
               'Gitleaks / Scan repository for accidental secret exposure',
-              'Actionlint / Lint GitHub Actions workflows',
-              'OSSF Scorecard / Run OSSF Scorecard',
-              'CodeQL',
-              'Dependency Review',
-              'P0 Runtime Evidence / Validate P0 runtime evidence register',
+              'Secret Scanning / Production secret readiness gate',
             ];
 
             const contexts = protection.required_status_checks?.contexts ?? [];
@@ -57,23 +64,24 @@ jobs:
 
             const controlsVerified = [
               protection.required_pull_request_reviews ? 'Pull requests are required before merging' : null,
+              protection.required_pull_request_reviews?.required_approving_review_count >= 1 ? 'At least one approving review is required' : null,
               protection.required_pull_request_reviews?.require_code_owner_reviews ? 'CODEOWNERS review is required' : null,
               protection.required_status_checks ? 'Required status checks are enforced' : null,
               protection.required_conversation_resolution ? 'Conversations must be resolved before merge' : null,
               protection.allow_force_pushes?.enabled === false ? 'Force pushes are blocked' : null,
               protection.allow_deletions?.enabled === false ? 'Branch deletion is blocked' : null,
-              missingChecks.length === 0 ? 'All documented P0 required checks are configured' : null,
+              missingChecks.length === 0 ? 'All documented enterprise required checks are configured' : null,
             ].filter(Boolean);
 
-            const complete = controlsVerified.length === 7;
+            const complete = controlsVerified.length === 8;
             const evidence = {
               evidenceItem: 'branch-protection-main',
               status: complete ? 'Complete' : 'Exception',
               reviewer: '@renansilva2002',
               reviewedAt: new Date().toISOString(),
               summary: complete
-                ? 'GitHub branch protection for main was read through the GitHub API and matched the P0 protection requirements.'
-                : `GitHub branch protection for main was read through the GitHub API, but ${7 - controlsVerified.length} required control(s) are missing or not detectable.`,
+                ? 'GitHub branch protection for main was read through the GitHub API and matched the enterprise protection requirements.'
+                : `GitHub branch protection for main was read through the GitHub API, but ${8 - controlsVerified.length} required control(s) are missing or not detectable.`,
               evidenceLocations: [
                 `GitHub Actions run: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
                 'Artifact: p0-branch-protection-evidence/branch-protection-main.generated.json',
@@ -93,7 +101,7 @@ jobs:
               evidence.exception = {
                 riskOwner: '@renansilva2002',
                 rationale: 'Generated evidence draft detected that branch protection is not fully configured or not fully visible to the workflow token.',
-                compensatingControls: ['Do not mark this P0 item Complete until branch protection evidence is complete.'],
+                compensatingControls: ['Do not mark this evidence Complete until branch protection evidence is complete and Full Security Suite is required.'],
                 expiryDate: 'YYYY-MM-DD',
                 approvalReference: 'P0 tracking issue #76',
               };

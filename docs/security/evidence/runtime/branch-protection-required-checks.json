@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "evidenceItem": "required-status-checks",
+  "status": "Exception",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "branch": "main",
+  "evidence_type": "branch-protection-required-checks",
+  "captured_at": "2026-06-20T00:00:00.000+01:00",
+  "reviewer": "@renansilva2002",
+  "reviewedAt": "2026-06-20T00:00:00.000+01:00",
+  "source": "repo-policy-evidence",
+  "policy_document": "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
+  "summary": "Required status checks and branch protection controls are documented for the main branch. This evidence remains an Exception until repository administrators confirm that the GitHub branch protection or ruleset configuration exactly matches the required Full Security Suite checks.",
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "evidenceLocations": [
+    "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
+    "docs/security/evidence/runtime/branch-protection-required-checks.json",
+    "scripts/security/check-branch-protection-evidence.mjs",
+    ".github/workflows/full-security-suite.yml"
+  ],
+  "branch_protection": {
+    "protect_branch": true,
+    "require_pull_request": true,
+    "required_approving_reviews": 1,
+    "require_code_owner_review": true,
+    "dismiss_stale_reviews": true,
+    "require_conversation_resolution": true,
+    "require_status_checks": true,
+    "require_up_to_date_branch": true,
+    "block_force_pushes": true,
+    "block_deletions": true,
+    "restrict_direct_pushes": true
+  },
+  "required_status_checks": [
+    "Full Security Suite / Core CI, build and npm audit",
+    "Full Security Suite / Actionlint",
+    "Full Security Suite / Secret scanning (Gitleaks)",
+    "Full Security Suite / Semgrep SAST",
+    "Full Security Suite / CodeQL",
+    "Full Security Suite / Dependency Review",
+    "Full Security Suite / OSSF Scorecard",
+    "Full Security Suite / Enterprise merge/deploy gate",
+    "CI / quality",
+    "RISCK COMPLY Security CI / Run security gates, typecheck and tests",
+    "Gitleaks / Scan repository for accidental secret exposure",
+    "Secret Scanning / Production secret readiness gate"
+  ],
+  "release_blockers": {
+    "full_security_suite_required": true,
+    "lint_failure_blocks": true,
+    "typecheck_failure_blocks": true,
+    "test_failure_blocks": true,
+    "build_failure_blocks": true,
+    "security_ci_failure_blocks": true,
+    "secret_scanning_failure_blocks": true,
+    "untriaged_high_or_critical_npm_audit_blocks": true
+  },
+  "sbom": {
+    "generated_by_ci": true,
+    "artifact_name": "risck-comply-sbom",
+    "runtime_path": "docs/security/evidence/runtime/sbom.json"
+  },
+  "exception": {
+    "riskOwner": "@renansilva2002",
+    "rationale": "Repository policy evidence is committed, but the GitHub branch protection or ruleset configuration must be verified by an administrator before this evidence can be marked Complete.",
+    "compensatingControls": [
+      "Do not merge or release unless Full Security Suite / Enterprise merge/deploy gate is green.",
+      "Keep docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md aligned with required GitHub status checks.",
+      "Run .github/workflows/p0-branch-protection-evidence.yml after branch protection is configured and review the generated artifact."
+    ],
+    "expiresAt": "2026-06-27",
+    "approvalReference": "P0 branch protection required checks rollout"
+  },
+  "verification_note": "This file records the required policy and evidence contract. Repository administrators must keep the GitHub branch protection or ruleset configuration aligned with this file before release promotion."
+}

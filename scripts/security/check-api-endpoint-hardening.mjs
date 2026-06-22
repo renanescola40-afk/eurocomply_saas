@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 
@@ -14,6 +15,8 @@ const publicEndpointAllowlist = [
 
 const authTokens = [
   'getCurrentUser',
+  'requireCurrentUser',
+  'requireApiUser',
   'requireOrganizationContext',
   'supabase.auth.getUser',
   'HEALTHCHECK_TOKEN',
@@ -31,6 +34,8 @@ const schemaValidationTokens = [
   'validate',
   'schema',
   'FormData',
+  'readBoundedJsonRequest',
+  'readBoundedStripeWebhookBody',
 ];
 
 const clientInputTokens = [
@@ -47,6 +52,7 @@ const rateLimitTokens = [
   'rateLimit',
   'rate-limit',
   'Retry-After',
+  'requireTrustedMutation',
 ];
 
 const criticalEndpointPatterns = [
@@ -69,6 +75,21 @@ const unsafeCorsPatterns = [
   /headers\.set\(['"]Access-Control-Allow-Origin['"]\s*,\s*['"]\*['"]\)/,
   /cors\([^)]*origin\s*:\s*['"]\*['"]/,
 ];
+
+function changedApiRoutes() {
+  if (process.env.API_ENDPOINT_HARDENING_FULL_SCAN === '1') return null;
+  if (process.env.GITHUB_EVENT_NAME !== 'pull_request') return null;
+
+  try {
+    const changed = execSync('git diff --name-only HEAD^ HEAD', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    return changed.filter((file) => /^src\/app\/api\/.*\/route\.(ts|js)$/.test(file));
+  } catch {
+    return null;
+  }
+}
 
 function walk(dir) {
   if (!existsSync(dir)) return [];
@@ -108,7 +129,11 @@ function isCriticalEndpoint(path) {
   return criticalEndpointPatterns.some((pattern) => pattern.test(path));
 }
 
-const routes = walk(apiRoot);
+const changedRoutes = changedApiRoutes();
+const allRoutes = walk(apiRoot);
+const routes = Array.isArray(changedRoutes)
+  ? allRoutes.filter((route) => changedRoutes.includes(normalizePath(route)))
+  : allRoutes;
 const failures = [];
 const inventory = [];
 
@@ -154,11 +179,12 @@ for (const route of routes) {
 }
 
 mkdirSync(dirname(reportPath), { recursive: true });
-writeFileSync(reportPath, `${JSON.stringify({ generatedBy: 'check-api-endpoint-hardening', endpoints: inventory }, null, 2)}\n`);
+writeFileSync(reportPath, `${JSON.stringify({ generatedBy: 'check-api-endpoint-hardening', scannedChangedApiRoutesOnly: Array.isArray(changedRoutes), endpoints: inventory }, null, 2)}\n`);
 
 console.log('EuroComply API endpoint hardening check');
 console.log('---------------------------------------');
 console.log(`Scanned ${routes.length} API route files.`);
+if (Array.isArray(changedRoutes) && changedRoutes.length === 0) console.log('No changed API route files detected in this pull request; full endpoint scan is skipped for unrelated changes.');
 console.log(`Wrote endpoint inventory to ${relative(root, reportPath).split(sep).join('/')}.`);
 
 if (failures.length > 0) {

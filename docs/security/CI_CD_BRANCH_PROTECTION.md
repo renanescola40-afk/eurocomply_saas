@@ -2,6 +2,8 @@
 
 This runbook defines the required GitHub, Vercel and Supabase release controls for EuroComply.
 
+For the canonical required-branch-protection checklist, use `docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md`.
+
 ## GitHub Secrets and Variables
 
 Configure these values in GitHub Environments, not in workflow YAML files.
@@ -46,10 +48,13 @@ Additional production deploy secrets:
 
 Production deploys must run:
 
-1. `npm run preflight`
-2. `npm run security:ci`
-3. `npm run build`
-4. Vercel pull/build/deploy with `--prod`
+1. `npm ci`
+2. `npm run preflight`
+3. `npm run security:ci`
+4. `npm run build`
+5. Vercel pull/build/deploy with `--prod`
+
+Production release is blocked unless the Full Security Suite is green for the commit being deployed.
 
 ## Vercel
 
@@ -78,23 +83,54 @@ Use Supabase project settings for auth/session controls and database/storage pol
 
 Protect `main` and any production release branch.
 
-Recommended branch protection rules:
+Required branch protection rules:
 
 - Require pull request before merging.
 - Require at least one approving review.
 - Dismiss stale approvals when new commits are pushed.
 - Require review from Code Owners for security-sensitive paths.
-- Require status checks to pass before merge:
-  - `CI / quality`
-  - `EuroComply Security CI / Run security gates, typecheck and tests`
-  - CodeQL
-  - Dependency Review
+- Require status checks to pass before merge.
 - Require branches to be up to date before merging.
 - Restrict who can push to matching branches.
 - Block force pushes.
 - Block branch deletion.
 - Require conversation resolution before merge.
 - Require signed commits where feasible.
+
+### Required status checks
+
+Configure the following status checks as required:
+
+- `Full Security Suite / Core CI, build and npm audit`
+- `Full Security Suite / Actionlint`
+- `Full Security Suite / Secret scanning (Gitleaks)`
+- `Full Security Suite / Semgrep SAST`
+- `Full Security Suite / CodeQL`
+- `Full Security Suite / Dependency Review`
+- `Full Security Suite / OSSF Scorecard`
+- `Full Security Suite / Enterprise merge/deploy gate`
+- `CI / quality`
+- `EuroComply Security CI / Run security gates, typecheck and tests`
+- `Secret Scanning / Gitleaks repository and history scan`
+- `Secret Scanning / Production secret readiness gate`
+
+The `Full Security Suite / Enterprise merge/deploy gate` check is the final enterprise blocker. It must remain required because it fails unless lint, typecheck, tests, build, npm audit, application security CI, route quality, Actionlint, Gitleaks, Semgrep, CodeQL, Dependency Review and OSSF Scorecard are all green.
+
+## Branch protection evidence
+
+Required evidence file:
+
+```text
+docs/security/evidence/runtime/branch-protection-required-checks.json
+```
+
+Required validation command:
+
+```bash
+node scripts/security/check-branch-protection-evidence.mjs
+```
+
+Do not mark a PR or release as enterprise-ready when this evidence is missing, stale, or inconsistent with GitHub branch protection settings.
 
 ## Production environment protection
 
@@ -111,6 +147,6 @@ If a production secret is exposed:
 
 1. Revoke/rotate the secret at the provider.
 2. Update GitHub Environment Secret and Vercel Environment Variable.
-3. Re-run `npm run security:ci`.
+3. Re-run `npm run security:ci` and the Full Security Suite.
 4. Review audit logs for suspicious deploys or data access.
 5. Document the incident in the incident response log.

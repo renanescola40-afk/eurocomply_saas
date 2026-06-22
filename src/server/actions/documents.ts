@@ -1,10 +1,22 @@
 import { z } from 'zod';
-import { DOCUMENT_BUCKET, buildDocumentStoragePath, validateDocumentFile } from '@/lib/documents/upload';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { createAuditEvent } from '@/server/queries/audit-events';
+import {
+  CONTROLLED_DOCUMENT_STORAGE_BUCKET as DOCUMENT_BUCKET,
+  MAX_UPLOAD_BYTES,
+  UPLOAD_SECURITY_AUDIT_EVENTS,
+  assertTenantStoragePathInOrganization,
+  buildTenantScopedUploadPath,
+  buildUploadSecurityAuditMetadata,
+  scanValidatedUploadForMalware,
+  shouldBlockUploadForMalwareScan,
+  validateUploadSecurityFile,
+  type MalwareScanResult,
+} from '@/server/security/upload-security';
 
 const createDocumentSchema = z.object({
   organizationId: z.string().uuid(),
@@ -27,10 +39,175 @@ const uploadDocumentSchema = z.object({
 export type CreateDocumentInput = z.input<typeof createDocumentSchema>;
 export type UploadDocumentInput = z.input<typeof uploadDocumentSchema>;
 
+function blockedScanError(scan: MalwareScanResult) {
+  if (scan.status === 'infected' || scan.status === 'suspicious') {
+    return new Error('Document upload was blocked because the scanner reported unsafe content.');
+  }
+
+  return new Error('Document upload was blocked because malware scanning did not return a clean result.');
+}
+
+function uploadSecurityColumns(metadata: Record<string, unknown> | undefined, fallbackMimeType: string | null, fallbackSizeBytes: number | null) {
+  return {
+    scan_status: typeof metadata?.scanStatus === 'string' ? metadata.scanStatus : null,
+    scan_provider: typeof metadata?.scanProvider === 'string' ? metadata.scanProvider : null,
+    scan_required: typeof metadata?.scanRequired === 'boolean' ? metadata.scanRequired : null,
+    scan_checked_at: typeof metadata?.scanCheckedAt === 'string' ? metadata.scanCheckedAt : null,
+    file_hash: typeof metadata?.fileHash === 'string' ? metadata.fileHash : null,
+    file_size: typeof metadata?.fileSize === 'number' ? metadata.fileSize : fallbackSizeBytes,
+    mime_detected: typeof metadata?.mimeDetected === 'string' ? metadata.mimeDetected : fallbackMimeType,
+  };
+}
+
+function withoutRawStoragePath(metadata: Record<string, unknown> | undefined) {
+  const safeMetadata = { ...(metadata ?? {}) };
+  delete safeMetadata.storagePath;
+  return safeMetadata;
+}
+
+async function auditUploadRequested(input: {
+  organizationId: string;
+  actorUserId: string;
+  file: File;
+}) {
+  const metadata = buildUploadSecurityAuditMetadata({
+    organizationId: input.organizationId,
+    actorUserId: input.actorUserId,
+    claimedMimeType: input.file.type,
+    fileSize: input.file.size,
+    accessPurpose: 'upload',
+  });
+
+  await Promise.all([
+    createAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadRequested,
+      entityType: 'document',
+      entityId: input.organizationId,
+      metadata,
+    }),
+    logAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadRequested,
+      entityType: 'document',
+      entityId: input.organizationId,
+      metadata,
+    }),
+  ]);
+}
+
+async function auditUploadScanned(input: {
+  organizationId: string;
+  actorUserId: string;
+  scan: MalwareScanResult;
+  fileHash: string;
+  fileSize: number;
+  claimedMimeType: string;
+  mimeDetected: string;
+  declaredSignatureMatches: boolean;
+}) {
+  const metadata = buildUploadSecurityAuditMetadata({
+    organizationId: input.organizationId,
+    actorUserId: input.actorUserId,
+    scan: input.scan,
+    fileHash: input.fileHash,
+    fileSize: input.fileSize,
+    claimedMimeType: input.claimedMimeType,
+    mimeDetected: input.mimeDetected,
+    declaredSignatureMatches: input.declaredSignatureMatches,
+    accessPurpose: 'upload',
+  });
+
+  await Promise.all([
+    createAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadScanned,
+      entityType: 'document',
+      entityId: input.organizationId,
+      metadata,
+    }),
+    logAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadScanned,
+      entityType: 'document',
+      entityId: input.organizationId,
+      metadata,
+    }),
+  ]);
+}
+
+async function auditUploadRejection(input: {
+  organizationId: string;
+  actorUserId: string;
+  reason: string;
+  file: File;
+  fileHash?: string | null;
+  scan?: MalwareScanResult | null;
+  detectedMimeType?: string | null;
+  declaredSignatureMatches?: boolean | null;
+}) {
+  const metadata = {
+    ...buildUploadSecurityAuditMetadata({
+      reason: input.reason,
+      claimedMimeType: input.file.type,
+      mimeDetected: input.detectedMimeType ?? null,
+      fileSize: input.file.size,
+      fileHash: input.fileHash ?? null,
+      scan: input.scan ?? null,
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      declaredSignatureMatches: input.declaredSignatureMatches ?? null,
+      accessPurpose: 'upload',
+    }),
+    scanReason: input.scan?.reason ?? null,
+  };
+
+  await Promise.all([
+    createAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadBlocked,
+      entityType: 'document',
+      entityId: input.organizationId,
+      metadata,
+    }),
+    createAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: 'document_upload_rejected',
+      entityType: 'document',
+      entityId: input.organizationId,
+      metadata,
+    }),
+    logAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadBlocked,
+      entityType: 'document',
+      entityId: input.organizationId,
+      metadata,
+    }),
+    logAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: 'document.upload_rejected',
+      entityType: 'document',
+      entityId: input.organizationId,
+      metadata,
+    }),
+  ]);
+}
+
 export async function createDocument(input: CreateDocumentInput, userId: string) {
   const payload = createDocumentSchema.parse(input);
   await assertCurrentUserCan(payload.organizationId, userId, 'documents:write');
+  assertTenantStoragePathInOrganization(payload.storagePath, payload.organizationId);
 
+  const uploadSecurityMetadata = withoutRawStoragePath(payload.metadata);
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
@@ -44,6 +221,7 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
       mime_type: payload.mimeType ?? null,
       size_bytes: payload.sizeBytes ?? null,
       expires_at: payload.expiresAt ?? null,
+      ...uploadSecurityColumns(uploadSecurityMetadata, payload.mimeType ?? null, payload.sizeBytes ?? null),
     })
     .select('*')
     .single();
@@ -56,7 +234,12 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
     action: 'document.created',
     entityType: 'document',
     entityId: data.id,
-    metadata: { name: payload.name, category: payload.category, ...(payload.metadata ?? {}) },
+    metadata: {
+      name: payload.name,
+      category: payload.category,
+      ...uploadSecurityMetadata,
+      hasStoragePath: Boolean(payload.storagePath),
+    },
   });
 
   return data;
@@ -79,46 +262,121 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
     throw error;
   }
 
-  const validationError = validateDocumentFile(file);
+  await auditUploadRequested({ organizationId: payload.organizationId, actorUserId: userId, file });
 
-  if (validationError) {
-    const error = new Error(validationError);
+  const uploadValidation = await validateUploadSecurityFile(file, { maxBytes: MAX_UPLOAD_BYTES });
+
+  if (!uploadValidation.ok) {
+    await auditUploadRejection({
+      organizationId: payload.organizationId,
+      actorUserId: userId,
+      reason: uploadValidation.reason,
+      file,
+      fileHash: uploadValidation.fileHash,
+      detectedMimeType: uploadValidation.mimeDetected,
+      declaredSignatureMatches: uploadValidation.declaredSignatureMatches,
+    });
+    const error = new Error(uploadValidation.message);
     reportError(error, { ...context, fileType: file.type, fileSize: file.size });
     throw error;
   }
 
-  const supabase = createAdminClient();
-  const storagePath = buildDocumentStoragePath({
+  const scan = await scanValidatedUploadForMalware({
+    validation: uploadValidation,
     organizationId: payload.organizationId,
-    userId,
-    fileName: file.name,
   });
 
-  const { error: uploadError } = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, file, {
-    contentType: file.type,
+  await auditUploadScanned({
+    organizationId: payload.organizationId,
+    actorUserId: userId,
+    scan,
+    fileHash: uploadValidation.fileHash,
+    fileSize: uploadValidation.fileSize,
+    claimedMimeType: uploadValidation.claimedMimeType,
+    mimeDetected: uploadValidation.mimeDetected,
+    declaredSignatureMatches: uploadValidation.declaredSignatureMatches,
+  });
+
+  if (shouldBlockUploadForMalwareScan(scan)) {
+    await auditUploadRejection({
+      organizationId: payload.organizationId,
+      actorUserId: userId,
+      reason: 'malware_scan_not_clean',
+      file,
+      fileHash: uploadValidation.fileHash,
+      scan,
+      detectedMimeType: uploadValidation.mimeDetected,
+      declaredSignatureMatches: uploadValidation.declaredSignatureMatches,
+    });
+    const error = blockedScanError(scan);
+    reportError(error, { ...context, fileType: uploadValidation.mimeDetected, fileSize: uploadValidation.fileSize, scanStatus: scan.status });
+    throw error;
+  }
+
+  const supabase = createAdminClient();
+  const storagePath = buildTenantScopedUploadPath({
+    organizationId: payload.organizationId,
+    userId,
+    extension: uploadValidation.extension,
+  });
+
+  const { error: uploadError } = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, uploadValidation.buffer, {
+    contentType: uploadValidation.mimeDetected,
     upsert: false,
   });
 
   if (uploadError) {
-    reportError(uploadError, { ...context, fileType: file.type, fileSize: file.size });
+    reportError(uploadError, { ...context, fileType: uploadValidation.mimeDetected, fileSize: uploadValidation.fileSize });
     throw uploadError;
   }
 
   try {
-    return await createDocument(
+    const auditMetadata = {
+      ...buildUploadSecurityAuditMetadata({
+        scan,
+        fileHash: uploadValidation.fileHash,
+        fileSize: uploadValidation.fileSize,
+        claimedMimeType: uploadValidation.claimedMimeType,
+        mimeDetected: uploadValidation.mimeDetected,
+        organizationId: payload.organizationId,
+        actorUserId: userId,
+        declaredSignatureMatches: uploadValidation.declaredSignatureMatches,
+        accessPurpose: 'upload',
+      }),
+      mimeType: uploadValidation.mimeDetected,
+      hasStoragePath: true,
+      storagePathTenantPrefixValidated: true,
+    };
+    const document = await createDocument(
       {
         organizationId: payload.organizationId,
         name: payload.name,
         category: payload.category,
         storagePath,
-        mimeType: file.type,
-        sizeBytes: file.size,
+        mimeType: uploadValidation.mimeDetected,
+        sizeBytes: uploadValidation.fileSize,
         expiresAt: payload.expiresAt ?? null,
+        metadata: auditMetadata,
       },
       userId,
     );
+
+    await createAuditEvent({
+      organizationId: payload.organizationId,
+      actorUserId: userId,
+      action: 'document_uploaded',
+      entityType: 'document',
+      entityId: document.id,
+      metadata: {
+        name: payload.name,
+        category: payload.category,
+        ...auditMetadata,
+      },
+    });
+
+    return document;
   } catch (error) {
-    reportError(error, { ...context, fileType: file.type, fileSize: file.size });
+    reportError(error, { ...context, fileType: uploadValidation.mimeDetected, fileSize: uploadValidation.fileSize });
     await supabase.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
     throw error;
   }
@@ -142,13 +400,9 @@ export async function deleteDocument(documentId: string, organizationId: string,
     throw new Error('Document not found');
   }
 
-  if (document.storage_path && !document.storage_path.startsWith(`${organizationId}/`)) {
-    const error = new Error('Document storage path does not match organization scope');
-    reportError(error, { ...context, storagePath: document.storage_path });
-    throw error;
-  }
-
   if (document.storage_path) {
+    assertTenantStoragePathInOrganization(document.storage_path, organizationId);
+
     const { error: storageError } = await supabase.storage.from(DOCUMENT_BUCKET).remove([document.storage_path]);
 
     if (storageError) {
@@ -176,7 +430,7 @@ export async function deleteDocument(documentId: string, organizationId: string,
     action: 'document.deleted',
     entityType: 'document',
     entityId: documentId,
-    metadata: { name: deletedDocument.name, category: deletedDocument.category },
+    metadata: { category: deletedDocument.category },
   });
 
   return deletedDocument;

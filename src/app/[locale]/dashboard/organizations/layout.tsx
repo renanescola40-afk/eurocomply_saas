@@ -13,7 +13,7 @@ export default async function OrganizationDashboardLayout({ children, params }: 
   return (
     <div className="min-h-screen bg-background">
       <div className="print:hidden">
-        <DashboardCommandNavigation locale={safeLocale} activePage="EuroComply" />
+        <DashboardCommandNavigation locale={safeLocale} activePage="RISCK COMPLY" />
       </div>
       {children}
     </div>

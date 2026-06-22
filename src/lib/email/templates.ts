@@ -39,14 +39,14 @@ function baseLayout(content: string) {
     <div style="font-family: Inter, Arial, sans-serif; background: #f8fafc; padding: 32px; color: #0f172a;">
       <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
         <div style="padding: 24px 28px; background: #020617; color: #ffffff;">
-          <div style="font-size: 18px; font-weight: 700;">EuroComply</div>
+          <div style="font-size: 18px; font-weight: 700;">RISCK COMPLY</div>
           <div style="font-size: 13px; opacity: 0.8; margin-top: 4px;">Compliance operations for growing teams</div>
         </div>
         <div style="padding: 28px;">
           ${content}
         </div>
         <div style="padding: 18px 28px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b;">
-          This message was sent by EuroComply. If you were not expecting it, you can ignore it.
+          This message was sent by RISCK COMPLY. If you were not expecting it, you can ignore it.
         </div>
       </div>
     </div>
@@ -85,22 +85,22 @@ function buildEmail(input: { title: string; body: string; ctaLabel: string; ctaU
 
 export function invitationEmail(input: InvitationEmailInput) {
   return buildEmail({
-    subject: `Invitation to join ${input.organizationName} on EuroComply`,
+    subject: `Invitation to join ${input.organizationName} on RISCK COMPLY`,
     title: `You have been invited to ${input.organizationName}`,
     body: [
-      paragraph(`You were invited to join ${input.organizationName} on EuroComply with the role <strong>${input.role}</strong>.`),
+      paragraph(`You were invited to join ${input.organizationName} on RISCK COMPLY with the role <strong>${input.role}</strong>.`),
       paragraph('Accept the invitation to collaborate on compliance tasks, documents, vendor reviews, risks and executive reports.'),
     ].join(''),
     ctaLabel: 'Accept invitation',
     ctaUrl: input.inviteUrl,
-    textLines: [`You have been invited to ${input.organizationName} on EuroComply.`, `Role: ${input.role}`],
+    textLines: [`You have been invited to ${input.organizationName} on RISCK COMPLY.`, `Role: ${input.role}`],
   });
 }
 
 export function onboardingEmail(input: OnboardingEmailInput) {
   return buildEmail({
-    subject: `${input.organizationName} is ready in EuroComply`,
-    title: `${input.organizationName} is ready in EuroComply`,
+    subject: `${input.organizationName} is ready in RISCK COMPLY`,
+    title: `${input.organizationName} is ready in RISCK COMPLY`,
     body: `
       ${paragraph('Your workspace has been created. Start by adding compliance templates, uploading key documents and inviting teammates.')}
       <ul style="font-size: 15px; line-height: 1.7; color: #334155; padding-left: 20px; margin: 0 0 24px;">
@@ -113,7 +113,7 @@ export function onboardingEmail(input: OnboardingEmailInput) {
     ctaLabel: 'Open dashboard',
     ctaUrl: input.dashboardUrl,
     textLines: [
-      `${input.organizationName} is ready in EuroComply.`,
+      `${input.organizationName} is ready in RISCK COMPLY.`,
       'Next steps: create template tasks, upload evidence documents, add vendors and review your executive dashboard.',
     ],
   });
@@ -123,10 +123,10 @@ export function trialUpgradeEmail(input: TrialUpgradeEmailInput) {
   const days = input.daysRemaining ?? 3;
 
   return buildEmail({
-    subject: 'Your EuroComply trial is ending',
+    subject: 'Your RISCK COMPLY trial is ending',
     title: `Your ${input.organizationName} trial is ending`,
     body: [
-      paragraph(`Your EuroComply trial has about <strong>${days} day${days === 1 ? '' : 's'}</strong> remaining.`),
+      paragraph(`Your RISCK COMPLY trial has about <strong>${days} day${days === 1 ? '' : 's'}</strong> remaining.`),
       paragraph('Upgrade now to keep access to compliance tasks, evidence documents, vendors, risks, reports and billing controls without interruption.'),
     ].join(''),
     ctaLabel: 'Review billing options',
@@ -137,10 +137,10 @@ export function trialUpgradeEmail(input: TrialUpgradeEmailInput) {
 
 export function paymentFailedEmail(input: PaymentFailedEmailInput) {
   return buildEmail({
-    subject: 'Payment issue detected for EuroComply',
+    subject: 'Payment issue detected for RISCK COMPLY',
     title: `Payment issue detected for ${input.organizationName}`,
     body: [
-      paragraph('Stripe reported a payment issue for your EuroComply subscription.'),
+      paragraph('Stripe reported a payment issue for your RISCK COMPLY subscription.'),
       paragraph('Please update the payment method or review the subscription status to avoid interruption to paid plan access.'),
     ].join(''),
     ctaLabel: 'Open billing',

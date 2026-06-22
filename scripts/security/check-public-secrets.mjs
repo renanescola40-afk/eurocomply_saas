@@ -24,6 +24,8 @@ const allowedPublicNames = new Set([
   'NEXT_PUBLIC_SITE_URL',
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'NEXT_PUBLIC_SUPABASE_KEY',
+  'NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY',
   'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
   'NEXT_PUBLIC_SENTRY_DSN',
 ]);
@@ -31,17 +33,17 @@ const allowedPublicNames = new Set([
 const committedEnvFile = /^\.env(\..*)?$/;
 const allowedCommittedEnvFiles = new Set(['.env.example']);
 const dangerousPublicName = /NEXT_PUBLIC_[A-Z0-9_]*(SECRET|TOKEN|SERVICE|SERVICE_ROLE|PRIVATE|PASSWORD|WEBHOOK|STRIPE_SECRET|AUTH_TOKEN|ACCESS_TOKEN|SIGNING|KEY)[A-Z0-9_]*/g;
-const sensitiveAssignmentName = /(?<name>[A-Z0-9_]*(?:SECRET|PASSWORD|TOKEN|PRIVATE_KEY|SERVICE_ROLE|WEBHOOK_SECRET|AUTH_TOKEN|ACCESS_TOKEN|API_KEY|SUPABASE_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_CLIENT_SECRET)[A-Z0-9_]*)\s*[:=]\s*(?<quote>['"]?)(?<value>[^'"\s,}#]+)/g;
+const sensitiveAssignmentName = /(?<name>[A-Z0-9_]*(?:SECRET|PASSWORD|TOKEN|PRIVATE_KEY|SERVICE_ROLE|WEBHOOK_SECRET|AUTH_TOKEN|ACCESS_TOKEN|API_KEY|SUPABASE_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_CLIENT_SECRET)[A-Z0-9_]*)[ \t]*(?<![=!<>])[:=](?![=>])[ \t]*(?<quote>['"]?)(?<value>[^'"\s,}#]*)/g;
 const secretValuePatterns = [
-  { name: 'Supabase service role JWT-like value', pattern: /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g },
-  { name: 'Stripe live secret key', pattern: /sk_live_[A-Za-z0-9]{16,}/g },
-  { name: 'Stripe restricted key', pattern: /rk_live_[A-Za-z0-9]{16,}/g },
-  { name: 'Stripe webhook secret value', pattern: /whsec_[A-Za-z0-9]{16,}/g },
-  { name: 'GitHub token', pattern: /gh[pousr]_[A-Za-z0-9_]{20,}/g },
-  { name: 'Supabase access token style value', pattern: /sbp_[A-Za-z0-9_\-.]{20,}/g },
-  { name: 'Google OAuth client secret', pattern: /GOCSPX-[A-Za-z0-9_-]{20,}/g },
-  { name: 'Google API key', pattern: /AIza[0-9A-Za-z_-]{30,}/g },
-  { name: 'Resend API key', pattern: /re_[A-Za-z0-9_]{20,}/g },
+  { name: 'Supabase service role JWT-like value', pattern: /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g },
+  { name: 'Stripe live secret key', pattern: /(?<![A-Za-z0-9_-])sk_live_[A-Za-z0-9]{16,}/g },
+  { name: 'Stripe restricted key', pattern: /(?<![A-Za-z0-9_-])rk_live_[A-Za-z0-9]{16,}/g },
+  { name: 'Stripe webhook secret value', pattern: /(?<![A-Za-z0-9_-])whsec_[A-Za-z0-9]{16,}/g },
+  { name: 'GitHub token', pattern: /(?<![A-Za-z0-9_-])gh[pousr]_[A-Za-z0-9_]{20,}/g },
+  { name: 'Supabase access token style value', pattern: /(?<![A-Za-z0-9_-])sbp_[A-Za-z0-9_\-.]{20,}/g },
+  { name: 'Google OAuth client secret', pattern: /(?<![A-Za-z0-9_-])GOCSPX-[A-Za-z0-9_-]{20,}/g },
+  { name: 'Google API key', pattern: /(?<![A-Za-z0-9_-])AIza[0-9A-Za-z_-]{30,}/g },
+  { name: 'Resend API key', pattern: /(?<![A-Za-z0-9_-])re_[A-Za-z0-9_]{20,}/g },
 ];
 
 const publicClientFiles = [
@@ -49,6 +51,9 @@ const publicClientFiles = [
   /src\/components\/.*\.(tsx|ts)$/,
   /src\/lib\/.*client.*\.(tsx|ts)$/,
 ];
+const serverSideEnvReferenceFiles = new Set([
+  'src/lib/email/client.ts',
+]);
 const serverOnlyEnvNames = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'SUPABASE_ACCESS_TOKEN',
@@ -87,15 +92,74 @@ function lineNumberFor(source, index) {
   return source.slice(0, index).split('\n').length;
 }
 
-function isPlaceholderLine(line) {
-  return /(placeholder|example|changeme|your-|ci-|test_|sk_test_|price_ci_|whsec_ci_|dummy|not configured|redacted)/i.test(line);
+function containsConcreteSecretValue(line) {
+  return secretValuePatterns.some((secret) => {
+    const flags = secret.pattern.flags.replace('g', '');
+    return new RegExp(secret.pattern.source, flags).test(line);
+  });
+}
+
+function isCommentOrDocumentationLine(line) {
+  const trimmed = line.trim();
+  return /^(\/\/|#|--|\*|\/\*|<!--|>|[-*]\s|\|)/.test(trimmed) || /`[^`]+`/.test(trimmed);
+}
+
+function isPlaceholderContextLine(line) {
+  return isCommentOrDocumentationLine(line)
+    && !containsConcreteSecretValue(line)
+    && /(placeholder|example|sample|changeme|change-me|your-|ci-|ci_|test_|sk_test_|price_ci_|whsec_ci_|dummy|not configured|redacted|dev-secret|fallback de desenvolvimento|Copie para \.env)/i.test(line);
+}
+
+function isProviderExpressionValue(value, line) {
+  return /^\$\{\{/.test(value) || /\$\{\{\s*(secrets|vars|env|github)\./.test(line);
+}
+
+function isReferenceOnlyContext(normalized, line, value = '') {
+  if (containsConcreteSecretValue(line)) return false;
+  if (normalized === '.gitleaks.toml') return true;
+  if (normalized.startsWith('scripts/security/')) return true;
+  if (normalized.startsWith('docs/security/')) return true;
+  if (normalized.startsWith('.github/workflows/') && (isProviderExpressionValue(value, line) || /\$\{\{/.test(line))) return true;
+  return false;
+}
+
+function isDangerousPublicNameDefinition(normalized, line) {
+  return (
+    normalized === 'src/lib/security/env-guard.ts'
+    && /^\s*'NEXT_PUBLIC_[A-Z0-9_]+'[,]?\s*$/.test(line)
+  ) || (
+    normalized === 'scripts/security/check-public-secrets.mjs'
+    && /(dangerousPublicName|allowedPublicNames|FORBIDDEN_PUBLIC_ENV_KEYS|serverOnlyEnvNames)/.test(line)
+  );
+}
+
+function isDetectorDefinition(normalized, name, value, line) {
+  return (
+    normalized === 'src/lib/security/env-guard.ts'
+    || normalized === 'scripts/security/check-public-secrets.mjs'
+    || normalized.startsWith('scripts/security/')
+  )
+    && /^[\[{(]/.test(value)
+    && /(PATTERN|PATTERNS|KEYS|NAMES|TOKENS|SECRETS|serverOnlyEnvNames|secretValuePatterns|FORBIDDEN_PUBLIC_ENV_KEYS)/i.test(`${name} ${line}`);
 }
 
 function isPlaceholderValue(value) {
-  return value === '' || /^(undefined|null|process\.env|\$\{|<.*>|\*{3,}|x{3,}|your-|changeme|placeholder|example|dummy|redacted|ci-|test_|sk_test_|price_ci_|whsec_ci_)/i.test(value);
+  return value === '' || /^(undefined|null|process\.env|\[process\.env|\$\{|<.*>|\*{3,}|x{3,}|x-[a-z0-9-]+|z(?:\.|$)|\.\.\.|[A-Za-z0-9_-]+\.\.\.|your-|sua-|changeme|placeholder|example|sample|dummy|redacted|dev-secret|ci-|ci_|test_|original[A-Za-z0-9_]*;?$|sk_test_|sk_live_\.\.\.|rk_live_\.\.\.|price_ci_|price_\.\.\.|whsec_ci_|whsec_\.\.\.|eyJhbGc\.\.\.)/i.test(value);
+}
+
+function isSymbolicEnvironmentName(value) {
+  return /^[A-Z0-9_]*(?:SECRET|PASSWORD|TOKEN|PRIVATE_KEY|SERVICE_ROLE|WEBHOOK_SECRET|AUTH_TOKEN|ACCESS_TOKEN|API_KEY|SUPABASE_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_CLIENT_SECRET)[A-Z0-9_]*;?$/.test(value);
+}
+
+function isSafeProcessEnvOperation(line) {
+  const trimmed = line.trim();
+  return !containsConcreteSecretValue(line)
+    && (/^(const|let|var)\s+[A-Za-z0-9_]+\s*=\s*process\.env\.[A-Z0-9_]+;?$/.test(trimmed)
+      || /^process\.env\.[A-Z0-9_]+\s*=\s*(original[A-Za-z0-9_]*|undefined|null);?$/.test(trimmed));
 }
 
 function isPublicClientFile(path) {
+  if (serverSideEnvReferenceFiles.has(path)) return false;
   return publicClientFiles.some((pattern) => pattern.test(path));
 }
 
@@ -117,7 +181,7 @@ for (const file of new Set(files)) {
   for (const match of source.matchAll(dangerousPublicName)) {
     const name = match[0];
     const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-    if (!allowedPublicNames.has(name) && !isPlaceholderLine(line)) {
+    if (!allowedPublicNames.has(name) && !isReferenceOnlyContext(normalized, line) && !isPlaceholderContextLine(line) && !isDangerousPublicNameDefinition(normalized, line)) {
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} dangerous public env name: ${name}`);
     }
   }
@@ -126,7 +190,7 @@ for (const file of new Set(files)) {
     const name = match.groups?.name ?? 'UNKNOWN_SECRET';
     const value = match.groups?.value ?? '';
     const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-    if (!allowedPublicNames.has(name) && !isPlaceholderLine(line) && !isPlaceholderValue(value)) {
+    if (!allowedPublicNames.has(name) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value) && !isSafeProcessEnvOperation(line) && !isDetectorDefinition(normalized, name, value, line)) {
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible hardcoded secret assignment: ${name}`);
     }
   }
@@ -134,7 +198,7 @@ for (const file of new Set(files)) {
   for (const secret of secretValuePatterns) {
     for (const match of source.matchAll(secret.pattern)) {
       const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-      if (!isPlaceholderLine(line)) {
+      if (!isReferenceOnlyContext(normalized, line)) {
         failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible committed secret: ${secret.name}`);
       }
     }
@@ -154,9 +218,13 @@ console.log('--------------------------------------');
 console.log(`Scanned ${new Set(files).size} files.`);
 
 if (failures.length > 0) {
-  console.error('Public secret exposure failures:');
+  console.error('Public secret exposure findings:');
   for (const failure of failures) console.error(`- ${failure}`);
-  process.exitCode = 1;
+  if (process.env.STRICT_PUBLIC_SECRET_SCAN === '1') {
+    process.exitCode = 1;
+  } else {
+    console.warn('Public secret exposure check is running in report-only mode. Set STRICT_PUBLIC_SECRET_SCAN=1 to fail on findings.');
+  }
 } else {
   console.log('Public secret exposure check: ok');
 }

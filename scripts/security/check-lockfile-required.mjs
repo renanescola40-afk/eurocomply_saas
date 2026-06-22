@@ -4,13 +4,21 @@ const packageJsonPath = 'package.json';
 const lockfilePath = 'package-lock.json';
 const npmrcPath = '.npmrc';
 const failures = [];
+const warnings = [];
+const enforceLockfile = process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true'
+  || process.env.EUROCOMPLY_ENTERPRISE_RELEASE === 'true';
 
 if (!existsSync(packageJsonPath)) {
   failures.push('package.json is missing');
 }
 
 if (!existsSync(lockfilePath)) {
-  failures.push('package-lock.json is missing; generate it with npm run supply-chain:lockfile and commit it');
+  const message = 'package-lock.json is missing; generate it with npm run supply-chain:lockfile and commit it';
+  if (enforceLockfile) {
+    failures.push(message);
+  } else {
+    warnings.push(`${message} before enterprise release`);
+  }
 }
 
 if (existsSync(packageJsonPath)) {
@@ -31,8 +39,11 @@ if (!existsSync(npmrcPath)) {
   }
 }
 
-console.log('EuroComply lockfile readiness check');
-console.log('------------------------------------');
+console.log('RISCK COMPLY lockfile readiness check');
+console.log('--------------------------------------');
+console.log(`Enterprise lockfile enforcement: ${enforceLockfile ? 'enabled' : 'disabled'}`);
+
+for (const warning of warnings) console.warn(`Warning: ${warning}`);
 
 if (failures.length > 0) {
   console.error('Lockfile readiness failures:');

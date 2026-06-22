@@ -11,7 +11,7 @@ export async function listComplianceTasks(organizationId: string) {
     .order('due_date', { ascending: true });
 
   if (error) {
-    console.warn('[tasks] list failed', error.message);
+    console.warn('[tasks] list_failed', { code: error.code ?? 'unknown' });
     return [];
   }
 

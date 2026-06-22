@@ -33,3 +33,6 @@ jobs:
 
       - name: Validate runtime evidence files
         run: node scripts/security/check-p0-runtime-evidence-files.mjs
+
+      - name: Validate optional runtime evidence files
+        run: node scripts/security/check-p0-runtime-evidence-optionals.mjs

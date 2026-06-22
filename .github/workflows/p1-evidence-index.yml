@@ -1,0 +1,23 @@
+name: P1 Evidence Index
+
+on:
+  pull_request:
+    paths:
+      - 'docs/security/evidence/p1/P1_EVIDENCE_INDEX.json'
+      - 'scripts/security/check-p1-evidence-index.mjs'
+      - '.github/workflows/p1-evidence-index.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-p1-evidence-index:
+    name: Validate P1 evidence index
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate P1 evidence index
+        run: node scripts/security/check-p1-evidence-index.mjs

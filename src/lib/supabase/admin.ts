@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { createClient } from '@supabase/supabase-js';
 
 const missingAdminEnvMessage = 'Supabase admin is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel to enable create, update, delete, upload and export actions.';
@@ -23,7 +25,7 @@ export function tryCreateAdminClient() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
-    console.warn(`[supabase] ${missingAdminEnvMessage}`);
+    console.warn('[supabase] admin client unavailable');
     return null;
   }
 

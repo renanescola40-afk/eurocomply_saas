@@ -1,0 +1,8 @@
+P1-06 validation timestamp reference
+
+Validated at: 2026-06-18T18:08:26Z
+Validation result: pass
+Validation source: GitHub Actions workflow run 27779627063
+Control: P1-06 SBOM + artifact attestation
+
+This file does not contain secrets.

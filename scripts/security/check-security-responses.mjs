@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 
 const checks = [
@@ -54,6 +55,41 @@ const checks = [
     ],
     forbidden: [],
   },
+  {
+    path: 'src/app/api/health/route.ts',
+    required: ['noStoreJson', "status: 'ok'", "application: 'ok'"],
+    forbidden: ['NextResponse.json', 'environment:', 'commit:'],
+  },
+  {
+    path: 'src/app/api/health/route.test.ts',
+    required: [
+      'public health endpoint hardening',
+      "not.toHaveProperty('environment')",
+      "not.toHaveProperty('commit')",
+      'no-store',
+    ],
+    forbidden: [],
+  },
+  {
+    path: 'src/app/api/billing/entitlements/route.ts',
+    required: ['noStoreJson', 'organization_required', 'Number.isFinite'],
+    forbidden: ['NextResponse.json'],
+  },
+  {
+    path: 'src/app/api/billing/entitlements/route.test.ts',
+    required: [
+      'billing entitlements response hardening',
+      'returns no-store unauthorized responses',
+      'returns no-store organization-required responses',
+      'normalized numeric limits',
+      'no-store',
+    ],
+    forbidden: [],
+  },
+];
+
+const delegatedChecks = [
+  'scripts/security/check-storage-security.mjs',
 ];
 
 const failures = [];
@@ -65,6 +101,27 @@ function readFile(path) {
   }
 
   return readFileSync(path, 'utf8');
+}
+
+function runDelegatedCheck(path) {
+  if (!existsSync(path)) {
+    failures.push(`${path} is missing; delegated response/security check cannot run`);
+    return;
+  }
+
+  const result = spawnSync(process.execPath, [path], {
+    cwd: process.cwd(),
+    stdio: 'inherit',
+  });
+
+  if (result.error) {
+    failures.push(`${path} failed to execute: ${result.error.message}`);
+    return;
+  }
+
+  if (result.status !== 0) {
+    failures.push(`${path} failed as part of response/security coverage`);
+  }
 }
 
 console.log('EuroComply security response helper check');
@@ -85,6 +142,10 @@ for (const check of checks) {
       failures.push(`${check.path} contains forbidden response-security pattern: ${token}`);
     }
   }
+}
+
+for (const checkPath of delegatedChecks) {
+  runDelegatedCheck(checkPath);
 }
 
 if (failures.length > 0) {

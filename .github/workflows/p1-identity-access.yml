@@ -1,0 +1,44 @@
+name: P1 Identity Access Evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/security/evidence/p1/sso-saml-oidc.json'
+      - 'docs/security/evidence/p1/sso-saml-oidc.template.json'
+      - 'docs/security/P1_IDENTITY_ACCESS_USAGE.md'
+      - 'scripts/security/check-p1-identity-access-evidence.mjs'
+      - '.github/workflows/p1-identity-access.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/security/evidence/p1/sso-saml-oidc.json'
+      - 'docs/security/evidence/p1/sso-saml-oidc.template.json'
+      - 'docs/security/P1_IDENTITY_ACCESS_USAGE.md'
+      - 'scripts/security/check-p1-identity-access-evidence.mjs'
+      - '.github/workflows/p1-identity-access.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p1-identity-access:
+    name: Validate P1 identity access evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Show runner Node.js and npm versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Validate P1 identity access evidence if present
+        run: node scripts/security/check-p1-identity-access-evidence.mjs

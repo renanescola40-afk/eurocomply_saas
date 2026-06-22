@@ -24,7 +24,7 @@ async function countRows(table: string, organizationId: string) {
     .eq('organization_id', organizationId);
 
   if (error) {
-    console.warn(`[billing] Failed to count ${table}:`, error.message);
+    console.warn('[billing] count_failed', { table, code: error.code ?? 'unknown' });
     return 0;
   }
 
@@ -42,7 +42,7 @@ async function getSubscription(organizationId: string) {
     .maybeSingle();
 
   if (error) {
-    console.warn('[billing] Failed to load subscription:', error.message);
+    console.warn('[billing] subscription_lookup_failed', { code: error.code ?? 'unknown' });
     return null;
   }
 

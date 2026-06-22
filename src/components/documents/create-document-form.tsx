@@ -71,11 +71,11 @@ export function CreateDocumentForm({ onSubmit }: { onSubmit: (input: UploadDocum
           <Input
             id="document-file"
             type="file"
-            accept="application/pdf,image/png,image/jpeg,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            accept="application/pdf,image/png,image/jpeg,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             required
           />
-          <p className="text-xs text-white/45">PDF, PNG, JPG, TXT or DOCX. Max 10MB.</p>
+          <p className="text-xs text-white/45">PDF, PNG, JPG, DOCX or XLSX. Max 10MB.</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="document-expires-at">Expiration date</Label>
