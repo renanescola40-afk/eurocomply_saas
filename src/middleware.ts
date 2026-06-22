@@ -77,6 +77,13 @@ function isPublicRoute(pathname: string, locale: string): boolean {
   );
 }
 
+function hasSupabaseAuthCookie(req: NextRequest) {
+  return req.cookies.getAll().some((cookie) => {
+    const name = cookie.name.toLowerCase();
+    return name.startsWith('sb-') || name.includes('supabase');
+  });
+}
+
 function detectLocale(req: NextRequest): string {
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
   if (cookieLocale && locales.includes(cookieLocale as 'en')) {
@@ -179,7 +186,8 @@ export default async function middleware(req: NextRequest) {
     const isPublic = isPublicRoute(pathname, locale);
     const isMarketingHome = pathname === `/${locale}`;
     const isAuthEntryRoute = pathname === `/${locale}/login` || pathname === `/${locale}/signup`;
-    const shouldCheckAuth = !isPublic || isAuthEntryRoute || isMarketingHome;
+    const shouldCheckMarketingHomeAuth = isMarketingHome && hasSupabaseAuthCookie(req);
+    const shouldCheckAuth = !isPublic || isAuthEntryRoute || shouldCheckMarketingHomeAuth;
     const authState = shouldCheckAuth
       ? await getAuthState(req)
       : { isAuthenticated: false, supabaseResponse: NextResponse.next({ request: req }) };
