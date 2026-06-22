@@ -55,11 +55,14 @@ const nextConfig: NextConfig = {
 };
 
 const nextIntlConfig = withNextIntl(nextConfig);
-const shouldUploadSentryArtifacts = Boolean(
+const hasSentryReleaseUploadCredentials = Boolean(
   process.env.SENTRY_ORG && process.env.SENTRY_PROJECT && process.env.SENTRY_AUTH_TOKEN,
 );
 
-export default shouldUploadSentryArtifacts
+// Source maps and release artifacts are uploaded only when the server-side
+// SENTRY_AUTH_TOKEN plus org/project are available in the build environment.
+// Local/dev builds keep the Next config unwrapped, preventing accidental uploads.
+export default hasSentryReleaseUploadCredentials
   ? withSentryConfig(nextIntlConfig, {
       org: process.env.SENTRY_ORG,
       project: process.env.SENTRY_PROJECT,
@@ -67,5 +70,6 @@ export default shouldUploadSentryArtifacts
       silent: !process.env.CI,
       widenClientFileUpload: true,
       tunnelRoute: '/monitoring',
+      disableLogger: true,
     })
   : nextIntlConfig;
