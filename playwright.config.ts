@@ -1,6 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3000';
+const useBuiltAppForRouteGate =
+  process.env.PLAYWRIGHT_USE_PRODUCTION_SERVER === 'true' ||
+  (process.env.CI === 'true' && process.env.npm_lifecycle_event === 'quality:routes:e2e');
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -22,7 +25,7 @@ export default defineConfig({
     ? {}
     : {
         webServer: {
-          command: 'npm run dev',
+          command: useBuiltAppForRouteGate ? 'npm run start' : 'npm run dev',
           url: baseURL,
           reuseExistingServer: !process.env.CI,
           timeout: 180_000,
