@@ -88,9 +88,12 @@ test.describe('enterprise dashboard UX', () => {
       await expectNoTemplateSmell(page, `${locale} enterprise dashboard`);
     }
   });
+});
+
+test.describe('enterprise dashboard UX on mobile', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true });
 
   test('mobile dashboard keeps actions reachable without horizontal overflow', async ({ page }) => {
-    test.use({ viewport: { width: 390, height: 844 }, isMobile: true });
     const credentials = credentialsFor('owner');
     skipWithoutCredentials('owner', credentials);
 
@@ -104,14 +107,16 @@ test.describe('enterprise dashboard UX', () => {
 });
 
 test.describe('basic visual smoke', () => {
-  test('captures public home and authenticated enterprise dashboard screenshots', async ({ page }) => {
-    const credentials = credentialsFor('owner');
-
+  test('captures public home screenshot', async ({ page }) => {
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
     await expectNoTemplateSmell(page, 'public home visual smoke');
     await page.screenshot({ path: 'test-results/visual-smoke-home-en.png', fullPage: true });
+  });
 
+  test('captures authenticated enterprise dashboard screenshot', async ({ page }) => {
+    const credentials = credentialsFor('owner');
     skipWithoutCredentials('owner', credentials);
+
     await signIn(page, 'en', credentials);
     await page.goto('/en/dashboard', { waitUntil: 'domcontentloaded' });
     await expectNoTemplateSmell(page, 'dashboard visual smoke');
