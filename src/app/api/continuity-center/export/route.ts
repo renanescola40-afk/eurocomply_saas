@@ -60,6 +60,7 @@ export async function GET(request: Request) {
   }
 
   const rateLimit = await checkDistributedRateLimit({
+    category: 'export',
     key: `continuity-export:${organization.id}:${user.id}`,
     limit: 5,
     windowSeconds: 60 * 60,
