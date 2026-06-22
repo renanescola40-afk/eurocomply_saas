@@ -232,19 +232,35 @@ Accepted evidence:
 
 For public production or enterprise procurement, attach evidence for:
 
-- External security review or pentest completed, or a clear deferral is disclosed
-- Critical findings resolved
+- External security review or pentest completed, or a clear deferral is disclosed for non-enterprise release only
+- Scope confirms auth, RBAC, tenant isolation, APIs, uploads, billing, audit chain, exports, GDPR delete, rate limiting, and webhooks
+- Test environment used seed data tenant A/B, accounts by role, Stripe test mode, Supabase test project, and scanner mock/real according to environment
+- Critical findings resolved or formally accepted
 - High findings resolved or formally accepted
 - Retest evidence attached where applicable
+- No critical finding has pending, failed, or missing retest evidence for enterprise release
 
 Accepted evidence:
 
+- `docs/security/PENTEST_SCOPE.md`
+- `docs/security/PRE_PENTEST_CHECKLIST.md`
+- `docs/security/PENTEST_FINDINGS_TRIAGE.md`
+- `docs/security/PENTEST_RETEST_RECORD.md`
+- `docs/security/evidence/runtime/external-security-review-or-pentest.json`
 - Pentest report when available
 - External review report when available
-- Finding triage spreadsheet
+- Finding triage spreadsheet or markdown record
 - Retest confirmation
 - Risk acceptance sign-off
 - Customer-safe disclosure if external review has not been completed
+
+Enterprise evidence must pass:
+
+```bash
+npm run release:enterprise-readiness
+```
+
+The placeholder JSON is not evidence of completion and must remain `Open` until a real report exists.
 
 ## Release decision
 
@@ -258,4 +274,4 @@ Private beta may accept more documented exceptions.
 
 Public production should not accept exceptions for build, CI, RLS, audit-chain integrity, billing correctness, customer communication ownership, or Trust Center claim accuracy.
 
-Enterprise procurement should not accept exceptions for supply-chain triage, live RLS validation, step-up authentication, upload scanning policy, audit-chain integrity, customer communication readiness, Trust Center readiness, or external review disclosure.
+Enterprise release should not accept exceptions for missing external security review evidence, unresolved critical/high findings, or pending critical retests.
