@@ -196,8 +196,12 @@ if (failures.length > 0) {
   console.log('API guard coverage: ok');
 }
 
-if (Array.isArray(changedRoutes) && changedRoutes.length === 0) {
-  console.log('Skipped API route hardening subgate because no changed API route files were detected in this pull request.');
+if (Array.isArray(changedRoutes)) {
+  if (changedRoutes.length === 0) {
+    console.log('Skipped API route hardening subgate because no changed API route files were detected in this pull request.');
+  } else {
+    console.log('Skipped full API route taxonomy subgate for pull request mode; changed API routes were checked above.');
+  }
 } else {
   const hardening = spawnSync(process.execPath, [join(process.cwd(), 'scripts/security/check-api-route-hardening.mjs')], {
     stdio: 'inherit',

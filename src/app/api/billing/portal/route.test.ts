@@ -102,6 +102,19 @@ describe('billing portal API security gates', () => {
     mocks.writeAuditLog.mockResolvedValue(undefined);
   });
 
+  it('blocks billing portal access without an authenticated user', async () => {
+    mocks.requireApiUser.mockRejectedValue({ code: 'unauthorized', status: 401 });
+
+    const response = await POST(buildRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body).toEqual({ error: 'unauthorized' });
+    expect(mocks.getCurrentOrganizationForUser).not.toHaveBeenCalled();
+    expect(mocks.stripePortalCreate).not.toHaveBeenCalled();
+    expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+  });
+
   it('blocks billing portal access without manage_billing permission', async () => {
     mocks.requirePermission.mockRejectedValue({ code: 'permission_denied', status: 403 });
 
@@ -112,6 +125,21 @@ describe('billing portal API security gates', () => {
     expect(body).toEqual({ error: 'permission_denied' });
     expect(mocks.requireTrustedMutation).not.toHaveBeenCalled();
     expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
+    expect(mocks.stripePortalCreate).not.toHaveBeenCalled();
+    expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+  });
+
+  it('blocks billing portal access without valid step-up', async () => {
+    mocks.requireStepUpForRequest.mockResolvedValue({
+      ok: false,
+      response: new Response(JSON.stringify({ error: 'step_up_required' }), { status: 403 }),
+    });
+
+    const response = await POST(buildRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body).toEqual({ error: 'step_up_required' });
     expect(mocks.stripePortalCreate).not.toHaveBeenCalled();
     expect(mocks.writeAuditLog).not.toHaveBeenCalled();
   });
@@ -133,6 +161,19 @@ describe('billing portal API security gates', () => {
       customer: 'cus_123',
       return_url: 'https://app.eurocomply.test/en/settings/billing',
     });
-    expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'billing_portal_created',
+        organizationId: 'org_a',
+        userId: 'user_admin',
+        entityType: 'stripe_billing_portal_session',
+        entityId: 'portal_session_fixture',
+        metadata: expect.objectContaining({
+          stripeCustomerId: 'cus_123',
+          rbacPermission: 'manage_billing',
+          trustedOriginRequired: true,
+        }),
+      }),
+    );
   });
 });
