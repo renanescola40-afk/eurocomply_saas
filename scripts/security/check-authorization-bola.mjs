@@ -3,48 +3,28 @@ import { join, relative, sep } from 'node:path';
 
 const root = process.cwd();
 const apiRoot = join(root, 'src', 'app', 'api');
+const inventoryPath = join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.md');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
 
-const publicEndpointAllowlist = [
-  /src\/app\/api\/billing\/webhook\/route\.ts$/,
-  /src\/app\/api\/stripe\/webhook\/route\.ts$/,
-  /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/,
-  /src\/app\/api\/ops\/.*\/route\.ts$/,
-  /src\/app\/api\/health\/route\.ts$/,
-  /src\/app\/api\/ready\/route\.ts$/,
-];
-
-const internalEndpointAllowlist = [
-  /src\/app\/api\/cron\/.*\/route\.(ts|js)$/,
-  /src\/app\/api\/internal\/.*\/route\.(ts|js)$/,
-  /src\/app\/api\/maintenance\/.*\/route\.(ts|js)$/,
-  /src\/app\/api\/intelligence\/refresh\/.*\/route\.(ts|js)$/,
-];
-
-const internalAuthGuardTokens = [
-  'isAuthorizedInternalCronRequest',
-  'isAuthorizedInternalMaintenanceRequest',
-  'HEALTHCHECK_TOKEN',
-  'CRON_SECRET',
-  'INTERNAL_CRON_SECRET',
-  'MAINTENANCE_SECRET',
-  'INTELLIGENCE_REFRESH_SECRET',
-];
-
-const resourceIdentifierPatterns = [
-  /params\s*[:=]/,
-  /\.params\b/,
-  /searchParams\.get\(['"](?:id|userId|organizationId|tenantId|documentId|vendorId|systemId|incidentId|teamId|memberId|inviteId)['"]\)/,
-  /(?:id|userId|organizationId|tenantId|documentId|vendorId|systemId|incidentId|teamId|memberId|inviteId)\s*=\s*(?:await\s+)?request\.json\(/,
-  /\b(?:userId|organizationId|tenantId|documentId|vendorId|systemId|incidentId|teamId|memberId|inviteId)\b/,
-];
+const knownClasses = new Set([
+  'public safe',
+  'authenticated',
+  'tenant-scoped',
+  'admin-only',
+  'high-risk',
+  'webhook',
+  'health/internal',
+]);
+const publicClasses = new Set(['public safe', 'webhook', 'health/internal']);
+const tenantClasses = new Set(['tenant-scoped', 'admin-only', 'high-risk']);
+const privilegedClasses = new Set(['admin-only', 'high-risk']);
 
 const authGuardTokens = [
   'getCurrentUser',
   'requireApiUser',
   'requireOrganizationContext',
+  'requireEnterpriseApiAccess',
   'supabase.auth.getUser',
-  ...internalAuthGuardTokens,
 ];
 
 const ownershipGuardTokens = [
@@ -54,9 +34,11 @@ const ownershipGuardTokens = [
   'getCurrentOrganizationForUser',
   'assertOrganizationPermission',
   'assertApiResourceOrganization',
+  'requireEnterpriseApiAccess',
+  ".eq('organization_id'",
+  '.eq("organization_id"',
   'organization_id',
   'organizationId',
-  'user.id',
   'membership.user_id',
   'memberships',
   'owner_user_id',
@@ -67,9 +49,11 @@ const rbacTokens = [
   'assertOrganizationPermission',
   'requirePermission',
   'requireAdmin',
+  'requireEnterpriseApiAccess',
   'manage_team',
   'manage_billing',
   'manage_documents',
+  'manage_settings',
   'export_data',
   'read_audit',
   'admin',
@@ -81,6 +65,15 @@ const adminRoutePatterns = [
   /\/team\//,
   /\/billing\//,
   /\/settings\//,
+  /\/security\/settings\//,
+];
+
+const resourceSelectorPatterns = [
+  /\/\[[^\]]*id[^\]]*\]\//i,
+  /params\s*[:=]/,
+  /\.params\b/,
+  /searchParams\.get\(['"](?:id|documentId|vendorId|systemId|incidentId|teamId|memberId|inviteId)['"]\)/,
+  /\b(?:documentId|vendorId|systemId|incidentId|teamId|memberId|inviteId)\b/,
 ];
 
 function walk(dir) {
@@ -105,45 +98,82 @@ function hasAny(source, tokens) {
   return tokens.some((token) => (typeof token === 'string' ? source.includes(token) : token.test(source)));
 }
 
-function isPublicAllowlisted(path) {
-  return publicEndpointAllowlist.some((pattern) => pattern.test(path));
+function firstIndexOfAny(source, tokens) {
+  const indexes = tokens.map((token) => source.indexOf(token)).filter((index) => index >= 0);
+  return indexes.length > 0 ? Math.min(...indexes) : -1;
 }
 
-function isInternalAllowlisted(path) {
-  return internalEndpointAllowlist.some((pattern) => pattern.test(path));
+function readInventory() {
+  if (!existsSync(inventoryPath)) {
+    return {
+      routeClasses: new Map(),
+      failures: [`missing ${relative(root, inventoryPath).split(sep).join('/')}`],
+    };
+  }
+
+  const source = readFileSync(inventoryPath, 'utf8');
+  const routeClasses = new Map();
+  const rowPattern = /^\|\s*`([^`]+route\.ts)`\s*\|\s*([^|]+?)\s*\|/gm;
+  for (const match of source.matchAll(rowPattern)) {
+    routeClasses.set(match[1], match[2].trim());
+  }
+
+  return { routeClasses, failures: [] };
 }
 
+function serviceRoleAppearsBeforeGuard(source) {
+  const serviceRoleIndex = firstIndexOfAny(source, ['createAdminClient', 'service_role']);
+  if (serviceRoleIndex === -1) return false;
+
+  const guardIndex = firstIndexOfAny(source, [...authGuardTokens, ...ownershipGuardTokens, ...rbacTokens]);
+  return guardIndex === -1 || serviceRoleIndex < guardIndex;
+}
+
+const inventory = readInventory();
 const routes = walk(apiRoot);
-const findings = [];
+const findings = [...inventory.failures];
 
 for (const route of routes) {
   const normalized = normalizePath(route);
   const source = readFileSync(route, 'utf8');
-  if (isPublicAllowlisted(normalized)) continue;
+  const routeClass = inventory.routeClasses.get(normalized);
 
-  if (isInternalAllowlisted(normalized)) {
-    if (!hasAny(source, internalAuthGuardTokens)) {
-      findings.push(`${normalized}: internal/cron route does not prove internal secret guard enforcement`);
-    }
+  if (!routeClass) {
+    findings.push(`${normalized}: missing API_ROUTE_INVENTORY.md classification`);
     continue;
   }
 
-  const handlesResourceId = hasAny(source, resourceIdentifierPatterns) || /\[[^\]]*id[^\]]*\]/i.test(normalized);
+  if (!knownClasses.has(routeClass)) {
+    findings.push(`${normalized}: unknown API route classification: ${routeClass}`);
+    continue;
+  }
+
+  if (publicClasses.has(routeClass)) continue;
+
   const appearsAdminRoute = adminRoutePatterns.some((pattern) => pattern.test(normalized));
+  const handlesResourceSelector = hasAny(source, resourceSelectorPatterns);
   const hasAuthGuard = hasAny(source, authGuardTokens);
   const hasOwnershipGuard = hasAny(source, ownershipGuardTokens);
   const hasRbacGuard = hasAny(source, rbacTokens);
 
-  if (handlesResourceId && !hasAuthGuard) {
-    findings.push(`${normalized}: receives or references a resource id but does not prove an authenticated user guard`);
+  if (!hasAuthGuard) {
+    findings.push(`${normalized}: ${routeClass} route does not prove an authenticated user guard`);
   }
 
-  if (handlesResourceId && !hasOwnershipGuard) {
-    findings.push(`${normalized}: receives or references a resource id but does not prove tenant/user ownership validation`);
+  if (tenantClasses.has(routeClass) && !hasOwnershipGuard) {
+    findings.push(`${normalized}: ${routeClass} route does not prove tenant membership/resource ownership validation`);
   }
 
-  if (appearsAdminRoute && !hasRbacGuard) {
-    findings.push(`${normalized}: admin/team/billing/settings route does not prove RBAC/admin permission enforcement`);
+  if ((privilegedClasses.has(routeClass) || appearsAdminRoute) && !hasRbacGuard) {
+    findings.push(`${normalized}: ${routeClass} route does not prove RBAC/admin permission enforcement`);
+  }
+
+  if (handlesResourceSelector && !hasOwnershipGuard) {
+    findings.push(`${normalized}: resource selector requires tenant ownership validation before use`);
+  }
+
+  if (serviceRoleAppearsBeforeGuard(source)) {
+    findings.push(`${normalized}: service-role/admin client appears before auth/tenant/RBAC guard proof`);
   }
 }
 
