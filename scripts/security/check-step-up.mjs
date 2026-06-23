@@ -18,17 +18,6 @@ const paths = {
   provider: 'src/server/security/step-up-provider.ts',
   settingsHelper: 'src/server/security/step-up-settings.ts',
   test: 'src/server/security/step-up.test.ts',
-  doc: 'docs/security/STEP_UP_AUTH.md',
-  rolloutMatrix: 'docs/security/STEP_UP_ROLLOUT_MATRIX.md',
-  auditChainVerifier: 'src/app/api/audit/chain/verify/route.ts',
-  auditChainExport: 'src/app/api/audit/evidence-pack/route.ts',
-  teamInvite: 'src/app/api/team/invites/route.ts',
-  teamRemove: 'src/app/api/team/members/remove/route.ts',
-  teamRole: 'src/app/api/team/members/role/route.ts',
-  teamCancelInvite: 'src/app/api/team/invitations/cancel/route.ts',
-  teamPage: 'src/app/[locale]/dashboard/organizations/team/page.tsx',
-  teamSettings: 'src/components/team/team-settings-section.tsx',
-  securitySettings: 'src/app/api/security/settings/route.ts',
   challenge: 'src/app/api/security/step-up/challenge/route.ts',
   verify: 'src/app/api/security/step-up/verify/route.ts',
   ui: 'src/components/security/step-up-mfa-dialog.tsx',
@@ -38,8 +27,30 @@ const paths = {
   runtimePreflight: 'scripts/security/check-step-up-runtime-preflight.mjs',
   runtimeValidation: 'scripts/security/run-step-up-mfa-runtime-validation.mjs',
   productionPreflight: 'scripts/preflight.mjs',
+  packageJson: 'package.json',
   runtimeEvidence: 'docs/security/evidence/runtime/step-up-mfa-validation.json',
+  teamPage: 'src/app/[locale]/dashboard/organizations/team/page.tsx',
+  auditChainVerifier: 'src/app/api/audit/chain/verify/route.ts',
 };
+
+const protectedRoutes = [
+  'src/app/api/gdpr/export/route.ts',
+  'src/app/api/gdpr/delete-request/route.ts',
+  'src/app/api/billing/checkout/route.ts',
+  'src/app/api/billing/portal/route.ts',
+  'src/app/api/audit/chain/verify/route.ts',
+  'src/app/api/audit/evidence-pack/route.ts',
+  'src/app/api/security-questionnaire/export/route.ts',
+  'src/app/api/vendor-assurance/export/route.ts',
+  'src/app/api/enterprise-readiness/export/route.ts',
+  'src/app/api/retention-center/export/route.ts',
+  'src/app/api/continuity-center/export/route.ts',
+  'src/app/api/team/invites/route.ts',
+  'src/app/api/team/members/remove/route.ts',
+  'src/app/api/team/members/role/route.ts',
+  'src/app/api/team/invitations/cancel/route.ts',
+  'src/app/api/security/settings/route.ts',
+];
 
 const tokenChecks = {
   [paths.helper]: [
@@ -113,7 +124,10 @@ const tokenChecks = {
     'readRuntimeSetting', 'hasConfiguredList', 'enterpriseReleaseEnv', 'legacyEnterpriseReleaseEnv',
     'Enterprise step-up runtime provider preflight: running', 'Enterprise step-up runtime provider preflight: skipped',
     'stepUpProviderEnv', 'stepUpSigningEnv', 'auditSigningEnv', 'supabaseUrlEnv', 'supabaseAnonEnv',
-    'stepUpAcrEnv', 'stepUpAmrEnv', 'providerConfigured', 'providerProof', 'step-up-mfa-validation.json',
+    'stepUpAcrEnv', 'stepUpAmrEnv', 'providerConfigured',
+  ],
+  [paths.packageJson]: [
+    'security:step-up', 'security:step-up:runtime', 'RISCK_COMPLY_ENTERPRISE_RELEASE=true npm run security:step-up',
   ],
   [paths.runtimeEvidence]: [
     'step-up-mfa-validation', 'ProviderProofRequired', 'supabase_mfa', 'enterprise_idp', 'failClosedWithoutProvider',
@@ -185,24 +199,7 @@ for (const [path, tokens] of Object.entries(tokenChecks)) {
   if (sources[path]) requireTokens(path, sources[path], tokens);
 }
 
-for (const routePath of [
-  'src/app/api/gdpr/export/route.ts',
-  'src/app/api/gdpr/delete-request/route.ts',
-  'src/app/api/billing/checkout/route.ts',
-  'src/app/api/billing/portal/route.ts',
-  'src/app/api/audit/chain/verify/route.ts',
-  'src/app/api/audit/evidence-pack/route.ts',
-  'src/app/api/security-questionnaire/export/route.ts',
-  'src/app/api/vendor-assurance/export/route.ts',
-  'src/app/api/enterprise-readiness/export/route.ts',
-  'src/app/api/retention-center/export/route.ts',
-  'src/app/api/continuity-center/export/route.ts',
-  'src/app/api/team/invites/route.ts',
-  'src/app/api/team/members/remove/route.ts',
-  'src/app/api/team/members/role/route.ts',
-  'src/app/api/team/invitations/cancel/route.ts',
-  'src/app/api/security/settings/route.ts',
-]) {
+for (const routePath of protectedRoutes) {
   const source = read(routePath);
   if (source) requireAwaitedStepUp(routePath, source);
 }
