@@ -1,15 +1,19 @@
 # P0 Runtime Evidence Register
 
-This register separates repository readiness from real production/security execution evidence.
-
-Repository gates can prove that controls are documented and wired into CI. Runtime evidence proves that the controls were actually applied in GitHub, Vercel, Supabase, and the production-like environment.
+This register separates repository readiness from real production/security execution evidence. It records observed evidence only and keeps the release decision at No-Go while required live evidence remains open.
 
 ## Current release assessment
 
-- Release name: EuroComply Final Release Readiness - 2026-06-22
-- Assessment date: 2026-06-22
-- Assessed commit SHA: `7794d552d44784f906451b308b367d30c06ecc4c`
-- Current PR head SHA: `369c979e6428178648462aa3565d0698b567851a`
+- Release name: EuroComply Operational Release Candidate - 2026-06-23
+- Assessment date: 2026-06-23
+- Current PR: #346
+- Remediation branch: `release/operational-go-evidence-2026-06-23`
+- Current PR head SHA assessed by this register refresh: `2771aa2af6113c5660d4bb4ea9f0da1c33aa45fc`
+- Current PR preview deployment: Ready according to the latest Vercel PR comment, after an earlier quota failure
+- Current PR preview URL: recorded in the latest Vercel PR comment for #346
+- Current PR build/deploy log: recorded in the latest Vercel PR comment for #346
+- Final validation bundle: `release-validation/summary.json`, `release-validation/summary.md`, `release-validation/logs/*.log`
+- Final validation result: **failed / blocked_not_run**
 - Final decision: **No-Go**
 - Decision report: `docs/RELEASE_FINAL_READINESS_REPORT.md`
 
@@ -17,29 +21,28 @@ Repository gates can prove that controls are documented and wired into CI. Runti
 
 | Evidence item | Status | Required evidence | Owner | Expiry / next action |
 | --- | --- | --- | --- | --- |
-| Branch protection applied on `main` | Exception | `docs/security/evidence/runtime/branch-protection-main.json` records Complete, but release reviewer must re-confirm current GitHub ruleset before Go; exception owner/due: release owner, 2026-06-23 | Release owner | Revalidate by 2026-06-23 |
-| Required status checks configured | Exception | `docs/security/evidence/runtime/required-status-checks.json` records Complete; exception owner/due: release owner, 2026-06-23, to resolve stale/conflicting `branch-protection-required-checks.json` and confirm required checks are enforced for the assessed commit | Release owner | Revalidate by 2026-06-23 |
-| CI run for assessed commit | Open | Passing GitHub Actions run URL for the assessed commit with `npm ci`, lint, typecheck, test, e2e, build, security CI and release readiness logs; use `node scripts/release/run-final-validation.mjs` to generate `release-validation/summary.json` and logs | Engineering owner | Required by 2026-06-23 |
-| Production deployment / build log | Open | Successful build log and deployment URL for the assessed commit; current commit status has Vercel failure | Platform owner | Required by 2026-06-23 |
+| Branch protection applied on `main` | Exception | `docs/security/evidence/runtime/branch-protection-main.json` records Complete repository evidence; exception owner Release owner must re-confirm current rules before Go and expiry is 2026-06-23 | Release owner | Revalidate by 2026-06-23 |
+| Required status checks configured | Exception | `docs/security/evidence/runtime/required-status-checks.json` records Complete repository evidence; exception owner Release owner must confirm final assessed commit checks and expiry is 2026-06-23 | Release owner | Revalidate by 2026-06-23 |
+| CI run for assessed commit | Open | Passing GitHub Actions run URL for the final assessed commit with `npm ci`, lint, typecheck, test, e2e, build, security CI and release readiness logs; current `release-validation/` bundle is non-passing because commands were blocked/not run | Engineering owner | Required by 2026-06-23 |
+| Current PR production deployment / build log | Complete | Latest Vercel PR comment records Ready preview deployment evidence and build/deploy log link; this proves preview deployment exists, not release approval | Platform owner | Functional smoke verification still required before Go |
+| Deployment URL functional verification | Open | Verify the current PR deployment URL and `/api/health` response from a network-capable release runner after a successful deployment exists; do not mark Complete from historical URL presence alone | Platform owner | Required by 2026-06-23 |
 | Production secrets configured in provider secret stores | Complete | `docs/security/evidence/runtime/production-secrets-provider-stores.json` records status `Complete`, provider stores checked, values redacted, reviewer and timestamp | Release owner | Attach runtime preflight before Go |
 | Supabase live RLS validation completed | Open | `docs/security/evidence/runtime/supabase-live-rls-validation.json` must record status `Complete`, outcome `passed`, tenant A/B cross-tenant read/insert/update/delete denial, same-tenant allowed reads per reviewed table, and backend privileged path review generated by `scripts/security/run-supabase-live-tenant-isolation.mjs --update-register` | Security reviewer | Required by 2026-06-25 |
 | External security review or pentest completed | Open | `docs/security/evidence/runtime/external-security-review-or-pentest.json` must record `status: Complete` only after a real external report exists; include scope, triage, critical/high resolution or formal acceptance and critical retest evidence | Security reviewer | Required before enterprise; target 2026-07-06 |
-| Deterministic npm lockfile committed | Complete | `package-lock.json` committed with npm lockfile version 3 after P0 Commit Lockfile workflow | Engineering owner | Attach `npm ci` output before Go |
-| Floating dependency specs removed | Complete | `node scripts/security/list-floating-dependencies.mjs` output showing no forbidden specs | Engineering owner | Attach security CI output before Go |
-| Audit-chain live validation | Exception | `docs/security/evidence/runtime/audit-chain-live-validation.json` records Complete repository evidence; exception owner/due: security reviewer, 2026-06-25, because enterprise still needs customer/target live run with production Supabase credentials, signing material and fresh step-up assertion | Security reviewer | Required by 2026-06-25 for enterprise |
-| Upload malware/content scanning validation | Exception | `docs/security/evidence/runtime/upload-malware-scan-validation.json` records Complete repository evidence and fail-closed behavior; exception owner/due: security reviewer, 2026-06-25, because enterprise still needs live scanner provider proof for target environment | Security reviewer | Required by 2026-06-25 for enterprise |
-| Step-up MFA / IdP validation | Exception | `docs/security/evidence/runtime/step-up-mfa-validation.json` records Complete repository evidence; exception owner/due: security reviewer, 2026-06-25, because live provider execution with real Supabase MFA or enterprise IdP credentials must be attached | Security reviewer | Required by 2026-06-25 for enterprise |
-| Stripe billing runtime validation | Exception | `docs/security/evidence/runtime/stripe-billing-validation.json` records Complete repository evidence but `validationStatus` remains `implemented_pending_ci_execution`; exception owner/due: engineering owner, 2026-06-24 | Engineering owner | Required by 2026-06-24 |
-| Observability readiness | Exception | `docs/security/evidence/runtime/observability-readiness.json` records Complete repository evidence; exception owner/due: SRE/release owner, 2026-06-23, because CI output, owner sign-off and previous known-good deployment must be attached | SRE / release owner | Required by 2026-06-23 |
-| Incident response owner | Open | Named incident owner in `docs/RELEASE_APPROVAL_RECORD.md` and runbook acknowledgement | Release owner | Required by 2026-06-23 |
-| Rollback owner and rollback target | Open | Named rollback owner plus previous known-good deployment URL/SHA and rollback trigger criteria | Release owner | Required by 2026-06-23 |
-| Support / customer communication owner | Open | Named support and customer communication owners plus status-page/customer notice decision | Release owner | Required by 2026-06-23 |
+| Deterministic npm lockfile committed | Complete | `package-lock.json` committed with npm lockfile version 3 after P0 Commit Lockfile workflow; attach `npm ci` output before Go | Engineering owner | Attach `npm ci` output before Go |
+| Floating dependency specs removed | Complete | `node scripts/security/list-floating-dependencies.mjs` output evidence showing no forbidden specs | Engineering owner | Attach security CI output before Go |
+| Audit-chain live validation | Exception | `docs/security/evidence/runtime/audit-chain-live-validation.json` records Complete repository evidence; exception owner Security reviewer must run customer/target live validation and expiry is 2026-06-25 for enterprise | Security reviewer | Required by 2026-06-25 for enterprise |
+| Upload malware/content scanning validation | Exception | `docs/security/evidence/runtime/upload-malware-scan-validation.json` records Complete repository evidence and fail-closed behavior; exception owner Security reviewer must attach live scanner provider proof and expiry is 2026-06-25 for enterprise | Security reviewer | Required by 2026-06-25 for enterprise |
+| Step-up MFA / IdP validation | Exception | `docs/security/evidence/runtime/step-up-mfa-validation.json` records Complete repository evidence; exception owner Security reviewer must attach live provider execution proof and expiry is 2026-06-25 for enterprise | Security reviewer | Required by 2026-06-25 for enterprise |
+| Stripe billing runtime validation | Exception | `docs/security/evidence/runtime/stripe-billing-validation.json` records Complete repository evidence but `validationStatus` remains `implemented_pending_ci_execution`; exception owner Engineering owner must attach focused runtime/webhook proof and expiry is 2026-06-24 | Engineering owner | Required by 2026-06-24 |
+| Observability readiness | Exception | `docs/security/evidence/runtime/observability-readiness.json` records Complete repository evidence; exception owner SRE / release owner must attach CI output, owner sign-off, deployment smoke evidence and rollback verification with expiry 2026-06-23 | SRE / release owner | Required by 2026-06-23 |
+| Incident response owner | Complete | Named incident owner evidence is recorded in `docs/RELEASE_APPROVAL_RECORD.md`; runbook acknowledgement/drill evidence still required before Go | Release owner | Attach acknowledgement/drill before Go |
+| Rollback owner and rollback target | Exception | Named rollback owner and rollback target candidate evidence is recorded in `docs/RELEASE_APPROVAL_RECORD.md`; exception owner Release owner must attach functional verification and dry-run evidence with expiry 2026-06-23 | Release owner | Required by 2026-06-23 |
+| Support / customer communication owner | Complete | Named support and customer communication owner evidence is recorded in `docs/RELEASE_APPROVAL_RECORD.md`; customer notice/status-page decision remains required before Go | Release owner | Required by 2026-06-23 |
 
 ## Evidence storage rule
 
-Do not commit screenshots containing secret values. Redact all secret values before storing evidence.
-
-Private evidence can be stored outside the repository, but the release approval must reference where it is stored and who reviewed it.
+Do not commit screenshots or exports containing value-bearing credentials. Redact sensitive values before storing evidence. Private evidence can be stored outside the repository, but the release approval must reference where it is stored and who reviewed it.
 
 ## External review release gate
 

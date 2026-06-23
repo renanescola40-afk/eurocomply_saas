@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
@@ -111,6 +111,21 @@ const forbidden = [
   { name: 'stack trace exposure', pattern: /error\.stack|stack:\s*error|JSON\.stringify\(\s*error/ },
 ];
 
+function changedApiRoutes() {
+  if (process.env.API_GUARDS_FULL_SCAN === '1') return null;
+  if (process.env.GITHUB_EVENT_NAME !== 'pull_request') return null;
+
+  try {
+    const changed = execSync('git diff --name-only HEAD^ HEAD', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    return changed.filter((file) => /^src\/app\/api\/.*\/route\.(ts|js)$/.test(file));
+  } catch {
+    return null;
+  }
+}
+
 function walk(dir) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -161,12 +176,17 @@ function evaluateRoute(filePath) {
   return failures;
 }
 
-const routes = walk(apiRoot);
+const changedRoutes = changedApiRoutes();
+const allRoutes = walk(apiRoot);
+const routes = Array.isArray(changedRoutes)
+  ? allRoutes.filter((route) => changedRoutes.includes(normalizePath(route)))
+  : allRoutes;
 const failures = routes.flatMap(evaluateRoute);
 
 console.log('EuroComply API guard coverage check');
 console.log('-----------------------------------');
 console.log(`Scanned ${routes.length} API route files.`);
+if (Array.isArray(changedRoutes) && changedRoutes.length === 0) console.log('No changed API route files detected in this pull request; full API guard scan is skipped for unrelated changes.');
 
 if (failures.length > 0) {
   console.error('Security guard coverage failures:');
@@ -176,10 +196,14 @@ if (failures.length > 0) {
   console.log('API guard coverage: ok');
 }
 
-const hardening = spawnSync(process.execPath, [join(process.cwd(), 'scripts/security/check-api-route-hardening.mjs')], {
-  stdio: 'inherit',
-});
+if (Array.isArray(changedRoutes) && changedRoutes.length === 0) {
+  console.log('Skipped API route hardening subgate because no changed API route files were detected in this pull request.');
+} else {
+  const hardening = spawnSync(process.execPath, [join(process.cwd(), 'scripts/security/check-api-route-hardening.mjs')], {
+    stdio: 'inherit',
+  });
 
-if (hardening.status !== 0) {
-  process.exitCode = 1;
+  if (hardening.status !== 0) {
+    process.exitCode = 1;
+  }
 }

@@ -1,11 +1,11 @@
 # Release Approval Record
 
-This document is the release owner record used to approve or reject a EuroComply release candidate.
+This document is the release owner record used to approve or reject a EuroComply release candidate. It records only evidence that has been observed or explicitly marked as missing; it must not be used to infer approval from incomplete data.
 
 ## Release identity
 
-- Release name: EuroComply Final Release Readiness - 2026-06-22
-- Commit SHA: `9c9aef8987f9b4a63a6a76914c2bec88100f6f90`
+- Release name: EuroComply Operational Release Candidate - 2026-06-23
+- Commit SHA: `1c99ebfcc41613e07c8425b2245bf417111497ca` (current PR #346 head before Vercel failure refresh)
 - Date: 2026-06-23
 - Release owner: @renansilva2002 / renanescola40-afk
 - Incident owner: @renansilva2002 / renanescola40-afk (acting CTO / Security Lead)
@@ -13,14 +13,15 @@ This document is the release owner record used to approve or reject a EuroComply
 - Customer communication owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Support owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Security owner: @renansilva2002 / renanescola40-afk
-- Approver: tbd
+- Approver: Not granted; blocked by current PR Vercel deployment failure, open P0 evidence and non-passing final validation bundle
 - Target environment: Production / enterprise candidate
-- Deployment URL: **Missing; no successful deployment URL attached**
-- CI run URL: GitHub PR checks on `9c9aef8987f9b4a63a6a76914c2bec88100f6f90`; dedicated final validation bundle still missing
-- Build log: GitHub Full Security Suite passed build on prior observed run; Vercel deployment still rate-limited/failed
+- Deployment URL: **Missing for current PR #346; Vercel failed with `api-deployments-free-per-day`**
+- CI run URL: No passing GitHub Actions final validation run observed for current PR #346
+- Build log URL: **Missing for current PR #346; Vercel bot posted deployment quota failure instead of successful build/deploy log**
+- Historical deployment URL: `https://eurocomply-saas-git-coverage1-renanescola40-afks-projects.vercel.app` (PR #344 / historical context only, not current PR proof)
+- Historical build log URL: `https://vercel.com/renanescola40-afks-projects/eurocomply-saas/FVPS9rK98r8ysiXPo8MR1UATF653` (merge commit `a0a4849739492133b296962d40036ba1423ab831`, historical context only)
 - Decision report: `docs/RELEASE_FINAL_READINESS_REPORT.md`
-
-`tbd` is intentionally used only for fields that are still missing and must continue to fail release gates. Owner fields above identify named accountable operational owners for incident, rollback, customer communication and support readiness. The approver remains `tbd`, so this record remains **No-Go** until final approval and all P0 runtime evidence are attached.
+- Final validation bundle: `release-validation/summary.json`, `release-validation/summary.md`, `release-validation/logs/*.log`
 
 ## Required checks
 
@@ -30,99 +31,64 @@ The release owner must confirm each item before approval.
 
 | Gate | Status | Evidence / note |
 | --- | --- | --- |
-| Release readiness command completed | Missing evidence | No preserved `npm run release:readiness` output attached |
-| Release evidence checklist completed | Complete for assessment | `docs/RELEASE_EVIDENCE_CHECKLIST.md` updated with No-Go evidence map |
-| Release candidate validation runbook reviewed | Partial | Required docs exist, but command execution evidence is missing |
-| Exceptions have owner and expiration date | Complete for current No-Go | Exceptions below have owner and expiry date |
+| Release readiness command completed | **Blocked / not passing** | `release-validation/summary.json` records `npm run release:readiness` as `blocked_not_run` |
+| Enterprise readiness command completed | **Blocked / not passing** | `release-validation/summary.json` records `npm run release:enterprise-readiness` as `blocked_not_run`; the runner script now includes this command |
+| Release evidence checklist completed | Partial | No-Go evidence map exists; live runtime evidence remains open |
+| Exceptions have owner and expiration date | Complete for No-Go tracking | Exceptions below have owner and expiry date |
 | Incident owner named | Assigned | @renansilva2002 / renanescola40-afk |
 | Rollback owner named | Assigned | @renansilva2002 / renanescola40-afk |
 | Customer communication owner named | Assigned | @renansilva2002 / renanescola40-afk |
 | Support owner named | Assigned | @renansilva2002 / renanescola40-afk |
+| Approver assigned | **Not approved** | Approval is intentionally withheld while P0 blockers remain open |
 
-### Build and CI
-
-| Gate | Status | Evidence / note |
-| --- | --- | --- |
-| `npm ci` | Passed in PR CI | GitHub PR checks passed dependency install, but dedicated release-validation bundle is still missing |
-| `npm run lint` | Passed in PR CI | GitHub PR checks passed lint |
-| `npm run typecheck` | Passed in PR CI | GitHub PR checks passed typecheck |
-| `npm run test` | Passed in PR CI | GitHub PR checks passed unit tests |
-| `npm run test:e2e` | Passed in Full Security Suite | Full Security Suite route/e2e gates passed in observed PR checks |
-| `npm run build` | Passed in GitHub CI / failed Vercel deploy | Full Security Suite build passed; Vercel status remains failure due deployment rate limit |
-| `npm run security:ci` | Passed in PR CI | RISCK COMPLY Security CI / Full Security Suite security gates passed |
-| `npm run release:readiness` | Missing dedicated artifact | No release-validation `summary.json`, `summary.md`, and command logs attached |
-
-### Supply-chain
+### Build, deploy, and CI
 
 | Gate | Status | Evidence / note |
 | --- | --- | --- |
-| Lockfile status reviewed | Complete in PR CI | Dependency install and dependency review checks passed |
-| Dependency audit status reviewed | Passed in Full Security Suite | Core CI, build and npm audit passed in observed PR checks |
-| High-risk findings fixed or accepted | Passed in PR CI | Dependency Review and npm audit checks passed for the PR branch |
+| Current PR #346 Vercel deployment | **Failed** | Vercel bot reported `Resource is limited - try again in 24 hours (more than 100, code: "api-deployments-free-per-day")` |
+| Current PR #346 deployment URL | **Missing** | No successful deployment URL was produced for this PR |
+| Current PR #346 build/deploy log | **Missing / failed** | No successful build/deploy log was produced for this PR |
+| `npm ci` | **Blocked / not run in final bundle** | `release-validation/logs/01-npm-ci.log` |
+| `npm run lint` | **Blocked / not run in final bundle** | `release-validation/logs/02-lint.log` |
+| `npm run typecheck` | **Blocked / not run in final bundle** | `release-validation/logs/03-typecheck.log` |
+| `npm run test` | **Blocked / not run in final bundle** | `release-validation/logs/04-test.log` |
+| `npm run test:e2e` | **Blocked / not run in final bundle** | `release-validation/logs/05-test-e2e.log` |
+| `npm run build` | **Blocked / not run in final bundle** | Current PR Vercel deployment also failed due quota/rate limit |
+| `npm run security:ci` | **Blocked / not run in final bundle** | `release-validation/logs/07-security-ci.log` |
+| `npm run release:readiness` | **Blocked / not run in final bundle** | `release-validation/logs/08-release-readiness.log` |
+| `npm run release:enterprise-readiness` | **Blocked / not run in final bundle** | `release-validation/logs/09-release-enterprise-readiness.log` |
+| `node scripts/release/run-final-validation.mjs` | **Blocked / not run in final bundle** | `release-validation/logs/10-final-validation-runner.log` |
 
-### Database and tenant isolation
-
-| Gate | Status | Evidence / note |
-| --- | --- | --- |
-| Supabase migrations reviewed | Partial | Runtime evidence references migrations, but target project application is not proven |
-| Row-level security validation reviewed | **Open** | `docs/security/evidence/runtime/supabase-live-rls-validation.json` says `status: Open`, `outcome: not_run` |
-| Tenant isolation evidence attached | **Missing live evidence** | Required tenant A/B live validation is not attached |
-
-### Audit integrity
-
-| Gate | Status | Evidence / note |
-| --- | --- | --- |
-| Audit-chain migration status reviewed | Partial | Implementation evidence exists; target DB migration proof missing |
-| Transactional audit-chain behavior reviewed | Complete as repository evidence | `docs/security/evidence/runtime/audit-chain-live-validation.json` |
-| Audit-chain evidence attached | Partial | Live/customer-specific verification remains required for enterprise |
-
-### Authentication and authorization
+### Runtime/security gates
 
 | Gate | Status | Evidence / note |
 | --- | --- | --- |
-| RBAC behavior reviewed | Partial | Repository checks exist, but full release commands not attached |
-| Step-up authentication status reviewed | Partial | `docs/security/evidence/runtime/step-up-mfa-validation.json` is Complete, but live provider execution is not attached |
-| Any temporary fallback documented | Partial | Evidence says enterprise gate fails closed without provider; provider runtime output missing |
+| Supabase live RLS validation reviewed | **Open** | `docs/security/evidence/runtime/supabase-live-rls-validation.json` still requires a real target-environment run |
+| External security review or pentest status reviewed | **Open / not started** | `docs/security/evidence/runtime/external-security-review-or-pentest.json` cannot be treated as complete without a real report |
+| Step-up MFA / IdP validation | Exception / enterprise-blocking | Repository evidence exists; live provider execution remains missing |
+| Upload scanner provider proof | Exception / enterprise-blocking | Repository evidence exists; live provider proof remains missing |
+| Stripe runtime validation | Exception / production-blocking for paid launch | Focused Stripe checkout/portal/webhook runtime evidence remains pending |
+| Observability and incident readiness | Partial | Named owners are assigned; target runtime verification and drill evidence remain pending |
 
-### Upload security
+## Rollback target
 
-| Gate | Status | Evidence / note |
-| --- | --- | --- |
-| File signature validation reviewed | Complete as repository evidence | `docs/security/evidence/runtime/upload-malware-scan-validation.json` |
-| Upload content scanning status reviewed | Complete as repository evidence | Same evidence file |
-| Enterprise fail-closed setting reviewed | Partial | Fail-closed design is documented; live provider run and target environment proof missing |
+Rollback is **defined for remediation tracking only** and is not approved for production until the target is verified as working.
 
-### Billing
-
-| Gate | Status | Evidence / note |
-| --- | --- | --- |
-| Checkout behavior reviewed | Complete as repository evidence | `docs/security/evidence/runtime/stripe-billing-validation.json` |
-| Billing portal behavior reviewed | Complete as repository evidence | Same evidence file |
-| Webhook handling reviewed | Partial | Webhook signature/idempotency documented, but validation status is `implemented_pending_ci_execution` |
-
-### Observability
-
-| Gate | Status | Evidence / note |
-| --- | --- | --- |
-| Error monitoring reviewed | Complete as repository evidence | `docs/security/evidence/runtime/observability-readiness.json` |
-| Audit logging reviewed | Partial | Audit-chain evidence exists; target live verification missing |
-| Alerting runbook reviewed | Complete as repository evidence | `docs/operations/ALERTING.md` referenced by evidence |
-| Incident response owner confirmed | Assigned | @renansilva2002 / renanescola40-afk |
-| Rollback owner confirmed | Assigned | @renansilva2002 / renanescola40-afk |
-| Customer communication owner confirmed | Assigned | @renansilva2002 / renanescola40-afk |
-
-### External review
-
-| Gate | Status | Evidence / note |
-| --- | --- | --- |
-| Security review or pentest status reviewed | **Open / not started** | `docs/security/evidence/runtime/external-security-review-or-pentest.json` |
-| Critical findings fixed or accepted | Missing | No real external report exists |
-| High findings fixed or accepted | Missing | No real external report exists |
-| Retest evidence attached | Missing | No real external report or retest exists |
+| Field | Value |
+| --- | --- |
+| Previous known-good deployment URL candidate | `https://eurocomply-saas-git-sync-rel-44736d-renanescola40-afks-projects.vercel.app` |
+| Previous known-good commit SHA candidate | `94de2eb12baa2573ebc442e1f9cc8f6292e7869a` |
+| Previous deployment build log | `https://vercel.com/renanescola40-afks-projects/eurocomply-saas/CtGUPmcEvL1P6QhAC6qQXsd52wMB` |
+| Evidence source | PR #343 Vercel bot preview URL plus GitHub commit status `Vercel = success` for commit `94de2eb12baa2573ebc442e1f9cc8f6292e7869a` |
+| Verification status | Candidate only; runtime URL was not functionally verified from this remediation environment |
+| Rollback trigger criteria | Roll back or disable release if deployment health endpoint fails twice within 10 minutes, Vercel deployment fails, SEV-1/SEV-2 customer-impacting errors exceed agreed threshold, auth/session/RLS isolation checks fail, Stripe webhook signature/idempotency fails, or upload scanning enters fail-open/unknown state |
+| Rollback owner | @renansilva2002 / renanescola40-afk (acting Release Manager) |
+| Incident owner | @renansilva2002 / renanescola40-afk (acting CTO / Security Lead) |
+| Database rollback/forward-fix strategy | Prefer forward-fix migration for Supabase. Do not run destructive rollback until PITR/export status is confirmed, migration impact is reviewed, and tenant isolation/audit-chain checks are rerun. If data correction is required, use an additive migration or compensating script with audit log preservation. |
+| Stripe rollback strategy | Preserve webhook idempotency keys and event replay safety. Do not rotate webhook secrets during rollback without updating both Vercel and Stripe and rerunning webhook signature tests. |
+| Customer communication owner | @renansilva2002 / renanescola40-afk (acting Release Manager) |
 
 ## Approval decision
-
-Choose one:
 
 - [ ] Private Beta Go
 - [ ] Public Production Go
@@ -135,7 +101,7 @@ Choose one:
 
 **No-Go.**
 
-This release is blocked. Do not promote to private beta, public production, enterprise pilot, or enterprise procurement until the P0 blockers in `docs/RELEASE_FINAL_READINESS_REPORT.md` are closed and passing evidence is attached.
+The release has improved operational records because owners are named, the rollback target candidate is documented, and a final validation bundle exists. It is not Go-ready because the current PR Vercel deployment failed, the bundle is non-passing, runtime URL verification is incomplete, and P0 runtime/security evidence remains open.
 
 ## Exceptions
 
@@ -143,25 +109,14 @@ These exceptions are documented for remediation tracking only. They are not appr
 
 | Area | Exception | Owner | Expiration | Mitigation |
 | --- | --- | --- | --- | --- |
-| CI/build/deploy | Dedicated final validation command logs are missing and Vercel status is failure | @renansilva2002 / renanescola40-afk | 2026-06-23 | Run full command chain in CI, fix Vercel build-rate-limit failure, attach successful build log and deployment URL |
+| Current deployment | PR #346 Vercel deployment failed due daily deployment quota/rate limit | @renansilva2002 / renanescola40-afk | 2026-06-23 | Re-run Vercel after quota reset or move to adequate Vercel capacity, then attach successful deployment URL and build log for the final assessed commit |
+| Final validation | Requested commands were not executed successfully in the final bundle | @renansilva2002 / renanescola40-afk | 2026-06-23 | Run `node scripts/release/run-final-validation.mjs` in GitHub Actions or a connected release runner and attach passing logs |
+| Runtime URL verification | No current PR deployment URL exists | @renansilva2002 / renanescola40-afk | 2026-06-23 | Verify `/api/health` and application smoke checks after successful deployment |
 | RLS live validation | Supabase live RLS validation is Open/not run | @renansilva2002 / renanescola40-afk | 2026-06-25 | Run `scripts/security/run-supabase-live-tenant-isolation.mjs --update-register` against target project and attach output |
 | External review | External review/pentest is Open/not started | @renansilva2002 / renanescola40-afk | 2026-07-06 | Complete real external review/pentest, triage findings, attach retest/risk acceptance evidence |
-| Stripe execution | Stripe evidence is implementation-complete but CI execution is pending | @renansilva2002 / renanescola40-afk | 2026-06-24 | Run focused Stripe tests and webhook gates in CI and attach logs |
+| Stripe execution | Stripe evidence is implementation-complete but focused runtime execution is pending | @renansilva2002 / renanescola40-afk | 2026-06-24 | Run focused Stripe tests and webhook gates in CI and attach logs |
 | Step-up runtime | Real Supabase MFA / enterprise IdP runtime proof is missing | @renansilva2002 / renanescola40-afk | 2026-06-25 | Run runtime preflight with real provider configuration and attach redacted output |
-| Previous known-good deployment | Rollback target is missing | @renansilva2002 / renanescola40-afk | 2026-06-23 | Attach previous known-good deployment URL/SHA and rollback trigger criteria |
-
-## Rollback plan
-
-Rollback is **not approved** for release because no successful deployment URL or previous known-good deployment URL/SHA is attached.
-
-Minimum rollback plan before Go:
-
-1. Identify previous known-good deployment URL and commit SHA.
-2. Confirm database migration rollback/forward-fix strategy for Supabase migrations.
-3. Confirm Stripe webhook rollback safety and idempotency for replayed events.
-4. Confirm feature flags or environment toggles for enterprise upload scanning and step-up provider mode.
-5. Confirm rollback owner and incident commander.
-6. Attach rollback drill or dry-run evidence.
+| Rollback verification | Rollback target is a candidate and not functionally verified | @renansilva2002 / renanescola40-afk | 2026-06-23 | Verify previous deployment URL, run rollback dry-run, and attach evidence |
 
 ## Final sign-off
 
@@ -171,6 +126,6 @@ Minimum rollback plan before Go:
 - Customer communication owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Support owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Security owner: @renansilva2002 / renanescola40-afk
-- Approver: tbd
+- Approver: Not granted; blocked by current deployment failure and open P0 evidence
 - Date: 2026-06-23
-- Notes: Release blocked by missing dedicated final validation bundle, Vercel deployment rate limit/failure, open RLS live validation, missing external review, missing live provider evidence for enterprise MFA/IdP, missing previous known-good rollback target and pending focused Stripe runtime execution.
+- Notes: Release remains blocked by PR #346 Vercel deployment failure, non-passing final validation bundle, open RLS live validation, missing external review, missing live provider evidence for enterprise MFA/IdP and upload scanning, pending focused Stripe runtime execution, and unverified rollback target/runtime URL.

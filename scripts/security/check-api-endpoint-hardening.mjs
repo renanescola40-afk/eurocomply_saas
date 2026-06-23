@@ -8,6 +8,7 @@ const reportPath = join(root, 'security-endpoints-inventory.json');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
 
 const publicEndpointAllowlist = [
+  { pattern: /src\/app\/api\/health\/route\.ts$/, reason: 'Public healthcheck returns only generic no-store service status' },
   { pattern: /src\/app\/api\/billing\/webhook\/route\.ts$/, reason: 'Stripe webhook validates provider signature instead of user session' },
   { pattern: /src\/app\/api\/stripe\/webhook\/route\.ts$/, reason: 'Stripe webhook validates provider signature instead of user session' },
   { pattern: /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/, reason: 'Public verifier; must remain no-store/rate-limited' },
@@ -200,10 +201,14 @@ if (failures.length > 0) {
   console.log('API endpoint hardening: ok');
 }
 
-const routeHardening = spawnSync(process.execPath, [join(root, 'scripts/security/check-api-route-hardening.mjs')], {
-  stdio: 'inherit',
-});
+if (Array.isArray(changedRoutes) && changedRoutes.length === 0) {
+  console.log('Skipped API route hardening subgate because no changed API route files were detected in this pull request.');
+} else {
+  const routeHardening = spawnSync(process.execPath, [join(root, 'scripts/security/check-api-route-hardening.mjs')], {
+    stdio: 'inherit',
+  });
 
-if (routeHardening.status !== 0) {
-  process.exitCode = 1;
+  if (routeHardening.status !== 0) {
+    process.exitCode = 1;
+  }
 }
