@@ -15,13 +15,14 @@ describe('central API guard security contract', () => {
       'requireOrganizationContext',
       'requireOrganizationMembership',
       'requirePermission',
-      'requireTrustedOriginForMutation',
       'requireRateLimit',
       'parseJsonBodyWithZod',
-      'secureApiError',
-      'secureApiJson',
     ]) {
-      expect(guardSource).toContain(`export ${helper === 'secureApiJson' ? 'function' : 'async function'} ${helper}`);
+      expect(guardSource).toContain(`export async function ${helper}`);
+    }
+
+    for (const helper of ['requireTrustedOriginForMutation', 'secureApiError', 'secureApiJson']) {
+      expect(guardSource).toContain(`export function ${helper}`);
     }
   });
 
