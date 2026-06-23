@@ -17,7 +17,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: senior-agent-dispatch-${{ github.event.issue.number || inputs.issue_number }}
+  group: senior-agent-dispatch-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
