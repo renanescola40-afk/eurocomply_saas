@@ -27,48 +27,48 @@ const TRUST_COPY: Record<SupportedLocale, TrustCopy> = {
   en: {
     eyebrow: 'Trust Center',
     title: 'Security, privacy and operational transparency without compliance washing.',
-    description: 'EuroComply publishes current controls, open gaps and procurement documentation so buyers can evaluate the platform honestly.',
-    assurance: 'EuroComply only claims controls that are currently evidenced. Open release gaps remain visible until they are closed with runtime evidence.',
+    description: 'EuroComply publishes current controls, open gaps and procurement-ready documentation so enterprise buyers can evaluate the platform honestly.',
+    assurance: 'EuroComply makes no SOC 2 or ISO 27001 claim at this time. The platform publishes current controls, open gaps and release evidence for enterprise review.',
     resourceLabel: 'Open resource',
     cards: baseCards,
   },
   pt: {
     eyebrow: 'Centro de Confiança',
     title: 'Segurança, privacidade e transparência operacional sem compliance washing.',
-    description: 'O EuroComply publica controlos atuais, lacunas abertas e documentação para avaliação honesta.',
-    assurance: 'O EuroComply só afirma controlos com evidência atual. Lacunas de release continuam visíveis até serem fechadas com evidência runtime.',
+    description: 'O EuroComply publica controlos atuais, lacunas abertas e documentação pronta para procurement enterprise.',
+    assurance: 'O EuroComply não faz claims externos de assurance neste momento. A plataforma publica controlos atuais, lacunas abertas e evidência de release para revisão enterprise.',
     resourceLabel: 'Abrir recurso',
     cards: baseCards,
   },
   es: {
     eyebrow: 'Centro de Confianza',
     title: 'Seguridad, privacidad y transparencia operacional sin compliance washing.',
-    description: 'EuroComply publica controles actuales, brechas abiertas y documentación para evaluación honesta.',
-    assurance: 'EuroComply solo afirma controles con evidencia actual. Las brechas de release siguen visibles hasta cerrarse con evidencia runtime.',
+    description: 'EuroComply publica controles actuales, brechas abiertas y documentación lista para evaluación enterprise.',
+    assurance: 'EuroComply no realiza claims externos de assurance en este momento. La plataforma publica controles actuales, brechas abiertas y evidencia de release para revisión enterprise.',
     resourceLabel: 'Abrir recurso',
     cards: baseCards,
   },
   fr: {
     eyebrow: 'Centre de Confiance',
     title: 'Sécurité, confidentialité et transparence opérationnelle sans compliance washing.',
-    description: 'EuroComply publie les contrôles actuels, les limites ouvertes et les documents de revue.',
-    assurance: 'EuroComply ne revendique que les contrôles actuellement prouvés. Les écarts de release restent visibles jusqu’à preuve runtime.',
+    description: 'EuroComply publie les contrôles actuels, les limites ouvertes et les documents prêts pour revue enterprise.',
+    assurance: 'EuroComply ne formule pas de claims externes d assurance à ce stade. La plateforme publie les contrôles actuels, les limites ouvertes et les preuves de release pour revue enterprise.',
     resourceLabel: 'Ouvrir la ressource',
     cards: baseCards,
   },
   it: {
     eyebrow: 'Centro Fiducia',
     title: 'Sicurezza, privacy e trasparenza operativa senza compliance washing.',
-    description: 'EuroComply pubblica controlli attuali, gap aperti e documentazione per una valutazione onesta.',
-    assurance: 'EuroComply dichiara solo controlli supportati da evidenza attuale. I gap di release restano visibili fino alla prova runtime.',
+    description: 'EuroComply pubblica controlli attuali, gap aperti e documentazione pronta per review enterprise.',
+    assurance: 'EuroComply non formula claims esterni di assurance in questo momento. La piattaforma pubblica controlli attuali, gap aperti ed evidenze di release per review enterprise.',
     resourceLabel: 'Apri risorsa',
     cards: baseCards,
   },
   de: {
     eyebrow: 'Trust Center',
     title: 'Sicherheit, Datenschutz und operative Transparenz ohne Compliance Washing.',
-    description: 'EuroComply veröffentlicht aktuelle Kontrollen, offene Lücken und Dokumentation für eine ehrliche Bewertung.',
-    assurance: 'EuroComply beansprucht nur aktuell belegte Kontrollen. Release-Lücken bleiben sichtbar, bis Runtime-Nachweise vorliegen.',
+    description: 'EuroComply veröffentlicht aktuelle Kontrollen, offene Lücken und Dokumentation für Enterprise Reviews.',
+    assurance: 'EuroComply macht derzeit keine externen Assurance Claims. Die Plattform veröffentlicht aktuelle Kontrollen, offene Lücken und Release Evidence Gates für Enterprise Reviews.',
     resourceLabel: 'Ressource öffnen',
     cards: baseCards,
   },
@@ -83,7 +83,7 @@ export default async function TrustCenterPage({ params }: { params: Promise<{ lo
     <main className="min-h-screen bg-[#0A0A0F] text-white">
       <section className="px-6 py-20">
         <div className="mx-auto max-w-6xl">
-          <Link href={`/${locale}`} className="text-sm text-white/70 hover:text-white">← EuroComply</Link>
+          <Link href={`/${locale}`} className="text-sm text-white/70 hover:text-white">EuroComply</Link>
           <p className="mt-10 text-sm font-semibold uppercase tracking-[0.24em] text-blue-200">{copy.eyebrow}</p>
           <h1 className="mt-4 max-w-4xl text-5xl font-semibold tracking-[-0.05em]">{copy.title}</h1>
           <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">{copy.description}</p>
