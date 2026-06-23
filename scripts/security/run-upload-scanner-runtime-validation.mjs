@@ -74,6 +74,31 @@ function endpointHostForEvidence() {
   }
 }
 
+function workflowRunUrlForEvidence() {
+  const serverUrl = process.env.GITHUB_SERVER_URL;
+  const repository = process.env.GITHUB_REPOSITORY;
+  const runId = process.env.GITHUB_RUN_ID;
+  if (!serverUrl || !repository || !runId) return null;
+  return `${serverUrl}/${repository}/actions/runs/${runId}`;
+}
+
+function commitShaForEvidence() {
+  const sha = process.env.GITHUB_SHA;
+  return /^[a-f0-9]{40}$/i.test(String(sha ?? '')) ? sha : null;
+}
+
+function runtimeContextForEvidence() {
+  return {
+    commandUsed: 'npm run security:upload-scanner:runtime -- --update-register',
+    generatedByGithubActions: process.env.GITHUB_ACTIONS === 'true',
+    githubWorkflow: process.env.GITHUB_WORKFLOW || null,
+    githubRunId: process.env.GITHUB_RUN_ID || null,
+    githubRunAttempt: process.env.GITHUB_RUN_ATTEMPT || null,
+    workflowRunUrl: workflowRunUrlForEvidence(),
+    commitSha: commitShaForEvidence(),
+  };
+}
+
 function mapStatus(status) {
   const normalized = String(status ?? '').trim().toLowerCase();
   if (['clean', 'ok', 'passed', 'allow', 'allowed'].includes(normalized)) return 'clean';
@@ -242,13 +267,27 @@ function shouldBlockUploadForMalwareScan(scanResult) {
   return scanResult.required && scanResult.status !== 'clean';
 }
 
+function exceptionFor(scanResult) {
+  return {
+    riskOwner: 'Security reviewer',
+    rationale: `Enterprise upload malware scanning remains blocked until a real scanner provider returns clean; current runtime validation reasonCode=${scanResult.reasonCode}.`,
+    compensatingControls: [
+      'Enterprise uploads fail closed when REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true and no clean scanner verdict is available.',
+      'Security CI rejects mock, disabled and unavailable scanner providers for enterprise runtime proof.',
+      'Download and preview access remain tenant-checked and backend mediated through short-lived signed URLs.',
+    ],
+    expiresAt: '2026-06-25',
+    approvalReference: 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md Upload malware/content scanning validation exception',
+  };
+}
+
 function buildEvidence(scanResult, skipped = false) {
   const provider = configuredProvider() || 'not_configured';
   const providerIsReal = REAL_PROVIDERS.has(provider) && !BYPASS_PROVIDERS.has(provider);
   const passed = scanResult.status === 'clean' && scanResult.required && providerIsReal;
   const blockedOnFailure = shouldBlockUploadForMalwareScan({ ...scanResult, required: true });
 
-  return {
+  const evidence = {
     evidenceItem: 'upload-malware-scan-validation',
     status: passed ? 'Complete' : 'Exception',
     reviewer: 'security-automation',
@@ -257,9 +296,10 @@ function buildEvidence(scanResult, skipped = false) {
     summary: passed
       ? 'Live malware scanner provider returned a clean verdict for the runtime validation upload fixture; enterprise fail-closed upload policy can allow clean uploads.'
       : 'Repository upload controls are implemented, but live malware scanner provider proof is not complete. Enterprise release remains gated until a real provider returns clean and --update-register is run.',
-    redactionConfirmation: 'All secrets, tokens, credentials, connection strings, scanner endpoints with access-granting values and file bytes are redacted.',
+    redactionConfirmation: 'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
     contentRedactionScope: 'The validation file bytes are not committed; only SHA-256, size, MIME and redacted provider metadata are recorded. Provider response bodies, messages and signature names are never written to repo evidence.',
     runtimeValidationScript: 'scripts/security/run-upload-scanner-runtime-validation.mjs',
+    runtimeContext: runtimeContextForEvidence(),
     liveProviderProof: {
       status: skipped ? 'skipped_non_enterprise_ci_gate' : passed ? 'passed' : 'failed_or_pending',
       requiredEnv: `${REQUIRE_MALWARE_SCAN_FOR_UPLOADS}=true`,
@@ -337,6 +377,7 @@ function buildEvidence(scanResult, skipped = false) {
       'scripts/security/check-upload-security.mjs',
       'scripts/security/check-upload-content-scan.mjs',
       'scripts/security/run-upload-scanner-runtime-validation.mjs',
+      '.github/workflows/upload-security-ci.yml',
       'tests/security/upload-malware-scan-validation.test.ts',
       'docs/security/evidence/runtime/upload-malware-scan-validation.json',
       'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md',
@@ -345,6 +386,9 @@ function buildEvidence(scanResult, skipped = false) {
     completionRule: 'Run npm run security:upload-scanner:runtime with REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true and a real MALWARE_SCANNER_PROVIDER. Use --update-register only when liveProviderProof.status is passed.',
     productionGate: 'Enterprise upload readiness requires a reachable real malware scanner provider returning clean verdicts. Bypass, mock, disabled, unavailable, timeout, suspicious, infected, malformed and error results block upload.',
   };
+
+  if (!passed) evidence.exception = exceptionFor(scanResult);
+  return evidence;
 }
 
 function writeEvidence(evidence) {
