@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-06-23T10:20:00+01:00",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "workflow": null,
+  "runId": null,
+  "runUrl": null,
+  "commitSha": "2f826f7f011b7a02c9c57cb56a630568416e05b1",
+  "refName": "release/operational-go-evidence-2026-06-23",
+  "actor": "ChatGPT release remediation session for @renansilva2002",
+  "eventName": "manual remediation",
+  "releaseTarget": "production-and-enterprise",
+  "overallResult": "failed",
+  "failureReason": "The requested command chain could not be executed in the available remediation runtime because the container could not resolve github.com and therefore could not clone/install the repository. This bundle is intentionally non-passing and must not be treated as release approval evidence.",
+  "evidencePolicy": "No evidence was fabricated. Commands that were not run are marked blocked, not passed.",
+  "vercel": {
+    "observedCommitSha": "a0a4849739492133b296962d40036ba1423ab831",
+    "statusContext": "Vercel",
+    "state": "success",
+    "buildLogUrl": "https://vercel.com/renanescola40-afks-projects/eurocomply-saas/FVPS9rK98r8ysiXPo8MR1UATF653",
+    "deploymentUrl": "https://eurocomply-saas-git-coverage1-renanescola40-afks-projects.vercel.app",
+    "deploymentUrlSource": "Vercel bot preview URL on PR #344 for head commit b546847c803ed568371571c1854e13536f5cad27; merge commit a0a4849739492133b296962d40036ba1423ab831 has Vercel status success with the build log above.",
+    "runtimeVerification": "not_verified_from_this_environment"
+  },
+  "requestedCommandFailures": [
+    "npm ci",
+    "npm run lint",
+    "npm run typecheck",
+    "npm run test",
+    "npm run test:e2e",
+    "npm run build",
+    "npm run security:ci",
+    "npm run release:readiness",
+    "npm run release:enterprise-readiness",
+    "node scripts/release/run-final-validation.mjs"
+  ],
+  "prerequisiteFailures": [
+    "repository clone / workspace preparation"
+  ],
+  "commands": [
+    { "command": "repository clone / workspace preparation", "requested": false, "prerequisiteFor": "all requested commands", "exitStatus": 128, "result": "failed", "log": "release-validation/logs/00-workspace-preparation.log" },
+    { "command": "npm ci", "requested": true, "exitStatus": null, "result": "blocked_not_run", "log": "release-validation/logs/01-npm-ci.log" },
+    { "command": "npm run lint", "requested": true, "exitStatus": null, "result": "blocked_not_run", "log": "release-validation/logs/02-lint.log" },
+    { "command": "npm run typecheck", "requested": true, "exitStatus": null, "result": "blocked_not_run", "log": "release-validation/logs/03-typecheck.log" },
+    { "command": "npm run test", "requested": true, "exitStatus": null, "result": "blocked_not_run", "log": "release-validation/logs/04-test.log" },
+    { "command": "npm run test:e2e", "requested": true, "exitStatus": null, "result": "blocked_not_run", "log": "release-validation/logs/05-test-e2e.log" },
+    { "command": "npm run build", "requested": true, "exitStatus": null, "result": "blocked_not_run", "log": "release-validation/logs/06-build.log" },
+    { "command": "npm run security:ci", "requested": true, "exitStatus": null, "result": "blocked_not_run", "log": "release-validation/logs/07-security-ci.log" },
+    { "command": "npm run release:readiness", "requested": true, "exitStatus": null, "result": "blocked_not_run", "log": "release-validation/logs/08-release-readiness.log" },
+    { "command": "npm run release:enterprise-readiness", "requested": true, "exitStatus": null, "result": "blocked_not_run", "log": "release-validation/logs/09-release-enterprise-readiness.log" },
+    { "command": "node scripts/release/run-final-validation.mjs", "requested": true, "exitStatus": null, "result": "blocked_not_run", "log": "release-validation/logs/10-final-validation-runner.log" }
+  ]
+}

@@ -27,8 +27,9 @@ describe('release operational owner readiness', () => {
 
   it('keeps release approval blocked while runtime evidence is missing', () => {
     expect(approvalRecord).toContain('- [x] **No-Go**');
-    expect(approvalRecord).toContain('Approver: tbd');
-    expect(approvalRecord).toContain('Deployment URL: **Missing; no successful deployment URL attached**');
+    expect(approvalRecord).toContain('- Approver: Not granted; blocked by current PR Vercel deployment failure, open P0 evidence and non-passing final validation bundle');
+    expect(approvalRecord).toContain('- Deployment URL: **Missing for current PR #346; Vercel failed with `api-deployments-free-per-day`**');
+    expect(approvalRecord).toContain('Approval is intentionally withheld while P0 blockers remain open');
   });
 
   it('documents that owner assignment does not satisfy runtime evidence', () => {

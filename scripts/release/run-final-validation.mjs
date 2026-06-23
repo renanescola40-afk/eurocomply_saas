@@ -28,6 +28,13 @@ const commands = [
   { slug: '06-build', label: 'npm run build', command: 'npm', args: ['run', 'build'], requested: true },
   { slug: '07-security-ci', label: 'npm run security:ci', command: 'npm', args: ['run', 'security:ci'], requested: true },
   { slug: '08-release-readiness', label: 'npm run release:readiness', command: 'npm', args: ['run', 'release:readiness'], requested: true },
+  {
+    slug: '09-release-enterprise-readiness',
+    label: 'npm run release:enterprise-readiness',
+    command: 'npm',
+    args: ['run', 'release:enterprise-readiness'],
+    requested: true,
+  },
 ];
 
 function now() {
