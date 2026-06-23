@@ -1,147 +1,15 @@
-name: Senior Agent Self-Heal
+name: Senior Agent Manual Repair
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 */4 * * *'
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-
-concurrency:
-  group: senior-agent-self-heal
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  self-heal:
-    name: Safe scheduled autofix
+  manual-repair:
+    name: Manual repair placeholder
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Capture baseline checks
-        shell: bash
-        run: |
-          set +e
-          mkdir -p .agent-report
-          echo "# Senior Agent Self-Heal Report" > .agent-report/self-heal.md
-          echo >> .agent-report/self-heal.md
-          echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> .agent-report/self-heal.md
-          echo >> .agent-report/self-heal.md
-          echo "## Baseline" >> .agent-report/self-heal.md
-          echo '```txt' >> .agent-report/self-heal.md
-          npm run lint >> .agent-report/self-heal.md 2>&1
-          echo '```' >> .agent-report/self-heal.md
-          echo '```txt' >> .agent-report/self-heal.md
-          npm run typecheck >> .agent-report/self-heal.md 2>&1
-          echo '```' >> .agent-report/self-heal.md
-          exit 0
-
-      - name: Apply safe mechanical fixes
-        shell: bash
-        run: |
-          set +e
-          npm run lint -- --fix
-          npm run security:zod-compat
-          npm run quality:routes
-          exit 0
-
-      - name: Guard protected surfaces
-        id: guard
-        shell: bash
-        run: |
-          set +e
-          CHANGED_FILES=$(git diff --name-only)
-          echo "$CHANGED_FILES" > .agent-report/changed-files.txt
-          BLOCKED=false
-          if echo "$CHANGED_FILES" | grep -E '(^package.json$|^package-lock.json$|^supabase/|^migrations/|^app/api/|^middleware\.|^src/middleware\.|^next.config\.|^vercel\.json$|^\.env)' >/dev/null; then
-            BLOCKED=true
-          fi
-          echo "blocked=$BLOCKED" >> "$GITHUB_OUTPUT"
-          if [ "$BLOCKED" = "true" ]; then
-            echo "Protected surface changed; reverting self-heal changes." >> .agent-report/self-heal.md
-            git checkout -- .
-          fi
-          exit 0
-
-      - name: Verify candidate
-        id: verify
-        if: steps.guard.outputs.blocked != 'true'
-        shell: bash
-        run: |
-          set +e
-          echo >> .agent-report/self-heal.md
-          echo "## Verification" >> .agent-report/self-heal.md
-          echo '```txt' >> .agent-report/self-heal.md
-          npm run lint >> .agent-report/self-heal.md 2>&1
-          LINT_STATUS=$?
-          echo '```' >> .agent-report/self-heal.md
-          echo '```txt' >> .agent-report/self-heal.md
-          npm run typecheck >> .agent-report/self-heal.md 2>&1
-          TYPE_STATUS=$?
-          echo '```' >> .agent-report/self-heal.md
-          echo '```txt' >> .agent-report/self-heal.md
-          npm run test >> .agent-report/self-heal.md 2>&1
-          TEST_STATUS=$?
-          echo '```' >> .agent-report/self-heal.md
-          echo "lint_status=$LINT_STATUS" >> "$GITHUB_OUTPUT"
-          echo "type_status=$TYPE_STATUS" >> "$GITHUB_OUTPUT"
-          echo "test_status=$TEST_STATUS" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Detect changes
-        id: changes
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "has_changes=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_changes=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Open self-heal PR
-        if: steps.changes.outputs.has_changes == 'true' && steps.guard.outputs.blocked != 'true'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ github.token }}
-          branch: agent/scheduled-self-heal
-          delete-branch: true
-          commit-message: fix: apply scheduled senior agent self-heal
-          title: 'fix: scheduled senior agent self-heal'
-          body: |
-            ## Summary
-            - Applies scheduled safe mechanical fixes from Senior Agent Self-Heal.
-
-            ## Why this change is safe
-            - No direct push to main.
-            - Protected surfaces are blocked and reverted before PR creation.
-            - Owner review is required before merge.
-
-            ## Verification
-            - lint exit code: ${{ steps.verify.outputs.lint_status }}
-            - typecheck exit code: ${{ steps.verify.outputs.type_status }}
-            - test exit code: ${{ steps.verify.outputs.test_status }}
-
-            ## Risk notes
-            - Automated PR. Review changed files before merge.
-            - The self-heal agent must not merge its own PR.
-          labels: |
-            senior-agent
-            agent:ready
-            type:ci
+      - name: Explain status
+        run: echo "Senior Agent manual repair workflow is a non-mutating placeholder until provider setup is complete."
