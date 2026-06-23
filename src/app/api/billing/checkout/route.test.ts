@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   checkDistributedRateLimit: vi.fn(),
+  buildRateLimitSubjectFromRequest: vi.fn((_request, subject = {}) => ({
+    userId: subject.userId ?? null,
+    organizationId: subject.organizationId ?? null,
+    ip: '203.0.113.10',
+    userAgent: 'Vitest',
+    action: subject.action ?? 'trusted_mutation',
+    route: subject.route ?? '/api/billing/checkout',
+  })),
   stripeCheckoutCreate: vi.fn(),
   getCurrentUser: vi.fn(),
   getCurrentOrganizationForUser: vi.fn(),
@@ -17,6 +25,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/security/rate-limit', () => ({
   checkDistributedRateLimit: mocks.checkDistributedRateLimit,
+  buildRateLimitSubjectFromRequest: mocks.buildRateLimitSubjectFromRequest,
 }));
 
 vi.mock('@/lib/security/rate-limit-response', () => ({
