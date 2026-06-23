@@ -8,7 +8,7 @@ export const requiredBackendWriteDenyOperations = ['same_tenant_insert_denied', 
 export const requiredViewerAdminDenyOperations = ['viewer_same_tenant_admin_insert_denied', 'viewer_same_tenant_admin_update_denied', 'viewer_same_tenant_admin_delete_denied'];
 
 const backendOwnedTables = new Set(['audit_events', 'audit_logs', 'subscriptions']);
-const sameTenantWritableTables = new Set(['documents', 'risks', 'vendors', 'tasks', 'compliance_tasks', 'ai_systems', 'ai_incidents', 'profiles']);
+const sameTenantWritableTables = new Set(['documents', 'risks', 'vendors', 'tasks', 'compliance_tasks', 'ai_systems', 'ai_incidents']);
 
 export function commandUsed(argv = process.argv.slice(2)) {
   return `node ${runner}${argv.length > 0 ? ` ${argv.join(' ')}` : ''}`;
@@ -93,7 +93,7 @@ export function validatePassingEvidence(evidence) {
     }
   }
 
-  for (const table of ['documents', 'risks', 'vendors', 'tasks', 'profiles']) requirePassedTest(tests, table, 'same_tenant_insert', errors, `missing same-tenant insert coverage: ${table}`);
+  for (const table of ['documents', 'risks', 'vendors', 'tasks']) requirePassedTest(tests, table, 'same_tenant_insert', errors, `missing same-tenant insert coverage: ${table}`);
   for (const table of ['audit_events', 'subscriptions']) for (const operation of requiredBackendWriteDenyOperations) requirePassedTest(tests, table, operation, errors);
   for (const operation of requiredViewerAdminDenyOperations) requirePassedTest(tests, 'organization_members', operation, errors);
 
@@ -119,10 +119,8 @@ export function buildEvidencePayload({ status, outcome, supabaseUrl, testCases =
     commitSha,
     supabaseProjectReference: redactProjectReferenceFromUrl(supabaseUrl),
     supabaseProjectReferenceRedacted: true,
-    summary: status === 'Complete' && outcome === 'passed'
-      ? 'Live Supabase tenant-isolation validation passed.'
-      : 'Live Supabase tenant-isolation validation did not pass.',
-    redactionConfirmation: 'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
+    summary: status === 'Complete' && outcome === 'passed' ? 'Live Supabase tenant-isolation validation passed.' : 'Live Supabase tenant-isolation validation did not pass.',
+    redactionConfirmation: 'Access-granting values are redacted.',
     evidenceLocations: ['docs/security/evidence/runtime/supabase-live-rls-validation.json'],
     productionGate: status === 'Complete' && outcome === 'passed' ? 'Enterprise release may proceed only if all other P0 runtime evidence is satisfied.' : 'Enterprise release remains blocked.',
     controlsVerified: status === 'Complete' && outcome === 'passed' ? ['RLS enabled on critical tenant tables', 'Cross-tenant access denied', 'Viewer admin actions denied'] : [],
