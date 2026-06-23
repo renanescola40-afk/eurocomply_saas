@@ -13,7 +13,14 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    include: [
+      'tests/**/*.test.ts',
+      'src/app/api/billing/checkout/route.test.ts',
+      'src/app/api/billing/portal/route.test.ts',
+      'src/app/api/billing/webhook/route.test.ts',
+      'src/app/api/stripe/webhook/route.test.ts',
+      'src/server/billing/stripe-webhooks.test.ts',
+    ],
     setupFiles: [resolve(rootDir, 'tests/setup-env.ts')],
   },
 });
