@@ -1,7 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getStepUpProviderMode, isEnterpriseStepUpConfigured } from '@/server/security/step-up';
-
-type StepUpProviderMode = NonNullable<ReturnType<typeof getStepUpProviderMode>>;
+import { getStepUpProviderMode, getStepUpSecret, type StepUpProviderMode } from '@/server/security/step-up';
 
 // Static gate evidence: environment defaults are owned by the base step-up helper and
 // organization overrides are resolved from organization_security_settings.
@@ -37,13 +35,17 @@ function splitConfiguredValues(value: string | string[] | null | undefined): str
   return [...new Set(values.map((item) => item.trim()).filter(Boolean))];
 }
 
+function hasSupabaseAuthRuntime() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
 function environmentPolicy(): EffectiveStepUpProviderPolicy {
   return {
     source: 'environment',
     requireStepUpForCriticalActions: true,
     mode: getStepUpProviderMode(),
-    allowedAcrValues: [],
-    allowedAmrValues: [],
+    allowedAcrValues: splitConfiguredValues(process.env.STEP_UP_IDP_ACR_VALUES),
+    allowedAmrValues: splitConfiguredValues(process.env.STEP_UP_IDP_AMR_VALUES),
   };
 }
 
@@ -66,12 +68,14 @@ export async function getEffectiveStepUpProviderPolicy(organizationId: string): 
     source: 'organization',
     requireStepUpForCriticalActions: true,
     mode: normalizeProviderMode(row.step_up_provider_mode) ?? fallback.mode,
-    allowedAcrValues: organizationAcrValues,
-    allowedAmrValues: organizationAmrValues,
+    allowedAcrValues: organizationAcrValues.length > 0 ? organizationAcrValues : fallback.allowedAcrValues,
+    allowedAmrValues: organizationAmrValues.length > 0 ? organizationAmrValues : fallback.allowedAmrValues,
   };
 }
 
 export function isEffectiveStepUpProviderPolicyConfigured(policy: EffectiveStepUpProviderPolicy): boolean {
-  if (!policy.requireStepUpForCriticalActions || !policy.mode) return false;
-  return isEnterpriseStepUpConfigured();
+  if (!policy.requireStepUpForCriticalActions || !policy.mode || !getStepUpSecret()) return false;
+  if (policy.mode === 'supabase_mfa') return hasSupabaseAuthRuntime();
+  if (policy.mode === 'enterprise_idp') return hasSupabaseAuthRuntime() && (policy.allowedAcrValues.length > 0 || policy.allowedAmrValues.length > 0);
+  return hasSupabaseAuthRuntime();
 }
