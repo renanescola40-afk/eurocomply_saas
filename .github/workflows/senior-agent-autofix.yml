@@ -18,7 +18,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: senior-agent-autofix-${{ github.event.issue.number || github.event.inputs.issue_number || github.run_id }}
+  group: senior-agent-autofix-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
