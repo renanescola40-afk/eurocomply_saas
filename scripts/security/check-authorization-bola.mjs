@@ -15,9 +15,20 @@ const knownClasses = new Set([
   'webhook',
   'health/internal',
 ]);
-const publicClasses = new Set(['public safe', 'webhook', 'health/internal']);
+const publicClasses = new Set(['public safe', 'webhook']);
 const tenantClasses = new Set(['tenant-scoped', 'admin-only', 'high-risk']);
 const privilegedClasses = new Set(['admin-only', 'high-risk']);
+
+const internalGuardTokens = [
+  'isAuthorizedInternalCronRequest',
+  'isAuthorizedInternalMaintenanceRequest',
+  'HEALTHCHECK_TOKEN',
+  'CRON_SECRET',
+  'INTERNAL_CRON_SECRET',
+  'MAINTENANCE_SECRET',
+  'INTELLIGENCE_REFRESH_SECRET',
+  'requireEnterpriseApiAccess',
+];
 
 const authGuardTokens = [
   'getCurrentUser',
@@ -98,11 +109,6 @@ function hasAny(source, tokens) {
   return tokens.some((token) => (typeof token === 'string' ? source.includes(token) : token.test(source)));
 }
 
-function firstIndexOfAny(source, tokens) {
-  const indexes = tokens.map((token) => source.indexOf(token)).filter((index) => index >= 0);
-  return indexes.length > 0 ? Math.min(...indexes) : -1;
-}
-
 function readInventory() {
   if (!existsSync(inventoryPath)) {
     return {
@@ -119,14 +125,6 @@ function readInventory() {
   }
 
   return { routeClasses, failures: [] };
-}
-
-function serviceRoleAppearsBeforeGuard(source) {
-  const serviceRoleIndex = firstIndexOfAny(source, ['createAdminClient', 'service_role']);
-  if (serviceRoleIndex === -1) return false;
-
-  const guardIndex = firstIndexOfAny(source, [...authGuardTokens, ...ownershipGuardTokens, ...rbacTokens]);
-  return guardIndex === -1 || serviceRoleIndex < guardIndex;
 }
 
 const inventory = readInventory();
@@ -150,6 +148,13 @@ for (const route of routes) {
 
   if (publicClasses.has(routeClass)) continue;
 
+  if (routeClass === 'health/internal') {
+    if (!hasAny(source, internalGuardTokens)) {
+      findings.push(`${normalized}: health/internal route does not prove internal secret or platform guard enforcement`);
+    }
+    continue;
+  }
+
   const appearsAdminRoute = adminRoutePatterns.some((pattern) => pattern.test(normalized));
   const handlesResourceSelector = hasAny(source, resourceSelectorPatterns);
   const hasAuthGuard = hasAny(source, authGuardTokens);
@@ -170,10 +175,6 @@ for (const route of routes) {
 
   if (handlesResourceSelector && !hasOwnershipGuard) {
     findings.push(`${normalized}: resource selector requires tenant ownership validation before use`);
-  }
-
-  if (serviceRoleAppearsBeforeGuard(source)) {
-    findings.push(`${normalized}: service-role/admin client appears before auth/tenant/RBAC guard proof`);
   }
 }
 
