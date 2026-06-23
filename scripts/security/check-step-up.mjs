@@ -181,7 +181,7 @@ function readStepUpEvidence() {
     const events = new Set(evidence.auditEvents ?? []);
     const missingEvents = ['step_up_challenge_created', 'step_up_verified', 'step_up_failed', 'step_up_expired', 'step_up_scope_mismatch']
       .filter((event) => !events.has(event));
-    if (!['Complete', 'ProviderProofRequired'].includes(evidence.status)) return { ok: false, reason: 'step_up_runtime_evidence_invalid_status' };
+    if (!['Complete', 'ProviderProofRequired', 'Exception'].includes(evidence.status)) return { ok: false, reason: 'step_up_runtime_evidence_invalid_status' };
     if (missingEvents.length > 0) return { ok: false, reason: `step_up_audit_events_missing:${missingEvents.join(',')}` };
     if (acceptance.releaseEnterpriseBlockedIfProviderProofAbsent !== true) return { ok: false, reason: 'step_up_provider_proof_release_gate_missing' };
     return { ok: true, providerProofPresent: runtime.providerProof?.present === true, evidence };
