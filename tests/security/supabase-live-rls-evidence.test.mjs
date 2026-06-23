@@ -10,11 +10,18 @@ import {
 } from '../../scripts/security/run-supabase-live-tenant-isolation.mjs';
 
 const baseOperations = [
+  'rls_enabled',
   'cross_tenant_read',
   'cross_tenant_insert',
   'cross_tenant_update',
   'cross_tenant_delete',
   'same_tenant_read',
+];
+
+const viewerAdminDenyOperations = [
+  'viewer_same_tenant_admin_insert_denied',
+  'viewer_same_tenant_admin_update_denied',
+  'viewer_same_tenant_admin_delete_denied',
 ];
 
 function passingTestCases() {
@@ -49,6 +56,16 @@ function passingTestCases() {
         error: { code: '42501', message: 'permission denied by RLS' },
       });
     }
+  }
+
+  for (const operation of viewerAdminDenyOperations) {
+    cases.push({
+      table: 'organization_members',
+      operation,
+      passed: true,
+      returnedRows: 0,
+      error: { code: '42501', message: 'permission denied by RLS' },
+    });
   }
 
   return cases;
@@ -157,11 +174,27 @@ describe('Supabase live RLS evidence parser and generator', () => {
     expect(result.errors).toContain('missing live RLS operation coverage: vendors:cross_tenant_update');
   });
 
+  it('rejects evidence that omits RLS enablement proof for a critical table', () => {
+    const testCases = passingTestCases().filter((test) => !(test.table === 'documents' && test.operation === 'rls_enabled'));
+    const result = validatePassingEvidence(passingEvidence({ testCases }));
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('missing live RLS operation coverage: documents:rls_enabled');
+  });
+
   it('rejects evidence that omits same-tenant backend write denial for audit events', () => {
     const testCases = passingTestCases().filter((test) => !(test.table === 'audit_events' && test.operation === 'same_tenant_update_denied'));
     const result = validatePassingEvidence(passingEvidence({ testCases }));
 
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('missing live RLS operation coverage: audit_events:same_tenant_update_denied');
+  });
+
+  it('rejects evidence that omits viewer same-tenant admin denial', () => {
+    const testCases = passingTestCases().filter((test) => test.operation !== 'viewer_same_tenant_admin_update_denied');
+    const result = validatePassingEvidence(passingEvidence({ testCases }));
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('missing live RLS operation coverage: organization_members:viewer_same_tenant_admin_update_denied');
   });
 });
