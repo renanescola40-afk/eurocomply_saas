@@ -100,6 +100,21 @@ Every incident must identify:
 - Rollback owner
 - Evidence owner
 
+## Operational owner acknowledgement
+
+For this release candidate, the named accountable operational owners are recorded in `docs/RELEASE_APPROVAL_RECORD.md`:
+
+| Role | Owner |
+| --- | --- |
+| Incident commander / incident owner | @renansilva2002 / renanescola40-afk |
+| Rollback owner | @renansilva2002 / renanescola40-afk |
+| Customer communication owner | @renansilva2002 / renanescola40-afk |
+| Support owner | @renansilva2002 / renanescola40-afk |
+| Security/compliance owner | @renansilva2002 / renanescola40-afk |
+| Evidence owner | @renansilva2002 / renanescola40-afk |
+
+This acknowledgement only closes the missing-owner gap. It does not approve release promotion and does not satisfy missing deployment, Supabase live RLS, Stripe runtime, MFA/IdP provider, rollback target, or external security review evidence.
+
 ## Initial triage checklist
 
 When an incident is declared, capture:
