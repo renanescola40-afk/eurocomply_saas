@@ -16,8 +16,8 @@ Security reports and urgent trust issues should be sent privately to renansilva2
 
 ## Evidence boundaries
 
-EuroComply does not currently claim 24/7 staffed monitoring, external incident-response retainer, completed tabletop exercise or contractual notification timing unless a signed customer agreement says otherwise.
+Risck comply does not currently claim 24/7 staffed monitoring, external incident-response retainer, completed tabletop exercise or contractual notification timing unless a signed customer agreement says otherwise.
 
 ## Customer-safe answer
 
-EuroComply maintains a documented incident response workflow designed to support triage, containment, customer communication and post-incident review. Program maturity evidence should be reviewed during procurement.
+Risck comply maintains a documented incident response workflow designed to support triage, containment, customer communication and post-incident review. Program maturity evidence should be reviewed during procurement.
