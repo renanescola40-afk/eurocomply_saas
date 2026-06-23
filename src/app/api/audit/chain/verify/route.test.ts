@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   assertOrganizationPermission: vi.fn(),
   permissionDeniedResponse: vi.fn(),
   checkDistributedRateLimit: vi.fn(),
+  getClientIpFromRequest: vi.fn(() => '203.0.113.10'),
+  getUserAgentFromRequest: vi.fn(() => 'Vitest'),
   verifyAuditChain: vi.fn(),
   requireStepUpForRequest: vi.fn(),
 }));
@@ -44,6 +46,8 @@ vi.mock('@/server/security/rbac', () => ({
 
 vi.mock('@/server/security/rate-limit', () => ({
   checkDistributedRateLimit: mocks.checkDistributedRateLimit,
+  getClientIpFromRequest: mocks.getClientIpFromRequest,
+  getUserAgentFromRequest: mocks.getUserAgentFromRequest,
 }));
 
 vi.mock('@/server/security/audit-chain', () => ({

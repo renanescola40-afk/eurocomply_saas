@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   handleStripeWebhookEvent: vi.fn(),
   reportError: vi.fn(),
   checkDistributedRateLimit: vi.fn(),
+  getClientIpFromRequest: vi.fn(() => '203.0.113.10'),
+  getUserAgentFromRequest: vi.fn(() => 'Vitest'),
 }));
 
 vi.mock('@/server/billing/stripe', () => ({
@@ -27,6 +29,8 @@ vi.mock('@/lib/observability/report-error', () => ({
 
 vi.mock('@/lib/security/rate-limit', () => ({
   checkDistributedRateLimit: mocks.checkDistributedRateLimit,
+  getClientIpFromRequest: mocks.getClientIpFromRequest,
+  getUserAgentFromRequest: mocks.getUserAgentFromRequest,
 }));
 
 vi.mock('@/lib/security/rate-limit-response', () => ({

@@ -1,5 +1,10 @@
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
-import { checkDistributedRateLimit, type RateLimitOptions } from '@/lib/security/rate-limit';
+import {
+  buildRateLimitSubjectFromRequest,
+  checkDistributedRateLimit,
+  type RateLimitOptions,
+  type RateLimitPolicyId,
+} from '@/lib/security/rate-limit';
 import { getCurrentUser } from '@/server/queries/auth';
 import { noStoreJson, noStoreDownload, applyNoStoreHeaders } from '@/server/security/no-store';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
@@ -35,6 +40,10 @@ export type RequirePermissionOptions = RequireOrganizationAccessOptions & {
 
 export type TrustedMutationOptions = {
   rateLimit?: RateLimitOptions;
+};
+
+export type EnterpriseRateLimitOptions = Omit<RateLimitOptions, 'ip' | 'userAgent' | 'policy'> & {
+  policy: RateLimitPolicyId;
 };
 
 export type ParseJsonBodyOptions<TBody> = {
@@ -167,13 +176,33 @@ export async function requireRateLimit(options: RateLimitOptions) {
   return null;
 }
 
+export async function requireEnterpriseRateLimit(request: Request, options: EnterpriseRateLimitOptions) {
+  return requireRateLimit({
+    ...options,
+    ...buildRateLimitSubjectFromRequest(request, {
+      userId: options.userId,
+      organizationId: options.organizationId,
+      action: options.action ?? options.policy,
+      route: options.route,
+    }),
+  });
+}
+
 export async function requireTrustedMutation(request: Request, options: TrustedMutationOptions = {}) {
   const originDenied = requireTrustedOriginForMutation(request);
   if (originDenied) return originDenied;
 
   if (!options.rateLimit) return null;
 
-  return requireRateLimit(options.rateLimit);
+  return requireRateLimit({
+    ...options.rateLimit,
+    ...buildRateLimitSubjectFromRequest(request, {
+      userId: options.rateLimit.userId,
+      organizationId: options.rateLimit.organizationId,
+      action: options.rateLimit.action ?? options.rateLimit.key ?? 'trusted_mutation',
+      route: options.rateLimit.route,
+    }),
+  });
 }
 
 export async function parseJsonBodyWithZod<TBody>(request: Request, schemaOrOptions: { parse: (value: unknown) => TBody } | ParseJsonBodyOptions<TBody>) {
