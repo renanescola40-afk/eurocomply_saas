@@ -4,7 +4,7 @@ Status: procurement-safe FAQ. Answers must stay aligned with implementation and 
 
 ## Do you have SOC 2?
 
-Not currently. EuroComply must not claim SOC 2 Type I or Type II until an approved report exists.
+Not currently. Risck comply must not claim SOC 2 Type I or Type II until an approved report exists.
 
 ## Are you ISO 27001 certified?
 
@@ -16,7 +16,7 @@ Not currently claimed. Any future test should be referenced only with approved e
 
 ## How is authentication handled?
 
-EuroComply uses Supabase Auth and server-side session checks. Private workspace routes require an authenticated session.
+Risck comply uses Supabase Auth and server-side session checks. Private workspace routes require an authenticated session.
 
 ## How is authorization handled?
 
@@ -32,4 +32,4 @@ Security reports should be sent privately to renansilva2002@gmail.com until a de
 
 ## What should sales say?
 
-Use bounded language: EuroComply is designed to support enterprise security review with authenticated workspaces, role-based access, tenant-isolation controls, audit events, trust documentation and release evidence gates.
+Use bounded language: Risck comply is designed to support enterprise security review with authenticated workspaces, role-based access, tenant-isolation controls, audit events, trust documentation and release evidence gates.
