@@ -138,4 +138,34 @@ Every PR opened by an agent should include:
 ## Verification
 - [ ] `npm run lint`
 - [ ] `npm run typecheck`
+- [ ] `npm run test`
+- [ ] `npm run build`
+- [ ] `npm run security:ci`
+
+## Risk notes
+- 
+
+## Follow-ups
+- 
 ```
+
+## Escalation rules
+
+Stop and ask for owner review before making changes that:
+
+- Modify authentication/session behavior.
+- Modify authorization, tenant isolation, or Supabase RLS assumptions.
+- Touch payment, billing, legal/compliance evidence, or audit-chain logic.
+- Delete data or run migrations that are not backward-compatible.
+- Add a new third-party service, tracker, telemetry sink, or AI provider.
+- Require new secrets or production configuration.
+
+## Definition of done
+
+A task is done only when:
+
+- The root cause or product reason is documented.
+- The implementation is minimal and reviewed through a PR.
+- Relevant tests/checks pass or failures are explicitly explained.
+- No security/compliance guardrail has been weakened.
+- The PR body contains enough evidence for the owner to decide whether to merge.
