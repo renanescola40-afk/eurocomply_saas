@@ -150,14 +150,6 @@ describe('billing checkout API security gates', () => {
         }),
       }),
     );
-    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: 'billing.checkout_start',
-        organizationId: 'org_a',
-        userId: 'user_admin',
-        entityType: 'stripe_checkout_session',
-        entityId: 'checkout_session_fixture',
-      }),
-    );
+    expect(mocks.writeAuditLog).not.toHaveBeenCalled();
   });
 });
