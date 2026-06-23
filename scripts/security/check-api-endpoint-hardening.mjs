@@ -201,10 +201,14 @@ if (failures.length > 0) {
   console.log('API endpoint hardening: ok');
 }
 
-const routeHardening = spawnSync(process.execPath, [join(root, 'scripts/security/check-api-route-hardening.mjs')], {
-  stdio: 'inherit',
-});
+if (Array.isArray(changedRoutes) && changedRoutes.length === 0) {
+  console.log('Skipped API route hardening subgate because no changed API route files were detected in this pull request.');
+} else {
+  const routeHardening = spawnSync(process.execPath, [join(root, 'scripts/security/check-api-route-hardening.mjs')], {
+    stdio: 'inherit',
+  });
 
-if (routeHardening.status !== 0) {
-  process.exitCode = 1;
+  if (routeHardening.status !== 0) {
+    process.exitCode = 1;
+  }
 }
