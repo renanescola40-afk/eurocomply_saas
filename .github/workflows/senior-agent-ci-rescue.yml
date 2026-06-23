@@ -1,0 +1,15 @@
+name: Senior Agent CI Rescue
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  disabled:
+    name: Disabled placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain disabled workflow
+        run: echo "Senior Agent CI Rescue draft disabled until reviewed."

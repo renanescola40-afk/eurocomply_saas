@@ -1,0 +1,87 @@
+name: Senior Agent Incident
+
+description: Report a production, security, compliance, or CI incident for the senior engineering agent queue.
+title: "[Agent Incident]: "
+labels:
+  - senior-agent
+  - agent:triage
+  - priority:p0
+  - needs-owner
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for urgent incidents only: production outages, security findings, compliance blockers, broken required checks, or release-blocking regressions.
+
+  - type: dropdown
+    id: incident_type
+    attributes:
+      label: Incident type
+      options:
+        - Production outage
+        - Security finding
+        - Compliance blocker
+        - Broken required check
+        - Release blocker
+        - Data or tenant isolation concern
+        - Other urgent incident
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Who or what is affected? Include tenant/customer impact only at a high level. Do not paste real customer data or secrets.
+      placeholder: "Example: Security CI is blocking release because required Supabase environment secrets are missing. No application runtime behavior changed."
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Paste relevant failing check names, log excerpts, URLs, or reproduction notes. Redact secrets.
+      placeholder: "Check: EuroComply Security CI / Run security gates...\nFailure: Missing NEXT_PUBLIC_SUPABASE_URL..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: suspected_root_cause
+    attributes:
+      label: Suspected root cause
+      description: What do you think caused it? It is okay to say unknown.
+      placeholder: "Unknown / likely environment configuration / likely regression in auth middleware."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: high_risk_surfaces
+    attributes:
+      label: High-risk surfaces involved
+      options:
+        - label: Authentication or sessions
+        - label: Authorization, tenant isolation, or RLS
+        - label: Billing or Stripe
+        - label: Audit chain or compliance evidence
+        - label: Uploads, files, or storage
+        - label: Secrets, environment config, or deployment
+        - label: CI/CD or GitHub Actions
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: What must be true before this incident can be considered fixed?
+      placeholder: "Required checks pass, no security gates weakened, and PR includes verification evidence."
+    validations:
+      required: true
+
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback or containment plan
+      description: What is the safest fallback if the fix fails?
+      placeholder: "Revert the PR, restore prior workflow config, or keep deployment blocked until secrets are configured."
+    validations:
+      required: false

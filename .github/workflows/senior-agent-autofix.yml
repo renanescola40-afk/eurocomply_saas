@@ -1,0 +1,15 @@
+name: Senior Agent Autofix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  autofix:
+    name: Manual autofix placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain status
+        run: echo "Senior Agent Autofix is installed as a safe manual placeholder until the coding-agent provider is connected."

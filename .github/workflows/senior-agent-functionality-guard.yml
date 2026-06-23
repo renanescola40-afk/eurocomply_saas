@@ -1,0 +1,15 @@
+name: Senior Agent Functionality Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  functionality-check:
+    name: Manual functionality check placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain status
+        run: echo "Senior Agent functionality check is a non-mutating placeholder until provider setup is complete."

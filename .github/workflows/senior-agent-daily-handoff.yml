@@ -1,0 +1,15 @@
+name: Senior Agent Daily Handoff
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  handoff:
+    name: Manual handoff placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain status
+        run: echo "Senior Agent Daily Handoff is installed as a non-mutating placeholder until provider setup is complete."

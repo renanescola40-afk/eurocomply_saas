@@ -1,0 +1,64 @@
+name: Senior Agent Task
+description: Create a scoped implementation or bug-fix task for the EuroComply senior engineering agent
+title: "[Agent] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for focused engineering work. The agent should make small, reviewable PRs and include verification evidence.
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What should be implemented, corrected, or investigated?
+      placeholder: "Example: Fix dashboard loading failure when the organization has no compliance evidence yet."
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context / evidence
+      description: Add error messages, screenshots, affected routes, logs, or links to failing runs.
+      placeholder: "Route, stack trace, CI run, user impact, reproduction steps..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be true for this task to be done?
+      value: |
+        - [ ] Root cause is documented in the PR.
+        - [ ] Implementation is minimal and reviewable.
+        - [ ] Relevant tests/checks pass.
+        - [ ] Security/compliance guardrails are not weakened.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk area
+      options:
+        - "Low: UI/content only"
+        - "Medium: product logic or data display"
+        - "High: auth, authorization, tenant isolation, uploads, audit, billing, or compliance evidence"
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Expected verification
+      description: Which commands or manual checks should be run?
+      value: |
+        - npm run lint
+        - npm run typecheck
+        - npm run test
+        - npm run build
+        - npm run security:ci
+    validations:
+      required: false

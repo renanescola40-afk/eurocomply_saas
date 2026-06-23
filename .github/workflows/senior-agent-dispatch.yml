@@ -1,0 +1,15 @@
+name: Senior Agent Dispatch
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    name: Manual dispatch placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain status
+        run: echo "Senior Agent Dispatch is installed as a safe manual placeholder until the coding-agent provider is connected."

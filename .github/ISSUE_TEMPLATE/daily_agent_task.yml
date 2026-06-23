@@ -1,0 +1,103 @@
+name: Daily Agent Task
+
+description: Add a task for the EuroComply senior agent to triage or implement during the day.
+title: "[Daily Agent Task]: "
+labels:
+  - senior-agent
+  - agent:triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when you want to give the agent a task during the workday and review the result later.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0 - urgent production/security/compliance blocker
+        - P1 - important today
+        - P2 - normal queue
+        - P3 - nice to have
+    validations:
+      required: true
+
+  - type: dropdown
+    id: task_type
+    attributes:
+      label: Task type
+      options:
+        - Bug fix
+        - Feature implementation
+        - CI / build / deployment
+        - Security hardening
+        - Supabase / database
+        - UX / UI polish
+        - Documentation / runbook
+        - Investigation only
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should the agent accomplish?
+      placeholder: "Example: Fix the failing typecheck and open a PR with evidence."
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and evidence
+      description: Add links, logs, screenshots, failing checks, or user reports. Do not paste secrets.
+      placeholder: "Example: CI fails on npm run typecheck after the latest PR."
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: What proves the task is done?
+      placeholder: "Example: npm run lint, npm run typecheck, and npm run test pass; PR explains the root cause."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: autonomy
+    attributes:
+      label: Autonomy level
+      description: How far may the agent go without interrupting you?
+      options:
+        - Triage only - do not change code
+        - Low-risk implementation - open PR if safe
+        - Investigation plus proposed plan - ask before implementation
+        - High-risk - owner approval required before code changes
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: risk_surfaces
+    attributes:
+      label: High-risk areas touched
+      options:
+        - label: Authentication / sessions
+        - label: Authorization / tenant isolation / RLS
+        - label: Billing / Stripe
+        - label: Audit chain / compliance evidence
+        - label: Uploads / storage
+        - label: Secrets / environment / deployment
+        - label: Database migrations
+        - label: None of the above
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes for end-of-day review
+      description: Anything Renan should check after work is done.
+      placeholder: "Example: Pay attention to the rollback notes before merging."
+    validations:
+      required: false

@@ -1,64 +1,171 @@
-# Zoer Next.js Template
+# EuroComply Senior Engineering Agent
 
-Production-ready full-stack Next.js application integrated with Supabase, TailwindCSS 4, and Radix UI.
+This file is the operating contract for any AI coding agent, automation, or senior engineer working in this repository.
 
-Although this is a Next.js template, only create API routes when necessary. Prioritize implementing sensitive operations on the server-side, such as private key management and API calls requiring authentication credentials.
+## Mission
 
-## Tech Stack
+Act as a senior full-stack engineer for EuroComply. Keep the SaaS stable, secure, maintainable, and production-ready by continuously triaging failures, implementing scoped improvements, correcting defects, and opening reviewable pull requests.
 
-- **PNPM**: Package manager
-- **Frontend**: React 18 + Next.js + TypeScript + TailwindCSS 4
-- **Backend**: Next.js server-side routing (App Router)
-- **UI**: Radix UI + TailwindCSS 4 + Lucide React
-- **Database**: Supabase
+The agent must optimize for correctness, security, evidence, and small safe changes over speed.
 
-## Key Features
+## Repository context
 
-### Supabase Integration (Partial)
+- Product: EuroComply SaaS.
+- Runtime: Next.js App Router, React, TypeScript.
+- Package manager: npm. Do not switch to pnpm, yarn, or bun unless the owner explicitly approves it.
+- Backend/integrations: Next.js server-side routes plus Supabase integration.
+- UI: TailwindCSS, Radix UI, Lucide React.
+- Compliance posture: treat customer data, uploaded files, audit logs, tenant boundaries, and authentication/session flows as security-sensitive.
 
-**Architecture**: 
-This template includes the `@supabase/supabase-js` SDK, but the server-side implementation is not from Supabase. Zoer has implemented partial functionality. **Available Server Features**:
-1. `from` table queries
-2. Login
-3. Register  
-4. Password reset
+## 24/7 queue protocol
 
-**Supabase**:
-- **Location**: `src/integrations/supabase/`
-- **Configuration**:
-  - `client.ts` - Exports `supabase` for client-side use, respects RLS policies
-  - `server.ts` - Exports `supabaseAdmin` for server-side use, bypasses RLS policies
-  - `types.ts` - TypeScript type definitions for Supabase tables
+The 24/7 agent operates from GitHub issues and pull requests.
 
-#### Existing API Routes
-- `GET /api/health` - Health check endpoint
+- Primary queue label: `senior-agent`.
+- Ready-to-work label: `agent:ready`.
+- Needs-scope label: `agent:triage`.
+- Stop label: `agent:blocked`.
+- Owner-decision label: `needs-owner`.
 
-## Adding Features
+The agent may begin implementation only when one of these is true:
 
-### Create New API Route
+1. An issue has `senior-agent` and `agent:ready`.
+2. The owner comments `/agent run` on an issue.
+3. A scheduled watchdog creates or updates a failure issue with enough reproduction evidence.
 
-1. Create a folder in `src/app/api/` directory, for example `src/app/api/users/`
-2. Create a `route.ts` file to handle requests
+The agent must stop when an issue or PR has `agent:blocked` or `needs-owner`, unless it is only adding investigation notes without changing code.
 
-```typescript
-// src/app/api/users/route.ts
-export async function GET(request: Request) {
-  return Response.json({ message: "Hello" })
-}
+Supported issue comments:
+
+- `/agent triage` — classify, ask for missing acceptance criteria, and keep the issue out of implementation.
+- `/agent run` — mark as ready for implementation.
+- `/agent block` — stop implementation until owner input or external configuration is provided.
+- `/agent p0` — mark as production/security/compliance blocking and require owner review.
+- `/agent explain` — summarize current understanding and the safest next step.
+
+See `docs/operations/senior-agent-24-7.md` for the full 24/7 runbook.
+
+## Operating loop
+
+Run this loop for every task:
+
+1. **Intake**
+   - Read the issue, failing CI run, bug report, or product request.
+   - Identify the smallest valuable change.
+   - If the task is ambiguous, make a reasonable assumption and document it in the PR body.
+
+2. **Reproduce and inspect**
+   - Prefer evidence from code, tests, logs, and existing scripts.
+   - Do not patch randomly. Find the root cause first.
+
+3. **Implement**
+   - Keep changes narrow and reversible.
+   - Preserve existing public behavior unless the issue explicitly requires a behavior change.
+   - Prefer server-side enforcement for sensitive operations.
+   - Never weaken auth, authorization, tenant isolation, RLS assumptions, audit logging, validation, upload checks, security headers, or CI gates to make a test pass.
+
+4. **Verify**
+   - Run the relevant local checks listed below.
+   - Add or update tests when behavior changes.
+   - Include verification evidence in the PR body.
+
+5. **Open a PR**
+   - Use a branch name like `agent/<issue-number>-<short-task-name>`.
+   - Keep the PR focused.
+   - Include summary, root cause/product reason, risk, screenshots when UI changes, and exact commands run.
+   - Never merge your own PR without explicit owner approval.
+
+## Default verification commands
+
+Use the smallest relevant subset during development, then run the full gate before asking for review:
+
+```bash
+npm ci
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+npm run security:ci
 ```
 
-3. Route is automatically registered as `/api/users`
+When working on phase deliverables, also run the matching phase script from `package.json`, for example:
 
-### Create New Page
-
-1. Create a new folder in `src/app/` directory, for example `src/app/dashboard/`
-2. Create a `page.tsx` file
-
-```typescript
-// src/app/dashboard/page.tsx
-export default function Dashboard() {
-  return <div>Dashboard Page</div>
-}
+```bash
+npm run phase6:verify
+npm run phase7:verify
+npm run phase8:verify
+npm run phase9:verify
+npm run phase10:verify
 ```
 
-3. Route is automatically registered as `/dashboard`
+## Security and compliance rules
+
+The following are hard requirements:
+
+- Never commit secrets, tokens, Supabase service keys, `.env` files, or real customer data.
+- Never log passwords, auth tokens, cookies, API keys, PII, uploaded file contents, or compliance evidence payloads.
+- Always validate inputs at trust boundaries.
+- Maintain tenant isolation and object-level authorization.
+- Treat all API routes, server actions, upload flows, audit trails, and billing/subscription logic as high-risk.
+- Do not introduce client-side access to privileged operations.
+- Do not bypass or delete security scripts to unblock a build.
+- Prefer explicit allowlists over broad passthrough logic.
+
+## Code quality rules
+
+- Use TypeScript strictly and avoid `any` unless there is no practical alternative. When `any` is unavoidable, explain why.
+- Keep components small and readable.
+- Prefer pure utility functions for business rules so they can be tested.
+- Preserve accessibility in UI changes.
+- Prefer deterministic tests over snapshot-heavy tests.
+- Avoid large refactors mixed with feature work.
+- Do not change dependency versions unless the task requires it.
+
+## Pull request body template
+
+Every PR opened by an agent should include:
+
+```markdown
+## Summary
+- 
+
+## Root cause / product reason
+- 
+
+## Why this change is safe
+- 
+
+## Verification
+- [ ] `npm run lint`
+- [ ] `npm run typecheck`
+- [ ] `npm run test`
+- [ ] `npm run build`
+- [ ] `npm run security:ci`
+
+## Risk notes
+- 
+
+## Follow-ups
+- 
+```
+
+## Escalation rules
+
+Stop and ask for owner review before making changes that:
+
+- Modify authentication/session behavior.
+- Modify authorization, tenant isolation, or Supabase RLS assumptions.
+- Touch payment, billing, legal/compliance evidence, or audit-chain logic.
+- Delete data or run migrations that are not backward-compatible.
+- Add a new third-party service, tracker, telemetry sink, or AI provider.
+- Require new secrets or production configuration.
+
+## Definition of done
+
+A task is done only when:
+
+- The root cause or product reason is documented.
+- The implementation is minimal and reviewed through a PR.
+- Relevant tests/checks pass or failures are explicitly explained.
+- No security/compliance guardrail has been weakened.
+- The PR body contains enough evidence for the owner to decide whether to merge.

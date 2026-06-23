@@ -1,0 +1,15 @@
+name: Senior Agent Health
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    name: Manual health placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain status
+        run: echo "Senior Agent Health is installed as a non-mutating placeholder until provider setup is complete."

@@ -1,0 +1,15 @@
+name: Senior Agent Triage
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  triage:
+    name: Manual triage placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain status
+        run: echo "Senior Agent Triage is installed as a safe manual placeholder until the coding-agent provider is connected."

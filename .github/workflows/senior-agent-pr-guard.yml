@@ -1,0 +1,15 @@
+name: Senior Agent PR Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pr-check:
+    name: Manual PR check placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain status
+        run: echo "Senior Agent PR check is a non-mutating placeholder until provider setup is complete."

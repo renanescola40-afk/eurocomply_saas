@@ -1,0 +1,15 @@
+name: Senior Agent Watchdog
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  watchdog:
+    name: Manual watchdog placeholder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain status
+        run: echo "Senior Agent Watchdog is installed as a safe manual placeholder until the coding-agent provider is connected."
