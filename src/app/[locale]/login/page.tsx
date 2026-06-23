@@ -1,9 +1,9 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Fingerprint } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ const loginCopy: Record<string, {
   publicErrors: Record<PublicAuthErrorCode, string>;
 }> = {
   en: {
-    title: 'Sign in to EuroComply',
+    title: 'Sign in to Risck comply',
     subtitle: 'Access your compliance workspace with Google or email.',
     google: 'Continue with Google',
     separator: 'or',
@@ -41,7 +41,7 @@ const loginCopy: Record<string, {
     },
   },
   pt: {
-    title: 'Entrar no EuroComply',
+    title: 'Entrar no Risck comply',
     subtitle: 'Aceda ao seu workspace de compliance com Google ou email.',
     google: 'Continuar com Google',
     separator: 'ou',
@@ -58,7 +58,7 @@ const loginCopy: Record<string, {
     },
   },
   es: {
-    title: 'Entrar en EuroComply',
+    title: 'Entrar en Risck comply',
     subtitle: 'Accede a tu workspace de compliance con Google o email.',
     google: 'Continuar con Google',
     separator: 'o',
@@ -75,7 +75,7 @@ const loginCopy: Record<string, {
     },
   },
   fr: {
-    title: 'Connexion à EuroComply',
+    title: 'Connexion à Risck comply',
     subtitle: 'Accédez à votre espace compliance avec Google ou email.',
     google: 'Continuer avec Google',
     separator: 'ou',
@@ -92,7 +92,7 @@ const loginCopy: Record<string, {
     },
   },
   it: {
-    title: 'Accedi a EuroComply',
+    title: 'Accedi a Risck comply',
     subtitle: 'Accedi al workspace compliance con Google o email.',
     google: 'Continua con Google',
     separator: 'o',
@@ -109,7 +109,7 @@ const loginCopy: Record<string, {
     },
   },
   de: {
-    title: 'Bei EuroComply anmelden',
+    title: 'Bei Risck comply anmelden',
     subtitle: 'Melden Sie sich mit Google oder E-Mail an.',
     google: 'Mit Google fortfahren',
     separator: 'oder',
@@ -199,8 +199,8 @@ export default function LoginPage() {
 
       <div className="relative mx-auto flex min-h-screen max-w-md items-center px-5">
         <div className="w-full rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-7 shadow-2xl backdrop-blur-xl">
-          <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
-            <Fingerprint className="h-6 w-6" />
+          <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black">
+            <Image src="/brand/risck-comply-icon.svg" alt="Risck comply" width={48} height={48} className="h-12 w-12 object-contain" priority />
           </div>
 
           <div className="text-center">

@@ -26,6 +26,6 @@ function normalizeValue(value: StableJsonValue): unknown {
   return value;
 }
 
-export function stableJsonStringify(value: StableJsonValue, spacing = 2) {
+export function stableJsonStringify(value: StableJsonValue, spacing = 0) {
   return JSON.stringify(normalizeValue(value), null, spacing);
 }

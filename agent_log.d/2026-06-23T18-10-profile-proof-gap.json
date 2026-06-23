@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-06-23T18:10:00Z",
+  "cycle": "profile_proof_followup",
+  "status": "runner_gap_identified",
+  "progress": {
+    "donePercent": 97,
+    "remainingPercent": 3
+  },
+  "findings": [
+    "PR #353 is merged into main with merge commit 9e35f9448c56dc22e917901851306c51ff541b69.",
+    "PR #355 is merged into main with merge commit 33ffa857cd6add22d4b0a9800d032841d9872904.",
+    "The final evidence checker now requires profiles runtime coverage for rls_enabled, cross_tenant_read, cross_tenant_insert, cross_tenant_update, cross_tenant_delete, and same_tenant_read.",
+    "The runtime runner still skips profiles during fixture setup, so it cannot yet generate the profiles runtime cases required by the final checker.",
+    "No Complete/passed runtime evidence has been generated in this cycle. Evidence must remain Open until a real runtime run passes."
+  ],
+  "next_actions": [
+    "Patch scripts/security/run-supabase-live-tenant-isolation-v2.mjs so setup seeds a user-scoped profiles row for owner B and uses a separate target user for cross-tenant insert denial.",
+    "Run npm run security:rls against the real project with runtime environment variables.",
+    "Commit docs/security/evidence/runtime/supabase-live-rls-validation.json only if it is generated as Complete/passed by the runtime runner."
+  ]
+}

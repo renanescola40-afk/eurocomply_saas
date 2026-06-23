@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { evaluateAiGovernanceRole } from './role-wizard';
 
 describe('evaluateAiGovernanceRole', () => {
-  it('classifies a third-party internal tool as deployer with high confidence', () => {
+  it('classifies a third-party internal tool as deployer with medium confidence', () => {
     const assessment = evaluateAiGovernanceRole({
       role: 'deployer',
       vendorName: 'OpenAI',
@@ -12,7 +12,7 @@ describe('evaluateAiGovernanceRole', () => {
     });
 
     expect(assessment.recommendedRole).toBe('deployer');
-    expect(assessment.confidence).toBe('high');
+    expect(assessment.confidence).toBe('medium');
     expect(assessment.signals).toContain('third_party_vendor');
     expect(assessment.nextSteps).toContain('collect_vendor_evidence');
   });

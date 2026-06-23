@@ -1,9 +1,7 @@
 # Data safeguards
 
-Status: customer-safe overview for enterprise review.
+Status: enterprise review note.
 
-EuroComply relies on managed providers for transport and storage protections. Provider settings must be verified before contractual statements are made.
+This page records that provider-managed safeguards must be evidenced before stronger customer statements are made. Risck comply should use bounded wording and must not present unavailable controls as completed.
 
-Current customer-safe position: production web traffic should use managed HTTPS, storage protections are provider-managed, payment card handling should remain with the billing provider, and audit records may include integrity checks where configured.
-
-EuroComply does not currently claim customer-managed cryptography, browser-only secrecy or externally immutable audit storage.
+Responsible contact: renansilva2002@gmail.com

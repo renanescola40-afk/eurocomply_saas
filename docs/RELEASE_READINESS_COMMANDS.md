@@ -37,8 +37,31 @@ This command validates the Release Candidate governance package:
 
 - `security:release-candidate`
 - `security:release-evidence`
+- `security:external-review`
 
 It is intentionally separate from the full CI command so release owners can check governance evidence without running the entire test suite. It does **not** replace the required green Full Security Suite run.
+
+## Enterprise external review gate
+
+For enterprise release, run:
+
+```bash
+npm run release:enterprise-readiness
+```
+
+This sets `RELEASE_TARGET=enterprise` and blocks release when:
+
+- `docs/security/evidence/runtime/external-security-review-or-pentest.json` is not `Complete`.
+- Any critical/high finding is neither resolved nor formally accepted.
+- Any critical finding has pending, failed, or missing retest evidence.
+
+The placeholder evidence file is deliberately `Open` and will fail this enterprise gate until a real external report, triage, and retest record have been reviewed.
+
+To check the external review package without enterprise enforcement, run:
+
+```bash
+npm run security:external-review
+```
 
 ## Full security CI
 
@@ -116,3 +139,5 @@ Do not promote to public production unless all of these are true:
 - SBOM artifact `eurocomply-sbom` is attached.
 - Any high/critical npm audit item is fixed or triaged with owner and expiry.
 - Any remaining exceptions are documented with owner and expiry.
+
+Do not promote to enterprise release unless `npm run release:enterprise-readiness` passes with real external security review evidence.

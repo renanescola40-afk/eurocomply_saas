@@ -1,16 +1,16 @@
 # Security Policy
 
-RISCK COMPLY is a European B2B compliance SaaS. Security reports are taken seriously and should be handled privately.
+Risck comply is a European B2B compliance SaaS. Security reports are taken seriously and should be handled privately.
 
 ## Supported versions
 
 The production deployment on the `main` branch is currently supported.
 
-## Reporting a vulnerability
+## Reporting a security issue
 
-Please do not create a public GitHub issue for security vulnerabilities.
+Please do not create a public GitHub issue for private security reports.
 
-Send a private report to the project owner with:
+Send a private report to `renansilva2002@gmail.com` with:
 
 - affected URL, endpoint, or component;
 - steps to reproduce;
@@ -20,12 +20,14 @@ Send a private report to the project owner with:
 
 ## Response targets
 
-Initial triage targets:
+Initial triage targets are operational goals, not contractual SLAs unless agreed separately:
 
 - Critical: 24 hours
 - High: 2 business days
 - Medium: 5 business days
 - Low: next planned maintenance window
+
+These are operational targets, not a contractual SLA unless separately agreed in writing.
 
 ## Security scope
 
@@ -39,21 +41,6 @@ In scope:
 - document upload and controlled document storage;
 - audit logs and notification integrity.
 
-Out of scope unless combined with a real exploit:
+## Claims guardrail
 
-- missing security headers already documented in the roadmap;
-- social engineering;
-- denial-of-service without a practical abuse path;
-- vulnerabilities in third-party services outside RISCK COMPLY configuration.
-
-## Production security posture
-
-Before public launch, confirm:
-
-- Supabase migrations are applied;
-- storage bucket `controlled-documents` is private;
-- RLS policies are active;
-- Stripe webhook signature verification is enabled;
-- Sentry source maps and alerting are configured;
-- `HEALTHCHECK_TOKEN` protects readiness and smoke endpoints;
-- production secrets are rotated when personnel or deployment context changes.
+Do not claim SOC 2, ISO 27001 certification, completed external review, tested disaster recovery, guaranteed RTO/RPO, or 24/7 staffed monitoring unless approved evidence exists. Use `designed to support` for evidence-dependent capabilities.

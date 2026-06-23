@@ -65,7 +65,7 @@ export async function buildBoardReportData(params: { userId: string; workspaceId
 
 export function boardReportToText(data: BoardReportData) {
   return [
-    'EuroComply AI - Board Report',
+    'Risck comply AI - Board Report',
     `Generated: ${new Date(data.generatedAt).toLocaleString()}`,
     '',
     'Executive Summary',

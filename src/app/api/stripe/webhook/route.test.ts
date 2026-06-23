@@ -5,8 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   constructEvent: vi.fn(),
   handleStripeWebhookEvent: vi.fn(),
+  getStripeEventAuditContext: vi.fn(() => ({ organizationId: 'org_a', actorUserId: 'user_admin', objectId: 'sub_123' })),
   reportError: vi.fn(),
+  writeAuditLog: vi.fn(),
   checkDistributedRateLimit: vi.fn(),
+  getClientIpFromRequest: vi.fn(() => '203.0.113.10'),
+  getUserAgentFromRequest: vi.fn(() => 'Vitest'),
 }));
 
 vi.mock('@/lib/billing/stripe', () => ({
@@ -19,21 +23,28 @@ vi.mock('@/lib/billing/stripe', () => ({
 
 vi.mock('@/server/billing/stripe-webhooks', () => ({
   handleStripeWebhookEvent: mocks.handleStripeWebhookEvent,
+  getStripeEventAuditContext: mocks.getStripeEventAuditContext,
 }));
 
 vi.mock('@/lib/observability/report-error', () => ({
   reportError: mocks.reportError,
 }));
 
+vi.mock('@/lib/security/audit-log', () => ({
+  writeAuditLog: mocks.writeAuditLog,
+}));
+
 vi.mock('@/lib/security/rate-limit', () => ({
   checkDistributedRateLimit: mocks.checkDistributedRateLimit,
+  getClientIpFromRequest: mocks.getClientIpFromRequest,
+  getUserAgentFromRequest: mocks.getUserAgentFromRequest,
 }));
 
 vi.mock('@/lib/security/rate-limit-response', () => ({
   rateLimitResponse: () => new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429 }),
 }));
 
-import { POST, STRIPE_WEBHOOK_TOLERANCE_SECONDS, getStripeWebhookContentLength, readBoundedStripeWebhookBody } from './route';
+import { POST, getStripeWebhookContentLength, readBoundedStripeWebhookBody } from './route';
 
 const TEST_STRIPE_WEBHOOK_SECRET = 'test_webhook_signing_secret';
 
@@ -57,6 +68,22 @@ function makePostRequest(signature = 't=1800000000,v1=bad') {
     },
     body: JSON.stringify({ id: 'evt_invalid', type: 'customer.subscription.updated' }),
   });
+}
+
+function makeStripeEvent(type = 'customer.subscription.updated') {
+  return {
+    id: 'evt_valid',
+    object: 'event',
+    type,
+    created: 1_800_000_000,
+    livemode: false,
+    data: {
+      object: {
+        id: 'sub_123',
+        metadata: { organization_id: 'org_a', user_id: 'user_admin' },
+      },
+    },
+  };
 }
 
 describe('Stripe webhook body hardening', () => {
@@ -86,9 +113,11 @@ describe('Stripe webhook route signature validation', () => {
     vi.clearAllMocks();
     process.env.STRIPE_WEBHOOK_SECRET = TEST_STRIPE_WEBHOOK_SECRET;
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
+    mocks.writeAuditLog.mockResolvedValue(undefined);
     mocks.constructEvent.mockImplementation(() => {
       throw new Error('No signatures found matching the expected signature for payload');
     });
+    mocks.handleStripeWebhookEvent.mockResolvedValue({ skipped: false });
   });
 
   it('always rejects invalid Stripe signatures and does not process the event', async () => {
@@ -102,7 +131,13 @@ describe('Stripe webhook route signature validation', () => {
       expect.any(String),
       't=1800000000,v1=bad',
       TEST_STRIPE_WEBHOOK_SECRET,
-      STRIPE_WEBHOOK_TOLERANCE_SECONDS,
+    );
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'webhook_rejected',
+        entityType: 'stripe_webhook_event',
+        metadata: expect.objectContaining({ reason: 'invalid_signature' }),
+      }),
     );
   });
 
@@ -120,5 +155,32 @@ describe('Stripe webhook route signature validation', () => {
     expect(body).toEqual({ error: 'missing_signature' });
     expect(mocks.constructEvent).not.toHaveBeenCalled();
     expect(mocks.handleStripeWebhookEvent).not.toHaveBeenCalled();
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'webhook_rejected',
+        metadata: expect.objectContaining({ reason: 'missing_signature' }),
+      }),
+    );
+  });
+
+  it('audits valid Stripe webhook receipt before dispatching the idempotent handler', async () => {
+    const event = makeStripeEvent();
+    mocks.constructEvent.mockReturnValue(event);
+
+    const response = await POST(makePostRequest('t=1800000000,v1=good'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ received: true, skipped: false });
+    expect(mocks.handleStripeWebhookEvent).toHaveBeenCalledWith(event);
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'webhook_received',
+        organizationId: 'org_a',
+        userId: 'user_admin',
+        entityId: 'evt_valid',
+        metadata: expect.objectContaining({ stripeEventId: 'evt_valid', stripeEventType: 'customer.subscription.updated' }),
+      }),
+    );
   });
 });

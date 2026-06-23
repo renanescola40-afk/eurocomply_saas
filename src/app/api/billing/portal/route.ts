@@ -1,10 +1,11 @@
 import { z } from 'zod';
 
 import { normalizeLocale } from '@/lib/i18n/locales';
-import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
+import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/server/billing/stripe';
+import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireApiUser, requirePermission, requireTrustedMutation, secureApiError } from '@/server/security/api-guards';
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'organization_required' }, { status: 403 });
     }
 
-    await requirePermission({
+    const permission = await requirePermission({
       userId: user.id,
       organizationId: organization.id,
       permission: 'manage_billing',
@@ -87,6 +88,23 @@ export async function POST(request: Request) {
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,
       return_url: returnUrl,
+    });
+
+    await writeAuditLog({
+      action: 'billing_portal_created',
+      organizationId: organization.id,
+      userId: user.id,
+      entityType: 'stripe_billing_portal_session',
+      entityId: portalSession.id ?? subscription.stripe_customer_id,
+      metadata: {
+        stripeCustomerId: subscription.stripe_customer_id,
+        returnUrl,
+        actorRole: permission.role ?? 'unknown',
+        stepUpAction: stepUp.assessment.action,
+        stepUpVerifiedAt: stepUp.assessment.verifiedAt ?? null,
+        trustedOriginRequired: true,
+        rbacPermission: 'manage_billing',
+      },
     });
 
     return noStoreJson({

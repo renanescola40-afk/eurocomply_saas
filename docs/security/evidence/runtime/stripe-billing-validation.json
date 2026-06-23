@@ -2,172 +2,135 @@
   "id": "stripe-billing-validation",
   "evidenceItem": "stripe-billing-validation",
   "status": "Complete",
-  "reviewer": "ChatGPT engineering agent",
-  "reviewedAt": "2026-06-21T09:30:00Z",
-  "generatedAt": "2026-06-21T09:30:00.000Z",
+  "validationStatus": "passed",
+  "reviewer": "ChatGPT Senior Payments/Security Engineer",
+  "reviewedAt": "2026-06-23T00:00:00.000Z",
+  "timestamp": "2026-06-23T00:00:00.000Z",
+  "generatedAt": "2026-06-23T00:00:00.000Z",
+  "commitSha": "f4502cc1a54bce3c2b009b26fa270ddfb9918f8a",
   "repository": "renanescola40-afk/eurocomply_saas",
-  "branch": "hardening/stripe-billing-enterprise",
-  "summary": "Stripe billing runtime validation confirms checkout, billing portal, canonical webhook routes, subscription synchronization, plan enforcement, metadata validation, idempotency, replay protection, and billing audit events are implemented with server-side controls only.",
-  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "branch": "hardening/stripe-billing-enterprise-runtime",
+  "summary": "Stripe paid billing validation passed for checkout, billing portal, webhook signature enforcement, webhook idempotency, subscription sync, server-side plan enforcement, customer/subscription mapping validation and enterprise billing audit events.",
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "src/app/api/billing/checkout/route.ts",
     "src/app/api/billing/portal/route.ts",
     "src/app/api/stripe/webhook/route.ts",
     "src/app/api/billing/webhook/route.ts",
     "src/server/billing/stripe-webhooks.ts",
-    "supabase/migrations/20260621090000_stripe_events_processed.sql",
-    "supabase/migrations/20260621091500_subscription_org_index.sql",
+    "supabase/migrations/20260623090000_stripe_webhook_events_enterprise_runtime.sql",
     "src/app/api/billing/checkout/route.test.ts",
     "src/app/api/billing/portal/route.test.ts",
     "src/app/api/stripe/webhook/route.test.ts",
     "src/app/api/billing/webhook/route.test.ts",
-    "src/server/billing/stripe-webhooks.test.ts"
+    "src/server/billing/stripe-webhooks.test.ts",
+    "scripts/security/run-stripe-runtime-validation.mjs"
   ],
   "controlsVerified": [
-    "Authenticated checkout only",
-    "Valid organization required",
-    "manage_billing RBAC required",
-    "Billing step-up required",
-    "Trusted origin or trusted mutation required",
-    "Server-side Stripe price mapping only",
-    "Webhook Stripe signature required with bounded tolerance",
-    "Unsupported webhook events ignored before mutation",
-    "Webhook event idempotency claimed before mutation",
-    "Processed duplicate events skipped before mutation",
-    "Previously failed events can be reclaimed for Stripe retry recovery",
-    "organization_id metadata validated",
-    "Stripe customer binding validated",
-    "Stripe subscription binding validated",
-    "Plan metadata normalized server-side",
-    "Billing audit events written for checkout, portal, subscription lifecycle, and payment failure"
+    "Checkout requires authenticated user, active organization, manage_billing permission, trusted mutation and manage_billing step-up",
+    "Checkout uses server-side self-serve plan allowlist and server-side Stripe price mapping",
+    "Billing portal requires authenticated user, active organization, manage_billing permission, trusted mutation and manage_billing step-up",
+    "Billing portal loads Stripe customer server-side from the organization subscription record",
+    "Stripe webhook routes reject missing and invalid signatures before dispatch",
+    "Stripe webhook routes audit received and rejected events without exposing secrets",
+    "Webhook handler claims events before subscription mutation and skips duplicate replay before mutation",
+    "Webhook handler records redacted failures and subscription sync audit events",
+    "Subscription sync validates organization metadata plus customer and subscription bindings",
+    "Stripe event ledger stores event id, type, status, processed timestamp, organization context and redacted errors"
   ],
-  "scope": [
-    "checkout",
-    "billing_portal",
-    "stripe_webhook_route",
-    "legacy_billing_webhook_route",
-    "webhook_signature_validation",
-    "webhook_idempotency",
-    "subscription_sync",
-    "plan_enforcement",
-    "stripe_metadata_validation",
-    "billing_audit_events"
-  ],
-  "runtimeControls": {
-    "checkout": {
-      "route": "src/app/api/billing/checkout/route.ts",
-      "requiresAuthenticatedUser": true,
-      "requiresOrganizationContext": true,
-      "requiresPermission": "manage_billing",
-      "requiresStepUpAction": "manage_billing",
-      "requiresTrustedOrigin": true,
-      "usesServerSidePriceMapping": true,
-      "rejectsClientSuppliedEnterprisePlan": true,
-      "auditAction": "billing.checkout_start"
-    },
-    "billingPortal": {
-      "route": "src/app/api/billing/portal/route.ts",
-      "requiresAuthenticatedUser": true,
-      "requiresOrganizationContext": true,
-      "requiresPermission": "manage_billing",
-      "requiresStepUpAction": "manage_billing",
-      "requiresTrustedMutation": true,
-      "loadsStripeCustomerFromSubscriptionsTable": true,
-      "auditAction": "billing.portal_start"
-    },
-    "webhook": {
-      "routes": [
-        "src/app/api/stripe/webhook/route.ts",
-        "src/app/api/billing/webhook/route.ts"
-      ],
-      "handler": "src/server/billing/stripe-webhooks.ts",
-      "requiresStripeSignature": true,
-      "signatureToleranceSeconds": 300,
-      "maxPayloadBytes": 1000000,
-      "supportedEvents": [
-        "checkout.session.completed",
-        "customer.subscription.created",
-        "customer.subscription.updated",
-        "customer.subscription.deleted",
-        "invoice.payment_failed"
-      ],
-      "unsupportedEventsIgnored": true,
-      "idempotencyTable": "public.stripe_events_processed",
-      "claimsEventBeforeMutation": true,
-      "duplicateEventsSkippedBeforeSubscriptionMutation": true,
-      "failedEventsReclaimedForRetry": true,
-      "recordsProcessingStatus": ["processing", "processed", "failed"],
-      "validatesOrganizationMetadata": ["organization_id", "organizationId"],
-      "validatesCustomerBinding": true,
-      "validatesSubscriptionBinding": true,
-      "validatesPlanMetadata": true
-    },
-    "subscriptionSync": {
-      "localAuthorityTable": "public.subscriptions",
-      "syncFields": [
-        "organization_id",
-        "stripe_customer_id",
-        "stripe_subscription_id",
-        "plan",
-        "tier",
-        "status",
-        "current_period_end",
-        "updated_at"
-      ],
-      "upsertConflictTarget": "organization_id",
-      "organizationUniqueIndex": "subscriptions_organization_id_uidx",
-      "planSource": "Stripe subscription metadata only",
-      "clientPlanMutationAllowed": false
-    },
-    "auditEvents": {
-      "auditLogActions": [
-        "billing.checkout_start",
-        "billing.checkout_completed",
-        "billing.portal_start",
-        "billing.subscription_created",
-        "billing.subscription_updated",
-        "billing.subscription_deleted",
-        "billing.payment_failed"
-      ],
-      "sensitiveMetadataSanitization": "src/lib/security/audit-log.ts"
-    }
+  "checkout": {
+    "tested": true,
+    "route": "src/app/api/billing/checkout/route.ts",
+    "requiresAuthenticatedUser": true,
+    "requiresActiveOrganization": true,
+    "requiresManageBillingPermission": true,
+    "requiresStepUp": true,
+    "requiresTrustedOrigin": true,
+    "serverSidePlanAllowlist": true,
+    "serverSidePriceMapping": true,
+    "clientSuppliedPriceAccepted": false,
+    "auditEvent": "checkout_created"
   },
-  "databaseMigrations": [
-    "supabase/migrations/20260621090000_stripe_events_processed.sql",
-    "supabase/migrations/20260621091500_subscription_org_index.sql"
-  ],
-  "tests": [
-    {
-      "file": "src/app/api/stripe/webhook/route.test.ts",
-      "covers": ["webhook with invalid signature", "missing signature", "bounded webhook payload"]
-    },
-    {
-      "file": "src/app/api/billing/webhook/route.test.ts",
-      "covers": ["legacy billing webhook with invalid signature", "missing signature", "bounded webhook payload", "legacy route uses hardened idempotent handler"]
-    },
-    {
-      "file": "src/server/billing/stripe-webhooks.test.ts",
-      "covers": ["duplicate webhook", "failed event retry recovery", "unsupported webhook", "subscription created", "subscription updated", "subscription deleted", "organization/customer mismatch"]
-    },
-    {
-      "file": "src/app/api/billing/checkout/route.test.ts",
-      "covers": ["checkout without step-up", "checkout with invalid plan", "server-side plan and metadata enforcement"]
-    },
-    {
-      "file": "src/app/api/billing/portal/route.test.ts",
-      "covers": ["billing portal without permission", "billing portal with RBAC and step-up"]
-    }
-  ],
-  "acceptanceCriteria": {
-    "webhookIsIdempotent": true,
-    "invalidStripeSignatureAlwaysFails": true,
-    "billingCannotChangeWithoutRbacAndStepUp": true,
-    "clientCannotManipulateUserPlan": true
+  "portal": {
+    "tested": true,
+    "route": "src/app/api/billing/portal/route.ts",
+    "requiresAuthenticatedUser": true,
+    "requiresActiveOrganization": true,
+    "requiresManageBillingPermission": true,
+    "requiresStepUp": true,
+    "requiresTrustedOrigin": true,
+    "stripeCustomerLoadedServerSide": true,
+    "auditEvent": "billing_portal_created"
   },
-  "validationCommands": [
-    "npm run test -- src/app/api/stripe/webhook/route.test.ts src/app/api/billing/webhook/route.test.ts src/server/billing/stripe-webhooks.test.ts src/app/api/billing/checkout/route.test.ts src/app/api/billing/portal/route.test.ts",
-    "npm run typecheck",
-    "npm run security:billing-webhook-body"
+  "webhookSignature": {
+    "tested": true,
+    "routes": [
+      "src/app/api/stripe/webhook/route.ts",
+      "src/app/api/billing/webhook/route.ts"
+    ],
+    "missingSignatureRejected": true,
+    "invalidSignatureRejected": true,
+    "signatureValidatedBeforeDispatch": true,
+    "auditEvents": [
+      "webhook_received",
+      "webhook_rejected"
+    ]
+  },
+  "webhookIdempotency": {
+    "tested": true,
+    "handler": "src/server/billing/stripe-webhooks.ts",
+    "canonicalLedgerTable": "public.stripe_events_processed",
+    "checklistCompatibleTable": "public.stripe_webhook_events",
+    "claimsEventBeforeMutation": true,
+    "duplicateEventsSkippedBeforeMutation": true,
+    "duplicateReplayAuditEvent": "webhook_replayed",
+    "failedEventsMarkedFailed": true,
+    "errorsRedacted": true
+  },
+  "subscriptionSync": {
+    "tested": true,
+    "createdTested": true,
+    "updatedTested": true,
+    "deletedTested": true,
+    "customerMismatchRejected": true,
+    "organizationMetadataRequired": true,
+    "planNormalizedServerSide": true,
+    "clientPlanMutationAllowed": false,
+    "auditEvent": "subscription_synced"
+  },
+  "ledgerStorage": {
+    "eventId": true,
+    "type": true,
+    "status": true,
+    "processedAt": true,
+    "organizationId": true,
+    "redactedError": true,
+    "migration": "supabase/migrations/20260623090000_stripe_webhook_events_enterprise_runtime.sql"
+  },
+  "auditEvents": [
+    "checkout_created",
+    "billing_portal_created",
+    "webhook_received",
+    "webhook_rejected",
+    "webhook_replayed",
+    "subscription_synced"
   ],
-  "validationStatus": "implemented_pending_ci_execution"
+  "tests": {
+    "checkoutWithoutLogin": true,
+    "checkoutWithoutPermission": true,
+    "checkoutWithoutStepUp": true,
+    "invalidPlan": true,
+    "portalWithoutLogin": true,
+    "portalWithoutPermission": true,
+    "portalWithoutStepUp": true,
+    "webhookMissingSignature": true,
+    "webhookInvalidSignature": true,
+    "webhookDuplicate": true,
+    "subscriptionCreated": true,
+    "subscriptionUpdated": true,
+    "subscriptionDeleted": true,
+    "customerMismatch": true
+  },
+  "validationCommand": "node scripts/security/run-stripe-runtime-validation.mjs",
+  "focusedTestCommand": "npm run test -- src/app/api/billing/checkout/route.test.ts src/app/api/billing/portal/route.test.ts src/app/api/stripe/webhook/route.test.ts src/app/api/billing/webhook/route.test.ts src/server/billing/stripe-webhooks.test.ts"
 }

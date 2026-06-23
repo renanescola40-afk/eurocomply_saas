@@ -1,7 +1,12 @@
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
-import { checkDistributedRateLimit, type RateLimitOptions } from '@/lib/security/rate-limit';
+import {
+  buildRateLimitSubjectFromRequest,
+  checkDistributedRateLimit,
+  type RateLimitOptions,
+  type RateLimitPolicyId,
+} from '@/lib/security/rate-limit';
 import { getCurrentUser } from '@/server/queries/auth';
-import { noStoreJson } from '@/server/security/no-store';
+import { noStoreJson, noStoreDownload, applyNoStoreHeaders } from '@/server/security/no-store';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import {
   assertOrganizationPermission,
@@ -26,6 +31,9 @@ export type RequireOrganizationAccessOptions = {
   organizationId: string | null | undefined;
 };
 
+export type RequireOrganizationContextOptions = RequireOrganizationAccessOptions;
+export type RequireOrganizationMembershipOptions = RequireOrganizationAccessOptions;
+
 export type RequirePermissionOptions = RequireOrganizationAccessOptions & {
   permission: OrganizationPermission;
 };
@@ -34,13 +42,23 @@ export type TrustedMutationOptions = {
   rateLimit?: RateLimitOptions;
 };
 
+export type EnterpriseRateLimitOptions = Omit<RateLimitOptions, 'ip' | 'userAgent' | 'policy'> & {
+  policy: RateLimitPolicyId;
+};
+
+export type ParseJsonBodyOptions<TBody> = {
+  schema: { parse: (value: unknown) => TBody };
+};
+
 export class ApiSecurityError extends Error {
-  status: 400 | 401 | 403 | 503;
+  status: 400 | 401 | 403 | 429 | 503;
   code:
+    | 'invalid_request'
     | 'invalid_organization'
     | 'unauthorized'
     | 'organization_membership_required'
     | 'permission_denied'
+    | 'rate_limited'
     | 'security_control_unavailable';
 
   constructor({
@@ -71,6 +89,12 @@ function sanitizeOrganizationId(organizationId: string | null | undefined) {
 
   return normalized;
 }
+
+export function secureApiJson<TBody>(body: TBody, init?: ResponseInit) {
+  return noStoreJson(body, init);
+}
+
+export { applyNoStoreHeaders, noStoreDownload, noStoreJson };
 
 export async function requireApiUser() {
   const user = await getCurrentUser();
@@ -114,6 +138,14 @@ export async function requireOrganizationAccess(options: RequireOrganizationAcce
   };
 }
 
+export async function requireOrganizationContext(options: RequireOrganizationContextOptions): Promise<ApiOrganizationAccess> {
+  return requireOrganizationAccess(options);
+}
+
+export async function requireOrganizationMembership(options: RequireOrganizationMembershipOptions): Promise<ApiOrganizationAccess> {
+  return requireOrganizationAccess(options);
+}
+
 export async function requirePermission(options: RequirePermissionOptions): Promise<PermissionCheckResult> {
   const organizationId = sanitizeOrganizationId(options.organizationId);
   const result = await assertOrganizationPermission({
@@ -133,16 +165,61 @@ export async function requirePermission(options: RequirePermissionOptions): Prom
   return result;
 }
 
+export function requireTrustedOriginForMutation(request: Request) {
+  return assertTrustedOrigin(request);
+}
+
+export async function requireRateLimit(options: RateLimitOptions) {
+  const rateLimit = await checkDistributedRateLimit(options);
+  if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+
+  return null;
+}
+
+export async function requireEnterpriseRateLimit(request: Request, options: EnterpriseRateLimitOptions) {
+  return requireRateLimit({
+    ...options,
+    ...buildRateLimitSubjectFromRequest(request, {
+      userId: options.userId,
+      organizationId: options.organizationId,
+      action: options.action ?? options.policy,
+      route: options.route,
+    }),
+  });
+}
+
 export async function requireTrustedMutation(request: Request, options: TrustedMutationOptions = {}) {
-  const originDenied = assertTrustedOrigin(request);
+  const originDenied = requireTrustedOriginForMutation(request);
   if (originDenied) return originDenied;
 
   if (!options.rateLimit) return null;
 
-  const rateLimit = await checkDistributedRateLimit(options.rateLimit);
-  if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+  return requireRateLimit({
+    ...options.rateLimit,
+    ...buildRateLimitSubjectFromRequest(request, {
+      userId: options.rateLimit.userId,
+      organizationId: options.rateLimit.organizationId,
+      action: options.rateLimit.action ?? options.rateLimit.key ?? 'trusted_mutation',
+      route: options.rateLimit.route,
+    }),
+  });
+}
 
-  return null;
+export async function parseJsonBodyWithZod<TBody>(request: Request, schemaOrOptions: { parse: (value: unknown) => TBody } | ParseJsonBodyOptions<TBody>) {
+  let rawBody: unknown;
+
+  try {
+    rawBody = await request.json();
+  } catch {
+    throw new ApiSecurityError({
+      code: 'invalid_request',
+      message: 'Request body must be valid JSON.',
+      status: 400,
+    });
+  }
+
+  const schema = 'schema' in schemaOrOptions ? schemaOrOptions.schema : schemaOrOptions;
+  return schema.parse(rawBody);
 }
 
 export function assertApiResourceOrganization(resourceOrganizationId: string | null | undefined, organizationId: string) {

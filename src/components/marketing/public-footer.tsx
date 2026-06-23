@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
@@ -70,7 +71,10 @@ export function PublicFooter({ locale }: { locale: string }) {
   return (
     <footer className="border-t bg-background px-6 py-10 text-sm text-muted-foreground">
       <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-        <div><p className="text-base font-semibold text-foreground">EuroComply</p><p className="mt-3 max-w-md leading-6">{copy.tagline}</p></div>
+        <div>
+          <Image src="/brand/risck-comply-wordmark.svg" alt="Risck comply" width={160} height={40} className="h-9 w-auto object-contain" />
+          <p className="mt-3 max-w-md leading-6">{copy.tagline}</p>
+        </div>
         <nav><p className="font-medium text-foreground">{copy.productTitle}</p><ul className="mt-3 space-y-2">{copy.productLinks.map((link) => <li key={link.href}><Link href={`/${activeLocale}${link.href}`} className="hover:text-foreground">{link.label}</Link></li>)}</ul></nav>
         <nav><p className="font-medium text-foreground">{copy.companyTitle}</p><ul className="mt-3 space-y-2">{copy.companyLinks.map((link) => <li key={link.href}><Link href={`/${activeLocale}${link.href}`} className="hover:text-foreground">{link.label}</Link></li>)}</ul></nav>
         <nav><p className="font-medium text-foreground">{copy.trustTitle}</p><ul className="mt-3 space-y-2">{copy.trustLinks.map((link) => <li key={link.href}><Link href={`/${activeLocale}${link.href}`} className="hover:text-foreground">{link.label}</Link></li>)}</ul></nav>

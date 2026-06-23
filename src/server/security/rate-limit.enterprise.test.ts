@@ -5,7 +5,8 @@ import {
   clearRateLimitBuckets,
   getRateLimitHeaders,
   hashRateLimitIp,
-  type RateLimitCategory,
+  hashRateLimitUserAgent,
+  type RateLimitPolicyId,
 } from './rate-limit';
 
 const ORIGINAL_ENV = { ...process.env };
@@ -18,12 +19,13 @@ function resetEnv() {
   Object.assign(process.env, { NODE_ENV: 'test' });
 }
 
-async function hit(category: RateLimitCategory, organizationId = 'org-a') {
+async function hit(policy: RateLimitPolicyId, organizationId = 'org-a') {
   return checkDistributedRateLimit({
-    category,
+    policy,
     userId: 'user-a',
     organizationId,
     ip: '203.0.113.10',
+    userAgent: 'Vitest Browser',
     action: 'test-action',
     route: '/api/test',
     limit: 2,
@@ -45,8 +47,8 @@ describe('enterprise rate limiting', () => {
   });
 
   it('allows requests below the configured limit', async () => {
-    const first = await hit('billing');
-    const second = await hit('billing');
+    const first = await hit('billing-checkout');
+    const second = await hit('billing-checkout');
 
     expect(first.allowed).toBe(true);
     expect(first.remaining).toBe(1);
@@ -55,13 +57,15 @@ describe('enterprise rate limiting', () => {
   });
 
   it('blocks requests above the configured limit', async () => {
-    await hit('billing');
-    await hit('billing');
-    const blocked = await hit('billing');
+    await hit('billing-checkout');
+    await hit('billing-checkout');
+    const blocked = await hit('billing-checkout');
 
     expect(blocked.allowed).toBe(false);
     expect(blocked.remaining).toBe(0);
     expect(blocked.audit).toBe(true);
+    expect(blocked.policy).toBe('billing-checkout');
+    expect(blocked.highRisk).toBe(true);
   });
 
   it('fails closed for high-risk production routes when Redis is not configured', async () => {
@@ -69,10 +73,11 @@ describe('enterprise rate limiting', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     const result = await checkDistributedRateLimit({
-      category: 'billing',
+      policy: 'billing-checkout',
       userId: 'user-a',
       organizationId: 'org-a',
       ip: '203.0.113.10',
+      userAgent: 'Vitest Browser',
       action: 'checkout',
       route: '/api/billing/checkout',
     });
@@ -80,6 +85,26 @@ describe('enterprise rate limiting', () => {
     expect(result.allowed).toBe(false);
     expect(result.failureMode).toBe('fail-closed');
     expect(result.reason).toBe('redis_not_configured');
+    expect(result.audit).toBe(true);
+  });
+
+  it('does not block development/test high-risk routes just because Redis is unavailable', async () => {
+    const result = await checkDistributedRateLimit({
+      policy: 'gdpr-delete',
+      userId: 'user-a',
+      organizationId: 'org-a',
+      ip: '203.0.113.10',
+      userAgent: 'Vitest Browser',
+      action: 'gdpr_delete',
+      route: '/api/gdpr/delete-request',
+      limit: 2,
+      windowMs: 60_000,
+      now: 1_000,
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.reason).toBeUndefined();
+    expect(result.failureMode).toBe('fail-closed');
   });
 
   it('degrades open for low-risk production routes when Redis is not configured', async () => {
@@ -87,7 +112,7 @@ describe('enterprise rate limiting', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     const result = await checkDistributedRateLimit({
-      category: 'general-api',
+      policy: 'general-api',
       userId: 'user-a',
       organizationId: 'org-a',
       ip: '203.0.113.10',
@@ -111,20 +136,24 @@ describe('enterprise rate limiting', () => {
     expect(orgBFirst.remaining).toBe(1);
   });
 
-  it('uses hashed IP material in keys and emits standard rate limit headers', async () => {
-    const key = buildRateLimitKey('auth', {
+  it('uses hashed IP and user-agent material in keys and emits standard rate limit headers', async () => {
+    const key = buildRateLimitKey('password-reset', {
       userId: null,
       organizationId: null,
       ip: '203.0.113.10',
+      userAgent: 'Vitest Browser',
       action: 'password-reset',
       route: '/api/auth/password/reset',
     });
     const ipHash = hashRateLimitIp('203.0.113.10');
+    const uaHash = hashRateLimitUserAgent('Vitest Browser');
     const result = await hit('auth');
     const headers = getRateLimitHeaders(result, result.resetAt - 10_000);
 
     expect(key).toContain(ipHash);
+    expect(key).toContain(uaHash);
     expect(key).not.toContain('203.0.113.10');
+    expect(key).not.toContain('Vitest Browser');
     expect(headers['Retry-After']).toBe('10');
     expect(headers['RateLimit-Limit']).toBe(String(result.limit));
     expect(headers['RateLimit-Remaining']).toBe(String(result.remaining));

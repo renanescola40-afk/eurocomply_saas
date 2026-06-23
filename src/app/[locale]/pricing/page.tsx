@@ -20,10 +20,16 @@ const valueProof = [
   ['Create upgrade clarity', 'Usage limits are visible and predictable before procurement conversations begin.'],
 ];
 
+const trustProof = [
+  ['Trust Center', 'Public security, data protection, subprocessor and procurement materials are available before a sales call.'],
+  ['Evidence packet', 'Buyer responses use implemented, evidence pending, designed to support and planned status labels.'],
+  ['Operational clarity', 'Teams can compare pricing, limits and readiness materials before procurement conversations.'],
+];
+
 const billingFaqs = [
   {
     question: 'Why publish prices when larger GRC tools ask for a demo?',
-    answer: 'EuroComply is designed for European SaaS, fintech and B2B teams that need a clear entry point before enterprise procurement. Larger rollouts can still use custom Enterprise packaging.',
+    answer: 'Risck comply is designed for European SaaS, fintech and B2B teams that need a clear entry point before enterprise procurement. Larger rollouts can still use custom Enterprise packaging.',
   },
   {
     question: 'Can we change plans later?',
@@ -57,8 +63,9 @@ export default async function PricingPage({ params }: Props) {
     <main className="min-h-screen bg-[#05060a] text-white">
       <header className="border-b border-white/10 bg-[#05060a]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link href={`/${locale}`} className="text-lg font-bold tracking-tight">EuroComply</Link>
+          <Link href={`/${locale}`} className="text-lg font-bold tracking-tight">Risck comply</Link>
           <nav className="flex items-center gap-2 text-sm">
+            <Link href={`/${locale}/trust`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Trust Center</Link>
             <Link href={`/${locale}/login`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Sign in</Link>
             <Link href={`/${locale}/signup`} className="rounded-full bg-white px-4 py-2 font-semibold text-black hover:bg-white/90">Start free</Link>
           </nav>
@@ -75,20 +82,20 @@ export default async function PricingPage({ params }: Props) {
               Start like a startup. Scale like a regulated company.
             </h1>
             <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
-              EuroComply gives European teams a clear path from first compliance workspace to board-ready reporting and enterprise controls — without forcing every buyer into a sales call.
+              Risck comply gives European teams a clear path from first compliance workspace to board-ready reporting and enterprise controls.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href={`/${locale}/signup?plan=professional`} className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
                 Start with Professional
               </Link>
-              <Link href={`/${locale}/signup?plan=enterprise`} className="inline-flex h-12 items-center justify-center rounded-full border border-white/15 px-6 text-sm font-bold hover:bg-white/10">
-                Start Enterprise
+              <Link href={`/${locale}/trust`} className="inline-flex h-12 items-center justify-center rounded-full border border-white/15 px-6 text-sm font-bold hover:bg-white/10">
+                Review Trust Center
               </Link>
             </div>
           </div>
 
           <div className="rounded-[2rem] border border-white/10 bg-slate-950 p-6 shadow-2xl">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Pricing psychology</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Buyer clarity</p>
             <div className="mt-5 grid gap-3">
               {valueProof.map(([title, description]) => (
                 <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -167,6 +174,15 @@ export default async function PricingPage({ params }: Props) {
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="grid gap-6 md:grid-cols-3">
+          {trustProof.map(([title, description]) => (
+            <article key={title} className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+              <h3 className="font-semibold">{title}</h3>
+              <p className="mt-3 text-sm leading-6 text-slate-400">{description}</p>
+            </article>
+          ))}
         </section>
 
         <section className="grid gap-6 md:grid-cols-3">

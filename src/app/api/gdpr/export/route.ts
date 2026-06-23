@@ -1,5 +1,5 @@
 import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
-import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
@@ -34,7 +34,13 @@ export async function GET(request: Request) {
   }
 
   const rateLimit = await checkDistributedRateLimit({
-    key: `gdpr:export:${organization.id}:${user.id}`,
+    policy: 'export',
+    userId: user.id,
+    organizationId: organization.id,
+    ip: getClientIpFromRequest(request),
+    userAgent: getUserAgentFromRequest(request),
+    action: 'gdpr_export',
+    route: '/api/gdpr/export',
     limit: 10,
     windowMs: 60 * 60 * 1000,
   });
@@ -95,7 +101,11 @@ export async function GET(request: Request) {
   }
 
   const exportBody = await collectOrganizationDataExport({
-    organization,
+    organization: {
+      id: organization.id,
+      name: organization.name ?? null,
+      slug: organization.slug ?? null,
+    },
     subject: {
       userId: user.id,
       email: user.email,

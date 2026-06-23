@@ -1,0 +1,4 @@
+# npm run release:readiness
+Command: npm run release:readiness
+Result: blocked_not_run
+Reason: Repository workspace preparation failed before npm commands could execute in this remediation environment. No pass/fail claim is made for this command.

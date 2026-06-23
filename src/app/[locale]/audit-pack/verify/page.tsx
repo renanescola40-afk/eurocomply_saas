@@ -1,6 +1,7 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft, FileCheck2, Fingerprint } from 'lucide-react';
+import { ArrowLeft, FileCheck2 } from 'lucide-react';
 
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -11,42 +12,42 @@ const copy = {
   en: {
     eyebrow: 'Evidence Verification',
     title: 'Verify an Audit Evidence Pack',
-    description: 'Paste or upload an exported EuroComply evidence pack to validate the payload hash and signature status.',
+    description: 'Paste or upload an exported Risck comply evidence pack to validate the payload hash and signature status.',
     back: 'Back to Evidence Pack',
     checks: ['SHA-256 payload hash', 'Optional signature check', 'Export structure validation'],
   },
   pt: {
     eyebrow: 'Verificação de Evidências',
     title: 'Verificar um Pacote de Evidências',
-    description: 'Cole ou carregue um pacote de evidências EuroComply exportado para validar o hash do payload e o estado da assinatura.',
+    description: 'Cole ou carregue um pacote de evidências Risck comply exportado para validar o hash do payload e o estado da assinatura.',
     back: 'Voltar ao Pacote de Evidências',
     checks: ['Hash SHA-256 do payload', 'Verificação opcional de assinatura', 'Validação da estrutura do export'],
   },
   es: {
     eyebrow: 'Verificación de Evidencias',
     title: 'Verificar un Paquete de Evidencias',
-    description: 'Pega o carga un paquete de evidencias EuroComply exportado para validar el hash del payload y el estado de firma.',
+    description: 'Pega o carga un paquete de evidencias Risck comply exportado para validar el hash del payload y el estado de firma.',
     back: 'Volver al Paquete de Evidencias',
     checks: ['Hash SHA-256 del payload', 'Verificación opcional de firma', 'Validación de estructura del export'],
   },
   fr: {
     eyebrow: 'Vérification des Preuves',
     title: 'Vérifier un Pack de Preuves',
-    description: 'Collez ou chargez un pack de preuves EuroComply exporté pour valider le hash du payload et l’état de signature.',
+    description: 'Collez ou chargez un pack de preuves Risck comply exporté pour valider le hash du payload et l’état de signature.',
     back: 'Retour au Pack de Preuves',
     checks: ['Hash SHA-256 du payload', 'Vérification optionnelle de signature', 'Validation de structure de l’export'],
   },
   it: {
     eyebrow: 'Verifica Evidenze',
     title: 'Verifica un Pacchetto Evidenze',
-    description: 'Incolla o carica un pacchetto evidenze EuroComply esportato per validare hash del payload e stato firma.',
+    description: 'Incolla o carica un pacchetto evidenze Risck comply esportato per validare hash del payload e stato firma.',
     back: 'Torna al Pacchetto Evidenze',
     checks: ['Hash SHA-256 del payload', 'Verifica firma opzionale', 'Validazione struttura export'],
   },
   de: {
     eyebrow: 'Nachweisprüfung',
     title: 'Audit Evidence Pack prüfen',
-    description: 'Fügen Sie ein exportiertes EuroComply Evidence Pack ein oder laden Sie es hoch, um Payload-Hash und Signaturstatus zu prüfen.',
+    description: 'Fügen Sie ein exportiertes Risck comply Evidence Pack ein oder laden Sie es hoch, um Payload-Hash und Signaturstatus zu prüfen.',
     back: 'Zurück zum Evidence Pack',
     checks: ['SHA-256-Payload-Hash', 'Optionale Signaturprüfung', 'Validierung der Exportstruktur'],
   },
@@ -87,8 +88,8 @@ export default async function AuditPackVerifyPage({ params }: PageProps) {
               <h1 className="mt-2 text-3xl font-semibold md:text-4xl">{t.title}</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">{t.description}</p>
             </div>
-            <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4 text-emerald-50">
-              <Fingerprint className="h-5 w-5" />
+            <div className="overflow-hidden rounded-2xl border border-emerald-300/20 bg-black p-1 text-emerald-50">
+              <Image src="/brand/risck-comply-icon.svg" alt="Risck comply" width={52} height={52} className="h-13 w-13 object-contain" />
             </div>
           </div>
         </section>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" role="img" aria-label="Risck comply">
+  <rect width="900" height="220" fill="#000000"/>
+  <g fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round">
+    <path d="M50 118c0-54 44-98 98-98s98 44 98 98"/>
+    <path d="M76 118c0-40 32-72 72-72s72 32 72 72"/>
+    <path d="M102 118c0-25 21-46 46-46s46 21 46 46"/>
+    <path d="M128 118c0-11 9-20 20-20s20 9 20 20v54"/>
+    <path d="M50 144v24"/>
+    <path d="M76 148v38"/>
+    <path d="M102 152v33"/>
+    <path d="M194 148v38"/>
+    <path d="M220 142v27"/>
+    <path d="M119 194c15-23 22-46 22-76"/>
+  </g>
+  <text x="300" y="148" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="96" font-weight="800" letter-spacing="-3">RISCK</text>
+  <text x="592" y="148" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="500" letter-spacing="-1">comply</text>
+</svg>

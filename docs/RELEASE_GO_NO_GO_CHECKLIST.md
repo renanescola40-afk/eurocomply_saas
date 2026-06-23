@@ -8,14 +8,33 @@ It complements:
 - `docs/RELEASE_EVIDENCE_CHECKLIST.md`
 - `docs/RELEASE_APPROVAL_RECORD.md`
 - `docs/RELEASE_APPROVAL_LINKAGE.md`
+- `docs/security/PENTEST_SCOPE.md`
+- `docs/security/PRE_PENTEST_CHECKLIST.md`
+- `docs/security/PENTEST_FINDINGS_TRIAGE.md`
+- `docs/security/PENTEST_RETEST_RECORD.md`
+- `docs/RELEASE_FINAL_READINESS_REPORT.md`
+
+## Current release decision
+
+- Release name: EuroComply Final Release Readiness - 2026-06-22
+- Commit SHA: `7794d552d44784f906451b308b367d30c06ecc4c`
+- Date: 2026-06-22
+- Release owner: @renansilva2002 / renanescola40-afk
+- Security owner: @renansilva2002 / renanescola40-afk
+- Approver: no approval granted
+- Environment: production / enterprise candidate
+- Decision: **No-Go**
 
 ## Decision outcomes
 
 A release decision must result in exactly one of the following outcomes:
 
-- **Go**: all mandatory gates are satisfied and no unresolved blocking risk remains.
-- **Conditional Go**: all customer-impacting gates are satisfied, but one or more accepted exceptions are documented with owners and expiry dates.
-- **No-Go**: at least one blocking gate is missing, failing, or unreviewed.
+- **Private Beta Go**: private beta gates pass and any private-beta-only exceptions are accepted with owner and expiry date.
+- **Public Production Go**: production gates pass with no P0 open.
+- **Enterprise Pilot Go**: enterprise pilot gates pass, including live tenant isolation, real MFA/IdP, fail-closed upload scanning, Stripe webhook validation, and external review status.
+- **Enterprise Procurement Go**: enterprise procurement gates pass with real external review/pentest evidence and no unsupported security claims.
+- **Conditional Go**: non-blocking gaps are formally accepted with owners and expiry dates; not allowed for unresolved P0 or missing enterprise external review.
+- **No-Go**: at least one blocking gate is missing, failing, unreviewed, or contradicted.
 
 ## Mandatory Go criteria
 
@@ -26,55 +45,56 @@ A release may be marked **Go** only when all of these are true:
 - Release evidence is complete according to `docs/RELEASE_EVIDENCE_CHECKLIST.md`.
 - Supply-chain status is reviewed, including lockfile and npm audit evidence.
 - Supabase RLS live validation evidence is attached and `docs/security/evidence/runtime/supabase-live-rls-validation.json` records `status: Complete` and `outcome: passed` for production or enterprise release.
-- Audit-chain integrity evidence is attached, including transactional append readiness.
-- Upload security evidence is attached, including signature validation and content scanning policy.
-- Step-up authentication coverage is reviewed for protected actions.
-- Billing and webhook behavior are validated for the target environment.
-- Incident owner, rollback owner and customer communication owner are recorded.
-- Rollback owner and rollback trigger are recorded.
-- External review, penetration test, or compensating review decision is recorded.
-
-## Conditional Go criteria
-
-A **Conditional Go** may be approved only when:
-
-- No open exception allows customer data exposure beyond the intended tenant boundary.
-- No open exception disables audit logging, audit-chain hashing, or RBAC enforcement.
-- No open exception disables payment integrity controls for paid plans.
-- Every exception has an owner, severity, target fix date, and customer-impact note.
-- The approver explicitly accepts the remaining risk in `docs/RELEASE_APPROVAL_RECORD.md`.
+- Audit-chain integrity evidence is attached, including transactional append readiness and target-environment verification.
+- Upload security evidence is attached, including signature validation, content scanning policy and fail-closed scanner behavior.
+- Step-up authentication coverage is reviewed for protected actions and real MFA/IdP provider execution is attached for enterprise.
+- Billing and webhook behavior are validated for the target environment, including Stripe webhook signature validation.
+- Incident owner, rollback owner, support owner and customer communication owner are recorded.
+- Rollback trigger and previous known-good deployment are recorded.
+- External review, penetration test, or approved compensating review decision is recorded.
+- For enterprise release, `docs/security/evidence/runtime/external-security-review-or-pentest.json` records `status: Complete` from a real external report, not the placeholder.
+- For enterprise release, critical/high external findings are resolved or formally accepted.
+- For enterprise release, no critical external finding has pending, failed, or missing retest evidence.
+- No high or critical vulnerability is untriaged.
 
 ## Automatic No-Go criteria
 
 A release is **No-Go** if any of the following is true:
 
 - Security CI is failing or has not run for the promoted commit.
+- `npm ci`, lint, typecheck, tests, e2e, build, security CI, or release readiness command output is missing.
+- Build/deployment evidence is failing or missing.
 - The promoted commit differs from the commit in the approval record.
-- Release evidence is missing for build, CI, supply chain, database, audit-chain, or billing.
-- A critical tenant isolation or RLS validation issue is open without an approved exception.
+- Release evidence is missing for build, CI, supply chain, database, audit-chain, upload scanning, MFA/IdP, billing, or owners.
+- A critical tenant isolation or RLS validation issue is open without approved non-production exception.
 - Supabase live RLS evidence is `Open`, missing, failed, or was not generated by `scripts/security/run-supabase-live-tenant-isolation.mjs` for production or enterprise release.
 - Audit-chain append behavior is known to be non-transactional in the target production database.
 - A billing webhook or checkout flow is unverified for the target environment.
 - A required malware/content scanning policy is enabled but no provider or fail-closed behavior is verified.
+- Real MFA/IdP evidence is missing for enterprise release.
 - The incident owner is missing or unowned.
 - The rollback plan is missing or unowned.
+- The support owner or customer communication owner is missing for public/enterprise release.
 - A high or critical vulnerability is untriaged.
+- Enterprise release is attempted while external security review evidence is missing, `Open`, or not `Complete`.
+- Enterprise release is attempted while a critical/high external finding is neither resolved nor formally accepted.
+- Enterprise release is attempted while a critical external finding has pending, failed, or missing retest evidence.
 
-## Evidence mapping
+## Current evidence mapping
 
-The final release reviewer should map each decision area to evidence:
-
-| Area | Required evidence | Decision |
-| --- | --- | --- |
-| Build and CI | CI run URL, commit SHA | Go / Conditional Go / No-Go |
-| Supply chain | lockfile, audit summary, triage notes | Go / Conditional Go / No-Go |
-| Database and RLS | live validation output or exception | Go / Conditional Go / No-Go |
-| Audit chain | hash-chain validation and RPC readiness | Go / Conditional Go / No-Go |
-| Upload security | signature validation and scanning policy | Go / Conditional Go / No-Go |
-| Step-up auth | protected action coverage and provider status | Go / Conditional Go / No-Go |
-| Billing | Stripe checkout, portal, webhook evidence | Go / Conditional Go / No-Go |
-| Observability | logging, alerting, incident owner | Go / Conditional Go / No-Go |
-| External review | pentest/review report or accepted deferral | Go / Conditional Go / No-Go |
+| Area | Required evidence | Current status | Decision |
+| --- | --- | --- | --- |
+| Build and CI | CI run URL, command logs, commit SHA | Missing CI run URL; Vercel status failure; command logs missing | No-Go |
+| Supply chain | lockfile, `npm ci`, audit summary, triage notes | Lockfile/register evidence exists; current install/audit logs missing | No-Go |
+| Database and RLS | live validation output | `supabase-live-rls-validation.json` is Open/not_run | No-Go |
+| Audit chain | hash-chain validation and RPC readiness | Repository evidence Complete; target live verification still required for enterprise | Conditional evidence only; not Go |
+| Upload security | signature validation and scanning policy | Repository evidence Complete; live target scanner proof still required for enterprise | Conditional evidence only; not Go |
+| Step-up auth | protected action coverage and real provider status | Repository evidence Complete; live Supabase MFA/IdP proof missing | No-Go for enterprise |
+| Billing | Stripe checkout, portal, webhook evidence | Repository evidence Complete; CI execution pending | No-Go for paid production |
+| Observability | logging, alerting, incident owner | Repository evidence Complete; owner sign-off and CI output missing | No-Go |
+| External review | report reference, finding triage, retest record | Open/not_started placeholder only | No-Go for enterprise |
+| Rollback | previous known-good deployment and owner | Missing | No-Go |
+| Support | support owner and communication owner | Missing | No-Go |
 
 ## Final decision record
 
@@ -83,12 +103,52 @@ The final decision must be copied into `docs/RELEASE_APPROVAL_RECORD.md` with:
 - decision outcome
 - commit SHA
 - release owner
+- security owner
+- support owner
 - incident owner
 - final approver
 - exception list
 - rollback owner
 - release date
 
+Current decision copied: **No-Go**.
+
 ## Enterprise rule
 
-For enterprise procurement, **Conditional Go** is acceptable only for operational or evidence-timing gaps. It is not acceptable for unresolved tenant isolation, RBAC, audit-chain, billing integrity, or customer data protection gaps.
+For enterprise procurement, **Conditional Go** is acceptable only for operational or evidence-timing gaps that do not affect tenant isolation, RBAC, audit-chain integrity, billing integrity, upload fail-closed behavior, customer data protection, real MFA/IdP, or external security review.
+
+Enterprise release cannot use Conditional Go to bypass:
+
+- missing RLS live validation;
+- missing real external review/pentest evidence;
+- missing upload scan fail-closed evidence;
+- missing real MFA/IdP evidence;
+- missing Stripe webhook validation;
+- untriaged high/critical vulnerabilities;
+- missing owner sign-off.
+
+Before enterprise release, run and attach:
+
+```bash
+npm ci
+npm run lint
+npm run typecheck
+npm run test
+npm run test:e2e
+npm run build
+npm run security:ci
+npm run release:enterprise-readiness
+```
+
+## Current No-Go blockers
+
+| Blocker | Owner | Expiry date | Required closure evidence |
+| --- | --- | --- | --- |
+| No CI run URL / command logs for assessed commit | @renansilva2002 / renanescola40-afk | 2026-06-23 | Passing CI run URL with logs for all release commands |
+| Vercel build status failure / no deployment URL | @renansilva2002 / renanescola40-afk | 2026-06-23 | Successful deployment URL and build log |
+| Supabase live RLS validation Open/not_run | @renansilva2002 / renanescola40-afk | 2026-06-25 | `supabase-live-rls-validation.json` Complete/passed |
+| External security review Open/not_started | @renansilva2002 / renanescola40-afk | 2026-07-06 | Real external report, triage and retest/risk acceptance evidence |
+| Real MFA/IdP runtime proof missing | @renansilva2002 / renanescola40-afk | 2026-06-25 | Redacted runtime preflight with Supabase MFA or enterprise IdP |
+| Stripe validation pending CI execution | @renansilva2002 / renanescola40-afk | 2026-06-24 | Passing focused Stripe/webhook tests and security gate output |
+| Incident/rollback/support/customer owners missing | @renansilva2002 / renanescola40-afk | 2026-06-23 | Signed approval record with named owners |
+| Previous known-good deployment missing | @renansilva2002 / renanescola40-afk | 2026-06-23 | Rollback target URL/SHA and rollback trigger criteria |

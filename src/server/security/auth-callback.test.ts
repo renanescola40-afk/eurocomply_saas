@@ -11,9 +11,9 @@ const APP_URL_ENV = ['NEXT', 'PUBLIC', 'APP', 'URL'].join('_');
 
 describe('auth callback redirect hardening', () => {
   it('falls back when next is missing or external', () => {
-    expect(getSafeAuthCallbackNextPath(null)).toBe('/pt/dashboard/organizations');
-    expect(getSafeAuthCallbackNextPath('https://evil.example/dashboard')).toBe('/pt/dashboard/organizations');
-    expect(getSafeAuthCallbackNextPath('//evil.example/dashboard')).toBe('/pt/dashboard/organizations');
+    expect(getSafeAuthCallbackNextPath(null)).toBe('/en/dashboard/organizations');
+    expect(getSafeAuthCallbackNextPath('https://external.example/dashboard')).toBe('/en/dashboard/organizations');
+    expect(getSafeAuthCallbackNextPath('//external.example/dashboard')).toBe('/en/dashboard/organizations');
   });
 
   it('only allows localized dashboard paths', () => {
@@ -26,7 +26,7 @@ describe('auth callback redirect hardening', () => {
     expect(getSafeAuthCallbackNextPathForLocale(null, 'fr')).toBe('/fr/dashboard/organizations');
     expect(getSafeAuthCallbackNextPathForLocale('/fr/dashboard/evidence', 'fr')).toBe('/fr/dashboard/evidence');
     expect(getSafeAuthCallbackNextPathForLocale('/en/dashboard/evidence', 'fr')).toBe('/fr/dashboard/organizations');
-    expect(getSafeAuthCallbackNextPathForLocale('https://evil.example/fr/dashboard', 'fr')).toBe('/fr/dashboard/organizations');
+    expect(getSafeAuthCallbackNextPathForLocale('https://external.example/fr/dashboard', 'fr')).toBe('/fr/dashboard/organizations');
   });
 
   it('only emits allowlisted public auth error codes', () => {
@@ -49,7 +49,7 @@ describe('auth callback redirect hardening', () => {
 
   it('uses the configured app origin for auth redirects', () => {
     expect(
-      resolveAuthAppBaseUrl('https://attacker.example/auth/google', {
+      resolveAuthAppBaseUrl('https://external.example/auth/google', {
         [APP_URL_ENV]: 'https://app.eurocomply.example/some-path',
         NODE_ENV: 'production',
       }),
@@ -58,13 +58,13 @@ describe('auth callback redirect hardening', () => {
 
   it('fails closed in production when the app base URL is unavailable', () => {
     expect(
-      resolveAuthAppBaseUrl('https://attacker.example/auth/google', {
+      resolveAuthAppBaseUrl('https://external.example/auth/google', {
         NODE_ENV: 'production',
       }),
     ).toBeNull();
 
     expect(
-      resolveAuthAppBaseUrl('https://attacker.example/auth/google', {
+      resolveAuthAppBaseUrl('https://external.example/auth/google', {
         [APP_URL_ENV]: 'not-a-url',
         NODE_ENV: 'production',
       }),
