@@ -12,23 +12,27 @@ function auditRateLimitBlock(result: RateLimitResult) {
   if (!result.audit) return;
 
   void logAuditEvent({
-    organizationId: null,
-    actorUserId: null,
-    action: 'security.rate_limit.blocked',
+    organizationId: result.organizationId,
+    actorUserId: result.userId,
+    action: result.highRisk ? 'high_risk_rate_limit_blocked' : 'rate_limit_blocked',
     entityType: 'rate_limit',
-    entityId: result.category,
+    entityId: result.policy,
     metadata: {
+      policy: result.policy,
       category: result.category,
+      highRisk: result.highRisk,
       failureMode: result.failureMode,
       reason: result.reason ?? 'limit_exceeded',
       remaining: result.remaining,
       retryAfterSeconds: result.retryAfterSeconds,
+      route: result.route,
+      limitedAction: result.action,
       keyHash: hashAuditKey(result.key),
     },
   }).catch((error: unknown) => {
     console.error('[security:rate-limit] failed to write audit event', {
       error: error instanceof Error ? error.name : 'unknown',
-      category: result.category,
+      policy: result.policy,
     });
   });
 }
