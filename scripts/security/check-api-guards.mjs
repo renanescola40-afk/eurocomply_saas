@@ -186,11 +186,7 @@ const failures = routes.flatMap(evaluateRoute);
 console.log('EuroComply API guard coverage check');
 console.log('-----------------------------------');
 console.log(`Scanned ${routes.length} API route files.`);
-
-if (Array.isArray(changedRoutes) && changedRoutes.length === 0) {
-  console.log('No changed API route files detected in this pull request; skipping full API guard scan.');
-  process.exit(0);
-}
+if (Array.isArray(changedRoutes) && changedRoutes.length === 0) console.log('No changed API route files detected in this pull request; full API guard scan is skipped for unrelated changes.');
 
 if (failures.length > 0) {
   console.error('Security guard coverage failures:');
@@ -200,10 +196,14 @@ if (failures.length > 0) {
   console.log('API guard coverage: ok');
 }
 
-const hardening = spawnSync(process.execPath, [join(process.cwd(), 'scripts/security/check-api-route-hardening.mjs')], {
-  stdio: 'inherit',
-});
+if (Array.isArray(changedRoutes) && changedRoutes.length === 0) {
+  console.log('Skipped API route hardening subgate because no changed API route files were detected in this pull request.');
+} else {
+  const hardening = spawnSync(process.execPath, [join(process.cwd(), 'scripts/security/check-api-route-hardening.mjs')], {
+    stdio: 'inherit',
+  });
 
-if (hardening.status !== 0) {
-  process.exitCode = 1;
+  if (hardening.status !== 0) {
+    process.exitCode = 1;
+  }
 }
