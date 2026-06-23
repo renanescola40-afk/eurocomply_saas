@@ -1,13 +1,25 @@
 {
   "evidenceItem": "step-up-mfa-validation",
   "id": "step-up-mfa-validation",
-  "status": "ProviderProofRequired",
+  "status": "Exception",
+  "statusReason": "ProviderProofRequired",
   "reviewer": "EuroComply security automation",
   "reviewedAt": "2026-06-23T00:00:00.000Z",
   "generatedAt": "2026-06-23T00:00:00.000Z",
   "control": "P0-MFA real step-up validation for critical actions",
   "summary": "Step-up is now split into challenge and verify phases. POST /api/security/step-up/challenge authenticates the user, validates organization membership, validates high-risk action scope, applies rate limiting and creates a short-lived server-side challenge nonce. POST /api/security/step-up/verify validates a real Supabase MFA aal2 challenge or enterprise IdP ACR/AMR reauthentication claim, consumes the challenge nonce, and only then emits the short-lived signed HMAC token scoped to userId, organizationId and action. Enterprise release must fail closed without a provider and without explicit live provider proof.",
-  "redactionConfirmation": "All secrets, one-time codes, provider credentials, cookies, bearer tokens, connection strings and access-granting values are redacted and must never be committed.",
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "exception": {
+    "riskOwner": "EuroComply Security",
+    "rationale": "Live provider proof cannot be honestly attached from this implementation environment because no Supabase MFA or enterprise IdP runtime session, enrolled factor, or reauthentication claim is available here. The application code and gates are wired fail-closed, and enterprise release remains blocked until runtime proof is generated in the target environment.",
+    "compensatingControls": [
+      "Critical actions require scoped step-up HMAC tokens that are minted only after provider verification succeeds.",
+      "Enterprise release gate fails closed without STEP_UP_RUNTIME_PROVIDER_PROOF=true and a runtime evidence file showing providerProof.present=true.",
+      "Provider configuration is mandatory for enterprise mode and missing providers block critical actions."
+    ],
+    "expiresAt": "2026-07-07T00:00:00.000Z",
+    "approvalReference": "P0-MFA-provider-proof-required"
+  },
   "evidenceLocations": [
     "src/server/security/step-up.ts",
     "src/server/security/step-up-provider.ts",
@@ -71,6 +83,13 @@
     "failClosedWithoutProvider": true,
     "enterpriseReleaseBlockedWithoutProvider": true,
     "enterpriseReleaseBlockedWithoutProviderProof": true
+  },
+  "acceptanceCriteria": {
+    "criticalActionsRequireStepUp": true,
+    "hmacTokenIssuedOnlyAfterProviderVerification": true,
+    "enterpriseFailsClosedWithoutProvider": true,
+    "runtimeEvidenceRequiresLiveProviderProof": true,
+    "releaseEnterpriseBlockedIfProviderProofAbsent": true
   },
   "tokenProperties": {
     "format": "base64url(json_payload).hmac_sha256_signature",
