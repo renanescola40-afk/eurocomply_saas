@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createConnection } from 'node:net';
 
@@ -53,10 +53,6 @@ function isRequired() {
   return process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS] === 'true';
 }
 
-function sanitizeReason(reason) {
-  return String(reason ?? '').replace(/[\r\n\u0000-\u001f\u007f]+/g, ' ').slice(0, 500);
-}
-
 function allowedHosts() {
   return new Set(
     String(process.env[MALWARE_SCANNER_ALLOWED_HOSTS] ?? '')
@@ -88,39 +84,39 @@ function mapStatus(status) {
   return null;
 }
 
-function result(status, provider, reason, extra = {}) {
+function result(status, provider, reasonCode, extra = {}) {
   return {
     status,
     provider,
     required: isRequired(),
     checkedAt: nowIso(),
-    reason: sanitizeReason(reason),
+    reasonCode,
     ...extra,
   };
 }
 
 async function scanWithHttpProvider(provider) {
   const endpoint = process.env[MALWARE_SCANNER_ENDPOINT]?.trim() || process.env[MALWARE_SCANNER_URL]?.trim();
-  if (!endpoint) return result('unavailable', provider, 'HTTP malware scanner endpoint is not configured.');
+  if (!endpoint) return result('unavailable', provider, 'http_endpoint_not_configured');
 
   let url;
   try {
     url = new URL(endpoint);
   } catch {
-    return result('unavailable', provider, 'HTTP malware scanner endpoint must be an absolute HTTPS URL.');
+    return result('unavailable', provider, 'http_endpoint_not_absolute_https_url');
   }
 
   if (url.protocol !== 'https:') {
-    return result('unavailable', provider, 'HTTP malware scanner endpoint must use HTTPS.');
+    return result('unavailable', provider, 'http_endpoint_not_https');
   }
 
   if (url.username || url.password) {
-    return result('unavailable', provider, 'HTTP malware scanner endpoint must not include credentials in the URL.');
+    return result('unavailable', provider, 'http_endpoint_contains_credentials');
   }
 
   const hosts = allowedHosts();
   if (hosts.size === 0 || !hosts.has(url.hostname.toLowerCase())) {
-    return result('unavailable', provider, `HTTP malware scanner host must be listed in ${MALWARE_SCANNER_ALLOWED_HOSTS}.`);
+    return result('unavailable', provider, 'http_endpoint_host_not_allowed');
   }
 
   const timeoutMs = scannerTimeoutMs();
@@ -143,45 +139,38 @@ async function scanWithHttpProvider(provider) {
     });
 
     const body = await response.text();
-    if (!response.ok) return result('unavailable', provider, `HTTP malware scanner returned ${response.status}.`);
+    if (!response.ok) return result('unavailable', provider, 'http_provider_non_2xx_response');
 
     let payload;
     try {
       payload = JSON.parse(body);
     } catch {
-      return result('error', provider, 'HTTP malware scanner returned non-JSON response.');
+      return result('error', provider, 'http_provider_non_json_response');
     }
 
     const status = mapStatus(payload.status ?? payload.verdict ?? payload.result);
-    const reasonText = sanitizeReason(payload.reason ?? payload.message ?? '');
-    const signature = payload.signature ? sanitizeReason(payload.signature) : undefined;
+    const providerSignatureDetected = Boolean(payload.signature);
 
-    if (status === 'clean') return result('clean', provider, reasonText || 'HTTP malware scanner returned clean.');
-    if (status === 'infected') return result('infected', provider, reasonText || 'HTTP malware scanner reported malware.', { signature: signature ?? 'provider-reported' });
-    if (status === 'suspicious') return result('suspicious', provider, reasonText || 'HTTP malware scanner reported suspicious content.');
-    if (status === 'error') return result('error', provider, reasonText || 'HTTP malware scanner reported a scan failure.');
-    if (status === 'unavailable') return result('unavailable', provider, reasonText || 'HTTP malware scanner reported unavailable.');
+    if (status === 'clean') return result('clean', provider, 'http_provider_clean_verdict');
+    if (status === 'infected') return result('infected', provider, 'http_provider_infected_verdict', { providerSignatureDetected });
+    if (status === 'suspicious') return result('suspicious', provider, 'http_provider_suspicious_verdict');
+    if (status === 'error') return result('error', provider, 'http_provider_error_verdict');
+    if (status === 'unavailable') return result('unavailable', provider, 'http_provider_unavailable_verdict');
 
-    return result('suspicious', provider, 'HTTP malware scanner returned an unknown verdict.');
+    return result('suspicious', provider, 'http_provider_unknown_verdict');
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown error';
     const timedOut = error instanceof Error && error.name === 'AbortError';
-    return result('unavailable', provider, timedOut ? 'HTTP malware scanner timed out.' : `HTTP malware scanner unavailable: ${message}`);
+    return result('unavailable', provider, timedOut ? 'http_provider_timeout' : 'http_provider_unavailable');
   } finally {
     clearTimeout(timeout);
   }
 }
 
 function parseClamAvResponse(response, provider) {
-  const sanitized = sanitizeReason(response);
-  if (/\bOK\b/i.test(sanitized)) return result('clean', provider, 'ClamAV returned OK.');
-
-  const foundMatch = sanitized.match(/: (.+) FOUND/i);
-  if (foundMatch?.[1]) return result('infected', provider, 'ClamAV reported malware signature.', { signature: sanitizeReason(foundMatch[1]) });
-  if (/FOUND/i.test(sanitized)) return result('infected', provider, 'ClamAV reported malware.', { signature: 'unknown' });
-  if (/ERROR/i.test(sanitized)) return result('error', provider, `ClamAV scan error: ${sanitized}`);
-
-  return result('suspicious', provider, `Unrecognized ClamAV response: ${sanitized || 'empty response'}`);
+  if (/\bOK\b/i.test(response)) return result('clean', provider, 'clamav_ok_verdict');
+  if (/FOUND/i.test(response)) return result('infected', provider, 'clamav_found_verdict', { providerSignatureDetected: true });
+  if (/ERROR/i.test(response)) return result('error', provider, 'clamav_error_verdict');
+  return result('suspicious', provider, 'clamav_unrecognized_response');
 }
 
 async function scanWithClamAv(provider) {
@@ -189,7 +178,7 @@ async function scanWithClamAv(provider) {
   const port = Number.parseInt(process.env[MALWARE_SCANNER_CLAMAV_PORT] ?? '3310', 10);
   const timeoutMs = scannerTimeoutMs();
 
-  if (!Number.isFinite(port) || port <= 0) return result('unavailable', provider, 'Invalid ClamAV port configuration.');
+  if (!Number.isFinite(port) || port <= 0) return result('unavailable', provider, 'invalid_clamav_port');
 
   return new Promise((resolve) => {
     const socket = createConnection({ host, port });
@@ -197,7 +186,7 @@ async function scanWithClamAv(provider) {
     let settled = false;
 
     const timeout = setTimeout(() => {
-      settle(result('unavailable', provider, 'ClamAV scan timed out.'));
+      settle(result('unavailable', provider, 'clamav_timeout'));
     }, timeoutMs);
 
     function settle(scanResult) {
@@ -225,7 +214,7 @@ async function scanWithClamAv(provider) {
     });
 
     socket.on('end', () => settle(parseClamAvResponse(response, provider)));
-    socket.on('error', (error) => settle(result('unavailable', provider, `ClamAV scanner unavailable: ${error.message}`)));
+    socket.on('error', () => settle(result('unavailable', provider, 'clamav_unavailable')));
   });
 }
 
@@ -233,15 +222,15 @@ async function runLiveScan() {
   const provider = configuredProvider();
 
   if (!isRequired()) {
-    return result('not_configured', provider || 'not_configured', `${REQUIRE_MALWARE_SCAN_FOR_UPLOADS}=true is required for enterprise upload scanner validation.`);
+    return result('not_configured', provider || 'not_configured', 'required_env_missing');
   }
 
   if (BYPASS_PROVIDERS.has(provider)) {
-    return result('not_configured', provider || 'not_configured', 'Enterprise upload malware scanning is required but no real provider is configured.');
+    return result('not_configured', provider || 'not_configured', 'enterprise_scanner_provider_missing_or_bypass');
   }
 
   if (!REAL_PROVIDERS.has(provider)) {
-    return result('unavailable', provider, `Unsupported malware scanner provider: ${provider}.`);
+    return result('unavailable', provider, 'unsupported_provider');
   }
 
   if (provider === 'clamav' || provider === 'clamd') return scanWithClamAv(provider);
@@ -269,7 +258,7 @@ function buildEvidence(scanResult, skipped = false) {
       ? 'Live malware scanner provider returned a clean verdict for the runtime validation upload fixture; enterprise fail-closed upload policy can allow clean uploads.'
       : 'Repository upload controls are implemented, but live malware scanner provider proof is not complete. Enterprise release remains gated until a real provider returns clean and --update-register is run.',
     redactionConfirmation: 'All secrets, tokens, credentials, connection strings, scanner endpoints with access-granting values and file bytes are redacted.',
-    contentRedactionScope: 'The validation file bytes are not committed; only SHA-256, size, MIME and redacted provider metadata are recorded.',
+    contentRedactionScope: 'The validation file bytes are not committed; only SHA-256, size, MIME and redacted provider metadata are recorded. Provider response bodies, messages and signature names are never written to repo evidence.',
     runtimeValidationScript: 'scripts/security/run-upload-scanner-runtime-validation.mjs',
     liveProviderProof: {
       status: skipped ? 'skipped_non_enterprise_ci_gate' : passed ? 'passed' : 'failed_or_pending',
@@ -286,8 +275,10 @@ function buildEvidence(scanResult, skipped = false) {
       scanProvider: scanResult.provider,
       scanRequired: scanResult.required,
       scanCheckedAt: scanResult.checkedAt,
-      scanReason: scanResult.reason,
-      signature: scanResult.signature ? '<redacted-provider-signature-name-present>' : null,
+      scanReasonCode: scanResult.reasonCode,
+      providerSignatureRedacted: scanResult.providerSignatureDetected === true ? 'present_but_redacted' : null,
+      providerResponseBodyPersisted: false,
+      providerResponseMessagePersisted: false,
       fileHash,
       fileSize: testPdf.length,
       mimeDetected: 'application/pdf',
@@ -358,24 +349,33 @@ function buildEvidence(scanResult, skipped = false) {
 
 function writeEvidence(evidence) {
   mkdirSync(dirname(EVIDENCE_PATH), { recursive: true });
-  writeFileSync(EVIDENCE_PATH, `${JSON.stringify(evidence, null, 2)}\n`);
+  writeFileSync(EVIDENCE_PATH, `${JSON.stringify(evidence, null, 2)}\n`, { encoding: 'utf8' });
+}
+
+function readP0Register() {
+  try {
+    return readFileSync(P0_REGISTER_PATH, 'utf8');
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : 'unknown_error';
+    if (code === 'ENOENT') throw new Error(`${P0_REGISTER_PATH} is missing; cannot update P0 register.`);
+    throw error;
+  }
 }
 
 function updateP0RegisterIfPassed(evidence) {
   if (!updateRegister || evidence.liveProviderProof.status !== 'passed') return false;
-  if (!existsSync(P0_REGISTER_PATH)) throw new Error(`${P0_REGISTER_PATH} is missing; cannot update P0 register.`);
 
-  const source = readFileSync(P0_REGISTER_PATH, 'utf8');
+  const source = readP0Register();
   const replacement = `| Upload malware/content scanning validation | Complete | \`${EVIDENCE_PATH}\` records Complete live provider proof from a real ${evidence.liveProviderProof.provider} scanner, fail-closed behavior, clean verdict allowance and rejected non-clean verdict policy; secrets and file bytes redacted | Security reviewer | Revalidate before enterprise release or provider change |`;
   const updated = source.replace(/^\| Upload malware\/content scanning validation \|.*$/m, replacement);
 
   if (updated === source) throw new Error('Could not find Upload malware/content scanning validation row in P0 register.');
-  writeFileSync(P0_REGISTER_PATH, updated);
+  writeFileSync(P0_REGISTER_PATH, updated, { encoding: 'utf8' });
   return true;
 }
 
 if (ciGate && !enterpriseContext) {
-  const skipped = buildEvidence(result('not_configured', 'not_configured', 'Non-enterprise CI gate skipped live scanner proof.'), true);
+  const skipped = buildEvidence(result('not_configured', 'not_configured', 'non_enterprise_ci_gate_skipped'), true);
   console.log('Upload scanner runtime validation: skipped live provider proof for non-enterprise CI gate.');
   if (!noWrite) writeEvidence(skipped);
   process.exit(0);
@@ -393,7 +393,7 @@ if (evidence.liveProviderProof.status === 'passed') {
   process.exit(0);
 }
 
-const message = `Upload scanner runtime validation: ${evidence.outcome}; provider=${evidence.liveProviderProof.provider}; status=${evidence.liveProviderProof.scanStatus}; reason=${evidence.liveProviderProof.scanReason}`;
+const message = `Upload scanner runtime validation: ${evidence.outcome}; provider=${evidence.liveProviderProof.provider}; status=${evidence.liveProviderProof.scanStatus}; reasonCode=${evidence.liveProviderProof.scanReasonCode}`;
 
 if (advisory && !enterpriseContext) {
   console.warn(message);
