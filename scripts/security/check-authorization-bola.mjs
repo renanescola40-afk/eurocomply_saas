@@ -3,6 +3,7 @@ import { join, relative, sep } from 'node:path';
 
 const root = process.cwd();
 const apiRoot = join(root, 'src', 'app', 'api');
+const inventoryPath = join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.md');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
 
 const publicEndpointAllowlist = [
@@ -24,12 +25,15 @@ const internalGuardTokens = [
   'isAuthorizedInternalMaintenanceRequest',
 ];
 
-const resourceIdentifierPatterns = [
-  /params\s*[:=]/,
-  /\.params\b/,
-  /searchParams\.get\(['"](?:id|userId|organizationId|tenantId|documentId|vendorId|systemId|incidentId|teamId|memberId|inviteId)['"]\)/,
-  /(?:id|userId|organizationId|tenantId|documentId|vendorId|systemId|incidentId|teamId|memberId|inviteId)\s*=\s*(?:await\s+)?request\.json\(/,
-  /\b(?:userId|organizationId|tenantId|documentId|vendorId|systemId|incidentId|teamId|memberId|inviteId)\b/,
+const internalGuardTokens = [
+  'isAuthorizedInternalCronRequest',
+  'isAuthorizedInternalMaintenanceRequest',
+  'HEALTHCHECK_TOKEN',
+  'CRON_SECRET',
+  'INTERNAL_CRON_SECRET',
+  'MAINTENANCE_SECRET',
+  'INTELLIGENCE_REFRESH_SECRET',
+  'requireEnterpriseApiAccess',
 ];
 
 const authGuardTokens = [
@@ -39,12 +43,15 @@ const authGuardTokens = [
   'requireAuthenticatedUser',
   'requireOrganizationContext',
   'requirePrivilegedOrganizationContext',
+  'requireEnterpriseApiAccess',
   'supabase.auth.getUser',
   'auth.getUser',
 ];
 
 const ownershipGuardTokens = [
   'requireOrganizationContext',
+  'requirePrivilegedOrganizationContext',
+  'requireOrganizationMembership',
   'requireOrganizationAccess',
   'requireOrganizationMembership',
   'requirePrivilegedOrganizationContext',
@@ -71,8 +78,10 @@ const rbacTokens = [
   'assertPrivilegedOrganizationRole',
   'assertAdminAllowed',
   'assertMutationAllowed',
-  'permissionDeniedResponse',
+  'assertRole',
   'permission.ok',
+  'permissionDeniedResponse',
+  'requireEnterpriseApiAccess',
   'manage_team',
   'manage_billing',
   'manage_documents',
@@ -89,6 +98,14 @@ const adminRoutePatterns = [
   /\/billing\//,
   /\/settings\//,
   /\/security\/settings\//,
+];
+
+const resourceSelectorPatterns = [
+  /\/\[[^\]]*id[^\]]*\]\//i,
+  /params\s*[:=]/,
+  /\.params\b/,
+  /searchParams\.get\(['"](?:id|documentId|vendorId|systemId|incidentId|teamId|memberId|inviteId)['"]\)/,
+  /\b(?:documentId|vendorId|systemId|incidentId|teamId|memberId|inviteId)\b/,
 ];
 
 function walk(dir) {
@@ -112,8 +129,22 @@ function hasAny(source, tokens) {
   return tokens.some((token) => (typeof token === 'string' ? source.includes(token) : token.test(source)));
 }
 
-function isPublicAllowlisted(path) {
-  return publicEndpointAllowlist.some((pattern) => pattern.test(path));
+function readInventory() {
+  if (!existsSync(inventoryPath)) {
+    return {
+      routeClasses: new Map(),
+      failures: [`missing ${relative(root, inventoryPath).split(sep).join('/')}`],
+    };
+  }
+
+  const source = readFileSync(inventoryPath, 'utf8');
+  const routeClasses = new Map();
+  const rowPattern = /^\|\s*`([^`]+route\.ts)`\s*\|\s*([^|]+?)\s*\|/gm;
+  for (const match of source.matchAll(rowPattern)) {
+    routeClasses.set(match[1], match[2].trim());
+  }
+
+  return { routeClasses, failures: [] };
 }
 
 function isInternalAllowlisted(path, source) {
@@ -121,7 +152,7 @@ function isInternalAllowlisted(path, source) {
 }
 
 const routes = walk(apiRoot);
-const findings = [];
+const findings = [...inventory.failures];
 
 for (const route of routes) {
   const normalized = normalizePath(route);
@@ -129,22 +160,26 @@ for (const route of routes) {
   if (isPublicAllowlisted(normalized)) continue;
   if (isInternalAllowlisted(normalized, source)) continue;
 
-  const handlesResourceId = hasAny(source, resourceIdentifierPatterns) || /\[[^\]]*id[^\]]*\]/i.test(normalized);
   const appearsAdminRoute = adminRoutePatterns.some((pattern) => pattern.test(normalized));
+  const handlesResourceSelector = hasAny(source, resourceSelectorPatterns);
   const hasAuthGuard = hasAny(source, authGuardTokens);
   const hasOwnershipGuard = hasAny(source, ownershipGuardTokens);
   const hasRbacGuard = hasAny(source, rbacTokens);
 
-  if (handlesResourceId && !hasAuthGuard) {
-    findings.push(`${normalized}: receives or references a resource id but does not prove an authenticated user guard`);
+  if (!hasAuthGuard) {
+    findings.push(`${normalized}: ${routeClass} route does not prove an authenticated user guard`);
   }
 
-  if (handlesResourceId && !hasOwnershipGuard) {
-    findings.push(`${normalized}: receives or references a resource id but does not prove tenant/user ownership validation`);
+  if (tenantClasses.has(routeClass) && !hasOwnershipGuard) {
+    findings.push(`${normalized}: ${routeClass} route does not prove tenant membership/resource ownership validation`);
   }
 
-  if (appearsAdminRoute && !hasRbacGuard) {
-    findings.push(`${normalized}: admin/team/billing/settings route does not prove RBAC/admin permission enforcement`);
+  if ((privilegedClasses.has(routeClass) || appearsAdminRoute) && !hasRbacGuard) {
+    findings.push(`${normalized}: ${routeClass} route does not prove RBAC/admin permission enforcement`);
+  }
+
+  if (handlesResourceSelector && !hasOwnershipGuard) {
+    findings.push(`${normalized}: resource selector requires tenant ownership validation before use`);
   }
 }
 

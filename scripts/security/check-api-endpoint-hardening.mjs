@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 
@@ -10,8 +10,11 @@ const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'co
 const publicEndpointAllowlist = [
   { pattern: /src\/app\/api\/health\/route\.ts$/, reason: 'Public healthcheck returns only generic no-store service status' },
   { pattern: /src\/app\/api\/billing\/webhook\/route\.ts$/, reason: 'Stripe webhook validates provider signature instead of user session' },
+  { pattern: /src\/app\/api\/stripe\/webhook\/route\.ts$/, reason: 'Stripe webhook validates provider signature instead of user session' },
   { pattern: /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/, reason: 'Public verifier; must remain no-store/rate-limited' },
   { pattern: /src\/app\/api\/ops\/.*\/route\.ts$/, reason: 'Ops routes use HEALTHCHECK_TOKEN/cron secret instead of user session' },
+  { pattern: /src\/app\/api\/health\/route\.ts$/, reason: 'Public liveness check without tenant data' },
+  { pattern: /src\/app\/api\/ready\/route\.ts$/, reason: 'Public readiness check without tenant data' },
 ];
 
 const authTokens = [
@@ -30,6 +33,7 @@ const authTokens = [
 const schemaValidationTokens = [
   '.parse(',
   '.safeParse(',
+  'parseJsonBodyWithZod',
   'z.object',
   'zod',
   'validate',
@@ -50,6 +54,7 @@ const clientInputTokens = [
 
 const rateLimitTokens = [
   'checkDistributedRateLimit',
+  'requireRateLimit',
   'rateLimit',
   'rate-limit',
   'Retry-After',
@@ -194,4 +199,12 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log('API endpoint hardening: ok');
+}
+
+const routeHardening = spawnSync(process.execPath, [join(root, 'scripts/security/check-api-route-hardening.mjs')], {
+  stdio: 'inherit',
+});
+
+if (routeHardening.status !== 0) {
+  process.exitCode = 1;
 }
