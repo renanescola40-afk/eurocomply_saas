@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { readBoundedJsonRequest } from '@/lib/security/validate';
+import { writeAuditLog } from '@/lib/security/audit-log';
 import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan } from '@/server/billing/plans';
@@ -107,6 +108,27 @@ export async function POST(request: Request) {
         },
       },
       allow_promotion_codes: true,
+    });
+
+    if (!session.url) {
+      return noStoreJson({ error: 'checkout_session_unavailable' }, { status: 502 });
+    }
+
+    await writeAuditLog({
+      action: 'checkout_created',
+      organizationId: organization.id,
+      userId: user.id,
+      entityType: 'stripe_checkout_session',
+      entityId: session.id,
+      metadata: {
+        plan,
+        priceId,
+        actorRole: permission.role ?? 'unknown',
+        stepUpAction: stepUp.assessment.action,
+        stepUpVerifiedAt: stepUp.assessment.verifiedAt ?? null,
+        trustedOriginRequired: true,
+        rbacPermission: 'manage_billing',
+      },
     });
 
     return noStoreJson({
