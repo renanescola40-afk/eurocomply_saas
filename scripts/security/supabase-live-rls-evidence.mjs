@@ -1,14 +1,14 @@
 import crypto from 'node:crypto';
 
 export const runner = 'scripts/security/run-supabase-live-tenant-isolation.mjs';
-export const criticalTables = ['organizations', 'organization_members', 'documents', 'audit_events', 'risks', 'vendors', 'tasks', 'subscriptions', 'notifications'];
-export const optionalTables = ['profiles', 'compliance_tasks', 'audit_logs', 'ai_systems', 'ai_incidents'];
+export const criticalTables = ['organizations', 'organization_members', 'documents', 'audit_events', 'risks', 'vendors', 'tasks', 'subscriptions', 'notifications', 'profiles'];
+export const optionalTables = ['compliance_tasks', 'audit_logs', 'ai_systems', 'ai_incidents'];
 export const requiredCoverageOperations = ['cross_tenant_read', 'cross_tenant_insert', 'cross_tenant_update', 'cross_tenant_delete'];
 export const requiredBackendWriteDenyOperations = ['same_tenant_insert_denied', 'same_tenant_update_denied', 'same_tenant_delete_denied'];
 export const requiredViewerAdminDenyOperations = ['viewer_same_tenant_admin_insert_denied', 'viewer_same_tenant_admin_update_denied', 'viewer_same_tenant_admin_delete_denied'];
 
 const backendOwnedTables = new Set(['audit_events', 'audit_logs', 'subscriptions']);
-const sameTenantWritableTables = new Set(['documents', 'risks', 'vendors', 'tasks', 'compliance_tasks', 'ai_systems', 'ai_incidents']);
+const sameTenantWritableTables = new Set(['documents', 'risks', 'vendors', 'tasks', 'compliance_tasks', 'ai_systems', 'ai_incidents', 'profiles']);
 
 export function commandUsed(argv = process.argv.slice(2)) {
   return `node ${runner}${argv.length > 0 ? ` ${argv.join(' ')}` : ''}`;
@@ -93,7 +93,7 @@ export function validatePassingEvidence(evidence) {
     }
   }
 
-  for (const table of ['documents', 'risks', 'vendors', 'tasks']) requirePassedTest(tests, table, 'same_tenant_insert', errors, `missing same-tenant insert coverage: ${table}`);
+  for (const table of ['documents', 'risks', 'vendors', 'tasks', 'profiles']) requirePassedTest(tests, table, 'same_tenant_insert', errors, `missing same-tenant insert coverage: ${table}`);
   for (const table of ['audit_events', 'subscriptions']) for (const operation of requiredBackendWriteDenyOperations) requirePassedTest(tests, table, operation, errors);
   for (const operation of requiredViewerAdminDenyOperations) requirePassedTest(tests, 'organization_members', operation, errors);
 
