@@ -119,7 +119,9 @@ export function buildEvidencePayload({ status, outcome, supabaseUrl, testCases =
     commitSha,
     supabaseProjectReference: redactProjectReferenceFromUrl(supabaseUrl),
     supabaseProjectReferenceRedacted: true,
-    summary: status === 'Complete' && outcome === 'passed' ? 'Live Supabase tenant-isolation validation passed.' : 'Live Supabase tenant-isolation validation did not pass.',
+    summary: status === 'Complete' && outcome === 'passed'
+      ? 'Live Supabase tenant-isolation validation passed.'
+      : 'Live Supabase tenant-isolation validation did not pass.',
     redactionConfirmation: 'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
     evidenceLocations: ['docs/security/evidence/runtime/supabase-live-rls-validation.json'],
     productionGate: status === 'Complete' && outcome === 'passed' ? 'Enterprise release may proceed only if all other P0 runtime evidence is satisfied.' : 'Enterprise release remains blocked.',
