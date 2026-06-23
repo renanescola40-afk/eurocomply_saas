@@ -3,6 +3,7 @@ import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { noStoreJson } from '@/server/security/no-store';
 
 export const STEP_UP_MAX_AGE_MS = 5 * 60 * 1000;
+export const STEP_UP_CHALLENGE_MAX_AGE_MS = 2 * 60 * 1000;
 export const STEP_UP_SIGNING_SECRET_ENV = 'STEP_UP_SIGNING_SECRET';
 export const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
 export const STEP_UP_PROVIDER_MODE_ENV = 'STEP_UP_PROVIDER_MODE';
@@ -17,6 +18,14 @@ export type HighRiskAction =
   | 'change_security_settings';
 
 export type StepUpVerificationMethod = 'supabase_mfa' | 'enterprise_idp';
+export type StepUpProviderMode = 'supabase_mfa' | 'enterprise_idp' | 'supabase_mfa_or_enterprise_idp';
+
+export type StepUpAuditEvent =
+  | 'step_up_challenge_created'
+  | 'step_up_verified'
+  | 'step_up_failed'
+  | 'step_up_expired'
+  | 'step_up_scope_mismatch';
 
 export type StepUpAssessmentInput = {
   action: HighRiskAction;
@@ -88,7 +97,8 @@ export type StepUpAssessment = {
     | 'step_up_token_scope_mismatch'
     | 'step_up_token_replayed'
     | 'step_up_token_revoked'
-    | 'step_up_token_store_unavailable';
+    | 'step_up_token_store_unavailable'
+    | 'step_up_provider_not_configured';
   verifiedAt: string | null;
   issuedAt?: string | null;
   expiresAt: string | null;
@@ -166,6 +176,17 @@ function safeEqual(left: string, right: string) {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
+function splitConfiguredValues(value: string | null | undefined) {
+  return String(value ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function isEnterpriseReleaseEnabled() {
+  return process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true' || process.env.EUROCOMPLY_ENTERPRISE_RELEASE === 'true';
+}
+
 function sanitizeMetadata(metadata?: PersistStepUpTokenInput['metadata']) {
   if (!metadata) return {};
 
@@ -186,7 +207,7 @@ export function getStepUpSecret(explicitSecret?: string) {
   return explicitSecret ?? process.env.STEP_UP_SIGNING_SECRET ?? process.env.AUDIT_CHAIN_SIGNING_SECRET ?? null;
 }
 
-export function getStepUpProviderMode() {
+export function getStepUpProviderMode(): StepUpProviderMode | null {
   const mode = (process.env.STEP_UP_PROVIDER_MODE ?? '').trim().toLowerCase();
   if (mode === 'supabase_mfa' || mode === 'enterprise_idp' || mode === 'supabase_mfa_or_enterprise_idp') return mode;
   return null;
@@ -196,13 +217,13 @@ export function isEnterpriseStepUpConfigured() {
   const mode = getStepUpProviderMode();
   const hasSigningSecret = Boolean(getStepUpSecret());
   const hasSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  const hasIdpPolicy = Boolean(process.env.STEP_UP_IDP_ACR_VALUES || process.env.STEP_UP_IDP_AMR_VALUES);
+  const hasIdpPolicy = splitConfiguredValues(process.env.STEP_UP_IDP_ACR_VALUES).length > 0
+    || splitConfiguredValues(process.env.STEP_UP_IDP_AMR_VALUES).length > 0;
 
-  return Boolean(
-    hasSigningSecret &&
-      mode &&
-      ((mode.includes('supabase_mfa') && hasSupabase) || (mode.includes('enterprise_idp') && hasIdpPolicy)),
-  );
+  if (!hasSigningSecret || !mode) return false;
+  if (mode === 'supabase_mfa') return hasSupabase;
+  if (mode === 'enterprise_idp') return hasSupabase && hasIdpPolicy;
+  return hasSupabase;
 }
 
 export function hashStepUpToken(token: string, secret?: string) {
@@ -471,7 +492,7 @@ async function consumeStepUpToken({
 }
 
 export async function recordStepUpAuditEvent(input: {
-  event: 'step_up_requested' | 'step_up_approved' | 'step_up_denied' | 'step_up_expired';
+  event: StepUpAuditEvent;
   action: HighRiskAction;
   userId?: string | null;
   organizationId?: string | null;
@@ -514,6 +535,12 @@ export function stepUpRequiredResponse(assessment: StepUpAssessment) {
   );
 }
 
+function auditEventForFailedAssessment(assessment: StepUpAssessment): StepUpAuditEvent {
+  if (assessment.reason === 'expired_verification') return 'step_up_expired';
+  if (assessment.reason === 'step_up_token_scope_mismatch') return 'step_up_scope_mismatch';
+  return 'step_up_failed';
+}
+
 export async function requireStepUpForRequest(input: StepUpRequestInput): Promise<StepUpRequestResult> {
   const token = input.request.headers.get(STEP_UP_TOKEN_HEADER);
   let assessment = assessStepUpToken({
@@ -525,6 +552,17 @@ export async function requireStepUpForRequest(input: StepUpRequestInput): Promis
     maxAgeMs: input.maxAgeMs,
     secret: input.secret,
   });
+
+  if (assessment.ok && isEnterpriseReleaseEnabled() && !isEnterpriseStepUpConfigured()) {
+    assessment = {
+      ok: false,
+      action: input.action,
+      reason: 'step_up_provider_not_configured',
+      verifiedAt: null,
+      expiresAt: null,
+      maxAgeMs: input.maxAgeMs ?? STEP_UP_MAX_AGE_MS,
+    };
+  }
 
   if (assessment.ok && input.persist !== false) {
     const consumed = await consumeStepUpToken({
@@ -545,7 +583,7 @@ export async function requireStepUpForRequest(input: StepUpRequestInput): Promis
   if (!assessment.ok) {
     if (input.audit !== false) {
       await recordStepUpAuditEvent({
-        event: assessment.reason === 'expired_verification' ? 'step_up_expired' : 'step_up_denied',
+        event: auditEventForFailedAssessment(assessment),
         action: input.action,
         userId: input.userId,
         organizationId: input.organizationId,
