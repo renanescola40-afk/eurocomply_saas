@@ -1,4 +1,4 @@
-# EuroComply GDPR Runbook
+# Risck comply GDPR Runbook
 
 Status: production readiness control
 Owner: Privacy Engineering / Security Engineering
