@@ -2,56 +2,76 @@
   "evidenceItem": "rate-limit-validation",
   "status": "Complete",
   "reviewer": "Security Engineering",
-  "reviewedAt": "2026-06-22T16:30:00.000Z",
-  "summary": "Enterprise rate limiting and abuse protection were implemented for sensitive backend surfaces, including fail-closed production behavior for high-risk policies, hashed IP key material, standard response headers, and redacted audit metadata.",
+  "reviewedAt": "2026-06-23T17:45:00.000Z",
+  "summary": "Enterprise rate limiting and abuse protection are enforced through named policies for auth, password reset, step-up challenge, billing checkout, billing portal, upload, export, GDPR delete, audit-chain verification, webhooks, and general API traffic. Production uses Upstash Redis, high-risk policies fail closed on limiter dependency failure, and development/test are the only in-memory fallback environments.",
   "evidenceLocations": [
     "src/server/security/rate-limit.ts",
     "src/lib/security/rate-limit.ts",
     "src/lib/security/rate-limit-response.ts",
+    "src/server/security/api-guards.ts",
     "src/server/security/rate-limit.enterprise.test.ts",
     "src/lib/security/rate-limit.test.ts",
     "tests/unit/rate-limit.test.ts",
     "docs/security/RATE_LIMITING.md"
   ],
-  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, raw Redis keys, raw IP addresses, raw user-agent values, and access-granting values are redacted from evidence.",
   "controlsVerified": [
-    "High-risk production policies fail closed when Redis is missing or unavailable.",
-    "Low-risk health/internal and general-api policies degrade according to explicit policy.",
-    "Legacy sensitive keys infer fail-closed enterprise categories through the compatibility wrapper.",
-    "Uncategorized direct server limiter calls default to the fail-closed auth policy.",
-    "Limiter keys use hashed IP material and avoid raw client IP disclosure.",
-    "Rate-limit audit events store keyHash instead of raw limiter keys.",
-    "Blocked responses emit Retry-After, RateLimit-Limit, RateLimit-Remaining, and RateLimit-Reset headers."
+    "Named policies exist for auth, password-reset, step-up-challenge, billing-checkout, billing-portal, upload, export, gdpr-delete, audit-chain-verify, webhook, general-api, and health-internal.",
+    "Production uses Upstash Redis REST pipeline with INCR, EXPIRE NX, and TTL.",
+    "Development and test use in-memory buckets only when Upstash is not configured or unavailable.",
+    "High-risk production policies fail closed when Redis is missing, unavailable, or returns an invalid response.",
+    "General API and health/internal policies use explicit low-risk fail-open behavior.",
+    "Limiter keys include route, action, user, organization, hashed IP, and hashed user-agent where useful.",
+    "Blocked responses emit Retry-After, RateLimit-Limit, RateLimit-Remaining, and RateLimit-Reset headers.",
+    "Blocked requests produce rate_limit_blocked or high_risk_rate_limit_blocked audit events without storing raw limiter keys or raw network identifiers.",
+    "Focused tests cover below-limit allow, above-limit block, Redis unavailable high-risk production block, Redis unavailable dev/test non-blocking fallback, and tenant bucket isolation."
   ],
   "validationCommands": [
     "npm run test -- src/server/security/rate-limit.enterprise.test.ts src/lib/security/rate-limit.test.ts tests/unit/rate-limit.test.ts",
+    "npm run security:api-guards",
     "npm run security:enterprise-api",
     "npm run lint",
     "npm run typecheck"
   ],
   "control": "enterprise-rate-limiting-and-abuse-protection",
-  "generatedAt": "2026-06-22T16:30:00.000Z",
+  "generatedAt": "2026-06-23T17:45:00.000Z",
   "implementation": {
     "module": "src/server/security/rate-limit.ts",
     "compatibilityExport": "src/lib/security/rate-limit.ts",
     "responseHelper": "src/lib/security/rate-limit-response.ts",
+    "guardIntegration": "src/server/security/api-guards.ts",
     "docs": "docs/security/RATE_LIMITING.md"
   },
   "runtime": {
-    "productionStore": "Upstash Redis REST pipeline using INCR, EXPIRE NX and TTL",
+    "productionStore": "Upstash Redis REST pipeline",
     "devTestStore": "in-memory buckets",
     "highRiskProductionFailureMode": "fail-closed",
-    "lowRiskProductionFailureMode": "policy based fail-open for health/internal and general-api",
+    "lowRiskProductionFailureMode": "explicit policy fail-open for general-api and health-internal",
     "pipelineResponseParsing": "accepts object-style REST result fields and tuple-style result entries"
   },
+  "policies": [
+    "auth",
+    "password-reset",
+    "step-up-challenge",
+    "billing-checkout",
+    "billing-portal",
+    "upload",
+    "export",
+    "gdpr-delete",
+    "audit-chain-verify",
+    "webhook",
+    "general-api",
+    "health-internal"
+  ],
   "auditEvents": {
-    "action": "security.rate_limit.blocked",
+    "actions": ["rate_limit_blocked", "high_risk_rate_limit_blocked"],
     "rawIpLogged": false,
+    "rawUserAgentLogged": false,
     "rawLimiterKeyLogged": false,
-    "metadata": ["category", "failureMode", "reason", "remaining", "retryAfterSeconds", "keyHash"]
+    "metadata": ["policy", "category", "highRisk", "failureMode", "reason", "remaining", "retryAfterSeconds", "route", "limitedAction", "keyHash"]
   },
   "notes": [
-    "This evidence file follows the P0 runtime evidence hygiene schema and contains no secret values.",
-    "Follow-up work can migrate the route-local step-up challenge deny response to the shared rateLimitResponse helper, but the limiter policy is already applied."
+    "This evidence file follows runtime evidence hygiene and contains no secret values.",
+    "Security CI route scanners must continue to block sensitive or high-risk routes that lack rate-limit guard tokens."
   ]
 }
