@@ -21,7 +21,6 @@ jobs:
   triage:
     name: Triage senior-agent queue
     runs-on: ubuntu-latest
-    if: github.event_name != 'issue_comment' || contains(github.event.comment.body, '/agent')
     steps:
       - name: Classify issue or queue
         uses: actions/github-script@v7
@@ -29,6 +28,11 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
+
+            if (context.eventName === 'issue_comment' && !String(context.payload.comment?.body || '').includes('/agent')) {
+              core.info('Skipping non-agent issue comment.');
+              return;
+            }
 
             const labels = {
               seniorAgent: { name: 'senior-agent', color: '5319e7', description: 'Work belongs to the senior engineering agent queue.' },
