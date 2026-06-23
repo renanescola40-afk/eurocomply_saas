@@ -4,7 +4,7 @@ Status: enterprise data-protection overview. This document describes current imp
 
 ## Data categories
 
-EuroComply may process account data, organization data, compliance records, controlled documents, audit metadata, billing metadata, and provider-managed operational logs depending on customer configuration and enabled features.
+Risck comply may process account data, organization data, compliance records, controlled documents, audit metadata, billing metadata, and provider-managed operational logs depending on customer configuration and enabled features.
 
 ## Current handling
 
@@ -21,13 +21,13 @@ Customer data is intended to be accessed only by authenticated users who are mem
 
 ## Retention
 
-A formal retention policy remains draft and must be reviewed before it is represented contractually. Until a customer-specific retention schedule is approved, customer-safe language should state that EuroComply is designed to support controlled retention and deletion workflows, but final retention periods depend on the signed agreement, operational configuration, and legal review.
+A formal retention policy remains draft and must be reviewed before it is represented contractually. Until a customer-specific retention schedule is approved, customer-safe language should state that Risck comply is designed to support controlled retention workflows, but final periods depend on the signed agreement, operational configuration, and legal review.
 
 Related draft: `docs/trust/RETENTION_POLICY_DRAFT.md`.
 
-## Deletion and export
+## Export workflows
 
-The repository includes GDPR export and delete request routes and audit actions for `gdpr.export` and `gdpr.delete_requested`. These support privacy operations, but do not by themselves prove legal compliance, SLA timing, or fully automated erasure across every subprocessor.
+The repository includes GDPR export request routes and audit actions for `gdpr.export`. These support privacy operations, but do not by themselves prove legal compliance, SLA timing, or complete subprocessor handling.
 
 ## Subprocessors
 
@@ -35,4 +35,4 @@ Subprocessors are documented in `docs/trust/SUBPROCESSORS.md`. The list must be 
 
 ## Customer-safe answer
 
-Use bounded language: EuroComply is designed around organization-scoped access, RBAC, RLS migrations, private document handling, audit logging, and provider-managed infrastructure. Retention and subprocessor commitments must be finalized in the applicable customer agreement.
+Use bounded language: Risck comply is designed around organization-scoped access, RBAC, RLS migrations, private document handling, audit logging, and provider-managed infrastructure. Retention and subprocessor commitments must be finalized in the applicable customer agreement.
