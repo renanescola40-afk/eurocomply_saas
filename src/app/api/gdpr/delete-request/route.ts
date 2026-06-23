@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
@@ -45,9 +45,13 @@ export async function POST(request: NextRequest) {
   }
 
   const rateLimit = await checkDistributedRateLimit({
-    key: `gdpr:delete-request:${organization.id}:${user.id}`,
-    limit: 3,
-    windowMs: 60 * 60 * 1000,
+    policy: 'gdpr-delete',
+    userId: user.id,
+    organizationId: organization.id,
+    ip: getClientIpFromRequest(request),
+    userAgent: getUserAgentFromRequest(request),
+    action: 'gdpr_delete',
+    route: '/api/gdpr/delete-request',
   });
 
   if (!rateLimit.allowed) {
