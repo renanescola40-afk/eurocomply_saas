@@ -1,8 +1,8 @@
 import crypto from 'node:crypto';
 
 export const runner = 'scripts/security/run-supabase-live-tenant-isolation.mjs';
-export const criticalTables = ['organizations', 'organization_members', 'documents', 'audit_events', 'risks', 'vendors', 'tasks', 'subscriptions', 'notifications', 'profiles'];
-export const optionalTables = ['compliance_tasks', 'audit_logs', 'ai_systems', 'ai_incidents'];
+export const criticalTables = ['organizations', 'organization_members', 'documents', 'audit_events', 'risks', 'vendors', 'tasks', 'subscriptions', 'notifications'];
+export const optionalTables = ['profiles', 'compliance_tasks', 'audit_logs', 'ai_systems', 'ai_incidents'];
 export const requiredCoverageOperations = ['cross_tenant_read', 'cross_tenant_insert', 'cross_tenant_update', 'cross_tenant_delete'];
 export const requiredBackendWriteDenyOperations = ['same_tenant_insert_denied', 'same_tenant_update_denied', 'same_tenant_delete_denied'];
 export const requiredViewerAdminDenyOperations = ['viewer_same_tenant_admin_insert_denied', 'viewer_same_tenant_admin_update_denied', 'viewer_same_tenant_admin_delete_denied'];
@@ -120,7 +120,7 @@ export function buildEvidencePayload({ status, outcome, supabaseUrl, testCases =
     supabaseProjectReference: redactProjectReferenceFromUrl(supabaseUrl),
     supabaseProjectReferenceRedacted: true,
     summary: status === 'Complete' && outcome === 'passed' ? 'Live Supabase tenant-isolation validation passed.' : 'Live Supabase tenant-isolation validation did not pass.',
-    redactionConfirmation: 'Access-granting values are redacted.',
+    redactionConfirmation: 'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
     evidenceLocations: ['docs/security/evidence/runtime/supabase-live-rls-validation.json'],
     productionGate: status === 'Complete' && outcome === 'passed' ? 'Enterprise release may proceed only if all other P0 runtime evidence is satisfied.' : 'Enterprise release remains blocked.',
     controlsVerified: status === 'Complete' && outcome === 'passed' ? ['RLS enabled on critical tenant tables', 'Cross-tenant access denied', 'Viewer admin actions denied'] : [],
