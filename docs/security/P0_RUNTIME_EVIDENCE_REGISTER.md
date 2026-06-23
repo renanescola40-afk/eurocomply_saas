@@ -41,9 +41,9 @@ Repository gates can prove that controls are documented and wired into CI. Runti
 | Step-up MFA / IdP validation | Exception | `docs/security/evidence/runtime/step-up-mfa-validation.json` records Complete repository evidence; live provider execution with real Supabase MFA or enterprise IdP credentials must be attached | Security reviewer | Required by 2026-06-25 for enterprise |
 | Stripe billing runtime validation | Exception | `docs/security/evidence/runtime/stripe-billing-validation.json` records Complete repository evidence but `validationStatus` remains `implemented_pending_ci_execution`; focused runtime/webhook evidence remains required for paid production | Engineering owner | Required by 2026-06-24 |
 | Observability readiness | Exception | `docs/security/evidence/runtime/observability-readiness.json` records Complete repository evidence; CI output, owner sign-off, deployment smoke evidence and rollback verification must be attached | SRE / release owner | Required by 2026-06-23 |
-| Incident response owner | Complete for owner assignment | Named incident owner is recorded in `docs/RELEASE_APPROVAL_RECORD.md`; runbook acknowledgement/drill evidence still required before Go | Release owner | Attach acknowledgement/drill before Go |
+| Incident response owner | Complete | Named incident owner is recorded in `docs/RELEASE_APPROVAL_RECORD.md`; runbook acknowledgement/drill evidence still required before Go | Release owner | Attach acknowledgement/drill before Go |
 | Rollback owner and rollback target | Exception | Named rollback owner and rollback target candidate are recorded in `docs/RELEASE_APPROVAL_RECORD.md`; functional verification and dry-run are still required before Go | Release owner | Required by 2026-06-23 |
-| Support / customer communication owner | Complete for owner assignment | Named support and customer communication owners are recorded in `docs/RELEASE_APPROVAL_RECORD.md`; customer notice/status-page decision remains required before Go | Release owner | Required by 2026-06-23 |
+| Support / customer communication owner | Complete | Named support and customer communication owners are recorded in `docs/RELEASE_APPROVAL_RECORD.md`; customer notice/status-page decision remains required before Go | Release owner | Required by 2026-06-23 |
 
 ## Evidence storage rule
 
