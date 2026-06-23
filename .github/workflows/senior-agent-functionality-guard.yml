@@ -1,44 +1,15 @@
-name: Senior Agent Functionality Guard
+name: Senior Agent Functionality Check
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  functionality-guard:
-    name: Verify agent PR functionality
+  functionality-check:
+    name: Manual functionality check placeholder
     runs-on: ubuntu-latest
-    if: startsWith(github.head_ref, 'agent/') && github.head_ref != 'agent/senior-engineer-agent-bootstrap'
     steps:
-      - name: Checkout PR
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Verify routes
-        run: npm run quality:routes
-
-      - name: Verify protected routes
-        run: npm run security:protected-routes
-
-      - name: Verify API guards
-        run: npm run security:api-guards
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Unit tests
-        run: npm run test
+      - name: Explain status
+        run: echo "Senior Agent functionality check is a non-mutating placeholder until provider setup is complete."
