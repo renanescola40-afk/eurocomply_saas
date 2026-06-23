@@ -7,8 +7,11 @@ const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'co
 
 const publicEndpointAllowlist = [
   /src\/app\/api\/billing\/webhook\/route\.ts$/,
+  /src\/app\/api\/stripe\/webhook\/route\.ts$/,
   /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/,
   /src\/app\/api\/ops\/.*\/route\.ts$/,
+  /src\/app\/api\/health\/route\.ts$/,
+  /src\/app\/api\/ready\/route\.ts$/,
 ];
 
 const resourceIdentifierPatterns = [
@@ -28,6 +31,7 @@ const authGuardTokens = [
 
 const ownershipGuardTokens = [
   'requireOrganizationContext',
+  'requireOrganizationMembership',
   'requireOrganizationAccess',
   'getCurrentOrganizationForUser',
   'assertOrganizationPermission',
@@ -121,11 +125,7 @@ console.log(`Scanned ${routes.length} API route files.`);
 if (findings.length > 0) {
   console.error('Authorization/BOLA findings:');
   for (const finding of findings) console.error(`- ${finding}`);
-  if (process.env.STRICT_AUTHORIZATION_BOLA_SCAN === '1') {
-    process.exitCode = 1;
-  } else {
-    console.warn('Authorization/BOLA check is running in report-only mode. Set STRICT_AUTHORIZATION_BOLA_SCAN=1 to fail on findings.');
-  }
+  process.exitCode = 1;
 } else {
   console.log('Authorization and anti-BOLA checks: ok');
 }
