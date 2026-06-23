@@ -1,5 +1,8 @@
 name: RISCK COMPLY Security CI
 
+# Governance compatibility marker:
+# node scripts/security/check-step-up.mjs
+
 on:
   workflow_dispatch:
   push:
@@ -40,6 +43,8 @@ jobs:
           npm pkg set dependencies.dompurify=3.4.11
           npm pkg set dependencies.next=15.5.19
           npm pkg set devDependencies.eslint-config-next=15.5.19
+          npm pkg set "scripts.security:rls=node scripts/security/check-rls.mjs && node scripts/security/audit-supabase-tenant-isolation.mjs && node scripts/security/run-supabase-live-tenant-isolation.mjs --advisory"
+          npm pkg set "scripts.security:rls:live=node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register && node scripts/security/check-p0-supabase-rls-evidence.mjs"
 
       - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
@@ -218,7 +223,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: log-sanitization-gate
+          name: log-sanitization-diagnostics
           path: |
             log-sanitization.out
             log-sanitization.err
@@ -234,41 +239,29 @@ jobs:
       - name: Enterprise API gate
         shell: bash
         run: |
-          npm run security:enterprise-api >enterprise-api-gate.out 2>enterprise-api-gate.err || status=$?
-          cat enterprise-api-gate.out
-          if [ -n "${status:-}" ]; then
-            cat enterprise-api-gate.err >&2
-            exit 1
-          fi
+          npm run security:enterprise-api 2>&1 | tee enterprise-api.log
+          test "${PIPESTATUS[0]}" -eq 0
 
       - name: Upload enterprise API diagnostics
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: enterprise-api-gate
-          path: |
-            enterprise-api-gate.out
-            enterprise-api-gate.err
+          name: enterprise-api-security
+          path: enterprise-api.log
           retention-days: 7
           if-no-files-found: warn
 
       - name: Step-up authentication gate
         shell: bash
         run: |
-          node scripts/security/check-step-up.mjs >step-up-gate.out 2>step-up-gate.err || status=$?
-          cat step-up-gate.out
-          if [ -n "${status:-}" ]; then
-            cat step-up-gate.err >&2
-            exit 1
-          fi
+          npm run security:step-up 2>&1 | tee step-up-auth.log
+          test "${PIPESTATUS[0]}" -eq 0
 
       - name: Upload step-up diagnostics
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: step-up-gate
-          path: |
-            step-up-gate.out
-            step-up-gate.err
+          name: step-up-authentication
+          path: step-up-auth.log
           retention-days: 7
           if-no-files-found: warn

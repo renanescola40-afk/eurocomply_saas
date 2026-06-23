@@ -6,14 +6,14 @@ const apiRoot = join(process.cwd(), 'src', 'app', 'api');
 
 const guards = {
   auth: ['getCurrentUser', 'requireCurrentUser', 'requireAuthenticatedUser', 'requireApiUser', 'requireOrganizationContext', 'requireEnterpriseApiAccess'],
-  org: ['getCurrentOrganizationForUser', 'requireOrganizationAccess', 'requireOrganizationContext', 'requireEnterpriseApiAccess'],
+  org: ['getCurrentOrganizationForUser', 'requireOrganizationAccess', 'requireOrganizationContext', 'requireOrganizationMembership', 'requireEnterpriseApiAccess'],
   rbac: ['assertOrganizationPermission', 'requirePermission', 'requireEnterpriseApiAccess'],
   plan: ['assertPlanAtLeast', 'assertGdprSelfServiceEnabled'],
-  rateLimit: ['checkDistributedRateLimit', 'checkRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
-  audit: ['createAuditEvent'],
+  rateLimit: ['checkDistributedRateLimit', 'checkRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireRateLimit', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
+  audit: ['createAuditEvent', 'writeAuditLog'],
   integrity: ['buildEvidencePackIntegrity'],
-  noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'Cache-Control', 'no-store', 'secureApiError'],
-  origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
+  noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'Cache-Control', 'no-store', 'secureApiError', 'secureApiJson'],
+  origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireTrustedOriginForMutation', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   stepUp: ['requireStepUpForRequest'],
   internal: ['isAuthorizedInternalCronRequest', 'isAuthorizedInternalMaintenanceRequest', 'noStoreJson'],
   webhook: ['constructEvent', 'stripe-signature', 'noStoreJson'],
@@ -181,8 +181,5 @@ const hardening = spawnSync(process.execPath, [join(process.cwd(), 'scripts/secu
 });
 
 if (hardening.status !== 0) {
-  console.warn('[security] API route hardening inventory reported follow-up findings. See docs/security/API_SECURITY_MODEL.md migration backlog.');
-  if (process.env.STRICT_API_ROUTE_HARDENING === '1') {
-    process.exitCode = 1;
-  }
+  process.exitCode = 1;
 }
