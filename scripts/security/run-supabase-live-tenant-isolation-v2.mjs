@@ -148,6 +148,12 @@ function rlsEnabledCase(table, inventory) {
   };
 }
 
+function rlsInventoryCases(inventory) {
+  return [...criticalTables, ...optionalTables]
+    .filter((table) => criticalTables.includes(table) || inventory.some((entry) => entry?.table_name === table && entry?.exists === true))
+    .map((table) => rlsEnabledCase(table, inventory));
+}
+
 function tableSpecs({ suffix, orgB, orgInsertTarget, userA, userAViewer, userB, memberB }) {
   const org = orgB.id;
   return {
@@ -168,7 +174,7 @@ function tableSpecs({ suffix, orgB, orgInsertTarget, userA, userAViewer, userB, 
 }
 
 async function setup(admin) {
-  const suffix = `${Date.now()}-${crypto.randomUUID()}`;
+  const suffix = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   const phrase = `${crypto.randomBytes(18).toString('base64url')}Aa1!`;
   const created = { users: [], rows: [] };
   const makeUser = async (label) => {
@@ -257,9 +263,9 @@ export async function main() {
   let testCases = [];
   try {
     const inventory = await loadRlsInventory(admin);
-    testCases = criticalTables.map((table) => rlsEnabledCase(table, inventory));
+    testCases = rlsInventoryCases(inventory);
     const rlsFailures = testCases.filter((test) => !test.passed);
-    if (rlsFailures.length > 0) throw new Error(`Required critical tables are missing RLS or policies: ${rlsFailures.map((test) => test.table).join(', ')}`);
+    if (rlsFailures.length > 0) throw new Error(`Required reviewed tables are missing RLS or policies: ${rlsFailures.map((test) => test.table).join(', ')}`);
     ctx = await setup(admin);
     const missingRequired = ctx.missing.filter((table) => criticalTables.includes(table));
     if (missingRequired.length > 0) throw new Error(`Required validation tables are missing: ${missingRequired.join(', ')}`);
@@ -311,4 +317,4 @@ export async function main() {
 }
 
 const isCli = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-if (isCli) main().catch((error) => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; });
+if (isCli) main().catch((error) => { console.error(error instanceof Error ? error : error); process.exitCode = 1; });
