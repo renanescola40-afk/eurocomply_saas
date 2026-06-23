@@ -200,6 +200,10 @@ if (failures.length > 0) {
   console.log('API endpoint hardening: ok');
 }
 
+if (Array.isArray(changedRoutes) && changedRoutes.length === 0) {
+  process.exit(process.exitCode ?? 0);
+}
+
 const routeHardening = spawnSync(process.execPath, [join(root, 'scripts/security/check-api-route-hardening.mjs')], {
   stdio: 'inherit',
 });
