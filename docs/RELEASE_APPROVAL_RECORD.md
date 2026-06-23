@@ -5,7 +5,7 @@ This document is the release owner record used to approve or reject a EuroComply
 ## Release identity
 
 - Release name: EuroComply Operational Release Candidate - 2026-06-23
-- Commit SHA: `32f4617ca43b6cc124605f9a486dd716e5e91c10` (remediation branch head before this document refresh)
+- Commit SHA: `1c99ebfcc41613e07c8425b2245bf417111497ca` (current PR #346 head before Vercel failure refresh)
 - Date: 2026-06-23
 - Release owner: @renansilva2002 / renanescola40-afk
 - Incident owner: @renansilva2002 / renanescola40-afk (acting CTO / Security Lead)
@@ -13,11 +13,13 @@ This document is the release owner record used to approve or reject a EuroComply
 - Customer communication owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Support owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Security owner: @renansilva2002 / renanescola40-afk
-- Approver: Not granted; blocked by open P0 evidence and non-passing final validation bundle
+- Approver: Not granted; blocked by current PR Vercel deployment failure, open P0 evidence and non-passing final validation bundle
 - Target environment: Production / enterprise candidate
-- Deployment URL: `https://eurocomply-saas-git-coverage1-renanescola40-afks-projects.vercel.app` (observed from Vercel bot on PR #344 for head commit `b546847c803ed568371571c1854e13536f5cad27`; runtime reachability was not verified from this remediation environment)
-- CI run URL: No GitHub Actions run observed for merge commit `a0a4849739492133b296962d40036ba1423ab831`; final validation bundle in `release-validation/` is non-passing and records commands as blocked/not run
-- Build log URL: `https://vercel.com/renanescola40-afks-projects/eurocomply-saas/FVPS9rK98r8ysiXPo8MR1UATF653` (Vercel status context `success` observed for merge commit `a0a4849739492133b296962d40036ba1423ab831`)
+- Deployment URL: **Missing for current PR #346; Vercel failed with `api-deployments-free-per-day`**
+- CI run URL: No passing GitHub Actions final validation run observed for current PR #346
+- Build log URL: **Missing for current PR #346; Vercel bot posted deployment quota failure instead of successful build/deploy log**
+- Historical deployment URL: `https://eurocomply-saas-git-coverage1-renanescola40-afks-projects.vercel.app` (PR #344 / historical context only, not current PR proof)
+- Historical build log URL: `https://vercel.com/renanescola40-afks-projects/eurocomply-saas/FVPS9rK98r8ysiXPo8MR1UATF653` (merge commit `a0a4849739492133b296962d40036ba1423ab831`, historical context only)
 - Decision report: `docs/RELEASE_FINAL_READINESS_REPORT.md`
 - Final validation bundle: `release-validation/summary.json`, `release-validation/summary.md`, `release-validation/logs/*.log`
 
@@ -43,18 +45,19 @@ The release owner must confirm each item before approval.
 
 | Gate | Status | Evidence / note |
 | --- | --- | --- |
+| Current PR #346 Vercel deployment | **Failed** | Vercel bot reported `Resource is limited - try again in 24 hours (more than 100, code: "api-deployments-free-per-day")` |
+| Current PR #346 deployment URL | **Missing** | No successful deployment URL was produced for this PR |
+| Current PR #346 build/deploy log | **Missing / failed** | No successful build/deploy log was produced for this PR |
 | `npm ci` | **Blocked / not run in final bundle** | `release-validation/logs/01-npm-ci.log` |
 | `npm run lint` | **Blocked / not run in final bundle** | `release-validation/logs/02-lint.log` |
 | `npm run typecheck` | **Blocked / not run in final bundle** | `release-validation/logs/03-typecheck.log` |
 | `npm run test` | **Blocked / not run in final bundle** | `release-validation/logs/04-test.log` |
 | `npm run test:e2e` | **Blocked / not run in final bundle** | `release-validation/logs/05-test-e2e.log` |
-| `npm run build` | **Blocked / not run in final bundle** | Vercel status success observed separately for merge commit `a0a4849739492133b296962d40036ba1423ab831`; no local/CI final bundle build pass is claimed |
+| `npm run build` | **Blocked / not run in final bundle** | Current PR Vercel deployment also failed due quota/rate limit |
 | `npm run security:ci` | **Blocked / not run in final bundle** | `release-validation/logs/07-security-ci.log` |
 | `npm run release:readiness` | **Blocked / not run in final bundle** | `release-validation/logs/08-release-readiness.log` |
 | `npm run release:enterprise-readiness` | **Blocked / not run in final bundle** | `release-validation/logs/09-release-enterprise-readiness.log` |
 | `node scripts/release/run-final-validation.mjs` | **Blocked / not run in final bundle** | `release-validation/logs/10-final-validation-runner.log` |
-| Vercel build/deploy status | Improved from prior failure | GitHub commit status for `a0a4849739492133b296962d40036ba1423ab831` shows `Vercel = success` and build log URL above |
-| Deployment URL attached | Partial | Preview URL observed from PR #344; functional runtime verification still required before Go |
 
 ### Runtime/security gates
 
@@ -98,7 +101,7 @@ Rollback is **defined for remediation tracking only** and is not approved for pr
 
 **No-Go.**
 
-The release has improved operational evidence because a Vercel success status and deployment URL are now recorded, owners are named, the rollback target candidate is documented, and a final validation bundle exists. It is still not Go-ready because the bundle is non-passing, runtime URL verification is incomplete, and P0 runtime/security evidence remains open.
+The release has improved operational records because owners are named, the rollback target candidate is documented, and a final validation bundle exists. It is not Go-ready because the current PR Vercel deployment failed, the bundle is non-passing, runtime URL verification is incomplete, and P0 runtime/security evidence remains open.
 
 ## Exceptions
 
@@ -106,8 +109,9 @@ These exceptions are documented for remediation tracking only. They are not appr
 
 | Area | Exception | Owner | Expiration | Mitigation |
 | --- | --- | --- | --- | --- |
+| Current deployment | PR #346 Vercel deployment failed due daily deployment quota/rate limit | @renansilva2002 / renanescola40-afk | 2026-06-23 | Re-run Vercel after quota reset or move to adequate Vercel capacity, then attach successful deployment URL and build log for the final assessed commit |
 | Final validation | Requested commands were not executed successfully in the final bundle | @renansilva2002 / renanescola40-afk | 2026-06-23 | Run `node scripts/release/run-final-validation.mjs` in GitHub Actions or a connected release runner and attach passing logs |
-| Runtime URL verification | Deployment URL is recorded but not functionally verified here | @renansilva2002 / renanescola40-afk | 2026-06-23 | Verify `/api/health` and application smoke checks against the deployment URL |
+| Runtime URL verification | No current PR deployment URL exists | @renansilva2002 / renanescola40-afk | 2026-06-23 | Verify `/api/health` and application smoke checks after successful deployment |
 | RLS live validation | Supabase live RLS validation is Open/not run | @renansilva2002 / renanescola40-afk | 2026-06-25 | Run `scripts/security/run-supabase-live-tenant-isolation.mjs --update-register` against target project and attach output |
 | External review | External review/pentest is Open/not started | @renansilva2002 / renanescola40-afk | 2026-07-06 | Complete real external review/pentest, triage findings, attach retest/risk acceptance evidence |
 | Stripe execution | Stripe evidence is implementation-complete but focused runtime execution is pending | @renansilva2002 / renanescola40-afk | 2026-06-24 | Run focused Stripe tests and webhook gates in CI and attach logs |
@@ -122,6 +126,6 @@ These exceptions are documented for remediation tracking only. They are not appr
 - Customer communication owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Support owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Security owner: @renansilva2002 / renanescola40-afk
-- Approver: Not granted; blocked by open P0 evidence
+- Approver: Not granted; blocked by current deployment failure and open P0 evidence
 - Date: 2026-06-23
-- Notes: Release remains blocked by non-passing final validation bundle, open RLS live validation, missing external review, missing live provider evidence for enterprise MFA/IdP and upload scanning, pending focused Stripe runtime execution, and unverified rollback target/runtime URL.
+- Notes: Release remains blocked by PR #346 Vercel deployment failure, non-passing final validation bundle, open RLS live validation, missing external review, missing live provider evidence for enterprise MFA/IdP and upload scanning, pending focused Stripe runtime execution, and unverified rollback target/runtime URL.
