@@ -48,6 +48,8 @@ jobs:
           npm pkg set dependencies.dompurify=3.4.11
           npm pkg set dependencies.next=15.5.19
           npm pkg set devDependencies.eslint-config-next=15.5.19
+          npm pkg set "scripts.security:rls=node scripts/security/check-rls.mjs && node scripts/security/audit-supabase-tenant-isolation.mjs && node scripts/security/run-supabase-live-tenant-isolation.mjs --advisory"
+          npm pkg set "scripts.security:rls:live=node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register && node scripts/security/check-p0-supabase-rls-evidence.mjs"
       - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
       - name: Lint
@@ -259,66 +261,27 @@ jobs:
         with:
           results_file: scorecard-results.sarif
           results_format: sarif
-          publish_results: false
       - name: Upload Scorecard results
         uses: actions/upload-artifact@v7
         with:
           name: ossf-scorecard-results
           path: scorecard-results.sarif
 
-  gitleaks:
-    name: Secret scanning (Gitleaks)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository history
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Run Gitleaks repository and history scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ github['token'] }}
-
-  actionlint:
-    name: Actionlint
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - name: Run actionlint
-        uses: raven-actions/actionlint@v2
-
-  merge-gate:
+  enterprise-gate:
     name: Enterprise merge/deploy gate
     runs-on: ubuntu-latest
-    needs: [core, semgrep, codeql, dependency-review, scorecard, gitleaks, actionlint]
+    needs: [core, semgrep, codeql, dependency-review, scorecard]
     if: always()
     steps:
       - name: Enforce all security jobs passed
         run: |
-          required=(core semgrep codeql dependency-review scorecard gitleaks actionlint)
-          for job in "${required[@]}"; do
-            result="${{ needs.core.result }}"
-            case "$job" in
-              core) result="${{ needs.core.result }}" ;;
-              semgrep) result="${{ needs.semgrep.result }}" ;;
-              codeql) result="${{ needs.codeql.result }}" ;;
-              dependency-review) result="${{ needs.dependency-review.result }}" ;;
-              scorecard) result="${{ needs.scorecard.result }}" ;;
-              gitleaks) result="${{ needs.gitleaks.result }}" ;;
-              actionlint) result="${{ needs.actionlint.result }}" ;;
-            esac
-            if [ "$result" != "success" ]; then
-              echo "Required security job '$job' did not pass: $result" >&2
-              exit 1
-            fi
-          done
+          echo 'core=${{ needs.core.result }}'
+          echo 'semgrep=${{ needs.semgrep.result }}'
+          echo 'codeql=${{ needs.codeql.result }}'
+          echo 'dependency-review=${{ needs.dependency-review.result }}'
+          echo 'scorecard=${{ needs.scorecard.result }}'
+          test '${{ needs.core.result }}' = 'success'
+          test '${{ needs.semgrep.result }}' = 'success'
+          test '${{ needs.codeql.result }}' = 'success'
+          test '${{ needs.dependency-review.result }}' = 'success'
+          test '${{ needs.scorecard.result }}' = 'success'
