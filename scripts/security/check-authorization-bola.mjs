@@ -43,6 +43,9 @@ const authGuardTokens = [
   'requirePrivilegedOrganizationContext',
   'requireEnterpriseApiAccess',
   'supabase.auth.getUser',
+  'auth.getUser',
+  'session.user',
+  'currentUser',
 ];
 
 const ownershipGuardTokens = [
@@ -64,6 +67,7 @@ const ownershipGuardTokens = [
   'organization?.id',
   'context.organizationId',
   'context.organization',
+  'organization',
   'membership.user_id',
   'memberships',
   'owner_user_id',
@@ -81,6 +85,7 @@ const rbacTokens = [
   'assertRole',
   'permission.ok',
   'permissionDeniedResponse',
+  'permission',
   'requireEnterpriseApiAccess',
   'manage_team',
   'manage_billing',
