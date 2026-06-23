@@ -158,7 +158,19 @@ jobs:
         run: npm run security:auth-tokens
 
       - name: Authorization BOLA gate
-        run: npm run security:authorization-bola
+        shell: bash
+        run: |
+          npm run security:authorization-bola 2>&1 | tee authorization-bola.log
+          test "${PIPESTATUS[0]}" -eq 0
+
+      - name: Upload Authorization BOLA diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: authorization-bola-gate
+          path: authorization-bola.log
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Server action identity gate
         run: npm run security:server-action-identity
