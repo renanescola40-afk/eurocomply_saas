@@ -41,6 +41,7 @@ const schemaValidationTokens = [
   'FormData',
   'readBoundedJsonRequest',
   'readBoundedStripeWebhookBody',
+  'readBoundedBillingWebhookBody',
 ];
 
 const clientInputTokens = [
