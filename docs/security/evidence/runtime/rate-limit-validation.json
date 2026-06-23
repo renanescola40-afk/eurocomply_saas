@@ -14,7 +14,7 @@
     "tests/unit/rate-limit.test.ts",
     "docs/security/RATE_LIMITING.md"
   ],
-  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, raw Redis keys, raw IP addresses, raw user-agent values, and access-granting values are redacted from evidence.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "controlsVerified": [
     "Named policies exist for auth, password-reset, step-up-challenge, billing-checkout, billing-portal, upload, export, gdpr-delete, audit-chain-verify, webhook, general-api, and health-internal.",
     "Production uses Upstash Redis REST pipeline with INCR, EXPIRE NX, and TTL.",
@@ -71,7 +71,7 @@
     "metadata": ["policy", "category", "highRisk", "failureMode", "reason", "remaining", "retryAfterSeconds", "route", "limitedAction", "keyHash"]
   },
   "notes": [
-    "This evidence file follows runtime evidence hygiene and contains no secret values.",
+    "This evidence file follows runtime evidence hygiene and contains no raw limiter keys or raw network identifiers.",
     "Security CI route scanners must continue to block sensitive or high-risk routes that lack rate-limit guard tokens."
   ]
 }
