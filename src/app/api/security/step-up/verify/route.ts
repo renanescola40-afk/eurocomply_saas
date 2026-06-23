@@ -5,19 +5,27 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
-import { STEP_UP_CHALLENGE_MAX_AGE_MS, HIGH_RISK_ACTIONS, normalizeHighRiskAction, recordStepUpAuditEvent } from '@/server/security/step-up';
-import { STEP_UP_ACTION_PERMISSIONS, createStepUpProviderChallenge, type StepUpProviderRequestBody } from '@/server/security/step-up-provider';
+import {
+  STEP_UP_MAX_AGE_MS,
+  HIGH_RISK_ACTIONS,
+  createStepUpTokenEnvelope,
+  normalizeHighRiskAction,
+  persistStepUpTokenRecord,
+  recordStepUpAuditEvent,
+} from '@/server/security/step-up';
+import { STEP_UP_ACTION_PERMISSIONS, verifyStepUpProviderChallenge, type StepUpProviderRequestBody } from '@/server/security/step-up-provider';
 import { getEffectiveStepUpProviderPolicy } from '@/server/security/step-up-settings';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 
 export const runtime = 'nodejs';
 
-const STEP_UP_CHALLENGE_JSON_MAX_BYTES = 4 * 1024;
+const STEP_UP_VERIFY_JSON_MAX_BYTES = 4 * 1024;
 
-// Static gate evidence: this route creates a short-lived challenge nonce, uses
-// Supabase MFA methods through src/server/security/step-up-provider.ts, and never emits a signed HMAC token.
-// Provider methods covered by the abstraction: supabase.auth.mfa.challenge, supabase.auth.mfa.verify,
-// getAuthenticatorAssuranceLevel, getClaims, enterprise IdP ACR/AMR checks.
+function auditFailureEvent(error: string) {
+  if (error === 'step_up_expired') return 'step_up_expired' as const;
+  if (error === 'step_up_scope_mismatch') return 'step_up_scope_mismatch' as const;
+  return 'step_up_failed' as const;
+}
 
 export async function POST(request: Request) {
   const originDenied = assertTrustedOrigin(request);
@@ -41,8 +49,8 @@ export async function POST(request: Request) {
     organizationId: organization.id,
     ip: getClientIpFromRequest(request),
     userAgent: getUserAgentFromRequest(request),
-    action: 'step_up_challenge',
-    route: '/api/security/step-up/challenge',
+    action: 'step_up_verify',
+    route: '/api/security/step-up/verify',
   });
 
   if (!rateLimit.allowed) {
@@ -50,7 +58,7 @@ export async function POST(request: Request) {
   }
 
   const body = await readBoundedJsonRequest<StepUpProviderRequestBody>(request, {
-    maxBytes: STEP_UP_CHALLENGE_JSON_MAX_BYTES,
+    maxBytes: STEP_UP_VERIFY_JSON_MAX_BYTES,
   }).catch(() => null);
   const action = normalizeHighRiskAction(body?.action);
 
@@ -58,7 +66,7 @@ export async function POST(request: Request) {
     return noStoreJson(
       {
         error: 'invalid_step_up_action',
-        message: 'A supported high-risk action is required before step-up can be issued.',
+        message: 'A supported high-risk action is required before step-up can be verified.',
         supportedActions: HIGH_RISK_ACTIONS,
       },
       { status: 400 },
@@ -76,7 +84,7 @@ export async function POST(request: Request) {
   }
 
   const providerPolicy = await getEffectiveStepUpProviderPolicy(organization.id);
-  const challenge = await createStepUpProviderChallenge({
+  const verification = await verifyStepUpProviderChallenge({
     body,
     action,
     userId: user.id,
@@ -84,50 +92,87 @@ export async function POST(request: Request) {
     policy: providerPolicy,
   });
 
-  if (challenge instanceof Response) return challenge;
-
-  if (!challenge.ok) {
+  if (!verification.ok) {
     await recordStepUpAuditEvent({
-      event: challenge.error === 'step_up_expired' ? 'step_up_expired' : 'step_up_failed',
+      event: auditFailureEvent(verification.error),
       action,
       userId: user.id,
       organizationId: organization.id,
-      reason: challenge.error,
+      reason: verification.error,
       verificationMethod: providerPolicy.mode,
     });
 
     return noStoreJson(
       {
-        error: challenge.error,
-        message: challenge.message,
-        details: challenge.details,
+        error: verification.error,
+        message: verification.message,
+        details: verification.details,
         requiredProvider: 'mfa_or_identity_provider_reauthentication',
       },
-      { status: challenge.status },
+      { status: verification.status },
+    );
+  }
+
+  const envelope = createStepUpTokenEnvelope({
+    action,
+    userId: user.id,
+    organizationId: organization.id,
+    verifiedAt: new Date(),
+    verificationMethod: verification.method,
+  });
+
+  const persisted = await persistStepUpTokenRecord({
+    token: envelope.token,
+    payload: envelope.payload,
+    metadata: {
+      provider: verification.provider,
+      aal: verification.aal ?? null,
+      challengeNonce: verification.challengeNonce,
+      policySource: providerPolicy.source,
+    },
+  });
+
+  if (!persisted.ok) {
+    await recordStepUpAuditEvent({
+      event: 'step_up_failed',
+      action,
+      userId: user.id,
+      organizationId: organization.id,
+      reason: persisted.reason,
+      nonce: envelope.payload.nonce,
+      verificationMethod: verification.method,
+    });
+
+    return noStoreJson(
+      {
+        error: persisted.reason,
+        message: 'Step-up provider verification succeeded, but token persistence is unavailable. Critical actions remain blocked.',
+      },
+      { status: 503 },
     );
   }
 
   await recordStepUpAuditEvent({
-    event: 'step_up_challenge_created',
+    event: 'step_up_verified',
     action,
     userId: user.id,
     organizationId: organization.id,
-    nonce: challenge.challengeNonce,
-    verificationMethod: challenge.provider,
+    nonce: envelope.payload.nonce,
+    verificationMethod: verification.method,
   });
 
   return noStoreJson({
-    status: 'step_up_challenge_created',
+    token: envelope.token,
+    tokenType: 'signed_hmac',
     action,
     organizationId: organization.id,
-    provider: challenge.provider,
-    challengeNonce: challenge.challengeNonce,
-    challengeId: challenge.challengeId,
-    factorId: challenge.factorId,
-    factors: challenge.factors,
-    expiresAt: challenge.expiresAt,
-    maxAgeMs: STEP_UP_CHALLENGE_MAX_AGE_MS,
-    requiresCode: challenge.requiresCode,
-    message: challenge.message,
+    expiresAt: envelope.payload.expiresAt,
+    maxAgeMs: STEP_UP_MAX_AGE_MS,
+    verification: {
+      method: verification.method,
+      provider: verification.provider,
+      aal: verification.aal ?? null,
+      policySource: providerPolicy.source,
+    },
   });
 }
