@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   return noStoreJson(
     {
-      service: 'risck-comply-saas',
+      service: 'eurocomply-saas',
       status: 'ok',
       checkedAt: new Date().toISOString(),
       checks: {
