@@ -25,10 +25,7 @@ jobs:
   autofix:
     name: Analyze and implement safe autofix
     runs-on: ubuntu-latest
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' && github.event.label.name == 'agent:ready') ||
-      (github.event_name == 'issue_comment' && (contains(github.event.comment.body, '/agent run') || contains(github.event.comment.body, '/agent autofix')))
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'issues' || github.event_name == 'issue_comment'
     steps:
       - name: Resolve issue and safety state
         id: issue
@@ -37,6 +34,19 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
+
+            if (context.eventName === 'issues' && context.payload.label?.name !== 'agent:ready') {
+              core.info('Skipping non-ready issue label event.');
+              return;
+            }
+            if (context.eventName === 'issue_comment') {
+              const body = String(context.payload.comment?.body || '');
+              if (!body.includes('/agent run') && !body.includes('/agent autofix')) {
+                core.info('Skipping issue comment without agent run command.');
+                return;
+              }
+            }
+
             const issueNumber = context.eventName === 'workflow_dispatch'
               ? Number(core.getInput('issue_number'))
               : context.payload.issue.number;
