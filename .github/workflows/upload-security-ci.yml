@@ -1,0 +1,68 @@
+name: RISCK COMPLY Upload Security CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upload-security-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  upload-security-ci:
+    name: Upload scanner, tenant storage and fail-closed gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Upload validation and tenant isolation static gate
+        shell: bash
+        run: |
+          npm run security:upload 2>&1 | tee upload-security.log
+          test "${PIPESTATUS[0]}" -eq 0
+
+      - name: Upload content scanning fail-closed gate
+        shell: bash
+        run: |
+          npm run security:upload-content-scan 2>&1 | tee upload-content-scan.log
+          test "${PIPESTATUS[0]}" -eq 0
+
+      - name: Enterprise scanner bypass gate
+        shell: bash
+        run: |
+          npm run security:upload-scanner:ci 2>&1 | tee upload-scanner-runtime-ci.log
+          test "${PIPESTATUS[0]}" -eq 0
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: upload-security-ci-diagnostics
+          path: |
+            upload-security.log
+            upload-content-scan.log
+            upload-scanner-runtime-ci.log
+          retention-days: 7
+          if-no-files-found: warn
