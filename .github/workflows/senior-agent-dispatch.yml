@@ -1,137 +1,15 @@
 name: Senior Agent Dispatch
 
 on:
-  issues:
-    types: [labeled, reopened]
-  issue_comment:
-    types: [created]
   workflow_dispatch:
-    inputs:
-      issue_number:
-        description: Issue number to dispatch to the senior agent queue
-        required: true
-        type: number
 
 permissions:
   contents: read
-  issues: write
-
-concurrency:
-  group: senior-agent-dispatch-${{ github.run_id }}
-  cancel-in-progress: false
 
 jobs:
   dispatch:
-    name: Prepare agent work packet
+    name: Manual dispatch placeholder
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'issues' || github.event_name == 'issue_comment'
     steps:
-      - name: Create senior agent work packet
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-
-            if (context.eventName === 'issues' && context.payload.label?.name !== 'agent:ready') {
-              core.info('Skipping non-ready issue label event.');
-              return;
-            }
-            if (context.eventName === 'issue_comment' && !String(context.payload.comment?.body || '').includes('/agent run')) {
-              core.info('Skipping issue comment without /agent run.');
-              return;
-            }
-
-            const issueNumber = context.eventName === 'workflow_dispatch'
-              ? Number(core.getInput('issue_number'))
-              : context.payload.issue.number;
-
-            const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number: issueNumber });
-            if (issue.pull_request) {
-              core.info('Skipping pull request issue.');
-              return;
-            }
-
-            const labels = issue.labels.map((label) => label.name);
-            const hasReady = labels.includes('agent:ready') || context.eventName === 'workflow_dispatch';
-            const isBlocked = labels.includes('agent:blocked') || labels.includes('needs-owner');
-
-            if (!hasReady) {
-              core.info('Issue is not agent-ready.');
-              return;
-            }
-
-            if (isBlocked) {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: issueNumber,
-                body: [
-                  '<!-- senior-agent-dispatch-blocked -->',
-                  '## Senior Agent dispatch blocked',
-                  '',
-                  'This issue is marked `agent:blocked` or `needs-owner`, so the agent must not implement code yet.',
-                  '',
-                  'Remove the blocker label or comment `/agent run` after the owner decision is made.',
-                ].join('\n'),
-              });
-              return;
-            }
-
-            const slug = issue.title
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, '-')
-              .replace(/^-+|-+$/g, '')
-              .slice(0, 48) || 'task';
-            const branchName = `agent/${issueNumber}-${slug}`;
-
-            const packet = [
-              '<!-- senior-agent-dispatch -->',
-              '## Senior Agent work packet',
-              '',
-              `Issue: #${issueNumber}`,
-              `Recommended branch: \`${branchName}\``,
-              'Base branch: `main`',
-              '',
-              '### Required operating contract',
-              '- Read `AGENTS.md` before touching files.',
-              '- Read `.github/senior-agent.yml` for autonomy boundaries and verification gates.',
-              '- Keep the implementation minimal and reversible.',
-              '- Open a PR; do not merge it.',
-              '- Do not weaken auth, authorization, tenant isolation, RLS assumptions, audit logging, upload checks, validation, security headers, or CI/security gates.',
-              '',
-              '### Required PR evidence',
-              '- Root cause or product reason.',
-              '- Files changed and why.',
-              '- Commands run and results.',
-              '- Risk notes, especially for auth/RLS/billing/audit/uploads/secrets/deployments.',
-              '- Follow-ups intentionally left out of scope.',
-              '',
-              '### Suggested verification gate',
-              '```bash',
-              'npm ci',
-              'npm run lint',
-              'npm run typecheck',
-              'npm run test',
-              'npm run build',
-              'npm run security:ci',
-              '```',
-              '',
-              'A connected coding-agent provider can now claim this issue and open a PR from the recommended branch.',
-            ].join('\n');
-
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner,
-              repo,
-              issue_number: issueNumber,
-              per_page: 100,
-            });
-
-            const existing = comments.find((comment) => comment.body && comment.body.includes('<!-- senior-agent-dispatch -->'));
-            if (existing) {
-              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: packet });
-            } else {
-              await github.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body: packet });
-            }
-
-            await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ['senior-agent', 'agent:ready'] });
+      - name: Explain status
+        run: echo "Senior Agent Dispatch is installed as a safe manual placeholder until the coding-agent provider is connected."
