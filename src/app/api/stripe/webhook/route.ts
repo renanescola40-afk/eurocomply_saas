@@ -1,8 +1,11 @@
+import Stripe from 'stripe';
+
 import { getStripeClient } from '@/lib/billing/stripe';
 import { reportError } from '@/lib/observability/report-error';
+import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
-import { handleStripeWebhookEvent } from '@/server/billing/stripe-webhooks';
+import { getStripeEventAuditContext, handleStripeWebhookEvent } from '@/server/billing/stripe-webhooks';
 import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
@@ -31,6 +34,32 @@ export async function readBoundedStripeWebhookBody(request: Request) {
   return payload;
 }
 
+async function recordWebhookRouteAudit(input: {
+  action: 'webhook_received' | 'webhook_rejected';
+  event?: Stripe.Event;
+  reason?: string;
+}) {
+  try {
+    const context = input.event ? getStripeEventAuditContext(input.event) : { organizationId: null, actorUserId: null };
+
+    await writeAuditLog({
+      action: input.action,
+      organizationId: context.organizationId,
+      userId: context.actorUserId,
+      entityType: 'stripe_webhook_event',
+      entityId: input.event?.id ?? null,
+      metadata: {
+        stripeEventId: input.event?.id ?? null,
+        stripeEventType: input.event?.type ?? null,
+        livemode: input.event?.livemode ?? null,
+        reason: input.reason ?? null,
+      },
+    });
+  } catch (auditError) {
+    reportError(auditError, { area: 'stripe_webhook_route_audit', action: input.action });
+  }
+}
+
 export async function POST(request: Request) {
   const rateLimit = await checkDistributedRateLimit({
     policy: 'webhook',
@@ -55,24 +84,37 @@ export async function POST(request: Request) {
   const signature = request.headers.get('stripe-signature');
 
   if (!signature) {
+    await recordWebhookRouteAudit({ action: 'webhook_rejected', reason: 'missing_signature' });
     reportError(new Error('Missing Stripe signature'), { area: 'stripe_webhook' });
     return noStoreJson({ error: 'missing_signature' }, { status: 400 });
   }
 
   const body = await readBoundedStripeWebhookBody(request);
   if (body === null) {
+    await recordWebhookRouteAudit({ action: 'webhook_rejected', reason: 'payload_too_large' });
     reportError(new Error('Stripe webhook payload is too large'), { area: 'stripe_webhook' });
     return noStoreJson({ error: 'payload_too_large' }, { status: 413 });
   }
 
   const stripe = getStripeClient();
+  let event: Stripe.Event;
 
   try {
-    const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+  } catch (error) {
+    await recordWebhookRouteAudit({ action: 'webhook_rejected', reason: 'invalid_signature' });
+    reportError(error, { area: 'stripe_webhook_signature' });
+    return noStoreJson({ error: 'invalid_webhook' }, { status: 400 });
+  }
+
+  await recordWebhookRouteAudit({ action: 'webhook_received', event });
+
+  try {
     const result = await handleStripeWebhookEvent(event);
 
     return noStoreJson({ received: true, skipped: result.skipped });
   } catch (error) {
+    await recordWebhookRouteAudit({ action: 'webhook_rejected', event, reason: 'processing_failed' });
     reportError(error, { area: 'stripe_webhook' });
 
     return noStoreJson({ error: 'invalid_webhook' }, { status: 400 });
