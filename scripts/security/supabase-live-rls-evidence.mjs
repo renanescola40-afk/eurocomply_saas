@@ -6,6 +6,8 @@ export const optionalTables = ['profiles', 'compliance_tasks', 'audit_logs', 'ai
 export const requiredCoverageOperations = ['cross_tenant_read', 'cross_tenant_insert', 'cross_tenant_update', 'cross_tenant_delete'];
 export const requiredBackendWriteDenyOperations = ['same_tenant_insert_denied', 'same_tenant_update_denied', 'same_tenant_delete_denied'];
 export const requiredViewerAdminDenyOperations = ['viewer_same_tenant_admin_insert_denied', 'viewer_same_tenant_admin_update_denied', 'viewer_same_tenant_admin_delete_denied'];
+export const requiredUserScopedTable = 'profiles';
+export const requiredUserScopedOperations = ['rls_enabled', 'cross_tenant_read', 'cross_tenant_insert', 'cross_tenant_update', 'cross_tenant_delete', 'same_tenant_read'];
 
 const backendOwnedTables = new Set(['audit_events', 'audit_logs', 'subscriptions']);
 const sameTenantWritableTables = new Set(['documents', 'risks', 'vendors', 'tasks', 'compliance_tasks', 'ai_systems', 'ai_incidents']);
@@ -93,6 +95,10 @@ export function validatePassingEvidence(evidence) {
     }
   }
 
+  for (const operation of requiredUserScopedOperations) {
+    requirePassedTest(tests, requiredUserScopedTable, operation, errors, `missing live RLS user-scoped table coverage: ${requiredUserScopedTable}:${operation}`);
+  }
+
   for (const table of ['documents', 'risks', 'vendors', 'tasks']) requirePassedTest(tests, table, 'same_tenant_insert', errors, `missing same-tenant insert coverage: ${table}`);
   for (const table of ['audit_events', 'subscriptions']) for (const operation of requiredBackendWriteDenyOperations) requirePassedTest(tests, table, operation, errors);
   for (const operation of requiredViewerAdminDenyOperations) requirePassedTest(tests, 'organization_members', operation, errors);
@@ -125,7 +131,7 @@ export function buildEvidencePayload({ status, outcome, supabaseUrl, testCases =
     redactionConfirmation: 'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
     evidenceLocations: ['docs/security/evidence/runtime/supabase-live-rls-validation.json'],
     productionGate: status === 'Complete' && outcome === 'passed' ? 'Enterprise release may proceed only if all other P0 runtime evidence is satisfied.' : 'Enterprise release remains blocked.',
-    controlsVerified: status === 'Complete' && outcome === 'passed' ? ['RLS enabled on critical tenant tables', 'Cross-tenant access denied', 'Viewer admin actions denied'] : [],
+    controlsVerified: status === 'Complete' && outcome === 'passed' ? ['RLS enabled on critical tenant tables', 'Cross-tenant access denied', 'Viewer admin actions denied', 'Profiles user-scoped isolation verified'] : [],
     criticalTables,
     optionalTables,
     tablesReviewed,

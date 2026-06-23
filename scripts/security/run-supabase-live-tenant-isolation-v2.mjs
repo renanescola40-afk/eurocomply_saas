@@ -159,6 +159,7 @@ function tableSpecs({ suffix, orgB, orgInsertTarget, userA, userAViewer, userB, 
   return {
     organizations: { seed: orgB, insert: { name: `cross-org-${suffix}`, slug: `cross-org-${suffix}`, created_by: userA.id }, update: { name: `mutated-org-${suffix}` } },
     organization_members: { seed: memberB, insert: { organization_id: org, user_id: userA.id, role: 'viewer' }, viewerAdminInsert: { organization_id: orgInsertTarget.id, user_id: userAViewer.id, role: 'admin' }, viewerAdminUpdate: { role: 'admin' }, update: { role: 'admin' } },
+    profiles: { seed: { id: userB.id, full_name: `tenant-b-profile-${suffix}`, avatar_url: null }, insert: { id: userAViewer.id, full_name: `cross-user-profile-${suffix}`, avatar_url: null }, update: { full_name: `mutated-profile-${suffix}` } },
     documents: { seed: { organization_id: org, uploaded_by: userB.id, name: `tenant-b-doc-${suffix}`, category: 'general', storage_path: `${org}/doc-${suffix}.txt` }, insert: { organization_id: org, uploaded_by: userA.id, name: `cross-doc-${suffix}`, category: 'general', storage_path: `${org}/cross-${suffix}.txt` }, sameInsert: { organization_id: org, uploaded_by: userB.id, name: `same-doc-${suffix}`, category: 'general', storage_path: `${org}/same-${suffix}.txt` }, update: { name: `mutated-doc-${suffix}` } },
     audit_events: { seed: { organization_id: org, actor_id: userB.id, actor_user_id: userB.id, action: 'seeded_event', entity_type: 'rls_validation', entity_id: suffix }, insert: { organization_id: org, actor_id: userA.id, actor_user_id: userA.id, action: 'cross_tenant_attempt', entity_type: 'rls_validation', entity_id: suffix }, sameDeniedInsert: { organization_id: org, actor_id: userB.id, actor_user_id: userB.id, action: 'same_tenant_write_attempt', entity_type: 'rls_validation', entity_id: suffix }, update: { action: 'mutated_event' } },
     risks: { seed: { organization_id: org, created_by: userB.id, owner_user_id: userB.id, title: `tenant-b-risk-${suffix}`, category: 'general' }, insert: { organization_id: org, created_by: userA.id, title: `cross-risk-${suffix}`, category: 'general' }, sameInsert: { organization_id: org, created_by: userB.id, owner_user_id: userB.id, title: `same-risk-${suffix}`, category: 'general' }, update: { title: `mutated-risk-${suffix}` } },
@@ -198,7 +199,7 @@ async function setup(admin) {
   const specs = tableSpecs({ suffix, orgB, orgInsertTarget, userA, userAViewer, userB, memberB });
   const missing = [];
   for (const table of [...criticalTables, ...optionalTables]) {
-    if (['organizations', 'organization_members', 'profiles'].includes(table)) continue;
+    if (['organizations', 'organization_members'].includes(table)) continue;
     if (!(await tableExists(admin, table))) { missing.push(table); continue; }
     specs[table].seed = await insertOne(admin, table, specs[table].seed);
     created.rows.push([table, specs[table].seed.id]);
@@ -249,7 +250,7 @@ async function sameTenantInsertAllowed(client, table, row) {
 function markRegisterComplete() {
   if (!updateRegister) return false;
   const source = fs.readFileSync(registerPath, 'utf8');
-  const updated = source.replace(/\| Supabase live RLS validation completed \| (?:Open|Exception|Complete) \|[^\n]+/, '| Supabase live RLS validation completed | Complete | `docs/security/evidence/runtime/supabase-live-rls-validation.json` records status `Complete`, outcome `passed`, timestamp, redacted Supabase project reference, tables reviewed, tests passed/failed, zero failures, reviewer, command used, commit SHA, RLS enablement, tenant A/B cross-tenant read/insert/update/delete denial, viewer/admin separation, same-tenant allowed behavior, and backend-owned write denial | Security reviewer |');
+  const updated = source.replace(/\| Supabase live RLS validation completed \| (?:Open|Exception|Complete) \|[^\n]+/, '| Supabase live RLS validation completed | Complete | `docs/security/evidence/runtime/supabase-live-rls-validation.json` records status `Complete`, outcome `passed`, timestamp, redacted Supabase project reference, tables reviewed, tests passed/failed, zero failures, reviewer, command used, commit SHA, RLS enablement, tenant A/B cross-tenant read/insert/update/delete denial, profiles user-scoped read/insert/update/delete proof, viewer/admin separation, same-tenant allowed behavior, and backend-owned write denial | Security reviewer |');
   if (updated === source) throw new Error('Could not update live RLS row in P0 runtime evidence register.');
   fs.writeFileSync(registerPath, updated);
   return true;
