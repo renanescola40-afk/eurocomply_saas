@@ -1,4 +1,5 @@
-import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
+import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -111,25 +112,6 @@ type RealVerificationResult =
       message: string;
       details?: Record<string, unknown>;
     };
-
-function rateLimitDeniedResponse(result: RateLimitResult) {
-  const retryAfter = Math.max(1, Math.ceil((result.resetAt - Date.now()) / 1000));
-
-  return noStoreJson(
-    {
-      error: result.reason ? 'security_control_unavailable' : 'rate_limit_exceeded',
-      retryAfter,
-    },
-    {
-      status: result.reason ? 503 : 429,
-      headers: {
-        'Retry-After': String(retryAfter),
-        'X-RateLimit-Remaining': String(result.remaining),
-        'X-RateLimit-Reset': String(Math.ceil(result.resetAt / 1000)),
-      },
-    },
-  );
-}
 
 function getString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
@@ -355,13 +337,17 @@ export async function POST(request: Request) {
   }
 
   const rateLimit = await checkDistributedRateLimit({
-    key: `step-up:challenge:${organization.id}:${user.id}`,
-    limit: 5,
-    windowMs: 60 * 1000,
+    policy: 'step-up-challenge',
+    userId: user.id,
+    organizationId: organization.id,
+    ip: getClientIpFromRequest(request),
+    userAgent: getUserAgentFromRequest(request),
+    action: 'step_up_challenge',
+    route: '/api/security/step-up/challenge',
   });
 
   if (!rateLimit.allowed) {
-    return rateLimitDeniedResponse(rateLimit);
+    return rateLimitResponse(rateLimit);
   }
 
   const body = await readBoundedJsonRequest<StepUpChallengeBody>(request, {
