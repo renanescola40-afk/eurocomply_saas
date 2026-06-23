@@ -1,0 +1,4 @@
+# node scripts/release/run-final-validation.mjs
+Command: node scripts/release/run-final-validation.mjs
+Result: blocked_not_run
+Reason: Repository workspace preparation failed before npm commands could execute in this remediation environment. The runner script was updated to include npm run release:enterprise-readiness, but this remediation session did not execute the runner successfully.
