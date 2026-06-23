@@ -4,7 +4,7 @@ Status: enterprise review draft. This file must be verified before being shared 
 
 ## Purpose
 
-This register lists providers that may process customer data or operational metadata for EuroComply. Keep it current before signing a customer agreement or answering a procurement questionnaire.
+This register lists providers that may process customer data or operational metadata for Risck comply. Keep it current before signing a customer agreement or answering a procurement questionnaire.
 
 ## Current draft list
 
@@ -31,7 +31,7 @@ Customers should receive notice before adding a material subprocessor that proce
 
 ## Customer-safe answer
 
-"EuroComply maintains a subprocessor register for infrastructure, authentication/database/storage, billing, source control/CI, and conditional observability/cache/email providers. The register is reviewed before enterprise disclosure and final contractual commitments depend on the signed DPA and enabled production services."
+"Risck comply maintains a subprocessor register for infrastructure, authentication/database/storage, billing, source control/CI, and conditional observability/cache/email providers. The register is reviewed before enterprise disclosure and final contractual commitments depend on the signed DPA and enabled production services."
 
 ## Guardrail
 
