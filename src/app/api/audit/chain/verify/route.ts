@@ -1,10 +1,11 @@
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { getCurrentUser } from '@/server/queries/auth';
 import { buildAuditRequestContextFromRequest, createAuditEvent, listAuditEvents } from '@/server/queries/audit-events';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
-import { checkDistributedRateLimit } from '@/server/security/rate-limit';
+import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/server/security/rate-limit';
 import { verifyAuditChain, type AuditChainRecord } from '@/server/security/audit-chain';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireStepUpForRequest } from '@/server/security/step-up';
@@ -96,13 +97,17 @@ export async function GET(request: Request) {
   }
 
   const rateLimit = await checkDistributedRateLimit({
-    key: `audit-chain-verify:${organization.id}:${user.id}`,
-    limit: 10,
-    windowSeconds: 60 * 60,
+    policy: 'audit-chain-verify',
+    userId: user.id,
+    organizationId: organization.id,
+    ip: getClientIpFromRequest(request),
+    userAgent: getUserAgentFromRequest(request),
+    action: 'audit_chain_verify',
+    route: '/api/audit/chain/verify',
   });
 
   if (!rateLimit.allowed) {
-    return noStoreJson({ error: 'rate_limited', retryAfterSeconds: rateLimit.retryAfterSeconds }, { status: 429 });
+    return rateLimitResponse(rateLimit);
   }
 
   const parsedLimit = parseAuditChainVerifyLimit(request.url);
