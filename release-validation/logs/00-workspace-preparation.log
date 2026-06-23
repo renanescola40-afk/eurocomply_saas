@@ -1,0 +1,12 @@
+# repository clone / workspace preparation
+Command: git clone https://github.com/renanescola40-afk/eurocomply_saas.git /mnt/data/eurocomply_saas
+Started: 2026-06-23T10:20:00+01:00
+Release target: production-and-enterprise
+
+Cloning into '/mnt/data/eurocomply_saas'...
+fatal: unable to access 'https://github.com/renanescola40-afk/eurocomply_saas.git/': Could not resolve host: github.com
+
+Finished: 2026-06-23T10:20:00+01:00
+Exit status: 128
+
+Result: failed. The requested validation command chain was blocked before npm commands could be run in this remediation environment.
