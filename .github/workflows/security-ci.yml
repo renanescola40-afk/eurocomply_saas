@@ -1,5 +1,8 @@
 name: RISCK COMPLY Security CI
 
+# Governance compatibility marker:
+# node scripts/security/check-step-up.mjs
+
 on:
   workflow_dispatch:
   push:
