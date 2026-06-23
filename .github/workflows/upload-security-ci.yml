@@ -150,8 +150,11 @@ jobs:
           if (evidence.liveProviderProof?.provider !== 'clamav') failures.push('liveProviderProof.provider must be clamav');
           if (evidence.liveProviderProof?.providerIsReal !== true) failures.push('liveProviderProof.providerIsReal must be true');
           if (evidence.liveProviderProof?.scanStatus !== 'clean') failures.push('liveProviderProof.scanStatus must be clean');
-          if (evidence.liveProviderProof?.blockedIfNotClean !== true) failures.push('blockedIfNotClean must remain true');
+          if (evidence.liveProviderProof?.blockedIfNotClean !== false) failures.push('clean live verdict should not be blocked');
           if (evidence.acceptanceCriteria?.enterpriseUploadRequiresCleanScan !== true) failures.push('enterpriseUploadRequiresCleanScan must be true');
+          if (evidence.acceptanceCriteria?.scannerUnavailableBlocksUpload !== true) failures.push('scannerUnavailableBlocksUpload must be true');
+          if (evidence.acceptanceCriteria?.scannerTimeoutBlocksUpload !== true) failures.push('scannerTimeoutBlocksUpload must be true');
+          if (evidence.acceptanceCriteria?.scannerMalwareOrSuspiciousBlocksUpload !== true) failures.push('scannerMalwareOrSuspiciousBlocksUpload must be true');
           if (evidence.acceptanceCriteria?.liveProviderProofExists !== true) failures.push('liveProviderProofExists must be true');
           if (evidence.acceptanceCriteria?.p0RegisterMayBeUpdated !== true) failures.push('p0RegisterMayBeUpdated must be true');
           if (evidence.liveProviderProof?.providerResponseBodyPersisted !== false) failures.push('provider response body must not be persisted');
