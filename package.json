@@ -74,6 +74,7 @@
     "security:rls": "node scripts/security/check-rls.mjs && node scripts/security/audit-supabase-tenant-isolation.mjs && node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register && node scripts/security/check-p0-supabase-rls-evidence.mjs",
     "security:rls:live": "node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register && node scripts/security/check-p0-supabase-rls-evidence.mjs",
     "security:api-guards": "node scripts/security/check-api-guards.mjs",
+    "security:step-up": "node scripts/security/check-step-up.mjs",
     "security:protected-routes": "node scripts/security/check-protected-routes.mjs",
     "security:public-secrets": "node scripts/security/check-public-secrets.mjs",
     "security:production-secrets": "node scripts/security/check-production-secret-readiness.mjs",

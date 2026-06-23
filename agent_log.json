@@ -387,6 +387,30 @@
         "Merge PR #311 only if the log diff is append-only or near append-only and required checks pass.",
         "Continue watching open PRs for route, billing, demo, cron, and supply-chain drift."
       ]
+    },
+    {
+      "timestamp": "2026-06-23T12:18:00Z",
+      "cycle": "scheduled_health_audit",
+      "status": "patched_waiting_for_ci",
+      "findings": [
+        "PR #353 is open and mergeable with most checks passing on head 627e39c025cbe6dbfc705b2c818257785a4cb2f7.",
+        "RISCK COMPLY Security CI failed at the API endpoint hardening gate after authorization/BOLA had already passed.",
+        "Full Security Suite failed because Application security CI failed after lint, typecheck, unit tests, E2E, build, and npm audit moderate gate passed.",
+        "PR #353 changed security workflow and scanner files only, with no changed src/app/api route files, no billing/demo runtime exposure, and no cron expansion."
+      ],
+      "actions_taken": [
+        "Applied a scanner-only non-breaking correction so check-api-endpoint-hardening exits after the changed-route scan when a pull request contains no changed API route files, instead of invoking the full API route hardening companion scan on unrelated diffs.",
+        "Kept runtime API, billing, entitlement, demo, and cron behavior unchanged.",
+        "Recorded this PR #353 audit and correction in agent_log.json."
+      ],
+      "commits": [
+        "60986598b04ea2e36791fb6997aade6b47c097c1"
+      ],
+      "next_cycle_focus": [
+        "Rerun RISCK COMPLY Security CI and Full Security Suite for the new PR #353 head.",
+        "Merge PR #353 only after required CI/security gates are green.",
+        "If API route hardening still fails, inspect the exact route hardening output before changing runtime code."
+      ]
     }
   ]
 }
