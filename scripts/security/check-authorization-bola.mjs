@@ -14,6 +14,23 @@ const publicEndpointAllowlist = [
   /src\/app\/api\/ready\/route\.ts$/,
 ];
 
+const internalEndpointAllowlist = [
+  /src\/app\/api\/cron\/.*\/route\.(ts|js)$/,
+  /src\/app\/api\/internal\/.*\/route\.(ts|js)$/,
+  /src\/app\/api\/maintenance\/.*\/route\.(ts|js)$/,
+  /src\/app\/api\/intelligence\/refresh\/.*\/route\.(ts|js)$/,
+];
+
+const internalAuthGuardTokens = [
+  'isAuthorizedInternalCronRequest',
+  'isAuthorizedInternalMaintenanceRequest',
+  'HEALTHCHECK_TOKEN',
+  'CRON_SECRET',
+  'INTERNAL_CRON_SECRET',
+  'MAINTENANCE_SECRET',
+  'INTELLIGENCE_REFRESH_SECRET',
+];
+
 const resourceIdentifierPatterns = [
   /params\s*[:=]/,
   /\.params\b/,
@@ -27,6 +44,7 @@ const authGuardTokens = [
   'requireApiUser',
   'requireOrganizationContext',
   'supabase.auth.getUser',
+  ...internalAuthGuardTokens,
 ];
 
 const ownershipGuardTokens = [
@@ -91,6 +109,10 @@ function isPublicAllowlisted(path) {
   return publicEndpointAllowlist.some((pattern) => pattern.test(path));
 }
 
+function isInternalAllowlisted(path) {
+  return internalEndpointAllowlist.some((pattern) => pattern.test(path));
+}
+
 const routes = walk(apiRoot);
 const findings = [];
 
@@ -98,6 +120,13 @@ for (const route of routes) {
   const normalized = normalizePath(route);
   const source = readFileSync(route, 'utf8');
   if (isPublicAllowlisted(normalized)) continue;
+
+  if (isInternalAllowlisted(normalized)) {
+    if (!hasAny(source, internalAuthGuardTokens)) {
+      findings.push(`${normalized}: internal/cron route does not prove internal secret guard enforcement`);
+    }
+    continue;
+  }
 
   const handlesResourceId = hasAny(source, resourceIdentifierPatterns) || /\[[^\]]*id[^\]]*\]/i.test(normalized);
   const appearsAdminRoute = adminRoutePatterns.some((pattern) => pattern.test(normalized));
