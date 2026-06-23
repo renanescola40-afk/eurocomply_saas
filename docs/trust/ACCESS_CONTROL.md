@@ -4,7 +4,7 @@ Status: current access-control documentation for enterprise review. This documen
 
 ## Authentication
 
-EuroComply uses Supabase Auth for user sessions. Middleware checks authenticated state for non-public localized routes and redirects anonymous users to `/{locale}/login` with the original destination preserved in the `next` query parameter. Server-side helpers call Supabase `auth.getUser()` before sensitive user-specific behavior.
+Risck comply uses Supabase Auth for user sessions. Middleware checks authenticated state for non-public localized routes and redirects anonymous users to `/{locale}/login` with the original destination preserved in the `next` query parameter. Server-side helpers call Supabase `auth.getUser()` before sensitive user-specific behavior.
 
 ## Public and private routes
 
@@ -58,4 +58,4 @@ Enterprise SSO/SAML is planned but not currently available. Tenant-enforced MFA 
 
 ## Customer-safe answer
 
-Use: "EuroComply currently implements organization-scoped roles and permissions for owner, admin, member, and Trust Center RBAC-model editor/viewer access where flows use the shared RBAC helper, backed by server-side membership checks and Supabase RLS migrations. Some legacy server paths are still owner/admin/member-only and are tracked as migration gaps. Enterprise SSO/SAML and tenant-enforced MFA are roadmap items and must not be presented as available until implemented."
+Use: "Risck comply currently implements organization-scoped roles and permissions for owner, admin, member, and Trust Center RBAC-model editor/viewer access where flows use the shared RBAC helper, backed by server-side membership checks and Supabase RLS migrations. Some legacy server paths are still owner/admin/member-only and are tracked as migration gaps. Enterprise SSO/SAML and tenant-enforced MFA are roadmap items and must not be presented as available until implemented."
