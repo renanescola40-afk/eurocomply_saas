@@ -172,6 +172,8 @@ function evaluateRoute(filePath) {
       if (!hasAny(source, tokens)) failures.push(`${normalized}: ${rule.name} missing one of guard token group: ${tokens.join(' OR ')}`);
     }
   }
+
+  return failures;
 }
 
 const changedRoutes = changedApiRoutes();
@@ -184,28 +186,24 @@ const failures = routes.flatMap(evaluateRoute);
 console.log('EuroComply API guard coverage check');
 console.log('-----------------------------------');
 console.log(`Scanned ${routes.length} API route files.`);
-if (Array.isArray(changedRoutes) && changedRoutes.length === 0) console.log('No changed API route files detected in this pull request; full API guard scan is skipped for unrelated changes.');
 
-const changedRoutes = changedApiRoutes();
 if (Array.isArray(changedRoutes) && changedRoutes.length === 0) {
   console.log('No changed API route files detected in this pull request; skipping full API guard scan.');
   process.exit(0);
 }
 
-if (Array.isArray(changedRoutes)) {
-  console.log(`Detected ${changedRoutes.length} changed API route file(s); running route hardening scanner.`);
+if (failures.length > 0) {
+  console.error('Security guard coverage failures:');
+  for (const failure of failures) console.error(`- ${failure}`);
+  process.exitCode = 1;
 } else {
-  console.log('Running full API route hardening scanner.');
+  console.log('API guard coverage: ok');
 }
 
-if (Array.isArray(changedRoutes) && changedRoutes.length === 0) {
-  console.log('Skipped API route hardening subgate because no changed API route files were detected in this pull request.');
-} else {
-  const hardening = spawnSync(process.execPath, [join(process.cwd(), 'scripts/security/check-api-route-hardening.mjs')], {
-    stdio: 'inherit',
-  });
+const hardening = spawnSync(process.execPath, [join(process.cwd(), 'scripts/security/check-api-route-hardening.mjs')], {
+  stdio: 'inherit',
+});
 
-  if (hardening.status !== 0) {
-    process.exitCode = 1;
-  }
+if (hardening.status !== 0) {
+  process.exitCode = 1;
 }
