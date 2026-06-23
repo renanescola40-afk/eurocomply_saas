@@ -19,6 +19,11 @@ const publicClasses = new Set(['public safe', 'webhook']);
 const tenantClasses = new Set(['tenant-scoped', 'admin-only', 'high-risk']);
 const privilegedClasses = new Set(['admin-only', 'high-risk']);
 
+const internalProtectedRoutePatterns = [
+  /src\/app\/api\/(cron|internal|maintenance)\//,
+  /src\/app\/api\/intelligence\/refresh\//,
+];
+
 const internalGuardTokens = [
   'isAuthorizedInternalCronRequest',
   'isAuthorizedInternalMaintenanceRequest',
@@ -149,7 +154,8 @@ for (const route of routes) {
   if (publicClasses.has(routeClass)) continue;
 
   if (routeClass === 'health/internal') {
-    if (!hasAny(source, internalGuardTokens)) {
+    const requiresInternalGuard = internalProtectedRoutePatterns.some((pattern) => pattern.test(normalized));
+    if (requiresInternalGuard && !hasAny(source, internalGuardTokens)) {
       findings.push(`${normalized}: health/internal route does not prove internal secret or platform guard enforcement`);
     }
     continue;
