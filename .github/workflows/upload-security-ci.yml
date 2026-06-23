@@ -20,7 +20,13 @@ jobs:
   upload-security-ci:
     name: Upload scanner, tenant storage and fail-closed gates
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
+
+    services:
+      clamav:
+        image: clamav/clamav:stable
+        ports:
+          - 3310:3310
 
     steps:
       - name: Checkout repository
@@ -36,6 +42,67 @@ jobs:
 
       - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
+
+      - name: Wait for live ClamAV scanner
+        shell: bash
+        run: |
+          node <<'NODE'
+          import { createConnection } from 'node:net';
+
+          const host = '127.0.0.1';
+          const port = 3310;
+          const attempts = 90;
+          const delayMs = 5_000;
+
+          function sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          }
+
+          function pingClamd() {
+            return new Promise((resolve, reject) => {
+              const socket = createConnection({ host, port });
+              let response = '';
+              const timeout = setTimeout(() => {
+                socket.destroy();
+                reject(new Error('clamd ping timed out'));
+              }, 3_000);
+
+              socket.on('connect', () => socket.write('PING\n', 'utf8'));
+              socket.on('data', (chunk) => {
+                response += chunk.toString('utf8');
+                if (response.includes('PONG')) {
+                  clearTimeout(timeout);
+                  socket.destroy();
+                  resolve();
+                }
+              });
+              socket.on('error', (error) => {
+                clearTimeout(timeout);
+                reject(error);
+              });
+              socket.on('end', () => {
+                clearTimeout(timeout);
+                if (response.includes('PONG')) resolve();
+                else reject(new Error(`clamd ping ended without PONG: ${response.trim() || '<empty>'}`));
+              });
+            });
+          }
+
+          for (let attempt = 1; attempt <= attempts; attempt += 1) {
+            try {
+              await pingClamd();
+              console.log(`ClamAV scanner is ready on ${host}:${port}.`);
+              process.exit(0);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              console.log(`Waiting for ClamAV scanner (${attempt}/${attempts}): ${message}`);
+              await sleep(delayMs);
+            }
+          }
+
+          console.error(`ClamAV scanner did not become ready on ${host}:${port}.`);
+          process.exit(1);
+          NODE
 
       - name: Upload validation and tenant isolation static gate
         shell: bash
@@ -55,6 +122,54 @@ jobs:
           npm run security:upload-scanner:ci 2>&1 | tee upload-scanner-runtime-ci.log
           test "${PIPESTATUS[0]}" -eq 0
 
+      - name: Live ClamAV scanner proof and P0 evidence generation
+        shell: bash
+        env:
+          REQUIRE_MALWARE_SCAN_FOR_UPLOADS: 'true'
+          MALWARE_SCANNER_PROVIDER: clamav
+          MALWARE_SCANNER_CLAMAV_HOST: 127.0.0.1
+          MALWARE_SCANNER_CLAMAV_PORT: '3310'
+          MALWARE_SCANNER_TIMEOUT_MS: '30000'
+        run: |
+          npm run security:upload-scanner:runtime -- --update-register 2>&1 | tee upload-clamav-live-proof.log
+          test "${PIPESTATUS[0]}" -eq 0
+
+      - name: Validate live ClamAV evidence artifact
+        shell: bash
+        run: |
+          node <<'NODE'
+          import { readFileSync } from 'node:fs';
+
+          const evidencePath = 'docs/security/evidence/runtime/upload-malware-scan-validation.json';
+          const evidence = JSON.parse(readFileSync(evidencePath, 'utf8'));
+          const failures = [];
+
+          if (evidence.status !== 'Complete') failures.push('evidence.status must be Complete');
+          if (evidence.outcome !== 'passed') failures.push('evidence.outcome must be passed');
+          if (evidence.liveProviderProof?.status !== 'passed') failures.push('liveProviderProof.status must be passed');
+          if (evidence.liveProviderProof?.provider !== 'clamav') failures.push('liveProviderProof.provider must be clamav');
+          if (evidence.liveProviderProof?.providerIsReal !== true) failures.push('liveProviderProof.providerIsReal must be true');
+          if (evidence.liveProviderProof?.scanStatus !== 'clean') failures.push('liveProviderProof.scanStatus must be clean');
+          if (evidence.liveProviderProof?.blockedIfNotClean !== true) failures.push('blockedIfNotClean must remain true');
+          if (evidence.acceptanceCriteria?.enterpriseUploadRequiresCleanScan !== true) failures.push('enterpriseUploadRequiresCleanScan must be true');
+          if (evidence.acceptanceCriteria?.liveProviderProofExists !== true) failures.push('liveProviderProofExists must be true');
+          if (evidence.acceptanceCriteria?.p0RegisterMayBeUpdated !== true) failures.push('p0RegisterMayBeUpdated must be true');
+          if (evidence.liveProviderProof?.providerResponseBodyPersisted !== false) failures.push('provider response body must not be persisted');
+          if (evidence.liveProviderProof?.providerResponseMessagePersisted !== false) failures.push('provider response message must not be persisted');
+          if (!evidence.runtimeContext?.workflowRunUrl) failures.push('runtimeContext.workflowRunUrl must be present in GitHub Actions');
+
+          if (failures.length > 0) {
+            console.error('Upload live ClamAV evidence validation failed:');
+            for (const failure of failures) console.error(`- ${failure}`);
+            process.exit(1);
+          }
+
+          console.log('Upload live ClamAV evidence validation: ok');
+          NODE
+          node scripts/security/check-p0-runtime-evidence-register.mjs
+          node scripts/security/check-p0-runtime-evidence-files.mjs
+          git diff -- docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md docs/security/evidence/runtime/upload-malware-scan-validation.json > upload-clamav-live-proof.diff
+
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v7
@@ -64,5 +179,9 @@ jobs:
             upload-security.log
             upload-content-scan.log
             upload-scanner-runtime-ci.log
-          retention-days: 7
+            upload-clamav-live-proof.log
+            upload-clamav-live-proof.diff
+            docs/security/evidence/runtime/upload-malware-scan-validation.json
+            docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md
+          retention-days: 14
           if-no-files-found: warn
