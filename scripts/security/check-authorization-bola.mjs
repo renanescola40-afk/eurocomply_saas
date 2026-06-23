@@ -95,7 +95,6 @@ const rbacTokens = [
 const adminRoutePatterns = [
   /\/admin\//,
   /\/team\//,
-  /\/billing\//,
   /\/settings\//,
   /\/security\/settings\//,
 ];
