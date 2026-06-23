@@ -40,6 +40,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/team/members/remove/route.ts` | admin-only | Member removal; manage_team, rate limit, origin, audit required. |
 | `src/app/api/security/settings/route.ts` | admin-only | Security settings mutation; manage_settings, step-up and audit required. |
 | `src/app/api/security/step-up/challenge/route.ts` | high-risk | Step-up challenge; auth, tenant context, origin and rate limit required. |
+| `src/app/api/security/step-up/verify/route.ts` | high-risk | Step-up verification; auth, tenant context, origin, rate limit, provider verification and audit required. |
 | `src/app/api/documents/upload/route.ts` | high-risk | File upload; manage_documents, malware/content scan, tenant validation and origin/rate limits required. |
 | `src/app/api/documents/[id]/approval/route.ts` | high-risk | Resource mutation; fetch document and validate `organization_id` before update. |
 | `src/app/api/gdpr/export/route.ts` | high-risk | Export path; auth, tenant scope, plan/permission, audit and no-store required. |
