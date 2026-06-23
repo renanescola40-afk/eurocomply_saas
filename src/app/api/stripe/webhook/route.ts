@@ -1,6 +1,6 @@
 import { getStripeClient } from '@/lib/billing/stripe';
 import { reportError } from '@/lib/observability/report-error';
-import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { handleStripeWebhookEvent } from '@/server/billing/stripe-webhooks';
 import { noStoreJson } from '@/server/security/no-store';
@@ -8,12 +8,6 @@ import { noStoreJson } from '@/server/security/no-store';
 export const runtime = 'nodejs';
 
 export const MAX_STRIPE_WEBHOOK_BYTES = 1_000_000;
-
-function getWebhookRateLimitKey(request: Request) {
-  const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-  const realIp = request.headers.get('x-real-ip');
-  return `stripe-webhook:${forwardedFor ?? realIp ?? 'unknown'}`;
-}
 
 export function getStripeWebhookContentLength(request: Request) {
   const contentLength = request.headers.get('content-length');
@@ -39,9 +33,11 @@ export async function readBoundedStripeWebhookBody(request: Request) {
 
 export async function POST(request: Request) {
   const rateLimit = await checkDistributedRateLimit({
-    key: getWebhookRateLimitKey(request),
-    limit: 120,
-    windowMs: 60_000,
+    policy: 'webhook',
+    ip: getClientIpFromRequest(request),
+    userAgent: getUserAgentFromRequest(request),
+    action: 'stripe_webhook',
+    route: '/api/stripe/webhook',
   });
 
   if (!rateLimit.allowed) {
