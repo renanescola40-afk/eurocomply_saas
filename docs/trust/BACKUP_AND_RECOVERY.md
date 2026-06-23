@@ -4,7 +4,7 @@ Status: enterprise review note. This document describes intended recovery postur
 
 ## Current position
 
-EuroComply uses managed infrastructure providers. Database, storage and deployment backup behavior depends on the configured provider plans and project settings.
+Risck comply uses managed infrastructure providers. Database, storage and deployment backup behavior depends on the configured provider plans and project settings.
 
 ## Customer-safe commitments
 
@@ -21,4 +21,4 @@ EuroComply uses managed infrastructure providers. Database, storage and deployme
 
 ## Customer-safe answer
 
-EuroComply is designed to support managed backup and recovery workflows through its infrastructure providers. Tested restore evidence and contractual recovery targets must be confirmed before being shared as commitments.
+Risck comply is designed to support managed backup and recovery workflows through its infrastructure providers. Tested restore evidence and contractual recovery targets must be confirmed before being shared as commitments.

@@ -1,9 +1,9 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
@@ -12,7 +12,7 @@ import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
 
 const signupCopy = {
   en: {
-    title: 'Create your EuroComply workspace',
+    title: 'Create your Risck comply workspace',
     subtitle: 'Start organizing documents, vendors, risks and compliance tasks in one secure workspace.',
     google: 'Continue with Google',
     separator: 'or',
@@ -30,7 +30,7 @@ const signupCopy = {
     planHelp: 'This plan is stored with your signup so checkout/onboarding can continue with the right package.',
   },
   pt: {
-    title: 'Crie o seu workspace EuroComply',
+    title: 'Crie o seu workspace Risck comply',
     subtitle: 'Comece a organizar documentos, fornecedores, riscos e tarefas de compliance num workspace seguro.',
     google: 'Continuar com Google',
     separator: 'ou',
@@ -127,11 +127,11 @@ export default function SignupPage() {
 
       <div className="relative mx-auto flex min-h-screen max-w-md items-center px-5 py-10">
         <div className="w-full rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-7 shadow-2xl backdrop-blur-xl">
-          <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
-            <ShieldCheck className="h-6 w-6" />
+          <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black">
+            <Image src="/brand/risck-comply-icon.svg" alt="Risck comply" width={48} height={48} className="h-12 w-12 object-contain" priority />
           </div>
           <div className="text-center">
-            <p className="text-xs uppercase tracking-[0.28em] text-white/36">EuroComply</p>
+            <p className="text-xs uppercase tracking-[0.28em] text-white/36">Risck comply</p>
             <h1 className="mt-2 text-2xl font-semibold">{copy.title}</h1>
             <p className="mt-2 text-sm text-white/50">{copy.subtitle}</p>
           </div>

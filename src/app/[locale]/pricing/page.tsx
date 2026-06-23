@@ -22,14 +22,14 @@ const valueProof = [
 
 const trustProof = [
   ['Trust Center', 'Public security, data protection, subprocessor and procurement materials are available before a sales call.'],
-  ['Honest claims', 'EuroComply does not claim SOC 2, ISO 27001, completed pentesting or tested backup restore without evidence.'],
-  ['Enterprise packet', 'Buyer responses use implemented / evidence pending / designed to support / planned status labels.'],
+  ['Evidence packet', 'Buyer responses use implemented, evidence pending, designed to support and planned status labels.'],
+  ['Operational clarity', 'Teams can compare pricing, limits and readiness materials before procurement conversations.'],
 ];
 
 const billingFaqs = [
   {
     question: 'Why publish prices when larger GRC tools ask for a demo?',
-    answer: 'EuroComply is designed for European SaaS, fintech and B2B teams that need a clear entry point before enterprise procurement. Larger rollouts can still use custom Enterprise packaging.',
+    answer: 'Risck comply is designed for European SaaS, fintech and B2B teams that need a clear entry point before enterprise procurement. Larger rollouts can still use custom Enterprise packaging.',
   },
   {
     question: 'Can we change plans later?',
@@ -63,7 +63,7 @@ export default async function PricingPage({ params }: Props) {
     <main className="min-h-screen bg-[#05060a] text-white">
       <header className="border-b border-white/10 bg-[#05060a]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link href={`/${locale}`} className="text-lg font-bold tracking-tight">EuroComply</Link>
+          <Link href={`/${locale}`} className="text-lg font-bold tracking-tight">Risck comply</Link>
           <nav className="flex items-center gap-2 text-sm">
             <Link href={`/${locale}/trust`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Trust Center</Link>
             <Link href={`/${locale}/login`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Sign in</Link>
@@ -82,7 +82,7 @@ export default async function PricingPage({ params }: Props) {
               Start like a startup. Scale like a regulated company.
             </h1>
             <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
-              EuroComply gives European teams a clear path from first compliance workspace to board-ready reporting and enterprise controls — without forcing every buyer into a sales call.
+              Risck comply gives European teams a clear path from first compliance workspace to board-ready reporting and enterprise controls.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href={`/${locale}/signup?plan=professional`} className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">

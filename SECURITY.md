@@ -1,6 +1,6 @@
 # Security Policy
 
-EuroComply is a European B2B compliance SaaS. Security reports are taken seriously and should be handled privately.
+Risck comply is a European B2B compliance SaaS. Security reports are taken seriously and should be handled privately.
 
 ## Supported versions
 

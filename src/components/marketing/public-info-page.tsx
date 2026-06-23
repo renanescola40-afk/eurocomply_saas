@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { PublicFooter } from './public-footer';
 import { locales, type Locale } from '@/lib/i18n/routing';
@@ -35,7 +36,7 @@ const pageContent = {
   trust: {
     eyebrow: 'Trust Center',
     title: 'Security and compliance transparency without compliance washing.',
-    summary: 'EuroComply keeps security, compliance and operational assurance information reachable before procurement or customer review cycles begin.',
+    summary: 'Risck comply keeps security, compliance and operational assurance information reachable before procurement or customer review cycles begin.',
     primaryCta: 'Review security',
     secondaryCta: 'See pricing',
     sections: [commonSections.evidence, commonSections.security, commonSections.operations],
@@ -49,7 +50,7 @@ const pageContent = {
     sections: [
       commonSections.security,
       { title: 'RBAC boundaries', body: 'Owner, admin, editor, member and viewer roles map to explicit permissions in the server-side RBAC module.' },
-      { title: 'No unsupported claims', body: 'EuroComply does not currently claim SOC 2, ISO 27001 certification or completed third-party penetration testing.' },
+      { title: 'No unsupported claims', body: 'Risck comply does not currently claim SOC 2, ISO 27001 certification or completed third-party penetration testing.' },
     ],
   },
   compliance: {
@@ -63,7 +64,7 @@ const pageContent = {
   resources: {
     eyebrow: 'Resources',
     title: 'Practical guidance for operating compliance without route chaos.',
-    summary: 'Use EuroComply to turn security questionnaires, reports, risks and audit evidence into repeatable operating workflows.',
+    summary: 'Use Risck comply to turn security questionnaires, reports, risks and audit evidence into repeatable operating workflows.',
     primaryCta: 'Open trust center',
     secondaryCta: 'See pricing',
     sections: [
@@ -75,7 +76,7 @@ const pageContent = {
   faq: {
     eyebrow: 'FAQ',
     title: 'Frequently asked trust, route and billing questions.',
-    summary: 'Quick answers for visitors, buyers and workspace operators evaluating EuroComply.',
+    summary: 'Quick answers for visitors, buyers and workspace operators evaluating Risck comply.',
     primaryCta: 'View pricing',
     secondaryCta: 'Open trust center',
     sections: [
@@ -85,16 +86,16 @@ const pageContent = {
     ],
   },
   about: {
-    eyebrow: 'About EuroComply',
+    eyebrow: 'About Risck comply',
     title: 'A compliance operating system for teams that ship fast.',
-    summary: 'EuroComply is built for European SaaS, fintech and B2B teams that need visible evidence, clear roles and reliable customer-review workflows.',
+    summary: 'Risck comply is built for European SaaS, fintech and B2B teams that need visible evidence, clear roles and reliable customer-review workflows.',
     primaryCta: 'Explore trust',
     secondaryCta: 'See pricing',
     sections: [commonSections.evidence, commonSections.operations, commonSections.security],
   },
   contact: {
     eyebrow: 'Contact',
-    title: 'Talk to the EuroComply team.',
+    title: 'Talk to the Risck comply team.',
     summary: 'Use the public contact path for procurement, security review, support or partnership questions.',
     primaryCta: 'Email contact',
     secondaryCta: 'View trust center',
@@ -115,14 +116,14 @@ const pageContent = {
   privacy: {
     eyebrow: 'Privacy',
     title: 'Privacy information for compliance workspaces.',
-    summary: 'EuroComply keeps privacy, processing and subprocessor information accessible from public routes across supported locales.',
+    summary: 'Risck comply keeps privacy, processing and subprocessor information accessible from public routes across supported locales.',
     primaryCta: 'Data processing',
     secondaryCta: 'Subprocessors',
     sections: [commonSections.operations, commonSections.security, commonSections.evidence],
   },
   terms: {
     eyebrow: 'Terms',
-    title: 'Terms and acceptable use for EuroComply workspaces.',
+    title: 'Terms and acceptable use for Risck comply workspaces.',
     summary: 'Public terms stay discoverable before signup so customer and procurement journeys do not depend on private routes.',
     primaryCta: 'View pricing',
     secondaryCta: 'Contact team',
@@ -190,7 +191,9 @@ export function PublicInfoPage({ locale, pageKey }: { locale: string; pageKey: P
     <main className="min-h-screen bg-[#05060a] text-white">
       <header className="border-b border-white/10 bg-[#05060a]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link href={`/${activeLocale}`} className="text-lg font-bold tracking-tight">EuroComply</Link>
+          <Link href={`/${activeLocale}`} className="flex items-center" aria-label="Risck comply home">
+            <Image src="/brand/risck-comply-wordmark.svg" alt="Risck comply" width={160} height={40} className="h-9 w-auto object-contain" />
+          </Link>
           <nav className="flex items-center gap-2 text-sm">
             <Link href={`/${activeLocale}/pricing`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Pricing</Link>
             <Link href={`/${activeLocale}/trust`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Trust Center</Link>
@@ -218,7 +221,7 @@ export function PublicInfoPage({ locale, pageKey }: { locale: string; pageKey: P
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-6 px-6 py-16 md:grid-cols-3">
+      <section className="mx-auto grid max-w-7xl gap-5 px-6 py-16 md:grid-cols-3">
         {content.sections.map((section) => (
           <article key={section.title} className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-xl">
             <h2 className="text-xl font-semibold">{section.title}</h2>

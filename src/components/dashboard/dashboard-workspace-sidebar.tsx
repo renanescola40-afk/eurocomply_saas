@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { DashboardSummary } from '@/server/queries/dashboard';
 
@@ -75,9 +76,11 @@ export function DashboardWorkspaceSidebar({ summary, basePath }: DashboardWorksp
         <div className="absolute -bottom-12 left-8 h-28 w-28 rounded-full bg-emerald-400/15 blur-2xl" />
         <div className="relative">
           <div className="flex items-center gap-3">
-            <div className="animate-pulse-border flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-sm font-black text-slate-950 shadow-2xl">EC</div>
+            <div className="animate-pulse-border flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-black shadow-2xl">
+              <Image src="/brand/risck-comply-icon.svg" alt="Risck comply" width={44} height={44} className="h-11 w-11 object-contain" />
+            </div>
             <div>
-              <p className="text-sm font-bold leading-none">EuroComply OS</p>
+              <p className="text-sm font-bold leading-none">Risck comply OS</p>
               <p className="mt-1 text-xs text-slate-500">Premium B2B workspace</p>
             </div>
           </div>
