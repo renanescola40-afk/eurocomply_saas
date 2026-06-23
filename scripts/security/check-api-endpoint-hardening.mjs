@@ -80,7 +80,7 @@ const criticalEndpointPatterns = [
 const unsafeCorsPatterns = [
   /Access-Control-Allow-Origin['"]?\s*[:,]\s*['"]\*['"]/,
   /headers\.set\(['"]Access-Control-Allow-Origin['"]\s*,\s*['"]\*['"]\)/,
-  /cors\([^)]*origin\s*:\s*['"]\*['"]/,
+  /cors\([^)]*origin\s*:\s*['"]\*['"]/, 
 ];
 
 function changedApiRoutes() {
@@ -202,8 +202,12 @@ if (failures.length > 0) {
   console.log('API endpoint hardening: ok');
 }
 
-if (Array.isArray(changedRoutes) && changedRoutes.length === 0) {
-  console.log('Skipped API route hardening subgate because no changed API route files were detected in this pull request.');
+if (Array.isArray(changedRoutes)) {
+  if (changedRoutes.length === 0) {
+    console.log('Skipped API route hardening subgate because no changed API route files were detected in this pull request.');
+  } else {
+    console.log('Skipped full API route taxonomy subgate for pull request mode; changed API routes were checked above.');
+  }
 } else {
   const routeHardening = spawnSync(process.execPath, [join(root, 'scripts/security/check-api-route-hardening.mjs')], {
     stdio: 'inherit',
