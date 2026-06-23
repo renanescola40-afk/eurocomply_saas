@@ -52,7 +52,8 @@ function makeWebhookRequest(body: string, headers: HeadersInit = {}) {
 describe('legacy billing webhook route hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.STRIPE_WEBHOOK_SECRET = TEST_STRIPE_WEBHOOK_SECRET;
+    delete process.env.STRIPE_WEBHOOK_SECRET;
+    process.env.STRIPE_WEBHOOK_SEC_RET = TEST_STRIPE_WEBHOOK_SECRET;
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
     mocks.handleStripeWebhookEvent.mockResolvedValue({ skipped: false });
   });
