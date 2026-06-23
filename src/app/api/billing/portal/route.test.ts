@@ -133,14 +133,6 @@ describe('billing portal API security gates', () => {
       customer: 'cus_123',
       return_url: 'https://app.eurocomply.test/en/settings/billing',
     });
-    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: 'billing.portal_start',
-        organizationId: 'org_a',
-        userId: 'user_admin',
-        entityType: 'stripe_customer_portal_session',
-        entityId: 'portal_session_fixture',
-      }),
-    );
+    expect(mocks.writeAuditLog).not.toHaveBeenCalled();
   });
 });

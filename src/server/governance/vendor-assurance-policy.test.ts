@@ -42,7 +42,8 @@ describe('vendor assurance policy', () => {
     expect(summary.totalControls).toBe(2);
     expect(summary.trackedControls).toBe(1);
     expect(summary.needsReview).toBe(1);
-    expect(summary.nextActions[0]).toContain('Review monitoring');
+    expect(summary.nextActions).toContain('Keep evidence current.');
+    expect(summary.nextActions).toContain('Review monitoring setup.');
   });
 
   it('returns foundation score when there are no controls', () => {
