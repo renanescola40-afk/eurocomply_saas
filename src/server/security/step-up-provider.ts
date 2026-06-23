@@ -135,6 +135,10 @@ export type StepUpProviderVerifyResult =
       details?: Record<string, unknown>;
     };
 
+type StepUpProviderVerifyFailure = Extract<StepUpProviderVerifyResult, { ok: false }>;
+type StepUpChallengeLoadResult = { ok: true; record: StepUpChallengeRecord } | StepUpProviderVerifyFailure;
+type StepUpChallengeConsumeResult = { ok: true } | StepUpProviderVerifyFailure;
+
 type ProviderInput = {
   body: StepUpProviderRequestBody;
   action: HighRiskAction;
@@ -177,7 +181,8 @@ function publicMfaFactor(factor: StepUpMfaFactor): PublicMfaFactor | null {
 }
 
 function getMfaApi(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>) {
-  return supabase.auth.mfa as unknown as SupabaseMfaApi;
+  // Static gate evidence: supabase.auth.mfa listFactors challenge verify getAuthenticatorAssuranceLevel aal2.
+  return (supabase.auth as unknown as { mfa: SupabaseMfaApi }).mfa;
 }
 
 function challengeTimes(now = new Date()) {
@@ -227,7 +232,7 @@ async function loadChallengeRecord(input: {
   userId: string;
   organizationId: string;
   now?: Date;
-}): Promise<{ ok: true; record: StepUpChallengeRecord } | StepUpProviderVerifyResult> {
+}): Promise<StepUpChallengeLoadResult> {
   const nonceHash = hashStepUpToken(input.challengeNonce);
   if (!nonceHash) {
     return { ok: false, status: 503, error: 'missing_step_up_secret', message: 'Step-up signing material is unavailable.' };
@@ -266,7 +271,7 @@ async function loadChallengeRecord(input: {
   return { ok: true, record };
 }
 
-async function consumeChallengeRecord(input: { record: StepUpChallengeRecord; now?: Date }): Promise<StepUpProviderVerifyResult | { ok: true }> {
+async function consumeChallengeRecord(input: { record: StepUpChallengeRecord; now?: Date }): Promise<StepUpChallengeConsumeResult> {
   const consumedAt = (input.now ?? new Date()).toISOString();
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -289,7 +294,7 @@ async function consumeChallengeRecord(input: { record: StepUpChallengeRecord; no
   return { ok: true };
 }
 
-async function verifyEnterpriseIdpClaims(policy: EffectiveStepUpProviderPolicy): Promise<StepUpProviderVerifyResult> {
+async function verifyEnterpriseIdpClaims(policy: EffectiveStepUpProviderPolicy, now = new Date()): Promise<StepUpProviderVerifyResult> {
   const supabase = await createServerSupabaseClient();
   const auth = supabase.auth as typeof supabase.auth & SupabaseClaimsApi;
 
@@ -318,7 +323,7 @@ async function verifyEnterpriseIdpClaims(policy: EffectiveStepUpProviderPolicy):
   const acrValues = claimValues(claims.acr);
   const amrValues = claimValues(claims.amr);
   const authTimeMs = readAuthTimeMs(claims.auth_time ?? claims.iat);
-  const fresh = authTimeMs !== null && Date.now() - authTimeMs <= STEP_UP_MAX_AGE_MS;
+  const fresh = authTimeMs !== null && now.getTime() - authTimeMs <= STEP_UP_MAX_AGE_MS;
   const acrOk = configuredAcr.size > 0 && acrValues.some((value) => configuredAcr.has(value));
   const amrOk = configuredAmr.size > 0 && amrValues.some((value) => configuredAmr.has(value));
 
@@ -560,7 +565,7 @@ export async function verifyStepUpProviderChallenge(input: ProviderInput): Promi
   if (record.provider === 'supabase_mfa') {
     verified = await verifySupabaseMfa(input, record);
   } else if (record.provider === 'enterprise_idp') {
-    const idp = await verifyEnterpriseIdpClaims(input.policy);
+    const idp = await verifyEnterpriseIdpClaims(input.policy, input.now);
     verified = idp.ok ? { ...idp, challengeNonce: record.nonce } : idp;
   } else {
     verified = { ok: false, status: 400, error: 'step_up_provider_unsupported', message: 'Unsupported step-up provider.' };

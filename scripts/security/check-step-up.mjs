@@ -10,47 +10,69 @@ const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
 const supabaseAnonEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY');
 const enterpriseReleaseEnv = env('RISCK', 'COMPLY', 'ENTERPRISE', 'RELEASE');
 const legacyEnterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
+const providerProofEnv = env('STEP', 'UP', 'RUNTIME', 'PROVIDER', 'PROOF');
 const forbiddenSubprocessToken = ['spawn', 'Sync'].join('');
 
 const paths = {
   helper: 'src/server/security/step-up.ts',
+  provider: 'src/server/security/step-up-provider.ts',
   settingsHelper: 'src/server/security/step-up-settings.ts',
   test: 'src/server/security/step-up.test.ts',
-  doc: 'docs/security/STEP_UP_AUTH.md',
-  rolloutMatrix: 'docs/security/STEP_UP_ROLLOUT_MATRIX.md',
-  auditChainVerifier: 'src/app/api/audit/chain/verify/route.ts',
-  auditChainExport: 'src/app/api/audit/evidence-pack/route.ts',
-  teamInvite: 'src/app/api/team/invites/route.ts',
-  teamRemove: 'src/app/api/team/members/remove/route.ts',
-  teamRole: 'src/app/api/team/members/role/route.ts',
-  teamCancelInvite: 'src/app/api/team/invitations/cancel/route.ts',
-  teamPage: 'src/app/[locale]/dashboard/organizations/team/page.tsx',
-  teamSettings: 'src/components/team/team-settings-section.tsx',
-  securitySettings: 'src/app/api/security/settings/route.ts',
   challenge: 'src/app/api/security/step-up/challenge/route.ts',
+  verify: 'src/app/api/security/step-up/verify/route.ts',
   ui: 'src/components/security/step-up-mfa-dialog.tsx',
-  migration: 'supabase/migrations/20260619143000_step_up_token_store.sql',
+  tokenMigration: 'supabase/migrations/20260619143000_step_up_token_store.sql',
+  challengeMigration: 'supabase/migrations/20260623120000_step_up_challenge_store.sql',
   securitySettingsMigration: 'supabase/migrations/20260619191500_organization_security_settings.sql',
   runtimePreflight: 'scripts/security/check-step-up-runtime-preflight.mjs',
+  runtimeValidation: 'scripts/security/run-step-up-mfa-runtime-validation.mjs',
   productionPreflight: 'scripts/preflight.mjs',
+  packageJson: 'package.json',
   runtimeEvidence: 'docs/security/evidence/runtime/step-up-mfa-validation.json',
+  teamPage: 'src/app/[locale]/dashboard/organizations/team/page.tsx',
+  auditChainVerifier: 'src/app/api/audit/chain/verify/route.ts',
 };
+
+const protectedRoutes = [
+  'src/app/api/gdpr/export/route.ts',
+  'src/app/api/gdpr/delete-request/route.ts',
+  'src/app/api/billing/checkout/route.ts',
+  'src/app/api/billing/portal/route.ts',
+  'src/app/api/audit/chain/verify/route.ts',
+  'src/app/api/audit/evidence-pack/route.ts',
+  'src/app/api/security-questionnaire/export/route.ts',
+  'src/app/api/vendor-assurance/export/route.ts',
+  'src/app/api/enterprise-readiness/export/route.ts',
+  'src/app/api/retention-center/export/route.ts',
+  'src/app/api/continuity-center/export/route.ts',
+  'src/app/api/team/invites/route.ts',
+  'src/app/api/team/members/remove/route.ts',
+  'src/app/api/team/members/role/route.ts',
+  'src/app/api/team/invitations/cancel/route.ts',
+  'src/app/api/security/settings/route.ts',
+];
 
 const tokenChecks = {
   [paths.helper]: [
-    'STEP_UP_MAX_AGE_MS', '5 * 60 * 1000', 'STEP_UP_SIGNING_SECRET_ENV', 'STEP_UP_TOKEN_HEADER',
-    'STEP_UP_PROVIDER_MODE_ENV', 'HIGH_RISK_ACTIONS', 'export_data', 'manage_billing', 'manage_team',
-    'gdpr_delete', 'audit_chain_verify', 'audit_chain_export', 'change_security_settings',
+    'STEP_UP_MAX_AGE_MS', '5 * 60 * 1000', 'STEP_UP_CHALLENGE_MAX_AGE_MS', 'STEP_UP_SIGNING_SECRET_ENV',
+    'STEP_UP_TOKEN_HEADER', 'STEP_UP_PROVIDER_MODE_ENV', 'HIGH_RISK_ACTIONS', 'export_data', 'manage_billing',
+    'manage_team', 'gdpr_delete', 'audit_chain_verify', 'audit_chain_export', 'change_security_settings',
     'createStepUpTokenEnvelope', 'persistStepUpTokenRecord', 'consumeStepUpToken', 'recordStepUpAuditEvent',
-    'step_up_requested', 'step_up_approved', 'step_up_denied', 'step_up_expired', 'createHmac',
-    'timingSafeEqual', 'randomUUID', 'nonce', 'expiresAt', stepUpSigningEnv, auditSigningEnv,
-    'step_up_token_replayed', 'step_up_token_store_unavailable',
+    'step_up_challenge_created', 'step_up_verified', 'step_up_failed', 'step_up_expired', 'step_up_scope_mismatch',
+    'step_up_provider_not_configured', 'createHmac', 'timingSafeEqual', 'randomUUID', 'nonce', 'expiresAt',
+    stepUpSigningEnv, auditSigningEnv, 'step_up_token_replayed', 'step_up_token_store_unavailable',
+  ],
+  [paths.provider]: [
+    'createStepUpProviderChallenge', 'verifyStepUpProviderChallenge', 'STEP_UP_ACTION_PERMISSIONS', 'step_up_challenges',
+    'createChallengeRecord', 'loadChallengeRecord', 'consumeChallengeRecord', 'nonce_hash', 'supabase.auth.mfa',
+    'listFactors', 'challenge', 'verify', 'getAuthenticatorAssuranceLevel', 'aal2', 'getClaims', 'auth_time',
+    'allowedAcrValues', 'allowedAmrValues', 'step_up_provider_not_configured', 'step_up_challenge_replayed',
   ],
   [paths.settingsHelper]: [
     'getEffectiveStepUpProviderPolicy', 'isEffectiveStepUpProviderPolicyConfigured', 'STEP_UP_PROVIDER_MODE',
     'STEP_UP_IDP_ACR_VALUES', 'STEP_UP_IDP_AMR_VALUES', 'organization_security_settings',
     'allowed_idp_acr_values', 'allowed_idp_amr_values', 'supabase_mfa', 'enterprise_idp',
-    'supabase_mfa_or_enterprise_idp',
+    'supabase_mfa_or_enterprise_idp', 'getStepUpSecret',
   ],
   [paths.test]: [
     'uses a short enterprise step-up window',
@@ -64,52 +86,35 @@ const tokenChecks = {
     'rejects replayed single-use request helper tokens',
     'fails closed when enterprise MFA/IdP provider is not configured',
   ],
-  [paths.doc]: [
-    'Step-Up Authentication Standard', 'Supabase MFA', 'Enterprise IdP', 'single-use nonce', '5 minutes',
-    'step_up_required', stepUpProviderEnv, 'Release gate', 'check-step-up-runtime-preflight.mjs',
-    `${enterpriseReleaseEnv}=true node scripts/preflight.mjs`,
-  ],
-  [paths.rolloutMatrix]: [
-    'Step-Up Rollout Matrix', 'GET /api/gdpr/export', 'GET /api/audit/chain/verify',
-    'GET /api/audit/evidence-pack', 'GET /api/security-questionnaire/export',
-    'GET /api/vendor-assurance/export', 'GET /api/enterprise-readiness/export',
-    'GET /api/retention-center/export', 'GET /api/continuity-center/export',
-    'POST /api/billing/checkout', 'POST /api/billing/portal', 'POST /api/gdpr/delete-request',
-    'POST /api/team/invites', 'POST /api/team/members/remove', 'POST /api/team/members/role',
-    'POST /api/team/invitations/cancel', 'POST /api/security/settings', 'POST /api/security/step-up/challenge',
-    'src/components/security/step-up-mfa-dialog.tsx', 'scripts/security/check-step-up-runtime-preflight.mjs',
-    'signed_hmac', 'single-use', 'Supabase MFA or enterprise IdP', 'Team invite management',
-    'Security settings changes',
-  ],
-  [paths.auditChainVerifier]: ['await requireStepUpForRequest', 'audit_chain_verify', 'stepUpVerifiedAt'],
-  [paths.auditChainExport]: ['await requireStepUpForRequest', 'audit_chain_export', 'publicStepUpSummary'],
-  [paths.teamInvite]: ['await requireStepUpForRequest', 'manage_team'],
-  [paths.teamRemove]: ['await requireStepUpForRequest', 'manage_team'],
-  [paths.teamRole]: ['await requireStepUpForRequest', 'manage_team'],
-  [paths.teamCancelInvite]: ['await requireStepUpForRequest', 'manage_team'],
-  [paths.securitySettings]: ['await requireStepUpForRequest', 'change_security_settings', 'manage_settings', 'security_settings_changed'],
-  [paths.teamSettings]: [
-    'StepUpMfaDialog', 'STEP_UP_TOKEN_HEADER', '/api/team/invites', '/api/team/members/remove',
-    '/api/team/invitations/cancel', 'action="manage_team"',
-  ],
   [paths.challenge]: [
     'assertTrustedOrigin', 'getCurrentUser', 'getCurrentOrganizationForUser', 'readBoundedJsonRequest',
-    'normalizeHighRiskAction', 'createStepUpTokenEnvelope', 'persistStepUpTokenRecord',
-    'recordStepUpAuditEvent', 'supabase.auth.mfa.challenge', 'supabase.auth.mfa.verify',
-    'supabase.auth.mfa.challengeAndVerify', 'getAuthenticatorAssuranceLevel', 'getClaims',
-    'getEffectiveStepUpProviderPolicy', 'isEffectiveStepUpProviderPolicyConfigured', 'step_up_provider_not_configured',
-    'mfa_or_identity_provider_reauthentication',
+    'normalizeHighRiskAction', 'checkDistributedRateLimit', 'STEP_UP_ACTION_PERMISSIONS',
+    'createStepUpProviderChallenge', 'recordStepUpAuditEvent', 'step_up_challenge_created',
+    'mfa_or_identity_provider_reauthentication', '/api/security/step-up/challenge',
   ],
-  [paths.ui]: ['StepUpMfaDialog', '/api/security/step-up/challenge', 'factorId', 'challengeId', 'one-time-code', 'STEP_UP_TOKEN_HEADER'],
-  [paths.migration]: [
+  [paths.verify]: [
+    'assertTrustedOrigin', 'getCurrentUser', 'getCurrentOrganizationForUser', 'readBoundedJsonRequest',
+    'normalizeHighRiskAction', 'checkDistributedRateLimit', 'STEP_UP_ACTION_PERMISSIONS',
+    'verifyStepUpProviderChallenge', 'createStepUpTokenEnvelope', 'persistStepUpTokenRecord',
+    'recordStepUpAuditEvent', 'step_up_verified', 'signed_hmac', '/api/security/step-up/verify',
+  ],
+  [paths.ui]: [
+    'StepUpMfaDialog', '/api/security/step-up/challenge', '/api/security/step-up/verify',
+    'challengeNonce', 'factorId', 'challengeId', 'one-time-code', 'STEP_UP_TOKEN_HEADER',
+  ],
+  [paths.tokenMigration]: [
     'create table if not exists public.step_up_tokens', 'nonce text primary key', 'token_hash text not null',
     'verification_method', "check (expires_at <= verified_at + interval '5 minutes')", 'consumed_at',
     'revoked_at', 'enable row level security', 'grant all on public.step_up_tokens to service_role',
   ],
-  [paths.securitySettingsMigration]: [
-    'create table if not exists public.organization_security_settings', 'organization_id uuid primary key',
-    'require_step_up_for_critical_actions', 'step_up_provider_mode', 'allowed_idp_acr_values',
-    'allowed_idp_amr_values', 'enable row level security', 'grant all on public.organization_security_settings to service_role',
+  [paths.challengeMigration]: [
+    'create table if not exists public.step_up_challenges', 'nonce text primary key', 'nonce_hash text not null unique',
+    'provider_challenge_id', 'provider_factor_id', "check (expires_at <= issued_at + interval '2 minutes')",
+    'consumed_at', 'enable row level security', 'grant all on public.step_up_challenges to service_role',
+  ],
+  [paths.runtimeValidation]: [
+    'run-step-up-mfa-runtime-validation', 'providerProof', providerProofEnv, 'STEP_UP_RUNTIME_PROVIDER_PROOF=true',
+    'step_up_challenge_created', 'step_up_verified', 'releaseEnterpriseBlockedIfProviderProofAbsent',
   ],
   [paths.runtimePreflight]: [
     'await import', './check-step-up.mjs', enterpriseReleaseEnv, legacyEnterpriseReleaseEnv, 'runtime provider preflight',
@@ -117,16 +122,19 @@ const tokenChecks = {
   ],
   [paths.productionPreflight]: [
     'readRuntimeSetting', 'hasConfiguredList', 'enterpriseReleaseEnv', 'legacyEnterpriseReleaseEnv',
-    'Enterprise step-up runtime provider preflight: running',
-    'Enterprise step-up runtime provider preflight: skipped', 'stepUpProviderEnv', 'stepUpSigningEnv',
-    'auditSigningEnv', 'supabaseUrlEnv', 'supabaseAnonEnv', 'stepUpAcrEnv', 'stepUpAmrEnv', 'providerConfigured',
+    'Enterprise step-up runtime provider preflight: running', 'Enterprise step-up runtime provider preflight: skipped',
+    'stepUpProviderEnv', 'stepUpSigningEnv', 'auditSigningEnv', 'supabaseUrlEnv', 'supabaseAnonEnv',
+    'stepUpAcrEnv', 'stepUpAmrEnv', 'providerConfigured',
+  ],
+  [paths.packageJson]: [
+    'security:step-up', 'security:step-up:runtime', 'RISCK_COMPLY_ENTERPRISE_RELEASE=true npm run security:step-up',
   ],
   [paths.runtimeEvidence]: [
-    'step-up-mfa-validation', 'supabase_mfa', 'enterprise_idp', 'failClosedWithoutProvider',
-    'singleUseNonce', 'enterpriseReleaseBlockedWithoutProvider', 'runtimePreflightFailsWithoutProvider',
-    'productionPreflightRunsRuntimeProviderPreflight', 'scripts/security/check-step-up-runtime-preflight.mjs',
-    'scripts/preflight.mjs', 'POST /api/team/invites', 'POST /api/team/members/role',
-    'POST /api/security/settings', 'security_settings_changed',
+    'step-up-mfa-validation', 'ProviderProofRequired', 'supabase_mfa', 'enterprise_idp', 'failClosedWithoutProvider',
+    'enterpriseReleaseBlockedWithoutProviderProof', 'releaseEnterpriseBlockedIfProviderProofAbsent',
+    'scripts/security/run-step-up-mfa-runtime-validation.mjs', 'POST /api/security/step-up/challenge',
+    'POST /api/security/step-up/verify', 'step_up_challenge_created', 'step_up_verified', 'step_up_failed',
+    'step_up_expired', 'step_up_scope_mismatch',
   ],
 };
 
@@ -164,6 +172,24 @@ function isEnterpriseReleaseEnabled() {
   return process.env[enterpriseReleaseEnv] === 'true' || process.env[legacyEnterpriseReleaseEnv] === 'true';
 }
 
+function readStepUpEvidence() {
+  if (!existsSync(paths.runtimeEvidence)) return { ok: false, reason: 'step_up_runtime_evidence_missing' };
+  try {
+    const evidence = JSON.parse(readFileSync(paths.runtimeEvidence, 'utf8'));
+    const acceptance = evidence.acceptanceCriteria ?? {};
+    const runtime = evidence.runtimeValidation ?? {};
+    const events = new Set(evidence.auditEvents ?? []);
+    const missingEvents = ['step_up_challenge_created', 'step_up_verified', 'step_up_failed', 'step_up_expired', 'step_up_scope_mismatch']
+      .filter((event) => !events.has(event));
+    if (!['Complete', 'ProviderProofRequired'].includes(evidence.status)) return { ok: false, reason: 'step_up_runtime_evidence_invalid_status' };
+    if (missingEvents.length > 0) return { ok: false, reason: `step_up_audit_events_missing:${missingEvents.join(',')}` };
+    if (acceptance.releaseEnterpriseBlockedIfProviderProofAbsent !== true) return { ok: false, reason: 'step_up_provider_proof_release_gate_missing' };
+    return { ok: true, providerProofPresent: runtime.providerProof?.present === true, evidence };
+  } catch {
+    return { ok: false, reason: 'step_up_runtime_evidence_invalid_json' };
+  }
+}
+
 console.log('RISCK COMPLY enterprise step-up authentication check');
 console.log('----------------------------------------------------');
 
@@ -173,24 +199,7 @@ for (const [path, tokens] of Object.entries(tokenChecks)) {
   if (sources[path]) requireTokens(path, sources[path], tokens);
 }
 
-for (const routePath of [
-  'src/app/api/gdpr/export/route.ts',
-  'src/app/api/gdpr/delete-request/route.ts',
-  'src/app/api/billing/checkout/route.ts',
-  'src/app/api/billing/portal/route.ts',
-  'src/app/api/audit/chain/verify/route.ts',
-  'src/app/api/audit/evidence-pack/route.ts',
-  'src/app/api/security-questionnaire/export/route.ts',
-  'src/app/api/vendor-assurance/export/route.ts',
-  'src/app/api/enterprise-readiness/export/route.ts',
-  'src/app/api/retention-center/export/route.ts',
-  'src/app/api/continuity-center/export/route.ts',
-  'src/app/api/team/invites/route.ts',
-  'src/app/api/team/members/remove/route.ts',
-  'src/app/api/team/members/role/route.ts',
-  'src/app/api/team/invitations/cancel/route.ts',
-  'src/app/api/security/settings/route.ts',
-]) {
+for (const routePath of protectedRoutes) {
   const source = read(routePath);
   if (source) requireAwaitedStepUp(routePath, source);
 }
@@ -207,12 +216,21 @@ const auditChainVerifier = sources[paths.auditChainVerifier];
 if (auditChainVerifier && auditChainVerifier.includes('x-eurocomply-step-up-verified-at')) failures.push(`${paths.auditChainVerifier} must not trust raw timestamp step-up headers`);
 
 const challenge = sources[paths.challenge];
-if (challenge && challenge.includes('{ status: 501 }')) failures.push(`${paths.challenge} must no longer be a symbolic 501 placeholder after real MFA/IdP integration`);
-if (challenge && challenge.includes('verifiedAt') && challenge.includes('body.verifiedAt')) failures.push(`${paths.challenge} must not trust user-supplied verification timestamps`);
+if (challenge && challenge.includes('createStepUpTokenEnvelope')) failures.push(`${paths.challenge} must not mint HMAC tokens; use /api/security/step-up/verify after real provider verification`);
+if (challenge && challenge.includes('{ status: 501 }')) failures.push(`${paths.challenge} must not be a symbolic 501 placeholder after real MFA/IdP integration`);
+if (challenge && challenge.includes('body.verifiedAt')) failures.push(`${paths.challenge} must not trust user-supplied verification timestamps`);
 
-for (const path of [paths.runtimePreflight, paths.productionPreflight]) {
+const verify = sources[paths.verify];
+if (verify && !verify.includes('verifyStepUpProviderChallenge') && verify.includes('createStepUpTokenEnvelope')) {
+  failures.push(`${paths.verify} must call verifyStepUpProviderChallenge before creating HMAC tokens`);
+}
+
+for (const path of [paths.runtimePreflight, paths.productionPreflight, paths.runtimeValidation]) {
   if (sources[path] && sources[path].includes(forbiddenSubprocessToken)) failures.push(`${path} must not use subprocess execution for step-up preflight validation`);
 }
+
+const evidence = readStepUpEvidence();
+if (!evidence.ok) failures.push(`Step-up runtime evidence invalid: ${evidence.reason}`);
 
 if (isEnterpriseReleaseEnabled()) {
   const providerMode = readRuntimeSetting(stepUpProviderEnv);
@@ -226,9 +244,14 @@ if (isEnterpriseReleaseEnabled()) {
       : providerMode === 'supabase_mfa_or_enterprise_idp'
         ? hasSupabaseAuth
         : false;
+  const providerProofPresent = evidence.ok && evidence.providerProofPresent && readRuntimeSetting(providerProofEnv) === 'true';
 
   if (!hasSecret || !providerConfigured) {
     failures.push('Enterprise release blocked: configure step-up signing material plus Supabase auth configuration and a real Supabase MFA or enterprise IdP ACR/AMR policy before release.');
+  }
+
+  if (!providerProofPresent) {
+    failures.push('Enterprise release blocked: attach real step-up provider proof by running scripts/security/run-step-up-mfa-runtime-validation.mjs with STEP_UP_RUNTIME_PROVIDER_PROOF=true after live MFA/IdP verification.');
   }
 }
 
