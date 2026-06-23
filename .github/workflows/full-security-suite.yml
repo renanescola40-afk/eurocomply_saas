@@ -8,6 +8,7 @@ name: Full Security Suite
 # semgrep --config auto
 # gitleaks/gitleaks-action@v2
 # ossf/scorecard-action@v2.4.2
+# raven-actions/actionlint@v2
 
 on:
   workflow_dispatch:
