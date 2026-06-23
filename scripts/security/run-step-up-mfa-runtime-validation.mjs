@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// run-step-up-mfa-runtime-validation: writes redacted P0-MFA evidence and blocks enterprise release
+// unless a real Supabase MFA or enterprise IdP provider proof has been attached.
+
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
@@ -14,6 +17,7 @@ const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
 const supabaseAnonEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY');
 const enterpriseReleaseEnv = env('RISCK', 'COMPLY', 'ENTERPRISE', 'RELEASE');
 const legacyEnterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
+const providerProofEnv = env('STEP', 'UP', 'RUNTIME', 'PROVIDER', 'PROOF');
 
 const criticalFiles = [
   'src/server/security/step-up.ts',
@@ -132,7 +136,7 @@ function validateSources() {
 const sourceFailures = validateSources();
 const provider = providerConfigured();
 const enterpriseRelease = readRuntimeSetting(enterpriseReleaseEnv) === 'true' || readRuntimeSetting(legacyEnterpriseReleaseEnv) === 'true';
-const providerProofPresent = provider.configured && readRuntimeSetting('STEP_UP_RUNTIME_PROVIDER_PROOF') === 'true';
+const providerProofPresent = provider.configured && readRuntimeSetting(providerProofEnv) === 'true';
 const generatedAt = new Date().toISOString();
 
 const evidence = {
