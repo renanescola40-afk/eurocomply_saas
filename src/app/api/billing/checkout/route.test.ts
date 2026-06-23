@@ -79,13 +79,14 @@ vi.mock('@/server/security/step-up', () => ({
 
 import { POST } from './route';
 
-function buildRequest(body: unknown) {
+function buildRequest(body: unknown, headers: HeadersInit = {}) {
   return new Request('https://app.eurocomply.test/api/billing/checkout', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       origin: 'https://app.eurocomply.test',
       'x-eurocomply-step-up-token': 'step_up_token',
+      ...headers,
     },
     body: JSON.stringify(body),
   });
@@ -107,6 +108,38 @@ describe('billing checkout API security gates', () => {
     mocks.publicStepUpSummary.mockReturnValue({ verified: true });
     mocks.stripeCheckoutCreate.mockResolvedValue({ id: 'checkout_session_fixture', url: 'https://checkout.stripe.test/session-fixture' });
     mocks.writeAuditLog.mockResolvedValue(undefined);
+  });
+
+  it('blocks checkout without an authenticated user', async () => {
+    mocks.getCurrentUser.mockResolvedValue(null);
+
+    const response = await POST(buildRequest({ plan: 'business', locale: 'en' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body).toEqual({ error: 'unauthorized' });
+    expect(mocks.getCurrentOrganizationForUser).not.toHaveBeenCalled();
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+    expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+  });
+
+  it('blocks checkout without manage_billing permission', async () => {
+    mocks.assertOrganizationPermission.mockResolvedValue({
+      ok: false,
+      error: 'permission_denied',
+      status: 403,
+      message: 'Permission denied.',
+    });
+
+    const response = await POST(buildRequest({ plan: 'business', locale: 'en' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body).toEqual({ error: 'permission_denied' });
+    expect(mocks.assertTrustedOrigin).not.toHaveBeenCalled();
+    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+    expect(mocks.writeAuditLog).not.toHaveBeenCalled();
   });
 
   it('blocks checkout without a valid step-up token', async () => {
@@ -159,6 +192,19 @@ describe('billing checkout API security gates', () => {
         }),
       }),
     );
-    expect(mocks.writeAuditLog).not.toHaveBeenCalled();
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'checkout_created',
+        organizationId: 'org_a',
+        userId: 'user_admin',
+        entityType: 'stripe_checkout_session',
+        entityId: 'checkout_session_fixture',
+        metadata: expect.objectContaining({
+          plan: 'business',
+          rbacPermission: 'manage_billing',
+          trustedOriginRequired: true,
+        }),
+      }),
+    );
   });
 });
