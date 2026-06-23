@@ -36,6 +36,11 @@ type SubscriptionWithPeriod = Stripe.Subscription & {
   };
 };
 
+type StripeObjectWithMetadata = {
+  id?: string | null;
+  metadata?: StripeMetadata;
+};
+
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 }
@@ -92,15 +97,52 @@ function stripeEventCreatedAt(event: Stripe.Event) {
 
 function sanitizeWebhookFailure(error: unknown) {
   const message = error instanceof Error ? error.message : 'unknown_error';
-  return message.slice(0, 500);
+  return message
+    .replace(/\b(?:sk|rk|pk|whsec|cs|sess)_[A-Za-z0-9_=-]+\b/g, '[redacted]')
+    .replace(/Bearer\s+[^\s]+/gi, 'Bearer [redacted]')
+    .slice(0, 500);
 }
 
 export function isSupportedStripeWebhookEvent(eventType: string) {
   return SUPPORTED_STRIPE_WEBHOOK_EVENTS.has(eventType);
 }
 
+export function getStripeEventAuditContext(event: Stripe.Event) {
+  const object = event.data.object as StripeObjectWithMetadata;
+  const metadata = object?.metadata;
+
+  return {
+    organizationId: getOrganizationIdFromMetadata(metadata),
+    actorUserId: getActorUserIdFromMetadata(metadata),
+    objectId: getStripeObjectId(object),
+  };
+}
+
+async function recordStripeWebhookReplayAudit(event: Stripe.Event) {
+  const context = getStripeEventAuditContext(event);
+
+  try {
+    await writeAuditLog({
+      action: 'webhook_replayed',
+      organizationId: context.organizationId,
+      userId: context.actorUserId,
+      entityType: 'stripe_webhook_event',
+      entityId: event.id,
+      metadata: {
+        stripeEventId: event.id,
+        stripeEventType: event.type,
+        livemode: event.livemode,
+        objectId: context.objectId ?? null,
+      },
+    });
+  } catch (error) {
+    reportError(error, { area: 'stripe_webhook_replay_audit', stripeEventId: event.id });
+  }
+}
+
 export async function claimStripeEventForProcessing(event: Stripe.Event) {
   const supabase = createAdminClient();
+  const auditContext = getStripeEventAuditContext(event);
   const { error } = await supabase.from('stripe_events_processed').insert({
     id: event.id,
     type: event.type,
@@ -108,6 +150,7 @@ export async function claimStripeEventForProcessing(event: Stripe.Event) {
     stripe_created_at: stripeEventCreatedAt(event),
     livemode: event.livemode,
     api_version: event.api_version ?? null,
+    organization_id: auditContext.organizationId,
     payload: event as unknown as Record<string, unknown>,
   });
 
@@ -137,6 +180,7 @@ export async function claimStripeEventForProcessing(event: Stripe.Event) {
       stripe_created_at: stripeEventCreatedAt(event),
       livemode: event.livemode,
       api_version: event.api_version ?? null,
+      organization_id: auditContext.organizationId,
       payload: event as unknown as Record<string, unknown>,
     })
     .eq('id', event.id)
@@ -151,9 +195,10 @@ export async function claimStripeEventForProcessing(event: Stripe.Event) {
 
 export async function markStripeEventProcessed(event: Stripe.Event) {
   const supabase = createAdminClient();
+  const auditContext = getStripeEventAuditContext(event);
   const { error } = await supabase
     .from('stripe_events_processed')
-    .update({ status: 'processed', processed_at: new Date().toISOString(), error: null })
+    .update({ status: 'processed', processed_at: new Date().toISOString(), organization_id: auditContext.organizationId, error: null })
     .eq('id', event.id);
 
   if (error) throw error;
@@ -161,9 +206,10 @@ export async function markStripeEventProcessed(event: Stripe.Event) {
 
 export async function markStripeEventFailed(event: Stripe.Event, error: unknown) {
   const supabase = createAdminClient();
+  const auditContext = getStripeEventAuditContext(event);
   const { error: updateError } = await supabase
     .from('stripe_events_processed')
-    .update({ status: 'failed', failed_at: new Date().toISOString(), error: sanitizeWebhookFailure(error) })
+    .update({ status: 'failed', failed_at: new Date().toISOString(), organization_id: auditContext.organizationId, error: sanitizeWebhookFailure(error) })
     .eq('id', event.id);
 
   if (updateError) {
@@ -236,7 +282,7 @@ async function validateOrganizationStripeBinding({
 }
 
 async function recordBillingWebhookAudit(input: {
-  action: 'billing.checkout_completed' | 'billing.subscription_created' | 'billing.subscription_updated' | 'billing.subscription_deleted' | 'billing.payment_failed';
+  action: string;
   organizationId: string;
   actorUserId?: string | null;
   entityType: string;
@@ -309,7 +355,7 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
   if (event) {
     const suffix = event.type.endsWith('.created') ? 'created' : event.type.endsWith('.deleted') ? 'deleted' : 'updated';
     await recordBillingWebhookAudit({
-      action: `billing.subscription_${suffix}` as 'billing.subscription_created' | 'billing.subscription_updated' | 'billing.subscription_deleted',
+      action: `billing.subscription_${suffix}`,
       organizationId,
       actorUserId: getActorUserIdFromMetadata(subscription.metadata),
       entityType: 'stripe_subscription',
@@ -319,6 +365,20 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
         plan,
         status: subscription.status,
         stripeCustomerId: customerId,
+      },
+    });
+    await recordBillingWebhookAudit({
+      action: 'subscription_synced',
+      organizationId,
+      actorUserId: getActorUserIdFromMetadata(subscription.metadata),
+      entityType: 'stripe_subscription',
+      entityId: subscription.id,
+      event,
+      metadata: {
+        plan,
+        status: subscription.status,
+        stripeCustomerId: customerId,
+        syncSource: 'stripe_webhook',
       },
     });
   }
@@ -479,6 +539,7 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<Str
   const claimed = await claimStripeEventForProcessing(event);
 
   if (!claimed) {
+    await recordStripeWebhookReplayAudit(event);
     return { skipped: true, duplicate: true };
   }
 
