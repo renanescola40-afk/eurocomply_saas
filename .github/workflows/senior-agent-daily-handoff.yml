@@ -2,108 +2,14 @@ name: Senior Agent Daily Handoff
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '30 17 * * 1-5'
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: read
-
-concurrency:
-  group: senior-agent-daily-handoff
-  cancel-in-progress: false
 
 jobs:
   handoff:
-    name: Create daily handoff
+    name: Manual handoff placeholder
     runs-on: ubuntu-latest
     steps:
-      - name: Create or update handoff issue
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const now = new Date();
-            const date = now.toISOString().slice(0, 10);
-            const title = `[Senior Agent Daily Handoff] ${date}`;
-
-            const labels = [
-              { name: 'senior-agent', color: '5319e7', description: 'Senior agent queue.' },
-              { name: 'daily-handoff', color: 'bfd4f2', description: 'Daily review summary.' },
-              { name: 'needs-owner', color: 'cc317c', description: 'Owner decision required.' },
-            ];
-
-            for (const label of labels) {
-              try {
-                await github.rest.issues.getLabel({ owner, repo, name: label.name });
-              } catch (error) {
-                if (error.status !== 404) throw error;
-                await github.rest.issues.createLabel({ owner, repo, ...label });
-              }
-            }
-
-            async function search(q) {
-              const { data } = await github.rest.search.issuesAndPullRequests({ q, per_page: 20 });
-              return data.items;
-            }
-
-            const openAgentIssues = await search(`repo:${owner}/${repo} is:issue is:open label:senior-agent`);
-            const readyIssues = await search(`repo:${owner}/${repo} is:issue is:open label:agent:ready`);
-            const blockedIssues = await search(`repo:${owner}/${repo} is:issue is:open label:agent:blocked`);
-            const needsOwner = await search(`repo:${owner}/${repo} is:issue is:open label:needs-owner`);
-            const openAgentPrs = await search(`repo:${owner}/${repo} is:pr is:open head:agent`);
-            const ciIssues = await search(`repo:${owner}/${repo} is:issue is:open label:type:ci`);
-
-            function list(items, emptyText) {
-              if (!items.length) return `- ${emptyText}`;
-              return items.map((item) => `- #${item.number} ${item.title}`).join('\n');
-            }
-
-            const blockerMap = new Map();
-            for (const item of [...blockedIssues, ...needsOwner]) blockerMap.set(item.number, item);
-            const blockers = [...blockerMap.values()];
-
-            const body = [
-              '<!-- senior-agent-daily-handoff -->',
-              `# Senior Agent Daily Handoff — ${date}`,
-              '',
-              'End-of-day review board for EuroComply senior-agent work.',
-              '',
-              '## Summary',
-              `- Open senior-agent issues: ${openAgentIssues.length}`,
-              `- Ready for agent work: ${readyIssues.length}`,
-              `- Blocked or needs owner: ${blockers.length}`,
-              `- Open agent PRs: ${openAgentPrs.length}`,
-              `- Open CI/workflow issues: ${ciIssues.length}`,
-              '',
-              '## Review first: blocked / owner decisions',
-              list(blockers, 'No blockers found.'),
-              '',
-              '## Open agent PRs',
-              list(openAgentPrs, 'No open agent PRs found.'),
-              '',
-              '## Ready queue',
-              list(readyIssues, 'No issues marked agent:ready.'),
-              '',
-              '## CI / workflow queue',
-              list(ciIssues, 'No CI/workflow issues found.'),
-              '',
-              '## End-of-day actions for Renan',
-              '- Review open agent PRs.',
-              '- Answer blockers labeled `needs-owner` or `agent:blocked`.',
-              '- Comment `/agent run` on the next issues you want handled.',
-              '- Merge only after required checks and owner review pass.',
-              '',
-              'This handoff organizes work. Code implementation still requires a connected coding-agent provider or runner.',
-            ].join('\n');
-
-            const existing = await search(`repo:${owner}/${repo} is:issue is:open in:title "${title}"`);
-            const current = existing.find((item) => item.title === title);
-
-            if (current) {
-              await github.rest.issues.update({ owner, repo, issue_number: current.number, body, labels: ['senior-agent', 'daily-handoff', 'needs-owner'] });
-            } else {
-              await github.rest.issues.create({ owner, repo, title, body, labels: ['senior-agent', 'daily-handoff', 'needs-owner'] });
-            }
+      - name: Explain status
+        run: echo "Senior Agent Daily Handoff is installed as a non-mutating placeholder until provider setup is complete."
