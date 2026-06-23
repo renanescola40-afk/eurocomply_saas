@@ -8,10 +8,10 @@ This document is the release owner record used to approve or reject a EuroComply
 - Commit SHA: `9c9aef8987f9b4a63a6a76914c2bec88100f6f90`
 - Date: 2026-06-23
 - Release owner: @renansilva2002 / renanescola40-afk
-- Incident owner: tbd
-- Rollback owner: tbd
-- Customer communication owner: tbd
-- Support owner: tbd
+- Incident owner: @renansilva2002 / renanescola40-afk (acting CTO / Security Lead)
+- Rollback owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
+- Customer communication owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
+- Support owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Security owner: @renansilva2002 / renanescola40-afk
 - Approver: tbd
 - Target environment: Production / enterprise candidate
@@ -20,7 +20,7 @@ This document is the release owner record used to approve or reject a EuroComply
 - Build log: GitHub Full Security Suite passed build on prior observed run; Vercel deployment still rate-limited/failed
 - Decision report: `docs/RELEASE_FINAL_READINESS_REPORT.md`
 
-`tbd` is intentionally used for missing owner/approver fields because release gate scripts reject it. Do not replace these values with prose; use named accountable owners only when they have formally accepted the role.
+`tbd` is intentionally used only for fields that are still missing and must continue to fail release gates. Owner fields above identify named accountable operational owners for incident, rollback, customer communication and support readiness. The approver remains `tbd`, so this record remains **No-Go** until final approval and all P0 runtime evidence are attached.
 
 ## Required checks
 
@@ -34,10 +34,10 @@ The release owner must confirm each item before approval.
 | Release evidence checklist completed | Complete for assessment | `docs/RELEASE_EVIDENCE_CHECKLIST.md` updated with No-Go evidence map |
 | Release candidate validation runbook reviewed | Partial | Required docs exist, but command execution evidence is missing |
 | Exceptions have owner and expiration date | Complete for current No-Go | Exceptions below have owner and expiry date |
-| Incident owner named | Missing | `tbd`; blocks Go |
-| Rollback owner named | Missing | `tbd`; blocks Go |
-| Customer communication owner named | Missing | `tbd`; blocks public/enterprise Go |
-| Support owner named | Missing | `tbd`; blocks public/enterprise Go |
+| Incident owner named | Assigned | @renansilva2002 / renanescola40-afk |
+| Rollback owner named | Assigned | @renansilva2002 / renanescola40-afk |
+| Customer communication owner named | Assigned | @renansilva2002 / renanescola40-afk |
+| Support owner named | Assigned | @renansilva2002 / renanescola40-afk |
 
 ### Build and CI
 
@@ -107,9 +107,9 @@ The release owner must confirm each item before approval.
 | Error monitoring reviewed | Complete as repository evidence | `docs/security/evidence/runtime/observability-readiness.json` |
 | Audit logging reviewed | Partial | Audit-chain evidence exists; target live verification missing |
 | Alerting runbook reviewed | Complete as repository evidence | `docs/operations/ALERTING.md` referenced by evidence |
-| Incident response owner confirmed | Missing | `tbd`; blocks Go |
-| Rollback owner confirmed | Missing | `tbd`; blocks Go |
-| Customer communication owner confirmed | Missing | `tbd`; blocks public/enterprise Go |
+| Incident response owner confirmed | Assigned | @renansilva2002 / renanescola40-afk |
+| Rollback owner confirmed | Assigned | @renansilva2002 / renanescola40-afk |
+| Customer communication owner confirmed | Assigned | @renansilva2002 / renanescola40-afk |
 
 ### External review
 
@@ -148,7 +148,6 @@ These exceptions are documented for remediation tracking only. They are not appr
 | External review | External review/pentest is Open/not started | @renansilva2002 / renanescola40-afk | 2026-07-06 | Complete real external review/pentest, triage findings, attach retest/risk acceptance evidence |
 | Stripe execution | Stripe evidence is implementation-complete but CI execution is pending | @renansilva2002 / renanescola40-afk | 2026-06-24 | Run focused Stripe tests and webhook gates in CI and attach logs |
 | Step-up runtime | Real Supabase MFA / enterprise IdP runtime proof is missing | @renansilva2002 / renanescola40-afk | 2026-06-25 | Run runtime preflight with real provider configuration and attach redacted output |
-| Owners | Incident, rollback, support and customer communication owners are not signed | @renansilva2002 / renanescola40-afk | 2026-06-23 | Assign named owners and record approval in this file |
 | Previous known-good deployment | Rollback target is missing | @renansilva2002 / renanescola40-afk | 2026-06-23 | Attach previous known-good deployment URL/SHA and rollback trigger criteria |
 
 ## Rollback plan
@@ -167,11 +166,11 @@ Minimum rollback plan before Go:
 ## Final sign-off
 
 - Release owner: @renansilva2002 / renanescola40-afk
-- Incident owner: tbd
-- Rollback owner: tbd
-- Customer communication owner: tbd
-- Support owner: tbd
+- Incident owner: @renansilva2002 / renanescola40-afk (acting CTO / Security Lead)
+- Rollback owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
+- Customer communication owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
+- Support owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Security owner: @renansilva2002 / renanescola40-afk
 - Approver: tbd
 - Date: 2026-06-23
-- Notes: Release blocked by missing dedicated final validation bundle, Vercel deployment rate limit/failure, open RLS live validation, missing external review, missing owner sign-off, missing live provider evidence for enterprise MFA/IdP, and pending focused Stripe runtime execution.
+- Notes: Release blocked by missing dedicated final validation bundle, Vercel deployment rate limit/failure, open RLS live validation, missing external review, missing live provider evidence for enterprise MFA/IdP, missing previous known-good rollback target and pending focused Stripe runtime execution.
