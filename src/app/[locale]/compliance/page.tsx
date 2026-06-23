@@ -6,7 +6,7 @@ const copy = {
   en: {
     eyebrow: 'Compliance posture',
     title: 'Built for European compliance teams.',
-    intro: 'EuroComply helps companies organise evidence, responsibilities, regulatory deadlines and audit trails across European operations.',
+    intro: 'Risck comply helps companies organise evidence, responsibilities, regulatory deadlines and audit trails across European operations.',
     items: [
       ['GDPR-aligned workflows', 'Data subject exports, deletion request workflow and processor transparency are designed around EU privacy expectations.'],
       ['DORA, NIS2 and AI Act roadmap', 'Premium modules are prepared for regulated companies that need stronger operational resilience and governance controls.'],
@@ -20,7 +20,7 @@ const copy = {
   pt: {
     eyebrow: 'Postura de compliance',
     title: 'Construído para equipas europeias de compliance.',
-    intro: 'O EuroComply ajuda empresas a organizar evidências, responsabilidades, prazos regulatórios e trilhos de auditoria em operações europeias.',
+    intro: 'O Risck comply ajuda empresas a organizar evidências, responsabilidades, prazos regulatórios e trilhos de auditoria em operações europeias.',
     items: [
       ['Workflows alinhados com GDPR', 'Exportação de dados, pedidos de apagamento e transparência de subprocessadores foram desenhados para expectativas europeias de privacidade.'],
       ['Roadmap DORA, NIS2 e AI Act', 'Módulos premium estão preparados para empresas reguladas que precisam de resiliência operacional e governação mais forte.'],
@@ -34,7 +34,7 @@ const copy = {
   es: {
     eyebrow: 'Postura de compliance',
     title: 'Diseñado para equipos europeos de compliance.',
-    intro: 'EuroComply ayuda a organizar evidencias, responsabilidades, plazos regulatorios y trazas de auditoría en operaciones europeas.',
+    intro: 'Risck comply ayuda a organizar evidencias, responsabilidades, plazos regulatorios y trazas de auditoría en operaciones europeas.',
     items: [
       ['Flujos alineados con GDPR', 'Exportaciones de datos, solicitudes de supresión y transparencia de subencargados están diseñadas para expectativas europeas de privacidad.'],
       ['Roadmap DORA, NIS2 y AI Act', 'Módulos premium preparados para compañías reguladas que necesitan resiliencia operativa y gobierno más sólido.'],
@@ -48,7 +48,7 @@ const copy = {
   fr: {
     eyebrow: 'Posture de conformité',
     title: 'Conçu pour les équipes européennes de conformité.',
-    intro: 'EuroComply aide les entreprises à organiser preuves, responsabilités, échéances réglementaires et journaux d’audit dans leurs opérations européennes.',
+    intro: 'Risck comply aide les entreprises à organiser preuves, responsabilités, échéances réglementaires et journaux d’audit dans leurs opérations européennes.',
     items: [
       ['Processus alignés GDPR', 'Exports de données, demandes de suppression et transparence des sous-traitants sont pensés pour les attentes européennes de confidentialité.'],
       ['Feuille de route DORA, NIS2 et AI Act', 'Modules premium préparés pour les entreprises réglementées nécessitant résilience opérationnelle et gouvernance renforcée.'],
@@ -62,7 +62,7 @@ const copy = {
   it: {
     eyebrow: 'Postura di compliance',
     title: 'Progettato per team europei di compliance.',
-    intro: 'EuroComply aiuta le aziende a organizzare evidenze, responsabilità, scadenze normative e audit trail nelle operazioni europee.',
+    intro: 'Risck comply aiuta le aziende a organizzare evidenze, responsabilità, scadenze normative e audit trail nelle operazioni europee.',
     items: [
       ['Workflow allineati al GDPR', 'Export dei dati, richieste di cancellazione e trasparenza dei subprocessori sono progettati per le aspettative europee sulla privacy.'],
       ['Roadmap DORA, NIS2 e AI Act', 'Moduli premium preparati per aziende regolamentate che richiedono resilienza operativa e governance più forte.'],
@@ -76,7 +76,7 @@ const copy = {
   de: {
     eyebrow: 'Compliance-Positionierung',
     title: 'Entwickelt für europäische Compliance-Teams.',
-    intro: 'EuroComply hilft Unternehmen, Nachweise, Verantwortlichkeiten, regulatorische Fristen und Audit-Trails über europäische Abläufe hinweg zu organisieren.',
+    intro: 'Risck comply hilft Unternehmen, Nachweise, Verantwortlichkeiten, regulatorische Fristen und Audit-Trails über europäische Abläufe hinweg zu organisieren.',
     items: [
       ['GDPR-orientierte Workflows', 'Datenexporte, Löschanfragen und Transparenz zu Unterauftragsverarbeitern sind auf europäische Datenschutzanforderungen ausgelegt.'],
       ['Roadmap für DORA, NIS2 und AI Act', 'Premium-Module für regulierte Unternehmen mit Bedarf an operativer Resilienz und stärkerer Governance.'],
