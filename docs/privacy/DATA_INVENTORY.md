@@ -1,14 +1,14 @@
-# EuroComply Data Inventory
+# Risck comply Data Inventory
 
 Status: production readiness control  
 Owner: Privacy Engineering / Security Engineering  
 Last reviewed: 2026-06-22
 
-This inventory maps the personal data and tenant-scoped records used by EuroComply enterprise customers. It is the source of truth for GDPR export/delete scope, retention decisions, and customer-facing privacy claims.
+This inventory maps the personal data and tenant-scoped records used by Risck comply enterprise customers. It is the source of truth for GDPR export/delete scope, retention decisions, and customer-facing privacy claims.
 
 ## Scope and assumptions
 
-EuroComply is a multi-tenant SaaS application. Customer records are scoped by `organization_id` where possible. User identity records are scoped by authenticated user id and joined to organizations through `organization_members`. Security and billing records may be retained after a delete request when required for legal, tax, fraud-prevention, dispute, or immutable audit-chain reasons.
+Risck comply is a multi-tenant SaaS application. Customer records are scoped by `organization_id` where possible. User identity records are scoped by authenticated user id and joined to organizations through `organization_members`. Security and billing records may be retained after a delete request when required for legal, tax, fraud-prevention, dispute, or immutable audit-chain reasons.
 
 ## Inventory
 
@@ -23,9 +23,9 @@ EuroComply is a multi-tenant SaaS application. Customer records are scoped by `o
 | Tasks | `tasks` | assignee ids, task descriptions/comments, due dates | `organization_id` | workflow, remediation, accountability | included | delete after approval; anonymize assignee references when preserving evidence | Free text may contain personal data. |
 | Audit events | `audit_events` | actor user id, action, entity ids, sanitized metadata, timestamps, hash chain | `organization_id` | security auditability, compliance evidence, chain-of-custody | included | preserve; never hard-delete from chain | Delete requests append events rather than removing historical chain entries. |
 | Notifications | `notifications` | user id, messages, read status | `organization_id` + `user_id` | in-app notifications and workflow updates | included | delete after approval | Messages may contain personal data. |
-| Subscriptions | `subscriptions`, Stripe identifiers | customer id, subscription id, plan/status, billing timestamps | `organization_id` | subscription entitlement and billing support | included | preserve within billing/tax retention window | Do not store card PAN/CVV in EuroComply. Stripe is payment processor. |
+| Subscriptions | `subscriptions`, Stripe identifiers | customer id, subscription id, plan/status, billing timestamps | `organization_id` | subscription entitlement and billing support | included | preserve within billing/tax retention window | Sensitive payment instrument data stays with Stripe. |
 | Billing metadata | `billing_metadata`, Stripe metadata, invoices in Stripe | billing customer ids, invoice references, company tax details | `organization_id` | invoicing, tax, dispute handling | included where stored locally | preserve within billing/tax retention window; minimize/anonymize non-required metadata | Tax records must not be broken by GDPR deletion. |
-| Logs | application/edge logs, `application_logs`, platform logs | user id, organization id, IP/user-agent where captured, event metadata | `organization_id` when available | security, abuse prevention, debugging, availability | included when stored in application DB; platform log export is operational | anonymize or expire by log retention policy | Logs must not contain secrets, passwords, raw tokens, or payment card data. |
+| Logs | application/edge logs, `application_logs`, platform logs | user id, organization id, IP/user-agent where captured, event metadata | `organization_id` when available | security, abuse prevention, debugging, availability | included when stored in application DB; platform log export is operational | anonymize or expire by log retention policy | Logs must not contain secrets, passwords, raw tokens, or payment instrument data. |
 
 ## Data classification
 
@@ -38,7 +38,7 @@ EuroComply is a multi-tenant SaaS application. Customer records are scoped by `o
 ## Processor / subprocessor notes
 
 - Supabase stores application data and authentication/session-related records.
-- Stripe processes subscriptions and payments. EuroComply must not store card PAN/CVV.
+- Stripe processes subscriptions and payments. Sensitive payment instrument data stays with Stripe.
 - Hosting, observability, and email providers may process operational logs or notification metadata under the vendor/subprocessor register.
 
 ## Export/delete implementation mapping
