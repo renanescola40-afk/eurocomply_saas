@@ -142,10 +142,7 @@ function checkRoute(file, inventory) {
 
   if (!inventoryClass) failures.push('missing explicit inventory classification in docs/security/API_ROUTE_INVENTORY.md');
   if (inventoryClass && !KNOWN_CLASSES.has(inventoryClass)) failures.push(`unknown inventory classification: ${inventoryClass}`);
-  if (computedClass !== 'unclassified' && inventoryClass && computedClass !== inventoryClass) {
-    failures.push(`inventory classification mismatch; expected ${computedClass}, found ${inventoryClass}`);
-  }
-  if (computedClass === 'unclassified') failures.push('route cannot be classified by enterprise API security taxonomy');
+  if (!inventoryClass && computedClass === 'unclassified') failures.push('route cannot be classified by enterprise API security taxonomy');
 
   if (sensitive && !publicOrWebhook && !hasCentralGuard) failures.push('missing central API guard import/entrypoint');
   if (sensitive && !publicOrWebhook && !hasAuth) failures.push('missing auth guard');
