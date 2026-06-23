@@ -11,12 +11,12 @@ export default function AboutPage({ params }: { params: { locale: string } }) {
   return (
     <main className="min-h-screen bg-background">
       <section className="mx-auto max-w-5xl px-6 py-20">
-        <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">About EuroComply</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">About Risck comply</p>
         <h1 className="mt-4 max-w-4xl text-4xl font-bold tracking-tight md:text-6xl">
           Compliance operations for teams that need repeatable proof.
         </h1>
         <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
-          EuroComply helps growing European companies move compliance work out of scattered spreadsheets and into a secure operational workspace for tasks, documents, vendors, risks and executive reporting.
+          Risck comply helps growing European companies move compliance work out of scattered spreadsheets and into a secure operational workspace for tasks, documents, vendors, risks and executive reporting.
         </p>
       </section>
 
@@ -34,7 +34,7 @@ export default function AboutPage({ params }: { params: { locale: string } }) {
         <div className="rounded-3xl border bg-card p-8 md:p-10">
           <h2 className="text-3xl font-bold">Built for V1 buyers</h2>
           <p className="mt-4 leading-7 text-muted-foreground">
-            The product focuses on the workflows early customers actually need: clear ownership, evidence readiness, vendor review, risk visibility, billing control and printable executive reporting. It is not legal advice; it is the operating system around the work.
+            The product focuses on the workflows early customers actually need: clear ownership, evidence readiness, vendor review, risk visibility, billing control and printable executive reporting.
           </p>
         </div>
       </section>
