@@ -33,7 +33,7 @@ vi.mock('@/lib/security/rate-limit-response', () => ({
   rateLimitResponse: () => new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429 }),
 }));
 
-import { POST, STRIPE_WEBHOOK_TOLERANCE_SECONDS, getStripeWebhookContentLength, readBoundedStripeWebhookBody } from './route';
+import { POST, getStripeWebhookContentLength, readBoundedStripeWebhookBody } from './route';
 
 const TEST_STRIPE_WEBHOOK_SECRET = 'test_webhook_signing_secret';
 
@@ -102,7 +102,6 @@ describe('Stripe webhook route signature validation', () => {
       expect.any(String),
       't=1800000000,v1=bad',
       TEST_STRIPE_WEBHOOK_SECRET,
-      STRIPE_WEBHOOK_TOLERANCE_SECONDS,
     );
   });
 
