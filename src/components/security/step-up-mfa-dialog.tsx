@@ -25,8 +25,11 @@ type StepUpTokenResponse = {
   message?: string;
   factors?: StepUpFactor[];
   status?: string;
+  challengeNonce?: string;
   challengeId?: string;
   factorId?: string;
+  provider?: 'supabase_mfa' | 'enterprise_idp';
+  requiresCode?: boolean;
 };
 
 export const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
@@ -51,6 +54,17 @@ async function postStepUpChallenge(payload: Record<string, string>) {
   return { response, body };
 }
 
+async function postStepUpVerify(payload: Record<string, string>) {
+  const response = await fetch('/api/security/step-up/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(payload),
+  });
+  const body = (await response.json().catch(() => ({}))) as StepUpTokenResponse;
+  return { response, body };
+}
+
 export function StepUpMfaDialog({
   action,
   open,
@@ -61,8 +75,11 @@ export function StepUpMfaDialog({
 }: StepUpMfaDialogProps) {
   const [factors, setFactors] = useState<StepUpFactor[]>([]);
   const [factorId, setFactorId] = useState('');
+  const [challengeNonce, setChallengeNonce] = useState('');
   const [challengeId, setChallengeId] = useState('');
   const [code, setCode] = useState('');
+  const [provider, setProvider] = useState<'supabase_mfa' | 'enterprise_idp' | null>(null);
+  const [requiresCode, setRequiresCode] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -80,19 +97,25 @@ export function StepUpMfaDialog({
     setError(null);
     setMessage(null);
     setCode('');
+    setChallengeNonce('');
     setChallengeId('');
+    setProvider(null);
+    setRequiresCode(true);
 
     postStepUpChallenge({ action })
       .then(({ body }) => {
         if (cancelled) return;
-        if (body.token) {
-          onToken(body.token, body.expiresAt);
-          return;
-        }
+        if (body.challengeNonce) setChallengeNonce(body.challengeNonce);
+        if (body.provider) setProvider(body.provider);
+        if (typeof body.requiresCode === 'boolean') setRequiresCode(body.requiresCode);
         if (body.factors?.length) {
           setFactors(body.factors);
           setFactorId(body.factors[0]?.id ?? '');
           setMessage(body.message ?? 'Choose an MFA factor to continue.');
+          return;
+        }
+        if (body.challengeNonce && body.provider === 'enterprise_idp') {
+          setMessage(body.message ?? 'Reauthenticate with your enterprise IdP, then verify this session.');
           return;
         }
         setError(body.message ?? body.error ?? 'Step-up verification is not available.');
@@ -118,12 +141,16 @@ export function StepUpMfaDialog({
     setMessage(null);
 
     try {
-      const { body } = await postStepUpChallenge({ action, factorId });
+      const payload: Record<string, string> = { action, factorId };
+      if (challengeNonce) payload.challengeNonce = challengeNonce;
+      const { body } = await postStepUpChallenge(payload);
+      if (body.challengeNonce) setChallengeNonce(body.challengeNonce);
+      if (body.provider) setProvider(body.provider);
+      if (typeof body.requiresCode === 'boolean') setRequiresCode(body.requiresCode);
       if (body.challengeId) {
         setChallengeId(body.challengeId);
+        setFactorId(body.factorId ?? factorId);
         setMessage(body.message ?? 'Enter the MFA code for the selected factor.');
-      } else if (body.token) {
-        onToken(body.token, body.expiresAt);
       } else {
         setError(body.message ?? body.error ?? 'Could not issue MFA challenge.');
       }
@@ -134,23 +161,44 @@ export function StepUpMfaDialog({
     }
   }
 
+  async function submitVerification(payload: Record<string, string>) {
+    const { body } = await postStepUpVerify(payload);
+    if (body.token) {
+      onToken(body.token, body.expiresAt);
+    } else {
+      setError(body.message ?? body.error ?? 'Step-up verification failed.');
+    }
+  }
+
   async function handleVerify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!factorId || !code.trim()) return;
+    if (!challengeNonce) return;
+    if (requiresCode && (!factorId || !challengeId || !code.trim())) return;
     setLoading(true);
     setError(null);
 
     try {
-      const payload: Record<string, string> = { action, factorId, code: code.trim() };
+      const payload: Record<string, string> = { action, challengeNonce };
+      if (factorId) payload.factorId = factorId;
       if (challengeId) payload.challengeId = challengeId;
-      const { body } = await postStepUpChallenge(payload);
-      if (body.token) {
-        onToken(body.token, body.expiresAt);
-      } else {
-        setError(body.message ?? body.error ?? 'MFA verification failed.');
-      }
+      if (code.trim()) payload.code = code.trim();
+      await submitVerification(payload);
     } catch {
-      setError('MFA verification failed.');
+      setError('Step-up verification failed.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleVerifyEnterpriseSession() {
+    if (!challengeNonce) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      await submitVerification({ action, challengeNonce });
+    } catch {
+      setError('Enterprise step-up verification failed.');
     } finally {
       setLoading(false);
     }
@@ -211,6 +259,17 @@ export function StepUpMfaDialog({
                 disabled={loading}
               />
             </label>
+          ) : null}
+
+          {provider === 'enterprise_idp' && challengeNonce && !requiresCode ? (
+            <button
+              type="button"
+              className="w-full rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-slate-950"
+              onClick={handleVerifyEnterpriseSession}
+              disabled={loading}
+            >
+              {loading ? 'Checking session…' : 'Verify enterprise session'}
+            </button>
           ) : null}
 
           {message ? <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300">{message}</p> : null}
