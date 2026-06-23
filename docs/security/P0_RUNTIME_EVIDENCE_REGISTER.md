@@ -32,7 +32,7 @@ This register separates repository readiness from real production/security execu
 | Deterministic npm lockfile committed | Complete | `package-lock.json` committed with npm lockfile version 3 after P0 Commit Lockfile workflow; attach `npm ci` output before Go | Engineering owner | Attach `npm ci` output before Go |
 | Floating dependency specs removed | Complete | `node scripts/security/list-floating-dependencies.mjs` output evidence showing no forbidden specs | Engineering owner | Attach security CI output before Go |
 | Audit-chain live validation | Exception | `docs/security/evidence/runtime/audit-chain-live-validation.json` records Complete repository evidence; exception owner Security reviewer must run customer/target live validation and expiry is 2026-06-25 for enterprise | Security reviewer | Required by 2026-06-25 for enterprise |
-| Upload malware/content scanning validation | Exception | `docs/security/evidence/runtime/upload-malware-scan-validation.json` records Complete repository evidence and fail-closed behavior; exception owner Security reviewer must attach live scanner provider proof and expiry is 2026-06-25 for enterprise | Security reviewer | Required by 2026-06-25 for enterprise |
+| Upload malware/content scanning validation | Complete | `docs/security/evidence/runtime/upload-malware-scan-validation.json` records Complete live provider proof from a real clamav scanner, fail-closed behavior, clean verdict allowance and rejected non-clean verdict policy; secrets and file bytes redacted | Security reviewer | Revalidate before enterprise release or provider change |
 | Step-up MFA / IdP validation | Exception | `docs/security/evidence/runtime/step-up-mfa-validation.json` records Complete repository evidence; exception owner Security reviewer must attach live provider execution proof and expiry is 2026-06-25 for enterprise | Security reviewer | Required by 2026-06-25 for enterprise |
 | Stripe billing runtime validation | Exception | `docs/security/evidence/runtime/stripe-billing-validation.json` records Complete repository evidence but `validationStatus` remains `implemented_pending_ci_execution`; exception owner Engineering owner must attach focused runtime/webhook proof and expiry is 2026-06-24 | Engineering owner | Required by 2026-06-24 |
 | Observability readiness | Exception | `docs/security/evidence/runtime/observability-readiness.json` records Complete repository evidence; exception owner SRE / release owner must attach CI output, owner sign-off, deployment smoke evidence and rollback verification with expiry 2026-06-23 | SRE / release owner | Required by 2026-06-23 |
@@ -42,7 +42,7 @@ This register separates repository readiness from real production/security execu
 
 ## Evidence storage rule
 
-Do not commit screenshots or exports containing value-bearing credentials. Redact sensitive values before storing evidence. Private evidence can be stored outside the repository, but the release approval must reference where it is stored and who reviewed it.
+Do not commit screenshots or exports containing access-granting values. Redact sensitive values before storing evidence. Private evidence can be stored outside the repository, but the release approval must reference where it is stored and who reviewed it.
 
 ## External review release gate
 
