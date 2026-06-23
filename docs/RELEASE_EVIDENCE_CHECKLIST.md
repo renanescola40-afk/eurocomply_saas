@@ -2,120 +2,151 @@
 
 This checklist defines the evidence package that must be attached to a EuroComply release before promoting it beyond private beta. It complements `docs/RELEASE_CANDIDATE_VALIDATION.md` by focusing on artifacts that cannot be proven by static source checks alone.
 
-## Release identity
+## Current release assessment
 
-Record release version or tag, commit SHA, deployment target, deployment URL, release owner, approval date, rollback owner and customer communication owner.
+- Release name: EuroComply Final Release Readiness - 2026-06-22
+- Assessment date: 2026-06-22
+- Promoted commit assessed: `7794d552d44784f906451b308b367d30c06ecc4c`
+- Assessment branch: `release/final-readiness-2026-06-22`
+- Release owner: @renansilva2002 / renanescola40-afk
+- Security owner: @renansilva2002 / renanescola40-afk
+- Support owner: not approved / must be assigned before release
+- Target environment: production / enterprise candidate
+- Final decision: **No-Go**
+- Decision report: `docs/RELEASE_FINAL_READINESS_REPORT.md`
+
+## Release identity evidence
+
+| Evidence | Status | Attached evidence / location | Release decision impact |
+| --- | --- | --- | --- |
+| Release name | Complete | `EuroComply Final Release Readiness - 2026-06-22` | None |
+| Commit SHA | Complete | `7794d552d44784f906451b308b367d30c06ecc4c` | None |
+| Date | Complete | `2026-06-22` | None |
+| Release owner | Complete | @renansilva2002 / renanescola40-afk | None |
+| Approver | Missing | No independent approval recorded | Blocks Go |
+| Target environment | Partial | Production / enterprise candidate declared, but deployment URL is not proven | Blocks production / enterprise Go |
+| Deployment URL | Missing | No successful deployment URL attached; current commit status only shows Vercel failure target | Blocks Go |
+| Rollback plan | Partial | Runbook exists; previous known-good deployment not attached | Blocks Go |
+| Incident response owner | Missing | Not formally signed in approval record | Blocks Go |
+| Rollback owner | Missing | Not formally signed in approval record | Blocks Go |
+| Support owner | Missing | Not formally signed in approval record | Blocks public/enterprise Go |
+
+## Command validation evidence
+
+The following release validation commands were requested. They are **not marked as executed** because no preserved local or CI logs are attached for this release assessment and no GitHub Actions workflow run was available for the assessed merge commit.
+
+| Command | Status | Evidence | Owner | Required before Go |
+| --- | --- | --- | --- | --- |
+| `npm ci` | Missing evidence | No install log attached | Engineering owner | Yes |
+| `npm run lint` | Missing evidence | No lint log attached | Engineering owner | Yes |
+| `npm run typecheck` | Missing evidence | No typecheck log attached | Engineering owner | Yes |
+| `npm run test` | Missing evidence | No unit test log attached | Engineering owner | Yes |
+| `npm run test:e2e` | Missing evidence | No Playwright run/log attached | Engineering owner | Yes |
+| `npm run build` | Failed / missing log | Commit status shows Vercel failure; no successful build log attached | Platform owner | Yes |
+| `npm run security:ci` | Missing evidence | No security CI log attached | Security owner | Yes |
+| `npm run release:readiness` | Missing evidence | No release readiness log attached | Release owner | Yes |
 
 ## Build and CI evidence
 
-Attach CI run URL or logs, build output, deployment evidence, release approval note and confirmation that no required gate was skipped.
+| Evidence | Status | Attached evidence / location | Release decision impact |
+| --- | --- | --- | --- |
+| CI run URL | Missing | GitHub workflow runs for the assessed merge commit were not found | Blocks Go |
+| Build log | Missing / failed | Vercel commit status is `failure`; no successful build artifact/log attached | Blocks Go |
+| Deployment URL | Missing | No successful production/preview deployment URL attached | Blocks Go |
+| Required status checks | Partial | `docs/security/evidence/runtime/required-status-checks.json`; also resolve stale/conflicting `docs/security/evidence/runtime/branch-protection-required-checks.json` exception before Go | Blocks until current GitHub settings and required checks are revalidated |
+| Branch protection | Partial | `docs/security/evidence/runtime/branch-protection-main.json` says Complete; current admin revalidation still required before release | Blocks until revalidated |
+| High/critical vulnerability triage | Missing release artifact | `npm audit` output for the assessed commit is not attached | Blocks Go |
 
-## Production environment evidence
+## Production environment and secrets evidence
 
-Attach provider configuration evidence with values redacted, owner confirmation that sensitive settings are provider-managed, and smoke-test output for release-critical operational routes.
+| Evidence | Status | Attached evidence / location | Release decision impact |
+| --- | --- | --- | --- |
+| Secrets provider | Complete as inventory | `docs/security/evidence/runtime/production-secrets-provider-stores.json` | Values remain private; acceptable only with reviewer confirmation |
+| Environment variables | Partial | Provider names and variable names are inventoried with values redacted | Requires production preflight output before Go |
+| Production preflight | Missing evidence | No `npm run preflight` or readiness output attached | Blocks Go |
 
 ## Supply-chain evidence
 
-Attach lockfile evidence, deterministic install output, dependency audit output, triage notes and approved exception records.
+| Evidence | Status | Attached evidence / location | Release decision impact |
+| --- | --- | --- | --- |
+| Deterministic lockfile | Complete in register | `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md` | Requires `npm ci` log for assessed commit |
+| Floating dependency review | Complete in register | `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md` | Requires release command log before Go |
+| npm audit | Missing release artifact | No preserved `npm audit` or `security:npm-audit:all` output attached | Blocks Go |
 
 ## Supabase and RLS evidence
 
-Attach live RLS validation output, project identifier, tenant-isolation review notes and confirmation that service-role paths were reviewed separately from user-session paths.
+| Evidence | Status | Attached evidence / location | Release decision impact |
+| --- | --- | --- | --- |
+| RLS live validation | **Open / not run** | `docs/security/evidence/runtime/supabase-live-rls-validation.json` | **P0 blocker** |
+| Tenant A/B cross-tenant denial | Missing live evidence | Must be generated by `scripts/security/run-supabase-live-tenant-isolation.mjs --update-register` | Blocks public/enterprise Go |
+| Service-role path review | Missing live release artifact | Not attached for target environment | Blocks enterprise Go |
 
-## Audit and authorization evidence
+## Audit-chain evidence
 
-Attach evidence that critical authorization paths, role checks, audit event creation and audit listing are working in the target environment.
+| Evidence | Status | Attached evidence / location | Release decision impact |
+| --- | --- | --- | --- |
+| Audit-chain implementation and tests | Complete as repository evidence | `docs/security/evidence/runtime/audit-chain-live-validation.json` | Acceptable for implementation readiness |
+| Live production/customer-specific verification | Partial | Evidence notes a customer-specific live run still needs production Supabase credentials, signing material and step-up assertion | Blocks enterprise until live target evidence is attached |
+| Signing material | Partial | Required secrets inventoried in provider evidence; no runtime proof attached | Requires live preflight before Go |
 
-## Billing evidence
+## Upload content scanning evidence
 
-Attach checkout, portal and webhook validation evidence for the target environment. Billing changes should produce audit events and respect organization permissions.
+| Evidence | Status | Attached evidence / location | Release decision impact |
+| --- | --- | --- | --- |
+| Upload validation | Complete as repository evidence | `docs/security/evidence/runtime/upload-malware-scan-validation.json` | Acceptable for implementation readiness |
+| Enterprise fail-closed scanning | Complete as repository evidence | Same evidence records fail-closed behavior | Requires target scanner provider live proof before enterprise Go |
+| Real scanner provider | Partial | Provider variables inventoried; no live scanner run attached | Blocks enterprise until live provider evidence is attached |
 
-## Trust Center readiness
+## Stripe and billing evidence
 
-Attach evidence that the public Trust Center and Security pages exist, footer and commercial routes link to Trust Center material, critical docs exist in `docs/trust/`, responsible disclosure contact is present, and `npm run security:trust-package` passes.
+| Evidence | Status | Attached evidence / location | Release decision impact |
+| --- | --- | --- | --- |
+| Checkout / portal / webhook controls | Complete as repository evidence | `docs/security/evidence/runtime/stripe-billing-validation.json` | Good implementation evidence |
+| Stripe webhook signature validation | Complete as repository evidence | Same evidence records invalid signatures fail | Still requires release CI/test execution |
+| Stripe runtime test execution | Partial | Evidence `validationStatus` is `implemented_pending_ci_execution` | Blocks paid production until CI/test logs are attached |
 
-Required Trust Center artifacts:
+## Step-up / MFA / IdP evidence
 
-- `docs/trust/SECURITY_OVERVIEW.md`
-- `docs/trust/ARCHITECTURE_OVERVIEW.md`
-- `docs/trust/DATA_PROTECTION.md`
-- `docs/trust/ACCESS_CONTROL.md`
-- `docs/trust/ENCRYPTION.md`
-- `docs/trust/INCIDENT_RESPONSE.md`
-- `docs/trust/BACKUP_AND_RECOVERY.md`
-- `docs/trust/SUBPROCESSORS.md`
-- `docs/trust/SECURITY_FAQ.md`
-- `docs/trust/ENTERPRISE_PROCUREMENT_PACKET.md`
+| Evidence | Status | Attached evidence / location | Release decision impact |
+| --- | --- | --- | --- |
+| Step-up control implementation | Complete as repository evidence | `docs/security/evidence/runtime/step-up-mfa-validation.json` | Good implementation evidence |
+| Real MFA/IdP runtime execution | Partial | Evidence states live provider execution must run with real Supabase MFA or enterprise IdP credentials | Blocks enterprise Go until target-provider proof exists |
+| Fail-closed provider gate | Complete as repository evidence | Same evidence records fail-closed release gate | Requires preflight output before Go |
 
-## Claims guardrail evidence
+## Observability, incident response and rollback evidence
 
-Before release, confirm public pages and sales/procurement documents do not claim unavailable certifications, completed external reviews, tested disaster recovery, guaranteed RTO/RPO, 24/7 staffed monitoring, or other evidence-dependent controls. Use `designed to support` when a control is planned or requires customer/provider evidence.
-
-## Customer communication evidence
-
-Attach evidence for:
-
-- Customer communication owner assigned
-- Status page owner assigned or explicit exception recorded
-- Support owner assigned
-- Support macros or response guidance prepared
-- Security/compliance reviewer assigned for security, privacy, audit-chain, RLS, authorization, billing, or data integrity communications
-- SEV-1 and SEV-2 communication timing targets acknowledged
-- Customer communication plan reviewed before Go/No-Go
-
-Accepted evidence:
-
-- Completed `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md` review note
-- Release approval record naming the customer communication owner
-- Status page decision
-- Support readiness note
-- Customer notice draft, if applicable
-- Post-incident customer summary decision, if applicable
+| Evidence | Status | Attached evidence / location | Release decision impact |
+| --- | --- | --- | --- |
+| Observability implementation | Complete as repository evidence | `docs/security/evidence/runtime/observability-readiness.json` | Good implementation evidence |
+| CI output for observability gates | Missing | Evidence notes CI command output must be attached before production sign-off | Blocks Go |
+| Incident response owner | Missing final sign-off | Must be named in `docs/RELEASE_APPROVAL_RECORD.md` | Blocks Go |
+| Rollback owner | Missing final sign-off | Must be named in `docs/RELEASE_APPROVAL_RECORD.md` | Blocks Go |
+| Previous known-good deployment | Missing | Required by observability release gate | Blocks Go |
 
 ## External review evidence
 
-For public production or enterprise procurement, attach evidence for:
+| Evidence | Status | Attached evidence / location | Release decision impact |
+| --- | --- | --- | --- |
+| External security review / pentest | **Open / not started** | `docs/security/evidence/runtime/external-security-review-or-pentest.json` | **P0 enterprise blocker** |
+| Critical/high findings triage | Missing | No real report or triage exists | Blocks enterprise/public production |
+| Retest evidence | Missing | No report or retest record exists | Blocks enterprise |
 
-- External security review or pentest completed, or a clear deferral is disclosed for non-enterprise release only
-- Scope confirms auth, RBAC, tenant isolation, APIs, uploads, billing, audit chain, exports, GDPR delete, rate limiting, and webhooks
-- Test environment used seed data tenant A/B, accounts by role, Stripe test mode, Supabase test project, and scanner mock/real according to environment
-- Critical findings resolved or formally accepted
-- High findings resolved or formally accepted
-- Retest evidence attached where applicable
-- No critical finding has pending, failed, or missing retest evidence for enterprise release
+## Exceptions
 
-Accepted evidence:
+These exceptions document current gaps. They are **not release approvals** and do not permit public production or enterprise Go.
 
-- `docs/security/PENTEST_SCOPE.md`
-- `docs/security/PRE_PENTEST_CHECKLIST.md`
-- `docs/security/PENTEST_FINDINGS_TRIAGE.md`
-- `docs/security/PENTEST_RETEST_RECORD.md`
-- `docs/security/evidence/runtime/external-security-review-or-pentest.json`
-- Pentest report when available
-- External review report when available
-- Finding triage spreadsheet or markdown record
-- Retest confirmation
-- Risk acceptance sign-off
-- Customer-safe disclosure if external review has not been completed
-
-Enterprise evidence must pass:
-
-```bash
-npm run release:enterprise-readiness
-```
-
-The placeholder JSON is not evidence of completion and must remain `Open` until a real report exists.
+| Area | Exception | Owner | Expiry date | Mitigation | Release impact |
+| --- | --- | --- | --- | --- | --- |
+| CI/build | Full validation command logs are missing; Vercel status is failure | Engineering / Platform owner: @renansilva2002 / renanescola40-afk | 2026-06-23 | Run full command chain in CI, attach logs and successful deployment URL | P0 blocker |
+| RLS live | Supabase live tenant-isolation validation is Open/not run | Security owner: @renansilva2002 / renanescola40-afk | 2026-06-25 | Run live validation against target project and update runtime evidence | P0 blocker |
+| External review | External review/pentest evidence is Open/not started | Security owner: @renansilva2002 / renanescola40-afk | 2026-07-06 | Complete third-party review or formal external review package with triage/retest | P0 enterprise blocker |
+| Deployment | Successful deployment URL and previous known-good deployment are missing | Platform owner: @renansilva2002 / renanescola40-afk | 2026-06-23 | Restore Vercel build capacity, deploy assessed commit, attach build/deployment logs | P0 blocker |
+| Stripe execution | Stripe evidence is implementation-complete but pending CI execution | Billing owner: @renansilva2002 / renanescola40-afk | 2026-06-24 | Run focused billing/webhook tests and security gate in CI | P0 for paid production |
+| Step-up provider | Real MFA/IdP provider execution is not attached | Security owner: @renansilva2002 / renanescola40-afk | 2026-06-25 | Run runtime preflight with real Supabase MFA or IdP claims | P0 enterprise blocker |
+| Observability owners | Incident, rollback, support/customer communication owners are not signed | Release owner: @renansilva2002 / renanescola40-afk | 2026-06-23 | Fill approval record and attach runbook owner acknowledgements | P0 blocker |
 
 ## Release decision
 
-A release may be promoted only when every required evidence section is either:
+**Final decision: No-Go.**
 
-- Complete
-- Not applicable to the target release tier
-- Explicitly accepted as a documented risk by the release owner
-
-Private beta may accept more documented exceptions.
-
-Public production should not accept exceptions for build, CI, RLS, audit-chain integrity, billing correctness, customer communication ownership, or Trust Center claim accuracy.
-
-Enterprise release should not accept exceptions for missing external security review evidence, unresolved critical/high findings, or pending critical retests.
+Rationale: public production and enterprise releases are blocked by missing CI/build/deployment evidence, open Supabase live RLS validation, missing external review evidence, missing owner sign-off and missing preserved command outputs. Do not represent this release as enterprise-ready until `docs/RELEASE_FINAL_READINESS_REPORT.md` is updated with passing evidence and all P0 items are closed.

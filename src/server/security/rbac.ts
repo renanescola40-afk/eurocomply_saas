@@ -1,4 +1,3 @@
-import { createAdminClient } from '@/lib/supabase/admin';
 import { noStoreJson } from '@/server/security/no-store';
 
 export type OrganizationRole = 'owner' | 'admin' | 'editor' | 'viewer' | 'member';
@@ -176,6 +175,7 @@ async function recordRbacDeniedAuditEvent({
 }
 
 export async function getOrganizationMembership(userId: string, organizationId: string) {
+  const { createAdminClient } = await import('@/lib/supabase/admin');
   const supabase = createAdminClient();
 
   const { data, error } = await supabase

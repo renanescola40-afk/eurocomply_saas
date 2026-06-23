@@ -16,11 +16,11 @@ type TrustCopy = {
 };
 
 const baseCards: TrustCard[] = [
-  { title: 'Security overview', description: 'Authentication, RBAC, audit logs, monitoring posture and current non-claims.', href: '/security' },
-  { title: 'Architecture', description: 'Application stack, server-only operations, trust boundaries and data flow.', href: '/security' },
-  { title: 'Data protection', description: 'Data categories, retention posture, deletion/export support and DPA readiness.', href: '/data-processing' },
-  { title: 'Subprocessors', description: 'Provider register for hosting, database, billing, CI/CD and conditional services.', href: '/subprocessors' },
-  { title: 'Responsible disclosure', description: 'Private contact path for coordinated reports.', href: '/contact' },
+  { title: 'Overview', description: 'Current controls, operating model and known release limits.', href: '/security' },
+  { title: 'Architecture', description: 'Application stack, trust boundaries and data flow.', href: '/security' },
+  { title: 'Data protection', description: 'Data categories, retention posture and DPA readiness.', href: '/data-processing' },
+  { title: 'Providers', description: 'Hosting, database, billing, CI/CD and conditional services.', href: '/subprocessors' },
+  { title: 'Contact', description: 'Contact path for product, privacy and trust questions.', href: '/contact' },
 ];
 
 const TRUST_COPY: Record<SupportedLocale, TrustCopy> = {
@@ -38,13 +38,7 @@ const TRUST_COPY: Record<SupportedLocale, TrustCopy> = {
     description: 'O EuroComply publica controlos atuais, lacunas abertas e documentação pronta para procurement enterprise.',
     assurance: 'O EuroComply não faz claims externos de assurance neste momento. A plataforma publica controlos atuais, lacunas abertas e evidência de release para revisão enterprise.',
     resourceLabel: 'Abrir recurso',
-    cards: [
-      { title: 'Visão geral de segurança', description: 'Autenticação, RBAC, audit logs, monitorização e claims atuais.', href: '/security' },
-      { title: 'Arquitetura', description: 'Stack aplicacional, operações server-only, boundaries e fluxo de dados.', href: '/security' },
-      { title: 'Proteção de dados', description: 'Categorias de dados, retenção, export/delete e prontidão DPA.', href: '/data-processing' },
-      { title: 'Subprocessadores', description: 'Registo de hosting, base de dados, billing, CI/CD e serviços condicionais.', href: '/subprocessors' },
-      { title: 'Divulgação responsável', description: 'Contacto privado para reports coordenados.', href: '/contact' },
-    ],
+    cards: baseCards,
   },
   es: {
     eyebrow: 'Centro de Confianza',
