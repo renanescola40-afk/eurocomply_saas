@@ -42,3 +42,6 @@ as $$
   left join policy_counts on policy_counts.polrelid = live_tables.oid
   order by requested.table_name;
 $$;
+
+grant execute on function public.eurocomply_live_rls_inventory(text[]) to service_role;
+notify pgrst, 'reload schema';
