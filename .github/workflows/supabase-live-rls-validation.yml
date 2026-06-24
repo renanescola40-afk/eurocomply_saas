@@ -13,7 +13,7 @@ on:
         type: boolean
         default: true
       apply_migrations:
-        description: Apply the committed live RLS inventory helper migration before running the live validator
+        description: Apply the committed live RLS policy and inventory helper migrations before running the live validator
         required: true
         type: boolean
         default: true
@@ -53,14 +53,14 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund
           git checkout -- package-lock.json
 
-      - name: Apply live RLS inventory helper migration
+      - name: Apply live RLS policy and inventory helper migrations
         if: ${{ inputs.apply_migrations }}
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           if [ -z "${SUPABASE_DB_URL}" ]; then
             echo "SUPABASE_DB_URL is required when apply_migrations=true."
-            echo "Add the Supabase Postgres transaction pooler connection string as an environment/repository secret, or apply supabase/migrations/20260623120000_live_rls_validation_inventory.sql manually and rerun with apply_migrations=false."
+            echo "Add the Supabase Postgres transaction pooler connection string as an environment/repository secret, or apply the live RLS policy and inventory helper migrations manually and rerun with apply_migrations=false."
             exit 1
           fi
 
@@ -72,6 +72,9 @@ jobs:
 
           sudo apt-get update
           sudo apt-get install -y postgresql-client
+          psql "${SUPABASE_DB_URL}" \
+            --set=ON_ERROR_STOP=1 \
+            --file=supabase/migrations/20260619103000_complete_multi_tenant_rls_policies.sql
           psql "${SUPABASE_DB_URL}" \
             --set=ON_ERROR_STOP=1 \
             --file=supabase/migrations/20260623120000_live_rls_validation_inventory.sql
