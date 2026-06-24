@@ -1,0 +1,77 @@
+name: EuroComply Release Final Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_target:
+        description: Release target to validate
+        required: true
+        default: enterprise
+        type: choice
+        options:
+          - production
+          - enterprise
+      assessed_commit:
+        description: Optional commit SHA being assessed; defaults to workflow SHA
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-final-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  final-validation:
+    name: Generate final validation bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Record assessed commit
+        shell: bash
+        run: |
+          ASSESSED_COMMIT="${{ inputs.assessed_commit }}"
+          if [ -z "$ASSESSED_COMMIT" ]; then
+            ASSESSED_COMMIT="$GITHUB_SHA"
+          fi
+          echo "Assessed commit: $ASSESSED_COMMIT" | tee assessed-commit.txt
+          echo "ASSESSED_COMMIT=$ASSESSED_COMMIT" >> "$GITHUB_ENV"
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Run Day 1 release control-plane gate
+        run: node scripts/release/check-day1-release-control-plane.mjs
+
+      - name: Run final validation bundle
+        env:
+          RELEASE_TARGET: ${{ inputs.release_target }}
+        run: node scripts/release/run-final-validation.mjs
+
+      - name: Upload final validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-validation-${{ github.run_id }}
+          path: |
+            assessed-commit.txt
+            release-validation/summary.json
+            release-validation/summary.md
+            release-validation/logs/*.log
+          retention-days: 14
+          if-no-files-found: warn
