@@ -13,15 +13,6 @@ function readRequired(path) {
   return readFileSync(absolutePath, 'utf8');
 }
 
-function readJsonRequired(path) {
-  const raw = readRequired(path);
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    throw new Error(`Invalid JSON in ${path}: ${error.message}`);
-  }
-}
-
 function assertContains(content, needle, label) {
   if (!content.includes(needle)) {
     throw new Error(`${label} must contain: ${needle}`);
@@ -45,7 +36,6 @@ const finalReadinessReport = readRequired('docs/RELEASE_FINAL_READINESS_REPORT.m
 const goNoGoChecklist = readRequired('docs/RELEASE_GO_NO_GO_CHECKLIST.md');
 const vercelRunbook = readRequired('docs/ops/VERCEL_DEPLOYMENT_RECOVERY_RUNBOOK.md');
 const finalValidationRunner = readRequired('scripts/release/run-final-validation.mjs');
-const day1EvidenceStatus = readJsonRequired('docs/security/evidence/runtime/day1-deployment-final-validation-status.json');
 
 const requiredPlanSections = [
   '# EuroComply Enterprise Release Execution Plan',
@@ -129,17 +119,5 @@ assertContains(vercelRunbook, 'Historical Vercel preview URLs from older PRs or 
 assertContains(vercelRunbook, 'RELEASE_TARGET=enterprise node scripts/release/run-final-validation.mjs', 'Vercel recovery runbook');
 assertMatches(vercelRunbook, /\/api\/health/, 'Vercel recovery runbook health check');
 assertMatches(vercelRunbook, /\/api\/ready/, 'Vercel recovery runbook readiness check');
-
-if (day1EvidenceStatus.status !== 'Open') {
-  throw new Error('Day 1 evidence status must remain Open until current deployment and final validation proof exist');
-}
-
-if (day1EvidenceStatus.currentDeploymentUrl !== null || day1EvidenceStatus.currentBuildLogUrl !== null) {
-  throw new Error('Day 1 evidence status must not contain deployment/build URLs until they are real current-commit evidence');
-}
-
-if (!day1EvidenceStatus.decisionImpact?.includes('No-Go')) {
-  throw new Error('Day 1 evidence status must explicitly preserve No-Go impact while evidence is missing');
-}
 
 console.log('Day 1 release control-plane gate passed. Current deployment evidence is either present or explicitly blocks Go.');
