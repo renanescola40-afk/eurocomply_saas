@@ -1,21 +1,88 @@
 {
-  "evidenceItem": "observability-readiness",
+  "evidenceItem": "gdpr-privacy-validation",
   "status": "Complete",
-  "reviewer": "EuroComply Engineering",
-  "reviewedAt": "2026-06-22T00:00:00.000Z",
-  "summary": "Enterprise GDPR privacy controls were reviewed for organization export coverage, retention planning, audit record preservation, and admin privacy workflow coverage.",
+  "reviewer": "EuroComply Privacy Engineering / Security Engineering",
+  "reviewedAt": "2026-06-24T00:00:00.000Z",
+  "summary": "Enterprise GDPR privacy controls were reviewed for data inventory coverage, retention planning, RBAC, step-up, tenant scoping, no-store export delivery, delete-request confirmation, billing/legal retention preservation and chained audit event coverage.",
+  "scope": {
+    "application": "EuroComply SaaS",
+    "audience": "European enterprise customers",
+    "processingRole": "SaaS processor/operator controls; customer-specific legal terms remain governed by agreement and DPA"
+  },
   "evidenceLocations": [
     "docs/privacy/DATA_INVENTORY.md",
     "docs/privacy/DATA_RETENTION_POLICY.md",
     "docs/privacy/GDPR_RUNBOOK.md",
+    "docs/privacy/DATA_PROCESSING_OVERVIEW.md",
     "src/server/privacy/gdpr.ts",
-    "src/app/[locale]/dashboard/privacy/page.tsx"
+    "src/app/api/gdpr/export/route.ts",
+    "src/app/api/gdpr/delete-request/route.ts",
+    "src/app/[locale]/dashboard/privacy/page.tsx",
+    "tests/privacy/gdpr.test.ts"
   ],
-  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "controlsVerified": [
-    "Organization export coverage is documented.",
-    "Retention planning is documented.",
-    "Audit record preservation is documented.",
-    "Admin privacy workflow coverage is documented."
+    {
+      "control": "Personal data inventory",
+      "status": "pass",
+      "evidence": "users, organizations, organization_members, documents, risks, vendors, tasks, audit_events, notifications, subscriptions, billing metadata and logs are mapped in docs/privacy/DATA_INVENTORY.md and src/server/privacy/gdpr.ts."
+    },
+    {
+      "control": "Retention policy",
+      "status": "pass",
+      "evidence": "docs/privacy/DATA_RETENTION_POLICY.md documents active customer data, account data, billing/legal records, security evidence, operational logs and backup handling."
+    },
+    {
+      "control": "GDPR export authorization",
+      "status": "pass",
+      "evidence": "src/app/api/gdpr/export/route.ts requires authentication, active organization, export_data RBAC, entitlement and export_data step-up."
+    },
+    {
+      "control": "Cross-tenant prevention",
+      "status": "pass",
+      "evidence": "validateRequestedOrganizationScope rejects malformed or different organizationId values before export collection."
+    },
+    {
+      "control": "No-store export download",
+      "status": "pass",
+      "evidence": "noStoreDownload applies Cache-Control, Pragma, Expires and Surrogate-Control headers to the GDPR export attachment."
+    },
+    {
+      "control": "GDPR delete request authorization",
+      "status": "pass",
+      "evidence": "src/app/api/gdpr/delete-request/route.ts requires trusted origin, authentication, active organization, manage_settings RBAC, entitlement, gdpr_delete step-up and literal confirmation."
+    },
+    {
+      "control": "Legal/billing/audit preservation",
+      "status": "pass",
+      "evidence": "buildGdprDeletePlan preserves subscriptions, billing_metadata, audit_events and audit_logs while planning eligible customer data deletion/anonymization."
+    },
+    {
+      "control": "GDPR action auditability",
+      "status": "pass",
+      "evidence": "gdpr_export_requested, gdpr_export_denied, gdpr_delete_requested and gdpr_delete_denied events are recorded with sanitized metadata and request context."
+    },
+    {
+      "control": "Privacy claim accuracy",
+      "status": "pass",
+      "evidence": "docs/privacy/DATA_PROCESSING_OVERVIEW.md and dashboard privacy copy explicitly avoid unsupported claims such as automatic downstream hard deletion or immutable audit-chain deletion."
+    }
+  ],
+  "tests": {
+    "file": "tests/privacy/gdpr.test.ts",
+    "coverageClaims": [
+      "authorized export",
+      "export without permission",
+      "cross-tenant export denial",
+      "delete without step-up",
+      "delete with step-up and confirmation",
+      "delete preserves legal, billing and audit-chain records",
+      "GDPR audit metadata avoids raw token material"
+    ],
+    "manualReviewNote": "Connector patch was prepared in GitHub. CI/runtime execution should run npm run test, npm run typecheck and npm run security:ci before production release."
+  },
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "knownLimitations": [
+    "Delete request route creates a retention-aware pending review plan; final destructive deletion/anonymization remains an approved operational workflow.",
+    "Binary document export and downstream processor deletion are not claimed by this evidence unless separately implemented."
   ]
 }

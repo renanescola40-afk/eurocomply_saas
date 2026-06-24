@@ -2,6 +2,12 @@ import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 
+const privacyControls = [
+  'Exportação autenticada, tenant-scoped, com RBAC, step-up e download no-store.',
+  'Pedido de eliminação com RBAC, step-up, confirmação literal, revisão de retenção e audit event.',
+  'Registos legais, billing e audit chain são preservados quando necessário.',
+];
+
 type PageProps = {
   params: Promise<{ locale: string }>;
 };
@@ -15,20 +21,33 @@ export default async function PrivacyAdminPage({ params }: PageProps) {
         <Badge className="rounded-full px-3 py-1 uppercase tracking-[0.18em]">Admin GDPR</Badge>
         <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] md:text-5xl">Privacidade e GDPR.</h1>
         <p className="mt-3 max-w-3xl text-muted-foreground">
-          Centro enterprise para exportação, retenção, autorização, verificação adicional, isolamento por organização e evidência operacional.
+          Centro enterprise para exportação, pedidos de eliminação, retenção, autorização, verificação adicional, isolamento por organização e evidência operacional.
         </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <section className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
           <h2 className="text-2xl font-semibold">Exportação</h2>
-          <p className="mt-3 text-sm text-muted-foreground">Use a rota GDPR existente com sessão autenticada e resposta no-store.</p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            A rota GDPR prepara um ficheiro JSON tenant-scoped apenas para utilizadores autorizados, com step-up válido e headers no-store.
+          </p>
         </section>
         <section className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
-          <h2 className="text-2xl font-semibold">Revisão</h2>
-          <p className="mt-3 text-sm text-muted-foreground">Fluxos sensíveis exigem permissão administrativa, verificação adicional e revisão operacional.</p>
+          <h2 className="text-2xl font-semibold">Pedido de eliminação</h2>
+          <p className="mt-3 text-sm text-muted-foreground">
+            O fluxo recebe um pedido confirmado e auditado para revisão operacional; dados legais, billing e auditáveis não são removidos automaticamente.
+          </p>
         </section>
       </div>
+
+      <section className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur">
+        <h2 className="text-2xl font-semibold">Claims implementadas</h2>
+        <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+          {privacyControls.map((control) => (
+            <li key={control} className="rounded-2xl border bg-muted/30 p-3">{control}</li>
+          ))}
+        </ul>
+      </section>
 
       <p className="text-sm text-muted-foreground">Voltar ao <Link className="underline" href={`/${locale}/profile#privacy`}>perfil</Link>.</p>
     </section>

@@ -4,8 +4,8 @@ import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
-import { buildGdprDeletePlan, GDPR_DELETE_CONFIRMATION, normalizeDeleteReason, validateDeleteConfirmation } from '@/server/privacy/gdpr';
-import { createAuditEvent } from '@/server/queries/audit-events';
+import { buildGdprDeleteAuditMetadata, buildGdprDeletePlan, GDPR_DELETE_CONFIRMATION, normalizeDeleteReason, validateDeleteConfirmation } from '@/server/privacy/gdpr';
+import { buildAuditRequestContextFromRequest, createAuditEvent } from '@/server/queries/audit-events';
 import { getCurrentUser } from '@/server/queries/auth';
 import { createNotification } from '@/server/queries/notifications';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
   if (!organization) {
     return noStoreJson({ error: 'Organization not found' }, { status: 404 });
   }
+
+  const requestContext = buildAuditRequestContextFromRequest(request);
 
   const permission = await assertOrganizationPermission({
     userId: user.id,
@@ -97,6 +99,7 @@ export async function POST(request: NextRequest) {
         requiredConfirmation: GDPR_DELETE_CONFIRMATION,
         role: permission.role,
       },
+      requestContext,
     });
 
     return noStoreJson({
@@ -115,15 +118,14 @@ export async function POST(request: NextRequest) {
     action: 'gdpr_delete_requested',
     entityType: 'organization',
     entityId: organization.id,
-    metadata: {
+    metadata: buildGdprDeleteAuditMetadata({
       reason,
       role: permission.role,
       plan: entitlementCheck.entitlements.plan,
       deletePlan,
-      stepUpAction: stepUp.assessment.action,
-      stepUpVerifiedAt: stepUp.assessment.verifiedAt,
-      stepUpTokenType: 'signed_hmac',
-    },
+      stepUp: stepUp.assessment,
+    }),
+    requestContext,
   });
 
   await createNotification({

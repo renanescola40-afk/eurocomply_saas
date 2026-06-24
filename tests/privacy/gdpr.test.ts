@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildGdprDeleteAuditMetadata,
   buildGdprDeletePlan,
+  buildGdprExportAuditMetadata,
   GDPR_DELETE_CONFIRMATION,
   GDPR_DELETE_SAFETY_DELAY_HOURS,
   normalizeDeleteReason,
   ORGANIZATION_EXPORT_TABLES,
   validateDeleteConfirmation,
+  validateRequestedOrganizationScope,
 } from '../../src/server/privacy/gdpr';
+import { NO_STORE_HEADERS } from '../../src/server/security/no-store';
 import { roleHasPermission } from '../../src/server/security/rbac';
 import { assessStepUpToken, createStepUpToken } from '../../src/server/security/step-up';
 
@@ -28,6 +32,7 @@ describe('GDPR privacy controls', () => {
   it('maps all required enterprise datasets into the export/delete inventory', () => {
     expect(ORGANIZATION_EXPORT_TABLES.map((table) => table.key)).toEqual(
       expect.arrayContaining([
+        'users',
         'organizations',
         'organization_members',
         'documents',
@@ -43,10 +48,23 @@ describe('GDPR privacy controls', () => {
     );
   });
 
-  it('allows authorized organization roles to export tenant data', () => {
+  it('allows authorized organization roles to export tenant data with step-up and no-store controls', () => {
+    const token = createToken({ action: 'export_data' });
+    const assessment = assessStepUpToken({
+      action: 'export_data',
+      userId: 'user_123',
+      organizationId: 'org_123',
+      token,
+      now: '2026-06-22T10:01:00.000Z',
+      secret: signingKeyForTests,
+    });
+
     expect(roleHasPermission('owner', 'export_data')).toBe(true);
     expect(roleHasPermission('admin', 'export_data')).toBe(true);
     expect(roleHasPermission('editor', 'export_data')).toBe(true);
+    expect(validateRequestedOrganizationScope('org_123', 'org_123')).toMatchObject({ ok: true });
+    expect(assessment).toMatchObject({ ok: true, action: 'export_data' });
+    expect(NO_STORE_HEADERS['Cache-Control']).toContain('no-store');
   });
 
   it('denies export for roles without export permission', () => {
@@ -54,7 +72,14 @@ describe('GDPR privacy controls', () => {
     expect(roleHasPermission('viewer', 'export_data')).toBe(false);
   });
 
-  it('rejects cross-tenant export tokens', () => {
+  it('rejects cross-tenant export requests and cross-tenant step-up tokens', () => {
+    expect(validateRequestedOrganizationScope('org_other', 'org_123')).toMatchObject({
+      ok: false,
+      status: 403,
+      error: 'cross_tenant_export_denied',
+      auditReason: 'cross_tenant_export_denied',
+    });
+
     const token = createToken({ action: 'export_data', organizationId: 'org_123' });
     const assessment = assessStepUpToken({
       action: 'export_data',
@@ -66,6 +91,15 @@ describe('GDPR privacy controls', () => {
     });
 
     expect(assessment).toMatchObject({ ok: false, reason: 'step_up_token_scope_mismatch' });
+  });
+
+  it('rejects invalid organization identifiers before export scoping', () => {
+    expect(validateRequestedOrganizationScope('../org_123', 'org_123')).toMatchObject({
+      ok: false,
+      status: 400,
+      error: 'invalid_organization_id',
+      auditReason: 'invalid_requested_organization_id',
+    });
   });
 
   it('rejects delete requests without valid step-up', () => {
@@ -81,7 +115,7 @@ describe('GDPR privacy controls', () => {
     expect(assessment).toMatchObject({ ok: false, reason: 'missing_verification' });
   });
 
-  it('accepts delete only with step-up scoped to gdpr_delete', () => {
+  it('accepts delete only with step-up scoped to gdpr_delete and explicit confirmation', () => {
     const token = createToken({ action: 'gdpr_delete' });
     const assessment = assessStepUpToken({
       action: 'gdpr_delete',
@@ -93,9 +127,6 @@ describe('GDPR privacy controls', () => {
     });
 
     expect(assessment).toMatchObject({ ok: true, action: 'gdpr_delete' });
-  });
-
-  it('requires explicit delete confirmation text', () => {
     expect(validateDeleteConfirmation({ confirmation: GDPR_DELETE_CONFIRMATION })).toBe(true);
     expect(validateDeleteConfirmation({ confirmation: 'delete' })).toBe(false);
     expect(normalizeDeleteReason('  customer request  ')).toBe('customer request');
@@ -110,5 +141,27 @@ describe('GDPR privacy controls', () => {
     expect(plan.legalRetentionPreserved).toEqual(expect.arrayContaining(['subscriptions', 'billing_metadata', 'audit_events', 'audit_logs']));
     expect(plan.actions.find((action) => action.key === 'documents')).toMatchObject({ action: 'delete' });
     expect(plan.actions.find((action) => action.key === 'audit_events')).toMatchObject({ action: 'preserve' });
+  });
+
+  it('builds GDPR audit metadata without exposing step-up token material', () => {
+    const exportMetadata = buildGdprExportAuditMetadata({
+      plan: 'enterprise',
+      role: 'admin',
+      tableKeys: ['users', 'organizations', 'documents'],
+      unavailableTables: [],
+      stepUp: { action: 'export_data', verifiedAt: '2026-06-22T10:00:00.000Z' },
+    });
+    const deletePlan = buildGdprDeletePlan(new Date('2026-06-22T10:00:00.000Z'));
+    const deleteMetadata = buildGdprDeleteAuditMetadata({
+      reason: 'customer request',
+      role: 'owner',
+      plan: 'enterprise',
+      deletePlan,
+      stepUp: { action: 'gdpr_delete', verifiedAt: '2026-06-22T10:00:00.000Z' },
+    });
+
+    expect(exportMetadata).toMatchObject({ scope: 'organization_export', stepUpTokenType: 'signed_hmac' });
+    expect(deleteMetadata).toMatchObject({ reason: 'customer request', stepUpTokenType: 'signed_hmac' });
+    expect(JSON.stringify({ exportMetadata, deleteMetadata })).not.toMatch(/nonce|token\./i);
   });
 });
