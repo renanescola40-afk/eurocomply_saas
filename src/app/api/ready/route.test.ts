@@ -11,7 +11,7 @@ vi.mock('@/lib/supabase/admin', () => ({
   tryCreateAdminClient: supabaseMock.tryCreateAdminClient,
 }));
 
-import { GET, readyEnvironmentCheck, sentryReleaseUploadCheck } from './route';
+import { GET, enterpriseStorageScannerCheck, readyEnvironmentCheck, sentryReleaseUploadCheck } from './route';
 
 function makeRequest(token?: string) {
   return new Request('https://app.eurocomply.example/api/ready', {
@@ -42,6 +42,14 @@ function stubReadyEnvironment() {
   vi.stubEnv('SENTRY_ORG', 'eurocomply');
   vi.stubEnv('SENTRY_PROJECT', 'saas');
   vi.stubEnv('SENTRY_AUTH_TOKEN', 'configured');
+}
+
+function stubEnterpriseScannerEnvironment() {
+  vi.stubEnv('RELEASE_TARGET', 'enterprise');
+  vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', 'true');
+  vi.stubEnv('REQUIRE_MALWARE_SCAN_FOR_UPLOADS', 'true');
+  vi.stubEnv('MALWARE_SCANNER_PROVIDER', 'http');
+  vi.stubEnv('MALWARE_SCANNER_ENDPOINT', 'https://scanner.example/scan');
 }
 
 describe('ready endpoint hardening', () => {
@@ -135,9 +143,67 @@ describe('ready endpoint hardening', () => {
       stripeConfigured: true,
       redisConfigured: true,
       sentryConfigured: true,
+      enterpriseStorageScannerConfigured: true,
       healthcheckProtected: true,
     });
+    expect(body.enterpriseStorageScanner).toEqual({
+      required: false,
+      configured: true,
+      storageBucketConfigured: true,
+      malwareScanningRequired: false,
+      realScannerProviderConfigured: false,
+      scannerTransportConfigured: false,
+    });
     expect(body.sentryReleaseUploads.sourceMapsUploadRequiresAuthToken).toBe(true);
+  });
+
+  it('requires storage and scanner readiness for enterprise releases', async () => {
+    stubReadyEnvironment();
+    vi.stubEnv('RELEASE_TARGET', 'enterprise');
+    vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', 'true');
+    vi.stubEnv('REQUIRE_MALWARE_SCAN_FOR_UPLOADS', 'false');
+    vi.stubEnv('MALWARE_SCANNER_PROVIDER', 'mock');
+
+    expect(enterpriseStorageScannerCheck()).toEqual({
+      required: true,
+      configured: false,
+      storageBucketConfigured: true,
+      malwareScanningRequired: false,
+      realScannerProviderConfigured: false,
+      scannerTransportConfigured: false,
+    });
+
+    const response = await GET(makeRequest('expected-token'));
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.status).toBe('not_ready');
+    expect(body.checks.enterpriseStorageScannerConfigured).toBe(false);
+    expect(JSON.stringify(body)).not.toContain('MALWARE_SCANNER_PROVIDER');
+    expect(JSON.stringify(body)).not.toContain('MALWARE_SCANNER_ENDPOINT');
+  });
+
+  it('passes enterprise storage and scanner readiness when configured safely', async () => {
+    stubReadyEnvironment();
+    stubEnterpriseScannerEnvironment();
+
+    expect(enterpriseStorageScannerCheck()).toEqual({
+      required: true,
+      configured: true,
+      storageBucketConfigured: true,
+      malwareScanningRequired: true,
+      realScannerProviderConfigured: true,
+      scannerTransportConfigured: true,
+    });
+
+    const response = await GET(makeRequest('expected-token'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.status).toBe('ready');
+    expect(body.checks.enterpriseStorageScannerConfigured).toBe(true);
+    expect(body.enterpriseStorageScanner.configured).toBe(true);
+    expect(JSON.stringify(body)).not.toContain('https://scanner.example/scan');
   });
 
   it('returns grouped readiness gaps without listing individual env keys', async () => {
