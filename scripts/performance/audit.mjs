@@ -5,6 +5,11 @@ const ROOT = process.cwd();
 const SOURCE_ROOTS = ['src/app', 'src/components', 'src/hooks', 'src/server', 'src/lib'];
 const QUERY_ROOTS = ['src/app', 'src/server', 'src/lib'];
 const NEXT_CONFIG = 'next.config.ts';
+const SENSITIVE_ROUTE_FILES = [
+  'src/app/[locale]/dashboard/organizations/page.tsx',
+  'src/app/[locale]/dashboard/organizations/billing/page.tsx',
+  'src/app/[locale]/documentos/page.tsx',
+];
 
 function walk(dir, predicate = () => true) {
   const absolute = join(ROOT, dir);
@@ -37,8 +42,12 @@ function auditClientComponents() {
   const files = SOURCE_ROOTS.flatMap((root) => walk(root, (path) => /\.(ts|tsx)$/.test(path)));
   const clientFiles = files.filter((path) => /^["']use client["'];?/.test(read(path).trimStart()));
   const clientPages = clientFiles.filter((path) => /src\/app\/.*\/(page|layout)\.tsx$/.test(path));
+  const likelyHeavyClientFiles = clientFiles.filter((path) => {
+    const source = read(path);
+    return /from ['"](?:recharts|framer-motion|react-day-picker|cmdk|embla-carousel-react)['"]/.test(source);
+  });
 
-  return { totalSourceFiles: files.length, clientFiles, clientPages };
+  return { totalSourceFiles: files.length, clientFiles, clientPages, likelyHeavyClientFiles };
 }
 
 function auditImageRemotePatterns() {
@@ -55,6 +64,36 @@ function auditImageRemotePatterns() {
 
   if (!source.includes('NEXT_IMAGE_REMOTE_HOSTS') || !source.includes('DEFAULT_IMAGE_REMOTE_HOSTS')) {
     failures.push('next.config should use an explicit trusted image host allowlist');
+  }
+
+  if (!source.includes('normalizeTrustedImageHostname') || !source.includes("candidate.includes('*')")) {
+    failures.push('next.config should reject wildcard image hostnames from environment configuration');
+  }
+
+  if (/img-src 'self' data: blob: https:/.test(source)) {
+    failures.push('Content-Security-Policy img-src should not allow every HTTPS image host');
+  }
+
+  return { ok: failures.length === 0, failures };
+}
+
+function auditSensitiveCaching() {
+  const failures = [];
+
+  for (const path of SENSITIVE_ROUTE_FILES) {
+    if (!existsSync(join(ROOT, path))) {
+      failures.push(`${path}: sensitive route file missing`);
+      continue;
+    }
+
+    const source = read(path);
+    if (!source.includes("fetchCache = 'force-no-store'") && !source.includes('fetchCache = "force-no-store"')) {
+      failures.push(`${path}: missing force-no-store fetch cache guard`);
+    }
+
+    if (!source.includes('noStore()')) {
+      failures.push(`${path}: missing noStore() call`);
+    }
   }
 
   return { ok: failures.length === 0, failures };
@@ -127,9 +166,14 @@ function auditBuildManifest() {
 
 const clientAudit = auditClientComponents();
 const imageAudit = auditImageRemotePatterns();
+const cacheAudit = auditSensitiveCaching();
 const queryAudit = auditSupabaseQueries();
 const buildManifest = auditBuildManifest();
-const hardFailures = [...imageAudit.failures, ...queryAudit.selectStar.map((path) => `${path}: avoid select('*') in production queries`)];
+const hardFailures = [
+  ...imageAudit.failures,
+  ...cacheAudit.failures,
+  ...queryAudit.selectStar.map((path) => `${path}: avoid select('*') in production queries`),
+];
 
 console.log('EuroComply performance audit');
 console.log('============================');
@@ -140,9 +184,16 @@ if (clientAudit.clientPages.length > 0) {
   console.log('Client pages/layouts to review:');
   for (const path of clientAudit.clientPages.slice(0, 30)) console.log(`- ${path}`);
 }
+if (clientAudit.likelyHeavyClientFiles.length > 0) {
+  console.log('Heavy client dependency files to review/lazy-load:');
+  for (const path of clientAudit.likelyHeavyClientFiles.slice(0, 30)) console.log(`- ${path}`);
+}
 
 console.log('\nImage remotePatterns:');
 console.log(imageAudit.ok ? '- ok: trusted allowlist detected' : imageAudit.failures.map((failure) => `- ${failure}`).join('\n'));
+
+console.log('\nSensitive route caching:');
+console.log(cacheAudit.ok ? '- ok: sensitive routes are force no-store' : cacheAudit.failures.map((failure) => `- ${failure}`).join('\n'));
 
 console.log('\nSupabase query audit:');
 console.log(`- select('*') findings: ${queryAudit.selectStar.length}`);
