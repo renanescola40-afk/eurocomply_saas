@@ -29,6 +29,7 @@ const REQUIRED_ENV_GROUPS = {
 
 const SENTRY_RELEASE_UPLOAD_ENV = ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN'] as const;
 const REAL_MALWARE_SCANNER_PROVIDERS = new Set(['clamav', 'clamd', 'http', 'generic-http', 'webhook']);
+const HTTP_MALWARE_SCANNER_PROVIDERS = new Set(['http', 'generic-http', 'webhook']);
 const CONTROLLED_DOCUMENT_BUCKET = 'controlled-documents';
 
 type EnvGroupName = keyof typeof REQUIRED_ENV_GROUPS;
@@ -91,9 +92,11 @@ export function enterpriseStorageScannerCheck(): EnterpriseStorageScannerCheck {
   const provider = String(process.env[MALWARE_SCANNER_PROVIDER_ENV] ?? '').trim().toLowerCase();
   const malwareScanningRequired = process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true';
   const realScannerProviderConfigured = REAL_MALWARE_SCANNER_PROVIDERS.has(provider);
+  const scannerEndpointConfigured = Boolean(process.env[MALWARE_SCANNER_ENDPOINT_ENV] || process.env[MALWARE_SCANNER_URL_ENV]);
+  const scannerAllowedHostsConfigured = Boolean(process.env.MALWARE_SCANNER_ALLOWED_HOSTS);
   const scannerTransportConfigured = provider === 'clamav' || provider === 'clamd'
     ? Boolean(process.env.MALWARE_SCANNER_CLAMAV_HOST || process.env.MALWARE_SCANNER_CLAMAV_PORT)
-    : Boolean(process.env[MALWARE_SCANNER_ENDPOINT_ENV] || process.env[MALWARE_SCANNER_URL_ENV]);
+    : HTTP_MALWARE_SCANNER_PROVIDERS.has(provider) && scannerEndpointConfigured && scannerAllowedHostsConfigured;
   const storageBucketConfigured = DOCUMENT_BUCKET === CONTROLLED_DOCUMENT_BUCKET;
 
   return {
