@@ -13,4 +13,8 @@ Required runtime environment variables:
 - Supabase service role key stored in the deployment/runtime environment
 - `GITHUB_SHA` or a local Git checkout that resolves to a 40-character SHA
 
+The manual GitHub Actions workflow can also apply committed Supabase migrations before running the live proof. Keep `apply_migrations=true` and configure the `SUPABASE_DB_URL` secret with the target Supabase Postgres connection string. This applies migrations such as `supabase/migrations/20260623120000_live_rls_validation_inventory.sql`, which creates the required `public.eurocomply_live_rls_inventory(text[])` helper.
+
+If the database migration has already been applied outside the workflow, rerun the workflow with `apply_migrations=false`.
+
 Do not commit generated `Complete` evidence unless it was produced by a real live run against the target Supabase project.
