@@ -373,8 +373,8 @@ export const dashboardCopy = {
   }
 } as const;
 
-export type DashboardCopy = (typeof dashboardCopy)['en'];
+export type DashboardCopy = (typeof dashboardCopy)[keyof typeof dashboardCopy];
 
-export function getDashboardCopy(locale: string): DashboardCopy {
+export function getDashboardCopy(locale: string) {
   return dashboardCopy[locale as keyof typeof dashboardCopy] ?? dashboardCopy.en;
 }
