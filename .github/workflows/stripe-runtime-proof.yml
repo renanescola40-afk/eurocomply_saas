@@ -1,0 +1,45 @@
+name: Stripe Runtime Proof
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/stripe-runtime-proof.yml'
+      - 'scripts/security/run-stripe-runtime-validation.mjs'
+      - 'src/app/api/billing/**'
+      - 'src/app/api/stripe/webhook/**'
+      - 'src/server/billing/**'
+      - 'supabase/migrations/*stripe*'
+
+permissions:
+  contents: read
+
+jobs:
+  stripe-runtime-proof:
+    name: Run focused Stripe runtime proof
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run focused Stripe route and webhook tests
+        run: npx vitest run src/app/api/billing/checkout/route.test.ts src/app/api/billing/portal/route.test.ts src/app/api/stripe/webhook/route.test.ts src/app/api/billing/webhook/route.test.ts src/server/billing/stripe-webhooks.test.ts
+
+      - name: Generate Stripe runtime validation evidence
+        run: node scripts/security/run-stripe-runtime-validation.mjs
+
+      - name: Upload Stripe runtime evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: stripe-billing-validation
+          path: docs/security/evidence/runtime/stripe-billing-validation.json
+          if-no-files-found: error
