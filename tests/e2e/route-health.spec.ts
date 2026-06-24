@@ -43,6 +43,7 @@ const PRIVATE_ROUTES: RouteCase[] = [
   { name: 'audit', path: '/auditoria', critical: true },
   { name: 'settings', path: '/settings', critical: true },
   { name: 'billing', path: '/billing', critical: true },
+  { name: 'organization billing', path: '/dashboard/organizations/billing', critical: true },
   { name: 'trust/security access center', path: '/security-center', critical: true },
 ];
 
@@ -56,6 +57,7 @@ const AUTHENTICATED_SMOKE_ROUTES: RouteCase[] = [
   { name: 'audit', path: '/auditoria' },
   { name: 'settings', path: '/settings' },
   { name: 'billing', path: '/billing' },
+  { name: 'organization billing', path: '/dashboard/organizations/billing' },
   { name: 'trust/security', path: '/security-center' },
 ];
 
@@ -105,8 +107,33 @@ async function expectNoUndefinedUrl(page: Page, label: string) {
   expect(page.url(), `${label} navigated to /undefined`).not.toContain('/undefined');
 }
 
+async function expectNoUndefinedLinks(page: Page, label: string) {
+  type LinkSnapshot = { absoluteHref: string; rawHref: string; text: string; visible: boolean };
+
+  const links = await page.locator('a[href]').evaluateAll((elements): LinkSnapshot[] =>
+    elements.map((element) => {
+      const anchor = element as HTMLAnchorElement;
+      const rect = anchor.getBoundingClientRect();
+      const style = window.getComputedStyle(anchor);
+
+      return {
+        absoluteHref: anchor.href,
+        rawHref: anchor.getAttribute('href') ?? '',
+        text: (anchor.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        visible: rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden',
+      };
+    }),
+  );
+
+  const undefinedLinks = links.filter(
+    (link) => link.visible && (link.absoluteHref.includes('/undefined') || link.rawHref.includes('/undefined')),
+  );
+  expect(undefinedLinks, `${label} has visible /undefined links`).toEqual([]);
+}
+
 async function expectNoDeadPrimaryControls(page: Page, label: string) {
   type AnchorSnapshot = { href: string; text: string; visible: boolean };
+  type ButtonSnapshot = { text: string; visible: boolean; disabled: boolean; ariaDisabled: string | null };
 
   const anchors = await page.locator('a').evaluateAll((elements): AnchorSnapshot[] =>
     elements.map((element) => {
@@ -131,6 +158,28 @@ async function expectNoDeadPrimaryControls(page: Page, label: string) {
   );
 
   expect(brokenAnchors, `${label} has dead primary links`).toEqual([]);
+
+  const buttons = await page.locator('button').evaluateAll((elements): ButtonSnapshot[] =>
+    elements.map((element) => {
+      const button = element as HTMLButtonElement;
+      const rect = button.getBoundingClientRect();
+      const style = window.getComputedStyle(button);
+
+      return {
+        text: (button.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        visible: rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden',
+        disabled: button.disabled,
+        ariaDisabled: button.getAttribute('aria-disabled'),
+      };
+    }),
+  );
+
+  const primaryButtons = buttons.filter((button) =>
+    button.visible && /start|sign|login|entrar|create|criar|save|guardar|submit|send|enviar|continue|continuar|manage/i.test(button.text),
+  );
+  const inertButtons = primaryButtons.filter((button) => button.disabled || button.ariaDisabled === 'true');
+
+  expect(inertButtons, `${label} has disabled primary buttons`).toEqual([]);
 }
 
 async function expectNoBrokenInternalLinks(page: Page, label: string) {
@@ -187,6 +236,7 @@ async function expectRouteHealthy(page: Page, routePath: string, label: string) 
   expectHealthyStatus(response, label);
   await expect(page.locator('body')).toBeVisible();
   await expectNoUndefinedUrl(page, label);
+  await expectNoUndefinedLinks(page, label);
   await expectNoStackTrace(page, label);
   await expectNoDeadPrimaryControls(page, label);
 }
@@ -228,7 +278,7 @@ test.describe('anonymous visitor public route health', () => {
 test.describe('anonymous visitor private route guards', () => {
   for (const locale of LOCALES) {
     for (const route of PRIVATE_ROUTES) {
-      test(`${locale} ${route.name} private route has a safe anonymous guard`, async ({ page }) => {
+      test(`${locale} ${route.name} private route redirects anonymous visitor to login`, async ({ page }) => {
         const targetPath = localizedPath(locale, route.path);
         const response = await page.goto(targetPath, { waitUntil: 'domcontentloaded' });
         const currentUrl = new URL(page.url());
@@ -236,13 +286,12 @@ test.describe('anonymous visitor private route guards', () => {
         expectHealthyStatus(response, `anonymous visitor ${locale} ${route.name}`);
         expect(
           currentUrl.pathname,
-          `anonymous visitor ${locale} ${route.name} should stay localized or redirect to login`,
-        ).toMatch(new RegExp(`^/${locale}(/login|/)`));
-        if (currentUrl.pathname.includes('/login')) {
-          const next = currentUrl.searchParams.get('next') ?? '';
-          expect(next, `anonymous visitor ${locale} ${route.name} login redirect should preserve next`).toContain(targetPath);
-        }
+          `anonymous visitor ${locale} ${route.name} should redirect to localized login`,
+        ).toBe(`/${locale}/login`);
+        const next = currentUrl.searchParams.get('next') ?? '';
+        expect(next, `anonymous visitor ${locale} ${route.name} login redirect should preserve next`).toContain(targetPath);
         await expectNoUndefinedUrl(page, `anonymous visitor ${locale} ${route.name}`);
+        await expectNoUndefinedLinks(page, `anonymous visitor ${locale} ${route.name}`);
         await expectNoStackTrace(page, `anonymous visitor ${locale} ${route.name}`);
       });
     }
@@ -259,10 +308,12 @@ test.describe('legacy /undefined route guard', () => {
   ];
 
   for (const routePath of undefinedCases) {
-    test(`${routePath} is controlled and never server-errors`, async ({ page }) => {
+    test(`${routePath} is controlled, redirected away from /undefined and never server-errors`, async ({ page }) => {
       const response = await page.goto(routePath, { waitUntil: 'domcontentloaded' });
       expectNoServerErrorStatus(response, `legacy /undefined route ${routePath}`);
       await expect(page.locator('body')).toBeVisible();
+      await expectNoUndefinedUrl(page, `legacy /undefined route ${routePath}`);
+      await expectNoUndefinedLinks(page, `legacy /undefined route ${routePath}`);
       await expectNoStackTrace(page, `legacy /undefined route ${routePath}`);
     });
   }
