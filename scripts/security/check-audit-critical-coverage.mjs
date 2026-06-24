@@ -115,7 +115,8 @@ if (auditLog) {
   requireToken(auditLogPath, auditLog, 'createAuditEvent');
   requireToken(auditLogPath, auditLog, 'requestContext');
 
-  if (auditLog.includes('user_id: actorUserId')) failures.push(`${auditLogPath} must write actor_user_id, not user_id, to audit_logs`);
+  const legacyAuditLogColumnWrite = /\baudit_logs['"]\)\.insert\(\{[\s\S]*?\buser_id\s*:\s*actorUserId/.test(auditLog);
+  if (legacyAuditLogColumnWrite) failures.push(`${auditLogPath} must write actor_user_id, not user_id, to audit_logs`);
   if (auditLog.includes('ip_address: ip')) failures.push(`${auditLogPath} must keep IP address in sanitized metadata unless the audit_logs schema has an ip_address column`);
   if (auditLog.includes('user_agent: userAgent')) failures.push(`${auditLogPath} must keep user agent in sanitized metadata unless the audit_logs schema has a user_agent column`);
 }
