@@ -114,7 +114,7 @@ export function buildEvidencePayload({ status, outcome, supabaseUrl, testCases =
       : 'Live Supabase profiles user-scoped RLS validation did not pass.',
     redactionConfirmation: 'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
     evidenceLocations: ['docs/security/evidence/runtime/supabase-live-rls-validation.json'],
-    productionGate: status === 'Complete' && outcome === 'passed' ? 'Enterprise release may proceed only if all other P0 runtime evidence is satisfied.' : 'Enterprise release remains blocked.',
+    productionGate: status === 'Complete' && outcome === 'passed' ? 'P0 production release may proceed only if all other P0 runtime evidence is satisfied.' : 'P0 production release remains blocked.',
     controlsVerified: status === 'Complete' && outcome === 'passed' ? ['Profiles user-scoped isolation verified', 'Cross-user profile access denied', 'Profile self-read allowed'] : [],
     criticalTables,
     optionalTables,
