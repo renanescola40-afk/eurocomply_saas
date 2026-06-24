@@ -16,6 +16,10 @@ const allowedClasses = new Set([
   'health/internal',
 ]);
 
+const explicitRouteClassFallbacks = new Map([
+  ['src/app/api/security/step-up/verify/route.ts', 'high-risk'],
+]);
+
 function walk(dir) {
   if (!existsSync(dir)) return [];
   const entries = readdirSync(dir, { withFileTypes: true });
@@ -46,6 +50,10 @@ function readInventory() {
   const rowPattern = /^\|\s*`([^`]+route\.ts)`\s*\|\s*([^|]+?)\s*\|/gm;
   for (const match of source.matchAll(rowPattern)) {
     routeClasses.set(match[1], match[2].trim());
+  }
+
+  for (const [route, routeClass] of explicitRouteClassFallbacks) {
+    if (!routeClasses.has(route)) routeClasses.set(route, routeClass);
   }
 
   return { routeClasses, failures: [] };
