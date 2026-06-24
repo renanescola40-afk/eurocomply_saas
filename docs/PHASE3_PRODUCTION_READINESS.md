@@ -8,7 +8,7 @@ Prepare the SaaS for a production deployment path with explicit environment, sec
 
 ## Phase position
 
-Phase 3 is the production readiness foundation inside the 13-phase EuroComply SaaS implementation sequence.
+Phase 3 is the production readiness foundation inside the 13-phase Risck comply SaaS implementation sequence.
 
 ## Required production readiness areas
 
