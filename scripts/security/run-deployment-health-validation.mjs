@@ -22,10 +22,6 @@ function normalizeTarget(value) {
   return url;
 }
 
-function evidenceUrl(url) {
-  return `${url.protocol}//${url.hostname}${url.pathname}`;
-}
-
 async function assertHealthy(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15000);
@@ -56,7 +52,7 @@ function githubActions() {
   };
 }
 
-function buildEvidence(targetUrl) {
+function buildEvidence() {
   return {
     schema: 'eurocomply.runtime.deployment-health-validation.v1',
     evidenceItem: 'deployment-health-validation',
@@ -68,9 +64,9 @@ function buildEvidence(targetUrl) {
     redactionConfirmation: 'Redaction confirmed for runtime evidence.',
     runner,
     target: {
-      url: evidenceUrl(targetUrl),
-      host: targetUrl.hostname,
-      path: targetUrl.pathname,
+      url: '[redacted-live-deployment-url]',
+      host: '[redacted]',
+      path: '/api/health',
       queryRemoved: true,
     },
     healthCheck: {
@@ -79,7 +75,7 @@ function buildEvidence(targetUrl) {
     },
     controlsVerified: [
       'A network-capable runner performed a real HTTPS GET request to /api/health before this evidence file was written.',
-      'The evidence stores only target host/path and a controlled pass verdict.',
+      'The evidence stores only a controlled pass verdict and redacted target metadata.',
     ],
     githubActions: githubActions(),
     acceptanceCriteria: {
@@ -110,10 +106,10 @@ function promoteRegister(evidence) {
 async function main() {
   const targetUrl = normalizeTarget(inputUrl);
   await assertHealthy(targetUrl);
-  const evidence = buildEvidence(targetUrl);
+  const evidence = buildEvidence();
   writeEvidence(evidence);
   promoteRegister(evidence);
-  console.log(`Deployment health validation passed for ${evidence.target.url}`);
+  console.log('Deployment health validation passed for the redacted live deployment target.');
 }
 
 main().catch((error) => {
