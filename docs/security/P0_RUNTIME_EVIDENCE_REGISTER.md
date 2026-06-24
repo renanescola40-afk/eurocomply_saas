@@ -1,45 +1,48 @@
 # P0 Runtime Evidence Register
 
-This register separates repository readiness from real production/security execution evidence. It records observed evidence only and keeps the release decision at No-Go while required live evidence remains open.
+This register separates repository readiness from real production/security execution evidence. It records observed evidence only and keeps the release decision at No-Go while required live evidence remains open or under exception.
 
 ## Current release assessment
 
-- Release name: EuroComply Operational Release Candidate - 2026-06-24
+- Release name: EuroComply Final Enterprise Release Decision - 2026-06-24
 - Assessment date: 2026-06-24
-- Current PR: #394
-- Remediation branch: `security/deployment-health-proof-2026-06-24`
-- External security review gate update branch: `security/external-review-pentest-gate`
-- Current PR head SHA assessed by this register refresh: `9124d875ded50763842d6d4a6f2de286b4318c68`
-- Current PR preview deployment: not accepted as current runtime proof until a network-capable runner verifies `/api/health`
-- Current PR preview URL: deployment URL functional verification remains Open until the deployment health proof artifact is produced and promoted
-- Current PR build/deploy log: Vercel preview comments are evidence of deployment presence only, not functional smoke completion
-- Final validation bundle: `docs/security/evidence/runtime/stripe-billing-validation.json`
-- Final validation result: **Stripe focused runtime/webhook proof passed / blocked_by_remaining_runtime_evidence**
+- Repository: `renanescola40-afk/eurocomply_saas`
+- Latest assessed PR: #431
+- PR #431 head SHA: `a52abc7f2b7b1eef41f2d8ab79ed5fdc7ef48a2c`
+- PR #431 merge commit SHA: `bcb694b6f9a93d8ae59db742429f00dbb41b369b`
+- PR #431 preview deployment: Vercel Ready preview observed.
+- PR #431 preview URL functional verification: **Open** until a network-capable release runner verifies `/api/health`, protected `/api/ready`, preview smoke, and production smoke.
+- Final validation bundle: `scripts/release/run-final-validation.mjs` exists and includes the requested command chain.
+- Final validation result: **Not proven passed** for the assessed commit.
+- CI result: Success observed for PR #431 head SHA via CI and Full Security Suite workflows.
+- P0 Runtime Evidence workflow result: Success observed for register/file hygiene checks.
+- P0 Final Release Gate result: **Not proven for PR #431 / final assessed SHA**.
 - Final decision: **No-Go**
 - Decision report: `docs/RELEASE_FINAL_READINESS_REPORT.md`
 
 ## Evidence status
 
-| Evidence item | Status | Required evidence | Owner | Expiry / next action |
+| Evidence item | Status | Required evidence | Owner | Next action |
 | --- | --- | --- | --- | --- |
-| Branch protection applied on `main` | Exception | `docs/security/evidence/runtime/branch-protection-main.json` records Complete repository evidence; exception owner Release owner must re-confirm current rules before Go and expiry is 2026-06-23 | Release owner | Revalidate by 2026-06-23 |
-| Required status checks configured | Exception | `docs/security/evidence/runtime/required-status-checks.json` records Complete repository evidence; exception owner Release owner must confirm final assessed commit checks and expiry is 2026-06-23 | Release owner | Revalidate by 2026-06-23 |
-| CI run for assessed commit | Complete | `docs/security/evidence/runtime/ci-assessed-commit-validation.json` records passing GitHub Actions runs for PR #382 head `90344010e993f80f495fd0d72f63ac7b0751ee4a`, including CI, typecheck, tests, route E2E, build, security CI, upload scanner CI, CodeQL, Semgrep, dependency review, Gitleaks, Secret Scanning and Full Security Suite | Engineering owner | Revalidate for the final release commit before Go |
-| Current PR production deployment / build log | Complete | Latest Vercel PR comment records Ready preview deployment evidence and build/deploy log link; this proves preview deployment exists, not release approval | Platform owner | Functional smoke verification still required before Go |
-| Deployment URL functional verification | Open | Verify the current deployment URL and `/api/health` response from a network-capable release runner after a successful deployment exists; do not mark Complete from historical URL presence alone. Current deployment-health workflow is available, but the proof artifact must be produced and promoted before Go | Platform owner | Required before Go |
-| Production secrets configured in provider secret stores | Complete | `docs/security/evidence/runtime/production-secrets-provider-stores.json` records status `Complete`, provider stores checked, values redacted, reviewer and timestamp | Release owner | Attach runtime preflight before Go |
-| Supabase live RLS validation completed | Open | `docs/security/evidence/runtime/supabase-live-rls-validation.json` must record status `Complete`, outcome `passed`, tenant A/B cross-tenant read/insert/update/delete denial, same-tenant allowed reads per reviewed table, and backend privileged path review generated by `scripts/security/run-supabase-live-tenant-isolation.mjs --update-register` | Security reviewer | Required by 2026-06-25 |
-| External security review or pentest completed | Open | `docs/security/evidence/runtime/external-security-review-or-pentest.json` intentionally remains `Open` until a real third-party report or approved external review exists. Required Complete evidence: reviewer/vendor, date, scope, methodology, summary, critical/high/medium findings, resolution status, accepted risk records, retest status, report reference and storage location. Findings must include owner, severity, mitigation and due date. Critical/high findings must be resolved or formally accepted, and every critical finding requires retest evidence. Environment preparation through `docs/security/PRE_PENTEST_CHECKLIST.md` is not completion evidence. | Security reviewer | Required before enterprise/procurement; target 2026-07-06 |
-| Deterministic npm lockfile committed | Complete | `package-lock.json` committed with npm lockfile version 3 after P0 Commit Lockfile workflow; attach `npm ci` output before Go | Engineering owner | Attach `npm ci` output before Go |
-| Floating dependency specs removed | Complete | `node scripts/security/list-floating-dependencies.mjs` output evidence showing no forbidden specs | Engineering owner | Attach security CI output before Go |
-| Audit-chain live validation | Exception | `docs/security/evidence/runtime/audit-chain-live-validation.json` records target-live validation required; exception owner Security reviewer must regenerate evidence with `scripts/security/run-audit-chain-live-validation.mjs` against the target Supabase project, attach reviewer proof, and keep enterprise release blocked until migrations, RPC callable proof, normal append, stale previous-hash rejection plus retry, tamper detection, missing previous-hash detection, signed export readiness, and reviewer confirmation are complete | Security reviewer | Required by 2026-06-25 for enterprise |
-| Upload malware/content scanning validation | Complete | `docs/security/evidence/runtime/upload-malware-scan-validation.json` records Complete live provider proof from a real clamav scanner, fail-closed behavior, clean verdict allowance and rejected non-clean verdict policy; secrets and file bytes redacted | Security reviewer | Revalidate before enterprise release or provider change |
-| Step-up MFA / IdP validation | Exception | `docs/security/evidence/runtime/step-up-mfa-validation.json` records Complete repository evidence; exception owner Security reviewer must attach live provider execution proof and expiry is 2026-06-25 for enterprise | Security reviewer | Required by 2026-06-25 for enterprise |
-| Stripe billing runtime validation | Complete | `docs/security/evidence/runtime/stripe-billing-validation.json` records focused Stripe Runtime Proof GitHub Actions run `28087494908`, artifact `stripe-billing-validation` id `7844905541`, digest `sha256:c9279b5e8bb672a313a33e504e0d81780b8e7bb0dc3ee8304ce96e2edb8c9f6e`, passing checkout, billing portal, webhook signature, idempotency, subscription sync and billing audit controls | Engineering owner | Revalidate before billing provider or webhook handler changes |
-| Observability readiness | Exception | `docs/security/evidence/runtime/observability-readiness.json` records Complete repository evidence; exception owner SRE / release owner must attach CI output, owner sign-off, deployment smoke evidence and rollback verification with expiry 2026-06-23 | SRE / release owner | Required by 2026-06-23 |
-| Incident response owner | Complete | Named incident owner evidence is recorded in `docs/RELEASE_APPROVAL_RECORD.md`; runbook acknowledgement/drill evidence still required before Go | Release owner | Attach acknowledgement/drill before Go |
-| Rollback owner and rollback target | Exception | Named rollback owner and rollback target candidate evidence is recorded in `docs/RELEASE_APPROVAL_RECORD.md`; exception owner Release owner must attach functional verification and dry-run evidence with expiry 2026-06-23 | Release owner | Required by 2026-06-23 |
-| Support / customer communication owner | Complete | Named support and customer communication owner evidence is recorded in `docs/RELEASE_APPROVAL_RECORD.md`; customer notice/status-page decision remains required before Go | Release owner | Required by 2026-06-23 |
+| Branch protection applied on `main` | Exception | Repository evidence exists; release owner must re-confirm current rules before Go | Release owner | Revalidate for final release commit |
+| Required status checks configured | Exception | Repository evidence exists; release owner must confirm final assessed commit checks before Go | Release owner | Revalidate for final release commit |
+| CI run for assessed commit | Complete | CI run `28134792863` and Full Security Suite run `28134792914` completed success for PR #431 head SHA | Engineering owner | Attach final command bundle before Go |
+| Current PR production deployment / build log | Complete for deployment presence only | Vercel Ready preview and build log observed for PR #431 | Platform owner | Functional smoke verification still required |
+| Deployment URL functional verification | Open | Verify the current deployment URL and `/api/health`, protected `/api/ready`, preview smoke and production smoke from a network-capable release runner | Platform owner | Required before Go |
+| Final validation runner | Open | `node scripts/release/run-final-validation.mjs` must pass and attach summary/logs for all requested commands | Release owner | Required before Go |
+| Production secrets configured in provider secret stores | Complete | `production-secrets-provider-stores.json` records status Complete, provider stores checked, values redacted, reviewer and timestamp | Release owner | Attach runtime preflight before Go |
+| Supabase live RLS validation completed | Open | `supabase-live-rls-validation.json` must record status Complete, outcome passed, and tenant A/B isolation proof from the live script | Security reviewer | Required before production/enterprise Go |
+| External security review completed | Open | `external-security-review-or-pentest.json` remains Open until a real external report or approved external review exists | Security reviewer | Required before enterprise/procurement |
+| Deterministic npm lockfile committed | Complete | `package-lock.json` committed with npm lockfile version 3; attach exact final runner `npm ci` output before Go | Engineering owner | Attach exact final runner output |
+| Floating dependency specs removed | Complete | Existing evidence shows no forbidden specs | Engineering owner | Attach security CI output before Go |
+| Audit-chain live validation | Exception | `audit-chain-live-validation.json` records target-live validation required; enterprise remains blocked until the target Supabase run is complete | Security reviewer | Required before enterprise Go |
+| Upload scanning validation | Complete | `upload-malware-scan-validation.json` records Complete live provider proof and fail-closed policy | Security reviewer | Revalidate before enterprise release or provider change |
+| Step-up MFA / IdP validation | Exception | `step-up-mfa-validation.json` records provider proof absent and enterprise release blocked without proof | Security reviewer | Required before enterprise Go |
+| Stripe billing runtime validation | Complete | `stripe-billing-validation.json` records focused Stripe runtime proof passed | Engineering owner | Revalidate before billing provider or webhook handler changes |
+| Observability readiness | Complete as repository evidence | `observability-readiness.json` records health/ready controls, logging, alerting and owner governance | SRE / release owner | Attach deployment smoke, drill/sign-off and rollback verification |
+| Incident response owner | Complete | Named incident owner is recorded in the release approval record | Release owner | Attach acknowledgement/drill before Go |
+| Rollback owner and rollback target | Exception | Named rollback owner and rollback target candidate are recorded; functional verification and dry-run are missing | Release owner | Required before Go |
+| Support / customer communication owner | Complete | Named support and communication owners are recorded in the release approval record | Release owner | Attach customer notice/status-page decision before Go |
 
 ## Evidence storage rule
 
@@ -51,12 +54,12 @@ External security review evidence is intentionally `Open` until a real third-par
 
 Enterprise release and enterprise procurement are blocked when any of the following is true:
 
-- `docs/security/evidence/runtime/external-security-review-or-pentest.json` is missing or not `Complete`.
-- The real report reference or report storage location is missing.
-- Any critical/high finding is neither resolved nor formally accepted.
-- Any critical finding has pending, failed, missing, or unreferenced retest evidence.
-- The evidence contains placeholder values or claims completion without a real external report.
-- The P0 register marks the evidence `Complete` while the JSON is not `Complete`, or the JSON is `Complete` while this register remains `Open`.
+- the external review evidence is missing or not `Complete`;
+- the real report reference or report storage location is missing;
+- any critical/high finding is neither resolved nor formally accepted;
+- any critical finding has pending, failed, missing, or unreferenced retest evidence;
+- the evidence contains placeholder values or claims completion without a real external report;
+- this register and the external review JSON disagree about completion status.
 
 Run the machine-checkable gate with:
 
@@ -65,10 +68,10 @@ npm run security:external-review
 npm run release:enterprise-readiness
 ```
 
-`npm run security:external-review` is expected to fail now because the evidence is still `Open` and no real external report is attached. That failure is the correct enterprise procurement block.
+`npm run security:external-review` is expected to fail while the evidence is still Open and no real external report is attached. That failure is the correct enterprise procurement block.
 
 ## Go/No-Go rule
 
-Public production or enterprise procurement is blocked while any P0 runtime evidence item remains open or under exception, unless the release is explicitly private beta and the release owner documents the exception. Enterprise release cannot use a private-beta exception for the external security review or audit-chain target-live validation gates.
+Public production, enterprise pilot, enterprise procurement and Conditional Go are blocked while any P0 runtime evidence item remains Open or under enterprise-blocking Exception. Enterprise release cannot use a private-beta exception for the external review, RLS live validation, MFA/IdP provider proof, audit-chain target-live validation, or final validation runner gates.
 
-Current final decision: **No-Go**. No production, enterprise pilot, enterprise procurement, or “pentested” claim is allowed from this evidence package.
+Current final decision: **No-Go**. No production, enterprise pilot, enterprise procurement, external-review, or buyer-ready claim is allowed from this evidence package.
