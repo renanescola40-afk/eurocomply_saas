@@ -6,6 +6,8 @@ import { useState, useRef, useEffect } from 'react';
 import { locales, LOCALE_META, type Locale } from '@/lib/i18n/routing';
 
 const COOKIE_NAME = 'NEXT_LOCALE';
+const LOCALE_STORAGE_KEY = 'risck-comply-locale';
+const LEGACY_LOCALE_STORAGE_KEY = 'eurocomply-locale';
 
 interface LanguageSwitcherProps {
   variant?: 'dropdown' | 'inline';
@@ -60,7 +62,8 @@ export default function LanguageSwitcher({ variant = 'dropdown', className = '' 
   const switchLocale = (newLocale: Locale) => {
     const targetPath = buildLocalizedPath(pathname, newLocale);
     document.cookie = `${COOKIE_NAME}=${newLocale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
-    localStorage.setItem('eurocomply-locale', newLocale);
+    localStorage.setItem(LOCALE_STORAGE_KEY, newLocale);
+    localStorage.removeItem(LEGACY_LOCALE_STORAGE_KEY);
     setOpen(false);
 
     window.location.assign(targetPath);
