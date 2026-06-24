@@ -9,15 +9,23 @@ returns boolean language sql stable set search_path = public as $$
 $$;
 
 create or replace function public.live_rls_validation_is_org_member(target_organization_id uuid)
-returns boolean language sql stable set search_path = public as $$
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
   select auth.uid() is not null
     and target_organization_id is not null
     and exists (
-      select 1 from public.organization_members om
+      select 1
+      from public.organization_members om
       where om.organization_id = target_organization_id
         and om.user_id = auth.uid()
     );
 $$;
+
+grant execute on function public.live_rls_validation_is_org_member(uuid) to authenticated;
 
 create or replace function public.live_rls_validation_apply_org_scoped(target_table_name text)
 returns void language plpgsql set search_path = public as $$
