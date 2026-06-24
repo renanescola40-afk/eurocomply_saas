@@ -2,7 +2,19 @@
 
 This checklist defines the minimum UX/UI bar for public and authenticated EuroComply surfaces. It is written as an acceptance tool for product, design, frontend, QA and security review.
 
-## 1. Page completeness
+## 1. Audit scope
+
+Public and private pages must be reviewed as buyer-facing product, not as internal prototypes.
+
+| Surface | Review goal | Current gate |
+| --- | --- | --- |
+| Public marketing routes | Clear proposition, trustworthy CTAs, no generic SaaS filler | `tests/e2e/enterprise-ux.spec.ts` public visual smoke |
+| Authentication and onboarding | Safe redirects, preserved intent, no raw auth errors | Protected route and enterprise smoke checks |
+| Organization dashboard | Executive readiness, risk, work, evidence, vendors, audit and billing | Enterprise overview component and authenticated visual smoke |
+| Documents, risks, approvals and vendors | Clear empty/error/permission states and safe next action | Route health plus page-level review before release |
+| Billing and plan-gated flows | Role-aware actions and upgrade copy | Enterprise dashboard billing status and add-ons/pricing routes |
+
+## 2. Page completeness
 
 Every page must answer these questions before it is considered enterprise-ready:
 
@@ -12,9 +24,9 @@ Every page must answer these questions before it is considered enterprise-ready:
 - What happens when the user cannot take that action?
 - What does a buyer, admin, viewer and unauthenticated visitor see?
 
-A page fails review if it contains lorem ipsum, “coming soon” without a useful next step, placeholder metrics presented as real data, disabled primary buttons without explanation, raw framework errors, or routes that land on `/undefined`.
+A page fails review if it contains lorem ipsum, “coming soon” without a useful next step, sample metrics presented as production data, disabled primary buttons without explanation, raw framework errors, or routes that land on `/undefined`.
 
-## 2. Required product states
+## 3. Required product states
 
 Each data-dependent surface must define the following states using the shared enterprise state pattern:
 
@@ -22,26 +34,35 @@ Each data-dependent surface must define the following states using the shared en
 | --- | --- | --- |
 | Loading | Skeleton or progress copy that names what is loading. Avoid full-screen spinners except during auth/session bootstrap. | Do not reveal tenant identifiers while session is unresolved. |
 | Empty | Explain why nothing exists and provide one safe next action. | Do not imply access to objects the user cannot view. |
-| Error | Human copy, retry or support path, no stack traces. | Never expose SQL, provider errors, tokens, request IDs unless explicitly safe. |
+| Error | Human copy, retry or support path, no stack traces. | Never expose SQL, provider errors, tokens or internal IDs. |
 | Permission denied | Explain role/plan limitation and who can help. | Do not leak object names or counts outside permission scope. |
 | Success | Confirm what changed and what happens next. | Avoid exposing hidden fields or internal IDs in toast/copy. |
 | Offline/network issue | Preserve user context and provide retry guidance. | Do not retry destructive writes automatically. |
 
-## 3. Dashboard acceptance
+Implementation reference: `src/components/dashboard/enterprise-dashboard-overview.tsx` renders visible `role="status"` and `role="alert"` examples for the dashboard control room. Downstream pages should reuse the same copy tone and aria behavior.
+
+## 4. Dashboard acceptance
 
 The dashboard must provide an executive overview that builds trust within 10 seconds:
 
 - Clear page title and buyer-grade description.
 - Compliance status with source/meaning explained.
-- Risk summary with severity, owner and next step.
+- Risk summary with severity and next step.
 - Pending tasks grouped by priority/SLA.
-- Document status with version/review state.
-- Audit activity that explains actor, timestamp and entity.
+- Document status with review and expiry signal.
+- Vendor status for third-party exposure.
+- Audit activity that explains actor/timestamp/entity when available.
 - Billing status gated by role and plan.
-- Primary actions must route to working pages or show a permission state.
-- Metrics must not pretend placeholder/sample values are live production data.
+- Primary actions route to working pages or show a permission state.
+- Metrics must not pretend sample values are live production data.
 
-## 4. Visual consistency
+Current implementation gate:
+
+- `src/app/[locale]/dashboard/organizations/page.tsx` localizes hero copy, plan intent, quick links and enterprise overview.
+- `src/lib/i18n/dashboard-copy.ts` includes dashboard enterprise copy for `en`, `pt`, `es`, `fr`, `it`, `de`.
+- `tests/e2e/enterprise-ux.spec.ts` checks the dashboard heading, compliance/risk/task/document/vendor/audit/billing panels and standardized states.
+
+## 5. Visual consistency
 
 Use a consistent system across public and private pages:
 
@@ -53,7 +74,7 @@ Use a consistent system across public and private pages:
 - Tables: visible headers, empty state, row actions, keyboard reachability, responsive fallback.
 - Forms: label every control, inline validation, success/error feedback, prevent duplicate submission.
 
-## 5. Accessibility
+## 6. Accessibility
 
 Minimum accessibility gates:
 
@@ -67,7 +88,7 @@ Minimum accessibility gates:
 - Color is never the only way to communicate status.
 - Text/background contrast is checked for normal and muted text.
 
-## 6. Responsive behavior
+## 7. Responsive behavior
 
 Every critical flow must be reviewed at:
 
@@ -83,7 +104,7 @@ Pass criteria:
 - Tables/cards collapse into readable stacked layouts.
 - Sticky headers do not hide form fields or focus targets.
 
-## 7. i18n completeness
+## 8. i18n completeness
 
 Existing locales: `pt`, `en`, `es`, `fr`, `it`, `de`.
 
@@ -95,7 +116,7 @@ For every new user-visible string:
 - Avoid idioms that break translation.
 - Test at least one long-string locale for layout wrapping.
 
-## 8. RBAC and permissions
+## 9. RBAC and permissions
 
 UI must respect permissions before the user clicks:
 
@@ -104,25 +125,34 @@ UI must respect permissions before the user clicks:
 - Permission denied states are safe and useful.
 - Plan-gated features explain the required plan without exposing restricted tenant data.
 
-## 9. E2E and smoke visual gates
+## 10. E2E and smoke visual gates
 
 Required coverage:
 
 - Public critical routes render in every locale without 404/500, `/undefined`, raw errors or dead primary CTAs.
-- Private routes redirect anonymous users to login with `next` preserved.
+- Private routes redirect anonymous users to login with `next` preserved where applicable.
 - Authenticated owner/admin/member/viewer can reach their critical surfaces when credentials are provided.
 - Viewer cannot see admin-only actions.
-- Mobile viewport passes public critical route smoke.
-- Enterprise dashboard smoke checks: headings, CTAs, product-state examples, no placeholder copy, no horizontal overflow.
-- Basic visual screenshot smoke captures public home and enterprise dashboard when credentials are available.
+- Mobile viewport passes public and dashboard smoke.
+- Tablet viewport passes dashboard smoke and keyboard focus.
+- Enterprise dashboard smoke checks: headings, CTAs, product-state examples, no template copy, no horizontal overflow.
+- Basic visual screenshots capture public home and enterprise dashboard when credentials are available.
 
-## 10. Review sign-off
+Recommended command:
+
+```bash
+npx playwright test tests/e2e/enterprise-ux.spec.ts
+```
+
+Credential-dependent tests are skipped unless `E2E_OWNER_EMAIL` and `E2E_OWNER_PASSWORD` are present.
+
+## 11. Review sign-off
 
 Before merge, attach evidence in the PR:
 
-- Screenshots or video for desktop and mobile dashboard.
+- Screenshots or video for desktop, tablet and mobile dashboard.
 - `npm run lint`
 - `npm run typecheck`
 - `npm run test`
-- `npm run test:e2e` or a scoped Playwright command with skipped credential-dependent tests documented.
+- `npx playwright test tests/e2e/enterprise-ux.spec.ts`
 - Notes for any intentionally deferred page or state.
