@@ -110,8 +110,18 @@ jobs:
           npx playwright install --with-deps chromium
           npm run quality:routes:e2e
         env:
+          PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          E2E_BASE_URLS: ${{ vars.E2E_BASE_URLS }}
+          E2E_PREVIEW_URL: ${{ vars.E2E_PREVIEW_URL }}
+          PREVIEW_DEPLOYMENT_URL: ${{ vars.PREVIEW_DEPLOYMENT_URL }}
+          VERCEL_BRANCH_URL: ${{ vars.VERCEL_BRANCH_URL }}
+          VERCEL_URL: ${{ vars.VERCEL_URL }}
+          E2E_PRODUCTION_URL: ${{ vars.E2E_PRODUCTION_URL }}
+          PRODUCTION_DEPLOYMENT_URL: ${{ vars.PRODUCTION_DEPLOYMENT_URL }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          SITE_URL: ${{ vars.SITE_URL }}
       - name: Branch protection evidence gate
         run: node scripts/security/check-branch-protection-evidence.mjs
       - name: Generate SBOM
