@@ -5,13 +5,12 @@
 create or replace function public.eurocomply_live_rls_inventory(table_names text[])
 returns table (
   table_name text,
-  table_exists boolean,
+  "exists" boolean,
   rls_enabled boolean,
   force_rls boolean,
   policy_count integer
 )
 language sql
-security definer
 stable
 set search_path = public, pg_catalog
 as $$
@@ -34,7 +33,7 @@ as $$
   )
   select
     requested.table_name,
-    live_tables.oid is not null as table_exists,
+    live_tables.oid is not null as "exists",
     coalesce(live_tables.relrowsecurity, false) as rls_enabled,
     coalesce(live_tables.relforcerowsecurity, false) as force_rls,
     coalesce(policy_counts.policy_count, 0) as policy_count
@@ -43,6 +42,3 @@ as $$
   left join policy_counts on policy_counts.polrelid = live_tables.oid
   order by requested.table_name;
 $$;
-
-revoke all on function public.eurocomply_live_rls_inventory(text[]) from public;
-grant execute on function public.eurocomply_live_rls_inventory(text[]) to service_role;
