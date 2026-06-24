@@ -74,6 +74,7 @@ jobs:
           sudo apt-get install -y postgresql-client
           for migration in \
             supabase/migrations/20260623120000_live_rls_validation_inventory.sql \
+            supabase/migrations/20260624220000_live_rls_validation_missing_tables.sql \
             supabase/migrations/20260624170400_live_rls_validation_drop_apply_helpers.sql \
             supabase/migrations/20260624170500_live_rls_validation_policy_patch.sql
           do
