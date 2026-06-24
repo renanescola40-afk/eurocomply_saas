@@ -9,10 +9,11 @@ const dash = `${app}/dashboard`;
 const org = `${dash}/organizations`;
 const s = 'security';
 
-const files = [
+const required = [
   'docs/quality/ROUTE_INVENTORY.md',
   'docs/quality/ROUTE_HEALTH_REPORT.md',
   'tests/e2e/route-health.spec.ts',
+  'scripts/quality/run-route-health-e2e.mjs',
   `${app}/page.tsx`,
   `${app}/pricing/page.tsx`,
   `${app}/login/page.tsx`,
@@ -36,73 +37,109 @@ const files = [
   `${app}/${s}-center/page.tsx`,
 ];
 
-const specNeedles = [
-  'anonymous visitor',
-  'authenticated user without organization',
-  'owner',
-  'admin',
-  'editor',
-  'viewer',
-  'pt',
-  'en',
-  'es',
-  'fr',
-  'it',
-  'de',
-  '/dashboard/organizations',
-  '/vendor-assurance',
-  '/aprovacoes',
-  `/${s}-center`,
-  '/data-processing',
-  '/undefined',
-  'mobile viewport',
-];
-
-const docNeedles = [
-  'landing',
-  'pricing',
-  'login',
-  'signup',
-  'password reset',
-  'dashboard',
-  'organizations',
-  'documents',
-  'vendors',
-  'risks',
-  'tasks/approvals',
-  'reports',
-  'audit',
-  'settings',
-  'billing',
-  `trust/${s}`,
-  'data-processing',
-  'owner',
-  'admin',
-  'editor',
-  'viewer',
-];
+const contentMarkers = {
+  'tests/e2e/route-health.spec.ts': [
+    'anonymous visitor',
+    'authenticated user without organization',
+    'owner',
+    'admin',
+    'editor',
+    'viewer',
+    'pt',
+    'en',
+    'es',
+    'fr',
+    'it',
+    'de',
+    '/dashboard/organizations',
+    '/dashboard/organizations/billing',
+    '/vendor-assurance',
+    '/aprovacoes',
+    `/${s}-center`,
+    '/data-processing',
+    '/undefined',
+    'expectNoUndefinedLinks',
+    'expectNoDeadPrimaryControls',
+    'should redirect to localized login',
+    'mobile viewport',
+  ],
+  'scripts/quality/run-route-health-e2e.mjs': [
+    'local',
+    'preview',
+    'production',
+    'E2E_BASE_URLS',
+    'E2E_PREVIEW_URL',
+    'E2E_PRODUCTION_URL',
+    'ROUTE_HEALTH_SKIP_LOCAL',
+    'ROUTE_HEALTH_TARGET',
+  ],
+  'docs/quality/ROUTE_INVENTORY.md': [
+    'landing',
+    'pricing',
+    'login',
+    'signup',
+    'password reset',
+    'dashboard',
+    'organizations',
+    'documents',
+    'vendors',
+    'risks',
+    'tasks/approvals',
+    'reports',
+    'audit',
+    'settings',
+    'billing',
+    `trust/${s}`,
+    'data-processing',
+    'preview',
+    'production',
+    'owner',
+    'admin',
+    'editor',
+    'viewer',
+  ],
+  'docs/quality/ROUTE_HEALTH_REPORT.md': [
+    'landing',
+    'pricing',
+    'login',
+    'signup',
+    'password reset',
+    'dashboard',
+    'organizations',
+    'documents',
+    'vendors',
+    'risks',
+    'tasks/approvals',
+    'reports',
+    'audit',
+    'settings',
+    'billing',
+    `trust/${s}`,
+    'preview',
+    'production',
+    'CI blocks merge',
+  ],
+};
 
 let failed = false;
+
 function fail(message) {
   failed = true;
   console.error(message);
 }
 
-for (const file of files) {
+for (const file of required) {
   if (!existsSync(join(root, file))) fail(`Missing route health artifact: ${file}`);
 }
 
-const spec = join(root, 'tests/e2e/route-health.spec.ts');
-if (existsSync(spec)) {
-  const body = readFileSync(spec, 'utf8');
-  for (const needle of specNeedles) if (!body.includes(needle)) fail(`Route E2E spec missing marker: ${needle}`);
-}
-
-for (const file of ['docs/quality/ROUTE_INVENTORY.md', 'docs/quality/ROUTE_HEALTH_REPORT.md']) {
+for (const [file, markers] of Object.entries(contentMarkers)) {
   const path = join(root, file);
   if (!existsSync(path)) continue;
+
   const body = readFileSync(path, 'utf8').toLowerCase();
-  for (const needle of docNeedles) if (!body.includes(needle.toLowerCase())) fail(`${file} missing marker: ${needle}`);
+  for (const marker of markers) {
+    if (!body.includes(marker.toLowerCase())) fail(`${file} missing marker: ${marker}`);
+  }
 }
 
 if (failed) process.exit(1);
