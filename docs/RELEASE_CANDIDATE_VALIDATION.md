@@ -125,6 +125,7 @@ The following must be applied to the target Supabase project:
 Release evidence must include:
 
 - `AUDIT_CHAIN_SIGNING_SECRET` configured for signed audit hashes
+- `EVIDENCE_PACK_SIGNING_SECRET` configured for signed audit/evidence exports
 - successful migration application
 - proof that `append_audit_event_chained(...)` exists
 - proof that `createAuditEvent()` uses the transactional RPC path
@@ -133,10 +134,39 @@ Release evidence must include:
 - `docs/security/AUDIT_CHAIN_MODEL.md` reviewed
 - `docs/security/evidence/runtime/audit-chain-live-validation.json` with status `Complete`
 - `scripts/security/verify-audit-chain.mjs` CLI tamper-detection output
+- `scripts/security/run-audit-chain-live-validation.mjs` target Supabase output
 - proof that audit-chain runtime evidence is complete
 - proof that audit-chain RPC is applied and validated
 
-Enterprise release is blocked when audit-chain runtime evidence is missing, incomplete, not linked to release gates, or does not confirm tamper detection, transactional append, concurrency-safe append, signed export, RBAC/step-up protected verification, and request-context sanitization.
+Required target-live command:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+AUDIT_CHAIN_SIGNING_SECRET=...
+EVIDENCE_PACK_SIGNING_SECRET=...
+AUDIT_CHAIN_LIVE_ORGANIZATION_ID=...
+node scripts/security/run-audit-chain-live-validation.mjs
+```
+
+After the security reviewer confirms that the generated evidence only contains redacted values and that the synthetic audit rows exist in the target Supabase project, rerun with:
+
+```bash
+AUDIT_CHAIN_LIVE_PROOF=true node scripts/security/run-audit-chain-live-validation.mjs
+```
+
+The live validation must prove:
+
+- migrations are applied and `audit_events` hash columns are readable
+- `append_audit_event_chained` is callable with service-role credentials
+- normal append is transactional
+- concurrent stale `previous_hash` append is rejected and retry succeeds
+- readback verification succeeds with the stored `created_at` values
+- tampering changes the expected hash and is detected
+- missing `previous_hash` is detected
+- verify/export remain protected by RBAC plus step-up and signed evidence export remains fail-closed without signing material
+
+Enterprise release is blocked when audit-chain runtime evidence is missing, incomplete, not linked to release gates, or does not confirm tamper detection, transactional append, concurrency-safe append, signed export, RBAC/step-up protected verification, request-context sanitization, and target-live Supabase validation.
 
 ### 7. Step-up security validation
 
@@ -217,15 +247,3 @@ The canonical plan is `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md`.
 Release Candidate evidence must prove that preflight protects both operational controls and release governance artifacts.
 
 The preflight file should include at least:
-
-- `docs/RELEASE_CANDIDATE_VALIDATION.md`
-- `docs/RELEASE_EVIDENCE_CHECKLIST.md`
-- `docs/RELEASE_GO_NO_GO_CHECKLIST.md`
-- `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md`
-- `scripts/security/check-release-candidate.mjs`
-- lockfile and supply-chain runbook coverage
-- RLS live validation runbook coverage
-- audit-chain concurrency runbook coverage
-- audit-chain model and runtime evidence coverage
-- upload content scan runbook coverage
-- step-up rollout coverage
