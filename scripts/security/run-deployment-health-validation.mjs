@@ -13,7 +13,7 @@ const now = () => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 
 function normalizeTarget(value) {
   const url = new URL(String(value ?? '').trim());
-  if (url.protocol !== 'https:') throw new Error('Deployment health validation requires an https URL.');
+  if (url.protocol !== 'https:') throw new Error('Deployment health validation requires https.');
   url.username = '';
   url.password = '';
   url.hash = '';
@@ -26,15 +26,15 @@ function evidenceUrl(url) {
   return `${url.protocol}//${url.hostname}${url.pathname}`;
 }
 
-async function requestHealth(url) {
+async function assertHealthy(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15000);
   try {
     const response = await fetch(url, { method: 'GET', redirect: 'manual', cache: 'no-store', signal: controller.signal });
     await response.arrayBuffer().catch(() => null);
-    return response.status >= 200 && response.status < 300;
+    if (response.status < 200 || response.status >= 300) throw new Error('Health check failed.');
   } catch {
-    return false;
+    throw new Error('Health check failed.');
   } finally {
     clearTimeout(timer);
   }
@@ -56,16 +56,14 @@ function githubActions() {
   };
 }
 
-function buildEvidence(targetUrl, passed) {
+function buildEvidence(targetUrl) {
   return {
     schema: 'eurocomply.runtime.deployment-health-validation.v1',
     evidenceItem: 'deployment-health-validation',
-    status: passed ? 'Complete' : 'Exception',
+    status: 'Complete',
     reviewer: 'EuroComply deployment health automation',
     reviewedAt: now(),
-    summary: passed
-      ? 'Deployment health validation completed against a live HTTPS deployment URL and /api/health returned a successful HTTP status.'
-      : 'Deployment health validation did not complete successfully; release remains blocked until a passing /api/health response is recorded.',
+    summary: 'Deployment health validation completed against a live HTTPS deployment URL and /api/health returned a successful HTTP status.',
     evidenceLocations: [evidencePath, runner, registerPath],
     redactionConfirmation: 'Redaction confirmed for runtime evidence.',
     runner,
@@ -76,33 +74,19 @@ function buildEvidence(targetUrl, passed) {
       queryRemoved: true,
     },
     healthCheck: {
-      outcome: passed ? 'passed' : 'failed',
-      responseBodyPersisted: false,
-      responseHeadersPersisted: false,
-      responseStatusPersisted: false,
-      networkErrorPersisted: false,
+      outcome: 'passed',
+      remoteDetailsPersisted: false,
     },
-    controlsVerified: passed ? [
-      'A network-capable runner performed a real HTTPS GET request to /api/health.',
-      'The deployment health endpoint returned a successful HTTP status.',
-      'The evidence stores only target host/path and a controlled pass/fail verdict, not response body, headers, status code or network error text.',
-    ] : [
-      'Deployment health validation is fail-closed: non-2xx, timeout or network error keeps the P0 row blocked.',
+    controlsVerified: [
+      'A network-capable runner performed a real HTTPS GET request to /api/health before this evidence file was written.',
+      'The evidence stores only target host/path and a controlled pass verdict.',
     ],
     githubActions: githubActions(),
     acceptanceCriteria: {
       liveHttpsRequestPerformed: true,
-      healthEndpointReturned2xx: passed,
-      responseBodyPersisted: false,
-      releaseBlockedOnFailure: !passed,
-      p0RegisterMayBePromoted: passed,
-    },
-    exception: passed ? undefined : {
-      riskOwner: 'Platform owner',
-      rationale: 'Deployment health must be verified from a release runner before production Go.',
-      compensatingControls: ['Keep deployment URL functional verification Open until a passing run exists.'],
-      expiresAt: '2026-06-25',
-      approvalReference: 'P0_RUNTIME_EVIDENCE_REGISTER.md#deployment-url-functional-verification',
+      healthEndpointReturned2xx: true,
+      releaseBlockedOnFailure: true,
+      p0RegisterMayBePromoted: true,
     },
   };
 }
@@ -119,22 +103,17 @@ function promoteRegister(evidence) {
   const oldRow = source.split('\n').find((line) => line.startsWith('| Deployment URL functional verification |'));
   if (!oldRow) throw new Error(`${registerPath} missing Deployment URL functional verification row`);
   if (oldRow.includes('| Complete |') && oldRow.includes(evidencePath)) return;
-  const newRow = '| Deployment URL functional verification | Complete | `docs/security/evidence/runtime/deployment-health-validation.json` records live HTTPS `/api/health` validation with successful HTTP status, GitHub Actions provenance when available and fail-closed behavior for non-2xx/timeouts/network errors | Platform owner | Revalidate before Go and after every deployment target change |';
+  const newRow = '| Deployment URL functional verification | Complete | `docs/security/evidence/runtime/deployment-health-validation.json` records live HTTPS `/api/health` validation with successful HTTP status and release-blocking failure behavior | Platform owner | Revalidate before Go and after every deployment target change |';
   writeFileSync(registerPath, source.replace(oldRow, newRow));
 }
 
 async function main() {
   const targetUrl = normalizeTarget(inputUrl);
-  const passed = await requestHealth(targetUrl);
-  const evidence = buildEvidence(targetUrl, passed);
+  await assertHealthy(targetUrl);
+  const evidence = buildEvidence(targetUrl);
   writeEvidence(evidence);
   promoteRegister(evidence);
-  if (evidence.status === 'Complete') {
-    console.log(`Deployment health validation passed for ${evidence.target.url}`);
-  } else {
-    console.error(`Deployment health validation failed for ${evidence.target.url}`);
-    process.exitCode = 1;
-  }
+  console.log(`Deployment health validation passed for ${evidence.target.url}`);
 }
 
 main().catch((error) => {
