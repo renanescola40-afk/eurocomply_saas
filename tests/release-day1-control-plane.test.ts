@@ -33,6 +33,17 @@ describe('day 1 release control plane', () => {
     expect(runbook).toContain('RELEASE_TARGET=enterprise node scripts/release/run-final-validation.mjs');
   });
 
+  it('records Day 1 evidence as open until current deployment and final validation proof exist', () => {
+    const evidence = JSON.parse(readRepoFile('docs/security/evidence/runtime/day1-deployment-final-validation-status.json'));
+
+    expect(evidence.status).toBe('Open');
+    expect(evidence.outcome).toBe('blocked_not_complete');
+    expect(evidence.currentDeploymentUrl).toBeNull();
+    expect(evidence.currentBuildLogUrl).toBeNull();
+    expect(evidence.decisionImpact).toContain('No-Go');
+    expect(evidence.nonEvidence).toContain('historical Vercel preview URLs from other commits');
+  });
+
   it('passes the repo-side Day 1 release control-plane gate', () => {
     const output = execFileSync('node', ['scripts/release/check-day1-release-control-plane.mjs'], {
       cwd: repoRoot,
