@@ -27,9 +27,12 @@ describe('release operational owner readiness', () => {
 
   it('keeps release approval blocked while runtime evidence is missing', () => {
     expect(approvalRecord).toContain('- [x] **No-Go**');
-    expect(approvalRecord).toContain('- Approver: Not granted; blocked by current PR Vercel deployment failure, open P0 evidence and non-passing final validation bundle');
-    expect(approvalRecord).toContain('- Deployment URL: **Missing for current PR #346; Vercel failed with `api-deployments-free-per-day`**');
+    expect(approvalRecord).toContain('- Approver: **Not granted**; blocked by open P0 runtime evidence and missing final validation runner proof.');
+    expect(approvalRecord).toContain('| Deployment URL functional verification | **Open** |');
     expect(approvalRecord).toContain('Approval is intentionally withheld while P0 blockers remain open');
+    expect(approvalRecord).toContain('Supabase RLS live validation is Open/not_run');
+    expect(approvalRecord).toContain('External review/pentest is Open/not_started');
+    expect(approvalRecord).toContain('Rollback target is candidate-only');
   });
 
   it('documents that owner assignment does not satisfy runtime evidence', () => {
