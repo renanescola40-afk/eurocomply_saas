@@ -168,7 +168,6 @@ const requiredEvidenceTokens = [
   'upload_blocked',
   'download_requested',
   'download_denied',
-  'enterprise_upload_scan_bypass',
   'scanStatus',
   'scanProvider',
   'scanRequired',
