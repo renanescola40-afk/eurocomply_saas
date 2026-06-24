@@ -26,6 +26,7 @@ begin
     return;
   end if;
   execute format('alter table public.%I enable row level security', target_table_name);
+  execute format('grant select, insert, update, delete on public.%I to authenticated', target_table_name);
   execute format('drop policy if exists %I on public.%I', 'live_rls_' || target_table_name || '_select_member', target_table_name);
   execute format('drop policy if exists %I on public.%I', 'live_rls_' || target_table_name || '_insert_member', target_table_name);
   execute format('drop policy if exists %I on public.%I', 'live_rls_' || target_table_name || '_update_member', target_table_name);
@@ -44,6 +45,7 @@ begin
     return;
   end if;
   execute format('alter table public.%I enable row level security', target_table_name);
+  execute format('grant select, insert, update, delete on public.%I to authenticated', target_table_name);
   execute format('drop policy if exists %I on public.%I', 'live_rls_' || target_table_name || '_select_member', target_table_name);
   execute format('drop policy if exists %I on public.%I', 'live_rls_' || target_table_name || '_insert_deny', target_table_name);
   execute format('drop policy if exists %I on public.%I', 'live_rls_' || target_table_name || '_update_deny', target_table_name);
