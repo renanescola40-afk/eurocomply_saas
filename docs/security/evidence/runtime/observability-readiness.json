@@ -3,8 +3,8 @@
   "evidenceItem": "observability-readiness",
   "status": "Complete",
   "reviewer": "SRE Incident Response Lead",
-  "reviewedAt": "2026-06-21T15:25:00Z",
-  "summary": "Observability readiness controls were added for Sentry configuration, redacted structured logging, protected readiness, alerting, incident response, rollback and customer communication runbooks.",
+  "reviewedAt": "2026-06-24T00:00:00Z",
+  "summary": "Observability readiness controls were added for Sentry configuration, redacted structured logging, protected readiness, enterprise storage/scanner readiness, alerting, incident response, rollback and customer communication runbooks.",
   "evidenceLocations": [
     "src/server/observability/logger.ts",
     "src/server/observability/logger.test.ts",
@@ -19,9 +19,10 @@
     "docs/operations/ALERTING.md",
     "docs/operations/INCIDENT_RESPONSE_RUNBOOK.md",
     "docs/operations/ROLLBACK_RUNBOOK.md",
-    "docs/operations/CUSTOMER_COMMUNICATION_RUNBOOK.md"
+    "docs/operations/CUSTOMER_COMMUNICATION_RUNBOOK.md",
+    "docs/RELEASE_APPROVAL_RECORD.md"
   ],
-  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, scanner endpoints, allowed-host values and access-granting values are redacted.",
   "controlsVerified": [
     "Sentry client config disables default PII and strips request/user fields before send.",
     "Sentry server config disables default PII and strips request/user fields before send.",
@@ -33,6 +34,8 @@
     "/api/health remains public and simple.",
     "/api/ready requires HEALTHCHECK_TOKEN bearer authorization.",
     "/api/ready checks Supabase connectivity and grouped Stripe, Redis and Sentry config without exposing values.",
+    "/api/ready checks enterprise storage/scanner readiness when RELEASE_TARGET=enterprise, RISCK_COMPLY_ENTERPRISE_RELEASE=true, or REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true.",
+    "/api/ready does not expose scanner endpoint, allowed host, token or environment variable names.",
     "Sensitive error reporting returns sanitized error metadata and captures Sentry exceptions with sanitized extra context.",
     "Alerting, incident response, rollback and customer communication runbooks exist for SEV-1 and SEV-2 operations.",
     "Release readiness gates require incident and rollback owners before release sign-off."
@@ -41,10 +44,18 @@
   "releaseGate": {
     "requiresIncidentOwner": true,
     "requiresRollbackOwner": true,
+    "requiresSupportOwner": true,
+    "requiresCustomerCommunicationOwner": true,
+    "requiresEscalationPath": true,
+    "requiresStatusPageDecision": true,
+    "requiresSevTiming": true,
     "noGoIfMissing": [
       "incidentOwner",
       "rollbackOwner",
+      "supportOwner",
       "customerCommunicationOwner",
+      "escalationPath",
+      "statusPageDecision",
       "previousKnownGoodDeployment"
     ]
   },
@@ -108,7 +119,8 @@
     "health": {
       "path": "/api/health",
       "public": true,
-      "dependencyChecks": false
+      "dependencyChecks": false,
+      "configExposure": false
     },
     "ready": {
       "path": "/api/ready",
@@ -118,9 +130,36 @@
         "Stripe server config",
         "Redis server config",
         "Sentry runtime config",
-        "Sentry source-map upload credentials present when release uploads are expected"
-      ]
+        "Sentry source-map upload credentials present when release uploads are expected",
+        "Enterprise controlled document storage bucket constant",
+        "Enterprise malware scanner required flag",
+        "Enterprise real malware scanner provider",
+        "Enterprise scanner transport configuration"
+      ],
+      "enterpriseStorageScannerRequiredWhen": [
+        "RELEASE_TARGET=enterprise",
+        "RISCK_COMPLY_ENTERPRISE_RELEASE=true",
+        "REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true"
+      ],
+      "scannerConfigExposure": false
     }
+  },
+  "operationsGovernance": {
+    "incidentOwner": "@renansilva2002 / renanescola40-afk",
+    "rollbackOwner": "@renansilva2002 / renanescola40-afk",
+    "supportOwner": "@renansilva2002 / renanescola40-afk",
+    "customerCommunicationOwner": "@renansilva2002 / renanescola40-afk",
+    "escalationPath": "Support owner -> Incident owner -> Rollback owner -> Security owner -> Release owner / Approver",
+    "statusPageDecision": "Required for confirmed SEV-1 customer impact and customer-visible SEV-2 incidents lasting more than 30 minutes.",
+    "sev1Timing": "Declare within 5 minutes; first customer/status update within 15 minutes; updates every 30 minutes.",
+    "sev2Timing": "Declare within 15 minutes; first customer-visible update within 30 minutes; updates every 60 minutes."
+  },
+  "rollbackTarget": {
+    "previousKnownGoodDeploymentUrlCandidate": "https://eurocomply-saas-git-sync-rel-44736d-renanescola40-afks-projects.vercel.app",
+    "previousKnownGoodCommitShaCandidate": "94de2eb12baa2573ebc442e1f9cc8f6292e7869a",
+    "rollbackTrigger": "Rollback or disable release if health/readiness fails, Vercel deploy fails, SEV-1/SEV-2 thresholds are met, auth/session/RLS checks fail, Stripe webhook idempotency/signature fails, or enterprise scanner readiness is not configured.",
+    "databaseProcedure": "Prefer Supabase forward-fix; destructive rollback requires PITR/export confirmation, migration impact review and tenant isolation/audit-chain reruns.",
+    "stripeReplayIdempotencyNote": "Preserve idempotency keys and event IDs; replay Stripe webhooks only after signature/idempotency and subscription-state reconciliation are confirmed."
   },
   "tests": [
     "src/server/observability/logger.test.ts",
@@ -136,7 +175,7 @@
     "npm run build"
   ],
   "notes": [
-    "This evidence file intentionally contains no secrets, tokens, customer PII, cookie values or stack traces.",
+    "This evidence file intentionally contains no secrets, tokens, customer PII, cookie values, scanner endpoints, allowed host values or stack traces.",
     "CI command output must be attached before production release sign-off."
   ]
 }
