@@ -28,26 +28,13 @@ function evidenceUrl(url) {
 
 async function requestHealth(url) {
   const controller = new AbortController();
-  const startedAt = Date.now();
   const timer = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15000);
   try {
     const response = await fetch(url, { method: 'GET', redirect: 'manual', cache: 'no-store', signal: controller.signal });
     await response.arrayBuffer().catch(() => null);
-    return {
-      ok: response.status >= 200 && response.status < 300,
-      statusCode: response.status,
-      durationMs: Date.now() - startedAt,
-      contentType: response.headers.get('content-type'),
-      errorName: null,
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      statusCode: null,
-      durationMs: Date.now() - startedAt,
-      contentType: null,
-      errorName: error instanceof Error ? error.name : 'UnknownError',
-    };
+    return response.status >= 200 && response.status < 300;
+  } catch {
+    return false;
   } finally {
     clearTimeout(timer);
   }
@@ -69,8 +56,7 @@ function githubActions() {
   };
 }
 
-function buildEvidence(targetUrl, result) {
-  const passed = result.ok === true;
+function buildEvidence(targetUrl, passed) {
   return {
     schema: 'eurocomply.runtime.deployment-health-validation.v1',
     evidenceItem: 'deployment-health-validation',
@@ -89,11 +75,17 @@ function buildEvidence(targetUrl, result) {
       path: targetUrl.pathname,
       queryRemoved: true,
     },
-    httpResult: result,
+    healthCheck: {
+      outcome: passed ? 'passed' : 'failed',
+      responseBodyPersisted: false,
+      responseHeadersPersisted: false,
+      responseStatusPersisted: false,
+      networkErrorPersisted: false,
+    },
     controlsVerified: passed ? [
       'A network-capable runner performed a real HTTPS GET request to /api/health.',
       'The deployment health endpoint returned a successful HTTP status.',
-      'The evidence stores status code, duration, content type and host/path only.',
+      'The evidence stores only target host/path and a controlled pass/fail verdict, not response body, headers, status code or network error text.',
     ] : [
       'Deployment health validation is fail-closed: non-2xx, timeout or network error keeps the P0 row blocked.',
     ],
@@ -133,8 +125,8 @@ function promoteRegister(evidence) {
 
 async function main() {
   const targetUrl = normalizeTarget(inputUrl);
-  const result = await requestHealth(targetUrl);
-  const evidence = buildEvidence(targetUrl, result);
+  const passed = await requestHealth(targetUrl);
+  const evidence = buildEvidence(targetUrl, passed);
   writeEvidence(evidence);
   promoteRegister(evidence);
   if (evidence.status === 'Complete') {
