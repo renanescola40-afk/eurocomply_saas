@@ -3,7 +3,9 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const evidencePath = 'docs/security/evidence/runtime/external-security-review-or-pentest.json';
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
-const placeholderValuePattern = /REPLACE_|YYYY-MM-DD|TODO|TBD|placeholder/i;
+
+const placeholderValuePattern =
+  /REPLACE_|YYYY-MM-DD|TODO|TBD|placeholder|pending_real_external_report|PENDING_REAL_EXTERNAL_REPORT|__OPEN_|not_started|not-started/i;
 
 const requiredDocs = {
   'docs/security/PENTEST_SCOPE.md': [
@@ -131,7 +133,7 @@ function hasPlaceholderString(value) {
 }
 
 function normalize(value) {
-  return String(value ?? '').trim().toLowerCase().replaceAll(' ', '_');
+  return String(value ?? '').trim().toLowerCase().replaceAll(' ', '_').replaceAll('-', '_');
 }
 
 function requireNonEmptyString(object, field, prefix) {
@@ -145,7 +147,12 @@ function validateRequiredDocs() {
   }
 }
 
-function validateRegister() {
+function registerStatus(row) {
+  const cells = row.split('|').map((cell) => cell.trim()).filter(Boolean);
+  return cells[1] ?? '';
+}
+
+function validateRegister(evidence) {
   const register = readText(registerPath);
   if (!register) return;
 
@@ -158,8 +165,17 @@ function validateRegister() {
     return;
   }
 
+  const p0Status = registerStatus(row);
+
   if (!row.includes(evidencePath)) failures.push(`${registerPath} external review row must reference ${evidencePath}`);
-  if (!row.includes('| Complete |')) failures.push(`${registerPath} must mark external review as Complete only after real evidence is attached`);
+
+  if (evidence?.status === 'Complete' && p0Status !== 'Complete') {
+    failures.push(`${registerPath} external review row must be Complete when the real external review evidence is Complete`);
+  }
+
+  if (evidence?.status !== 'Complete' && p0Status === 'Complete') {
+    failures.push(`${registerPath} cannot mark external review Complete while ${evidencePath} is not Complete`);
+  }
 }
 
 function validateCompleteShape(evidence) {
@@ -171,13 +187,19 @@ function validateCompleteShape(evidence) {
     requireNonEmptyString(evidence, field, evidencePath);
   }
 
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(evidence.date ?? ''))) {
+    failures.push(`${evidencePath}.date must be YYYY-MM-DD from the real external report or approved review`);
+  }
+
   for (const field of ['scope', 'criticalFindings', 'highFindings', 'mediumFindings', 'acceptedRiskRecords']) {
     if (!Array.isArray(evidence[field])) failures.push(`${evidencePath}.${field} must be an array`);
   }
 
   if (!isNonEmptyArray(evidence.scope)) failures.push(`${evidencePath}.scope must list reviewed scope items`);
   if (!isNonEmptyString(evidence.reportStorageLocation)) failures.push(`${evidencePath}.reportStorageLocation is required`);
-  if (hasPlaceholderString(evidence)) failures.push(`${evidencePath} Complete evidence must not contain placeholder strings such as REPLACE_, YYYY-MM-DD, TODO, TBD, or placeholder`);
+  if (hasPlaceholderString(evidence)) {
+    failures.push(`${evidencePath} Complete evidence must not contain placeholder strings such as REPLACE_, YYYY-MM-DD, TODO, TBD, pending_real_external_report, not_started, or placeholder`);
+  }
 
   const normalizedScope = new Set((Array.isArray(evidence.scope) ? evidence.scope : []).map((item) => normalize(item)));
   for (const control of requiredScopeControls) {
@@ -191,19 +213,99 @@ function validateEvidenceIntegrity(evidence) {
   }
 
   if (evidence.status !== 'Complete') failures.push(`${evidencePath} status must be Complete`);
-  if (evidence.status === 'Complete' && evidence.outcome === 'not_started') failures.push(`${evidencePath} cannot be Complete with outcome not_started`);
+  if (evidence.status === 'Complete' && normalize(evidence.outcome) === 'not_started') {
+    failures.push(`${evidencePath} cannot be Complete with outcome not_started`);
+  }
 
   if (evidence.evidenceIntegrity?.containsSecrets !== false) failures.push(`${evidencePath} evidenceIntegrity.containsSecrets must be false`);
   if (evidence.evidenceIntegrity?.valuesRedacted !== true) failures.push(`${evidencePath} evidenceIntegrity.valuesRedacted must be true`);
   if (evidence.evidenceIntegrity?.placeholderOnly !== false) failures.push(`${evidencePath} evidenceIntegrity.placeholderOnly must be false`);
   if (evidence.evidenceIntegrity?.realExternalReportAttached !== true) failures.push(`${evidencePath} evidenceIntegrity.realExternalReportAttached must be true`);
 
-  if (!isNonEmptyString(evidence.reportStorageLocation)) failures.push(`${evidencePath} report missing: reportStorageLocation must reference the real external report`);
-  if (!isNonEmptyString(evidence.reportReference)) failures.push(`${evidencePath} report missing: reportReference must identify the real external report`);
+  if (!isNonEmptyString(evidence.reportStorageLocation) || hasPlaceholderString(evidence.reportStorageLocation)) {
+    failures.push(`${evidencePath} report missing: reportStorageLocation must reference the real external report`);
+  }
+
+  if (!isNonEmptyString(evidence.reportReference) || hasPlaceholderString(evidence.reportReference)) {
+    failures.push(`${evidencePath} report missing: reportReference must identify the real external report`);
+  }
+}
+
+function findingKey(finding, fallback) {
+  const id = isNonEmptyString(finding?.id) ? finding.id : fallback;
+  return `${normalize(finding?.severity)}:${id}`;
+}
+
+function collectFindings(evidence) {
+  const findings = [];
+  const seen = new Set();
+
+  for (const [field, expectedSeverity] of [
+    ['findings', null],
+    ['criticalFindings', 'critical'],
+    ['highFindings', 'high'],
+    ['mediumFindings', 'medium'],
+  ]) {
+    if (!Array.isArray(evidence[field])) continue;
+
+    evidence[field].forEach((finding, index) => {
+      const normalizedFinding =
+        finding && typeof finding === 'object'
+          ? { ...finding }
+          : { id: `${field}[${index}]`, title: String(finding ?? '') };
+
+      if (expectedSeverity && !normalizedFinding.severity) normalizedFinding.severity = expectedSeverity;
+
+      const key = findingKey(normalizedFinding, `${field}[${index}]`);
+      if (!seen.has(key)) {
+        seen.add(key);
+        findings.push(normalizedFinding);
+      }
+    });
+  }
+
+  return findings;
+}
+
+function riskAcceptanceForFinding(evidence, finding) {
+  if (finding?.riskAcceptance && typeof finding.riskAcceptance === 'object') return finding.riskAcceptance;
+
+  const findingId = finding?.id;
+  if (!isNonEmptyString(findingId) || !Array.isArray(evidence.acceptedRiskRecords)) return null;
+
+  return evidence.acceptedRiskRecords.find((record) => record?.findingId === findingId || record?.id === findingId) ?? null;
+}
+
+function retestEvidenceForFinding(evidence, finding) {
+  if (isNonEmptyString(finding?.retestEvidence) || isNonEmptyString(finding?.retestReference)) return true;
+
+  const findingId = finding?.id;
+  if (!isNonEmptyString(findingId) || !Array.isArray(evidence.retests)) return false;
+
+  return evidence.retests.some((retest) => {
+    if (retest?.findingId !== findingId && retest?.id !== findingId) return false;
+    if (!passingRetestStatuses.includes(normalize(retest?.retestStatus ?? retest?.status ?? retest?.outcome))) return false;
+    return isNonEmptyString(retest?.evidence) || isNonEmptyString(retest?.retestEvidence) || isNonEmptyString(retest?.reportReference);
+  });
+}
+
+function validateRiskAcceptances(evidence) {
+  if (!Array.isArray(evidence.acceptedRiskRecords)) return;
+
+  evidence.acceptedRiskRecords.forEach((record, index) => {
+    const id = isNonEmptyString(record?.findingId) ? record.findingId : `acceptedRiskRecords[${index}]`;
+    for (const field of ['acceptedBy', 'acceptedAt', 'acceptedUntil', 'rationale', 'customerImpact']) {
+      if (!isNonEmptyString(record?.[field])) failures.push(`${evidencePath} accepted risk ${id} missing ${field}`);
+    }
+
+    if (!isNonEmptyArray(record?.compensatingControls)) {
+      failures.push(`${evidencePath} accepted risk ${id} missing compensatingControls`);
+    }
+  });
 }
 
 function validateFindings(evidence) {
-  const findings = Array.isArray(evidence.findings) ? evidence.findings : [];
+  const findings = collectFindings(evidence);
   const summary = evidence.findingsSummary ?? {};
 
   for (const severity of findingsSeverities) {
@@ -211,6 +313,8 @@ function validateFindings(evidence) {
       failures.push(`${evidencePath} findingsSummary.${severity} must be a non-negative integer`);
     }
   }
+
+  validateRiskAcceptances(evidence);
 
   for (const finding of findings) {
     const id = isNonEmptyString(finding?.id) ? finding.id : '<missing finding id>';
@@ -220,7 +324,7 @@ function validateFindings(evidence) {
 
     if (!findingsSeverities.includes(severity)) failures.push(`${evidencePath} finding ${id} has invalid severity`);
 
-    for (const field of ['owner', 'dueDate', 'mitigation', 'retestStatus']) {
+    for (const field of ['owner', 'dueDate', 'mitigation', 'status', 'retestStatus']) {
       if (!isNonEmptyString(finding?.[field])) failures.push(`${evidencePath} finding ${id} missing ${field}`);
     }
 
@@ -232,13 +336,21 @@ function validateFindings(evidence) {
       failures.push(`${evidencePath} critical finding ${id} has missing, pending, failed, or invalid retest`);
     }
 
+    if (severity === 'critical' && retestStatus === 'passed' && !retestEvidenceForFinding(evidence, finding)) {
+      failures.push(`${evidencePath} critical finding ${id} has passed retest status but no retest evidence/reference`);
+    }
+
     if (status === 'formally_accepted') {
-      const acceptance = finding.riskAcceptance ?? {};
-      for (const field of ['acceptedBy', 'acceptedAt', 'acceptedUntil', 'rationale', 'compensatingControls']) {
-        if (field === 'compensatingControls') {
-          if (!isNonEmptyArray(acceptance[field])) failures.push(`${evidencePath} finding ${id} formal acceptance missing ${field}`);
-        } else if (!isNonEmptyString(acceptance[field])) {
-          failures.push(`${evidencePath} finding ${id} formal acceptance missing ${field}`);
+      const acceptance = riskAcceptanceForFinding(evidence, finding);
+      if (!acceptance) {
+        failures.push(`${evidencePath} finding ${id} is formally accepted but has no risk acceptance record`);
+      } else {
+        for (const field of ['acceptedBy', 'acceptedAt', 'acceptedUntil', 'rationale', 'customerImpact']) {
+          if (!isNonEmptyString(acceptance[field])) failures.push(`${evidencePath} finding ${id} formal acceptance missing ${field}`);
+        }
+
+        if (!isNonEmptyArray(acceptance.compensatingControls)) {
+          failures.push(`${evidencePath} finding ${id} formal acceptance missing compensatingControls`);
         }
       }
     }
@@ -261,11 +373,25 @@ function validateFindings(evidence) {
   if (Array.isArray(evidence.mediumFindings) && evidence.mediumFindings.length !== summary.medium) {
     failures.push(`${evidencePath}.mediumFindings count must match findingsSummary.medium`);
   }
+
+  if (Array.isArray(evidence.findings)) {
+    const actualCounts = Object.fromEntries(findingsSeverities.map((severity) => [severity, 0]));
+    for (const finding of findings) {
+      const severity = normalize(finding?.severity);
+      if (severity in actualCounts) actualCounts[severity] += 1;
+    }
+
+    for (const severity of ['critical', 'high', 'medium']) {
+      if (Number.isInteger(summary[severity]) && actualCounts[severity] !== summary[severity]) {
+        failures.push(`${evidencePath} ${severity} finding count must match findingsSummary.${severity}`);
+      }
+    }
+  }
 }
 
 validateRequiredDocs();
-validateRegister();
 const evidence = readJson(evidencePath);
+validateRegister(evidence);
 
 if (evidence) {
   validateEvidenceIntegrity(evidence);
