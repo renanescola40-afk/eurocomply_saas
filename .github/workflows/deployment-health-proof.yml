@@ -1,0 +1,38 @@
+name: Deployment Health Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: 'HTTPS deployment URL to validate. Root path is normalized to /api/health.'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deployment-health-proof:
+    name: Validate deployment health endpoint
+    runs-on: ubuntu-latest
+    env:
+      DEPLOYMENT_HEALTH_URL: ${{ inputs.deployment_url }}
+      DEPLOYMENT_HEALTH_TIMEOUT_MS: '15000'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run deployment health validation
+        run: node scripts/security/run-deployment-health-validation.mjs
+
+      - name: Upload deployment health evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-health-validation
+          path: docs/security/evidence/runtime/deployment-health-validation.json
+          if-no-files-found: error
