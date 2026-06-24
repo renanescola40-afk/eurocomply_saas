@@ -1,0 +1,63 @@
+{
+  "schema": "eurocomply.runtime.ci-assessed-commit-validation.v1",
+  "evidenceItem": "ci-assessed-commit-validation",
+  "status": "Complete",
+  "reviewer": "EuroComply security automation",
+  "reviewedAt": "2026-06-23T22:55:49Z",
+  "summary": "The final upload-security follow-up PR head commit completed the required GitHub Actions validation set successfully before merge. This evidence records CI, security CI, upload scanner CI, CodeQL, dependency review, Semgrep, Gitleaks, Actionlint, secret scanning, P0 runtime evidence, P0 gap report and full security suite run provenance for the assessed commit.",
+  "evidenceLocations": [
+    "https://github.com/renanescola40-afk/eurocomply_saas/pull/382",
+    "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28062625186",
+    "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28062625246",
+    "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28062625166",
+    "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28062625207",
+    "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28062625191",
+    "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28062625314",
+    "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28062625253",
+    "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28062625213",
+    "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28062625202",
+    "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28062625159",
+    "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28062625161"
+  ],
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "assessedPullRequest": {
+    "number": 382,
+    "title": "Keep live upload scanner CI idempotent",
+    "url": "https://github.com/renanescola40-afk/eurocomply_saas/pull/382",
+    "state": "merged",
+    "mergedAt": "2026-06-23T22:55:49Z",
+    "headSha": "90344010e993f80f495fd0d72f63ac7b0751ee4a",
+    "mergeCommitSha": "67ee3860cf4c05f46a2332c2146f85556d65bde2"
+  },
+  "controlsVerified": [
+    "CI / quality completed successfully for the assessed pull request head commit.",
+    "RISCK COMPLY Security CI completed successfully for the assessed pull request head commit.",
+    "RISCK COMPLY Upload Security CI completed successfully and retained live ClamAV scanner proof for the assessed pull request head commit.",
+    "Full Security Suite completed successfully for the assessed pull request head commit.",
+    "CodeQL completed successfully for the assessed pull request head commit.",
+    "Dependency Review completed successfully for the assessed pull request head commit.",
+    "Semgrep completed successfully for the assessed pull request head commit.",
+    "Gitleaks completed successfully for the assessed pull request head commit.",
+    "Secret Scanning production readiness gate completed successfully for the assessed pull request head commit.",
+    "Actionlint completed successfully for the assessed pull request head commit.",
+    "P0 Runtime Evidence and P0 Runtime Gap Report completed successfully for the assessed pull request head commit."
+  ],
+  "workflowRuns": [
+    { "name": "CI", "runId": "28062625186", "conclusion": "success" },
+    { "name": "RISCK COMPLY Security CI", "runId": "28062625246", "conclusion": "success" },
+    { "name": "RISCK COMPLY Upload Security CI", "runId": "28062625166", "conclusion": "success" },
+    { "name": "Full Security Suite", "runId": "28062625207", "conclusion": "success" },
+    { "name": "CodeQL", "runId": "28062625191", "conclusion": "success" },
+    { "name": "Dependency Review", "runId": "28062625190", "conclusion": "success" },
+    { "name": "Semgrep", "runId": "28062625314", "conclusion": "success" },
+    { "name": "Gitleaks", "runId": "28062625253", "conclusion": "success" },
+    { "name": "Secret Scanning", "runId": "28062625213", "conclusion": "success" },
+    { "name": "Actionlint", "runId": "28062625202", "conclusion": "success" },
+    { "name": "P0 Runtime Evidence", "runId": "28062625159", "conclusion": "success" },
+    { "name": "P0 Runtime Gap Report", "runId": "28062625161", "conclusion": "success" }
+  ],
+  "limitations": [
+    "This evidence closes the CI execution row only. It does not claim Vercel deployment health for the merge commit because the merge-commit Vercel status reported a build-rate-limit failure.",
+    "This evidence does not close Supabase live RLS, external security review, Stripe runtime, step-up provider, audit-chain customer live validation, observability operational sign-off, rollback dry-run or deployment health rows."
+  ]
+}
