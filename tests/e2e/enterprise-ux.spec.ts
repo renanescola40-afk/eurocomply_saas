@@ -49,6 +49,12 @@ async function expectNoHorizontalOverflow(page: Page, label: string) {
   expect(hasOverflow, `${label} has horizontal overflow`).toBe(false);
 }
 
+async function expectCriticalActionCanReceiveKeyboardFocus(page: Page) {
+  const openOrganizations = page.getByRole('link', { name: /Open organizations/i });
+  await openOrganizations.focus();
+  await expect(openOrganizations).toBeFocused();
+}
+
 test.describe('enterprise dashboard UX', () => {
   test('owner sees the executive overview, standardized states and working primary CTAs', async ({ page }) => {
     const credentials = credentialsFor('owner');
@@ -64,12 +70,14 @@ test.describe('enterprise dashboard UX', () => {
     await expect(page.getByText(/Risk summary/i)).toBeVisible();
     await expect(page.getByText(/Pending tasks/i)).toBeVisible();
     await expect(page.getByText(/Document status/i)).toBeVisible();
+    await expect(page.getByText(/Vendor status/i)).toBeVisible();
     await expect(page.getByText(/Audit activity/i)).toBeVisible();
     await expect(page.getByText(/Billing status/i)).toBeVisible();
     await expect(page.getByRole('status').filter({ hasText: /Success|Empty/i }).first()).toBeVisible();
     await expect(page.getByRole('alert').filter({ hasText: /Error|Permission denied|Offline/i }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /Open organizations/i })).toHaveAttribute('href', /\/en\/dashboard\/organizations/);
     await expect(page.getByRole('link', { name: /View documents/i })).toHaveAttribute('href', /\/en\/dashboard\/organizations\/documents/);
+    await expectCriticalActionCanReceiveKeyboardFocus(page);
     await expectNoTemplateSmell(page, 'enterprise dashboard');
     await expectNoHorizontalOverflow(page, 'enterprise dashboard desktop');
   });
@@ -106,6 +114,23 @@ test.describe('enterprise dashboard UX on mobile', () => {
   });
 });
 
+test.describe('enterprise dashboard UX on tablet', () => {
+  test.use({ viewport: { width: 768, height: 1024 } });
+
+  test('tablet dashboard preserves panel readability and keyboard focus', async ({ page }) => {
+    const credentials = credentialsFor('owner');
+    skipWithoutCredentials('owner', credentials);
+
+    await signIn(page, 'en', credentials);
+    await page.goto(localizedPath('en', '/dashboard'), { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByRole('heading', { name: /Executive compliance overview/i })).toBeVisible();
+    await expect(page.getByText(/Standard product states/i)).toBeVisible();
+    await expectCriticalActionCanReceiveKeyboardFocus(page);
+    await expectNoHorizontalOverflow(page, 'enterprise dashboard tablet');
+  });
+});
+
 test.describe('basic visual smoke', () => {
   test('captures public home screenshot', async ({ page }) => {
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
@@ -121,5 +146,16 @@ test.describe('basic visual smoke', () => {
     await page.goto('/en/dashboard', { waitUntil: 'domcontentloaded' });
     await expectNoTemplateSmell(page, 'dashboard visual smoke');
     await page.screenshot({ path: 'test-results/visual-smoke-dashboard-en.png', fullPage: true });
+  });
+
+  test('captures authenticated tablet dashboard screenshot', async ({ page }) => {
+    const credentials = credentialsFor('owner');
+    skipWithoutCredentials('owner', credentials);
+
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await signIn(page, 'en', credentials);
+    await page.goto('/en/dashboard', { waitUntil: 'domcontentloaded' });
+    await expectNoHorizontalOverflow(page, 'dashboard tablet visual smoke');
+    await page.screenshot({ path: 'test-results/visual-smoke-dashboard-tablet-en.png', fullPage: true });
   });
 });
