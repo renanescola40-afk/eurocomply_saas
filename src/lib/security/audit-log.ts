@@ -116,7 +116,7 @@ export async function writeAuditLog(input: AuditLogInput) {
     });
 
     if (error) {
-      reportError(error, { area: 'audit_log_write', action: input.action, organizationId: input.organizationId ?? undefined, userId: actorUserId ?? undefined });
+      reportError(error, { area: 'audit_log_write', action: input.action, organizationId: input.organizationId ?? undefined, actorUserId: actorUserId ?? undefined });
     } else {
       legacyPersisted = true;
     }
@@ -140,7 +140,7 @@ export async function writeAuditLog(input: AuditLogInput) {
       area: 'audit_chain_write',
       action: input.action,
       organizationId: input.organizationId,
-      userId: actorUserId ?? undefined,
+      actorUserId: actorUserId ?? undefined,
       reason: 'reason' in chainResult ? chainResult.reason : undefined,
     });
   }
