@@ -1,6 +1,6 @@
 # Phase 3 Production Handoff
 
-This handoff summarizes what must be confirmed before EuroComply SaaS Phase 3 can be marked production-complete.
+This handoff summarizes what must be confirmed before Risck comply SaaS Phase 3 can be marked production-complete.
 
 ## Scope
 
