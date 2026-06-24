@@ -12,6 +12,8 @@ import {
   assertTenantStoragePathInOrganization,
   buildTenantScopedUploadPath,
   buildUploadSecurityAuditMetadata,
+  currentUploadMalwareScannerProvider,
+  isUploadMalwareScanRequired,
   scanValidatedUploadForMalware,
   shouldBlockUploadForMalwareScan,
   validateUploadSecurityFile,
@@ -63,6 +65,87 @@ function withoutRawStoragePath(metadata: Record<string, unknown> | undefined) {
   const safeMetadata = { ...(metadata ?? {}) };
   delete safeMetadata.storagePath;
   return safeMetadata;
+}
+
+function stringMetadataValue(metadata: Record<string, unknown> | undefined, key: string) {
+  const value = metadata?.[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function numberMetadataValue(metadata: Record<string, unknown> | undefined, key: string) {
+  const value = metadata?.[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function isServerGeneratedDocumentMetadata(metadata: Record<string, unknown> | undefined) {
+  return metadata?.source === 'template' && metadata.serverGenerated === true;
+}
+
+function hasCleanEnterpriseUploadScanMetadata(metadata: Record<string, unknown> | undefined) {
+  return (
+    metadata?.scanRequired === true &&
+    metadata.scanStatus === 'clean' &&
+    stringMetadataValue(metadata, 'scanProvider') !== null &&
+    stringMetadataValue(metadata, 'scanProvider') !== 'not_configured' &&
+    stringMetadataValue(metadata, 'scanCheckedAt') !== null &&
+    stringMetadataValue(metadata, 'fileHash') !== null &&
+    numberMetadataValue(metadata, 'fileSize') !== null &&
+    stringMetadataValue(metadata, 'mimeDetected') !== null
+  );
+}
+
+async function assertEnterpriseDocumentCreateHasCleanUploadScan(input: {
+  organizationId: string;
+  actorUserId: string;
+  metadata: Record<string, unknown> | undefined;
+}) {
+  if (!isUploadMalwareScanRequired()) return;
+  if (isServerGeneratedDocumentMetadata(input.metadata)) return;
+  if (hasCleanEnterpriseUploadScanMetadata(input.metadata)) return;
+
+  const metadata = {
+    ...buildUploadSecurityAuditMetadata({
+      reason: 'enterprise_upload_scan_bypass',
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      accessPurpose: 'upload',
+      fileHash: stringMetadataValue(input.metadata, 'fileHash'),
+      fileSize: numberMetadataValue(input.metadata, 'fileSize'),
+      mimeDetected: stringMetadataValue(input.metadata, 'mimeDetected'),
+    }),
+    attemptedScanStatus: stringMetadataValue(input.metadata, 'scanStatus') ?? 'missing',
+    expectedScanStatus: 'clean',
+    expectedScanProvider: currentUploadMalwareScannerProvider(),
+  };
+
+  await Promise.all([
+    createAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadBlocked,
+      entityType: 'document',
+      entityId: input.organizationId,
+      metadata,
+    }),
+    createAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: 'document_upload_rejected',
+      entityType: 'document',
+      entityId: input.organizationId,
+      metadata,
+    }),
+    logAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadBlocked,
+      entityType: 'document',
+      entityId: input.organizationId,
+      metadata,
+    }),
+  ]);
+
+  throw new Error('Document upload was blocked because enterprise upload scanning metadata is missing or not clean.');
 }
 
 async function auditUploadRequested(input: {
@@ -208,6 +291,12 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
   assertTenantStoragePathInOrganization(payload.storagePath, payload.organizationId);
 
   const uploadSecurityMetadata = withoutRawStoragePath(payload.metadata);
+  await assertEnterpriseDocumentCreateHasCleanUploadScan({
+    organizationId: payload.organizationId,
+    actorUserId: userId,
+    metadata: uploadSecurityMetadata,
+  });
+
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
