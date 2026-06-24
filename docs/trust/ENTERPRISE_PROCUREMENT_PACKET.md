@@ -2,6 +2,14 @@
 
 Status: buyer-facing checklist and answer bank for enterprise review. This packet is not a certification report.
 
+## Procurement checklist
+
+See `docs/trust/PROCUREMENT_CHECKLIST.md` for the current working checklist. Confirm public Trust Center routes, footer links, landing links, pricing links, release evidence, subprocessors, data retention boundaries, incident response workflow, backup evidence, and responsible disclosure contact before sharing enterprise answers.
+
+## Approved positioning
+
+Risck comply is designed to support enterprise security review through authenticated workspaces, organization-scoped access, tenant-isolation controls, audit events, controlled documentation, managed-provider safeguards, subprocessor review, and release evidence gates.
+
 ## Core materials
 
 - `docs/trust/SECURITY_OVERVIEW.md`
@@ -13,24 +21,11 @@ Status: buyer-facing checklist and answer bank for enterprise review. This packe
 - `docs/trust/BACKUP_AND_RECOVERY.md`
 - `docs/trust/SUBPROCESSORS.md`
 - `docs/trust/SECURITY_FAQ.md`
-
-## Procurement checklist
-
-- Confirm customer use case and regulated data categories.
-- Confirm production hosting, database, storage and billing providers.
-- Confirm current subprocessor list and customer notice process.
-- Attach release evidence showing trust docs, public pages and release gates.
-- Attach provider evidence for managed infrastructure safeguards where applicable.
-- Confirm retention, deletion, support and recovery commitments in the customer agreement.
-- Do not claim unavailable certifications or reviews without approved evidence.
-
-## Approved positioning
-
-EuroComply is designed to support enterprise security review through authenticated workspaces, organization-scoped access, tenant-isolation controls, audit events, controlled documentation and release evidence gates.
+- `docs/trust/PROCUREMENT_CHECKLIST.md`
 
 ## Guardrail
 
-Use `designed to support` for planned or evidence-dependent capabilities. Do not present planned items as completed.
+Use `designed to support` for planned or evidence-dependent capabilities. Do not present planned items as completed. Do not claim SOC 2, ISO 27001, completed third-party penetration testing, tested recovery, or 24/7 monitoring unless approved evidence exists.
 
 ## Responsible disclosure
 

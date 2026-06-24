@@ -4,20 +4,39 @@ Status: enterprise review note. This is an operational readiness document, not a
 
 ## Intake
 
-Security reports and urgent trust issues should be sent privately to renansilva2002@gmail.com until a dedicated security mailbox is provisioned.
+Security reports and urgent trust issues should be sent privately to `renansilva2002@gmail.com` until a dedicated security mailbox is provisioned. Do not create public GitHub issues for private security reports.
+
+Reports should include affected component, reproduction steps, expected impact, screenshots or logs when safe to share, and whether authentication, organization isolation, billing, storage, audit logs, or customer data may be affected.
 
 ## Current workflow
 
-1. Triage report and determine affected component, severity, customer impact and data sensitivity.
-2. Contain issue through configuration, access control, release rollback or code patch as appropriate.
-3. Preserve relevant logs and deployment evidence.
-4. Communicate with affected customers according to legal and contractual obligations.
-5. Complete post-incident review with root cause, corrective actions and evidence links.
+1. Triage the report and determine affected component, severity, customer impact, data sensitivity, and whether exploitation is plausible.
+2. Contain the issue through configuration, access control, release rollback, provider action, or code patch as appropriate.
+3. Preserve relevant logs, audit events, deployment records, provider evidence, and customer-impact notes.
+4. Validate the fix with focused tests or manual reproduction evidence.
+5. Communicate with affected customers according to legal and contractual obligations.
+6. Complete a post-incident review with root cause, timeline, corrective actions, owner, due date, and evidence links.
+7. Update trust documentation if the incident changes a public claim, subprocessor disclosure, retention position, or operational commitment.
+
+## Severity model
+
+| Severity | Examples | Current operating target |
+| --- | --- | --- |
+| Critical | Active compromise, cross-tenant exposure, authentication bypass, payment-impacting security failure | Initial triage target: 24 hours |
+| High | Material data exposure risk, privilege escalation, exploitable upload or webhook weakness | Initial triage target: 2 business days |
+| Medium | Limited-impact security defect or defense-in-depth gap | Initial triage target: 5 business days |
+| Low | Hardening item, documentation issue, low-risk misconfiguration | Next planned maintenance window |
+
+These are operational targets, not contractual SLAs unless separately agreed in writing.
+
+## Customer communication
+
+Customer communication should be based on verified impact. Avoid premature public claims. Communication records should identify affected customers, data categories, timeline, containment status, corrective actions, and whether regulatory or contractual notice is required.
 
 ## Evidence boundaries
 
-Risck comply does not currently claim 24/7 staffed monitoring, external incident-response retainer, completed tabletop exercise or contractual notification timing unless a signed customer agreement says otherwise.
+Risck comply does not currently claim 24/7 staffed monitoring, external incident-response retainer, completed tabletop exercise, or contractual notification timing unless a signed customer agreement says otherwise.
 
 ## Customer-safe answer
 
-Risck comply maintains a documented incident response workflow designed to support triage, containment, customer communication and post-incident review. Program maturity evidence should be reviewed during procurement.
+Risck comply maintains a documented incident response workflow designed to support intake, triage, containment, evidence preservation, customer communication, and post-incident review. Program maturity evidence should be reviewed during procurement.
