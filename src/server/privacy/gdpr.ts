@@ -56,11 +56,12 @@ type QueryResult = { data: unknown[] | null; error: QueryError };
 type ScopedQuery = Promise<QueryResult> & {
   order?: (column: string, options: { ascending: boolean }) => Promise<QueryResult>;
 };
+type SelectQuery = {
+  eq: (column: string, value: string) => ScopedQuery;
+};
 type SupabaseLike = {
   from: (table: string) => {
-    select: (columns: string) => {
-      eq: (column: string, value: string) => ScopedQuery;
-    };
+    select: (columns: string) => SelectQuery;
   };
 };
 
@@ -123,12 +124,7 @@ export function validateRequestedOrganizationScope(value: string | null, current
   return { ok: true, requestedOrganizationId, currentOrganizationId };
 }
 
-function scopeQuery(
-  query: ReturnType<SupabaseLike['from']>['select'] extends (columns: string) => infer TResult ? TResult : never,
-  descriptor: PrivacyInventoryTable,
-  organizationId: string,
-  userId: string,
-) {
+function scopeQuery(query: SelectQuery, descriptor: PrivacyInventoryTable, organizationId: string, userId: string) {
   if (descriptor.scopeColumn === 'id') return query.eq('id', organizationId);
   if (descriptor.scopeColumn === 'user_id') return query.eq('user_id', userId);
   if (descriptor.scopeColumn === 'subject_id') return query.eq('id', userId);
