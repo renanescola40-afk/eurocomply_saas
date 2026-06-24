@@ -4,9 +4,10 @@
   "outcome": "no_go",
   "generatedAt": "2026-06-25T00:00:00.000Z",
   "reviewer": "security-release-review",
+  "reviewedAt": "2026-06-25T00:00:00Z",
   "summary": "Final enterprise readiness remains No-Go until live target evidence, CI command logs, owner sign-off, rollback target, and external security review evidence are complete. This file is a safe placeholder and does not contain secrets or invented evidence.",
   "releaseDecision": "No-Go",
-  "redactionConfirmation": "No secrets, tokens, credentials, customer data, screenshots, or access-granting values are included.",
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "docs/ENTERPRISE_FINAL_READINESS_PLAN.md",
     "docs/RELEASE_GO_NO_GO_CHECKLIST.md",
@@ -59,5 +60,10 @@
     }
   },
   "completionRule": "Set status to Complete only after every P0 blocker is backed by real evidence generated in the target environment and reviewed without unresolved critical/high findings.",
-  "productionGate": "Public production and enterprise pilot remain blocked while this evidence status is Open. Do not use this placeholder as customer-facing proof."
+  "productionGate": "Public production and enterprise pilot remain blocked while this evidence status is Open. Do not use this placeholder as customer-facing proof.",
+  "evidenceIntegrity": {
+    "placeholderOnly": true,
+    "realRuntimeEvidenceAttached": false,
+    "customerFacingProof": false
+  }
 }
