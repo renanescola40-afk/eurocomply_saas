@@ -13,6 +13,10 @@ This document is the release owner record used to approve or reject a EuroComply
 - Customer communication owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Support owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Security owner: @renansilva2002 / renanescola40-afk
+- Escalation path: Support owner -> Incident owner -> Rollback owner -> Security owner -> Release owner / Approver
+- Status page decision: Required for confirmed SEV-1 customer impact and for SEV-2 incidents lasting more than 30 minutes; optional/manual update for contained SEV-2 incidents with no customer-visible impact.
+- SEV-1 timing: declare within 5 minutes, incident owner assigned immediately, first customer/status update within 15 minutes, follow-up every 30 minutes, post-incident review started within 24 hours.
+- SEV-2 timing: declare within 15 minutes, incident owner assigned within 15 minutes, first customer/status update within 30 minutes when customer-visible, follow-up every 60 minutes, post-incident review started within 2 business days.
 - Approver: Not granted; blocked by current PR Vercel deployment failure, open P0 evidence and non-passing final validation bundle
 - Target environment: Production / enterprise candidate
 - Deployment URL: **Missing for current PR #346; Vercel failed with `api-deployments-free-per-day`**
@@ -39,6 +43,9 @@ The release owner must confirm each item before approval.
 | Rollback owner named | Assigned | @renansilva2002 / renanescola40-afk |
 | Customer communication owner named | Assigned | @renansilva2002 / renanescola40-afk |
 | Support owner named | Assigned | @renansilva2002 / renanescola40-afk |
+| Escalation path documented | Assigned | Support owner -> Incident owner -> Rollback owner -> Security owner -> Release owner / Approver |
+| Status page decision documented | Assigned | Required for SEV-1 and customer-visible SEV-2 over 30 minutes |
+| SEV-1 / SEV-2 timing documented | Assigned | SEV-1 first update within 15 minutes; SEV-2 first customer-visible update within 30 minutes |
 | Approver assigned | **Not approved** | Approval is intentionally withheld while P0 blockers remain open |
 
 ### Build, deploy, and CI
@@ -66,7 +73,7 @@ The release owner must confirm each item before approval.
 | Supabase live RLS validation reviewed | **Open** | `docs/security/evidence/runtime/supabase-live-rls-validation.json` still requires a real target-environment run |
 | External security review or pentest status reviewed | **Open / not started** | `docs/security/evidence/runtime/external-security-review-or-pentest.json` cannot be treated as complete without a real report |
 | Step-up MFA / IdP validation | Exception / enterprise-blocking | Repository evidence exists; live provider execution remains missing |
-| Upload scanner provider proof | Exception / enterprise-blocking | Repository evidence exists; live provider proof remains missing |
+| Upload scanner provider proof | Exception / enterprise-blocking | Repository evidence exists; live provider proof remains missing; `/api/ready` now fails enterprise readiness unless scanner/storage config is present |
 | Stripe runtime validation | Exception / production-blocking for paid launch | Focused Stripe checkout/portal/webhook runtime evidence remains pending |
 | Observability and incident readiness | Partial | Named owners are assigned; target runtime verification and drill evidence remain pending |
 
@@ -81,11 +88,11 @@ Rollback is **defined for remediation tracking only** and is not approved for pr
 | Previous deployment build log | `https://vercel.com/renanescola40-afks-projects/eurocomply-saas/CtGUPmcEvL1P6QhAC6qQXsd52wMB` |
 | Evidence source | PR #343 Vercel bot preview URL plus GitHub commit status `Vercel = success` for commit `94de2eb12baa2573ebc442e1f9cc8f6292e7869a` |
 | Verification status | Candidate only; runtime URL was not functionally verified from this remediation environment |
-| Rollback trigger criteria | Roll back or disable release if deployment health endpoint fails twice within 10 minutes, Vercel deployment fails, SEV-1/SEV-2 customer-impacting errors exceed agreed threshold, auth/session/RLS isolation checks fail, Stripe webhook signature/idempotency fails, or upload scanning enters fail-open/unknown state |
+| Rollback trigger criteria | Roll back or disable release if deployment health endpoint fails twice within 10 minutes, Vercel deployment fails, SEV-1/SEV-2 customer-impacting errors exceed agreed threshold, auth/session/RLS isolation checks fail, Stripe webhook signature/idempotency fails, upload scanning enters fail-open/unknown state, or enterprise `/api/ready` reports storage/scanner not configured. |
 | Rollback owner | @renansilva2002 / renanescola40-afk (acting Release Manager) |
 | Incident owner | @renansilva2002 / renanescola40-afk (acting CTO / Security Lead) |
 | Database rollback/forward-fix strategy | Prefer forward-fix migration for Supabase. Do not run destructive rollback until PITR/export status is confirmed, migration impact is reviewed, and tenant isolation/audit-chain checks are rerun. If data correction is required, use an additive migration or compensating script with audit log preservation. |
-| Stripe rollback strategy | Preserve webhook idempotency keys and event replay safety. Do not rotate webhook secrets during rollback without updating both Vercel and Stripe and rerunning webhook signature tests. |
+| Stripe rollback strategy | Preserve webhook idempotency keys and event replay safety. Do not rotate webhook secrets during rollback without updating both Vercel and Stripe and rerunning webhook signature tests. Replay missed Stripe webhooks only after confirming idempotency keys, event IDs and subscription state reconciliation. |
 | Customer communication owner | @renansilva2002 / renanescola40-afk (acting Release Manager) |
 
 ## Approval decision
@@ -111,7 +118,7 @@ These exceptions are documented for remediation tracking only. They are not appr
 | --- | --- | --- | --- | --- |
 | Current deployment | PR #346 Vercel deployment failed due daily deployment quota/rate limit | @renansilva2002 / renanescola40-afk | 2026-06-23 | Re-run Vercel after quota reset or move to adequate Vercel capacity, then attach successful deployment URL and build log for the final assessed commit |
 | Final validation | Requested commands were not executed successfully in the final bundle | @renansilva2002 / renanescola40-afk | 2026-06-23 | Run `node scripts/release/run-final-validation.mjs` in GitHub Actions or a connected release runner and attach passing logs |
-| Runtime URL verification | No current PR deployment URL exists | @renansilva2002 / renanescola40-afk | 2026-06-23 | Verify `/api/health` and application smoke checks after successful deployment |
+| Runtime URL verification | No current PR deployment URL exists | @renansilva2002 / renanescola40-afk | 2026-06-23 | Verify `/api/health`, protected `/api/ready`, and application smoke checks after successful deployment |
 | RLS live validation | Supabase live RLS validation is Open/not run | @renansilva2002 / renanescola40-afk | 2026-06-25 | Run `scripts/security/run-supabase-live-tenant-isolation.mjs --update-register` against target project and attach output |
 | External review | External review/pentest is Open/not started | @renansilva2002 / renanescola40-afk | 2026-07-06 | Complete real external review/pentest, triage findings, attach retest/risk acceptance evidence |
 | Stripe execution | Stripe evidence is implementation-complete but focused runtime execution is pending | @renansilva2002 / renanescola40-afk | 2026-06-24 | Run focused Stripe tests and webhook gates in CI and attach logs |
@@ -126,6 +133,9 @@ These exceptions are documented for remediation tracking only. They are not appr
 - Customer communication owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Support owner: @renansilva2002 / renanescola40-afk (acting Release Manager)
 - Security owner: @renansilva2002 / renanescola40-afk
+- Escalation path: Support owner -> Incident owner -> Rollback owner -> Security owner -> Release owner / Approver
+- Status page decision: Required for confirmed SEV-1 customer impact and for customer-visible SEV-2 incidents lasting more than 30 minutes
+- SEV-1 / SEV-2 timing: SEV-1 declare within 5 minutes and first update within 15 minutes; SEV-2 declare within 15 minutes and first customer-visible update within 30 minutes
 - Approver: Not granted; blocked by current deployment failure and open P0 evidence
 - Date: 2026-06-23
 - Notes: Release remains blocked by PR #346 Vercel deployment failure, non-passing final validation bundle, open RLS live validation, missing external review, missing live provider evidence for enterprise MFA/IdP and upload scanning, pending focused Stripe runtime execution, and unverified rollback target/runtime URL.
