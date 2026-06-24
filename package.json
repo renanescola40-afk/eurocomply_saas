@@ -70,7 +70,7 @@
     "phase10:review": "npm run phase10:check && npm run test",
     "phase10:verify": "npm run phase10:review && npm run lint && npm run typecheck && npm run build",
     "quality:routes": "node scripts/quality/check-route-links.mjs && node scripts/quality/check-route-health-artifacts.mjs",
-    "quality:routes:e2e": "playwright test tests/e2e/route-health.spec.ts --project=chromium",
+    "quality:routes:e2e": "node scripts/quality/run-route-health-e2e.mjs",
     "security:rls": "node scripts/security/check-rls.mjs && node scripts/security/audit-supabase-tenant-isolation.mjs && node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register && node scripts/security/check-p0-supabase-rls-evidence.mjs",
     "security:rls:live": "node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register && node scripts/security/check-p0-supabase-rls-evidence.mjs",
     "security:api-guards": "node scripts/security/check-api-guards.mjs",
