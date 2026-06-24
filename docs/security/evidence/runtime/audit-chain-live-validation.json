@@ -1,12 +1,12 @@
 {
   "evidenceItem": "audit-chain-live-validation",
   "id": "audit-chain-live-validation",
-  "status": "TargetValidationRequired",
+  "status": "Exception",
   "reviewer": "EuroComply security automation",
   "reviewedAt": "2026-06-24T00:00:00.000Z",
   "generatedAt": "2026-06-24T00:00:00.000Z",
   "control": "Enterprise audit logging and tamper-evident audit chain live validation",
-  "summary": "EuroComply audit events are appended to an organization-scoped hash chain with deterministic canonical payload hashing, optional HMAC signatures, sanitized metadata, sanitized request context, transactional Supabase RPC append, RBAC plus step-up protected verification, CLI verification, and signed audit evidence export. Enterprise release now requires target Supabase execution through scripts/security/run-audit-chain-live-validation.mjs and reviewer confirmation with AUDIT_CHAIN_LIVE_PROOF=true.",
+  "summary": "EuroComply audit events are appended to an organization-scoped hash chain with deterministic canonical payload hashing, optional HMAC signatures, sanitized metadata, sanitized request context, transactional Supabase RPC append, RBAC plus step-up protected verification, CLI verification, and signed audit evidence export. Enterprise release remains blocked until target Supabase execution through scripts/security/run-audit-chain-live-validation.mjs and reviewer confirmation are attached.",
   "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "redactionScope": "Evidence contains only synthetic ids, file paths, control names, status fields and hash prefixes. Secrets, tokens, cookies, service-role keys, full organization identifiers, connection strings and access-granting values are excluded.",
   "evidenceLocation": "docs/security/evidence/runtime/audit-chain-live-validation.json",
@@ -173,6 +173,17 @@
     "appendConcurrent": false,
     "missingPreviousHashDetected": false,
     "liveProofAttached": false
+  },
+  "exception": {
+    "riskOwner": "Security reviewer",
+    "rationale": "Repository evidence proves implementation wiring and fail-closed behavior, but enterprise audit-chain release requires target Supabase live validation before any enterprise claim or procurement use.",
+    "compensatingControls": [
+      "Enterprise release remains No-Go until target live validation evidence is attached.",
+      "External security review gate also remains Open and independently blocks enterprise release.",
+      "Audit evidence export and verification remain RBAC plus step-up protected and fail closed without signing material."
+    ],
+    "expiresAt": "2026-06-25",
+    "approvalReference": "docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md#audit-chain-live-validation"
   },
   "operationalNotes": [
     "Run Supabase migration supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql before enabling enterprise audit-chain verification in production.",
