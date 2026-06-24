@@ -1,5 +1,12 @@
 import { reportError } from '@/lib/observability/report-error';
+import { DOCUMENT_BUCKET } from '@/lib/documents/upload';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import {
+  MALWARE_SCANNER_ENDPOINT_ENV,
+  MALWARE_SCANNER_PROVIDER_ENV,
+  MALWARE_SCANNER_URL_ENV,
+  REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV,
+} from '@/server/security/upload-security';
 import { validateBearerToken } from '@/server/security/bearer-token';
 import { noStoreJson } from '@/server/security/no-store';
 import { logSecurityEvent, requestIdFromHeaders } from '@/server/observability/logger';
@@ -21,6 +28,8 @@ const REQUIRED_ENV_GROUPS = {
 } as const;
 
 const SENTRY_RELEASE_UPLOAD_ENV = ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN'] as const;
+const REAL_MALWARE_SCANNER_PROVIDERS = new Set(['clamav', 'clamd', 'http', 'generic-http', 'webhook']);
+const CONTROLLED_DOCUMENT_BUCKET = 'controlled-documents';
 
 type EnvGroupName = keyof typeof REQUIRED_ENV_GROUPS;
 
@@ -28,6 +37,15 @@ type ReadyEnvironmentGroup = {
   name: EnvGroupName;
   configured: boolean;
   missingCount: number;
+};
+
+type EnterpriseStorageScannerCheck = {
+  required: boolean;
+  configured: boolean;
+  storageBucketConfigured: boolean;
+  malwareScanningRequired: boolean;
+  realScannerProviderConfigured: boolean;
+  scannerTransportConfigured: boolean;
 };
 
 type ReadyDatabaseCheck = {
@@ -40,6 +58,12 @@ function hasHealthcheckToken(request: Request) {
   return validateBearerToken(request, process.env.HEALTHCHECK_TOKEN, {
     allowMissingTokenOutsideProduction: false,
   });
+}
+
+export function isEnterpriseReadinessRequired() {
+  return process.env.RELEASE_TARGET === 'enterprise'
+    || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true'
+    || process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true';
 }
 
 export function readyEnvironmentCheck(): ReadyEnvironmentGroup[] {
@@ -59,6 +83,26 @@ export function sentryReleaseUploadCheck() {
     configured: missingCount === 0,
     missingCount,
     sourceMapsUploadRequiresAuthToken: Boolean(process.env.SENTRY_AUTH_TOKEN),
+  };
+}
+
+export function enterpriseStorageScannerCheck(): EnterpriseStorageScannerCheck {
+  const required = isEnterpriseReadinessRequired();
+  const provider = String(process.env[MALWARE_SCANNER_PROVIDER_ENV] ?? '').trim().toLowerCase();
+  const malwareScanningRequired = process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true';
+  const realScannerProviderConfigured = REAL_MALWARE_SCANNER_PROVIDERS.has(provider);
+  const scannerTransportConfigured = provider === 'clamav' || provider === 'clamd'
+    ? Boolean(process.env.MALWARE_SCANNER_CLAMAV_HOST || process.env.MALWARE_SCANNER_CLAMAV_PORT)
+    : Boolean(process.env[MALWARE_SCANNER_ENDPOINT_ENV] || process.env[MALWARE_SCANNER_URL_ENV]);
+  const storageBucketConfigured = DOCUMENT_BUCKET === CONTROLLED_DOCUMENT_BUCKET;
+
+  return {
+    required,
+    configured: !required || (storageBucketConfigured && malwareScanningRequired && realScannerProviderConfigured && scannerTransportConfigured),
+    storageBucketConfigured,
+    malwareScanningRequired,
+    realScannerProviderConfigured,
+    scannerTransportConfigured,
   };
 }
 
@@ -115,13 +159,20 @@ export async function GET(request: Request) {
   const environment = readyEnvironmentCheck();
   const database = await checkSupabaseConnectivity();
   const sentryReleaseUploads = sentryReleaseUploadCheck();
+  const enterpriseStorageScanner = enterpriseStorageScannerCheck();
 
   const supabaseConfigured = checkConfigured(environment, 'supabase');
   const stripeConfigured = checkConfigured(environment, 'stripe');
   const redisConfigured = checkConfigured(environment, 'redis');
   const sentryConfigured = checkConfigured(environment, 'sentry');
   const databaseReachable = database.adminClient && database.subscriptionsReadable;
-  const ok = supabaseConfigured && stripeConfigured && redisConfigured && sentryConfigured && databaseReachable;
+  const enterpriseStorageScannerConfigured = enterpriseStorageScanner.configured;
+  const ok = supabaseConfigured
+    && stripeConfigured
+    && redisConfigured
+    && sentryConfigured
+    && databaseReachable
+    && enterpriseStorageScannerConfigured;
 
   return noStoreJson(
     {
@@ -131,12 +182,14 @@ export async function GET(request: Request) {
       environment,
       database,
       sentryReleaseUploads,
+      enterpriseStorageScanner,
       checks: {
         supabaseConfigured,
         databaseReachable,
         stripeConfigured,
         redisConfigured,
         sentryConfigured,
+        enterpriseStorageScannerConfigured,
         healthcheckProtected: Boolean(process.env.HEALTHCHECK_TOKEN),
       },
     },
