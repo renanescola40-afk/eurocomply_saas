@@ -3,8 +3,8 @@ import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequ
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
-import { collectOrganizationDataExport } from '@/server/privacy/gdpr';
-import { createAuditEvent } from '@/server/queries/audit-events';
+import { buildGdprExportAuditMetadata, collectOrganizationDataExport, validateRequestedOrganizationScope } from '@/server/privacy/gdpr';
+import { buildAuditRequestContextFromRequest, createAuditEvent } from '@/server/queries/audit-events';
 import { getCurrentUser } from '@/server/queries/auth';
 import { createNotification } from '@/server/queries/notifications';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -13,12 +13,6 @@ import { assertOrganizationPermission, permissionDeniedResponse } from '@/server
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 export const runtime = 'nodejs';
-
-function validateRequestedOrganizationId(value: string | null) {
-  if (value === null) return null;
-  const trimmed = value.trim();
-  return /^[a-zA-Z0-9_-]{1,128}$/.test(trimmed) ? trimmed : 'invalid';
-}
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -32,6 +26,8 @@ export async function GET(request: Request) {
   if (!organization) {
     return noStoreJson({ error: 'organization_required' }, { status: 404 });
   }
+
+  const requestContext = buildAuditRequestContextFromRequest(request);
 
   const rateLimit = await checkDistributedRateLimit({
     policy: 'export',
@@ -49,22 +45,27 @@ export async function GET(request: Request) {
     return rateLimitResponse(rateLimit);
   }
 
-  const requestedOrganizationId = validateRequestedOrganizationId(new URL(request.url).searchParams.get('organizationId'));
-  if (requestedOrganizationId === 'invalid') {
-    return noStoreJson({ error: 'invalid_organization_id' }, { status: 400 });
-  }
+  const requestedOrganizationScope = validateRequestedOrganizationScope(
+    new URL(request.url).searchParams.get('organizationId'),
+    organization.id,
+  );
 
-  if (requestedOrganizationId && requestedOrganizationId !== organization.id) {
+  if (!requestedOrganizationScope.ok) {
     await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
       action: 'gdpr_export_denied',
       entityType: 'organization',
-      entityId: requestedOrganizationId,
-      metadata: { reason: 'cross_tenant_export_denied', currentOrganizationId: organization.id },
+      entityId: requestedOrganizationScope.requestedOrganizationId ?? organization.id,
+      metadata: {
+        reason: requestedOrganizationScope.auditReason,
+        currentOrganizationId: organization.id,
+        requestedOrganizationId: requestedOrganizationScope.requestedOrganizationId,
+      },
+      requestContext,
     });
 
-    return noStoreJson({ error: 'cross_tenant_export_denied' }, { status: 403 });
+    return noStoreJson({ error: requestedOrganizationScope.error }, { status: requestedOrganizationScope.status });
   }
 
   const permission = await assertOrganizationPermission({
@@ -118,16 +119,14 @@ export async function GET(request: Request) {
     action: 'gdpr_export_requested',
     entityType: 'organization',
     entityId: organization.id,
-    metadata: {
-      scope: 'organization_export',
+    metadata: buildGdprExportAuditMetadata({
       plan: entitlementCheck.entitlements.plan,
       role: permission.role,
       tableKeys: Object.keys(exportBody.tables),
       unavailableTables: exportBody.unavailableTables,
-      stepUpAction: stepUp.assessment.action,
-      stepUpVerifiedAt: stepUp.assessment.verifiedAt,
-      stepUpTokenType: 'signed_hmac',
-    },
+      stepUp: stepUp.assessment,
+    }),
+    requestContext,
   });
 
   await createNotification({
