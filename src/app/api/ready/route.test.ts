@@ -50,6 +50,7 @@ function stubEnterpriseScannerEnvironment() {
   vi.stubEnv('REQUIRE_MALWARE_SCAN_FOR_UPLOADS', 'true');
   vi.stubEnv('MALWARE_SCANNER_PROVIDER', 'http');
   vi.stubEnv('MALWARE_SCANNER_ENDPOINT', 'https://scanner.example/scan');
+  vi.stubEnv('MALWARE_SCANNER_ALLOWED_HOSTS', 'scanner.example');
 }
 
 describe('ready endpoint hardening', () => {
@@ -204,6 +205,7 @@ describe('ready endpoint hardening', () => {
     expect(body.checks.enterpriseStorageScannerConfigured).toBe(true);
     expect(body.enterpriseStorageScanner.configured).toBe(true);
     expect(JSON.stringify(body)).not.toContain('https://scanner.example/scan');
+    expect(JSON.stringify(body)).not.toContain('scanner.example');
   });
 
   it('returns grouped readiness gaps without listing individual env keys', async () => {
