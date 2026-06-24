@@ -1,6 +1,9 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import { createAdminClient, tryCreateAdminClient } from '@/lib/supabase/admin';
 
 const DOCUMENT_COLUMNS = 'id,organization_id,name,category,status,expires_at,created_at,updated_at';
+const DEFAULT_DOCUMENTS_PAGE_SIZE = 50;
+const MAX_DOCUMENTS_PAGE_SIZE = 100;
 
 type DocumentRow = {
   id: string;
@@ -24,6 +27,11 @@ type NormalizedDocumentRow = Omit<Required<DocumentRow>, 'name' | 'category' | '
   version: number;
 };
 
+export type ListDocumentsOptions = {
+  page?: number;
+  pageSize?: number;
+};
+
 function normalizeDocumentRow(document: DocumentRow): NormalizedDocumentRow {
   const name = document.name ?? null;
 
@@ -41,15 +49,27 @@ function normalizeDocumentRow(document: DocumentRow): NormalizedDocumentRow {
   };
 }
 
-export async function listDocuments(organizationId: string) {
+function getDocumentsPaginationRange(options: ListDocumentsOptions = {}) {
+  const safePage = Math.max(1, Math.floor(options.page ?? 1));
+  const safePageSize = Math.max(1, Math.min(Math.floor(options.pageSize ?? DEFAULT_DOCUMENTS_PAGE_SIZE), MAX_DOCUMENTS_PAGE_SIZE));
+  const from = (safePage - 1) * safePageSize;
+
+  return { from, to: from + safePageSize - 1, pageSize: safePageSize };
+}
+
+export async function listDocuments(organizationId: string, options: ListDocumentsOptions = {}) {
+  noStore();
+
   const supabase = tryCreateAdminClient();
   if (!supabase) return [];
 
+  const { from, to } = getDocumentsPaginationRange(options);
   const { data, error } = await supabase
     .from('documents')
     .select(DOCUMENT_COLUMNS)
     .eq('organization_id', organizationId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(from, to);
 
   if (error) {
     console.warn('[documents] list_failed', { code: error.code });
@@ -60,6 +80,8 @@ export async function listDocuments(organizationId: string) {
 }
 
 export async function getDocument(documentId: string, organizationId: string) {
+  noStore();
+
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
