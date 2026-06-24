@@ -16,6 +16,7 @@ const allowedItems = new Set([
   'stripe-billing-validation',
   'observability-readiness',
   'rate-limit-validation',
+  'enterprise-final-readiness-validation',
   // GDPR privacy evidence added by the enterprise privacy controls package.
   'gdpr-privacy-validation',
 ]);
@@ -106,6 +107,53 @@ function checkExternalReviewOpenPlaceholder(file, evidence) {
   return true;
 }
 
+function checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence) {
+  if (evidence.evidenceItem !== 'enterprise-final-readiness-validation' || evidence.status !== 'Open') return false;
+
+  requireString(file, evidence, 'reviewer', 3);
+  requireString(file, evidence, 'reviewedAt', 10);
+  requireString(file, evidence, 'summary', 40);
+  requireArray(file, evidence, 'evidenceLocations', 1);
+
+  if (!hasValidRedactionText(evidence)) {
+    failures.push(`${file} missing redaction confirmation`);
+  }
+
+  if (evidence.outcome !== 'no_go') {
+    failures.push(`${file} Open enterprise final readiness evidence must have outcome no_go`);
+  }
+
+  if (evidence.releaseDecision !== 'No-Go') {
+    failures.push(`${file} Open enterprise final readiness evidence must keep releaseDecision No-Go`);
+  }
+
+  if (!String(evidence.productionGate ?? '').toLowerCase().includes('blocked')) {
+    failures.push(`${file} Open enterprise final readiness evidence must keep production blocked`);
+  }
+
+  if (!String(evidence.completionRule ?? '').toLowerCase().includes('complete')) {
+    failures.push(`${file} Open enterprise final readiness evidence must include completion rule`);
+  }
+
+  if (!evidence.blockingEvidence || typeof evidence.blockingEvidence !== 'object' || Array.isArray(evidence.blockingEvidence)) {
+    failures.push(`${file} Open enterprise final readiness evidence must document blockingEvidence`);
+  }
+
+  if (evidence.evidenceIntegrity?.placeholderOnly !== true) {
+    failures.push(`${file} Open enterprise final readiness evidence must be marked placeholderOnly`);
+  }
+
+  if (evidence.evidenceIntegrity?.realRuntimeEvidenceAttached !== false) {
+    failures.push(`${file} Open enterprise final readiness evidence must confirm no real runtime evidence is attached`);
+  }
+
+  if (evidence.evidenceIntegrity?.customerFacingProof !== false) {
+    failures.push(`${file} Open enterprise final readiness evidence must not be customer-facing proof`);
+  }
+
+  return true;
+}
+
 const files = listJsonFiles(evidenceDir);
 
 console.log('EuroComply P0 runtime evidence file check');
@@ -125,7 +173,11 @@ for (const file of files) {
     failures.push(`${file} has invalid evidenceItem: ${evidence.evidenceItem}`);
   }
 
-  if (checkSupabaseOpenPlaceholder(file, evidence) || checkExternalReviewOpenPlaceholder(file, evidence)) {
+  if (
+    checkSupabaseOpenPlaceholder(file, evidence) ||
+    checkExternalReviewOpenPlaceholder(file, evidence) ||
+    checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence)
+  ) {
     continue;
   }
 

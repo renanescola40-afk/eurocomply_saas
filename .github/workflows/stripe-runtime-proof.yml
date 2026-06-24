@@ -14,21 +14,28 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: stripe-runtime-proof-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   stripe-runtime-proof:
     name: Run focused Stripe runtime proof
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: 22
           cache: npm
 
-      - name: Install dependencies
+      - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
 
       - name: Run focused Stripe route and webhook tests
@@ -38,7 +45,7 @@ jobs:
         run: node scripts/security/run-stripe-runtime-validation.mjs
 
       - name: Upload Stripe runtime evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: stripe-billing-validation
           path: docs/security/evidence/runtime/stripe-billing-validation.json

@@ -18,29 +18,9 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
-      - name: Align package manifest to deterministic lockfile root
-        run: |
-          npm pkg set dependencies.dompurify=3.4.11
-          npm pkg set dependencies.next=15.5.19
-          npm pkg set devDependencies.eslint-config-next=15.5.19
       - run: npm ci --ignore-scripts
-      - name: Detect app-affecting changes
-        id: changes
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            changed_files=$(git diff --name-only HEAD^ HEAD)
-          else
-            changed_files=$(git diff --name-only HEAD^ HEAD || git show --name-only --format= HEAD)
-          fi
-          echo "$changed_files"
-          if echo "$changed_files" | grep -E '^(src|app|pages|components|lib|server|tests)/|(^|/)(package(-lock)?\.json|tsconfig\.json|next\.config\.|vitest\.config\.)'; then
-            echo "app_changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "app_changed=false" >> "$GITHUB_OUTPUT"
-          fi
       - run: npm run phase3:strict
       - run: npm run phase3:closeout
       - run: npm run phase4:check
@@ -62,8 +42,7 @@ jobs:
           path: lint.log
           retention-days: 7
           if-no-files-found: warn
-      - name: Typecheck app changes
-        if: steps.changes.outputs.app_changed == 'true'
+      - name: Typecheck
         shell: bash
         run: |
           npm run typecheck 2>&1 | tee typecheck.log
@@ -76,11 +55,7 @@ jobs:
           path: typecheck.log
           retention-days: 7
           if-no-files-found: warn
-      - name: Skip typecheck for non-app changes
-        if: steps.changes.outputs.app_changed != 'true'
-        run: echo "No app/package/tsconfig changes detected; skipping app typecheck."
-      - name: Test app changes
-        if: steps.changes.outputs.app_changed == 'true'
+      - name: Test
         shell: bash
         run: |
           npm run test 2>&1 | tee test.log
@@ -92,7 +67,4 @@ jobs:
           name: ci-test-diagnostics
           path: test.log
           retention-days: 7
-          if-no-files-found: ignore
-      - name: Skip tests for non-app changes
-        if: steps.changes.outputs.app_changed != 'true'
-        run: echo "No app/package/test changes detected; skipping app tests."
+          if-no-files-found: warn

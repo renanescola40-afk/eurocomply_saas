@@ -38,14 +38,6 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Align package manifest to deterministic lockfile root
-        run: |
-          npm pkg set dependencies.dompurify=3.4.11
-          npm pkg set dependencies.next=15.5.19
-          npm pkg set devDependencies.eslint-config-next=15.5.19
-          npm pkg set "scripts.security:rls=node scripts/security/check-rls.mjs && node scripts/security/audit-supabase-tenant-isolation.mjs && node scripts/security/run-supabase-live-tenant-isolation.mjs --advisory"
-          npm pkg set "scripts.security:rls:live=node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register && node scripts/security/check-p0-supabase-rls-evidence.mjs"
-
       - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
 
@@ -139,7 +131,7 @@ jobs:
       - name: RLS gate
         shell: bash
         run: |
-          npm run security:rls 2>&1 | tee rls-gate.log
+          npm run security:rls:advisory 2>&1 | tee rls-gate.log
           test "${PIPESTATUS[0]}" -eq 0
 
       - name: Upload RLS diagnostics
@@ -264,4 +256,3 @@ jobs:
           name: step-up-authentication
           path: step-up-auth.log
           retention-days: 7
-          if-no-files-found: warn
