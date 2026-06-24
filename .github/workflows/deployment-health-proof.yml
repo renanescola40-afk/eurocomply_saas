@@ -7,6 +7,11 @@ on:
         description: 'HTTPS deployment URL to validate. Root path is normalized to /api/health.'
         required: true
         type: string
+      include_promoted_register:
+        description: 'Also generate a promoted P0 register copy in the uploaded artifact. Does not commit changes.'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -28,11 +33,18 @@ jobs:
           node-version: '20'
 
       - name: Run deployment health validation
-        run: node scripts/security/run-deployment-health-validation.mjs
+        run: |
+          if [ "${{ inputs.include_promoted_register }}" = "true" ]; then
+            node scripts/security/run-deployment-health-validation.mjs --update-register
+          else
+            node scripts/security/run-deployment-health-validation.mjs
+          fi
 
       - name: Upload deployment health evidence
         uses: actions/upload-artifact@v4
         with:
           name: deployment-health-validation
-          path: docs/security/evidence/runtime/deployment-health-validation.json
+          path: |
+            docs/security/evidence/runtime/deployment-health-validation.json
+            docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md
           if-no-files-found: error
