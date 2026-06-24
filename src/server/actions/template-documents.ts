@@ -125,6 +125,7 @@ export async function createDocumentFromTemplate(input: TemplateDocumentInput, u
         expiresAt: input.expiresAt ?? null,
         metadata: {
           source: 'template',
+          serverGenerated: true,
           sourceTemplateId: template.id,
           sourceTemplateTitle: template.title,
           recommendedOwner: template.recommendedOwner,
