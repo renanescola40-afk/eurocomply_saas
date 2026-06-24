@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-const auditSigningEnv = ['AUDIT', 'CHAIN', 'SIGNING', String.fromCharCode(83, 69, 67, 82, 69, 84)].join('_');
+const auditSigningEnv = 'AUDIT_CHAIN_SIGNING_SECRET';
 
 const files = {
   helper: 'src/server/security/audit-chain.ts',
@@ -15,6 +15,7 @@ const files = {
   verifyRoute: 'src/app/api/audit/chain/verify/route.ts',
   evidencePackRoute: 'src/app/api/audit/evidence-pack/route.ts',
   cli: 'scripts/security/verify-audit-chain.mjs',
+  liveValidation: 'scripts/security/run-audit-chain-live-validation.mjs',
   verifyRouteTest: 'src/app/api/audit/chain/verify/route.test.ts',
   evidencePackRouteTest: 'src/app/api/audit/evidence-pack/route.test.ts',
   runtimeEvidence: 'docs/security/evidence/runtime/audit-chain-live-validation.json',
@@ -68,9 +69,10 @@ const requiredTokens = {
   verifyRoute: ['getCurrentUser', 'assertOrganizationPermission', 'read_audit', 'requireStepUpForRequest', 'audit_chain_verify', 'checkDistributedRateLimit', 'createAuditEvent', 'audit_chain.verified'],
   evidencePackRoute: ['assertOrganizationPermission', 'export_data', 'requireStepUpForRequest', 'audit_chain_export', 'buildEvidencePackIntegrity', '!integrity.signed', 'audit_evidence_pack_signing_unavailable', 'audit_chain.evidence_exported'],
   cli: ['eurocomply.audit-chain.cli', '--input', '--expected-previous-hash', 'SIGNING_ENV', 'canonicalizeAuditEvent', 'buildAuditEventHash', 'missing_previous_hash', 'previous_hash_mismatch', 'event_hash_mismatch', 'signature_mismatch', 'payload.evidence?.auditEvents', 'evidence?.auditEvents', 'process.exit(result.ok ? 0 : 1)'],
+  liveValidation: ['run-audit-chain-live-validation', 'append_audit_event_chained', 'organizationEnv', 'proofEnv', 'appendConcurrent', 'tamperDetection', 'missingPreviousHash', 'criticalEventCoverage', 'enterpriseRelease', 'audit_chain_target_live_validation_incomplete'],
   verifyRouteTest: ['rejects verification before step-up when RBAC is missing', 'verifies the chain only after RBAC and signed step-up', 'rejects verification without a valid step-up token', 'audit_chain.verified'],
   evidencePackRouteTest: ['returns a signed export only after RBAC and step-up', 'rejects export when RBAC is missing', 'fails closed when the evidence export cannot be signed', 'audit_chain.evidence_exported'],
-  runtimeEvidence: ['audit-chain-live-validation', 'appendNormal', 'appendConcurrent', 'tamperDetection', 'missingPreviousHash', 'signedExport', 'verifyWithStepUp', 'criticalEventCoverage', 'cliVerifier'],
+  runtimeEvidence: ['audit-chain-live-validation', 'appendNormal', 'appendConcurrent', 'tamperDetection', 'missingPreviousHash', 'signedExport', 'verifyWithStepUp', 'criticalEventCoverage', 'cliVerifier', 'targetLiveValidation', 'AUDIT_CHAIN_LIVE_PROOF'],
 };
 
 const failures = [];
@@ -103,7 +105,7 @@ if (sources.preflight && !(sources.preflight.includes(auditSigningEnv) || source
   failures.push(`${files.preflight} must recommend audit-chain signing material`);
 }
 
-for (const requiredPath of [files.migration, files.rpcMigration, files.enterpriseMigration, files.concurrencyRunbook, files.model, files.cli, files.runtimeEvidence]) {
+for (const requiredPath of [files.migration, files.rpcMigration, files.enterpriseMigration, files.concurrencyRunbook, files.model, files.cli, files.liveValidation, files.runtimeEvidence]) {
   if (sources.preflight && !sources.preflight.includes(requiredPath)) failures.push(`${files.preflight} must require ${requiredPath}`);
 }
 

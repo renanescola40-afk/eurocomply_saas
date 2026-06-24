@@ -101,6 +101,7 @@ const requiredFiles = [
   'scripts/security/check-security-responses.mjs',
   'scripts/security/check-audit-chain.mjs',
   'scripts/security/verify-audit-chain.mjs',
+  'scripts/security/run-audit-chain-live-validation.mjs',
   'scripts/security/check-step-up.mjs',
   'scripts/security/check-step-up-runtime-preflight.mjs',
   'docs/security/ASVS_MATRIX.md',
@@ -155,6 +156,7 @@ function readAuditChainRuntimeEvidence() {
     const evidence = JSON.parse(readFileSync(auditChainRuntimeEvidencePath, 'utf8'));
     const acceptance = evidence.acceptanceCriteria ?? {};
     const runtime = evidence.runtimeValidation ?? {};
+    const targetLiveValidation = evidence.targetLiveValidation ?? evidence.liveValidation ?? {};
     const requiredRuntimeChecks = [
       'appendNormal',
       'appendConcurrent',
@@ -186,6 +188,8 @@ function readAuditChainRuntimeEvidence() {
     if (evidence.status !== 'Complete') return { ok: false, reason: 'audit_chain_runtime_evidence_incomplete' };
     if (missingRuntimeChecks.length > 0) return { ok: false, reason: `audit_chain_runtime_checks_missing:${missingRuntimeChecks.join(',')}` };
     if (failedAcceptance.length > 0) return { ok: false, reason: `audit_chain_acceptance_missing:${failedAcceptance.join(',')}` };
+    if (targetLiveValidation.status && targetLiveValidation.status !== 'Complete') return { ok: false, reason: `audit_chain_target_live_validation:${targetLiveValidation.status}` };
+    if (acceptance.liveProofAttached === false) return { ok: false, reason: 'audit_chain_live_proof_missing' };
 
     return { ok: true, evidence };
   } catch {
