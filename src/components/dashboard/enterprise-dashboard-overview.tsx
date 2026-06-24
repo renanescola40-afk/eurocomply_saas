@@ -38,6 +38,7 @@ type EnterpriseDashboardOverviewProps = {
   vendorsRequiringReview: PreviewVendor[];
   documentsExpiringSoon: PreviewDocument[];
   basePath: string;
+  tasksPath: string;
   planName: string;
   limitsSummary: string;
 };
@@ -60,6 +61,7 @@ export function EnterpriseDashboardOverview({
   vendorsRequiringReview,
   documentsExpiringSoon,
   basePath,
+  tasksPath,
   planName,
   limitsSummary,
 }: EnterpriseDashboardOverviewProps) {
@@ -148,7 +150,7 @@ export function EnterpriseDashboardOverview({
             </Link>
           </Button>
           <Button asChild variant="outline" className="rounded-full bg-background/70">
-            <Link href={`${basePath}/aprovacoes`} aria-label={copy.viewTasks}>
+            <Link href={tasksPath} aria-label={copy.viewTasks}>
               {copy.viewTasks}
             </Link>
           </Button>
