@@ -13,7 +13,7 @@ on:
         type: boolean
         default: true
       apply_migrations:
-        description: Apply committed Supabase migrations before running the live validator
+        description: Apply the committed live RLS inventory helper migration before running the live validator
         required: true
         type: boolean
         default: true
@@ -53,18 +53,28 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund
           git checkout -- package-lock.json
 
-      - name: Apply committed Supabase migrations
+      - name: Apply live RLS inventory helper migration
         if: ${{ inputs.apply_migrations }}
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           if [ -z "${SUPABASE_DB_URL}" ]; then
             echo "SUPABASE_DB_URL is required when apply_migrations=true."
-            echo "Add the Supabase Postgres connection string as an environment/repository secret, or apply supabase/migrations/20260623120000_live_rls_validation_inventory.sql manually and rerun with apply_migrations=false."
+            echo "Add the Supabase Postgres transaction pooler connection string as an environment/repository secret, or apply supabase/migrations/20260623120000_live_rls_validation_inventory.sql manually and rerun with apply_migrations=false."
             exit 1
           fi
 
-          npx --yes supabase@latest db push --db-url "$SUPABASE_DB_URL"
+          if printf '%s' "${SUPABASE_DB_URL}" | grep -Eq '@db\.[^.]+\.supabase\.co:5432/'; then
+            echo "SUPABASE_DB_URL appears to use the direct IPv6-only Supabase database endpoint."
+            echo "GitHub-hosted runners cannot reliably reach that endpoint. Use the Supabase IPv4 transaction pooler URI from Connect > Transaction pooler, typically on port 6543, then rerun with apply_migrations=true."
+            exit 1
+          fi
+
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          psql "${SUPABASE_DB_URL}" \
+            --set=ON_ERROR_STOP=1 \
+            --file=supabase/migrations/20260623120000_live_rls_validation_inventory.sql
 
       - name: Run strict Supabase tenant isolation validator
         env:
