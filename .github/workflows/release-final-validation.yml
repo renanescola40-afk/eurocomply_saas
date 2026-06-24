@@ -36,21 +36,32 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Record assessed commit
+      - name: Resolve and check out assessed commit
         shell: bash
         run: |
           ASSESSED_COMMIT="${{ inputs.assessed_commit }}"
           if [ -z "$ASSESSED_COMMIT" ]; then
             ASSESSED_COMMIT="$GITHUB_SHA"
           fi
-          echo "Assessed commit: $ASSESSED_COMMIT" | tee assessed-commit.txt
-          echo "ASSESSED_COMMIT=$ASSESSED_COMMIT" >> "$GITHUB_ENV"
+
+          git fetch --no-tags --prune origin "$ASSESSED_COMMIT" || true
+          RESOLVED_COMMIT="$(git rev-parse "$ASSESSED_COMMIT^{commit}")"
+          git checkout --detach "$RESOLVED_COMMIT"
+
+          ACTUAL_COMMIT="$(git rev-parse HEAD)"
+          if [ "$ACTUAL_COMMIT" != "$RESOLVED_COMMIT" ]; then
+            echo "Assessed commit checkout mismatch: expected $RESOLVED_COMMIT, got $ACTUAL_COMMIT" >&2
+            exit 1
+          fi
+
+          echo "Assessed commit: $ACTUAL_COMMIT" | tee assessed-commit.txt
+          echo "ASSESSED_COMMIT=$ACTUAL_COMMIT" >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies deterministically
         run: npm ci --ignore-scripts
