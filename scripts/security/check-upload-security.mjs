@@ -7,6 +7,7 @@ const signatureTest = 'src/server/security/file-signature.test.ts';
 const contentScanHelper = 'src/server/security/malware-scan.ts';
 const downloadAction = 'src/server/actions/document-downloads.ts';
 const serverActionUpload = 'src/server/actions/documents.ts';
+const enterpriseBypassTest = 'tests/security/upload-enterprise-bypass.test.ts';
 const evidencePath = 'docs/security/evidence/runtime/upload-malware-scan-validation.json';
 const uploadSecurityDoc = 'docs/security/UPLOAD_SECURITY.md';
 
@@ -79,6 +80,9 @@ const requiredServerActionTokens = [
   'validateUploadSecurityFile',
   'scanValidatedUploadForMalware',
   'shouldBlockUploadForMalwareScan',
+  'isUploadMalwareScanRequired',
+  'hasCleanEnterpriseUploadScanMetadata',
+  'enterprise_upload_scan_bypass',
   'uploadRequested',
   'uploadScanned',
   'uploadBlocked',
@@ -134,6 +138,14 @@ const requiredSignatureTestTokens = [
   'vbaProject.bin',
 ];
 
+const requiredEnterpriseBypassTestTokens = [
+  'enterprise_upload_scan_bypass',
+  'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
+  'not clean',
+  'createAdminClient).not.toHaveBeenCalled',
+  'serverGenerated',
+];
+
 const requiredContentScanTokens = [
   'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
   'MALWARE_SCANNER_PROVIDER',
@@ -156,6 +168,7 @@ const requiredEvidenceTokens = [
   'upload_blocked',
   'download_requested',
   'download_denied',
+  'enterprise_upload_scan_bypass',
   'scanStatus',
   'scanProvider',
   'scanRequired',
@@ -172,6 +185,7 @@ const requiredDocTokens = [
   'REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true',
   'MALWARE_SCANNER_PROVIDER',
   'MALWARE_SCANNER_API_KEY',
+  'enterprise_upload_scan_bypass',
   'upload_requested',
   'download_denied',
   'organizationId',
@@ -207,6 +221,7 @@ const uploadSource = assertFile(uploadRoute);
 const uploadSecuritySource = assertFile(uploadSecurityModule);
 const signatureSource = assertFile(signatureHelper);
 const signatureTestSource = assertFile(signatureTest);
+const enterpriseBypassTestSource = assertFile(enterpriseBypassTest);
 const contentScanSource = assertFile(contentScanHelper);
 const downloadSource = assertFile(downloadAction);
 const serverActionSource = assertFile(serverActionUpload);
@@ -217,6 +232,7 @@ if (uploadSource) assertTokens(uploadSource, requiredUploadTokens, uploadRoute);
 if (uploadSecuritySource) assertTokens(uploadSecuritySource, requiredUploadSecurityModuleTokens, uploadSecurityModule);
 if (signatureSource) assertTokens(signatureSource, requiredSignatureTokens, signatureHelper);
 if (signatureTestSource) assertTokens(signatureTestSource, requiredSignatureTestTokens, signatureTest);
+if (enterpriseBypassTestSource) assertTokens(enterpriseBypassTestSource, requiredEnterpriseBypassTestTokens, enterpriseBypassTest);
 if (contentScanSource) assertTokens(contentScanSource, requiredContentScanTokens, contentScanHelper);
 if (downloadSource) assertTokens(downloadSource, requiredDownloadTokens, downloadAction);
 if (serverActionSource) assertTokens(serverActionSource, requiredServerActionTokens, serverActionUpload);
@@ -245,6 +261,10 @@ if (contentScanSource && !hasFailClosedRequiredScanPolicy(contentScanSource)) {
 
 if (serverActionSource.includes('buildDocumentStoragePath')) {
   failures.push(`${serverActionUpload} must use buildTenantScopedUploadPath so storage paths are tenant scoped and filename-independent`);
+}
+
+if (serverActionSource.includes('createDocumentSchema') && !serverActionSource.includes('enterprise_upload_scan_bypass')) {
+  failures.push(`${serverActionUpload} must block enterprise document metadata creation without clean scan metadata`);
 }
 
 if (downloadSource.includes('createSignedUrl') && downloadSource.indexOf('assertTenantStoragePathInOrganization') > downloadSource.indexOf('createSignedUrl')) {
