@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const evidencePath = 'docs/security/evidence/runtime/external-security-review-or-pentest.json';
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
-const placeholderValuePattern = /REPLACE_|YYYY-MM-DD|TODO|placeholder/i;
+const placeholderValuePattern = /REPLACE_|YYYY-MM-DD|TODO|TBD|placeholder/i;
 
 const requiredDocs = {
   'docs/security/PENTEST_SCOPE.md': [
@@ -11,28 +11,31 @@ const requiredDocs = {
     'RBAC',
     'tenant isolation',
     'APIs',
+    'BOLA/IDOR',
     'uploads',
-    'billing',
+    'malware scanner',
+    'billing Stripe',
+    'webhooks',
     'audit chain',
     'exports',
     'GDPR delete',
     'rate limiting',
-    'webhooks',
-    'Stripe test mode',
-    'Supabase test project',
+    'observability',
+    'secrets',
   ],
   'docs/security/PRE_PENTEST_CHECKLIST.md': [
-    'seed data tenant A/B',
-    'accounts by role',
+    'tenant A/B',
+    'owner/admin/editor/viewer',
     'Stripe test mode',
     'Supabase test project',
-    'scanner mock/real',
+    'upload scanner test mode',
+    'seed data',
   ],
   'docs/security/PENTEST_FINDINGS_TRIAGE.md': [
     'Owner',
     'Severity',
+    'Mitigation',
     'Due date',
-    'Retest',
     'critical/high',
     'formally accepted',
   ],
@@ -41,31 +44,47 @@ const requiredDocs = {
     'Critical',
     'High',
     'retest evidence',
+    'vendor retest',
   ],
 };
 
-const requiredControls = [
+const requiredScopeControls = [
   'auth',
   'RBAC',
   'tenant isolation',
   'APIs',
+  'BOLA/IDOR',
   'uploads',
-  'billing',
+  'malware scanner',
+  'billing Stripe',
+  'webhooks',
   'audit chain',
   'exports',
   'GDPR delete',
   'rate limiting',
-  'webhooks',
+  'observability',
+  'secrets',
 ];
 
-const enterpriseTargets = new Set(['enterprise', 'enterprise-production', 'enterprise_release', 'enterprise-release']);
-const lifecycleEvent = process.env.npm_lifecycle_event ?? '';
-const releaseTarget = String(process.env.RELEASE_TARGET ?? '').toLowerCase();
-const enterpriseRelease = process.argv.includes('--enterprise')
-  || process.argv.includes('--enforce')
-  || process.env.ENTERPRISE_RELEASE === 'true'
-  || enterpriseTargets.has(releaseTarget)
-  || lifecycleEvent === 'release:enterprise-readiness';
+const completeReviewFields = [
+  'reviewer',
+  'vendor',
+  'date',
+  'scope',
+  'methodology',
+  'summary',
+  'criticalFindings',
+  'highFindings',
+  'mediumFindings',
+  'resolutionStatus',
+  'acceptedRiskRecords',
+  'retestStatus',
+  'reportStorageLocation',
+];
+
+const findingsSeverities = ['critical', 'high', 'medium', 'low', 'informational'];
+const resolvedStatuses = ['resolved', 'formally_accepted', 'false_positive'];
+const passingRetestStatuses = ['passed', 'not_required_formally_accepted', 'not_required_false_positive'];
 
 const failures = [];
 
@@ -100,6 +119,10 @@ function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+function isNonEmptyArray(value) {
+  return Array.isArray(value) && value.length > 0;
+}
+
 function hasPlaceholderString(value) {
   if (typeof value === 'string') return placeholderValuePattern.test(value);
   if (Array.isArray(value)) return value.some((entry) => hasPlaceholderString(entry));
@@ -107,12 +130,12 @@ function hasPlaceholderString(value) {
   return false;
 }
 
-function requireNonEmptyString(filePath, object, field, label = field) {
-  if (!isNonEmptyString(object?.[field])) failures.push(`${filePath} ${label} must be a non-empty string`);
-}
-
 function normalize(value) {
   return String(value ?? '').trim().toLowerCase().replaceAll(' ', '_');
+}
+
+function requireNonEmptyString(object, field, prefix) {
+  if (!isNonEmptyString(object?.[field])) failures.push(`${prefix}.${field} must be a non-empty string`);
 }
 
 function validateRequiredDocs() {
@@ -136,78 +159,56 @@ function validateRegister() {
   }
 
   if (!row.includes(evidencePath)) failures.push(`${registerPath} external review row must reference ${evidencePath}`);
+  if (!row.includes('| Complete |')) failures.push(`${registerPath} must mark external review as Complete only after real evidence is attached`);
+}
 
-  if (enterpriseRelease && !row.includes('| Complete |')) {
-    failures.push(`${registerPath} must mark external review as Complete before enterprise release`);
+function validateCompleteShape(evidence) {
+  for (const field of completeReviewFields) {
+    if (!(field in evidence)) failures.push(`${evidencePath} missing Complete field: ${field}`);
+  }
+
+  for (const field of ['reviewer', 'vendor', 'date', 'methodology', 'summary', 'resolutionStatus', 'retestStatus', 'reportStorageLocation']) {
+    requireNonEmptyString(evidence, field, evidencePath);
+  }
+
+  for (const field of ['scope', 'criticalFindings', 'highFindings', 'mediumFindings', 'acceptedRiskRecords']) {
+    if (!Array.isArray(evidence[field])) failures.push(`${evidencePath}.${field} must be an array`);
+  }
+
+  if (!isNonEmptyArray(evidence.scope)) failures.push(`${evidencePath}.scope must list reviewed scope items`);
+  if (!isNonEmptyString(evidence.reportStorageLocation)) failures.push(`${evidencePath}.reportStorageLocation is required`);
+  if (hasPlaceholderString(evidence)) failures.push(`${evidencePath} Complete evidence must not contain placeholder strings such as REPLACE_, YYYY-MM-DD, TODO, TBD, or placeholder`);
+
+  const normalizedScope = new Set((Array.isArray(evidence.scope) ? evidence.scope : []).map((item) => normalize(item)));
+  for (const control of requiredScopeControls) {
+    if (!normalizedScope.has(normalize(control))) failures.push(`${evidencePath}.scope missing ${control}`);
   }
 }
 
-function validatePlaceholderSafety(evidence) {
-  if (!evidence) return;
-
+function validateEvidenceIntegrity(evidence) {
   if (evidence.evidenceItem !== 'external-security-review-or-pentest') {
     failures.push(`${evidencePath} evidenceItem must be external-security-review-or-pentest`);
   }
 
-  if (evidence.status === 'Complete' && hasPlaceholderString(evidence)) {
-    failures.push(`${evidencePath} Complete evidence must not contain placeholder strings such as REPLACE_, YYYY-MM-DD, TODO, or placeholder`);
-  }
+  if (evidence.status !== 'Complete') failures.push(`${evidencePath} status must be Complete`);
+  if (evidence.status === 'Complete' && evidence.outcome === 'not_started') failures.push(`${evidencePath} cannot be Complete with outcome not_started`);
 
-  if (evidence.status === 'Complete' && evidence.evidenceIntegrity?.placeholderOnly === true) {
-    failures.push(`${evidencePath} cannot be Complete while evidenceIntegrity.placeholderOnly is true`);
-  }
+  if (evidence.evidenceIntegrity?.containsSecrets !== false) failures.push(`${evidencePath} evidenceIntegrity.containsSecrets must be false`);
+  if (evidence.evidenceIntegrity?.valuesRedacted !== true) failures.push(`${evidencePath} evidenceIntegrity.valuesRedacted must be true`);
+  if (evidence.evidenceIntegrity?.placeholderOnly !== false) failures.push(`${evidencePath} evidenceIntegrity.placeholderOnly must be false`);
+  if (evidence.evidenceIntegrity?.realExternalReportAttached !== true) failures.push(`${evidencePath} evidenceIntegrity.realExternalReportAttached must be true`);
 
-  if (evidence.status === 'Complete' && evidence.outcome === 'not_started') {
-    failures.push(`${evidencePath} cannot be Complete with outcome not_started`);
-  }
-
-  if (evidence.evidenceIntegrity?.containsSecrets !== false) {
-    failures.push(`${evidencePath} evidenceIntegrity.containsSecrets must be false`);
-  }
-
-  if (evidence.evidenceIntegrity?.valuesRedacted !== true) {
-    failures.push(`${evidencePath} evidenceIntegrity.valuesRedacted must be true`);
-  }
-}
-
-function requireRealReviewEvidence(evidence) {
-  if (!evidence) return;
-
-  if (evidence.status !== 'Complete') failures.push(`${evidencePath} status must be Complete before enterprise release`);
-  if (evidence.outcome !== 'passed' && evidence.outcome !== 'passed_with_formal_acceptance') {
-    failures.push(`${evidencePath} outcome must be passed or passed_with_formal_acceptance before enterprise release`);
-  }
-
-  for (const field of ['reviewType', 'provider', 'reportDate', 'reportReference', 'reviewedBy', 'reviewedAt']) {
-    requireNonEmptyString(evidencePath, evidence.review ?? {}, field, `review.${field}`);
-  }
-
-  if (evidence.evidenceIntegrity?.placeholderOnly !== false) {
-    failures.push(`${evidencePath} evidenceIntegrity.placeholderOnly must be false for enterprise release`);
-  }
-
-  if (evidence.evidenceIntegrity?.realExternalReportAttached !== true) {
-    failures.push(`${evidencePath} evidenceIntegrity.realExternalReportAttached must be true for enterprise release`);
-  }
-
-  const controlsVerified = Array.isArray(evidence.controlsVerified) ? evidence.controlsVerified : [];
-  const normalizedControls = new Set(controlsVerified.map((control) => normalize(control)));
-  for (const control of requiredControls) {
-    if (!normalizedControls.has(normalize(control))) failures.push(`${evidencePath} controlsVerified missing ${control}`);
-  }
+  if (!isNonEmptyString(evidence.reportStorageLocation)) failures.push(`${evidencePath} report missing: reportStorageLocation must reference the real external report`);
+  if (!isNonEmptyString(evidence.reportReference)) failures.push(`${evidencePath} report missing: reportReference must identify the real external report`);
 }
 
 function validateFindings(evidence) {
-  if (!evidence) return;
-
   const findings = Array.isArray(evidence.findings) ? evidence.findings : [];
   const summary = evidence.findingsSummary ?? {};
 
-  if (evidence.status === 'Complete') {
-    for (const severity of ['critical', 'high', 'medium', 'low', 'informational']) {
-      if (!Number.isInteger(summary[severity]) || summary[severity] < 0) {
-        failures.push(`${evidencePath} findingsSummary.${severity} must be a non-negative integer when Complete`);
-      }
+  for (const severity of findingsSeverities) {
+    if (!Number.isInteger(summary[severity]) || summary[severity] < 0) {
+      failures.push(`${evidencePath} findingsSummary.${severity} must be a non-negative integer`);
     }
   }
 
@@ -217,40 +218,60 @@ function validateFindings(evidence) {
     const status = normalize(finding?.status);
     const retestStatus = normalize(finding?.retestStatus);
 
-    if (!['critical', 'high', 'medium', 'low', 'informational'].includes(severity)) {
-      failures.push(`${evidencePath} finding ${id} has invalid severity`);
+    if (!findingsSeverities.includes(severity)) failures.push(`${evidencePath} finding ${id} has invalid severity`);
+
+    for (const field of ['owner', 'dueDate', 'mitigation', 'retestStatus']) {
+      if (!isNonEmptyString(finding?.[field])) failures.push(`${evidencePath} finding ${id} missing ${field}`);
     }
 
-    if (!isNonEmptyString(finding?.owner)) failures.push(`${evidencePath} finding ${id} missing owner`);
-    if (!isNonEmptyString(finding?.dueDate)) failures.push(`${evidencePath} finding ${id} missing dueDate`);
-    if (!isNonEmptyString(finding?.retestStatus)) failures.push(`${evidencePath} finding ${id} missing retestStatus`);
+    if ((severity === 'critical' || severity === 'high') && !resolvedStatuses.includes(status)) {
+      failures.push(`${evidencePath} ${severity} finding ${id} must be resolved, formally accepted, or false positive`);
+    }
 
-    if (severity === 'critical' || severity === 'high') {
-      const resolvedOrAccepted = status === 'resolved' || status === 'formally_accepted' || status === 'false_positive';
-      if (enterpriseRelease && !resolvedOrAccepted) {
-        failures.push(`${evidencePath} ${severity} finding ${id} must be resolved or formally accepted before enterprise release`);
-      }
+    if (severity === 'critical' && !passingRetestStatuses.includes(retestStatus)) {
+      failures.push(`${evidencePath} critical finding ${id} has missing, pending, failed, or invalid retest`);
+    }
 
-      if (status === 'formally_accepted') {
-        const acceptance = finding.riskAcceptance ?? {};
-        for (const field of ['acceptedBy', 'acceptedAt', 'acceptedUntil', 'rationale']) {
-          if (!isNonEmptyString(acceptance[field])) failures.push(`${evidencePath} finding ${id} formal acceptance missing ${field}`);
+    if (status === 'formally_accepted') {
+      const acceptance = finding.riskAcceptance ?? {};
+      for (const field of ['acceptedBy', 'acceptedAt', 'acceptedUntil', 'rationale', 'compensatingControls']) {
+        if (field === 'compensatingControls') {
+          if (!isNonEmptyArray(acceptance[field])) failures.push(`${evidencePath} finding ${id} formal acceptance missing ${field}`);
+        } else if (!isNonEmptyString(acceptance[field])) {
+          failures.push(`${evidencePath} finding ${id} formal acceptance missing ${field}`);
         }
       }
     }
+  }
 
-    if (enterpriseRelease && severity === 'critical' && ['pending', 'required_pending', 'not_started', 'failed', 'missing'].includes(retestStatus)) {
-      failures.push(`${evidencePath} critical finding ${id} has pending, failed, or missing retest`);
-    }
+  const criticalUnresolved = findings.filter((finding) => normalize(finding.severity) === 'critical' && !resolvedStatuses.includes(normalize(finding.status)));
+  const highUnresolved = findings.filter((finding) => normalize(finding.severity) === 'high' && !resolvedStatuses.includes(normalize(finding.status)));
+  const criticalRetestMissing = findings.filter((finding) => normalize(finding.severity) === 'critical' && !passingRetestStatuses.includes(normalize(finding.retestStatus)));
+
+  if (criticalUnresolved.length > 0) failures.push(`${evidencePath} critical unresolved findings: ${criticalUnresolved.map((finding) => finding.id).join(', ')}`);
+  if (highUnresolved.length > 0) failures.push(`${evidencePath} high unresolved findings: ${highUnresolved.map((finding) => finding.id).join(', ')}`);
+  if (criticalRetestMissing.length > 0) failures.push(`${evidencePath} critical retest missing: ${criticalRetestMissing.map((finding) => finding.id).join(', ')}`);
+
+  if (Array.isArray(evidence.criticalFindings) && evidence.criticalFindings.length !== summary.critical) {
+    failures.push(`${evidencePath}.criticalFindings count must match findingsSummary.critical`);
+  }
+  if (Array.isArray(evidence.highFindings) && evidence.highFindings.length !== summary.high) {
+    failures.push(`${evidencePath}.highFindings count must match findingsSummary.high`);
+  }
+  if (Array.isArray(evidence.mediumFindings) && evidence.mediumFindings.length !== summary.medium) {
+    failures.push(`${evidencePath}.mediumFindings count must match findingsSummary.medium`);
   }
 }
 
 validateRequiredDocs();
 validateRegister();
 const evidence = readJson(evidencePath);
-validatePlaceholderSafety(evidence);
-validateFindings(evidence);
-if (enterpriseRelease) requireRealReviewEvidence(evidence);
+
+if (evidence) {
+  validateEvidenceIntegrity(evidence);
+  if (evidence.status === 'Complete') validateCompleteShape(evidence);
+  validateFindings(evidence);
+}
 
 if (failures.length > 0) {
   console.error('External security review gate failed:');
@@ -258,6 +279,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(enterpriseRelease
-  ? 'External security review gate passed for enterprise release.'
-  : 'External security review gate checked; enterprise enforcement not requested.');
+console.log('External security review gate passed. Real external review/pentest evidence is attached and blocking findings are resolved or accepted.');
