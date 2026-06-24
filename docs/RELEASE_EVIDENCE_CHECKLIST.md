@@ -1,52 +1,68 @@
 # Release Evidence Checklist
 
-This checklist defines the evidence package that must be attached before a Risck comply release is represented as production-ready or enterprise-ready. It is intentionally evidence-bound and must not be used to imply certification, external assurance, tested recovery, or monitoring maturity that has not been proven.
+This checklist records the evidence required before EuroComply can be represented as beta-ready, production-ready, enterprise-ready, or procurement-ready.
 
 ## Current release assessment
 
+- Release name: EuroComply Final Enterprise Release Decision - 2026-06-24
+- Assessment date: 2026-06-24
+- Repository: `renanescola40-afk/eurocomply_saas`
+- Latest assessed PR: #431
+- PR #431 head SHA: `a52abc7f2b7b1eef41f2d8ab79ed5fdc7ef48a2c`
+- PR #431 merge commit SHA: `bcb694b6f9a93d8ae59db742429f00dbb41b369b`
 - Release owner: @renansilva2002 / renanescola40-afk
 - Security owner: @renansilva2002 / renanescola40-afk
 - Target environment: production / enterprise candidate
-- Final decision: **No-Go** until all blocker evidence is attached.
+- Final decision: **No-Go**
 
 ## Command validation evidence
 
-| Command | Status | Evidence required | Required before Go |
-| --- | --- | --- | --- |
-| `npm ci` | Missing evidence | Preserved install log | Yes |
-| `npm run lint` | Missing evidence | Preserved lint log | Yes |
-| `npm run typecheck` | Missing evidence | Preserved typecheck log | Yes |
-| `npm run test` | Missing evidence | Preserved unit-test log | Yes |
-| `npm run build` | Missing evidence | Successful build log and deployment URL | Yes |
-| `npm run security:ci` | Missing evidence | Preserved security gate log | Yes |
-| `npm run security:trust-package` | Required | Trust Center package gate output | Yes |
-| `npm run release:readiness` | Missing evidence | Preserved readiness log | Yes |
+| Command | Status | Required before Go |
+| --- | --- | --- |
+| `npm ci` | Partial; deterministic install variants passed, but exact plain command output from the final runner is missing | Yes |
+| `npm run lint` | Passed in CI / Full Security Suite | Yes |
+| `npm run typecheck` | Passed in CI / Full Security Suite | Yes |
+| `npm run test` | Passed in CI / Full Security Suite | Yes |
+| `npm run test:e2e` | Partial; E2E gates passed when configured, but exact standalone command output is missing | Yes |
+| `npm run build` | Passed in Full Security Suite | Yes |
+| `npm run security:ci` | Partial; security workflows passed, but exact standalone command output is missing | Yes |
+| `npm run release:readiness` | **Missing / not proven passed** | Yes |
+| `npm run release:enterprise-readiness` | **Missing / not proven passed** | Required for enterprise |
+| `node scripts/release/run-final-validation.mjs` | **Missing / not proven passed** | Yes |
 
-## Trust Center readiness
+## Deployment and runtime evidence
 
-| Evidence | Status | Attached evidence / location | Release decision impact |
-| --- | --- | --- | --- |
-| Public Trust Center route | Complete as repository evidence | `src/app/[locale]/trust/page.tsx`; `/trust` redirects to localized route through middleware | Required for enterprise buyer evaluation |
-| Public security route | Complete as repository evidence | `src/app/[locale]/security/page.tsx`; `/security` redirects to localized route through middleware | Required for enterprise buyer evaluation |
-| Footer Trust Center link | Complete as repository evidence | `src/components/marketing/public-footer.tsx` | Required for discoverability |
-| Landing page Trust Center link | Complete as repository evidence | `src/components/marketing/enterprise-home.tsx` | Required for buyer flow |
-| Pricing page Trust Center link | Complete as repository evidence | `src/app/[locale]/pricing/page.tsx` | Required for pricing/procurement flow |
-| Required trust docs | Complete as repository evidence | `docs/trust/*`; enforced by `scripts/security/check-trust-package.mjs` | Required for buyer review |
-| Procurement checklist | Complete as repository evidence | `docs/trust/PROCUREMENT_CHECKLIST.md` | Required for enterprise questionnaire workflow |
-| Non-claim guardrail | Complete as repository evidence | Trust docs disclose no SOC 2 report and no ISO 27001 certification claim | Prevents unsupported assurance language |
+| Evidence | Status | Impact |
+| --- | --- | --- |
+| Vercel preview deployment | Present / Ready for PR #431 | Positive, not approval |
+| Vercel commit status | Success for PR #431 head SHA | Positive, not approval |
+| Deployment URL functional verification | **Open** | Blocks Go |
+| Preview and production smoke tests | **Open** | Blocks Go |
+| Production secrets provider stores | Complete | Positive; runtime preflight still required |
+| Supabase live RLS validation | **Open / not_run** | Blocks production and enterprise Go |
+| Stripe runtime validation | Complete / passed | Positive for paid billing evidence |
+| MFA / IdP runtime validation | **Exception / provider proof absent** | Blocks enterprise Go |
+| Upload scanner live proof | Complete / passed | Positive; revalidate before enterprise/provider change |
+| Audit-chain live validation | **Exception / target validation required** | Blocks enterprise Go |
+| Observability readiness | Complete as repository evidence | Positive; deployment smoke and drill proof still required |
+| Rollback target | Candidate documented only | Blocks Go until verified and dry-run evidence exists |
+| Incident/support owners | Assigned | Positive; drill/sign-off remains required |
+| External review | **Open / not_started** | Blocks enterprise pilot/procurement and external assurance claims |
 
 ## Evidence still blocking Go
 
 | Area | Current gap | Release impact |
 | --- | --- | --- |
-| CI/build | Preserved command logs and successful deployment URL are not attached | Blocks Go |
-| RLS live validation | Target-environment tenant-isolation evidence is not attached | Blocks enterprise Go |
-| External review | Independent review evidence is not attached | Blocks stronger assurance claims |
-| Continuity | Target-environment continuity and restore evidence is not attached | Blocks contractual recovery commitments |
-| Owners | Incident, rollback and support owner sign-off must be confirmed | Blocks Go |
+| Final validation | Exact final validation runner output is missing | Blocks all Go paths |
+| Deployment smoke | Deployment URL exists but functional smoke is Open | Blocks production/public/enterprise Go |
+| RLS live validation | Target-environment tenant-isolation evidence is Open/not_run | Blocks production and enterprise Go |
+| MFA/IdP | Real provider runtime proof is absent | Blocks enterprise Go |
+| Audit chain | Target live validation is missing | Blocks enterprise Go |
+| External review | Real external review evidence is not attached | Blocks enterprise pilot/procurement |
+| Rollback | Rollback target is candidate-only and not dry-run verified | Blocks Go |
 
 ## Release decision
 
 **Final decision: No-Go.**
 
-Rationale: Trust Center materials are now part of the release evidence package, but public production and enterprise readiness still require preserved CI/build evidence, target-environment RLS evidence, external review evidence where claimed, continuity evidence, and owner sign-off.
+Positive CI, security-suite, Vercel preview, Stripe runtime, upload scanner, and observability repository evidence do not close the remaining P0 runtime and release-governance gaps.
