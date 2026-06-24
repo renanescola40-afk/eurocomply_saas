@@ -12,6 +12,22 @@ const DEFAULT_IMAGE_REMOTE_HOSTS = [
   'flagcdn.com',
 ] as const;
 
+function normalizeTrustedImageHostname(value: string) {
+  const candidate = value.trim().toLowerCase();
+  if (!candidate || candidate.includes('*')) return null;
+
+  try {
+    if (candidate.startsWith('http://') || candidate.startsWith('https://')) {
+      return new URL(candidate).hostname;
+    }
+  } catch {
+    return null;
+  }
+
+  if (!/^[a-z0-9.-]+$/.test(candidate)) return null;
+  return candidate;
+}
+
 function getSupabaseImageHost() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) return [];
@@ -26,11 +42,14 @@ function getSupabaseImageHost() {
 function getTrustedImageHostnames() {
   const configuredHosts = (process.env.NEXT_IMAGE_REMOTE_HOSTS ?? '')
     .split(',')
-    .map((host) => host.trim())
-    .filter(Boolean);
+    .map((host) => normalizeTrustedImageHostname(host))
+    .filter((host): host is string => Boolean(host));
 
   return Array.from(new Set([...DEFAULT_IMAGE_REMOTE_HOSTS, ...getSupabaseImageHost(), ...configuredHosts]));
 }
+
+const trustedImageHostnames = getTrustedImageHostnames();
+const imageSrcPolicy = ["img-src 'self' data: blob:", ...trustedImageHostnames.map((hostname) => `https://${hostname}`)].join(' ');
 
 const securityHeaders = [
   {
@@ -41,7 +60,7 @@ const securityHeaders = [
         ? "script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.sentry.io https://*.ingest.sentry.io"
         : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.sentry.io https://*.ingest.sentry.io",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https:",
+      imageSrcPolicy,
       "media-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "connect-src 'self' https://*.supabase.co https://api.stripe.com https://checkout.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://vitals.vercel-insights.com",
@@ -81,7 +100,7 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    remotePatterns: getTrustedImageHostnames().map((hostname) => ({
+    remotePatterns: trustedImageHostnames.map((hostname) => ({
       protocol: 'https',
       hostname,
     })),

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,9 @@ type BillingPageProps = {
   params: { locale: string };
   searchParams?: { checkout?: string; billing_error?: string };
 };
+
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 function formatStatus(status: string | null) {
   if (!status) return 'No active Stripe subscription';
@@ -152,6 +155,8 @@ async function openCustomerPortal(formData: FormData) {
 }
 
 export default async function BillingPage({ params, searchParams }: BillingPageProps) {
+  noStore();
+
   const user = await getCurrentUser();
 
   if (!user) {

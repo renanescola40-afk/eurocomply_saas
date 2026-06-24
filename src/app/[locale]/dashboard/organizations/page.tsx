@@ -1,4 +1,5 @@
 import { unstable_noStore as noStore } from 'next/cache';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Building2, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
@@ -35,6 +36,30 @@ type PageProps = {
 
 function getSafeLocale(locale: string): Locale {
   return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+}
+
+function DashboardHomeOverviewSkeleton() {
+  return (
+    <div className="space-y-6" aria-label="Loading dashboard overview">
+      <div className="grid gap-4 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="rounded-[1.5rem] border bg-background/80 p-5 shadow-sm">
+            <div className="h-4 w-24 animate-pulse rounded-full bg-muted" />
+            <div className="mt-4 h-8 w-20 animate-pulse rounded-xl bg-muted" />
+            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-muted" />
+          </div>
+        ))}
+      </div>
+      <div className="rounded-[2rem] border bg-background/80 p-6 shadow-sm">
+        <div className="h-6 w-56 animate-pulse rounded-full bg-muted" />
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-24 animate-pulse rounded-2xl bg-muted" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default async function OrganizationDashboardPage({ params, searchParams }: PageProps) {
@@ -179,16 +204,18 @@ export default async function OrganizationDashboardPage({ params, searchParams }
           })}
         </section>
 
-        <DashboardHomeOverview
-          summary={data.summary}
-          tasks={data.tasks}
-          trendHistory={data.trendHistory}
-          trendComparison={data.trendComparison}
-          workflowReadiness={data.workflowReadiness}
-          basePath={localizedDashboardBasePath}
-          vendorsRequiringReview={data.vendorsRequiringReview}
-          documentsExpiringSoon={data.documentsExpiringSoon}
-        />
+        <Suspense fallback={<DashboardHomeOverviewSkeleton />}>
+          <DashboardHomeOverview
+            summary={data.summary}
+            tasks={data.tasks}
+            trendHistory={data.trendHistory}
+            trendComparison={data.trendComparison}
+            workflowReadiness={data.workflowReadiness}
+            basePath={localizedDashboardBasePath}
+            vendorsRequiringReview={data.vendorsRequiringReview}
+            documentsExpiringSoon={data.documentsExpiringSoon}
+          />
+        </Suspense>
       </div>
     </main>
   );
