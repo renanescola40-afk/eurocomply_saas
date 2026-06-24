@@ -9,13 +9,14 @@ export type PrivacyInventoryTable = {
   key: string;
   table: string;
   columns: string;
-  scopeColumn: 'organization_id' | 'id' | 'user_id';
-  retentionClass: 'active_customer_data' | 'legal_billing_record' | 'audit_chain' | 'operational_log';
+  scopeColumn: 'organization_id' | 'id' | 'user_id' | 'subject_id';
+  retentionClass: 'account_data' | 'active_customer_data' | 'legal_billing_record' | 'audit_chain' | 'operational_log';
   exportable: boolean;
   deletable: 'delete' | 'anonymize' | 'preserve';
 };
 
 export const ORGANIZATION_EXPORT_TABLES: PrivacyInventoryTable[] = [
+  { key: 'users', table: 'users', columns: 'id,email,created_at,updated_at', scopeColumn: 'subject_id', retentionClass: 'account_data', exportable: true, deletable: 'anonymize' },
   { key: 'organizations', table: 'organizations', columns: 'id,name,slug,created_at,updated_at', scopeColumn: 'id', retentionClass: 'active_customer_data', exportable: true, deletable: 'anonymize' },
   { key: 'organization_members', table: 'organization_members', columns: 'id,organization_id,user_id,role,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
   { key: 'documents', table: 'documents', columns: 'id,organization_id,name,category,status,expires_at,created_at,updated_at', scopeColumn: 'organization_id', retentionClass: 'active_customer_data', exportable: true, deletable: 'delete' },
@@ -63,6 +64,22 @@ type SupabaseLike = {
   };
 };
 
+type StepUpAuditLike = {
+  action?: string | null;
+  verifiedAt?: string | null;
+};
+
+export type RequestedOrganizationScopeValidation =
+  | { ok: true; requestedOrganizationId: string | null; currentOrganizationId: string }
+  | {
+      ok: false;
+      status: 400 | 403;
+      error: 'invalid_organization_id' | 'cross_tenant_export_denied';
+      auditReason: 'invalid_requested_organization_id' | 'cross_tenant_export_denied';
+      requestedOrganizationId: string | null;
+      currentOrganizationId: string;
+    };
+
 function isExpectedMissingTable(error: QueryError) {
   return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST204' || error?.code === 'PGRST205';
 }
@@ -72,14 +89,56 @@ async function getAdminClient() {
   return tryCreateAdminClient() as unknown as SupabaseLike | null;
 }
 
+function normalizeRequestedOrganizationId(value: string | null) {
+  if (value === null) return null;
+  const trimmed = value.trim();
+  return /^[a-zA-Z0-9_-]{1,128}$/.test(trimmed) ? trimmed : 'invalid';
+}
+
+export function validateRequestedOrganizationScope(value: string | null, currentOrganizationId: string): RequestedOrganizationScopeValidation {
+  const requestedOrganizationId = normalizeRequestedOrganizationId(value);
+
+  if (requestedOrganizationId === 'invalid') {
+    return {
+      ok: false,
+      status: 400,
+      error: 'invalid_organization_id',
+      auditReason: 'invalid_requested_organization_id',
+      requestedOrganizationId: value,
+      currentOrganizationId,
+    };
+  }
+
+  if (requestedOrganizationId && requestedOrganizationId !== currentOrganizationId) {
+    return {
+      ok: false,
+      status: 403,
+      error: 'cross_tenant_export_denied',
+      auditReason: 'cross_tenant_export_denied',
+      requestedOrganizationId,
+      currentOrganizationId,
+    };
+  }
+
+  return { ok: true, requestedOrganizationId, currentOrganizationId };
+}
+
+function scopeQuery(
+  query: ReturnType<SupabaseLike['from']>['select'] extends (columns: string) => infer TResult ? TResult : never,
+  descriptor: PrivacyInventoryTable,
+  organizationId: string,
+  userId: string,
+) {
+  if (descriptor.scopeColumn === 'id') return query.eq('id', organizationId);
+  if (descriptor.scopeColumn === 'user_id') return query.eq('user_id', userId);
+  if (descriptor.scopeColumn === 'subject_id') return query.eq('id', userId);
+  return query.eq('organization_id', organizationId);
+}
+
 async function safeListScopedRows(client: SupabaseLike, descriptor: PrivacyInventoryTable, organizationId: string, userId: string) {
   try {
     const query = client.from(descriptor.table).select(descriptor.columns);
-    const scoped = descriptor.scopeColumn === 'id'
-      ? query.eq('id', organizationId)
-      : descriptor.scopeColumn === 'user_id'
-        ? query.eq('user_id', userId)
-        : query.eq('organization_id', organizationId);
+    const scoped = scopeQuery(query, descriptor, organizationId, userId);
     const result = typeof scoped.order === 'function' ? await scoped.order('created_at', { ascending: false }) : await scoped;
 
     if (result.error) {
@@ -121,6 +180,25 @@ export async function collectOrganizationDataExport(context: OrganizationExportC
   };
 }
 
+export function buildGdprExportAuditMetadata(input: {
+  plan: string;
+  role?: string | null;
+  tableKeys: string[];
+  unavailableTables: OrganizationDataExport['unavailableTables'];
+  stepUp: StepUpAuditLike;
+}) {
+  return {
+    scope: 'organization_export',
+    plan: input.plan,
+    role: input.role ?? null,
+    tableKeys: input.tableKeys,
+    unavailableTables: input.unavailableTables,
+    stepUpAction: input.stepUp.action ?? null,
+    stepUpVerifiedAt: input.stepUp.verifiedAt ?? null,
+    stepUpTokenType: 'signed_hmac',
+  };
+}
+
 export type DeleteRequestBody = { confirmation?: unknown; reason?: unknown };
 
 export function validateDeleteConfirmation(body: DeleteRequestBody) {
@@ -153,5 +231,23 @@ export function buildGdprDeletePlan(now = new Date()) {
     requiresManualCompletion: true,
     legalRetentionPreserved: actions.filter((action) => action.action === 'preserve').map((action) => action.key),
     actions,
+  };
+}
+
+export function buildGdprDeleteAuditMetadata(input: {
+  reason: string;
+  role?: string | null;
+  plan: string;
+  deletePlan: ReturnType<typeof buildGdprDeletePlan>;
+  stepUp: StepUpAuditLike;
+}) {
+  return {
+    reason: input.reason,
+    role: input.role ?? null,
+    plan: input.plan,
+    deletePlan: input.deletePlan,
+    stepUpAction: input.stepUp.action ?? null,
+    stepUpVerifiedAt: input.stepUp.verifiedAt ?? null,
+    stepUpTokenType: 'signed_hmac',
   };
 }
