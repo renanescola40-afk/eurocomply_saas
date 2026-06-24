@@ -12,6 +12,11 @@ on:
         required: true
         type: boolean
         default: true
+      apply_migrations:
+        description: Apply committed Supabase migrations before running the live validator
+        required: true
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -47,6 +52,19 @@ jobs:
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm ci --ignore-scripts --no-audit --no-fund
           git checkout -- package-lock.json
+
+      - name: Apply committed Supabase migrations
+        if: ${{ inputs.apply_migrations }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "${SUPABASE_DB_URL}" ]; then
+            echo "SUPABASE_DB_URL is required when apply_migrations=true."
+            echo "Add the Supabase Postgres connection string as an environment/repository secret, or apply supabase/migrations/20260623120000_live_rls_validation_inventory.sql manually and rerun with apply_migrations=false."
+            exit 1
+          fi
+
+          npx --yes supabase@latest db push --db-url "$SUPABASE_DB_URL"
 
       - name: Run strict Supabase tenant isolation validator
         env:
