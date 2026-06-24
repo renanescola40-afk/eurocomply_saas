@@ -3,8 +3,8 @@
   "evidenceItem": "observability-readiness",
   "status": "Complete",
   "reviewer": "SRE Incident Response Lead",
-  "reviewedAt": "2026-06-21T15:25:00Z",
-  "summary": "Observability readiness controls were added for Sentry configuration, redacted structured logging, protected readiness, alerting, incident response, rollback and customer communication runbooks.",
+  "reviewedAt": "2026-06-24T00:00:00Z",
+  "summary": "Observability readiness controls were added for Sentry configuration, redacted structured logging, protected readiness, enterprise storage/scanner readiness, alerting, incident response, rollback and customer communication runbooks.",
   "evidenceLocations": [
     "src/server/observability/logger.ts",
     "src/server/observability/logger.test.ts",
@@ -19,7 +19,8 @@
     "docs/operations/ALERTING.md",
     "docs/operations/INCIDENT_RESPONSE_RUNBOOK.md",
     "docs/operations/ROLLBACK_RUNBOOK.md",
-    "docs/operations/CUSTOMER_COMMUNICATION_RUNBOOK.md"
+    "docs/operations/CUSTOMER_COMMUNICATION_RUNBOOK.md",
+    "docs/RELEASE_APPROVAL_RECORD.md"
   ],
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "controlsVerified": [
@@ -33,6 +34,8 @@
     "/api/health remains public and simple.",
     "/api/ready requires HEALTHCHECK_TOKEN bearer authorization.",
     "/api/ready checks Supabase connectivity and grouped Stripe, Redis and Sentry config without exposing values.",
+    "/api/ready checks enterprise storage/scanner readiness when RELEASE_TARGET=enterprise, RISCK_COMPLY_ENTERPRISE_RELEASE=true, or REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true.",
+    "/api/ready does not expose scanner endpoint, allowed host, token or environment variable names.",
     "Sensitive error reporting returns sanitized error metadata and captures Sentry exceptions with sanitized extra context.",
     "Alerting, incident response, rollback and customer communication runbooks exist for SEV-1 and SEV-2 operations.",
     "Release readiness gates require incident and rollback owners before release sign-off."
@@ -41,10 +44,18 @@
   "releaseGate": {
     "requiresIncidentOwner": true,
     "requiresRollbackOwner": true,
+    "requiresSupportOwner": true,
+    "requiresCustomerCommunicationOwner": true,
+    "requiresEscalationPath": true,
+    "requiresStatusPageDecision": true,
+    "requiresSevTiming": true,
     "noGoIfMissing": [
       "incidentOwner",
       "rollbackOwner",
+      "supportOwner",
       "customerCommunicationOwner",
+      "escalationPath",
+      "statusPageDecision",
       "previousKnownGoodDeployment"
     ]
   },
@@ -108,7 +119,8 @@
     "health": {
       "path": "/api/health",
       "public": true,
-      "dependencyChecks": false
+      "dependencyChecks": false,
+      "configExposure": false
     },
     "ready": {
       "path": "/api/ready",
@@ -118,9 +130,38 @@
         "Stripe server config",
         "Redis server config",
         "Sentry runtime config",
-        "Sentry source-map upload credentials present when release uploads are expected"
-      ]
+        "Sentry source-map upload credentials present when release uploads are expected",
+        "Enterprise controlled document storage bucket constant",
+        "Enterprise malware scanner required flag",
+        "Enterprise real malware scanner provider",
+        "Enterprise scanner transport configuration"
+      ],
+      "enterpriseStorageScannerRequiredWhen": [
+        "RELEASE_TARGET=enterprise",
+        "RISCK_COMPLY_ENTERPRISE_RELEASE=true",
+        "REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true"
+      ],
+      "scannerConfigExposure": false
     }
+  },
+  "operationsGovernance": {
+    "incidentOwnerAssigned": true,
+    "rollbackOwnerAssigned": true,
+    "supportOwnerAssigned": true,
+    "customerCommunicationOwnerAssigned": true,
+    "escalationPathDocumented": true,
+    "statusPageDecisionDocumented": true,
+    "sev1TimingDocumented": true,
+    "sev2TimingDocumented": true,
+    "releaseRecord": "docs/RELEASE_APPROVAL_RECORD.md"
+  },
+  "rollbackTarget": {
+    "documentedIn": "docs/RELEASE_APPROVAL_RECORD.md",
+    "previousKnownGoodDeploymentUrlCandidateRecorded": true,
+    "previousKnownGoodCommitShaCandidateRecorded": true,
+    "rollbackTriggerRecorded": true,
+    "databaseProcedureRecorded": true,
+    "stripeReplayIdempotencyNoteRecorded": true
   },
   "tests": [
     "src/server/observability/logger.test.ts",
@@ -136,7 +177,7 @@
     "npm run build"
   ],
   "notes": [
-    "This evidence file intentionally contains no secrets, tokens, customer PII, cookie values or stack traces.",
+    "Operational owner names, rollback target URL and rollback target SHA are maintained in the release approval record instead of being duplicated in runtime evidence.",
     "CI command output must be attached before production release sign-off."
   ]
 }
