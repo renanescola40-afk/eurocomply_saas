@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Building2, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-overview';
+import { EnterpriseDashboardOverview } from '@/components/dashboard/enterprise-dashboard-overview';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { locales, type Locale } from '@/lib/i18n/routing';
+import { getDashboardCopy } from '@/lib/i18n/dashboard-copy';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { formatLimit } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -14,13 +16,6 @@ import { getOrganizationDashboardData } from '@/server/queries/organization-dash
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-
-const quickLinks = [
-  { href: '/aprovacoes', label: 'Tasks', description: 'Assign owners and unblock overdue work', icon: FileCheck2 },
-  { href: '/documentos', label: 'Evidence', description: 'Review policies, proofs and expirations', icon: ShieldCheck },
-  { href: '/vendor-assurance', label: 'Vendors', description: 'Track third-party review exposure', icon: UsersRound },
-  { href: '/riscos', label: 'Risks', description: 'Prioritise high-impact compliance gaps', icon: Gauge },
-];
 
 const planLabels = {
   essential: 'Essential',
@@ -40,7 +35,7 @@ function getSafeLocale(locale: string): Locale {
 
 function DashboardHomeOverviewSkeleton() {
   return (
-    <div className="space-y-6" aria-label="Loading dashboard overview">
+    <div className="space-y-6" aria-label="Loading dashboard overview" role="status" aria-live="polite">
       <div className="grid gap-4 md:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
           <div key={index} className="rounded-[1.5rem] border bg-background/80 p-5 shadow-sm">
@@ -68,6 +63,8 @@ export default async function OrganizationDashboardPage({ params, searchParams }
   const { locale } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const safeLocale = getSafeLocale(locale);
+  const copy = getDashboardCopy(safeLocale);
+  const organizationCopy = copy.organization;
   const user = await getCurrentUser();
 
   if (!user) {
@@ -84,9 +81,23 @@ export default async function OrganizationDashboardPage({ params, searchParams }
   const entitlements = data.entitlements;
   const dashboardBasePath = `/dashboard/organizations`;
   const localizedDashboardBasePath = `/${safeLocale}${dashboardBasePath}`;
-  const complianceHealth = data.summary.complianceScore >= 80 ? 'Audit ready' : data.summary.complianceScore >= 55 ? 'Needs attention' : 'Remediation needed';
+  const localizedTasksPath = `/${safeLocale}/aprovacoes`;
+  const planName = planLabels[entitlements.plan];
+  const complianceHealth = data.summary.complianceScore >= 80 ? organizationCopy.health.auditReady : data.summary.complianceScore >= 55 ? organizationCopy.health.needsAttention : organizationCopy.health.remediation;
   const requestedPlan = resolvedSearchParams.plan ? getBillingPlan(resolvedSearchParams.plan) : undefined;
   const shouldShowRequestedPlan = requestedPlan && requestedPlan.id !== entitlements.plan;
+  const limitCards = [
+    { label: organizationCopy.documentsIncluded, value: formatLimit(entitlements.maxDocuments) },
+    { label: organizationCopy.usersIncluded, value: formatLimit(entitlements.maxUsers) },
+    { label: organizationCopy.fiscalCountriesIncluded, value: formatLimit(entitlements.maxFiscalCountries) },
+  ];
+  const limitsSummary = limitCards.map((item) => `${item.label}: ${item.value}`).join(' · ');
+  const quickLinks = [
+    { href: localizedTasksPath, label: organizationCopy.quickLinks.tasks.label, description: organizationCopy.quickLinks.tasks.description, icon: FileCheck2 },
+    { href: `${localizedDashboardBasePath}/documents`, label: organizationCopy.quickLinks.evidence.label, description: organizationCopy.quickLinks.evidence.description, icon: ShieldCheck },
+    { href: `/${safeLocale}/vendor-assurance`, label: organizationCopy.quickLinks.vendors.label, description: organizationCopy.quickLinks.vendors.description, icon: UsersRound },
+    { href: `/${safeLocale}/riscos`, label: organizationCopy.quickLinks.risks.label, description: organizationCopy.quickLinks.risks.description, icon: Gauge },
+  ];
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.16),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))]">
@@ -94,22 +105,22 @@ export default async function OrganizationDashboardPage({ params, searchParams }
         {shouldShowRequestedPlan ? (
           <section className="rounded-[1.5rem] border border-primary/25 bg-primary/8 p-5 shadow-lg shadow-primary/5 md:flex md:items-center md:justify-between md:gap-6">
             <div>
-              <Badge className="rounded-full px-3 py-1">Plano selecionado</Badge>
+              <Badge className="rounded-full px-3 py-1">{organizationCopy.selectedPlanBadge}</Badge>
               <h2 className="mt-3 text-2xl font-semibold tracking-tight">
-                Continuar com {requestedPlan.name} · €{requestedPlan.priceMonthly}/mês
+                {organizationCopy.continueWithPlan} {requestedPlan.name} · €{requestedPlan.priceMonthly}/{organizationCopy.month}
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                Você chegou ao dashboard com intenção de assinar este plano. Continue para rever limites, add-ons e finalizar a configuração comercial sem perder a escolha feita no pricing.
+                {organizationCopy.requestedPlanDescription}
               </p>
             </div>
             <div className="mt-4 flex flex-wrap gap-3 md:mt-0 md:justify-end">
               <Button asChild className="rounded-full">
                 <Link href={`/${safeLocale}/dashboard/organizations/add-ons?plan=${requestedPlan.id}`}>
-                  Rever plano e add-ons <ArrowRight className="h-4 w-4" />
+                  {organizationCopy.reviewPlan} <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" className="rounded-full bg-background/70">
-                <Link href={`/${safeLocale}/pricing`}>Comparar planos</Link>
+                <Link href={`/${safeLocale}/pricing`}>{organizationCopy.comparePlans}</Link>
               </Button>
             </div>
           </section>
@@ -121,13 +132,13 @@ export default async function OrganizationDashboardPage({ params, searchParams }
             <div className="space-y-6">
               <div className="flex flex-wrap items-center gap-3">
                 <Badge className="gap-2 rounded-full px-3 py-1 text-xs uppercase tracking-[0.2em]">
-                  <Sparkles className="h-3.5 w-3.5" /> EuroComply
+                  <Sparkles className="h-3.5 w-3.5" /> {organizationCopy.eyebrow}
                 </Badge>
                 <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
                   {complianceHealth}
                 </Badge>
                 <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-                  Plano {planLabels[entitlements.plan]}
+                  {organizationCopy.planPrefix} {planName}
                 </Badge>
               </div>
 
@@ -136,66 +147,60 @@ export default async function OrganizationDashboardPage({ params, searchParams }
                   <Building2 className="h-4 w-4" /> {data.organization.name}
                 </p>
                 <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.04em] md:text-6xl">
-                  Your regulatory operating system, focused on what needs action today.
+                  {organizationCopy.title}
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-                  Monitor GDPR, AI Act and operational compliance from one executive cockpit: risk, evidence, vendors and remediation work — without the spreadsheet chaos.
+                  {organizationCopy.subtitle}
                 </p>
               </div>
 
               <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
-                <div className="rounded-2xl border bg-background/70 p-4">
-                  <p className="font-semibold text-foreground">Documentos</p>
-                  <p>{formatLimit(entitlements.maxDocuments)} incluídos</p>
-                </div>
-                <div className="rounded-2xl border bg-background/70 p-4">
-                  <p className="font-semibold text-foreground">Utilizadores</p>
-                  <p>{formatLimit(entitlements.maxUsers)} incluídos</p>
-                </div>
-                <div className="rounded-2xl border bg-background/70 p-4">
-                  <p className="font-semibold text-foreground">Países fiscais</p>
-                  <p>{formatLimit(entitlements.maxFiscalCountries)} incluídos</p>
-                </div>
+                {limitCards.map((item) => (
+                  <div key={item.label} className="rounded-2xl border bg-background/70 p-4">
+                    <p className="font-semibold text-foreground">{item.label}</p>
+                    <p>{item.value} {organizationCopy.included}</p>
+                  </div>
+                ))}
               </div>
 
               <div className="flex flex-wrap gap-3">
                 <Button asChild size="lg" className="rounded-full">
                   <Link href={`${localizedDashboardBasePath}/reports-governance`}>
-                    Generate audit pack <ArrowRight className="h-4 w-4" />
+                    {organizationCopy.generateAuditPack} <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="rounded-full bg-background/70">
-                  <Link href={`/${safeLocale}/aprovacoes`}>Review priority tasks</Link>
+                  <Link href={localizedTasksPath}>{organizationCopy.reviewPriorityTasks}</Link>
                 </Button>
               </div>
             </div>
 
             <div className="rounded-3xl border bg-muted/30 p-5">
-              <p className="text-sm font-medium text-muted-foreground">Compliance score</p>
+              <p className="text-sm font-medium text-muted-foreground">{organizationCopy.complianceScore}</p>
               <div className="mt-3 flex items-end justify-between gap-4">
                 <p className="text-6xl font-bold tracking-tight">{data.summary.complianceScore}%</p>
                 <p className="pb-2 text-right text-sm text-muted-foreground">
-                  {data.summary.criticalRisks} critical risks<br />
-                  {data.summary.missingDocuments} missing evidence
+                  {data.summary.criticalRisks} {organizationCopy.criticalRisks}<br />
+                  {data.summary.missingDocuments} {organizationCopy.missingEvidence}
                 </p>
               </div>
-              <div className="mt-5 h-3 overflow-hidden rounded-full bg-background">
+              <div className="mt-5 h-3 overflow-hidden rounded-full bg-background" aria-hidden="true">
                 <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(Math.max(data.summary.complianceScore, 0), 100)}%` }} />
               </div>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Dashboard shortcuts">
           {quickLinks.map((link) => {
             const Icon = link.icon;
             return (
-              <Link key={link.href} href={`/${safeLocale}${link.href}`} className="group rounded-2xl border bg-background/78 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
+              <Link key={link.href} href={link.href} className="group rounded-2xl border bg-background/78 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                  <div className="rounded-xl bg-primary/10 p-2 text-primary" aria-hidden="true">
                     <Icon className="h-5 w-5" />
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary" />
+                  <ArrowRight className="h-4 w-4 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary" aria-hidden="true" />
                 </div>
                 <p className="mt-4 font-semibold">{link.label}</p>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">{link.description}</p>
@@ -203,6 +208,18 @@ export default async function OrganizationDashboardPage({ params, searchParams }
             );
           })}
         </section>
+
+        <EnterpriseDashboardOverview
+          copy={copy.enterprise}
+          summary={data.summary}
+          tasks={data.tasks}
+          vendorsRequiringReview={data.vendorsRequiringReview}
+          documentsExpiringSoon={data.documentsExpiringSoon}
+          basePath={localizedDashboardBasePath}
+          tasksPath={localizedTasksPath}
+          planName={planName}
+          limitsSummary={limitsSummary}
+        />
 
         <Suspense fallback={<DashboardHomeOverviewSkeleton />}>
           <DashboardHomeOverview
