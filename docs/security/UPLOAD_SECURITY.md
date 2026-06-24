@@ -6,6 +6,8 @@ This standard covers upload, storage, download and preview handling for controll
 
 Enterprise uploads must fail closed. A user-submitted document is stored only after all local validation succeeds and the configured malware scanner returns `clean` for the exact bytes that will be written to storage.
 
+Direct document metadata creation must not be usable as an upload-scanning bypass. When `REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true`, document creation for user-submitted content requires clean scan evidence and blocks with `enterprise_upload_scan_bypass` when that evidence is missing, incomplete or not clean.
+
 ## Central module
 
 The authoritative runtime module is `src/server/security/upload-security.ts`. Upload code should call that module instead of reimplementing ad-hoc checks in routes or server actions.
@@ -62,8 +64,11 @@ Supported real providers are `clamav`, `clamd`, `http`, `generic-http` and `webh
 | `suspicious` | block upload |
 | `infected` | block upload |
 | scanner error or malformed provider response | block upload |
+| direct metadata creation without clean scan evidence | block with `enterprise_upload_scan_bypass` |
 
-Upload storage and document metadata insertion happen only after a clean verdict.
+Upload storage and document metadata insertion happen only after a clean verdict. The server action path also verifies scan metadata before inserting `documents` rows so a future caller cannot skip the upload flow and persist unscanned enterprise content.
+
+Server-generated template documents are not user uploads. They must explicitly mark metadata with `source: 'template'` and `serverGenerated: true`; otherwise they are treated as upload content when enterprise scanning is required.
 
 ## Tenant isolation
 
@@ -102,7 +107,7 @@ The upload/download security audit event names are:
 
 Legacy document events such as `document_upload_rejected`, `document_uploaded` and `document.download_url_rejected` may still be emitted for compatibility, but new controls should key off the events above.
 
-Audit/log metadata must not include file bytes or extracted document content. It should include only control evidence and safe identifiers:
+Audit/log metadata must not include file bytes, extracted document content, provider response bodies or raw storage paths. It should include only control evidence and safe identifiers:
 
 ```txt
 scanStatus
@@ -145,8 +150,8 @@ npm run security:upload-content-scan
 npm run build
 ```
 
-`npm run security:ci` includes `security:upload` and `security:upload-content-scan`, so enterprise upload scanning bypasses fail the security CI path.
+`npm run security:ci` includes `security:upload` and `security:upload-content-scan`, so enterprise upload scanning bypasses fail the security CI path. `security:upload` also checks for the `enterprise_upload_scan_bypass` guard and the regression test in `tests/security/upload-enterprise-bypass.test.ts`.
 
 ## Evidence
 
-Runtime evidence is tracked in `docs/security/evidence/runtime/upload-malware-scan-validation.json`. The evidence must mention `src/server/security/upload-security.ts`, fail-closed scanner behavior, tenant-scoped storage paths, RBAC-validated download/preview and the audit events listed above.
+Runtime evidence is tracked in `docs/security/evidence/runtime/upload-malware-scan-validation.json`. The evidence must mention `src/server/security/upload-security.ts`, fail-closed scanner behavior, tenant-scoped storage paths, RBAC-validated download/preview, the `enterprise_upload_scan_bypass` control and the audit events listed above.
