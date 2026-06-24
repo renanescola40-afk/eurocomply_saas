@@ -60,7 +60,13 @@ jobs:
         run: |
           if [ -z "${SUPABASE_DB_URL}" ]; then
             echo "SUPABASE_DB_URL is required when apply_migrations=true."
-            echo "Add the Supabase Postgres connection string as an environment/repository secret, or apply supabase/migrations/20260623120000_live_rls_validation_inventory.sql manually and rerun with apply_migrations=false."
+            echo "Add the Supabase Postgres transaction pooler connection string as an environment/repository secret, or apply supabase/migrations/20260623120000_live_rls_validation_inventory.sql manually and rerun with apply_migrations=false."
+            exit 1
+          fi
+
+          if printf '%s' "${SUPABASE_DB_URL}" | grep -Eq '@db\.[^.]+\.supabase\.co:5432/'; then
+            echo "SUPABASE_DB_URL appears to use the direct IPv6-only Supabase database endpoint."
+            echo "GitHub-hosted runners cannot reliably reach that endpoint. Use the Supabase IPv4 transaction pooler URI from Connect > Transaction pooler, typically on port 6543, then rerun with apply_migrations=true."
             exit 1
           fi
 
