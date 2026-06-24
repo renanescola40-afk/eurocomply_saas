@@ -5,7 +5,7 @@
 create or replace function public.eurocomply_live_rls_inventory(table_names text[])
 returns table (
   table_name text,
-  exists boolean,
+  table_exists boolean,
   rls_enabled boolean,
   force_rls boolean,
   policy_count integer
@@ -34,7 +34,7 @@ as $$
   )
   select
     requested.table_name,
-    live_tables.oid is not null as exists,
+    live_tables.oid is not null as table_exists,
     coalesce(live_tables.relrowsecurity, false) as rls_enabled,
     coalesce(live_tables.relforcerowsecurity, false) as force_rls,
     coalesce(policy_counts.policy_count, 0) as policy_count
