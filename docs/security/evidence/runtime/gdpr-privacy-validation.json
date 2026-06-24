@@ -1,5 +1,5 @@
 {
-  "evidenceItem": "gdpr-privacy-readiness",
+  "evidenceItem": "gdpr-privacy-validation",
   "status": "Complete",
   "reviewer": "EuroComply Privacy Engineering / Security Engineering",
   "reviewedAt": "2026-06-24T00:00:00.000Z",
@@ -80,7 +80,7 @@
     ],
     "manualReviewNote": "Connector patch was prepared in GitHub. CI/runtime execution should run npm run test, npm run typecheck and npm run security:ci before production release."
   },
-  "redactionConfirmation": "Evidence contains no customer personal data, secrets, raw tokens, cookies, MFA codes or payment instrument data.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "knownLimitations": [
     "Delete request route creates a retention-aware pending review plan; final destructive deletion/anonymization remains an approved operational workflow.",
     "Binary document export and downstream processor deletion are not claimed by this evidence unless separately implemented."
