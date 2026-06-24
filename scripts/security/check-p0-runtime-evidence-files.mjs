@@ -6,6 +6,7 @@ const allowedItems = new Set([
   'branch-protection-main',
   'required-status-checks',
   'ci-assessed-commit-validation',
+  'deployment-health-validation',
   'production-secrets-provider-stores',
   'supabase-live-rls-validation',
   'external-security-review-or-pentest',
