@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { normalizePlan } from '@/server/queries/subscription';
 
@@ -14,10 +15,23 @@ export type OrganizationBillingContext = {
   usage: BillingUsage;
 };
 
-async function countRows(table: string, organizationId: string) {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return 0;
+type SupabaseAdminClient = NonNullable<ReturnType<typeof tryCreateAdminClient>>;
+type BillingCountTable = 'organization_members' | 'documents' | 'vendors' | 'risks';
 
+function emptyBillingContext(): OrganizationBillingContext {
+  return {
+    plan: 'essential',
+    status: null,
+    usage: {
+      users: 0,
+      documents: 0,
+      vendors: 0,
+      risks: 0,
+    },
+  };
+}
+
+async function countRows(supabase: SupabaseAdminClient, table: BillingCountTable, organizationId: string) {
   const { count, error } = await supabase
     .from(table)
     .select('id', { count: 'exact', head: true })
@@ -31,10 +45,7 @@ async function countRows(table: string, organizationId: string) {
   return count ?? 0;
 }
 
-async function getSubscription(organizationId: string) {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return null;
-
+async function getSubscription(supabase: SupabaseAdminClient, organizationId: string) {
   const { data, error } = await supabase
     .from('subscriptions')
     .select('plan,status')
@@ -52,12 +63,17 @@ async function getSubscription(organizationId: string) {
 export async function getOrganizationBillingContext(
   organizationId: string,
 ): Promise<OrganizationBillingContext> {
+  noStore();
+
+  const supabase = tryCreateAdminClient();
+  if (!supabase) return emptyBillingContext();
+
   const [subscription, users, documents, vendors, risks] = await Promise.all([
-    getSubscription(organizationId),
-    countRows('organization_members', organizationId),
-    countRows('documents', organizationId),
-    countRows('vendors', organizationId),
-    countRows('risks', organizationId),
+    getSubscription(supabase, organizationId),
+    countRows(supabase, 'organization_members', organizationId),
+    countRows(supabase, 'documents', organizationId),
+    countRows(supabase, 'vendors', organizationId),
+    countRows(supabase, 'risks', organizationId),
   ]);
 
   return {
