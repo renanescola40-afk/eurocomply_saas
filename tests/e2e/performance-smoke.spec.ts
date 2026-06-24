@@ -3,6 +3,8 @@ import { expect, test, type Page } from '@playwright/test';
 const STRICT_PERFORMANCE = process.env.PERFORMANCE_SMOKE_STRICT === 'true';
 const LANDING_DOM_CONTENT_LOADED_BUDGET_MS = Number(process.env.LANDING_DCL_BUDGET_MS ?? 8_000);
 const DASHBOARD_DOM_CONTENT_LOADED_BUDGET_MS = Number(process.env.DASHBOARD_DCL_BUDGET_MS ?? 10_000);
+const BILLING_DOM_CONTENT_LOADED_BUDGET_MS = Number(process.env.BILLING_DCL_BUDGET_MS ?? 10_000);
+const DOCUMENTS_DOM_CONTENT_LOADED_BUDGET_MS = Number(process.env.DOCUMENTS_DCL_BUDGET_MS ?? 10_000);
 
 type NavigationTiming = {
   domContentLoadedEventEnd?: number;
@@ -22,6 +24,25 @@ async function getNavigationTiming(page: Page): Promise<NavigationTiming> {
 async function expectNoSensitiveCache(response: Awaited<ReturnType<Page['request']['get']>>, label: string) {
   const cacheControl = response.headers()['cache-control'] ?? '';
   expect(cacheControl.toLowerCase(), `${label} must not be cacheable`).toContain('no-store');
+}
+
+async function expectProtectedRouteStable(page: Page, path: string, label: string, budgetMs: number) {
+  const response = await page.goto(path, { waitUntil: 'domcontentloaded' });
+
+  expect(response?.status(), `${label} did not return a response`).toBeDefined();
+  expect(response?.status(), `${label} returned a server error`).toBeLessThan(500);
+  await expect(page).toHaveURL(/\/pt\/login/);
+  await expect(page.locator('body')).toBeVisible();
+
+  const timing = await getNavigationTiming(page);
+  test.info().annotations.push({
+    type: `${label}-domcontentloaded-ms`,
+    description: String(Math.round(timing.domContentLoadedEventEnd ?? 0)),
+  });
+
+  if (STRICT_PERFORMANCE) {
+    expect(timing.domContentLoadedEventEnd ?? Number.POSITIVE_INFINITY).toBeLessThan(budgetMs);
+  }
 }
 
 test.describe('EuroComply performance smoke', () => {
@@ -45,22 +66,15 @@ test.describe('EuroComply performance smoke', () => {
   });
 
   test('dashboard route is stable and protected for anonymous users', async ({ page }) => {
-    const response = await page.goto('/pt/dashboard/organizations', { waitUntil: 'domcontentloaded' });
+    await expectProtectedRouteStable(page, '/pt/dashboard/organizations', 'dashboard-redirect', DASHBOARD_DOM_CONTENT_LOADED_BUDGET_MS);
+  });
 
-    expect(response?.status(), 'dashboard did not return a response').toBeDefined();
-    expect(response?.status(), 'dashboard returned a server error').toBeLessThan(500);
-    await expect(page).toHaveURL(/\/pt\/login/);
-    await expect(page.locator('body')).toBeVisible();
+  test('billing route is stable and protected for anonymous users', async ({ page }) => {
+    await expectProtectedRouteStable(page, '/pt/dashboard/organizations/billing', 'billing-redirect', BILLING_DOM_CONTENT_LOADED_BUDGET_MS);
+  });
 
-    const timing = await getNavigationTiming(page);
-    test.info().annotations.push({
-      type: 'dashboard-redirect-domcontentloaded-ms',
-      description: String(Math.round(timing.domContentLoadedEventEnd ?? 0)),
-    });
-
-    if (STRICT_PERFORMANCE) {
-      expect(timing.domContentLoadedEventEnd ?? Number.POSITIVE_INFINITY).toBeLessThan(DASHBOARD_DOM_CONTENT_LOADED_BUDGET_MS);
-    }
+  test('documents route is stable and protected for anonymous users', async ({ page }) => {
+    await expectProtectedRouteStable(page, '/pt/documentos', 'documents-redirect', DOCUMENTS_DOM_CONTENT_LOADED_BUDGET_MS);
   });
 
   test('critical health API responds without sensitive caching', async ({ page }) => {
