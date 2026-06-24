@@ -44,15 +44,15 @@ Each item should be marked as one of:
 
 Do not claim any of the following unless approved evidence is attached:
 
-- SOC 2 Type I or Type II report;
-- ISO 27001 certification;
-- completed third-party penetration test;
-- GDPR compliance as a legal conclusion;
-- end-to-end encryption;
-- immutable or WORM-backed audit logs;
-- tested disaster recovery;
-- contractual RTO/RPO;
-- 24/7 staffed monitoring.
+- Do not claim SOC 2 Type I or Type II report status.
+- Do not claim ISO 27001 certification.
+- Do not claim completed third-party penetration test status.
+- Do not claim GDPR compliance as a legal conclusion.
+- Do not claim end-to-end encryption.
+- Do not claim immutable or WORM-backed audit logs.
+- Do not claim tested disaster recovery.
+- Do not claim contractual RTO/RPO.
+- Do not claim 24/7 staffed monitoring.
 
 Use this safer structure instead:
 
@@ -83,7 +83,6 @@ Before an enterprise deal is marked procurement-ready, confirm:
 - all mandatory trust docs exist;
 - public Trust Center and Security pages render;
 - footer, landing, and pricing surfaces link to the Trust Center;
-- the Trust Center package check passes;
-- the Vitest trust-documentation test passes;
+- `npm run security:trust-package` passes;
 - release evidence records current blockers honestly;
 - no sales or marketing page claims unsupported certification, penetration test, disaster recovery, or monitoring maturity.
