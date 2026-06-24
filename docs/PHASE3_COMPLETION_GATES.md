@@ -1,6 +1,6 @@
 # Phase 3 Completion Gates
 
-This document defines the final completion gates for EuroComply SaaS Phase 3.
+This document defines the final completion gates for Risck comply SaaS Phase 3.
 
 ## Scope
 
