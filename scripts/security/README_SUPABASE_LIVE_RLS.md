@@ -15,6 +15,8 @@ Required runtime environment variables:
 
 The manual GitHub Actions workflow can also apply committed Supabase migrations before running the live proof. Keep `apply_migrations=true` and configure the `SUPABASE_DB_URL` secret with the target Supabase Postgres connection string. This applies migrations such as `supabase/migrations/20260623120000_live_rls_validation_inventory.sql`, which creates the required `public.eurocomply_live_rls_inventory(text[])` helper.
 
+`SUPABASE_DB_URL` must use Supabase's IPv4 Transaction pooler URI, not the direct database URI. GitHub-hosted runners often cannot reach the direct `db.<project-ref>.supabase.co:5432` IPv6-only endpoint. Copy the Transaction pooler connection string from the Supabase dashboard under `Connect > Transaction pooler`; it typically uses port `6543`.
+
 If the database migration has already been applied outside the workflow, rerun the workflow with `apply_migrations=false`.
 
 Do not commit generated `Complete` evidence unless it was produced by a real live run against the target Supabase project.
