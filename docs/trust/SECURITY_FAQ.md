@@ -2,17 +2,17 @@
 
 Status: procurement-safe FAQ. Answers must stay aligned with implementation and evidence.
 
-## Do you have SOC 2?
+## What is your SOC 2 status?
 
-Not currently. Risck comply must not claim SOC 2 Type I or Type II until an approved report exists.
+Not currently available. Risck comply must not claim SOC 2 Type I or Type II until an approved report exists.
 
-## Are you ISO 27001 certified?
+## What is your ISO 27001 status?
 
-Not currently. The product may be designed to support security review, but certification must not be claimed without an active certificate.
+Not currently certified. The product may be designed to support security review, but certification must not be claimed without an active certificate.
 
-## Has a third-party penetration test been completed?
+## What is your third-party security review status?
 
-Not currently claimed. Any future test should be referenced only with approved evidence and scope.
+Not currently claimed as complete. Any future review should be referenced only with approved evidence and scope.
 
 ## How is authentication handled?
 
@@ -25,6 +25,14 @@ Organization access is role-based. Current roles include owner, admin, editor, m
 ## Do you support audit logs?
 
 The application includes audit event code paths and release evidence checks. Stronger statements about retention, immutability or external log storage require current evidence.
+
+## How do you handle encryption in transit?
+
+Risck comply is designed to use HTTPS/TLS through managed hosting and provider APIs. Deployment and provider evidence should be attached before stronger contractual commitments are made.
+
+## How do you handle data retention?
+
+Retention commitments are agreement-dependent until a formal policy is approved. Customer-specific periods must be confirmed in the signed agreement.
 
 ## What is your responsible disclosure contact?
 
