@@ -72,12 +72,14 @@ jobs:
 
           sudo apt-get update
           sudo apt-get install -y postgresql-client
-          psql "${SUPABASE_DB_URL}" \
-            --set=ON_ERROR_STOP=1 \
-            --file=supabase/migrations/20260619103000_complete_multi_tenant_rls_policies.sql
-          psql "${SUPABASE_DB_URL}" \
-            --set=ON_ERROR_STOP=1 \
-            --file=supabase/migrations/20260623120000_live_rls_validation_inventory.sql
+          for migration in \
+            supabase/migrations/20260623120000_live_rls_validation_inventory.sql \
+            supabase/migrations/20260624170500_live_rls_validation_policy_patch.sql
+          do
+            psql "${SUPABASE_DB_URL}" \
+              --set=ON_ERROR_STOP=1 \
+              --file="$migration"
+          done
 
       - name: Run strict Supabase tenant isolation validator
         env:
