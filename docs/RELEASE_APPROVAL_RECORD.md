@@ -23,6 +23,7 @@ This document is the release owner record used to approve or reject a EuroComply
 - SEV-2 timing: declare within 15 minutes, incident owner assigned within 15 minutes, first customer/status update within 30 minutes when customer-visible, follow-up every 60 minutes, post-incident review started within 2 business days.
 - Approver: **Not granted**; blocked by open P0 runtime evidence and missing final validation runner proof.
 - Target environment: Production / enterprise candidate
+- Deployment URL: `https://eurocomply-saas-git-enterpri-6c7190-renanescola40-afks-projects.vercel.app`
 - Deployment URL observed: `https://eurocomply-saas-git-enterpri-6c7190-renanescola40-afks-projects.vercel.app`
 - Deployment URL status: Present / Vercel Ready, but functional health/readiness smoke remains Open until verified by a network-capable release runner.
 - Build log URL observed: `https://vercel.com/renanescola40-afks-projects/eurocomply-saas/HPxo4kGCReYMds3RCR4Aphfqoknw`
