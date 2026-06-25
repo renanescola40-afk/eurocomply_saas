@@ -15,11 +15,14 @@
     "src/lib/observability/report-error.test.ts",
     "instrumentation.ts",
     "instrumentation-client.ts",
+    "sentry.server.config.ts",
+    "sentry.edge.config.ts",
     "next.config.ts",
     "docs/operations/ALERTING.md",
     "docs/operations/INCIDENT_RESPONSE_RUNBOOK.md",
     "docs/operations/ROLLBACK_RUNBOOK.md",
     "docs/operations/CUSTOMER_COMMUNICATION_RUNBOOK.md",
+    "docs/operations/SENTRY_VERCEL_GITHUB_SUPABASE.md",
     "docs/RELEASE_APPROVAL_RECORD.md"
   ],
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
@@ -27,7 +30,8 @@
     "Sentry client config disables default PII and strips request/user fields before send.",
     "Sentry server config disables default PII and strips request/user fields before send.",
     "Sentry edge config disables default PII and strips request/user fields before send.",
-    "Source-map upload is gated on SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT.",
+    "The Sentry Next.js wrapper remains enabled so runtime instrumentation and the /monitoring tunnel are registered.",
+    "Source-map and release artifact upload options are only supplied when SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT are all present.",
     "Central logger redacts secrets, tokens, cookies, sessions and avoidable PII.",
     "Central logger includes requestId and only includes safe organizationId values.",
     "Standardized security events are exported and test-covered.",
@@ -67,25 +71,27 @@
       "dsn": "NEXT_PUBLIC_SENTRY_DSN"
     },
     "server": {
-      "file": "instrumentation.ts",
+      "file": "sentry.server.config.ts",
       "sendDefaultPii": false,
       "requestAndUserStrippedInBeforeSend": true,
       "dsn": "SENTRY_DSN with NEXT_PUBLIC_SENTRY_DSN fallback"
     },
     "edge": {
-      "file": "instrumentation.ts",
+      "file": "sentry.edge.config.ts",
       "sendDefaultPii": false,
       "requestAndUserStrippedInBeforeSend": true,
       "dsn": "NEXT_PUBLIC_SENTRY_DSN"
     },
     "sourceMaps": {
       "file": "next.config.ts",
+      "wrapperAlwaysEnabledForRuntimeInstrumentation": true,
+      "tunnelRoute": "/monitoring",
       "uploadRequires": [
         "SENTRY_AUTH_TOKEN",
         "SENTRY_ORG",
         "SENTRY_PROJECT"
       ],
-      "accidentalUploadGuard": "Next config is not wrapped with withSentryConfig unless all release-upload credentials are present."
+      "accidentalUploadGuard": "withSentryConfig stays enabled for runtime instrumentation and the tunnel route, but source-map and release artifact upload settings are only supplied when SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT are all present."
     }
   },
   "logging": {

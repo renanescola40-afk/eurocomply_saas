@@ -1,0 +1,118 @@
+{
+  "evidenceItem": "google-oauth-validation",
+  "id": "google-oauth-validation",
+  "status": "Exception",
+  "statusReason": "LiveProviderProofRequired",
+  "reviewer": "EuroComply security automation",
+  "reviewedAt": "2026-06-25T00:00:00.000Z",
+  "generatedAt": "2026-06-25T00:00:00.000Z",
+  "control": "Enterprise Google OAuth via Supabase Auth",
+  "summary": "Google OAuth is implemented through Supabase Auth with a server-side /auth/google entrypoint and server-side /auth/callback code exchange. Redirect handling is restricted to localized dashboard paths, and the Google client secret is documented as server-only/provider-only. This evidence does not claim live production or preview provider execution because Google Cloud Console and Supabase runtime credentials are not available in this implementation environment.",
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "exception": {
+    "riskOwner": "EuroComply Security Lead",
+    "rationale": "Live Google OAuth provider proof requires production and preview provider credentials plus configured Google Cloud Console and Supabase Auth settings, which are not available in this repository-only validation environment.",
+    "compensatingControls": [
+      "Server-side OAuth entrypoint and callback exchange are documented and statically reviewed.",
+      "Redirect handling rejects absolute, protocol-relative, root-only, and non-dashboard next values.",
+      "Google client secret is documented as provider/server-only and must not use a NEXT_PUBLIC prefix.",
+      "Enterprise release remains No-Go until live production and preview OAuth evidence plus live MFA or IdP step-up proof are attached."
+    ],
+    "expiresAt": "2026-07-02T00:00:00.000Z",
+    "approvalReference": "PR-446-google-oauth-mfa-evidence"
+  },
+  "runtimeValidation": {
+    "productionGoogleLoginTested": false,
+    "previewGoogleLoginTested": false,
+    "supabaseGoogleProviderConfirmedEnabled": false,
+    "googleCloudConsoleConfirmed": false,
+    "providerProof": {
+      "present": false,
+      "requiredChecks": [
+        "Production Google OAuth login completes through Supabase Auth and returns to https://<production-host>/auth/callback.",
+        "Preview Google OAuth login completes through Supabase Auth and returns to https://<preview-host>/auth/callback.",
+        "Google Authorized redirect URI equals the Supabase provider callback URL exactly.",
+        "Supabase Additional Redirect URLs include only exact application /auth/callback URLs or an approved controlled preview pattern.",
+        "Application logs do not contain OAuth code, access_token, refresh_token, id_token, set-cookie, cookie or Google client secret values."
+      ],
+      "note": "Run this validation in the target production and preview environments after Google Cloud Console and Supabase provider settings are configured. Keep raw screenshots and logs outside the repository."
+    }
+  },
+  "codeValidation": {
+    "serverOAuthEntrypoint": "src/app/auth/google/route.ts",
+    "serverCallbackExchange": "src/app/auth/callback/route.ts",
+    "clientEntrypoint": "src/hooks/useAuth.tsx",
+    "redirectHelper": "src/server/security/auth-callback.ts",
+    "middleware": "src/middleware.ts",
+    "googleProvider": "supabase.auth.signInWithOAuth({ provider: 'google' })",
+    "callbackExchange": "supabase.auth.exchangeCodeForSession(oauthCode)",
+    "clientCodeExchangeRemoved": true,
+    "googleSecretPublicPrefixForbidden": true
+  },
+  "redirectControls": {
+    "nextAllowsAbsoluteUrls": false,
+    "nextAllowsProtocolRelativeUrls": false,
+    "nextAllowsRootOnlyRedirect": false,
+    "nextAllowedPrefix": "/<locale>/dashboard",
+    "callbackUsesConfiguredAppBaseUrl": true,
+    "oauthRedirectTo": "/auth/callback?next=<safe-local-dashboard-path>",
+    "localizedLoginRedirectForPrivateRoutes": true,
+    "authenticatedUsersBypassLoginSignup": true
+  },
+  "googleCloudConsoleRequiredConfiguration": {
+    "oauthConsentScreen": {
+      "appName": "RISCK COMPLY",
+      "scopes": ["openid", "email", "profile"],
+      "authorizedDomains": ["<production-root-domain>", "<controlled-preview-domain-if-required>"],
+      "noAdditionalGoogleApiScopes": true
+    },
+    "authorizedJavaScriptOrigins": [
+      "https://<production-host>",
+      "https://<preview-host>",
+      "http://localhost:3000"
+    ],
+    "authorizedRedirectUris": [
+      "https://<supabase-project-ref>.supabase.co/auth/v1/callback"
+    ],
+    "supabaseUrlConfiguration": {
+      "siteUrl": "https://<production-host>",
+      "additionalRedirectUrls": [
+        "https://<production-host>/auth/callback",
+        "https://<preview-host>/auth/callback",
+        "http://localhost:3000/auth/callback"
+      ]
+    }
+  },
+  "environmentPlaceholders": {
+    "GOOGLE_CLIENT_ID": "server/provider secret store only",
+    "GOOGLE_CLIENT_SECRET": "server/provider secret store only; never NEXT_PUBLIC",
+    "SUPABASE_AUTH_SITE_URL": "documented placeholder",
+    "SUPABASE_AUTH_REDIRECT_URLS": "documented placeholder"
+  },
+  "acceptanceCriteria": {
+    "loginGoogleWorksInProduction": false,
+    "loginGoogleWorksInPreview": false,
+    "redirectUrisStrict": true,
+    "openRedirectAbsent": true,
+    "tokensAndCookiesAbsentFromApplicationLogs": "requires runtime log review",
+    "stepUpRealValidatedForEnterprise": false,
+    "enterpriseReleaseDecision": "No-Go until live Google OAuth proof and live Supabase MFA or enterprise IdP step-up proof are attached"
+  },
+  "evidenceLocations": [
+    "src/app/auth/google/route.ts",
+    "src/app/auth/callback/route.ts",
+    "src/hooks/useAuth.tsx",
+    "src/server/security/auth-callback.ts",
+    "src/middleware.ts",
+    ".env.example",
+    "docs/security/GOOGLE_OAUTH_ENTERPRISE_CONFIGURATION.md",
+    "docs/security/evidence/runtime/google-oauth-validation.json"
+  ],
+  "negativeTests": {
+    "absoluteNextFallsBackToDashboard": true,
+    "protocolRelativeNextFallsBackToDashboard": true,
+    "nonDashboardNextFallsBackToDashboard": true,
+    "missingConfiguredAppBaseUrlFailsClosedInProduction": true,
+    "googleSecretNotPublicEnv": true
+  }
+}
