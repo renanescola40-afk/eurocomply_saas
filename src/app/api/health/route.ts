@@ -13,9 +13,7 @@ export async function GET() {
       service: 'eurocomply-saas',
       status: 'ok',
       checkedAt: new Date().toISOString(),
-      checks: {
-        application: 'ok',
-      },
+      checks: { application: 'ok' },
     },
     {
       status: 200,
