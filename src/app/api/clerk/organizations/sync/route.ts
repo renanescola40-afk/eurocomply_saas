@@ -1,11 +1,13 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { z } from 'zod';
 import { syncClerkOrganizationToSupabase } from '@/server/clerk/organization-sync';
 import { noStoreJson, secureApiError } from '@/server/security/api-guards';
+import { checkDistributedRateLimit, getRateLimitHeaders } from '@/server/security/rate-limit';
 
-type ClerkOrgSyncBody = {
-  clerkOrgId?: string;
-  membershipId?: string | null;
-};
+const clerkOrgSyncBodySchema = z.object({
+  clerkOrgId: z.string().min(1).max(128),
+  membershipId: z.string().min(1).max(128).nullable().optional(),
+});
 
 export async function POST(request: Request) {
   try {
@@ -18,9 +20,28 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json().catch(() => null) as ClerkOrgSyncBody | null;
+    const rateLimit = await checkDistributedRateLimit({
+      policy: 'general-api',
+      userId,
+      organizationId: orgId,
+      action: 'clerk.organization.sync',
+      route: '/api/clerk/organizations/sync',
+    });
 
-    if (!body?.clerkOrgId || body.clerkOrgId !== orgId) {
+    if (!rateLimit.allowed) {
+      return noStoreJson(
+        { error: 'rate_limited' },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimit),
+        },
+      );
+    }
+
+    const rawBody = await request.json().catch(() => null);
+    const parsedBody = clerkOrgSyncBodySchema.safeParse(rawBody);
+
+    if (!parsedBody.success || parsedBody.data.clerkOrgId !== orgId) {
       return noStoreJson({ error: 'invalid_organization_payload' }, { status: 400 });
     }
 
@@ -33,7 +54,7 @@ export async function POST(request: Request) {
       name: clerkOrganization.name,
       slug: clerkOrganization.slug,
       role: orgRole,
-      membershipId: body.membershipId,
+      membershipId: parsedBody.data.membershipId,
     });
 
     return noStoreJson({ organization });
