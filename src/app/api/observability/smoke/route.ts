@@ -2,6 +2,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { logSecurityEvent, requestIdFromHeaders } from '@/server/observability/logger';
 import { validateBearerToken } from '@/server/security/bearer-token';
 import { noStoreJson } from '@/server/security/no-store';
+import { checkDistributedRateLimit, getRateLimitHeaders } from '@/server/security/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,28 @@ export async function POST(request: Request) {
     });
 
     return noStoreJson({ status: 'unauthorized', requestId }, { status: 401 });
+  }
+
+  const rateLimit = await checkDistributedRateLimit({
+    policy: 'health-internal',
+    action: 'observability.smoke',
+    route: ROUTE,
+  });
+
+  if (!rateLimit.allowed) {
+    logSecurityEvent('security_denied', {
+      requestId,
+      route: ROUTE,
+      reason: 'observability_smoke_rate_limited',
+    });
+
+    return noStoreJson(
+      { status: 'rate_limited', requestId },
+      {
+        status: 429,
+        headers: getRateLimitHeaders(rateLimit),
+      },
+    );
   }
 
   const report = reportError(new Error(SMOKE_TEST_ERROR_MESSAGE), {
