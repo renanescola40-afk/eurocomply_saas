@@ -31,6 +31,7 @@ const allowedPublicNames = new Set([
   'NEXT_PUBLIC_SENTRY_DSN',
 ]);
 
+const allowedControlAssignments = new Set(['STRICT_PUBLIC_SECRET_SCAN', 'CI_SECRET_LOG_POLICY']);
 const committedEnvFile = /^\.env(\..*)?$/;
 const allowedCommittedEnvFiles = new Set(['.env.example']);
 const dangerousPublicName = /NEXT_PUBLIC_[A-Z0-9_]*(SECRET|TOKEN|SERVICE|SERVICE_ROLE|PRIVATE|PASSWORD|WEBHOOK|STRIPE_SECRET|AUTH_TOKEN|ACCESS_TOKEN|SIGNING|KEY)[A-Z0-9_]*/g;
@@ -152,6 +153,14 @@ function isSymbolicEnvironmentName(value) {
   return /^[A-Z0-9_]*(?:SECRET|PASSWORD|TOKEN|PRIVATE_KEY|SERVICE_ROLE|WEBHOOK_SECRET|AUTH_TOKEN|ACCESS_TOKEN|API_KEY|SUPABASE_KEY|SUPABASE_SERVICE_ROLE_KEY|GOOGLE_CLIENT_SECRET)[A-Z0-9_]*;?$/.test(value);
 }
 
+function isEnvNameBuilder(value, line) {
+  return /^envName\(/.test(value) || /envName\('[A-Z0-9_']+(,\s*'[A-Z0-9_']+')*\)/.test(line);
+}
+
+function isControlAssignment(name, value) {
+  return allowedControlAssignments.has(name) && /^(1|0|true|false|fail-closed|warn|off)$/i.test(value);
+}
+
 function isSafeProcessEnvOperation(line) {
   const trimmed = line.trim();
   return !containsConcreteSecretValue(line)
@@ -195,7 +204,7 @@ for (const file of new Set(files)) {
     const name = match.groups?.name ?? 'UNKNOWN_SECRET';
     const value = match.groups?.value ?? '';
     const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
-    if (!allowedPublicNames.has(name) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value) && !isSafeProcessEnvOperation(line) && !isDetectorDefinition(normalized, name, value, line)) {
+    if (!allowedPublicNames.has(name) && !isPlaceholderValue(value) && !isSymbolicEnvironmentName(value) && !isEnvNameBuilder(value, line) && !isControlAssignment(name, value) && !isSafeProcessEnvOperation(line) && !isDetectorDefinition(normalized, name, value, line)) {
       failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible hardcoded secret assignment: ${name}`);
     }
   }
