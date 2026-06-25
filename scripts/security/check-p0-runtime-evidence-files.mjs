@@ -11,6 +11,7 @@ const allowedItems = new Set([
   'supabase-live-rls-validation',
   'external-security-review-or-pentest',
   'step-up-mfa-validation',
+  'google-oauth-validation',
   'upload-malware-scan-validation',
   'audit-chain-live-validation',
   'stripe-billing-validation',
