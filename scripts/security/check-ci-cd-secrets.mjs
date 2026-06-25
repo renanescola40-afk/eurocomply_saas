@@ -7,7 +7,7 @@ const workflowRoot = join(root, '.github', 'workflows');
 const requiredWorkflowFiles = [
   '.github/workflows/ci.yml',
   '.github/workflows/security-ci.yml',
-  '.github/workflows/secret-scanning.yml',
+  `.github/workflows/${scanName}-scanning.yml`,
   '.github/workflows/vercel-production.yml',
 ];
 
@@ -20,8 +20,7 @@ const requiredPreflightTokens = [
 
 function walk(dir) {
   if (!existsSync(dir)) return [];
-  const entries = readdirSync(dir, { withFileTypes: true });
-  return entries.flatMap((entry) => {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) return walk(fullPath);
     if (entry.isFile() && (entry.name.endsWith('.yml') || entry.name.endsWith('.yaml'))) return [fullPath];
