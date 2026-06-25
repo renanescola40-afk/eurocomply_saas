@@ -1,3 +1,4 @@
+import { PostHogScript } from "@/components/analytics/posthog-script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -20,6 +21,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
+        <PostHogScript />
       </body>
     </html>
   );
