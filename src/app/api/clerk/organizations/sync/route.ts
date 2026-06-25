@@ -1,5 +1,6 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { z } from 'zod';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { syncClerkOrganizationToSupabase } from '@/server/clerk/organization-sync';
 import { noStoreJson, secureApiError } from '@/server/security/api-guards';
 import { checkDistributedRateLimit, getRateLimitHeaders } from '@/server/security/rate-limit';
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const rawBody = await request.json().catch(() => null);
+    const rawBody = await readBoundedJsonRequest(request, { maxBytes: 2048 });
     const parsedBody = clerkOrgSyncBodySchema.safeParse(rawBody);
 
     if (!parsedBody.success || parsedBody.data.clerkOrgId !== orgId) {
