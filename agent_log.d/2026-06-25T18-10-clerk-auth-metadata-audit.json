@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-06-25T18:10:00Z",
+  "cycle": "scheduled_health_audit",
+  "status": "patched_waiting_for_ci",
+  "findings": [
+    "PR #451 is open, mergeable, and changes only src/hooks/useAuth.tsx to expose Clerk metadata through the auth compatibility user.",
+    "The PR head before this correction had CI, Secret Scanning, RISCK COMPLY Security CI, RISCK COMPLY Upload Security CI, and Full Security Suite failing while CodeQL, Semgrep, Gitleaks, Dependency Review, Actionlint, P0 Runtime Evidence, P0 Runtime Gap Report, and P0 Progress were green.",
+    "The inspected patch exposed clerkUser.unsafeMetadata through both user_metadata and unsafeMetadata on the client-side auth compatibility object, which is unnecessary for public auth compatibility and increases client-side metadata exposure risk.",
+    "vercel.json still uses npm install --ignore-scripts, npm run build, and a single daily /api/internal/daily-maintenance cron.",
+    "Billing checkout remains protected by requireApiUser, organization lookup, manage_billing permission, trusted mutation/rate limit, step-up, Stripe metadata, audit log, and no-store responses.",
+    "Enterprise demo remains gated by NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO and does not activate Stripe, subscriptions, or production permissions.",
+    "Route health documentation continues to cover critical public/private routes, locale coverage, /undefined regressions, primary CTA checks, stack-trace checks, RBAC visual checks, and preview/production smoke when URLs are configured."
+  ],
+  "actions_taken": [
+    "Removed unsafeMetadata from the client-side ClerkCompatUser type and returned auth user object.",
+    "Stopped merging clerkUser.unsafeMetadata into user_metadata; only publicMetadata and basic profile fields remain in the compatibility metadata object.",
+    "Kept signup-time unsafeMetadata write behavior unchanged because it is part of Clerk signup metadata submission, not client-side exposure after auth.",
+    "Recorded this audit entry in agent_log.d because agent_log.json is large and should not be rewritten/truncated by the connector."
+  ],
+  "commits": [
+    "3efc584127a481e1aff6cbe9fd1d4f9135d24fab"
+  ],
+  "next_cycle_focus": [
+    "Rerun CI, Secret Scanning, RISCK COMPLY Security CI, Upload Security CI, and Full Security Suite on the new PR #451 head.",
+    "Do not merge PR #451 until the failing gates are green or the exact failures are triaged.",
+    "If compatibility code still needs signup metadata, expose only explicit allowlisted public fields instead of Clerk unsafeMetadata."
+  ]
+}
