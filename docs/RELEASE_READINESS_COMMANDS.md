@@ -24,7 +24,7 @@ The Full Security Suite runs the enterprise merge/deploy blockers:
 
 ```bash
 npm ci --ignore-scripts
-node scripts/security/check-package-lock-alignment.mjs
+npm run security:package-lock
 npm run lint
 npm run typecheck
 npm run test
@@ -87,6 +87,7 @@ This is the application security gate and must pass before public production.
 It validates:
 
 - npm audit at moderate level
+- package-lock alignment through `npm run security:package-lock`
 - public-secret checks in strict fail-closed mode
 - production secret readiness
 - routes
@@ -114,7 +115,7 @@ Before calling a release enterprise-ready, collect:
 
 ```bash
 npm run supply-chain:lockfile
-node scripts/security/check-package-lock-alignment.mjs
+npm run security:package-lock
 npm run supply-chain:floating-deps
 npm run security:npm-audit:json > npm-audit.json
 RELEASE_TARGET=enterprise node scripts/security/check-branch-protection-evidence.mjs
