@@ -113,6 +113,10 @@ const ROLE_PERMISSIONS: Record<OrganizationRole, OrganizationPermission[]> = {
   viewer: ['read_documents', 'read_vendors', 'read_risks', 'read_ai_governance', 'read_ai_incidents'],
 };
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 export function getRolePermissions(role: string | null | undefined) {
   return [...ROLE_PERMISSIONS[normalizeOrganizationRole(role)]];
 }
@@ -127,7 +131,8 @@ export function getOrganizationPermissionMatrix() {
 export function normalizeOrganizationRole(role: string | null | undefined): OrganizationRole {
   const normalized = String(role ?? '')
     .trim()
-    .toLowerCase();
+    .toLowerCase()
+    .replace(/^org:/, '');
 
   if (['owner', 'proprietario', 'proprietário', 'dono'].includes(normalized)) return 'owner';
   if (['admin', 'administrator', 'administrador'].includes(normalized)) return 'admin';
@@ -170,19 +175,20 @@ async function recordRbacDeniedAuditEvent({
       },
     });
   } catch {
-    // Authorization failures must never be masked by best-effort audit logging.
+    // Keep the original authorization result even if best-effort audit logging fails.
   }
 }
 
 export async function getOrganizationMembership(userId: string, organizationId: string) {
   const { createAdminClient } = await import('@/lib/supabase/admin');
   const supabase = createAdminClient();
+  const identityColumn = isUuid(userId) ? 'user_id' : 'clerk_user_id';
 
   const { data, error } = await supabase
     .from('organization_members')
     .select('organization_id, role')
     .eq('organization_id', organizationId)
-    .eq('user_id', userId)
+    .eq(identityColumn, userId)
     .maybeSingle();
 
   if (error) {
