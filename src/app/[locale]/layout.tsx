@@ -3,6 +3,7 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { ClerkFloatingControls } from '@/components/auth/ClerkFloatingControls';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffects from '@/components/GlobalClientEffects';
@@ -71,9 +72,9 @@ export default async function LocaleLayout({ children, params }: Props) {
   const messages = await getMessages();
 
   return (
-    <ClerkProvider>
-      <html lang={safeLocale} suppressHydrationWarning>
-        <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
+    <html lang={safeLocale} suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
+        <ClerkProvider>
           <NextIntlClientProvider messages={messages}>
             <ThemeProvider
               attribute="class"
@@ -83,14 +84,15 @@ export default async function LocaleLayout({ children, params }: Props) {
             >
               <AuthProvider>
                 {children}
+                <ClerkFloatingControls locale={safeLocale} />
                 <GapAnalysisShortcut />
                 <GlobalClientEffects />
                 <Toaster />
               </AuthProvider>
             </ThemeProvider>
           </NextIntlClientProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }
