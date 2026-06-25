@@ -7,7 +7,7 @@ const workflowRoot = join(root, '.github', 'workflows');
 const requiredWorkflowFiles = [
   '.github/workflows/ci.yml',
   '.github/workflows/security-ci.yml',
-  `.github/workflows/${scanName}-scanning.yml`,
+  '.github/workflows/secret-scanning.yml',
   '.github/workflows/vercel-production.yml',
 ];
 
