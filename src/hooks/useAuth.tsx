@@ -65,6 +65,13 @@ function getRedirectUrl(path = '/dashboard/organizations') {
   return new URL(getLocalizedPath(path), window.location.origin).toString();
 }
 
+function addMetadataAlias(metadata: Record<string, unknown>, key: string, value: string | null | undefined) {
+  const normalized = value?.trim();
+  if (normalized) {
+    metadata[key] = normalized;
+  }
+}
+
 export function getLocalizedDashboardPath() {
   return getLocalizedPath('/dashboard/organizations');
 }
@@ -85,11 +92,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ...publicMetadata,
       ...unsafeMetadata,
       email: getPrimaryEmail(clerkUser),
-      name: clerkUser.fullName,
-      full_name: clerkUser.fullName,
-      first_name: clerkUser.firstName,
-      last_name: clerkUser.lastName,
     } satisfies Record<string, unknown>;
+
+    addMetadataAlias(userMetadata, 'name', clerkUser.fullName);
+    addMetadataAlias(userMetadata, 'full_name', clerkUser.fullName);
+    addMetadataAlias(userMetadata, 'first_name', clerkUser.firstName);
+    addMetadataAlias(userMetadata, 'last_name', clerkUser.lastName);
 
     return {
       id: clerkUser.id,
