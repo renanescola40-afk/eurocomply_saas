@@ -113,21 +113,22 @@ const nextConfig: NextConfig = {
 };
 
 const nextIntlConfig = withNextIntl(nextConfig);
-const hasSentryReleaseUploadCredentials = Boolean(
-  process.env.SENTRY_ORG && process.env.SENTRY_PROJECT && process.env.SENTRY_AUTH_TOKEN,
-);
+const sentryReleaseUploadConfig =
+  process.env.SENTRY_ORG && process.env.SENTRY_PROJECT && process.env.SENTRY_AUTH_TOKEN
+    ? {
+        org: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        widenClientFileUpload: true,
+      }
+    : {};
 
-// Source maps and release artifacts are uploaded only when the server-side
-// SENTRY_AUTH_TOKEN plus org/project are available in the build environment.
-// Local/dev builds keep the Next config unwrapped, preventing accidental uploads.
-export default hasSentryReleaseUploadCredentials
-  ? withSentryConfig(nextIntlConfig, {
-      org: process.env.SENTRY_ORG,
-      project: process.env.SENTRY_PROJECT,
-      authToken: process.env.SENTRY_AUTH_TOKEN,
-      silent: !process.env.CI,
-      widenClientFileUpload: true,
-      tunnelRoute: '/monitoring',
-      disableLogger: true,
-    })
-  : nextIntlConfig;
+// Keep the Sentry Next.js wrapper enabled in every environment so runtime
+// instrumentation and the tunnel route are registered. Source maps and release
+// artifacts are uploaded only when SENTRY_AUTH_TOKEN plus org/project are set.
+export default withSentryConfig(nextIntlConfig, {
+  ...sentryReleaseUploadConfig,
+  silent: !process.env.CI,
+  tunnelRoute: '/monitoring',
+  disableLogger: true,
+});
