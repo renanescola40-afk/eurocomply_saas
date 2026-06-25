@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "evidenceItem": "required-status-checks",
   "status": "Exception",
   "repository": "renanescola40-afk/eurocomply_saas",
@@ -10,7 +10,7 @@
   "reviewedAt": "2026-06-25T00:00:00.000+01:00",
   "source": "repo-policy-evidence",
   "policy_document": "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
-  "summary": "Required status checks and branch protection controls are documented for the main branch. This evidence remains an Exception because this PR cannot verify or mutate the repository ruleset/branch protection UI state through the available API action. Enterprise release validation fails while this status is Exception or Open.",
+  "summary": "Required status checks and branch protection controls are documented for main. This evidence remains an Exception because this PR cannot verify or mutate repository ruleset/branch protection UI state through the available connector action. Enterprise release validation fails while this status is Exception or Open.",
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
@@ -36,12 +36,18 @@
     "risk": "Direct pushes to main bypass normal PR review evidence and can trigger production/release workflows before the enterprise approval record is complete.",
     "required_response": "Treat any direct push to main as a release governance exception. Do not promote the commit until branch protection evidence is Complete and Full Security Suite / Enterprise merge/deploy gate is green for the exact commit."
   },
+  "workflow_secret_log_policy": {
+    "secrets_in_logs_prohibited": true,
+    "ci_build_uses_placeholder_public_values": true,
+    "checkout_persist_credentials_disabled": true,
+    "strict_public_secret_scan_required": true
+  },
   "required_status_checks": [
     "Full Security Suite / Core CI, build and npm audit",
     "Full Security Suite / Actionlint",
     "Full Security Suite / Secret scanning (Gitleaks)",
     "Full Security Suite / Semgrep SAST",
-    "Full Security Suite / CodeQL (javascript-typescript)",
+    "Full Security Suite / CodeQL",
     "Full Security Suite / Dependency Review",
     "Full Security Suite / OSSF Scorecard",
     "Full Security Suite / Enterprise merge/deploy gate",
@@ -58,13 +64,18 @@
     "build_failure_blocks": true,
     "security_ci_failure_blocks": true,
     "secret_scanning_failure_blocks": true,
-    "branch_protection_exception_blocks_enterprise_release": true,
-    "untriaged_high_or_critical_npm_audit_blocks": true
+    "untriaged_high_or_critical_npm_audit_blocks": true,
+    "branch_protection_evidence_blocks": true,
+    "strict_public_secret_scan_required": true,
+    "hardcoded_secret_blocks": true,
+    "package_lock_mismatch_blocks": true,
+    "direct_push_main_is_release_risk_documented": true,
+    "workflow_secret_log_exposure_blocks": true
   },
   "sbom": {
     "generated_by_ci": true,
     "artifact_name": "risck-comply-sbom",
-    "runtime_path": "docs/security/evidence/runtime/sbom.json",
+    "runtime_path": "docs/security/evidence/runtime/sbom.cyclonedx.json",
     "format": "CycloneDX"
   },
   "exception": {
