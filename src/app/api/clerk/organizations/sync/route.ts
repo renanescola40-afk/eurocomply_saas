@@ -2,7 +2,13 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { z } from 'zod';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
 import { syncClerkOrganizationToSupabase } from '@/server/clerk/organization-sync';
-import { noStoreJson, requirePermission, requireTrustedMutation, secureApiError } from '@/server/security/api-guards';
+import {
+  noStoreJson,
+  requireOrganizationContext,
+  requirePermission,
+  requireTrustedMutation,
+  secureApiError,
+} from '@/server/security/api-guards';
 
 const clerkOrgSyncBodySchema = z.object({
   clerkOrgId: z.string().min(1).max(128),
@@ -33,6 +39,11 @@ export async function POST(request: Request) {
     if (mutationDenied) {
       return mutationDenied;
     }
+
+    await requireOrganizationContext({
+      userId,
+      organizationId: orgId,
+    });
 
     await requirePermission({
       userId,
