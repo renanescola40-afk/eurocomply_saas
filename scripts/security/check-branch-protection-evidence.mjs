@@ -16,9 +16,20 @@ function read(path) {
   return readFileSync(path, 'utf8');
 }
 
-const evidenceSource = read(evidencePath);
-const policySource = read(policyPath);
-read(triagePath);
+const requiredChecks = [
+  'Full Security Suite / Core CI, build and npm audit',
+  'Full Security Suite / Actionlint',
+  'Full Security Suite / Secret scanning (Gitleaks)',
+  'Full Security Suite / Semgrep SAST',
+  'Full Security Suite / CodeQL (javascript-typescript)',
+  'Full Security Suite / Dependency Review',
+  'Full Security Suite / OSSF Scorecard',
+  'Full Security Suite / Enterprise merge/deploy gate',
+  'CI / quality',
+  'RISCK COMPLY Security CI / Run security gates, typecheck and tests',
+  'Gitleaks / Scan repository for accidental secret exposure',
+  'Secret Scanning / Production secret readiness gate',
+];
 
 let evidence = {};
 try {

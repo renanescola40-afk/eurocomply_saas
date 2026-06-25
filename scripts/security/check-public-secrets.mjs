@@ -2,8 +2,8 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join, relative, sep } from 'node:path';
 
 const root = process.cwd();
-const strictName = ['STRICT', 'PUBLIC', 'SEC', 'RET', 'SCAN'].join('_').replace('SEC_RET', 'SECRET');
-const strictPublicScan = process.env[strictName] === '1';
+const strictPublicSecretScan = process.env.STRICT_PUBLIC_SECRET_SCAN === '1';
+const ignoredDirectories = new Set(['node_modules', '.next', '.git', '.vercel', 'dist', 'coverage', 'playwright-report', 'test-results']);
 const scanRoots = ['src', 'scripts', 'docs', '.github', 'supabase'].filter((path) => existsSync(join(root, path)));
 const scanFiles = [
   'package.json',
@@ -20,21 +20,50 @@ const scanFiles = [
   '.env.example',
 ].filter((path) => existsSync(join(root, path)));
 
-const ignoredDirectories = new Set(['node_modules', '.next', '.git', '.vercel', 'dist', 'coverage', 'playwright-report', 'test-results']);
-const committedEnvFile = /^\.env(\..*)?$/;
 const allowedCommittedEnvFiles = new Set(['.env.example']);
+const allowedPublicNames = new Set([
+  'NEXT_PUBLIC_APP_URL',
+  'NEXT_PUBLIC_SITE_URL',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'NEXT_PUBLIC_SUPABASE_KEY',
+  'NEXT_PUBLIC_DATABASE_PUBLISHABLE_KEY',
+  'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
+  'NEXT_PUBLIC_SENTRY_DSN',
+]);
 
-const concretePatterns = [
-  ['jwt-like credential', 'eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}'],
-  ['provider live key', ['sk', 'live'].join('_') + '_[A-Za-z0-9]{16,}'],
-  ['provider restricted key', ['rk', 'live'].join('_') + '_[A-Za-z0-9]{16,}'],
-  ['webhook value', 'wh' + 'sec' + '_[A-Za-z0-9]{16,}'],
-  ['repository token', 'gh[pousr]_[A-Za-z0-9_]{20,}'],
-  ['provider access token', 'sbp_[A-Za-z0-9_.-]{20,}'],
-  ['oauth client value', 'GOCSPX-[A-Za-z0-9_-]{20,}'],
-  ['cloud api key', 'AIza[0-9A-Za-z_-]{30,}'],
-  ['email provider key', 're_[A-Za-z0-9_]{20,}'],
-].map(([name, source]) => ({ name, pattern: new RegExp(`(?<![A-Za-z0-9_-])${source}`, 'g') }));
+const dangerousPublicName = /NEXT_PUBLIC_[A-Z0-9_]*(SECRET|TOKEN|SERVICE|SERVICE_ROLE|PRIVATE|PASSWORD|WEBHOOK|AUTH_TOKEN|ACCESS_TOKEN|SIGNING)[A-Z0-9_]*/g;
+const concreteSecretPatterns = [
+  { name: 'JWT-like service credential', pattern: /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g },
+  { name: 'Stripe live secret key', pattern: new RegExp('(?<![A-Za-z0-9_-])' + 'sk_' + 'live_' + '[A-Za-z0-9]{16,}', 'g') },
+  { name: 'Stripe restricted live key', pattern: new RegExp('(?<![A-Za-z0-9_-])' + 'rk_' + 'live_' + '[A-Za-z0-9]{16,}', 'g') },
+  { name: 'Stripe webhook signing secret', pattern: new RegExp('(?<![A-Za-z0-9_-])' + 'whsec_' + '[A-Za-z0-9]{16,}', 'g') },
+  { name: 'Supabase access token style value', pattern: new RegExp('(?<![A-Za-z0-9_-])' + 'sbp_' + '[A-Za-z0-9_.-]{20,}', 'g') },
+  { name: 'Google OAuth client secret value', pattern: new RegExp('(?<![A-Za-z0-9_-])' + 'GOCSPX-' + '[A-Za-z0-9_-]{20,}', 'g') },
+  { name: 'Google API key value', pattern: new RegExp('(?<![A-Za-z0-9_-])' + 'AIza' + '[0-9A-Za-z_-]{30,}', 'g') },
+  { name: 'Resend API key value', pattern: new RegExp('(?<![A-Za-z0-9_-])' + 're_' + '[A-Za-z0-9_]{20,}', 'g') },
+];
+
+const publicClientFiles = [
+  /src\/app\/.*\/.*client\.(tsx|ts)$/,
+  /src\/components\/.*\.(tsx|ts)$/,
+  /src\/lib\/.*client.*\.(tsx|ts)$/,
+];
+const serverSideEnvReferenceFiles = new Set(['src/lib/email/client.ts']);
+const serverOnlyEnvNames = [
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_ACCESS_TOKEN',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'SENTRY_AUTH_TOKEN',
+  'RESEND_API_KEY',
+  'EVIDENCE_PACK_SIGNING_SECRET',
+  'HEALTHCHECK_TOKEN',
+  'CRON_SECRET',
+  'INTERNAL_CRON_SECRET',
+  'UPSTASH_REDIS_REST_TOKEN',
+  'GOOGLE_CLIENT_SECRET',
+];
 
 function walk(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -54,34 +83,70 @@ function lineNumberFor(source, index) {
   return source.slice(0, index).split('\n').length;
 }
 
-function isReferenceOnlyContext(path, line) {
-  return path === '.gitleaks.toml'
-    || path === 'package.json'
-    || path.startsWith('docs/')
-    || path.startsWith('scripts/security/')
-    || path.startsWith('.github/workflows/')
-    || /\$\{\{\s*(secrets|vars|env|github)\./.test(line);
+function lineFor(source, index) {
+  return source.split('\n')[lineNumberFor(source, index) - 1] ?? '';
 }
 
-const files = [...scanRoots.flatMap((scanRoot) => walk(join(root, scanRoot))), ...scanFiles.map((file) => join(root, file))];
+function containsConcreteSecretValue(line) {
+  return concreteSecretPatterns.some((secret) => {
+    const flags = secret.pattern.flags.replace('g', '');
+    return new RegExp(secret.pattern.source, flags).test(line);
+  });
+}
+
+function isReferenceOnlyContext(normalized, line) {
+  if (containsConcreteSecretValue(line)) return false;
+  if (normalized === '.gitleaks.toml') return true;
+  if (normalized.startsWith('docs/')) return true;
+  if (normalized.startsWith('scripts/security/')) return true;
+  if (normalized.startsWith('.github/workflows/')) return true;
+  return false;
+}
+
+function isPublicClientFile(path) {
+  if (serverSideEnvReferenceFiles.has(path)) return false;
+  return publicClientFiles.some((pattern) => pattern.test(path));
+}
+
+const files = [
+  ...scanRoots.flatMap((scanRoot) => walk(join(root, scanRoot))),
+  ...scanFiles.map((file) => join(root, file)),
+];
 const failures = [];
 
-if (!strictPublicScan) failures.push(`${strictName}=1 is required; report-only scanning is not allowed in CI or release checks`);
+if (!strictPublicSecretScan) {
+  failures.push('STRICT_PUBLIC_SECRET_SCAN=1 is required; report-only public secret scanning is not allowed');
+}
 
 for (const file of new Set(files)) {
   const normalized = normalizePath(file);
   const source = readFileSync(file, 'utf8');
-  const lines = source.split('\n');
 
-  if (committedEnvFile.test(basename(normalized)) && !allowedCommittedEnvFiles.has(basename(normalized))) {
-    failures.push(`${normalized}: committed environment file detected; keep runtime values in provider stores only`);
+  if (/^\.env(\..*)?$/.test(basename(normalized)) && !allowedCommittedEnvFiles.has(basename(normalized))) {
+    failures.push(`${normalized}: committed environment file detected; keep real secrets in provider secret stores only`);
   }
 
-  for (const item of concretePatterns) {
-    for (const match of source.matchAll(item.pattern)) {
-      const line = lines[lineNumberFor(source, match.index ?? 0) - 1] ?? '';
+  for (const match of source.matchAll(dangerousPublicName)) {
+    const name = match[0];
+    const line = lineFor(source, match.index ?? 0);
+    if (!allowedPublicNames.has(name) && !isReferenceOnlyContext(normalized, line)) {
+      failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} dangerous public env name: ${name}`);
+    }
+  }
+
+  for (const secret of concreteSecretPatterns) {
+    for (const match of source.matchAll(secret.pattern)) {
+      const line = lineFor(source, match.index ?? 0);
       if (!isReferenceOnlyContext(normalized, line)) {
-        failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible committed credential: ${item.name}`);
+        failures.push(`${normalized}:${lineNumberFor(source, match.index ?? 0)} possible committed secret value: ${secret.name}`);
+      }
+    }
+  }
+
+  if (isPublicClientFile(normalized)) {
+    for (const envName of serverOnlyEnvNames) {
+      if (source.includes(envName)) {
+        failures.push(`${normalized}: server-only env referenced from public/client-side code: ${envName}`);
       }
     }
   }
