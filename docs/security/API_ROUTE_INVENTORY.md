@@ -30,6 +30,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/billing/webhook/route.ts` | webhook | Stripe webhook; signature verification replaces trusted origin. |
 | `src/app/api/stripe/webhook/route.ts` | webhook | Stripe webhook; signature verification replaces trusted origin. |
 | `src/app/api/audit/evidence-pack/verify/route.ts` | public safe | Public verifier; must stay rate-limited and no-store. |
+| `src/app/api/clerk/organizations/sync/route.ts` | tenant-scoped | Clerk organization sync; active Clerk organization must match request payload before Supabase mapping. |
 | `src/app/api/billing/entitlements/route.ts` | tenant-scoped | Private subscription/entitlement data; membership and tenant context required. |
 | `src/app/api/billing/checkout/route.ts` | high-risk | Billing mutation; manage_billing, trusted origin, rate limit, tenant validation required. |
 | `src/app/api/billing/checkout-intent/route.ts` | high-risk | Billing mutation intent; manage_billing, trusted origin, rate limit required. |
