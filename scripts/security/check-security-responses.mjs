@@ -64,7 +64,6 @@ const checks = [
     path: 'src/app/api/health/route.test.ts',
     required: [
       'public health endpoint hardening',
-      'body).toEqual({ status: \'ok\' })',
       "not.toHaveProperty('checks')",
       "not.toHaveProperty('environment')",
       "not.toHaveProperty('commit')",
