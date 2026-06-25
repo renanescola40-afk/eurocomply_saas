@@ -1,3 +1,4 @@
+import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 type SyncClerkOrganizationInput = {
@@ -20,6 +21,11 @@ function normalizeSlug(value: string) {
     .slice(0, 80) || 'organization';
 }
 
+function normalizeOrganizationName(value: string | null | undefined, fallback: string) {
+  const normalized = value?.trim();
+  return normalized && normalized.length <= 160 ? normalized : fallback;
+}
+
 function clerkRoleToAppRole(role?: string | null) {
   if (!role) return 'member';
   const normalized = role.replace(/^org:/, '').toLowerCase();
@@ -34,7 +40,8 @@ function clerkRoleToAppRole(role?: string | null) {
 export async function syncClerkOrganizationToSupabase(input: SyncClerkOrganizationInput) {
   const supabase = createAdminClient();
   const now = new Date().toISOString();
-  const baseSlug = normalizeSlug(input.slug || input.name || input.clerkOrgId);
+  const safeName = normalizeOrganizationName(input.name, input.slug || input.clerkOrgId);
+  const baseSlug = normalizeSlug(input.slug || safeName || input.clerkOrgId);
 
   const { data: existingByClerkOrgId, error: lookupError } = await supabase
     .from('organizations')
@@ -52,7 +59,7 @@ export async function syncClerkOrganizationToSupabase(input: SyncClerkOrganizati
     const { data, error } = await supabase
       .from('organizations')
       .update({
-        name: input.name,
+        name: safeName,
         clerk_org_id: input.clerkOrgId,
         created_by_clerk_user_id: input.clerkUserId,
         last_clerk_sync_at: now,
@@ -68,7 +75,7 @@ export async function syncClerkOrganizationToSupabase(input: SyncClerkOrganizati
     const { data, error } = await supabase
       .from('organizations')
       .insert({
-        name: input.name,
+        name: safeName,
         slug: baseSlug,
         clerk_org_id: input.clerkOrgId,
         created_by: null,
@@ -84,7 +91,7 @@ export async function syncClerkOrganizationToSupabase(input: SyncClerkOrganizati
         const fallback = await supabase
           .from('organizations')
           .insert({
-            name: input.name,
+            name: safeName,
             slug: fallbackSlug,
             clerk_org_id: input.clerkOrgId,
             created_by: null,
@@ -107,7 +114,7 @@ export async function syncClerkOrganizationToSupabase(input: SyncClerkOrganizati
   const role = clerkRoleToAppRole(input.role);
   const { data: existingMembership, error: membershipLookupError } = await supabase
     .from('organization_members')
-    .select('id')
+    .select('id, role')
     .eq('organization_id', organization.id)
     .eq('clerk_user_id', input.clerkUserId)
     .maybeSingle();
@@ -117,6 +124,7 @@ export async function syncClerkOrganizationToSupabase(input: SyncClerkOrganizati
   }
 
   if (existingMembership) {
+    const previousRole = existingMembership.role ?? null;
     const { error: updateMembershipError } = await supabase
       .from('organization_members')
       .update({
@@ -128,6 +136,24 @@ export async function syncClerkOrganizationToSupabase(input: SyncClerkOrganizati
 
     if (updateMembershipError) {
       throw new Error(updateMembershipError.message);
+    }
+
+    if (previousRole !== role) {
+      await writeAuditLog({
+        action: 'team.member_role_changed',
+        organizationId: organization.id,
+        actorUserId: input.clerkUserId,
+        entityType: 'organization_member',
+        entityId: existingMembership.id,
+        metadata: {
+          source: 'clerk_organization_sync',
+          clerkOrgId: input.clerkOrgId,
+          clerkUserId: input.clerkUserId,
+          clerkMembershipId: input.membershipId ?? null,
+          previousRole,
+          nextRole: role,
+        },
+      });
     }
   } else {
     const { error: insertMembershipError } = await supabase
