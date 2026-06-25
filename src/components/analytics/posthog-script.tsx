@@ -20,8 +20,8 @@ export function PostHogScript() {
 posthog.init(${JSON.stringify(posthogKey)}, {
   api_host: ${JSON.stringify(apiHost)},
   person_profiles: "identified_only",
-  capture_pageview: true,
-  capture_pageleave: true
+  capture_pageview: false,
+  capture_pageleave: false
 });
       `}
     </Script>
