@@ -3,7 +3,8 @@
 
 alter table public.organizations
   add column if not exists clerk_org_id text,
-  add column if not exists created_by_clerk_user_id text;
+  add column if not exists created_by_clerk_user_id text,
+  add column if not exists last_clerk_sync_at timestamptz;
 
 create unique index if not exists organizations_clerk_org_id_key
   on public.organizations (clerk_org_id)
@@ -15,7 +16,8 @@ create index if not exists organizations_created_by_clerk_user_id_idx
 
 alter table public.organization_members
   add column if not exists clerk_user_id text,
-  add column if not exists clerk_membership_id text;
+  add column if not exists clerk_membership_id text,
+  add column if not exists last_clerk_sync_at timestamptz;
 
 alter table public.organization_members
   alter column user_id drop not null;
@@ -48,5 +50,7 @@ create index if not exists organization_members_clerk_user_id_idx
 
 comment on column public.organizations.clerk_org_id is 'Clerk organization ID, for example org_xxx. Used to map Clerk Organizations to Supabase tenant rows.';
 comment on column public.organizations.created_by_clerk_user_id is 'Clerk user ID that created the tenant row when Supabase Auth UUID is not available.';
+comment on column public.organizations.last_clerk_sync_at is 'Last time this tenant row was synchronized from Clerk Organizations.';
 comment on column public.organization_members.clerk_user_id is 'Clerk user ID for membership rows created by Clerk-backed authentication.';
 comment on column public.organization_members.clerk_membership_id is 'Optional Clerk membership ID for idempotent membership synchronization.';
+comment on column public.organization_members.last_clerk_sync_at is 'Last time this membership row was synchronized from Clerk Organizations.';
