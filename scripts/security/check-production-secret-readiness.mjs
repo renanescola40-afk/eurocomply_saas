@@ -42,9 +42,11 @@ function lineNumberFor(source, index) {
 }
 
 function isPlaceholderValue(value) {
-  return /^(|redacted|placeholder|example|sample|dummy|changeme|change-me|your-|sua-|ci-|ci_|test_|dev-|\.\.\.)/i.test(value)
-    || value.includes('example')
-    || value.includes('localhost');
+  const text = String(value ?? '').trim();
+  if (text.length === 0) return true;
+  return /^(redacted|placeholder|example|sample|dummy|changeme|change-me|your-|sua-|ci-|ci_|test_|dev-|\.\.\.)/i.test(text)
+    || text.includes('example')
+    || text.includes('localhost');
 }
 
 function scanConcreteValues(path, source) {
@@ -80,7 +82,9 @@ if (existsSync(join(root, 'docs/security/evidence/runtime/production-secrets-pro
 
 try {
   const output = readFileSync(join(root, '.github/workflows/vercel-production.yml'), 'utf8');
-  for (const token of ['npm ci', 'npm run lint', 'npm run typecheck', 'npm run test', 'npm run build', 'npm run security:ci', 'npm run quality:routes', 'npm run ops:vercel-readiness', 'npm run release:readiness', 'vercel deploy --prebuilt --prod']) {
+  const requiredTokens = ['npm run lint', 'npm run typecheck', 'npm run test', 'npm run build', 'npm run security:ci', 'npm run quality:routes', 'npm run ops:vercel-readiness', 'npm run release:readiness', 'vercel deploy --prebuilt --prod'];
+  if (!output.includes('npm ci')) failures.push('production workflow missing install gate: npm ci');
+  for (const token of requiredTokens) {
     if (!output.includes(token)) failures.push(`production workflow missing gate: ${token}`);
   }
 } catch {
