@@ -52,7 +52,7 @@ type EnterpriseStorageScannerCheck = {
 type ReadyDatabaseCheck = {
   adminClient: boolean;
   subscriptionsReadable: boolean;
-  detail: string;
+  detail: 'ok' | 'not_ready';
 };
 
 function hasHealthcheckToken(request: Request) {
@@ -117,7 +117,7 @@ async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
   let database: ReadyDatabaseCheck = {
     adminClient: false,
     subscriptionsReadable: false,
-    detail: 'not_checked',
+    detail: 'not_ready',
   };
 
   try {
@@ -129,17 +129,15 @@ async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
       database = {
         adminClient: true,
         subscriptionsReadable: !error,
-        detail: error ? error.code ?? 'query_failed' : 'ok',
+        detail: error ? 'not_ready' : 'ok',
       };
-    } else {
-      database.detail = 'admin_client_unavailable';
     }
   } catch (error) {
     reportError(error, { area: 'ready_supabase_check' });
     database = {
       adminClient: false,
       subscriptionsReadable: false,
-      detail: 'query_failed',
+      detail: 'not_ready',
     };
   }
 
