@@ -28,6 +28,8 @@ type ClerkCompatUser = {
 
 type ClerkCompatSession = {
   id: string;
+  access_token: string;
+  token_type: 'bearer';
 } | null;
 
 interface AuthContextType {
@@ -78,8 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!clerkUser) return null;
 
     const publicMetadata = clerkUser.publicMetadata as Record<string, unknown>;
+    const unsafeMetadata = clerkUser.unsafeMetadata as Record<string, unknown>;
     const userMetadata = {
       ...publicMetadata,
+      ...unsafeMetadata,
       email: getPrimaryEmail(clerkUser),
       name: clerkUser.fullName,
       full_name: clerkUser.fullName,
@@ -101,7 +105,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const session = useMemo<ClerkCompatSession>(() => {
     if (!clerkSession) return null;
-    return { id: clerkSession.id };
+    return {
+      id: clerkSession.id,
+      access_token: clerkSession.id,
+      token_type: 'bearer',
+    };
   }, [clerkSession]);
 
   const loading = !userLoaded || !sessionLoaded;
