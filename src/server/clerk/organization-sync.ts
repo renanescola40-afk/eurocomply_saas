@@ -105,23 +105,45 @@ export async function syncClerkOrganizationToSupabase(input: SyncClerkOrganizati
   }
 
   const role = clerkRoleToAppRole(input.role);
-
-  const { error: membershipError } = await supabase
+  const { data: existingMembership, error: membershipLookupError } = await supabase
     .from('organization_members')
-    .upsert(
-      {
+    .select('id')
+    .eq('organization_id', organization.id)
+    .eq('clerk_user_id', input.clerkUserId)
+    .maybeSingle();
+
+  if (membershipLookupError) {
+    throw new Error(membershipLookupError.message);
+  }
+
+  if (existingMembership) {
+    const { error: updateMembershipError } = await supabase
+      .from('organization_members')
+      .update({
+        clerk_membership_id: input.membershipId ?? null,
+        role,
+        last_clerk_sync_at: now,
+      })
+      .eq('id', existingMembership.id);
+
+    if (updateMembershipError) {
+      throw new Error(updateMembershipError.message);
+    }
+  } else {
+    const { error: insertMembershipError } = await supabase
+      .from('organization_members')
+      .insert({
         organization_id: organization.id,
         user_id: null,
         clerk_user_id: input.clerkUserId,
         clerk_membership_id: input.membershipId ?? null,
         role,
         last_clerk_sync_at: now,
-      },
-      { onConflict: 'organization_id,clerk_user_id' },
-    );
+      });
 
-  if (membershipError) {
-    throw new Error(membershipError.message);
+    if (insertMembershipError) {
+      throw new Error(insertMembershipError.message);
+    }
   }
 
   return {
