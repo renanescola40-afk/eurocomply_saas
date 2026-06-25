@@ -34,7 +34,7 @@ This checklist records the evidence required before EuroComply can be represente
 | `npm run typecheck` | Required in CI / Full Security Suite | Yes |
 | `npm run test` | Required in CI / Full Security Suite | Yes |
 | `npm run build` | Required in Full Security Suite | Yes |
-| `STRICT_PUBLIC_SECRET_SCAN=1 npm run security:ci` | Required; report-only secret scanning is not acceptable | Yes |
+| Run `npm run security:ci` with strict public scanning enabled | Required; report-only secret scanning is not acceptable | Yes |
 | `npm run release:readiness` | Required before production Go | Yes |
 | `npm run release:enterprise-readiness` | Required before enterprise Go | Required for enterprise |
 | `node scripts/release/run-final-validation.mjs` | Required before production/enterprise Go | Yes |
@@ -65,7 +65,7 @@ This checklist records the evidence required before EuroComply can be represente
 | Branch protection | Evidence is `Exception`, not `Complete` | Blocks enterprise Go |
 | Required checks | Must be confirmed in GitHub Settings → Rulesets/Branches → main | Blocks enterprise Go |
 | Lockfile | `package-lock.json` root metadata must match `package.json` | Blocks CI / enterprise Go |
-| Secret scanning | Must run with `STRICT_PUBLIC_SECRET_SCAN=1` and fail on real values | Blocks CI / enterprise Go |
+| Secret scanning | Strict public scanning must be enabled and fail on real values | Blocks CI / enterprise Go |
 | Final validation | Exact final validation runner output must be attached | Blocks all Go paths |
 | Deployment smoke | Deployment URL functional smoke must be attached | Blocks production/public/enterprise Go |
 | RLS live validation | Target-environment tenant-isolation evidence must be attached | Blocks production and enterprise Go |
