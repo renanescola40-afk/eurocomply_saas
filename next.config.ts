@@ -12,6 +12,9 @@ const DEFAULT_IMAGE_REMOTE_HOSTS = [
   'flagcdn.com',
 ] as const;
 
+const POSTHOG_SCRIPT_HOSTS = ['https://eu-assets.i.posthog.com'] as const;
+const POSTHOG_CONNECT_HOSTS = ['https://eu.i.posthog.com', 'https://eu-assets.i.posthog.com'] as const;
+
 function normalizeTrustedImageHostname(value: string) {
   const candidate = value.trim().toLowerCase();
   if (!candidate || candidate.includes('*')) return null;
@@ -50,6 +53,8 @@ function getTrustedImageHostnames() {
 
 const trustedImageHostnames = getTrustedImageHostnames();
 const imageSrcPolicy = ["img-src 'self' data: blob:", ...trustedImageHostnames.map((hostname) => `https://${hostname}`)].join(' ');
+const posthogScriptSrcPolicy = POSTHOG_SCRIPT_HOSTS.join(' ');
+const posthogConnectSrcPolicy = POSTHOG_CONNECT_HOSTS.join(' ');
 
 const securityHeaders = [
   {
@@ -57,13 +62,13 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       isProduction
-        ? "script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.sentry.io https://*.ingest.sentry.io"
-        : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.sentry.io https://*.ingest.sentry.io",
+        ? `script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.sentry.io https://*.ingest.sentry.io ${posthogScriptSrcPolicy}`
+        : `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.sentry.io https://*.ingest.sentry.io ${posthogScriptSrcPolicy}`,
       "style-src 'self' 'unsafe-inline'",
       imageSrcPolicy,
       "media-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co https://api.stripe.com https://checkout.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://vitals.vercel-insights.com",
+      `connect-src 'self' https://*.supabase.co https://api.stripe.com https://checkout.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://vitals.vercel-insights.com ${posthogConnectSrcPolicy}`,
       "frame-src https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
       "object-src 'none'",
       "base-uri 'self'",
