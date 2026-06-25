@@ -13,19 +13,17 @@ function getSafeLocale(locale: string) {
 
 export function ClerkFloatingControls({ locale }: ClerkFloatingControlsProps) {
   const safeLocale = getSafeLocale(locale);
-  const loginUrl = `/${safeLocale}/login`;
-  const signupUrl = `/${safeLocale}/signup`;
   const dashboardUrl = `/${safeLocale}/dashboard/organizations`;
 
   return (
     <div className="fixed bottom-5 right-5 z-[80] flex items-center gap-2 rounded-full border border-white/10 bg-black/70 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl">
       <SignedOut>
-        <SignInButton mode="redirect" fallbackRedirectUrl={dashboardUrl}>
+        <SignInButton>
           <button className="rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/10">
             Entrar
           </button>
         </SignInButton>
-        <SignUpButton mode="redirect" fallbackRedirectUrl={dashboardUrl}>
+        <SignUpButton>
           <button className="rounded-full bg-white px-4 py-2 text-xs font-bold text-black transition hover:bg-zinc-200">
             Criar conta
           </button>
@@ -39,14 +37,7 @@ export function ClerkFloatingControls({ locale }: ClerkFloatingControlsProps) {
         >
           Dashboard
         </Link>
-        <UserButton
-          afterSignOutUrl={`/${safeLocale}`}
-          appearance={{
-            elements: {
-              userButtonAvatarBox: 'h-8 w-8',
-            },
-          }}
-        />
+        <UserButton />
       </SignedIn>
     </div>
   );
