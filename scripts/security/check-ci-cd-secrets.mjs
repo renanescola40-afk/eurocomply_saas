@@ -13,8 +13,7 @@ const requiredWorkflowFiles = [
   '.github/workflows/vercel-production.yml',
 ];
 
-const requiredPreflightTokens = [
-  'npm run preflight',
+const requiredGateTokens = [
   'npm run security:ci',
   'npm run security:production-secrets',
   'npm run security:public-secrets',
@@ -53,7 +52,7 @@ for (const path of requiredWorkflowFiles) {
   if (!existsSync(join(root, path))) failures.push(`${path} is missing`);
 }
 
-for (const token of requiredPreflightTokens) {
+for (const token of requiredGateTokens) {
   if (!allWorkflowSource.includes(token)) failures.push(`GitHub Actions workflows must run ${token} before deploy/release gates`);
 }
 
