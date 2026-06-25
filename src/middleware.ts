@@ -1,6 +1,6 @@
-// middleware.ts - Combined i18n + Auth
+// middleware.ts - Combined i18n + Clerk Auth
 
-import { createServerClient } from '@supabase/ssr';
+import { clerkMiddleware } from '@clerk/nextjs/server';
 import createIntlMiddleware from 'next-intl/middleware';
 import { NextRequest, NextResponse } from 'next/server';
 import { routing, locales, defaultLocale, COUNTRY_TO_LOCALE } from '@/lib/i18n/routing';
@@ -64,11 +64,16 @@ function normalizeLegacyUndefinedPath(pathname: string): string | null {
   return null;
 }
 
-function isPublicRoute(pathname: string, locale: string): boolean {
-  let path = pathname;
+function stripLocale(pathname: string, locale: string): string {
   if (locales.includes(locale as 'en') && pathname.startsWith(`/${locale}`)) {
-    path = pathname.replace(`/${locale}`, '') || '/';
+    return pathname.replace(`/${locale}`, '') || '/';
   }
+
+  return pathname;
+}
+
+function isPublicRoute(pathname: string, locale: string): boolean {
+  const path = stripLocale(pathname, locale);
 
   return PUBLIC_ROUTES.some(route =>
     path === route ||
@@ -117,51 +122,11 @@ function detectLocale(req: NextRequest): string {
   return defaultLocale;
 }
 
-async function getAuthState(req: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request: req });
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return { isAuthenticated: false, supabaseResponse };
-  }
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return req.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
-        supabaseResponse = NextResponse.next({ request: req });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
-        );
-      },
-    },
-  });
-
-  const { data, error } = await supabase.auth.getUser();
-
-  return {
-    isAuthenticated: Boolean(data.user && !error),
-    supabaseResponse,
-  };
-}
-
-function copyAuthCookies(source: NextResponse, target: NextResponse) {
-  source.cookies.getAll().forEach((cookie) => {
-    target.cookies.set(cookie.name, cookie.value, cookie);
-  });
-}
-
-export default async function middleware(req: NextRequest) {
+export default clerkMiddleware(async (auth, req) => {
   const pathname = req.nextUrl.pathname;
 
   if (
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/auth') ||
     pathname.startsWith('/next_api') ||
     pathname.includes('.')
   ) {
@@ -184,25 +149,18 @@ export default async function middleware(req: NextRequest) {
     const isPublic = isPublicRoute(pathname, locale);
     const isMarketingHome = pathname === `/${locale}`;
     const isAuthEntryRoute = pathname === `/${locale}/login` || pathname === `/${locale}/signup`;
-    const shouldCheckMarketingHomeAuth = isMarketingHome;
-    const shouldCheckAuth = !isPublic || isAuthEntryRoute || shouldCheckMarketingHomeAuth;
-    const authState = shouldCheckAuth
-      ? await getAuthState(req)
-      : { isAuthenticated: false, supabaseResponse: NextResponse.next({ request: req }) };
+    const { userId } = await auth();
+    const isAuthenticated = Boolean(userId);
 
-    if (!authState.isAuthenticated && !isPublic) {
+    if (!isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
       loginUrl.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
-      const response = withPrivateNoStore(NextResponse.redirect(loginUrl));
-      copyAuthCookies(authState.supabaseResponse, response);
-      return response;
+      return withPrivateNoStore(NextResponse.redirect(loginUrl));
     }
 
-    if (authState.isAuthenticated && (isAuthEntryRoute || isMarketingHome)) {
+    if (isAuthenticated && (isAuthEntryRoute || isMarketingHome)) {
       const dashboardUrl = new URL(`/${locale}${ORGANIZATION_DASHBOARD_PATH}`, req.url);
-      const response = withPrivateNoStore(NextResponse.redirect(dashboardUrl));
-      copyAuthCookies(authState.supabaseResponse, response);
-      return response;
+      return withPrivateNoStore(NextResponse.redirect(dashboardUrl));
     }
 
     const response = intlMiddleware(req);
@@ -213,9 +171,11 @@ export default async function middleware(req: NextRequest) {
       sameSite: 'lax',
     });
 
-    copyAuthCookies(authState.supabaseResponse, response);
-
     return response;
+  }
+
+  if (pathname.startsWith('/api')) {
+    return NextResponse.next();
   }
 
   const detected = detectLocale(req);
@@ -230,7 +190,7 @@ export default async function middleware(req: NextRequest) {
   });
 
   return response;
-}
+});
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],

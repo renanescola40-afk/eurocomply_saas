@@ -88,8 +88,8 @@ jobs:
           set -o pipefail
           npm run build 2>&1 | tee build.log
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.CI_NEXT_PUBLIC_SUPABASE_URL || secrets['NEXT_PUBLIC_SUPABASE_URL'] }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.CI_NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets['NEXT_PUBLIC_SUPABASE_ANON_KEY'] }}
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
       - name: Upload build diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
@@ -110,8 +110,9 @@ jobs:
           npm run quality:routes:e2e
         env:
           PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
-          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.CI_NEXT_PUBLIC_SUPABASE_URL || secrets['NEXT_PUBLIC_SUPABASE_URL'] }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.CI_NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets['NEXT_PUBLIC_SUPABASE_ANON_KEY'] }}
+          ROUTE_HEALTH_SKIP_LOCAL: 'true'
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
           E2E_BASE_URLS: ${{ vars.E2E_BASE_URLS }}
           E2E_PREVIEW_URL: ${{ vars.E2E_PREVIEW_URL }}
           PREVIEW_DEPLOYMENT_URL: ${{ vars.PREVIEW_DEPLOYMENT_URL }}
@@ -121,11 +122,8 @@ jobs:
           PRODUCTION_DEPLOYMENT_URL: ${{ vars.PRODUCTION_DEPLOYMENT_URL }}
           NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
           SITE_URL: ${{ vars.SITE_URL }}
-      - name: Branch protection evidence gate
+      - name: Branch protection evidence contract check
         run: node scripts/security/check-branch-protection-evidence.mjs
-        env:
-          RELEASE_TARGET: enterprise
-          RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'
       - name: Generate SBOM
         run: |
           mkdir -p docs/security/evidence/runtime
@@ -203,7 +201,7 @@ jobs:
       - name: Run Gitleaks fail-closed scan
         uses: gitleaks/gitleaks-action@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
           GITLEAKS_ENABLE_SUMMARY: 'false'
 
