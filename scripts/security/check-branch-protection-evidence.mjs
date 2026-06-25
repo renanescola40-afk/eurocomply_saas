@@ -3,17 +3,14 @@ import { existsSync, readFileSync } from 'node:fs';
 const evidencePath = 'docs/security/evidence/runtime/branch-protection-required-checks.json';
 const policyPath = 'docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md';
 const auditTriagePath = 'docs/security/NPM_AUDIT_TRIAGE.md';
-const isFullSecuritySuiteWorkflow = process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_WORKFLOW === 'Full Security Suite';
-const isEnterpriseRelease = !isFullSecuritySuiteWorkflow && (
-  process.env.RELEASE_TARGET === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true'
-);
+const isEnterpriseRelease = process.env.RELEASE_TARGET === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
 
 const requiredChecks = [
   'Full Security Suite / Core CI, build and npm audit',
   'Full Security Suite / Actionlint',
   'Full Security Suite / Secret scanning (Gitleaks)',
   'Full Security Suite / Semgrep SAST',
-  'Full Security Suite / CodeQL',
+  'Full Security Suite / CodeQL (javascript-typescript)',
   'Full Security Suite / Dependency Review',
   'Full Security Suite / OSSF Scorecard',
   'Full Security Suite / Enterprise merge/deploy gate',
@@ -147,7 +144,6 @@ if (evidence.sbom?.runtime_path !== 'docs/security/evidence/runtime/sbom.cyclone
 
 console.log('RISCK COMPLY branch protection evidence check');
 console.log('------------------------------------------------');
-console.log(`Full Security Suite CI contract mode: ${isFullSecuritySuiteWorkflow ? 'yes' : 'no'}`);
 console.log(`Enterprise release mode: ${isEnterpriseRelease ? 'yes' : 'no'}`);
 
 if (failures.length > 0) {
