@@ -27,24 +27,6 @@ function getOrganizationOwnerInsert(userId: string) {
   };
 }
 
-function getOrganizationMemberInsert(organizationId: string, userId: string, role = 'owner') {
-  if (isUuid(userId)) {
-    return {
-      organization_id: organizationId,
-      user_id: userId,
-      clerk_user_id: null,
-      role,
-    };
-  }
-
-  return {
-    organization_id: organizationId,
-    user_id: null,
-    clerk_user_id: userId,
-    role,
-  };
-}
-
 export async function createOrganization(input: CreateOrganizationInput, userId: string, userEmail?: string | null) {
   const payload = createOrganizationSchema.parse(input);
   const supabase = createAdminClient();
@@ -58,9 +40,23 @@ export async function createOrganization(input: CreateOrganizationInput, userId:
 
   if (error) throw error;
 
+  const memberInsert = isUuid(userId)
+    ? {
+        organization_id: organization.id,
+        user_id: userId,
+        clerk_user_id: null,
+        role: 'owner',
+      }
+    : {
+        organization_id: organization.id,
+        user_id: null,
+        clerk_user_id: userId,
+        role: 'owner',
+      };
+
   const { error: memberError } = await supabase
     .from('organization_members')
-    .insert(getOrganizationMemberInsert(organization.id, userId));
+    .insert(memberInsert as never);
 
   if (memberError) throw memberError;
 
