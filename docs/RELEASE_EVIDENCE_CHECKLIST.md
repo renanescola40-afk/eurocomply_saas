@@ -4,65 +4,78 @@ This checklist records the evidence required before EuroComply can be represente
 
 ## Current release assessment
 
-- Release name: EuroComply Final Enterprise Release Decision - 2026-06-24
-- Assessment date: 2026-06-24
+- Release name: EuroComply GitHub Enterprise Hardening Review - 2026-06-25
+- Assessment date: 2026-06-25
 - Repository: `renanescola40-afk/eurocomply_saas`
-- Latest assessed PR: #431
-- PR #431 head SHA: `a52abc7f2b7b1eef41f2d8ab79ed5fdc7ef48a2c`
-- PR #431 merge commit SHA: `bcb694b6f9a93d8ae59db742429f00dbb41b369b`
 - Release owner: @renansilva2002 / renanescola40-afk
 - Security owner: @renansilva2002 / renanescola40-afk
 - Target environment: production / enterprise candidate
-- Final decision: **No-Go**
+- Final decision: **No-Go for enterprise**
+
+## GitHub enterprise evidence
+
+| Evidence | Status | Required before Go |
+| --- | --- | --- |
+| Full Security Suite required check list | Documented | Yes |
+| Branch protection / ruleset API proof | **Exception** | Required for enterprise |
+| `RELEASE_TARGET=enterprise node scripts/security/check-branch-protection-evidence.mjs` | Expected to fail until evidence is `Complete` | Required for enterprise |
+| Direct push to `main` risk record | Documented | Yes |
+| SBOM artifact name | `risck-comply-sbom` required | Yes |
+| Secret scanning mode | Strict fail-closed required | Yes |
+| Package lock alignment | **Open until `package-lock.json` matches `package.json`** | Yes |
 
 ## Command validation evidence
 
 | Command | Status | Required before Go |
 | --- | --- | --- |
-| `npm ci` | Partial; deterministic install variants passed, but exact plain command output from the final runner is missing | Yes |
-| `npm run lint` | Passed in CI / Full Security Suite | Yes |
-| `npm run typecheck` | Passed in CI / Full Security Suite | Yes |
-| `npm run test` | Passed in CI / Full Security Suite | Yes |
-| `npm run test:e2e` | Partial; E2E gates passed when configured, but exact standalone command output is missing | Yes |
-| `npm run build` | Passed in Full Security Suite | Yes |
-| `npm run security:ci` | Partial; security workflows passed, but exact standalone command output is missing | Yes |
-| `npm run release:readiness` | **Missing / not proven passed** | Yes |
-| `npm run release:enterprise-readiness` | **Missing / not proven passed** | Required for enterprise |
-| `node scripts/release/run-final-validation.mjs` | **Missing / not proven passed** | Yes |
+| `npm ci --ignore-scripts` | Required in Full Security Suite | Yes |
+| `node scripts/security/check-package-lock-alignment.mjs` | Added as repository gate; expected to fail until lockfile drift is fixed | Yes |
+| `npm run lint` | Required in CI / Full Security Suite | Yes |
+| `npm run typecheck` | Required in CI / Full Security Suite | Yes |
+| `npm run test` | Required in CI / Full Security Suite | Yes |
+| `npm run build` | Required in Full Security Suite | Yes |
+| `STRICT_PUBLIC_SECRET_SCAN=1 npm run security:ci` | Required; report-only secret scanning is not acceptable | Yes |
+| `npm run release:readiness` | Required before production Go | Yes |
+| `npm run release:enterprise-readiness` | Required before enterprise Go | Required for enterprise |
+| `node scripts/release/run-final-validation.mjs` | Required before production/enterprise Go | Yes |
 
 ## Deployment and runtime evidence
 
 | Evidence | Status | Impact |
 | --- | --- | --- |
-| Vercel preview deployment | Present / Ready for PR #431 | Positive, not approval |
-| Vercel commit status | Success for PR #431 head SHA | Positive, not approval |
-| Deployment URL functional verification | **Open** | Blocks Go |
-| Preview and production smoke tests | **Open** | Blocks Go |
-| Production secrets provider stores | Complete | Positive; runtime preflight still required |
-| Supabase live RLS validation | **Open / not_run** | Blocks production and enterprise Go |
-| Stripe runtime validation | Complete / passed | Positive for paid billing evidence |
-| MFA / IdP runtime validation | **Exception / provider proof absent** | Blocks enterprise Go |
-| Upload scanner live proof | Complete / passed | Positive; revalidate before enterprise/provider change |
-| Audit-chain live validation | **Exception / target validation required** | Blocks enterprise Go |
-| Observability readiness | Complete as repository evidence | Positive; deployment smoke and drill proof still required |
-| Rollback target | Candidate documented only | Blocks Go until verified and dry-run evidence exists |
-| Incident/support owners | Assigned | Positive; drill/sign-off remains required |
-| External review | **Open / not_started** | Blocks enterprise pilot/procurement and external assurance claims |
+| Vercel preview deployment | Required before production Go | Positive, not approval |
+| Vercel commit status | Required for exact release commit | Positive, not approval |
+| Deployment URL functional verification | **Open unless attached for exact commit** | Blocks Go |
+| Preview and production smoke tests | **Open unless attached for exact commit** | Blocks Go |
+| Production secrets provider stores | Required | Positive; runtime preflight still required |
+| Supabase live RLS validation | **Open unless target evidence is attached** | Blocks production and enterprise Go |
+| Stripe runtime validation | Required for paid billing evidence | Positive when current |
+| MFA / IdP runtime validation | **Exception / provider proof absent unless attached** | Blocks enterprise Go |
+| Upload scanner live proof | Required when uploads are enabled | Positive when current |
+| Audit-chain live validation | **Exception / target validation required unless attached** | Blocks enterprise Go |
+| Observability readiness | Required as repository and runtime evidence | Positive; deployment smoke and drill proof still required |
+| Rollback target | Candidate-only unless dry-run evidence exists | Blocks Go until verified |
+| Incident/support owners | Required | Positive; drill/sign-off remains required |
+| External review | **Open / not_started unless real report is attached** | Blocks enterprise pilot/procurement |
 
-## Evidence still blocking Go
+## Evidence still blocking enterprise Go
 
 | Area | Current gap | Release impact |
 | --- | --- | --- |
-| Final validation | Exact final validation runner output is missing | Blocks all Go paths |
-| Deployment smoke | Deployment URL exists but functional smoke is Open | Blocks production/public/enterprise Go |
-| RLS live validation | Target-environment tenant-isolation evidence is Open/not_run | Blocks production and enterprise Go |
-| MFA/IdP | Real provider runtime proof is absent | Blocks enterprise Go |
-| Audit chain | Target live validation is missing | Blocks enterprise Go |
-| External review | Real external review evidence is not attached | Blocks enterprise pilot/procurement |
-| Rollback | Rollback target is candidate-only and not dry-run verified | Blocks Go |
+| Branch protection | Evidence is `Exception`, not `Complete` | Blocks enterprise Go |
+| Required checks | Must be confirmed in GitHub Settings → Rulesets/Branches → main | Blocks enterprise Go |
+| Lockfile | `package-lock.json` root metadata must match `package.json` | Blocks CI / enterprise Go |
+| Secret scanning | Must run with `STRICT_PUBLIC_SECRET_SCAN=1` and fail on real values | Blocks CI / enterprise Go |
+| Final validation | Exact final validation runner output must be attached | Blocks all Go paths |
+| Deployment smoke | Deployment URL functional smoke must be attached | Blocks production/public/enterprise Go |
+| RLS live validation | Target-environment tenant-isolation evidence must be attached | Blocks production and enterprise Go |
+| MFA/IdP | Real provider runtime proof must be attached | Blocks enterprise Go |
+| Audit chain | Target live validation must be attached | Blocks enterprise Go |
+| External review | Real external review evidence must be attached | Blocks enterprise pilot/procurement |
+| Rollback | Rollback target must be dry-run verified | Blocks Go |
 
 ## Release decision
 
-**Final decision: No-Go.**
+**Final decision: No-Go for enterprise.**
 
-Positive CI, security-suite, Vercel preview, Stripe runtime, upload scanner, and observability repository evidence do not close the remaining P0 runtime and release-governance gaps.
+Repository-side security policy, branch-protection evidence contract, direct-push risk documentation, and lockfile alignment gate are now represented in code/docs. Enterprise release remains blocked until GitHub branch protection evidence is `Complete`, `package-lock.json` aligns with `package.json`, and the exact release commit has green Full Security Suite plus runtime/release evidence.
