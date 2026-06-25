@@ -1,16 +1,16 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "evidenceItem": "required-status-checks",
   "status": "Exception",
   "repository": "renanescola40-afk/eurocomply_saas",
   "branch": "main",
   "evidence_type": "branch-protection-required-checks",
-  "captured_at": "2026-06-20T00:00:00.000+01:00",
+  "captured_at": "2026-06-25T00:00:00.000+01:00",
   "reviewer": "@renansilva2002",
-  "reviewedAt": "2026-06-20T00:00:00.000+01:00",
+  "reviewedAt": "2026-06-25T00:00:00.000+01:00",
   "source": "repo-policy-evidence",
   "policy_document": "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
-  "summary": "Required status checks and branch protection controls are documented for the main branch. This evidence remains an Exception until repository administrators confirm that the GitHub branch protection or ruleset configuration exactly matches the required Full Security Suite checks.",
+  "summary": "Required status checks and branch protection controls are documented for main. This evidence remains an Exception because this PR cannot verify or mutate repository ruleset/branch protection UI state through the available connector action. Enterprise release validation fails while this status is Exception or Open.",
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
@@ -30,6 +30,17 @@
     "block_force_pushes": true,
     "block_deletions": true,
     "restrict_direct_pushes": true
+  },
+  "direct_push_to_main_risk": {
+    "treated_as_enterprise_release_risk": true,
+    "risk": "Direct pushes to main bypass normal PR review evidence and can trigger production/release workflows before the enterprise approval record is complete.",
+    "required_response": "Treat any direct push to main as a release governance exception. Do not promote the commit until branch protection evidence is Complete and Full Security Suite / Enterprise merge/deploy gate is green for the exact commit."
+  },
+  "workflow_secret_log_policy": {
+    "secrets_in_logs_prohibited": true,
+    "ci_build_uses_placeholder_public_values": true,
+    "checkout_persist_credentials_disabled": true,
+    "strict_public_secret_scan_required": true
   },
   "required_status_checks": [
     "Full Security Suite / Core CI, build and npm audit",
@@ -53,23 +64,31 @@
     "build_failure_blocks": true,
     "security_ci_failure_blocks": true,
     "secret_scanning_failure_blocks": true,
-    "untriaged_high_or_critical_npm_audit_blocks": true
+    "untriaged_high_or_critical_npm_audit_blocks": true,
+    "branch_protection_evidence_blocks": true,
+    "strict_public_secret_scan_required": true,
+    "hardcoded_secret_blocks": true,
+    "package_lock_mismatch_blocks": true,
+    "direct_push_main_is_release_risk_documented": true,
+    "workflow_secret_log_exposure_blocks": true
   },
   "sbom": {
     "generated_by_ci": true,
     "artifact_name": "risck-comply-sbom",
-    "runtime_path": "docs/security/evidence/runtime/sbom.json"
+    "runtime_path": "docs/security/evidence/runtime/sbom.cyclonedx.json",
+    "format": "CycloneDX"
   },
   "exception": {
     "riskOwner": "@renansilva2002",
-    "rationale": "Repository policy evidence is committed, but the GitHub branch protection or ruleset configuration must be verified by an administrator before this evidence can be marked Complete.",
+    "rationale": "Repository policy evidence is committed, but GitHub branch protection/ruleset configuration must be verified by an administrator before this evidence can be marked Complete. The available connector did not expose a branch-protection mutation or verification action for rulesets.",
     "compensatingControls": [
-      "Do not merge or release unless Full Security Suite / Enterprise merge/deploy gate is green.",
+      "Do not merge or release unless Full Security Suite / Enterprise merge/deploy gate is green for the exact commit.",
       "Keep docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md aligned with required GitHub status checks.",
-      "Run .github/workflows/p0-branch-protection-evidence.yml after branch protection is configured and review the generated artifact."
+      "Run .github/workflows/p0-branch-protection-evidence.yml after branch protection is configured and review the generated artifact.",
+      "For enterprise release validation, scripts/security/check-branch-protection-evidence.mjs fails while this evidence is Exception or Open."
     ],
     "expiresAt": "2026-06-27",
     "approvalReference": "P0 branch protection required checks rollout"
   },
-  "verification_note": "This file records the required policy and evidence contract. Repository administrators must keep the GitHub branch protection or ruleset configuration aligned with this file before release promotion."
+  "verification_note": "Settings → Rulesets/Branches → main must be configured to match this evidence before release promotion. Do not mark this evidence Complete without API-generated or screenshot-backed proof that each required check is configured."
 }

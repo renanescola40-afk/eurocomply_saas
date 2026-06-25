@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const evidencePath = 'docs/security/evidence/runtime/branch-protection-required-checks.json';
 const policyPath = 'docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md';
 const auditTriagePath = 'docs/security/NPM_AUDIT_TRIAGE.md';
+const isEnterpriseRelease = process.env.RELEASE_TARGET === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
 
 const requiredChecks = [
   'Full Security Suite / Core CI, build and npm audit',
@@ -41,6 +42,12 @@ const requiredReleaseBlockers = [
   'security_ci_failure_blocks',
   'secret_scanning_failure_blocks',
   'untriaged_high_or_critical_npm_audit_blocks',
+  'branch_protection_evidence_blocks',
+  'strict_public_secret_scan_required',
+  'hardcoded_secret_blocks',
+  'package_lock_mismatch_blocks',
+  'direct_push_main_is_release_risk_documented',
+  'workflow_secret_log_exposure_blocks',
 ];
 
 const failures = [];
@@ -92,6 +99,14 @@ if (!Date.parse(evidence.captured_at ?? '')) {
   failures.push(`${evidencePath} captured_at must be an ISO-8601 timestamp`);
 }
 
+if (isEnterpriseRelease && ['Exception', 'Open'].includes(evidence.status)) {
+  failures.push(`${evidencePath} status=${evidence.status} is not allowed for enterprise release; branch protection evidence must be Complete`);
+}
+
+if (isEnterpriseRelease && evidence.status !== 'Complete') {
+  failures.push(`${evidencePath} status must be Complete for enterprise release`);
+}
+
 for (const flag of requiredProtectionFlags) {
   requireTrue(evidence.branch_protection, flag, 'branch_protection');
 }
@@ -123,12 +138,13 @@ if (evidence.sbom?.artifact_name !== 'risck-comply-sbom') {
   failures.push('sbom.artifact_name must be risck-comply-sbom');
 }
 
-if (evidence.sbom?.runtime_path !== 'docs/security/evidence/runtime/sbom.json') {
-  failures.push('sbom.runtime_path must be docs/security/evidence/runtime/sbom.json');
+if (evidence.sbom?.runtime_path !== 'docs/security/evidence/runtime/sbom.cyclonedx.json') {
+  failures.push('sbom.runtime_path must be docs/security/evidence/runtime/sbom.cyclonedx.json');
 }
 
 console.log('RISCK COMPLY branch protection evidence check');
 console.log('------------------------------------------------');
+console.log(`Enterprise release mode: ${isEnterpriseRelease ? 'yes' : 'no'}`);
 
 if (failures.length > 0) {
   console.error('Branch protection evidence failures:');
