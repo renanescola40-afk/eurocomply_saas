@@ -4,7 +4,7 @@ const DEFAULT_POSTHOG_HOST = "https://eu.i.posthog.com";
 const DEFAULT_POSTHOG_ASSET_HOST = "https://eu-assets.i.posthog.com";
 
 export function PostHogScript() {
-  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY ?? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
 
   if (!posthogKey) {
     return null;
