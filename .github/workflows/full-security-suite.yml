@@ -110,6 +110,7 @@ jobs:
           npm run quality:routes:e2e
         env:
           PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
+          ROUTE_HEALTH_SKIP_LOCAL: 'true'
           NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
           E2E_BASE_URLS: ${{ vars.E2E_BASE_URLS }}
@@ -200,7 +201,7 @@ jobs:
       - name: Run Gitleaks fail-closed scan
         uses: gitleaks/gitleaks-action@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
           GITLEAKS_ENABLE_SUMMARY: 'false'
 
