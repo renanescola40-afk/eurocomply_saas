@@ -44,11 +44,15 @@ function getAppOrigin() {
   return DEFAULT_APP_URL;
 }
 
-function getCurrentLocalePrefix() {
-  if (typeof window === 'undefined') return '/pt';
+function getCurrentLocale() {
+  if (typeof window === 'undefined') return 'pt' as Locale;
   const segments = window.location.pathname.split('/').filter(Boolean);
   const currentLocale = segments[0] as Locale | undefined;
-  return locales.includes(currentLocale as Locale) ? `/${currentLocale}` : '/pt';
+  return locales.includes(currentLocale as Locale) ? currentLocale as Locale : 'pt';
+}
+
+function getCurrentLocalePrefix() {
+  return `/${getCurrentLocale()}`;
 }
 
 function getAuthCallbackUrl(nextPath = '/pt/dashboard/organizations') {
@@ -86,27 +90,15 @@ function redirectAuthenticatedUser() {
   }
 }
 
-async function recoverOAuthSessionFromUrl() {
-  if (typeof window === 'undefined') return;
+function getGoogleOAuthEntryUrl() {
+  const entryUrl = new URL('/auth/google', getAppOrigin());
+  const locale = getCurrentLocale();
+  const nextPath = getLocalizedDashboardPath();
 
-  const url = new URL(window.location.href);
-  const code = url.searchParams.get('code');
+  entryUrl.searchParams.set('locale', locale);
+  entryUrl.searchParams.set('next', nextPath);
 
-  if (!code) return;
-
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-  url.searchParams.delete('code');
-  url.searchParams.delete('state');
-  url.searchParams.delete('scope');
-  url.searchParams.delete('authuser');
-  url.searchParams.delete('prompt');
-
-  window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
-
-  if (!error) {
-    redirectAuthenticatedUser();
-  }
+  return entryUrl.toString();
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -117,7 +109,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function loadSession() {
       try {
-        await recoverOAuthSessionFromUrl();
         const { data } = await supabase.auth.getSession();
         const currentSession = data.session;
         setSession(currentSession);
@@ -187,45 +178,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     try {
-      const nextPath = getLocalizedDashboardPath();
-      const redirectTo = getAuthCallbackUrl(nextPath);
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-        },
-      });
-
-      if (error) {
-        const errorCode = (error as any)?.error_code || error.message;
-        const isProviderDisabled = error.message?.includes('provider is not enabled')
-          || error.message?.includes('Unsupported provider')
-          || errorCode === 'validation_failed';
-
-        const isRedirectMismatch = error.message?.includes('redirect')
-          || error.message?.includes('callback')
-          || errorCode === 'invalid_redirect_uri';
-
-        if (isProviderDisabled) {
-          return {
-            error: new Error(
-              'Google OAuth ainda não está ativado no Supabase. Ative o provider Google em Authentication > Sign In / Providers ou entre com email e senha.'
-            ) as Error,
-          };
-        }
-
-        if (isRedirectMismatch) {
-          return {
-            error: new Error(
-              `Erro de configuração: adicione esta URL nos Redirect URLs do Supabase: ${redirectTo}`
-            ) as Error,
-          };
-        }
-
-        return { error: error as Error | null };
+      if (typeof window === 'undefined') {
+        return { error: new Error('Google OAuth must start in the browser.') };
       }
 
+      window.location.assign(getGoogleOAuthEntryUrl());
       return { error: null };
     } catch (e) {
       return { error: e as Error };
