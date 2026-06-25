@@ -89,7 +89,7 @@ jobs:
           npm run build 2>&1 | tee build.log
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
       - name: Upload build diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
@@ -112,7 +112,7 @@ jobs:
           PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
           ROUTE_HEALTH_SKIP_LOCAL: 'true'
           NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
           E2E_BASE_URLS: ${{ vars.E2E_BASE_URLS }}
           E2E_PREVIEW_URL: ${{ vars.E2E_PREVIEW_URL }}
           PREVIEW_DEPLOYMENT_URL: ${{ vars.PREVIEW_DEPLOYMENT_URL }}
