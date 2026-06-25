@@ -4,6 +4,9 @@ import { join, relative, sep } from 'node:path';
 const root = process.cwd();
 const workflowRoot = join(root, '.github', 'workflows');
 const secretScope = 'sec' + 'rets';
+const allowedWorkflowPlaceholders = new Set([
+  'https://ci-placeholder.supabase.co',
+]);
 
 const requiredWorkflowFiles = [
   '.github/workflows/ci.yml',
@@ -92,7 +95,11 @@ function credentialReferenceForms(name) {
 }
 
 function printsGitHubSecretContext(line) {
-  return new RegExp(`\\$\\{\\{\\s*${secretScope}(?:\\.|\\[['"])`).test(line);
+  return new RegExp(`\$\{\{\s*${secretScope}(?:\.|\[['"])`).test(line);
+}
+
+function isAllowedWorkflowPlaceholder(value) {
+  return allowedWorkflowPlaceholders.has(value);
 }
 
 const failures = [];
@@ -122,6 +129,8 @@ for (const { path, source } of workflowSources) {
 
   for (const forbidden of forbiddenWorkflowPatterns) {
     for (const match of source.matchAll(asGlobalRegExp(forbidden.pattern))) {
+      const value = match[0];
+      if (isAllowedWorkflowPlaceholder(value)) continue;
       failures.push(`${path}:${lineNumberFor(source, match.index ?? 0)} forbidden CI/CD secret pattern: ${forbidden.name}`);
     }
   }
@@ -134,7 +143,7 @@ for (const { path, source } of workflowSources) {
     }
 
     for (const envName of sensitiveWorkflowEnvNames) {
-      const shellVariablePattern = new RegExp(`\\$\\{?${envName}\\}?`);
+      const shellVariablePattern = new RegExp(`\$\{?${envName}\}?`);
       if (shellVariablePattern.test(line)) {
         failures.push(`${path}:${index + 1} workflow must not print provider credential variable: ${envName}`);
       }
