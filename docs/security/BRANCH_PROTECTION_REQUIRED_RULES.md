@@ -31,7 +31,7 @@ Configure these checks as required in GitHub branch protection or a repository r
 | Full Security Suite | Actionlint |
 | Full Security Suite | Secret scanning (Gitleaks) |
 | Full Security Suite | Semgrep SAST |
-| Full Security Suite | CodeQL |
+| Full Security Suite | CodeQL (javascript-typescript) |
 | Full Security Suite | Dependency Review |
 | Full Security Suite | OSSF Scorecard |
 | Full Security Suite | Enterprise merge/deploy gate |
