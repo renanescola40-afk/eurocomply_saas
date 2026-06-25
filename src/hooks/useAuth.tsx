@@ -24,7 +24,6 @@ type ClerkCompatUser = {
   imageUrl: string;
   user_metadata: Record<string, unknown>;
   publicMetadata: Record<string, unknown>;
-  unsafeMetadata: Record<string, unknown>;
 };
 
 type ClerkCompatSession = {
@@ -79,10 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!clerkUser) return null;
 
     const publicMetadata = clerkUser.publicMetadata as Record<string, unknown>;
-    const unsafeMetadata = clerkUser.unsafeMetadata as Record<string, unknown>;
     const userMetadata = {
       ...publicMetadata,
-      ...unsafeMetadata,
       email: getPrimaryEmail(clerkUser),
       name: clerkUser.fullName,
       full_name: clerkUser.fullName,
@@ -99,7 +96,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       imageUrl: clerkUser.imageUrl,
       user_metadata: userMetadata,
       publicMetadata,
-      unsafeMetadata,
     };
   }, [clerkUser]);
 
