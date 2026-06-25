@@ -9,23 +9,58 @@ function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function getOrganizationOwnerInsert(userId: string) {
+  if (isUuid(userId)) {
+    return {
+      created_by: userId,
+      created_by_clerk_user_id: null,
+    };
+  }
+
+  return {
+    created_by: null,
+    created_by_clerk_user_id: userId,
+  };
+}
+
+function getOrganizationMemberInsert(organizationId: string, userId: string, role = 'owner') {
+  if (isUuid(userId)) {
+    return {
+      organization_id: organizationId,
+      user_id: userId,
+      clerk_user_id: null,
+      role,
+    };
+  }
+
+  return {
+    organization_id: organizationId,
+    user_id: null,
+    clerk_user_id: userId,
+    role,
+  };
+}
+
 export async function createOrganization(input: CreateOrganizationInput, userId: string, userEmail?: string | null) {
   const payload = createOrganizationSchema.parse(input);
   const supabase = createAdminClient();
+  const ownerInsert = getOrganizationOwnerInsert(userId);
 
   const { data: organization, error } = await supabase
     .from('organizations')
-    .insert({ name: payload.name, slug: payload.slug, created_by: userId })
+    .insert({ name: payload.name, slug: payload.slug, ...ownerInsert })
     .select('*')
     .single();
 
   if (error) throw error;
 
-  const { error: memberError } = await supabase.from('organization_members').insert({
-    organization_id: organization.id,
-    user_id: userId,
-    role: 'owner',
-  });
+  const { error: memberError } = await supabase
+    .from('organization_members')
+    .insert(getOrganizationMemberInsert(organization.id, userId));
 
   if (memberError) throw memberError;
 
