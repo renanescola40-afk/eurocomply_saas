@@ -1,8 +1,8 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { z } from 'zod';
+import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
 import { syncClerkOrganizationToSupabase } from '@/server/clerk/organization-sync';
-import { noStoreJson, secureApiError } from '@/server/security/api-guards';
-import { checkDistributedRateLimit, getRateLimitHeaders } from '@/server/security/rate-limit';
+import { noStoreJson, requirePermission, requireTrustedMutation, secureApiError } from '@/server/security/api-guards';
 
 const clerkOrgSyncBodySchema = z.object({
   clerkOrgId: z.string().min(1).max(128),
@@ -20,25 +20,36 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'unauthorized' }, { status: 401 });
     }
 
-    const rateLimit = await checkDistributedRateLimit({
-      policy: 'general-api',
-      userId,
-      organizationId: orgId,
-      action: 'clerk.organization.sync',
-      route: '/api/clerk/organizations/sync',
+    const mutationDenied = await requireTrustedMutation(request, {
+      rateLimit: {
+        policy: 'general-api',
+        userId,
+        organizationId: orgId,
+        action: 'clerk.organization.sync',
+        route: '/api/clerk/organizations/sync',
+      },
     });
 
-    if (!rateLimit.allowed) {
-      return noStoreJson(
-        { error: 'rate_limited' },
-        {
-          status: 429,
-          headers: getRateLimitHeaders(rateLimit),
-        },
-      );
+    if (mutationDenied) {
+      return mutationDenied;
     }
 
-    const rawBody = await request.json().catch(() => null);
+    await requirePermission({
+      userId,
+      organizationId: orgId,
+      permission: 'manage_team',
+    });
+
+    let rawBody: unknown;
+    try {
+      rawBody = await readBoundedJsonRequest(request, { maxBytes: 2048 });
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return noStoreJson({ error: 'invalid_organization_payload' }, { status: 400 });
+      }
+      throw error;
+    }
+
     const parsedBody = clerkOrgSyncBodySchema.safeParse(rawBody);
 
     if (!parsedBody.success || parsedBody.data.clerkOrgId !== orgId) {
