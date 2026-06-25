@@ -12,7 +12,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | admin-only | Auth, membership, admin/RBAC permission, tenant validation, no-store, audit for sensitive changes. |
 | high-risk | Auth, trusted origin for mutations, Zod/body validation, rate limit, RBAC, tenant validation, audit/step-up where sensitive. |
 | webhook | Provider signature verification instead of user session; raw body preserved; no-store; no CSRF origin requirement. |
-| health/internal | Health/ops/internal secret or cron authorization; no tenant data exposure; no-store. |
+| health/internal | Health/ops/internal authorization; no tenant data exposure; no-store. |
 
 ## Route registry
 
@@ -20,7 +20,8 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | --- | --- | --- |
 | `src/app/api/health/route.ts` | public safe | Liveness endpoint; no private data. |
 | `src/app/api/ready/route.ts` | public safe | Readiness endpoint; no private data. |
-| `src/app/api/ops/smoke/route.ts` | health/internal | Ops smoke check guarded by operational secret/no-store contract. |
+| `src/app/api/observability/smoke/route.ts` | health/internal | Observability smoke check guarded by internal authorization and no-store contract. |
+| `src/app/api/ops/smoke/route.ts` | health/internal | Ops smoke check guarded by operational authorization and no-store contract. |
 | `src/app/api/ops/enterprise-readiness/route.ts` | health/internal | Ops readiness check; no tenant payloads. |
 | `src/app/api/internal/trial-reminders/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
 | `src/app/api/internal/daily-maintenance/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
@@ -62,8 +63,8 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 
 ## BOLA/IDOR invariants
 
-Every tenant-scoped resource must be loaded from the server and checked against the active organization before returning or mutating it. Client-supplied IDs are selectors only; they never establish authorization. Service-role Supabase clients remain server-side only and must be preceded by `requireApiUser()`, `requireOrganizationContext()`/`requireOrganizationMembership()`, and `requirePermission()` or an equivalent route-specific permission check.
+Every tenant-scoped resource must be loaded from the server and checked against the active organization before returning or mutating it. Client-supplied IDs are selectors only; they never establish authorization.
 
 ## Required negative tests
 
-Security tests should cover: unauthenticated requests return 401; missing membership returns 403; viewer attempting admin mutation returns 403; tenant A attempting tenant B resource access returns 403/404 without leakage; invalid origin returns 403; invalid body returns 400; internal errors return sanitized responses without stack traces; legitimate signed webhooks continue to pass.
+Security tests should cover unauthenticated requests, missing membership, viewer attempting admin mutation, tenant-crossing access attempts, invalid origin, invalid body, sanitized internal errors, and legitimate signed webhooks.
