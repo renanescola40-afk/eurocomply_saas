@@ -5,10 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   return noStoreJson(
-    {
-      status: 'ok',
-      checks: { application: 'ok' },
-    },
+    { status: 'ok' },
     {
       status: 200,
       headers: {
