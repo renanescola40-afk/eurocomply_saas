@@ -3,7 +3,10 @@ import { existsSync, readFileSync } from 'node:fs';
 const evidencePath = 'docs/security/evidence/runtime/branch-protection-required-checks.json';
 const policyPath = 'docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md';
 const auditTriagePath = 'docs/security/NPM_AUDIT_TRIAGE.md';
-const isEnterpriseRelease = process.env.RELEASE_TARGET === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
+const isFullSecuritySuiteWorkflow = process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_WORKFLOW === 'Full Security Suite';
+const isEnterpriseRelease = !isFullSecuritySuiteWorkflow && (
+  process.env.RELEASE_TARGET === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true'
+);
 
 const requiredChecks = [
   'Full Security Suite / Core CI, build and npm audit',
@@ -144,6 +147,7 @@ if (evidence.sbom?.runtime_path !== 'docs/security/evidence/runtime/sbom.cyclone
 
 console.log('RISCK COMPLY branch protection evidence check');
 console.log('------------------------------------------------');
+console.log(`Full Security Suite CI contract mode: ${isFullSecuritySuiteWorkflow ? 'yes' : 'no'}`);
 console.log(`Enterprise release mode: ${isEnterpriseRelease ? 'yes' : 'no'}`);
 
 if (failures.length > 0) {
