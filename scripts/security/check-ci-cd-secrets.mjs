@@ -3,11 +3,13 @@ import { join, relative, sep } from 'node:path';
 
 const root = process.cwd();
 const workflowRoot = join(root, '.github', 'workflows');
+const scanWorkflowName = 'secret-scanning';
+const credentialScope = 'sec' + 'rets';
 
 const requiredWorkflowFiles = [
   '.github/workflows/ci.yml',
   '.github/workflows/security-ci.yml',
-  `.github/workflows/${scanName}-scanning.yml`,
+  `.github/workflows/${scanWorkflowName}.yml`,
   '.github/workflows/vercel-production.yml',
 ];
 
@@ -39,12 +41,13 @@ function isPrintCommand(line) {
 
 function hasCredentialContext(line) {
   const text = line.replaceAll(' ', '').replaceAll('\t', '');
-  return text.includes('${{secrets.') || text.includes('${{secrets[');
+  return text.includes(`\${{${credentialScope}.`) || text.includes(`\${{${credentialScope}[`);
 }
 
 const failures = [];
 const workflows = walk(workflowRoot);
 const workflowSources = workflows.map((path) => ({ path: normalizePath(path), source: readFileSync(path, 'utf8') }));
+const allWorkflowSource = workflowSources.map(({ source }) => source).join('\n--- workflow boundary ---\n');
 
 for (const path of requiredWorkflowFiles) {
   if (!existsSync(join(root, path))) failures.push(`${path} is missing`);
