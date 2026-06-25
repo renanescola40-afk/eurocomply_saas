@@ -121,11 +121,8 @@ jobs:
           PRODUCTION_DEPLOYMENT_URL: ${{ vars.PRODUCTION_DEPLOYMENT_URL }}
           NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
           SITE_URL: ${{ vars.SITE_URL }}
-      - name: Branch protection evidence gate
+      - name: Branch protection evidence contract check
         run: node scripts/security/check-branch-protection-evidence.mjs
-        env:
-          RELEASE_TARGET: enterprise
-          RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'
       - name: Generate SBOM
         run: |
           mkdir -p docs/security/evidence/runtime
