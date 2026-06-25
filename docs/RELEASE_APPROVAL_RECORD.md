@@ -95,7 +95,7 @@ Rollback is **defined for remediation tracking only** and is not approved for pr
 | --- | --- |
 | Previous known-good deployment URL candidate | `https://eurocomply-saas-git-sync-rel-44736d-renanescola40-afks-projects.vercel.app` |
 | Previous known-good commit SHA candidate | `94de2eb12baa2573ebc442e1f9cc8f6292e7869a` |
-| Verification status | Candidate only; functional verification and dry-run evidence not attached |
+| Verification status | Candidate only; runtime URL was not functionally verified. Functional verification and dry-run evidence not attached |
 | Rollback trigger criteria | Roll back or disable release if deployment health endpoint fails twice within 10 minutes, Vercel deployment fails, SEV-1/SEV-2 customer-impacting errors exceed threshold, auth/session/RLS checks fail, Stripe webhook signature/idempotency fails, upload scanning enters fail-open/unknown state, or enterprise `/api/ready` reports required storage/scanner unavailable. |
 | Rollback owner | @renansilva2002 / renanescola40-afk |
 | Incident owner | @renansilva2002 / renanescola40-afk |
