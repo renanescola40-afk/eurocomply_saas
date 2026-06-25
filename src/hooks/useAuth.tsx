@@ -22,6 +22,9 @@ type ClerkCompatUser = {
   lastName: string | null;
   fullName: string | null;
   imageUrl: string;
+  user_metadata: Record<string, unknown>;
+  publicMetadata: Record<string, unknown>;
+  unsafeMetadata: Record<string, unknown>;
 };
 
 type ClerkCompatSession = {
@@ -75,6 +78,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const user = useMemo<ClerkCompatUser | null>(() => {
     if (!clerkUser) return null;
 
+    const publicMetadata = clerkUser.publicMetadata as Record<string, unknown>;
+    const unsafeMetadata = clerkUser.unsafeMetadata as Record<string, unknown>;
+    const userMetadata = {
+      ...publicMetadata,
+      ...unsafeMetadata,
+      email: getPrimaryEmail(clerkUser),
+      name: clerkUser.fullName,
+      full_name: clerkUser.fullName,
+      first_name: clerkUser.firstName,
+      last_name: clerkUser.lastName,
+    } satisfies Record<string, unknown>;
+
     return {
       id: clerkUser.id,
       email: getPrimaryEmail(clerkUser),
@@ -82,6 +97,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       lastName: clerkUser.lastName,
       fullName: clerkUser.fullName,
       imageUrl: clerkUser.imageUrl,
+      user_metadata: userMetadata,
+      publicMetadata,
+      unsafeMetadata,
     };
   }, [clerkUser]);
 
