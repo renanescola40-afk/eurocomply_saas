@@ -67,4 +67,4 @@ Every tenant-scoped resource must be loaded from the server and checked against 
 
 ## Required negative tests
 
-Security tests should cover unauthenticated requests, missing membership, viewer attempting admin mutation, tenant-crossing access attempts, invalid origin, invalid body, sanitized internal errors, and legitimate signed webhooks.
+Security tests must assert that unauthenticated requests return 401, missing membership returns 403, viewer attempting admin mutation returns 403, tenant A attempting tenant B resource access returns 403/404, invalid origin returns 403, invalid body returns 400, internal errors return sanitized responses without stack traces, and legitimate signed webhooks continue to pass.
