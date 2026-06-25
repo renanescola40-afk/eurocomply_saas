@@ -1,0 +1,132 @@
+name: Supabase Clerk Organization Migration Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: Supabase environment to validate. Configure matching GitHub environments with Supabase secrets.
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+      apply_migrations:
+        description: Apply Clerk organization migrations before validation
+        required: true
+        type: boolean
+        default: true
+      run_legacy_uuid_validator:
+        description: Also run the existing Supabase Auth UUID live validator after Clerk SQL validation
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  clerk-org-migration-validation:
+    name: Backup, migrate, and validate Clerk tenant isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.target_environment }}
+    steps:
+      - name: Checkout trusted ref
+        uses: actions/checkout@v6
+
+      - name: Install database client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Verify required database secret
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "${SUPABASE_DB_URL}" ]; then
+            echo "SUPABASE_DB_URL is required for ${{ inputs.target_environment }}."
+            echo "Use the Supabase IPv4 transaction pooler connection string, not the direct IPv6 db endpoint."
+            exit 1
+          fi
+          if printf '%s' "${SUPABASE_DB_URL}" | grep -Eq '@db\.[^.]+\.supabase\.co:5432/'; then
+            echo "SUPABASE_DB_URL appears to be the direct IPv6-only Supabase database endpoint."
+            echo "Use the Supabase transaction pooler URI, typically port 6543, so GitHub-hosted runners can connect."
+            exit 1
+          fi
+
+      - name: Backup database before applying migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+        run: |
+          set -euo pipefail
+          mkdir -p supabase-backups
+          short_sha="${GITHUB_SHA:0:12}"
+          backup_base="supabase-backups/${TARGET_ENVIRONMENT}-${GITHUB_RUN_ID}-${short_sha}"
+          pg_dump "${SUPABASE_DB_URL}" \
+            --format=custom \
+            --no-owner \
+            --no-privileges \
+            --file="${backup_base}.dump"
+          pg_dump "${SUPABASE_DB_URL}" \
+            --schema-only \
+            --no-owner \
+            --no-privileges \
+            --file="${backup_base}.schema.sql"
+          sha256sum "${backup_base}.dump" "${backup_base}.schema.sql" > "${backup_base}.sha256"
+          chmod 600 "${backup_base}.dump" "${backup_base}.schema.sql" "${backup_base}.sha256"
+          echo "BACKUP_BASE=${backup_base}" >> "$GITHUB_ENV"
+
+      - name: Upload database backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-${{ inputs.target_environment }}-backup-before-clerk-org-migrations-${{ github.run_id }}
+          path: |
+            ${{ env.BACKUP_BASE }}.dump
+            ${{ env.BACKUP_BASE }}.schema.sql
+            ${{ env.BACKUP_BASE }}.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Apply Clerk organization migrations
+        if: ${{ inputs.apply_migrations }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          migrations=(
+            supabase/migrations/20260625193000_clerk_organization_identity_mapping.sql
+            supabase/migrations/20260625214500_clerk_rls_identity_helpers.sql
+            supabase/migrations/20260626120000_clerk_uuid_safe_rls_helpers.sql
+          )
+          for migration in "${migrations[@]}"; do
+            echo "Applying ${migration}"
+            psql "${SUPABASE_DB_URL}" \
+              --set=ON_ERROR_STOP=1 \
+              --single-transaction \
+              --file="${migration}"
+          done
+
+      - name: Validate Clerk mapping, RLS, roles, and tenant isolation
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "${SUPABASE_DB_URL}" \
+            --set=ON_ERROR_STOP=1 \
+            --file=scripts/security/validate-clerk-organization-tenant-isolation.sql
+
+      - name: Install dependencies for optional legacy UUID validator
+        if: ${{ inputs.run_legacy_uuid_validator }}
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run existing legacy Supabase UUID live validator
+        if: ${{ inputs.run_legacy_uuid_validator }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RLS_LIVE_ADVISORY: '0'
+          RLS_LIVE_KEEP_FIXTURES: '0'
+        run: node scripts/security/run-supabase-live-tenant-isolation.mjs
