@@ -47,7 +47,7 @@
     "Full Security Suite / Actionlint",
     "Full Security Suite / Secret scanning (Gitleaks)",
     "Full Security Suite / Semgrep SAST",
-    "Full Security Suite / CodeQL",
+    "Full Security Suite / CodeQL (javascript-typescript)",
     "Full Security Suite / Dependency Review",
     "Full Security Suite / OSSF Scorecard",
     "Full Security Suite / Enterprise merge/deploy gate",
@@ -82,7 +82,7 @@
     "riskOwner": "@renansilva2002",
     "rationale": "Repository policy evidence is committed, but GitHub branch protection/ruleset configuration must be verified by an administrator before this evidence can be marked Complete. The available connector did not expose a branch-protection mutation or verification action for rulesets.",
     "compensatingControls": [
-      "Do not merge or release unless Full Security Suite / Enterprise merge/deploy gate is green for the exact commit.",
+      "Do not promote an enterprise release unless branch protection evidence is Complete and the enterprise release validation command passes for the exact commit.",
       "Keep docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md aligned with required GitHub status checks.",
       "Run .github/workflows/p0-branch-protection-evidence.yml after branch protection is configured and review the generated artifact.",
       "For enterprise release validation, scripts/security/check-branch-protection-evidence.mjs fails while this evidence is Exception or Open."
