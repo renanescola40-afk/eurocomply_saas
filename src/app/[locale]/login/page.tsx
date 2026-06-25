@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { SignIn } from '@clerk/nextjs';
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
+import { normalizePublicAuthErrorCode } from '@/lib/auth/public-errors';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
 const copy = {
@@ -13,12 +14,24 @@ const copy = {
     title: 'Sign in to RISCK COMPLY',
     subtitle: 'Access your compliance workspace with Clerk-secured authentication.',
     signup: 'Create an account',
+    publicErrors: {
+      missing_oauth_code: 'The sign-in request expired. Please try again.',
+      auth_configuration_unavailable: 'Authentication is temporarily unavailable. Please try again later.',
+      auth_exchange_failed: 'We could not complete sign-in. Please try again.',
+      email_sign_in_failed: 'We could not complete email sign-in. Please try again.',
+    },
   },
   pt: {
     eyebrow: 'Acesso seguro',
     title: 'Entrar no RISCK COMPLY',
     subtitle: 'Aceda ao seu workspace de compliance com autenticação segura via Clerk.',
     signup: 'Criar conta',
+    publicErrors: {
+      missing_oauth_code: 'O pedido de entrada expirou. Tente novamente.',
+      auth_configuration_unavailable: 'A autenticação está temporariamente indisponível. Tente novamente mais tarde.',
+      auth_exchange_failed: 'Não foi possível concluir a entrada. Tente novamente.',
+      email_sign_in_failed: 'Não foi possível concluir a entrada por email. Tente novamente.',
+    },
   },
 } as const;
 
@@ -45,6 +58,9 @@ export default function LoginPage() {
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const pageCopy = activeLocale === 'pt' ? copy.pt : copy.en;
   const afterSignInUrl = getSafeNextPath(searchParams.get('next'), activeLocale);
+  const publicErrorCode = searchParams.has('error')
+    ? normalizePublicAuthErrorCode(searchParams.get('error'), 'email_sign_in_failed')
+    : null;
 
   return (
     <main className="min-h-screen bg-[#050505] text-white">
@@ -64,6 +80,12 @@ export default function LoginPage() {
             <h1 className="mt-2 text-2xl font-semibold">{pageCopy.title}</h1>
             <p className="mt-2 text-sm text-white/50">{pageCopy.subtitle}</p>
           </div>
+
+          {publicErrorCode ? (
+            <div className="mb-4 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100" role="alert">
+              {pageCopy.publicErrors[publicErrorCode]}
+            </div>
+          ) : null}
 
           <div className="flex justify-center">
             <SignIn
