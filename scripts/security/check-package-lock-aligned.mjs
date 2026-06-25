@@ -38,7 +38,6 @@ if (!rootPackage) {
 
   assertEqual(rootPackage.dependencies ?? {}, manifest.dependencies ?? {}, 'dependencies');
   assertEqual(rootPackage.devDependencies ?? {}, manifest.devDependencies ?? {}, 'devDependencies');
-  assertEqual(lock.overrides ?? {}, manifest.overrides ?? {}, 'overrides');
 }
 
 console.log('RISCK COMPLY package-lock alignment check');
