@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join, relative, sep } from 'node:path';
 
 const root = process.cwd();
+const strictPublicSecretScan = process.env.STRICT_PUBLIC_SECRET_SCAN === '1';
 const scanRoots = ['src', 'scripts', 'docs', '.github', 'supabase'].filter((path) => existsSync(join(root, path)));
 const scanFiles = [
   'package.json',
@@ -169,6 +170,10 @@ const files = [
 ];
 const failures = [];
 
+if (!strictPublicSecretScan) {
+  failures.push('STRICT_PUBLIC_SECRET_SCAN=1 is required; report-only secret scanning is not allowed in CI or release checks');
+}
+
 for (const file of new Set(files)) {
   const normalized = normalizePath(file);
   const source = readFileSync(file, 'utf8');
@@ -220,11 +225,7 @@ console.log(`Scanned ${new Set(files).size} files.`);
 if (failures.length > 0) {
   console.error('Public secret exposure findings:');
   for (const failure of failures) console.error(`- ${failure}`);
-  if (process.env.STRICT_PUBLIC_SECRET_SCAN === '1') {
-    process.exitCode = 1;
-  } else {
-    console.warn('Public secret exposure check is running in report-only mode. Set STRICT_PUBLIC_SECRET_SCAN=1 to fail on findings.');
-  }
+  process.exitCode = 1;
 } else {
   console.log('Public secret exposure check: ok');
 }
