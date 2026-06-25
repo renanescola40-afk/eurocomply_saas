@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GET } from './route';
 
 describe('public health endpoint hardening', () => {
-  it('returns a minimal no-store response without operational metadata', async () => {
+  it('returns a no-store health response without sensitive operational metadata', async () => {
     const response = await GET();
     const body = await response.json();
 
