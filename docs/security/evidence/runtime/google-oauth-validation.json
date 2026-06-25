@@ -8,7 +8,19 @@
   "generatedAt": "2026-06-25T00:00:00.000Z",
   "control": "Enterprise Google OAuth via Supabase Auth",
   "summary": "Google OAuth is implemented through Supabase Auth with a server-side /auth/google entrypoint and server-side /auth/callback code exchange. Redirect handling is restricted to localized dashboard paths, and the Google client secret is documented as server-only/provider-only. This evidence does not claim live production or preview provider execution because Google Cloud Console and Supabase runtime credentials are not available in this implementation environment.",
-  "redactionConfirmation": "All secrets, tokens, credentials, authorization codes, session cookies, connection strings, and access-granting values are redacted.",
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "exception": {
+    "riskOwner": "EuroComply Security Lead",
+    "rationale": "Live Google OAuth provider proof requires production and preview provider credentials plus configured Google Cloud Console and Supabase Auth settings, which are not available in this repository-only validation environment.",
+    "compensatingControls": [
+      "Server-side OAuth entrypoint and callback exchange are documented and statically reviewed.",
+      "Redirect handling rejects absolute, protocol-relative, root-only, and non-dashboard next values.",
+      "Google client secret is documented as provider/server-only and must not use a NEXT_PUBLIC prefix.",
+      "Enterprise release remains No-Go until live production and preview OAuth evidence plus live MFA or IdP step-up proof are attached."
+    ],
+    "expiresAt": "2026-07-02T00:00:00.000Z",
+    "approvalReference": "PR-446-google-oauth-mfa-evidence"
+  },
   "runtimeValidation": {
     "productionGoogleLoginTested": false,
     "previewGoogleLoginTested": false,
