@@ -57,13 +57,15 @@ const checks = [
   },
   {
     path: 'src/app/api/health/route.ts',
-    required: ['noStoreJson', "status: 'ok'", "application: 'ok'"],
-    forbidden: ['NextResponse.json', 'environment:', 'commit:'],
+    required: ['noStoreJson', "status: 'ok'", 'X-Content-Type-Options'],
+    forbidden: ['NextResponse.json', 'environment:', 'commit:', 'checks:', "application: 'ok'"],
   },
   {
     path: 'src/app/api/health/route.test.ts',
     required: [
       'public health endpoint hardening',
+      'body).toEqual({ status: \'ok\' })',
+      "not.toHaveProperty('checks')",
       "not.toHaveProperty('environment')",
       "not.toHaveProperty('commit')",
       'no-store',
