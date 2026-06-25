@@ -1,9 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { locales, type Locale } from '@/lib/i18n/routing';
-import type { User, Session } from '@supabase/supabase-js';
+import React, { createContext, useCallback, useContext, useMemo } from 'react';
+import {
+  useClerk,
+  useSession,
+  useSignIn,
+  useSignUp,
+  useUser,
+} from '@clerk/nextjs';
 
 type SignupMetadata = {
   name?: string;
@@ -11,9 +15,22 @@ type SignupMetadata = {
   requested_plan?: string;
 };
 
+type ClerkCompatUser = {
+  id: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  fullName: string | null;
+  imageUrl: string;
+};
+
+type ClerkCompatSession = {
+  id: string;
+} | null;
+
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: ClerkCompatUser | null;
+  session: ClerkCompatSession;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUpWithEmail: (
@@ -27,187 +44,144 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const DEFAULT_APP_URL = 'http://localhost:3000';
-const AUTH_DASHBOARD_PATH = '/dashboard/organizations';
 
-function getAppOrigin() {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-
-  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
-
-  if (configuredUrl) {
-    return configuredUrl.replace(/\/$/, '');
-  }
-
-  return DEFAULT_APP_URL;
-}
-
-function getCurrentLocale() {
-  if (typeof window === 'undefined') return 'pt' as Locale;
-  const segments = window.location.pathname.split('/').filter(Boolean);
-  const currentLocale = segments[0] as Locale | undefined;
-  return locales.includes(currentLocale as Locale) ? currentLocale as Locale : 'pt';
-}
-
-function getCurrentLocalePrefix() {
-  return `/${getCurrentLocale()}`;
-}
-
-function getAuthCallbackUrl(nextPath = '/pt/dashboard/organizations') {
-  const origin = getAppOrigin();
-  const callbackUrl = new URL('/auth/callback', origin);
-  callbackUrl.searchParams.set('next', nextPath);
-  return callbackUrl.toString();
+function getPrimaryEmail(user: ReturnType<typeof useUser>['user']) {
+  return user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses?.[0]?.emailAddress ?? null;
 }
 
 function getLocalizedPath(path: string) {
-  const localePrefix = getCurrentLocalePrefix();
-  return `${localePrefix}${path.startsWith('/') ? path : `/${path}`}`;
+  if (typeof window === 'undefined') return `/pt${path.startsWith('/') ? path : `/${path}`}`;
+  const segments = window.location.pathname.split('/').filter(Boolean);
+  const locale = segments[0] ?? 'pt';
+  return `/${locale}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+function getRedirectUrl(path = '/dashboard/organizations') {
+  if (typeof window === 'undefined') return getLocalizedPath(path);
+  return new URL(getLocalizedPath(path), window.location.origin).toString();
 }
 
 export function getLocalizedDashboardPath() {
-  return getLocalizedPath(AUTH_DASHBOARD_PATH);
-}
-
-function appendRequestedPlan(path: string, requestedPlan?: string) {
-  if (!requestedPlan) return path;
-  const separator = path.includes('?') ? '&' : '?';
-  return `${path}${separator}plan=${encodeURIComponent(requestedPlan)}`;
-}
-
-function isPublicAuthPath(pathname: string) {
-  const localePrefix = getCurrentLocalePrefix();
-  return pathname === localePrefix || pathname === `${localePrefix}/login` || pathname === `${localePrefix}/signup`;
-}
-
-function redirectAuthenticatedUser() {
-  if (typeof window === 'undefined') return;
-
-  if (isPublicAuthPath(window.location.pathname)) {
-    window.location.replace(getLocalizedDashboardPath());
-  }
-}
-
-function getGoogleOAuthEntryUrl() {
-  const entryUrl = new URL('/auth/google', getAppOrigin());
-  const locale = getCurrentLocale();
-  const nextPath = getLocalizedDashboardPath();
-
-  entryUrl.searchParams.set('locale', locale);
-  entryUrl.searchParams.set('next', nextPath);
-
-  return entryUrl.toString();
+  return getLocalizedPath('/dashboard/organizations');
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user: clerkUser, isLoaded: userLoaded } = useUser();
+  const { session: clerkSession, isLoaded: sessionLoaded } = useSession();
+  const { signOut: clerkSignOut } = useClerk();
+  const { signIn, setActive: setSignInActive, isLoaded: signInLoaded } = useSignIn();
+  const { signUp, setActive: setSignUpActive, isLoaded: signUpLoaded } = useSignUp();
 
-  useEffect(() => {
-    async function loadSession() {
-      try {
-        const { data } = await supabase.auth.getSession();
-        const currentSession = data.session;
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+  const user = useMemo<ClerkCompatUser | null>(() => {
+    if (!clerkUser) return null;
 
-        if (currentSession) {
-          redirectAuthenticatedUser();
-        }
-      } catch (e) {
-        setSession(null);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event: unknown, currentSession: Session | null) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setLoading(false);
-
-      if (currentSession) {
-        redirectAuthenticatedUser();
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
+    return {
+      id: clerkUser.id,
+      email: getPrimaryEmail(clerkUser),
+      firstName: clerkUser.firstName,
+      lastName: clerkUser.lastName,
+      fullName: clerkUser.fullName,
+      imageUrl: clerkUser.imageUrl,
     };
-  }, []);
+  }, [clerkUser]);
+
+  const session = useMemo<ClerkCompatSession>(() => {
+    if (!clerkSession) return null;
+    return { id: clerkSession.id };
+  }, [clerkSession]);
+
+  const loading = !userLoaded || !sessionLoaded;
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error: error as Error | null };
-    } catch (e) {
-      return { error: e as Error };
-    }
-  }, []);
-
-  const signUpWithEmail = useCallback(
-    async (
-      email: string,
-      password: string,
-      metadata?: SignupMetadata
-    ) => {
-      try {
-        const nextPath = appendRequestedPlan(getLocalizedDashboardPath(), metadata?.requested_plan);
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: metadata,
-            emailRedirectTo: getAuthCallbackUrl(nextPath),
-          },
-        });
-
-        return { error: error as Error | null };
-      } catch (e) {
-        return { error: e as Error };
+      if (!signInLoaded || !signIn || !setSignInActive) {
+        return { error: new Error('Clerk sign-in is not ready yet') };
       }
-    },
-    []
-  );
+
+      const result = await signIn.create({
+        identifier: email,
+        password,
+      });
+
+      if (result.status !== 'complete') {
+        return { error: new Error('Additional sign-in verification is required') };
+      }
+
+      await setSignInActive({ session: result.createdSessionId });
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [setSignInActive, signIn, signInLoaded]);
+
+  const signUpWithEmail = useCallback(async (
+    email: string,
+    password: string,
+    metadata?: SignupMetadata,
+  ) => {
+    try {
+      if (!signUpLoaded || !signUp || !setSignUpActive) {
+        return { error: new Error('Clerk sign-up is not ready yet') };
+      }
+
+      const nameParts = metadata?.name?.trim().split(/\s+/).filter(Boolean) ?? [];
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || undefined;
+
+      const result = await signUp.create({
+        emailAddress: email,
+        password,
+        firstName,
+        lastName,
+        unsafeMetadata: {
+          company_name: metadata?.company_name,
+          requested_plan: metadata?.requested_plan,
+        },
+      });
+
+      if (result.status === 'complete') {
+        await setSignUpActive({ session: result.createdSessionId });
+        return { error: null };
+      }
+
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [setSignUpActive, signUp, signUpLoaded]);
 
   const signInWithGoogle = useCallback(async () => {
     try {
-      if (typeof window === 'undefined') {
-        return { error: new Error('Google OAuth must start in the browser.') };
+      if (!signInLoaded || !signIn) {
+        return { error: new Error('Clerk sign-in is not ready yet') };
       }
 
-      window.location.assign(getGoogleOAuthEntryUrl());
+      await signIn.authenticateWithRedirect({
+        strategy: 'oauth_google',
+        redirectUrl: getRedirectUrl('/login'),
+        redirectUrlComplete: getRedirectUrl('/dashboard/organizations'),
+      });
+
       return { error: null };
-    } catch (e) {
-      return { error: e as Error };
+    } catch (error) {
+      return { error: error as Error };
     }
-  }, []);
+  }, [signIn, signInLoaded]);
 
   const signOut = useCallback(async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      return { error: error as Error | null };
-    } catch (e) {
-      return { error: e as Error };
+      await clerkSignOut({ redirectUrl: '/' });
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
     }
-  }, []);
+  }, [clerkSignOut]);
 
-  const resetPassword = useCallback(async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: getAuthCallbackUrl(getLocalizedPath('/atualizar-senha')),
-      });
-
-      return { error: error as Error | null };
-    } catch (e) {
-      return { error: e as Error };
-    }
+  const resetPassword = useCallback(async () => {
+    return {
+      error: new Error('Use Clerk account recovery from the sign-in page.'),
+    };
   }, []);
 
   const value: AuthContextType = {
