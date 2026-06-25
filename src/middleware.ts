@@ -82,6 +82,10 @@ function isPublicRoute(pathname: string, locale: string): boolean {
   );
 }
 
+function shouldCheckMarketingHomeAuth(pathname: string, locale: string): boolean {
+  return pathname === `/${locale}`;
+}
+
 function withPrivateNoStore(response: NextResponse) {
   response.headers.set('Cache-Control', 'private, no-store, max-age=0');
   return response;
@@ -151,9 +155,10 @@ export default clerkMiddleware(async (auth, req) => {
   if (pathnameHasLocale) {
     const locale = pathname.split('/')[1];
     const isPublic = isPublicRoute(pathname, locale);
-    const isMarketingHome = pathname === `/${locale}`;
+    const isMarketingHome = shouldCheckMarketingHomeAuth(pathname, locale);
     const isAuthEntryRoute = pathname === `/${locale}/login` || pathname === `/${locale}/signup`;
-    const { userId } = await auth();
+    const shouldCheckAuth = !isPublic || isAuthEntryRoute || isMarketingHome;
+    const { userId } = shouldCheckAuth ? await auth() : { userId: null };
     const isAuthenticated = Boolean(userId);
 
     if (!isAuthenticated && !isPublic) {
