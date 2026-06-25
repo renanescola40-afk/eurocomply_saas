@@ -17,6 +17,7 @@ const allowedClasses = new Set([
 ]);
 
 const explicitRouteClassFallbacks = new Map([
+  ['src/app/api/clerk/organizations/sync/route.ts', 'tenant-scoped'],
   ['src/app/api/security/step-up/verify/route.ts', 'high-risk'],
 ]);
 
