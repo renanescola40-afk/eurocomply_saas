@@ -15,17 +15,22 @@ export function ClerkOrganizationPanel() {
 
   const memberships = userMemberships.data ?? [];
   const hasOrganizations = memberships.length > 0;
+  const activeOrganizationId = organization?.id ?? null;
+  const activeOrganizationName = organization?.name ?? null;
+  const activeOrganizationSlug = organization?.slug ?? null;
   const activeMembership = useMemo(
-    () => memberships.find((item) => item.organization.id === organization?.id),
-    [memberships, organization?.id],
+    () => memberships.find((item) => item.organization.id === activeOrganizationId),
+    [memberships, activeOrganizationId],
   );
 
   useEffect(() => {
-    if (!organizationLoaded || !organization?.id || !organization.name) return;
+    if (!organizationLoaded || !activeOrganizationId || !activeOrganizationName) return;
 
     const controller = new AbortController();
 
     async function syncOrganization() {
+      if (!activeOrganizationId || !activeOrganizationName) return;
+
       setSyncState('syncing');
       setSyncError(null);
 
@@ -34,9 +39,9 @@ export function ClerkOrganizationPanel() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            clerkOrgId: organization.id,
-            name: organization.name,
-            slug: organization.slug,
+            clerkOrgId: activeOrganizationId,
+            name: activeOrganizationName,
+            slug: activeOrganizationSlug,
             membershipId: activeMembership?.id,
           }),
           signal: controller.signal,
@@ -58,7 +63,7 @@ export function ClerkOrganizationPanel() {
     void syncOrganization();
 
     return () => controller.abort();
-  }, [activeMembership?.id, organization?.id, organization?.name, organization?.slug, organizationLoaded]);
+  }, [activeMembership?.id, activeOrganizationId, activeOrganizationName, activeOrganizationSlug, organizationLoaded]);
 
   return (
     <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-white shadow-2xl shadow-black/20">
@@ -104,8 +109,8 @@ export function ClerkOrganizationPanel() {
             <div className="grid gap-4 lg:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
                 <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Organização ativa</p>
-                <p className="mt-3 text-lg font-bold">{organization?.name ?? 'Nenhuma organização ativa'}</p>
-                <p className="mt-2 text-xs text-zinc-400">ID: {organization?.id ?? 'n/a'}</p>
+                <p className="mt-3 text-lg font-bold">{activeOrganizationName ?? 'Nenhuma organização ativa'}</p>
+                <p className="mt-2 text-xs text-zinc-400">ID: {activeOrganizationId ?? 'n/a'}</p>
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
