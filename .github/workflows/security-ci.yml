@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+env:
+  STRICT_PUBLIC_SECRET_SCAN: '1'
+  CI_SECRET_LOG_POLICY: fail-closed
+
 concurrency:
   group: security-ci-${{ github.ref }}
   cancel-in-progress: true
