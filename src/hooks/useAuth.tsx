@@ -69,8 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { user: clerkUser, isLoaded: userLoaded } = useUser();
   const { session: clerkSession, isLoaded: sessionLoaded } = useSession();
   const { signOut: clerkSignOut } = useClerk();
-  const { signIn, isLoaded: signInLoaded } = useSignIn();
-  const { signUp, isLoaded: signUpLoaded } = useSignUp();
+  const { signIn, setActive: setSignInActive, isLoaded: signInLoaded } = useSignIn();
+  const { signUp, setActive: setSignUpActive, isLoaded: signUpLoaded } = useSignUp();
 
   const user = useMemo<ClerkCompatUser | null>(() => {
     if (!clerkUser) return null;
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     try {
-      if (!signInLoaded || !signIn) {
+      if (!signInLoaded || !signIn || !setSignInActive) {
         return { error: new Error('Clerk sign-in is not ready yet') };
       }
 
@@ -107,12 +107,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: new Error('Additional sign-in verification is required') };
       }
 
-      await signIn.setActive({ session: result.createdSessionId });
+      await setSignInActive({ session: result.createdSessionId });
       return { error: null };
     } catch (error) {
       return { error: error as Error };
     }
-  }, [signIn, signInLoaded]);
+  }, [setSignInActive, signIn, signInLoaded]);
 
   const signUpWithEmail = useCallback(async (
     email: string,
@@ -120,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     metadata?: SignupMetadata,
   ) => {
     try {
-      if (!signUpLoaded || !signUp) {
+      if (!signUpLoaded || !signUp || !setSignUpActive) {
         return { error: new Error('Clerk sign-up is not ready yet') };
       }
 
@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (result.status === 'complete') {
-        await signUp.setActive({ session: result.createdSessionId });
+        await setSignUpActive({ session: result.createdSessionId });
         return { error: null };
       }
 
@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       return { error: error as Error };
     }
-  }, [signUp, signUpLoaded]);
+  }, [setSignUpActive, signUp, signUpLoaded]);
 
   const signInWithGoogle = useCallback(async () => {
     try {
