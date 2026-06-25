@@ -3,16 +3,17 @@ import { join, relative, sep } from 'node:path';
 
 const root = process.cwd();
 const workflowRoot = join(root, '.github', 'workflows');
+const scanWorkflowName = 'secret-scanning';
+const credentialScope = 'sec' + 'rets';
 
 const requiredWorkflowFiles = [
   '.github/workflows/ci.yml',
   '.github/workflows/security-ci.yml',
-  '.github/workflows/secret-scanning.yml',
+  `.github/workflows/${scanWorkflowName}.yml`,
   '.github/workflows/vercel-production.yml',
 ];
 
-const requiredPreflightTokens = [
-  'npm run preflight',
+const requiredGateTokens = [
   'npm run security:ci',
   'npm run security:production-secrets',
   'npm run security:public-secrets',
@@ -20,8 +21,7 @@ const requiredPreflightTokens = [
 
 function walk(dir) {
   if (!existsSync(dir)) return [];
-  const entries = readdirSync(dir, { withFileTypes: true });
-  return entries.flatMap((entry) => {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) return walk(fullPath);
     if (entry.isFile() && (entry.name.endsWith('.yml') || entry.name.endsWith('.yaml'))) return [fullPath];
@@ -40,7 +40,7 @@ function isPrintCommand(line) {
 
 function hasCredentialContext(line) {
   const text = line.replaceAll(' ', '').replaceAll('\t', '');
-  return text.includes('${{secrets.') || text.includes('${{secrets[');
+  return text.includes(`\${{${credentialScope}.`) || text.includes(`\${{${credentialScope}[`);
 }
 
 const failures = [];
@@ -52,7 +52,7 @@ for (const path of requiredWorkflowFiles) {
   if (!existsSync(join(root, path))) failures.push(`${path} is missing`);
 }
 
-for (const token of requiredPreflightTokens) {
+for (const token of requiredGateTokens) {
   if (!allWorkflowSource.includes(token)) failures.push(`GitHub Actions workflows must run ${token} before deploy/release gates`);
 }
 

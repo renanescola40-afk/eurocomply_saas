@@ -98,12 +98,16 @@ function containsConcreteSecretValue(line) {
   });
 }
 
+function isWorkflowProviderReference(line) {
+  return /\$\{\{\s*(secrets|vars)\.[A-Z0-9_]+\s*\}\}/.test(line) || /\$\{\{\s*github\.token\s*\}\}/.test(line);
+}
+
 function isReferenceOnlyContext(normalized, line) {
   if (containsConcreteSecretValue(line)) return false;
   if (normalized === '.gitleaks.toml') return true;
   if (normalized.startsWith('docs/')) return true;
   if (normalized.startsWith('scripts/security/')) return true;
-  if (normalized.startsWith('.github/workflows/')) return true;
+  if (normalized.startsWith('.github/workflows/')) return isWorkflowProviderReference(line);
   return false;
 }
 
