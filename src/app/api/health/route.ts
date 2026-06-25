@@ -7,7 +7,6 @@ export async function GET() {
   return noStoreJson(
     {
       status: 'ok',
-      checks: { application: 'ok' },
     },
     {
       status: 200,
