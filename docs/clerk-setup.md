@@ -1,6 +1,6 @@
 # Clerk setup for RISCK COMPLY
 
-This repository currently uses Supabase Auth in middleware and client auth hooks. Clerk should be introduced in a staged migration so production auth does not break.
+This branch migrates application authentication from Supabase Auth to Clerk while keeping Supabase available as the application database/data API.
 
 ## Security first
 
@@ -28,21 +28,23 @@ NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/pt/dashboard/organizations
 
 Production values must be configured in Vercel/GitHub/Supabase provider secret stores, not committed.
 
-## Recommended migration plan
+## What this branch changes
 
-1. Keep the current Supabase Auth flow active until Clerk is fully validated.
-2. Install Clerk locally:
+- Wraps the localized app layout with `ClerkProvider`.
+- Replaces the Supabase-backed compatibility hook in `src/hooks/useAuth.tsx` with Clerk hooks.
+- Replaces the localized login and signup pages with Clerk `SignIn` and `SignUp` components.
+- Replaces Supabase session checks in `src/middleware.ts` with Clerk middleware checks.
+- Keeps Supabase imports where the app still uses Supabase for tenant data, documents, logs, billing state, and compliance records.
 
-   ```bash
-   npm install @clerk/nextjs
-   ```
+## Required local command
 
-3. Commit the generated `package-lock.json` after install.
-4. Wrap `src/app/layout.tsx` with `ClerkProvider`.
-5. Add Clerk-powered routes behind a feature flag or separate path first, for example `/pt/clerk-login` and `/pt/clerk-signup`.
-6. Enable Clerk Organizations in the dashboard.
-7. Map Clerk organization IDs to the existing organization/workspace model.
-8. Only after validation, replace Supabase Auth checks in `src/middleware.ts` and `src/hooks/useAuth.tsx`.
+The dependency was added to `package.json`, but the lockfile must be regenerated locally:
+
+```bash
+npm install
+```
+
+Commit the resulting `package-lock.json` update before opening/merging the PR.
 
 ## Enterprise/B2B target
 
@@ -51,6 +53,7 @@ Use Clerk Organizations as the B2B identity layer:
 - Organization/workspace switcher
 - `org:admin` and `org:member` roles
 - Permissions for billing, members, API keys, audit logs, and settings
+- Clerk organization ID mapped to the existing workspace/organization model
 - Organization ID stored on every tenant-owned row
 
 Recommended first permissions:
@@ -66,9 +69,10 @@ audit_logs:view
 
 ## Validation commands
 
-After installing Clerk and applying code changes, run:
+After rotating the Clerk secret and running `npm install`, run:
 
 ```bash
+npm run clerk:env
 npm run lint
 npm run typecheck
 npm run test
@@ -76,4 +80,4 @@ npm run build
 npm run security:public-secrets
 ```
 
-Do not proceed to production until all commands pass and the old exposed Clerk secret has been rotated.
+Do not proceed to production until all commands pass and the exposed Clerk backend secret has been rotated.
