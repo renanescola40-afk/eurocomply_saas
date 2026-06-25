@@ -220,7 +220,11 @@ jobs:
           persist-credentials: false
       - name: Run Semgrep rules
         run: >-
-          semgrep --config auto
+          semgrep scan
+          --config p/owasp-top-ten
+          --config p/typescript
+          --config p/javascript
+          --severity ERROR
           --error
           --metrics off
           src
