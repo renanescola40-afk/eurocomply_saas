@@ -66,9 +66,13 @@ const serverOnlyEnvNames = [
 ];
 
 function walk(dir) {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  return entries.flatMap((entry) => {
     const fullPath = join(dir, entry.name);
-    if (entry.isDirectory()) return ignoredDirectories.has(entry.name) ? [] : walk(fullPath);
+    if (entry.isDirectory()) {
+      if (ignoredDirectories.has(entry.name)) return [];
+      return walk(fullPath);
+    }
     if (!entry.isFile()) return [];
     if (!/\.(ts|tsx|js|jsx|mjs|cjs|json|md|yml|yaml|sql|example)$/.test(entry.name) && !entry.name.startsWith('.env')) return [];
     return [fullPath];
@@ -94,12 +98,16 @@ function containsConcreteSecretValue(line) {
   });
 }
 
+function isWorkflowProviderReference(line) {
+  return /\$\{\{\s*(secrets|vars)\.[A-Z0-9_]+\s*\}\}/.test(line) || /\$\{\{\s*github\.token\s*\}\}/.test(line);
+}
+
 function isReferenceOnlyContext(normalized, line) {
   if (containsConcreteSecretValue(line)) return false;
   if (normalized === '.gitleaks.toml') return true;
   if (normalized.startsWith('docs/')) return true;
   if (normalized.startsWith('scripts/security/')) return true;
-  if (normalized.startsWith('.github/workflows/')) return true;
+  if (normalized.startsWith('.github/workflows/')) return isWorkflowProviderReference(line);
   return false;
 }
 
@@ -152,14 +160,14 @@ for (const file of new Set(files)) {
   }
 }
 
-console.log('EuroComply public exposure check');
-console.log('--------------------------------');
+console.log('EuroComply public secret exposure check');
+console.log('--------------------------------------');
 console.log(`Scanned ${new Set(files).size} files.`);
 
 if (failures.length > 0) {
-  console.error('Public exposure findings:');
+  console.error('Public secret exposure findings:');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log('Public exposure check: ok');
+  console.log('Public secret exposure check: ok');
 }
