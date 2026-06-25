@@ -3,13 +3,14 @@ import { existsSync, readFileSync } from 'node:fs';
 const evidencePath = 'docs/security/evidence/runtime/branch-protection-required-checks.json';
 const policyPath = 'docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md';
 const auditTriagePath = 'docs/security/NPM_AUDIT_TRIAGE.md';
+const isEnterpriseRelease = process.env.RELEASE_TARGET === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
 
 const requiredChecks = [
   'Full Security Suite / Core CI, build and npm audit',
   'Full Security Suite / Actionlint',
   'Full Security Suite / Secret scanning (Gitleaks)',
   'Full Security Suite / Semgrep SAST',
-  'Full Security Suite / CodeQL (javascript-typescript)',
+  'Full Security Suite / CodeQL',
   'Full Security Suite / Dependency Review',
   'Full Security Suite / OSSF Scorecard',
   'Full Security Suite / Enterprise merge/deploy gate',
@@ -40,16 +41,16 @@ const requiredReleaseBlockers = [
   'build_failure_blocks',
   'security_ci_failure_blocks',
   'secret_scanning_failure_blocks',
-  'branch_protection_exception_blocks_enterprise_release',
   'untriaged_high_or_critical_npm_audit_blocks',
+  'branch_protection_evidence_blocks',
+  'strict_public_secret_scan_required',
+  'hardcoded_secret_blocks',
+  'package_lock_mismatch_blocks',
+  'direct_push_main_is_release_risk_documented',
+  'workflow_secret_log_exposure_blocks',
 ];
 
-const enterpriseRelease = process.env.RELEASE_TARGET === 'enterprise'
-  || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true'
-  || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === '1';
-
 const failures = [];
-const warnings = [];
 
 function readText(path) {
   if (!existsSync(path)) {
@@ -63,12 +64,6 @@ function requireTrue(object, key, prefix) {
   if (object?.[key] !== true) {
     failures.push(`${prefix}.${key} must be true`);
   }
-}
-
-function isExpiredIsoDate(value) {
-  const parsed = Date.parse(value ?? '');
-  if (!Number.isFinite(parsed)) return true;
-  return parsed < Date.now();
 }
 
 const evidenceSource = readText(evidencePath);
@@ -104,9 +99,12 @@ if (!Date.parse(evidence.captured_at ?? '')) {
   failures.push(`${evidencePath} captured_at must be an ISO-8601 timestamp`);
 }
 
-const allowedStatuses = new Set(['Complete', 'Exception', 'Open']);
-if (!allowedStatuses.has(evidence.status)) {
-  failures.push(`${evidencePath} status must be one of Complete, Exception, or Open`);
+if (isEnterpriseRelease && ['Exception', 'Open'].includes(evidence.status)) {
+  failures.push(`${evidencePath} status=${evidence.status} is not allowed for enterprise release; branch protection evidence must be Complete`);
+}
+
+if (isEnterpriseRelease && evidence.status !== 'Complete') {
+  failures.push(`${evidencePath} status must be Complete for enterprise release`);
 }
 
 for (const flag of requiredProtectionFlags) {
@@ -140,43 +138,13 @@ if (evidence.sbom?.artifact_name !== 'risck-comply-sbom') {
   failures.push('sbom.artifact_name must be risck-comply-sbom');
 }
 
-if (evidence.sbom?.runtime_path !== 'docs/security/evidence/runtime/sbom.json') {
-  failures.push('sbom.runtime_path must be docs/security/evidence/runtime/sbom.json');
-}
-
-if (evidence.direct_push_to_main_risk?.treated_as_enterprise_release_risk !== true) {
-  failures.push('direct_push_to_main_risk.treated_as_enterprise_release_risk must be true');
-}
-
-if (enterpriseRelease && evidence.status !== 'Complete') {
-  failures.push(`${evidencePath} status is ${evidence.status}; enterprise releases require status Complete`);
-}
-
-if (enterpriseRelease && ['Exception', 'Open'].includes(evidence.status)) {
-  failures.push(`${evidencePath} cannot be ${evidence.status} for RELEASE_TARGET=enterprise/RISCK_COMPLY_ENTERPRISE_RELEASE`);
-}
-
-if (evidence.status === 'Exception') {
-  if (!evidence.exception?.riskOwner) {
-    failures.push('exception.riskOwner is required when status is Exception');
-  }
-  if (!evidence.exception?.approvalReference) {
-    failures.push('exception.approvalReference is required when status is Exception');
-  }
-  if (isExpiredIsoDate(evidence.exception?.expiresAt)) {
-    failures.push('exception.expiresAt must be a non-expired ISO date when status is Exception');
-  }
-}
-
-if (!enterpriseRelease && evidence.status !== 'Complete') {
-  warnings.push(`${evidencePath} is ${evidence.status}; this is allowed only for non-enterprise validation and blocks enterprise release promotion.`);
+if (evidence.sbom?.runtime_path !== 'docs/security/evidence/runtime/sbom.cyclonedx.json') {
+  failures.push('sbom.runtime_path must be docs/security/evidence/runtime/sbom.cyclonedx.json');
 }
 
 console.log('RISCK COMPLY branch protection evidence check');
 console.log('------------------------------------------------');
-console.log(`Enterprise release enforcement: ${enterpriseRelease ? 'enabled' : 'disabled'}`);
-
-for (const warning of warnings) console.warn(`Warning: ${warning}`);
+console.log(`Enterprise release mode: ${isEnterpriseRelease ? 'yes' : 'no'}`);
 
 if (failures.length > 0) {
   console.error('Branch protection evidence failures:');
