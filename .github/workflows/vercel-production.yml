@@ -15,12 +15,13 @@ concurrency:
 
 jobs:
   deploy-production:
-    name: Preflight, security gates and deploy to Vercel production
+    name: P0 gates and deploy to Vercel production
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     environment: production
 
     env:
+      RELEASE_TARGET: ${{ vars.RELEASE_TARGET }}
       NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
       NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
       TRUSTED_ORIGINS: ${{ vars.TRUSTED_ORIGINS }}
@@ -72,17 +73,36 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies deterministically without lifecycle scripts
-        run: npm ci --ignore-scripts
+      - name: Install dependencies deterministically
+        run: npm ci
 
-      - name: Run production preflight
-        run: npm run preflight
+      - name: Run lint gate
+        run: npm run lint
 
-      - name: Run full security CI
+      - name: Run typecheck gate
+        run: npm run typecheck
+
+      - name: Run test gate
+        run: npm run test
+
+      - name: Run build gate
+        run: npm run build
+
+      - name: Run full security CI gate
         run: npm run security:ci
 
-      - name: Build application
-        run: npm run build
+      - name: Run route quality gate
+        run: npm run quality:routes
+
+      - name: Run Vercel production environment readiness gate
+        run: npm run ops:vercel-readiness
+
+      - name: Run release readiness gate
+        run: npm run release:readiness
+
+      - name: Run enterprise readiness gate
+        if: env.RELEASE_TARGET == 'enterprise'
+        run: npm run release:enterprise-readiness
 
       - name: Pull Vercel production environment
         run: npx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
