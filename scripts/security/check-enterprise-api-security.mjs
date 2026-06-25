@@ -53,10 +53,15 @@ const internalRoutes = [
   /src\/app\/api\/internal\/.*\/route\.ts$/,
   /src\/app\/api\/ops\/.*\/route\.ts$/,
   /src\/app\/api\/intelligence\/refresh\/route\.ts$/,
+  /src\/app\/api\/observability\/smoke\/route\.ts$/,
 ];
 
 const privateReadOnlyPostRoutes = [
   /src\/app\/api\/billing\/checkout-intent\/route\.ts$/,
+];
+
+const clerkOrganizationSyncRoutes = [
+  /src\/app\/api\/clerk\/organizations\/sync\/route\.ts$/,
 ];
 
 const publicMutationExemptions = [
@@ -126,6 +131,32 @@ function assertGuard(failures, source, path, groupName, description) {
   }
 }
 
+function evaluateClerkOrganizationSyncContract(failures, source, path) {
+  if (!isAnyMatch(path, clerkOrganizationSyncRoutes)) return false;
+
+  const requiredTokens = [
+    'await auth()',
+    'userId',
+    'orgId',
+    'orgRole',
+    'readBoundedJsonRequest',
+    'checkDistributedRateLimit',
+    'noStoreJson',
+    'clerkClient',
+    'client.organizations.getOrganization',
+    'parsedBody.data.clerkOrgId !== orgId',
+    'syncClerkOrganizationToSupabase',
+  ];
+
+  for (const token of requiredTokens) {
+    if (!source.includes(token)) {
+      failures.push(`${path}: missing Clerk organization sync contract token ${token}`);
+    }
+  }
+
+  return true;
+}
+
 function evaluateGdprExportContract(failures, source, path) {
   if (path !== 'src/app/api/gdpr/export/route.ts') return;
 
@@ -160,6 +191,10 @@ function evaluateRoute(filePath) {
   const isPublicMutationExemption = isAnyMatch(path, publicMutationExemptions);
 
   if (routeHandlers.length === 0) return failures;
+
+  if (evaluateClerkOrganizationSyncContract(failures, source, path)) {
+    return failures;
+  }
 
   if (isWebhook) {
     assertGuard(failures, source, path, 'webhookAuth', 'webhook signature validation');
