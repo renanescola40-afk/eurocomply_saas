@@ -29,6 +29,8 @@ type ClerkCompatUser = {
 
 type ClerkCompatSession = {
   id: string;
+  access_token: string;
+  token_type: 'bearer';
 } | null;
 
 interface AuthContextType {
@@ -105,7 +107,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const session = useMemo<ClerkCompatSession>(() => {
     if (!clerkSession) return null;
-    return { id: clerkSession.id };
+    return {
+      id: clerkSession.id,
+      access_token: clerkSession.id,
+      token_type: 'bearer',
+    };
   }, [clerkSession]);
 
   const loading = !userLoaded || !sessionLoaded;
