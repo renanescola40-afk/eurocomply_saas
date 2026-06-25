@@ -13,7 +13,7 @@ The repository has a strong existing security posture, but enterprise release mu
 1. `package-lock.json` is aligned with `package.json`.
 2. Branch protection evidence is `Complete`; `Exception` or `Open` blocks enterprise release.
 3. Full Security Suite is green for the exact commit being promoted.
-4. Secret scanning runs fail-closed with `STRICT_PUBLIC_SECRET_SCAN=1`.
+4. Secret scanning runs fail-closed with strict public scanning enabled.
 5. Any high or critical npm audit finding is fixed or triaged with owner, risk decision, and expiry.
 
 ## Workflow audit findings
@@ -44,7 +44,7 @@ Observed issue: the repository already has `.github/workflows/full-security-suit
 
 ### Secret scanning
 
-Secret scanning must not be report-only for production or enterprise release. Any hardcoded real credential-like value must fail CI. `STRICT_PUBLIC_SECRET_SCAN=1` is mandatory.
+Secret scanning must not be report-only for production or enterprise release. Any hardcoded real credential-like value must fail CI. Strict public scanning is mandatory.
 
 ### Dependency Review
 
@@ -55,7 +55,7 @@ Dependency Review must be blocking when dependency manifests or lockfiles change
 Branch protection evidence is currently `Exception`; enterprise release validation must fail while it is `Exception` or `Open`. The required manual setup is documented in `docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md`:
 
 ```text
-Settings → Rulesets/Branches → main → required checks → add every required check listed in docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md
+Settings -> Rulesets/Branches -> main -> required checks -> add every required check listed in docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md
 ```
 
 ## Supply-chain finding
