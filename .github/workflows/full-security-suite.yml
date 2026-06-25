@@ -22,6 +22,10 @@ on:
 permissions:
   contents: read
 
+env:
+  STRICT_PUBLIC_SECRET_SCAN: '1'
+  CI_SECRET_LOG_POLICY: fail-closed
+
 concurrency:
   group: full-security-suite-${{ github.ref }}
   cancel-in-progress: true
@@ -46,6 +50,8 @@ jobs:
           cache: npm
       - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
+      - name: Package lock alignment gate
+        run: npm run security:package-lock
       - name: Lint
         run: npm run lint
       - name: Typecheck
@@ -82,8 +88,8 @@ jobs:
           set -o pipefail
           npm run build 2>&1 | tee build.log
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
       - name: Upload build diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
@@ -104,8 +110,8 @@ jobs:
           npm run quality:routes:e2e
         env:
           PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
           E2E_BASE_URLS: ${{ vars.E2E_BASE_URLS }}
           E2E_PREVIEW_URL: ${{ vars.E2E_PREVIEW_URL }}
           PREVIEW_DEPLOYMENT_URL: ${{ vars.PREVIEW_DEPLOYMENT_URL }}
@@ -117,6 +123,9 @@ jobs:
           SITE_URL: ${{ vars.SITE_URL }}
       - name: Branch protection evidence gate
         run: node scripts/security/check-branch-protection-evidence.mjs
+        env:
+          RELEASE_TARGET: enterprise
+          RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'
       - name: Generate SBOM
         run: |
           mkdir -p docs/security/evidence/runtime
@@ -161,8 +170,40 @@ jobs:
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v7
         with:
-          name: sbom-cyclonedx
+          name: risck-comply-sbom
           path: docs/security/evidence/runtime/sbom.cyclonedx.json
+
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Validate GitHub Actions workflows
+        uses: raven-actions/actionlint@v2
+
+  gitleaks:
+    name: Secret scanning (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run Gitleaks fail-closed scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
+          GITLEAKS_ENABLE_SUMMARY: 'false'
 
   semgrep:
     name: Semgrep SAST
@@ -179,17 +220,13 @@ jobs:
           persist-credentials: false
       - name: Run Semgrep rules
         run: >-
-          semgrep scan
-          --config p/owasp-top-ten
-          --config p/typescript
-          --config p/javascript
-          --severity ERROR
+          semgrep --config auto
           --error
           --metrics off
           src
 
   codeql:
-    name: CodeQL (javascript-typescript)
+    name: CodeQL
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -274,17 +311,21 @@ jobs:
   enterprise-gate:
     name: Enterprise merge/deploy gate
     runs-on: ubuntu-latest
-    needs: [core, semgrep, codeql, dependency-review, scorecard]
+    needs: [core, actionlint, gitleaks, semgrep, codeql, dependency-review, scorecard]
     if: always()
     steps:
       - name: Enforce all security jobs passed
         run: |
           echo 'core=${{ needs.core.result }}'
+          echo 'actionlint=${{ needs.actionlint.result }}'
+          echo 'gitleaks=${{ needs.gitleaks.result }}'
           echo 'semgrep=${{ needs.semgrep.result }}'
           echo 'codeql=${{ needs.codeql.result }}'
           echo 'dependency-review=${{ needs.dependency-review.result }}'
           echo 'scorecard=${{ needs.scorecard.result }}'
           test '${{ needs.core.result }}' = 'success'
+          test '${{ needs.actionlint.result }}' = 'success'
+          test '${{ needs.gitleaks.result }}' = 'success'
           test '${{ needs.semgrep.result }}' = 'success'
           test '${{ needs.codeql.result }}' = 'success'
           test '${{ needs.dependency-review.result }}' = 'success'
