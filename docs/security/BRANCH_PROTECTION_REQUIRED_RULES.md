@@ -46,29 +46,20 @@ The final blocking signal is `Full Security Suite / Enterprise merge/deploy gate
 
 The available connector did not expose a branch protection or ruleset mutation action, so do not claim this PR applied GitHub UI configuration. Apply the required checks manually as follows:
 
-Settings → Rulesets/Branches → `main` → required checks → add every check listed in the table above.
+Settings -> Rulesets/Branches -> `main` -> required checks -> add every check listed in the table above.
 
 Then enable or verify:
 
-Settings → Rulesets/Branches → `main` → Require a pull request before merging → enabled.
-
-Settings → Rulesets/Branches → `main` → Required approvals → at least `1`.
-
-Settings → Rulesets/Branches → `main` → Require review from Code Owners → enabled.
-
-Settings → Rulesets/Branches → `main` → Dismiss stale pull request approvals when new commits are pushed → enabled.
-
-Settings → Rulesets/Branches → `main` → Require conversation resolution before merging → enabled.
-
-Settings → Rulesets/Branches → `main` → Require status checks to pass → enabled.
-
-Settings → Rulesets/Branches → `main` → Require branches to be up to date before merging → enabled.
-
-Settings → Rulesets/Branches → `main` → Block force pushes → enabled.
-
-Settings → Rulesets/Branches → `main` → Block deletions → enabled.
-
-Settings → Rulesets/Branches → `main` → Restrict who can push → enabled for release administrators only; no regular direct push path to `main`.
+- Require a pull request before merging.
+- Required approvals: at least `1`.
+- Require review from Code Owners.
+- Dismiss stale pull request approvals when new commits are pushed.
+- Require conversation resolution before merging.
+- Require status checks to pass.
+- Require branches to be up to date before merging.
+- Block force pushes.
+- Block deletions.
+- Restrict who can push: release administrators only; no regular direct push path to `main`.
 
 ## Enterprise blockers
 
@@ -85,7 +76,7 @@ A pull request is **not enterprise-ready** when any of these conditions is true:
 - `npm run security:package-lock` fails.
 - Actionlint fails.
 - Gitleaks or GitHub secret scanning fails.
-- `STRICT_PUBLIC_SECRET_SCAN=1` is missing or public secret scanning finds a real value.
+- Strict public scanning is missing or public exposure scanning finds a real value.
 - Semgrep fails.
 - CodeQL fails.
 - Dependency Review fails.
@@ -95,9 +86,9 @@ A pull request is **not enterprise-ready** when any of these conditions is true:
 
 High or critical npm audit findings are release blockers until they are fixed or triaged in `docs/security/NPM_AUDIT_TRIAGE.md` with an owner, risk decision, remediation target, and expiry.
 
-## Workflow secret logging policy
+## Workflow logging policy
 
-Workflows must not echo secrets, print environment dumps, upload `.env*` files, or tee commands that may reveal secret values. CI builds in `Full Security Suite` use placeholder public values rather than GitHub Secrets. Deployment workflows may reference GitHub Secrets only through provider inputs or environment variables needed by deployment commands, and must keep `persist-credentials: false` on checkout.
+Workflows must not echo credentials, print environment dumps, upload `.env*` files, or tee commands that may reveal credential-like values. CI builds in `Full Security Suite` use placeholder public values rather than provider stores. Deployment workflows may reference protected provider values only through provider inputs or environment variables needed by deployment commands, and must keep `persist-credentials: false` on checkout.
 
 ## Evidence requirements
 
@@ -115,11 +106,7 @@ Run the evidence validator locally or in CI:
 node scripts/security/check-branch-protection-evidence.mjs
 ```
 
-For enterprise release validation, run:
-
-```bash
-RELEASE_TARGET=enterprise RISCK_COMPLY_ENTERPRISE_RELEASE=true node scripts/security/check-branch-protection-evidence.mjs
-```
+For enterprise release validation, run the same validator with enterprise release mode enabled.
 
 ## Release rule
 

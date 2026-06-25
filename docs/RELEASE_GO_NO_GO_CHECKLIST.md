@@ -15,7 +15,7 @@ It complements:
 - Date: 2026-06-25
 - Latest assessed branch: `security/enterprise-github-hardening`
 - Release owner: @renansilva2002 / renanescola40-afk
-- Security owner: @renansilva2002 / renanescola40-afk
+- Security owner: @renansilva2002 / renanescola-afk
 - Approver: no approval granted
 - Environment: production / enterprise candidate
 - Decision: **No-Go**
@@ -71,7 +71,7 @@ A release is **No-Go** if any of the following is true:
 - Incident, rollback, support, or customer communication ownership is missing.
 - Enterprise release is attempted while external review evidence is missing, Open, or not Complete.
 - High or critical npm audit findings are present without triage.
-- Secret scanning runs in report-only mode, `STRICT_PUBLIC_SECRET_SCAN=1` is absent, or a real hardcoded secret is detected.
+- Strict public scanning is absent, report-only mode is used, or a real hardcoded secret is detected.
 
 ## Current evidence mapping
 
