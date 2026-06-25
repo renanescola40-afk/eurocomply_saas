@@ -140,7 +140,10 @@ function evaluateClerkOrganizationSyncContract(failures, source, path) {
     'orgId',
     'orgRole',
     'readBoundedJsonRequest',
-    'checkDistributedRateLimit',
+    'ValidationError',
+    'requireTrustedMutation',
+    'requirePermission',
+    "permission: 'manage_team'",
     'noStoreJson',
     'clerkClient',
     'client.organizations.getOrganization',
@@ -153,6 +156,13 @@ function evaluateClerkOrganizationSyncContract(failures, source, path) {
       failures.push(`${path}: missing Clerk organization sync contract token ${token}`);
     }
   }
+
+  assertGuard(failures, source, path, 'origin', 'trusted Origin validation for mutable route');
+  assertGuard(failures, source, path, 'auth', 'authentication');
+  assertGuard(failures, source, path, 'organization', 'organization/tenant context');
+  assertGuard(failures, source, path, 'rbac', 'RBAC authorization');
+  assertGuard(failures, source, path, 'noStore', 'no-store response protection');
+  assertGuard(failures, source, path, 'rateLimit', 'rate limiting');
 
   return true;
 }
