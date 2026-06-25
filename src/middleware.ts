@@ -125,6 +125,10 @@ function detectLocale(req: NextRequest): string {
 export default clerkMiddleware(async (auth, req) => {
   const pathname = req.nextUrl.pathname;
 
+  if (pathname.startsWith('/__clerk')) {
+    return NextResponse.next();
+  }
+
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/next_api') ||
@@ -193,5 +197,8 @@ export default clerkMiddleware(async (auth, req) => {
 });
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/__clerk/:path*',
+  ],
 };
