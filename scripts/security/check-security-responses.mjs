@@ -58,7 +58,7 @@ const checks = [
   {
     path: 'src/app/api/health/route.ts',
     required: ['noStoreJson', "status: 'ok'", 'X-Content-Type-Options'],
-    forbidden: ['NextResponse.json', 'environment:', 'commit:', 'checks:', "application: 'ok'"],
+    forbidden: ['NextResponse.json', 'environment:', 'commit:', 'checks:', 'service:', "application: 'ok'"],
   },
   {
     path: 'src/app/api/health/route.test.ts',
