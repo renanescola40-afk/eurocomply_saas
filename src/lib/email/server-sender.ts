@@ -20,7 +20,7 @@ export type SendEmailInput = {
   metadata?: Record<string, string | number | boolean | null | undefined>;
 };
 
-type SendEmailResult = {
+export type SendEmailResult = {
   sent: boolean;
   provider: 'resend' | 'console';
   id?: string;
