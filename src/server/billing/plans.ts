@@ -1,6 +1,6 @@
-import type { SubscriptionPlan } from '@/server/queries/subscription';
+import type { CanonicalSubscriptionPlan } from '@/server/queries/subscription';
 
-export type BillingPlan = SubscriptionPlan;
+export type BillingPlan = CanonicalSubscriptionPlan;
 
 export type BillingEntitlements = {
   users: number;
