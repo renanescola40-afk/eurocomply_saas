@@ -8,6 +8,38 @@ export const requiredBackendWriteDenyOperations = [];
 export const requiredViewerAdminDenyOperations = [];
 export const requiredUserScopedTable = 'profiles';
 export const requiredUserScopedOperations = ['rls_enabled', 'cross_tenant_read', 'cross_tenant_insert', 'cross_tenant_update', 'cross_tenant_delete', 'same_tenant_read'];
+export const requiredProfileProofCases = [
+  {
+    table: requiredUserScopedTable,
+    operation: 'rls_enabled',
+    requirement: 'public.profiles has row-level security enabled with at least one self-scoped authenticated policy.',
+  },
+  {
+    table: requiredUserScopedTable,
+    operation: 'cross_tenant_read',
+    requirement: 'Authenticated user/tenant A cannot read the profile row owned by authenticated user B.',
+  },
+  {
+    table: requiredUserScopedTable,
+    operation: 'cross_tenant_insert',
+    requirement: 'Authenticated user/tenant A cannot insert a profile row for another user.',
+  },
+  {
+    table: requiredUserScopedTable,
+    operation: 'cross_tenant_update',
+    requirement: 'Authenticated user/tenant A cannot update the profile row owned by authenticated user B.',
+  },
+  {
+    table: requiredUserScopedTable,
+    operation: 'cross_tenant_delete',
+    requirement: 'Authenticated user/tenant A cannot delete the profile row owned by authenticated user B.',
+  },
+  {
+    table: requiredUserScopedTable,
+    operation: 'same_tenant_read',
+    requirement: 'Authenticated user B can read their own public.profiles row.',
+  },
+];
 
 const sameTenantWritableTables = new Set(['profiles']);
 
@@ -83,8 +115,8 @@ export function validatePassingEvidence(evidence) {
   if (tests.length === 0) errors.push('testCases must include live validation cases');
   if (tests.some((test) => test?.passed !== true)) errors.push('all testCases must pass');
 
-  for (const operation of requiredUserScopedOperations) {
-    requirePassedTest(tests, requiredUserScopedTable, operation, errors, `missing live RLS user-scoped table coverage: ${requiredUserScopedTable}:${operation}`);
+  for (const { table, operation } of requiredProfileProofCases) {
+    requirePassedTest(tests, table, operation, errors, `missing live RLS user-scoped table coverage: ${table}:${operation}`);
   }
 
   if (!Array.isArray(evidence.testsRun) || evidence.testsRun.length !== tests.length) errors.push('testsRun must list every executed test case');
@@ -118,6 +150,8 @@ export function buildEvidencePayload({ status, outcome, supabaseUrl, testCases =
     controlsVerified: status === 'Complete' && outcome === 'passed' ? ['Profiles user-scoped isolation verified', 'Cross-user profile access denied', 'Profile self-read allowed'] : [],
     criticalTables,
     optionalTables,
+    requiredProfileProofCases,
+    profileProofExecutionState: status === 'Complete' && outcome === 'passed' ? 'executed_and_passed' : outcome,
     tablesReviewed,
     testsRun: testCases.map((test) => `${test.table}:${test.operation}`),
     testsPassed: testCases.filter((test) => test.passed === true).map((test) => `${test.table}:${test.operation}`),

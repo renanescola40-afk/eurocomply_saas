@@ -2,14 +2,52 @@
   "evidenceItem": "supabase-live-rls-validation",
   "status": "Open",
   "generatedAt": "2026-06-19T00:00:00.000Z",
+  "lastUpdatedAt": "2026-06-27T07:00:00Z",
   "runner": "scripts/security/run-supabase-live-tenant-isolation.mjs",
   "reviewer": "security-automation",
-  "summary": "Live Supabase tenant isolation validation is pending and must pass against the target project before this item can be completed.",
+  "summary": "Live Supabase profiles user-scoped RLS validation is pending and must pass against the target project before this item can be completed.",
   "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "evidenceLocations": [
     "docs/security/evidence/runtime/supabase-live-rls-validation.json"
   ],
   "outcome": "not_run",
-  "completionRule": "Run scripts/security/run-supabase-live-tenant-isolation.mjs with update-register after migrations are applied.",
+  "criticalTables": [
+    "profiles"
+  ],
+  "optionalTables": [],
+  "requiredProfileProofCases": [
+    {
+      "table": "profiles",
+      "operation": "rls_enabled",
+      "requirement": "public.profiles has row-level security enabled with at least one self-scoped authenticated policy."
+    },
+    {
+      "table": "profiles",
+      "operation": "cross_tenant_read",
+      "requirement": "Authenticated user/tenant A cannot read the profile row owned by authenticated user B."
+    },
+    {
+      "table": "profiles",
+      "operation": "cross_tenant_insert",
+      "requirement": "Authenticated user/tenant A cannot insert a profile row for another user."
+    },
+    {
+      "table": "profiles",
+      "operation": "cross_tenant_update",
+      "requirement": "Authenticated user/tenant A cannot update the profile row owned by authenticated user B."
+    },
+    {
+      "table": "profiles",
+      "operation": "cross_tenant_delete",
+      "requirement": "Authenticated user/tenant A cannot delete the profile row owned by authenticated user B."
+    },
+    {
+      "table": "profiles",
+      "operation": "same_tenant_read",
+      "requirement": "Authenticated user B can read their own public.profiles row."
+    }
+  ],
+  "profileProofExecutionState": "not_run",
+  "completionRule": "Only scripts/security/run-supabase-live-tenant-isolation.mjs may mark this evidence Complete after a successful live profiles RLS run against the target Supabase project.",
   "productionGate": "Public production remains blocked while this evidence status is Open."
 }
