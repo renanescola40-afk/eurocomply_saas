@@ -1,0 +1,58 @@
+name: Deploy failed alert
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+      - Vercel Production Deployment
+      - Production Deploy
+      - Release
+    branches:
+      - main
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  notify:
+    name: Notify deploy failure
+    if: ${{ github.event.workflow_run.conclusion == 'failure' && vars.DISABLE_DEPLOY_FAILED_ALERT != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send alert webhook
+        if: ${{ secrets.OPS_ALERT_WEBHOOK_URL != '' }}
+        env:
+          OPS_ALERT_WEBHOOK_URL: ${{ secrets.OPS_ALERT_WEBHOOK_URL }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          WORKFLOW_URL: ${{ github.event.workflow_run.html_url }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          payload=$(jq -n \
+            --arg event "deploy_failed" \
+            --arg app "risck-comply" \
+            --arg severity "P2" \
+            --arg repository "$REPOSITORY" \
+            --arg workflow "$WORKFLOW_NAME" \
+            --arg workflowUrl "$WORKFLOW_URL" \
+            --arg branch "$HEAD_BRANCH" \
+            --arg sha "$HEAD_SHA" \
+            '{event:$event, app:$app, severity:$severity, repository:$repository, workflow:$workflow, workflowUrl:$workflowUrl, branch:$branch, sha:$sha}')
+
+          curl --fail --silent --show-error \
+            --request POST \
+            --header 'content-type: application/json' \
+            --data "$payload" \
+            "$OPS_ALERT_WEBHOOK_URL"
+
+      - name: No webhook configured
+        if: ${{ secrets.OPS_ALERT_WEBHOOK_URL == '' }}
+        run: echo "OPS_ALERT_WEBHOOK_URL is not configured; deploy failure alert webhook skipped."
