@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   requireStepUpForRequest: vi.fn(),
   publicStepUpSummary: vi.fn(),
   writeAuditLog: vi.fn(),
+  supabaseMaybeSingle: vi.fn(),
 }));
 
 vi.mock('@/lib/security/rate-limit', () => ({
@@ -34,6 +35,24 @@ vi.mock('@/lib/security/rate-limit-response', () => ({
 
 vi.mock('@/lib/security/audit-log', () => ({
   writeAuditLog: mocks.writeAuditLog,
+}));
+
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: () => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          not: () => ({
+            order: () => ({
+              limit: () => ({
+                maybeSingle: mocks.supabaseMaybeSingle,
+              }),
+            }),
+          }),
+        }),
+      }),
+    }),
+  }),
 }));
 
 vi.mock('@/server/billing/app-url', () => ({
@@ -51,7 +70,13 @@ vi.mock('@/server/billing/stripe', () => ({
 }));
 
 vi.mock('@/server/billing/plans', () => ({
-  isSelfServePlan: (plan: string) => plan === 'essential' || plan === 'professional' || plan === 'business',
+  normalizeBillingPlanId: (plan: string) => {
+    if (plan === 'business' || plan === 'professional' || plan === 'growth') return 'growth';
+    if (plan === 'essential' || plan === 'starter') return 'starter';
+    if (plan === 'enterprise') return 'enterprise';
+    return undefined;
+  },
+  isSelfServePlan: (plan: string) => plan === 'starter' || plan === 'growth' || plan === 'enterprise',
   getStripePriceId: (plan: string) => `price_${plan}`,
 }));
 
@@ -97,7 +122,7 @@ describe('billing checkout API security gates', () => {
     vi.clearAllMocks();
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
     mocks.getCurrentUser.mockResolvedValue({ id: 'user_admin', email: 'admin@example.test' });
-    mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a' });
+    mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a', clerk_org_id: 'clerk_org_a' });
     mocks.assertOrganizationPermission.mockResolvedValue({ ok: true, role: 'admin' });
     mocks.permissionDeniedResponse.mockImplementation(() => new Response(JSON.stringify({ error: 'permission_denied' }), { status: 403 }));
     mocks.assertTrustedOrigin.mockReturnValue(null);
@@ -108,12 +133,13 @@ describe('billing checkout API security gates', () => {
     mocks.publicStepUpSummary.mockReturnValue({ verified: true });
     mocks.stripeCheckoutCreate.mockResolvedValue({ id: 'checkout_session_fixture', url: 'https://checkout.stripe.test/session-fixture' });
     mocks.writeAuditLog.mockResolvedValue(undefined);
+    mocks.supabaseMaybeSingle.mockResolvedValue({ data: null, error: null });
   });
 
   it('blocks checkout without an authenticated user', async () => {
     mocks.getCurrentUser.mockResolvedValue(null);
 
-    const response = await POST(buildRequest({ plan: 'business', locale: 'en' }));
+    const response = await POST(buildRequest({ plan: 'growth', locale: 'en' }));
     const body = await response.json();
 
     expect(response.status).toBe(401);
@@ -131,7 +157,7 @@ describe('billing checkout API security gates', () => {
       message: 'Permission denied.',
     });
 
-    const response = await POST(buildRequest({ plan: 'business', locale: 'en' }));
+    const response = await POST(buildRequest({ plan: 'growth', locale: 'en' }));
     const body = await response.json();
 
     expect(response.status).toBe(403);
@@ -148,7 +174,7 @@ describe('billing checkout API security gates', () => {
       response: new Response(JSON.stringify({ error: 'step_up_required' }), { status: 403 }),
     });
 
-    const response = await POST(buildRequest({ plan: 'business', locale: 'en' }));
+    const response = await POST(buildRequest({ plan: 'growth', locale: 'en' }));
     const body = await response.json();
 
     expect(response.status).toBe(403);
@@ -157,8 +183,8 @@ describe('billing checkout API security gates', () => {
     expect(mocks.writeAuditLog).not.toHaveBeenCalled();
   });
 
-  it('rejects invalid or non-self-serve plans before contacting Stripe', async () => {
-    const response = await POST(buildRequest({ plan: 'enterprise', locale: 'en' }));
+  it('rejects invalid plans before contacting Stripe', async () => {
+    const response = await POST(buildRequest({ plan: 'unknown', locale: 'en' }));
     const body = await response.json();
 
     expect(response.status).toBe(400);
@@ -176,18 +202,26 @@ describe('billing checkout API security gates', () => {
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: 'subscription',
-        line_items: [{ price: 'price_business', quantity: 1 }],
+        line_items: [{ price: 'price_growth', quantity: 1 }],
         client_reference_id: 'org_a',
         metadata: expect.objectContaining({
           organization_id: 'org_a',
+          organizationId: 'org_a',
+          clerk_org_id: 'clerk_org_a',
+          clerkOrgId: 'clerk_org_a',
           user_id: 'user_admin',
-          plan: 'business',
+          userId: 'user_admin',
+          plan: 'growth',
         }),
         subscription_data: expect.objectContaining({
           metadata: expect.objectContaining({
             organization_id: 'org_a',
+            organizationId: 'org_a',
+            clerk_org_id: 'clerk_org_a',
+            clerkOrgId: 'clerk_org_a',
             user_id: 'user_admin',
-            plan: 'business',
+            userId: 'user_admin',
+            plan: 'growth',
           }),
         }),
       }),
@@ -200,7 +234,7 @@ describe('billing checkout API security gates', () => {
         entityType: 'stripe_checkout_session',
         entityId: 'checkout_session_fixture',
         metadata: expect.objectContaining({
-          plan: 'business',
+          plan: 'growth',
           rbacPermission: 'manage_billing',
           trustedOriginRequired: true,
         }),
