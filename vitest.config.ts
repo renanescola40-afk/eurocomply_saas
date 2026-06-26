@@ -14,7 +14,6 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
-    exclude: ['src/server/billing/stripe-webhooks.test.ts'],
     setupFiles: [resolve(rootDir, 'tests/setup-env.ts')],
   },
 });
