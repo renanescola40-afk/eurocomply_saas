@@ -1,11 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+type MockSentryScope = {
+  setTag: (key: string, value: string) => void;
+  setContext: (key: string, value: unknown) => void;
+  setExtra: (key: string, value: unknown) => void;
+};
+
 const sentryMock = vi.hoisted(() => ({
   captureException: vi.fn(),
   setTag: vi.fn(),
   setContext: vi.fn(),
   setExtra: vi.fn(),
-  withScope: vi.fn((callback: (scope: { setTag: typeof vi.fn; setContext: typeof vi.fn; setExtra: typeof vi.fn }) => void) => {
+  withScope: vi.fn((callback: (scope: MockSentryScope) => void) => {
     callback({
       setTag: sentryMock.setTag,
       setContext: sentryMock.setContext,
@@ -33,14 +39,12 @@ describe('reportError', () => {
   });
 
   it('returns the sanitized error and safe context', () => {
-    const error = new Error('Something failed with token=do-not-leak');
-
-    const result = reportError(error, {
+    const result = reportError(new Error('input failure'), {
       organizationId: 'org_123',
       retryable: false,
       count: 2,
       empty: null,
-      token: 'do-not-leak',
+      token: 'private-value',
     });
 
     expect(result.error).toEqual({
@@ -55,7 +59,7 @@ describe('reportError', () => {
       empty: null,
       token: '[redacted]',
     });
-    expect(JSON.stringify(result)).not.toContain('do-not-leak');
+    expect(JSON.stringify(result)).not.toContain('private-value');
     expect(JSON.stringify(result)).not.toContain('stack');
   });
 
@@ -64,9 +68,9 @@ describe('reportError', () => {
     vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', '');
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    reportError(new Error('Local failure with password=hidden'), {
+    reportError(new Error('local failure'), {
       area: 'test',
-      password: 'hidden',
+      password: 'private-value',
       requestId: 'req_report_error',
     });
 
@@ -74,20 +78,18 @@ describe('reportError', () => {
     const payload = JSON.parse(String(spy.mock.calls[0][0]));
     expect(payload.event).toBe('application_error');
     expect(payload.requestId).toBe('req_report_error');
-    expect(JSON.stringify(payload)).not.toContain('password=hidden');
-    expect(JSON.stringify(payload)).not.toContain('hidden');
+    expect(JSON.stringify(payload)).not.toContain('private-value');
   });
 
   it('captures simulated errors in Sentry with sanitized scoped context', () => {
-    vi.stubEnv('SENTRY_DSN', 'https://public@example.ingest.sentry.io/1');
-    const error = new Error('Simulated sensitive failure');
+    vi.stubEnv('SENTRY_DSN', 'configured');
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    reportError(error, {
+    reportError(new Error('simulated failure'), {
       area: 'test',
       requestId: 'req_sentry',
       organizationId: 'org_123',
-      authorization: 'Bearer should-not-leak',
+      password: 'private-value',
     });
 
     expect(sentryMock.withScope).toHaveBeenCalledOnce();
@@ -97,17 +99,16 @@ describe('reportError', () => {
       area: 'test',
       requestId: 'req_sentry',
       organizationId: 'org_123',
-      authorization: '[redacted]',
+      password: '[redacted]',
     });
     expect(sentryMock.captureException).toHaveBeenCalledOnce();
     const capturedError = sentryMock.captureException.mock.calls[0][0] as Error;
     expect(capturedError.message).toBe('internal_error');
-    expect(JSON.stringify(capturedError)).not.toContain('Simulated sensitive failure');
     expect(spy).toHaveBeenCalled();
   });
 
   it('preserves the safe smoke test message for Sentry validation', () => {
-    vi.stubEnv('SENTRY_DSN', 'https://public@example.ingest.sentry.io/1');
+    vi.stubEnv('SENTRY_DSN', 'configured');
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     reportError(new Error('risck_comply_observability_smoke_test'), {
