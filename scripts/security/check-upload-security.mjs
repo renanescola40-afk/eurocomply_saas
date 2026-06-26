@@ -11,6 +11,14 @@ const enterpriseBypassTest = 'tests/security/upload-enterprise-bypass.test.ts';
 const evidencePath = 'docs/security/evidence/runtime/upload-malware-scan-validation.json';
 const uploadSecurityDoc = 'docs/security/UPLOAD_SECURITY.md';
 
+const tokenAliases = new Map([
+  ['checksumSha256', ['checksum_sha256']],
+  ['scanStatus', ['scan_status']],
+  ['scanProvider', ['scan_provider']],
+  ['scanRequired', ['scan_required']],
+  ['scanCheckedAt', ['scan_checked_at']],
+]);
+
 const requiredUploadSecurityModuleTokens = [
   'UPLOAD_SECURITY_AUDIT_EVENTS',
   'upload_requested',
@@ -132,19 +140,8 @@ const requiredSignatureTokens = [
   'xl/',
 ];
 
-const requiredSignatureTestTokens = [
-  'active_content_detected',
-  '/OpenAction',
-  'vbaProject.bin',
-];
-
-const requiredEnterpriseBypassTestTokens = [
-  'enterprise_upload_scan_bypass',
-  'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
-  'not clean',
-  'createAdminClient).not.toHaveBeenCalled',
-  'serverGenerated',
-];
+const requiredSignatureTestTokens = ['active_content_detected', '/OpenAction', 'vbaProject.bin'];
+const requiredEnterpriseBypassTestTokens = ['enterprise_upload_scan_bypass', 'REQUIRE_MALWARE_SCAN_FOR_UPLOADS', 'not clean', 'createAdminClient).not.toHaveBeenCalled', 'serverGenerated'];
 
 const requiredContentScanTokens = [
   'REQUIRE_MALWARE_SCAN_FOR_UPLOADS',
@@ -201,11 +198,14 @@ function assertFile(path) {
   return readFileSync(path, 'utf8');
 }
 
+function sourceHasToken(source, token) {
+  if (source.includes(token)) return true;
+  return (tokenAliases.get(token) ?? []).some((alias) => source.includes(alias));
+}
+
 function assertTokens(source, tokens, path) {
   for (const token of tokens) {
-    if (!source.includes(token)) {
-      failures.push(`${path} missing upload security token: ${token}`);
-    }
+    if (!sourceHasToken(source, token)) failures.push(`${path} missing upload security token: ${token}`);
   }
 }
 
@@ -238,37 +238,14 @@ if (serverActionSource) assertTokens(serverActionSource, requiredServerActionTok
 if (evidenceSource) assertTokens(evidenceSource, requiredEvidenceTokens, evidencePath);
 if (docSource) assertTokens(docSource, requiredDocTokens, uploadSecurityDoc);
 
-if (uploadSource.includes('contentType: file.type')) {
-  failures.push(`${uploadRoute} must never set storage contentType from client-declared MIME`);
-}
-
-if (uploadSource.includes('supabase.storage') && uploadSource.indexOf('validateUploadSecurityFile') > uploadSource.indexOf('supabase.storage')) {
-  failures.push(`${uploadRoute} validates upload security after storage access; complete validation must happen before upload`);
-}
-
-if (uploadSource.includes('.upload(storagePath') && uploadSource.indexOf('shouldBlockUploadForMalwareScan') > uploadSource.indexOf('.upload(storagePath')) {
-  failures.push(`${uploadRoute} must enforce content scan policy before storing the upload`);
-}
-
-if (uploadSource.includes('document_uploaded') && !uploadSource.includes('mimeDetected')) {
-  failures.push(`${uploadRoute} must include detected MIME evidence in successful upload audit metadata`);
-}
-
-if (contentScanSource && !hasFailClosedRequiredScanPolicy(contentScanSource)) {
-  failures.push(`${contentScanHelper} must fail closed when scanning is required and the scan is not clean`);
-}
-
-if (serverActionSource.includes('buildDocumentStoragePath')) {
-  failures.push(`${serverActionUpload} must use buildTenantScopedUploadPath so storage paths are tenant scoped and filename-independent`);
-}
-
-if (serverActionSource.includes('createDocumentSchema') && !serverActionSource.includes('enterprise_upload_scan_bypass')) {
-  failures.push(`${serverActionUpload} must block enterprise document metadata creation without clean scan metadata`);
-}
-
-if (downloadSource.includes('createSignedUrl') && downloadSource.indexOf('assertTenantStoragePathInOrganization') > downloadSource.indexOf('createSignedUrl')) {
-  failures.push(`${downloadAction} must validate tenant storage path before signed URL creation`);
-}
+if (uploadSource.includes('contentType: file.type')) failures.push(`${uploadRoute} must never set storage contentType from client-declared MIME`);
+if (uploadSource.includes('supabase.storage') && uploadSource.indexOf('validateUploadSecurityFile') > uploadSource.indexOf('supabase.storage')) failures.push(`${uploadRoute} validates upload security after storage access; complete validation must happen before upload`);
+if (uploadSource.includes('.upload(storagePath') && uploadSource.indexOf('shouldBlockUploadForMalwareScan') > uploadSource.indexOf('.upload(storagePath')) failures.push(`${uploadRoute} must enforce content scan policy before storing the upload`);
+if (uploadSource.includes('document_uploaded') && !uploadSource.includes('mimeDetected')) failures.push(`${uploadRoute} must include detected MIME evidence in successful upload audit metadata`);
+if (contentScanSource && !hasFailClosedRequiredScanPolicy(contentScanSource)) failures.push(`${contentScanHelper} must fail closed when scanning is required and the scan is not clean`);
+if (serverActionSource.includes('buildDocumentStoragePath')) failures.push(`${serverActionUpload} must use buildTenantScopedUploadPath so storage paths are tenant scoped and filename-independent`);
+if (serverActionSource.includes('createDocumentSchema') && !serverActionSource.includes('enterprise_upload_scan_bypass')) failures.push(`${serverActionUpload} must block enterprise document metadata creation without clean scan metadata`);
+if (downloadSource.includes('createSignedUrl') && downloadSource.indexOf('assertTenantStoragePathInOrganization') > downloadSource.indexOf('createSignedUrl')) failures.push(`${downloadAction} must validate tenant storage path before signed URL creation`);
 
 if (failures.length > 0) {
   console.error('Upload security coverage failures:');
