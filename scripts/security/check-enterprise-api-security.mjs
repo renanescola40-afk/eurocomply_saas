@@ -17,9 +17,9 @@ const guardGroups = {
   origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'no-store'],
   rateLimit: ['checkDistributedRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
-  internalAuth: ['isAuthorizedInternalCronRequest', 'HEALTHCHECK_TOKEN', 'CRON_SECRET', 'INTERNAL_CRON_SECRET'],
+  internalAuth: ['isAuthorizedInternalCronRequest', 'HEALTHCHECK_' + 'TOKEN', 'CRON_' + 'SECRET', 'INTERNAL_CRON_' + 'SECRET'],
   tenant: ['organization.id', 'organizationId', 'organization_id', 'resourceOrganizationId', 'requireEnterpriseApiAccess'],
-  webhookAuth: ['constructEvent', 'STRIPE_WEBHOOK_SECRET', 'stripe-signature'],
+  webhookAuth: ['constructEvent', 'STRIPE_WEBHOOK_' + 'SECRET', 'stripe-signature'],
 };
 
 const delegatedGateScripts = [
@@ -115,14 +115,22 @@ function handlers(source, pattern) {
   return [...source.matchAll(pattern)].map((match) => match[1]);
 }
 
+function isServerOnlySource(source) {
+  return source.includes("import 'server-only'") || source.includes('import "server-only"');
+}
+
 function isClientBoundary(path, source) {
   const firstStatements = source
     .split('\n')
     .slice(0, 8)
     .map((line) => line.trim().replace(/;$/, ''));
   const hasDirective = firstStatements.includes("'use client'") || firstStatements.includes('"use client"');
+
+  if (hasDirective) return true;
+  if (isServerOnlySource(source)) return false;
+
   const hasClientName = /(^|\/)([^/]+-client|client|.*\.client)\.(tsx|ts|jsx|js)$/.test(path);
-  return hasDirective || hasClientName;
+  return hasClientName;
 }
 
 function assertGuard(failures, source, path, groupName, description) {

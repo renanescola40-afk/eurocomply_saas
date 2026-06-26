@@ -1,4 +1,3 @@
-import { noStoreJson } from '@/server/security/no-store';
 import { sendEmail } from '@/lib/email/client';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
@@ -14,8 +13,13 @@ import {
   welcomeOnboardingEmail,
   type EmailTemplateKey,
 } from '@/lib/email/templates';
+import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
+import { readBoundedJsonRequest, validationErrorResponse } from '@/lib/security/validate';
+import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
+
+const TEST_EMAIL_BODY_MAX_BYTES = 4 * 1024;
 
 type TestEmailPayload = {
   to?: string;
