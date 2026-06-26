@@ -199,6 +199,9 @@ begin
     drop policy if exists live_rls_tasks_insert_member on public.tasks;
     drop policy if exists live_rls_tasks_update_member on public.tasks;
     drop policy if exists live_rls_tasks_delete_member on public.tasks;
+    drop policy if exists live_rls_tasks_insert_writer on public.tasks;
+    drop policy if exists live_rls_tasks_update_writer on public.tasks;
+    drop policy if exists live_rls_tasks_delete_admin on public.tasks;
 
     create policy live_rls_tasks_select_member
       on public.tasks
