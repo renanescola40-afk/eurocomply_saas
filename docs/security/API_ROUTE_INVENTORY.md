@@ -27,6 +27,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/internal/daily-maintenance/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
 | `src/app/api/internal/compliance-alerts/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
 | `src/app/api/internal/metric-snapshots/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
+| `src/app/api/internal/email/test/route.ts` | health/internal | Internal route guarded by shared internal authorization and no-store responses. |
 | `src/app/api/intelligence/refresh/route.ts` | health/internal | Internal refresh endpoint; guarded by internal authorization. |
 | `src/app/api/billing/webhook/route.ts` | webhook | Stripe webhook; signature verification replaces trusted origin. |
 | `src/app/api/stripe/webhook/route.ts` | webhook | Stripe webhook; signature verification replaces trusted origin. |
@@ -43,7 +44,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/security/settings/route.ts` | admin-only | Security settings mutation; manage_settings, step-up and audit required. |
 | `src/app/api/security/step-up/challenge/route.ts` | high-risk | Step-up challenge; auth, tenant context, origin and rate limit required. |
 | `src/app/api/security/step-up/verify/route.ts` | high-risk | Step-up verification; auth, tenant context, origin, rate limit, provider verification and audit required. |
-| `src/app/api/documents/upload/route.ts` | high-risk | File upload; manage_documents, malware/content scan, tenant validation and origin/rate limits required. |
+| `src/app/api/documents/upload/route.ts` | high-risk | File upload; manage_documents, content scan, tenant validation and origin/rate limits required. |
 | `src/app/api/documents/[id]/approval/route.ts` | high-risk | Resource mutation; fetch document and validate `organization_id` before update. |
 | `src/app/api/gdpr/export/route.ts` | high-risk | Export path; auth, tenant scope, plan/permission, audit and no-store required. |
 | `src/app/api/gdpr/delete-request/route.ts` | high-risk | Data deletion workflow; trusted origin, rate limit, validation and audit required. |
