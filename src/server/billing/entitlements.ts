@@ -18,7 +18,22 @@ export type PlanEntitlements = {
   whiteLabelReports: boolean;
 };
 
-const ENTITLEMENTS: Record<'starter' | 'growth' | 'enterprise', Omit<PlanEntitlements, 'plan'>> = {
+const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
+  essential: {
+    maxDocuments: 10,
+    maxUsers: 1,
+    maxFiscalCountries: 1,
+    aiCalendar: 'basic',
+    aiNews: 'basic',
+    riskMatrix: 'simple',
+    auditLog: false,
+    employeeInvites: false,
+    approvalWorkflows: false,
+    executiveReports: false,
+    csvExports: false,
+    gdprSelfService: false,
+    whiteLabelReports: false,
+  },
   starter: {
     maxDocuments: 40,
     maxUsers: 3,
@@ -32,6 +47,21 @@ const ENTITLEMENTS: Record<'starter' | 'growth' | 'enterprise', Omit<PlanEntitle
     executiveReports: false,
     csvExports: true,
     gdprSelfService: false,
+    whiteLabelReports: false,
+  },
+  professional: {
+    maxDocuments: 100,
+    maxUsers: 3,
+    maxFiscalCountries: 2,
+    aiCalendar: 'advanced',
+    aiNews: 'standard',
+    riskMatrix: 'complete',
+    auditLog: true,
+    employeeInvites: false,
+    approvalWorkflows: false,
+    executiveReports: false,
+    csvExports: true,
+    gdprSelfService: true,
     whiteLabelReports: false,
   },
   growth: {
@@ -49,10 +79,25 @@ const ENTITLEMENTS: Record<'starter' | 'growth' | 'enterprise', Omit<PlanEntitle
     gdprSelfService: true,
     whiteLabelReports: false,
   },
+  business: {
+    maxDocuments: 500,
+    maxUsers: 10,
+    maxFiscalCountries: 5,
+    aiCalendar: 'advanced',
+    aiNews: 'advanced',
+    riskMatrix: 'advanced',
+    auditLog: true,
+    employeeInvites: true,
+    approvalWorkflows: true,
+    executiveReports: true,
+    csvExports: true,
+    gdprSelfService: true,
+    whiteLabelReports: false,
+  },
   enterprise: {
-    maxDocuments: 10000,
-    maxUsers: 250,
-    maxFiscalCountries: 50,
+    maxDocuments: Number.POSITIVE_INFINITY,
+    maxUsers: Number.POSITIVE_INFINITY,
+    maxFiscalCountries: Number.POSITIVE_INFINITY,
     aiCalendar: 'advanced',
     aiNews: 'advanced',
     riskMatrix: 'enterprise',
@@ -71,8 +116,7 @@ export function formatLimit(limit: number) {
 }
 
 export function getPlanEntitlements(plan: SubscriptionPlan): PlanEntitlements {
-  const canonicalPlan = normalizePlan(plan);
-  return { plan: canonicalPlan, ...ENTITLEMENTS[canonicalPlan] };
+  return { plan, ...ENTITLEMENTS[plan] };
 }
 
 export async function getOrganizationEntitlements(organizationId: string): Promise<PlanEntitlements> {
