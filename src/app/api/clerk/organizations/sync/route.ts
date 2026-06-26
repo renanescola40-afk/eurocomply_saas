@@ -2,13 +2,18 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { z } from 'zod';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
 import { syncClerkOrganizationToSupabase } from '@/server/clerk/organization-sync';
-import {
-  noStoreJson,
-  requireOrganizationContext,
-  requirePermission,
-  requireTrustedMutation,
-  secureApiError,
-} from '@/server/security/api-guards';
+import { noStoreJson, requireTrustedMutation, secureApiError } from '@/server/security/api-guards';
+
+const allowedClerkOrganizationRoles = new Set([
+  'org:owner',
+  'org:admin',
+  'org:member',
+  'org:viewer',
+  'owner',
+  'admin',
+  'member',
+  'viewer',
+]);
 
 const clerkOrgSyncBodySchema = z.object({
   clerkOrgId: z.string().min(1).max(128),
@@ -21,9 +26,14 @@ export async function POST(request: Request) {
     const userId = authState.userId;
     const orgId = authState.orgId;
     const orgRole = (authState as { orgRole?: string | null }).orgRole ?? null;
+    const normalizedOrgRole = orgRole?.toLowerCase() ?? null;
 
     if (!userId || !orgId) {
       return noStoreJson({ error: 'unauthorized' }, { status: 401 });
+    }
+
+    if (!normalizedOrgRole || !allowedClerkOrganizationRoles.has(normalizedOrgRole)) {
+      return noStoreJson({ error: 'organization_membership_required' }, { status: 403 });
     }
 
     const mutationDenied = await requireTrustedMutation(request, {
@@ -39,17 +49,6 @@ export async function POST(request: Request) {
     if (mutationDenied) {
       return mutationDenied;
     }
-
-    await requireOrganizationContext({
-      userId,
-      organizationId: orgId,
-    });
-
-    await requirePermission({
-      userId,
-      organizationId: orgId,
-      permission: 'manage_team',
-    });
 
     let rawBody: unknown;
     try {
@@ -75,7 +74,7 @@ export async function POST(request: Request) {
       clerkUserId: userId,
       name: clerkOrganization.name,
       slug: clerkOrganization.slug,
-      role: orgRole,
+      role: normalizedOrgRole,
       membershipId: parsedBody.data.membershipId,
     });
 
