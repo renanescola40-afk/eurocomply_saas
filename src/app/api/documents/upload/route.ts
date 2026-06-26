@@ -28,6 +28,7 @@ import {
 const STORAGE_BUCKET = CONTROLLED_DOCUMENT_STORAGE_BUCKET;
 // The controlled-documents bucket is the only storage bucket permitted for enterprise document uploads.
 const SIGNATURE_MISMATCH_REASON = 'signature_mismatch';
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function safeDocumentTitle(name: string) {
   return sanitizeUploadFileName(name)
@@ -39,6 +40,10 @@ function safeDocumentTitle(name: string) {
 function blockedScanStatus(scan: MalwareScanResult) {
   if (scan.status === 'not_configured' || scan.status === 'unavailable') return 503;
   return 422;
+}
+
+function uuidOrNull(value: string | null | undefined) {
+  return value && UUID_PATTERN.test(value) ? value : null;
 }
 
 function preScanAuditMetadata(input: {
@@ -333,11 +338,12 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Unable to store document securely.' }, { status: 500 });
   }
 
+  const uploadedBy = uuidOrNull(user.id);
   const { data: persistedDocument, error: documentError } = await supabase
     .from('documents')
     .insert({
       organization_id: organization.id,
-      uploaded_by: user.id,
+      uploaded_by: uploadedBy,
       name: title,
       category: 'controlled-document',
       status: 'pending',
@@ -358,64 +364,45 @@ export async function POST(request: NextRequest) {
 
   if (documentError) {
     await storage.remove([storagePath]);
-    console.warn('[documents] metadata_create_failed', { code: documentError.code ?? 'unknown' });
+    console.warn('[documents] metadata_insert_failed', { code: documentError.code ?? 'unknown' });
 
-    return noStoreJson({ error: 'Unable to register document metadata.' }, { status: 500 });
+    return noStoreJson({ error: 'Unable to register document securely.' }, { status: 500 });
   }
-
-  const document = {
-    id: persistedDocument?.id,
-    title: persistedDocument?.name ?? title,
-    status: persistedDocument?.status ?? 'pending',
-    version: 1,
-    created_at: persistedDocument?.created_at ?? null,
-  };
-
-  await createAuditEvent({
-    organizationId: organization.id,
-    actorUserId: user.id,
-    action: 'document_uploaded',
-    entityType: 'document',
-    entityId: document.id,
-    metadata: {
-      title,
-      mimeType: uploadValidation.mimeDetected,
-      claimedMimeType: uploadValidation.claimedMimeType,
-      mimeDetected: uploadValidation.mimeDetected,
-      sizeBytes: uploadValidation.fileSize,
-      fileSize: uploadValidation.fileSize,
-      fileHash: uploadValidation.fileHash,
-      checksumSha256: uploadValidation.fileHash,
-      plan: quota.entitlements.plan,
-      actorRole: permission.role ?? 'unknown',
-      documentCountBeforeUpload: quota.currentCount,
-      scanStatus: scan.status,
-      scanProvider: scan.provider,
-      scanRequired: scan.required,
-      scanCheckedAt: scan.scannedAt,
-      organizationId: organization.id,
-      actorUserId: user.id,
-    },
-  });
 
   await createNotification({
     organizationId: organization.id,
-    userId: user.id,
-    type: 'document',
-    message: `Documento ${title} carregado para revisão.`,
+    type: 'document_uploaded',
+    title: 'Controlled document uploaded',
+    message: `${title} was uploaded and is pending review.`,
+    metadata: {
+      documentId: persistedDocument.id,
+      status: persistedDocument.status,
+    },
   });
 
-  return noStoreJson({
-    document,
-    checksum: uploadValidation.fileHash,
-    scan: {
-      status: scan.status,
-      provider: scan.provider,
-      required: scan.required,
+  await auditUploadSecurityEvent({
+    action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadAccepted,
+    organizationId: organization.id,
+    actorUserId: user.id,
+    entityId: persistedDocument.id,
+    metadata: {
+      ...scanMetadata,
+      documentId: persistedDocument.id,
+      storagePath,
+      name: title,
+      uploadedBy,
     },
-    plan: quota.entitlements.plan,
-    remainingDocuments: Number.isFinite(quota.entitlements.maxDocuments)
-      ? Math.max(quota.entitlements.maxDocuments - quota.currentCount - 1, 0)
-      : null,
   });
+
+  return noStoreJson(
+    {
+      document: persistedDocument,
+      scan: {
+        status: scan.status,
+        provider: scan.provider,
+        required: scan.required,
+      },
+    },
+    { status: 201 },
+  );
 }
