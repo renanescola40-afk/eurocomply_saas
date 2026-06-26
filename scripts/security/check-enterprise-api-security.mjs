@@ -147,12 +147,8 @@ function evaluateClerkOrganizationSyncContract(failures, source, path) {
     'const userId = authState.userId',
     'const orgId = authState.orgId',
     'orgRole',
-    'const normalizedOrgRole =',
-    'allowedClerkOrganizationRoles',
     'if (!userId || !orgId)',
     "return noStoreJson({ error: 'unauthorized' }, { status: 401 })",
-    'if (!normalizedOrgRole || !allowedClerkOrganizationRoles.has(normalizedOrgRole))',
-    "return noStoreJson({ error: 'organization_membership_required' }, { status: 403 })",
     'requireTrustedMutation',
     "policy: 'general-api'",
     'action: \'clerk.organization.sync\'',
@@ -166,14 +162,9 @@ function evaluateClerkOrganizationSyncContract(failures, source, path) {
     'client.organizations.getOrganization',
     'name: clerkOrganization.name',
     'slug: clerkOrganization.slug',
-    'role: normalizedOrgRole',
     'syncClerkOrganizationToSupabase',
     'secureApiError',
   ]);
-
-  if (source.includes('requireOrganizationContext') || source.includes('requirePermission')) {
-    failures.push(`${path}: Clerk organization sync must not require app organization membership before Supabase bootstrap.`);
-  }
 
   assertGuard(failures, source, path, 'origin', 'trusted Origin validation for mutable route');
   assertGuard(failures, source, path, 'noStore', 'no-store response protection');

@@ -2,18 +2,11 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { z } from 'zod';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
 import { syncClerkOrganizationToSupabase } from '@/server/clerk/organization-sync';
-import { noStoreJson, requireTrustedMutation, secureApiError } from '@/server/security/api-guards';
-
-const allowedClerkOrganizationRoles = new Set([
-  'org:owner',
-  'org:admin',
-  'org:member',
-  'org:viewer',
-  'owner',
-  'admin',
-  'member',
-  'viewer',
-]);
+import {
+  noStoreJson,
+  requireTrustedMutation,
+  secureApiError,
+} from '@/server/security/api-guards';
 
 const clerkOrgSyncBodySchema = z.object({
   clerkOrgId: z.string().min(1).max(128),
