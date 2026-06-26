@@ -1,5 +1,6 @@
 import { noStoreJson } from '@/server/security/no-store';
 import { sendEmail } from '@/lib/email/client';
+import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import {
   billingStartedEmail,
   complianceDeadlineReminderEmail,
@@ -14,8 +15,6 @@ import {
 
 export const runtime = 'nodejs';
 
-const INTERNAL_SECRET_ENV = 'INTERNAL_CRON_SECRET';
-
 type TestEmailPayload = {
   to?: string;
   template?: EmailTemplateKey;
@@ -24,14 +23,6 @@ type TestEmailPayload = {
 
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
-}
-
-function isAuthorized(request: Request) {
-  const secret = process.env[INTERNAL_SECRET_ENV] ?? process.env.CRON_SECRET;
-  if (!secret) return false;
-
-  const authorization = request.headers.get('authorization');
-  return authorization === `Bearer ${secret}`;
 }
 
 function buildTemplate(template: EmailTemplateKey, organizationName: string) {
@@ -89,7 +80,7 @@ function buildTemplate(template: EmailTemplateKey, organizationName: string) {
 }
 
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isAuthorizedInternalCronRequest(request)) {
     return noStoreJson({ error: 'unauthorized' }, { status: 401 });
   }
 
