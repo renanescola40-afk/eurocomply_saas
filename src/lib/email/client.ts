@@ -12,7 +12,7 @@ export type SendEmailInput = {
   html: string;
   text?: string;
   from?: string;
-  template: EmailTemplateKey;
+  template?: EmailTemplateKey;
   organizationId?: string | null;
   userId?: string | null;
   unsubscribeUrl?: string | null;
@@ -43,6 +43,7 @@ const DEFAULT_MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 350;
 const MAX_BACKOFF_MS = 3_000;
 const EMAIL_HASH_PEPPER_ENV = 'EMAIL_LOG_HASH_PEPPER';
+const LEGACY_TEMPLATE: EmailTemplateKey = 'security_alert';
 
 const SENSITIVE_VALUE_PATTERNS = [
   /\b(?:sk|rk|pk|whsec|clerk|sess|cs|orginv|ticket)_[A-Za-z0-9_=-]{12,}\b/gi,
@@ -52,6 +53,10 @@ const SENSITIVE_VALUE_PATTERNS = [
 ];
 
 const SENSITIVE_REPLACEMENT = '[redacted]';
+
+function getTemplate(input: Pick<SendEmailInput, 'template'>) {
+  return input.template ?? LEGACY_TEMPLATE;
+}
 
 function getDefaultFromAddress() {
   return process.env.EMAIL_FROM ?? 'RISCK COMPLY <no-reply@risckcomply.app>';
@@ -90,7 +95,7 @@ function assertNoSensitiveContent(input: SendEmailInput) {
   const redacted = redactEmailSecrets(combined);
 
   if (redacted !== combined) {
-    throw new Error(`Email template ${input.template} contains a sensitive token-like value and was blocked before delivery.`);
+    throw new Error(`Email template ${getTemplate(input)} contains a sensitive token-like value and was blocked before delivery.`);
   }
 }
 
@@ -122,12 +127,13 @@ async function writeEmailLog(input: {
 
   const recipients = normalizeRecipients(input.email.to);
   const primaryRecipient = recipients[0] ?? input.email.to.toLowerCase();
+  const template = getTemplate(input.email);
 
   const payload = {
     id: input.id,
     recipient: primaryRecipient,
     recipient_hash: hashRecipient(primaryRecipient),
-    template: input.email.template,
+    template,
     status: input.status,
     provider: input.provider,
     provider_id: input.providerId ?? null,
@@ -147,7 +153,7 @@ async function writeEmailLog(input: {
   if (error) {
     reportError(error, {
       area: 'email_delivery_log_write',
-      template: input.email.template,
+      template,
       status: input.status,
     });
   }
@@ -186,6 +192,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const from = input.from ?? getDefaultFromAddress();
   const maxAttempts = Number(process.env.EMAIL_MAX_SEND_ATTEMPTS ?? DEFAULT_MAX_ATTEMPTS);
   const attemptsToRun = Number.isSafeInteger(maxAttempts) && maxAttempts > 0 ? Math.min(maxAttempts, 5) : DEFAULT_MAX_ATTEMPTS;
+  const template = getTemplate(input);
 
   assertNoSensitiveContent(input);
 
@@ -198,7 +205,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
   if (!apiKey) {
     console.info('[RISCK COMPLY email skipped]', {
-      template: input.template,
+      template,
       recipient: normalizeRecipients(input.to)[0] ?? 'unknown',
     });
 
@@ -233,7 +240,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
       reportError(error, {
         area: 'email_send',
-        template: input.template,
+        template,
         attempt,
         attemptsToRun,
       });
