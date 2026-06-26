@@ -24,8 +24,10 @@ export function reportError(error: unknown, context: ReportErrorContext = {}) {
 
   if (isSentryConfigured()) {
     Sentry.withScope((scope) => {
+      const area = typeof sanitizedContext.area === 'string' ? sanitizedContext.area : 'unknown';
       scope.setTag('app', 'risck-comply');
-      scope.setTag('area', typeof sanitizedContext.area === 'string' ? sanitizedContext.area : 'unknown');
+      scope.setTag('area', area);
+      scope.setTag('error_name', sanitizedError.name);
       scope.setContext('safe_context', sanitizedContext);
       scope.setExtra('safe_error', sanitizedError);
       Sentry.captureException(safeError);
