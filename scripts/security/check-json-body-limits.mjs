@@ -33,10 +33,6 @@ function requireToken(source, token, message) {
   if (!source.includes(token)) failures.push(message);
 }
 
-function isInternalTokenAuthorizedRoute(source) {
-  return source.includes('isAuthorizedInternalCronRequest');
-}
-
 console.log('EuroComply JSON body limit check');
 console.log('----------------------------------');
 
@@ -62,7 +58,7 @@ requireToken(test, 'returns sanitized no-store validation errors', `${TEST_PATH}
 for (const path of walk(API_ROOT)) {
   const source = readFileSync(path, 'utf8');
 
-  if (/\brequest\.json\s*\(/.test(source) && !isInternalTokenAuthorizedRoute(source)) {
+  if (/\brequest\.json\s*\(/.test(source)) {
     failures.push(`${path} must use readBoundedJsonRequest instead of request.json().`);
   }
 }
