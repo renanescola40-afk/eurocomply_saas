@@ -101,9 +101,14 @@ Enable Supabase project alerts for:
 - Auth service incident.
 - Storage service incident.
 
-## GitHub deploy-failed alert
+## GitHub/Vercel deploy-failed alert
 
-The repository includes `.github/workflows/deploy-failed-alert.yml`. Configure repository secret `OPS_ALERT_WEBHOOK_URL` to receive a webhook when main-branch CI/deploy workflows fail.
+Enable native notifications in GitHub Actions and Vercel for production deploy failures. A deploy failure should page/notify the engineering owner when:
+
+- the failing workflow targets `main`, or
+- Vercel marks the production deployment as failed, canceled, or blocked by missing env/config.
+
+Keep webhook integrations configured in the vendor UI rather than committing webhook-forwarding workflow code to the repository.
 
 ## Dashboard
 
