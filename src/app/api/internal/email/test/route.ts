@@ -1,6 +1,4 @@
-import { noStoreJson } from '@/server/security/no-store';
 import { sendEmail } from '@/lib/email/client';
-import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import {
   billingStartedEmail,
   complianceDeadlineReminderEmail,
@@ -12,8 +10,13 @@ import {
   welcomeOnboardingEmail,
   type EmailTemplateKey,
 } from '@/lib/email/templates';
+import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
+import { readBoundedJsonRequest, validationErrorResponse } from '@/lib/security/validate';
+import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
+
+const TEST_EMAIL_BODY_MAX_BYTES = 4 * 1024;
 
 type TestEmailPayload = {
   to?: string;
@@ -84,7 +87,16 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'unauthorized' }, { status: 401 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as TestEmailPayload;
+  let body: TestEmailPayload;
+
+  try {
+    body = await readBoundedJsonRequest<TestEmailPayload>(request, {
+      maxBytes: TEST_EMAIL_BODY_MAX_BYTES,
+    });
+  } catch (error) {
+    return validationErrorResponse(error) ?? noStoreJson({ error: 'invalid_request_payload' }, { status: 400 });
+  }
+
   const to = body.to?.trim();
 
   if (!to) {
