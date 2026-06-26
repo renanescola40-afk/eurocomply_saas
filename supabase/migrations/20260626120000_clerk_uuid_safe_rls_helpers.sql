@@ -105,3 +105,84 @@ grant execute on function public.has_org_role(uuid, text[]) to authenticated;
 comment on function public.current_jwt_subject() is 'Raw JWT subject from request.jwt.claim.sub/request.jwt.claims.sub. Internal helper for mixed Supabase UUID and Clerk text identities.';
 comment on function public.current_legacy_user_id() is 'UUID-safe Supabase Auth user ID resolver. Returns null instead of casting Clerk text subjects to uuid.';
 comment on function public.current_clerk_user_id() is 'Clerk text user ID resolver. UUID Supabase Auth subjects return null so legacy UUID auth stays on user_id.';
+
+-- Replace stale inline auth.uid() policies with UUID-safe helper based policies.
+-- These policies existed before Clerk support and can throw invalid UUID casts for Clerk user_ subjects.
+
+drop policy if exists "Users can view own profile" on public.profiles;
+create policy "Users can view own profile"
+on public.profiles for select
+using (
+  public.current_legacy_user_id() is not null
+  and id = public.current_legacy_user_id()
+);
+
+drop policy if exists "Users can update own profile" on public.profiles;
+create policy "Users can update own profile"
+on public.profiles for update
+using (
+  public.current_legacy_user_id() is not null
+  and id = public.current_legacy_user_id()
+)
+with check (
+  public.current_legacy_user_id() is not null
+  and id = public.current_legacy_user_id()
+);
+
+drop policy if exists "Members can view organizations" on public.organizations;
+create policy "Members can view organizations"
+on public.organizations for select
+using (public.is_org_member(id));
+
+drop policy if exists "Members can view memberships" on public.organization_members;
+create policy "Members can view memberships"
+on public.organization_members for select
+using (public.is_org_member(organization_id));
+
+drop policy if exists "Members can view subscriptions" on public.subscriptions;
+create policy "Members can view subscriptions"
+on public.subscriptions for select
+using (public.is_org_member(organization_id));
+
+drop policy if exists "Members can view audit logs" on public.audit_logs;
+create policy "Members can view audit logs"
+on public.audit_logs for select
+using (public.is_org_member(organization_id));
+
+alter table if exists public.audit_events enable row level security;
+alter table if exists public.tasks enable row level security;
+alter table if exists public.notifications enable row level security;
+
+drop policy if exists live_rls_audit_events_select_member on public.audit_events;
+create policy live_rls_audit_events_select_member on public.audit_events
+  for select to authenticated
+  using (public.is_org_member(organization_id));
+
+drop policy if exists live_rls_notifications_select_member on public.notifications;
+create policy live_rls_notifications_select_member on public.notifications
+  for select to authenticated
+  using (public.is_org_member(organization_id));
+
+drop policy if exists live_rls_tasks_select_member on public.tasks;
+drop policy if exists live_rls_tasks_insert_member on public.tasks;
+drop policy if exists live_rls_tasks_update_member on public.tasks;
+drop policy if exists live_rls_tasks_delete_member on public.tasks;
+
+create policy live_rls_tasks_select_member on public.tasks
+  for select to authenticated
+  using (public.is_org_member(organization_id));
+
+create policy live_rls_tasks_insert_member on public.tasks
+  for insert to authenticated
+  with check (public.is_org_member(organization_id));
+
+create policy live_rls_tasks_update_member on public.tasks
+  for update to authenticated
+  using (public.is_org_member(organization_id))
+  with check (public.is_org_member(organization_id));
+
+create policy live_rls_tasks_delete_member on public.tasks
+  for delete to authenticated
+  using (public.is_org_member(organization_id));
+
+notify pgrst, 'reload schema';
