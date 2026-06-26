@@ -11,11 +11,12 @@ export default function GlobalClientEffects() {
   useZoerIframe();
 
   useEffect(() => {
-    const checkoutStatus = new URLSearchParams(window.location.search).get("checkout");
+    const searchParams = new URLSearchParams(window.location.search);
+    const checkoutStatus = searchParams.get("checkout");
 
     if (checkoutStatus !== "success") return;
 
-    const key = `risckcomply.analytics.checkout_success.${pathname}`;
+    const key = `risckcomply.analytics.checkout_success.${pathname}.${window.location.search}`;
     if (window.sessionStorage.getItem(key)) return;
 
     window.sessionStorage.setItem(key, "1");
@@ -23,6 +24,11 @@ export default function GlobalClientEffects() {
       path: pathname,
       source: "return_url",
     });
+
+    searchParams.delete("checkout");
+    const nextSearch = searchParams.toString();
+    const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
   }, [pathname]);
 
   return null;
