@@ -122,7 +122,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
                 </Link>
               </Button>
               <Button asChild variant="outline" className="rounded-full">
-                <Link href={`/${safeLocale}/dashboard/organizations/billing`}>{organizationCopy.goToBilling}</Link>
+                <Link href={`/${safeLocale}/dashboard/organizations/billing`}>{organizationCopy.comparePlans}</Link>
               </Button>
             </div>
           </section>
@@ -135,14 +135,14 @@ export default async function OrganizationDashboardPage({ params, searchParams }
               <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{complianceHealth}</span>
             </div>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">{organizationCopy.title}</h1>
-            <p className="mt-3 max-w-3xl text-muted-foreground">{organizationCopy.description}</p>
+            <p className="mt-3 max-w-3xl text-muted-foreground">{organizationCopy.subtitle}</p>
             <p className="mt-4 text-sm text-muted-foreground">{limitsSummary}</p>
           </div>
           <div className="rounded-[2rem] border bg-foreground p-6 text-background shadow-sm">
             <div className="flex items-center gap-3">
               <div className="rounded-2xl bg-background/10 p-3"><Sparkles className="h-5 w-5" /></div>
               <div>
-                <p className="text-sm text-background/70">{organizationCopy.readinessLabel}</p>
+                <p className="text-sm text-background/70">{organizationCopy.complianceScore}</p>
                 <p className="text-3xl font-semibold">{data.summary.complianceScore}%</p>
               </div>
             </div>
