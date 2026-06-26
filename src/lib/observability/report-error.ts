@@ -5,20 +5,44 @@ export type ReportErrorContext = Record<string, unknown>;
 
 export { sanitizeContext };
 
+function isSentryConfigured() {
+  return Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN);
+}
+
+function buildSafeSentryError(error: unknown) {
+  const sanitizedError = sanitizeErrorForLog(error);
+  const safeError = new Error(sanitizedError.message);
+  safeError.name = sanitizedError.name || 'ApplicationError';
+
+  return { safeError, sanitizedError };
+}
+
 export function reportError(error: unknown, context: ReportErrorContext = {}) {
   const sanitizedContext = sanitizeContext(context);
-  const sanitizedError = sanitizeErrorForLog(error);
+  const { safeError, sanitizedError } = buildSafeSentryError(error);
   const report = { error: sanitizedError, context: sanitizedContext };
 
-  if (process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN) {
-    Sentry.captureException(error, {
-      extra: sanitizedContext,
+  if (isSentryConfigured()) {
+    Sentry.withScope((scope) => {
+      scope.setTag('app', 'risck-comply');
+      scope.setTag('area', typeof sanitizedContext.area === 'string' ? sanitizedContext.area : 'unknown');
+      scope.setContext('safe_context', sanitizedContext);
+      scope.setExtra('safe_error', sanitizedError);
+      Sentry.captureException(safeError);
     });
+
+    logger.error('application_error_reported', {
+      ...sanitizedContext,
+      provider: 'sentry',
+      error: sanitizedError,
+    });
+
     return report;
   }
 
   logger.error('application_error', {
     ...sanitizedContext,
+    provider: 'local_log',
     error: sanitizedError,
   });
 
