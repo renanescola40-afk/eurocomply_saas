@@ -42,14 +42,13 @@ const billingFaqs = [
 ];
 
 function planPositioning(planId: string) {
-  if (planId === 'essential') return 'For founders building their first evidence system.';
-  if (planId === 'professional') return 'For growing B2B teams preparing customer and board reviews.';
-  if (planId === 'business') return 'For mature teams managing larger vendor, risk and document programs.';
+  if (planId === 'starter') return 'For founders building their first evidence system.';
+  if (planId === 'growth') return 'For growing B2B teams preparing customer and board reviews.';
   return 'For regulated teams that need premium intelligence, enterprise evidence and expanded limits.';
 }
 
 function planBadge(planId: string) {
-  if (planId === 'professional') return 'Most popular';
+  if (planId === 'growth') return 'Most popular';
   if (planId === 'enterprise') return 'Premium tier';
   return null;
 }
@@ -78,7 +77,7 @@ export default async function PricingPage({ params }: Props) {
             <h1 className="mt-6 max-w-5xl text-5xl font-semibold tracking-[-0.05em] md:text-7xl">Start like a startup. Scale like a regulated company.</h1>
             <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">Risck comply gives European teams a clear path from first compliance workspace to board-ready reporting and enterprise controls.</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={`/${locale}/signup?plan=professional`} className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">Start with Professional</Link>
+              <Link href={`/${locale}/signup?plan=growth`} className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">Start with Growth</Link>
               <Link href={`/${locale}/trust`} className="inline-flex h-12 items-center justify-center rounded-full border border-white/15 px-6 text-sm font-bold hover:bg-white/10">Review Trust Center</Link>
             </div>
           </div>
@@ -87,17 +86,23 @@ export default async function PricingPage({ params }: Props) {
       <div className="mx-auto flex max-w-7xl flex-col gap-14 px-6 py-16">
         <section className="grid gap-4 lg:grid-cols-4">
           {BILLING_PLANS.map((plan) => {
-            const planId = String(plan.id);
-            const isFeatured = planId === 'professional';
+            const planId = plan.id;
+            const isFeatured = planId === 'growth';
             const badge = planBadge(planId);
-            const isEnterprise = plan.id === 'enterprise';
+            const isEnterprise = planId === 'enterprise';
             return (
               <article key={plan.id} className={`relative flex rounded-[2rem] border p-6 shadow-xl flex-col transition hover:-translate-y-1 ${isFeatured ? 'border-blue-300 bg-white text-slate-950' : isEnterprise ? 'border-emerald-300/40 bg-gradient-to-b from-emerald-300/15 to-slate-950 text-white' : 'border-white/10 bg-slate-950 text-white'}`}>
                 {badge && <span className={`absolute right-5 top-5 rounded-full px-3 py-1 text-xs font-bold ${isFeatured ? 'bg-slate-950 text-white' : 'border border-emerald-300/40 text-emerald-100'}`}>{badge}</span>}
-                <div>
+                <div className="flex flex-1 flex-col">
                   <h2 className="text-2xl font-semibold">{plan.name}</h2>
                   <p className={`mt-2 text-sm leading-6 ${isFeatured ? 'text-slate-600' : 'text-slate-400'}`}>{planPositioning(planId)}</p>
                   <p className="mt-5 text-5xl font-bold">€{plan.priceMonthly}<span className="text-base font-normal text-slate-500">/mo</span></p>
+                  <Link
+                    href={`/${locale}/signup?plan=${plan.id}`}
+                    className={`mt-8 inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-bold ${isFeatured ? 'bg-slate-950 text-white hover:bg-slate-800' : 'border border-white/15 text-white hover:bg-white/10'}`}
+                  >
+                    Start with {plan.name}
+                  </Link>
                 </div>
               </article>
             );
