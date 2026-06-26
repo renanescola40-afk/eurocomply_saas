@@ -1,18 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { analyticsEvents, captureAnalyticsEvent } from "@/lib/analytics/posthog-client";
 import { useZoerIframe } from "@/hooks/useZoerIframe";
 
 export default function GlobalClientEffects() {
   const pathname = usePathname() || "/";
-  const searchParams = useSearchParams();
 
   useZoerIframe();
 
   useEffect(() => {
-    const checkoutStatus = searchParams.get("checkout");
+    const checkoutStatus = new URLSearchParams(window.location.search).get("checkout");
 
     if (checkoutStatus !== "success") return;
 
@@ -24,7 +23,7 @@ export default function GlobalClientEffects() {
       path: pathname,
       source: "return_url",
     });
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   return null;
 }
