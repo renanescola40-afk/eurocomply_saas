@@ -1,1 +1,17 @@
-{"installCommand":"npm install --ignore-scripts","buildCommand":"npm run build","crons":[{"path":"/api/internal/daily-maintenance","schedule":"0 4 * * *"}]}
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm install --ignore-scripts",
+  "buildCommand": "npm run build",
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "*": false
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/internal/daily-maintenance",
+      "schedule": "0 4 * * *"
+    }
+  ]
+}
