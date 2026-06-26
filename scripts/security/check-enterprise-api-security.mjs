@@ -153,6 +153,9 @@ function evaluateClerkOrganizationSyncContract(failures, source, path) {
     "policy: 'general-api'",
     'action: \'clerk.organization.sync\'',
     "route: '/api/clerk/organizations/sync'",
+    'requireOrganizationContext',
+    'requirePermission',
+    "permission: 'manage_team'",
     'readBoundedJsonRequest',
     'maxBytes: 2048',
     'ValidationError',
@@ -167,6 +170,8 @@ function evaluateClerkOrganizationSyncContract(failures, source, path) {
   ]);
 
   assertGuard(failures, source, path, 'origin', 'trusted Origin validation for mutable route');
+  assertGuard(failures, source, path, 'organization', 'organization/tenant context');
+  assertGuard(failures, source, path, 'rbac', 'RBAC authorization');
   assertGuard(failures, source, path, 'noStore', 'no-store response protection');
   assertGuard(failures, source, path, 'rateLimit', 'rate limiting');
 
