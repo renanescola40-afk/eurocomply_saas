@@ -1,10 +1,12 @@
-import type { SubscriptionPlan } from '@/server/queries/subscription';
+import type { CanonicalSubscriptionPlan } from '@/server/queries/subscription';
 
-export type BillingPlanId = SubscriptionPlan;
+export type BillingPlanId = CanonicalSubscriptionPlan;
 
 export type BillingEntitlements = {
   users: number;
   documents: number;
+  vendors: number;
+  risks: number;
   exports: number | 'unlimited';
   auditLogsDays: number;
   aiComplianceFeatures: 'core' | 'advanced' | 'enterprise';
@@ -22,6 +24,8 @@ export type BillingPlan = {
   limits: {
     users: number;
     documents: number;
+    vendors: number;
+    risks: number;
     exports: number | 'unlimited';
     auditLogsDays: number;
   };
@@ -48,10 +52,12 @@ export const BILLING_PLANS: BillingPlanCatalog = [
     priceMonthly: 49,
     stripePriceEnvKey: 'STRIPE_PRICE_STARTER_MONTHLY',
     legacyStripePriceEnvKeys: ['STRIPE_PRICE_ESSENTIAL_MONTHLY'],
-    limits: { users: 3, documents: 40, exports: 25, auditLogsDays: 30 },
+    limits: { users: 3, documents: 40, vendors: 15, risks: 30, exports: 25, auditLogsDays: 30 },
     entitlements: {
       users: 3,
       documents: 40,
+      vendors: 15,
+      risks: 30,
       exports: 25,
       auditLogsDays: 30,
       aiComplianceFeatures: 'core',
@@ -67,10 +73,12 @@ export const BILLING_PLANS: BillingPlanCatalog = [
     priceMonthly: 149,
     stripePriceEnvKey: 'STRIPE_PRICE_GROWTH_MONTHLY',
     legacyStripePriceEnvKeys: ['STRIPE_PRICE_PROFESSIONAL_MONTHLY', 'STRIPE_PRICE_BUSINESS_MONTHLY'],
-    limits: { users: 15, documents: 250, exports: 250, auditLogsDays: 180 },
+    limits: { users: 15, documents: 250, vendors: 75, risks: 150, exports: 250, auditLogsDays: 180 },
     entitlements: {
       users: 15,
       documents: 250,
+      vendors: 75,
+      risks: 150,
       exports: 250,
       auditLogsDays: 180,
       aiComplianceFeatures: 'advanced',
@@ -86,10 +94,12 @@ export const BILLING_PLANS: BillingPlanCatalog = [
     priceMonthly: 990,
     stripePriceEnvKey: 'STRIPE_PRICE_ENTERPRISE_MONTHLY',
     legacyStripePriceEnvKeys: ['STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
-    limits: { users: 250, documents: 10000, exports: 'unlimited', auditLogsDays: 3650 },
+    limits: { users: 250, documents: 10000, vendors: 2500, risks: 5000, exports: 'unlimited', auditLogsDays: 3650 },
     entitlements: {
       users: 250,
       documents: 10000,
+      vendors: 2500,
+      risks: 5000,
       exports: 'unlimited',
       auditLogsDays: 3650,
       aiComplianceFeatures: 'enterprise',

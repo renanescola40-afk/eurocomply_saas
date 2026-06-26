@@ -23,9 +23,11 @@ export type AddOnCatalogItem = {
 
 const PLAN_RANK: Record<SubscriptionPlan, number> = {
   essential: 1,
+  starter: 1,
   professional: 2,
-  business: 3,
-  enterprise: 4,
+  growth: 2,
+  business: 2,
+  enterprise: 3,
 };
 
 export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
@@ -35,7 +37,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
     priceMonthly: 29,
     description: 'Feed regulatório premium com impacto prático para GDPR, AI Act, DORA, NIS2 e fiscalidade europeia.',
     includedFromPlan: 'enterprise',
-    availableFromPlan: 'essential',
+    availableFromPlan: 'starter',
     category: 'reports',
   },
   {
@@ -44,7 +46,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
     priceMonthly: 69,
     description: 'Inventário de sistemas de IA, classificação AI Act, incidentes, responsáveis e obrigações iniciais.',
     includedFromPlan: 'enterprise',
-    availableFromPlan: 'professional',
+    availableFromPlan: 'growth',
     category: 'ai',
   },
   {
@@ -53,7 +55,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
     priceMonthly: 49,
     description: 'Relatórios board-ready em PDF com dados da empresa, responsável, score, lacunas e plano de ação.',
     includedFromPlan: 'enterprise',
-    availableFromPlan: 'professional',
+    availableFromPlan: 'growth',
     category: 'reports',
   },
   {
@@ -62,7 +64,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
     priceMonthly: 39,
     description: 'Exportações tabulares para vendors, riscos, evidências, obrigações e planos de remediação.',
     includedFromPlan: 'enterprise',
-    availableFromPlan: 'professional',
+    availableFromPlan: 'growth',
     category: 'reports',
   },
   {
@@ -71,7 +73,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
     priceMonthly: 79,
     description: 'Pacotes de auditoria com evidências, trilha de revisão, responsáveis e readiness operacional.',
     includedFromPlan: 'enterprise',
-    availableFromPlan: 'professional',
+    availableFromPlan: 'growth',
     category: 'risk',
   },
   {
@@ -80,7 +82,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
     priceMonthly: 99,
     description: 'Relatórios com marca da empresa ou consultoria para clientes, direção e auditorias.',
     includedFromPlan: 'enterprise',
-    availableFromPlan: 'business',
+    availableFromPlan: 'growth',
     category: 'reports',
   },
   {
@@ -89,7 +91,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
     priceMonthly: 49,
     description: 'Inclui até 3 países fiscais adicionais para obrigações e calendário legal multi-país.',
     includedFromPlan: 'enterprise',
-    availableFromPlan: 'essential',
+    availableFromPlan: 'starter',
     category: 'operations',
   },
   {
@@ -98,7 +100,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
     priceMonthly: 39,
     description: 'Pacote de +100 fornecedores/subprocessadores para gestão de third-party risk.',
     includedFromPlan: 'enterprise',
-    availableFromPlan: 'professional',
+    availableFromPlan: 'growth',
     category: 'risk',
   },
   {
@@ -107,7 +109,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
     priceMonthly: 149,
     description: 'Prioridade em suporte por ticket dentro do SaaS, sem depender de atendimento manual.',
     includedFromPlan: 'enterprise',
-    availableFromPlan: 'business',
+    availableFromPlan: 'growth',
     category: 'support',
   },
 ];
@@ -124,10 +126,9 @@ export function billingPlanAtLeast(plan: SubscriptionPlan, minimumPlan: Subscrip
 }
 
 export function getPlanDisplayName(plan: SubscriptionPlan) {
-  if (plan === 'enterprise') return 'Premium';
-  if (plan === 'business') return 'Business';
-  if (plan === 'professional') return 'Professional';
-  return 'Essential';
+  if (plan === 'enterprise') return 'Enterprise';
+  if (plan === 'growth' || plan === 'professional' || plan === 'business') return 'Growth';
+  return 'Starter';
 }
 
 export function getAddOnStatus(plan: SubscriptionPlan, addOn: AddOnCatalogItem, activeAddOnIds: AddOnId[] = []) {

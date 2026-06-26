@@ -1,10 +1,15 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 
-export type SubscriptionPlan = 'starter' | 'growth' | 'enterprise';
+export type CanonicalSubscriptionPlan = 'starter' | 'growth' | 'enterprise';
+export type LegacySubscriptionPlan = 'essential' | 'professional' | 'business';
+export type SubscriptionPlan = CanonicalSubscriptionPlan | LegacySubscriptionPlan;
 
 const PLAN_RANK: Record<SubscriptionPlan, number> = {
+  essential: 1,
   starter: 1,
+  professional: 2,
   growth: 2,
+  business: 2,
   enterprise: 3,
 };
 
@@ -14,7 +19,7 @@ type OrganizationSubscriptionRow = {
   status?: string | null;
 };
 
-export function normalizePlan(value: string | null | undefined): SubscriptionPlan {
+export function normalizePlan(value: string | null | undefined): CanonicalSubscriptionPlan {
   const normalized = value?.toLowerCase().trim();
 
   if (normalized === 'enterprise') return 'enterprise';
@@ -48,7 +53,7 @@ async function getLatestSubscriptionRow(organizationId: string, select: string):
   return data;
 }
 
-export async function getOrganizationPlan(organizationId: string): Promise<SubscriptionPlan> {
+export async function getOrganizationPlan(organizationId: string): Promise<CanonicalSubscriptionPlan> {
   const primary = await getLatestSubscriptionRow(organizationId, 'plan,status,created_at');
 
   if (primary?.plan) {
