@@ -3,6 +3,8 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { PostHogAnalyticsProvider } from '@/components/analytics/PostHogAnalyticsProvider';
+import { AnalyticsConsentBanner } from '@/components/analytics/AnalyticsConsentBanner';
 import { ClerkFloatingControls } from '@/components/auth/ClerkFloatingControls';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
@@ -83,11 +85,14 @@ export default async function LocaleLayout({ children, params }: Props) {
               disableTransitionOnChange
             >
               <AuthProvider>
-                {children}
-                <ClerkFloatingControls locale={safeLocale} />
-                <GapAnalysisShortcut />
-                <GlobalClientEffects />
-                <Toaster />
+                <PostHogAnalyticsProvider>
+                  {children}
+                  <ClerkFloatingControls locale={safeLocale} />
+                  <GapAnalysisShortcut />
+                  <GlobalClientEffects />
+                  <AnalyticsConsentBanner />
+                  <Toaster />
+                </PostHogAnalyticsProvider>
               </AuthProvider>
             </ThemeProvider>
           </NextIntlClientProvider>
