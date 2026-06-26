@@ -13,8 +13,6 @@ import {
   welcomeOnboardingEmail,
   type EmailTemplateKey,
 } from '@/lib/email/templates';
-import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
-import { readBoundedJsonRequest, validationErrorResponse } from '@/lib/security/validate';
 import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
@@ -115,7 +113,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = await readBoundedJsonRequest<TestEmailPayload>(request, { maxBytes: 2048 });
+  const body = await readBoundedJsonRequest<TestEmailPayload>(request, { maxBytes: TEST_EMAIL_BODY_MAX_BYTES });
   const to = body.to?.trim();
 
   if (!to) {
