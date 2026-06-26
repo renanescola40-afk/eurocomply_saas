@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { analyticsEvents, captureAnalyticsEvent } from '@/lib/analytics/posthog-client';
 
 export type UploadDocumentFormInput = {
   name: string;
@@ -37,6 +38,10 @@ export function CreateDocumentForm({ onSubmit }: { onSubmit: (input: UploadDocum
         category,
         expiresAt: expiresAt || null,
         file,
+      });
+      captureAnalyticsEvent(analyticsEvents.documentUploaded, {
+        source: 'documents_form',
+        count: 1,
       });
       setName('');
       setCategory('general');

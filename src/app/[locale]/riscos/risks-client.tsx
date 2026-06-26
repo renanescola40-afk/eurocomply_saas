@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { CheckCircle2, Plus, Save, ShieldAlert, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { analyticsEvents, captureAnalyticsEvent } from '@/lib/analytics/posthog-client';
 import type { PlanEntitlements } from '@/server/billing/entitlements';
 
 type Risk = {
@@ -56,6 +57,10 @@ export function RisksClient({ locale, entitlements }: { locale: string; entitlem
       return;
     }
     setRisks((current) => [{ id: crypto.randomUUID(), ...form }, ...current]);
+    captureAnalyticsEvent(analyticsEvents.riskCreated, {
+      source: 'risk_register',
+      locale,
+    });
     setForm({ title: '', probability: 'Média', impact: 'Médio', owner: '', action: '' });
     showToast(advancedRiskMatrix ? 'Risco adicionado ao registro avançado.' : 'Risco adicionado ao registro básico.');
   }
