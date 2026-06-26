@@ -1,103 +1,14 @@
-import Link from 'next/link';
-import { Activity, CheckCircle2, Database, LockKeyhole, Server, ShieldCheck } from 'lucide-react';
+import { TrustCenterPage } from '@/components/marketing/trust-center-page';
 
-import { isSupportedLocale, type Locale } from '@/lib/i18n/locales';
+export const revalidate = 300;
+export const dynamic = 'force-static';
 
-type StatusPageProps = {
+type PageProps = {
   params: Promise<{ locale: string }>;
 };
 
-const copy = {
-  en: {
-    title: 'Risck comply system status',
-    subtitle: 'Operational overview for public platform components.',
-    allSystems: 'Core services are designed for monitored, production-ready operation.',
-    checks: ['Application availability', 'Authentication services', 'Compliance data layer', 'Document storage', 'Billing operations', 'Monitoring'],
-    private: 'Deep readiness checks are available only to authorised operators.',
-    back: 'Back to Risck comply',
-  },
-  pt: {
-    title: 'Estado do sistema Risck comply',
-    subtitle: 'Visão operacional pública dos componentes da plataforma.',
-    allSystems: 'Os serviços principais foram desenhados para operação monitorizada em produção.',
-    checks: ['Disponibilidade da aplicação', 'Serviços de autenticação', 'Camada de dados de compliance', 'Armazenamento documental', 'Operações de faturação', 'Monitorização'],
-    private: 'As verificações profundas de readiness estão disponíveis apenas para operadores autorizados.',
-    back: 'Voltar ao Risck comply',
-  },
-  es: {
-    title: 'Estado del sistema Risck comply',
-    subtitle: 'Resumen operativo público de los componentes de la plataforma.',
-    allSystems: 'Los servicios principales están diseñados para operación monitorizada en producción.',
-    checks: ['Disponibilidad de la aplicación', 'Servicios de autenticación', 'Capa de datos de compliance', 'Almacenamiento documental', 'Operaciones de facturación', 'Monitorización'],
-    private: 'Las comprobaciones profundas de readiness están disponibles solo para operadores autorizados.',
-    back: 'Volver a Risck comply',
-  },
-  fr: {
-    title: 'État du système Risck comply',
-    subtitle: 'Vue opérationnelle publique des composants de la plateforme.',
-    allSystems: 'Les services principaux sont conçus pour une exploitation supervisée en production.',
-    checks: ['Disponibilité applicative', 'Services d’authentification', 'Couche de données compliance', 'Stockage documentaire', 'Opérations de facturation', 'Supervision'],
-    private: 'Les contrôles profonds de readiness sont réservés aux opérateurs autorisés.',
-    back: 'Retour à Risck comply',
-  },
-  it: {
-    title: 'Stato del sistema Risck comply',
-    subtitle: 'Panoramica operativa pubblica dei componenti della piattaforma.',
-    allSystems: 'I servizi principali sono progettati per operazioni monitorate in produzione.',
-    checks: ['Disponibilità applicativa', 'Servizi di autenticazione', 'Layer dati compliance', 'Archiviazione documentale', 'Operazioni di fatturazione', 'Monitoraggio'],
-    private: 'I controlli approfonditi di readiness sono disponibili solo agli operatori autorizzati.',
-    back: 'Torna a Risck comply',
-  },
-  de: {
-    title: 'Risck comply-Systemstatus',
-    subtitle: 'Öffentliche Betriebsübersicht der Plattformkomponenten.',
-    allSystems: 'Die Kernservices sind für überwachten Produktionsbetrieb ausgelegt.',
-    checks: ['Anwendungsverfügbarkeit', 'Authentifizierungsdienste', 'Compliance-Datenschicht', 'Dokumentenspeicher', 'Abrechnungsprozesse', 'Monitoring'],
-    private: 'Tiefe Readiness-Prüfungen sind nur autorisierten Betreibern zugänglich.',
-    back: 'Zurück zu Risck comply',
-  },
-} satisfies Record<Locale, { title: string; subtitle: string; allSystems: string; checks: string[]; private: string; back: string }>;
+export default async function StatusPage({ params }: PageProps) {
+  const { locale } = await params;
 
-const icons = [Activity, LockKeyhole, Database, Server, CheckCircle2, ShieldCheck];
-
-export default async function StatusPage({ params }: StatusPageProps) {
-  const { locale: rawLocale } = await params;
-  const locale = isSupportedLocale(rawLocale) ? rawLocale : 'en';
-  const t = copy[locale];
-
-  return (
-    <main className="min-h-screen bg-[#0A0A0F] px-6 py-16 text-white">
-      <section className="mx-auto max-w-5xl">
-        <Link href={`/${locale}`} className="text-sm text-white/60 transition hover:text-white">
-          {t.back}
-        </Link>
-        <div className="mt-12 rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 shadow-2xl backdrop-blur md:p-12">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-white/70">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            Operational readiness
-          </div>
-          <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-tight md:text-6xl">{t.title}</h1>
-          <p className="mt-5 max-w-3xl text-lg leading-8 text-white/65">{t.subtitle}</p>
-          <p className="mt-8 rounded-2xl border border-white/10 bg-black/30 p-5 text-white/75">{t.allSystems}</p>
-        </div>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {t.checks.map((check, index) => {
-            const Icon = icons[index] ?? CheckCircle2;
-            return (
-              <div key={check} className="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
-                <Icon className="h-5 w-5 text-white" />
-                <p className="mt-4 font-medium">{check}</p>
-                <p className="mt-2 text-sm text-white/55">Monitored component</p>
-              </div>
-            );
-          })}
-        </div>
-
-        <p className="mt-8 rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-sm leading-7 text-white/60">
-          {t.private}
-        </p>
-      </section>
-    </main>
-  );
+  return <TrustCenterPage locale={locale} kind="status" />;
 }
