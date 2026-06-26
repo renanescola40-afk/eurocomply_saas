@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { analyticsEvents, captureAnalyticsEvent } from '@/lib/analytics/posthog-client';
 
 export type CreateVendorFormInput = {
   name: string;
@@ -42,6 +43,13 @@ export function CreateVendorForm({ onCreate }: { onCreate: (input: CreateVendorF
           setError('Could not create vendor. Please review the details and try again.');
           return;
         }
+
+        captureAnalyticsEvent(analyticsEvents.vendorCreated, {
+          source: 'vendor_register',
+          path: window.location.pathname,
+          count: 1,
+        });
+
         setSuccess('Fornecedor guardado com sucesso.');
       } catch {
         setError('Could not create vendor. Please review the details and try again.');
