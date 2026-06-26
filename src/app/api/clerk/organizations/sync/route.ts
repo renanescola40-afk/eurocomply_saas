@@ -13,6 +13,18 @@ const clerkOrgSyncBodySchema = z.object({
   membershipId: z.string().min(1).max(128).nullable().optional(),
 });
 
+const allowedClerkOrganizationRoles = new Set([
+  'admin',
+  'basic_member',
+  'member',
+  'owner',
+  'viewer',
+  'org:admin',
+  'org:member',
+  'org:owner',
+  'org:viewer',
+]);
+
 export async function POST(request: Request) {
   try {
     const authState = await auth();
