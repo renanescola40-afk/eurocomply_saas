@@ -1,6 +1,7 @@
 import { noStoreJson } from '@/server/security/no-store';
 import { sendEmail } from '@/lib/email/client';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
 import {
   billingStartedEmail,
   complianceDeadlineReminderEmail,
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'unauthorized' }, { status: 401 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as TestEmailPayload;
+  const body = await readBoundedJsonRequest<TestEmailPayload>(request, { maxBytes: 2048 });
   const to = body.to?.trim();
 
   if (!to) {
