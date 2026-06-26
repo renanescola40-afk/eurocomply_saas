@@ -1,6 +1,8 @@
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser, type CurrentOrganizationMembership } from '@/server/queries/current-organization';
+import { syncClerkOrganizationToSupabase } from '@/server/clerk/organization-sync';
 
 export type AuthenticatedUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 
@@ -23,6 +25,30 @@ export class SecurityGuardError extends Error {
   }
 }
 
+function normalizeClerkRole(role: string | null | undefined) {
+  return role?.trim().toLowerCase() ?? null;
+}
+
+async function ensureActiveClerkOrganizationSynced(userId: string, activeClerkOrgId: string, orgRole: string | null) {
+  try {
+    const client = await clerkClient();
+    const clerkOrganization = await client.organizations.getOrganization({ organizationId: activeClerkOrgId });
+
+    await syncClerkOrganizationToSupabase({
+      clerkOrgId: activeClerkOrgId,
+      clerkUserId: userId,
+      name: clerkOrganization.name,
+      slug: clerkOrganization.slug,
+      role: orgRole,
+    });
+  } catch (error) {
+    console.warn('[organization] active_clerk_org_sync_failed', {
+      clerkOrgId: activeClerkOrgId,
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+  }
+}
+
 export async function requireAuthenticatedUser() {
   const user = await getCurrentUser();
 
@@ -35,7 +61,15 @@ export async function requireAuthenticatedUser() {
 
 export async function requireOrganizationContext(slug?: string): Promise<AuthenticatedOrganizationContext> {
   const user = await requireAuthenticatedUser();
-  const organization = await getCurrentOrganizationForUser(user.id, slug);
+  const authState = await auth().catch(() => null);
+  const activeClerkOrgId = authState?.orgId ?? null;
+  const activeClerkRole = normalizeClerkRole((authState as { orgRole?: string | null } | null)?.orgRole);
+
+  if (user.source === 'clerk' && activeClerkOrgId) {
+    await ensureActiveClerkOrganizationSynced(user.id, activeClerkOrgId, activeClerkRole);
+  }
+
+  const organization = await getCurrentOrganizationForUser(user.id, slug, activeClerkOrgId);
 
   if (!organization) {
     throw new SecurityGuardError('ORGANIZATION_REQUIRED', 'Organization context required', 403);
