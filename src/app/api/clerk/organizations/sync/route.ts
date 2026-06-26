@@ -19,9 +19,8 @@ export async function POST(request: Request) {
     const userId = authState.userId;
     const orgId = authState.orgId;
     const orgRole = (authState as { orgRole?: string | null }).orgRole ?? null;
-    const normalizedOrgRole = orgRole?.toLowerCase() ?? null;
 
-    if (!userId || !orgId || !normalizedOrgRole) {
+    if (!userId || !orgId) {
       return noStoreJson({ error: 'unauthorized' }, { status: 401 });
     }
 
@@ -63,7 +62,7 @@ export async function POST(request: Request) {
       clerkUserId: userId,
       name: clerkOrganization.name,
       slug: clerkOrganization.slug,
-      role: normalizedOrgRole,
+      role: orgRole,
       membershipId: parsedBody.data.membershipId,
     });
 
