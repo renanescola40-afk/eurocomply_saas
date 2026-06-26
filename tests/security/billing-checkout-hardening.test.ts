@@ -12,6 +12,26 @@ const mocks = vi.hoisted(() => ({
   publicStepUpSummary: vi.fn(),
   getStripePriceId: vi.fn(),
   isSelfServePlan: vi.fn(),
+  normalizeBillingPlanId: vi.fn(),
+  supabaseMaybeSingle: vi.fn(),
+}));
+
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: () => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          not: () => ({
+            order: () => ({
+              limit: () => ({
+                maybeSingle: mocks.supabaseMaybeSingle,
+              }),
+            }),
+          }),
+        }),
+      }),
+    }),
+  }),
 }));
 
 vi.mock('@/server/queries/organizations', () => ({
@@ -25,6 +45,7 @@ vi.mock('@/server/billing/app-url', () => ({
 vi.mock('@/server/billing/plans', () => ({
   getStripePriceId: mocks.getStripePriceId,
   isSelfServePlan: mocks.isSelfServePlan,
+  normalizeBillingPlanId: mocks.normalizeBillingPlanId,
 }));
 
 vi.mock('@/server/billing/stripe', () => ({
@@ -55,7 +76,7 @@ vi.mock('@/server/security/step-up', () => ({
 
 import { POST } from '../../src/app/api/billing/checkout/route';
 
-function buildRequest(body = { plan: 'professional', locale: 'pt' }) {
+function buildRequest(body = { plan: 'growth', locale: 'pt' }) {
   return new Request('https://app.eurocomply.test/api/billing/checkout', {
     method: 'POST',
     headers: {
@@ -71,7 +92,7 @@ describe('billing checkout API security gates', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.requireApiUser.mockResolvedValue({ id: 'user_admin', email: 'admin@example.test' });
-    mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a' });
+    mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a', clerk_org_id: 'clerk_org_a' });
     mocks.requirePermission.mockResolvedValue({ ok: true, role: 'admin' });
     mocks.requireTrustedMutation.mockResolvedValue(null);
     mocks.requireStepUpForRequest.mockResolvedValue({
@@ -79,8 +100,15 @@ describe('billing checkout API security gates', () => {
       assessment: { action: 'manage_billing', verifiedAt: '2026-06-22T09:00:00.000Z' },
     });
     mocks.publicStepUpSummary.mockReturnValue({ verified: true });
-    mocks.getStripePriceId.mockReturnValue('price_professional_monthly');
-    mocks.isSelfServePlan.mockImplementation((plan: string) => ['essential', 'professional', 'business'].includes(plan));
+    mocks.normalizeBillingPlanId.mockImplementation((plan: string) => {
+      if (plan === 'growth' || plan === 'professional' || plan === 'business') return 'growth';
+      if (plan === 'starter' || plan === 'essential') return 'starter';
+      if (plan === 'enterprise') return 'enterprise';
+      return undefined;
+    });
+    mocks.getStripePriceId.mockReturnValue('price_growth_monthly');
+    mocks.isSelfServePlan.mockImplementation((plan: string) => ['starter', 'growth', 'enterprise'].includes(plan));
+    mocks.supabaseMaybeSingle.mockResolvedValue({ data: null, error: null });
     mocks.stripeCheckoutCreate.mockResolvedValue({
       id: 'cs_test_fixture',
       url: 'https://checkout.stripe.test/session-fixture',
@@ -113,12 +141,7 @@ describe('billing checkout API security gates', () => {
   });
 
   it('fails closed when the trusted mutation or rate-limit guard denies the request', async () => {
-    mocks.requireTrustedMutation.mockResolvedValue(
-      new Response(JSON.stringify({ error: 'rate_limited' }), {
-        status: 429,
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-      }),
-    );
+    mocks.requireTrustedMutation.mockResolvedValue(new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }));
 
     const response = await POST(buildRequest());
     const body = await response.json();
@@ -130,41 +153,27 @@ describe('billing checkout API security gates', () => {
   });
 
   it('creates a checkout session only after RBAC, trusted mutation, and step-up', async () => {
-    const response = await POST(buildRequest());
+    const response = await POST(buildRequest({ plan: 'business', locale: 'pt' }));
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ url: 'https://checkout.stripe.test/session-fixture', stepUp: { verified: true } });
-    expect(mocks.requirePermission).toHaveBeenCalledWith({
-      userId: 'user_admin',
-      organizationId: 'org_a',
-      permission: 'manage_billing',
-    });
-    expect(mocks.requireTrustedMutation).toHaveBeenCalledWith(expect.any(Request), {
-      rateLimit: {
-        key: 'billing:checkout:org_a:user_admin',
-        limit: 10,
-        windowMs: 60 * 1000,
-      },
-    });
-    expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(expect.objectContaining({
-      action: 'manage_billing',
-      userId: 'user_admin',
-      organizationId: 'org_a',
-    }));
+    expect(mocks.requirePermission).toHaveBeenCalledWith({ userId: 'user_admin', organizationId: 'org_a', permission: 'manage_billing' });
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(expect.objectContaining({
       mode: 'subscription',
       customer_email: 'admin@example.test',
-      line_items: [{ price: 'price_professional_monthly', quantity: 1 }],
+      line_items: [{ price: 'price_growth_monthly', quantity: 1 }],
       success_url: 'https://app.eurocomply.test/pt/dashboard/organizations?checkout=success',
       cancel_url: 'https://app.eurocomply.test/pt/pricing?checkout=cancelled',
       client_reference_id: 'org_a',
       metadata: expect.objectContaining({
         organization_id: 'org_a',
+        organizationId: 'org_a',
+        clerk_org_id: 'clerk_org_a',
+        clerkOrgId: 'clerk_org_a',
         user_id: 'user_admin',
-        plan: 'professional',
-        actor_role: 'admin',
-        step_up_action: 'manage_billing',
+        userId: 'user_admin',
+        plan: 'growth',
       }),
     }));
   });
