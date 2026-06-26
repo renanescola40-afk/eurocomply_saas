@@ -115,7 +115,13 @@ function handlers(source, pattern) {
   return [...source.matchAll(pattern)].map((match) => match[1]);
 }
 
+function isServerOnlySource(source) {
+  return source.includes("import 'server-only'") || source.includes('import "server-only"');
+}
+
 function isClientBoundary(path, source) {
+  if (isServerOnlySource(source)) return false;
+
   const firstStatements = source
     .split('\n')
     .slice(0, 8)
