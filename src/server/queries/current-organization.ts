@@ -1,5 +1,9 @@
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value);
+}
+
 type RawOrganizationMembership = {
   organization_id: string;
   role: string;
@@ -8,11 +12,13 @@ type RawOrganizationMembership = {
         id: string;
         name: string;
         slug: string | null;
+        clerk_org_id: string | null;
       }
     | Array<{
         id: string;
         name: string;
         slug: string | null;
+        clerk_org_id: string | null;
       }>
     | null;
 };
@@ -23,15 +29,18 @@ export type CurrentOrganizationMembership = {
   role: string;
   name: string;
   slug: string | null;
+  clerk_org_id: string | null;
   organization: {
     id: string;
     name: string;
     slug: string | null;
+    clerk_org_id: string | null;
   };
   organizations: {
     id: string;
     name: string;
     slug: string | null;
+    clerk_org_id: string | null;
   };
 };
 
@@ -52,6 +61,7 @@ function normalizeMembership(membership: RawOrganizationMembership): CurrentOrga
     role: membership.role,
     name: organization.name,
     slug: organization.slug,
+    clerk_org_id: organization.clerk_org_id,
     organization,
     organizations: organization,
   };
@@ -65,10 +75,11 @@ export async function getUserOrganizationMemberships(
   if (!supabase) return [];
 
   const safeLimit = Math.max(1, Math.min(options.limit ?? 25, 100));
+  const identityColumn = isUuid(userId) ? 'user_id' : 'clerk_user_id';
   const { data, error } = await supabase
     .from('organization_members')
-    .select('organization_id, role, organizations(id, name, slug)')
-    .eq('user_id', userId)
+    .select('organization_id, role, organizations(id, name, slug, clerk_org_id)')
+    .eq(identityColumn, userId)
     .order('created_at', { ascending: true })
     .range(0, safeLimit - 1);
 
@@ -82,8 +93,13 @@ export async function getUserOrganizationMemberships(
     .filter((membership): membership is CurrentOrganizationMembership => Boolean(membership));
 }
 
-export async function getCurrentOrganizationForUser(userId: string, slug?: string) {
+export async function getCurrentOrganizationForUser(userId: string, slug?: string, activeClerkOrgId?: string | null) {
   const memberships = await getUserOrganizationMemberships(userId);
+
+  if (activeClerkOrgId) {
+    const activeMembership = memberships.find((membership) => membership.clerk_org_id === activeClerkOrgId);
+    if (activeMembership) return activeMembership;
+  }
 
   if (slug) {
     return memberships.find((membership) => membership.slug === slug) ?? null;
