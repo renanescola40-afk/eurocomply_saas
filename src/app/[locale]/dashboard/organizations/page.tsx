@@ -2,7 +2,7 @@ import { unstable_noStore as noStore } from 'next/cache';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowRight, Building2, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
+import { ArrowRight, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-overview';
 import { EnterpriseDashboardOverview } from '@/components/dashboard/enterprise-dashboard-overview';
 import { Badge } from '@/components/ui/badge';
@@ -161,8 +161,26 @@ export default async function OrganizationDashboardPage({ params, searchParams }
         </section>
 
         <Suspense fallback={<DashboardHomeOverviewSkeleton />}>
-          <DashboardHomeOverview data={data} locale={safeLocale} />
-          <EnterpriseDashboardOverview data={data} locale={safeLocale} />
+          <DashboardHomeOverview
+            summary={data.summary}
+            tasks={data.tasks}
+            trendComparison={data.trendComparison}
+            workflowReadiness={data.workflowReadiness}
+            basePath={localizedDashboardBasePath}
+            vendorsRequiringReview={data.vendorsRequiringReview}
+            documentsExpiringSoon={data.documentsExpiringSoon}
+          />
+          <EnterpriseDashboardOverview
+            copy={copy.enterprise}
+            summary={data.summary}
+            tasks={data.tasks}
+            vendorsRequiringReview={data.vendorsRequiringReview}
+            documentsExpiringSoon={data.documentsExpiringSoon}
+            basePath={localizedDashboardBasePath}
+            tasksPath={localizedTasksPath}
+            planName={planName}
+            limitsSummary={limitsSummary}
+          />
         </Suspense>
       </div>
     </main>
