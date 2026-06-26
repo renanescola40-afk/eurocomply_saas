@@ -131,36 +131,42 @@ function assertGuard(failures, source, path, groupName, description) {
   }
 }
 
+function assertRequiredTokens(failures, source, path, contractName, tokens) {
+  for (const token of tokens) {
+    if (!source.includes(token)) {
+      failures.push(`${path}: missing ${contractName} contract token ${token}`);
+    }
+  }
+}
+
 function evaluateClerkOrganizationSyncContract(failures, source, path) {
   if (!isAnyMatch(path, clerkOrganizationSyncRoutes)) return false;
 
-  const requiredTokens = [
-    'await auth()',
-    'userId',
-    'orgId',
+  assertRequiredTokens(failures, source, path, 'Clerk organization sync', [
+    'const authState = await auth()',
+    'const userId = authState.userId',
+    'const orgId = authState.orgId',
     'orgRole',
-    'readBoundedJsonRequest',
-    'ValidationError',
+    'if (!userId || !orgId)',
+    "return noStoreJson({ error: 'unauthorized' }, { status: 401 })",
     'requireTrustedMutation',
-    'requirePermission',
-    "permission: 'manage_team'",
-    'noStoreJson',
+    "policy: 'general-api'",
+    'action: \'clerk.organization.sync\'',
+    "route: '/api/clerk/organizations/sync'",
+    'readBoundedJsonRequest',
+    'maxBytes: 2048',
+    'ValidationError',
+    "return noStoreJson({ error: 'invalid_organization_payload' }, { status: 400 })",
+    'parsedBody.data.clerkOrgId !== orgId',
     'clerkClient',
     'client.organizations.getOrganization',
-    'parsedBody.data.clerkOrgId !== orgId',
+    'name: clerkOrganization.name',
+    'slug: clerkOrganization.slug',
     'syncClerkOrganizationToSupabase',
-  ];
-
-  for (const token of requiredTokens) {
-    if (!source.includes(token)) {
-      failures.push(`${path}: missing Clerk organization sync contract token ${token}`);
-    }
-  }
+    'secureApiError',
+  ]);
 
   assertGuard(failures, source, path, 'origin', 'trusted Origin validation for mutable route');
-  assertGuard(failures, source, path, 'auth', 'authentication');
-  assertGuard(failures, source, path, 'organization', 'organization/tenant context');
-  assertGuard(failures, source, path, 'rbac', 'RBAC authorization');
   assertGuard(failures, source, path, 'noStore', 'no-store response protection');
   assertGuard(failures, source, path, 'rateLimit', 'rate limiting');
 
