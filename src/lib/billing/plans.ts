@@ -1,6 +1,7 @@
-import type { CanonicalSubscriptionPlan } from '@/server/queries/subscription';
+import type { CanonicalSubscriptionPlan, LegacySubscriptionPlan } from '@/server/queries/subscription';
 
-export type BillingPlanId = CanonicalSubscriptionPlan;
+export type BillingPlanId = CanonicalSubscriptionPlan | LegacySubscriptionPlan;
+type CatalogBillingPlanId = CanonicalSubscriptionPlan;
 
 export type BillingEntitlements = {
   users: number;
@@ -16,7 +17,7 @@ export type BillingEntitlements = {
 };
 
 export type BillingPlan = {
-  id: BillingPlanId;
+  id: CatalogBillingPlanId;
   name: string;
   priceMonthly: number;
   stripePriceEnvKey: string;
@@ -35,14 +36,20 @@ export type BillingPlan = {
 
 export type BillingPlanCatalog = [BillingPlan, ...BillingPlan[]];
 
-const BILLING_PLAN_IDS: BillingPlanId[] = ['starter', 'growth', 'enterprise'];
+const BILLING_PLAN_IDS: BillingPlanId[] = ['starter', 'growth', 'enterprise', 'essential', 'professional', 'business'];
 
 const BILLING_PLAN_ALIASES: Record<string, BillingPlanId> = {
-  essential: 'starter',
   basic: 'starter',
-  professional: 'growth',
-  business: 'growth',
   pro: 'growth',
+};
+
+const CATALOG_PLAN_BY_ID: Record<BillingPlanId, CatalogBillingPlanId> = {
+  essential: 'starter',
+  starter: 'starter',
+  professional: 'growth',
+  growth: 'growth',
+  business: 'growth',
+  enterprise: 'enterprise',
 };
 
 export const BILLING_PLANS: BillingPlanCatalog = [
@@ -120,8 +127,13 @@ export function normalizeBillingPlanId(planId: string | null | undefined): Billi
   return BILLING_PLAN_ALIASES[normalized];
 }
 
-export function getBillingPlan(planId: string | null | undefined) {
+function normalizeCatalogPlanId(planId: string | null | undefined): CatalogBillingPlanId | undefined {
   const normalizedPlanId = normalizeBillingPlanId(planId);
+  return normalizedPlanId ? CATALOG_PLAN_BY_ID[normalizedPlanId] : undefined;
+}
+
+export function getBillingPlan(planId: string | null | undefined) {
+  const normalizedPlanId = normalizeCatalogPlanId(planId);
 
   return BILLING_PLANS.find((plan) => plan.id === normalizedPlanId);
 }

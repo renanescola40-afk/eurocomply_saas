@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-06-26T14:08:56Z",
+  "cycle": "scheduled_health_audit",
+  "status": "patched_waiting_for_ci",
+  "scope": [
+    "build_status",
+    "security_risks",
+    "broken_routes",
+    "configuration_drift",
+    "billing_and_demo_exposure",
+    "cron_limits",
+    "recent_changes"
+  ],
+  "findings": [
+    "PR #480 is open and mergeable on feature/org-stripe-billing-entitlements.",
+    "Initial PR #480 head cd6c7139e78a3689f67e743d09b0bf50e0e4b78d had CI, CodeQL and Full Security Suite still in progress while Security CI, Upload Security CI, Dependency Review, Gitleaks, Semgrep, Secret Scanning and P0 gates were green.",
+    "Vercel initially hit the free deployment limit, then later reported the PR preview deployment ready.",
+    "A Codex review flagged vitest.config.ts because excluding node_modules through an explicit exclude array can remove the src/server/billing/stripe-webhooks.test.ts hardening spec from the default npm test path.",
+    "Cron configuration remains within the free-tier safe shape with one daily /api/internal/daily-maintenance cron.",
+    "Billing checkout remains guarded by auth, organization lookup, manage_billing RBAC, trusted mutation/rate limit, step-up, Stripe metadata, audit logging and no-store responses.",
+    "Enterprise demo remains gated by NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO and does not activate real entitlements.",
+    "Route health coverage remains present for public/private routes, locale coverage, /undefined regressions, dead primary controls, stack traces and RBAC visuals.",
+    "Config drift remains visible on the inspected head: package.json declares @clerk/nextjs but the root package-lock.json dependencies do not include @clerk/nextjs. The lockfile should be regenerated with npm install --package-lock-only --ignore-scripts in a real dependency environment."
+  ],
+  "actions_taken": [
+    "Removed the explicit Vitest exclude entry from vitest.config.ts so the default npm test path continues to include src/**/*.test.ts billing hardening specs.",
+    "Kept billing, route, demo, cron, package, and runtime behavior otherwise unchanged.",
+    "Recorded this audit as an append-only agent_log.d entry instead of rewriting agent_log.json to avoid truncating its existing history."
+  ],
+  "commits": [
+    "716146c04de256a846036d4a65afcc3342974326"
+  ],
+  "next_cycle_focus": [
+    "Verify the new PR #480 head checks after the Vitest coverage restoration commit.",
+    "Do not merge until CI, CodeQL, Full Security Suite and any Vercel status are green on the latest head.",
+    "Regenerate package-lock.json with npm install --package-lock-only --ignore-scripts to resolve the @clerk/nextjs root dependency drift."
+  ]
+}
