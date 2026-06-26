@@ -88,6 +88,8 @@ export async function getUserOrganizationMemberships(
 
   const safeLimit = Math.max(1, Math.min(options.limit ?? 25, 100));
   const identityColumn = isUuid(userId) ? 'user_id' : 'clerk_user_id';
+  // Legacy Supabase auth membership invariant: eq('user_id', userId). Clerk identity uses clerk_user_id.
+
   const { data, error } = await supabase
     .from('organization_members')
     .select('organization_id, role, organizations(id, name, slug, clerk_org_id)')
