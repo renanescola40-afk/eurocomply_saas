@@ -37,6 +37,7 @@ function buildRequest(method: string, headers: Record<string, string> = {}) {
 
 describe('/api/observability/smoke', () => {
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
     mocks.reportError.mockReset();
     mocks.logSecurityEvent.mockReset();
@@ -77,6 +78,8 @@ describe('/api/observability/smoke', () => {
   });
 
   it('sends a smoke event and returns no internal report object', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', '');
+    vi.stubEnv('SENTRY_DSN', '');
     mocks.validateBearerToken.mockReturnValue(true);
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
 
