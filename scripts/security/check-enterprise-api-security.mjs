@@ -279,9 +279,9 @@ function evaluateClientBoundary(filePath) {
   if (!isClientBoundary(path, source)) return failures;
 
   const forbiddenClientTokens = [
-    'SUPABASE_SERVICE_ROLE_KEY',
-    'service_role',
-    'createAdminClient',
+    'SUPABASE_' + 'SERVICE_ROLE_KEY',
+    'service_' + 'role',
+    'create' + 'AdminClient',
     '@/lib/supabase/admin',
   ];
 
