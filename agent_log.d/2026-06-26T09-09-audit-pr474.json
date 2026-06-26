@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-06-26T09:09:54Z",
+  "agent": "chatgpt-automation",
+  "task": "Audit EuroComply health",
+  "target": {
+    "pull_request": 474,
+    "head": "d1f8f4fa119243b831bbc28adfbf4e9fb0b24714",
+    "branch": "fix/clerk-org-enterprise-sync"
+  },
+  "result": "go_for_github_checks_no_go_for_production_until_lockfile_drift_is_resolved_and_live_qa_is_completed",
+  "findings": [
+    "PR #474 is open and mergeable with all GitHub workflow runs green on the audited head.",
+    "Recent changes make Clerk the primary server-side auth source, bind organization context to Clerk auth().orgId, and auto-sync the active Clerk organization before protected API organization resolution.",
+    "Billing checkout remains guarded by auth, organization context, manage_billing RBAC, trusted mutation rate limiting, step-up, Stripe metadata, audit log, and no-store responses.",
+    "Enterprise demo remains gated by NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO.",
+    "Vercel cron configuration remains within the hobby-safe one-daily-cron pattern.",
+    "Configuration drift still exists: package.json declares @clerk/nextjs but the root package-lock.json dependencies block does not include @clerk/nextjs. Prepare lockfile regeneration rather than manual lockfile editing."
+  ],
+  "safe_correction": {
+    "status": "prepared_not_applied",
+    "reason": "Regenerating package-lock.json requires a real npm install/package-lock-only run. Manual lockfile editing would be unsafe.",
+    "command": "npm install --package-lock-only --ignore-scripts"
+  }
+}
