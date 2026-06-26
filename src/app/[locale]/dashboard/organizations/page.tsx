@@ -18,9 +18,11 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 const planLabels = {
-  essential: 'Essential',
-  professional: 'Professional',
-  business: 'Business',
+  essential: 'Starter',
+  starter: 'Starter',
+  professional: 'Growth',
+  growth: 'Growth',
+  business: 'Growth',
   enterprise: 'Enterprise',
 };
 
@@ -119,119 +121,48 @@ export default async function OrganizationDashboardPage({ params, searchParams }
                   {organizationCopy.reviewPlan} <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="rounded-full bg-background/70">
-                <Link href={`/${safeLocale}/pricing`}>{organizationCopy.comparePlans}</Link>
+              <Button asChild variant="outline" className="rounded-full">
+                <Link href={`/${safeLocale}/dashboard/organizations/billing`}>{organizationCopy.goToBilling}</Link>
               </Button>
             </div>
           </section>
         ) : null}
 
-        <section id="overview" className="relative scroll-mt-28 overflow-hidden rounded-[2rem] border bg-background/86 p-6 shadow-2xl shadow-primary/5 backdrop-blur md:p-8">
-          <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
-          <div className="relative grid gap-8 lg:grid-cols-[1.35fr_0.65fr] lg:items-end">
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center gap-3">
-                <Badge className="gap-2 rounded-full px-3 py-1 text-xs uppercase tracking-[0.2em]">
-                  <Sparkles className="h-3.5 w-3.5" /> {organizationCopy.eyebrow}
-                </Badge>
-                <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
-                  {complianceHealth}
-                </Badge>
-                <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-                  {organizationCopy.planPrefix} {planName}
-                </Badge>
-              </div>
-
-              <div className="space-y-3">
-                <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Building2 className="h-4 w-4" /> {data.organization.name}
-                </p>
-                <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.04em] md:text-6xl">
-                  {organizationCopy.title}
-                </h1>
-                <p className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-                  {organizationCopy.subtitle}
-                </p>
-              </div>
-
-              <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
-                {limitCards.map((item) => (
-                  <div key={item.label} className="rounded-2xl border bg-background/70 p-4">
-                    <p className="font-semibold text-foreground">{item.label}</p>
-                    <p>{item.value} {organizationCopy.included}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                <Button asChild size="lg" className="rounded-full">
-                  <Link href={`${localizedDashboardBasePath}/reports-governance`}>
-                    {organizationCopy.generateAuditPack} <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="rounded-full bg-background/70">
-                  <Link href={localizedTasksPath}>{organizationCopy.reviewPriorityTasks}</Link>
-                </Button>
-              </div>
+        <section className="grid gap-4 md:grid-cols-[1.3fr_0.7fr]">
+          <div className="rounded-[2rem] border bg-background/80 p-6 shadow-sm backdrop-blur">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge className="rounded-full px-3 py-1">{planName}</Badge>
+              <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{complianceHealth}</span>
             </div>
-
-            <div className="rounded-3xl border bg-muted/30 p-5">
-              <p className="text-sm font-medium text-muted-foreground">{organizationCopy.complianceScore}</p>
-              <div className="mt-3 flex items-end justify-between gap-4">
-                <p className="text-6xl font-bold tracking-tight">{data.summary.complianceScore}%</p>
-                <p className="pb-2 text-right text-sm text-muted-foreground">
-                  {data.summary.criticalRisks} {organizationCopy.criticalRisks}<br />
-                  {data.summary.missingDocuments} {organizationCopy.missingEvidence}
-                </p>
-              </div>
-              <div className="mt-5 h-3 overflow-hidden rounded-full bg-background" aria-hidden="true">
-                <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(Math.max(data.summary.complianceScore, 0), 100)}%` }} />
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">{organizationCopy.title}</h1>
+            <p className="mt-3 max-w-3xl text-muted-foreground">{organizationCopy.description}</p>
+            <p className="mt-4 text-sm text-muted-foreground">{limitsSummary}</p>
+          </div>
+          <div className="rounded-[2rem] border bg-foreground p-6 text-background shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-background/10 p-3"><Sparkles className="h-5 w-5" /></div>
+              <div>
+                <p className="text-sm text-background/70">{organizationCopy.readinessLabel}</p>
+                <p className="text-3xl font-semibold">{data.summary.complianceScore}%</p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Dashboard shortcuts">
-          {quickLinks.map((link) => {
-            const Icon = link.icon;
-            return (
-              <Link key={link.href} href={link.href} className="group rounded-2xl border bg-background/78 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="rounded-xl bg-primary/10 p-2 text-primary" aria-hidden="true">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary" aria-hidden="true" />
-                </div>
-                <p className="mt-4 font-semibold">{link.label}</p>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{link.description}</p>
-              </Link>
-            );
-          })}
+        <section className="grid gap-4 md:grid-cols-4">
+          {quickLinks.map((item) => (
+            <Link key={item.href} href={item.href} className="group rounded-[1.5rem] border bg-background/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <item.icon className="h-5 w-5 text-primary" />
+              <h2 className="mt-4 font-semibold">{item.label}</h2>
+              <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
+              <ArrowRight className="mt-4 h-4 w-4 transition group-hover:translate-x-1" />
+            </Link>
+          ))}
         </section>
 
-        <EnterpriseDashboardOverview
-          copy={copy.enterprise}
-          summary={data.summary}
-          tasks={data.tasks}
-          vendorsRequiringReview={data.vendorsRequiringReview}
-          documentsExpiringSoon={data.documentsExpiringSoon}
-          basePath={localizedDashboardBasePath}
-          tasksPath={localizedTasksPath}
-          planName={planName}
-          limitsSummary={limitsSummary}
-        />
-
         <Suspense fallback={<DashboardHomeOverviewSkeleton />}>
-          <DashboardHomeOverview
-            summary={data.summary}
-            tasks={data.tasks}
-            trendHistory={data.trendHistory}
-            trendComparison={data.trendComparison}
-            workflowReadiness={data.workflowReadiness}
-            basePath={localizedDashboardBasePath}
-            vendorsRequiringReview={data.vendorsRequiringReview}
-            documentsExpiringSoon={data.documentsExpiringSoon}
-          />
+          <DashboardHomeOverview data={data} locale={safeLocale} />
+          <EnterpriseDashboardOverview data={data} locale={safeLocale} />
         </Suspense>
       </div>
     </main>
