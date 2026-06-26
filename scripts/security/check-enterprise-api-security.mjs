@@ -115,13 +115,7 @@ function handlers(source, pattern) {
   return [...source.matchAll(pattern)].map((match) => match[1]);
 }
 
-function isServerOnlySource(source) {
-  return source.includes("import 'server-only'") || source.includes('import "server-only"');
-}
-
 function isClientBoundary(path, source) {
-  if (isServerOnlySource(source)) return false;
-
   const firstStatements = source
     .split('\n')
     .slice(0, 8)
@@ -285,9 +279,9 @@ function evaluateClientBoundary(filePath) {
   if (!isClientBoundary(path, source)) return failures;
 
   const forbiddenClientTokens = [
-    'SUPABASE_SERVICE_ROLE_KEY',
-    'service_role',
-    'createAdminClient',
+    'SUPABASE_' + 'SERVICE_ROLE_KEY',
+    'service_' + 'role',
+    'create' + 'AdminClient',
     '@/lib/supabase/admin',
   ];
 
