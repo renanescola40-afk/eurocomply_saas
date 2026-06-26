@@ -120,7 +120,7 @@ function hashRecipient(recipient: string) {
 }
 
 export function redactEmailSecrets(value: string | null | undefined) {
-  if (!value) return value ?? '';
+  if (typeof value !== 'string' || value.length === 0) return '';
 
   return SENSITIVE_VALUE_PATTERNS.reduce((current, pattern) => current.replace(pattern, SENSITIVE_REPLACEMENT), value);
 }
@@ -255,7 +255,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   });
 
   if (!apiKey) {
-    console.info('[RISCK COMPLY email skipped]', { event: 'email_skipped_missing_provider_key', template });
+    console.info('[RISCK COMPLY provider skipped]', { event: 'transactional_delivery_provider_missing', template });
 
     await writeEmailLog({
       email: input,
