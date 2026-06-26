@@ -1,84 +1,18 @@
-import { getOrganizationPlan, isPlanAtLeast, type SubscriptionPlan } from '@/server/queries/subscription';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getOrganizationPlan, isPlanAtLeast, type SubscriptionPlan } from '@/server/queries/subscription';
 
 export type PlanEntitlements = {
   plan: SubscriptionPlan;
   maxDocuments: number;
   maxUsers: number;
-  maxFiscalCountries: number;
-  aiCalendar: 'basic' | 'advanced';
-  aiNews: 'basic' | 'standard' | 'advanced';
-  riskMatrix: 'simple' | 'complete' | 'advanced' | 'enterprise';
-  auditLog: boolean;
-  employeeInvites: boolean;
-  approvalWorkflows: boolean;
-  executiveReports: boolean;
   csvExports: boolean;
-  gdprSelfService: boolean;
-  whiteLabelReports: boolean;
+  auditLog: boolean;
 };
 
 const ENTITLEMENTS: Record<SubscriptionPlan, Omit<PlanEntitlements, 'plan'>> = {
-  essential: {
-    maxDocuments: 10,
-    maxUsers: 1,
-    maxFiscalCountries: 1,
-    aiCalendar: 'basic',
-    aiNews: 'basic',
-    riskMatrix: 'simple',
-    auditLog: false,
-    employeeInvites: false,
-    approvalWorkflows: false,
-    executiveReports: false,
-    csvExports: false,
-    gdprSelfService: false,
-    whiteLabelReports: false,
-  },
-  professional: {
-    maxDocuments: 100,
-    maxUsers: 3,
-    maxFiscalCountries: 2,
-    aiCalendar: 'advanced',
-    aiNews: 'standard',
-    riskMatrix: 'complete',
-    auditLog: true,
-    employeeInvites: false,
-    approvalWorkflows: false,
-    executiveReports: false,
-    csvExports: true,
-    gdprSelfService: true,
-    whiteLabelReports: false,
-  },
-  business: {
-    maxDocuments: 500,
-    maxUsers: 10,
-    maxFiscalCountries: 5,
-    aiCalendar: 'advanced',
-    aiNews: 'advanced',
-    riskMatrix: 'advanced',
-    auditLog: true,
-    employeeInvites: true,
-    approvalWorkflows: true,
-    executiveReports: true,
-    csvExports: true,
-    gdprSelfService: true,
-    whiteLabelReports: false,
-  },
-  enterprise: {
-    maxDocuments: Number.POSITIVE_INFINITY,
-    maxUsers: Number.POSITIVE_INFINITY,
-    maxFiscalCountries: Number.POSITIVE_INFINITY,
-    aiCalendar: 'advanced',
-    aiNews: 'advanced',
-    riskMatrix: 'enterprise',
-    auditLog: true,
-    employeeInvites: true,
-    approvalWorkflows: true,
-    executiveReports: true,
-    csvExports: true,
-    gdprSelfService: true,
-    whiteLabelReports: true,
-  },
+  starter: { maxDocuments: 40, maxUsers: 3, csvExports: true, auditLog: true },
+  growth: { maxDocuments: 250, maxUsers: 15, csvExports: true, auditLog: true },
+  enterprise: { maxDocuments: 10000, maxUsers: 250, csvExports: true, auditLog: true },
 };
 
 export function getPlanEntitlements(plan: SubscriptionPlan): PlanEntitlements {
@@ -86,12 +20,7 @@ export function getPlanEntitlements(plan: SubscriptionPlan): PlanEntitlements {
 }
 
 export async function getOrganizationEntitlements(organizationId: string): Promise<PlanEntitlements> {
-  const plan = await getOrganizationPlan(organizationId);
-  return getPlanEntitlements(plan);
-}
-
-export function formatLimit(limit: number) {
-  return Number.isFinite(limit) ? String(limit) : 'unlimited';
+  return getPlanEntitlements(await getOrganizationPlan(organizationId));
 }
 
 export async function assertPlanAtLeast(organizationId: string, minimumPlan: SubscriptionPlan) {
@@ -101,8 +30,9 @@ export async function assertPlanAtLeast(organizationId: string, minimumPlan: Sub
     return {
       ok: false as const,
       status: 402,
-      error: `${minimumPlan}_plan_required`,
-      message: `This feature requires the ${minimumPlan} plan or higher.`,
+      error: 'upgrade_required',
+      message: `${minimumPlan} plan required.`,
+      requiredPlan: minimumPlan,
       entitlements,
     };
   }
@@ -112,68 +42,29 @@ export async function assertPlanAtLeast(organizationId: string, minimumPlan: Sub
 
 export async function assertCsvExportsEnabled(organizationId: string) {
   const entitlements = await getOrganizationEntitlements(organizationId);
-
-  if (!entitlements.csvExports) {
-    return {
-      ok: false as const,
-      status: 402,
-      error: 'professional_plan_required',
-      message: 'CSV exports require the Professional plan or higher.',
-      entitlements,
-    };
-  }
-
   return { ok: true as const, entitlements };
 }
 
 export async function assertGdprSelfServiceEnabled(organizationId: string) {
   const entitlements = await getOrganizationEntitlements(organizationId);
-
-  if (!entitlements.gdprSelfService) {
-    return {
-      ok: false as const,
-      status: 402,
-      error: 'professional_plan_required',
-      message: 'Self-service GDPR exports require the Professional plan or higher.',
-      entitlements,
-    };
-  }
-
   return { ok: true as const, entitlements };
 }
 
 export async function assertDocumentQuota(organizationId: string) {
   const entitlements = await getOrganizationEntitlements(organizationId);
-
-  if (!Number.isFinite(entitlements.maxDocuments)) {
-    return { ok: true as const, entitlements, currentCount: 0 };
-  }
-
   const supabase = createAdminClient();
-
-  if (!supabase) {
-    return {
-      ok: false as const,
-      status: 503,
-      error: 'billing_unavailable',
-      message: 'Plan limits cannot be verified right now.',
-      entitlements,
-      currentCount: 0,
-    };
-  }
-
   const { count, error } = await supabase
     .from('documents')
     .select('id', { count: 'exact', head: true })
     .eq('organization_id', organizationId);
 
   if (error) {
-    console.warn('[entitlements] document_quota_lookup_failed', { code: error.code ?? 'unknown' });
+    console.warn('[billing] document_quota_count_failed', { code: error.code ?? 'unknown' });
     return {
       ok: false as const,
       status: 503,
       error: 'quota_unavailable',
-      message: 'Document quota cannot be verified right now.',
+      message: 'Document quota could not be verified. Please try again.',
       entitlements,
       currentCount: 0,
     };
@@ -185,8 +76,8 @@ export async function assertDocumentQuota(organizationId: string) {
     return {
       ok: false as const,
       status: 402,
-      error: 'document_limit_reached',
-      message: `Your ${entitlements.plan} plan includes up to ${formatLimit(entitlements.maxDocuments)} controlled documents.`,
+      error: 'document_quota_exceeded',
+      message: `Document quota exceeded for the ${entitlements.plan} plan.`,
       entitlements,
       currentCount,
     };

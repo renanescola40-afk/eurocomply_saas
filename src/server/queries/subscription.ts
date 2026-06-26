@@ -1,12 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 
-export type SubscriptionPlan = 'essential' | 'professional' | 'business' | 'enterprise';
+export type SubscriptionPlan = 'starter' | 'growth' | 'enterprise';
 
 const PLAN_RANK: Record<SubscriptionPlan, number> = {
-  essential: 1,
-  professional: 2,
-  business: 3,
-  enterprise: 4,
+  starter: 1,
+  growth: 2,
+  enterprise: 3,
 };
 
 type OrganizationSubscriptionRow = {
@@ -19,10 +18,9 @@ export function normalizePlan(value: string | null | undefined): SubscriptionPla
   const normalized = value?.toLowerCase().trim();
 
   if (normalized === 'enterprise') return 'enterprise';
-  if (normalized === 'business') return 'business';
-  if (normalized === 'professional' || normalized === 'pro' || normalized === 'growth') return 'professional';
+  if (normalized === 'growth' || normalized === 'professional' || normalized === 'pro' || normalized === 'business') return 'growth';
 
-  return 'essential';
+  return 'starter';
 }
 
 export function isPlanAtLeast(plan: SubscriptionPlan, minimumPlan: SubscriptionPlan) {
@@ -63,7 +61,7 @@ export async function getOrganizationPlan(organizationId: string): Promise<Subsc
     return normalizePlan(legacy.tier);
   }
 
-  return 'essential';
+  return 'starter';
 }
 
 export async function requirePlanAtLeast(organizationId: string, minimumPlan: SubscriptionPlan) {
@@ -76,8 +74,12 @@ export async function requirePlanAtLeast(organizationId: string, minimumPlan: Su
   return plan;
 }
 
+export async function requireGrowthPlan(organizationId: string) {
+  return requirePlanAtLeast(organizationId, 'growth');
+}
+
 export async function requireBusinessPlan(organizationId: string) {
-  return requirePlanAtLeast(organizationId, 'business');
+  return requireGrowthPlan(organizationId);
 }
 
 export async function requireEnterprisePlan(organizationId: string) {
