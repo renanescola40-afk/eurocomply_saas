@@ -108,6 +108,65 @@ export default async function PricingPage({ params }: Props) {
             );
           })}
         </section>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          {valueProof.map(([title, text]) => (
+            <article key={title} className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-6">
+              <h2 className="text-xl font-semibold">{title}</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-300">{text}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950">
+          <div className="border-b border-white/10 p-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-100">Plan comparison</p>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight">Compare limits and buyer-ready controls.</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-white/10 text-sm">
+              <thead className="bg-white/[0.03] text-left text-slate-300">
+                <tr>
+                  <th className="px-6 py-4 font-semibold">Capability</th>
+                  {BILLING_PLANS.map((plan) => (
+                    <th key={plan.id} className="px-6 py-4 font-semibold">{plan.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {comparisonRows.map((row) => (
+                  <tr key={row.label}>
+                    <td className="px-6 py-4 font-medium text-white">{row.label}</td>
+                    {BILLING_PLANS.map((plan) => (
+                      <td key={`${row.label}-${plan.id}`} className="px-6 py-4 text-slate-300">{row.getValue(plan)}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          {trustProof.map(([title, text]) => (
+            <article key={title} className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-6">
+              <h2 className="text-xl font-semibold">{title}</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-300">{text}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 md:p-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-100">Billing FAQ</p>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {billingFaqs.map((faq) => (
+              <article key={faq.question} className="rounded-[1.5rem] border border-white/10 bg-slate-950 p-5">
+                <h2 className="font-semibold">{faq.question}</h2>
+                <p className="mt-3 text-sm leading-6 text-slate-300">{faq.answer}</p>
+              </article>
+            ))}
+          </div>
+        </section>
       </div>
       <PublicFooter locale={locale} />
     </main>
