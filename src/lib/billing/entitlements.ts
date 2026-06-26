@@ -4,6 +4,12 @@ export type UsageMetric = 'users' | 'documents' | 'vendors' | 'risks';
 
 export type PlanUsage = Partial<Record<UsageMetric, number>>;
 
+const LEGACY_LIMITS: Record<string, Partial<Record<UsageMetric, number>>> = {
+  essential: { users: 1, documents: 10, vendors: 5, risks: 10 },
+  professional: { users: 3, documents: 100, vendors: 30, risks: 75 },
+  business: { users: 10, documents: 1000, vendors: 150, risks: 300 },
+};
+
 function normalizePlanForLimits(planId: BillingPlanId | string | null | undefined) {
   if (!planId) return 'starter';
 
@@ -11,8 +17,10 @@ function normalizePlanForLimits(planId: BillingPlanId | string | null | undefine
 
   if (normalized === 'enterprise') return 'enterprise';
   if (normalized === 'business') return 'business';
-  if (normalized === 'professional' || normalized === 'pro' || normalized === 'growth') return 'growth';
-  if (normalized === 'essential' || normalized === 'basic' || normalized === 'starter') return 'starter';
+  if (normalized === 'professional') return 'professional';
+  if (normalized === 'pro' || normalized === 'growth') return 'growth';
+  if (normalized === 'essential') return 'essential';
+  if (normalized === 'basic' || normalized === 'starter') return 'starter';
 
   return 'starter';
 }
@@ -21,6 +29,9 @@ export function getPlanLimit(planId: BillingPlanId | string | null | undefined, 
   const normalizedPlanId = normalizePlanForLimits(planId);
 
   if (normalizedPlanId === 'enterprise') return Number.POSITIVE_INFINITY;
+
+  const legacyLimit = LEGACY_LIMITS[normalizedPlanId]?.[metric];
+  if (typeof legacyLimit === 'number') return legacyLimit;
 
   const plan = getBillingPlan(normalizedPlanId);
 
