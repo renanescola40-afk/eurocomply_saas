@@ -4,6 +4,8 @@ import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate
 import { syncClerkOrganizationToSupabase } from '@/server/clerk/organization-sync';
 import {
   noStoreJson,
+  requireOrganizationContext,
+  requirePermission,
   requireTrustedMutation,
   secureApiError,
 } from '@/server/security/api-guards';
@@ -37,6 +39,17 @@ export async function POST(request: Request) {
     if (mutationDenied) {
       return mutationDenied;
     }
+
+    await requireOrganizationContext({
+      userId,
+      organizationId: orgId,
+    });
+
+    await requirePermission({
+      userId,
+      organizationId: orgId,
+      permission: 'manage_team',
+    });
 
     let rawBody: unknown;
     try {
