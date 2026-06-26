@@ -97,6 +97,31 @@ vi.mock('@/server/security/origin-guard', () => ({
   assertTrustedOrigin: mocks.assertTrustedOrigin,
 }));
 
+vi.mock('@/server/security/api-guards', () => ({
+  requireApiUser: async () => {
+    const user = await mocks.getCurrentUser();
+    if (!user) throw { code: 'unauthorized', status: 401 };
+    return user;
+  },
+  requirePermission: async (input: unknown) => {
+    const permission = await mocks.assertOrganizationPermission(input);
+    if (!permission?.ok) throw { code: permission?.error ?? 'permission_denied', status: permission?.status ?? 403 };
+    return permission;
+  },
+  requireTrustedMutation: async (request: Request, input: { rateLimit?: unknown } = {}) => {
+    const originDenied = mocks.assertTrustedOrigin(request);
+    if (originDenied) return originDenied;
+    const rateLimit = await mocks.checkDistributedRateLimit(input.rateLimit ?? {});
+    if (!rateLimit.allowed) return new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429 });
+    return null;
+  },
+  secureApiError: (error: { code?: string; status?: number }) =>
+    new Response(JSON.stringify({ error: error.code ?? 'internal_server_error' }), {
+      status: error.status ?? 500,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    }),
+}));
+
 vi.mock('@/server/security/step-up', () => ({
   requireStepUpForRequest: mocks.requireStepUpForRequest,
   publicStepUpSummary: mocks.publicStepUpSummary,
