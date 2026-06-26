@@ -1,7 +1,14 @@
-// This file is protected and cannot be modified.
-import { createClient } from "@supabase/supabase-js";
+// This file is protected and must remain server-only.
+import 'server-only';
 
-export const supabaseAdmin = createClient(
-  process.env.DATABASE_URL || process.env.SUPABASE_URL || process.env.POSTGRES_URL || "",
-  process.env.DATABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.DATABASE_SERVICE_ROLE_KEY || '';
+
+export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
