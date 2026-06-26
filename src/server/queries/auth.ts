@@ -12,6 +12,8 @@ type CurrentAppUser = {
   lastName?: string | null;
   imageUrl?: string | null;
   source: 'clerk' | 'supabase';
+  clerkUserId?: string | null;
+  supabaseUserId?: string | null;
 };
 
 export async function getCurrentUser(): Promise<CurrentAppUser | null> {
@@ -26,6 +28,8 @@ export async function getCurrentUser(): Promise<CurrentAppUser | null> {
 
       return {
         id: clerkAuth.userId,
+        clerkUserId: clerkAuth.userId,
+        supabaseUserId: null,
         email: primaryEmail,
         firstName: clerkUser?.firstName ?? null,
         lastName: clerkUser?.lastName ?? null,
@@ -51,6 +55,8 @@ export async function getCurrentUser(): Promise<CurrentAppUser | null> {
 
     return {
       id: data.user.id,
+      supabaseUserId: data.user.id,
+      clerkUserId: null,
       email: data.user.email ?? null,
       source: 'supabase',
     };
