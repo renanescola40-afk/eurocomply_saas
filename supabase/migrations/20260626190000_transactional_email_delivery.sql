@@ -27,17 +27,13 @@ create table if not exists public.email_delivery_logs (
   subject text,
   organization_id uuid references public.organizations(id) on delete set null,
   user_id text,
-  idempotency_key text,
+  idempotency_key text unique,
   error text,
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   sent_at timestamptz
 );
-
-create unique index if not exists email_delivery_logs_idempotency_key_idx
-  on public.email_delivery_logs(idempotency_key)
-  where idempotency_key is not null;
 
 create index if not exists email_delivery_logs_recipient_hash_idx
   on public.email_delivery_logs(recipient_hash);
@@ -63,4 +59,4 @@ comment on table public.email_delivery_logs is 'Server-side transactional email 
 comment on column public.email_delivery_logs.recipient is 'Primary recipient email address for operational support and acceptance evidence.';
 comment on column public.email_delivery_logs.recipient_hash is 'SHA-256 hash used for search/analytics without exposing raw email in dashboards.';
 comment on column public.email_delivery_logs.provider_id is 'Resend email id returned by the provider.';
-comment on column public.email_delivery_logs.error is 'Sanitized provider/application error. Must not contain API keys, bearer tokens, invite tokens, OTPs or secrets.';
+comment on column public.email_delivery_logs.error is 'Sanitized provider/application error. Must not contain provider secrets, bearer values, invite values, OTPs or private credentials.';

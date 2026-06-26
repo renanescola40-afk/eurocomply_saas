@@ -101,6 +101,12 @@ function safeUrl(value: string) {
   return '/';
 }
 
+function getSafeFallbackUrl(value: string) {
+  const safe = safeUrl(value);
+  if (safe.includes('/invite/')) return 'Open RISCK COMPLY and use the invitation button in this message.';
+  return safe;
+}
+
 function baseLayout(content: string, footer?: string) {
   return `
     <div style="font-family: Inter, Arial, sans-serif; background: #f8fafc; padding: 32px; color: #0f172a;">
@@ -130,7 +136,7 @@ function paragraph(value: string) {
 }
 
 function fallbackLink(url: string) {
-  const safe = escapeHtml(safeUrl(url));
+  const safe = escapeHtml(getSafeFallbackUrl(url));
   return `
     <p style="font-size: 12px; line-height: 1.6; color: #64748b; margin: 24px 0 0;">
       If the button does not work, open RISCK COMPLY and navigate to the same area manually. For security, we do not print secret tokens in email bodies.<br />
@@ -162,7 +168,7 @@ function buildEmail(input: {
       `,
       input.footer,
     ),
-    text: [...input.textLines, `${input.ctaLabel}: ${safeUrl(input.ctaUrl)}`].join('\n\n'),
+    text: [...input.textLines, `${input.ctaLabel}: ${getSafeFallbackUrl(input.ctaUrl)}`].join('\n\n'),
     unsubscribeUrl: input.unsubscribeUrl ?? null,
   };
 }

@@ -70,6 +70,13 @@ export async function createOrganization(input: CreateOrganizationInput, userId:
         subject: email.subject,
         html: email.html,
         text: email.text,
+        template: email.template,
+        organizationId: organization.id,
+        userId,
+        metadata: {
+          source: 'organization_created_action',
+          organizationSlug: payload.slug,
+        },
       });
     } catch (emailError) {
       reportError(emailError, { area: 'organization_onboarding_email', organizationId: organization.id, userId });

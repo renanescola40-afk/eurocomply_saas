@@ -115,7 +115,20 @@ async function sendTrialReminders() {
     });
 
     try {
-      await sendEmail({ to: recipientEmail, subject: email.subject, html: email.html, text: email.text });
+      await sendEmail({
+        to: recipientEmail,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
+        template: email.template,
+        organizationId: subscription.organization_id,
+        userId: organization.created_by,
+        metadata: {
+          source: 'trial_reminder_job',
+          subscriptionId: subscription.id,
+          currentPeriodEnd: subscription.current_period_end,
+        },
+      });
       await recordReminderSent(subscription.organization_id, subscription.id, recipientEmail, subscription.current_period_end);
       sent += 1;
     } catch (error) {

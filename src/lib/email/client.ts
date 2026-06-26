@@ -38,12 +38,30 @@ type ResendEmailResponse = {
   };
 };
 
+type EmailLogPayload = {
+  id?: string;
+  recipient: string;
+  recipient_hash: string;
+  template: EmailTemplateKey;
+  status: EmailLogStatus;
+  provider: 'resend' | 'console';
+  provider_id: string | null;
+  attempts: number;
+  subject: string;
+  organization_id: string | null;
+  user_id: string | null;
+  idempotency_key: string | null;
+  error: string | null;
+  metadata: Record<string, string | number | boolean | null | undefined>;
+  updated_at: string;
+  sent_at: string | null;
+};
+
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 const DEFAULT_MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 350;
 const MAX_BACKOFF_MS = 3_000;
 const EMAIL_HASH_PEPPER_ENV = 'EMAIL_LOG_HASH_PEPPER';
-const LEGACY_TEMPLATE: EmailTemplateKey = 'security_alert';
 
 const SENSITIVE_VALUE_PATTERNS = [
   /\b(?:sk|rk|pk|whsec|clerk|sess|cs|orginv|ticket)_[A-Za-z0-9_=-]{12,}\b/gi,
@@ -54,8 +72,25 @@ const SENSITIVE_VALUE_PATTERNS = [
 
 const SENSITIVE_REPLACEMENT = '[redacted]';
 
-function getTemplate(input: Pick<SendEmailInput, 'template'>) {
-  return input.template ?? LEGACY_TEMPLATE;
+function inferLegacyTemplate(input: Pick<SendEmailInput, 'template' | 'subject'>): EmailTemplateKey {
+  if (input.template) return input.template;
+
+  const subject = input.subject.toLowerCase();
+
+  if (subject.includes('payment issue')) return 'invoice_failed';
+  if (subject.includes('trial')) return 'trial_upgrade';
+  if (subject.includes('invitation')) return 'member_invited';
+  if (subject.includes('document review')) return 'document_expiring';
+  if (subject.includes('vendor review')) return 'vendor_review';
+  if (subject.includes('export')) return 'export_ready';
+  if (subject.includes('security alert')) return 'security_alert';
+  if (subject.includes('ready in risck comply') || subject.includes('welcome')) return 'welcome_onboarding';
+
+  return 'security_alert';
+}
+
+function getTemplate(input: Pick<SendEmailInput, 'template' | 'subject'>) {
+  return inferLegacyTemplate(input);
 }
 
 function getDefaultFromAddress() {
@@ -113,7 +148,7 @@ function buildListUnsubscribeHeaders(input: SendEmailInput) {
   };
 }
 
-async function writeEmailLog(input: {
+function buildEmailLogPayload(input: {
   id?: string;
   email: SendEmailInput;
   status: EmailLogStatus;
@@ -121,15 +156,12 @@ async function writeEmailLog(input: {
   providerId?: string | null;
   attempts: number;
   error?: string | null;
-}) {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return;
-
+}): EmailLogPayload {
   const recipients = normalizeRecipients(input.email.to);
   const primaryRecipient = recipients[0] ?? input.email.to.toLowerCase();
   const template = getTemplate(input.email);
 
-  const payload = {
+  return {
     id: input.id,
     recipient: primaryRecipient,
     recipient_hash: hashRecipient(primaryRecipient),
@@ -147,13 +179,32 @@ async function writeEmailLog(input: {
     updated_at: new Date().toISOString(),
     sent_at: input.status === 'sent' ? new Date().toISOString() : null,
   };
+}
 
-  const { error } = await supabase.from('email_delivery_logs').upsert(payload, { onConflict: 'idempotency_key' });
+async function writeEmailLog(input: {
+  id?: string;
+  email: SendEmailInput;
+  status: EmailLogStatus;
+  provider: 'resend' | 'console';
+  providerId?: string | null;
+  attempts: number;
+  error?: string | null;
+}) {
+  const supabase = tryCreateAdminClient();
+  if (!supabase) return;
+
+  const payload = buildEmailLogPayload(input);
+
+  const operation = payload.idempotency_key
+    ? supabase.from('email_delivery_logs').upsert(payload, { onConflict: 'idempotency_key' })
+    : supabase.from('email_delivery_logs').insert(payload);
+
+  const { error } = await operation;
 
   if (error) {
     reportError(error, {
       area: 'email_delivery_log_write',
-      template,
+      template: payload.template,
       status: input.status,
     });
   }

@@ -68,6 +68,14 @@ export async function inviteOrganizationMember(input: InviteMemberInput, invited
       subject: email.subject,
       html: email.html,
       text: email.text,
+      template: email.template,
+      organizationId: payload.organizationId,
+      userId: invitedByUserId,
+      metadata: {
+        source: 'member_invitation_action',
+        invitationId: data.id,
+        role: payload.role,
+      },
     });
   } catch (emailError) {
     reportError(emailError, { ...context, area: 'member_invitation_email', invitationId: data.id });
