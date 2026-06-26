@@ -39,6 +39,7 @@ export const UPLOAD_SECURITY_AUDIT_EVENTS = {
   uploadRequested: 'upload_requested',
   uploadScanned: 'upload_scanned',
   uploadBlocked: 'upload_blocked',
+  uploadAccepted: 'upload_accepted',
   downloadRequested: 'download_requested',
   downloadDenied: 'download_denied',
 } as const;
