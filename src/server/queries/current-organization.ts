@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 type RawOrganizationMembership = {
@@ -113,7 +113,7 @@ export async function getCurrentOrganizationForUser(userId: string, slug?: strin
 
   if (clerkOrgId) {
     const activeMembership = memberships.find((membership) => membership.clerk_org_id === clerkOrgId);
-    if (activeMembership) return activeMembership;
+    return activeMembership ?? null;
   }
 
   if (slug) {
