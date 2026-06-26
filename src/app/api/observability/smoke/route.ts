@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const report = reportError(new Error(SMOKE_TEST_ERROR_MESSAGE), {
+  reportError(new Error(SMOKE_TEST_ERROR_MESSAGE), {
     area: 'observability_smoke',
     route: ROUTE,
     requestId,
@@ -62,7 +62,6 @@ export async function POST(request: Request) {
     status: 'sent',
     provider: process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN ? 'sentry' : 'local_log',
     requestId,
-    report,
   });
 }
 
