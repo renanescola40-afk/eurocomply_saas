@@ -33,8 +33,18 @@ jobs:
     timeout-minutes: 30
     environment: ${{ inputs.target_environment }}
     steps:
+      - name: Block production dispatch outside main
+        if: ${{ inputs.target_environment == 'production' && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "Production Clerk organization migration validation must be dispatched from refs/heads/main."
+          echo "Current ref: ${GITHUB_REF}"
+          exit 1
+
       - name: Checkout trusted ref
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_environment == 'production' && 'refs/heads/main' || github.ref }}
+          persist-credentials: false
 
       - name: Install database client
         run: |
