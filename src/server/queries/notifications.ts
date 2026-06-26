@@ -1,10 +1,14 @@
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
+type DocumentStatusNotification = `document_${'uploaded'}`;
+
 type NotificationInput = {
   organizationId: string;
   userId?: string | null;
-  type: 'invite' | 'document' | 'alert' | 'system' | 'approval';
+  type: 'invite' | 'document' | 'alert' | 'system' | 'approval' | DocumentStatusNotification;
+  title?: string | null;
   message: string;
+  metadata?: Record<string, unknown> | null;
 };
 
 export async function createNotification(input: NotificationInput) {
