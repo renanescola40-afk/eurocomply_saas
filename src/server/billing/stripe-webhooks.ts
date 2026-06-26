@@ -1,10 +1,11 @@
 import Stripe from 'stripe';
-import { normalizeBillingPlanId } from '@/lib/billing/plans';
+import { getBillingEntitlements, normalizeBillingPlanId } from '@/lib/billing/plans';
 import { sendEmail } from '@/lib/email/client';
 import { paymentFailedEmail } from '@/lib/email/templates';
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getStripeClient } from '@/server/billing/stripe';
 
 const SUPPORTED_STRIPE_WEBHOOK_EVENTS = new Set([
   'checkout.session.completed',
@@ -60,6 +61,10 @@ function getMetadataValue(metadata: StripeMetadata, ...keys: string[]) {
 
 function getOrganizationIdFromMetadata(metadata: StripeMetadata) {
   return getMetadataValue(metadata, 'organization_id', 'organizationId');
+}
+
+function getClerkOrgIdFromMetadata(metadata: StripeMetadata) {
+  return getMetadataValue(metadata, 'clerk_org_id', 'clerkOrgId');
 }
 
 function getPlanIdFromMetadata(metadata: StripeMetadata) {
@@ -234,22 +239,28 @@ export async function recordStripeEvent(event: Stripe.Event) {
 
 async function validateOrganizationStripeBinding({
   organizationId,
+  clerkOrgId,
   customerId,
   subscriptionId,
 }: {
   organizationId: string;
+  clerkOrgId?: string | null;
   customerId: string;
   subscriptionId?: string | null;
 }) {
   const supabase = createAdminClient();
   const { data: organization, error: organizationError } = await supabase
     .from('organizations')
-    .select('id')
+    .select('id,clerk_org_id')
     .eq('id', organizationId)
-    .maybeSingle<{ id: string }>();
+    .maybeSingle<{ id: string; clerk_org_id: string | null }>();
 
   if (organizationError || !organization?.id) {
     throw organizationError ?? new Error('Stripe webhook references an unknown organization');
+  }
+
+  if (clerkOrgId && organization.clerk_org_id && organization.clerk_org_id !== clerkOrgId) {
+    throw new Error('Stripe webhook Clerk organization does not match organization billing profile');
   }
 
   const { data: subscription, error: subscriptionError } = await supabase
@@ -312,6 +323,7 @@ async function recordBillingWebhookAudit(input: {
 export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscription, event?: Stripe.Event) {
   const supabase = createAdminClient();
   const organizationId = getOrganizationIdFromMetadata(subscription.metadata);
+  const clerkOrgId = getClerkOrgIdFromMetadata(subscription.metadata);
   const rawPlan = getPlanIdFromMetadata(subscription.metadata);
   const plan = normalizeBillingPlanId(rawPlan);
   const customerId = getStripeObjectId(subscription.customer);
@@ -330,10 +342,12 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
 
   await validateOrganizationStripeBinding({
     organizationId,
+    clerkOrgId,
     customerId,
     subscriptionId: subscription.id,
   });
 
+  const entitlements = getBillingEntitlements(plan);
   const { error } = await supabase.from('subscriptions').upsert(
     {
       organization_id: organizationId,
@@ -343,6 +357,7 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
       tier: plan,
       status: subscription.status,
       current_period_end: getSubscriptionCurrentPeriodEnd(subscription),
+      entitlements,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'organization_id' },
@@ -365,6 +380,7 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
         plan,
         status: subscription.status,
         stripeCustomerId: customerId,
+        clerkOrgId: clerkOrgId ?? null,
       },
     });
     await recordBillingWebhookAudit({
@@ -378,6 +394,7 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
         plan,
         status: subscription.status,
         stripeCustomerId: customerId,
+        clerkOrgId: clerkOrgId ?? null,
         syncSource: 'stripe_webhook',
       },
     });
@@ -390,6 +407,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
   }
 
   const organizationId = getOrganizationIdFromMetadata(session.metadata);
+  const clerkOrgId = getClerkOrgIdFromMetadata(session.metadata);
   const rawPlan = getPlanIdFromMetadata(session.metadata);
   const plan = rawPlan ? normalizeBillingPlanId(rawPlan) : undefined;
   const customerId = getStripeObjectId(session.customer);
@@ -407,7 +425,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
     throw new Error('Missing Stripe customer on checkout session');
   }
 
-  await validateOrganizationStripeBinding({ organizationId, customerId, subscriptionId });
+  await validateOrganizationStripeBinding({ organizationId, clerkOrgId, customerId, subscriptionId });
+
+  if (subscriptionId) {
+    const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId);
+    await upsertSubscriptionFromStripe(subscription, event);
+  }
 
   await recordBillingWebhookAudit({
     action: 'billing.checkout_completed',
@@ -420,6 +443,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
       plan: plan ?? null,
       stripeCustomerId: customerId,
       stripeSubscriptionId: subscriptionId ?? null,
+      clerkOrgId: clerkOrgId ?? null,
     },
   });
 }
