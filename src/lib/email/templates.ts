@@ -246,7 +246,10 @@ export function billingStartedEmail(input: BillingStartedEmailInput): BuiltEmail
 }
 
 export function invoiceFailedEmail(input: InvoiceFailedEmailInput): BuiltEmail {
-  const details = [input.amountDue ? `Amount due: ${input.amountDue}` : null, input.dueDate ? `Due date: ${input.dueDate}` : null].filter(Boolean);
+  const details: string[] = [
+    input.amountDue ? `Amount due: ${input.amountDue}` : null,
+    input.dueDate ? `Due date: ${input.dueDate}` : null,
+  ].filter((value): value is string => Boolean(value));
 
   return buildEmail({
     template: 'invoice_failed',
