@@ -17,8 +17,12 @@ const allowedClerkOrganizationRoles = new Set([
   'admin',
   'basic_member',
   'member',
+  'owner',
+  'viewer',
   'org:admin',
   'org:member',
+  'org:owner',
+  'org:viewer',
 ]);
 
 export async function POST(request: Request) {
