@@ -1,3 +1,4 @@
+import { auth } from '@clerk/nextjs/server';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 function isUuid(value: string) {
@@ -67,6 +68,17 @@ function normalizeMembership(membership: RawOrganizationMembership): CurrentOrga
   };
 }
 
+async function resolveActiveClerkOrgId(userId: string, activeClerkOrgId?: string | null) {
+  if (activeClerkOrgId || isUuid(userId)) return activeClerkOrgId ?? null;
+
+  try {
+    const authState = await auth();
+    return authState.orgId ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getUserOrganizationMemberships(
   userId: string,
   options: GetUserOrganizationMembershipsOptions = {},
@@ -95,9 +107,10 @@ export async function getUserOrganizationMemberships(
 
 export async function getCurrentOrganizationForUser(userId: string, slug?: string, activeClerkOrgId?: string | null) {
   const memberships = await getUserOrganizationMemberships(userId);
+  const clerkOrgId = await resolveActiveClerkOrgId(userId, activeClerkOrgId);
 
-  if (activeClerkOrgId) {
-    const activeMembership = memberships.find((membership) => membership.clerk_org_id === activeClerkOrgId);
+  if (clerkOrgId) {
+    const activeMembership = memberships.find((membership) => membership.clerk_org_id === clerkOrgId);
     if (activeMembership) return activeMembership;
   }
 
