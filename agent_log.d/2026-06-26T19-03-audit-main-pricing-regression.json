@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-06-26T19:03:38Z",
+  "cycle": "scheduled_health_audit",
+  "status": "patch_prepared_waiting_for_ci",
+  "summary": "Audited main after PR #489 merge. Production remains no-go because PR head checks failed and merge commit has no workflow runs returned yet. Prepared a non-breaking pricing page correction on an audit branch to restore rendered buyer proof, comparison, trust proof and FAQ sections that were present as constants but not rendered.",
+  "findings": [
+    "No open pull requests were found at audit time.",
+    "Latest merged pull request is #489, Improve transactional email logging, merge commit 73c4b9f0cc74b0df78fd0372e0df27789f853b63.",
+    "The PR #489 head had CI, RISCK COMPLY Security CI and Full Security Suite failures, while Upload Security CI, CodeQL, Semgrep, Gitleaks, Secret Scanning, Dependency Review and P0 gates were green.",
+    "The merge commit had no pull-request workflow runs returned by the connector yet.",
+    "vercel.json still has one daily cron at /api/internal/daily-maintenance.",
+    "Billing checkout remains guarded by authenticated user, organization context, manage_billing permission, trusted mutation/rate limit, step-up, Stripe metadata, audit log and no-store response.",
+    "Enterprise demo remains gated by NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO.",
+    "Route health gate documentation still covers public/private routes, locales, /undefined, dead CTAs, controlled errors, RBAC visuals and deployment targets.",
+    "Config drift remains: package.json declares @clerk/nextjs but package-lock.json root dependencies still omit @clerk/nextjs. This needs real lockfile regeneration, not manual patching."
+  ],
+  "actions_taken": [
+    "Created branch audit/2026-06-26-pricing-regression from merge commit 73c4b9f0cc74b0df78fd0372e0df27789f853b63.",
+    "Updated src/app/[locale]/pricing/page.tsx to render existing valueProof, comparisonRows, trustProof and billingFaqs content instead of leaving buyer-facing pricing sections unused.",
+    "Recorded this audit as an append-only agent_log.d entry to avoid truncating the large historical agent_log.json file through the connector response limit."
+  ],
+  "commits": [
+    "5af6a128c4b3abf78e12bef6dba99ffb24faf99e"
+  ],
+  "required_next_steps": [
+    "Open a PR from audit/2026-06-26-pricing-regression to main and let CI run.",
+    "Run npm run supply-chain:lockfile or npm install --package-lock-only --ignore-scripts locally/CI to regenerate package-lock.json safely.",
+    "Do not release production until main has green CI/security and the lockfile drift is resolved."
+  ]
+}
