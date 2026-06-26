@@ -17,7 +17,7 @@ export type LogLevel = 'info' | 'warn' | 'error';
 export type LogContext = Record<string, unknown>;
 export type SanitizedLogValue = string | number | boolean | null | SanitizedLogValue[] | { [key: string]: SanitizedLogValue };
 
-const SENSITIVE_KEY_PATTERN = /(password|passwd|secret|token|access_token|refresh_token|id_token|authorization|bearer|cookie|set-cookie|session|api[_-]?key|service[_-]?role|supabase|stripe_signature|stripe[_-]?secret|webhook[_-]?secret|card|iban|ssn|email|phone|address|jwt)/i;
+const SENSITIVE_KEY_PATTERN = /(password|passwd|secret|token|access_token|refresh_token|id_token|authorization|bearer|cookie|set-cookie|session|api[_-]?key|x[_-]?api[_-]?key|client[_-]?secret|private[_-]?key|connection[_-]?string|database[_-]?url|dsn|service[_-]?role|supabase|stripe_signature|stripe[_-]?secret|webhook[_-]?secret|card|iban|ssn|email|phone|address|jwt)/i;
 const ORGANIZATION_ID_PATTERN = /^(org_[A-Za-z0-9_-]{3,64}|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_.:/@-]{1,128}$/;
 const MAX_STRING_LENGTH = 160;
@@ -26,13 +26,18 @@ const MAX_OBJECT_KEYS = 40;
 
 const SENSITIVE_VALUE_PATTERNS = [
   /Bearer\s+[A-Za-z0-9._~+/=-]{8,}/gi,
+  /Basic\s+[A-Za-z0-9._~+/=-]{8,}/gi,
   /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g,
   /sk_(live|test)_[A-Za-z0-9_]{8,}/g,
+  /rk_(live|test)_[A-Za-z0-9_]{8,}/g,
+  /pk_(live|test)_[A-Za-z0-9_]{8,}/g,
   /whsec_[A-Za-z0-9_]{8,}/g,
   /gh[pousr]_[A-Za-z0-9_]{20,}/g,
   /sbp_[A-Za-z0-9_]{20,}/g,
   /sb_secret_[A-Za-z0-9_]{20,}/g,
-  /(session|csrf|token|authorization)=([^;\s]+)/gi,
+  /postgres(?:ql)?:\/\/[^\s]+/gi,
+  /https:\/\/[^\s@]+@[^\s/]+\/[^\s]+/gi,
+  /(session|csrf|token|authorization|cookie|secret|api[_-]?key)=([^;\s]+)/gi,
 ];
 
 function truncateString(value: string) {
