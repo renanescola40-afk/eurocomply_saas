@@ -1,23 +1,16 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { PublicFooter } from '@/components/marketing/public-footer';
+import { TrustCenterPage, type LocalizedTrustCopy } from '@/components/marketing/trust-center-page';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
 
-type TrustCopy = {
-  brand: string;
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-  notice: string;
-  cards: Array<{ href: string; title: string; body: string }>;
-  evidenceTitle: string;
-  evidenceItems: string[];
-  procurementTitle: string;
-  procurementItems: string[];
+export const revalidate = 300;
+export const dynamic = 'force-static';
+
+type PageProps = {
+  params: Promise<{ locale: string }>;
 };
 
-const TRUST_COPY: Record<SupportedLocale, TrustCopy> = {
+const TRUST_COPY: Record<SupportedLocale, LocalizedTrustCopy> = {
   en: {
     brand: 'Risck comply',
     eyebrow: 'Trust Center',
@@ -116,50 +109,12 @@ const TRUST_COPY: Record<SupportedLocale, TrustCopy> = {
   },
 };
 
-export default async function TrustCenterPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
-  if (!isSupportedLocale(locale)) notFound();
+export default async function TrustPage({ params }: PageProps) {
+  const { locale: rawLocale } = await params;
+  if (!isSupportedLocale(rawLocale)) notFound();
+
+  const locale = rawLocale;
   const copy = TRUST_COPY[locale];
 
-  return (
-    <main className="min-h-screen bg-[#0A0A0F] text-white">
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <Link href={`/${locale}`} className="text-sm text-white/70 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">
-            {copy.brand}
-          </Link>
-          <p className="mt-10 text-sm font-semibold uppercase tracking-[0.24em] text-blue-200">{copy.eyebrow}</p>
-          <h1 className="mt-4 max-w-5xl text-5xl font-semibold tracking-[-0.05em]">{copy.title}</h1>
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">{copy.subtitle}</p>
-          <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-sm leading-7 text-slate-300">{copy.notice}</div>
-        </div>
-      </section>
-
-      <section className="mx-auto grid max-w-6xl gap-5 px-6 pb-16 md:grid-cols-2 lg:grid-cols-3" aria-label={copy.eyebrow}>
-        {copy.cards.map((card) => (
-          <Link key={card.href} href={`/${locale}${card.href}`} className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 hover:bg-white/[0.07] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">
-            <h2 className="text-xl font-semibold">{card.title}</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-400">{card.body}</p>
-          </Link>
-        ))}
-      </section>
-
-      <section className="mx-auto grid max-w-6xl gap-5 px-6 pb-20 md:grid-cols-2">
-        <article className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
-          <h2 className="text-2xl font-semibold">{copy.evidenceTitle}</h2>
-          <ul className="mt-5 space-y-3 text-sm leading-6 text-slate-300">
-            {copy.evidenceItems.map((item) => <li key={item}>• {item}</li>)}
-          </ul>
-        </article>
-        <article className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
-          <h2 className="text-2xl font-semibold">{copy.procurementTitle}</h2>
-          <ul className="mt-5 space-y-3 text-sm leading-6 text-slate-300">
-            {copy.procurementItems.map((item) => <li key={item}>• {item}</li>)}
-          </ul>
-        </article>
-      </section>
-
-      <PublicFooter locale={locale} />
-    </main>
-  );
+  return <TrustCenterPage locale={locale} kind="trust" copy={copy} />;
 }
