@@ -11,6 +11,10 @@ function operationsFrom(cases = []) {
     .map((test) => test.operation);
 }
 
+function expectRequiredProfileCoverage(cases = []) {
+  expect(operationsFrom(cases)).toEqual(expect.arrayContaining(requiredProfileOperations));
+}
+
 describe('P0 Supabase RLS evidence checker profile coverage gate', () => {
   it('requires profiles user-scoped runtime operations before accepting Complete evidence', () => {
     expect(source).toContain("const userScopedTable = 'profiles'");
@@ -20,10 +24,10 @@ describe('P0 Supabase RLS evidence checker profile coverage gate', () => {
     expect(source).toContain('missing live RLS user-scoped table coverage');
   });
 
-  it('keeps pending evidence Open/not_run while documenting the required profiles live proof cases', () => {
+  it('keeps pending evidence Open while documenting the required profiles live proof cases', () => {
     if (evidence.status === 'Complete') {
       expect(evidence.outcome).toBe('passed');
-      expect(operationsFrom(evidence.testCases)).toEqual(expect.arrayContaining(requiredProfileOperations));
+      expectRequiredProfileCoverage(evidence.testCases);
       for (const operation of requiredProfileOperations) {
         expect(evidence.testCases).toContainEqual(expect.objectContaining({ table: 'profiles', operation, passed: true }));
       }
@@ -31,9 +35,16 @@ describe('P0 Supabase RLS evidence checker profile coverage gate', () => {
     }
 
     expect(evidence.status).toBe('Open');
-    expect(evidence.outcome).toBe('not_run');
-    expect(evidence.profileProofExecutionState).toBe('not_run');
-    expect(operationsFrom(evidence.requiredProfileProofCases)).toEqual(requiredProfileOperations);
-    expect(evidence).not.toHaveProperty('testsPassed');
+
+    if (evidence.outcome === 'not_run') {
+      expect(evidence.profileProofExecutionState).toBe('not_run');
+      expect(operationsFrom(evidence.requiredProfileProofCases)).toEqual(requiredProfileOperations);
+      expect(evidence).not.toHaveProperty('testsPassed');
+      return;
+    }
+
+    expect(evidence.outcome).toBe('failed');
+    expectRequiredProfileCoverage(evidence.testCases);
+    expect(evidence).toHaveProperty('testsPassed');
   });
 });
