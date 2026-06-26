@@ -1,4 +1,7 @@
 import { sendEmail } from '@/lib/email/client';
+import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { readBoundedJsonRequest } from '@/lib/security/validate';
 import {
   billingStartedEmail,
   complianceDeadlineReminderEmail,
@@ -87,16 +90,32 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'unauthorized' }, { status: 401 });
   }
 
-  let body: TestEmailPayload;
+  const rateLimit = await checkDistributedRateLimit({
+    key: 'internal-email-test:send',
+    policy: 'health-internal',
+    route: '/api/internal/email/test',
+    action: 'send_test_email',
+    limit: 10,
+    windowMs: 60 * 1000,
+  });
 
-  try {
-    body = await readBoundedJsonRequest<TestEmailPayload>(request, {
-      maxBytes: TEST_EMAIL_BODY_MAX_BYTES,
-    });
-  } catch (error) {
-    return validationErrorResponse(error) ?? noStoreJson({ error: 'invalid_request_payload' }, { status: 400 });
+  if (!rateLimit.allowed) {
+    const retryAfter = Math.max(1, Math.ceil((rateLimit.resetAt - Date.now()) / 1000));
+
+    return noStoreJson(
+      { error: rateLimit.reason ? 'security_control_unavailable' : 'rate_limit_exceeded', retryAfter },
+      {
+        status: rateLimit.reason ? 503 : 429,
+        headers: {
+          'Retry-After': String(retryAfter),
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+          'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
+        },
+      },
+    );
   }
 
+  const body = await readBoundedJsonRequest<TestEmailPayload>(request, { maxBytes: 2048 });
   const to = body.to?.trim();
 
   if (!to) {
