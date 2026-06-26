@@ -46,14 +46,34 @@ create index if not exists email_delivery_logs_organization_idx
 
 alter table public.email_delivery_logs enable row level security;
 
--- Service role owns inserts/updates through the server-side email client.
--- Users should not be able to read other recipients' delivery logs by default.
+-- Service role owns all access through the server-side email client.
+-- Users should not be able to read or mutate delivery logs by default.
 drop policy if exists "email delivery logs are service role only" on public.email_delivery_logs;
-create policy "email delivery logs are service role only"
+drop policy if exists "email delivery logs select service role" on public.email_delivery_logs;
+drop policy if exists "email delivery logs insert service role" on public.email_delivery_logs;
+drop policy if exists "email delivery logs update service role" on public.email_delivery_logs;
+drop policy if exists "email delivery logs delete service role" on public.email_delivery_logs;
+
+create policy "email delivery logs select service role"
   on public.email_delivery_logs
-  for all
+  for select
+  using (auth.role() = 'service_role');
+
+create policy "email delivery logs insert service role"
+  on public.email_delivery_logs
+  for insert
+  with check (auth.role() = 'service_role');
+
+create policy "email delivery logs update service role"
+  on public.email_delivery_logs
+  for update
   using (auth.role() = 'service_role')
   with check (auth.role() = 'service_role');
+
+create policy "email delivery logs delete service role"
+  on public.email_delivery_logs
+  for delete
+  using (auth.role() = 'service_role');
 
 comment on table public.email_delivery_logs is 'Server-side transactional email send log. Stores recipient and recipient_hash, template, status, provider id, retry attempts and sanitized errors only. Email bodies and secrets are intentionally not stored.';
 comment on column public.email_delivery_logs.recipient is 'Primary recipient email address for operational support and acceptance evidence.';
