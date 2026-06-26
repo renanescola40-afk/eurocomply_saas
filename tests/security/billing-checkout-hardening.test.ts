@@ -13,7 +13,12 @@ const mocks = vi.hoisted(() => ({
   getStripePriceId: vi.fn(),
   isSelfServePlan: vi.fn(),
   normalizeBillingPlanId: vi.fn(),
+  writeAuditLog: vi.fn(),
   supabaseMaybeSingle: vi.fn(),
+}));
+
+vi.mock('@/lib/security/audit-log', () => ({
+  writeAuditLog: mocks.writeAuditLog,
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -113,6 +118,7 @@ describe('billing checkout API security gates', () => {
       id: 'cs_test_fixture',
       url: 'https://checkout.stripe.test/session-fixture',
     });
+    mocks.writeAuditLog.mockResolvedValue(undefined);
   });
 
   it('rejects invalid checkout plan before auth, RBAC or Stripe calls', async () => {
@@ -175,6 +181,11 @@ describe('billing checkout API security gates', () => {
         userId: 'user_admin',
         plan: 'growth',
       }),
+    }));
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'checkout_created',
+      organizationId: 'org_a',
+      userId: 'user_admin',
     }));
   });
 });
