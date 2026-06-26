@@ -37,6 +37,10 @@ function clerkRoleToAppRole(role?: string | null) {
   return 'member';
 }
 
+function membershipIdPatch(membershipId: string | null | undefined) {
+  return membershipId === undefined ? {} : { clerk_membership_id: membershipId };
+}
+
 export async function syncClerkOrganizationToSupabase(input: SyncClerkOrganizationInput) {
   const supabase = createAdminClient();
   const now = new Date().toISOString();
@@ -128,7 +132,7 @@ export async function syncClerkOrganizationToSupabase(input: SyncClerkOrganizati
     const { error: updateMembershipError } = await supabase
       .from('organization_members')
       .update({
-        clerk_membership_id: input.membershipId ?? null,
+        ...membershipIdPatch(input.membershipId),
         role,
         last_clerk_sync_at: now,
       })
