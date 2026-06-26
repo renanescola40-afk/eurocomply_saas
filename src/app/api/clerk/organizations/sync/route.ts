@@ -19,9 +19,14 @@ export async function POST(request: Request) {
     const userId = authState.userId;
     const orgId = authState.orgId;
     const orgRole = (authState as { orgRole?: string | null }).orgRole ?? null;
+    const normalizedOrgRole = orgRole?.toLowerCase() ?? null;
 
     if (!userId || !orgId) {
       return noStoreJson({ error: 'unauthorized' }, { status: 401 });
+    }
+
+    if (!normalizedOrgRole || !allowedClerkOrganizationRoles.has(normalizedOrgRole)) {
+      return noStoreJson({ error: 'organization_membership_required' }, { status: 403 });
     }
 
     const mutationDenied = await requireTrustedMutation(request, {
@@ -62,7 +67,7 @@ export async function POST(request: Request) {
       clerkUserId: userId,
       name: clerkOrganization.name,
       slug: clerkOrganization.slug,
-      role: orgRole,
+      role: normalizedOrgRole,
       membershipId: parsedBody.data.membershipId,
     });
 
