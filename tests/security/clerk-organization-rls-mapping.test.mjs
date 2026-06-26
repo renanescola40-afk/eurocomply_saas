@@ -43,6 +43,8 @@ describe('Clerk organization RLS mapping', () => {
     expect(sql).toContain('create or replace function public.current_clerk_user_id()');
     expect(sql).not.toContain('auth.uid()');
     expect(sql).toContain("public.current_jwt_subject() ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'");
+    expect(sql).toContain('create or replace function public.live_rls_validation_is_org_member');
+    expect(sql).toContain('select public.is_org_member(target_organization_id);');
     expect(sql).toContain('drop policy if exists live_rls_tasks_insert_writer on public.tasks');
     expect(sql).toContain("with check (public.has_org_role(organization_id, array['owner','admin','editor']))");
     expect(sql).toContain("using (public.has_org_role(organization_id, array['owner','admin']))");

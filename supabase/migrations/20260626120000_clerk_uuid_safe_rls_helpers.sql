@@ -102,9 +102,25 @@ revoke all on function public.has_org_role(uuid, text[]) from public;
 grant execute on function public.is_org_member(uuid) to authenticated;
 grant execute on function public.has_org_role(uuid, text[]) to authenticated;
 
+-- Some older live RLS validation policies still reference this helper.
+-- Replace its auth.uid()-based body so stale policies cannot cast Clerk text subjects as UUIDs.
+create or replace function public.live_rls_validation_is_org_member(target_organization_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select public.is_org_member(target_organization_id);
+$$;
+
+revoke all on function public.live_rls_validation_is_org_member(uuid) from public;
+grant execute on function public.live_rls_validation_is_org_member(uuid) to authenticated;
+
 comment on function public.current_jwt_subject() is 'Raw JWT subject from request.jwt.claim.sub/request.jwt.claims.sub. Internal helper for mixed Supabase UUID and Clerk text identities.';
 comment on function public.current_legacy_user_id() is 'UUID-safe Supabase Auth user ID resolver. Returns null instead of casting Clerk text subjects to uuid.';
 comment on function public.current_clerk_user_id() is 'Clerk text user ID resolver. UUID Supabase Auth subjects return null so legacy UUID auth stays on user_id.';
+comment on function public.live_rls_validation_is_org_member(uuid) is 'Compatibility wrapper for older live RLS validation policies. Delegates to Clerk-safe public.is_org_member(uuid).';
 
 -- Replace stale inline auth.uid() policies with UUID-safe helper-based policies.
 -- Guard every optional table with to_regclass so this migration is safe across staging/prod schema drift.
