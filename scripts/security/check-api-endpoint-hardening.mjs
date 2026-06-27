@@ -24,6 +24,8 @@ const authTokens = [
   'requireApiUser',
   'requireOrganizationContext',
   'isAuthorizedInternalCronRequest',
+  'auth()',
+  'authState.userId',
   'supabase.auth.getUser',
   'HEALTHCHECK_' + 'TOKEN',
   'CRON_' + 'SECRET',
@@ -52,16 +54,17 @@ const clientInputTokens = [
   'request.text(',
   'request.blob(',
   'searchParams.get',
-  'new URL(request.url)',
 ];
 
 const rateLimitTokens = [
   'checkDistributedRateLimit',
   'requireRateLimit',
+  'requireEnterpriseRateLimit',
   'rateLimit',
   'rate-limit',
   'Retry-After',
   'requireTrustedMutation',
+  'isAuthorizedInternalCronRequest',
 ];
 
 const criticalEndpointPatterns = [
