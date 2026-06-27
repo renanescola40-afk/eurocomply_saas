@@ -2,7 +2,7 @@ import { unstable_noStore as noStore } from 'next/cache';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowRight, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
+import { ArrowRight, Building2, FileCheck2, Gauge, LockKeyhole, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-overview';
 import { EnterpriseDashboardOverview } from '@/components/dashboard/enterprise-dashboard-overview';
 import { Badge } from '@/components/ui/badge';
@@ -37,21 +37,21 @@ function getSafeLocale(locale: string): Locale {
 
 function DashboardHomeOverviewSkeleton() {
   return (
-    <div className="space-y-6" aria-label="Loading dashboard overview" role="status" aria-live="polite">
+    <div className="space-y-6" aria-label="Loading audit-ready dashboard overview" role="status" aria-live="polite">
       <div className="grid gap-4 md:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="rounded-[1.5rem] border bg-background/80 p-5 shadow-sm">
-            <div className="h-4 w-24 animate-pulse rounded-full bg-muted" />
-            <div className="mt-4 h-8 w-20 animate-pulse rounded-xl bg-muted" />
-            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-muted" />
+          <div key={index} className="premium-card rounded-[1.5rem] p-5">
+            <div className="h-4 w-24 animate-pulse rounded-full bg-white/10" />
+            <div className="mt-4 h-8 w-20 animate-pulse rounded-xl bg-white/10" />
+            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/10" />
           </div>
         ))}
       </div>
-      <div className="rounded-[2rem] border bg-background/80 p-6 shadow-sm">
-        <div className="h-6 w-56 animate-pulse rounded-full bg-muted" />
+      <div className="premium-card rounded-[2rem] p-6">
+        <div className="h-6 w-56 animate-pulse rounded-full bg-white/10" />
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-24 animate-pulse rounded-2xl bg-muted" />
+            <div key={index} className="h-24 animate-pulse rounded-2xl bg-white/10" />
           ))}
         </div>
       </div>
@@ -84,7 +84,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
   const dashboardBasePath = `/dashboard/organizations`;
   const localizedDashboardBasePath = `/${safeLocale}${dashboardBasePath}`;
   const localizedTasksPath = `/${safeLocale}/aprovacoes`;
-  const planName = planLabels[entitlements.plan];
+  const planName = planLabels[entitlements.plan] ?? entitlements.plan;
   const complianceHealth = data.summary.complianceScore >= 80 ? organizationCopy.health.auditReady : data.summary.complianceScore >= 55 ? organizationCopy.health.needsAttention : organizationCopy.health.remediation;
   const requestedPlan = resolvedSearchParams.plan ? getBillingPlan(resolvedSearchParams.plan) : undefined;
   const shouldShowRequestedPlan = requestedPlan && requestedPlan.id !== entitlements.plan;
@@ -95,23 +95,30 @@ export default async function OrganizationDashboardPage({ params, searchParams }
   ];
   const limitsSummary = limitCards.map((item) => `${item.label}: ${item.value}`).join(' · ');
   const quickLinks = [
-    { href: localizedTasksPath, label: organizationCopy.quickLinks.tasks.label, description: organizationCopy.quickLinks.tasks.description, icon: FileCheck2 },
-    { href: `${localizedDashboardBasePath}/documents`, label: organizationCopy.quickLinks.evidence.label, description: organizationCopy.quickLinks.evidence.description, icon: ShieldCheck },
-    { href: `/${safeLocale}/vendor-assurance`, label: organizationCopy.quickLinks.vendors.label, description: organizationCopy.quickLinks.vendors.description, icon: UsersRound },
-    { href: `/${safeLocale}/riscos`, label: organizationCopy.quickLinks.risks.label, description: organizationCopy.quickLinks.risks.description, icon: Gauge },
+    { href: localizedTasksPath, label: organizationCopy.quickLinks.tasks.label, description: organizationCopy.quickLinks.tasks.description, icon: FileCheck2, meta: 'approval queue' },
+    { href: `${localizedDashboardBasePath}/documents`, label: organizationCopy.quickLinks.evidence.label, description: organizationCopy.quickLinks.evidence.description, icon: ShieldCheck, meta: 'audit-ready evidence' },
+    { href: `/${safeLocale}/vendor-assurance`, label: organizationCopy.quickLinks.vendors.label, description: organizationCopy.quickLinks.vendors.description, icon: UsersRound, meta: 'third-party exposure' },
+    { href: `/${safeLocale}/riscos`, label: organizationCopy.quickLinks.risks.label, description: organizationCopy.quickLinks.risks.description, icon: Gauge, meta: 'risk register' },
+  ];
+  const trustSignals = [
+    { label: 'audit-ready', icon: ShieldCheck },
+    { label: 'tenant isolated', icon: Building2 },
+    { label: 'GDPR aligned', icon: LockKeyhole },
+    { label: 'role-based access', icon: UsersRound },
   ];
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.16),_transparent_34%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))]">
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-10">
+    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_34rem),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.09),_transparent_30rem),linear-gradient(180deg,#050505_0%,#080b12_46%,#050505_100%)]">
+      <div className="pointer-events-none fixed inset-0 tech-grid opacity-25" />
+      <div className="relative mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:py-10 lg:px-8">
         {shouldShowRequestedPlan ? (
-          <section className="rounded-[1.5rem] border border-primary/25 bg-primary/8 p-5 shadow-lg shadow-primary/5 md:flex md:items-center md:justify-between md:gap-6">
+          <section className="premium-card rounded-[1.5rem] p-5 md:flex md:items-center md:justify-between md:gap-6">
             <div>
               <Badge className="rounded-full px-3 py-1">{organizationCopy.selectedPlanBadge}</Badge>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight">
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white">
                 {organizationCopy.continueWithPlan} {requestedPlan.name} · €{requestedPlan.priceMonthly}/{organizationCopy.month}
               </h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-white/58">
                 {organizationCopy.requestedPlanDescription}
               </p>
             </div>
@@ -121,43 +128,70 @@ export default async function OrganizationDashboardPage({ params, searchParams }
                   {organizationCopy.reviewPlan} <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="rounded-full">
+              <Button asChild variant="outline" className="rounded-full border-white/15 bg-white/[0.04] text-white hover:bg-white/10">
                 <Link href={`/${safeLocale}/dashboard/organizations/billing`}>{organizationCopy.comparePlans}</Link>
               </Button>
             </div>
           </section>
         ) : null}
 
-        <section className="grid gap-4 md:grid-cols-[1.3fr_0.7fr]">
-          <div className="rounded-[2rem] border bg-background/80 p-6 shadow-sm backdrop-blur">
+        <section className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+          <div className="premium-card rounded-[2rem] p-6 md:p-8">
             <div className="flex flex-wrap items-center gap-3">
-              <Badge className="rounded-full px-3 py-1">{planName}</Badge>
-              <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{complianceHealth}</span>
+              <Badge className="rounded-full bg-white px-3 py-1 text-black">{planName}</Badge>
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-white/64">{complianceHealth}</span>
+              {trustSignals.map((signal) => {
+                const Icon = signal.icon;
+                return (
+                  <span key={signal.label} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1 text-xs font-medium text-white/58">
+                    <Icon className="h-3.5 w-3.5" /> {signal.label}
+                  </span>
+                );
+              })}
             </div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">{organizationCopy.title}</h1>
-            <p className="mt-3 max-w-3xl text-muted-foreground">{organizationCopy.subtitle}</p>
-            <p className="mt-4 text-sm text-muted-foreground">{limitsSummary}</p>
+            <h1 className="mt-5 max-w-4xl text-4xl font-semibold tracking-[-0.055em] text-white md:text-5xl">{organizationCopy.title}</h1>
+            <p className="mt-4 max-w-3xl text-sm leading-6 text-white/58 md:text-base">{organizationCopy.subtitle}</p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {limitCards.map((item) => (
+                <div key={item.label} className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/38">{item.label}</p>
+                  <p className="mt-2 text-xl font-semibold text-white">{item.value}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="rounded-[2rem] border bg-foreground p-6 text-background shadow-sm">
+          <div className="premium-card shine-line after:pointer-events-none rounded-[2rem] p-6 text-white">
             <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-background/10 p-3"><Sparkles className="h-5 w-5" /></div>
+              <div className="rounded-2xl bg-white/10 p-3"><Sparkles className="h-5 w-5" /></div>
               <div>
-                <p className="text-sm text-background/70">{organizationCopy.complianceScore}</p>
-                <p className="text-3xl font-semibold">{data.summary.complianceScore}%</p>
+                <p className="text-sm text-white/55">{organizationCopy.complianceScore}</p>
+                <p className="text-5xl font-semibold tracking-[-0.05em]">{data.summary.complianceScore}%</p>
               </div>
             </div>
+            <p className="mt-5 text-sm leading-6 text-white/58">Clear executive readiness score for board, audit and procurement conversations.</p>
+            <Button asChild className="mt-6 w-full rounded-full bg-white text-black hover:bg-white/90">
+              <Link href={`${localizedDashboardBasePath}/reports-governance`}>Open executive report <ArrowRight className="h-4 w-4" /></Link>
+            </Button>
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-4">
-          {quickLinks.map((item) => (
-            <Link key={item.href} href={item.href} className="group rounded-[1.5rem] border bg-background/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-              <item.icon className="h-5 w-5 text-primary" />
-              <h2 className="mt-4 font-semibold">{item.label}</h2>
-              <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
-              <ArrowRight className="mt-4 h-4 w-4 transition group-hover:translate-x-1" />
-            </Link>
-          ))}
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {quickLinks.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href} className="premium-card premium-card-hover group rounded-[1.5rem] p-5 focus:outline-none focus:ring-2 focus:ring-primary">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="rounded-2xl bg-white/10 p-3 text-white"><Icon className="h-5 w-5" /></span>
+                  <span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-medium text-white/44">{item.meta}</span>
+                </div>
+                <h2 className="mt-5 font-semibold text-white">{item.label}</h2>
+                <p className="mt-2 text-sm leading-6 text-white/56">{item.description}</p>
+                <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-white/76 transition group-hover:text-white">
+                  Open workspace <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                </span>
+              </Link>
+            );
+          })}
         </section>
 
         <Suspense fallback={<DashboardHomeOverviewSkeleton />}>
