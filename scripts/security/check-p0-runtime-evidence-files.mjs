@@ -24,6 +24,7 @@ const allowedItems = new Set([
 const redactionTexts = new Set([
   'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
   'Redaction confirmed for runtime evidence.',
+  'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
 ]);
 const failures = [];
 
