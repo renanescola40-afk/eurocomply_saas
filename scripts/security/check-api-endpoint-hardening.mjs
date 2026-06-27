@@ -12,6 +12,7 @@ const publicEndpointAllowlist = [
   { pattern: /src\/app\/api\/billing\/webhook\/route\.ts$/, reason: 'Stripe webhook validates provider signature instead of user session' },
   { pattern: /src\/app\/api\/stripe\/webhook\/route\.ts$/, reason: 'Stripe webhook validates provider signature instead of user session' },
   { pattern: /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/, reason: 'Public verifier; must remain no-store/rate-limited' },
+  { pattern: /src\/app\/api\/leads\/route\.ts$/, reason: 'Public sales lead capture; must remain no-store, schema-validated, consent-gated and rate-limited' },
   { pattern: /src\/app\/api\/ops\/.*\/route\.ts$/, reason: 'Ops routes use internal token instead of user session' },
   { pattern: /src\/app\/api\/health\/route\.ts$/, reason: 'Public liveness check without tenant data' },
   { pattern: /src\/app\/api\/ready\/route\.ts$/, reason: 'Public readiness check without tenant data' },
