@@ -14,19 +14,27 @@ type Props = {
   hasDashboardOpened: boolean;
 };
 
-export function OnboardingTelemetry(props: Props) {
+export function OnboardingTelemetry({
+  progress,
+  hasOrganization,
+  hasMembers,
+  hasDocuments,
+  hasRisks,
+  hasVendors,
+  hasDashboardOpened,
+}: Props) {
   useEffect(() => {
     captureAnalyticsEvent(analyticsEvents.onboardingChecklistViewed, {
       source: 'onboarding_progress_card',
-      has_organization: props.hasOrganization,
-      has_members: props.hasMembers,
-      has_documents: props.hasDocuments,
-      has_risks: props.hasRisks,
-      has_vendors: props.hasVendors,
-      has_dashboard_opened: props.hasDashboardOpened,
-      onboarding_progress: props.progress,
+      has_organization: hasOrganization,
+      has_members: hasMembers,
+      has_documents: hasDocuments,
+      has_risks: hasRisks,
+      has_vendors: hasVendors,
+      has_dashboard_opened: hasDashboardOpened,
+      onboarding_progress: progress,
     });
-  }, [props]);
+  }, [progress, hasOrganization, hasMembers, hasDocuments, hasRisks, hasVendors, hasDashboardOpened]);
 
   return null;
 }
