@@ -20,6 +20,10 @@ vi.mock('@/server/billing/entitlements', () => ({
 
 import { GET } from './route';
 
+function createRequest() {
+  return new Request('https://risck-comply.test/api/billing/entitlements');
+}
+
 describe('billing entitlements response hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -36,7 +40,7 @@ describe('billing entitlements response hardening', () => {
   it('returns no-store unauthorized responses', async () => {
     mocks.getCurrentUser.mockResolvedValue(null);
 
-    const response = await GET();
+    const response = await GET(createRequest());
     const body = await response.json();
 
     expect(response.status).toBe(401);
@@ -47,7 +51,7 @@ describe('billing entitlements response hardening', () => {
   it('returns no-store organization-required responses', async () => {
     mocks.getCurrentOrganizationForUser.mockResolvedValue(null);
 
-    const response = await GET();
+    const response = await GET(createRequest());
     const body = await response.json();
 
     expect(response.status).toBe(403);
@@ -56,7 +60,7 @@ describe('billing entitlements response hardening', () => {
   });
 
   it('returns entitlements with no-store and normalized numeric limits', async () => {
-    const response = await GET();
+    const response = await GET(createRequest());
     const body = await response.json();
 
     expect(response.status).toBe(200);
