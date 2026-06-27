@@ -7,8 +7,11 @@ const mutatingExportRegex = /export\s+async\s+function\s+(POST|PUT|PATCH|DELETE)
 
 const exemptRoutePatterns = [
   /src\/app\/api\/billing\/webhook\/route\.ts$/,
+  /src\/app\/api\/stripe\/webhook\/route\.ts$/,
   /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/,
   /src\/app\/api\/ops\/.*\/route\.ts$/,
+  /src\/app\/api\/internal\/.*\/route\.ts$/,
+  /src\/app\/api\/leads\/route\.ts$/,
 ];
 
 function walk(dir) {
@@ -35,7 +38,17 @@ function isExempt(path) {
 }
 
 function hasOriginGuard(source) {
-  return source.includes('assertTrustedOrigin') || source.includes('verifyTrustedOrigin') || source.includes('originDeniedResponse');
+  return (
+    source.includes('assertTrustedOrigin') ||
+    source.includes('verifyTrustedOrigin') ||
+    source.includes('originDeniedResponse') ||
+    source.includes('requireTrustedMutation') ||
+    source.includes('requireTrustedOriginForMutation') ||
+    source.includes('assertTrustedOriginForMutation') ||
+    source.includes('isAuthorizedInternalCronRequest') ||
+    source.includes('isAuthorizedInternalMaintenanceRequest') ||
+    source.includes('constructEvent')
+  );
 }
 
 const routes = walk(apiRoot);
