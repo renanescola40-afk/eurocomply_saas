@@ -87,6 +87,15 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
+  async redirects() {
+    return [
+      {
+        source: '/:locale(en|pt|es|fr|it|de)/register',
+        destination: '/:locale/signup',
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {
