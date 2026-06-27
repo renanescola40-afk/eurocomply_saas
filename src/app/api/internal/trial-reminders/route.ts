@@ -4,6 +4,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { noStoreJson } from '@/server/security/no-store';
+import { getUserEmailById } from '@/server/users/email';
 
 export const runtime = 'nodejs';
 
@@ -24,15 +25,7 @@ function daysUntil(value: string) {
 }
 
 async function getOwnerEmail(userId: string) {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.auth.admin.getUserById(userId);
-
-  if (error) {
-    reportError(error, { area: 'trial_reminder_owner_lookup', userId });
-    return null;
-  }
-
-  return data.user?.email ?? null;
+  return getUserEmailById(userId, 'trial_reminder_owner_lookup');
 }
 
 async function hasReminderBeenSent(organizationId: string, subscriptionId: string, recipientEmail: string) {
@@ -79,7 +72,7 @@ async function sendTrialReminders() {
 
   const { data: subscriptions, error } = await supabase
     .from('subscriptions')
-    .select('id,organization_id,current_period_end,organizations(id,name,created_by)')
+    .select('id,organization_id,current_period_end,organizations(id,name,created_by,created_by_clerk_user_id)')
     .eq('status', 'trialing')
     .not('current_period_end', 'is', null)
     .gte('current_period_end', today)
@@ -96,10 +89,11 @@ async function sendTrialReminders() {
 
   for (const subscription of subscriptions ?? []) {
     const organization = Array.isArray(subscription.organizations) ? subscription.organizations[0] : subscription.organizations;
+    const ownerUserId = organization?.created_by_clerk_user_id ?? organization?.created_by;
 
-    if (!organization?.created_by || !subscription.current_period_end) continue;
+    if (!ownerUserId || !subscription.current_period_end) continue;
 
-    const recipientEmail = await getOwnerEmail(organization.created_by);
+    const recipientEmail = await getOwnerEmail(ownerUserId);
 
     if (!recipientEmail) continue;
 
@@ -122,7 +116,7 @@ async function sendTrialReminders() {
         text: email.text,
         template: email.template,
         organizationId: subscription.organization_id,
-        userId: organization.created_by,
+        userId: ownerUserId,
         metadata: {
           source: 'trial_reminder_job',
           subscriptionId: subscription.id,
