@@ -7,6 +7,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | Class | Required controls |
 | --- | --- |
 | public safe | No private tenant data; no-store where applicable; rate limit for public verifiers. |
+| public mutation | Public POST without tenant session; bounded input parsing, no-store responses, rate limiting, consent validation and sanitized logging required. |
 | authenticated | User auth required; sanitized error responses; no-store responses. |
 | tenant-scoped | Auth, organization membership, tenant ownership validation before resource use, RBAC/read permission, no-store. |
 | admin-only | Auth, membership, admin/RBAC permission, tenant validation, no-store, audit for sensitive changes. |
@@ -33,6 +34,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/billing/webhook/route.ts` | webhook | Stripe webhook; signature verification replaces trusted origin. |
 | `src/app/api/stripe/webhook/route.ts` | webhook | Stripe webhook; signature verification replaces trusted origin. |
 | `src/app/api/audit/evidence-pack/verify/route.ts` | public safe | Public verifier; must stay rate-limited and no-store. |
+| `src/app/api/leads/route.ts` | public mutation | Public lead capture stores lead PII; requires consent, bounded JSON, rate limit, input normalization, sanitized logging and no-store responses. |
 | `src/app/api/clerk/organizations/sync/route.ts` | tenant-scoped | Clerk organization sync; active Clerk organization must match request payload before Supabase mapping. |
 | `src/app/api/billing/entitlements/route.ts` | tenant-scoped | Private subscription/entitlement data; membership and tenant context required. |
 | `src/app/api/billing/checkout/route.ts` | high-risk | Billing mutation; manage_billing, trusted origin, rate limit, tenant validation required. |

@@ -10,6 +10,7 @@ const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 const KNOWN_CLASSES = new Set([
   'public safe',
+  'public mutation',
   'authenticated',
   'tenant-scoped',
   'admin-only',
@@ -26,6 +27,7 @@ const PUBLIC_SAFE_PATTERNS = [
   /src\/app\/api\/og\//,
   /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/,
 ];
+const PUBLIC_MUTATION_PATTERNS = [/src\/app\/api\/leads\/route\.ts$/];
 
 const WEBHOOK_PATTERNS = [/\/webhook\//, /\/webhooks\//, /stripe\/webhook/, /billing\/webhook/];
 const INTERNAL_PATTERNS = [/src\/app\/api\/(cron|internal|maintenance|ops|intelligence\/refresh)\//];
@@ -92,6 +94,7 @@ function readInventory() {
 function classify(relativePath, source) {
   if (WEBHOOK_PATTERNS.some((pattern) => pattern.test(relativePath))) return 'webhook';
   if (INTERNAL_PATTERNS.some((pattern) => pattern.test(relativePath))) return 'health/internal';
+  if (PUBLIC_MUTATION_PATTERNS.some((pattern) => pattern.test(relativePath))) return 'public mutation';
   if (PUBLIC_SAFE_PATTERNS.some((pattern) => pattern.test(relativePath))) return 'public safe';
   if (hasAny(source, ADMIN_TERMS) || /\/(admin|team|security\/settings)\//.test(relativePath)) return 'admin-only';
   if (hasAny(relativePath, HIGH_RISK_TERMS) || hasAny(source, HIGH_RISK_TERMS)) return 'high-risk';
@@ -110,7 +113,7 @@ function checkRoute(file, inventory) {
   const routeClass = inventoryClass ?? computedClass;
   const failures = [];
 
-  const publicOrWebhook = routeClass === 'public safe' || routeClass === 'webhook' || routeClass === 'health/internal';
+  const publicOrWebhook = routeClass === 'public safe' || routeClass === 'public mutation' || routeClass === 'webhook' || routeClass === 'health/internal';
   const sensitive = routeClass === 'tenant-scoped' || routeClass === 'admin-only' || routeClass === 'high-risk' || routeClass === 'authenticated';
   const hasCentralGuard = hasAny(source, [
     '@/server/security/api-guard',
@@ -125,7 +128,7 @@ function checkRoute(file, inventory) {
   const hasAuth = hasAny(source, ['requireApiUser', 'getCurrentUser', 'requireAuthenticatedUser', 'requireCurrentUser', 'requireOrganizationContext', 'requirePrivilegedOrganizationContext', 'requireEnterpriseApiAccess']);
   const hasNoStore = hasAny(source, ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'secureApiError', 'secureApiJson', 'guardErrorResponse']);
   const hasSanitizedErrors = hasAny(source, ['secureApiError', 'noStoreJson', 'guardErrorResponse', 'secureApiJson']);
-  const hasValidation = hasAny(source, ['parseJsonBodyWithZod', 'z.object', 'zod', '.safeParse', '.parse(', 'readBoundedJsonRequest', 'formData()', 'request.json']);
+  const hasValidation = hasAny(source, ['parseJsonBodyWithZod', 'z.object', 'zod', '.safeParse', '.parse(', 'readBoundedJsonRequest', 'formData()']);
   const hasTenantGuard = hasAny(source, [
     'requireOrganizationContext',
     'requirePrivilegedOrganizationContext',
@@ -145,11 +148,22 @@ function checkRoute(file, inventory) {
     'context.organization',
   ]);
   const hasTrustedMutation = hasAny(source, ['requireTrustedOriginForMutation', 'requireTrustedMutation', 'assertTrustedOrigin']);
-  const hasRateLimit = hasAny(source, ['requireRateLimit', 'checkDistributedRateLimit', 'checkRateLimit', 'requireTrustedMutation']);
+  const hasRateLimit = hasAny(source, ['requireRateLimit', 'checkDistributedRateLimit', 'checkRateLimit', 'isRateLimited', 'rateLimitByIp', 'requireTrustedMutation']);
 
   if (!inventoryClass) failures.push('missing explicit inventory classification in docs/security/API_ROUTE_INVENTORY.md');
   if (inventoryClass && !KNOWN_CLASSES.has(inventoryClass)) failures.push(`unknown inventory classification: ${inventoryClass}`);
   if (!inventoryClass && computedClass === 'unclassified') failures.push('route cannot be classified by enterprise API security taxonomy');
+
+  if (routeClass === 'public mutation') {
+    if (!mutable) failures.push('public mutation route must expose a mutating handler');
+    if (!hasNoStore) failures.push('missing no-store response helper');
+    if (!hasSanitizedErrors) failures.push('missing sanitized error response');
+    if (!hasRateLimit) failures.push('missing rate limit');
+    if (!hasValidation) failures.push('missing bounded input validation');
+    if (!source.includes('consentToContact')) failures.push('missing explicit consent validation');
+    if (!source.includes('validateEmail')) failures.push('missing email validation');
+    if (source.includes('request.json()')) failures.push('must use bounded JSON parsing instead of request.json()');
+  }
 
   if (sensitive && !publicOrWebhook && !hasCentralGuard) failures.push('missing central API guard import/entrypoint');
   if (sensitive && !publicOrWebhook && !hasAuth) failures.push('missing auth guard');
