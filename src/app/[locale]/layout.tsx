@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     it: {
       title: 'RISCK COMPLY - Sistema Operativo di Compliance Europea',
-      description: 'Gestisci scadenze, rischi, documenti, registri di audit e identificativi fiscali in Europe.',
+      description: 'Gestisci scadenze, rischi, documenti, registri di audit e identificativi fiscali in Europa.',
     },
     de: {
       title: 'RISCK COMPLY - Europäisches Compliance-Betriebssystem',
