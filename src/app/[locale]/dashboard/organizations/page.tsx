@@ -160,7 +160,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
               ))}
             </div>
           </div>
-          <div className="premium-card shine-line rounded-[2rem] p-6 text-white">
+          <div className="premium-card shine-line after:pointer-events-none rounded-[2rem] p-6 text-white">
             <div className="flex items-center gap-3">
               <div className="rounded-2xl bg-white/10 p-3"><Sparkles className="h-5 w-5" /></div>
               <div>
