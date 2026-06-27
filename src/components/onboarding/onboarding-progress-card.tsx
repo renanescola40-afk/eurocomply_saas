@@ -3,6 +3,7 @@ import { CheckCircle2, Circle, TimerReset } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { OnboardingTelemetry } from '@/components/onboarding/onboarding-telemetry';
 import { buildOnboardingSteps, getOnboardingProgress, type OnboardingState } from '@/lib/onboarding/steps';
 
 type OnboardingProgressCardProps = {
@@ -25,6 +26,15 @@ export function OnboardingProgressCard({ state }: OnboardingProgressCardProps) {
 
   return (
     <Card className="border-primary/15 shadow-sm">
+      <OnboardingTelemetry
+        progress={progress.percentage}
+        hasOrganization={state.hasOrganization}
+        hasMembers={state.hasMembers}
+        hasDocuments={state.hasDocuments}
+        hasRisks={state.hasRisks ?? state.hasComplianceTasks}
+        hasVendors={state.hasVendors}
+        hasDashboardOpened={Boolean(state.hasDashboardOpened)}
+      />
       <CardHeader>
         <Badge variant="outline" className="w-fit rounded-full">Activation checklist</Badge>
         <CardTitle>Get RISCK COMPLY audit-ready</CardTitle>
