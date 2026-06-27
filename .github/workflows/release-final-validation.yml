@@ -28,6 +28,7 @@ jobs:
     name: Generate final validation bundle
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    environment: ${{ inputs.release_target }}
 
     steps:
       - name: Checkout repository
@@ -72,6 +73,11 @@ jobs:
       - name: Run final validation bundle
         env:
           RELEASE_TARGET: ${{ inputs.release_target }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: node scripts/release/run-final-validation.mjs
 
       - name: Upload final validation artifacts
