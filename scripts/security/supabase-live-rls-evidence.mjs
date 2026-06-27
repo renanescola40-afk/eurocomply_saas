@@ -1,10 +1,21 @@
 import crypto from 'node:crypto';
 
 export const runner = 'scripts/security/run-supabase-live-tenant-isolation.mjs';
-export const criticalTables = ['profiles'];
+export const criticalTables = [
+  'organizations',
+  'organization_members',
+  'documents',
+  'audit_events',
+  'risks',
+  'vendors',
+  'tasks',
+  'subscriptions',
+  'notifications',
+  'profiles',
+];
 export const optionalTables = [];
 export const requiredCoverageOperations = ['cross_tenant_read', 'cross_tenant_insert', 'cross_tenant_update', 'cross_tenant_delete'];
-export const requiredBackendWriteDenyOperations = [];
+export const requiredBackendWriteDenyOperations = ['same_tenant_insert_denied', 'same_tenant_update_denied', 'same_tenant_delete_denied'];
 export const requiredViewerAdminDenyOperations = [];
 export const requiredUserScopedTable = 'profiles';
 export const requiredUserScopedOperations = ['rls_enabled', 'cross_tenant_read', 'cross_tenant_insert', 'cross_tenant_update', 'cross_tenant_delete', 'same_tenant_read'];
@@ -41,7 +52,7 @@ export const requiredProfileProofCases = [
   },
 ];
 
-const sameTenantWritableTables = new Set(['profiles']);
+const sameTenantWritableTables = new Set(['documents', 'risks', 'vendors', 'tasks']);
 
 export function commandUsed(argv = process.argv.slice(2)) {
   return `node ${runner}${argv.length > 0 ? ` ${argv.join(' ')}` : ''}`;
@@ -73,7 +84,7 @@ export function tableCoverageFrom(testCases) {
         crossTenantInsertDenied: byOperation.get('cross_tenant_insert') === true,
         crossTenantUpdateDenied: byOperation.get('cross_tenant_update') === true,
         crossTenantDeleteDenied: byOperation.get('cross_tenant_delete') === true,
-        sameTenantReadAllowed: byOperation.get('same_tenant_read') === true,
+        sameTenantReadAllowed: byOperation.get('same_tenant_read') === true || byOperation.get('same_tenant_read_backend_only') === true,
         sameTenantInsertAllowed: byOperation.get('same_tenant_insert') === true || !sameTenantWritableTables.has(table),
       },
     };
@@ -142,12 +153,12 @@ export function buildEvidencePayload({ status, outcome, supabaseUrl, testCases =
     supabaseProjectReference: redactProjectReferenceFromUrl(supabaseUrl),
     supabaseProjectReferenceRedacted: true,
     summary: status === 'Complete' && outcome === 'passed'
-      ? 'Live Supabase profiles user-scoped RLS validation passed.'
-      : 'Live Supabase profiles user-scoped RLS validation did not pass.',
+      ? 'Live Supabase tenant-isolation RLS validation passed.'
+      : 'Live Supabase tenant-isolation RLS validation did not pass.',
     redactionConfirmation: 'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
     evidenceLocations: ['docs/security/evidence/runtime/supabase-live-rls-validation.json'],
     productionGate: status === 'Complete' && outcome === 'passed' ? 'P0 production release may proceed only if all other P0 runtime evidence is satisfied.' : 'P0 production release remains blocked.',
-    controlsVerified: status === 'Complete' && outcome === 'passed' ? ['Profiles user-scoped isolation verified', 'Cross-user profile access denied', 'Profile self-read allowed'] : [],
+    controlsVerified: status === 'Complete' && outcome === 'passed' ? ['Tenant isolation verified for critical tables', 'Cross-tenant access denied', 'Same-tenant read coverage verified', 'Backend-owned write denials verified'] : [],
     criticalTables,
     optionalTables,
     requiredProfileProofCases,
@@ -160,7 +171,7 @@ export function buildEvidencePayload({ status, outcome, supabaseUrl, testCases =
     failures,
     serviceRolePaths,
     registerUpdated,
-    completionRule: `Only ${runner} may mark this evidence Complete after a successful live profiles RLS run against the target Supabase project.`,
+    completionRule: `Only ${runner} may mark this evidence Complete after a successful live tenant-isolation RLS run against the target Supabase project.`,
     nextReviewDue: null,
     ...extra,
   };
