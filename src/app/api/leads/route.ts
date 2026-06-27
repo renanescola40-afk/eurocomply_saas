@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
@@ -32,6 +33,41 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
 const rateLimit = new Map<string, RateState>();
 
+const optionalTextSchema = (maxLength: number) =>
+  z.preprocess(
+    (value) => (typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value),
+    z.string().max(maxLength).optional().nullable(),
+  );
+
+const leadSchema = z.object({
+  fullName: z.preprocess(
+    (value) => (typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value),
+    z.string().min(1).max(120),
+  ),
+  workEmail: z.preprocess(
+    (value) => (typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').toLowerCase() : value),
+    z.string().email().max(180),
+  ),
+  companyName: z.preprocess(
+    (value) => (typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value),
+    z.string().min(1).max(160),
+  ),
+  role: optionalTextSchema(120),
+  companySize: optionalTextSchema(80),
+  region: optionalTextSchema(120),
+  complianceDrivers: z
+    .array(z.string().trim().max(80))
+    .max(10)
+    .optional()
+    .default([]),
+  timeline: optionalTextSchema(120),
+  currentProcess: optionalTextSchema(700),
+  message: optionalTextSchema(1000),
+  source: optionalTextSchema(120),
+  locale: optionalTextSchema(12),
+  consentToContact: z.literal(true),
+});
+
 function getClientHint(request: NextRequest) {
   return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 }
@@ -50,27 +86,12 @@ function isRateLimited(key: string) {
   return existing.count > RATE_LIMIT_MAX;
 }
 
-function text(value: unknown, maxLength: number) {
-  if (typeof value !== 'string') return null;
-  const normalized = value.trim().replace(/\s+/g, ' ');
-  if (!normalized) return null;
-  return normalized.slice(0, maxLength);
+function emptyToNull(value: string | null | undefined) {
+  return value || null;
 }
 
-function booleanValue(value: unknown) {
-  return value === true || value === 'true' || value === 'on';
-}
-
-function joinDrivers(value: unknown) {
-  if (Array.isArray(value)) {
-    return value.map((item) => text(item, 80)).filter(Boolean).join(', ').slice(0, 500) || null;
-  }
-
-  return text(value, 500);
-}
-
-function validEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+function joinDrivers(value: string[]) {
+  return value.length > 0 ? value.join(', ').slice(0, 500) : null;
 }
 
 async function readBody(request: NextRequest) {
@@ -128,37 +149,31 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await readBody(request);
-  if (!body) {
-    return noStoreJson({ error: 'Invalid request body.' }, { status: 400 });
-  }
+  const parsed = leadSchema.safeParse(body);
 
-  const fullName = text(body.fullName, 120);
-  const workEmail = text(body.workEmail, 180)?.toLowerCase() || null;
-  const companyName = text(body.companyName, 160);
-  const consentToContact = booleanValue(body.consentToContact);
-
-  if (!fullName || !workEmail || !companyName || !validEmail(workEmail) || !consentToContact) {
+  if (!parsed.success) {
     return noStoreJson(
       { error: 'Please provide name, work email, company and consent to contact.' },
       { status: 400 },
     );
   }
 
+  const lead = parsed.data;
   const record: LeadRecord = {
-    full_name: fullName,
-    work_email: workEmail,
-    company_name: companyName,
-    role: text(body.role, 120),
-    company_size: text(body.companySize, 80),
-    region: text(body.region, 120),
-    compliance_drivers: joinDrivers(body.complianceDrivers),
-    timeline: text(body.timeline, 120),
-    current_process: text(body.currentProcess, 700),
-    message: text(body.message, 1000),
-    source: text(body.source, 120) || 'book-demo',
-    locale: text(body.locale, 12),
-    consent_to_contact: consentToContact,
-    user_agent: text(request.headers.get('user-agent'), 300),
+    full_name: lead.fullName,
+    work_email: lead.workEmail,
+    company_name: lead.companyName,
+    role: emptyToNull(lead.role),
+    company_size: emptyToNull(lead.companySize),
+    region: emptyToNull(lead.region),
+    compliance_drivers: joinDrivers(lead.complianceDrivers),
+    timeline: emptyToNull(lead.timeline),
+    current_process: emptyToNull(lead.currentProcess),
+    message: emptyToNull(lead.message),
+    source: lead.source || 'book-demo',
+    locale: emptyToNull(lead.locale),
+    consent_to_contact: lead.consentToContact,
+    user_agent: request.headers.get('user-agent')?.trim().slice(0, 300) || null,
     ip_hint: ipHint,
   };
 
