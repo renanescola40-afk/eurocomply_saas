@@ -5,6 +5,10 @@ import { noStoreJson } from '@/server/security/no-store';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 5;
+const WEBHOOK_TIMEOUT_MS = 3_500;
+
 type RateState = {
   count: number;
   resetAt: number;
@@ -28,8 +32,6 @@ type LeadRecord = {
   ip_hint: string | null;
 };
 
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 5;
 const rateLimit = new Map<string, RateState>();
 
 function getClientHint(request: NextRequest) {
@@ -107,17 +109,24 @@ async function sendWebhook(record: LeadRecord) {
   const webhookUrl = process.env.RISCK_COMPLY_LEAD_WEBHOOK_URL;
   if (!webhookUrl) return false;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
+
   try {
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ event: 'sales_lead.created', lead: record }),
+      cache: 'no-store',
+      signal: controller.signal,
     });
 
     return response.ok;
   } catch (error) {
     console.error('[leads] Webhook failed', { message: error instanceof Error ? error.message : 'unknown error' });
     return false;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
