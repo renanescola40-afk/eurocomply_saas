@@ -37,17 +37,26 @@ function getSafeLocale(locale: string): Locale {
   return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
 }
 
+function isActivePendingInvitation(invitation: { expires_at?: string | null }) {
+  if (!invitation.expires_at) return true;
+
+  const expiresAt = new Date(invitation.expires_at).getTime();
+
+  return Number.isFinite(expiresAt) && expiresAt > Date.now();
+}
+
 async function getTeamActivationStatus(organizationId: string) {
   try {
     const [members, pendingInvitations] = await Promise.all([
       listOrganizationMembers(organizationId),
       listPendingInvitations(organizationId),
     ]);
+    const activePendingInvitations = pendingInvitations.filter(isActivePendingInvitation);
 
     return {
-      hasMembers: members.length > 1 || pendingInvitations.length > 0,
+      hasMembers: members.length > 1 || activePendingInvitations.length > 0,
       memberCount: members.length,
-      pendingInviteCount: pendingInvitations.length,
+      pendingInviteCount: activePendingInvitations.length,
     };
   } catch (error) {
     console.warn('[activation] team_status_unavailable', { code: error instanceof Error ? error.name : 'unknown' });
@@ -192,7 +201,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
             <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">{organizationCopy.title}</h1>
             <p className="mt-3 max-w-3xl text-muted-foreground">{organizationCopy.subtitle}</p>
             <p className="mt-4 text-sm text-muted-foreground">{limitsSummary}</p>
-            <p className="mt-3 text-xs text-muted-foreground">Team activation: {teamActivation.memberCount} members · {teamActivation.pendingInviteCount} pending invites</p>
+            <p className="mt-3 text-xs text-muted-foreground">Team activation: {teamActivation.memberCount} members · {teamActivation.pendingInviteCount} active pending invites</p>
           </div>
           <div className="premium-card shine-line after:pointer-events-none rounded-[2rem] p-6 text-white">
             <div className="flex items-center gap-3">
@@ -248,6 +257,11 @@ export default async function OrganizationDashboardPage({ params, searchParams }
             tasksPath={localizedTasksPath}
             planName={planName}
             limitsSummary={limitsSummary}
+          />
+          <OnboardingProgressCard
+            locale={safeLocale}
+            state={activationState}
+            analyticsContext={{ organizationId: data.organization.id, plan: entitlements.plan }}
           />
         </Suspense>
       </div>
