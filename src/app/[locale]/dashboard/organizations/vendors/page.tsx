@@ -91,7 +91,17 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
           </CardHeader>
           <CardContent className="space-y-3">
             {vendors.length === 0 ? (
-              <p className="text-sm text-white/55">No vendors yet. Add the first vendor to start tracking third-party risk.</p>
+              <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-black/20 p-7 text-center">
+                <h2 className="text-2xl font-semibold tracking-tight">Add the first vendor to activate third-party assurance.</h2>
+                <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-white/55">
+                  Start with the most important SaaS, cloud or AI provider. One vendor is enough to make procurement risk visible in the dashboard.
+                </p>
+                <div className="mt-5 grid gap-3 text-left text-sm text-white/60 md:grid-cols-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">Review DPA status</div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">Classify risk level</div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">Assign next review</div>
+                </div>
+              </div>
             ) : (
               vendors.map((vendor) => (
                 <div key={vendor.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
