@@ -5,7 +5,9 @@ export type OnboardingState = {
   hasMembers: boolean;
   hasComplianceTasks: boolean;
   hasDocuments: boolean;
+  hasRisks?: boolean;
   hasVendors: boolean;
+  hasDashboardOpened?: boolean;
 };
 
 export type OnboardingStep = {
@@ -16,36 +18,44 @@ export type OnboardingStep = {
 };
 
 export function buildOnboardingSteps(input: OnboardingState): OnboardingStep[] {
+  const hasRisks = input.hasRisks ?? input.hasComplianceTasks;
+
   return [
     {
       id: 'create-organization',
-      title: 'Create your organization',
-      description: 'Set up the tenant that owns your compliance workspace.',
+      title: 'Create organization',
+      description: 'Set up the secure tenant that owns compliance data, team access and billing.',
       status: input.hasOrganization ? 'complete' : 'pending',
     },
     {
       id: 'invite-team',
-      title: 'Invite your team',
-      description: 'Add stakeholders who will manage compliance work.',
+      title: 'Invite a member',
+      description: 'Add legal, security, finance or operations so compliance work is not isolated.',
       status: input.hasMembers ? 'complete' : 'pending',
     },
     {
-      id: 'create-compliance-task',
-      title: 'Create a compliance task',
-      description: 'Track the first requirement, owner, priority and due date.',
-      status: input.hasComplianceTasks ? 'complete' : 'pending',
-    },
-    {
       id: 'upload-document',
-      title: 'Upload a compliance document',
-      description: 'Attach policies, evidence or audit-ready documentation.',
+      title: 'Add first document',
+      description: 'Upload one policy, agreement, report or evidence file to start the register.',
       status: input.hasDocuments ? 'complete' : 'pending',
     },
     {
+      id: 'create-risk',
+      title: 'Create first risk',
+      description: 'Capture one business risk with owner, impact and mitigation action.',
+      status: hasRisks ? 'complete' : 'pending',
+    },
+    {
       id: 'add-vendor',
-      title: 'Add a vendor',
-      description: 'Start monitoring third-party risk and data access exposure.',
+      title: 'Add first vendor',
+      description: 'Register a provider so third-party assurance becomes visible.',
       status: input.hasVendors ? 'complete' : 'pending',
+    },
+    {
+      id: 'open-dashboard',
+      title: 'Open compliance dashboard',
+      description: 'Review score, gaps and next actions from one executive view.',
+      status: input.hasDashboardOpened ? 'complete' : 'pending',
     },
   ];
 }
