@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     it: {
       title: 'RISCK COMPLY - Sistema Operativo di Compliance Europea',
-      description: 'Gestisci scadenze, rischi, documenti, registri di audit e identificativi fiscali in Europa.',
+      description: 'Gestisci scadenze, rischi, documenti, registri di audit e identificativi fiscali in Europe.',
     },
     de: {
       title: 'RISCK COMPLY - Europäisches Compliance-Betriebssystem',
@@ -72,11 +72,19 @@ export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
   const safeLocale = routing.locales.includes(locale as Locale) ? locale : 'en';
   const messages = await getMessages();
+  const signInUrl = `/${safeLocale}/login`;
+  const signUpUrl = `/${safeLocale}/signup`;
+  const dashboardUrl = `/${safeLocale}/dashboard/organizations`;
 
   return (
     <html lang={safeLocale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
-        <ClerkProvider>
+        <ClerkProvider
+          signInUrl={signInUrl}
+          signUpUrl={signUpUrl}
+          signInFallbackRedirectUrl={dashboardUrl}
+          signUpFallbackRedirectUrl={dashboardUrl}
+        >
           <NextIntlClientProvider messages={messages}>
             <ThemeProvider
               attribute="class"

@@ -247,3 +247,8 @@ The canonical plan is `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md`.
 Release Candidate evidence must prove that preflight protects both operational controls and release governance artifacts.
 
 The preflight file should include at least:
+
+- audit-chain runtime evidence
+- `docs/security/AUDIT_CHAIN_MODEL.md`
+- `docs/security/evidence/runtime/audit-chain-live-validation.json`
+- `scripts/security/verify-audit-chain.mjs`
