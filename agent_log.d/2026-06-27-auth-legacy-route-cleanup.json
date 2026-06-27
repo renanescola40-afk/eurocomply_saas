@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-06-27T20:07:36Z",
+  "cycle": "scheduled_health_audit",
+  "status": "patched_waiting_for_ci",
+  "findings": [
+    "PR #541 is open and mergeable for legacy Google/auth callback route cleanup.",
+    "PR #541 head CI passed, but RISCK COMPLY Security CI failed and CodeQL plus Full Security Suite were still running at audit time.",
+    "The security failure matched the auth redirect base-url gate: legacy auth routes had been changed to build login redirects from request.url instead of the configured app base URL helper and did not fail closed when the app URL was unavailable.",
+    "Recent route changes are limited to legacy auth redirect cleanup and scanner adjustments; no billing, entitlement, public demo, or cron runtime expansion was introduced by the inspected diff."
+  ],
+  "actions_taken": [
+    "Updated src/app/auth/google/route.ts to use resolveAuthAppBaseUrl for the legacy login redirect and return no-store 503 when auth_app_url_unavailable.",
+    "Updated src/app/auth/callback/route.ts with the same configured-base-url and fail-closed behavior.",
+    "Kept the sanitized same-locale next path handling and no-store redirect headers.",
+    "Recorded this audit in agent_log.d to avoid truncating the large root agent_log.json history through a connector-limited write."
+  ],
+  "commits": [
+    "14acaf21d834a08a51175acfe0d7f2bdfc219d95",
+    "338a982753a5cafe8565b19683a0f1d58fc81310"
+  ],
+  "next_cycle_focus": [
+    "Verify the rerun of RISCK COMPLY Security CI and Full Security Suite for PR #541 head.",
+    "Merge PR #541 only after required CI and security gates are green.",
+    "After merge, verify the main merge-commit workflow runs before production release."
+  ]
+}
