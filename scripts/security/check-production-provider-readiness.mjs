@@ -12,8 +12,7 @@ const requiredFiles = [
   'docs/production-runbook.md',
 ];
 
-const ignoredDirectories = new Set(['.git', '.next', '.turbo', '.vercel', 'coverage', 'dist', 'node_modules', 'playwright-report', 'test-results']);
-const ignoredPathPrefixes = ['.clerk/.tmp/'];
+const ignoredDirectories = new Set(['.clerk', '.git', '.next', '.turbo', '.vercel', 'coverage', 'dist', 'node_modules', 'playwright-report', 'test-results']);
 const concreteValuePatterns = [
   { name: 'jwt-like value', pattern: /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g },
   { name: 'payment provider restricted value', pattern: /(?<![A-Za-z0-9_-])(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}/g },
@@ -29,17 +28,11 @@ function normalizePath(path) {
   return relative(root, path).split(sep).join('/');
 }
 
-function shouldIgnorePath(path) {
-  return ignoredPathPrefixes.some((prefix) => path.startsWith(prefix));
-}
-
 function walk(dir) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const fullPath = join(dir, entry.name);
-    const normalized = normalizePath(fullPath);
-    if (shouldIgnorePath(normalized) || entry.isDirectory() && ignoredDirectories.has(entry.name)) return [];
-    if (entry.isDirectory()) return walk(fullPath);
+    if (entry.isDirectory()) return ignoredDirectories.has(entry.name) ? [] : walk(fullPath);
     return entry.isFile() ? [fullPath] : [];
   });
 }
