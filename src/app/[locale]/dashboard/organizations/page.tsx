@@ -198,8 +198,6 @@ export default async function OrganizationDashboardPage({ params, searchParams }
                 </div>
               ))}
             </div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">{organizationCopy.title}</h1>
-            <p className="mt-3 max-w-3xl text-muted-foreground">{organizationCopy.subtitle}</p>
             <p className="mt-4 text-sm text-muted-foreground">{limitsSummary}</p>
             <p className="mt-3 text-xs text-muted-foreground">Team activation: {teamActivation.memberCount} members · {teamActivation.pendingInviteCount} active pending invites</p>
           </div>
@@ -213,7 +211,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
             </div>
             <p className="mt-5 text-sm leading-6 text-white/58">Clear executive readiness score for board, audit and procurement conversations.</p>
             <Button asChild className="mt-6 w-full rounded-full bg-white text-black hover:bg-white/90">
-              <Link href={`${localizedDashboardBasePath}/reports-governance`}>Open executive report <ArrowRight className="h-4 w-4" /></Link>
+              <Link href={localizedDashboardBasePath}>Open dashboard <ArrowRight className="h-4 w-4" /></Link>
             </Button>
           </div>
         </section>
