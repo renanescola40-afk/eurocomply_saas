@@ -128,6 +128,18 @@ function detectLocale(req: NextRequest): string {
   return defaultLocale;
 }
 
+function getLegacyDiagnosticsRedirect(pathname: string, req: NextRequest) {
+  const segments = pathname.split('/').filter(Boolean);
+  const locale = locales.includes(segments[0] as 'en') ? segments[0] : null;
+
+  if (!locale || segments[1] !== 'auth' || segments[2] !== 'diagnostics') {
+    return null;
+  }
+
+  const loginUrl = new URL(`/${locale}/login`, req.url);
+  return withPrivateNoStore(NextResponse.redirect(loginUrl));
+}
+
 export default clerkMiddleware(async (auth, req) => {
   const pathname = req.nextUrl.pathname;
 
@@ -141,6 +153,11 @@ export default clerkMiddleware(async (auth, req) => {
     pathname.includes('.')
   ) {
     return NextResponse.next();
+  }
+
+  const legacyDiagnosticsRedirect = getLegacyDiagnosticsRedirect(pathname, req);
+  if (legacyDiagnosticsRedirect) {
+    return legacyDiagnosticsRedirect;
   }
 
   const normalizedLegacyPath = normalizeLegacyUndefinedPath(pathname);
