@@ -12,6 +12,21 @@ This checklist records the evidence required before EuroComply can be represente
 - Target environment: production / enterprise candidate
 - Final decision: **No-Go for enterprise**
 
+## Required release evidence categories
+
+| Evidence category | Current status | Required before Go |
+| --- | --- | --- |
+| Build and CI evidence | Required from exact release commit final validation bundle | Yes |
+| Supply-chain evidence | Required from lockfile alignment, npm audit triage, SBOM and dependency review | Yes |
+| Database and RLS evidence | Supabase live RLS validation must be attached for production/enterprise | Yes |
+| Audit-chain evidence | Required for enterprise; production may carry structured non-complete evidence until enterprise gate | Required for enterprise |
+| Step-up authentication evidence | Provider proof required for enterprise protected actions | Required for enterprise |
+| Upload scanning evidence | Required when uploads are enabled; fail-closed proof required for enterprise | Yes |
+| Billing evidence | Stripe runtime/webhook validation required when paid plans are active | Yes |
+| Observability evidence | Logging, monitoring, incident and support owner evidence required | Yes |
+| External review evidence | Independent review/pentest required for enterprise pilot/procurement | Required for enterprise |
+| Release decision | Go / Conditional Go / No-Go decision must be recorded for the exact commit | Yes |
+
 ## GitHub enterprise evidence
 
 | Evidence | Status | Required before Go |
