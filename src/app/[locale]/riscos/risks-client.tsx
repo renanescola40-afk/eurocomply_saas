@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Plus, Save, ShieldAlert, Trash2 } from 'lucide-react';
+import { CheckCircle2, DatabaseZap, Plus, Save, ShieldAlert, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { analyticsEvents, captureAnalyticsEvent } from '@/lib/analytics/posthog-client';
@@ -19,15 +19,15 @@ type Risk = {
 
 type RiskEntitlements = PlanEntitlements | null;
 
-const defaultRisks: Risk[] = [
-  { id: 'risk-1', title: 'Revisão de fornecedores atrasada', probability: 'Média', impact: 'Alto', owner: 'Legal', action: 'Atualizar DPAs e próxima data de revisão.' },
-  { id: 'risk-2', title: 'Evidência de política sem aprovação', probability: 'Baixa', impact: 'Médio', owner: 'Compliance', action: 'Enviar política para workflow de aprovação.' },
+const demoRisks: Risk[] = [
+  { id: 'risk-demo-ai-vendor', title: 'AI vendor DPA review pending', probability: 'Média', impact: 'Alto', owner: 'Legal', action: 'Confirm DPA, subprocessors and retention terms before production rollout.' },
+  { id: 'risk-demo-policy-gap', title: 'Internal AI usage policy not approved', probability: 'Alta', impact: 'Médio', owner: 'Compliance', action: 'Send policy to leadership and attach approval evidence.' },
 ];
 
 const storageKey = 'eurocomply-risk-register-demo';
 
 export function RisksClient({ locale, entitlements }: { locale: string; entitlements: RiskEntitlements }) {
-  const [risks, setRisks] = useState<Risk[]>(defaultRisks);
+  const [risks, setRisks] = useState<Risk[]>([]);
   const [toast, setToast] = useState('');
   const [form, setForm] = useState({ title: '', probability: 'Média' as Risk['probability'], impact: 'Médio' as Risk['impact'], owner: '', action: '' });
   const advancedRiskMatrix = entitlements?.riskMatrix === 'advanced' || entitlements?.riskMatrix === 'enterprise';
@@ -48,6 +48,16 @@ export function RisksClient({ locale, entitlements }: { locale: string; entitlem
   function showToast(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(''), 2600);
+  }
+
+  function loadDemoData() {
+    setRisks(demoRisks);
+    captureAnalyticsEvent(analyticsEvents.onboardingDemoLoaded, {
+      source: 'risk_empty_state',
+      locale,
+      count: demoRisks.length,
+    });
+    showToast('Dados demo carregados. Substitua por riscos reais quando estiver pronto.');
   }
 
   function addRisk(event: FormEvent) {
@@ -115,28 +125,42 @@ export function RisksClient({ locale, entitlements }: { locale: string; entitlem
           <input value={form.action} onChange={(event) => setForm((current) => ({ ...current, action: event.target.value }))} placeholder="Ação de mitigação" className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary md:col-span-2" />
         </form>
 
-        <div className="mt-8 grid gap-4">
-          {risks.map((risk) => (
-            <article key={risk.id} className="rounded-3xl border bg-background p-5 shadow-sm">
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <div className="flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-primary" /><h2 className="text-lg font-semibold">{risk.title}</h2></div>
-                  <p className="mt-2 text-sm text-muted-foreground">Responsável: {risk.owner || 'Não atribuído'}</p>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{risk.action || 'Sem ação definida.'}</p>
+        {risks.length === 0 ? (
+          <div className="mt-8 rounded-[1.75rem] border border-dashed bg-muted/20 p-8 text-center">
+            <ShieldAlert className="mx-auto h-8 w-8 text-muted-foreground" />
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight">Crie o primeiro risco para ativar valor real.</h2>
+            <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Um único risco com responsável e ação de mitigação já ajuda o dashboard a parecer útil para compliance, legal e liderança.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <Button type="button" variant="outline" className="rounded-full" onClick={loadDemoData}><DatabaseZap className="h-4 w-4" />Carregar demo data</Button>
+              <Button asChild variant="ghost" className="rounded-full"><Link href={`/${locale}/dashboard/organizations`}>Abrir dashboard</Link></Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-8 grid gap-4">
+            {risks.map((risk) => (
+              <article key={risk.id} className="rounded-3xl border bg-background p-5 shadow-sm">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-primary" /><h2 className="text-lg font-semibold">{risk.title}</h2></div>
+                    <p className="mt-2 text-sm text-muted-foreground">Responsável: {risk.owner || 'Não atribuído'}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{risk.action || 'Sem ação definida.'}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">Probabilidade: {risk.probability}</Badge>
+                    <Badge variant="outline">Impacto: {risk.impact}</Badge>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline">Probabilidade: {risk.probability}</Badge>
-                  <Badge variant="outline">Impacto: {risk.impact}</Badge>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" className="rounded-full" onClick={requestExecutiveReview}><CheckCircle2 className="h-4 w-4" />Revisar</Button>
+                  <Button type="button" variant="outline" className="rounded-full" onClick={() => showToast('Alterações guardadas localmente.')}><Save className="h-4 w-4" />Guardar</Button>
+                  <Button type="button" variant="ghost" className="rounded-full text-destructive" onClick={() => removeRisk(risk.id)}><Trash2 className="h-4 w-4" />Remover</Button>
                 </div>
-              </div>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Button type="button" variant="outline" className="rounded-full" onClick={requestExecutiveReview}><CheckCircle2 className="h-4 w-4" />Revisar</Button>
-                <Button type="button" variant="outline" className="rounded-full" onClick={() => showToast('Alterações guardadas localmente.')}><Save className="h-4 w-4" />Guardar</Button>
-                <Button type="button" variant="ghost" className="rounded-full text-destructive" onClick={() => removeRisk(risk.id)}><Trash2 className="h-4 w-4" />Remover</Button>
-              </div>
-            </article>
-          ))}
-        </div>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
