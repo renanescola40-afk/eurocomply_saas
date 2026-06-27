@@ -217,4 +217,77 @@ describe('billing checkout API security gates', () => {
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
     expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
   });
+
+  it('creates checkout only from server-side organization, permission, step-up, and price mapping', async () => {
+    const response = await POST(buildRequest({ plan: 'business', locale: 'en' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ url: 'https://checkout.stripe.test/session-fixture', stepUp: { verified: true } });
+    expect(mocks.assertOrganizationPermission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user_admin',
+        organizationId: 'org_a',
+        permission: 'manage_billing',
+      }),
+    );
+    expect(mocks.assertTrustedOrigin).toHaveBeenCalled();
+    expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'manage_billing',
+        userId: 'user_admin',
+        organizationId: 'org_a',
+      }),
+    );
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'subscription',
+        line_items: [{ price: 'price_growth', quantity: 1 }],
+        client_reference_id: 'org_a',
+        metadata: expect.objectContaining({
+          organization_id: 'org_a',
+          organizationId: 'org_a',
+          clerk_org_id: 'clerk_org_a',
+          clerkOrgId: 'clerk_org_a',
+          user_id: 'user_admin',
+          userId: 'user_admin',
+          plan: 'growth',
+          actor_role: 'admin',
+          step_up_action: 'manage_billing',
+          step_up_verified_at: '2026-06-21T09:00:00.000Z',
+        }),
+        subscription_data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            organization_id: 'org_a',
+            organizationId: 'org_a',
+            clerk_org_id: 'clerk_org_a',
+            clerkOrgId: 'clerk_org_a',
+            user_id: 'user_admin',
+            userId: 'user_admin',
+            plan: 'growth',
+            actor_role: 'admin',
+            step_up_action: 'manage_billing',
+            step_up_verified_at: '2026-06-21T09:00:00.000Z',
+          }),
+        }),
+      }),
+    );
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'checkout_created',
+        organizationId: 'org_a',
+        userId: 'user_admin',
+        entityType: 'stripe_checkout_session',
+        entityId: 'checkout_session_fixture',
+        metadata: expect.objectContaining({
+          plan: 'growth',
+          rbacPermission: 'manage_billing',
+          trustedOriginRequired: true,
+          actorRole: 'admin',
+          stepUpAction: 'manage_billing',
+          stepUpVerifiedAt: '2026-06-21T09:00:00.000Z',
+        }),
+      }),
+    );
+  });
 });
