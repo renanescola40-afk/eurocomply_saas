@@ -258,11 +258,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
             planName={planName}
             limitsSummary={limitsSummary}
           />
-          <OnboardingProgressCard
-            locale={safeLocale}
-            state={activationState}
-            analyticsContext={{ organizationId: data.organization.id, plan: entitlements.plan }}
-          />
+          <OnboardingProgressCard state={activationState} />
         </Suspense>
       </div>
     </main>
