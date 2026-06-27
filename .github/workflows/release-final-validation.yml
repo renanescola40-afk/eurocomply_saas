@@ -79,6 +79,10 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           STEP_UP_SIGNING_SECRET: ${{ secrets.STEP_UP_SIGNING_SECRET }}
+          STEP_UP_PROVIDER_MODE: ${{ vars.STEP_UP_PROVIDER_MODE || secrets.STEP_UP_PROVIDER_MODE }}
+          STEP_UP_IDP_ACR_VALUES: ${{ vars.STEP_UP_IDP_ACR_VALUES || secrets.STEP_UP_IDP_ACR_VALUES }}
+          STEP_UP_IDP_AMR_VALUES: ${{ vars.STEP_UP_IDP_AMR_VALUES || secrets.STEP_UP_IDP_AMR_VALUES }}
+          STEP_UP_RUNTIME_PROVIDER_PROOF: ${{ vars.STEP_UP_RUNTIME_PROVIDER_PROOF || secrets.STEP_UP_RUNTIME_PROVIDER_PROOF }}
         run: node scripts/release/run-final-validation.mjs
 
       - name: Upload final validation artifacts
