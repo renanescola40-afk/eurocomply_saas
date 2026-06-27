@@ -64,9 +64,14 @@ const clerkOrganizationSyncRoutes = [
   /src\/app\/api\/clerk\/organizations\/sync\/route\.ts$/,
 ];
 
+const publicLeadCaptureRoutes = [
+  /src\/app\/api\/leads\/route\.ts$/,
+];
+
 const publicMutationExemptions = [
   ...webhookRoutes,
   ...publicVerifierRoutes,
+  ...publicLeadCaptureRoutes,
 ];
 
 const routeSpecificPermissions = [
