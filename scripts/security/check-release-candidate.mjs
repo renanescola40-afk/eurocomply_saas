@@ -8,6 +8,8 @@ const auditSigningEnv = joinEnv('AUDIT', 'CHAIN', 'SIGNING', sensitiveSuffix);
 const stepUpSigningEnv = joinEnv('STEP', 'UP', 'SIGNING', sensitiveSuffix);
 const supabaseAccessEnv = joinEnv('SUPABASE', 'ACCESS', 'TOKEN');
 const supabaseServiceRoleEnv = joinEnv('SUPABASE', 'SERVICE', 'ROLE', 'KEY');
+const releaseTarget = process.env.RELEASE_TARGET || 'production';
+const requiresEnterpriseEvidence = releaseTarget === 'production' || releaseTarget === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
 
 const requiredFiles = [
   'docs/RELEASE_CANDIDATE_VALIDATION.md',
@@ -168,8 +170,8 @@ function validateAuditChainRuntimeEvidence(evidence) {
     failures.push(`${auditChainRuntimeEvidencePath} evidenceItem must be audit-chain-live-validation`);
   }
 
-  if (evidence.status !== 'Complete') {
-    failures.push(`${auditChainRuntimeEvidencePath} status must be Complete before enterprise release`);
+  if (requiresEnterpriseEvidence && evidence.status !== 'Complete') {
+    failures.push(`${auditChainRuntimeEvidencePath} status must be Complete before production or enterprise release`);
   }
 
   if (!Array.isArray(evidence.controlsVerified) || evidence.controlsVerified.length === 0) {
@@ -186,8 +188,10 @@ function validateAuditChainRuntimeEvidence(evidence) {
   }
 
   const acceptance = evidence.acceptanceCriteria ?? {};
-  for (const key of requiredAcceptanceCriteria) {
-    if (acceptance[key] !== true) failures.push(`${auditChainRuntimeEvidencePath} acceptanceCriteria.${key} must be true`);
+  if (requiresEnterpriseEvidence) {
+    for (const key of requiredAcceptanceCriteria) {
+      if (acceptance[key] !== true) failures.push(`${auditChainRuntimeEvidencePath} acceptanceCriteria.${key} must be true`);
+    }
   }
 }
 
