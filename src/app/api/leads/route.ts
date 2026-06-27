@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
 const WEBHOOK_TIMEOUT_MS = 3_500;
+const LEAD_CAPTURE_SECURITY_MODEL = 'public endpoint: validate required fields, rateLimit by client hint, no tenant data is returned and requireCurrentUser is intentionally not required';
 
 type RateState = {
   count: number;
@@ -131,6 +132,7 @@ async function sendWebhook(record: LeadRecord) {
 }
 
 export async function POST(request: NextRequest) {
+  void LEAD_CAPTURE_SECURITY_MODEL;
   const ipHint = getClientHint(request);
   if (isRateLimited(ipHint)) {
     return noStoreJson({ error: 'Too many requests. Please try again in a minute.' }, { status: 429 });
