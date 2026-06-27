@@ -211,7 +211,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
             </div>
             <p className="mt-5 text-sm leading-6 text-white/58">Clear executive readiness score for board, audit and procurement conversations.</p>
             <Button asChild className="mt-6 w-full rounded-full bg-white text-black hover:bg-white/90">
-              <Link href={`${localizedDashboardBasePath}`}>Open dashboard <ArrowRight className="h-4 w-4" /></Link>
+              <Link href={localizedDashboardBasePath}>Open dashboard <ArrowRight className="h-4 w-4" /></Link>
             </Button>
           </div>
         </section>
