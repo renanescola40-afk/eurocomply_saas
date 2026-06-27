@@ -8,7 +8,9 @@ type PageProps = {
   params: Promise<{ locale: string }>;
 };
 
-const outcomes = [
+type Outcome = [string, string, typeof Building2];
+
+const outcomes: Outcome[] = [
   ['Map your current process', 'We identify where risks, documents, vendors and audit evidence live today.', Building2],
   ['Choose the first workflow', 'Start with the highest-value use case: risk, documents, vendors or audit readiness.', ShieldCheck],
   ['Estimate ROI', 'Use manual hours, owner chasing and review preparation to calculate practical value.', CalendarDays],
@@ -75,10 +77,10 @@ export default async function BookDemoPage({ params }: PageProps) {
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/35">What you get</p>
           <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {outcomes.map(([title, text, Icon]) => (
-              <article key={title as string} className="rounded-[1.5rem] border border-white/10 bg-black/25 p-5">
+              <article key={title} className="rounded-[1.5rem] border border-white/10 bg-black/25 p-5">
                 <Icon className="h-5 w-5 text-white" />
-                <h2 className="mt-4 text-lg font-semibold text-white">{title as string}</h2>
-                <p className="mt-3 text-sm leading-6 text-white/50">{text as string}</p>
+                <h2 className="mt-4 text-lg font-semibold text-white">{title}</h2>
+                <p className="mt-3 text-sm leading-6 text-white/50">{text}</p>
               </article>
             ))}
           </div>
