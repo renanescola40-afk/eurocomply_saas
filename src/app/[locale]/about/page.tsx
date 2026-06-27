@@ -7,7 +7,13 @@ const principles = [
   'Billing, limits and observability built into the SaaS from day one.',
 ];
 
-export default function AboutPage({ params }: { params: { locale: string } }) {
+type AboutPageProps = {
+  params: Promise<{ locale: string }>;
+};
+
+export default async function AboutPage({ params }: AboutPageProps) {
+  const { locale } = await params;
+
   return (
     <main className="min-h-screen bg-background">
       <section className="mx-auto max-w-5xl px-6 py-20">
@@ -39,7 +45,7 @@ export default function AboutPage({ params }: { params: { locale: string } }) {
         </div>
       </section>
 
-      <PublicFooter locale={params.locale} />
+      <PublicFooter locale={locale} />
     </main>
   );
 }
