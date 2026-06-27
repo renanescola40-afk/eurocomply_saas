@@ -21,7 +21,6 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | --- | --- | --- |
 | `src/app/api/health/route.ts` | public safe | Liveness endpoint; no private data. |
 | `src/app/api/ready/route.ts` | public safe | Readiness endpoint; no private data. |
-| `src/app/api/leads/route.ts` | public safe | Demo request capture endpoint; no tenant records are returned. |
 | `src/app/api/observability/smoke/route.ts` | health/internal | Observability smoke check guarded by internal authorization and no-store contract. |
 | `src/app/api/ops/smoke/route.ts` | health/internal | Ops smoke check guarded by operational authorization and no-store contract. |
 | `src/app/api/ops/enterprise-readiness/route.ts` | health/internal | Ops readiness check; no tenant payloads. |
