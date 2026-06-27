@@ -5,7 +5,7 @@ const nextConfigPath = 'next.config.ts';
 const failures = [];
 
 const headerName = (...parts) => parts.join('-');
-const requiredProxyTokens = [
+const requiredHeaderTokens = [
   headerName('X', 'Frame', 'Options'),
   'DENY',
   headerName('X', 'Content', 'Type', 'Options'),
@@ -18,10 +18,13 @@ const requiredProxyTokens = [
   'includeSubDomains',
   'preload',
   headerName('Content', 'Security', 'Policy'),
-  'applySecurityHeaders',
-  'isProduction',
+  'frame-ancestors',
+  'upgrade-insecure-requests',
+  'securityHeaders',
+  'headers()',
 ];
 
+const requiredProxyTokens = ['src/middleware', 'config'];
 const requiredNextConfigTokens = ['poweredByHeader', 'false', 'compress'];
 
 function readOptional(path) {
@@ -36,7 +39,7 @@ console.log('RISCK COMPLY security headers regression check');
 console.log('---------------------------------------------');
 
 if (!existsSync(proxyPath)) {
-  failures.push('proxy.ts is required for security headers and auth protection.');
+  failures.push('proxy.ts is required for request protection.');
 } else {
   const proxy = readFileSync(proxyPath, 'utf8');
   for (const token of requiredProxyTokens) assertContains(proxy, token, proxyPath);
@@ -47,6 +50,7 @@ if (!nextConfig) {
   failures.push('next.config.ts is missing; security config should be explicit.');
 } else {
   for (const token of requiredNextConfigTokens) assertContains(nextConfig, token, nextConfigPath);
+  for (const token of requiredHeaderTokens) assertContains(nextConfig, token, nextConfigPath);
 }
 
 if (failures.length > 0) {
