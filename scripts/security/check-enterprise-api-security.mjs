@@ -16,7 +16,7 @@ const guardGroups = {
   rbac: ['assertOrganizationPermission', 'requirePermission', 'requireEnterpriseApiAccess'],
   origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'no-store'],
-  rateLimit: ['checkDistributedRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
+  rateLimit: ['checkDistributedRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'isRateLimited', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   internalAuth: ['isAuthorizedInternalCronRequest', 'HEALTHCHECK_' + 'TOKEN', 'CRON_' + 'SECRET', 'INTERNAL_CRON_' + 'SECRET'],
   tenant: ['organization.id', 'organizationId', 'organization_id', 'resourceOrganizationId', 'requireEnterpriseApiAccess'],
   webhookAuth: ['constructEvent', 'STRIPE_WEBHOOK_' + 'SECRET', 'stripe-signature'],
@@ -186,6 +186,24 @@ function evaluateClerkOrganizationSyncContract(failures, source, path) {
   return true;
 }
 
+function evaluatePublicLeadCaptureContract(failures, source, path) {
+  if (!isAnyMatch(path, publicLeadCaptureRoutes)) return false;
+
+  assertGuard(failures, source, path, 'noStore', 'no-store response protection');
+  assertGuard(failures, source, path, 'rateLimit', 'rate limiting');
+  assertRequiredTokens(failures, source, path, 'public lead capture', [
+    'readBoundedJsonRequest',
+    'LEAD_CAPTURE_BODY_MAX_BYTES',
+    'requireJsonContentType: true',
+    'validateEmail',
+    'consentToContact',
+    'isRateLimited(ipHint)',
+    "return noStoreJson({ ok: true }, { status: 201 })",
+  ]);
+
+  return true;
+}
+
 function evaluateGdprExportContract(failures, source, path) {
   if (path !== 'src/app/api/gdpr/export/route.ts') return;
 
@@ -222,6 +240,10 @@ function evaluateRoute(filePath) {
   if (routeHandlers.length === 0) return failures;
 
   if (evaluateClerkOrganizationSyncContract(failures, source, path)) {
+    return failures;
+  }
+
+  if (evaluatePublicLeadCaptureContract(failures, source, path)) {
     return failures;
   }
 
