@@ -144,8 +144,15 @@ export default async function OrganizationDocumentsPage({ params }: { params: { 
           </div>
 
           {documents.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/10 p-6 text-sm text-white/50">
-              No documents registered yet. Upload your first compliance document to start building audit evidence.
+            <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-black/20 p-7 text-center">
+              <h2 className="text-2xl font-semibold tracking-tight">Add the first document to activate this workspace.</h2>
+              <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-white/55">
+                Upload one useful file so the dashboard can show real progress instead of an empty register.
+              </p>
+              <div className="mt-5 flex flex-wrap justify-center gap-3">
+                <a href="#document-name" className="inline-flex h-10 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-black hover:bg-white/90">Upload first document</a>
+                <Link href={dashboardBasePath} className="inline-flex h-10 items-center justify-center rounded-full border border-white/15 px-4 text-sm font-medium hover:bg-white/10">Open dashboard</Link>
+              </div>
             </div>
           ) : (
             <div className="space-y-3">
