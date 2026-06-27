@@ -44,9 +44,10 @@ if (!existsSync(checkoutPagePath)) {
 } else {
   const checkoutPage = readFileSync(checkoutPagePath, 'utf8');
 
-  requireToken(checkoutPage, 'start_secure_checkout', 'Deprecated checkout page must redirect to the secure checkout flow marker.');
-  requireToken(checkoutPage, 'isSelfServePlan', 'Deprecated checkout page must validate plan identifiers before redirecting.');
+  requireToken(checkoutPage, 'normalizeBillingPlanId', 'Deprecated checkout page must normalize legacy plan identifiers before redirecting.');
   requireToken(checkoutPage, 'normalizeLocale', 'Deprecated checkout page must normalize locale before building local redirects.');
+  requireToken(checkoutPage, '/checkout?plan=', 'Deprecated checkout page must redirect to the canonical checkout page.');
+  requireToken(checkoutPage, 'pricing?checkout=invalid_plan', 'Deprecated checkout page must route invalid plans to a controlled pricing error state.');
 
   forbidToken(checkoutPage, 'getStripeClient', 'Deprecated checkout page must not import or initialize Stripe.');
   forbidToken(checkoutPage, 'checkout.sessions.create', 'Deprecated checkout page must not create Stripe sessions during GET rendering.');
