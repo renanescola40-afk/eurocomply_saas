@@ -27,7 +27,13 @@ const faqs = [
   },
 ];
 
-export default function FaqPage({ params }: { params: { locale: string } }) {
+type FaqPageProps = {
+  params: Promise<{ locale: string }>;
+};
+
+export default async function FaqPage({ params }: FaqPageProps) {
+  const { locale } = await params;
+
   return (
     <main className="min-h-screen bg-background">
       <section className="mx-auto max-w-5xl px-6 py-20">
@@ -54,7 +60,7 @@ export default function FaqPage({ params }: { params: { locale: string } }) {
         ))}
       </section>
 
-      <PublicFooter locale={params.locale} />
+      <PublicFooter locale={locale} />
     </main>
   );
 }
