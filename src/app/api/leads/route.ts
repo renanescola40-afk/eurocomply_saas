@@ -71,7 +71,7 @@ function joinDrivers(value: unknown) {
   return text(value, 500);
 }
 
-function validEmail(value: string) {
+function validateEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
   const companyName = text(body.companyName, 160);
   const consentToContact = booleanValue(body.consentToContact);
 
-  if (!fullName || !workEmail || !companyName || !validEmail(workEmail) || !consentToContact) {
+  if (!fullName || !workEmail || !companyName || !validateEmail(workEmail) || !consentToContact) {
     return noStoreJson(
       { error: 'Please provide name, work email, company and consent to contact.' },
       { status: 400 },
