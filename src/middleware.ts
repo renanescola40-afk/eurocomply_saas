@@ -8,6 +8,7 @@ import { routing, locales, defaultLocale, COUNTRY_TO_LOCALE } from '@/lib/i18n/r
 const intlMiddleware = createIntlMiddleware(routing);
 const LOCALE_COOKIE = 'NEXT_LOCALE';
 const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations';
+const SENTRY_TUNNEL_PATH = '/monitoring';
 
 const PUBLIC_ROUTES = [
   '/',
@@ -21,6 +22,7 @@ const PUBLIC_ROUTES = [
   '/faq',
   '/about',
   '/contact',
+  '/book-demo',
   '/recuperar-senha',
   '/atualizar-senha',
   '/trust',
@@ -129,7 +131,7 @@ function detectLocale(req: NextRequest): string {
 export default clerkMiddleware(async (auth, req) => {
   const pathname = req.nextUrl.pathname;
 
-  if (pathname.startsWith('/__clerk')) {
+  if (pathname.startsWith('/__clerk') || pathname === SENTRY_TUNNEL_PATH || pathname.startsWith(`${SENTRY_TUNNEL_PATH}/`)) {
     return NextResponse.next();
   }
 
@@ -203,7 +205,7 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|monitoring|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     '/__clerk/:path*',
   ],
 };
