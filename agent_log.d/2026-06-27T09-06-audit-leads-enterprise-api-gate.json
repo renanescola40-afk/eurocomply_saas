@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-06-27T09:06:43Z",
+  "cycle": "scheduled_health_audit",
+  "status": "patch_prepared_waiting_for_ci",
+  "findings": [
+    "Latest merged PR #517 changed onboarding progress card props and merged into main at 2026-06-27T09:04:08Z.",
+    "PR #517 head CI passed, but RISCK COMPLY Security CI and Full Security Suite failed at the Enterprise API gate.",
+    "The failing gate reported src/app/api/leads/route.ts as missing enterprise auth, organization, RBAC, trusted-origin, and distributed rate-limit tokens even though the route is intentionally public lead capture and already applies request validation, no-store responses, and per-IP rate limiting.",
+    "Cron configuration remains within the Vercel free-tier limit with one daily maintenance cron.",
+    "Billing checkout and portal routes still require authenticated user, organization context, manage_billing permission, trusted mutation/rate limit, step-up, Stripe metadata, audit logging, and no-store responses.",
+    "Enterprise demo remains gated by NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO and does not activate Stripe subscriptions or real entitlements."
+  ],
+  "actions_taken": [
+    "Created branch fix/leads-enterprise-api-gate-20260627 from main.",
+    "Updated scripts/security/check-enterprise-api-security.mjs to explicitly classify /api/leads as an intentional public mutation exemption instead of requiring enterprise tenant/auth/RBAC tokens.",
+    "Kept runtime lead capture, billing, demo, entitlement, and cron behavior unchanged."
+  ],
+  "commits": [
+    "06257e0a6cb2fcd4c861c95fa71d8845fb1fce7c"
+  ],
+  "next_cycle_focus": [
+    "Open or verify the prepared PR and wait for CI/security gates on the new branch.",
+    "Merge only after Security CI and Full Security Suite pass.",
+    "After merge, verify merge-commit workflow runs before production release."
+  ]
+}
