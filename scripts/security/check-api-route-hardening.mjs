@@ -99,7 +99,7 @@ function classify(relativePath, source) {
   if (hasAny(source, ADMIN_TERMS) || /\/(admin|team|security\/settings)\//.test(relativePath)) return 'admin-only';
   if (hasAny(relativePath, HIGH_RISK_TERMS) || hasAny(source, HIGH_RISK_TERMS)) return 'high-risk';
   if (hasAny(source, TENANT_TERMS) || hasAny(relativePath, TENANT_TERMS)) return 'tenant-scoped';
-  if (hasAny(source, ['requireApiUser', 'getCurrentUser', 'requireAuthenticatedUser', 'requireCurrentUser', 'requireOrganizationContext', 'requirePrivilegedOrganizationContext'])) return 'authenticated';
+  if (hasAny(source, ['requireApiUser', 'getCurrentUser', 'requireAuthenticatedUser', 'requireCurrentUser', 'requireOrganizationContext', 'requirePrivilegedOrganizationContext', 'auth()', 'authState.userId'])) return 'authenticated';
   return 'unclassified';
 }
 
@@ -125,7 +125,7 @@ function checkRoute(file, inventory) {
     'isAuthorizedInternalMaintenanceRequest',
     'constructEvent',
   ]);
-  const hasAuth = hasAny(source, ['requireApiUser', 'getCurrentUser', 'requireAuthenticatedUser', 'requireCurrentUser', 'requireOrganizationContext', 'requirePrivilegedOrganizationContext', 'requireEnterpriseApiAccess']);
+  const hasAuth = hasAny(source, ['requireApiUser', 'getCurrentUser', 'requireAuthenticatedUser', 'requireCurrentUser', 'requireOrganizationContext', 'requirePrivilegedOrganizationContext', 'requireEnterpriseApiAccess', 'auth()', 'authState.userId']);
   const hasNoStore = hasAny(source, ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'secureApiError', 'secureApiJson', 'guardErrorResponse']);
   const hasSanitizedErrors = hasAny(source, ['secureApiError', 'noStoreJson', 'guardErrorResponse', 'secureApiJson']);
   const hasValidation = hasAny(source, ['parseJsonBodyWithZod', 'z.object', 'zod', '.safeParse', '.parse(', 'readBoundedJsonRequest', 'formData()']);
@@ -140,15 +140,18 @@ function checkRoute(file, inventory) {
     'assertApiResourceOrganization',
     'assertOrganizationResource',
     'assertSameOrganization',
-    ".eq('organization_id'",
+    " .eq('organization_id'",
     '.eq("organization_id"',
+    "eq('organization_id'",
     'organization_id',
     'organization.id',
     'organization?.id',
     'context.organization',
+    'authState.orgId',
+    'orgId',
   ]);
   const hasTrustedMutation = hasAny(source, ['requireTrustedOriginForMutation', 'requireTrustedMutation', 'assertTrustedOrigin']);
-  const hasRateLimit = hasAny(source, ['requireRateLimit', 'checkDistributedRateLimit', 'checkRateLimit', 'isRateLimited', 'rateLimitByIp', 'requireTrustedMutation']);
+  const hasRateLimit = hasAny(source, ['requireRateLimit', 'requireEnterpriseRateLimit', 'checkDistributedRateLimit', 'checkRateLimit', 'isRateLimited', 'rateLimitByIp', 'requireTrustedMutation', 'isAuthorizedInternalCronRequest']);
 
   if (!inventoryClass) failures.push('missing explicit inventory classification in docs/security/API_ROUTE_INVENTORY.md');
   if (inventoryClass && !KNOWN_CLASSES.has(inventoryClass)) failures.push(`unknown inventory classification: ${inventoryClass}`);
