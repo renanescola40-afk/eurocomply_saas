@@ -12,7 +12,7 @@ describe('onboarding steps', () => {
       hasVendors: false,
     });
 
-    expect(steps).toHaveLength(5);
+    expect(steps).toHaveLength(6);
     expect(steps.filter((step) => step.status === 'complete')).toHaveLength(2);
   });
 
@@ -27,8 +27,8 @@ describe('onboarding steps', () => {
 
     expect(getOnboardingProgress(steps)).toEqual({
       completed: 2,
-      total: 5,
-      percentage: 40,
+      total: 6,
+      percentage: 33,
     });
   });
 });
