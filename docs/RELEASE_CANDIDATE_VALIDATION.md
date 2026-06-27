@@ -179,14 +179,76 @@ Release evidence must include:
 - successful step-up test for protected actions
 - proof that sensitive exports, billing, GDPR delete, and audit-chain verification require step-up
 
-### 8. External review and pentest evidence
-
-Enterprise pilot/procurement release requires an external security review or pentest report attached to the release evidence packet.
+### 8. Upload malware/content scanning
 
 Release evidence must include:
 
-- pentest scope and tester identity or vendor
-- test dates and target commit/deployment URL
-- findings summary with severity
-- remediation or accepted-risk decisions for open findings
-- final reviewer sign-off before enterprise procurement claims
+- `REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true` for enterprise mode
+- `MALWARE_SCANNER_PROVIDER` configured to a real provider
+- successful clean-file test
+- blocked-file or unavailable-scanner fail-closed test
+- audit event evidence containing `scanStatus`, `scanProvider`, `scanRequired`, and `scanCheckedAt`
+
+### 9. Stripe billing validation
+
+Release evidence must include:
+
+- test checkout session creation
+- customer portal session creation
+- webhook delivery proof
+- failed webhook signature test
+- step-up validation for billing actions
+
+### 10. Release evidence package
+
+Every Release Candidate must include a completed evidence package based on:
+
+- `docs/RELEASE_EVIDENCE_CHECKLIST.md`
+- `docs/RELEASE_APPROVAL_RECORD.md`
+- `docs/RELEASE_GO_NO_GO_CHECKLIST.md`
+- `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md`
+
+The evidence package must include:
+
+- release identity
+- build and CI proof
+- supply-chain proof
+- Supabase and RLS proof
+- audit-chain proof
+- step-up proof
+- upload scanning proof
+- Stripe billing proof
+- observability proof
+- customer communication owner and customer notice decision
+- status page decision and evidence, when applicable
+- external security review proof when applicable
+- documented exceptions and approvals
+- final Go, Conditional Go, or No-Go decision
+
+### 11. Customer communication readiness
+
+A production or enterprise Release Candidate must define the customer communication path before promotion.
+
+Release evidence must include:
+
+- assigned customer communication owner
+- incident commander communication trigger decision
+- status page owner or explicit status page exception
+- support owner and customer support readiness confirmation
+- security/compliance review owner for security, privacy, audit-chain, RLS, authorization, billing, or data integrity messaging
+- SEV-1 and SEV-2 communication timing targets
+- customer notice evidence for customer-impacting incidents
+- post-incident customer summary decision for material incidents
+
+The canonical plan is `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md`.
+
+### 12. Preflight coverage
+
+Release Candidate evidence must prove that preflight protects both operational controls and release governance artifacts.
+
+The preflight file should include at least:
+
+- audit-chain runtime evidence
+- `docs/security/AUDIT_CHAIN_MODEL.md`
+- `docs/security/evidence/runtime/audit-chain-live-validation.json`
+- `scripts/security/verify-audit-chain.mjs`
