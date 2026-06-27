@@ -12,7 +12,7 @@ const requiredFiles = [
   'docs/production-runbook.md',
 ];
 
-const ignoredDirectories = new Set(['.git', '.next', '.turbo', '.vercel', 'coverage', 'dist', 'node_modules', 'playwright-report', 'test-results']);
+const ignoredDirectories = new Set(['.clerk', '.git', '.next', '.turbo', '.vercel', 'coverage', 'dist', 'node_modules', 'playwright-report', 'test-results']);
 const concreteValuePatterns = [
   { name: 'jwt-like value', pattern: /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g },
   { name: 'payment provider restricted value', pattern: /(?<![A-Za-z0-9_-])(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}/g },
