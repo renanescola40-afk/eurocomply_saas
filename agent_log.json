@@ -162,7 +162,7 @@
         "A further cleanup to remove an implied Enterprise self-serve price env from the public catalog was blocked by connector safety policy and should be reviewed locally."
       ],
       "next_cycle_focus": [
-        "Run npm run typecheck and npm run security:ci in CI or a connected build environment.",
+        "Run npm run typecheck and npm run security:ci in CI or a connected environment.",
         "Verify Vercel result for the latest plan-alignment commit.",
         "Review public catalog Enterprise price metadata locally so it cannot imply self-serve activation."
       ]
@@ -410,6 +410,34 @@
         "Rerun RISCK COMPLY Security CI and Full Security Suite for the new PR #353 head.",
         "Merge PR #353 only after required CI/security gates are green.",
         "If API route hardening still fails, inspect the exact route hardening output before changing runtime code."
+      ]
+    },
+    {
+      "timestamp": "2026-06-27T10:05:00Z",
+      "cycle": "scheduled_health_audit",
+      "status": "patch_prepared_waiting_for_ci",
+      "findings": [
+        "No PRs were open at audit start; latest merged PR #519 has merge commit 8d3ad1e13e4fc0122d4b57fa6ed719d4d6f4a67c.",
+        "The merge commit had no workflow runs returned yet, so production release could not be confirmed.",
+        "PR #519 head CI passed, but RISCK COMPLY Security CI and Full Security Suite failed at the Authorization BOLA gate.",
+        "The failing gate reported src/app/api/leads/route.ts as an unknown API route classification: public mutation.",
+        "The API route inventory taxonomy already documents public mutation, so the scanner allowed-class list was stale rather than the leads runtime route being newly exposed."
+      ],
+      "actions_taken": [
+        "Prepared branch audit/allow-public-mutation-bola-20260627.",
+        "Added public mutation to the allowed Authorization/BOLA inventory classes.",
+        "Removed the duplicate public safe leads inventory row so src/app/api/leads/route.ts has one explicit public mutation classification.",
+        "Kept runtime API, billing, demo, entitlement, and cron behavior unchanged.",
+        "Recorded this audit and correction in agent_log.json."
+      ],
+      "commits": [
+        "446a229c6892293dd4daa5a335ef643d8f472044",
+        "9abfd12cd3019f415960750f1c9a4df2450396e7"
+      ],
+      "next_cycle_focus": [
+        "Verify PR checks for the public mutation BOLA inventory correction.",
+        "Merge only after CI and security gates are green.",
+        "After merge, verify main merge-commit checks run successfully before production release."
       ]
     }
   ]
