@@ -67,6 +67,7 @@ export function EnterpriseDashboardOverview({
 }: EnterpriseDashboardOverviewProps) {
   const openTasks = tasks.filter((task) => task.status !== 'done');
   const operatingSignals = Math.max(openTasks.length + vendorsRequiringReview.length + documentsExpiringSoon.length, 1);
+  const localizedRoot = basePath.includes('/dashboard') ? basePath.split('/dashboard')[0] : '';
   const panelItems = [
     {
       key: 'compliance',
@@ -111,7 +112,7 @@ export function EnterpriseDashboardOverview({
       body: copy.panels.vendors.body,
       metric: `${formatCount(summary.highRiskVendors)} high`,
       tone: 'vendor assurance',
-      href: `/vendor-assurance`,
+      href: `${localizedRoot}/vendor-assurance`,
     },
     {
       key: 'audit',
