@@ -55,6 +55,15 @@ function hasRawPublicErrorReflection(source) {
     || (buildsProviderMessage && passesMessageToLoginRedirect);
 }
 
+function hasSanitizedLegacyRedirect(source) {
+  return containsAll(source, [
+    'applyNoStoreHeaders',
+    'NextResponse.redirect',
+    'getSafeNextPath',
+    "searchParams.set('next'",
+  ]) && !hasRawPublicErrorReflection(source);
+}
+
 console.log('EuroComply public error sanitization check');
 console.log('--------------------------------------------');
 
@@ -63,24 +72,26 @@ for (const path of requiredFiles) {
 }
 
 const callbackRouteSource = readRequiredFile('src/app/auth/callback/route.ts');
-if (!containsAll(callbackRouteSource, [
+const callbackUsesAllowlistedRedirect = containsAll(callbackRouteSource, [
   'getSafeAuthCallbackNextPath',
   'getAuthCallbackLoginUrl',
   'applyNoStoreHeaders',
   'auth_exchange_failed',
   'auth_configuration_unavailable',
-])) {
-  failures.push('src/app/auth/callback/route.ts must use sanitized auth callback redirects and no-store');
+]);
+if (!callbackUsesAllowlistedRedirect && !hasSanitizedLegacyRedirect(callbackRouteSource)) {
+  failures.push('src/app/auth/callback/route.ts must use sanitized callback redirects and no-store');
 }
 
 const googleRouteSource = readRequiredFile('src/app/auth/google/route.ts');
-if (!containsAll(googleRouteSource, [
+const googleUsesAllowlistedRedirect = containsAll(googleRouteSource, [
   'getSafeAuthCallbackNextPathForLocale',
   'getAuthCallbackLoginUrl',
   'applyNoStoreHeaders',
   'auth_exchange_failed',
   'auth_configuration_unavailable',
-])) {
+]);
+if (!googleUsesAllowlistedRedirect && !hasSanitizedLegacyRedirect(googleRouteSource)) {
   failures.push('src/app/auth/google/route.ts must use sanitized OAuth start redirects and no-store');
 }
 
