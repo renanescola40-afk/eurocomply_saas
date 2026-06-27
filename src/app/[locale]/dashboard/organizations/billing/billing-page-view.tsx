@@ -161,6 +161,7 @@ export function BillingPageView({ locale, billing, checkout, billingError }: Bil
     { label: 'Risks', current: billing.usage.risks, limit: currentPlan.limits.risks },
   ];
   const upgradeRecommended = usageMeters.some((meter) => getUsagePercent(meter.current, meter.limit) >= 80);
+  const hasSubscription = Boolean(billing.status);
 
   async function refreshBilling() {
     'use server';
@@ -173,7 +174,7 @@ export function BillingPageView({ locale, billing, checkout, billingError }: Bil
         <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary-foreground/70">Billing</p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight">Manage your EuroComply plan</h1>
+            <h1 className="mt-3 text-4xl font-bold tracking-tight">Manage your RISCK COMPLY plan</h1>
             <p className="mt-3 max-w-2xl text-white/70">Review usage, upgrade your subscription and open the Stripe billing portal.</p>
             {message && (
               <div className={`mt-6 rounded-2xl border p-4 ${message.className}`}>
@@ -195,6 +196,22 @@ export function BillingPageView({ locale, billing, checkout, billingError }: Bil
           </Card>
         </div>
       </section>
+
+      {!hasSubscription ? (
+        <section className="rounded-[1.75rem] border border-dashed bg-muted/20 p-6 shadow-sm md:flex md:items-center md:justify-between md:gap-6">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">No active paid plan yet.</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+              Choose a plan once the first organization, evidence, risk and vendor are in place. This turns trial usage into a clear enterprise upgrade conversation.
+            </p>
+          </div>
+          <form action={startCheckout} className="mt-4 md:mt-0">
+            <input type="hidden" name="locale" value={locale} />
+            <input type="hidden" name="planId" value="growth" />
+            <Button type="submit" className="rounded-full">Upgrade to Growth</Button>
+          </form>
+        </section>
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {usageMeters.map((meter) => <UsageMeter key={meter.label} {...meter} />)}
