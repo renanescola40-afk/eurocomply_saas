@@ -8,6 +8,7 @@ const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'co
 
 const allowedClasses = new Set([
   'public safe',
+  'public mutation',
   'authenticated',
   'tenant-scoped',
   'admin-only',
