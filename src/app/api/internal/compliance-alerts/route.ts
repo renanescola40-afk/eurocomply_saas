@@ -4,6 +4,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { noStoreJson } from '@/server/security/no-store';
+import { getUserEmailById } from '@/server/users/email';
 
 export const runtime = 'nodejs';
 
@@ -20,15 +21,7 @@ function addDays(days: number) {
 }
 
 async function getOrganizationOwnerEmail(userId: string) {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.auth.admin.getUserById(userId);
-
-  if (error) {
-    reportError(error, { area: 'compliance_alert_owner_lookup', userId });
-    return null;
-  }
-
-  return data.user?.email ?? null;
+  return getUserEmailById(userId, 'compliance_alert_owner_lookup');
 }
 
 async function hasNotificationBeenSent(input: {
