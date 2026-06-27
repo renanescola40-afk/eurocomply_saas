@@ -20,7 +20,7 @@ const requiredTables = [
   'audit_events',
   'risks',
   'vendors',
-  'tasks',
+  'compliance_tasks',
   'subscriptions',
   'notifications',
 ];
