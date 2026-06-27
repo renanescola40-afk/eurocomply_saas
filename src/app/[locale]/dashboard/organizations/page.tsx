@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { ArrowRight, Building2, FileCheck2, Gauge, LockKeyhole, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-overview';
 import { EnterpriseDashboardOverview } from '@/components/dashboard/enterprise-dashboard-overview';
+import { OnboardingProgressCard } from '@/components/onboarding/onboarding-progress-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { locales, type Locale } from '@/lib/i18n/routing';
@@ -12,6 +13,7 @@ import { getDashboardCopy } from '@/lib/i18n/dashboard-copy';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { formatLimit } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
+import { listOrganizationMembers, listPendingInvitations } from '@/server/queries/members';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
 
 export const dynamic = 'force-dynamic';
@@ -33,6 +35,33 @@ type PageProps = {
 
 function getSafeLocale(locale: string): Locale {
   return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+}
+
+function isActivePendingInvitation(invitation: { expires_at?: string | null }) {
+  if (!invitation.expires_at) return true;
+
+  const expiresAt = new Date(invitation.expires_at).getTime();
+
+  return Number.isFinite(expiresAt) && expiresAt > Date.now();
+}
+
+async function getTeamActivationStatus(organizationId: string) {
+  try {
+    const [members, pendingInvitations] = await Promise.all([
+      listOrganizationMembers(organizationId),
+      listPendingInvitations(organizationId),
+    ]);
+    const activePendingInvitations = pendingInvitations.filter(isActivePendingInvitation);
+
+    return {
+      hasMembers: members.length > 1 || activePendingInvitations.length > 0,
+      memberCount: members.length,
+      pendingInviteCount: activePendingInvitations.length,
+    };
+  } catch (error) {
+    console.warn('[activation] team_status_unavailable', { code: error instanceof Error ? error.name : 'unknown' });
+    return { hasMembers: false, memberCount: 0, pendingInviteCount: 0 };
+  }
 }
 
 function DashboardHomeOverviewSkeleton() {
@@ -88,6 +117,16 @@ export default async function OrganizationDashboardPage({ params, searchParams }
   const complianceHealth = data.summary.complianceScore >= 80 ? organizationCopy.health.auditReady : data.summary.complianceScore >= 55 ? organizationCopy.health.needsAttention : organizationCopy.health.remediation;
   const requestedPlan = resolvedSearchParams.plan ? getBillingPlan(resolvedSearchParams.plan) : undefined;
   const shouldShowRequestedPlan = requestedPlan && requestedPlan.id !== entitlements.plan;
+  const teamActivation = await getTeamActivationStatus(data.organization.id);
+  const activationState = {
+    hasOrganization: true,
+    hasMembers: teamActivation.hasMembers,
+    hasComplianceTasks: data.summary.totals.tasks > 0 || data.tasks.length > 0,
+    hasDocuments: data.summary.totals.documents > 0 || data.documentsExpiringSoon.length > 0,
+    hasRisks: data.summary.totals.risks > 0 || data.topRisks.length > 0,
+    hasVendors: data.summary.totals.vendors > 0 || data.vendorsRequiringReview.length > 0,
+    hasDashboardOpened: true,
+  };
   const limitCards = [
     { label: organizationCopy.documentsIncluded, value: formatLimit(entitlements.maxDocuments) },
     { label: organizationCopy.usersIncluded, value: formatLimit(entitlements.maxUsers) },
@@ -159,6 +198,10 @@ export default async function OrganizationDashboardPage({ params, searchParams }
                 </div>
               ))}
             </div>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">{organizationCopy.title}</h1>
+            <p className="mt-3 max-w-3xl text-muted-foreground">{organizationCopy.subtitle}</p>
+            <p className="mt-4 text-sm text-muted-foreground">{limitsSummary}</p>
+            <p className="mt-3 text-xs text-muted-foreground">Team activation: {teamActivation.memberCount} members · {teamActivation.pendingInviteCount} active pending invites</p>
           </div>
           <div className="premium-card shine-line after:pointer-events-none rounded-[2rem] p-6 text-white">
             <div className="flex items-center gap-3">
@@ -214,6 +257,11 @@ export default async function OrganizationDashboardPage({ params, searchParams }
             tasksPath={localizedTasksPath}
             planName={planName}
             limitsSummary={limitsSummary}
+          />
+          <OnboardingProgressCard
+            locale={safeLocale}
+            state={activationState}
+            analyticsContext={{ organizationId: data.organization.id, plan: entitlements.plan }}
           />
         </Suspense>
       </div>
