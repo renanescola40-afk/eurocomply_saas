@@ -11,7 +11,7 @@ const maxBuffer = 128 * 1024 * 1024;
 
 mkdirSync(logDir, { recursive: true });
 
-const commands = [
+const productionCommands = [
   { slug: '00-npm-ci', label: 'npm ci', command: 'npm', args: ['ci'], requested: true },
   { slug: '01-lint', label: 'npm run lint', command: 'npm', args: ['run', 'lint'], requested: true },
   { slug: '02-typecheck', label: 'npm run typecheck', command: 'npm', args: ['run', 'typecheck'], requested: true },
@@ -28,6 +28,9 @@ const commands = [
   { slug: '06-build', label: 'npm run build', command: 'npm', args: ['run', 'build'], requested: true },
   { slug: '07-security-ci', label: 'npm run security:ci', command: 'npm', args: ['run', 'security:ci'], requested: true },
   { slug: '08-release-readiness', label: 'npm run release:readiness', command: 'npm', args: ['run', 'release:readiness'], requested: true },
+];
+
+const enterpriseCommands = [
   {
     slug: '09-release-enterprise-readiness',
     label: 'npm run release:enterprise-readiness',
@@ -36,6 +39,10 @@ const commands = [
     requested: true,
   },
 ];
+
+const commands = releaseTarget === 'enterprise'
+  ? [...productionCommands, ...enterpriseCommands]
+  : productionCommands;
 
 function now() {
   return new Date().toISOString();
