@@ -19,7 +19,13 @@ const resources = [
   },
 ];
 
-export default function ResourcesPage({ params }: { params: { locale: string } }) {
+type ResourcesPageProps = {
+  params: Promise<{ locale: string }>;
+};
+
+export default async function ResourcesPage({ params }: ResourcesPageProps) {
+  const { locale } = await params;
+
   return (
     <main className="min-h-screen bg-background">
       <section className="mx-auto max-w-5xl px-6 py-20">
@@ -36,14 +42,14 @@ export default function ResourcesPage({ params }: { params: { locale: string } }
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{resource.type}</p>
             <h2 className="mt-3 text-2xl font-semibold">{resource.title}</h2>
             <p className="mt-4 flex-1 text-sm leading-6 text-muted-foreground">{resource.description}</p>
-            <Link href={`/${params.locale}/signup`} className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+            <Link href={`/${locale}/signup`} className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
               Use templates in EuroComply
             </Link>
           </article>
         ))}
       </section>
 
-      <PublicFooter locale={params.locale} />
+      <PublicFooter locale={locale} />
     </main>
   );
 }
