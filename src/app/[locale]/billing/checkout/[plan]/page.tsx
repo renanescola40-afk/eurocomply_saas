@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { normalizeLocale } from '@/lib/i18n/locales';
-import { isSelfServePlan } from '@/server/billing/plans';
+import { normalizeBillingPlanId } from '@/server/billing/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,10 +11,11 @@ export default async function BillingCheckoutPage({
 }) {
   const { locale, plan } = await params;
   const activeLocale = normalizeLocale(locale);
+  const normalizedPlan = normalizeBillingPlanId(plan);
 
-  if (!isSelfServePlan(plan)) {
+  if (!normalizedPlan) {
     redirect(`/${activeLocale}/pricing?checkout=invalid_plan`);
   }
 
-  redirect(`/${activeLocale}/pricing?checkout=start_secure_checkout&plan=${encodeURIComponent(plan)}`);
+  redirect(`/${activeLocale}/checkout?plan=${encodeURIComponent(normalizedPlan)}`);
 }

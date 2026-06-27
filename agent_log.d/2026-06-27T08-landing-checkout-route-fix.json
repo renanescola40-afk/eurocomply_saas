@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-06-27T08:00:00Z",
+  "scope": "landing checkout conversion route hardening",
+  "status": "implemented",
+  "changes": [
+    "Normalized deprecated /{locale}/billing/checkout/{plan} route to the canonical /{locale}/checkout?plan= flow.",
+    "Kept invalid plan handling on pricing with a controlled checkout=invalid_plan state.",
+    "Updated the billing page boundary security gate to validate the canonical checkout redirect instead of the old pricing marker."
+  ],
+  "risk_reduction": [
+    "Reduces friction from landing CTA to checkout.",
+    "Preserves locale normalization and plan normalization before redirect.",
+    "Keeps Stripe initialization out of page rendering boundaries."
+  ],
+  "validation_expected": [
+    "CI lint",
+    "CI typecheck",
+    "CI tests",
+    "Full Security Suite",
+    "Billing page boundary gate"
+  ]
+}
