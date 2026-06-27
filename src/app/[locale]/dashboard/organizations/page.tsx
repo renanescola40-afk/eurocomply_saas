@@ -2,9 +2,10 @@ import { unstable_noStore as noStore } from 'next/cache';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowRight, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
+import { ArrowRight, CalendarCheck2, DatabaseZap, FileCheck2, Gauge, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-overview';
 import { EnterpriseDashboardOverview } from '@/components/dashboard/enterprise-dashboard-overview';
+import { OnboardingProgressCard } from '@/components/onboarding/onboarding-progress-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { locales, type Locale } from '@/lib/i18n/routing';
@@ -12,6 +13,7 @@ import { getDashboardCopy } from '@/lib/i18n/dashboard-copy';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { formatLimit } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
+import { listOrganizationMembers, listPendingInvitations } from '@/server/queries/members';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
 
 export const dynamic = 'force-dynamic';
@@ -33,6 +35,24 @@ type PageProps = {
 
 function getSafeLocale(locale: string): Locale {
   return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+}
+
+async function getTeamActivationStatus(organizationId: string) {
+  try {
+    const [members, pendingInvitations] = await Promise.all([
+      listOrganizationMembers(organizationId),
+      listPendingInvitations(organizationId),
+    ]);
+
+    return {
+      hasMembers: members.length > 1 || pendingInvitations.length > 0,
+      memberCount: members.length,
+      pendingInviteCount: pendingInvitations.length,
+    };
+  } catch (error) {
+    console.warn('[activation] team_status_unavailable', { code: error instanceof Error ? error.name : 'unknown' });
+    return { hasMembers: false, memberCount: 0, pendingInviteCount: 0 };
+  }
 }
 
 function DashboardHomeOverviewSkeleton() {
@@ -88,6 +108,16 @@ export default async function OrganizationDashboardPage({ params, searchParams }
   const complianceHealth = data.summary.complianceScore >= 80 ? organizationCopy.health.auditReady : data.summary.complianceScore >= 55 ? organizationCopy.health.needsAttention : organizationCopy.health.remediation;
   const requestedPlan = resolvedSearchParams.plan ? getBillingPlan(resolvedSearchParams.plan) : undefined;
   const shouldShowRequestedPlan = requestedPlan && requestedPlan.id !== entitlements.plan;
+  const teamActivation = await getTeamActivationStatus(data.organization.id);
+  const activationState = {
+    hasOrganization: true,
+    hasMembers: teamActivation.hasMembers,
+    hasComplianceTasks: data.summary.totals.tasks > 0 || data.tasks.length > 0,
+    hasDocuments: data.summary.totals.documents > 0 || data.documentsExpiringSoon.length > 0,
+    hasRisks: data.summary.totals.risks > 0 || data.topRisks.length > 0,
+    hasVendors: data.summary.totals.vendors > 0 || data.vendorsRequiringReview.length > 0,
+    hasDashboardOpened: true,
+  };
   const limitCards = [
     { label: organizationCopy.documentsIncluded, value: formatLimit(entitlements.maxDocuments) },
     { label: organizationCopy.usersIncluded, value: formatLimit(entitlements.maxUsers) },
@@ -128,6 +158,24 @@ export default async function OrganizationDashboardPage({ params, searchParams }
           </section>
         ) : null}
 
+        <section className="rounded-[1.5rem] border border-primary/20 bg-primary/8 p-5 shadow-sm md:flex md:items-center md:justify-between md:gap-6">
+          <div>
+            <Badge className="rounded-full">Trial activation</Badge>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight">Turn this workspace into enterprise value before the trial ends.</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+              Invite one stakeholder, add one evidence document, register one vendor and create one risk. That is enough to make the compliance dashboard useful in under five minutes.
+            </p>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3 md:mt-0 md:justify-end">
+            <Button asChild className="rounded-full">
+              <Link href={`${localizedDashboardBasePath}/documents`}><DatabaseZap className="h-4 w-4" /> Add first evidence</Link>
+            </Button>
+            <Button asChild variant="outline" className="rounded-full">
+              <Link href={`/${safeLocale}/dashboard/organizations/billing?plan=growth`}><CalendarCheck2 className="h-4 w-4" /> Book onboarding call</Link>
+            </Button>
+          </div>
+        </section>
+
         <section className="grid gap-4 md:grid-cols-[1.3fr_0.7fr]">
           <div className="rounded-[2rem] border bg-background/80 p-6 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
@@ -137,6 +185,7 @@ export default async function OrganizationDashboardPage({ params, searchParams }
             <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">{organizationCopy.title}</h1>
             <p className="mt-3 max-w-3xl text-muted-foreground">{organizationCopy.subtitle}</p>
             <p className="mt-4 text-sm text-muted-foreground">{limitsSummary}</p>
+            <p className="mt-3 text-xs text-muted-foreground">Team activation: {teamActivation.memberCount} members · {teamActivation.pendingInviteCount} pending invites</p>
           </div>
           <div className="rounded-[2rem] border bg-foreground p-6 text-background shadow-sm">
             <div className="flex items-center gap-3">
@@ -148,6 +197,8 @@ export default async function OrganizationDashboardPage({ params, searchParams }
             </div>
           </div>
         </section>
+
+        <OnboardingProgressCard state={activationState} />
 
         <section className="grid gap-4 md:grid-cols-4">
           {quickLinks.map((item) => (
