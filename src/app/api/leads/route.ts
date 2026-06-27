@@ -1,6 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
 import { noStoreJson } from '@/server/security/no-store';
+import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
+import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -8,6 +9,7 @@ export const dynamic = 'force-dynamic';
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
 const WEBHOOK_TIMEOUT_MS = 3_500;
+const LEAD_CAPTURE_BODY_MAX_BYTES = 16 * 1024;
 
 type RateState = {
   count: number;
@@ -77,28 +79,28 @@ function validateEmail(value: string) {
 
 async function readBody(request: NextRequest) {
   try {
-    const body = (await request.json()) as unknown;
+    const body = await readBoundedJsonRequest<unknown>(request, {
+      maxBytes: LEAD_CAPTURE_BODY_MAX_BYTES,
+      requireJsonContentType: true,
+    });
+
     return body && typeof body === 'object' ? (body as Record<string, unknown>) : null;
-  } catch {
+  } catch (error) {
+    if (!(error instanceof ValidationError)) {
+      console.error('[leads] Request body read failed', { reason: 'unexpected_body_read_error' });
+    }
+
     return null;
   }
 }
 
 async function saveToSupabase(record: LeadRecord) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.DATABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    return false;
-  }
-
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const supabase = tryCreateAdminClient();
+  if (!supabase) return false;
 
   const { error } = await supabase.from('sales_leads').insert(record);
   if (error) {
-    console.error('[leads] Supabase insert failed', { message: error.message });
+    console.error('[leads] Supabase insert failed', { reason: 'lead_insert_failed' });
     return false;
   }
 
@@ -122,8 +124,8 @@ async function sendWebhook(record: LeadRecord) {
     });
 
     return response.ok;
-  } catch (error) {
-    console.error('[leads] Webhook failed', { message: error instanceof Error ? error.message : 'unknown error' });
+  } catch {
+    console.error('[leads] Webhook failed', { reason: 'lead_webhook_failed' });
     return false;
   } finally {
     clearTimeout(timeout);
