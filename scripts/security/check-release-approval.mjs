@@ -39,8 +39,8 @@ for (const token of [
 for (const token of [
   'Release Approval Record',
   'commit SHA',
-  'release owner',
-  'approver',
+  'Release owner',
+  'Approver',
   'exceptions',
 ]) {
   requireToken(approval, token, 'release approval record');
