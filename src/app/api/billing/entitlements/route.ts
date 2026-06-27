@@ -1,9 +1,9 @@
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { noStoreJson } from '@/server/security/no-store';
+import { noStoreJson, requireEnterpriseRateLimit } from '@/server/security/api-guards';
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -14,6 +14,18 @@ export async function GET() {
 
   if (!organization) {
     return noStoreJson({ error: 'organization_required' }, { status: 403 });
+  }
+
+  const rateLimitDenied = await requireEnterpriseRateLimit(request, {
+    policy: 'general-api',
+    userId: user.id,
+    organizationId: organization.id,
+    action: 'billing.entitlements.read',
+    route: '/api/billing/entitlements',
+  });
+
+  if (rateLimitDenied) {
+    return rateLimitDenied;
   }
 
   const entitlements = await getOrganizationEntitlements(organization.id);
