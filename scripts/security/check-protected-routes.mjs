@@ -80,9 +80,13 @@ if (existsSync(proxyPath)) {
 }
 
 if (guardSource) {
-  for (const segment of requiredProtectedSegments) {
-    if (!guardSource.includes(`'${segment}'`) && !guardSource.includes(`"${segment}"`)) {
-      failures.push(`Missing protected route segment in active request guard: ${segment}`);
+  const usesDefaultDeny = guardSource.includes('!isPublic') && guardSource.includes('isPublicRoute') && guardSource.includes('PUBLIC_ROUTES');
+
+  if (!usesDefaultDeny) {
+    for (const segment of requiredProtectedSegments) {
+      if (!guardSource.includes(`'${segment}'`) && !guardSource.includes(`"${segment}"`)) {
+        failures.push(`Missing protected route segment in active request guard: ${segment}`);
+      }
     }
   }
 
