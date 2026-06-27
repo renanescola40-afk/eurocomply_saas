@@ -2,6 +2,7 @@ name: RISCK COMPLY Security CI
 
 # Governance compatibility marker:
 # node scripts/security/check-step-up.mjs
+# Runtime provider requirements: STEP_UP_SIGNING_SECRET, SUPABASE_ACCESS_TOKEN
 
 on:
   workflow_dispatch:
