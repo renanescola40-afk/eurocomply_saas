@@ -12,8 +12,7 @@ export function ClerkOrganizationPanel() {
   });
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const [syncError, setSyncError] = useState<string | null>(null);
-
-  const memberships = userMemberships.data ?? [];
+  const memberships = useMemo(() => userMemberships.data ?? [], [userMemberships.data]);
   const hasOrganizations = memberships.length > 0;
   const activeOrganizationId = organization?.id ?? null;
   const activeOrganizationName = organization?.name ?? null;
