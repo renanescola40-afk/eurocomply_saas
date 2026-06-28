@@ -114,6 +114,8 @@ function runCommand(step) {
     startedAt,
     finishedAt,
     exitStatus,
+    exitCode: exitStatus,
+    passed: exitStatus === 0,
     result: exitStatus === 0 ? 'passed' : 'failed',
     log: logPath,
   };
@@ -144,6 +146,8 @@ const summary = {
     requested: result.requested,
     prerequisiteFor: result.prerequisiteFor || null,
     exitStatus: result.exitStatus,
+    exitCode: result.exitCode,
+    passed: result.passed,
     result: result.result,
     log: result.log,
     startedAt: result.startedAt,
@@ -185,6 +189,7 @@ const evidence = {
   evidenceLocations: ['scripts/release/run-final-validation.mjs', 'release-validation/summary.json', 'release-validation/logs/*.log', evidencePath],
   controlsVerified: overallResult === 'passed' ? summary.commands.filter((command) => command.requested).map((command) => command.command) : [],
   commands: summary.commands,
+  commandResults: summary.commands,
   failures: {
     requestedCommandFailures: summary.requestedCommandFailures,
     prerequisiteFailures: summary.prerequisiteFailures,
