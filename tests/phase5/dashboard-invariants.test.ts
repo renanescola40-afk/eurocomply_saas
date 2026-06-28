@@ -23,13 +23,15 @@ describe('Phase 5 dashboard invariants', () => {
     expect(middleware).toContain('withPrivateNoStore');
   });
 
-  it('keeps authenticated public auth entrypoints routed through onboarding first', () => {
+  it('keeps authenticated marketing home routed through onboarding without interrupting auth entry pages', () => {
     const middleware = read('src/middleware.ts');
 
     expect(middleware).toContain("const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations'");
     expect(middleware).toContain("const AUTH_SUCCESS_PATH = '/onboarding'");
-    expect(middleware).toContain('isAuthenticated && (isAuthEntryRoute || isMarketingHome)');
+    expect(middleware).toContain('const shouldCheckAuth = !isPublic || isMarketingHome;');
+    expect(middleware).toContain('isAuthenticated && isMarketingHome');
     expect(middleware).toContain('new URL(`/${locale}${AUTH_SUCCESS_PATH}`');
+    expect(middleware).not.toContain('isAuthenticated && (isAuthEntryRoute || isMarketingHome)');
   });
 
   it('keeps Clerk post-auth fallback URLs pointed at localized onboarding', () => {
@@ -46,8 +48,12 @@ describe('Phase 5 dashboard invariants', () => {
     expect(login).toContain('function getAuthSuccessHref(locale: string)');
     expect(login).toContain('return `/${locale}/onboarding`;');
     expect(login).toContain('const fallback = getAuthSuccessHref(locale);');
-    expect(login).toContain("next.includes('://')");
-    expect(login).toContain("next.startsWith('//')");
+    expect(login).toContain('normalizedNext.length > 240');
+    expect(login).toContain("normalizedNext.includes('://')");
+    expect(login).toContain("normalizedNext.startsWith('//')");
+    expect(login).toContain('!normalizedNext.startsWith(`/${locale}/onboarding`)');
+    expect(login).toContain('const signUpUrl = `/${activeLocale}/signup?next=${encodeURIComponent(afterSignInUrl)}`;');
+    expect(login).toContain('signUpUrl={signUpUrl}');
     expect(login).toContain('fallbackRedirectUrl={afterSignInUrl}');
     expect(login).toContain('forceRedirectUrl={afterSignInUrl}');
   });
