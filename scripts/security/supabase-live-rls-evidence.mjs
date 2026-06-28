@@ -8,12 +8,12 @@ export const criticalTables = [
   'audit_events',
   'risks',
   'vendors',
-  'tasks',
+  'compliance_tasks',
   'subscriptions',
   'notifications',
   'profiles',
 ];
-export const optionalTables = [];
+export const optionalTables = ['tasks'];
 export const requiredCoverageOperations = ['cross_tenant_read', 'cross_tenant_insert', 'cross_tenant_update', 'cross_tenant_delete'];
 export const requiredBackendWriteDenyOperations = ['same_tenant_insert_denied', 'same_tenant_update_denied', 'same_tenant_delete_denied'];
 export const requiredViewerAdminDenyOperations = [];
@@ -52,7 +52,7 @@ export const requiredProfileProofCases = [
   },
 ];
 
-const sameTenantWritableTables = new Set(['documents', 'risks', 'vendors', 'tasks']);
+const sameTenantWritableTables = new Set(['documents', 'risks', 'vendors', 'tasks', 'compliance_tasks']);
 
 export function commandUsed(argv = process.argv.slice(2)) {
   return `node ${runner}${argv.length > 0 ? ` ${argv.join(' ')}` : ''}`;
