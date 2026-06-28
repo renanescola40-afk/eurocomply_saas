@@ -6,6 +6,7 @@ import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/server/billing/stripe';
+import { getUserEmailById } from '@/server/users/email';
 
 const SUPPORTED_STRIPE_WEBHOOK_EVENTS = new Set([
   'checkout.session.completed',
@@ -449,15 +450,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 }
 
 async function getBillingContactEmail(userId: string) {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.auth.admin.getUserById(userId);
-
-  if (error) {
-    reportError(error, { area: 'billing_contact_lookup', userId });
-    return null;
-  }
-
-  return data.user?.email ?? null;
+  return getUserEmailById(userId, 'billing_contact_lookup');
 }
 
 export async function sendPaymentFailedEmail(invoice: Stripe.Invoice, event?: Stripe.Event) {
