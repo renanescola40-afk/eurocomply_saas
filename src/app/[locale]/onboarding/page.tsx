@@ -1,21 +1,42 @@
 import { redirect } from 'next/navigation';
 import { CreateOrganizationForm } from '@/components/onboarding/create-organization-form';
 import { OnboardingProgressCard } from '@/components/onboarding/onboarding-progress-card';
+import { getBillingPlan } from '@/lib/billing/plans';
 import { createOrganization } from '@/server/actions/organizations';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
-export default async function OnboardingPage({ params }: { params: { locale: string } }) {
+type OnboardingSearchParams = {
+  plan?: string;
+};
+
+type OnboardingPageProps = {
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<OnboardingSearchParams>;
+};
+
+function getPlanQuery(planId?: string) {
+  const plan = getBillingPlan(planId);
+  return plan ? `?plan=${encodeURIComponent(plan.id)}` : '';
+}
+
+export default async function OnboardingPage({ params, searchParams }: OnboardingPageProps) {
+  const emptySearchParams: OnboardingSearchParams = {};
+  const [{ locale }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve(emptySearchParams),
+  ]);
+  const planQuery = getPlanQuery(resolvedSearchParams.plan);
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect(`/${params.locale}/login`);
+    redirect(`/${locale}/login?next=${encodeURIComponent(`/${locale}/onboarding${planQuery}`)}`);
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (organization) {
-    redirect(`/${params.locale}/dashboard/organizations`);
+    redirect(`/${locale}/dashboard/organizations${planQuery}`);
   }
 
   async function createOrganizationFromOnboarding(input: { name: string; slug: string }) {
@@ -24,11 +45,11 @@ export default async function OnboardingPage({ params }: { params: { locale: str
     const currentUser = await getCurrentUser();
 
     if (!currentUser) {
-      redirect(`/${params.locale}/login`);
+      redirect(`/${locale}/login?next=${encodeURIComponent(`/${locale}/onboarding${planQuery}`)}`);
     }
 
     await createOrganization(input, currentUser.id, currentUser.email);
-    redirect(`/${params.locale}/dashboard/organizations`);
+    redirect(`/${locale}/dashboard/organizations${planQuery}`);
   }
 
   return (

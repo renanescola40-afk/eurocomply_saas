@@ -37,22 +37,22 @@ const signupCopy = {
   },
 } as const;
 
-function getDashboardHref(locale: string, planId?: string) {
-  const baseHref = `/${locale}/dashboard/organizations`;
+function getOnboardingHref(locale: string, planId?: string) {
+  const baseHref = `/${locale}/onboarding`;
   return planId ? `${baseHref}?plan=${encodeURIComponent(planId)}` : baseHref;
 }
 
 function normalizePlanId(planId: string | null) {
-  return getBillingPlan(planId)?.id ?? 'professional';
+  return getBillingPlan(planId)?.id;
 }
 
-function getSafeSignupContinuation(locale: string, nextPath: string | null, planId: string) {
-  const fallbackHref = getDashboardHref(locale, planId);
+function getSafeSignupContinuation(locale: string, nextPath: string | null, planId?: string) {
+  const fallbackHref = getOnboardingHref(locale, planId);
   const normalizedNext = nextPath?.trim();
 
   if (!normalizedNext) return fallbackHref;
   if (normalizedNext.length > 240 || normalizedNext.startsWith('//') || normalizedNext.includes('://')) return fallbackHref;
-  if (!normalizedNext.startsWith(`/${locale}/dashboard`)) return fallbackHref;
+  if (!normalizedNext.startsWith(`/${locale}/dashboard`) && !normalizedNext.startsWith(`/${locale}/onboarding`)) return fallbackHref;
   return normalizedNext;
 }
 
@@ -64,10 +64,10 @@ export default function SignupPage() {
   const pageCopy = activeLocale === 'pt' ? signupCopy.pt : signupCopy.en;
   const selectedPlanId = normalizePlanId(searchParams.get('plan'));
   const requestedNext = searchParams.get('next');
-  const selectedPlan = useMemo(() => getBillingPlan(selectedPlanId) ?? BILLING_PLANS[1], [selectedPlanId]);
+  const selectedPlan = useMemo(() => selectedPlanId ? getBillingPlan(selectedPlanId) : undefined, [selectedPlanId]);
   const continuationHref = useMemo(
-    () => getSafeSignupContinuation(activeLocale, requestedNext, selectedPlan.id),
-    [activeLocale, requestedNext, selectedPlan.id],
+    () => getSafeSignupContinuation(activeLocale, requestedNext, selectedPlan?.id),
+    [activeLocale, requestedNext, selectedPlan?.id],
   );
 
   return (
@@ -100,21 +100,22 @@ export default function SignupPage() {
               <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-white/56">{pageCopy.subtitle}</p>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-blue-300/20 bg-blue-400/10 p-4 text-sm text-blue-50">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-200/80">{pageCopy.selectedPlan}</p>
-                  <p className="mt-2 text-xl font-semibold tracking-tight">{selectedPlan.name}</p>
+            {selectedPlan ? (
+              <div className="mt-6 rounded-2xl border border-blue-300/20 bg-blue-400/10 p-4 text-sm text-blue-50">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-200/80">{pageCopy.selectedPlan}</p>
+                    <p className="mt-2 text-xl font-semibold tracking-tight">{selectedPlan.name}</p>
+                  </div>
+                  <p className="rounded-full bg-white px-3 py-1 text-sm font-bold text-slate-950">€{selectedPlan.priceMonthly}/mo</p>
                 </div>
-                <p className="rounded-full bg-white px-3 py-1 text-sm font-bold text-slate-950">€{selectedPlan.priceMonthly}/mo</p>
+                <p className="mt-3 text-xs leading-5 text-blue-100/70">{pageCopy.planHelp}</p>
               </div>
-              <p className="mt-3 text-xs leading-5 text-blue-100/70">{pageCopy.planHelp}</p>
-            </div>
+            ) : null}
 
             <div className="mt-6 rounded-[1.5rem] bg-white p-2 text-black shadow-[0_20px_70px_rgba(0,0,0,.45)]">
               <SignUp
-                routing="path"
-                path={`/${activeLocale}/signup`}
+                routing="hash"
                 signInUrl={`/${activeLocale}/login?next=${encodeURIComponent(continuationHref)}`}
                 fallbackRedirectUrl={continuationHref}
                 forceRedirectUrl={continuationHref}

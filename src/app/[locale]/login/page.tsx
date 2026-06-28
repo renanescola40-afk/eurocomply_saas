@@ -53,7 +53,7 @@ function getSafeNextPath(next: string | null, locale: string) {
     return getDashboardHref(locale);
   }
 
-  if (!next.startsWith(`/${locale}/dashboard`)) {
+  if (!next.startsWith(`/${locale}/dashboard`) && !next.startsWith(`/${locale}/onboarding`)) {
     return getDashboardHref(locale);
   }
 
@@ -133,8 +133,7 @@ export default function LoginPage() {
 
             <div className="rounded-[1.5rem] bg-white p-2 text-black shadow-[0_20px_70px_rgba(0,0,0,.45)]">
               <SignIn
-                routing="path"
-                path={`/${activeLocale}/login`}
+                routing="hash"
                 signUpUrl={`/${activeLocale}/signup`}
                 fallbackRedirectUrl={afterSignInUrl}
                 forceRedirectUrl={afterSignInUrl}
