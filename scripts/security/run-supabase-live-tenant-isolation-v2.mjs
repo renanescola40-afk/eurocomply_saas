@@ -247,12 +247,25 @@ async function sameTenantInsertAllowed(client, table, row) {
   return { passed: !error && Boolean(insertedId), error: safeError(error), returnedRows: Array.isArray(data) ? data.length : 0, insertedId, removedMissingColumns: removedColumns };
 }
 
+const completeRegisterRow = '| Supabase live RLS validation completed | Complete | `docs/security/evidence/runtime/supabase-live-rls-validation.json` records status `Complete`, outcome `passed`, timestamp, redacted Supabase project reference, tables reviewed, tests passed/failed, zero failures, reviewer, command used, commit SHA, RLS enablement, tenant A/B cross-tenant read/insert/update/delete denial, profiles user-scoped read/insert/update/delete proof, viewer/admin separation, same-tenant allowed behavior, and backend-owned write denial | Security reviewer |';
+
 function markRegisterComplete() {
   if (!updateRegister) return false;
+
   const source = fs.readFileSync(registerPath, 'utf8');
-  const updated = source.replace(/\| Supabase live RLS validation completed \| (?:Open|Exception|Complete) \|[^\n]+/, '| Supabase live RLS validation completed | Complete | `docs/security/evidence/runtime/supabase-live-rls-validation.json` records status `Complete`, outcome `passed`, timestamp, redacted Supabase project reference, tables reviewed, tests passed/failed, zero failures, reviewer, command used, commit SHA, RLS enablement, tenant A/B cross-tenant read/insert/update/delete denial, profiles user-scoped read/insert/update/delete proof, viewer/admin separation, same-tenant allowed behavior, and backend-owned write denial | Security reviewer |');
-  if (updated === source) throw new Error('Could not update live RLS row in P0 runtime evidence register.');
-  fs.writeFileSync(registerPath, updated);
+  const rowPattern = /^\| Supabase live RLS validation completed \| (?:Open|Exception|Complete) \|.*$/m;
+  const currentRow = source.match(rowPattern)?.[0] ?? null;
+
+  if (!currentRow) {
+    throw new Error('Could not locate live RLS row in P0 runtime evidence register.');
+  }
+
+  if (currentRow === completeRegisterRow) {
+    console.log('P0 runtime evidence register already records Supabase live RLS as Complete. Continuing without rewriting the register.');
+    return false;
+  }
+
+  fs.writeFileSync(registerPath, source.replace(rowPattern, completeRegisterRow));
   return true;
 }
 
