@@ -2,13 +2,13 @@
   "evidenceItem": "supabase-live-rls-validation",
   "status": "Complete",
   "outcome": "passed",
-  "timestamp": "2026-06-27T11:28:41Z",
-  "generatedAt": "2026-06-27T11:28:41Z",
+  "timestamp": "2026-06-28T08:59:16Z",
+  "generatedAt": "2026-06-28T08:59:16Z",
   "runner": "scripts/security/run-supabase-live-tenant-isolation.mjs",
   "reviewer": "renanescola40-afk",
-  "reviewedAt": "2026-06-27T11:28:41Z",
+  "reviewedAt": "2026-06-28T08:59:16Z",
   "commandUsed": "node scripts/security/run-supabase-live-tenant-isolation.mjs",
-  "commitSha": "f2357de82995106ff7e8103c88a70ef234de1ff7",
+  "commitSha": "9d7f44e617717a6233e05e81d1a5c2572cfa62b1",
   "supabaseProjectReference": "redacted:sha256:bd5ab31fe970bac1",
   "supabaseProjectReferenceRedacted": true,
   "summary": "Live Supabase tenant-isolation RLS validation passed.",
@@ -30,12 +30,14 @@
     "audit_events",
     "risks",
     "vendors",
-    "tasks",
+    "compliance_tasks",
     "subscriptions",
     "notifications",
     "profiles"
   ],
-  "optionalTables": [],
+  "optionalTables": [
+    "tasks"
+  ],
   "requiredProfileProofCases": [
     {
       "table": "profiles",
@@ -155,7 +157,7 @@
       }
     },
     {
-      "table": "tasks",
+      "table": "compliance_tasks",
       "status": "passed",
       "rlsEnabled": true,
       "operations": {
@@ -209,6 +211,20 @@
         "sameTenantReadAllowed": true,
         "sameTenantInsertAllowed": true
       }
+    },
+    {
+      "table": "tasks",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true
+      }
     }
   ],
   "testsRun": [
@@ -218,10 +234,11 @@
     "audit_events:rls_enabled",
     "risks:rls_enabled",
     "vendors:rls_enabled",
-    "tasks:rls_enabled",
+    "compliance_tasks:rls_enabled",
     "subscriptions:rls_enabled",
     "notifications:rls_enabled",
     "profiles:rls_enabled",
+    "tasks:rls_enabled",
     "organizations:cross_tenant_read",
     "organizations:cross_tenant_insert",
     "organizations:cross_tenant_update",
@@ -258,12 +275,12 @@
     "vendors:cross_tenant_delete",
     "vendors:same_tenant_read",
     "vendors:same_tenant_insert",
-    "tasks:cross_tenant_read",
-    "tasks:cross_tenant_insert",
-    "tasks:cross_tenant_update",
-    "tasks:cross_tenant_delete",
-    "tasks:same_tenant_read",
-    "tasks:same_tenant_insert",
+    "compliance_tasks:cross_tenant_read",
+    "compliance_tasks:cross_tenant_insert",
+    "compliance_tasks:cross_tenant_update",
+    "compliance_tasks:cross_tenant_delete",
+    "compliance_tasks:same_tenant_read",
+    "compliance_tasks:same_tenant_insert",
     "subscriptions:cross_tenant_read",
     "subscriptions:cross_tenant_insert",
     "subscriptions:cross_tenant_update",
@@ -282,6 +299,12 @@
     "profiles:cross_tenant_update",
     "profiles:cross_tenant_delete",
     "profiles:same_tenant_read",
+    "tasks:cross_tenant_read",
+    "tasks:cross_tenant_insert",
+    "tasks:cross_tenant_update",
+    "tasks:cross_tenant_delete",
+    "tasks:same_tenant_read",
+    "tasks:same_tenant_insert",
     "organization_members:viewer_same_tenant_admin_insert_denied",
     "organization_members:viewer_same_tenant_admin_update_denied",
     "organization_members:viewer_same_tenant_admin_delete_denied"
@@ -293,10 +316,11 @@
     "audit_events:rls_enabled",
     "risks:rls_enabled",
     "vendors:rls_enabled",
-    "tasks:rls_enabled",
+    "compliance_tasks:rls_enabled",
     "subscriptions:rls_enabled",
     "notifications:rls_enabled",
     "profiles:rls_enabled",
+    "tasks:rls_enabled",
     "organizations:cross_tenant_read",
     "organizations:cross_tenant_insert",
     "organizations:cross_tenant_update",
@@ -333,12 +357,12 @@
     "vendors:cross_tenant_delete",
     "vendors:same_tenant_read",
     "vendors:same_tenant_insert",
-    "tasks:cross_tenant_read",
-    "tasks:cross_tenant_insert",
-    "tasks:cross_tenant_update",
-    "tasks:cross_tenant_delete",
-    "tasks:same_tenant_read",
-    "tasks:same_tenant_insert",
+    "compliance_tasks:cross_tenant_read",
+    "compliance_tasks:cross_tenant_insert",
+    "compliance_tasks:cross_tenant_update",
+    "compliance_tasks:cross_tenant_delete",
+    "compliance_tasks:same_tenant_read",
+    "compliance_tasks:same_tenant_insert",
     "subscriptions:cross_tenant_read",
     "subscriptions:cross_tenant_insert",
     "subscriptions:cross_tenant_update",
@@ -357,6 +381,12 @@
     "profiles:cross_tenant_update",
     "profiles:cross_tenant_delete",
     "profiles:same_tenant_read",
+    "tasks:cross_tenant_read",
+    "tasks:cross_tenant_insert",
+    "tasks:cross_tenant_update",
+    "tasks:cross_tenant_delete",
+    "tasks:same_tenant_read",
+    "tasks:same_tenant_insert",
     "organization_members:viewer_same_tenant_admin_insert_denied",
     "organization_members:viewer_same_tenant_admin_update_denied",
     "organization_members:viewer_same_tenant_admin_delete_denied"
@@ -418,13 +448,13 @@
       "policyCount": 12
     },
     {
-      "table": "tasks",
+      "table": "compliance_tasks",
       "operation": "rls_enabled",
       "passed": true,
       "exists": true,
       "rlsEnabled": true,
       "forceRls": false,
-      "policyCount": 15
+      "policyCount": 13
     },
     {
       "table": "subscriptions",
@@ -452,6 +482,15 @@
       "rlsEnabled": true,
       "forceRls": false,
       "policyCount": 10
+    },
+    {
+      "table": "tasks",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": false,
+      "policyCount": 15
     },
     {
       "table": "organizations",
@@ -582,7 +621,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "95015f3a-37d3-427e-9cbc-786e98b5f686",
+      "insertedId": "30826ec8-08d8-405d-8713-0f2dd9167e59",
       "removedMissingColumns": [
         "storage_path",
         "uploaded_by"
@@ -700,7 +739,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "cef3c380-03bc-4b5f-8194-712ca01c1fec",
+      "insertedId": "90e49a9e-625f-4bff-b080-eaa86608dff2",
       "removedMissingColumns": [
         "owner_user_id"
       ]
@@ -751,56 +790,56 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "23dd1d02-c003-4dcb-bb81-74b367fc9e7f",
+      "insertedId": "cc4799d3-bab1-407b-830f-50fcf3fb2684",
       "removedMissingColumns": []
     },
     {
-      "table": "tasks",
+      "table": "compliance_tasks",
       "operation": "cross_tenant_read",
       "passed": true,
       "error": null,
       "returnedRows": 0
     },
     {
-      "table": "tasks",
+      "table": "compliance_tasks",
       "operation": "cross_tenant_insert",
       "passed": true,
       "error": {
         "code": "42501",
-        "message": "new row violates row-level security policy \"live_val_tasks_insert_guard\" for table \"tasks\""
+        "message": "new row violates row-level security policy \"live_val_compliance_tasks_insert_guard\" for table \"compliance_tasks\""
       },
       "returnedRows": 0,
       "denialMode": "rls_or_permission_error",
       "removedMissingColumns": []
     },
     {
-      "table": "tasks",
+      "table": "compliance_tasks",
       "operation": "cross_tenant_update",
       "passed": true,
       "error": null,
       "returnedRows": 0
     },
     {
-      "table": "tasks",
+      "table": "compliance_tasks",
       "operation": "cross_tenant_delete",
       "passed": true,
       "error": null,
       "returnedRows": 0
     },
     {
-      "table": "tasks",
+      "table": "compliance_tasks",
       "operation": "same_tenant_read",
       "passed": true,
       "error": null,
       "returnedRows": 1
     },
     {
-      "table": "tasks",
+      "table": "compliance_tasks",
       "operation": "same_tenant_insert",
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "e762fcb1-3e07-4b85-8fa9-984edab40b60",
+      "insertedId": "6d4dad66-249f-4591-944e-fcc95048806d",
       "removedMissingColumns": []
     },
     {
@@ -950,6 +989,55 @@
       "returnedRows": 1
     },
     {
+      "table": "tasks",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "tasks",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy \"live_val_tasks_insert_guard\" for table \"tasks\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "tasks",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "tasks",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "tasks",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "tasks",
+      "operation": "same_tenant_insert",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1,
+      "insertedId": "b2714229-ded8-42fe-ab6f-b8d214e9db7a",
+      "removedMissingColumns": []
+    },
+    {
       "table": "organization_members",
       "operation": "viewer_same_tenant_admin_insert_denied",
       "passed": true,
@@ -995,20 +1083,20 @@
       "purpose": "Deletes validation rows and test auth users unless --keep-fixtures is set."
     }
   ],
-  "registerUpdated": true,
+  "registerUpdated": false,
   "completionRule": "Only scripts/security/run-supabase-live-tenant-isolation.mjs may mark this evidence Complete after a successful live tenant-isolation RLS run against the target Supabase project.",
   "nextReviewDue": null,
   "githubActions": {
     "generatedInGitHubActions": true,
     "workflow": "Supabase Live RLS Validation",
-    "runId": "28287822934",
+    "runId": "28317184719",
     "runAttempt": "1",
-    "runUrl": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28287822934",
+    "runUrl": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28317184719",
     "repository": "renanescola40-afk/eurocomply_saas",
-    "commitSha": "f2357de82995106ff7e8103c88a70ef234de1ff7",
+    "commitSha": "9d7f44e617717a6233e05e81d1a5c2572cfa62b1",
     "refName": "main",
     "actor": "renanescola40-afk",
     "eventName": "workflow_dispatch",
-    "stampedAt": "2026-06-27T11:28:43.810Z"
+    "stampedAt": "2026-06-28T08:59:19.082Z"
   }
 }
