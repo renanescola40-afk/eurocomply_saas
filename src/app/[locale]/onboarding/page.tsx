@@ -6,9 +6,13 @@ import { createOrganization } from '@/server/actions/organizations';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
+type OnboardingSearchParams = {
+  plan?: string;
+};
+
 type OnboardingPageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ plan?: string }>;
+  searchParams?: Promise<OnboardingSearchParams>;
 };
 
 function getPlanQuery(planId?: string) {
@@ -17,9 +21,10 @@ function getPlanQuery(planId?: string) {
 }
 
 export default async function OnboardingPage({ params, searchParams }: OnboardingPageProps) {
+  const emptySearchParams: OnboardingSearchParams = {};
   const [{ locale }, resolvedSearchParams] = await Promise.all([
     params,
-    searchParams ?? Promise.resolve({}),
+    searchParams ?? Promise.resolve(emptySearchParams),
   ]);
   const planQuery = getPlanQuery(resolvedSearchParams.plan);
   const user = await getCurrentUser();
