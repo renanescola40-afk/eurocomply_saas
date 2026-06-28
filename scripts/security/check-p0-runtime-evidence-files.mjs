@@ -7,6 +7,9 @@ const allowedItems = new Set([
   'required-status-checks',
   'ci-assessed-commit-validation',
   'deployment-health-validation',
+  'deployment-smoke-validation',
+  'rollback-dry-run-validation',
+  'final-validation-runner',
   'production-secrets-provider-stores',
   'supabase-live-rls-validation',
   'external-security-review-or-pentest',
@@ -49,8 +52,51 @@ function requireArray(file, object, key, minItems = 1) {
   }
 }
 
+function requireObject(file, object, key) {
+  if (!object[key] || typeof object[key] !== 'object' || Array.isArray(object[key])) {
+    failures.push(`${file} missing valid object field: ${key}`);
+    return null;
+  }
+
+  return object[key];
+}
+
 function hasValidRedactionText(evidence) {
   return redactionTexts.has(String(evidence.redactionConfirmation ?? ''));
+}
+
+function hasBlockedGateText(evidence) {
+  return String(evidence.releaseGate ?? evidence.productionGate ?? '').toLowerCase().includes('blocked');
+}
+
+function checkGenericOpenBlockedEvidence(file, evidence, allowedOpenOutcomes) {
+  if (evidence.status !== 'Open') return false;
+  if (!allowedOpenOutcomes.has(evidence.outcome)) return false;
+
+  requireString(file, evidence, 'reviewer', 3);
+  requireString(file, evidence, 'reviewedAt', 10);
+  requireString(file, evidence, 'summary', 40);
+  requireArray(file, evidence, 'evidenceLocations', 1);
+
+  if (!hasValidRedactionText(evidence)) {
+    failures.push(`${file} missing redaction confirmation`);
+  }
+
+  if (!hasBlockedGateText(evidence)) {
+    failures.push(`${file} Open evidence must keep the release blocked`);
+  }
+
+  if (Array.isArray(evidence.controlsVerified) && evidence.controlsVerified.length > 0) {
+    failures.push(`${file} Open evidence must not list controlsVerified as if passed`);
+  }
+
+  return true;
+}
+
+function checkReleaseOpenPlaceholder(file, evidence) {
+  if (!new Set(['deployment-smoke-validation', 'rollback-dry-run-validation', 'final-validation-runner']).has(evidence.evidenceItem)) return false;
+
+  return checkGenericOpenBlockedEvidence(file, evidence, new Set(['failed']));
 }
 
 function checkSupabaseOpenPlaceholder(file, evidence) {
@@ -156,6 +202,61 @@ function checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence) {
   return true;
 }
 
+function checkCompleteDeploymentSmoke(file, evidence) {
+  if (evidence.evidenceItem !== 'deployment-smoke-validation' || evidence.status !== 'Complete') return;
+
+  const smokeTargets = requireObject(file, evidence, 'smokeTargets');
+  if (!smokeTargets) return;
+
+  requireArray(file, smokeTargets, 'passed', 1);
+
+  if (Array.isArray(smokeTargets.failed) && smokeTargets.failed.length > 0) {
+    failures.push(`${file} Complete deployment smoke evidence must not list failed smoke targets`);
+  }
+}
+
+function checkCompleteFinalValidation(file, evidence) {
+  if (evidence.evidenceItem !== 'final-validation-runner' || evidence.status !== 'Complete') return;
+
+  const commandResults = evidence.commandResults ?? evidence.commands;
+  if (!Array.isArray(commandResults) || commandResults.length < 1) {
+    failures.push(`${file} Complete final validation evidence must include commandResults`);
+    return;
+  }
+
+  for (const [index, result] of commandResults.entries()) {
+    if (!result || typeof result !== 'object' || Array.isArray(result)) {
+      failures.push(`${file} commandResults[${index}] must be an object`);
+      continue;
+    }
+
+    requireString(file, result, 'command', 2);
+
+    if (result.passed !== true && result.exitCode !== 0) {
+      failures.push(`${file} commandResults[${index}] must prove a passed command`);
+    }
+  }
+}
+
+function checkCompleteRollback(file, evidence) {
+  if (evidence.evidenceItem !== 'rollback-dry-run-validation' || evidence.status !== 'Complete') return;
+
+  const targetValidation = requireObject(file, evidence, 'targetValidation');
+  if (!targetValidation) return;
+
+  if (targetValidation.passed !== true) {
+    failures.push(`${file} Complete rollback evidence must include targetValidation.passed true`);
+  }
+}
+
+function checkCompleteEvidenceShape(file, evidence) {
+  if (evidence.status !== 'Complete') return;
+
+  checkCompleteDeploymentSmoke(file, evidence);
+  checkCompleteFinalValidation(file, evidence);
+  checkCompleteRollback(file, evidence);
+}
+
 const files = listJsonFiles(evidenceDir);
 
 console.log('EuroComply P0 runtime evidence file check');
@@ -176,6 +277,7 @@ for (const file of files) {
   }
 
   if (
+    checkReleaseOpenPlaceholder(file, evidence) ||
     checkSupabaseOpenPlaceholder(file, evidence) ||
     checkExternalReviewOpenPlaceholder(file, evidence) ||
     checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence)
@@ -198,6 +300,7 @@ for (const file of files) {
 
   if (evidence.status === 'Complete') {
     requireArray(file, evidence, 'controlsVerified', 1);
+    checkCompleteEvidenceShape(file, evidence);
     if (evidence.exception) {
       failures.push(`${file} status Complete must not include exception details`);
     }
