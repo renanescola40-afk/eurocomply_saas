@@ -1,14 +1,17 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Download, FileCheck2, FileText } from 'lucide-react';
+import { UpgradeRequiredCard } from '@/components/billing/upgrade-required-card';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { buildAiGovernanceReadiness } from '@/server/ai-governance/readiness';
+import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
 import { listAiIncidents } from '@/server/queries/ai-incidents';
 import { listAiSystems } from '@/server/queries/ai-systems';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { isPlanAtLeast } from '@/server/queries/subscription';
 
 const copy = {
   en: { badge: 'Document generator', title: 'AI compliance document generator', subtitle: 'Turn live AI governance data into export-ready board, audit, policy and action-plan outputs.', empty: 'Documents will become richer after you register AI systems and classify risk exposure.', inventory: 'Open inventory', print: 'Open print-ready report' },
@@ -33,9 +36,10 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
   }
 
   const organization = await getCurrentOrganizationForUser(user.id);
-  const [systems, incidents] = organization
-    ? await Promise.all([listAiSystems(organization.id), listAiIncidents(organization.id)])
-    : [[], []];
+  const [systems, incidents, entitlements] = organization
+    ? await Promise.all([listAiSystems(organization.id), listAiIncidents(organization.id), getOrganizationEntitlements(organization.id)])
+    : [[], [], null];
+  const canViewExecutiveReports = entitlements ? isPlanAtLeast(entitlements.plan, 'business') : false;
   const readiness = buildAiGovernanceReadiness({ locale, systems, incidents });
   const hasInventory = systems.length > 0;
   const documents = [
@@ -59,7 +63,11 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
               <p className="mt-3 text-sm leading-6 text-muted-foreground">{t.subtitle}</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button asChild className="rounded-full"><Link href="#generated-report">{t.print}<Download className="h-4 w-4" /></Link></Button>
+              {canViewExecutiveReports ? (
+                <Button asChild className="rounded-full"><Link href="#generated-report">{t.print}<Download className="h-4 w-4" /></Link></Button>
+              ) : (
+                <Button asChild className="rounded-full"><Link href={`/${locale}/pricing`}>Upgrade to print report<Download className="h-4 w-4" /></Link></Button>
+              )}
               <Button asChild variant="outline" className="rounded-full"><Link href={`/${locale}/ai-systems`}>{t.inventory}</Link></Button>
             </div>
           </div>
@@ -83,23 +91,34 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
             ))}
           </div>
 
-          <section id="generated-report" className="mt-6 rounded-3xl border bg-background p-6 shadow-sm print:shadow-none">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-tight">{organization?.name ?? 'Organization'} · AI Compliance Report</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{readiness.boardSummary}</p>
+          {canViewExecutiveReports ? (
+            <section id="generated-report" className="mt-6 rounded-3xl border bg-background p-6 shadow-sm print:shadow-none">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold tracking-tight">{organization?.name ?? 'Organization'} · AI Compliance Report</h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{readiness.boardSummary}</p>
+                </div>
+                <Badge variant="outline" className="w-fit rounded-full">Readiness: {readiness.score === null ? '—' : `${readiness.score}%`}</Badge>
               </div>
-              <Badge variant="outline" className="w-fit rounded-full">Readiness: {readiness.score === null ? '—' : `${readiness.score}%`}</Badge>
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                {readiness.gaps.map((gap) => (
+                  <article key={gap.id} className="rounded-2xl border bg-muted/20 p-4"><Badge variant="outline" className="rounded-full">{gap.severity}</Badge><h3 className="mt-3 font-semibold">{gap.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{gap.action}</p></article>
+                ))}
+                {readiness.actionPlan.map((action) => (
+                  <article key={action.id} className="rounded-2xl border bg-muted/20 p-4"><Badge variant="outline" className="rounded-full">{action.ownerRole}</Badge><h3 className="mt-3 font-semibold">{action.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{action.description}</p></article>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <div id="generated-report" className="mt-6">
+              <UpgradeRequiredCard
+                locale={locale}
+                requiredPlan="Business"
+                title="Print-ready AI compliance reports require Business"
+                description="Board and audit-ready AI compliance reports include executive summaries, gap analysis and action plans. Upgrade to Business to unlock printable executive evidence packs."
+              />
             </div>
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {readiness.gaps.map((gap) => (
-                <article key={gap.id} className="rounded-2xl border bg-muted/20 p-4"><Badge variant="outline" className="rounded-full">{gap.severity}</Badge><h3 className="mt-3 font-semibold">{gap.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{gap.action}</p></article>
-              ))}
-              {readiness.actionPlan.map((action) => (
-                <article key={action.id} className="rounded-2xl border bg-muted/20 p-4"><Badge variant="outline" className="rounded-full">{action.ownerRole}</Badge><h3 className="mt-3 font-semibold">{action.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{action.description}</p></article>
-              ))}
-            </div>
-          </section>
+          )}
         </div>
       </section>
     </main>
