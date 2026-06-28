@@ -51,11 +51,26 @@ This checklist records the evidence required before EuroComply can be represente
 | `npm run build` | Required in Full Security Suite / final validation | Yes |
 | `npm run security:ci` | Required with strict public scanning enabled | Yes |
 | `npm run release:deployment-smoke` | Added; writes `deployment-smoke-validation.json`; expected to fail without real deployment URL and protected readiness token | Yes |
+| `node scripts/release/normalize-deployment-smoke-evidence.mjs` | Required after deployment smoke so generated target results also expose the `smokeTargets` shape expected by existing validators | Yes |
+| `node scripts/release/check-runtime-evidence-shape.mjs docs/security/evidence/runtime/deployment-smoke-validation.json smokeTargets` | Required after normalization to prove the smoke evidence contains the validator-compatible key | Yes |
 | `npm run release:rollback:dry-run` | Added; writes `rollback-dry-run-validation.json`; expected to fail without verified rollback target proof | Yes |
 | `npm run release:readiness` | Updated to include deployment smoke, rollback dry-run and P0 runtime gap report | Yes |
 | `npm run release:enterprise-runtime-evidence` | Added; fails unless required enterprise runtime evidence files are Complete/non-placeholder | Required for enterprise |
 | `npm run release:enterprise-readiness` | Updated to include RLS, MFA/IdP runtime, audit-chain live, upload scanner, branch protection, readiness, enterprise runtime evidence and strict P0 gap | Required for enterprise |
 | `node scripts/release/run-final-validation.mjs` | Updated to emit `final-validation-runner.json` and run smoke/rollback/readiness bundle | Yes |
+
+## Deployment closeout sequence
+
+Run this exact sequence before treating deployment smoke evidence as validator-ready:
+
+```bash
+npm run release:deployment-smoke
+node scripts/release/normalize-deployment-smoke-evidence.mjs
+node scripts/release/check-runtime-evidence-shape.mjs docs/security/evidence/runtime/deployment-smoke-validation.json smokeTargets
+node scripts/security/check-p0-runtime-evidence-files.mjs
+```
+
+Do not mark `deployment-smoke-validation.json` as release-ready unless the normalization and evidence-file checks also pass for the exact promoted commit.
 
 ## Deployment and runtime evidence
 
@@ -63,7 +78,7 @@ This checklist records the evidence required before EuroComply can be represente
 | --- | --- | --- |
 | Vercel preview deployment | Required before production Go | Positive, not approval |
 | Vercel commit status | Required for exact release commit | Positive, not approval |
-| Deployment URL functional verification | **Open unless `deployment-smoke-validation.json` is Complete/passed for exact commit** | Blocks Go |
+| Deployment URL functional verification | **Open unless `deployment-smoke-validation.json` is Complete/passed for exact commit and normalized with `smokeTargets`** | Blocks Go |
 | Preview and production smoke tests | **Open unless attached for exact commit** | Blocks Go |
 | Production secrets provider stores | Complete as provider-store evidence; runtime preflight still required | Positive, not enough for Go |
 | Supabase live RLS validation | **Complete / passed** | Closed P0-RLS-003 |
@@ -83,7 +98,7 @@ This checklist records the evidence required before EuroComply can be represente
 | Branch protection | Evidence is `Exception`, not `Complete` | Blocks enterprise Go |
 | Required checks | Must be confirmed in GitHub Settings → Rulesets/Branches → main | Blocks enterprise Go |
 | Final validation | Exact final validation runner output must be attached for promoted commit | Blocks all Go paths |
-| Deployment smoke | Real deployment URL functional smoke must be attached | Blocks production/public/enterprise Go |
+| Deployment smoke | Real deployment URL functional smoke must be attached and normalized | Blocks production/public/enterprise Go |
 | MFA/IdP | Real provider runtime proof must be attached | Blocks enterprise Go |
 | Audit chain | Target live validation must be attached | Blocks enterprise Go |
 | External review | Real external review evidence must be attached | Blocks enterprise pilot/procurement |
