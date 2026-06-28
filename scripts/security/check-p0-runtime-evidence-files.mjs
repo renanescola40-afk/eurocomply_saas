@@ -205,6 +205,26 @@ function checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence) {
 function checkCompleteDeploymentSmoke(file, evidence) {
   if (evidence.evidenceItem !== 'deployment-smoke-validation' || evidence.status !== 'Complete') return;
 
+  if (Array.isArray(evidence.targets)) {
+    if (evidence.targets.length < 1) {
+      failures.push(`${file} Complete deployment smoke evidence must include at least one target`);
+      return;
+    }
+
+    for (const [index, target] of evidence.targets.entries()) {
+      if (!target || typeof target !== 'object' || Array.isArray(target)) {
+        failures.push(`${file} targets[${index}] must be an object`);
+        continue;
+      }
+
+      if (target.passed !== true) failures.push(`${file} targets[${index}] must have passed=true`);
+      if (target.checks?.healthOk !== true) failures.push(`${file} targets[${index}] must prove /api/health ok`);
+      if (target.checks?.readyProtected !== true) failures.push(`${file} targets[${index}] must prove /api/ready rejects anonymous access`);
+      if (target.checks?.readyOk !== true) failures.push(`${file} targets[${index}] must prove /api/ready authenticated readiness`);
+    }
+    return;
+  }
+
   const smokeTargets = requireObject(file, evidence, 'smokeTargets');
   if (!smokeTargets) return;
 
@@ -215,12 +235,16 @@ function checkCompleteDeploymentSmoke(file, evidence) {
   }
 }
 
+function commandPassed(result) {
+  return result?.passed === true || result?.exitCode === 0 || result?.exitStatus === 0 || result?.result === 'passed';
+}
+
 function checkCompleteFinalValidation(file, evidence) {
   if (evidence.evidenceItem !== 'final-validation-runner' || evidence.status !== 'Complete') return;
 
   const commandResults = evidence.commandResults ?? evidence.commands;
   if (!Array.isArray(commandResults) || commandResults.length < 1) {
-    failures.push(`${file} Complete final validation evidence must include commandResults`);
+    failures.push(`${file} Complete final validation evidence must include commandResults or commands`);
     return;
   }
 
@@ -232,7 +256,7 @@ function checkCompleteFinalValidation(file, evidence) {
 
     requireString(file, result, 'command', 2);
 
-    if (result.passed !== true && result.exitCode !== 0) {
+    if (!commandPassed(result)) {
       failures.push(`${file} commandResults[${index}] must prove a passed command`);
     }
   }
