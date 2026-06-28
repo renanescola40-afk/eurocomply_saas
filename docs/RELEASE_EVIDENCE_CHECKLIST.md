@@ -4,28 +4,28 @@ This checklist records the evidence required before EuroComply can be represente
 
 ## Current release assessment
 
-- Release name: EuroComply GitHub Enterprise Hardening Review - 2026-06-25
-- Assessment date: 2026-06-25
+- Release name: EuroComply P0 Enterprise Evidence Gate Wiring - 2026-06-28
+- Assessment date: 2026-06-28
 - Repository: `renanescola40-afk/eurocomply_saas`
 - Release owner: @renansilva2002 / renanescola40-afk
 - Security owner: @renansilva2002 / renanescola40-afk
 - Target environment: production / enterprise candidate
-- Final decision: **No-Go for enterprise**
+- Final decision: **No-Go for production / enterprise until remaining real runtime evidence is attached**
 
 ## Required release evidence categories
 
 | Evidence category | Current status | Required before Go |
 | --- | --- | --- |
 | Build and CI evidence | Required from exact release commit final validation bundle | Yes |
-| Supply-chain evidence | Required from lockfile alignment, npm audit triage, SBOM and dependency review | Yes |
-| Database and RLS evidence | Supabase live RLS validation must be attached for production/enterprise | Yes |
-| Audit-chain evidence | Required for enterprise; production may carry structured non-complete evidence until enterprise gate | Required for enterprise |
-| Step-up authentication evidence | Provider proof required for enterprise protected actions | Required for enterprise |
-| Upload scanning evidence | Required when uploads are enabled; fail-closed proof required for enterprise | Yes |
-| Billing evidence | Stripe runtime/webhook validation required when paid plans are active | Yes |
-| Observability evidence | Logging, monitoring, incident and support owner evidence required | Yes |
-| External review evidence | Independent review/pentest required for enterprise pilot/procurement | Required for enterprise |
-| Release decision | Go / Conditional Go / No-Go decision must be recorded for the exact commit | Yes |
+| Supply-chain evidence | Required from deterministic install, lockfile alignment, npm audit triage, SBOM and dependency review | Yes |
+| Database and RLS evidence | **Complete / passed** by `docs/security/evidence/runtime/supabase-live-rls-validation.json` | Yes |
+| Audit-chain evidence | Exception until target-live validation is Complete | Required for enterprise |
+| Step-up authentication evidence | Exception until real MFA/IdP provider proof is Complete | Required for enterprise |
+| Upload scanning evidence | Existing live scanner evidence is positive; revalidate before enterprise/provider change | Yes |
+| Billing evidence | Existing Stripe runtime validation is positive; revalidate before billing/provider change | Yes |
+| Observability evidence | Repository evidence positive; deployment smoke and drill/sign-off still required | Yes |
+| External review evidence | Open/not_started until real external review or pentest evidence exists | Required for enterprise |
+| Release decision | No-Go until the exact commit has passing evidence bundle and zero P0 Open/Exception blockers | Yes |
 
 ## GitHub enterprise evidence
 
@@ -33,26 +33,29 @@ This checklist records the evidence required before EuroComply can be represente
 | --- | --- | --- |
 | Full Security Suite required check list | Documented | Yes |
 | Branch protection / ruleset API proof | **Exception** | Required for enterprise |
-| `RELEASE_TARGET=enterprise node scripts/security/check-branch-protection-evidence.mjs` | Expected to fail until evidence is `Complete` | Required for enterprise |
+| `RELEASE_TARGET=enterprise npm run security:branch-protection-evidence` | Expected to fail until evidence is `Complete` | Required for enterprise |
 | Direct push to `main` risk record | Documented | Yes |
 | SBOM artifact name | `risck-comply-sbom` required | Yes |
 | Secret scanning mode | Strict fail-closed required | Yes |
-| Package lock alignment | **Open until `package-lock.json` matches `package.json`** | Yes |
+| Package lock alignment | Required; package metadata must not drift from lockfile | Yes |
 
 ## Command validation evidence
 
 | Command | Status | Required before Go |
 | --- | --- | --- |
-| `npm ci --ignore-scripts` | Required in Full Security Suite | Yes |
-| `node scripts/security/check-package-lock-alignment.mjs` | Added as repository gate; expected to fail until lockfile drift is fixed | Yes |
-| `npm run lint` | Required in CI / Full Security Suite | Yes |
-| `npm run typecheck` | Required in CI / Full Security Suite | Yes |
-| `npm run test` | Required in CI / Full Security Suite | Yes |
-| `npm run build` | Required in Full Security Suite | Yes |
-| Run `npm run security:ci` with strict public scanning enabled | Required; report-only secret scanning is not acceptable | Yes |
-| `npm run release:readiness` | Required before production Go | Yes |
-| `npm run release:enterprise-readiness` | Required before enterprise Go | Required for enterprise |
-| `node scripts/release/run-final-validation.mjs` | Required before production/enterprise Go | Yes |
+| `npm ci` | Required in final validation runner | Yes |
+| `npm run lint` | Required in CI / Full Security Suite / final validation | Yes |
+| `npm run typecheck` | Required in CI / Full Security Suite / final validation | Yes |
+| `npm run test` | Required in CI / Full Security Suite / final validation | Yes |
+| `npm run test:e2e` | Required in final validation runner | Yes |
+| `npm run build` | Required in Full Security Suite / final validation | Yes |
+| `npm run security:ci` | Required with strict public scanning enabled | Yes |
+| `npm run release:deployment-smoke` | Added; writes `deployment-smoke-validation.json`; expected to fail without real deployment URL and protected readiness token | Yes |
+| `npm run release:rollback:dry-run` | Added; writes `rollback-dry-run-validation.json`; expected to fail without verified rollback target proof | Yes |
+| `npm run release:readiness` | Updated to include deployment smoke, rollback dry-run and P0 runtime gap report | Yes |
+| `npm run release:enterprise-runtime-evidence` | Added; fails unless required enterprise runtime evidence files are Complete/non-placeholder | Required for enterprise |
+| `npm run release:enterprise-readiness` | Updated to include RLS, MFA/IdP runtime, audit-chain live, upload scanner, branch protection, readiness, enterprise runtime evidence and strict P0 gap | Required for enterprise |
+| `node scripts/release/run-final-validation.mjs` | Updated to emit `final-validation-runner.json` and run smoke/rollback/readiness bundle | Yes |
 
 ## Deployment and runtime evidence
 
@@ -60,18 +63,18 @@ This checklist records the evidence required before EuroComply can be represente
 | --- | --- | --- |
 | Vercel preview deployment | Required before production Go | Positive, not approval |
 | Vercel commit status | Required for exact release commit | Positive, not approval |
-| Deployment URL functional verification | **Open unless attached for exact commit** | Blocks Go |
+| Deployment URL functional verification | **Open unless `deployment-smoke-validation.json` is Complete/passed for exact commit** | Blocks Go |
 | Preview and production smoke tests | **Open unless attached for exact commit** | Blocks Go |
-| Production secrets provider stores | Required | Positive; runtime preflight still required |
-| Supabase live RLS validation | **Open unless target evidence is attached** | Blocks production and enterprise Go |
-| Stripe runtime validation | Required for paid billing evidence | Positive when current |
+| Production secrets provider stores | Complete as provider-store evidence; runtime preflight still required | Positive, not enough for Go |
+| Supabase live RLS validation | **Complete / passed** | Closed P0-RLS-003 |
+| Stripe runtime validation | Existing evidence Complete/passed | Positive, revalidate before billing change |
 | MFA / IdP runtime validation | **Exception / provider proof absent unless attached** | Blocks enterprise Go |
-| Upload scanner live proof | Required when uploads are enabled | Positive when current |
+| Upload scanner live proof | Existing evidence Complete/passed | Positive, revalidate before enterprise release/provider change |
 | Audit-chain live validation | **Exception / target validation required unless attached** | Blocks enterprise Go |
-| Observability readiness | Required as repository and runtime evidence | Positive; deployment smoke and drill proof still required |
-| Rollback target | Candidate-only unless dry-run evidence exists | Blocks Go until verified |
-| Incident/support owners | Required | Positive; drill/sign-off remains required |
-| External review | **Open / not_started unless real report is attached** | Blocks enterprise pilot/procurement |
+| Observability readiness | Complete as repository evidence; deployment smoke/drill proof pending | Positive, not enough for Go |
+| Rollback target | **Open until `rollback-dry-run-validation.json` is Complete/passed** | Blocks Go |
+| Incident/support owners | Assigned | Positive; drill/sign-off remains required |
+| External review | **Open / not_started until real report is attached** | Blocks enterprise pilot/procurement |
 
 ## Evidence still blocking enterprise Go
 
@@ -79,11 +82,8 @@ This checklist records the evidence required before EuroComply can be represente
 | --- | --- | --- |
 | Branch protection | Evidence is `Exception`, not `Complete` | Blocks enterprise Go |
 | Required checks | Must be confirmed in GitHub Settings → Rulesets/Branches → main | Blocks enterprise Go |
-| Lockfile | `package-lock.json` root metadata must match `package.json` | Blocks CI / enterprise Go |
-| Secret scanning | Strict public scanning must be enabled and fail on real values | Blocks CI / enterprise Go |
-| Final validation | Exact final validation runner output must be attached | Blocks all Go paths |
-| Deployment smoke | Deployment URL functional smoke must be attached | Blocks production/public/enterprise Go |
-| RLS live validation | Target-environment tenant-isolation evidence must be attached | Blocks production and enterprise Go |
+| Final validation | Exact final validation runner output must be attached for promoted commit | Blocks all Go paths |
+| Deployment smoke | Real deployment URL functional smoke must be attached | Blocks production/public/enterprise Go |
 | MFA/IdP | Real provider runtime proof must be attached | Blocks enterprise Go |
 | Audit chain | Target live validation must be attached | Blocks enterprise Go |
 | External review | Real external review evidence must be attached | Blocks enterprise pilot/procurement |
@@ -91,6 +91,6 @@ This checklist records the evidence required before EuroComply can be represente
 
 ## Release decision
 
-**Final decision: No-Go for enterprise.**
+**Final decision: No-Go for production / enterprise.**
 
-Repository-side security policy, branch-protection evidence contract, direct-push risk documentation, and lockfile alignment gate are now represented in code/docs. Enterprise release remains blocked until GitHub branch protection evidence is `Complete`, `package-lock.json` aligns with `package.json`, and the exact release commit has green Full Security Suite plus runtime/release evidence.
+Repository-side gates are stronger after the P0 evidence wiring work, and Supabase RLS is no longer an open blocker. The project is still not production-ready or enterprise-ready until the remaining P0 runtime evidence is generated from real target environments and the strict gates pass without Open or Exception evidence.

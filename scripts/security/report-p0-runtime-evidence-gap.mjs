@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const strict = process.argv.includes('--strict');
+const finalValidationInProgress = process.env.FINAL_VALIDATION_IN_PROGRESS === 'true';
 const registerPath = path.join('docs', 'security', 'P0_RUNTIME_EVIDENCE_REGISTER.md');
 const runtimeDir = path.join('docs', 'security', 'evidence', 'runtime');
 const satisfiedStatuses = new Set(['Complete']);
@@ -21,7 +22,7 @@ const requiredRuntimeItems = [
   ['Stripe billing runtime validation', 'stripe-billing-validation.json'],
   ['Observability readiness', 'observability-readiness.json'],
   ['Rollback owner and rollback target', 'rollback-dry-run-validation.json'],
-];
+].filter(([item]) => !(finalValidationInProgress && item === 'Final validation runner'));
 
 function fail(message) {
   console.error(`P0 runtime evidence gap report failed: ${message}`);
@@ -51,6 +52,7 @@ const report = {
     percentSatisfied: Math.round(((results.length - missing.length) / results.length) * 100),
     percentMissing: Math.round((missing.length / results.length) * 100),
     strictEnforced: strict,
+    finalValidationInProgress,
   },
   missing,
   results,

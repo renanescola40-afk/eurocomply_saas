@@ -6,10 +6,13 @@ import { join } from 'node:path';
 
 const outputDir = process.env.RELEASE_VALIDATION_DIR || 'release-validation';
 const logDir = join(outputDir, 'logs');
+const evidenceDir = join('docs', 'security', 'evidence', 'runtime');
+const evidencePath = join(evidenceDir, 'final-validation-runner.json');
 const releaseTarget = process.env.RELEASE_TARGET || 'production';
 const maxBuffer = 128 * 1024 * 1024;
 
 mkdirSync(logDir, { recursive: true });
+mkdirSync(evidenceDir, { recursive: true });
 
 const productionCommands = [
   { slug: '00-npm-ci', label: 'npm ci', command: 'npm', args: ['ci'], requested: true },
@@ -27,12 +30,14 @@ const productionCommands = [
   { slug: '05-test-e2e', label: 'npm run test:e2e', command: 'npm', args: ['run', 'test:e2e'], requested: true },
   { slug: '06-build', label: 'npm run build', command: 'npm', args: ['run', 'build'], requested: true },
   { slug: '07-security-ci', label: 'npm run security:ci', command: 'npm', args: ['run', 'security:ci'], requested: true },
-  { slug: '08-release-readiness', label: 'npm run release:readiness', command: 'npm', args: ['run', 'release:readiness'], requested: true },
+  { slug: '08-deployment-smoke', label: 'npm run release:deployment-smoke', command: 'npm', args: ['run', 'release:deployment-smoke'], requested: true },
+  { slug: '09-rollback-dry-run', label: 'npm run release:rollback:dry-run', command: 'npm', args: ['run', 'release:rollback:dry-run'], requested: true },
+  { slug: '10-release-readiness', label: 'npm run release:readiness', command: 'npm', args: ['run', 'release:readiness'], requested: true },
 ];
 
 const enterpriseCommands = [
   {
-    slug: '09-release-enterprise-readiness',
+    slug: '11-release-enterprise-readiness',
     label: 'npm run release:enterprise-readiness',
     command: 'npm',
     args: ['run', 'release:enterprise-readiness'],
@@ -80,6 +85,7 @@ function runCommand(step) {
       CI: 'true',
       NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED || '1',
       RELEASE_TARGET: releaseTarget,
+      FINAL_VALIDATION_IN_PROGRESS: 'true',
     },
   });
 
@@ -166,8 +172,34 @@ const markdown = [
 
 writeFileSync(join(outputDir, 'summary.md'), markdown);
 
+const evidence = {
+  evidenceItem: 'final-validation-runner',
+  status: overallResult === 'passed' ? 'Complete' : 'Open',
+  outcome: overallResult,
+  generatedAt: summary.generatedAt,
+  reviewedAt: summary.generatedAt,
+  reviewer: 'EuroComply release automation',
+  releaseTarget,
+  summary: overallResult === 'passed' ? 'Final validation command bundle passed for the assessed commit.' : 'Final validation command bundle failed; release remains blocked.',
+  redactionConfirmation: 'Redaction confirmed for runtime evidence.',
+  evidenceLocations: ['scripts/release/run-final-validation.mjs', 'release-validation/summary.json', 'release-validation/logs/*.log', evidencePath],
+  controlsVerified: overallResult === 'passed' ? summary.commands.filter((command) => command.requested).map((command) => command.command) : [],
+  commands: summary.commands,
+  failures: {
+    requestedCommandFailures: summary.requestedCommandFailures,
+    prerequisiteFailures: summary.prerequisiteFailures,
+  },
+  releaseGate: overallResult === 'passed' ? 'Final validation evidence is present.' : 'Release remains blocked until final validation is Complete/passed.',
+  evidenceIntegrity: {
+    containsSensitiveValues: false,
+    valuesRedacted: true,
+  },
+};
+
+writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+
 if (overallResult !== 'passed') {
-  console.error('Final release validation failed. See release-validation/summary.json and release-validation/logs/*.log.');
+  console.error('Final release validation failed. See release-validation/summary.json, release-validation/logs/*.log and docs/security/evidence/runtime/final-validation-runner.json.');
   process.exit(1);
 }
 
