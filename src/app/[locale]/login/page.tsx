@@ -70,7 +70,7 @@ export default function LoginPage() {
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const pageCopy = activeLocale === 'pt' ? copy.pt : copy.en;
   const afterSignInUrl = getSafeNextPath(searchParams.get('next'), activeLocale);
-  const signUpUrl = `/${activeLocale}/signup?next=${encodeURIComponent(afterSignInUrl)}`;
+  const signUpUrl = `/${activeLocale}/signup`;
   const publicErrorCode = searchParams.has('error')
     ? normalizePublicAuthErrorCode(searchParams.get('error'), 'email_sign_in_failed')
     : null;
