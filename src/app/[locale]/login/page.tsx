@@ -50,16 +50,17 @@ function getAuthSuccessHref(locale: string) {
 
 function getSafeNextPath(next: string | null, locale: string) {
   const fallback = getAuthSuccessHref(locale);
+  const normalizedNext = next?.trim();
 
-  if (!next || next.includes('://') || next.startsWith('//')) {
+  if (!normalizedNext || normalizedNext.length > 240 || normalizedNext.includes('://') || normalizedNext.startsWith('//')) {
     return fallback;
   }
 
-  if (!next.startsWith(`/${locale}/dashboard`) && !next.startsWith(`/${locale}/onboarding`)) {
+  if (!normalizedNext.startsWith(`/${locale}/onboarding`)) {
     return fallback;
   }
 
-  return next;
+  return normalizedNext;
 }
 
 export default function LoginPage() {
@@ -69,6 +70,7 @@ export default function LoginPage() {
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const pageCopy = activeLocale === 'pt' ? copy.pt : copy.en;
   const afterSignInUrl = getSafeNextPath(searchParams.get('next'), activeLocale);
+  const signUpUrl = `/${activeLocale}/signup?next=${encodeURIComponent(afterSignInUrl)}`;
   const publicErrorCode = searchParams.has('error')
     ? normalizePublicAuthErrorCode(searchParams.get('error'), 'email_sign_in_failed')
     : null;
@@ -136,7 +138,7 @@ export default function LoginPage() {
             <div className="rounded-[1.5rem] bg-white p-2 text-black shadow-[0_20px_70px_rgba(0,0,0,.45)]">
               <SignIn
                 routing="hash"
-                signUpUrl={`/${activeLocale}/signup`}
+                signUpUrl={signUpUrl}
                 fallbackRedirectUrl={afterSignInUrl}
                 forceRedirectUrl={afterSignInUrl}
                 appearance={{
@@ -153,7 +155,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <Link href={`/${activeLocale}/signup`} className="mt-5 block text-center text-sm font-medium text-white/55 transition hover:text-white">
+            <Link href={signUpUrl} className="mt-5 block text-center text-sm font-medium text-white/55 transition hover:text-white">
               {pageCopy.signup}
             </Link>
           </div>

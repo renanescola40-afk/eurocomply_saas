@@ -201,8 +201,7 @@ export default clerkMiddleware(async (auth, req) => {
     const locale = pathname.split('/')[1];
     const isPublic = isPublicRoute(pathname, locale);
     const isMarketingHome = shouldCheckMarketingHomeAuth(pathname, locale);
-    const isAuthEntryRoute = pathname === `/${locale}/login` || pathname === `/${locale}/signup`;
-    const shouldCheckAuth = !isPublic || isAuthEntryRoute || isMarketingHome;
+    const shouldCheckAuth = !isPublic || isMarketingHome;
     const { userId } = shouldCheckAuth ? await auth() : { userId: null };
     const isAuthenticated = Boolean(userId);
 
@@ -212,7 +211,7 @@ export default clerkMiddleware(async (auth, req) => {
       return withPrivateNoStore(NextResponse.redirect(loginUrl));
     }
 
-    if (isAuthenticated && (isAuthEntryRoute || isMarketingHome)) {
+    if (isAuthenticated && isMarketingHome) {
       const dashboardUrl = new URL(`/${locale}${AUTH_SUCCESS_PATH}`, req.url);
       return withPrivateNoStore(NextResponse.redirect(dashboardUrl));
     }
