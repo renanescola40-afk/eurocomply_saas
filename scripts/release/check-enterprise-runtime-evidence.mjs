@@ -30,15 +30,15 @@ function complete(path, evidence, label) {
   if (evidence.status !== 'Complete') { failures.push(`${label} must be Complete for enterprise release; current status is ${evidence.status ?? '<missing>'} (${path})`); return false; }
   return true;
 }
-function checkBasic(label, path) { return complete(path, readJson(path), label); }
+function basic(label, path) { return complete(path, readJson(path), label); }
 
-checkBasic('Production secrets provider evidence', files.productionSecrets);
+basic('Production secrets provider evidence', files.productionSecrets);
 const supabase = readJson(files.supabaseRls);
 if (complete(files.supabaseRls, supabase, 'Supabase live RLS evidence') && supabase.outcome !== 'passed') failures.push(`${files.supabaseRls} outcome must be passed`);
-checkBasic('Upload scanner evidence', files.uploadScanner);
-checkBasic('Stripe billing evidence', files.stripeBilling);
-checkBasic('Observability evidence', files.observability);
-checkBasic('Branch protection/ruleset evidence', files.branchProtection);
+basic('Upload scanner evidence', files.uploadScanner);
+basic('Stripe billing evidence', files.stripeBilling);
+basic('Observability evidence', files.observability);
+basic('Branch protection/ruleset evidence', files.branchProtection);
 
 const deployment = readJson(files.deploymentSmoke);
 if (complete(files.deploymentSmoke, deployment, 'Deployment smoke evidence')) {
@@ -68,9 +68,7 @@ if (complete(files.stepUpMfa, stepUp, 'MFA/IdP provider proof evidence')) {
 const auditChain = readJson(files.auditChain);
 if (complete(files.auditChain, auditChain, 'Audit-chain target-live evidence')) {
   const acceptance = auditChain.acceptanceCriteria ?? {};
-  for (const key of ['appendNormal', 'appendConcurrent', 'auditChainDetectsTampering', 'missingPreviousHashDetected', 'liveProofAttached']) {
-    if (acceptance[key] !== true) failures.push(`${files.auditChain} acceptanceCriteria.${key} must be true`);
-  }
+  for (const key of ['appendNormal', 'appendConcurrent', 'auditChainDetectsTampering', 'missingPreviousHashDetected', 'liveProofAttached']) if (acceptance[key] !== true) failures.push(`${files.auditChain} acceptanceCriteria.${key} must be true`);
 }
 
 const external = readJson(files.externalReview);
@@ -95,11 +93,7 @@ if (existsSync(registerPath)) {
     const [item, status] = row.split('|').map((cell) => cell.trim()).filter(Boolean);
     if (item && item !== 'Evidence item' && status !== 'Complete') failures.push(`${registerPath} still has non-Complete item: ${item} = ${status}`);
   }
-} else { failures.push(`${registerPath} is missing`); }
+} else failures.push(`${registerPath} is missing`);
 
-if (failures.length > 0) {
-  console.error('Enterprise runtime evidence gate failed:');
-  for (const failure of failures) console.error(`- ${failure}`);
-  process.exit(1);
-}
+if (failures.length > 0) { console.error('Enterprise runtime evidence gate failed:'); for (const failure of failures) console.error(`- ${failure}`); process.exit(1); }
 console.log('Enterprise runtime evidence gate passed.');

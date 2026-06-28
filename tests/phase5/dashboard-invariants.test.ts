@@ -23,6 +23,64 @@ describe('Phase 5 dashboard invariants', () => {
     expect(middleware).toContain('withPrivateNoStore');
   });
 
+  it('keeps authenticated marketing home routed through onboarding without interrupting auth entry pages', () => {
+    const middleware = read('src/middleware.ts');
+
+    expect(middleware).toContain("const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations'");
+    expect(middleware).toContain("const AUTH_SUCCESS_PATH = '/onboarding'");
+    expect(middleware).toContain('const shouldCheckAuth = !isPublic || isMarketingHome;');
+    expect(middleware).toContain('isAuthenticated && isMarketingHome');
+    expect(middleware).toContain('new URL(`/${locale}${AUTH_SUCCESS_PATH}`');
+    expect(middleware).not.toContain('isAuthenticated && (isAuthEntryRoute || isMarketingHome)');
+  });
+
+  it('keeps Clerk post-auth fallback URLs pointed at localized onboarding', () => {
+    const layout = read('src/app/[locale]/layout.tsx');
+
+    expect(layout).toContain('const onboardingUrl = `/${safeLocale}/onboarding`;');
+    expect(layout).toContain('signInFallbackRedirectUrl={onboardingUrl}');
+    expect(layout).toContain('signUpFallbackRedirectUrl={onboardingUrl}');
+  });
+
+  it('keeps login success fallback on onboarding while preserving safe next validation', () => {
+    const login = read('src/app/[locale]/login/page.tsx');
+
+    expect(login).toContain('function getAuthSuccessHref(locale: string)');
+    expect(login).toContain('return `/${locale}/onboarding`;');
+    expect(login).toContain('const fallback = getAuthSuccessHref(locale);');
+    expect(login).toContain('normalizedNext.length > 240');
+    expect(login).toContain("normalizedNext.includes('://')");
+    expect(login).toContain("normalizedNext.startsWith('//')");
+    expect(login).toContain('!normalizedNext.startsWith(`/${locale}/onboarding`)');
+    expect(login).toContain('const signUpUrl = `/${activeLocale}/signup?next=${encodeURIComponent(afterSignInUrl)}`;');
+    expect(login).toContain('signUpUrl={signUpUrl}');
+    expect(login).toContain('fallbackRedirectUrl={afterSignInUrl}');
+    expect(login).toContain('forceRedirectUrl={afterSignInUrl}');
+  });
+
+  it('keeps signup continuation defaulted to onboarding with open redirect guards', () => {
+    const signup = read('src/app/[locale]/signup/page.tsx');
+
+    expect(signup).toContain('function getOnboardingHref(locale: string, planId?: string)');
+    expect(signup).toContain('const baseHref = `/${locale}/onboarding`;');
+    expect(signup).toContain('const fallbackHref = getOnboardingHref(locale, planId);');
+    expect(signup).toContain("normalizedNext.startsWith('//')");
+    expect(signup).toContain("normalizedNext.includes('://')");
+    expect(signup).toContain('fallbackRedirectUrl={continuationHref}');
+    expect(signup).toContain('forceRedirectUrl={continuationHref}');
+  });
+
+  it('keeps onboarding as the organization decision point', () => {
+    const onboarding = read('src/app/[locale]/onboarding/page.tsx');
+
+    expect(onboarding).toContain('getCurrentUser');
+    expect(onboarding).toContain('getCurrentOrganizationForUser');
+    expect(onboarding).toContain('CreateOrganizationForm');
+    expect(onboarding).toContain('createOrganization(input, currentUser.id, currentUser.email)');
+    expect(onboarding).toContain('redirect(`/${locale}/dashboard/organizations${planQuery}`)');
+    expect(onboarding).toContain('redirect(`/${locale}/login?next=');
+  });
+
   it('keeps organization dashboard auth and onboarding routing in place', () => {
     const content = read('src/app/[locale]/dashboard/organizations/page.tsx');
 
@@ -68,6 +126,17 @@ describe('Phase 5 dashboard invariants', () => {
     expect(content).toContain("from('risks')");
     expect(content).toContain("from('vendors')");
     expect(content).toContain("from('documents')");
+  });
+
+  it('keeps dashboard data available once a user has an organization membership', () => {
+    const content = read('src/server/queries/organization-dashboard.ts');
+
+    expect(content).toContain('if (!organization)');
+    expect(content).toContain('return null');
+    expect(content).toContain('const fallbackEntitlements = getPlanEntitlements');
+    expect(content).toContain('withDashboardTimeout');
+    expect(content).toContain('return {');
+    expect(content).toContain('organization: normalizeOrganization(organization)');
   });
 
   it('exposes derived workflow readiness for organization workflows', () => {
