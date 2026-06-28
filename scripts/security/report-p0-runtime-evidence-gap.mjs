@@ -2,27 +2,25 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const strict = false;
+const strict = process.argv.includes('--strict');
 const registerPath = path.join('docs', 'security', 'P0_RUNTIME_EVIDENCE_REGISTER.md');
 const runtimeDir = path.join('docs', 'security', 'evidence', 'runtime');
-const satisfiedRegisterStatuses = new Set(['Complete']);
-
-const providerEvidenceName = ['production', 'sec' + 'rets', 'provider', 'stores'].join('-') + '.json';
-const providerEvidenceLabel = ['Production', 'sec' + 'rets', 'configured', 'in', 'provider', 'sec' + 'ret', 'stores'].join(' ');
+const satisfiedStatuses = new Set(['Complete']);
 
 const requiredRuntimeItems = [
-  {
-    label: providerEvidenceLabel,
-    evidenceFile: providerEvidenceName,
-  },
-  {
-    label: 'Supabase live RLS validation completed',
-    evidenceFile: 'supabase-live-rls-validation.json',
-  },
-  {
-    label: 'External security review or pentest completed',
-    evidenceFile: 'external-security-review-or-pentest.json',
-  },
+  ['Branch protection applied on `main`', 'branch-protection-required-checks.json'],
+  ['Required status checks configured', 'branch-protection-required-checks.json'],
+  ['Deployment URL functional verification', 'deployment-smoke-validation.json'],
+  ['Final validation runner', 'final-validation-runner.json'],
+  ['Production secrets configured in provider secret stores', 'production-secrets-provider-stores.json'],
+  ['Supabase live RLS validation completed', 'supabase-live-rls-validation.json'],
+  ['External security review or pentest completed', 'external-security-review-or-pentest.json'],
+  ['Audit-chain live validation', 'audit-chain-live-validation.json'],
+  ['Upload malware/content scanning validation', 'upload-malware-scan-validation.json'],
+  ['Step-up MFA / IdP validation', 'step-up-mfa-validation.json'],
+  ['Stripe billing runtime validation', 'stripe-billing-validation.json'],
+  ['Observability readiness', 'observability-readiness.json'],
+  ['Rollback owner and rollback target', 'rollback-dry-run-validation.json'],
 ];
 
 function fail(message) {
@@ -30,67 +28,35 @@ function fail(message) {
   process.exit(1);
 }
 
-if (!fs.existsSync(registerPath)) {
-  fail(`missing register: ${registerPath}`);
-}
+if (!fs.existsSync(registerPath)) fail(`missing register: ${registerPath}`);
 
-const register = fs.readFileSync(registerPath, 'utf8');
-const rows = register
+const rows = fs.readFileSync(registerPath, 'utf8')
   .split('\n')
   .filter((line) => line.startsWith('|') && !line.includes('---'))
   .map((line) => line.split('|').map((cell) => cell.trim()).filter(Boolean));
+const statusByItem = new Map(rows.filter(([item]) => item && item !== 'Evidence item').map(([item, status]) => [item.replace(/`/g, ''), status.replace(/`/g, '')]));
 
-const statusByItem = new Map();
-for (const row of rows) {
-  const [item, status] = row;
-  if (item && status && item !== 'Evidence item') {
-    statusByItem.set(item.replace(/`/g, ''), status.replace(/`/g, ''));
-  }
-}
-
-const results = requiredRuntimeItems.map((item) => {
-  const evidencePath = path.join(runtimeDir, item.evidenceFile);
-  const status = statusByItem.get(item.label) || 'Missing from register';
+const results = requiredRuntimeItems.map(([item, file]) => {
+  const evidencePath = path.join(runtimeDir, file);
+  const status = statusByItem.get(item.replace(/`/g, '')) || 'Missing from register';
   const evidenceFileExists = fs.existsSync(evidencePath);
-  const satisfiedStatus = satisfiedRegisterStatuses.has(status);
-
-  return {
-    item: item.label,
-    registerStatus: status,
-    evidenceFile: evidencePath,
-    evidenceFileExists,
-    satisfiedStatus,
-    satisfied: satisfiedStatus && evidenceFileExists,
-    note: status === 'Exception'
-      ? 'Exception remains pending in this gap report until validated by the item-specific runtime evidence checker.'
-      : undefined,
-  };
+  const satisfiedStatus = satisfiedStatuses.has(status);
+  return { item, registerStatus: status, evidenceFile: evidencePath, evidenceFileExists, satisfiedStatus, satisfied: satisfiedStatus && evidenceFileExists };
 });
-
-const satisfied = results.filter((entry) => entry.satisfied).length;
-const total = results.length;
 const missing = results.filter((entry) => !entry.satisfied);
-const percentSatisfied = Math.round((satisfied / total) * 100);
-const percentMissing = 100 - percentSatisfied;
-
 const report = {
   p0RuntimeEvidenceGap: {
-    satisfied,
-    total,
-    percentSatisfied,
-    percentMissing,
-    satisfiedRegisterStatuses: Array.from(satisfiedRegisterStatuses),
+    satisfied: results.length - missing.length,
+    total: results.length,
+    percentSatisfied: Math.round(((results.length - missing.length) / results.length) * 100),
+    percentMissing: Math.round((missing.length / results.length) * 100),
     strictEnforced: strict,
   },
-  missing: missing.map((entry) => ({
-    item: entry.item,
-    registerStatus: entry.registerStatus,
-    satisfiedStatus: entry.satisfiedStatus,
-    evidenceFile: entry.evidenceFile,
-    evidenceFileExists: entry.evidenceFileExists,
-    note: entry.note,
-  })),
+  missing,
   results,
 };
-
 console.log(JSON.stringify(report, null, 2));
+if (strict && missing.length > 0) {
+  console.error('Strict P0 runtime evidence gap enforcement failed. Complete real runtime evidence is required; exceptions/open placeholders do not pass.');
+  process.exit(1);
+}
