@@ -68,12 +68,12 @@ describe('Phase 5 dashboard invariants', () => {
     expect(signup).toContain("normalizedNext.startsWith('//')");
     expect(signup).toContain("normalizedNext.includes('://')");
     expect(signup).toContain('!normalizedNext.startsWith(`/${locale}/onboarding`)');
-    expect(signup).toContain('function getSignInHref(locale: string, continuationHref: string)');
-    expect(signup).toContain('`${baseHref}?next=${encodeURIComponent(continuationHref)}`');
+    expect(signup).toContain('const signInUrl = `/${activeLocale}/login`;');
     expect(signup).toContain('signInUrl={signInUrl}');
     expect(signup).toContain('fallbackRedirectUrl={continuationHref}');
     expect(signup).toContain('forceRedirectUrl={continuationHref}');
     expect(signup).not.toContain('signup?next=');
+    expect(signup).not.toContain('login?next=');
   });
 
   it('keeps onboarding as the organization decision point', () => {
