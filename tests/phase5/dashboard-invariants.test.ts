@@ -52,10 +52,11 @@ describe('Phase 5 dashboard invariants', () => {
     expect(login).toContain("normalizedNext.includes('://')");
     expect(login).toContain("normalizedNext.startsWith('//')");
     expect(login).toContain('!normalizedNext.startsWith(`/${locale}/onboarding`)');
-    expect(login).toContain('const signUpUrl = `/${activeLocale}/signup?next=${encodeURIComponent(afterSignInUrl)}`;');
+    expect(login).toContain('const signUpUrl = `/${activeLocale}/signup`;');
     expect(login).toContain('signUpUrl={signUpUrl}');
     expect(login).toContain('fallbackRedirectUrl={afterSignInUrl}');
     expect(login).toContain('forceRedirectUrl={afterSignInUrl}');
+    expect(login).not.toContain('signup?next=');
   });
 
   it('keeps signup continuation defaulted to onboarding with open redirect guards', () => {
@@ -66,8 +67,13 @@ describe('Phase 5 dashboard invariants', () => {
     expect(signup).toContain('const fallbackHref = getOnboardingHref(locale, planId);');
     expect(signup).toContain("normalizedNext.startsWith('//')");
     expect(signup).toContain("normalizedNext.includes('://')");
+    expect(signup).toContain('!normalizedNext.startsWith(`/${locale}/onboarding`)');
+    expect(signup).toContain('function getSignInHref(locale: string, continuationHref: string)');
+    expect(signup).toContain('`${baseHref}?next=${encodeURIComponent(continuationHref)}`');
+    expect(signup).toContain('signInUrl={signInUrl}');
     expect(signup).toContain('fallbackRedirectUrl={continuationHref}');
     expect(signup).toContain('forceRedirectUrl={continuationHref}');
+    expect(signup).not.toContain('signup?next=');
   });
 
   it('keeps onboarding as the organization decision point', () => {
