@@ -8,6 +8,7 @@ import { routing, locales, defaultLocale, COUNTRY_TO_LOCALE } from '@/lib/i18n/r
 const intlMiddleware = createIntlMiddleware(routing);
 const LOCALE_COOKIE = 'NEXT_LOCALE';
 const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations';
+const AUTH_SUCCESS_PATH = '/onboarding';
 const SENTRY_TUNNEL_PATH = '/monitoring';
 const CHECKOUT_PLAN_IDS = new Set(['starter', 'growth', 'enterprise', 'essential', 'professional', 'business', 'basic', 'pro']);
 
@@ -212,7 +213,7 @@ export default clerkMiddleware(async (auth, req) => {
     }
 
     if (isAuthenticated && (isAuthEntryRoute || isMarketingHome)) {
-      const dashboardUrl = new URL(`/${locale}${ORGANIZATION_DASHBOARD_PATH}`, req.url);
+      const dashboardUrl = new URL(`/${locale}${AUTH_SUCCESS_PATH}`, req.url);
       return withPrivateNoStore(NextResponse.redirect(dashboardUrl));
     }
 
