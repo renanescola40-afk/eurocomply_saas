@@ -44,17 +44,19 @@ const copy = {
   },
 } as const;
 
-function getDashboardHref(locale: string) {
-  return `/${locale}/dashboard/organizations`;
+function getAuthSuccessHref(locale: string) {
+  return `/${locale}/onboarding`;
 }
 
 function getSafeNextPath(next: string | null, locale: string) {
+  const fallback = getAuthSuccessHref(locale);
+
   if (!next || next.includes('://') || next.startsWith('//')) {
-    return getDashboardHref(locale);
+    return fallback;
   }
 
   if (!next.startsWith(`/${locale}/dashboard`) && !next.startsWith(`/${locale}/onboarding`)) {
-    return getDashboardHref(locale);
+    return fallback;
   }
 
   return next;
