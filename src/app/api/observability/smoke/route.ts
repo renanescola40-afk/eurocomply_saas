@@ -1,6 +1,7 @@
 import { reportError } from '@/lib/observability/report-error';
 import { logSecurityEvent, requestIdFromHeaders } from '@/server/observability/logger';
 import { validateBearerToken } from '@/server/security/bearer-token';
+import { requireTrustedOriginForMutation } from '@/server/security/api-guards';
 import { noStoreJson } from '@/server/security/no-store';
 import { checkDistributedRateLimit, getRateLimitHeaders } from '@/server/security/rate-limit';
 
@@ -18,6 +19,17 @@ function hasHealthcheckToken(request: Request) {
 
 export async function POST(request: Request) {
   const requestId = requestIdFromHeaders(request.headers);
+
+  const originDenied = requireTrustedOriginForMutation(request);
+  if (originDenied) {
+    logSecurityEvent('security_denied', {
+      requestId,
+      route: ROUTE,
+      reason: 'untrusted_origin',
+    });
+
+    return originDenied;
+  }
 
   if (!hasHealthcheckToken(request)) {
     logSecurityEvent('security_denied', {
