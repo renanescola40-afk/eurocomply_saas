@@ -208,6 +208,10 @@ Every Release Candidate must include a completed evidence package based on:
 * `docs/RELEASE_GO_NO_GO_CHECKLIST.md`
 * `docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md`
 
+The Go/No-Go checklist must be reviewed before release.
+
+A release may proceed only after Go or explicitly approved Conditional Go.
+
 The evidence package must include:
 
 * release identity
