@@ -52,7 +52,7 @@ function getSafeSignupContinuation(locale: string, nextPath: string | null, plan
 
   if (!normalizedNext) return fallbackHref;
   if (normalizedNext.length > 240 || normalizedNext.startsWith('//') || normalizedNext.includes('://')) return fallbackHref;
-  if (!normalizedNext.startsWith(`/${locale}/dashboard`) && !normalizedNext.startsWith(`/${locale}/onboarding`)) return fallbackHref;
+  if (!normalizedNext.startsWith(`/${locale}/onboarding`)) return fallbackHref;
   return normalizedNext;
 }
 
@@ -69,6 +69,7 @@ export default function SignupPage() {
     () => getSafeSignupContinuation(activeLocale, requestedNext, selectedPlan?.id),
     [activeLocale, requestedNext, selectedPlan?.id],
   );
+  const signInUrl = `/${activeLocale}/login`;
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
@@ -116,7 +117,7 @@ export default function SignupPage() {
             <div className="mt-6 rounded-[1.5rem] bg-white p-2 text-black shadow-[0_20px_70px_rgba(0,0,0,.45)]">
               <SignUp
                 routing="hash"
-                signInUrl={`/${activeLocale}/login?next=${encodeURIComponent(continuationHref)}`}
+                signInUrl={signInUrl}
                 fallbackRedirectUrl={continuationHref}
                 forceRedirectUrl={continuationHref}
                 appearance={{
@@ -133,7 +134,7 @@ export default function SignupPage() {
               />
             </div>
 
-            <Link href={`/${activeLocale}/login?next=${encodeURIComponent(continuationHref)}`} className="mt-5 block text-center text-sm font-medium text-white/55 transition hover:text-white">
+            <Link href={signInUrl} className="mt-5 block text-center text-sm font-medium text-white/55 transition hover:text-white">
               {pageCopy.login}
             </Link>
           </div>
