@@ -74,7 +74,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   const messages = await getMessages();
   const signInUrl = `/${safeLocale}/login`;
   const signUpUrl = `/${safeLocale}/signup`;
-  const dashboardUrl = `/${safeLocale}/dashboard/organizations`;
+  const onboardingUrl = `/${safeLocale}/onboarding`;
 
   return (
     <html lang={safeLocale} suppressHydrationWarning>
@@ -82,8 +82,8 @@ export default async function LocaleLayout({ children, params }: Props) {
         <ClerkProvider
           signInUrl={signInUrl}
           signUpUrl={signUpUrl}
-          signInFallbackRedirectUrl={dashboardUrl}
-          signUpFallbackRedirectUrl={dashboardUrl}
+          signInFallbackRedirectUrl={onboardingUrl}
+          signUpFallbackRedirectUrl={onboardingUrl}
         >
           <NextIntlClientProvider messages={messages}>
             <ThemeProvider
