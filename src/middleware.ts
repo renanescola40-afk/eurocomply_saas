@@ -9,6 +9,7 @@ const intlMiddleware = createIntlMiddleware(routing);
 const LOCALE_COOKIE = 'NEXT_LOCALE';
 const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations';
 const SENTRY_TUNNEL_PATH = '/monitoring';
+const CHECKOUT_PLAN_IDS = new Set(['starter', 'growth', 'enterprise', 'essential', 'professional', 'business', 'basic', 'pro']);
 
 const PUBLIC_ROUTES = [
   '/',
@@ -140,6 +141,25 @@ function getLegacyDiagnosticsRedirect(pathname: string, req: NextRequest) {
   return withPrivateNoStore(NextResponse.redirect(loginUrl));
 }
 
+function getCheckoutPlanRedirect(pathname: string, req: NextRequest) {
+  const segments = pathname.split('/').filter(Boolean);
+  const locale = locales.includes(segments[0] as 'en') ? segments[0] : null;
+
+  if (!locale || segments[1] !== 'checkout' || segments.length !== 2) {
+    return null;
+  }
+
+  const plan = req.nextUrl.searchParams.get('plan')?.trim().toLowerCase();
+
+  if (plan && CHECKOUT_PLAN_IDS.has(plan)) {
+    return null;
+  }
+
+  const pricingUrl = new URL(`/${locale}/pricing`, req.url);
+  pricingUrl.searchParams.set('checkout', 'select_plan');
+  return NextResponse.redirect(pricingUrl);
+}
+
 export default clerkMiddleware(async (auth, req) => {
   const pathname = req.nextUrl.pathname;
 
@@ -158,6 +178,11 @@ export default clerkMiddleware(async (auth, req) => {
   const legacyDiagnosticsRedirect = getLegacyDiagnosticsRedirect(pathname, req);
   if (legacyDiagnosticsRedirect) {
     return legacyDiagnosticsRedirect;
+  }
+
+  const checkoutPlanRedirect = getCheckoutPlanRedirect(pathname, req);
+  if (checkoutPlanRedirect) {
+    return checkoutPlanRedirect;
   }
 
   const normalizedLegacyPath = normalizeLegacyUndefinedPath(pathname);
