@@ -221,6 +221,7 @@ function checkCompleteDeploymentSmoke(file, evidence) {
       if (target.checks?.healthOk !== true) failures.push(`${file} targets[${index}] must prove /api/health ok`);
       if (target.checks?.readyProtected !== true) failures.push(`${file} targets[${index}] must prove /api/ready rejects anonymous access`);
       if (target.checks?.readyOk !== true) failures.push(`${file} targets[${index}] must prove /api/ready authenticated readiness`);
+      if (target.checks?.readyUsesProtectedCheck !== true) failures.push(`${file} targets[${index}] must prove /api/ready used the protected readiness check`);
     }
     return;
   }
@@ -236,7 +237,9 @@ function checkCompleteDeploymentSmoke(file, evidence) {
 }
 
 function commandPassed(result) {
-  return result?.passed === true || result?.exitCode === 0 || result?.exitStatus === 0 || result?.result === 'passed';
+  if (typeof result?.exitStatus === 'number') return result.exitStatus === 0;
+  if (typeof result?.exitCode === 'number') return result.exitCode === 0;
+  return result?.passed === true || result?.result === 'passed';
 }
 
 function checkCompleteFinalValidation(file, evidence) {
