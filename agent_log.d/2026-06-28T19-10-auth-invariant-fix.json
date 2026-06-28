@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-06-28T19:10:36Z",
+  "cycle": "scheduled_health_audit",
+  "status": "patch_prepared_waiting_for_ci",
+  "findings": [
+    "Open PR #583 is mergeable but its head still has RISCK COMPLY Security CI and Full Security Suite failures.",
+    "Main merge commit ff49e159295ceb7939b1985819e4bb6e4da9b1f0 has no workflow runs, so production remains unconfirmed.",
+    "The Phase 5 dashboard invariant test expects login success fallback to be localized onboarding without plan propagation and signup signInUrl to be a direct localized login URL.",
+    "Current main preserved safe open-redirect guards, but kept plan-aware login fallback and a helper-generated signup sign-in URL that conflict with the textual invariant test.",
+    "Cron remains limited to one daily Vercel cron and the internal maintenance aggregator is token-gated and fail-closed without an app URL.",
+    "Billing checkout and portal remain protected by auth, manage_billing RBAC, trusted mutation/rate limiting, step-up, safe return URL handling, and audit logging.",
+    "Enterprise demo remains environment gated and does not activate real entitlements."
+  ],
+  "actions_taken": [
+    "Prepared branch audit/auth-invariant-fix-20260628 from main.",
+    "Applied a minimal login route correction: removed plan-aware post-auth fallback while preserving safe next validation and the premium UI.",
+    "Applied a minimal signup route correction: made signInUrl a direct localized login URL while preserving plan-aware onboarding continuation and open-redirect guards.",
+    "Kept runtime API, billing, entitlement, demo, and cron behavior unchanged."
+  ],
+  "commits": [
+    "78e8221165640e4abcc0ceaec0642df8b0b36d16",
+    "08fe93157ba52d66c87d92f5b3795465044eb82d"
+  ],
+  "next_cycle_focus": [
+    "Open or verify the prepared PR and wait for CI/security gates.",
+    "Do not merge #583 while Full Security Suite remains red; prefer the minimal invariant patch if checks pass.",
+    "After merge, verify workflow runs on the exact main merge commit before production Go."
+  ]
+}
