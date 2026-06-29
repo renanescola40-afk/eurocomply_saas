@@ -6,9 +6,13 @@ import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 export const revalidate = 300;
 export const dynamic = 'force-static';
 
+type ContactSearchParams = {
+  intent?: string | string[];
+};
+
 type PageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ intent?: string | string[] }>;
+  searchParams?: Promise<ContactSearchParams>;
 };
 
 function first(value: string | string[] | undefined) {
@@ -45,10 +49,8 @@ function copyFor(locale: Locale, intent?: string) {
 }
 
 export default async function ContactPage({ params, searchParams }: PageProps) {
-  const [{ locale: requestedLocale }, resolvedSearchParams] = await Promise.all([
-    params,
-    searchParams ?? Promise.resolve({}),
-  ]);
+  const { locale: requestedLocale } = await params;
+  const resolvedSearchParams: ContactSearchParams = searchParams ? await searchParams : {};
   const activeLocale = (locales.includes(requestedLocale as Locale) ? requestedLocale : defaultLocale) as Locale;
   const intent = first(resolvedSearchParams.intent);
   const copy = copyFor(activeLocale, intent);
