@@ -6,7 +6,7 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { createNotification } from '@/server/queries/notifications';
 import { assertDocumentQuota } from '@/server/billing/entitlements';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
-import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { buildRateLimitSubjectFromRequest, checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
@@ -29,6 +29,8 @@ const STORAGE_BUCKET = CONTROLLED_DOCUMENT_STORAGE_BUCKET;
 // The controlled-documents bucket is the only storage bucket permitted for enterprise document uploads.
 const SIGNATURE_MISMATCH_REASON = 'signature_mismatch';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MULTIPART_UPLOAD_OVERHEAD_BYTES = 256 * 1024;
+const MAX_MULTIPART_UPLOAD_BYTES = MAX_UPLOAD_BYTES + MULTIPART_UPLOAD_OVERHEAD_BYTES;
 
 function safeDocumentTitle(name: string) {
   return sanitizeUploadFileName(name)
@@ -44,6 +46,24 @@ function blockedScanStatus(scan: MalwareScanResult) {
 
 function uuidOrNull(value: string | null | undefined) {
   return value && UUID_PATTERN.test(value) ? value : null;
+}
+
+function parseContentLength(request: NextRequest) {
+  const raw = request.headers.get('content-length');
+  if (!raw) return null;
+
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function rejectOversizedMultipartRequest(request: NextRequest) {
+  const contentLength = parseContentLength(request);
+
+  if (contentLength !== null && contentLength > MAX_MULTIPART_UPLOAD_BYTES) {
+    return noStoreJson({ error: 'Upload request is too large.' }, { status: 413 });
+  }
+
+  return null;
 }
 
 function preScanAuditMetadata(input: {
@@ -91,6 +111,9 @@ export async function POST(request: NextRequest) {
   const originDenied = assertTrustedOrigin(request);
   if (originDenied) return originDenied;
 
+  const oversizedRequest = rejectOversizedMultipartRequest(request);
+  if (oversizedRequest) return oversizedRequest;
+
   const user = await getCurrentUser();
 
   if (!user) {
@@ -114,7 +137,14 @@ export async function POST(request: NextRequest) {
   }
 
   const rateLimit = await checkDistributedRateLimit({
+    ...buildRateLimitSubjectFromRequest(request, {
+      userId: user.id,
+      organizationId: organization.id,
+      action: 'documents_upload',
+      route: '/api/documents/upload',
+    }),
     key: `documents:upload:${organization.id}:${user.id}`,
+    policy: 'upload',
     limit: 10,
     windowMs: 60 * 1000,
   });
@@ -388,7 +418,7 @@ export async function POST(request: NextRequest) {
     metadata: {
       ...scanMetadata,
       documentId: persistedDocument.id,
-      storagePath,
+      storagePathRecorded: true,
       name: title,
       uploadedBy,
     },
