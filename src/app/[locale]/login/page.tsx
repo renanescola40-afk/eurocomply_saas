@@ -14,14 +14,22 @@ const publicErrors = {
     auth_configuration_unavailable: 'Authentication is temporarily unavailable. Please try again later.',
     auth_exchange_failed: 'Could not complete sign-in. Please try again.',
     email_sign_in_failed: 'Could not complete sign-in. Please try again.',
+    auth_loading: 'Authentication is still loading. Please try again in a moment.',
+    auth_not_configured: 'Authentication is not configured for this deployment. Add the Clerk publishable and secret keys in Vercel, then redeploy.',
   },
   pt: {
     missing_oauth_code: 'O pedido de entrada expirou. Tente novamente.',
     auth_configuration_unavailable: 'A autenticação está temporariamente indisponível. Tente novamente mais tarde.',
     auth_exchange_failed: 'Não foi possível concluir a entrada. Tente novamente.',
     email_sign_in_failed: 'Não foi possível concluir a entrada. Tente novamente.',
+    auth_loading: 'A autenticação ainda está a carregar. Tente novamente dentro de alguns segundos.',
+    auth_not_configured: 'A autenticação não está configurada neste deployment. Adicione as chaves Clerk publishable e secret na Vercel e faça novo deploy.',
   },
 } as const;
+
+function clerkIsConfigured() {
+  return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim());
+}
 
 function getAuthSuccessHref(locale: string, planId?: string | null) {
   const baseHref = `/${locale}/onboarding`;
@@ -64,6 +72,40 @@ function getClerkErrorMessage(error: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+function getLoginCopy(activeLocale: Locale) {
+  return activeLocale === 'pt'
+    ? {
+        title: 'Entrar na RISCK COMPLY',
+        subtitle: 'Acesse o seu workspace de compliance de IA.',
+        google: 'Continuar com Google',
+        divider: 'ou entre com email',
+        email: 'Email profissional',
+        password: 'Senha',
+        submit: 'Entrar com segurança',
+        loading: 'A entrar...',
+        noAccount: 'Ainda não tem conta?',
+        create: 'Criar conta',
+        home: 'Voltar à landing',
+        contact: 'Falar com suporte',
+        fallbackError: 'Não foi possível entrar. Verifique os dados e tente novamente.',
+      }
+    : {
+        title: 'Sign in to RISCK COMPLY',
+        subtitle: 'Access your AI compliance workspace.',
+        google: 'Continue with Google',
+        divider: 'or sign in with email',
+        email: 'Work email',
+        password: 'Password',
+        submit: 'Sign in securely',
+        loading: 'Signing in...',
+        noAccount: 'No account yet?',
+        create: 'Create account',
+        home: 'Back to landing',
+        contact: 'Contact support',
+        fallbackError: 'Could not sign in. Check your details and try again.',
+      };
 }
 
 function AuthShell({ children, activeLocale }: { children: React.ReactNode; activeLocale: Locale }) {
@@ -115,65 +157,78 @@ function AuthShell({ children, activeLocale }: { children: React.ReactNode; acti
   );
 }
 
-function LoginPageContent() {
-  const params = useParams();
-  const searchParams = useSearchParams();
+type LoginFormProps = {
+  activeLocale: Locale;
+  afterSignInUrl: string;
+  signUpUrl: string;
+  publicErrorCode: keyof typeof publicErrors.en | null;
+};
+
+function LoginUnavailable({ activeLocale }: { activeLocale: Locale }) {
+  const copy = getLoginCopy(activeLocale);
+  const messages = activeLocale === 'pt' ? publicErrors.pt : publicErrors.en;
+
+  return (
+    <AuthShell activeLocale={activeLocale}>
+      <div className="text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-200/80">Secure access</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">{copy.title}</h1>
+        <p className="mt-3 text-sm leading-6 text-white/56">{copy.subtitle}</p>
+      </div>
+      <div className="mt-5 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-100" role="alert">
+        {messages.auth_not_configured}
+      </div>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <Link href={`/${activeLocale}`} className="inline-flex justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
+          {copy.home}
+        </Link>
+        <Link href={`/${activeLocale}/contact?intent=support`} className="inline-flex justify-center rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90">
+          {copy.contact}
+        </Link>
+      </div>
+    </AuthShell>
+  );
+}
+
+function LoginForm({ activeLocale, afterSignInUrl, signUpUrl, publicErrorCode }: LoginFormProps) {
   const router = useRouter();
   const { isLoaded, signIn, setActive } = useSignIn();
-  const locale = (params.locale as string) || 'pt';
-  const activeLocale = (locales.includes(locale as Locale) ? locale : 'pt') as Locale;
-  const requestedPlanId = searchParams.get('plan');
-  const afterSignInUrl = getSafeNextPath(searchParams.get('next'), activeLocale, requestedPlanId);
-  const signUpUrl = getSignUpHref(activeLocale, requestedPlanId, afterSignInUrl);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const publicErrorCode = searchParams.has('error')
-    ? normalizePublicAuthErrorCode(searchParams.get('error'), 'email_sign_in_failed')
-    : null;
   const messages = activeLocale === 'pt' ? publicErrors.pt : publicErrors.en;
-  const copy = activeLocale === 'pt'
-    ? {
-        title: 'Entrar na RISCK COMPLY',
-        subtitle: 'Acesse o seu workspace de compliance de IA.',
-        google: 'Continuar com Google',
-        divider: 'ou entre com email',
-        email: 'Email profissional',
-        password: 'Senha',
-        submit: 'Entrar com segurança',
-        loading: 'A entrar...',
-        noAccount: 'Ainda não tem conta?',
-        create: 'Criar conta',
-        fallbackError: 'Não foi possível entrar. Verifique os dados e tente novamente.',
-      }
-    : {
-        title: 'Sign in to RISCK COMPLY',
-        subtitle: 'Access your AI compliance workspace.',
-        google: 'Continue with Google',
-        divider: 'or sign in with email',
-        email: 'Work email',
-        password: 'Password',
-        submit: 'Sign in securely',
-        loading: 'Signing in...',
-        noAccount: 'No account yet?',
-        create: 'Create account',
-        fallbackError: 'Could not sign in. Check your details and try again.',
-      };
+  const copy = getLoginCopy(activeLocale);
 
   async function handleGoogleSignIn() {
-    if (!isLoaded) return;
+    if (!isLoaded || !signIn) {
+      setFormError(messages.auth_loading);
+      return;
+    }
+
+    setIsSubmitting(true);
     setFormError(null);
-    await signIn.authenticateWithRedirect({
-      strategy: 'oauth_google',
-      redirectUrl: `/${activeLocale}/oauth/complete`,
-      redirectUrlComplete: afterSignInUrl,
-    });
+
+    try {
+      await signIn.authenticateWithRedirect({
+        strategy: 'oauth_google',
+        redirectUrl: `/${activeLocale}/oauth/complete`,
+        redirectUrlComplete: afterSignInUrl,
+      });
+    } catch (error) {
+      setFormError(getClerkErrorMessage(error, messages.auth_exchange_failed));
+      setIsSubmitting(false);
+    }
   }
 
   async function handleEmailSignIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!isLoaded) return;
+
+    if (!isLoaded || !signIn || !setActive) {
+      setFormError(messages.auth_loading);
+      return;
+    }
+
     setIsSubmitting(true);
     setFormError(null);
 
@@ -209,10 +264,10 @@ function LoginPageContent() {
       <button
         type="button"
         onClick={handleGoogleSignIn}
-        disabled={!isLoaded || isSubmitting}
+        disabled={isSubmitting}
         className="mt-6 flex w-full items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {copy.google}
+        {isSubmitting ? copy.loading : copy.google}
       </button>
 
       <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.24em] text-white/35">
@@ -245,7 +300,7 @@ function LoginPageContent() {
         </label>
         <button
           type="submit"
-          disabled={!isLoaded || isSubmitting}
+          disabled={isSubmitting}
           className="w-full rounded-2xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? copy.loading : copy.submit}
@@ -259,6 +314,32 @@ function LoginPageContent() {
         </Link>
       </p>
     </AuthShell>
+  );
+}
+
+function LoginPageContent() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const locale = (params.locale as string) || 'pt';
+  const activeLocale = (locales.includes(locale as Locale) ? locale : 'pt') as Locale;
+  const requestedPlanId = searchParams.get('plan');
+  const afterSignInUrl = getSafeNextPath(searchParams.get('next'), activeLocale, requestedPlanId);
+  const signUpUrl = getSignUpHref(activeLocale, requestedPlanId, afterSignInUrl);
+  const publicErrorCode = searchParams.has('error')
+    ? normalizePublicAuthErrorCode(searchParams.get('error'), 'email_sign_in_failed')
+    : null;
+
+  if (!clerkIsConfigured()) {
+    return <LoginUnavailable activeLocale={activeLocale} />;
+  }
+
+  return (
+    <LoginForm
+      activeLocale={activeLocale}
+      afterSignInUrl={afterSignInUrl}
+      signUpUrl={signUpUrl}
+      publicErrorCode={publicErrorCode}
+    />
   );
 }
 

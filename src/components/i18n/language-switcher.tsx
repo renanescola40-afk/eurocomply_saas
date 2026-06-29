@@ -57,6 +57,7 @@ export function LanguageSwitcher({ currentLocale, variant = 'light', compact = f
       {locales.map((locale) => {
         const active = locale === currentLocale;
         const baseTargetPath = switchLocalePath(pathname, locale);
+        const mobileVisibility = compact && !active ? 'hidden sm:inline-flex' : 'inline-flex';
         return (
           <Link
             key={locale}
@@ -68,7 +69,7 @@ export function LanguageSwitcher({ currentLocale, variant = 'light', compact = f
                 window.location.assign(withCurrentLocationState(baseTargetPath));
               }
             }}
-            className={`rounded-full px-2.5 py-1.5 text-xs font-bold uppercase tracking-[0.18em] transition ${active ? (isDark ? 'bg-white text-black' : 'bg-foreground text-background') : isDark ? 'text-white/60 hover:bg-white/10 hover:text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            className={`${mobileVisibility} rounded-full px-2.5 py-1.5 text-xs font-bold uppercase tracking-[0.18em] transition ${active ? (isDark ? 'bg-white text-black' : 'bg-foreground text-background') : isDark ? 'text-white/60 hover:bg-white/10 hover:text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
             title={LOCALE_META[locale].nativeName}
             prefetch={false}
           >
