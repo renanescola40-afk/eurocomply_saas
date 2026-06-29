@@ -1,8 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
+import { useParams, useSearchParams } from 'next/navigation';
 import { SignUp } from '@clerk/nextjs';
 import { getBillingPlan } from '@/lib/billing/plans';
+import { locales, type Locale } from '@/lib/i18n/routing';
 
 function getOnboardingHref(locale: string, planId?: string) {
   const baseHref = `/${locale}/onboarding`;
@@ -28,11 +31,14 @@ function getSignInHref(locale: string, planId?: string) {
   return planId ? `${baseHref}?plan=${encodeURIComponent(planId)}` : baseHref;
 }
 
-export default function SignupPage() {
-  const activeLocale = 'pt';
-  const selectedPlanId = normalizePlanId(null);
+function SignupPageContent() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const locale = (params.locale as string) || 'pt';
+  const activeLocale = (locales.includes(locale as Locale) ? locale : 'pt') as Locale;
+  const selectedPlanId = normalizePlanId(searchParams.get('plan'));
   const selectedPlan = selectedPlanId ? getBillingPlan(selectedPlanId) : undefined;
-  const continuationHref = getSafeSignupContinuation(activeLocale, null, selectedPlan?.id);
+  const continuationHref = getSafeSignupContinuation(activeLocale, searchParams.get('next'), selectedPlan?.id);
   const signInUrl = getSignInHref(activeLocale, selectedPlan?.id);
 
   return (
@@ -41,6 +47,14 @@ export default function SignupPage() {
         <Link href={`/${activeLocale}`} className="mb-6 block text-center text-sm font-semibold text-white">
           RISCK COMPLY
         </Link>
+        {selectedPlan ? (
+          <div className="mb-4 rounded-2xl border border-blue-300/20 bg-blue-400/10 p-4 text-sm text-blue-50">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-200/80">
+              {activeLocale === 'pt' ? 'Plano selecionado' : 'Selected plan'}
+            </p>
+            <p className="mt-2 text-xl font-semibold tracking-tight">{selectedPlan.name}</p>
+          </div>
+        ) : null}
         <div className="rounded-[1.5rem] bg-white p-2 text-black">
           <SignUp
             routing="hash"
@@ -50,9 +64,17 @@ export default function SignupPage() {
           />
         </div>
         <Link href={signInUrl} className="mt-5 block text-center text-sm font-medium text-white/55 transition hover:text-white">
-          Sign in
+          {activeLocale === 'pt' ? 'Já tem conta? Entrar' : 'Already have an account? Sign in'}
         </Link>
       </section>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-[#050505]" />}>
+      <SignupPageContent />
+    </Suspense>
   );
 }
