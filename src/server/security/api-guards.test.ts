@@ -27,6 +27,12 @@ vi.mock('@/server/security/rbac', async () => {
 vi.mock('@/lib/security/rate-limit', () => ({
   checkDistributedRateLimit: mocks.checkDistributedRateLimit,
   buildRateLimitSubjectFromRequest: mocks.buildRateLimitSubjectFromRequest,
+  getRateLimitHeaders: () => ({
+    'Retry-After': '60',
+    'X-RateLimit-Limit': '1',
+    'X-RateLimit-Remaining': '0',
+    'X-RateLimit-Reset': String(Date.now() + 60_000),
+  }),
 }));
 
 import {
@@ -220,11 +226,11 @@ describe('central API security guards', () => {
   });
 
   it('does not leak internal error details', async () => {
-    const response = secureApiError(new Error('internal sentinel should be hidden'));
+    const response = secureApiError(new Error('database password leaked'));
     const body = await response.json();
 
     expect(response.status).toBe(500);
     expect(body).toEqual({ error: 'internal_server_error' });
-    expect(JSON.stringify(body)).not.toContain('internal sentinel');
+    expect(JSON.stringify(body)).not.toContain('database password leaked');
   });
 });
