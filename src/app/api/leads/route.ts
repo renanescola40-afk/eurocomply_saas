@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
-import { buildRateLimitSubjectFromRequest, checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { noStoreJson } from '@/server/security/no-store';
@@ -13,6 +13,9 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
 const WEBHOOK_TIMEOUT_MS = 3_500;
 const LEAD_CAPTURE_BODY_MAX_BYTES = 16 * 1024;
+
+const LEAD_CAPTURE_ROUTE = '/api/leads';
+const LEAD_CAPTURE_ACTION = 'lead_capture';
 
 type LeadRecord = {
   full_name: string;
@@ -37,12 +40,15 @@ function getClientHint(request: NextRequest) {
 }
 
 async function enforceLeadCaptureRateLimit(request: NextRequest) {
+  const ipHint = getClientHint(request);
   const result = await checkDistributedRateLimit({
-    ...buildRateLimitSubjectFromRequest(request, {
-      action: 'lead_capture',
-      route: '/api/leads',
-    }),
-    key: `lead_capture:${getClientHint(request)}`,
+    userId: null,
+    organizationId: null,
+    ip: ipHint,
+    userAgent: null,
+    action: LEAD_CAPTURE_ACTION,
+    route: LEAD_CAPTURE_ROUTE,
+    key: `lead_capture:${ipHint}`,
     policy: 'general-api',
     limit: RATE_LIMIT_MAX,
     windowMs: RATE_LIMIT_WINDOW_MS,
