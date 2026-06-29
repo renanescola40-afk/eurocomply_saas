@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-06-29T01:08:55Z",
+  "cycle": "scheduled_health_audit",
+  "status": "patched_waiting_for_ci",
+  "findings": [
+    "Main commit ff49e159295ceb7939b1985819e4bb6e4da9b1f0 still has no GitHub workflow runs returned by the connector.",
+    "Open PRs #582, #583, and #584 remain mergeable, but #584 had CI and Full Security Suite failures on the previous head.",
+    "The Phase 5 dashboard invariant test expects signup to expose a direct localized login URL and explicitly rejects login?next= continuation propagation.",
+    "Cron remains limited to one daily Vercel cron targeting the protected daily-maintenance aggregator.",
+    "Billing checkout and portal remain guarded by authenticated user, organization membership, RBAC, trusted mutation, rate limits, step-up, safe return URL handling, and audit logging.",
+    "Enterprise demo remains gated by NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO and is visual-only; plan query parameters are treated as review intent, not entitlements."
+  ],
+  "actions_taken": [
+    "Updated PR #584 branch audit/auth-invariant-fix-20260628 to set signup signInUrl back to the direct localized login path required by Phase 5 invariants.",
+    "Kept signup fallbackRedirectUrl and forceRedirectUrl on the safe onboarding continuation so signup completion still preserves validated plan/onboarding intent.",
+    "Left billing, demo, entitlement, API, and cron runtime behavior unchanged.",
+    "Recorded this correction in the append-only agent_log.d audit log because rewriting the large root agent_log.json safely through the connector would risk truncating historical entries."
+  ],
+  "commits": [
+    "789db838772c452627a4cbdafb77729f03c41f90"
+  ],
+  "next_cycle_focus": [
+    "Verify CI and Full Security Suite for the updated PR #584 head.",
+    "Merge #584 only after required checks pass and main receives confirming workflow runs.",
+    "Keep #583 blocked unless its larger auth UI diff is still needed and security checks pass."
+  ]
+}

@@ -4,7 +4,43 @@ import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { SignIn } from '@clerk/nextjs';
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
+import { normalizePublicAuthErrorCode } from '@/lib/auth/public-errors';
 import { locales, type Locale } from '@/lib/i18n/routing';
+
+const copy = {
+  en: {
+    eyebrow: 'Secure access',
+    title: 'Sign in to RISCK COMPLY',
+    subtitle: 'Continue to your audit-ready workspace with tenant isolated data, GDPR aligned controls and role-based access.',
+    signup: 'Create an account',
+    home: 'Back to public site',
+    panelTitle: 'Enterprise control room',
+    panelSubtitle: 'Designed for European compliance teams that need clean evidence, clear ownership and procurement-safe trust copy.',
+    assurances: ['Audit-ready evidence trails', 'Tenant isolated workspace model', 'GDPR aligned privacy workflows', 'Role-based access for teams'],
+    publicErrors: {
+      missing_oauth_code: 'The sign-in request expired. Please try again.',
+      auth_configuration_unavailable: 'Authentication is temporarily unavailable. Please try again later.',
+      auth_exchange_failed: 'We could not complete sign-in. Please try again.',
+      email_sign_in_failed: 'We could not complete email sign-in. Please try again.',
+    },
+  },
+  pt: {
+    eyebrow: 'Acesso seguro',
+    title: 'Entrar no RISCK COMPLY',
+    subtitle: 'Continue para o seu workspace audit-ready com dados tenant isolated, controlos GDPR aligned e role-based access.',
+    signup: 'Criar conta',
+    home: 'Voltar ao site público',
+    panelTitle: 'Sala de controlo enterprise',
+    panelSubtitle: 'Desenhado para equipas europeias de compliance que precisam de evidência limpa, ownership claro e linguagem segura para procurement.',
+    assurances: ['Trilhas de evidência audit-ready', 'Modelo de workspace tenant isolated', 'Workflows de privacidade GDPR aligned', 'Role-based access para equipas'],
+    publicErrors: {
+      missing_oauth_code: 'O pedido de entrada expirou. Tente novamente.',
+      auth_configuration_unavailable: 'A autenticação está temporariamente indisponível. Tente novamente mais tarde.',
+      auth_exchange_failed: 'Não foi possível concluir a entrada. Tente novamente.',
+      email_sign_in_failed: 'Não foi possível concluir a entrada por email. Tente novamente.',
+    },
+  },
+} as const;
 
 function getAuthSuccessHref(locale: string) {
   return `/${locale}/onboarding`;
@@ -30,6 +66,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const locale = (params.locale as string) || 'pt';
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+  const pageCopy = activeLocale === 'pt' ? copy.pt : copy.en;
   const afterSignInUrl = getSafeNextPath(searchParams.get('next'), activeLocale);
   const signUpUrl = `/${activeLocale}/signup`;
 
