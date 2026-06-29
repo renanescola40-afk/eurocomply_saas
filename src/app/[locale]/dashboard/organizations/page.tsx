@@ -65,17 +65,17 @@ function DashboardHomeOverviewSkeleton() {
       <div className="grid gap-4 md:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
           <div key={index} className="premium-card rounded-[1.5rem] p-5">
-            <div className="h-4 w-24 animate-pulse rounded-full bg-white/10" />
-            <div className="mt-4 h-8 w-20 animate-pulse rounded-xl bg-white/10" />
-            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/10" />
+            <div className="skeleton-pulse h-4 w-24 rounded-full bg-white/[0.055]" />
+            <div className="skeleton-pulse mt-4 h-8 w-20 rounded-xl bg-white/[0.055]" />
+            <div className="skeleton-pulse mt-3 h-4 w-full rounded-full bg-white/[0.055]" />
           </div>
         ))}
       </div>
       <div className="premium-card rounded-[2rem] p-6">
-        <div className="h-6 w-56 animate-pulse rounded-full bg-white/10" />
+        <div className="skeleton-pulse h-6 w-56 rounded-full bg-white/[0.055]" />
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-24 animate-pulse rounded-2xl bg-white/10" />
+            <div key={index} className="skeleton-pulse h-24 rounded-2xl bg-white/[0.055]" />
           ))}
         </div>
       </div>
