@@ -50,6 +50,6 @@ describe('public trust and marketing claim safety', () => {
 
     expect(source).toMatch(/without claiming legal guarantees or replacing counsel/i);
     expect(source).toMatch(/not certification, legal advice or a compliance guarantee/i);
-    expect(source).toMatch(/does not replace legal advice/i);
+    expect(source).toMatch(/does not replace a lawyer and does not guarantee legal compliance/i);
   });
 });
