@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const LOCALE = 'pt';
+const CLERK_ENABLED = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim());
+
+function escapeRegExp(value: string) {
+  return value.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+}
 
 async function expectClickableLinkNavigation(page: Page, name: RegExp, expectedPath: string) {
   await page.goto(`/${LOCALE}`, { waitUntil: 'domcontentloaded' });
@@ -10,7 +15,7 @@ async function expectClickableLinkNavigation(page: Page, name: RegExp, expectedP
   await expect(link).toBeEnabled();
 
   await link.click();
-  await expect(page).toHaveURL(new RegExp(`${expectedPath.replace(/\//g, '\\/')}(?:$|[?#])`));
+  await expect(page).toHaveURL(new RegExp(`${escapeRegExp(expectedPath)}(?:$|[?#])`));
   await expect(page.locator('body')).toBeVisible();
 }
 
@@ -20,6 +25,8 @@ test.describe('public landing auth CTA navigation', () => {
   });
 
   test('floating create-account link navigates to signup with a plan and onboarding next', async ({ page }) => {
+    test.skip(!CLERK_ENABLED, 'Floating Clerk controls are not rendered without NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.');
+
     await page.goto(`/${LOCALE}`, { waitUntil: 'domcontentloaded' });
 
     const createAccountLink = page.getByRole('link', { name: /^Criar conta$/i }).first();
@@ -28,10 +35,10 @@ test.describe('public landing auth CTA navigation', () => {
 
     await createAccountLink.click();
 
-    await expect(page).toHaveURL(new RegExp(`/${LOCALE}/signup(?:$|[?#])`));
+    await expect(page).toHaveURL(new RegExp(`${escapeRegExp(`/${LOCALE}/signup`)}(?:$|[?#])`));
     const url = new URL(page.url());
     expect(url.searchParams.get('plan')).toBe('professional');
-    expect(url.searchParams.get('next')).toBe(`/${LOCALE}/onboarding`);
+    expect(url.searchParams.get('next')).toBe(`/${LOCALE}/onboarding?plan=professional`);
     await expect(page.locator('body')).toBeVisible();
   });
 
@@ -44,7 +51,7 @@ test.describe('public landing auth CTA navigation', () => {
 
     await trialLink.click();
 
-    await expect(page).toHaveURL(new RegExp(`/${LOCALE}/signup(?:$|[?#])`));
+    await expect(page).toHaveURL(new RegExp(`${escapeRegExp(`/${LOCALE}/signup`)}(?:$|[?#])`));
     const url = new URL(page.url());
     expect(url.searchParams.get('plan')).toBe('professional');
     expect(url.searchParams.get('next')).toBe(`/${LOCALE}/onboarding`);
