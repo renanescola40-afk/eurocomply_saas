@@ -120,9 +120,9 @@ export async function POST(request: Request) {
       duplicate: result.duplicate ?? false,
       unsupported: result.unsupported ?? false,
     });
-  } catch (error) {
+  } catch (processingError) {
     await recordWebhookRouteAudit({ action: 'webhook_rejected', event, reason: 'processing_failed' });
-    reportError(error, { area: 'stripe_webhook_processing_failed' });
+    reportError(processingError, { area: 'stripe_webhook_processing_failed' });
 
     return noStoreJson({ error: 'webhook_processing_failed' }, { status: 500 });
   }
