@@ -13,9 +13,10 @@ function getSafeLocale(locale: string) {
 
 export function ClerkFloatingControls({ locale }: ClerkFloatingControlsProps) {
   const safeLocale = getSafeLocale(locale);
+  const onboardingUrl = `/${safeLocale}/onboarding`;
   const dashboardUrl = `/${safeLocale}/dashboard/organizations`;
-  const signInUrl = `/${safeLocale}/login?next=${encodeURIComponent(dashboardUrl)}`;
-  const signUpUrl = `/${safeLocale}/signup?next=${encodeURIComponent(dashboardUrl)}`;
+  const signInUrl = `/${safeLocale}/login?next=${encodeURIComponent(onboardingUrl)}`;
+  const signUpUrl = `/${safeLocale}/signup?plan=professional&next=${encodeURIComponent(onboardingUrl)}`;
 
   return (
     <div className="fixed bottom-5 left-5 z-[80] flex items-center gap-2 rounded-full border border-white/10 bg-black/70 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl print:hidden">
