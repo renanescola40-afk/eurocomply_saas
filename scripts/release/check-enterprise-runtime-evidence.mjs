@@ -44,6 +44,9 @@ const deployment = readJson(files.deploymentSmoke);
 if (complete(files.deploymentSmoke, deployment, 'Deployment smoke evidence')) {
   if (deployment.outcome !== 'passed') failures.push(`${files.deploymentSmoke} outcome must be passed`);
   if (!Array.isArray(deployment.targets) || deployment.targets.length === 0) failures.push(`${files.deploymentSmoke} must list smoke targets`);
+  if (!Array.isArray(deployment.smokeTargets?.passed) || !Array.isArray(deployment.smokeTargets?.failed)) failures.push(`${files.deploymentSmoke} must include normalized smokeTargets passed/failed arrays`);
+  if ((deployment.smokeTargets?.failed ?? []).length > 0) failures.push(`${files.deploymentSmoke} normalized smokeTargets.failed must be empty`);
+  if ((deployment.smokeTargets?.passed ?? []).length === 0) failures.push(`${files.deploymentSmoke} normalized smokeTargets.passed must not be empty`);
   for (const target of deployment.targets ?? []) {
     if (target?.passed !== true) failures.push(`${files.deploymentSmoke} has failing target ${target?.baseUrl ?? '<unknown>'}`);
     if (target?.checks?.healthOk !== true) failures.push(`${files.deploymentSmoke} missing /api/health proof`);
