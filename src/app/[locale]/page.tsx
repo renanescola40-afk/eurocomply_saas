@@ -1,4 +1,5 @@
 import { EnterpriseHome } from '@/components/marketing/enterprise-home';
+import { PublicLandingLinkNormalizer } from '@/components/marketing/public-landing-link-normalizer';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
 export const revalidate = 300;
@@ -12,5 +13,10 @@ export default async function HomePage({ params }: PageProps) {
   const { locale: requestedLocale } = await params;
   const locale = (locales.includes(requestedLocale as Locale) ? requestedLocale : defaultLocale) as Locale;
 
-  return <EnterpriseHome locale={locale} />;
+  return (
+    <>
+      <PublicLandingLinkNormalizer locale={locale} />
+      <EnterpriseHome locale={locale} />
+    </>
+  );
 }
