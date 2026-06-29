@@ -1,6 +1,9 @@
 import { z } from 'zod';
+import { reportError } from '@/lib/observability/report-error';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { requireCurrentUser } from '@/server/queries/auth';
 import { logAuditEvent } from './audit';
 
 const riskSchema = z.object({
@@ -16,66 +19,128 @@ const riskSchema = z.object({
   dueDate: z.string().optional().nullable(),
 });
 
-export async function createRisk(input: unknown, userId: string) {
-  const payload = riskSchema.parse(input);
-  await assertCurrentUserCan(payload.organizationId, userId, 'risks:write');
+const deleteRiskSchema = z.object({
+  riskId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+});
 
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('risks')
-    .insert({
-      organization_id: payload.organizationId,
-      title: payload.title,
-      description: payload.description,
-      category: payload.category,
-      likelihood: payload.likelihood,
-      impact: payload.impact,
-      mitigation: payload.mitigation,
-      status: payload.status,
-      owner_user_id: payload.ownerUserId,
-      due_date: payload.dueDate,
-      created_by: userId,
-    })
-    .select('*')
-    .single();
-
-  if (error) throw error;
-
-  await logAuditEvent({
-    organizationId: payload.organizationId,
-    actorUserId: userId,
-    action: 'risk.create',
-    entityType: 'risk',
-    entityId: data.id,
-    metadata: { title: payload.title, likelihood: payload.likelihood, impact: payload.impact },
-  });
-
-  return data;
+function actionError(message: string) {
+  return new Error(message);
 }
 
-export async function deleteRisk(riskId: string, organizationId: string, userId: string) {
-  await assertCurrentUserCan(organizationId, userId, 'risks:delete');
+async function requireRiskActionUser() {
+  return requireCurrentUser();
+}
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('risks')
-    .delete()
-    .eq('id', riskId)
-    .eq('organization_id', organizationId)
-    .select('id,title,likelihood,impact')
-    .single();
+export async function createRisk(input: unknown) {
+  const user = await requireRiskActionUser();
+  const payload = riskSchema.parse(input);
+  const context = { area: 'risk_create_action', organizationId: payload.organizationId, userId: user.id };
 
-  if (error) throw error;
+  await assertCurrentUserCan(payload.organizationId, user.id, 'risks:write');
 
-  await logAuditEvent({
-    organizationId,
-    actorUserId: userId,
-    action: 'risk.delete',
-    entityType: 'risk',
-    entityId: riskId,
-    metadata: { title: data.title, likelihood: data.likelihood, impact: data.impact },
+  const rateLimit = await checkDistributedRateLimit({
+    key: `risk:create:${payload.organizationId}:${user.id}`,
+    policy: 'general-api',
+    userId: user.id,
+    organizationId: payload.organizationId,
+    route: 'server-action:createRisk',
+    action: 'risk.create',
+    limit: 30,
+    windowMs: 60_000,
+    failureMode: 'fail-closed',
   });
 
-  return data;
+  if (!rateLimit.allowed) {
+    throw actionError('Too many risk changes. Please try again later.');
+  }
+
+  try {
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase
+      .from('risks')
+      .insert({
+        organization_id: payload.organizationId,
+        title: payload.title,
+        description: payload.description,
+        category: payload.category,
+        likelihood: payload.likelihood,
+        impact: payload.impact,
+        mitigation: payload.mitigation,
+        status: payload.status,
+        owner_user_id: payload.ownerUserId,
+        due_date: payload.dueDate,
+        created_by: user.id,
+      })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    await logAuditEvent({
+      organizationId: payload.organizationId,
+      actorUserId: user.id,
+      action: 'risk.create',
+      entityType: 'risk',
+      entityId: data.id,
+      metadata: { title: payload.title, likelihood: payload.likelihood, impact: payload.impact },
+    });
+
+    return data;
+  } catch (error) {
+    reportError(error, context);
+    throw actionError('Unable to create risk');
+  }
+}
+
+export async function deleteRisk(riskId: string, organizationId: string) {
+  const user = await requireRiskActionUser();
+  const payload = deleteRiskSchema.parse({ riskId, organizationId });
+  const context = { area: 'risk_delete_action', organizationId: payload.organizationId, riskId: payload.riskId, userId: user.id };
+
+  await assertCurrentUserCan(payload.organizationId, user.id, 'risks:delete');
+
+  const rateLimit = await checkDistributedRateLimit({
+    key: `risk:delete:${payload.organizationId}:${user.id}`,
+    policy: 'general-api',
+    userId: user.id,
+    organizationId: payload.organizationId,
+    route: 'server-action:deleteRisk',
+    action: 'risk.delete',
+    limit: 30,
+    windowMs: 60_000,
+    failureMode: 'fail-closed',
+  });
+
+  if (!rateLimit.allowed) {
+    throw actionError('Too many risk changes. Please try again later.');
+  }
+
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('risks')
+      .delete()
+      .eq('id', payload.riskId)
+      .eq('organization_id', payload.organizationId)
+      .select('id,title,likelihood,impact')
+      .single();
+
+    if (error) throw error;
+
+    await logAuditEvent({
+      organizationId: payload.organizationId,
+      actorUserId: user.id,
+      action: 'risk.delete',
+      entityType: 'risk',
+      entityId: payload.riskId,
+      metadata: { title: data.title, likelihood: data.likelihood, impact: data.impact },
+    });
+
+    return data;
+  } catch (error) {
+    reportError(error, context);
+    throw actionError('Unable to delete risk');
+  }
 }
