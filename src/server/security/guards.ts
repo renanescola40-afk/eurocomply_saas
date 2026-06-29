@@ -1,8 +1,8 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser, type CurrentOrganizationMembership } from '@/server/queries/current-organization';
 import { syncClerkOrganizationToSupabase } from '@/server/clerk/organization-sync';
+import { noStoreJson } from '@/server/security/no-store';
 
 export type AuthenticatedUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 
@@ -44,7 +44,7 @@ async function ensureActiveClerkOrganizationSynced(userId: string, activeClerkOr
   } catch (error) {
     console.warn('[organization] active_clerk_org_sync_failed', {
       clerkOrgId: activeClerkOrgId,
-      error: error instanceof Error ? error.message : 'unknown',
+      error: error instanceof Error ? error.name : 'unknown',
     });
   }
 }
@@ -85,10 +85,14 @@ export async function requireOrganizationContext(slug?: string): Promise<Authent
 
 export function guardErrorResponse(error: unknown) {
   if (error instanceof SecurityGuardError) {
-    return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    return noStoreJson({ error: error.message, code: error.code }, { status: error.status });
   }
 
-  return NextResponse.json({ error: 'Unexpected server error' }, { status: 500 });
+  console.error('[security-guard] guard_failed', {
+    error: error instanceof Error ? error.name : 'unknown',
+  });
+
+  return noStoreJson({ error: 'Unexpected server error' }, { status: 500 });
 }
 
 export function assertSameOrganization(resourceOrganizationId: string | null | undefined, organizationId: string) {

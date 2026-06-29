@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { csvDownloadResponse } from '@/lib/exports/csv';
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
@@ -8,6 +7,7 @@ import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { assertCsvExportsEnabled } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
+import { noStoreJson } from '@/server/security/no-store';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 
 const VENDORS_CSV_HEADER = ['Name', 'Category', 'Risk level', 'Review status', 'Created at', 'Updated at'];
@@ -46,6 +46,11 @@ export async function GET() {
 
   const rateLimit = await checkDistributedRateLimit({
     key: `export:vendors:${organization.id}:${user.id}`,
+    policy: 'export',
+    userId: user.id,
+    organizationId: organization.id,
+    action: 'export_vendors_csv',
+    route: '/api/reports/vendors.csv',
     limit: 10,
     windowMs: 60_000,
   });
@@ -76,7 +81,7 @@ export async function GET() {
 
   if (error) {
     reportError(new Error('Vendors CSV export failed'), { area: 'vendors_csv_export', organizationId: organization.id, userId: user.id, code: error.code ?? 'unknown' });
-    return NextResponse.json({ error: 'Unable to export vendors report' }, { status: 500 });
+    return noStoreJson({ error: 'Unable to export vendors report' }, { status: 500 });
   }
 
   const rows = [

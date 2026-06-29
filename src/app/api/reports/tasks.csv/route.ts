@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { csvDownloadResponse } from '@/lib/exports/csv';
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
@@ -6,6 +5,7 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
+import { noStoreJson } from '@/server/security/no-store';
 
 const TASKS_CSV_HEADER = ['Title', 'Category', 'Priority', 'Status', 'Due date', 'Created at', 'Updated at'];
 
@@ -21,6 +21,11 @@ export async function GET() {
   const { user, organization } = context;
   const rateLimit = await checkDistributedRateLimit({
     key: `export:tasks:${organization.id}:${user.id}`,
+    policy: 'export',
+    userId: user.id,
+    organizationId: organization.id,
+    action: 'export_tasks_csv',
+    route: '/api/reports/tasks.csv',
     limit: 10,
     windowMs: 60_000,
   });
@@ -51,8 +56,8 @@ export async function GET() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    reportError(error, { area: 'tasks_csv_export', organizationId: organization.id, userId: user.id });
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    reportError(new Error('Tasks CSV export failed'), { area: 'tasks_csv_export', organizationId: organization.id, userId: user.id, code: error.code ?? 'unknown' });
+    return noStoreJson({ error: 'Unable to export tasks report' }, { status: 500 });
   }
 
   const rows = [
