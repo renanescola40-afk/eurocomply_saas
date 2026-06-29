@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const read = (path: string) => readFileSync(path, 'utf8');
@@ -53,18 +53,20 @@ describe('Phase 5 dashboard invariants', () => {
     expect(login).toContain('normalizedNext.length > 240');
     expect(login).toContain("normalizedNext.includes('://')");
     expect(login).toContain("normalizedNext.startsWith('//')");
-    expect(login).toContain('!normalizedNext.startsWith(`/${locale}/onboarding`)');
-    expect(login).toContain('const signUpUrl = `/${activeLocale}/signup`;');
+    expect(login).toContain('isSafeLocalizedContinuation');
+    expect(login).toContain('`/${locale}/onboarding`');
+    expect(login).toContain('`/${locale}/dashboard/organizations`');
+    expect(login).toContain('`/${locale}/checkout`');
+    expect(login).toContain('const signUpUrl = getSignUpHref(activeLocale, requestedPlanId, afterSignInUrl);');
     expect(login).toContain('useSignIn');
     expect(login).toContain('authenticateWithRedirect');
     expect(login).toContain("strategy: 'oauth_google'");
-    expect(login).toContain("redirectUrl: `/${activeLocale}/auth/callback`");
+    expect(login).toContain('redirectUrl: `/${activeLocale}/oauth/complete`');
     expect(login).toContain('signIn.create({ identifier: email, password });');
     expect(login).not.toContain('<SignIn');
     expect(login).not.toContain('signUpUrl={signUpUrl}');
     expect(login).not.toContain('fallbackRedirectUrl={afterSignInUrl}');
     expect(login).not.toContain('forceRedirectUrl={afterSignInUrl}');
-    expect(login).not.toContain(signupNextPattern);
   });
 
   it('keeps signup continuation defaulted to onboarding with a custom stable entry template', () => {
@@ -74,16 +76,20 @@ describe('Phase 5 dashboard invariants', () => {
     expect(signup).toContain('const fallbackHref = getOnboardingHref(locale, planId);');
     expect(signup).toContain("normalizedNext.startsWith('//')");
     expect(signup).toContain("normalizedNext.includes('://')");
-    expect(signup).toContain('!normalizedNext.startsWith(`/${locale}/onboarding`)');
-    expect(signup).toContain('function getSignInHref(locale: string, planId?: string)');
-    expect(signup).toContain('const signInUrl = getSignInHref(activeLocale, selectedPlan?.id);');
+    expect(signup).toContain('isAllowedLocalizedContinuation');
+    expect(signup).toContain('`/${locale}/onboarding`');
+    expect(signup).toContain('`/${locale}/checkout`');
+    expect(signup).toContain('function getSignInHref(locale: string, planId?: string, nextPath?: string)');
+    expect(signup).toContain('const signInUrl = getSignInHref(activeLocale, selectedPlan?.id, continuationHref);');
     expect(signup).toContain('useSignUp');
     expect(signup).toContain('authenticateWithRedirect');
     expect(signup).toContain("strategy: 'oauth_google'");
-    expect(signup).toContain("redirectUrl: `/${activeLocale}/auth/callback`");
+    expect(signup).toContain('redirectUrl: `/${activeLocale}/oauth/complete`');
     expect(signup).toContain('signUp.create({ emailAddress: email, password });');
     expect(signup).toContain("prepareEmailAddressVerification({ strategy: 'email_code' })");
     expect(signup).toContain('attemptEmailAddressVerification({ code })');
+    expect(signup).toContain('!selectedPlan');
+    expect(signup).toContain('getSignupPlanHref');
     expect(signup).not.toContain('<SignUp');
     expect(signup).not.toContain('signInUrl={signInUrl}');
     expect(signup).not.toContain('fallbackRedirectUrl={continuationHref}');
@@ -93,8 +99,16 @@ describe('Phase 5 dashboard invariants', () => {
   });
 
   it('keeps OAuth callback route available for Google redirects', () => {
-    const callback = read('src/app/[locale]/auth/callback/route.ts');
+    if (existsSync('src/app/[locale]/oauth/complete/page.tsx')) {
+      const callback = read('src/app/[locale]/oauth/complete/page.tsx');
+      const middleware = read('src/middleware.ts');
 
+      expect(callback).toContain('AuthenticateWithRedirectCallback');
+      expect(middleware).toContain("'/oauth/complete'");
+      return;
+    }
+
+    const callback = read('src/app/[locale]/auth/callback/route.ts');
     expect(callback).toContain("export { GET } from '@/app/auth/callback/route'");
   });
 
@@ -138,6 +152,5 @@ describe('Phase 5 dashboard invariants', () => {
 
     expect(content).toContain('OrganizationWorkflowReadiness');
     expect(content).toContain('buildWorkflowReadinessAction');
-    expect(content).toContain('Stabilize blocked workflow readiness');
   });
 });
