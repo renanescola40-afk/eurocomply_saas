@@ -48,7 +48,7 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
       redirect(`/${locale}/login?next=${encodeURIComponent(`/${locale}/onboarding${planQuery}`)}`);
     }
 
-    await createOrganization(input, currentUser.id, currentUser.email);
+    await createOrganization(input);
     redirect(`/${locale}/dashboard/organizations${planQuery}`);
   }
 
