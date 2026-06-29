@@ -24,7 +24,10 @@ vi.mock('@/server/security/rbac', () => ({
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     }),
 }));
-vi.mock('@/lib/security/rate-limit', () => ({ checkDistributedRateLimit: mocks.checkDistributedRateLimit }));
+vi.mock('@/lib/security/rate-limit', () => ({
+  checkDistributedRateLimit: mocks.checkDistributedRateLimit,
+  buildRateLimitSubjectFromRequest: (_request: Request, subject = {}) => subject,
+}));
 vi.mock('@/server/queries/ai-systems', () => ({
   createAiSystem: mocks.createAiSystem,
   listAiSystems: mocks.listAiSystems,
