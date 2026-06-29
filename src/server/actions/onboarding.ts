@@ -51,7 +51,7 @@ async function resolveOrganizationId(input: { organizationId?: string; organizat
     return currentOrganization.organization_id;
   }
 
-  const organization = await createOrganization({ name: input.organizationName, slug: input.slug }, user.id, user.email);
+  const organization = await createOrganization({ name: input.organizationName, slug: input.slug });
   return organization.id as string;
 }
 
