@@ -14,6 +14,7 @@ import {
 import { createOrganization } from '@/server/actions/organizations';
 import { classifyAiSystem, normalizeAiRiskDomain, normalizeAiSystemRole, normalizeAiSystemStatus } from '@/server/ai-governance/classifier';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { requireCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
 type CurrentUserForOnboarding = {
@@ -23,8 +24,12 @@ type CurrentUserForOnboarding = {
 
 type SupabaseAdminClient = ReturnType<typeof createAdminClient>;
 
+function onboardingActionError(message: string) {
+  return new Error(message);
+}
+
 function isUuid(value: string | null | undefined) {
-  return Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value));
+  return Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value));
 }
 
 function getUuidUserId(userId: string) {
@@ -41,7 +46,7 @@ async function resolveOrganizationId(input: { organizationId?: string; organizat
 
   if (input.organizationId) {
     if (!currentOrganization || currentOrganization.organization_id !== input.organizationId) {
-      throw new Error('You do not have access to this organization.');
+      throw onboardingActionError('You do not have access to this organization.');
     }
 
     return input.organizationId;
@@ -100,7 +105,7 @@ async function updateOrganizationOnboardingProfile(
     .update(updatePayload)
     .eq('id', organizationId);
 
-  if (error) throw new Error(error.message);
+  if (error) throw onboardingActionError('Unable to update onboarding profile');
 }
 
 async function upsertFirstAiSystem(
@@ -140,7 +145,7 @@ async function upsertFirstAiSystem(
       .select('id')
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw onboardingActionError('Unable to update first AI system');
     return data.id as string;
   }
 
@@ -150,7 +155,7 @@ async function upsertFirstAiSystem(
     .select('id')
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw onboardingActionError('Unable to create first AI system');
   return data.id as string;
 }
 
@@ -169,7 +174,6 @@ async function createRecommendedDocumentRecords(
   const existingTitles = new Set(
     existingError ? [] : (existing ?? []).map((document) => String(document.title ?? document.name ?? '').toLowerCase()),
   );
-
   const missingDocuments = documents.filter((document) => !existingTitles.has(document.title.toLowerCase()));
 
   if (missingDocuments.length === 0) return { inserted: 0 };
@@ -195,7 +199,7 @@ async function createRecommendedDocumentRecords(
   }));
 
   const { error } = await supabase.from('documents').insert(rows);
-  if (error) throw new Error(error.message);
+  if (error) throw onboardingActionError('Unable to create recommended documents');
 
   return { inserted: rows.length };
 }
@@ -240,7 +244,7 @@ async function createInitialComplianceTasks(
   });
 
   const { error } = await supabase.from('compliance_tasks').insert(rows);
-  if (error) throw new Error(error.message);
+  if (error) throw onboardingActionError('Unable to create initial compliance tasks');
 
   return { inserted: rows.length };
 }
@@ -266,7 +270,7 @@ async function createTeamInvitations(
     .from('invitations')
     .upsert(rows, { onConflict: 'organization_id,email', ignoreDuplicates: true });
 
-  if (error) throw new Error(error.message);
+  if (error) throw onboardingActionError('Unable to create team invitations');
   return { inserted: rows.length };
 }
 
@@ -300,10 +304,11 @@ async function recordActivationRun(
     status: 'completed',
   });
 
-  if (error) throw new Error(error.message);
+  if (error) throw onboardingActionError('Unable to record onboarding activation');
 }
 
-export async function saveOnboardingDraft(input: OnboardingDraftInput, user: CurrentUserForOnboarding): Promise<OnboardingActionResult> {
+export async function saveOnboardingDraft(input: OnboardingDraftInput): Promise<OnboardingActionResult> {
+  const user = await requireCurrentUser();
   const payload = onboardingDraftSchema.parse(input);
   const supabase = createAdminClient();
   const organizationId = await resolveOrganizationId(payload, user);
@@ -323,9 +328,9 @@ export async function saveOnboardingDraft(input: OnboardingDraftInput, user: Cur
 
 export async function completeOnboardingActivation(
   input: OnboardingActivationInput,
-  user: CurrentUserForOnboarding,
   locale: string,
 ): Promise<OnboardingActionResult> {
+  const user = await requireCurrentUser();
   const payload = onboardingActivationSchema.parse(input);
   const supabase = createAdminClient();
   const organizationId = await resolveOrganizationId(payload, user);
@@ -344,7 +349,6 @@ export async function completeOnboardingActivation(
     biometricIdentification: payload.biometricIdentification,
     manipulativeOrExploitative: payload.manipulativeOrExploitative,
   });
-
   const recommendedDocuments = getRecommendedDocuments({
     riskLevel: classification.riskLevel,
     usesPersonalData: payload.usesPersonalData,
