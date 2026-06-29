@@ -103,6 +103,25 @@ describe('ready endpoint hardening', () => {
     });
   });
 
+  it('treats blank readiness environment values as missing', () => {
+    stubReadyEnvironment();
+    vi.stubEnv('STRIPE_SECRET_KEY', '   ');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', '\t');
+
+    expect(readyEnvironmentCheck()).toEqual(expect.arrayContaining([
+      {
+        name: 'stripe',
+        configured: false,
+        missingCount: 1,
+      },
+      {
+        name: 'redis',
+        configured: false,
+        missingCount: 1,
+      },
+    ]));
+  });
+
   it('fails without a healthcheck token', async () => {
     stubReadyEnvironment();
     const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
