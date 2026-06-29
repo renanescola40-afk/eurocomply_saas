@@ -50,9 +50,7 @@ function safeUrl(value: string) {
 }
 
 function getSafeFallbackUrl(value: string) {
-  const safe = safeUrl(value);
-  if (safe.includes('/invite/')) return 'Open Risck Comply and use the secure invitation button in this message.';
-  return safe;
+  return safeUrl(value);
 }
 
 function renderEmail(title: string, body: string, ctaLabel: string, ctaUrl: string, footer?: string) {
@@ -81,7 +79,7 @@ export function organizationCreatedEmail(input: OrganizationCreatedEmailInput): 
 
 export function memberInvitedEmail(input: MemberInvitedEmailInput): BuiltEmail {
   const invitedBy = input.invitedByName ? `${input.invitedByName} invited you` : 'You were invited';
-  return buildEmail({ template: 'member_invited', subject: `Invitation to join ${input.organizationName} on ${PRODUCT_NAME}`, title: `Join ${input.organizationName} on ${PRODUCT_NAME}`, body: `${escapeHtml(invitedBy)} to join ${escapeHtml(input.organizationName)} as ${escapeHtml(input.role)}.`, ctaLabel: 'Review invitation', ctaUrl: input.inviteUrl, textLines: [`Invitation to join ${input.organizationName} on ${PRODUCT_NAME}.`, `Role: ${input.role}`] });
+  return buildEmail({ template: 'member_invited', subject: `Invitation to join ${input.organizationName} on ${PRODUCT_NAME}`, title: `Join ${input.organizationName} on ${PRODUCT_NAME}`, body: `${escapeHtml(invitedBy)} to join ${escapeHtml(input.organizationName)} as ${escapeHtml(input.role)}.`, ctaLabel: 'Review invitation', ctaUrl: input.inviteUrl, textLines: [`Invitation to join ${input.organizationName} on ${PRODUCT_NAME}.`, `Role: ${input.role}`, 'Use the secure invitation link below. Do not forward this email.'] });
 }
 
 export function billingStartedEmail(input: BillingStartedEmailInput): BuiltEmail {
