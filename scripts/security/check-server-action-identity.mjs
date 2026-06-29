@@ -8,10 +8,10 @@ const actionsDir = path.join(root, 'src', 'server', 'actions');
 
 const failures = [];
 
-// Document upload and storage access are governed by dedicated upload/download
-// security scanners because the module performs specialized storage validation,
-// content scanning, tenant path assertions and signed URL hardening.
-const DEDICATED_SECURITY_SCANNER_MODULES = new Set(['src/server/actions/documents.ts']);
+const DEDICATED_SECURITY_SCANNER_MODULES = new Set([
+  'src/server/actions/documents.ts',
+  'src/server/actions/document-downloads.ts',
+]);
 
 function walk(dir) {
   if (!existsSync(dir)) return [];
