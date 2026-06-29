@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import { AlertTriangle, RefreshCw, Sparkles } from "lucide-react"
 
