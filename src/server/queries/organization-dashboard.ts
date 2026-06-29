@@ -14,15 +14,47 @@ import {
 
 const DASHBOARD_PREVIEW_PAGE_SIZE = 5;
 const DASHBOARD_PREVIEW_LAST_INDEX = DASHBOARD_PREVIEW_PAGE_SIZE - 1;
+const DASHBOARD_AI_SYSTEM_PREVIEW_SIZE = 25;
 
 type QueryError = {
   code?: string;
   message?: string;
 } | null;
 
+type CountResult = {
+  count: number | null;
+  error: QueryError;
+};
+
+export type DashboardMemberRole = 'owner' | 'admin' | 'member' | 'viewer' | 'compliance_manager';
+
 export type OrganizationWorkflowReadiness = {
   status: 'ready' | 'attention' | 'blocked';
   reasons: string[];
+};
+
+export type DashboardAiSystemSummary = {
+  total: number;
+  high: number;
+  unacceptable: number;
+  limited: number;
+  minimal: number;
+  previews: Array<{
+    id: string;
+    name?: string | null;
+    risk_level?: string | null;
+    lifecycle_status?: string | null;
+    vendor_name?: string | null;
+    owner_team?: string | null;
+    updated_at?: string | null;
+  }>;
+};
+
+export type DashboardAuditEventPreview = {
+  id: string;
+  action?: string | null;
+  entity_type?: string | null;
+  created_at?: string | null;
 };
 
 function isExpectedSchemaFallback(error: QueryError) {
@@ -56,16 +88,55 @@ function getEmptyDashboardSummary(): DashboardSummary {
   };
 }
 
+function getEmptyAiSystemSummary(): DashboardAiSystemSummary {
+  return {
+    total: 0,
+    high: 0,
+    unacceptable: 0,
+    limited: 0,
+    minimal: 0,
+    previews: [],
+  };
+}
+
+function safeCount(result: CountResult, label: string) {
+  if (result.error) {
+    logDashboardPreviewError(label, result.error);
+    return 0;
+  }
+
+  return result.count ?? 0;
+}
+
+export function normalizeDashboardMemberRole(role?: string | null): DashboardMemberRole {
+  if (role === 'owner' || role === 'admin' || role === 'member' || role === 'viewer' || role === 'compliance_manager') {
+    return role;
+  }
+
+  return 'viewer';
+}
+
+export function canManageDashboard(role?: string | null) {
+  const normalizedRole = normalizeDashboardMemberRole(role);
+
+  return normalizedRole === 'owner' || normalizedRole === 'admin' || normalizedRole === 'compliance_manager';
+}
+
+export function canManageDashboardBilling(role?: string | null) {
+  return normalizeDashboardMemberRole(role) === 'owner';
+}
+
 function getOrganizationWorkflowReadiness(
   summary: DashboardSummary,
   tasks: unknown[],
   topRisks: unknown[],
   vendorsRequiringReview: unknown[],
   documentsExpiringSoon: unknown[],
+  aiSystemSummary: DashboardAiSystemSummary = getEmptyAiSystemSummary(),
 ): OrganizationWorkflowReadiness {
   const reasons: string[] = [];
 
-  if (summary.criticalRisks > 0 || topRisks.length > 0) {
+  if (summary.criticalRisks > 0 || topRisks.length > 0 || aiSystemSummary.high > 0 || aiSystemSummary.unacceptable > 0) {
     reasons.push('risk-review-required');
   }
 
@@ -79,6 +150,10 @@ function getOrganizationWorkflowReadiness(
 
   if (summary.missingDocuments > 0 || documentsExpiringSoon.length > 0) {
     reasons.push('evidence-review-required');
+  }
+
+  if (aiSystemSummary.total === 0) {
+    reasons.push('ai-inventory-required');
   }
 
   if (summary.complianceScore < 55) {
@@ -163,7 +238,7 @@ async function listDashboardVendorsRequiringReview(organizationId: string) {
 
   const { data, error } = await supabase
     .from('vendors')
-    .select('id,name,risk_level,review_status,created_at,updated_at')
+    .select('id,name,risk_level,review_status,next_review_at,created_at,updated_at')
     .eq('organization_id', organizationId)
     .or('review_status.neq.approved,risk_level.eq.high')
     .order('updated_at', { ascending: true })
@@ -198,6 +273,57 @@ async function listDashboardDocumentsExpiringSoon(organizationId: string) {
   return data ?? [];
 }
 
+async function getDashboardAiSystemSummary(organizationId: string): Promise<DashboardAiSystemSummary> {
+  const supabase = tryCreateAdminClient();
+  if (!supabase) return getEmptyAiSystemSummary();
+
+  const [previewResult, totalResult, highResult, unacceptableResult, limitedResult, minimalResult] = await Promise.all([
+    supabase
+      .from('ai_systems')
+      .select('id,name,risk_level,lifecycle_status,vendor_name,owner_team,updated_at')
+      .eq('organization_id', organizationId)
+      .order('updated_at', { ascending: false })
+      .range(0, DASHBOARD_AI_SYSTEM_PREVIEW_SIZE - 1),
+    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'high'),
+    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'unacceptable'),
+    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'limited'),
+    supabase.from('ai_systems').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId).eq('risk_level', 'minimal'),
+  ]);
+
+  if (previewResult.error) {
+    logDashboardPreviewError('ai_systems_preview', previewResult.error);
+  }
+
+  return {
+    total: safeCount(totalResult, 'ai_systems_total'),
+    high: safeCount(highResult, 'ai_systems_high'),
+    unacceptable: safeCount(unacceptableResult, 'ai_systems_unacceptable'),
+    limited: safeCount(limitedResult, 'ai_systems_limited'),
+    minimal: safeCount(minimalResult, 'ai_systems_minimal'),
+    previews: previewResult.error ? [] : previewResult.data ?? [],
+  };
+}
+
+async function listDashboardAuditEvents(organizationId: string): Promise<DashboardAuditEventPreview[]> {
+  const supabase = tryCreateAdminClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('audit_logs')
+    .select('id,action,entity_type,created_at')
+    .eq('organization_id', organizationId)
+    .order('created_at', { ascending: false })
+    .range(0, DASHBOARD_PREVIEW_LAST_INDEX);
+
+  if (error) {
+    logDashboardPreviewError('audit_events', error);
+    return [];
+  }
+
+  return data ?? [];
+}
+
 export async function getOrganizationDashboardData(userId: string, organizationSlug?: string) {
   noStore();
 
@@ -208,14 +334,27 @@ export async function getOrganizationDashboardData(userId: string, organizationS
   }
 
   const emptySummary = getEmptyDashboardSummary();
+  const emptyAiSystemSummary = getEmptyAiSystemSummary();
   const fallbackEntitlements = getPlanEntitlements('essential');
 
-  const [summary, tasks, topRisks, vendorsRequiringReview, documentsExpiringSoon, entitlements, trendHistory] = await Promise.all([
+  const [
+    summary,
+    tasks,
+    topRisks,
+    vendorsRequiringReview,
+    documentsExpiringSoon,
+    aiSystemSummary,
+    auditEvents,
+    entitlements,
+    trendHistory,
+  ] = await Promise.all([
     withDashboardTimeout('summary', getDashboardSummary(organization.id), emptySummary),
     withDashboardTimeout('tasks', listDashboardTasks(organization.id), []),
     withDashboardTimeout('risks', listDashboardTopRisks(organization.id), []),
     withDashboardTimeout('vendors', listDashboardVendorsRequiringReview(organization.id), []),
     withDashboardTimeout('documents', listDashboardDocumentsExpiringSoon(organization.id), []),
+    withDashboardTimeout('ai_systems', getDashboardAiSystemSummary(organization.id), emptyAiSystemSummary),
+    withDashboardTimeout('audit_events', listDashboardAuditEvents(organization.id), []),
     withDashboardTimeout('entitlements', getOrganizationEntitlements(organization.id), fallbackEntitlements, 2_500),
     withDashboardTimeout<DashboardTrendSnapshot[]>('trend_history', getDashboardTrendHistory(organization.id), [], 2_500),
   ]);
@@ -224,16 +363,23 @@ export async function getOrganizationDashboardData(userId: string, organizationS
     console.warn('[dashboard] metric_snapshot_background_failed', { code: getErrorCode(error) });
   });
 
+  const currentUserRole = normalizeDashboardMemberRole(organization.role);
+
   return {
     organization: normalizeOrganization(organization),
     entitlements,
     summary,
-    workflowReadiness: getOrganizationWorkflowReadiness(summary, tasks, topRisks, vendorsRequiringReview, documentsExpiringSoon),
+    workflowReadiness: getOrganizationWorkflowReadiness(summary, tasks, topRisks, vendorsRequiringReview, documentsExpiringSoon, aiSystemSummary),
+    currentUserRole,
+    canManageWorkspace: canManageDashboard(currentUserRole),
+    canManageBilling: canManageDashboardBilling(currentUserRole),
     tasks,
     trendHistory,
     trendComparison: getDashboardTrendComparison(trendHistory),
     topRisks,
     vendorsRequiringReview,
     documentsExpiringSoon,
+    aiSystemSummary,
+    auditEvents,
   };
 }
