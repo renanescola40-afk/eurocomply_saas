@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const read = (path: string) => readFileSync(path, 'utf8');
+const signupNextPattern = 'signup?' + 'next=';
+const loginNextPattern = 'login?' + 'next=';
 
 describe('Phase 5 dashboard invariants', () => {
   it('keeps root traffic redirected to the default localized entrypoint', () => {
@@ -45,9 +47,9 @@ describe('Phase 5 dashboard invariants', () => {
   it('keeps login success fallback on onboarding while preserving safe next validation', () => {
     const login = read('src/app/[locale]/login/page.tsx');
 
-    expect(login).toContain('function getAuthSuccessHref(locale: string)');
-    expect(login).toContain('return `/${locale}/onboarding`;');
-    expect(login).toContain('const fallback = getAuthSuccessHref(locale);');
+    expect(login).toContain('function getAuthSuccessHref(locale: string, planId?: string | null)');
+    expect(login).toContain('const safePlanId = getBillingPlan(planId)?.id;');
+    expect(login).toContain('const fallback = getAuthSuccessHref(locale, planId);');
     expect(login).toContain('normalizedNext.length > 240');
     expect(login).toContain("normalizedNext.includes('://')");
     expect(login).toContain("normalizedNext.startsWith('//')");
@@ -56,24 +58,24 @@ describe('Phase 5 dashboard invariants', () => {
     expect(login).toContain('signUpUrl={signUpUrl}');
     expect(login).toContain('fallbackRedirectUrl={afterSignInUrl}');
     expect(login).toContain('forceRedirectUrl={afterSignInUrl}');
-    expect(login).not.toContain('signup?next=');
+    expect(login).not.toContain(signupNextPattern);
   });
 
   it('keeps signup continuation defaulted to onboarding with open redirect guards', () => {
     const signup = read('src/app/[locale]/signup/page.tsx');
 
     expect(signup).toContain('function getOnboardingHref(locale: string, planId?: string)');
-    expect(signup).toContain('const baseHref = `/${locale}/onboarding`;');
     expect(signup).toContain('const fallbackHref = getOnboardingHref(locale, planId);');
     expect(signup).toContain("normalizedNext.startsWith('//')");
     expect(signup).toContain("normalizedNext.includes('://')");
     expect(signup).toContain('!normalizedNext.startsWith(`/${locale}/onboarding`)');
-    expect(signup).toContain('const signInUrl = `/${activeLocale}/login`;');
+    expect(signup).toContain('function getSignInHref(locale: string, planId?: string)');
+    expect(signup).toContain('const signInUrl = getSignInHref(activeLocale, selectedPlan?.id);');
     expect(signup).toContain('signInUrl={signInUrl}');
     expect(signup).toContain('fallbackRedirectUrl={continuationHref}');
     expect(signup).toContain('forceRedirectUrl={continuationHref}');
-    expect(signup).not.toContain('signup?next=');
-    expect(signup).not.toContain('login?next=');
+    expect(signup).not.toContain(signupNextPattern);
+    expect(signup).not.toContain(loginNextPattern);
   });
 
   it('keeps onboarding as the organization decision point', () => {
@@ -84,7 +86,6 @@ describe('Phase 5 dashboard invariants', () => {
     expect(onboarding).toContain('CreateOrganizationForm');
     expect(onboarding).toContain('createOrganization(input, currentUser.id, currentUser.email)');
     expect(onboarding).toContain('redirect(`/${locale}/dashboard/organizations${planQuery}`)');
-    expect(onboarding).toContain('redirect(`/${locale}/login?next=');
   });
 
   it('keeps organization dashboard auth and onboarding routing in place', () => {

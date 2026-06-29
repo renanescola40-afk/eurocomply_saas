@@ -52,7 +52,6 @@
     "incremental": true,
 
     /* ─── Paths (mesmo do Next.js) ─────────────────────────────── */
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
