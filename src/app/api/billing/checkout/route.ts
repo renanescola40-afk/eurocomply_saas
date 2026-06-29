@@ -47,21 +47,11 @@ async function getOrganizationStripeCustomerId(organizationId: string) {
 
 export async function POST(request: Request) {
   try {
-    const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
-      maxBytes: CHECKOUT_JSON_MAX_BYTES,
-    }).catch(() => null);
-    const parsedBody = checkoutBodySchema.safeParse(body);
-    const normalizedPlan = parsedBody.success ? normalizeBillingPlanId(parsedBody.data.plan) : undefined;
-
-    if (!parsedBody.success || !normalizedPlan || !isSelfServePlan(normalizedPlan)) {
-      return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
-    }
-
     const user = await requireApiUser();
     const organization = await getCurrentOrganizationForUser(user.id);
 
     if (!organization?.id) {
-      return noStoreJson({ error: 'organization_required' }, { status: 400 });
+      return noStoreJson({ error: 'organization_required' }, { status: 403 });
     }
 
     const permission = await requirePermission({
@@ -79,6 +69,16 @@ export async function POST(request: Request) {
     });
 
     if (mutationDenied) return mutationDenied;
+
+    const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
+      maxBytes: CHECKOUT_JSON_MAX_BYTES,
+    }).catch(() => null);
+    const parsedBody = checkoutBodySchema.safeParse(body);
+    const normalizedPlan = parsedBody.success ? normalizeBillingPlanId(parsedBody.data.plan) : undefined;
+
+    if (!parsedBody.success || !normalizedPlan || !isSelfServePlan(normalizedPlan)) {
+      return noStoreJson({ error: 'invalid_plan' }, { status: 400 });
+    }
 
     const stepUp = await requireStepUpForRequest({
       request,
