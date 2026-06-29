@@ -11,6 +11,7 @@ const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations';
 const AUTH_SUCCESS_PATH = '/onboarding';
 const SENTRY_TUNNEL_PATH = '/monitoring';
 const CHECKOUT_PLAN_IDS = new Set(['starter', 'growth', 'enterprise', 'essential', 'professional', 'business', 'basic', 'pro']);
+const AUTH_ENTRY_ROUTES = new Set(['/login', '/signup', '/register']);
 
 const PUBLIC_ROUTES = [
   '/',
@@ -87,6 +88,10 @@ function isPublicRoute(pathname: string, locale: string): boolean {
     path.startsWith('/auth/') ||
     path.startsWith('/api/auth/')
   );
+}
+
+function isAuthEntryRoute(pathname: string, locale: string): boolean {
+  return AUTH_ENTRY_ROUTES.has(stripLocale(pathname, locale));
 }
 
 function shouldCheckMarketingHomeAuth(pathname: string, locale: string): boolean {
@@ -204,7 +209,8 @@ export default clerkMiddleware(async (auth, req) => {
     const locale = pathname.split('/')[1];
     const isPublic = isPublicRoute(pathname, locale);
     const isMarketingHome = shouldCheckMarketingHomeAuth(pathname, locale);
-    const shouldCheckAuth = !isPublic || isMarketingHome;
+    const isAuthEntry = isAuthEntryRoute(pathname, locale);
+    const shouldCheckAuth = !isPublic || isMarketingHome || isAuthEntry;
     const { userId } = shouldCheckAuth ? await auth() : { userId: null };
     const isAuthenticated = Boolean(userId);
 
@@ -214,7 +220,7 @@ export default clerkMiddleware(async (auth, req) => {
       return withPrivateNoStore(NextResponse.redirect(loginUrl));
     }
 
-    if (isAuthenticated && isMarketingHome) {
+    if (isAuthenticated && (isMarketingHome || isAuthEntry)) {
       const dashboardUrl = new URL(`/${locale}${AUTH_SUCCESS_PATH}`, req.url);
       return withPrivateNoStore(NextResponse.redirect(dashboardUrl));
     }
