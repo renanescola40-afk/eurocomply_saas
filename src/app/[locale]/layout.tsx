@@ -30,10 +30,13 @@ type Props = {
   params: Promise<{ locale: string }>;
 };
 
-type LocaleShellProps = {
+type SharedShellProps = {
   children: React.ReactNode;
-  locale: string;
   messages: Awaited<ReturnType<typeof getMessages>>;
+};
+
+type ClerkShellProps = SharedShellProps & {
+  locale: string;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -74,7 +77,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-function SharedShell({ children, locale, messages }: LocaleShellProps) {
+function SharedShell({ children, messages }: SharedShellProps) {
   return (
     <NextIntlClientProvider messages={messages}>
       <ThemeProvider
@@ -95,7 +98,7 @@ function SharedShell({ children, locale, messages }: LocaleShellProps) {
   );
 }
 
-function ClerkShell({ children, locale, messages }: LocaleShellProps) {
+function ClerkShell({ children, locale, messages }: ClerkShellProps) {
   const signInUrl = `/${locale}/login`;
   const signUpUrl = `/${locale}/signup`;
   const onboardingUrl = `/${locale}/onboarding`;
@@ -142,7 +145,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         {hasClerkPublishableKey ? (
           <ClerkShell locale={safeLocale} messages={messages}>{children}</ClerkShell>
         ) : (
-          <SharedShell locale={safeLocale} messages={messages}>{children}</SharedShell>
+          <SharedShell messages={messages}>{children}</SharedShell>
         )}
       </body>
     </html>
