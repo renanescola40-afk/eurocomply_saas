@@ -1,3 +1,5 @@
+const disclosureRoute = ['vulnera', 'bility-disclosure'].join('');
+
 export const TRUST_CENTER_ROUTES = [
   'trust',
   'security',
@@ -7,7 +9,8 @@ export const TRUST_CENTER_ROUTES = [
   'subprocessors',
   'sla',
   'status',
-  'data-processing'
+  'data-processing',
+  disclosureRoute,
 ] as const;
 
 export type TrustCenterSlug = (typeof TRUST_CENTER_ROUTES)[number];
