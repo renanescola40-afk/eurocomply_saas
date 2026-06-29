@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-06-29T19:00:00Z",
+  "scope": "public landing auth CTA button navigation",
+  "status": "implemented",
+  "changes": [
+    "Changed floating signed-out auth CTAs from direct dashboard continuations to the localized onboarding continuation.",
+    "Added a default professional plan to the floating create-account CTA so signup does not open in an unselected plan state.",
+    "Added Playwright coverage that actually clicks public landing auth and demo CTAs instead of only checking href presence."
+  ],
+  "validation_expected": [
+    "npm run quality:routes:e2e",
+    "npm run lint",
+    "npm run typecheck",
+    "npm run build"
+  ],
+  "manual_focus": [
+    "/pt -> Entrar should navigate to /pt/login with next=/pt/onboarding",
+    "/pt -> Criar conta should navigate to /pt/signup?plan=professional&next=/pt/onboarding",
+    "/pt -> Iniciar trial should navigate to /pt/signup?plan=professional&next=/pt/onboarding",
+    "/pt -> Marcar demo should navigate to /pt/contact?intent=demo"
+  ]
+}
