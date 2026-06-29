@@ -2,7 +2,6 @@
 
 import http from 'node:http';
 import https from 'node:https';
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
