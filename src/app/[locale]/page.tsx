@@ -1,6 +1,7 @@
 import { EnterpriseHome } from '@/components/marketing/enterprise-home';
 import { PublicLandingBusinessCheckoutNormalizer } from '@/components/marketing/public-landing-business-checkout-normalizer';
 import { PublicLandingLinkNormalizer } from '@/components/marketing/public-landing-link-normalizer';
+import { PublicLandingMobileHeaderGuard } from '@/components/marketing/public-landing-mobile-header-guard';
 import { PublicLandingSignupPlanNormalizer as SignupPlanNormalizer } from '@/components/marketing/public-landing-signup-plan-normalizer';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
@@ -20,6 +21,7 @@ export default async function HomePage({ params }: PageProps) {
       <PublicLandingBusinessCheckoutNormalizer locale={locale} />
       <PublicLandingLinkNormalizer locale={locale} />
       <SignupPlanNormalizer locale={locale} />
+      <PublicLandingMobileHeaderGuard />
       <EnterpriseHome locale={locale} />
     </>
   );
