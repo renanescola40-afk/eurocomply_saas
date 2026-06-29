@@ -33,7 +33,7 @@ export default async function RisckComplyHomePage({ params }: { params: { locale
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.18),_transparent_32%),linear-gradient(180deg,_hsl(var(--background)),_hsl(var(--muted)/0.34))]">
-      <DashboardCommandNavigation locale={params.locale} activePage="RISCK COMPLY" />
+      <DashboardCommandNavigation locale={params.locale} activePage="Risck Comply" />
 
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 md:px-8 md:py-12">
         <section className="relative overflow-hidden rounded-[2rem] border bg-background/88 p-6 shadow-2xl shadow-primary/5 backdrop-blur md:p-10">
@@ -41,7 +41,7 @@ export default async function RisckComplyHomePage({ params }: { params: { locale
           <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
             <div className="space-y-6">
               <div className="flex flex-wrap items-center gap-3">
-                <Badge className="gap-2 rounded-full px-3 py-1 text-xs uppercase tracking-[0.2em]"><Crown className="h-3.5 w-3.5" /> Cliente RISCK COMPLY</Badge>
+                <Badge className="gap-2 rounded-full px-3 py-1 text-xs uppercase tracking-[0.2em]"><Crown className="h-3.5 w-3.5" /> Cliente Risck Comply</Badge>
                 <Badge variant="outline" className="gap-2 rounded-full px-3 py-1 text-xs"><LockKeyhole className="h-3.5 w-3.5" /> Plano {currentPlan}</Badge>
               </div>
               <div className="space-y-3">
