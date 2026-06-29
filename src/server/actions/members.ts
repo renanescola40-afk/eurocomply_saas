@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { inviteMemberSchema, type InviteMemberInput } from '@/lib/validation/organization';
 import { logAuditEvent } from '@/server/actions/audit';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { requireCurrentUser } from '@/server/queries/auth';
 
 const INVITE_LIMIT = 10;
 const INVITE_WINDOW_MS = 60 * 60 * 1000;
@@ -16,23 +17,40 @@ function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 }
 
-export async function inviteOrganizationMember(input: InviteMemberInput, invitedByUserId: string) {
-  const payload = inviteMemberSchema.parse(input);
-  const context = { area: 'member_invitation', organizationId: payload.organizationId, userId: invitedByUserId };
+function actionError(message: string) {
+  return new Error(message);
+}
 
-  await assertCurrentUserCan(payload.organizationId, invitedByUserId, 'team:invite');
+function failMemberAction(error: unknown, context: Record<string, unknown>, message: string): never {
+  reportError(error, context);
+  throw actionError(message);
+}
 
+async function enforceInviteRateLimit(organizationId: string, userId: string) {
   const rateLimit = await checkDistributedRateLimit({
-    key: `invite:${payload.organizationId}:${invitedByUserId}`,
+    key: `invite:${organizationId}:${userId}`,
+    policy: 'general-api',
+    userId,
+    organizationId,
+    route: 'server-action:team.invite',
+    action: 'team.invite',
     limit: INVITE_LIMIT,
     windowMs: INVITE_WINDOW_MS,
+    failureMode: 'fail-closed',
   });
 
   if (!rateLimit.allowed) {
-    const error = new Error('Too many invitations sent. Please try again later.');
-    reportError(error, context);
-    throw error;
+    throw actionError('Too many invitations sent. Please try again later.');
   }
+}
+
+export async function inviteOrganizationMember(input: InviteMemberInput) {
+  const user = await requireCurrentUser();
+  const payload = inviteMemberSchema.parse(input);
+  const context = { area: 'member_invitation', organizationId: payload.organizationId, userId: user.id };
+
+  await assertCurrentUserCan(payload.organizationId, user.id, 'team:invite');
+  await enforceInviteRateLimit(payload.organizationId, user.id);
 
   const supabase = createAdminClient();
   const token = randomUUID();
@@ -44,14 +62,13 @@ export async function inviteOrganizationMember(input: InviteMemberInput, invited
       email: payload.email.toLowerCase(),
       role: payload.role,
       token,
-      invited_by: invitedByUserId,
+      invited_by: user.id,
     })
     .select('*, organizations(name)')
     .single();
 
   if (error) {
-    reportError(error, { ...context, role: payload.role });
-    throw new Error(error.message);
+    failMemberAction(error, { ...context, role: payload.role }, 'Unable to create invitation.');
   }
 
   const organizationName = data.organizations?.name ?? 'your organization';
@@ -70,7 +87,7 @@ export async function inviteOrganizationMember(input: InviteMemberInput, invited
       text: email.text,
       template: email.template,
       organizationId: payload.organizationId,
-      userId: invitedByUserId,
+      userId: user.id,
       metadata: {
         source: 'member_invitation_action',
         invitationId: data.id,
@@ -83,7 +100,7 @@ export async function inviteOrganizationMember(input: InviteMemberInput, invited
 
   await logAuditEvent({
     organizationId: payload.organizationId,
-    actorUserId: invitedByUserId,
+    actorUserId: user.id,
     action: 'team.invite_created',
     entityType: 'invitation',
     entityId: data.id,
@@ -93,8 +110,9 @@ export async function inviteOrganizationMember(input: InviteMemberInput, invited
   return data;
 }
 
-export async function cancelOrganizationInvitation(input: { organizationId: string; invitationId: string }, actorUserId: string) {
-  await assertCurrentUserCan(input.organizationId, actorUserId, 'team:remove');
+export async function cancelOrganizationInvitation(input: { organizationId: string; invitationId: string }) {
+  const user = await requireCurrentUser();
+  await assertCurrentUserCan(input.organizationId, user.id, 'team:remove');
 
   const supabase = createAdminClient();
   const { data: invitation, error: invitationError } = await supabase
@@ -105,12 +123,11 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
     .maybeSingle();
 
   if (invitationError) {
-    reportError(invitationError, { area: 'team_cancel_invitation_lookup', organizationId: input.organizationId, invitationId: input.invitationId });
-    throw new Error(invitationError.message);
+    failMemberAction(invitationError, { area: 'team_cancel_invitation_lookup', organizationId: input.organizationId, invitationId: input.invitationId }, 'Unable to load invitation.');
   }
 
   if (!invitation || invitation.accepted_at) {
-    throw new Error('Invitation is no longer pending');
+    throw actionError('Invitation is no longer pending');
   }
 
   const { error } = await supabase
@@ -121,13 +138,12 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
     .is('accepted_at', null);
 
   if (error) {
-    reportError(error, { area: 'team_cancel_invitation', organizationId: input.organizationId, invitationId: input.invitationId });
-    throw new Error(error.message);
+    failMemberAction(error, { area: 'team_cancel_invitation', organizationId: input.organizationId, invitationId: input.invitationId }, 'Unable to cancel invitation.');
   }
 
   await logAuditEvent({
     organizationId: input.organizationId,
-    actorUserId,
+    actorUserId: user.id,
     action: 'team.invite_cancelled',
     entityType: 'invitation',
     entityId: input.invitationId,
@@ -135,28 +151,28 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
   });
 }
 
-export async function removeOrganizationMember(input: { organizationId: string; memberId: string }, actorUserId: string) {
-  await assertCurrentUserCan(input.organizationId, actorUserId, 'team:remove');
+export async function removeOrganizationMember(input: { organizationId: string; memberId: string }) {
+  const user = await requireCurrentUser();
+  await assertCurrentUserCan(input.organizationId, user.id, 'team:remove');
 
   const supabase = createAdminClient();
   const { data: member, error: memberError } = await supabase
     .from('organization_members')
-    .select('id,user_id,role,organization_id')
+    .select('id,user_id,clerk_user_id,role,organization_id')
     .eq('id', input.memberId)
     .eq('organization_id', input.organizationId)
     .maybeSingle();
 
   if (memberError) {
-    reportError(memberError, { area: 'team_remove_member_lookup', organizationId: input.organizationId, memberId: input.memberId });
-    throw new Error(memberError.message);
+    failMemberAction(memberError, { area: 'team_remove_member_lookup', organizationId: input.organizationId, memberId: input.memberId }, 'Unable to load member.');
   }
 
   if (!member) {
-    throw new Error('Member not found');
+    throw actionError('Member not found');
   }
 
-  if (member.user_id === actorUserId) {
-    throw new Error('You cannot remove your own access from here');
+  if (member.user_id === user.id || member.clerk_user_id === user.id) {
+    throw actionError('You cannot remove your own access from here');
   }
 
   if (member.role === 'owner') {
@@ -167,12 +183,11 @@ export async function removeOrganizationMember(input: { organizationId: string; 
       .eq('role', 'owner');
 
     if (ownerCountError) {
-      reportError(ownerCountError, { area: 'team_owner_count', organizationId: input.organizationId });
-      throw new Error(ownerCountError.message);
+      failMemberAction(ownerCountError, { area: 'team_owner_count', organizationId: input.organizationId }, 'Unable to validate organization owners.');
     }
 
     if ((count ?? 0) <= 1) {
-      throw new Error('Cannot remove the last organization owner');
+      throw actionError('Cannot remove the last organization owner');
     }
   }
 
@@ -183,16 +198,15 @@ export async function removeOrganizationMember(input: { organizationId: string; 
     .eq('organization_id', input.organizationId);
 
   if (error) {
-    reportError(error, { area: 'team_remove_member', organizationId: input.organizationId, memberId: input.memberId });
-    throw new Error(error.message);
+    failMemberAction(error, { area: 'team_remove_member', organizationId: input.organizationId, memberId: input.memberId }, 'Unable to remove member.');
   }
 
   await logAuditEvent({
     organizationId: input.organizationId,
-    actorUserId,
+    actorUserId: user.id,
     action: 'team.member_removed',
     entityType: 'organization_member',
     entityId: input.memberId,
-    metadata: { removedUserId: member.user_id, role: member.role },
+    metadata: { removedUserId: member.user_id ?? member.clerk_user_id ?? null, role: member.role },
   });
 }
