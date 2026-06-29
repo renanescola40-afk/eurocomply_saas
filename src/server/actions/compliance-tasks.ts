@@ -1,11 +1,20 @@
+import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createComplianceTaskSchema, updateComplianceTaskSchema, type CreateComplianceTaskInput, type UpdateComplianceTaskInput } from '@/lib/validation/compliance';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { requireCurrentUser } from '@/server/queries/auth';
 import { logAuditEvent } from './audit';
 
-export async function createComplianceTask(input: CreateComplianceTaskInput, userId: string) {
+function failTaskAction(error: unknown, context: Record<string, unknown>, message: string): never {
+  reportError(error, context);
+  throw new Error(message);
+}
+
+export async function createComplianceTask(input: CreateComplianceTaskInput) {
+  const user = await requireCurrentUser();
   const payload = createComplianceTaskSchema.parse(input);
-  await assertCurrentUserCan(payload.organizationId, userId, 'tasks:write');
+  const context = { area: 'compliance_task_create', organizationId: payload.organizationId, actorId: user.id };
+  await assertCurrentUserCan(payload.organizationId, user.id, 'tasks:write');
 
   const supabase = createAdminClient();
 
@@ -19,16 +28,18 @@ export async function createComplianceTask(input: CreateComplianceTaskInput, use
       priority: payload.priority,
       due_date: payload.dueDate,
       assignee_id: payload.assigneeId,
-      created_by: userId,
+      created_by: user.id,
     })
     .select('*')
     .single();
 
-  if (error) throw error;
+  if (error) {
+    failTaskAction(error, context, 'Unable to create compliance task.');
+  }
 
   await logAuditEvent({
     organizationId: payload.organizationId,
-    actorUserId: userId,
+    actorUserId: user.id,
     action: 'task.create',
     entityType: 'compliance_task',
     entityId: task.id,
@@ -38,9 +49,11 @@ export async function createComplianceTask(input: CreateComplianceTaskInput, use
   return task;
 }
 
-export async function updateComplianceTask(taskId: string, organizationId: string, input: UpdateComplianceTaskInput, userId: string) {
+export async function updateComplianceTask(taskId: string, organizationId: string, input: UpdateComplianceTaskInput) {
+  const user = await requireCurrentUser();
   const payload = updateComplianceTaskSchema.parse(input);
-  await assertCurrentUserCan(organizationId, userId, 'tasks:write');
+  const context = { area: 'compliance_task_update', organizationId, taskId, actorId: user.id };
+  await assertCurrentUserCan(organizationId, user.id, 'tasks:write');
 
   const supabase = createAdminClient();
 
@@ -61,11 +74,13 @@ export async function updateComplianceTask(taskId: string, organizationId: strin
     .select('*')
     .single();
 
-  if (error) throw error;
+  if (error) {
+    failTaskAction(error, context, 'Unable to update compliance task.');
+  }
 
   await logAuditEvent({
     organizationId,
-    actorUserId: userId,
+    actorUserId: user.id,
     action: 'task.update',
     entityType: 'compliance_task',
     entityId: taskId,
@@ -75,8 +90,10 @@ export async function updateComplianceTask(taskId: string, organizationId: strin
   return task;
 }
 
-export async function deleteComplianceTask(taskId: string, organizationId: string, userId: string) {
-  await assertCurrentUserCan(organizationId, userId, 'tasks:delete');
+export async function deleteComplianceTask(taskId: string, organizationId: string) {
+  const user = await requireCurrentUser();
+  const context = { area: 'compliance_task_delete', organizationId, taskId, actorId: user.id };
+  await assertCurrentUserCan(organizationId, user.id, 'tasks:delete');
 
   const supabase = createAdminClient();
   const { data: task, error } = await supabase
@@ -87,11 +104,13 @@ export async function deleteComplianceTask(taskId: string, organizationId: strin
     .select('id,title')
     .single();
 
-  if (error) throw error;
+  if (error) {
+    failTaskAction(error, context, 'Unable to delete compliance task.');
+  }
 
   await logAuditEvent({
     organizationId,
-    actorUserId: userId,
+    actorUserId: user.id,
     action: 'task.delete',
     entityType: 'compliance_task',
     entityId: taskId,
