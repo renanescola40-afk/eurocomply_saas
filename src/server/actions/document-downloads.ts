@@ -25,6 +25,10 @@ const DOCUMENT_SIGNED_URL_RATE_LIMIT = {
 
 type DocumentUrlAccessPurpose = 'download' | 'preview';
 
+function actionError(message: string) {
+  return new Error(message);
+}
+
 function normalizeDocumentId(documentId: string) {
   return typeof documentId === 'string' ? documentId.trim() : '';
 }
@@ -120,7 +124,7 @@ async function enforceDocumentUrlRateLimit(input: {
       reason: 'rate_limited',
       accessPurpose: input.accessPurpose,
     });
-    throw new Error('Too many document access requests. Please try again later.');
+    throw actionError('Too many document access requests. Please try again later.');
   }
 }
 
@@ -142,7 +146,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
       reason: 'invalid_document_id',
       accessPurpose,
     });
-    throw new Error('Document not found');
+    throw actionError('Document not found');
   }
 
   await enforceDocumentUrlRateLimit({ documentId: safeDocumentId, userId: user.id, accessPurpose });
@@ -158,7 +162,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
       membershipCount: 0,
       accessPurpose,
     });
-    throw new Error('Organization access required');
+    throw actionError('Organization access required');
   }
 
   const supabase = createAdminClient();
@@ -170,7 +174,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
     .maybeSingle();
 
   if (documentError || !document?.storage_path) {
-    reportError(documentError ?? new Error('Document not found'), context);
+    reportError(documentError ?? actionError('Document not found'), context);
     await auditRejectedDownloadUrl({
       documentId: safeDocumentId,
       userId: user.id,
@@ -179,7 +183,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
       membershipCount: organizationIds.length,
       accessPurpose,
     });
-    throw new Error('Document not found');
+    throw actionError('Document not found');
   }
 
   try {
@@ -195,7 +199,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
       membershipCount: organizationIds.length,
       accessPurpose,
     });
-    throw error;
+    throw actionError('Document not found');
   }
 
   try {
@@ -211,7 +215,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
       membershipCount: organizationIds.length,
       accessPurpose,
     });
-    throw error;
+    throw actionError('Document not found');
   }
 
   const signedUrlOptions = accessPurpose === 'download'
@@ -222,7 +226,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
     .createSignedUrl(document.storage_path, SIGNED_URL_EXPIRES_IN_SECONDS, signedUrlOptions);
 
   if (error || !data?.signedUrl) {
-    reportError(error ?? new Error('Unable to create signed download URL'), {
+    reportError(error ?? actionError('Unable to create signed download URL'), {
       ...context,
       organizationId: document.organization_id,
     });
@@ -235,7 +239,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
       membershipCount: organizationIds.length,
       accessPurpose,
     });
-    throw new Error('Unable to create signed download URL');
+    throw actionError('Unable to create signed download URL');
   }
 
   await logAuditEvent({

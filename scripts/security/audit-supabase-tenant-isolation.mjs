@@ -22,9 +22,21 @@ const additionalTenantTables = new Set([
   'invitations',
   'ai_systems',
   'ai_incidents',
+  'onboarding_activation_runs',
 ]);
 const backendOnlyTables = new Set(['audit_events', 'audit_logs', 'subscriptions', 'organization_invites', 'invitations']);
 const userScopedAllowList = new Set(['profiles', 'users']);
+const staleBackendWritePolicySuffixes = [
+  'insert_member',
+  'insert_writer',
+  'insert_admin',
+  'update_member',
+  'update_writer',
+  'update_admin',
+  'delete_member',
+  'delete_writer',
+  'delete_admin',
+];
 const failures = [];
 
 function listFiles(dir, matcher) {
@@ -73,16 +85,20 @@ function mergeMaps(maps) {
 function helperUsed(sql, helperName, table) {
   const escapedHelper = helperName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const escapedTable = table.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`${escapedHelper}\\s*\\(\\s*'${escapedTable}'\\s*\\)`, 'i').test(sql)
+  return new RegExp(`${escapedHelper}\\s*\\(\\s*'${escapedTable}'`, 'i').test(sql)
     || new RegExp(String.raw`foreach\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+in\s+array\s+array\[[\s\S]*'${escapedTable}'[\s\S]*\][\s\S]*perform\s+public\.${escapedHelper}\s*\(\s*\1\s*\)`, 'i').test(sql);
 }
 
 function orgScopedHelperUsed(sql, table) {
-  return helperUsed(sql, 'app_rls_org_scoped', table) || helperUsed(sql, 'app_rls_org_scoped_enterprise', table);
+  return helperUsed(sql, 'app_rls_org_scoped', table)
+    || helperUsed(sql, 'app_rls_org_scoped_enterprise', table)
+    || helperUsed(sql, 'app_rls_harden_org_writable_table', table);
 }
 
 function backendOnlyHelperUsed(sql, table) {
-  return helperUsed(sql, 'app_rls_backend_only', table) || helperUsed(sql, 'app_rls_backend_only_enterprise', table);
+  return helperUsed(sql, 'app_rls_backend_only', table)
+    || helperUsed(sql, 'app_rls_backend_only_enterprise', table)
+    || helperUsed(sql, 'app_rls_harden_backend_only_table', table);
 }
 
 function hasRlsEnable(sql, table) {
@@ -94,7 +110,7 @@ function hasRlsEnable(sql, table) {
 function hasPolicy(sql, table, keyword) {
   const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   if (orgScopedHelperUsed(sql, table)) {
-    return ['select', 'insert', 'update', 'delete', 'organization_id', 'has_org_write_role'].includes(keyword);
+    return ['select', 'insert', 'update', 'delete', 'organization_id', 'has_org_write_role', 'has_org_role'].includes(keyword);
   }
   if (backendOnlyHelperUsed(sql, table)) {
     return ['select', 'insert', 'update', 'delete', 'with check (false)', 'using (false)', 'organization_id'].includes(keyword);
@@ -111,12 +127,38 @@ function hasBackendOnlyWriteDenial(sql, table) {
 
 function hasDropLegacy(sql, table) {
   return new RegExp(`drop\\s+policy\\s+if\\s+exists[\\s\\S]+?on\\s+(?:public\\.)?${table}`, 'i').test(sql)
-    || new RegExp(`drop\\s+policy\\s+if\\s+exists[\\s\\S]+?on\\s+public\\.%I`, 'i').test(sql);
+    || new RegExp(`drop\\s+policy\\s+if\\s+exists[\\s\\S]+?on\\s+public\\.%I`, 'i').test(sql)
+    || helperUsed(sql, 'app_rls_drop_known_policies', table);
 }
 
 function hasAuditWriteProtection(sql) {
   return hasBackendOnlyWriteDenial(sql, 'audit_events')
     || /rls_audit_events_insert_backend_only[\s\S]+?with check \(false\)/i.test(sql);
+}
+
+function hasNoAllowAllPolicies(sql) {
+  const normalized = sql.toLowerCase().replace(/\s+/g, ' ');
+  return !/using\s*\(\s*true\s*\)/.test(normalized) && !/with check\s*\(\s*true\s*\)/.test(normalized);
+}
+
+function cleanupMigrationDropsStaleBackendPolicies(migrationTexts) {
+  const cleanup = migrationTexts.find((entry) => entry.file.endsWith('20260629110000_enterprise_tenant_rls_cleanup_indexes.sql'));
+  if (!cleanup) {
+    failures.push('Missing enterprise RLS cleanup migration for stale backend-only policies');
+    return;
+  }
+
+  for (const table of backendOnlyTables) {
+    if (!helperUsed(cleanup.text, 'app_rls_harden_backend_only_table', table)) {
+      failures.push(`Cleanup migration does not harden backend-only table: ${table}`);
+    }
+  }
+
+  for (const suffix of staleBackendWritePolicySuffixes) {
+    if (!cleanup.text.includes(`'rls_' || p_table_name || '_${suffix}'`)) {
+      failures.push(`Cleanup migration does not drop stale backend write policy suffix: ${suffix}`);
+    }
+  }
 }
 
 function auditMigrations() {
@@ -143,12 +185,14 @@ function auditMigrations() {
       if (!hasPolicy(allSql, table, 'delete')) failures.push(`Missing DELETE policy coverage for table: ${table}`);
     }
 
-    if (['notifications', 'ai_systems', 'ai_incidents', 'organization_invites', 'invitations', 'subscriptions'].includes(table) && !hasDropLegacy(allSql, table)) {
+    if (['notifications', 'ai_systems', 'ai_incidents', 'organization_invites', 'invitations', 'subscriptions', 'compliance_tasks'].includes(table) && !hasDropLegacy(allSql, table)) {
       failures.push(`Missing legacy policy cleanup for table: ${table}`);
     }
   }
 
   if (!hasAuditWriteProtection(allSql)) failures.push('audit_events must be backend-only for INSERT/UPDATE/DELETE from authenticated clients');
+  if (!hasNoAllowAllPolicies(allSql)) failures.push('RLS migrations must not use broad using true or with check true policies');
+  cleanupMigrationDropsStaleBackendPolicies(migrationTexts);
 
   return [...tenantTables].sort();
 }
@@ -181,6 +225,7 @@ const report = {
   migrationDirectory: migrationDir,
   tenantTables,
   criticalTables: [...criticalTables].sort(),
+  backendOnlyTables: [...backendOnlyTables].sort(),
   failures,
 };
 

@@ -34,6 +34,10 @@ type SupabaseLikeError = {
   hint?: string;
 };
 
+function providerActionError(message: string) {
+  return new Error(message);
+}
+
 function isMissingOptionalVendorColumn(error: SupabaseLikeError | null | undefined) {
   const text = [error?.message, error?.details, error?.hint].filter(Boolean).join(' ').toLowerCase();
 
@@ -63,6 +67,11 @@ function toVendorErrorMessage(error: SupabaseLikeError | Error | unknown, action
   }
 
   return `Não foi possível ${action} o fornecedor agora.`;
+}
+
+function failVendorAction(error: unknown, context: Record<string, unknown>, action: 'criar' | 'atualizar' | 'remover'): never {
+  reportError(error, context);
+  throw providerActionError(toVendorErrorMessage(error, action));
 }
 
 function toBaseVendorRecord(payload: z.infer<typeof vendorSchema>) {
@@ -104,7 +113,7 @@ async function enforceVendorActionRateLimit(input: {
   });
 
   if (!rateLimit.allowed) {
-    throw new Error('Too many vendor changes. Please try again later.');
+    throw providerActionError('Too many vendor changes. Please try again later.');
   }
 }
 
@@ -116,43 +125,33 @@ export async function createVendor(input: unknown) {
   await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:write');
   await enforceVendorActionRateLimit({ action: 'vendor.create', organizationId: payload.organizationId, userId: user.id });
 
-  try {
-    const supabase = createAdminClient();
-    const baseRecord = toBaseVendorRecord(payload);
-    const fullRecord = toFullVendorRecord(payload, user.id);
+  const supabase = createAdminClient();
+  const baseRecord = toBaseVendorRecord(payload);
+  const fullRecord = toFullVendorRecord(payload, user.id);
+  const insertVendor = async (record: typeof baseRecord | typeof fullRecord) =>
+    supabase.from('vendors').insert(record).select('*').single();
 
-    const insertVendor = async (record: typeof baseRecord | typeof fullRecord) =>
-      supabase
-        .from('vendors')
-        .insert(record)
-        .select('*')
-        .single();
+  let { data, error } = await insertVendor(fullRecord);
 
-    let { data, error } = await insertVendor(fullRecord);
-
-    if (error && isMissingOptionalVendorColumn(error)) {
-      console.warn('[vendors] legacy_schema_fallback', { code: error.code ?? 'unknown' });
-      const fallbackResult = await insertVendor(baseRecord);
-      data = fallbackResult.data;
-      error = fallbackResult.error;
-    }
-
-    if (error) throw error;
-
-    await logAuditEvent({
-      organizationId: payload.organizationId,
-      actorUserId: user.id,
-      action: 'vendor.create',
-      entityType: 'vendor',
-      entityId: data.id,
-      metadata: { name: payload.name, riskLevel: payload.riskLevel },
-    });
-
-    return data;
-  } catch (error) {
-    reportError(error, context);
-    throw new Error(toVendorErrorMessage(error, 'criar'));
+  if (error && isMissingOptionalVendorColumn(error)) {
+    console.warn('[vendors] legacy_schema_fallback', { code: error.code ?? 'unknown' });
+    const fallbackResult = await insertVendor(baseRecord);
+    data = fallbackResult.data;
+    error = fallbackResult.error;
   }
+
+  if (error) failVendorAction(error, context, 'criar');
+
+  await logAuditEvent({
+    organizationId: payload.organizationId,
+    actorUserId: user.id,
+    action: 'vendor.create',
+    entityType: 'vendor',
+    entityId: data.id,
+    metadata: { name: payload.name, riskLevel: payload.riskLevel },
+  });
+
+  return data;
 }
 
 export async function updateVendor(input: unknown) {
@@ -163,53 +162,42 @@ export async function updateVendor(input: unknown) {
   await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:write');
   await enforceVendorActionRateLimit({ action: 'vendor.update', organizationId: payload.organizationId, userId: user.id });
 
-  try {
-    const supabase = createAdminClient();
-    const baseRecord = toBaseVendorRecord(payload);
-    const fullRecord = {
-      ...baseRecord,
-      data_access_level: payload.dataAccessLevel,
-      dpa_signed: payload.dpaSigned,
-    };
+  const supabase = createAdminClient();
+  const baseRecord = toBaseVendorRecord(payload);
+  const fullRecord = {
+    ...baseRecord,
+    data_access_level: payload.dataAccessLevel,
+    dpa_signed: payload.dpaSigned,
+  };
 
-    const updateVendorRecord = async (record: typeof baseRecord | typeof fullRecord) =>
-      supabase
-        .from('vendors')
-        .update(record)
-        .eq('id', payload.vendorId)
-        .eq('organization_id', payload.organizationId)
-        .select('*')
-        .single();
+  const updateVendorRecord = async (record: typeof baseRecord | typeof fullRecord) =>
+    supabase.from('vendors').update(record).eq('id', payload.vendorId).eq('organization_id', payload.organizationId).select('*').single();
 
-    let { data, error } = await updateVendorRecord(fullRecord);
+  let { data, error } = await updateVendorRecord(fullRecord);
 
-    if (error && isMissingOptionalVendorColumn(error)) {
-      console.warn('[vendors] legacy_schema_fallback', { code: error.code ?? 'unknown' });
-      const fallbackResult = await updateVendorRecord(baseRecord);
-      data = fallbackResult.data;
-      error = fallbackResult.error;
-    }
-
-    if (error) throw error;
-
-    await logAuditEvent({
-      organizationId: payload.organizationId,
-      actorUserId: user.id,
-      action: 'vendor.update',
-      entityType: 'vendor',
-      entityId: payload.vendorId,
-      metadata: {
-        name: payload.name,
-        riskLevel: payload.riskLevel,
-        reviewStatus: payload.reviewStatus,
-      },
-    });
-
-    return data;
-  } catch (error) {
-    reportError(error, context);
-    throw new Error(toVendorErrorMessage(error, 'atualizar'));
+  if (error && isMissingOptionalVendorColumn(error)) {
+    console.warn('[vendors] legacy_schema_fallback', { code: error.code ?? 'unknown' });
+    const fallbackResult = await updateVendorRecord(baseRecord);
+    data = fallbackResult.data;
+    error = fallbackResult.error;
   }
+
+  if (error) failVendorAction(error, context, 'atualizar');
+
+  await logAuditEvent({
+    organizationId: payload.organizationId,
+    actorUserId: user.id,
+    action: 'vendor.update',
+    entityType: 'vendor',
+    entityId: payload.vendorId,
+    metadata: {
+      name: payload.name,
+      riskLevel: payload.riskLevel,
+      reviewStatus: payload.reviewStatus,
+    },
+  });
+
+  return data;
 }
 
 export async function deleteVendor(vendorId: string, organizationId: string) {
@@ -220,30 +208,25 @@ export async function deleteVendor(vendorId: string, organizationId: string) {
   await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:delete');
   await enforceVendorActionRateLimit({ action: 'vendor.delete', organizationId: payload.organizationId, userId: user.id });
 
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from('vendors')
-      .delete()
-      .eq('id', payload.vendorId)
-      .eq('organization_id', payload.organizationId)
-      .select('id,name,risk_level')
-      .single();
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('vendors')
+    .delete()
+    .eq('id', payload.vendorId)
+    .eq('organization_id', payload.organizationId)
+    .select('id,name,risk_level')
+    .single();
 
-    if (error) throw error;
+  if (error) failVendorAction(error, context, 'remover');
 
-    await logAuditEvent({
-      organizationId: payload.organizationId,
-      actorUserId: user.id,
-      action: 'vendor.delete',
-      entityType: 'vendor',
-      entityId: payload.vendorId,
-      metadata: { name: data.name, riskLevel: data.risk_level },
-    });
+  await logAuditEvent({
+    organizationId: payload.organizationId,
+    actorUserId: user.id,
+    action: 'vendor.delete',
+    entityType: 'vendor',
+    entityId: payload.vendorId,
+    metadata: { name: data.name, riskLevel: data.risk_level },
+  });
 
-    return data;
-  } catch (error) {
-    reportError(error, context);
-    throw new Error(toVendorErrorMessage(error, 'remover'));
-  }
+  return data;
 }

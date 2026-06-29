@@ -62,8 +62,8 @@ vi.mock('@/server/security/step-up', () => ({
 
 import { POST } from './route';
 
-function buildRequest() {
-  return new Request('https://app.eurocomply.test/api/billing/portal?locale=en', {
+function buildRequest(returnPath = '/dashboard/organizations/billing') {
+  return new Request(`https://app.eurocomply.test/api/billing/portal?locale=en&returnPath=${encodeURIComponent(returnPath)}`, {
     method: 'POST',
     headers: {
       origin: 'https://app.eurocomply.test',
@@ -144,6 +144,15 @@ describe('billing portal API security gates', () => {
     expect(mocks.writeAuditLog).not.toHaveBeenCalled();
   });
 
+  it('rejects unsafe portal return paths', async () => {
+    const response = await POST(buildRequest('/settings/billing'));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({ error: 'invalid_billing_portal_query' });
+    expect(mocks.stripePortalCreate).not.toHaveBeenCalled();
+  });
+
   it('creates a billing portal session only after RBAC, trusted mutation, and step-up', async () => {
     const response = await POST(buildRequest());
     const body = await response.json();
@@ -159,7 +168,7 @@ describe('billing portal API security gates', () => {
     expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(expect.objectContaining({ action: 'manage_billing', userId: 'user_admin', organizationId: 'org_a' }));
     expect(mocks.stripePortalCreate).toHaveBeenCalledWith({
       customer: 'cus_123',
-      return_url: 'https://app.eurocomply.test/en/settings/billing',
+      return_url: 'https://app.eurocomply.test/en/dashboard/organizations/billing',
     });
     expect(mocks.writeAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -170,6 +179,7 @@ describe('billing portal API security gates', () => {
         entityId: 'portal_session_fixture',
         metadata: expect.objectContaining({
           stripeCustomerId: 'cus_123',
+          returnUrl: 'https://app.eurocomply.test/en/dashboard/organizations/billing',
           rbacPermission: 'manage_billing',
           trustedOriginRequired: true,
         }),

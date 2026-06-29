@@ -38,6 +38,7 @@ const PUBLIC_ROUTES = [
   '/dpa',
   '/subprocessors',
   '/status',
+  '/vulnerability-disclosure',
   '/politica-privacidade',
   '/termos-servico',
 ];
