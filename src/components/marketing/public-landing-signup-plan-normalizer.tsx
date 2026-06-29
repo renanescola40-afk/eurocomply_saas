@@ -7,8 +7,9 @@ const SIGNUP_PLAN_ALIASES: Record<string, string> = {
   essential: 'essential',
   starter: 'essential',
   professional: 'professional',
-  business: 'professional',
+  business: 'business',
   growth: 'professional',
+  enterprise: 'enterprise',
 };
 
 function isSafeLocale(locale: string): locale is Locale {
@@ -23,11 +24,11 @@ function getNormalizedSignupHref(anchor: HTMLAnchorElement, locale: string) {
   if (!plan) return null;
 
   const next = url.searchParams.get('next');
-  if (next !== `/${locale}/onboarding`) return null;
+  if (next !== `/${locale}/onboarding` && next !== `/${locale}/onboarding?plan=${plan}`) return null;
 
   const params = new URLSearchParams(url.searchParams);
   params.set('plan', plan);
-  params.set('next', `/${locale}/onboarding?plan=${encodeURIComponent(plan)}`);
+  params.set('next', `/${locale}/onboarding?plan=${plan}`);
   return `/${locale}/signup?${params.toString()}`;
 }
 
@@ -35,10 +36,31 @@ export function PublicLandingSignupPlanNormalizer({ locale }: { locale: string }
   useEffect(() => {
     if (!isSafeLocale(locale)) return;
 
-    for (const anchor of Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href]'))) {
-      const normalizedHref = getNormalizedSignupHref(anchor, locale);
-      if (normalizedHref) anchor.setAttribute('href', normalizedHref);
-    }
+    const normalizeAnchors = () => {
+      for (const anchor of Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href]'))) {
+        const normalizedHref = getNormalizedSignupHref(anchor, locale);
+        if (normalizedHref) anchor.setAttribute('href', normalizedHref);
+      }
+    };
+
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target instanceof Element ? event.target.closest('a[href]') : null;
+      if (!(target instanceof HTMLAnchorElement)) return;
+
+      const normalizedHref = getNormalizedSignupHref(target, locale);
+      if (!normalizedHref) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      window.location.assign(normalizedHref);
+    };
+
+    normalizeAnchors();
+    document.addEventListener('click', handleClick, { capture: true });
+
+    return () => {
+      document.removeEventListener('click', handleClick, { capture: true });
+    };
   }, [locale]);
 
   return null;
