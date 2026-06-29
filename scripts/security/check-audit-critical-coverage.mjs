@@ -28,6 +28,8 @@ const criticalCoverageFiles = [
   'docs/security/evidence/runtime/audit-chain-live-validation.json',
 ];
 
+const forbiddenLegacyFiles = ['src/server/actions/billing.ts'];
+
 const requiredCriticalActions = [
   'auth.login_attempt',
   'auth.login_success',
@@ -107,6 +109,10 @@ function requireToken(path, source, token) {
 
 console.log('EuroComply audit critical coverage check');
 console.log('-----------------------------------------');
+
+for (const path of forbiddenLegacyFiles) {
+  if (existsSync(path)) failures.push(`${path} must remain removed; billing mutations must use API routes`);
+}
 
 const auditLog = read(auditLogPath);
 const serverActionAudit = read(serverActionAuditPath);

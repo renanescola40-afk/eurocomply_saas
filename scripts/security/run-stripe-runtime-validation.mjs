@@ -127,7 +127,7 @@ assertIncludes('webhook handler', source.webhookHandler, [
   "action: 'webhook_replayed'",
   "action: 'subscription_synced'",
   'validateOrganizationStripeBinding',
-  'normalizeBillingPlanId',
+  'getBillingPlanIdForStripePriceId',
 ]);
 
 assertIncludes('webhook migration', source.migration, [

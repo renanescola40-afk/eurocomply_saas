@@ -39,17 +39,14 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
       redirect(`/${params.locale}/onboarding`);
     }
 
-    await createComplianceTask(
-      {
-        organizationId: currentOrganization.id,
-        title: input.title,
-        description: input.description,
-        category: input.category,
-        priority: input.priority,
-        dueDate: input.dueDate,
-      },
-      currentUser.id,
-    );
+    await createComplianceTask({
+      organizationId: currentOrganization.id,
+      title: input.title,
+      description: input.description,
+      category: input.category,
+      priority: input.priority,
+      dueDate: input.dueDate,
+    });
 
     revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
@@ -70,7 +67,7 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
       redirect(`/${params.locale}/onboarding`);
     }
 
-    await deleteComplianceTask(taskId, currentOrganization.id, currentUser.id);
+    await deleteComplianceTask(taskId, currentOrganization.id);
     revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
   }

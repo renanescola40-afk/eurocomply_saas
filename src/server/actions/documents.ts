@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { createAuditEvent } from '@/server/queries/audit-events';
+import { requireCurrentUser } from '@/server/queries/auth';
 import {
   CONTROLLED_DOCUMENT_STORAGE_BUCKET as DOCUMENT_BUCKET,
   MAX_UPLOAD_BYTES,
@@ -41,12 +42,16 @@ const uploadDocumentSchema = z.object({
 export type CreateDocumentInput = z.input<typeof createDocumentSchema>;
 export type UploadDocumentInput = z.input<typeof uploadDocumentSchema>;
 
+function actionError(message: string) {
+  return new Error(message);
+}
+
 function blockedScanError(scan: MalwareScanResult) {
   if (scan.status === 'infected' || scan.status === 'suspicious') {
-    return new Error('Document upload was blocked because the scanner reported unsafe content.');
+    return actionError('Document upload was blocked because the scanner reported unsafe content.');
   }
 
-  return new Error('Document upload was blocked because malware scanning did not return a clean result.');
+  return actionError('Document upload was blocked because malware scanning did not return a clean result.');
 }
 
 function uploadSecurityColumns(metadata: Record<string, unknown> | undefined, fallbackMimeType: string | null, fallbackSizeBytes: number | null) {
@@ -145,7 +150,7 @@ async function assertEnterpriseDocumentCreateHasCleanUploadScan(input: {
     }),
   ]);
 
-  throw new Error('Document upload was blocked because enterprise upload scanning metadata is missing or not clean.');
+  throw actionError('Document upload was blocked because enterprise upload scanning metadata is missing or not clean.');
 }
 
 async function auditUploadRequested(input: {
@@ -285,8 +290,9 @@ async function auditUploadRejection(input: {
   ]);
 }
 
-export async function createDocument(input: CreateDocumentInput, userId: string) {
+async function createDocumentForUser(input: CreateDocumentInput, userId: string) {
   const payload = createDocumentSchema.parse(input);
+  const context = { area: 'document_create', organizationId: payload.organizationId, userId };
   await assertCurrentUserCan(payload.organizationId, userId, 'documents:write');
   assertTenantStoragePathInOrganization(payload.storagePath, payload.organizationId);
 
@@ -315,7 +321,10 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
     .select('*')
     .single();
 
-  if (error) throw error;
+  if (error) {
+    reportError(error, context);
+    throw actionError('Unable to create document.');
+  }
 
   await logAuditEvent({
     organizationId: payload.organizationId,
@@ -334,7 +343,14 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
   return data;
 }
 
-export async function uploadDocument(input: UploadDocumentInput, file: File, userId: string) {
+export async function createDocument(input: CreateDocumentInput) {
+  const user = await requireCurrentUser();
+  return createDocumentForUser(input, user.id);
+}
+
+export async function uploadDocument(input: UploadDocumentInput, file: File) {
+  const user = await requireCurrentUser();
+  const userId = user.id;
   const payload = uploadDocumentSchema.parse(input);
   await assertCurrentUserCan(payload.organizationId, userId, 'documents:write');
 
@@ -346,7 +362,7 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
   });
 
   if (!rateLimit.allowed) {
-    const error = new Error('Too many document uploads. Please try again later.');
+    const error = actionError('Too many document uploads. Please try again later.');
     reportError(error, context);
     throw error;
   }
@@ -365,7 +381,7 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
       detectedMimeType: uploadValidation.mimeDetected,
       declaredSignatureMatches: uploadValidation.declaredSignatureMatches,
     });
-    const error = new Error(uploadValidation.message);
+    const error = actionError(uploadValidation.message);
     reportError(error, { ...context, fileType: file.type, fileSize: file.size });
     throw error;
   }
@@ -416,7 +432,7 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
 
   if (uploadError) {
     reportError(uploadError, { ...context, fileType: uploadValidation.mimeDetected, fileSize: uploadValidation.fileSize });
-    throw uploadError;
+    throw actionError('Unable to upload document.');
   }
 
   try {
@@ -436,19 +452,16 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
       hasStoragePath: true,
       storagePathTenantPrefixValidated: true,
     };
-    const document = await createDocument(
-      {
-        organizationId: payload.organizationId,
-        name: payload.name,
-        category: payload.category,
-        storagePath,
-        mimeType: uploadValidation.mimeDetected,
-        sizeBytes: uploadValidation.fileSize,
-        expiresAt: payload.expiresAt ?? null,
-        metadata: auditMetadata,
-      },
-      userId,
-    );
+    const document = await createDocumentForUser({
+      organizationId: payload.organizationId,
+      name: payload.name,
+      category: payload.category,
+      storagePath,
+      mimeType: uploadValidation.mimeDetected,
+      sizeBytes: uploadValidation.fileSize,
+      expiresAt: payload.expiresAt ?? null,
+      metadata: auditMetadata,
+    }, userId);
 
     await createAuditEvent({
       organizationId: payload.organizationId,
@@ -467,11 +480,13 @@ export async function uploadDocument(input: UploadDocumentInput, file: File, use
   } catch (error) {
     reportError(error, { ...context, fileType: uploadValidation.mimeDetected, fileSize: uploadValidation.fileSize });
     await supabase.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
-    throw error;
+    throw actionError('Unable to upload document.');
   }
 }
 
-export async function deleteDocument(documentId: string, organizationId: string, userId: string) {
+export async function deleteDocument(documentId: string, organizationId: string) {
+  const user = await requireCurrentUser();
+  const userId = user.id;
   await assertCurrentUserCan(organizationId, userId, 'documents:delete');
 
   const context = { area: 'document_delete', organizationId, documentId, userId };
@@ -485,8 +500,8 @@ export async function deleteDocument(documentId: string, organizationId: string,
     .single();
 
   if (findError || !document) {
-    reportError(findError ?? new Error('Document not found'), context);
-    throw new Error('Document not found');
+    reportError(findError ?? actionError('Document not found'), context);
+    throw actionError('Document not found');
   }
 
   if (document.storage_path) {
@@ -496,7 +511,7 @@ export async function deleteDocument(documentId: string, organizationId: string,
 
     if (storageError) {
       reportError(storageError, context);
-      throw storageError;
+      throw actionError('Unable to delete document.');
     }
   }
 
@@ -510,7 +525,7 @@ export async function deleteDocument(documentId: string, organizationId: string,
 
   if (deleteError) {
     reportError(deleteError, context);
-    throw deleteError;
+    throw actionError('Unable to delete document.');
   }
 
   await logAuditEvent({

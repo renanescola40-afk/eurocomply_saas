@@ -23,6 +23,7 @@ import {
 } from '@/server/security/malware-scan';
 
 export const REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV = 'REQUIRE_MALWARE_SCAN_FOR_UPLOADS';
+export const LEGACY_MALWARE_SCAN_REQUIRED_ENV = 'MALWARE_SCAN_REQUIRED';
 export const MALWARE_SCANNER_PROVIDER_ENV = 'MALWARE_SCANNER_PROVIDER';
 export const MALWARE_SCANNER_API_KEY_ENV = 'MALWARE_SCANNER_API_KEY';
 export const MALWARE_SCANNER_TIMEOUT_MS_ENV = 'MALWARE_SCANNER_TIMEOUT_MS';
@@ -62,7 +63,7 @@ export type UploadSecurityValidationResult =
     }
   | {
       ok: false;
-      reason: Extract<UploadFileSecurityValidation, { ok: false }>['reason'];
+      reason: Extract<UploadFileSecurityValidation, { ok: false }>['reason'] | 'signature_mismatch';
       message: string;
       buffer: Buffer;
       fileHash: string;
@@ -102,7 +103,7 @@ function sanitizeStoragePathSegment(segment: string, label: string) {
 }
 
 export function isUploadMalwareScanRequired() {
-  return process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true';
+  return process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true' || process.env[LEGACY_MALWARE_SCAN_REQUIRED_ENV] === 'true';
 }
 
 export function currentUploadMalwareScannerProvider() {
@@ -128,10 +129,17 @@ export async function validateUploadSecurityFile(file: File, options: { maxBytes
   });
 
   if (!validation.ok) {
+    const reason = !declaredSignatureMatches && validation.reason === 'unsupported_mime_type' && !validation.detectedType
+      ? 'signature_mismatch'
+      : validation.reason;
+    const message = reason === 'signature_mismatch'
+      ? 'File signature does not match the declared file type.'
+      : validation.message;
+
     return {
       ok: false,
-      reason: validation.reason,
-      message: validation.message,
+      reason,
+      message,
       buffer,
       fileHash,
       checksumSha256: fileHash,
@@ -165,13 +173,28 @@ export async function scanValidatedUploadForMalware(input: {
   validation: Extract<UploadSecurityValidationResult, { ok: true }>;
   organizationId: string;
 }) {
-  return scanUploadForMalware({
+  const required = isUploadMalwareScanRequired();
+  const provider = currentUploadMalwareScannerProvider();
+
+  if (required && provider === 'not_configured') {
+    return {
+      status: 'not_configured',
+      provider,
+      required,
+      scannedAt: new Date().toISOString(),
+      reason: 'scanner_not_configured',
+    } satisfies MalwareScanResult;
+  }
+
+  const scan = await scanUploadForMalware({
     buffer: input.validation.buffer,
     mimeType: input.validation.mimeDetected,
     filename: input.validation.fileNameSanitized,
     organizationId: input.organizationId,
     fileHash: input.validation.fileHash,
   });
+
+  return { ...scan, required } satisfies MalwareScanResult;
 }
 
 export function buildTenantScopedUploadPath(input: {
@@ -201,6 +224,8 @@ export function isTenantScopedStoragePath(storagePath: string | null | undefined
   return isDocumentStoragePathInOrganization(storagePath, organizationId);
 }
 
+export { isDocumentStoragePathInOrganization };
+
 export function assertTenantStoragePathInOrganization(storagePath: string | null | undefined, organizationId: string) {
   return assertDocumentStoragePathInOrganization(storagePath, organizationId);
 }
@@ -209,6 +234,11 @@ export const assertTenantScopedStoragePath = assertTenantStoragePathInOrganizati
 
 export function isShortLivedSignedUrlExpiry(expiresInSeconds: number) {
   return Number.isFinite(expiresInSeconds) && expiresInSeconds > 0 && expiresInSeconds <= SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS;
+}
+
+export function isSignedUrlExpired(expiresAt: string | number | Date, now: Date = new Date()) {
+  const expiresAtMs = expiresAt instanceof Date ? expiresAt.getTime() : new Date(expiresAt).getTime();
+  return Number.isFinite(expiresAtMs) ? expiresAtMs <= now.getTime() : true;
 }
 
 export function createMockMalwareScannerProvider(input: {
@@ -257,26 +287,14 @@ export function buildUploadSecurityAuditMetadata(input: UploadSecurityAuditMetad
     sizeBytes: fileSize,
     claimedMimeType: input.claimedMimeType ?? null,
     mimeDetected,
-    detectedMimeType: mimeDetected,
+    declaredSignatureMatches: input.declaredSignatureMatches ?? null,
     organizationId: input.organizationId ?? null,
     actorUserId: input.actorUserId ?? null,
-    actorRole: input.actorRole ?? 'unknown',
+    actorRole: input.actorRole ?? null,
     documentId: input.documentId ?? null,
     accessPurpose: input.accessPurpose ?? null,
     expiresInSeconds: input.expiresInSeconds ?? null,
-    declaredSignatureMatches: input.declaredSignatureMatches ?? null,
   };
 }
 
-export function isSignedUrlExpired(input: { issuedAt: string | Date; expiresInSeconds: number; now?: Date }) {
-  const issuedAt = input.issuedAt instanceof Date ? input.issuedAt : new Date(input.issuedAt);
-  const now = input.now ?? new Date();
-
-  if (!Number.isFinite(issuedAt.getTime()) || !Number.isFinite(now.getTime())) return true;
-  if (!Number.isFinite(input.expiresInSeconds) || input.expiresInSeconds <= 0) return true;
-
-  return now.getTime() >= issuedAt.getTime() + input.expiresInSeconds * 1000;
-}
-
-export { scanUploadForMalware, shouldBlockUploadForMalwareScan };
-export type { MalwareScanResult };
+export { shouldBlockUploadForMalwareScan, type MalwareScanResult };
