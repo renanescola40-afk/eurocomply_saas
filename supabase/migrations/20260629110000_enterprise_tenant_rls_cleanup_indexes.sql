@@ -4,6 +4,8 @@
 
 create extension if not exists pgcrypto;
 
+-- Preserve the Clerk/Supabase compatibility helpers introduced earlier.
+-- Never call auth.uid() directly in tenant helpers because Clerk JWT subjects are text IDs.
 create or replace function public.is_org_member(target_organization_id uuid)
 returns boolean
 language sql
@@ -11,13 +13,21 @@ security definer
 stable
 set search_path = public, pg_temp
 as $$
-  select auth.uid() is not null
-    and target_organization_id is not null
+  select target_organization_id is not null
     and exists (
       select 1
       from public.organization_members om
       where om.organization_id = target_organization_id
-        and om.user_id = auth.uid()
+        and (
+          (
+            public.current_legacy_user_id() is not null
+            and om.user_id = public.current_legacy_user_id()
+          )
+          or (
+            public.current_clerk_user_id() is not null
+            and om.clerk_user_id = public.current_clerk_user_id()
+          )
+        )
     );
 $$;
 
@@ -28,14 +38,22 @@ security definer
 stable
 set search_path = public, pg_temp
 as $$
-  select auth.uid() is not null
-    and target_organization_id is not null
+  select target_organization_id is not null
     and exists (
       select 1
       from public.organization_members om
       where om.organization_id = target_organization_id
-        and om.user_id = auth.uid()
         and lower(om.role) = any(allowed_roles)
+        and (
+          (
+            public.current_legacy_user_id() is not null
+            and om.user_id = public.current_legacy_user_id()
+          )
+          or (
+            public.current_clerk_user_id() is not null
+            and om.clerk_user_id = public.current_clerk_user_id()
+          )
+        )
     );
 $$;
 
@@ -49,12 +67,24 @@ as $$
   select public.has_org_role(target_organization_id, array['owner','admin','editor']);
 $$;
 
+create or replace function public.current_app_user_matches(target_user_id uuid)
+returns boolean
+language sql
+stable
+set search_path = public, pg_temp
+as $$
+  select public.current_legacy_user_id() is not null
+    and target_user_id = public.current_legacy_user_id();
+$$;
+
 revoke all on function public.is_org_member(uuid) from public;
 revoke all on function public.has_org_role(uuid, text[]) from public;
 revoke all on function public.has_org_write_role(uuid) from public;
+revoke all on function public.current_app_user_matches(uuid) from public;
 grant execute on function public.is_org_member(uuid) to authenticated;
 grant execute on function public.has_org_role(uuid, text[]) to authenticated;
 grant execute on function public.has_org_write_role(uuid) to authenticated;
+grant execute on function public.current_app_user_matches(uuid) to authenticated;
 
 create or replace function public.app_rls_table_exists(p_table_name text)
 returns boolean
@@ -320,7 +350,7 @@ begin
       on public.notifications
       for select
       to authenticated
-      using (user_id = auth.uid() and public.is_org_member(organization_id));
+      using (public.current_app_user_matches(user_id) and public.is_org_member(organization_id));
 
     create policy "rls_notifications_insert_backend_only"
       on public.notifications
@@ -332,14 +362,14 @@ begin
       on public.notifications
       for update
       to authenticated
-      using (user_id = auth.uid() and public.is_org_member(organization_id))
-      with check (user_id = auth.uid() and public.is_org_member(organization_id));
+      using (public.current_app_user_matches(user_id) and public.is_org_member(organization_id))
+      with check (public.current_app_user_matches(user_id) and public.is_org_member(organization_id));
 
     create policy "rls_notifications_delete_recipient"
       on public.notifications
       for delete
       to authenticated
-      using (user_id = auth.uid() and public.is_org_member(organization_id));
+      using (public.current_app_user_matches(user_id) and public.is_org_member(organization_id));
 
     revoke insert on table public.notifications from anon, authenticated;
   end if;
@@ -407,6 +437,11 @@ begin
   if public.app_rls_table_exists('organization_members') then
     create index if not exists organization_members_org_user_role_idx
       on public.organization_members (organization_id, user_id, lower(role));
+
+    if public.app_rls_has_column('organization_members', 'clerk_user_id') then
+      create index if not exists organization_members_org_clerk_role_idx
+        on public.organization_members (organization_id, clerk_user_id, lower(role));
+    end if;
   end if;
 end $$;
 
