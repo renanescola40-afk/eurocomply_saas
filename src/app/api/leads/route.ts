@@ -1,7 +1,10 @@
 import type { NextRequest } from 'next/server';
-import { noStoreJson } from '@/server/security/no-store';
+
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,10 +14,8 @@ const RATE_LIMIT_MAX = 5;
 const WEBHOOK_TIMEOUT_MS = 3_500;
 const LEAD_CAPTURE_BODY_MAX_BYTES = 16 * 1024;
 
-type RateState = {
-  count: number;
-  resetAt: number;
-};
+const LEAD_CAPTURE_ROUTE = '/api/leads';
+const LEAD_CAPTURE_ACTION = 'lead_capture';
 
 type LeadRecord = {
   full_name: string;
@@ -34,24 +35,31 @@ type LeadRecord = {
   ip_hint: string | null;
 };
 
-const rateLimit = new Map<string, RateState>();
-
 function getClientHint(request: NextRequest) {
   return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 }
 
-function isRateLimited(key: string) {
-  const now = Date.now();
-  const existing = rateLimit.get(key);
+async function enforceLeadCaptureRateLimit(request: NextRequest) {
+  const ipHint = getClientHint(request);
+  const result = await checkDistributedRateLimit({
+    userId: null,
+    organizationId: null,
+    ip: ipHint,
+    userAgent: null,
+    action: LEAD_CAPTURE_ACTION,
+    route: LEAD_CAPTURE_ROUTE,
+    key: `lead_capture:${ipHint}`,
+    policy: 'general-api',
+    limit: RATE_LIMIT_MAX,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    failureMode: 'fail-closed',
+  });
 
-  if (!existing || existing.resetAt < now) {
-    rateLimit.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return false;
+  if (!result.allowed) {
+    return rateLimitResponse(result, 'Too many requests. Please try again in a minute.');
   }
 
-  existing.count += 1;
-  rateLimit.set(key, existing);
-  return existing.count > RATE_LIMIT_MAX;
+  return null;
 }
 
 function text(value: unknown, maxLength: number) {
@@ -133,11 +141,10 @@ async function sendWebhook(record: LeadRecord) {
 }
 
 export async function POST(request: NextRequest) {
-  const ipHint = getClientHint(request);
-  if (isRateLimited(ipHint)) {
-    return noStoreJson({ error: 'Too many requests. Please try again in a minute.' }, { status: 429 });
-  }
+  const rateLimited = await enforceLeadCaptureRateLimit(request);
+  if (rateLimited) return rateLimited;
 
+  const ipHint = getClientHint(request);
   const body = await readBody(request);
   if (!body) {
     return noStoreJson({ error: 'Invalid request body.' }, { status: 400 });
