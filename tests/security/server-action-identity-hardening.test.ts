@@ -5,15 +5,18 @@ import { describe, expect, it } from 'vitest';
 const identityScanner = readFileSync(join(process.cwd(), 'scripts/security/check-server-action-identity.mjs'), 'utf8');
 const risksAction = readFileSync(join(process.cwd(), 'src/server/actions/risks.ts'), 'utf8');
 const vendorsAction = readFileSync(join(process.cwd(), 'src/server/actions/vendors.ts'), 'utf8');
+const complianceTasksAction = readFileSync(join(process.cwd(), 'src/server/actions/compliance-tasks.ts'), 'utf8');
 const billingActionPath = join(process.cwd(), 'src/server/actions/billing.ts');
 const documentDownloadsAction = readFileSync(join(process.cwd(), 'src/server/actions/document-downloads.ts'), 'utf8');
 const risksPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/risks/page.tsx'), 'utf8');
 const vendorsPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/vendors/page.tsx'), 'utf8');
 
 describe('server action identity hardening invariants', () => {
-  it('scans every action helper module under src/server/actions', () => {
+  it('scans every standard action helper module under src/server/actions', () => {
     expect(identityScanner).toContain("rel.startsWith('src/server/actions/')");
     expect(identityScanner).toContain('isServerActionModule');
+    expect(identityScanner).toContain('DEDICATED_SECURITY_SCANNER_MODULES');
+    expect(identityScanner).toContain('src/server/actions/documents.ts');
     expect(identityScanner).not.toContain('if (!hasTopLevelServerActionDirective(content))');
   });
 
@@ -52,6 +55,19 @@ describe('server action identity hardening invariants', () => {
     expect(vendorsAction).toContain('reportError(error, context)');
     expect(vendorsAction).toContain('toVendorErrorMessage(error,');
     expect(vendorsAction).not.toContain('return message ||');
+  });
+
+  it('derives compliance task action identity server-side and avoids raw provider errors', () => {
+    expect(complianceTasksAction).toContain('requireCurrentUser');
+    expect(complianceTasksAction).not.toContain('createComplianceTask(input: CreateComplianceTaskInput, userId: string)');
+    expect(complianceTasksAction).not.toContain('updateComplianceTask(taskId: string, organizationId: string, input: UpdateComplianceTaskInput, userId: string)');
+    expect(complianceTasksAction).not.toContain('deleteComplianceTask(taskId: string, organizationId: string, userId: string)');
+    expect(complianceTasksAction).toContain("failureMode: 'fail-closed'");
+    expect(complianceTasksAction).toContain('reportError(error, context)');
+    expect(complianceTasksAction).toContain("throw actionError('Unable to create task')");
+    expect(complianceTasksAction).toContain("throw actionError('Unable to update task')");
+    expect(complianceTasksAction).toContain("throw actionError('Unable to delete task')");
+    expect(complianceTasksAction).not.toContain('throw error;');
   });
 
   it('keeps billing mutations API-only and document downloads sanitized', () => {
