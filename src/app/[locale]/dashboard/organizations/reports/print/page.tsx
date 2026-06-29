@@ -18,6 +18,44 @@ function getScoreNarrative(score: number) {
   return 'Requires leadership focus before external audit, customer or investor review.';
 }
 
+const printReportStyles = `
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  @media print {
+    html,
+    body {
+      background: #ffffff !important;
+      color: #0f172a !important;
+    }
+
+    body {
+      min-height: auto !important;
+      background-image: none !important;
+    }
+
+    a {
+      color: inherit !important;
+      text-decoration: none !important;
+    }
+
+    .print-report {
+      width: 100% !important;
+    }
+
+    .print-report section,
+    .print-report article,
+    .print-report table,
+    .print-report tr,
+    .print-report footer {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+  }
+`;
+
 export default async function PrintableExecutiveReportPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
 
@@ -64,6 +102,7 @@ export default async function PrintableExecutiveReportPage({ params }: { params:
 
   return (
     <main className="print-report mx-auto min-h-screen max-w-5xl bg-white px-8 py-10 text-slate-950 shadow-2xl print:min-h-0 print:max-w-none print:px-0 print:py-0 print:shadow-none">
+      <style dangerouslySetInnerHTML={{ __html: printReportStyles }} />
       <div className="mb-8 flex items-center justify-between gap-4 rounded-2xl border bg-slate-50 p-4 print:hidden">
         <Link href={`/${params.locale}/dashboard/organizations/reports`} className="rounded-md border bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50">
           Back to reports
