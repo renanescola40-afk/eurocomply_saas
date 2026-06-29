@@ -56,11 +56,6 @@ function getSafeSignupContinuation(locale: string, nextPath: string | null, plan
   return normalizedNext;
 }
 
-function getSignInHref(locale: string, planId?: string) {
-  const baseHref = `/${locale}/login`;
-  return planId ? `${baseHref}?plan=${encodeURIComponent(planId)}` : baseHref;
-}
-
 export default function SignupPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -74,7 +69,7 @@ export default function SignupPage() {
     () => getSafeSignupContinuation(activeLocale, requestedNext, selectedPlan?.id),
     [activeLocale, requestedNext, selectedPlan?.id],
   );
-  const signInUrl = getSignInHref(activeLocale, selectedPlan?.id);
+  const signInUrl = `/${activeLocale}/login`;
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
@@ -112,10 +107,9 @@ export default function SignupPage() {
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-200/80">{pageCopy.selectedPlan}</p>
                     <p className="mt-2 text-xl font-semibold tracking-tight">{selectedPlan.name}</p>
+                    <p className="mt-3 text-xs leading-5 text-blue-100/70">{pageCopy.planHelp}</p>
                   </div>
-                  <p className="rounded-full bg-white px-3 py-1 text-sm font-bold text-slate-950">€{selectedPlan.priceMonthly}/mo</p>
                 </div>
-                <p className="mt-3 text-xs leading-5 text-blue-100/70">{pageCopy.planHelp}</p>
               </div>
             ) : null}
 

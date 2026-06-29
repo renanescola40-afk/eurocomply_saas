@@ -7,7 +7,6 @@ import { SignIn } from '@clerk/nextjs';
 import { Building2, CheckCircle2, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { normalizePublicAuthErrorCode } from '@/lib/auth/public-errors';
-import { getBillingPlan } from '@/lib/billing/plans';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
 const copy = {
@@ -45,14 +44,12 @@ const copy = {
   },
 } as const;
 
-function getAuthSuccessHref(locale: string, planId?: string | null) {
-  const baseHref = `/${locale}/onboarding`;
-  const safePlanId = getBillingPlan(planId)?.id;
-  return safePlanId ? `${baseHref}?plan=${encodeURIComponent(safePlanId)}` : baseHref;
+function getAuthSuccessHref(locale: string) {
+  return `/${locale}/onboarding`;
 }
 
-function getSafeNextPath(next: string | null, locale: string, planId?: string | null) {
-  const fallback = getAuthSuccessHref(locale, planId);
+function getSafeNextPath(next: string | null, locale: string) {
+  const fallback = getAuthSuccessHref(locale);
   const normalizedNext = next?.trim();
 
   if (!normalizedNext || normalizedNext.length > 240 || normalizedNext.includes('://') || normalizedNext.startsWith('//')) {
@@ -72,7 +69,7 @@ export default function LoginPage() {
   const locale = (params.locale as string) || 'pt';
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const pageCopy = activeLocale === 'pt' ? copy.pt : copy.en;
-  const afterSignInUrl = getSafeNextPath(searchParams.get('next'), activeLocale, searchParams.get('plan'));
+  const afterSignInUrl = getSafeNextPath(searchParams.get('next'), activeLocale);
   const signUpUrl = `/${activeLocale}/signup`;
   const publicErrorCode = searchParams.has('error')
     ? normalizePublicAuthErrorCode(searchParams.get('error'), 'email_sign_in_failed')

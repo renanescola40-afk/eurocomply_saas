@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-06-28T19:10:36Z",
+  "cycle": "scheduled_health_audit",
+  "status": "patch_updated_waiting_for_ci",
+  "findings": [
+    "Open PR #583 is mergeable but its head still has RISCK COMPLY Security CI and Full Security Suite failures.",
+    "Main merge commit ff49e159295ceb7939b1985819e4bb6e4da9b1f0 has no workflow runs, so production remains unconfirmed.",
+    "The Phase 5 dashboard invariant test expects login success fallback to be localized onboarding without unsafe plan propagation.",
+    "Reviewer feedback on PR #584 identified that existing-account users who switch from signup to login must keep the sanitized onboarding continuation so selected pricing plan handoff is not lost.",
+    "Cron remains limited to one daily Vercel cron and the internal maintenance aggregator is token-gated and fail-closed without an app URL.",
+    "Billing checkout and portal remain protected by auth, manage_billing RBAC, trusted mutation/rate limiting, step-up, safe return URL handling, and audit logging.",
+    "Enterprise demo remains environment gated and does not activate real entitlements."
+  ],
+  "actions_taken": [
+    "Prepared branch audit/auth-invariant-fix-20260628 from main.",
+    "Applied a minimal login route correction: removed plan-aware post-auth fallback while preserving safe next validation and the premium UI.",
+    "Updated the signup route to carry only the sanitized onboarding continuation into the sign-in URL, preserving selected-plan handoff without open redirects.",
+    "Attempted to merge PR #584 after GitHub CI/security passed, but repository rules blocked merge until the unresolved review conversation is handled.",
+    "Kept runtime API, billing, entitlement, demo, and cron behavior unchanged."
+  ],
+  "commits": [
+    "78e8221165640e4abcc0ceaec0642df8b0b36d16",
+    "08fe93157ba52d66c87d92f5b3795465044eb82d",
+    "c7caf45df92361a8c5b190f5a60220fe10898d29"
+  ],
+  "next_cycle_focus": [
+    "Wait for the updated PR #584 CI/security gates after commit c7caf45df92361a8c5b190f5a60220fe10898d29.",
+    "Resolve the PR #584 signup handoff review thread only after confirming the updated diff satisfies it.",
+    "Do not merge #583 while Full Security Suite remains red; prefer the smaller #584 patch if updated checks pass.",
+    "After merge, verify workflow runs on the exact main merge commit before production Go."
+  ]
+}
