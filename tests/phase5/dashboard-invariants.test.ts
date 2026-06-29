@@ -144,6 +144,7 @@ describe('Phase 5 dashboard invariants', () => {
 
     expect(content).toContain('workflowReadiness?: OrganizationWorkflowReadiness');
     expect(content).toContain('workflowReadiness={workflowReadiness}');
+    expect(content).toContain('NextBestActions');
   });
 
   it('uses workflow readiness to prioritize next best actions', () => {
