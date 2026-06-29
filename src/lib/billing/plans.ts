@@ -40,6 +40,7 @@ const BILLING_PLAN_IDS: BillingPlanId[] = ['starter', 'growth', 'enterprise', 'e
 
 const BILLING_PLAN_ALIASES: Record<string, BillingPlanId> = {
   basic: 'starter',
+  free: 'starter',
   pro: 'growth',
 };
 
@@ -127,13 +128,13 @@ export function normalizeBillingPlanId(planId: string | null | undefined): Billi
   return BILLING_PLAN_ALIASES[normalized];
 }
 
-function normalizeCatalogPlanId(planId: string | null | undefined): CatalogBillingPlanId | undefined {
+export function normalizeBillingCatalogPlanId(planId: string | null | undefined): CatalogBillingPlanId | undefined {
   const normalizedPlanId = normalizeBillingPlanId(planId);
   return normalizedPlanId ? CATALOG_PLAN_BY_ID[normalizedPlanId] : undefined;
 }
 
 export function getBillingPlan(planId: string | null | undefined) {
-  const normalizedPlanId = normalizeCatalogPlanId(planId);
+  const normalizedPlanId = normalizeBillingCatalogPlanId(planId);
 
   return BILLING_PLANS.find((plan) => plan.id === normalizedPlanId);
 }
@@ -144,4 +145,23 @@ export function getBillingEntitlements(planId: string | null | undefined): Billi
 
 export function getStripePriceId(plan: BillingPlan) {
   return process.env[plan.stripePriceEnvKey] ?? plan.legacyStripePriceEnvKeys.map((key) => process.env[key]).find(Boolean);
+}
+
+export function getBillingPlanIdForStripePriceId(priceId: string | null | undefined): CatalogBillingPlanId | undefined {
+  const normalizedPriceId = priceId?.trim();
+
+  if (!normalizedPriceId) return undefined;
+
+  for (const plan of BILLING_PLANS) {
+    const configuredPriceIds = [process.env[plan.stripePriceEnvKey], ...plan.legacyStripePriceEnvKeys.map((key) => process.env[key])]
+      .filter((candidate): candidate is string => typeof candidate === 'string')
+      .map((candidate) => candidate.trim())
+      .filter(Boolean);
+
+    if (configuredPriceIds.includes(normalizedPriceId)) {
+      return plan.id;
+    }
+  }
+
+  return undefined;
 }

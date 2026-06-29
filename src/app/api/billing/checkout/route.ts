@@ -1,3 +1,4 @@
+import Stripe from 'stripe';
 import { z } from 'zod';
 
 import { readBoundedJsonRequest } from '@/lib/security/validate';
@@ -43,6 +44,35 @@ async function getOrganizationStripeCustomerId(organizationId: string) {
   }
 
   return data?.stripe_customer_id ?? null;
+}
+
+async function ensureOrganizationStripeCustomer({
+  stripe,
+  organizationId,
+  organizationName,
+  userEmail,
+  metadata,
+}: {
+  stripe: Stripe;
+  organizationId: string;
+  organizationName?: string | null;
+  userEmail?: string | null;
+  metadata: Record<string, string>;
+}) {
+  const existingCustomerId = await getOrganizationStripeCustomerId(organizationId);
+
+  if (existingCustomerId) {
+    await stripe.customers.update(existingCustomerId, { metadata });
+    return existingCustomerId;
+  }
+
+  const customer = await stripe.customers.create({
+    ...(userEmail ? { email: userEmail } : {}),
+    ...(organizationName ? { name: organizationName } : {}),
+    metadata,
+  });
+
+  return customer.id;
 }
 
 export async function POST(request: Request) {
@@ -101,8 +131,8 @@ export async function POST(request: Request) {
     const locale = normalizeCheckoutLocale(parsedBody.data.locale);
     const stripe = getStripeClient();
     const priceId = getStripePriceId(plan);
-    const existingCustomerId = await getOrganizationStripeCustomerId(organization.id);
     const clerkOrgId = typeof organization.clerk_org_id === 'string' ? organization.clerk_org_id : '';
+    const organizationName = typeof organization.name === 'string' ? organization.name : null;
     const metadata = {
       organization_id: organization.id,
       organizationId: organization.id,
@@ -115,10 +145,17 @@ export async function POST(request: Request) {
       step_up_action: stepUp.assessment.action,
       step_up_verified_at: stepUp.assessment.verifiedAt ?? '',
     };
+    const stripeCustomerId = await ensureOrganizationStripeCustomer({
+      stripe,
+      organizationId: organization.id,
+      organizationName,
+      userEmail: user.email,
+      metadata,
+    });
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      ...(existingCustomerId ? { customer: existingCustomerId } : { customer_email: user.email ?? undefined }),
+      customer: stripeCustomerId,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
       cancel_url: `${returnBaseUrl.appUrl}/${locale}/pricing?checkout=cancelled`,
@@ -143,7 +180,7 @@ export async function POST(request: Request) {
       metadata: {
         plan,
         priceId,
-        stripeCustomerId: existingCustomerId,
+        stripeCustomerId,
         clerkOrgId: clerkOrgId || null,
         actorRole: permission.role ?? 'unknown',
         stepUpAction: stepUp.assessment.action,
