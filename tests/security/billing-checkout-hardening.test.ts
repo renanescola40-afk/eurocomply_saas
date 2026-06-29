@@ -121,15 +121,30 @@ describe('billing checkout API security gates', () => {
     mocks.writeAuditLog.mockResolvedValue(undefined);
   });
 
-  it('rejects invalid checkout plan before auth, RBAC or Stripe calls', async () => {
+  it('blocks unauthenticated checkout before parsing attacker-controlled body', async () => {
+    mocks.requireApiUser.mockRejectedValue({ code: 'unauthorized', status: 401 });
+
+    const response = await POST(buildRequest({ plan: 'enterprise-custom', locale: 'pt' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body).toEqual({ error: 'unauthorized' });
+    expect(mocks.getCurrentOrganizationForUser).not.toHaveBeenCalled();
+    expect(mocks.requirePermission).not.toHaveBeenCalled();
+    expect(mocks.requireTrustedMutation).not.toHaveBeenCalled();
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid checkout plan only after auth, RBAC, trusted origin and rate-limit gates', async () => {
     const response = await POST(buildRequest({ plan: 'enterprise-custom', locale: 'pt' }));
     const body = await response.json();
 
     expect(response.status).toBe(400);
     expect(body).toEqual({ error: 'invalid_plan' });
-    expect(mocks.requireApiUser).not.toHaveBeenCalled();
-    expect(mocks.requirePermission).not.toHaveBeenCalled();
-    expect(mocks.requireTrustedMutation).not.toHaveBeenCalled();
+    expect(mocks.requireApiUser).toHaveBeenCalled();
+    expect(mocks.requirePermission).toHaveBeenCalledWith({ userId: 'user_admin', organizationId: 'org_a', permission: 'manage_billing' });
+    expect(mocks.requireTrustedMutation).toHaveBeenCalled();
+    expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
   });
 

@@ -1,18 +1,63 @@
-import { readBoundedJsonRequest } from '@/lib/security/validate';
+import { z } from 'zod';
+
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
 import {
+  assertApiResourceOrganization,
+  parseJsonBodyWithZod,
   requireApiUser,
   requirePermission,
   requireTrustedMutation,
   secureApiError,
 } from '@/server/security/api-guards';
 
-const allowedActions = new Set(['approve', 'reject']);
 const APPROVAL_JSON_MAX_BYTES = 8 * 1024;
+const documentIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(96)
+  .refine((value) => !value.includes('/') && !value.includes('\\') && !value.includes('..'), 'Unsafe document id');
+
+const approvalBodySchema = z.object({
+  action: z.enum(['approve', 'reject']),
+  note: z.string().trim().max(300).nullable().optional(),
+});
+
+type DocumentApprovalRow = {
+  id: string;
+  organization_id: string;
+  name: string | null;
+  status: string | null;
+};
+
+function documentTitle(document: Pick<DocumentApprovalRow, 'name'> | null | undefined) {
+  return document?.name?.trim() || 'Controlled document';
+}
+
+async function auditApprovalDenied(input: {
+  organizationId: string;
+  actorUserId: string;
+  documentId: string;
+  reason: string;
+  actorRole?: string | null;
+}) {
+  await createAuditEvent({
+    organizationId: input.organizationId,
+    actorUserId: input.actorUserId,
+    action: 'document_approval_denied',
+    entityType: 'document',
+    entityId: input.documentId,
+    metadata: {
+      documentId: input.documentId,
+      reason: input.reason,
+      actorRole: input.actorRole ?? 'unknown',
+    },
+  });
+}
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -39,51 +84,91 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     if (mutationDenied) return mutationDenied;
 
-    const { id } = await params;
-    const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
+    const { id: rawId } = await params;
+    const id = documentIdSchema.parse(rawId);
+    const body = await parseJsonBodyWithZod(request, {
+      schema: approvalBodySchema,
       maxBytes: APPROVAL_JSON_MAX_BYTES,
-    }).catch(() => null);
-    const action = typeof body?.action === 'string' ? body.action : undefined;
-
-    if (!action || !allowedActions.has(action)) {
-      return noStoreJson({ error: 'invalid_approval_action' }, { status: 400 });
-    }
+    });
 
     const supabase = tryCreateAdminClient();
-    const nextStatus = action === 'approve' ? 'approved' : 'rejected';
-    let persisted = false;
-    let documentTitle = 'Controlled document';
 
-    if (supabase && !id.startsWith('ap-') && !id.startsWith('demo-')) {
-      const { data, error } = await supabase
-        .from('documents')
-        .update({ status: nextStatus })
-        .eq('id', id)
-        .eq('organization_id', organization.id)
-        .select('id,title,status,organization_id')
-        .single();
+    if (!supabase) {
+      return noStoreJson({ error: 'document_storage_unavailable' }, { status: 503 });
+    }
 
-      if (error) {
-        if (!['42P01', '42703', 'PGRST116'].includes(error.code ?? '')) {
-          console.warn('[documents] approval_update_failed', { code: error.code ?? 'unknown' });
-        }
-      } else if (data && data.organization_id === organization.id) {
-        persisted = true;
-        documentTitle = data.title ?? documentTitle;
-      }
+    const { data: existingDocument, error: fetchError } = await supabase
+      .from('documents')
+      .select('id,organization_id,name,status')
+      .eq('id', id)
+      .maybeSingle<DocumentApprovalRow>();
+
+    if (fetchError) {
+      console.warn('[documents] approval_lookup_failed', { code: fetchError.code ?? 'unknown' });
+      return noStoreJson({ error: 'document_lookup_failed' }, { status: 500 });
+    }
+
+    if (!existingDocument) {
+      await auditApprovalDenied({
+        organizationId: organization.id,
+        actorUserId: user.id,
+        documentId: id,
+        reason: 'document_not_found',
+        actorRole: permission.role,
+      });
+      return noStoreJson({ error: 'document_not_found' }, { status: 404 });
+    }
+
+    try {
+      assertApiResourceOrganization(existingDocument.organization_id, organization.id);
+    } catch (error) {
+      await auditApprovalDenied({
+        organizationId: organization.id,
+        actorUserId: user.id,
+        documentId: id,
+        reason: 'document_wrong_organization',
+        actorRole: permission.role,
+      });
+      throw error;
+    }
+
+    const nextStatus = body.action === 'approve' ? 'approved' : 'rejected';
+    const title = documentTitle(existingDocument);
+    const { data: updatedDocument, error: updateError } = await supabase
+      .from('documents')
+      .update({ status: nextStatus })
+      .eq('id', id)
+      .eq('organization_id', organization.id)
+      .select('id,name,status,organization_id')
+      .maybeSingle<DocumentApprovalRow>();
+
+    if (updateError) {
+      console.warn('[documents] approval_update_failed', { code: updateError.code ?? 'unknown' });
+      return noStoreJson({ error: 'document_approval_failed' }, { status: 500 });
+    }
+
+    if (!updatedDocument) {
+      await auditApprovalDenied({
+        organizationId: organization.id,
+        actorUserId: user.id,
+        documentId: id,
+        reason: 'document_not_found_after_tenant_filter',
+        actorRole: permission.role,
+      });
+      return noStoreJson({ error: 'document_not_found' }, { status: 404 });
     }
 
     const audit = await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
-      action: action === 'approve' ? 'document_approved' : 'document_rejected',
+      action: body.action === 'approve' ? 'document_approved' : 'document_rejected',
       entityType: 'document',
-      entityId: persisted ? id : undefined,
+      entityId: updatedDocument.id,
       metadata: {
-        documentId: id,
-        documentTitle,
-        note: typeof body?.note === 'string' ? body.note.slice(0, 300) : null,
-        persisted,
+        documentId: updatedDocument.id,
+        documentTitle: title,
+        note: body.note ?? null,
+        persisted: true,
         actorRole: permission.role,
       },
     });
@@ -93,15 +178,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       userId: user.id,
       type: 'approval',
       message:
-        action === 'approve'
-          ? `Documento ${documentTitle} aprovado.`
-          : `Documento ${documentTitle} rejeitado para revisão.`,
+        body.action === 'approve'
+          ? `Documento ${title} aprovado.`
+          : `Documento ${title} rejeitado para revisão.`,
     });
 
     return noStoreJson({
-      documentId: id,
+      documentId: updatedDocument.id,
       status: nextStatus,
-      persisted,
+      persisted: true,
       auditPersisted: audit.persisted,
       notificationPersisted: notification.persisted,
     });

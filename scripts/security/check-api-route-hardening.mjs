@@ -3,7 +3,10 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 const ROOT = process.cwd();
-const API_ROOT = path.join(ROOT, 'src', 'app', 'api');
+const API_ROOTS = [
+  path.join(ROOT, 'src', 'app', 'api'),
+  path.join(ROOT, 'src', 'app', 'next_api'),
+];
 const INVENTORY_PATH = path.join(ROOT, 'docs', 'security', 'API_ROUTE_INVENTORY.md');
 const CANONICAL_GUARD_PATH = path.join(ROOT, 'src', 'server', 'security', 'api-guard.ts');
 const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
@@ -19,18 +22,19 @@ const KNOWN_CLASSES = new Set([
   'health/internal',
 ]);
 
+const APP_API_PREFIX_PATTERN = 'src\\/app\\/(?:api|next_api)';
 const PUBLIC_SAFE_PATTERNS = [
-  /src\/app\/api\/health\/route\.ts$/,
-  /src\/app\/api\/ready\/route\.ts$/,
-  /src\/app\/api\/public\//,
-  /src\/app\/api\/verify\//,
-  /src\/app\/api\/og\//,
-  /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/,
+  new RegExp(`${APP_API_PREFIX_PATTERN}\\/health\\/route\\.ts$`),
+  new RegExp(`${APP_API_PREFIX_PATTERN}\\/ready\\/route\\.ts$`),
+  new RegExp(`${APP_API_PREFIX_PATTERN}\\/public\\/`),
+  new RegExp(`${APP_API_PREFIX_PATTERN}\\/verify\\/`),
+  new RegExp(`${APP_API_PREFIX_PATTERN}\\/og\\/`),
+  new RegExp(`${APP_API_PREFIX_PATTERN}\\/audit\\/evidence-pack\\/verify\\/route\\.ts$`),
 ];
-const PUBLIC_MUTATION_PATTERNS = [/src\/app\/api\/leads\/route\.ts$/];
+const PUBLIC_MUTATION_PATTERNS = [new RegExp(`${APP_API_PREFIX_PATTERN}\\/leads\\/route\\.ts$`)];
 
 const WEBHOOK_PATTERNS = [/\/webhook\//, /\/webhooks\//, /stripe\/webhook/, /billing\/webhook/];
-const INTERNAL_PATTERNS = [/src\/app\/api\/(cron|internal|maintenance|ops|intelligence\/refresh)\//];
+const INTERNAL_PATTERNS = [new RegExp(`${APP_API_PREFIX_PATTERN}\\/(cron|internal|maintenance|ops|intelligence\\/refresh)\\/`)];
 const TENANT_TERMS = [
   'organization',
   'organizationId',
@@ -187,7 +191,7 @@ function checkRoute(file, inventory) {
 }
 
 const inventory = readInventory();
-const routes = walk(API_ROOT).map((file) => checkRoute(file, inventory));
+const routes = API_ROOTS.flatMap((root) => walk(root)).map((file) => checkRoute(file, inventory));
 const failingRoutes = routes.filter((route) => route.failures.length > 0);
 
 if (!existsSync(CANONICAL_GUARD_PATH)) {
