@@ -1,0 +1,1 @@
+phase6 auth checks follow-up: CI failed because dashboard invariants referenced stale component names after auth checks merge.
