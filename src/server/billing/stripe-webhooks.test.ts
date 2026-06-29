@@ -222,8 +222,8 @@ describe('Stripe webhook billing hardening', () => {
         organization_id: 'org_a',
         stripe_customer_id: 'cus_123',
         stripe_subscription_id: 'sub_123',
-        plan: 'business',
-        tier: 'business',
+        plan: 'growth',
+        tier: 'growth',
         status,
       }),
       { onConflict: 'organization_id' },
@@ -243,6 +243,11 @@ describe('Stripe webhook billing hardening', () => {
         userId: 'user_admin',
         entityType: 'stripe_subscription',
         entityId: 'sub_123',
+        metadata: expect.objectContaining({
+          plan: 'growth',
+          metadataPlan: 'business',
+          planSource: 'subscription_metadata_fallback',
+        }),
       }),
     );
   });
