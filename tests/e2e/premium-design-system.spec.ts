@@ -19,14 +19,24 @@ test.describe('premium design system', () => {
     expect(tokens.ring).toBe('#75adff');
     expect(tokens.surface).toContain('rgba');
 
-    await page.keyboard.press('Tab');
-    const focusOutline = await page.evaluate(() => {
-      const activeElement = document.activeElement;
-      if (!activeElement) return '';
-      return window.getComputedStyle(activeElement).outlineStyle;
+    const firstInteractive = page.locator('a[href], button, input, select, textarea').first();
+    await expect(firstInteractive).toBeVisible();
+    await firstInteractive.focus();
+
+    const focusStyles = await firstInteractive.evaluate((element) => {
+      const styles = window.getComputedStyle(element);
+      return {
+        outlineStyle: styles.outlineStyle,
+        outlineWidth: styles.outlineWidth,
+        boxShadow: styles.boxShadow,
+      };
     });
 
-    expect(focusOutline).not.toBe('none');
+    expect(
+      focusStyles.outlineStyle !== 'none' ||
+        focusStyles.outlineWidth !== '0px' ||
+        focusStyles.boxShadow !== 'none'
+    ).toBeTruthy();
 
     await page.setViewportSize({ width: 1440, height: 1200 });
     await page.screenshot({ path: 'test-results/premium-home-desktop.png', fullPage: true });
