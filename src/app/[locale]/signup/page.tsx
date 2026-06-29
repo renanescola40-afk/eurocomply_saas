@@ -16,13 +16,19 @@ function normalizePlanId(planId: string | null) {
   return getBillingPlan(planId)?.id;
 }
 
+function isAllowedLocalizedContinuation(path: string, locale: string) {
+  return [`/${locale}/onboarding`, `/${locale}/checkout`].some(
+    (allowedPath) => path === allowedPath || path.startsWith(`${allowedPath}/`) || path.startsWith(`${allowedPath}?`),
+  );
+}
+
 function getSafeSignupContinuation(locale: string, nextPath: string | null, planId?: string) {
   const fallbackHref = getOnboardingHref(locale, planId);
   const normalizedNext = nextPath?.trim();
 
   if (!normalizedNext) return fallbackHref;
   if (normalizedNext.length > 240 || normalizedNext.startsWith('//') || normalizedNext.includes('://')) return fallbackHref;
-  if (!normalizedNext.startsWith(`/${locale}/onboarding`) && !normalizedNext.startsWith(`/${locale}/checkout`)) return fallbackHref;
+  if (!isAllowedLocalizedContinuation(normalizedNext, locale)) return fallbackHref;
   return normalizedNext;
 }
 
