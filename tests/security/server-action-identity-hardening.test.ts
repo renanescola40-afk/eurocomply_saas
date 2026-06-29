@@ -16,7 +16,8 @@ describe('server action identity hardening invariants', () => {
     expect(risksAction).toContain("route: 'server-action:createRisk'");
     expect(risksAction).toContain("route: 'server-action:deleteRisk'");
     expect(risksAction).toContain('reportError(error, context)');
-    expect(risksAction).not.toContain('if (error) throw error');
+    expect(risksAction).toContain("throw actionError('Unable to create risk')");
+    expect(risksAction).toContain("throw actionError('Unable to delete risk')");
   });
 
   it('derives vendor action identity server-side and avoids raw provider errors', () => {
@@ -27,8 +28,8 @@ describe('server action identity hardening invariants', () => {
     expect(vendorsAction).toContain('enforceVendorActionRateLimit');
     expect(vendorsAction).toContain("failureMode: 'fail-closed'");
     expect(vendorsAction).toContain('reportError(error, context)');
+    expect(vendorsAction).toContain('toVendorErrorMessage(error,');
     expect(vendorsAction).not.toContain('return message ||');
-    expect(vendorsAction).not.toContain('if (error) throw error');
   });
 
   it('does not pass authenticated user ids from page actions into risk or vendor actions', () => {
