@@ -17,7 +17,7 @@ import {
 } from '@/server/security/upload-security';
 
 const SIGNED_URL_EXPIRES_IN_SECONDS = SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS;
-const DOCUMENT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const DOCUMENT_ID_PATTERN = /^[a-zA-Z0-9_-]{1,128}$/;
 const DOCUMENT_SIGNED_URL_RATE_LIMIT = {
   limit: 20,
   windowMs: 60_000,
@@ -155,12 +155,6 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
     });
     throw new Error('Organization access required');
   }
-
-  await enforceSignedUrlRateLimit({
-    userId: user.id,
-    organizationIds,
-    accessPurpose,
-  });
 
   const supabase = createAdminClient();
   const { data: document, error: documentError } = await supabase
