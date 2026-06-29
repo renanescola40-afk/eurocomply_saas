@@ -4,14 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   checkDistributedRateLimit: vi.fn(),
-  buildRateLimitSubjectFromRequest: vi.fn((_request, subject = {}) => ({
-    userId: subject.userId ?? null,
-    organizationId: subject.organizationId ?? null,
-    ip: '203.0.113.10',
-    userAgent: 'Vitest',
-    action: subject.action ?? 'lead_capture',
-    route: subject.route ?? '/api/leads',
-  })),
   rateLimitResponse: vi.fn((result, message = 'Too many requests') =>
     new Response(JSON.stringify({ error: message }), {
       status: result.reason && result.failureMode === 'fail-closed' ? 503 : 429,
@@ -28,7 +20,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/security/rate-limit', () => ({
   checkDistributedRateLimit: mocks.checkDistributedRateLimit,
-  buildRateLimitSubjectFromRequest: mocks.buildRateLimitSubjectFromRequest,
 }));
 
 vi.mock('@/lib/security/rate-limit-response', () => ({
@@ -100,17 +91,13 @@ describe('public lead capture API hardening', () => {
     });
   });
 
-  it('uses distributed rate limiting before reading and storing the lead', async () => {
+  it('uses distributed IP-only rate limiting before reading and storing the lead', async () => {
     const response = await POST(buildRequest(validLead()));
     const body = await response.json();
 
     expect(response.status).toBe(201);
     expect(response.headers.get('cache-control')).toContain('no-store');
     expect(body).toEqual({ ok: true });
-    expect(mocks.buildRateLimitSubjectFromRequest).toHaveBeenCalledWith(
-      expect.any(Request),
-      expect.objectContaining({ action: 'lead_capture', route: '/api/leads' }),
-    );
     expect(mocks.checkDistributedRateLimit).toHaveBeenCalledWith(
       expect.objectContaining({
         policy: 'general-api',
@@ -119,6 +106,9 @@ describe('public lead capture API hardening', () => {
         windowMs: 60_000,
         action: 'lead_capture',
         route: '/api/leads',
+        ip: '203.0.113.10',
+        userAgent: null,
+        key: 'lead_capture:203.0.113.10',
       }),
     );
     expect(mocks.supabaseInsert).toHaveBeenCalledWith(
@@ -128,6 +118,18 @@ describe('public lead capture API hardening', () => {
         consent_to_contact: true,
       }),
     );
+  });
+
+  it('keeps the rate-limit bucket stable when User-Agent changes', async () => {
+    await POST(buildRequest(validLead(), { 'user-agent': 'Agent A' }));
+    await POST(buildRequest(validLead(), { 'user-agent': 'Agent B' }));
+
+    const firstCall = mocks.checkDistributedRateLimit.mock.calls[0]?.[0];
+    const secondCall = mocks.checkDistributedRateLimit.mock.calls[1]?.[0];
+    expect(firstCall.key).toBe('lead_capture:203.0.113.10');
+    expect(secondCall.key).toBe('lead_capture:203.0.113.10');
+    expect(firstCall.userAgent).toBeNull();
+    expect(secondCall.userAgent).toBeNull();
   });
 
   it('blocks rate limited requests before Supabase or webhook side effects', async () => {
