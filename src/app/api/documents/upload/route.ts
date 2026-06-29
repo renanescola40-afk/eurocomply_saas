@@ -31,7 +31,6 @@ const SIGNATURE_MISMATCH_REASON = 'signature_mismatch';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MULTIPART_UPLOAD_OVERHEAD_BYTES = 256 * 1024;
 const MAX_MULTIPART_UPLOAD_BYTES = MAX_UPLOAD_BYTES + MULTIPART_UPLOAD_OVERHEAD_BYTES;
-const MAX_UPLOAD_REQUEST_BYTES = MAX_MULTIPART_UPLOAD_BYTES;
 
 function safeDocumentTitle(name: string) {
   return sanitizeUploadFileName(name)
@@ -63,7 +62,7 @@ function getRequestContentLength(request: NextRequest) {
 
 function isMultipartRequestTooLarge(request: NextRequest) {
   const contentLength = getRequestContentLength(request);
-  return contentLength !== null && contentLength > MAX_UPLOAD_REQUEST_BYTES;
+  return contentLength !== null && contentLength > MAX_MULTIPART_UPLOAD_BYTES;
 }
 
 function rejectOversizedMultipartRequest(request: NextRequest) {
@@ -148,7 +147,7 @@ export async function POST(request: NextRequest) {
     ...buildRateLimitSubjectFromRequest(request, {
       userId: user.id,
       organizationId: organization.id,
-      action: 'document_upload',
+      action: 'documents_upload',
       route: '/api/documents/upload',
     }),
     key: `documents:upload:${organization.id}:${user.id}`,
