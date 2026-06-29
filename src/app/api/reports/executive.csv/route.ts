@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { csvDownloadResponse } from '@/lib/exports/csv';
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
@@ -6,6 +5,7 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getDashboardSummary } from '@/server/queries/dashboard';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
+import { noStoreJson } from '@/server/security/no-store';
 
 export async function GET() {
   let context: Awaited<ReturnType<typeof requireOrganizationContext>>;
@@ -19,6 +19,11 @@ export async function GET() {
   const { user, organization } = context;
   const rateLimit = await checkDistributedRateLimit({
     key: `export:executive:${organization.id}:${user.id}`,
+    policy: 'export',
+    userId: user.id,
+    organizationId: organization.id,
+    action: 'export_executive_csv',
+    route: '/api/reports/executive.csv',
     limit: 10,
     windowMs: 60_000,
   });
@@ -58,6 +63,6 @@ export async function GET() {
     return csvDownloadResponse(rows, 'executive-report.csv');
   } catch (error) {
     reportError(error, { area: 'executive_csv_export', organizationId: organization.id, userId: user.id });
-    return NextResponse.json({ error: 'Unable to export executive report' }, { status: 500 });
+    return noStoreJson({ error: 'Unable to export executive report' }, { status: 500 });
   }
 }
