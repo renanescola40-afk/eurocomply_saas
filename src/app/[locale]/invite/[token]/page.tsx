@@ -22,18 +22,7 @@ export default async function AcceptInvitationPage({ params }: AcceptInvitationP
   async function acceptCurrentInvitation() {
     'use server';
 
-    const currentUser = await getCurrentUser();
-
-    if (!currentUser?.email) {
-      redirect(`/login?redirectedFrom=/invite/${params.token}`);
-    }
-
-    await acceptInvitation(
-      { token: params.token },
-      currentUser.id,
-      currentUser.email,
-    );
-
+    await acceptInvitation({ token: params.token });
     redirect('/dashboard/organizations');
   }
 
