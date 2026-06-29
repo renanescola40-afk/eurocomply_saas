@@ -5,8 +5,8 @@ import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 import { getTrustCenterPage } from '@/lib/trust-center/content';
 import { isTrustCenterSlug, TRUST_CENTER_ROUTES } from '@/lib/trust-center/routes';
 
-export const dynamic = 'force-static';
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 type PageProps = {
   params: Promise<{ locale: string; trustPage: string }>;
