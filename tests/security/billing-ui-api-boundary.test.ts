@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -6,24 +6,24 @@ const billingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard
 const publicCheckoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
 const billingActionButton = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx'), 'utf8');
 const billingPortalRoute = readFileSync(join(process.cwd(), 'src/app/api/billing/portal/route.ts'), 'utf8');
-const legacyBillingActions = readFileSync(join(process.cwd(), 'src/server/actions/billing.ts'), 'utf8');
+const legacyBillingActionsPath = join(process.cwd(), 'src/server/actions/billing.ts');
 
-describe('billing UI API security boundary', () => {
-  it('does not import legacy billing mutation server actions from billing UI pages', () => {
-    expect(billingPage).not.toContain("@/server/actions/billing");
-    expect(publicCheckoutPage).not.toContain("@/server/actions/billing");
-    expect(billingPage).toContain("./billing-action-button");
-    expect(publicCheckoutPage).toContain("billing-action-button");
+describe('billing UI API boundary', () => {
+  it('does not import the old billing action helper from billing UI pages', () => {
+    expect(billingPage).not.toContain('@/server/actions/billing');
+    expect(publicCheckoutPage).not.toContain('@/server/actions/billing');
+    expect(billingPage).toContain('./billing-action-button');
+    expect(publicCheckoutPage).toContain('billing-action-button');
   });
 
-  it('keeps the billing action client free of server-only imports', () => {
+  it('keeps the billing action client browser-safe', () => {
     expect(billingActionButton).toContain("'use client'");
-    expect(billingActionButton).not.toContain("@/server/");
-    expect(billingActionButton).not.toContain("@/lib/supabase/admin");
-    expect(billingActionButton).not.toContain("node:crypto");
+    expect(billingActionButton).not.toContain('@/server/');
+    expect(billingActionButton).not.toContain('@/lib/supabase/admin');
+    expect(billingActionButton).not.toContain('node:crypto');
   });
 
-  it('routes checkout and portal actions through hardened API endpoints', () => {
+  it('routes checkout and portal actions through API endpoints', () => {
     expect(billingActionButton).toContain("'/api/billing/checkout'");
     expect(billingActionButton).toContain('/api/billing/portal?locale=');
     expect(billingActionButton).toContain('returnPath=');
@@ -31,7 +31,7 @@ describe('billing UI API security boundary', () => {
     expect(billingActionButton).toContain("action === 'checkout' ? JSON.stringify({ plan: planId, locale }) : undefined");
   });
 
-  it('keeps Stripe portal returns scoped to an existing billing dashboard route', () => {
+  it('keeps Stripe portal returns scoped to the billing dashboard route', () => {
     expect(billingPortalRoute).toContain("DEFAULT_BILLING_RETURN_PATH = '/dashboard/organizations/billing'");
     expect(billingPortalRoute).toContain('returnPath');
     expect(billingPortalRoute).toContain('^\\/dashboard\\/organizations\\/billing');
@@ -46,9 +46,7 @@ describe('billing UI API security boundary', () => {
     expect(billingActionButton).toContain("action: 'manage_billing'");
   });
 
-  it('disables legacy server action billing mutations so future imports fail closed', () => {
-    expect(legacyBillingActions).toContain('Billing mutations must go through the hardened /api/billing routes.');
-    expect(legacyBillingActions).not.toContain('stripe.checkout.sessions.create');
-    expect(legacyBillingActions).not.toContain('stripe.billingPortal.sessions.create');
+  it('has no legacy billing action helper file', () => {
+    expect(existsSync(legacyBillingActionsPath)).toBe(false);
   });
 });

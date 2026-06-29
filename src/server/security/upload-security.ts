@@ -224,6 +224,8 @@ export function isTenantScopedStoragePath(storagePath: string | null | undefined
   return isDocumentStoragePathInOrganization(storagePath, organizationId);
 }
 
+export { isDocumentStoragePathInOrganization };
+
 export function assertTenantStoragePathInOrganization(storagePath: string | null | undefined, organizationId: string) {
   return assertDocumentStoragePathInOrganization(storagePath, organizationId);
 }
@@ -232,6 +234,11 @@ export const assertTenantScopedStoragePath = assertTenantStoragePathInOrganizati
 
 export function isShortLivedSignedUrlExpiry(expiresInSeconds: number) {
   return Number.isFinite(expiresInSeconds) && expiresInSeconds > 0 && expiresInSeconds <= SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS;
+}
+
+export function isSignedUrlExpired(expiresAt: string | number | Date, now: Date = new Date()) {
+  const expiresAtMs = expiresAt instanceof Date ? expiresAt.getTime() : new Date(expiresAt).getTime();
+  return Number.isFinite(expiresAtMs) ? expiresAtMs <= now.getTime() : true;
 }
 
 export function createMockMalwareScannerProvider(input: {
