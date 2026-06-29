@@ -393,7 +393,7 @@ if (targetUrls.length > 0) {
 
 const allCriticalChecks = [
   ...globalChecks,
-  ...targetResults.flatMap((target) => target.checks),
+  ...targetResults.flatMap((target) => target.detailedChecks),
 ];
 const failures = allCriticalChecks
   .filter((check) => check.critical && !check.passed)
