@@ -103,6 +103,25 @@ describe('ready endpoint hardening', () => {
     });
   });
 
+  it('treats blank readiness environment values as missing', () => {
+    stubReadyEnvironment();
+    vi.stubEnv('STRIPE_SECRET_KEY', '   ');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', '\t');
+
+    expect(readyEnvironmentCheck()).toEqual(expect.arrayContaining([
+      {
+        name: 'stripe',
+        configured: false,
+        missingCount: 1,
+      },
+      {
+        name: 'redis',
+        configured: false,
+        missingCount: 1,
+      },
+    ]));
+  });
+
   it('fails without a healthcheck token', async () => {
     stubReadyEnvironment();
     const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -182,6 +201,66 @@ describe('ready endpoint hardening', () => {
     expect(body.checks.enterpriseStorageScannerConfigured).toBe(false);
     expect(JSON.stringify(body)).not.toContain('MALWARE_SCANNER_PROVIDER');
     expect(JSON.stringify(body)).not.toContain('MALWARE_SCANNER_ENDPOINT');
+  });
+
+  it('does not treat partial ClamAV transport configuration as enterprise-ready', () => {
+    stubReadyEnvironment();
+    vi.stubEnv('RELEASE_TARGET', 'enterprise');
+    vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', 'true');
+    vi.stubEnv('REQUIRE_MALWARE_SCAN_FOR_UPLOADS', 'true');
+    vi.stubEnv('MALWARE_SCANNER_PROVIDER', 'clamav');
+    vi.stubEnv('MALWARE_SCANNER_CLAMAV_HOST', 'clamav.internal');
+
+    expect(enterpriseStorageScannerCheck()).toMatchObject({
+      required: true,
+      configured: false,
+      realScannerProviderConfigured: true,
+      scannerTransportConfigured: false,
+    });
+
+    vi.stubEnv('MALWARE_SCANNER_CLAMAV_PORT', 'not-a-port');
+
+    expect(enterpriseStorageScannerCheck()).toMatchObject({
+      configured: false,
+      scannerTransportConfigured: false,
+    });
+
+    vi.stubEnv('MALWARE_SCANNER_CLAMAV_PORT', '3310');
+
+    expect(enterpriseStorageScannerCheck()).toMatchObject({
+      configured: true,
+      scannerTransportConfigured: true,
+    });
+  });
+
+  it('requires non-empty HTTP scanner endpoint and allowed-host configuration', () => {
+    stubReadyEnvironment();
+    vi.stubEnv('RELEASE_TARGET', 'enterprise');
+    vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', 'true');
+    vi.stubEnv('REQUIRE_MALWARE_SCAN_FOR_UPLOADS', 'true');
+    vi.stubEnv('MALWARE_SCANNER_PROVIDER', 'http');
+    vi.stubEnv('MALWARE_SCANNER_ENDPOINT', '   ');
+    vi.stubEnv('MALWARE_SCANNER_ALLOWED_HOSTS', 'scanner.example');
+
+    expect(enterpriseStorageScannerCheck()).toMatchObject({
+      configured: false,
+      scannerTransportConfigured: false,
+    });
+
+    vi.stubEnv('MALWARE_SCANNER_ENDPOINT', 'https://scanner.example/scan');
+    vi.stubEnv('MALWARE_SCANNER_ALLOWED_HOSTS', '   ');
+
+    expect(enterpriseStorageScannerCheck()).toMatchObject({
+      configured: false,
+      scannerTransportConfigured: false,
+    });
+
+    vi.stubEnv('MALWARE_SCANNER_ALLOWED_HOSTS', 'scanner.example');
+
+    expect(enterpriseStorageScannerCheck()).toMatchObject({
+      configured: true,
+      scannerTransportConfigured: true,
+    });
   });
 
   it('passes enterprise storage and scanner readiness when configured safely', async () => {
