@@ -329,11 +329,17 @@ async function smoke(baseUrl) {
     }, false));
   }
 
+  const legacyChecks = Object.fromEntries(checks.map((check) => [check.name, check.passed]));
+  legacyChecks.healthOk = legacyChecks.healthEndpointOk === true;
+  legacyChecks.readyProtected = legacyChecks.readyEndpointRejectsAnonymous === true;
+  legacyChecks.readyOk = legacyChecks.readyEndpointOkWithToken === true;
+
   const passed = checks.filter((check) => check.critical).every((check) => check.passed);
   return {
     baseUrl,
     passed,
-    checks,
+    checks: legacyChecks,
+    detailedChecks: checks,
     pages: pageResponses,
     health: safeResponseSummary(health),
     readyAnonymous: safeResponseSummary(readyAnonymous),
@@ -397,6 +403,11 @@ const passedControls = allCriticalChecks
   .filter((check) => check.critical && check.passed)
   .map((check) => check.name);
 
+const smokeTargets = {
+  passed: targetResults.filter((target) => target.passed).map((target) => target.baseUrl),
+  failed: targetResults.filter((target) => !target.passed).map((target) => target.baseUrl),
+};
+
 const evidence = {
   evidenceItem: 'deployment-smoke-validation',
   status: outcome === 'passed' ? 'Complete' : 'Open',
@@ -429,6 +440,7 @@ const evidence = {
     buildShaSource: metadata.build?.source ?? null,
   },
   globalChecks,
+  smokeTargets,
   targets: targetResults,
   failures,
   releaseGate: outcome === 'passed'
