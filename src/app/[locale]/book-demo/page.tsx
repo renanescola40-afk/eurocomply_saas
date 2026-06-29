@@ -11,17 +11,18 @@ type PageProps = {
 type Outcome = [string, string, typeof Building2];
 
 const outcomes: Outcome[] = [
-  ['Map your current process', 'We identify where risks, documents, vendors and audit evidence live today.', Building2],
-  ['Choose the first workflow', 'Start with the highest-value use case: risk, documents, vendors or audit readiness.', ShieldCheck],
-  ['Estimate ROI', 'Use manual hours, owner chasing and review preparation to calculate practical value.', CalendarDays],
-  ['Prepare enterprise answers', 'Align GDPR, data, security, onboarding, support and pricing questions before procurement.', FileText],
+  ['Map your AI footprint', 'Identify where AI is used, which teams own it, which vendors are involved and which countries are in scope.', Building2],
+  ['Prioritize readiness gaps', 'Separate inventory, risk, policy, evidence and procurement gaps so the first workflow is obvious.', ShieldCheck],
+  ['Estimate operational ROI', 'Use manual hours, owner chasing and review preparation to quantify practical value without overclaiming.', CalendarDays],
+  ['Prepare buyer answers', 'Align AI governance, data, security, onboarding, support and pricing questions before procurement review.', FileText],
 ];
 
 const agenda = [
-  '5 min — current process and business trigger',
-  '10 min — RISCK COMPLY walkthrough',
-  '10 min — map your first workflow',
-  '5 min — pricing, onboarding and next step',
+  '3 min — trigger: buyer review, board request, audit prep or AI policy rollout',
+  '7 min — current AI workflow and evidence mapping',
+  '12 min — RISCK COMPLY walkthrough: inventory, risk, policies and evidence',
+  '5 min — pricing motion: trial, Business pilot or Enterprise review',
+  '3 min — next step and procurement blockers',
 ];
 
 function resolveLocale(value: string) {
@@ -43,13 +44,13 @@ export default async function BookDemoPage({ params }: PageProps) {
             ← Back to RISCK COMPLY
           </Link>
           <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-medium text-white/76">
-            <Users className="h-4 w-4" /> Enterprise discovery
+            <Users className="h-4 w-4" /> Enterprise readiness mapping
           </div>
           <h1 className="mt-7 max-w-4xl text-5xl font-semibold leading-[1.02] tracking-[-0.065em] text-white sm:text-6xl">
-            Book a demo for risks, documents, vendors and audit readiness.
+            Book a demo for AI inventory, risk, policy and evidence readiness.
           </h1>
           <p className="mt-6 max-w-3xl text-lg leading-8 text-white/62">
-            In 30 minutes, we map your current spreadsheet/manual process and show how RISCK COMPLY can centralize compliance ownership, evidence and review workflows.
+            In 30 minutes, we map your current AI governance workflow and show how RISCK COMPLY can centralize AI systems, owners, risk, policies, evidence and procurement answers.
           </p>
 
           <div className="mt-8 grid gap-3">
@@ -64,7 +65,7 @@ export default async function BookDemoPage({ params }: PageProps) {
           <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-black/25 p-5">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/35">Bring to the demo</p>
             <p className="mt-3 text-sm leading-7 text-white/55">
-              A current risk spreadsheet, vendor list, top compliance documents or recent customer/audit questions. Even messy materials are useful because the goal is to map the real workflow.
+              A current AI tools list, risk spreadsheet, policy draft, vendor list, customer security questions or board/audit request. Messy materials are useful because the goal is to map the real operating workflow.
             </p>
           </div>
         </div>
