@@ -1,10 +1,12 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import { Suspense } from 'react';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { DashboardHomeOverview } from '@/components/dashboard/dashboard-home-overview';
 import { EnterpriseComplianceCommandCenter } from '@/components/dashboard/enterprise-compliance-command-center';
 import { EnterpriseDashboardOverview } from '@/components/dashboard/enterprise-dashboard-overview';
 import { OnboardingProgressCard } from '@/components/onboarding/onboarding-progress-card';
+import { getBillingPlan } from '@/lib/billing/plans';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getDashboardCopy } from '@/lib/i18n/dashboard-copy';
 import { formatLimit } from '@/server/billing/entitlements';
@@ -105,6 +107,12 @@ export default async function OrganizationDashboardPage({ params, searchParams }
   const localizedDashboardBasePath = `/${safeLocale}/dashboard/organizations`;
   const localizedTasksPath = `/${safeLocale}/aprovacoes`;
   const planName = planLabels[entitlements.plan as keyof typeof planLabels] ?? entitlements.plan;
+  const requestedPlan = getBillingPlan(resolvedSearchParams.plan);
+  const currentCatalogPlan = getBillingPlan(entitlements.plan);
+  const shouldShowPlanContinuation = Boolean(requestedPlan && requestedPlan.id !== currentCatalogPlan?.id);
+  const planContinuationHref = data.canManageBilling
+    ? `/${safeLocale}/dashboard/organizations/billing?plan=${encodeURIComponent(requestedPlan?.id ?? '')}`
+    : `/${safeLocale}/dashboard/organizations/team`;
   const teamActivation = await getTeamActivationStatus(data.organization.id);
   const activationState = {
     hasOrganization: true,
@@ -125,6 +133,23 @@ export default async function OrganizationDashboardPage({ params, searchParams }
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_34rem),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.09),_transparent_30rem),linear-gradient(180deg,#050505_0%,#080b12_46%,#050505_100%)]">
       <div className="pointer-events-none fixed inset-0 tech-grid opacity-25" />
       <div className="relative mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:py-10 lg:px-8">
+        {shouldShowPlanContinuation && requestedPlan ? (
+          <section className="rounded-[1.5rem] border border-blue-300/20 bg-blue-400/10 p-5 text-blue-50 shadow-sm" aria-label="Selected plan continuation">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100/70">Selected plan</p>
+                <h2 className="mt-2 text-xl font-semibold tracking-tight">Review {requestedPlan.name} for this workspace</h2>
+                <p className="mt-2 text-sm leading-6 text-blue-50/72">
+                  This workspace is currently on {planName}. Continue to billing to review the selected plan, or ask an admin if you do not manage billing.
+                </p>
+              </div>
+              <Link href={planContinuationHref} className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-blue-50">
+                {data.canManageBilling ? 'Review billing' : 'Ask an admin'}
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
         <EnterpriseComplianceCommandCenter
           locale={safeLocale}
           summary={data.summary}
