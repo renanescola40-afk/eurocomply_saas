@@ -101,7 +101,10 @@ export async function createOrganization(input: CreateOrganizationInput, _legacy
       .from('organization_members')
       .insert(memberInsert as never);
 
-    if (memberError) throw memberError;
+    if (memberError) {
+      reportError(memberError, { ...context, organizationId: organization.id });
+      throw organizationActionError('Unable to create organization');
+    }
 
     if (user.email) {
       const dashboardUrl = `${getAppUrl()}/dashboard/organizations`;
