@@ -147,10 +147,31 @@ export async function POST(request: NextRequest) {
     policy: 'upload',
     limit: 10,
     windowMs: 60 * 1000,
+    failureMode: 'fail-closed',
   });
 
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit);
+  }
+
+  if (isMultipartRequestTooLarge(request)) {
+    await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadBlocked,
+      entityType: 'document',
+      entityId: organization.id,
+      metadata: buildUploadSecurityAuditMetadata({
+        reason: 'request_body_too_large',
+        organizationId: organization.id,
+        actorUserId: user.id,
+        actorRole: permission.role,
+        fileSize: getRequestContentLength(request),
+        accessPurpose: 'upload',
+      }),
+    });
+
+    return noStoreJson({ error: 'Upload request is too large.' }, { status: 413 });
   }
 
   const quota = await assertDocumentQuota(organization.id);

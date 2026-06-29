@@ -156,6 +156,12 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
     throw new Error('Organization access required');
   }
 
+  await enforceSignedUrlRateLimit({
+    userId: user.id,
+    organizationIds,
+    accessPurpose,
+  });
+
   const supabase = createAdminClient();
   const { data: document, error: documentError } = await supabase
     .from('documents')
