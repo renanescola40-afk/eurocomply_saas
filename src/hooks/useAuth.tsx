@@ -72,8 +72,27 @@ function addMetadataAlias(metadata: Record<string, unknown>, key: string, value:
   }
 }
 
+function clerkDisabledError() {
+  return new Error('Authentication is disabled because Clerk is not configured.');
+}
+
 export function getLocalizedDashboardPath() {
   return getLocalizedPath('/dashboard/organizations');
+}
+
+export function DisabledAuthProvider({ children }: { children: React.ReactNode }) {
+  const value = useMemo<AuthContextType>(() => ({
+    user: null,
+    session: null,
+    loading: false,
+    signInWithEmail: async () => ({ error: clerkDisabledError() }),
+    signUpWithEmail: async () => ({ error: clerkDisabledError() }),
+    signInWithGoogle: async () => ({ error: clerkDisabledError() }),
+    signOut: async () => ({ error: null }),
+    resetPassword: async () => ({ error: clerkDisabledError() }),
+  }), []);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
