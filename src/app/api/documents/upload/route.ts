@@ -30,7 +30,7 @@ const STORAGE_BUCKET = CONTROLLED_DOCUMENT_STORAGE_BUCKET;
 const SIGNATURE_MISMATCH_REASON = 'signature_mismatch';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MULTIPART_UPLOAD_OVERHEAD_BYTES = 256 * 1024;
-const MAX_MULTIPART_UPLOAD_BYTES = MAX_UPLOAD_BYTES + MULTIPART_UPLOAD_OVERHEAD_BYTES;
+const MAX_UPLOAD_REQUEST_BYTES = MAX_UPLOAD_BYTES + MULTIPART_UPLOAD_OVERHEAD_BYTES;
 
 function safeDocumentTitle(name: string) {
   return sanitizeUploadFileName(name)
@@ -48,7 +48,7 @@ function uuidOrNull(value: string | null | undefined) {
   return value && UUID_PATTERN.test(value) ? value : null;
 }
 
-function parseContentLength(request: NextRequest) {
+function getRequestContentLength(request: NextRequest) {
   const raw = request.headers.get('content-length');
   if (!raw) return null;
 
@@ -56,14 +56,9 @@ function parseContentLength(request: NextRequest) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function rejectOversizedMultipartRequest(request: NextRequest) {
-  const contentLength = parseContentLength(request);
-
-  if (contentLength !== null && contentLength > MAX_MULTIPART_UPLOAD_BYTES) {
-    return noStoreJson({ error: 'Upload request is too large.' }, { status: 413 });
-  }
-
-  return null;
+function isMultipartRequestTooLarge(request: NextRequest) {
+  const contentLength = getRequestContentLength(request);
+  return contentLength !== null && contentLength > MAX_UPLOAD_REQUEST_BYTES;
 }
 
 function preScanAuditMetadata(input: {
@@ -111,8 +106,9 @@ export async function POST(request: NextRequest) {
   const originDenied = assertTrustedOrigin(request);
   if (originDenied) return originDenied;
 
-  const oversizedRequest = rejectOversizedMultipartRequest(request);
-  if (oversizedRequest) return oversizedRequest;
+  if (isMultipartRequestTooLarge(request)) {
+    return noStoreJson({ error: 'Upload request is too large.', reason: 'request_body_too_large' }, { status: 413 });
+  }
 
   const user = await getCurrentUser();
 
@@ -140,7 +136,7 @@ export async function POST(request: NextRequest) {
     ...buildRateLimitSubjectFromRequest(request, {
       userId: user.id,
       organizationId: organization.id,
-      action: 'documents_upload',
+      action: 'document_upload',
       route: '/api/documents/upload',
     }),
     key: `documents:upload:${organization.id}:${user.id}`,
@@ -152,26 +148,6 @@ export async function POST(request: NextRequest) {
 
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit);
-  }
-
-  if (isMultipartRequestTooLarge(request)) {
-    await createAuditEvent({
-      organizationId: organization.id,
-      actorUserId: user.id,
-      action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadBlocked,
-      entityType: 'document',
-      entityId: organization.id,
-      metadata: buildUploadSecurityAuditMetadata({
-        reason: 'request_body_too_large',
-        organizationId: organization.id,
-        actorUserId: user.id,
-        actorRole: permission.role,
-        fileSize: getRequestContentLength(request),
-        accessPurpose: 'upload',
-      }),
-    });
-
-    return noStoreJson({ error: 'Upload request is too large.' }, { status: 413 });
   }
 
   const quota = await assertDocumentQuota(organization.id);
