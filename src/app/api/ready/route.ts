@@ -83,7 +83,7 @@ export function isEnterpriseReadinessRequired() {
 
 export function readyEnvironmentCheck(): ReadyEnvironmentGroup[] {
   return Object.entries(REQUIRED_ENV_GROUPS).map(([name, variables]) => {
-    const missingCount = variables.filter((variable) => !process.env[variable]).length;
+    const missingCount = variables.filter((variable) => !hasConfiguredEnvValue(variable)).length;
     return {
       name: name as EnvGroupName,
       configured: missingCount === 0,
