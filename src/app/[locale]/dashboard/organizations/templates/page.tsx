@@ -84,17 +84,14 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
     const owner = String(formData.get('owner') ?? '');
     const expiresAt = String(formData.get('expiresAt') ?? '');
 
-    await createDocumentFromTemplate(
-      {
-        organizationId: currentOrganization.id,
-        templateId,
-        title,
-        category,
-        owner,
-        expiresAt: expiresAt || null,
-      },
-      currentUser.id,
-    );
+    await createDocumentFromTemplate({
+      organizationId: currentOrganization.id,
+      templateId,
+      title,
+      category,
+      owner,
+      expiresAt: expiresAt || null,
+    });
     revalidatePath(`/${params.locale}/dashboard/organizations/documents`);
     revalidatePath(`/${params.locale}/dashboard/organizations/templates`);
     redirect(`/${params.locale}/dashboard/organizations/documents`);
@@ -191,10 +188,7 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
               <div className="mt-6 grid gap-3">
                 <form action={createTemplateTask}>
                   <input type="hidden" name="templateId" value={template.id} />
-                  <button
-                    type="submit"
-                    className="inline-flex h-11 w-full items-center justify-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
-                  >
+                  <button type="submit" className="inline-flex h-11 w-full items-center justify-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90">
                     Create compliance task
                   </button>
                 </form>
@@ -221,10 +215,7 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
                     <span className="font-medium">Review / expiry date</span>
                     <input name="expiresAt" type="date" className="h-10 rounded-md border bg-background px-3 text-sm" />
                   </label>
-                  <button
-                    type="submit"
-                    className="inline-flex h-11 w-full items-center justify-center rounded-full border bg-background px-4 text-sm font-semibold transition hover:bg-muted"
-                  >
+                  <button type="submit" className="inline-flex h-11 w-full items-center justify-center rounded-full border bg-background px-4 text-sm font-semibold transition hover:bg-muted">
                     Generate evidence document
                   </button>
                 </form>
