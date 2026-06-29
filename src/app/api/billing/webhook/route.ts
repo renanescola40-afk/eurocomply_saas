@@ -105,9 +105,9 @@ export async function POST(request: Request) {
 
   try {
     event = stripe.webhooks.constructEvent(body, providerSignature, providerSigningValue, BILLING_WEBHOOK_TOLERANCE_SECONDS);
-  } catch (error) {
+  } catch {
     await recordBillingWebhookRouteAudit({ action: 'webhook_rejected', reason: 'invalid_signature' });
-    reportError(error, { area: 'billing_stripe_webhook_signature' });
+    reportError(new Error('Invalid provider webhook signature'), { area: 'billing_stripe_webhook_signature' });
     return noStoreJson({ error: 'invalid_webhook' }, { status: 400 });
   }
 
@@ -124,8 +124,8 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     await recordBillingWebhookRouteAudit({ action: 'webhook_rejected', event, reason: 'processing_failed' });
-    reportError(error, { area: 'billing_stripe_webhook' });
+    reportError(error, { area: 'billing_stripe_webhook_processing_failed' });
 
-    return noStoreJson({ error: 'invalid_webhook' }, { status: 400 });
+    return noStoreJson({ error: 'webhook_processing_failed' }, { status: 500 });
   }
 }
