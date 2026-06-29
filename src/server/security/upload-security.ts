@@ -23,6 +23,7 @@ import {
 } from '@/server/security/malware-scan';
 
 export const REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV = 'REQUIRE_MALWARE_SCAN_FOR_UPLOADS';
+export const LEGACY_MALWARE_SCAN_REQUIRED_ENV = 'MALWARE_SCAN_REQUIRED';
 export const MALWARE_SCANNER_PROVIDER_ENV = 'MALWARE_SCANNER_PROVIDER';
 export const MALWARE_SCANNER_API_KEY_ENV = 'MALWARE_SCANNER_API_KEY';
 export const MALWARE_SCANNER_TIMEOUT_MS_ENV = 'MALWARE_SCANNER_TIMEOUT_MS';
@@ -102,7 +103,7 @@ function sanitizeStoragePathSegment(segment: string, label: string) {
 }
 
 export function isUploadMalwareScanRequired() {
-  return process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true';
+  return process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true' || process.env[LEGACY_MALWARE_SCAN_REQUIRED_ENV] === 'true';
 }
 
 export function currentUploadMalwareScannerProvider() {
@@ -128,10 +129,17 @@ export async function validateUploadSecurityFile(file: File, options: { maxBytes
   });
 
   if (!validation.ok) {
+    const reason = !declaredSignatureMatches && (validation.reason === 'unsupported_mime_type' || validation.reason === 'mime_spoofing')
+      ? 'signature_mismatch'
+      : validation.reason;
+    const message = reason === 'signature_mismatch'
+      ? 'File signature does not match the declared file type.'
+      : validation.message;
+
     return {
       ok: false,
-      reason: validation.reason,
-      message: validation.message,
+      reason,
+      message,
       buffer,
       fileHash,
       checksumSha256: fileHash,
@@ -278,5 +286,5 @@ export function isSignedUrlExpired(input: { issuedAt: string | Date; expiresInSe
   return now.getTime() >= issuedAt.getTime() + input.expiresInSeconds * 1000;
 }
 
-export { scanUploadForMalware, shouldBlockUploadForMalwareScan };
+export { isDocumentStoragePathInOrganization, scanUploadForMalware, shouldBlockUploadForMalwareScan };
 export type { MalwareScanResult };
