@@ -18,6 +18,7 @@ const PUBLIC_ROUTES = [
   '/signup',
   '/register',
   '/auth',
+  '/oauth/complete',
   '/pricing',
   '/checkout',
   '/resources',
