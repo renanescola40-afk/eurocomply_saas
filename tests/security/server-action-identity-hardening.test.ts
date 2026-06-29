@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 const identityScanner = readFileSync(join(process.cwd(), 'scripts/security/check-server-action-identity.mjs'), 'utf8');
 const risksAction = readFileSync(join(process.cwd(), 'src/server/actions/risks.ts'), 'utf8');
 const vendorsAction = readFileSync(join(process.cwd(), 'src/server/actions/vendors.ts'), 'utf8');
+const billingAction = readFileSync(join(process.cwd(), 'src/server/actions/billing.ts'), 'utf8');
+const documentDownloadsAction = readFileSync(join(process.cwd(), 'src/server/actions/document-downloads.ts'), 'utf8');
 const risksPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/risks/page.tsx'), 'utf8');
 const vendorsPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/vendors/page.tsx'), 'utf8');
 
@@ -22,6 +24,7 @@ describe('server action identity hardening invariants', () => {
       'exported server action parameter named invitedByUserId',
       'server action throws raw provider error message',
       'server action rethrows raw provider error',
+      'server action rethrows raw caught error',
     ]) {
       expect(identityScanner).toContain(expected);
     }
@@ -49,6 +52,16 @@ describe('server action identity hardening invariants', () => {
     expect(vendorsAction).toContain('reportError(error, context)');
     expect(vendorsAction).toContain('toVendorErrorMessage(error,');
     expect(vendorsAction).not.toContain('return message ||');
+  });
+
+  it('keeps billing mutations API-only and document downloads sanitized', () => {
+    expect(billingAction).toContain('Billing mutations must go through the hardened /api/billing routes.');
+    expect(billingAction).not.toContain('stripe.checkout.sessions.create');
+    expect(billingAction).not.toContain('stripe.billingPortal.sessions.create');
+    expect(billingAction).not.toContain('throw subscriptionError');
+    expect(billingAction).not.toContain('throw error;');
+    expect(documentDownloadsAction).toContain("throw actionError('Document not found')");
+    expect(documentDownloadsAction).not.toContain('throw error;');
   });
 
   it('does not pass authenticated user ids from page actions into risk or vendor mutations', () => {

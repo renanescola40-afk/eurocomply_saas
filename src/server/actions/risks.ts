@@ -76,7 +76,10 @@ export async function createRisk(input: unknown) {
       .select('*')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      reportError(error, context);
+      throw actionError('Unable to create risk');
+    }
 
     await logAuditEvent({
       organizationId: payload.organizationId,
@@ -89,6 +92,10 @@ export async function createRisk(input: unknown) {
 
     return data;
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unable to create risk') {
+      throw actionError('Unable to create risk');
+    }
+
     reportError(error, context);
     throw actionError('Unable to create risk');
   }
@@ -127,7 +134,10 @@ export async function deleteRisk(riskId: string, organizationId: string) {
       .select('id,title,likelihood,impact')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      reportError(error, context);
+      throw actionError('Unable to delete risk');
+    }
 
     await logAuditEvent({
       organizationId: payload.organizationId,
@@ -140,6 +150,10 @@ export async function deleteRisk(riskId: string, organizationId: string) {
 
     return data;
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unable to delete risk') {
+      throw actionError('Unable to delete risk');
+    }
+
     reportError(error, context);
     throw actionError('Unable to delete risk');
   }

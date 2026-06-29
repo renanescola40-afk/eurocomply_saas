@@ -29,6 +29,14 @@ function getAuthSuccessHref(locale: string, planId?: string | null) {
   return safePlanId ? `${baseHref}?plan=${encodeURIComponent(safePlanId)}` : baseHref;
 }
 
+function isSafeLocalizedContinuation(path: string, locale: string) {
+  return [
+    `/${locale}/onboarding`,
+    `/${locale}/dashboard/organizations`,
+    `/${locale}/checkout`,
+  ].some((allowedPath) => path === allowedPath || path.startsWith(`${allowedPath}/`) || path.startsWith(`${allowedPath}?`));
+}
+
 function getSafeNextPath(next: string | null, locale: string, planId?: string | null) {
   const fallback = getAuthSuccessHref(locale, planId);
   const normalizedNext = next?.trim();
@@ -37,11 +45,15 @@ function getSafeNextPath(next: string | null, locale: string, planId?: string | 
     return fallback;
   }
 
-  if (!normalizedNext.startsWith(`/${locale}/onboarding`)) {
-    return fallback;
-  }
+  return isSafeLocalizedContinuation(normalizedNext, locale) ? normalizedNext : fallback;
+}
 
-  return normalizedNext;
+function getSignUpHref(locale: string, planId: string | null, nextPath: string) {
+  const params = new URLSearchParams();
+  const safePlanId = getBillingPlan(planId)?.id;
+  if (safePlanId) params.set('plan', safePlanId);
+  params.set('next', nextPath);
+  return `/${locale}/signup?${params.toString()}`;
 }
 
 function getClerkErrorMessage(error: unknown, fallback: string) {
@@ -110,8 +122,9 @@ function LoginPageContent() {
   const { isLoaded, signIn, setActive } = useSignIn();
   const locale = (params.locale as string) || 'pt';
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'pt') as Locale;
-  const afterSignInUrl = getSafeNextPath(searchParams.get('next'), activeLocale, searchParams.get('plan'));
-  const signUpUrl = `/${activeLocale}/signup`;
+  const requestedPlanId = searchParams.get('plan');
+  const afterSignInUrl = getSafeNextPath(searchParams.get('next'), activeLocale, requestedPlanId);
+  const signUpUrl = getSignUpHref(activeLocale, requestedPlanId, afterSignInUrl);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -153,7 +166,7 @@ function LoginPageContent() {
     setFormError(null);
     await signIn.authenticateWithRedirect({
       strategy: 'oauth_google',
-      redirectUrl: `/${activeLocale}/auth/callback`,
+      redirectUrl: `/${activeLocale}/oauth/complete`,
       redirectUrlComplete: afterSignInUrl,
     });
   }

@@ -18,6 +18,7 @@ const PUBLIC_ROUTES = [
   '/signup',
   '/register',
   '/auth',
+  '/oauth/complete',
   '/pricing',
   '/checkout',
   '/resources',
@@ -37,6 +38,7 @@ const PUBLIC_ROUTES = [
   '/dpa',
   '/subprocessors',
   '/status',
+  '/vulnerability-disclosure',
   '/politica-privacidade',
   '/termos-servico',
 ];
