@@ -92,10 +92,10 @@ describe('Phase 5 dashboard invariants', () => {
     expect(signup).not.toContain(loginNextPattern);
   });
 
-  it('keeps OAuth callback available for Google redirects', () => {
-    const callback = read('src/app/[locale]/auth/callback/page.tsx');
+  it('keeps OAuth callback route available for Google redirects', () => {
+    const callback = read('src/app/[locale]/auth/callback/route.ts');
 
-    expect(callback).toContain('AuthenticateWithRedirectCallback');
+    expect(callback).toContain("export { GET } from '@/app/auth/callback/route'");
   });
 
   it('keeps onboarding as the activation decision point', () => {
