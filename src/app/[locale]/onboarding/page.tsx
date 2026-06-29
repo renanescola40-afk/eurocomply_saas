@@ -62,7 +62,7 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
       redirect(`/${safeLocale}/login?next=${encodeURIComponent(`/${safeLocale}/onboarding${planQuery}`)}`);
     }
 
-    return saveOnboardingDraft(input, { id: currentUser.id, email: currentUser.email });
+    return saveOnboardingDraft(input);
   }
 
   async function completeActivationFromOnboarding(input: OnboardingActivationInput) {
@@ -74,7 +74,7 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
       redirect(`/${safeLocale}/login?next=${encodeURIComponent(`/${safeLocale}/onboarding${planQuery}`)}`);
     }
 
-    return completeOnboardingActivation(input, { id: currentUser.id, email: currentUser.email }, safeLocale);
+    return completeOnboardingActivation(input, safeLocale);
   }
 
   return (
