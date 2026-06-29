@@ -38,28 +38,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const labels: Record<Locale, { title: string; description: string }> = {
     en: {
-      title: 'RISCK COMPLY - European Compliance Operating System',
-      description: 'Control deadlines, risks, documents, audit logs and fiscal identifiers across Europe.',
+      title: 'Risck Comply - AI Compliance Operating System',
+      description: 'EU AI Act readiness, AI system inventory, risk evidence, governance documents and audit workflows for European B2B teams.',
     },
     pt: {
-      title: 'RISCK COMPLY - Sistema Operacional de Compliance Europeu',
-      description: 'Controle prazos, riscos, documentos, logs de auditoria e identificações fiscais na Europa.',
+      title: 'Risck Comply - Sistema Operacional de Compliance de IA',
+      description: 'AI Act readiness, inventário de sistemas de IA, evidências de risco, documentos de governação e auditoria para equipas B2B europeias.',
     },
     es: {
-      title: 'RISCK COMPLY - Sistema Operativo de Compliance Europeo',
-      description: 'Controle plazos, riesgos, documentos, registros de auditoría e identificadores fiscales en Europa.',
+      title: 'Risck Comply - Sistema Operativo de Compliance de IA',
+      description: 'AI Act readiness, inventario de sistemas de IA, evidencias de riesgo, documentos de gobernanza y auditoría para equipos B2B europeos.',
     },
     fr: {
-      title: 'RISCK COMPLY - Système Opérationnel de Conformité Européenne',
-      description: 'Pilotez échéances, risques, documents, journaux d’audit et identifiants fiscaux en Europe.',
+      title: 'Risck Comply - Système Opérationnel de Conformité IA',
+      description: 'AI Act readiness, inventaire des systèmes IA, preuves de risque, documents de gouvernance et workflows d’audit pour équipes B2B européennes.',
     },
     it: {
-      title: 'RISCK COMPLY - Sistema Operativo di Compliance Europea',
-      description: 'Gestisci scadenze, rischi, documenti, registri di audit e identificativi fiscali in Europa.',
+      title: 'Risck Comply - Sistema Operativo di Compliance IA',
+      description: 'AI Act readiness, inventario dei sistemi IA, evidenze di rischio, documenti di governance e workflow di audit per team B2B europei.',
     },
     de: {
-      title: 'RISCK COMPLY - Europäisches Compliance-Betriebssystem',
-      description: 'Steuern Sie Fristen, Risiken, Dokumente, Audit-Logs und Steuerkennungen in Europa.',
+      title: 'Risck Comply - Betriebssystem für KI-Compliance',
+      description: 'AI Act Readiness, KI-Systeminventar, Risikonachweise, Governance-Dokumente und Audit-Workflows für europäische B2B-Teams.',
     },
   };
 
