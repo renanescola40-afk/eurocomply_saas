@@ -10,7 +10,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffects from '@/components/GlobalClientEffects';
 import GapAnalysisShortcut from '@/components/GapAnalysisShortcut';
-import { AuthProvider } from '@/hooks/useAuth';
+import { AuthProvider, DisabledAuthProvider } from '@/hooks/useAuth';
 import { routing, type Locale } from '@/lib/i18n/routing';
 
 import '../globals.css';
@@ -30,14 +30,9 @@ type Props = {
   params: Promise<{ locale: string }>;
 };
 
-type SharedShellProps = {
-  children: React.ReactNode;
-  messages: Awaited<ReturnType<typeof getMessages>>;
-};
-
-type ClerkShellProps = SharedShellProps & {
-  locale: string;
-};
+function hasClerkPublishableKey() {
+  return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim());
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
@@ -137,15 +132,57 @@ export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
   const safeLocale = routing.locales.includes(locale as Locale) ? locale : 'en';
   const messages = await getMessages();
-  const hasClerkPublishableKey = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  const signInUrl = `/${safeLocale}/login`;
+  const signUpUrl = `/${safeLocale}/signup`;
+  const onboardingUrl = `/${safeLocale}/onboarding`;
+  const clerkEnabled = hasClerkPublishableKey();
+
+  const sharedShell = (
+    <>
+      {children}
+      <GapAnalysisShortcut />
+      <GlobalClientEffects />
+      <AnalyticsConsentBanner />
+      <Toaster />
+    </>
+  );
+
+  const appShell = (
+    <NextIntlClientProvider messages={messages}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
+        enableSystem={false}
+        disableTransitionOnChange
+      >
+        {clerkEnabled ? (
+          <AuthProvider>
+            <PostHogAnalyticsProvider>
+              {sharedShell}
+              <ClerkFloatingControls locale={safeLocale} />
+            </PostHogAnalyticsProvider>
+          </AuthProvider>
+        ) : (
+          <DisabledAuthProvider>{sharedShell}</DisabledAuthProvider>
+        )}
+      </ThemeProvider>
+    </NextIntlClientProvider>
+  );
 
   return (
     <html lang={safeLocale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
-        {hasClerkPublishableKey ? (
-          <ClerkShell locale={safeLocale} messages={messages}>{children}</ClerkShell>
+        {clerkEnabled ? (
+          <ClerkProvider
+            signInUrl={signInUrl}
+            signUpUrl={signUpUrl}
+            signInFallbackRedirectUrl={onboardingUrl}
+            signUpFallbackRedirectUrl={onboardingUrl}
+          >
+            {appShell}
+          </ClerkProvider>
         ) : (
-          <SharedShell messages={messages}>{children}</SharedShell>
+          appShell
         )}
       </body>
     </html>

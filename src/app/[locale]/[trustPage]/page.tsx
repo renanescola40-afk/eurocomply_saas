@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { TrustCenterPage } from '@/components/trust/trust-page';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 import { getTrustCenterPage } from '@/lib/trust-center/content';
-import { isTrustCenterSlug } from '@/lib/trust-center/routes';
+import { isTrustCenterSlug, TRUST_CENTER_ROUTES } from '@/lib/trust-center/routes';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -14,6 +14,10 @@ type PageProps = {
 
 function safeLocale(value: string): Locale {
   return (locales.includes(value as Locale) ? value : defaultLocale) as Locale;
+}
+
+export function generateStaticParams() {
+  return locales.flatMap((locale) => TRUST_CENTER_ROUTES.map((trustPage) => ({ locale, trustPage })));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
