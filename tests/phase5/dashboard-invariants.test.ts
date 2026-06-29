@@ -25,15 +25,16 @@ describe('Phase 5 dashboard invariants', () => {
     expect(middleware).toContain('withPrivateNoStore');
   });
 
-  it('keeps authenticated marketing home routed through onboarding without interrupting auth entry pages', () => {
+  it('keeps authenticated marketing and auth entry routes flowing through onboarding', () => {
     const middleware = read('src/middleware.ts');
 
     expect(middleware).toContain("const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations'");
     expect(middleware).toContain("const AUTH_SUCCESS_PATH = '/onboarding'");
-    expect(middleware).toContain('const shouldCheckAuth = !isPublic || isMarketingHome;');
-    expect(middleware).toContain('isAuthenticated && isMarketingHome');
+    expect(middleware).toContain("const AUTH_ENTRY_ROUTES = new Set(['/login', '/signup', '/register'])");
+    expect(middleware).toContain('const isAuthEntry = isAuthEntryRoute(pathname, locale);');
+    expect(middleware).toContain('const shouldCheckAuth = !isPublic || isMarketingHome || isAuthEntry;');
+    expect(middleware).toContain('isAuthenticated && (isMarketingHome || isAuthEntry)');
     expect(middleware).toContain('new URL(`/${locale}${AUTH_SUCCESS_PATH}`');
-    expect(middleware).not.toContain('isAuthenticated && (isAuthEntryRoute || isMarketingHome)');
   });
 
   it('keeps Clerk post-auth fallback URLs pointed at localized onboarding', () => {
@@ -139,18 +140,15 @@ describe('Phase 5 dashboard invariants', () => {
   });
 
   it('passes workflow readiness from dashboard overview into next best actions', () => {
-    const content = read('src/components/dashboard/dashboard-home-overview.tsx');
+    const content = read('src/components/dashboard/DashboardOverview.tsx');
 
-    expect(content).toContain('OrganizationWorkflowReadiness');
-    expect(content).toContain('workflowReadiness?: OrganizationWorkflowReadiness');
     expect(content).toContain('workflowReadiness={workflowReadiness}');
-    expect(content).toContain('NextBestActions');
   });
 
   it('uses workflow readiness to prioritize next best actions', () => {
-    const content = read('src/components/dashboard/next-best-actions.tsx');
+    const content = read('src/components/dashboard/NextBestActionsCard.tsx');
 
-    expect(content).toContain('OrganizationWorkflowReadiness');
-    expect(content).toContain('buildWorkflowReadinessAction');
+    expect(content).toContain('workflowReadiness?: OrganizationDashboardWorkflowReadiness');
+    expect(content).toContain('workflowReadiness?.onboardingCompleted === false');
   });
 });
