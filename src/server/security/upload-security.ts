@@ -173,6 +173,19 @@ export async function scanValidatedUploadForMalware(input: {
   validation: Extract<UploadSecurityValidationResult, { ok: true }>;
   organizationId: string;
 }) {
+  const required = isUploadMalwareScanRequired();
+  const provider = currentUploadMalwareScannerProvider();
+
+  if (required && provider === 'not_configured') {
+    return {
+      status: 'not_configured',
+      provider,
+      required,
+      scannedAt: new Date().toISOString(),
+      reason: 'scanner_not_configured',
+    } satisfies MalwareScanResult;
+  }
+
   return scanUploadForMalware({
     buffer: input.validation.buffer,
     mimeType: input.validation.mimeDetected,
