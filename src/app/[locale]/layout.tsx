@@ -30,6 +30,10 @@ type Props = {
   params: Promise<{ locale: string }>;
 };
 
+function hasClerkPublishableKey() {
+  return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim());
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const labels: Record<Locale, { title: string; description: string }> = {
@@ -75,36 +79,45 @@ export default async function LocaleLayout({ children, params }: Props) {
   const signInUrl = `/${safeLocale}/login`;
   const signUpUrl = `/${safeLocale}/signup`;
   const onboardingUrl = `/${safeLocale}/onboarding`;
+  const clerkEnabled = hasClerkPublishableKey();
+
+  const appShell = (
+    <NextIntlClientProvider messages={messages}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
+        enableSystem={false}
+        disableTransitionOnChange
+      >
+        <AuthProvider>
+          <PostHogAnalyticsProvider>
+            {children}
+            {clerkEnabled ? <ClerkFloatingControls locale={safeLocale} /> : null}
+            <GapAnalysisShortcut />
+            <GlobalClientEffects />
+            <AnalyticsConsentBanner />
+            <Toaster />
+          </PostHogAnalyticsProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </NextIntlClientProvider>
+  );
 
   return (
     <html lang={safeLocale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
-        <ClerkProvider
-          signInUrl={signInUrl}
-          signUpUrl={signUpUrl}
-          signInFallbackRedirectUrl={onboardingUrl}
-          signUpFallbackRedirectUrl={onboardingUrl}
-        >
-          <NextIntlClientProvider messages={messages}>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="dark"
-              enableSystem={false}
-              disableTransitionOnChange
-            >
-              <AuthProvider>
-                <PostHogAnalyticsProvider>
-                  {children}
-                  <ClerkFloatingControls locale={safeLocale} />
-                  <GapAnalysisShortcut />
-                  <GlobalClientEffects />
-                  <AnalyticsConsentBanner />
-                  <Toaster />
-                </PostHogAnalyticsProvider>
-              </AuthProvider>
-            </ThemeProvider>
-          </NextIntlClientProvider>
-        </ClerkProvider>
+        {clerkEnabled ? (
+          <ClerkProvider
+            signInUrl={signInUrl}
+            signUpUrl={signUpUrl}
+            signInFallbackRedirectUrl={onboardingUrl}
+            signUpFallbackRedirectUrl={onboardingUrl}
+          >
+            {appShell}
+          </ClerkProvider>
+        ) : (
+          appShell
+        )}
       </body>
     </html>
   );
