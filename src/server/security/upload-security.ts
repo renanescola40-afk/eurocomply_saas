@@ -22,6 +22,8 @@ import {
   type MalwareScannerProvider,
 } from '@/server/security/malware-scan';
 
+export type { MalwareScanResult } from '@/server/security/malware-scan';
+
 export const REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV = 'REQUIRE_MALWARE_SCAN_FOR_UPLOADS';
 export const LEGACY_MALWARE_SCAN_REQUIRED_ENV = 'MALWARE_SCAN_REQUIRED';
 export const MALWARE_SCANNER_PROVIDER_ENV = 'MALWARE_SCANNER_PROVIDER';
@@ -281,10 +283,11 @@ export function buildUploadSecurityAuditMetadata(input: UploadSecurityAuditMetad
     scanProvider,
     scanRequired,
     scanCheckedAt,
+    scanReason: scan?.reason ?? null,
+    scanSignature: scan?.signature ?? null,
     fileHash,
     checksumSha256: fileHash,
     fileSize,
-    sizeBytes: fileSize,
     claimedMimeType: input.claimedMimeType ?? null,
     mimeDetected,
     declaredSignatureMatches: input.declaredSignatureMatches ?? null,
@@ -297,4 +300,4 @@ export function buildUploadSecurityAuditMetadata(input: UploadSecurityAuditMetad
   };
 }
 
-export { shouldBlockUploadForMalwareScan, type MalwareScanResult };
+export { shouldBlockUploadForMalwareScan };
