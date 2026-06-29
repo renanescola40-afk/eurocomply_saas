@@ -38,29 +38,46 @@ function hasTopLevelServerActionDirective(content) {
   return /['"]use server['"];?/.test(firstStatements);
 }
 
+function isServerActionModule(file, content) {
+  const rel = relative(file);
+  return rel.startsWith('src/server/actions/') || hasTopLevelServerActionDirective(content);
+}
+
 const checks = [
   {
     label: 'exported server action parameter named userId',
     pattern: /export\s+async\s+function\s+\w+\s*\([^)]*\buserId\b/s,
   },
   {
-    label: 'exported server action parameter named organizationId',
-    pattern: /export\s+async\s+function\s+\w+\s*\([^)]*\borganizationId\b/s,
+    label: 'exported server action parameter named actorUserId',
+    pattern: /export\s+async\s+function\s+\w+\s*\([^)]*\bactorUserId\b/s,
+  },
+  {
+    label: 'exported server action parameter named invitedByUserId',
+    pattern: /export\s+async\s+function\s+\w+\s*\([^)]*\binvitedByUserId\b/s,
   },
   {
     label: 'server action input schema accepts caller-supplied userId',
     pattern: /\buserId\s*:\s*(?:z\.string\(\)\.uuid\(\)|uuidSchema)\b/s,
   },
   {
-    label: 'server action input schema accepts caller-supplied organizationId',
-    pattern: /\borganizationId\s*:\s*(?:z\.string\(\)\.uuid\(\)|uuidSchema)\b/s,
+    label: 'server action input schema accepts caller-supplied actorUserId',
+    pattern: /\bactorUserId\s*:\s*(?:z\.string\(\)\.uuid\(\)|uuidSchema)\b/s,
+  },
+  {
+    label: 'server action throws raw provider error message',
+    pattern: /throw\s+new\s+Error\(\s*(?:error|\w+Error)\.message\s*\)/s,
+  },
+  {
+    label: 'server action rethrows raw provider error',
+    pattern: /if\s*\([^)]*error[^)]*\)\s*throw\s+error\b/s,
   },
 ];
 
 for (const file of walk(actionsDir)) {
   const content = readFileSync(file, 'utf8');
 
-  if (!hasTopLevelServerActionDirective(content)) {
+  if (!isServerActionModule(file, content)) {
     continue;
   }
 
@@ -83,7 +100,7 @@ if (failures.length > 0) {
   for (const failure of failures) {
     console.error(`- ${failure}`);
   }
-  console.error('\nDo not accept caller-supplied userId or organizationId in top-level `use server` actions. Derive identity and tenant from the authenticated session inside the action.');
+  console.error('\nDo not accept caller-supplied user identity in exported server actions. Derive identity from the authenticated session inside the action and sanitize provider errors.');
   process.exit(1);
 }
 
