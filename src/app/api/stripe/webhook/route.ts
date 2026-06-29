@@ -11,6 +11,7 @@ import { noStoreJson } from '@/server/security/no-store';
 export const runtime = 'nodejs';
 
 export const MAX_STRIPE_WEBHOOK_BYTES = 1_000_000;
+export const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
 
 export function getStripeWebhookContentLength(request: Request) {
   const contentLength = request.headers.get('content-length');
@@ -49,6 +50,7 @@ async function recordWebhookRouteAudit(input: {
       entityType: 'stripe_webhook_event',
       entityId: input.event?.id ?? null,
       metadata: {
+        route: '/api/stripe/webhook',
         stripeEventId: input.event?.id ?? null,
         stripeEventType: input.event?.type ?? null,
         livemode: input.event?.livemode ?? null,
@@ -100,10 +102,10 @@ export async function POST(request: Request) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-  } catch (error) {
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret, STRIPE_WEBHOOK_TOLERANCE_SECONDS);
+  } catch {
     await recordWebhookRouteAudit({ action: 'webhook_rejected', reason: 'invalid_signature' });
-    reportError(error, { area: 'stripe_webhook_signature' });
+    reportError(new Error('Invalid Stripe webhook signature'), { area: 'stripe_webhook_signature' });
     return noStoreJson({ error: 'invalid_webhook' }, { status: 400 });
   }
 
@@ -112,11 +114,16 @@ export async function POST(request: Request) {
   try {
     const result = await handleStripeWebhookEvent(event);
 
-    return noStoreJson({ received: true, skipped: result.skipped });
+    return noStoreJson({
+      received: true,
+      skipped: result.skipped,
+      duplicate: result.duplicate ?? false,
+      unsupported: result.unsupported ?? false,
+    });
   } catch (error) {
     await recordWebhookRouteAudit({ action: 'webhook_rejected', event, reason: 'processing_failed' });
-    reportError(error, { area: 'stripe_webhook' });
+    reportError(error, { area: 'stripe_webhook_processing_failed' });
 
-    return noStoreJson({ error: 'invalid_webhook' }, { status: 400 });
+    return noStoreJson({ error: 'webhook_processing_failed' }, { status: 500 });
   }
 }

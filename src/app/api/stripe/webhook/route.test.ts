@@ -44,7 +44,7 @@ vi.mock('@/lib/security/rate-limit-response', () => ({
   rateLimitResponse: () => new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429 }),
 }));
 
-import { POST, getStripeWebhookContentLength, readBoundedStripeWebhookBody } from './route';
+import { POST, STRIPE_WEBHOOK_TOLERANCE_SECONDS, getStripeWebhookContentLength, readBoundedStripeWebhookBody } from './route';
 
 const TEST_STRIPE_WEBHOOK_SECRET = 'test_webhook_signing_secret';
 
@@ -131,7 +131,13 @@ describe('Stripe webhook route signature validation', () => {
       expect.any(String),
       't=1800000000,v1=bad',
       TEST_STRIPE_WEBHOOK_SECRET,
+      STRIPE_WEBHOOK_TOLERANCE_SECONDS,
     );
+    expect(mocks.reportError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Invalid Stripe webhook signature' }),
+      expect.objectContaining({ area: 'stripe_webhook_signature' }),
+    );
+    expect(mocks.reportError).not.toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('No signatures found') }), expect.anything());
     expect(mocks.writeAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'webhook_rejected',
@@ -171,7 +177,7 @@ describe('Stripe webhook route signature validation', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ received: true, skipped: false });
+    expect(body).toEqual({ received: true, skipped: false, duplicate: false, unsupported: false });
     expect(mocks.handleStripeWebhookEvent).toHaveBeenCalledWith(event);
     expect(mocks.writeAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -179,7 +185,26 @@ describe('Stripe webhook route signature validation', () => {
         organizationId: 'org_a',
         userId: 'user_admin',
         entityId: 'evt_valid',
-        metadata: expect.objectContaining({ stripeEventId: 'evt_valid', stripeEventType: 'customer.subscription.updated' }),
+        metadata: expect.objectContaining({ route: '/api/stripe/webhook', stripeEventId: 'evt_valid', stripeEventType: 'customer.subscription.updated' }),
+      }),
+    );
+  });
+
+  it('returns retryable server errors for verified webhook processing failures', async () => {
+    const event = makeStripeEvent();
+    mocks.constructEvent.mockReturnValue(event);
+    mocks.handleStripeWebhookEvent.mockRejectedValue(new Error('database temporarily unavailable'));
+
+    const response = await POST(makePostRequest('t=1800000000,v1=good'));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({ error: 'webhook_processing_failed' });
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'webhook_rejected',
+        entityId: 'evt_valid',
+        metadata: expect.objectContaining({ route: '/api/stripe/webhook', reason: 'processing_failed' }),
       }),
     );
   });

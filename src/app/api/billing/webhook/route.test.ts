@@ -60,6 +60,22 @@ function makeWebhookRequest(body: string, headers: HeadersInit = {}) {
   });
 }
 
+function makeStripeEvent(type = 'customer.subscription.updated') {
+  return {
+    id: 'evt_ok',
+    object: 'event',
+    type,
+    created: 1_800_000_000,
+    livemode: false,
+    data: {
+      object: {
+        id: 'sub_123',
+        metadata: { organization_id: 'org_a', user_id: 'user_admin' },
+      },
+    },
+  };
+}
+
 describe('legacy billing webhook route hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -93,6 +109,11 @@ describe('legacy billing webhook route hardening', () => {
     expect(body).toEqual({ error: 'invalid_webhook' });
     expect(mocks.handleStripeWebhookEvent).not.toHaveBeenCalled();
     expect(mocks.constructEvent).toHaveBeenCalledWith(expect.any(String), 't=1800000000,v1=bad', TEST_STRIPE_WEBHOOK_SECRET, BILLING_WEBHOOK_TOLERANCE_SECONDS);
+    expect(mocks.reportError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Invalid provider webhook signature' }),
+      expect.objectContaining({ area: 'billing_stripe_webhook_signature' }),
+    );
+    expect(mocks.reportError).not.toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('No signatures found') }), expect.anything());
     expect(mocks.writeAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'webhook_rejected',
@@ -102,7 +123,7 @@ describe('legacy billing webhook route hardening', () => {
   });
 
   it('routes valid legacy billing webhook events through the hardened idempotent handler', async () => {
-    const event = { id: 'evt_ok', type: 'customer.subscription.updated', livemode: false, data: { object: { metadata: { organization_id: 'org_a', user_id: 'user_admin' } } } };
+    const event = makeStripeEvent();
     mocks.constructEvent.mockReturnValue(event);
 
     const response = await POST(makeWebhookRequest(JSON.stringify(event)));
@@ -139,6 +160,25 @@ describe('legacy billing webhook route hardening', () => {
       expect.objectContaining({
         action: 'webhook_rejected',
         metadata: expect.objectContaining({ route: '/api/billing/webhook', reason: 'missing_signature' }),
+      }),
+    );
+  });
+
+  it('returns retryable server errors for verified webhook processing failures', async () => {
+    const event = makeStripeEvent();
+    mocks.constructEvent.mockReturnValue(event);
+    mocks.handleStripeWebhookEvent.mockRejectedValue(new Error('database temporarily unavailable'));
+
+    const response = await POST(makeWebhookRequest(JSON.stringify(event)));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({ error: 'webhook_processing_failed' });
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'webhook_rejected',
+        entityId: 'evt_ok',
+        metadata: expect.objectContaining({ route: '/api/billing/webhook', reason: 'processing_failed' }),
       }),
     );
   });
