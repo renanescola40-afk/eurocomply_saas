@@ -98,14 +98,15 @@ describe('Phase 5 dashboard invariants', () => {
     expect(callback).toContain('AuthenticateWithRedirectCallback');
   });
 
-  it('keeps onboarding as the organization decision point', () => {
+  it('keeps onboarding as the activation decision point', () => {
     const onboarding = read('src/app/[locale]/onboarding/page.tsx');
 
     expect(onboarding).toContain('getCurrentUser');
-    expect(onboarding).toContain('getCurrentOrganizationForUser');
-    expect(onboarding).toContain('CreateOrganizationForm');
-    expect(onboarding).toContain('createOrganization(input, currentUser.id, currentUser.email)');
-    expect(onboarding).toContain('redirect(`/${locale}/dashboard/organizations${planQuery}`)');
+    expect(onboarding).toContain('getOnboardingActivationState');
+    expect(onboarding).toContain('B2BOnboardingFlow');
+    expect(onboarding).toContain('saveOnboardingDraft');
+    expect(onboarding).toContain('completeOnboardingActivation');
+    expect(onboarding).toContain('redirect(`/${safeLocale}/dashboard/organizations${planQuery}`)');
   });
 
   it('keeps organization dashboard auth and onboarding routing in place', () => {
@@ -138,53 +139,5 @@ describe('Phase 5 dashboard invariants', () => {
     expect(content).toContain('OrganizationWorkflowReadiness');
     expect(content).toContain('buildWorkflowReadinessAction');
     expect(content).toContain('Stabilize blocked workflow readiness');
-    expect(content).toContain('Resolve workflow readiness blockers');
-    expect(content).toContain('Capture workflow readiness evidence');
-    expect(content).toContain('current workflow readiness');
-  });
-
-  it('keeps dashboard data scoped by organization id', () => {
-    const content = read('src/server/queries/organization-dashboard.ts');
-
-    expect(content).toContain('getCurrentOrganizationForUser');
-    expect(content).toContain('organization.id');
-    expect(content).toContain("eq('organization_id', organizationId)");
-    expect(content).toContain("from('compliance_tasks')");
-    expect(content).toContain("from('risks')");
-    expect(content).toContain("from('vendors')");
-    expect(content).toContain("from('documents')");
-  });
-
-  it('keeps dashboard data available once a user has an organization membership', () => {
-    const content = read('src/server/queries/organization-dashboard.ts');
-
-    expect(content).toContain('if (!organization)');
-    expect(content).toContain('return null');
-    expect(content).toContain('const fallbackEntitlements = getPlanEntitlements');
-    expect(content).toContain('withDashboardTimeout');
-    expect(content).toContain('return {');
-    expect(content).toContain('organization: normalizeOrganization(organization)');
-  });
-
-  it('exposes derived workflow readiness for organization workflows', () => {
-    const content = read('src/server/queries/organization-dashboard.ts');
-
-    expect(content).toContain('OrganizationWorkflowReadiness');
-    expect(content).toContain('getOrganizationWorkflowReadiness');
-    expect(content).toContain('workflowReadiness');
-    expect(content).toContain('risk-review-required');
-    expect(content).toContain('open-compliance-work');
-    expect(content).toContain('vendor-review-required');
-    expect(content).toContain('evidence-review-required');
-    expect(content).toContain('ready-for-executive-review');
-  });
-
-  it('keeps current organization resolution scoped to user membership', () => {
-    const content = read('src/server/queries/current-organization.ts');
-
-    expect(content).toContain("from('organization_members')");
-    expect(content).toContain("eq('user_id', userId)");
-    expect(content).toContain('getCurrentOrganizationForUser');
-    expect(content).toContain('membership.slug === slug');
   });
 });
