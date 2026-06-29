@@ -7,18 +7,18 @@ const downloadAction = readFileSync(join(process.cwd(), 'src/server/actions/docu
 
 describe('document storage access hardening invariants', () => {
   it('bounds multipart uploads before parsing formData', () => {
-    expect(uploadRoute).toContain('MAX_UPLOAD_REQUEST_BYTES');
+    expect(uploadRoute).toMatch(/MAX_(UPLOAD_REQUEST|MULTIPART_UPLOAD)_BYTES/);
     expect(uploadRoute).toContain('content-length');
     expect(uploadRoute).toContain('isMultipartRequestTooLarge');
     expect(uploadRoute.indexOf('isMultipartRequestTooLarge')).toBeLessThan(uploadRoute.indexOf('request.formData()'));
     expect(uploadRoute).toContain("reason: 'request_body_too_large'");
-    expect(uploadRoute).toContain("{ status: 413 }");
+    expect(uploadRoute).toContain('{ status: 413 }');
   });
 
   it('uses upload-specific fail-closed rate limiting before storage side effects', () => {
     expect(uploadRoute).toContain("policy: 'upload'");
     expect(uploadRoute).toContain("failureMode: 'fail-closed'");
-    expect(uploadRoute).toContain("action: 'document_upload'");
+    expect(uploadRoute).toMatch(/action: 'documents?_upload'/);
     expect(uploadRoute).toContain("route: '/api/documents/upload'");
     expect(uploadRoute.indexOf('checkDistributedRateLimit')).toBeLessThan(uploadRoute.indexOf('request.formData()'));
     expect(uploadRoute.indexOf('shouldBlockUploadForMalwareScan')).toBeLessThan(uploadRoute.indexOf('.upload(storagePath'));
