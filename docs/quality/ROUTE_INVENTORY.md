@@ -1,6 +1,6 @@
 # Route Inventory
 
-This is the canonical route quality contract for EuroComply.
+This is the canonical route quality contract for Risck Comply.
 
 ## Objective
 
