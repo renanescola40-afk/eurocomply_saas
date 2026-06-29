@@ -49,6 +49,10 @@ function safeUrl(value: string) {
   return '/';
 }
 
+function getSafeFallbackUrl(value: string) {
+  return safeUrl(value);
+}
+
 function renderEmail(title: string, body: string, ctaLabel: string, ctaUrl: string, footer?: string) {
   const url = escapeHtml(safeUrl(ctaUrl));
   return `<div style="font-family: Inter, Arial, sans-serif; background: #f8fafc; padding: 32px; color: #0f172a;"><div style="max-width: 600px; margin: 0 auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;"><div style="padding: 24px 28px; background: #020617; color: #fff;"><div style="font-size: 18px; font-weight: 700;">${PRODUCT_NAME}</div><div style="font-size: 13px; opacity: .82; margin-top: 4px;">AI compliance operations for growing teams</div></div><div style="padding: 28px;"><h1 style="font-size: 24px; line-height: 1.2; margin: 0 0 12px;">${escapeHtml(title)}</h1><p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 18px;">${body}</p><a href="${url}" style="display: inline-block; background: #2563eb; color: #fff; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: 600;">${escapeHtml(ctaLabel)}</a></div><div style="padding: 18px 28px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6;">${footer ?? `Message sent by ${PRODUCT_NAME}.`}</div></div></div>`;
@@ -59,7 +63,7 @@ function buildEmail(input: { template: EmailTemplateKey; subject: string; title:
     template: input.template,
     subject: input.subject,
     html: renderEmail(input.title, input.body, input.ctaLabel, input.ctaUrl, input.footer),
-    text: [...input.textLines, `${input.ctaLabel}: ${safeUrl(input.ctaUrl)}`].join('\n\n'),
+    text: [...input.textLines, `${input.ctaLabel}: ${getSafeFallbackUrl(input.ctaUrl)}`].join('\n\n'),
     unsubscribeUrl: input.unsubscribeUrl ?? null,
   };
 }
@@ -75,7 +79,7 @@ export function organizationCreatedEmail(input: OrganizationCreatedEmailInput): 
 
 export function memberInvitedEmail(input: MemberInvitedEmailInput): BuiltEmail {
   const invitedBy = input.invitedByName ? `${input.invitedByName} invited you` : 'You were invited';
-  return buildEmail({ template: 'member_invited', subject: `Invitation to join ${input.organizationName} on ${PRODUCT_NAME}`, title: `Join ${input.organizationName} on ${PRODUCT_NAME}`, body: `${escapeHtml(invitedBy)} to join ${escapeHtml(input.organizationName)} as ${escapeHtml(input.role)}.`, ctaLabel: 'Review invitation', ctaUrl: input.inviteUrl, textLines: [`Invitation to join ${input.organizationName} on ${PRODUCT_NAME}.`, `Role: ${input.role}`] });
+  return buildEmail({ template: 'member_invited', subject: `Invitation to join ${input.organizationName} on ${PRODUCT_NAME}`, title: `Join ${input.organizationName} on ${PRODUCT_NAME}`, body: `${escapeHtml(invitedBy)} to join ${escapeHtml(input.organizationName)} as ${escapeHtml(input.role)}.`, ctaLabel: 'Review invitation', ctaUrl: input.inviteUrl, textLines: [`Invitation to join ${input.organizationName} on ${PRODUCT_NAME}.`, `Role: ${input.role}`, 'Use the secure invitation link below. Do not forward this email.'] });
 }
 
 export function billingStartedEmail(input: BillingStartedEmailInput): BuiltEmail {
