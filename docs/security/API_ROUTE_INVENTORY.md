@@ -1,6 +1,6 @@
 # API Route Inventory
 
-This inventory is the explicit classification source for `src/app/api/**/route.ts`. The security scanner fails when an API route exists without an entry here, or when a mutating/private route does not prove the expected central guard coverage.
+This inventory is the explicit classification source for `src/app/api/**/route.ts` and `src/app/next_api/**/route.ts`. The security scanner fails when an API route exists without an entry here, or when a mutating/private route does not prove the expected central guard coverage.
 
 ## Classification taxonomy
 
@@ -64,6 +64,10 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/reports/documents.csv/route.ts` | tenant-scoped | CSV export of private document data; auth, tenant context, no-store/download hardening. |
 | `src/app/api/ai-systems/route.ts` | tenant-scoped | AI governance data; auth, tenant membership, RBAC read/manage permission. |
 | `src/app/api/ai-incidents/route.ts` | tenant-scoped | AI incident data; auth, tenant membership, RBAC read/manage permission. |
+
+## Legacy route namespace
+
+There are currently no registered `src/app/next_api/**/route.ts` endpoints. If any legacy `next_api` route is reintroduced, it must be added to this inventory and pass the same auth, tenant, origin, rate-limit, validation, no-store, and sanitized-error gates as `src/app/api`.
 
 ## BOLA/IDOR invariants
 
