@@ -31,6 +31,8 @@ const SENTRY_RELEASE_UPLOAD_ENV = ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_
 const REAL_MALWARE_SCANNER_PROVIDERS = new Set(['clamav', 'clamd', 'http', 'generic-http', 'webhook']);
 const HTTP_MALWARE_SCANNER_PROVIDERS = new Set(['http', 'generic-http', 'webhook']);
 const CONTROLLED_DOCUMENT_BUCKET = 'controlled-documents';
+const MIN_TCP_PORT = 1;
+const MAX_TCP_PORT = 65_535;
 
 type EnvGroupName = keyof typeof REQUIRED_ENV_GROUPS;
 
@@ -61,6 +63,18 @@ function hasHealthcheckToken(request: Request) {
   });
 }
 
+function hasConfiguredEnvValue(name: string) {
+  return Boolean(process.env[name]?.trim());
+}
+
+function hasValidTcpPortEnv(name: string) {
+  const rawPort = process.env[name]?.trim();
+  if (!rawPort) return false;
+
+  const port = Number(rawPort);
+  return Number.isInteger(port) && port >= MIN_TCP_PORT && port <= MAX_TCP_PORT;
+}
+
 export function isEnterpriseReadinessRequired() {
   return process.env.RELEASE_TARGET === 'enterprise'
     || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true'
@@ -69,7 +83,7 @@ export function isEnterpriseReadinessRequired() {
 
 export function readyEnvironmentCheck(): ReadyEnvironmentGroup[] {
   return Object.entries(REQUIRED_ENV_GROUPS).map(([name, variables]) => {
-    const missingCount = variables.filter((variable) => !process.env[variable]).length;
+    const missingCount = variables.filter((variable) => !hasConfiguredEnvValue(variable)).length;
     return {
       name: name as EnvGroupName,
       configured: missingCount === 0,
@@ -92,10 +106,13 @@ export function enterpriseStorageScannerCheck(): EnterpriseStorageScannerCheck {
   const provider = String(process.env[MALWARE_SCANNER_PROVIDER_ENV] ?? '').trim().toLowerCase();
   const malwareScanningRequired = process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true';
   const realScannerProviderConfigured = REAL_MALWARE_SCANNER_PROVIDERS.has(provider);
-  const scannerEndpointConfigured = Boolean(process.env[MALWARE_SCANNER_ENDPOINT_ENV] || process.env[MALWARE_SCANNER_URL_ENV]);
-  const scannerAllowedHostsConfigured = Boolean(process.env.MALWARE_SCANNER_ALLOWED_HOSTS);
+  const scannerEndpointConfigured = hasConfiguredEnvValue(MALWARE_SCANNER_ENDPOINT_ENV)
+    || hasConfiguredEnvValue(MALWARE_SCANNER_URL_ENV);
+  const scannerAllowedHostsConfigured = hasConfiguredEnvValue('MALWARE_SCANNER_ALLOWED_HOSTS');
+  const clamavTransportConfigured = hasConfiguredEnvValue('MALWARE_SCANNER_CLAMAV_HOST')
+    && hasValidTcpPortEnv('MALWARE_SCANNER_CLAMAV_PORT');
   const scannerTransportConfigured = provider === 'clamav' || provider === 'clamd'
-    ? Boolean(process.env.MALWARE_SCANNER_CLAMAV_HOST || process.env.MALWARE_SCANNER_CLAMAV_PORT)
+    ? clamavTransportConfigured
     : HTTP_MALWARE_SCANNER_PROVIDERS.has(provider) && scannerEndpointConfigured && scannerAllowedHostsConfigured;
   const storageBucketConfigured = DOCUMENT_BUCKET === CONTROLLED_DOCUMENT_BUCKET;
 
