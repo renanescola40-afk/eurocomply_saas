@@ -10,8 +10,17 @@ import { noStoreJson } from '@/server/security/no-store';
 import { requireApiUser, requirePermission, requireTrustedMutation, secureApiError } from '@/server/security/api-guards';
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
+const DEFAULT_BILLING_RETURN_PATH = '/dashboard/organizations/billing';
+
 const billingPortalQuerySchema = z.object({
   locale: z.string().trim().max(16).nullable().optional(),
+  returnPath: z
+    .string()
+    .trim()
+    .max(160)
+    .regex(/^\/dashboard\/organizations\/billing(?:\?.*)?$/)
+    .nullable()
+    .optional(),
 });
 
 export async function POST(request: Request) {
@@ -75,14 +84,18 @@ export async function POST(request: Request) {
     }
 
     const url = new URL(request.url);
-    const parsedQuery = billingPortalQuerySchema.safeParse({ locale: url.searchParams.get('locale') });
+    const parsedQuery = billingPortalQuerySchema.safeParse({
+      locale: url.searchParams.get('locale'),
+      returnPath: url.searchParams.get('returnPath'),
+    });
 
     if (!parsedQuery.success) {
       return noStoreJson({ error: 'invalid_billing_portal_query' }, { status: 400 });
     }
 
     const locale = normalizeLocale(parsedQuery.data.locale);
-    const returnUrl = `${returnBaseUrl.appUrl}/${locale}/settings/billing`;
+    const returnPath = parsedQuery.data.returnPath ?? DEFAULT_BILLING_RETURN_PATH;
+    const returnUrl = `${returnBaseUrl.appUrl}/${locale}${returnPath}`;
 
     const stripe = getStripeClient();
     const portalSession = await stripe.billingPortal.sessions.create({

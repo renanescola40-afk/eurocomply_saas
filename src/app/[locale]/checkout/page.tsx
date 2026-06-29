@@ -1,8 +1,7 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
-import { createCheckoutSession } from '@/server/actions/billing';
+import { BillingActionButton } from '@/app/[locale]/dashboard/organizations/billing/billing-action-button';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
@@ -84,25 +83,6 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const selectedPlanIsCurrent = billing?.plan === selectedPlan.id && isCurrentPlanSubscription(billing.status);
   const message = checkoutMessage(checkoutStatus);
   const authContinuationPath = `/${locale}/dashboard/organizations/billing`;
-
-  async function startCheckout(formData: FormData) {
-    'use server';
-
-    const planId = String(formData.get('planId') ?? DEFAULT_PLAN_ID);
-    let url: string;
-
-    try {
-      url = await createCheckoutSession({
-        planId,
-        successPath: `/${locale}/dashboard/organizations/billing?checkout=success`,
-        cancelPath: `/${locale}/checkout?plan=${encodeURIComponent(planId)}&checkout=cancelled`,
-      });
-    } catch {
-      redirect(`/${locale}/checkout?plan=${encodeURIComponent(planId)}&checkout=error`);
-    }
-
-    redirect(url);
-  }
 
   return (
     <main className="min-h-screen bg-[#05060a] text-white">
@@ -196,17 +176,18 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
             </ul>
 
             {organization ? (
-              <form action={startCheckout} className="mt-6">
-                <input type="hidden" name="planId" value={selectedPlan.id} />
-                <button
-                  type="submit"
+              <div className="mt-6">
+                <BillingActionButton
+                  action="checkout"
+                  locale={locale}
+                  planId={selectedPlan.id}
                   disabled={selectedPlanIsCurrent}
                   className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40"
                 >
                   {selectedPlanIsCurrent ? 'Current plan' : 'Continue to secure checkout'}
-                </button>
+                </BillingActionButton>
                 <p className="mt-3 text-center text-xs text-slate-500">Workspace: {organization.name}</p>
-              </form>
+              </div>
             ) : user ? (
               <Link href={`/${locale}/onboarding`} className="mt-6 flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
                 Create workspace before checkout
