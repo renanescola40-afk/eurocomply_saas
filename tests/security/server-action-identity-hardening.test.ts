@@ -2,12 +2,31 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+const identityScanner = readFileSync(join(process.cwd(), 'scripts/security/check-server-action-identity.mjs'), 'utf8');
 const risksAction = readFileSync(join(process.cwd(), 'src/server/actions/risks.ts'), 'utf8');
 const vendorsAction = readFileSync(join(process.cwd(), 'src/server/actions/vendors.ts'), 'utf8');
 const risksPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/risks/page.tsx'), 'utf8');
 const vendorsPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/vendors/page.tsx'), 'utf8');
 
 describe('server action identity hardening invariants', () => {
+  it('scans every action helper module under src/server/actions', () => {
+    expect(identityScanner).toContain("rel.startsWith('src/server/actions/')");
+    expect(identityScanner).toContain('isServerActionModule');
+    expect(identityScanner).not.toContain('if (!hasTopLevelServerActionDirective(content))');
+  });
+
+  it('fails on caller-supplied identity and unsanitized provider failures', () => {
+    for (const expected of [
+      'exported server action parameter named userId',
+      'exported server action parameter named actorUserId',
+      'exported server action parameter named invitedByUserId',
+      'server action throws raw provider error message',
+      'server action rethrows raw provider error',
+    ]) {
+      expect(identityScanner).toContain(expected);
+    }
+  });
+
   it('derives risk action identity server-side and rate limits mutations', () => {
     expect(risksAction).toContain('requireCurrentUser');
     expect(risksAction).not.toContain('createRisk(input: unknown, userId: string)');
