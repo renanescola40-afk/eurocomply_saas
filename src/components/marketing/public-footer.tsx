@@ -19,39 +19,39 @@ function makeLinks(labels: string[], hrefs: string[]): FooterLink[] {
 
 const footerCopy: Record<Locale, FooterCopy> = {
   en: {
-    tagline: 'Compliance evidence, risk and vendor operations for modern European teams.',
+    tagline: 'AI governance evidence, risk and policy readiness for modern European teams.',
     productTitle: 'Product', companyTitle: 'Company', trustTitle: 'Trust',
-    productLinks: makeLinks(['Platform', 'Pricing', 'FAQ'], ['/#platform', '/#pricing', '/#faq']),
+    productLinks: makeLinks(['Platform', 'Pricing', 'Enterprise', 'Book demo', 'FAQ'], ['/#platform', '/pricing', '/book-demo?plan=enterprise', '/book-demo', '/#faq']),
     companyLinks: makeLinks(['Home', 'Log in'], ['/', '/login']),
   },
   pt: {
-    tagline: 'Evidencias de compliance, risco e fornecedores para equipas europeias.',
+    tagline: 'Evidencias de AI governance, risco e policy readiness para equipas europeias.',
     productTitle: 'Produto', companyTitle: 'Empresa', trustTitle: 'Confianca',
-    productLinks: makeLinks(['Plataforma', 'Precos', 'FAQ'], ['/#platform', '/#pricing', '/#faq']),
+    productLinks: makeLinks(['Plataforma', 'Precos', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/book-demo?plan=enterprise', '/book-demo', '/#faq']),
     companyLinks: makeLinks(['Inicio', 'Entrar'], ['/', '/login']),
   },
   es: {
-    tagline: 'Evidencias de compliance, riesgo y proveedores para equipos europeos.',
+    tagline: 'Evidencias de AI governance, riesgo y policy readiness para equipos europeos.',
     productTitle: 'Producto', companyTitle: 'Empresa', trustTitle: 'Confianza',
-    productLinks: makeLinks(['Plataforma', 'Precios', 'FAQ'], ['/#platform', '/#pricing', '/#faq']),
+    productLinks: makeLinks(['Plataforma', 'Precios', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/book-demo?plan=enterprise', '/book-demo', '/#faq']),
     companyLinks: makeLinks(['Inicio', 'Entrar'], ['/', '/login']),
   },
   fr: {
-    tagline: 'Preuves de conformite, risque et fournisseurs pour equipes europeennes.',
+    tagline: 'Preuves d’AI governance, risque et policy readiness pour equipes europeennes.',
     productTitle: 'Produit', companyTitle: 'Entreprise', trustTitle: 'Confiance',
-    productLinks: makeLinks(['Plateforme', 'Tarifs', 'FAQ'], ['/#platform', '/#pricing', '/#faq']),
+    productLinks: makeLinks(['Plateforme', 'Tarifs', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/book-demo?plan=enterprise', '/book-demo', '/#faq']),
     companyLinks: makeLinks(['Accueil', 'Connexion'], ['/', '/login']),
   },
   it: {
-    tagline: 'Evidenze di compliance, rischio e fornitori per team europei.',
+    tagline: 'Evidenze di AI governance, rischio e policy readiness per team europei.',
     productTitle: 'Prodotto', companyTitle: 'Azienda', trustTitle: 'Fiducia',
-    productLinks: makeLinks(['Piattaforma', 'Prezzi', 'FAQ'], ['/#platform', '/#pricing', '/#faq']),
+    productLinks: makeLinks(['Piattaforma', 'Prezzi', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/book-demo?plan=enterprise', '/book-demo', '/#faq']),
     companyLinks: makeLinks(['Home', 'Accesso'], ['/', '/login']),
   },
   de: {
-    tagline: 'Compliance-Nachweise, Risiken und Lieferantenprozesse fuer europaeische Teams.',
+    tagline: 'AI-Governance-Nachweise, Risiken und Policy Readiness fuer europaeische Teams.',
     productTitle: 'Produkt', companyTitle: 'Unternehmen', trustTitle: 'Vertrauen',
-    productLinks: makeLinks(['Plattform', 'Preise', 'FAQ'], ['/#platform', '/#pricing', '/#faq']),
+    productLinks: makeLinks(['Plattform', 'Preise', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/book-demo?plan=enterprise', '/book-demo', '/#faq']),
     companyLinks: makeLinks(['Startseite', 'Anmelden'], ['/', '/login']),
   },
 };
