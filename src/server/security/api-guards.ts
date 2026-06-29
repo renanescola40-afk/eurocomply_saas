@@ -5,6 +5,12 @@ import {
   type RateLimitOptions,
   type RateLimitPolicyId,
 } from '@/lib/security/rate-limit';
+import {
+  DEFAULT_JSON_BODY_MAX_BYTES,
+  readBoundedJsonRequest,
+  ValidationError,
+  type JsonRequestOptions,
+} from '@/lib/security/validate';
 import { getCurrentUser } from '@/server/queries/auth';
 import { noStoreJson, noStoreDownload, applyNoStoreHeaders } from '@/server/security/no-store';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
@@ -46,7 +52,7 @@ export type EnterpriseRateLimitOptions = Omit<RateLimitOptions, 'ip' | 'userAgen
   policy: RateLimitPolicyId;
 };
 
-export type ParseJsonBodyOptions<TBody> = {
+export type ParseJsonBodyOptions<TBody> = JsonRequestOptions & {
   schema: { parse: (value: unknown) => TBody };
 };
 
@@ -205,21 +211,17 @@ export async function requireTrustedMutation(request: Request, options: TrustedM
   });
 }
 
-export async function parseJsonBodyWithZod<TBody>(request: Request, schemaOrOptions: { parse: (value: unknown) => TBody } | ParseJsonBodyOptions<TBody>) {
-  let rawBody: unknown;
+export async function parseJsonBodyWithZod<TBody>(
+  request: Request,
+  schemaOrOptions: { parse: (value: unknown) => TBody } | ParseJsonBodyOptions<TBody>,
+) {
+  const options: ParseJsonBodyOptions<TBody> = 'schema' in schemaOrOptions ? schemaOrOptions : { schema: schemaOrOptions };
+  const rawBody = await readBoundedJsonRequest(request, {
+    maxBytes: options.maxBytes ?? DEFAULT_JSON_BODY_MAX_BYTES,
+    requireJsonContentType: options.requireJsonContentType ?? true,
+  });
 
-  try {
-    rawBody = await request.json();
-  } catch {
-    throw new ApiSecurityError({
-      code: 'invalid_request',
-      message: 'Request body must be valid JSON.',
-      status: 400,
-    });
-  }
-
-  const schema = 'schema' in schemaOrOptions ? schemaOrOptions.schema : schemaOrOptions;
-  return schema.parse(rawBody);
+  return options.schema.parse(rawBody);
 }
 
 export function assertApiResourceOrganization(resourceOrganizationId: string | null | undefined, organizationId: string) {
@@ -235,6 +237,10 @@ export function assertApiResourceOrganization(resourceOrganizationId: string | n
 export function secureApiError(error: unknown) {
   if (error instanceof ApiSecurityError) {
     return noStoreJson({ error: error.code }, { status: error.status });
+  }
+
+  if (error instanceof ValidationError) {
+    return noStoreJson({ error: 'invalid_request' }, { status: 400 });
   }
 
   if (error instanceof ZodError) {

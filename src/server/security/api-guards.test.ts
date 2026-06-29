@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   getOrganizationMembership: vi.fn(),
   assertOrganizationPermission: vi.fn(),
   checkDistributedRateLimit: vi.fn(),
+  buildRateLimitSubjectFromRequest: vi.fn(),
 }));
 
 vi.mock('@/server/queries/auth', () => ({
@@ -25,10 +26,18 @@ vi.mock('@/server/security/rbac', async () => {
 
 vi.mock('@/lib/security/rate-limit', () => ({
   checkDistributedRateLimit: mocks.checkDistributedRateLimit,
+  buildRateLimitSubjectFromRequest: mocks.buildRateLimitSubjectFromRequest,
+  getRateLimitHeaders: () => ({
+    'Retry-After': '60',
+    'X-RateLimit-Limit': '1',
+    'X-RateLimit-Remaining': '0',
+    'X-RateLimit-Reset': String(Date.now() + 60_000),
+  }),
 }));
 
 import {
   assertApiResourceOrganization,
+  parseJsonBodyWithZod,
   requireApiUser,
   requireOrganizationAccess,
   requirePermission,
@@ -51,6 +60,14 @@ describe('central API security guards', () => {
       rawRole: 'admin',
       permission: 'manage_team',
     });
+    mocks.buildRateLimitSubjectFromRequest.mockImplementation((_request: Request, subject = {}) => ({
+      userId: subject.userId ?? null,
+      organizationId: subject.organizationId ?? null,
+      ip: '203.0.113.10',
+      userAgent: 'vitest',
+      action: subject.action ?? 'trusted_mutation',
+      route: subject.route ?? '/api/test',
+    }));
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true, remaining: 9, resetAt: Date.now() + 60_000 });
   });
 
@@ -112,6 +129,35 @@ describe('central API security guards', () => {
     expect(body).toEqual({ error: 'invalid_request' });
   });
 
+  it('sanitizes oversized bounded JSON requests without leaking parser details', async () => {
+    const request = new Request('https://app.eurocomply.test/api/test', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'content-length': '64',
+      },
+      body: JSON.stringify({ action: 'approve' }),
+    });
+
+    let thrown: unknown;
+    try {
+      await parseJsonBodyWithZod(request, {
+        schema: z.object({ action: z.literal('approve') }),
+        maxBytes: 4,
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    const response = secureApiError(thrown);
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(body).toEqual({ error: 'invalid_request' });
+    expect(JSON.stringify(body)).not.toMatch(/too large|content-length|stack/i);
+  });
+
   it('blocks missing Origin in production mutations', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('VERCEL_ENV', 'production');
@@ -136,12 +182,55 @@ describe('central API security guards', () => {
     expect(body).toEqual({ error: 'untrusted_origin', reason: 'untrusted_origin' });
   });
 
+  it('blocks mutations when the rate limit is exceeded', async () => {
+    mocks.checkDistributedRateLimit.mockResolvedValue({
+      allowed: false,
+      limit: 1,
+      remaining: 0,
+      resetAt: Date.now() + 60_000,
+      retryAfterSeconds: 60,
+      category: 'general-api',
+      policy: 'general-api',
+      highRisk: false,
+      failureMode: 'fail-open',
+      audit: false,
+      key: 'test-rate-limit-key',
+      userId: 'user_a',
+      organizationId: 'org_a',
+      route: '/api/team',
+      action: 'manage_team',
+    });
+
+    const response = await requireTrustedMutation(
+      new Request('https://app.eurocomply.test/api/team', {
+        method: 'POST',
+        headers: { origin: 'https://app.eurocomply.test' },
+      }),
+      {
+        rateLimit: {
+          key: 'team:test',
+          limit: 1,
+          windowMs: 60_000,
+          userId: 'user_a',
+          organizationId: 'org_a',
+          route: '/api/team',
+          action: 'manage_team',
+        },
+      },
+    );
+    const body = await response?.json();
+
+    expect(response?.status).toBe(429);
+    expect(response?.headers.get('cache-control')).toContain('no-store');
+    expect(body).toEqual({ error: 'Too many requests' });
+  });
+
   it('does not leak internal error details', async () => {
-    const response = secureApiError(new Error('internal sentinel should be hidden'));
+    const response = secureApiError(new Error('database password leaked'));
     const body = await response.json();
 
     expect(response.status).toBe(500);
     expect(body).toEqual({ error: 'internal_server_error' });
-    expect(JSON.stringify(body)).not.toContain('internal sentinel');
+    expect(JSON.stringify(body)).not.toContain('database password leaked');
   });
 });
