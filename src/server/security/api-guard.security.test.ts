@@ -30,6 +30,13 @@ describe('central API guard security contract', () => {
     expect(canonicalGuardSource).toContain("export * from './api-guards'");
   });
 
+  it('parses API JSON through the bounded reader instead of raw request.json()', () => {
+    expect(guardSource).toContain('readBoundedJsonRequest');
+    expect(guardSource).toContain('DEFAULT_JSON_BODY_MAX_BYTES');
+    expect(guardSource).toContain('ValidationError');
+    expect(guardSource).not.toContain('request.json()');
+  });
+
   it('sanitizes auth, membership, validation, and internal error responses', () => {
     expect(guardSource).toContain("code: 'unauthorized'");
     expect(guardSource).toContain("code: 'organization_membership_required'");
