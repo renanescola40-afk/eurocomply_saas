@@ -1,10 +1,10 @@
 # Release Readiness Commands
 
-This document lists the commands used to validate EuroComply before promoting a build to beta, production, or enterprise review.
+This document lists the commands used to validate RISCK COMPLY before promoting a build to beta, production, or enterprise review.
 
 ## Current status
 
-As of 2026-06-25, enterprise promotion remains **No-Go** until repository controls, runtime evidence, branch protection evidence, and final validation are complete.
+As of 2026-06-29, enterprise promotion remains **No-Go** until the exact production deployment has green CI, real runtime evidence, rollback evidence, branch protection evidence, and final owner approval.
 
 Required repository controls:
 
@@ -12,6 +12,7 @@ Required repository controls:
 - Full Security Suite green for the exact promoted commit.
 - Public exposure scanning enabled in strict fail-closed mode.
 - Any high or critical npm audit finding fixed or triaged.
+- Production smoke evidence generated from the real deployment URL without exposing tokens or secrets.
 
 ## Enterprise blocking CI
 
@@ -38,13 +39,56 @@ node scripts/security/check-branch-protection-evidence.mjs
 
 It also runs E2E when configured, Actionlint, Gitleaks, Semgrep, CodeQL, Dependency Review, OSSF Scorecard, branch-protection evidence validation, and SBOM generation.
 
+## Production smoke test
+
+```bash
+npm run release:deployment-smoke
+```
+
+The production smoke test is a fail-closed runtime gate. It writes `docs/security/evidence/runtime/deployment-smoke-validation.json` and must not be called passed unless every critical check succeeds.
+
+Required environment for the smoke command:
+
+```bash
+RELEASE_DEPLOYMENT_URL="https://<production-or-preview-url>"
+HEALTHCHECK_TOKEN="<protected readiness token>"
+RELEASE_COMMIT_SHA="<commit being validated>"
+RELEASE_BUILD_SHA="<build sha or deployment sha>"
+RELEASE_ROLLBACK_TARGET="https://<last-known-good-deployment>"
+```
+
+Optional environment:
+
+```bash
+RELEASE_SMOKE_URLS="https://one.example,https://two.example"
+RELEASE_SMOKE_LOCALE="pt"
+RELEASE_SMOKE_TIMEOUT_MS="10000"
+RELEASE_RUN_OBSERVABILITY_SMOKE="true"
+```
+
+The smoke command validates:
+
+- Production URL is configured.
+- `/api/health` returns `status: ok` and `Cache-Control: no-store`.
+- `/api/ready` rejects anonymous access.
+- `/api/ready` returns `status: ready` with the protected healthcheck token.
+- Landing, pricing, trust, and login pages load publicly.
+- Dashboard and organization dashboard require authentication and redirect to localized login.
+- Protected redirects use `Cache-Control: private, no-store`.
+- Security headers are present on public pages.
+- Supabase, Stripe, Redis, Sentry, database connectivity, and enterprise upload scanner readiness are confirmed through grouped `/api/ready` checks.
+- Secret values, authorization headers, cookies, and individual secret environment variable names are not written to evidence.
+- Rollback target is configured and health-checked when it is a URL.
+- Last commit and build SHA are registered in evidence.
+- Observability smoke guard rejects anonymous requests; when `RELEASE_RUN_OBSERVABILITY_SMOKE=true`, it emits a real protected observability smoke event.
+
 ## Release governance
 
 ```bash
 npm run release:readiness
 ```
 
-This validates the release candidate governance package and does not replace the required green Full Security Suite run.
+This validates the release candidate governance package and does not replace the required green Full Security Suite run or the required production smoke evidence.
 
 ## Enterprise readiness
 
@@ -91,12 +135,14 @@ Do not promote to public production unless all of these are true:
 - Full Security Suite is green for the exact commit.
 - `npm run security:ci` passes with strict public scanning enabled.
 - `npm run release:readiness` passes.
+- `npm run release:deployment-smoke` passes against the exact deployed URL.
 - Branch protection evidence validates successfully.
 - Vercel build/deploy is green.
 - Supabase live RLS evidence is attached.
 - Audit-chain migration is applied in the target project.
 - Billing/webhook checks are attached.
 - SBOM artifact is attached.
+- Rollback target evidence is attached.
 - Any high/critical npm audit item is fixed or triaged with owner and expiry.
 - Any remaining exceptions are documented with owner and expiry.
 
