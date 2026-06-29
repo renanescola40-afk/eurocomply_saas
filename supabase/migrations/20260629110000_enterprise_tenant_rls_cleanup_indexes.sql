@@ -4,6 +4,58 @@
 
 create extension if not exists pgcrypto;
 
+create or replace function public.is_org_member(target_organization_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public, pg_temp
+as $$
+  select auth.uid() is not null
+    and target_organization_id is not null
+    and exists (
+      select 1
+      from public.organization_members om
+      where om.organization_id = target_organization_id
+        and om.user_id = auth.uid()
+    );
+$$;
+
+create or replace function public.has_org_role(target_organization_id uuid, allowed_roles text[])
+returns boolean
+language sql
+security definer
+stable
+set search_path = public, pg_temp
+as $$
+  select auth.uid() is not null
+    and target_organization_id is not null
+    and exists (
+      select 1
+      from public.organization_members om
+      where om.organization_id = target_organization_id
+        and om.user_id = auth.uid()
+        and lower(om.role) = any(allowed_roles)
+    );
+$$;
+
+create or replace function public.has_org_write_role(target_organization_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public, pg_temp
+as $$
+  select public.has_org_role(target_organization_id, array['owner','admin','editor']);
+$$;
+
+revoke all on function public.is_org_member(uuid) from public;
+revoke all on function public.has_org_role(uuid, text[]) from public;
+revoke all on function public.has_org_write_role(uuid) from public;
+grant execute on function public.is_org_member(uuid) to authenticated;
+grant execute on function public.has_org_role(uuid, text[]) to authenticated;
+grant execute on function public.has_org_write_role(uuid) to authenticated;
+
 create or replace function public.app_rls_table_exists(p_table_name text)
 returns boolean
 language sql
