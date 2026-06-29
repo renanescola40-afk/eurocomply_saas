@@ -3,19 +3,22 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { dirname, join, relative, sep } from 'node:path';
 
 const root = process.cwd();
-const apiRoot = join(root, 'src', 'app', 'api');
+const apiRoots = [
+  join(root, 'src', 'app', 'api'),
+  join(root, 'src', 'app', 'next_api'),
+];
 const reportPath = join(root, 'security-endpoints-inventory.json');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
+const appApiPrefixPattern = 'src\\/app\\/(?:api|next_api)';
 
 const publicEndpointAllowlist = [
-  { pattern: /src\/app\/api\/health\/route\.ts$/, reason: 'Public healthcheck returns only generic no-store service status' },
-  { pattern: /src\/app\/api\/billing\/webhook\/route\.ts$/, reason: 'Stripe webhook validates provider signature instead of user session' },
-  { pattern: /src\/app\/api\/stripe\/webhook\/route\.ts$/, reason: 'Stripe webhook validates provider signature instead of user session' },
-  { pattern: /src\/app\/api\/audit\/evidence-pack\/verify\/route\.ts$/, reason: 'Public verifier; must remain no-store/rate-limited' },
-  { pattern: /src\/app\/api\/leads\/route\.ts$/, reason: 'Public lead capture accepts no tenant data and must stay bounded, validated, no-store and rate-limited' },
-  { pattern: /src\/app\/api\/ops\/.*\/route\.ts$/, reason: 'Ops routes use internal token instead of user session' },
-  { pattern: /src\/app\/api\/health\/route\.ts$/, reason: 'Public liveness check without tenant data' },
-  { pattern: /src\/app\/api\/ready\/route\.ts$/, reason: 'Public readiness check without tenant data' },
+  { pattern: new RegExp(`${appApiPrefixPattern}\\/health\\/route\\.ts$`), reason: 'Public healthcheck returns only generic no-store service status' },
+  { pattern: new RegExp(`${appApiPrefixPattern}\\/billing\\/webhook\\/route\\.ts$`), reason: 'Stripe webhook validates provider signature instead of user session' },
+  { pattern: new RegExp(`${appApiPrefixPattern}\\/stripe\\/webhook\\/route\\.ts$`), reason: 'Stripe webhook validates provider signature instead of user session' },
+  { pattern: new RegExp(`${appApiPrefixPattern}\\/audit\\/evidence-pack\\/verify\\/route\\.ts$`), reason: 'Public verifier; must remain no-store/rate-limited' },
+  { pattern: new RegExp(`${appApiPrefixPattern}\\/leads\\/route\\.ts$`), reason: 'Public lead capture accepts no tenant data and must stay bounded, validated, no-store and rate-limited' },
+  { pattern: new RegExp(`${appApiPrefixPattern}\\/ops\\/.*\\/route\\.ts$`), reason: 'Ops routes use internal token instead of user session' },
+  { pattern: new RegExp(`${appApiPrefixPattern}\\/ready\\/route\\.ts$`), reason: 'Public readiness check without tenant data' },
 ];
 
 const authTokens = [
@@ -97,7 +100,7 @@ function changedApiRoutes() {
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean);
-    return changed.filter((file) => /^src\/app\/api\/.*\/route\.(ts|js)$/.test(file));
+    return changed.filter((file) => /^src\/app\/(?:api|next_api)\/.*\/route\.(ts|js)$/.test(file));
   } catch {
     return null;
   }
@@ -142,7 +145,7 @@ function isCriticalEndpoint(path) {
 }
 
 const changedRoutes = changedApiRoutes();
-const allRoutes = walk(apiRoot);
+const allRoutes = apiRoots.flatMap((apiRoot) => walk(apiRoot));
 const routes = Array.isArray(changedRoutes)
   ? allRoutes.filter((route) => changedRoutes.includes(normalizePath(route)))
   : allRoutes;
@@ -195,7 +198,7 @@ writeFileSync(reportPath, `${JSON.stringify({ generatedBy: 'check-api-endpoint-h
 
 console.log('EuroComply API endpoint hardening check');
 console.log('---------------------------------------');
-console.log(`Scanned ${routes.length} API route files.`);
+console.log(`Scanned ${routes.length} API route files across src/app/api and src/app/next_api.`);
 if (Array.isArray(changedRoutes) && changedRoutes.length === 0) console.log('No changed API route files detected in this pull request; full endpoint scan is skipped for unrelated changes.');
 console.log(`Wrote endpoint inventory to ${relative(root, reportPath).split(sep).join('/')}.`);
 
