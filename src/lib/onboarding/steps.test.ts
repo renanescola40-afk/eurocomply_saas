@@ -3,32 +3,60 @@ import { describe, expect, it } from 'vitest';
 import { buildOnboardingSteps, getOnboardingProgress } from './steps';
 
 describe('onboarding steps', () => {
-  it('marks completed steps from product state', () => {
+  it('models the full B2B activation flow', () => {
     const steps = buildOnboardingSteps({
       hasOrganization: true,
-      hasMembers: false,
+      hasCountry: true,
+      hasCompanyType: true,
+      hasSector: true,
+      hasAiUsage: true,
+      hasFirstAiSystem: true,
+      hasRiskClassification: true,
+      hasReadinessScore: true,
+      hasDocumentSuggestions: true,
+      hasInitialTasks: true,
+      hasMembers: true,
+      hasPlanIntent: true,
       hasComplianceTasks: true,
-      hasDocuments: false,
-      hasVendors: false,
+      hasDocuments: true,
+      hasVendors: true,
     });
 
-    expect(steps).toHaveLength(6);
-    expect(steps.filter((step) => step.status === 'complete')).toHaveLength(2);
+    expect(steps).toHaveLength(12);
+    expect(steps.map((step) => step.id)).toEqual([
+      'create-organization',
+      'choose-country',
+      'company-type',
+      'sector',
+      'ai-usage',
+      'first-ai-system',
+      'risk-classification',
+      'readiness-score',
+      'document-suggestions',
+      'initial-tasks',
+      'invite-team',
+      'plan-or-trial',
+    ]);
+    expect(steps.every((step) => step.status === 'complete')).toBe(true);
   });
 
-  it('calculates onboarding progress percentage', () => {
+  it('calculates activation progress percentage', () => {
     const steps = buildOnboardingSteps({
       hasOrganization: true,
-      hasMembers: true,
+      hasCountry: true,
+      hasCompanyType: true,
+      hasSector: true,
+      hasAiUsage: true,
+      hasMembers: false,
       hasComplianceTasks: false,
       hasDocuments: false,
       hasVendors: false,
     });
 
     expect(getOnboardingProgress(steps)).toEqual({
-      completed: 2,
-      total: 6,
-      percentage: 33,
+      completed: 5,
+      total: 12,
+      percentage: 42,
     });
   });
 });
