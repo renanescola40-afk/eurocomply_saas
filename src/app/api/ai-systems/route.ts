@@ -1,5 +1,6 @@
+import { z } from 'zod';
+
 import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
-import { readBoundedJsonRequest } from '@/lib/security/validate';
 import {
   classifyAiSystem,
   normalizeAiRiskDomain,
@@ -7,15 +8,30 @@ import {
   normalizeAiSystemStatus,
 } from '@/server/ai-governance/classifier';
 import { evaluateAiGovernanceRole } from '@/lib/ai-governance/role-wizard';
-import { getCurrentUser } from '@/server/queries/auth';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAiSystem, listAiSystems } from '@/server/queries/ai-systems';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
+import { parseJsonBodyWithZod, requireApiUser, secureApiError } from '@/server/security/api-guards';
 
 const AI_SYSTEM_JSON_MAX_BYTES = 64 * 1024;
+
+const aiSystemBodySchema = z.object({
+  name: z.string().trim().min(2).max(160),
+  useCase: z.string().trim().min(8).max(4000),
+  ownerTeam: z.string().trim().max(160).nullable().optional(),
+  vendorName: z.string().trim().max(160).nullable().optional(),
+  role: z.unknown().optional(),
+  lifecycleStatus: z.unknown().optional(),
+  riskDomain: z.unknown().optional(),
+  usesPersonalData: z.unknown().optional(),
+  interactsWithPeople: z.unknown().optional(),
+  generatesContent: z.unknown().optional(),
+  biometricIdentification: z.unknown().optional(),
+  manipulativeOrExploitative: z.unknown().optional(),
+});
 
 function asText(value: unknown, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
@@ -23,14 +39,6 @@ function asText(value: unknown, fallback = '') {
 
 function asBoolean(value: unknown) {
   return value === true || value === 'true' || value === 'on';
-}
-
-function getErrorCode(error: unknown) {
-  if (error && typeof error === 'object' && 'code' in error) {
-    const { code } = error as { code?: unknown };
-    return typeof code === 'string' ? code : 'unknown';
-  }
-  return 'unknown';
 }
 
 function rateLimitDeniedResponse(result: RateLimitResult) {
@@ -53,128 +61,106 @@ function rateLimitDeniedResponse(result: RateLimitResult) {
 }
 
 export async function GET() {
-  const user = await getCurrentUser();
+  try {
+    const user = await requireApiUser();
+    const organization = await getCurrentOrganizationForUser(user.id);
 
-  if (!user) {
-    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
+    if (!organization) {
+      return noStoreJson({ error: 'organization_required' }, { status: 403 });
+    }
+
+    const permission = await assertOrganizationPermission({
+      userId: user.id,
+      organizationId: organization.id,
+      permission: 'read_ai_governance',
+    });
+
+    if (!permission.ok) {
+      return permissionDeniedResponse(permission);
+    }
+
+    const systems = await listAiSystems(organization.id);
+    return noStoreJson({ systems, role: permission.role });
+  } catch (error) {
+    return secureApiError(error);
   }
-
-  const organization = await getCurrentOrganizationForUser(user.id);
-
-  if (!organization) {
-    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
-  }
-
-  const permission = await assertOrganizationPermission({
-    userId: user.id,
-    organizationId: organization.id,
-    permission: 'read_ai_governance',
-  });
-
-  if (!permission.ok) {
-    return permissionDeniedResponse(permission);
-  }
-
-  const systems = await listAiSystems(organization.id);
-  return noStoreJson({ systems, role: permission.role });
 }
 
 export async function POST(request: Request) {
-  const originDenied = assertTrustedOrigin(request);
-  if (originDenied) return originDenied;
-
-  const user = await getCurrentUser();
-
-  if (!user) {
-    return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const organization = await getCurrentOrganizationForUser(user.id);
-
-  if (!organization) {
-    return noStoreJson({ error: 'Organization not found' }, { status: 404 });
-  }
-
-  const permission = await assertOrganizationPermission({
-    userId: user.id,
-    organizationId: organization.id,
-    permission: 'manage_ai_governance',
-  });
-
-  if (!permission.ok) {
-    return permissionDeniedResponse(permission);
-  }
-
-  const rateLimit = await checkDistributedRateLimit({
-    key: `ai-systems:create:${organization.id}`,
-    limit: 20,
-    windowMs: 60 * 1000,
-  });
-
-  if (!rateLimit.allowed) {
-    return rateLimitDeniedResponse(rateLimit);
-  }
-
-  const payload = await readBoundedJsonRequest<Record<string, unknown>>(request, {
-    maxBytes: AI_SYSTEM_JSON_MAX_BYTES,
-  }).catch(() => null);
-
-  if (!payload) {
-    return noStoreJson({ error: 'invalid_json_body' }, { status: 400 });
-  }
-
-  const body = payload;
-  const name = asText(body.name);
-  const useCase = asText(body.useCase);
-
-  if (name.length < 2) {
-    return noStoreJson({ error: 'Name is required' }, { status: 400 });
-  }
-
-  if (useCase.length < 8) {
-    return noStoreJson({ error: 'Use case must describe how the AI system is used' }, { status: 400 });
-  }
-
-  const role = normalizeAiSystemRole(body.role);
-  const lifecycleStatus = normalizeAiSystemStatus(body.lifecycleStatus);
-  const riskDomain = normalizeAiRiskDomain(body.riskDomain);
-  const usesPersonalData = asBoolean(body.usesPersonalData);
-  const interactsWithPeople = asBoolean(body.interactsWithPeople);
-  const generatesContent = asBoolean(body.generatesContent);
-  const biometricIdentification = asBoolean(body.biometricIdentification);
-  const manipulativeOrExploitative = asBoolean(body.manipulativeOrExploitative);
-  const vendorName = asText(body.vendorName) || null;
-
-  const classification = classifyAiSystem({
-    role,
-    riskDomain,
-    usesPersonalData,
-    interactsWithPeople,
-    generatesContent,
-    biometricIdentification,
-    manipulativeOrExploitative,
-  });
-
-  const roleAssessment = evaluateAiGovernanceRole({
-    role,
-    vendorName,
-    useCase,
-    riskDomain,
-    usesPersonalData,
-    interactsWithPeople,
-    generatesContent,
-    biometricIdentification,
-    manipulativeOrExploitative,
-  });
-
   try {
+    const originDenied = assertTrustedOrigin(request);
+    if (originDenied) return originDenied;
+
+    const user = await requireApiUser();
+    const organization = await getCurrentOrganizationForUser(user.id);
+
+    if (!organization) {
+      return noStoreJson({ error: 'organization_required' }, { status: 403 });
+    }
+
+    const permission = await assertOrganizationPermission({
+      userId: user.id,
+      organizationId: organization.id,
+      permission: 'manage_ai_governance',
+    });
+
+    if (!permission.ok) {
+      return permissionDeniedResponse(permission);
+    }
+
+    const rateLimit = await checkDistributedRateLimit({
+      key: `ai-systems:create:${organization.id}:${user.id}`,
+      limit: 20,
+      windowMs: 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      return rateLimitDeniedResponse(rateLimit);
+    }
+
+    const body = await parseJsonBodyWithZod(request, {
+      schema: aiSystemBodySchema,
+      maxBytes: AI_SYSTEM_JSON_MAX_BYTES,
+    });
+    const role = normalizeAiSystemRole(body.role);
+    const lifecycleStatus = normalizeAiSystemStatus(body.lifecycleStatus);
+    const riskDomain = normalizeAiRiskDomain(body.riskDomain);
+    const usesPersonalData = asBoolean(body.usesPersonalData);
+    const interactsWithPeople = asBoolean(body.interactsWithPeople);
+    const generatesContent = asBoolean(body.generatesContent);
+    const biometricIdentification = asBoolean(body.biometricIdentification);
+    const manipulativeOrExploitative = asBoolean(body.manipulativeOrExploitative);
+    const vendorName = asText(body.vendorName) || null;
+
+    const classification = classifyAiSystem({
+      role,
+      riskDomain,
+      usesPersonalData,
+      interactsWithPeople,
+      generatesContent,
+      biometricIdentification,
+      manipulativeOrExploitative,
+    });
+
+    const roleAssessment = evaluateAiGovernanceRole({
+      role,
+      vendorName,
+      useCase: body.useCase,
+      riskDomain,
+      usesPersonalData,
+      interactsWithPeople,
+      generatesContent,
+      biometricIdentification,
+      manipulativeOrExploitative,
+    });
+
     const system = await createAiSystem({
       organizationId: organization.id,
       createdBy: user.id,
-      name,
+      name: body.name,
       ownerTeam: asText(body.ownerTeam) || null,
       vendorName,
-      useCase,
+      useCase: body.useCase,
       role,
       lifecycleStatus,
       riskDomain,
@@ -209,15 +195,6 @@ export async function POST(request: Request) {
 
     return noStoreJson({ system, roleAssessment });
   } catch (error) {
-    const code = getErrorCode(error);
-
-    if (code === '42P01' || code === 'PGRST205') {
-      return noStoreJson(
-        { error: 'ai_systems_table_missing', message: 'Apply the AI governance Supabase migration before creating AI systems.' },
-        { status: 503 },
-      );
-    }
-
-    return noStoreJson({ error: 'Could not create AI system' }, { status: 500 });
+    return secureApiError(error);
   }
 }
