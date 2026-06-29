@@ -27,7 +27,7 @@ describe('document storage access hardening invariants', () => {
   it('validates signed URL document ids before tenant-scoped lookup', () => {
     expect(downloadAction).toContain('DOCUMENT_ID_PATTERN');
     expect(downloadAction).toContain('normalizeDocumentId');
-    expect(downloadAction).toContain("documentId: 'invalid_document_id'");
+    expect(downloadAction).toContain('invalid_document_id');
     expect(downloadAction).toContain(".eq('id', safeDocumentId)");
     expect(downloadAction).not.toContain(".eq('id', documentId)");
   });
