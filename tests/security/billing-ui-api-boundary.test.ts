@@ -12,6 +12,13 @@ describe('billing UI API security boundary', () => {
     expect(billingPage).toContain("./billing-action-button");
   });
 
+  it('keeps the billing action client free of server-only imports', () => {
+    expect(billingActionButton).toContain("'use client'");
+    expect(billingActionButton).not.toContain("@/server/");
+    expect(billingActionButton).not.toContain("@/lib/supabase/admin");
+    expect(billingActionButton).not.toContain("node:crypto");
+  });
+
   it('routes checkout and portal actions through hardened API endpoints', () => {
     expect(billingActionButton).toContain("'/api/billing/checkout'");
     expect(billingActionButton).toContain("'/api/billing/portal?locale=");
