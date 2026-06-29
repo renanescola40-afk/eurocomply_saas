@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { getBillingEntitlements, normalizeBillingPlanId } from '@/lib/billing/plans';
+import { getBillingEntitlements, getBillingPlan, getBillingPlanIdForStripePriceId } from '@/lib/billing/plans';
 import { sendEmail } from '@/lib/email/client';
 import { paymentFailedEmail } from '@/lib/email/templates';
 import { reportError } from '@/lib/observability/report-error';
@@ -34,7 +34,10 @@ type StripeMetadata = Stripe.Metadata | null | undefined;
 type SubscriptionWithPeriod = Stripe.Subscription & {
   current_period_end?: number | null;
   items?: {
-    data?: Array<{ current_period_end?: number | null }>;
+    data?: Array<{
+      current_period_end?: number | null;
+      price?: { id?: string | null } | null;
+    }>;
   };
 };
 
@@ -87,6 +90,31 @@ function getSubscriptionCurrentPeriodEnd(subscription: Stripe.Subscription) {
   const periodEnd = typedSubscription.current_period_end ?? typedSubscription.items?.data?.[0]?.current_period_end ?? null;
 
   return typeof periodEnd === 'number' ? new Date(periodEnd * 1000).toISOString() : null;
+}
+
+function getSubscriptionStripePriceId(subscription: Stripe.Subscription) {
+  const typedSubscription = subscription as SubscriptionWithPeriod;
+  const priceId = typedSubscription.items?.data?.[0]?.price?.id;
+
+  return typeof priceId === 'string' && priceId.trim() ? priceId.trim() : null;
+}
+
+export function resolveStripeSubscriptionPlan(subscription: Stripe.Subscription) {
+  const stripePriceId = getSubscriptionStripePriceId(subscription);
+  const planFromPrice = getBillingPlanIdForStripePriceId(stripePriceId);
+
+  if (planFromPrice) {
+    return { plan: planFromPrice, stripePriceId, source: 'stripe_price_id' as const };
+  }
+
+  const metadataPlan = getPlanIdFromMetadata(subscription.metadata);
+  const planFromMetadata = getBillingPlan(metadataPlan)?.id;
+
+  if (planFromMetadata) {
+    return { plan: planFromMetadata, stripePriceId, source: 'subscription_metadata_fallback' as const };
+  }
+
+  return { plan: undefined, stripePriceId, source: 'unresolved' as const };
 }
 
 function getInvoiceSubscriptionId(invoice: Stripe.Invoice) {
@@ -326,7 +354,8 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
   const organizationId = getOrganizationIdFromMetadata(subscription.metadata);
   const clerkOrgId = getClerkOrgIdFromMetadata(subscription.metadata);
   const rawPlan = getPlanIdFromMetadata(subscription.metadata);
-  const plan = normalizeBillingPlanId(rawPlan);
+  const planResolution = resolveStripeSubscriptionPlan(subscription);
+  const plan = planResolution.plan;
   const customerId = getStripeObjectId(subscription.customer);
 
   if (!organizationId) {
@@ -334,7 +363,7 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
   }
 
   if (!plan) {
-    throw new Error('Missing or invalid plan in Stripe subscription metadata');
+    throw new Error('Missing or invalid Stripe price or plan metadata on subscription');
   }
 
   if (!customerId) {
@@ -379,6 +408,9 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
       event,
       metadata: {
         plan,
+        metadataPlan: rawPlan ?? null,
+        planSource: planResolution.source,
+        stripePriceId: planResolution.stripePriceId,
         status: subscription.status,
         stripeCustomerId: customerId,
         clerkOrgId: clerkOrgId ?? null,
@@ -393,6 +425,9 @@ export async function upsertSubscriptionFromStripe(subscription: Stripe.Subscrip
       event,
       metadata: {
         plan,
+        metadataPlan: rawPlan ?? null,
+        planSource: planResolution.source,
+        stripePriceId: planResolution.stripePriceId,
         status: subscription.status,
         stripeCustomerId: customerId,
         clerkOrgId: clerkOrgId ?? null,
@@ -410,7 +445,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
   const organizationId = getOrganizationIdFromMetadata(session.metadata);
   const clerkOrgId = getClerkOrgIdFromMetadata(session.metadata);
   const rawPlan = getPlanIdFromMetadata(session.metadata);
-  const plan = rawPlan ? normalizeBillingPlanId(rawPlan) : undefined;
+  const plan = getBillingPlan(rawPlan)?.id;
   const customerId = getStripeObjectId(session.customer);
   const subscriptionId = getStripeObjectId(session.subscription as string | Stripe.Subscription | null | undefined);
 
@@ -442,6 +477,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
     event,
     metadata: {
       plan: plan ?? null,
+      metadataPlan: rawPlan ?? null,
       stripeCustomerId: customerId,
       stripeSubscriptionId: subscriptionId ?? null,
       clerkOrgId: clerkOrgId ?? null,
