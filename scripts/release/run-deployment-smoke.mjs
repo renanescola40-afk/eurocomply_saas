@@ -38,7 +38,9 @@ function now() {
 function normalizeUrl(value) {
   const raw = String(value || '').trim();
   if (!raw) return null;
+
   const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+
   try {
     const url = new URL(candidate);
     url.search = '';
@@ -442,6 +444,7 @@ const evidence = {
 
 mkdirSync(dirname(evidencePath), { recursive: true });
 writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+
 console.log(`Wrote ${evidencePath}`);
 
 if (failures.length > 0) {
