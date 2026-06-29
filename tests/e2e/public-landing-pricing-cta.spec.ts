@@ -11,6 +11,7 @@ test.describe('public landing pricing CTA navigation', () => {
     await expect(pricingTrialLink).toBeEnabled();
 
     await pricingTrialLink.click();
+    await page.waitForURL('**/pt/checkout?plan=professional');
 
     const url = new URL(page.url());
     expect(url.pathname).toBe(`/${LOCALE}/checkout`);
