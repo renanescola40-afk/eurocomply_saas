@@ -18,6 +18,7 @@ import {
   UPLOAD_SECURITY_AUDIT_EVENTS,
   buildTenantScopedUploadPath,
   buildUploadSecurityAuditMetadata,
+  isDocumentStoragePathInOrganization,
   sanitizeUploadFileName,
   scanValidatedUploadForMalware,
   shouldBlockUploadForMalwareScan,
@@ -25,10 +26,18 @@ import {
   type MalwareScanResult,
 } from '@/server/security/upload-security';
 
+export {
+  ALLOWED_TYPES,
+  CONTROLLED_DOCUMENT_STORAGE_BUCKET,
+  MAX_UPLOAD_BYTES,
+  buildTenantScopedUploadPath,
+  isDocumentStoragePathInOrganization,
+};
+
 const STORAGE_BUCKET = CONTROLLED_DOCUMENT_STORAGE_BUCKET;
 // The controlled-documents bucket is the only storage bucket permitted for enterprise document uploads.
 const SIGNATURE_MISMATCH_REASON = 'signature_mismatch';
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
 const MULTIPART_UPLOAD_OVERHEAD_BYTES = 256 * 1024;
 const MAX_MULTIPART_UPLOAD_BYTES = MAX_UPLOAD_BYTES + MULTIPART_UPLOAD_OVERHEAD_BYTES;
 

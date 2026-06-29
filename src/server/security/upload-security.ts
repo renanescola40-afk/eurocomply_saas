@@ -104,12 +104,17 @@ function sanitizeStoragePathSegment(segment: string, label: string) {
   return normalized;
 }
 
+function isTruthyEnv(value: string | undefined) {
+  return ['true', '1', 'yes', 'y', 'on', 'required'].includes(String(value ?? '').trim().toLowerCase());
+}
+
 export function isUploadMalwareScanRequired() {
-  return process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true' || process.env[LEGACY_MALWARE_SCAN_REQUIRED_ENV] === 'true';
+  return isTruthyEnv(process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV]) || isTruthyEnv(process.env[LEGACY_MALWARE_SCAN_REQUIRED_ENV]);
 }
 
 export function currentUploadMalwareScannerProvider() {
-  return process.env[MALWARE_SCANNER_PROVIDER_ENV]?.trim() || 'not_configured';
+  const provider = process.env[MALWARE_SCANNER_PROVIDER_ENV]?.trim().toLowerCase();
+  return provider && provider !== 'none' && provider !== 'disabled' ? provider : 'not_configured';
 }
 
 export function sanitizeUploadFileName(fileName: string | null | undefined) {

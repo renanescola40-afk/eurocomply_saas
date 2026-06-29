@@ -10,7 +10,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffects from '@/components/GlobalClientEffects';
 import GapAnalysisShortcut from '@/components/GapAnalysisShortcut';
-import { AuthProvider } from '@/hooks/useAuth';
+import { AuthProvider, DisabledAuthProvider } from '@/hooks/useAuth';
 import { routing, type Locale } from '@/lib/i18n/routing';
 
 import '../globals.css';
@@ -29,6 +29,10 @@ type Props = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 };
+
+function hasClerkPublishableKey() {
+  return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim());
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
@@ -75,36 +79,55 @@ export default async function LocaleLayout({ children, params }: Props) {
   const signInUrl = `/${safeLocale}/login`;
   const signUpUrl = `/${safeLocale}/signup`;
   const onboardingUrl = `/${safeLocale}/onboarding`;
+  const clerkEnabled = hasClerkPublishableKey();
+
+  const sharedShell = (
+    <>
+      {children}
+      <GapAnalysisShortcut />
+      <GlobalClientEffects />
+      <AnalyticsConsentBanner />
+      <Toaster />
+    </>
+  );
+
+  const appShell = (
+    <NextIntlClientProvider messages={messages}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
+        enableSystem={false}
+        disableTransitionOnChange
+      >
+        {clerkEnabled ? (
+          <AuthProvider>
+            <PostHogAnalyticsProvider>
+              {sharedShell}
+              <ClerkFloatingControls locale={safeLocale} />
+            </PostHogAnalyticsProvider>
+          </AuthProvider>
+        ) : (
+          <DisabledAuthProvider>{sharedShell}</DisabledAuthProvider>
+        )}
+      </ThemeProvider>
+    </NextIntlClientProvider>
+  );
 
   return (
     <html lang={safeLocale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
-        <ClerkProvider
-          signInUrl={signInUrl}
-          signUpUrl={signUpUrl}
-          signInFallbackRedirectUrl={onboardingUrl}
-          signUpFallbackRedirectUrl={onboardingUrl}
-        >
-          <NextIntlClientProvider messages={messages}>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="dark"
-              enableSystem={false}
-              disableTransitionOnChange
-            >
-              <AuthProvider>
-                <PostHogAnalyticsProvider>
-                  {children}
-                  <ClerkFloatingControls locale={safeLocale} />
-                  <GapAnalysisShortcut />
-                  <GlobalClientEffects />
-                  <AnalyticsConsentBanner />
-                  <Toaster />
-                </PostHogAnalyticsProvider>
-              </AuthProvider>
-            </ThemeProvider>
-          </NextIntlClientProvider>
-        </ClerkProvider>
+        {clerkEnabled ? (
+          <ClerkProvider
+            signInUrl={signInUrl}
+            signUpUrl={signUpUrl}
+            signInFallbackRedirectUrl={onboardingUrl}
+            signUpFallbackRedirectUrl={onboardingUrl}
+          >
+            {appShell}
+          </ClerkProvider>
+        ) : (
+          appShell
+        )}
       </body>
     </html>
   );
