@@ -63,7 +63,7 @@ export type UploadSecurityValidationResult =
     }
   | {
       ok: false;
-      reason: Extract<UploadFileSecurityValidation, { ok: false }>['reason'];
+      reason: Extract<UploadFileSecurityValidation, { ok: false }>['reason'] | 'signature_mismatch';
       message: string;
       buffer: Buffer;
       fileHash: string;
@@ -129,7 +129,7 @@ export async function validateUploadSecurityFile(file: File, options: { maxBytes
   });
 
   if (!validation.ok) {
-    const reason = !declaredSignatureMatches && (validation.reason === 'unsupported_mime_type' || validation.reason === 'mime_spoofing')
+    const reason = !declaredSignatureMatches && validation.reason === 'unsupported_mime_type' && !validation.detectedType
       ? 'signature_mismatch'
       : validation.reason;
     const message = reason === 'signature_mismatch'
@@ -222,6 +222,8 @@ export function isTenantScopedStoragePath(storagePath: string | null | undefined
   return isDocumentStoragePathInOrganization(storagePath, organizationId);
 }
 
+export const isDocumentStoragePathInOrganizationAlias = isTenantScopedStoragePath;
+
 export function assertTenantStoragePathInOrganization(storagePath: string | null | undefined, organizationId: string) {
   return assertDocumentStoragePathInOrganization(storagePath, organizationId);
 }
@@ -278,26 +280,14 @@ export function buildUploadSecurityAuditMetadata(input: UploadSecurityAuditMetad
     sizeBytes: fileSize,
     claimedMimeType: input.claimedMimeType ?? null,
     mimeDetected,
-    detectedMimeType: mimeDetected,
+    declaredSignatureMatches: input.declaredSignatureMatches ?? null,
     organizationId: input.organizationId ?? null,
     actorUserId: input.actorUserId ?? null,
-    actorRole: input.actorRole ?? 'unknown',
+    actorRole: input.actorRole ?? null,
     documentId: input.documentId ?? null,
     accessPurpose: input.accessPurpose ?? null,
     expiresInSeconds: input.expiresInSeconds ?? null,
-    declaredSignatureMatches: input.declaredSignatureMatches ?? null,
   };
 }
 
-export function isSignedUrlExpired(input: { issuedAt: string | Date; expiresInSeconds: number; now?: Date }) {
-  const issuedAt = input.issuedAt instanceof Date ? input.issuedAt : new Date(input.issuedAt);
-  const now = input.now ?? new Date();
-
-  if (!Number.isFinite(issuedAt.getTime()) || !Number.isFinite(now.getTime())) return true;
-  if (!Number.isFinite(input.expiresInSeconds) || input.expiresInSeconds <= 0) return true;
-
-  return now.getTime() >= issuedAt.getTime() + input.expiresInSeconds * 1000;
-}
-
-export { isDocumentStoragePathInOrganization, scanUploadForMalware, shouldBlockUploadForMalwareScan };
-export type { MalwareScanResult };
+export { shouldBlockUploadForMalwareScan, type MalwareScanResult };
