@@ -3,13 +3,17 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const billingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx'), 'utf8');
+const publicCheckoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
 const billingActionButton = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx'), 'utf8');
+const billingPortalRoute = readFileSync(join(process.cwd(), 'src/app/api/billing/portal/route.ts'), 'utf8');
 const legacyBillingActions = readFileSync(join(process.cwd(), 'src/server/actions/billing.ts'), 'utf8');
 
 describe('billing UI API security boundary', () => {
-  it('does not import legacy billing mutation server actions from the billing page', () => {
+  it('does not import legacy billing mutation server actions from billing UI pages', () => {
     expect(billingPage).not.toContain("@/server/actions/billing");
+    expect(publicCheckoutPage).not.toContain("@/server/actions/billing");
     expect(billingPage).toContain("./billing-action-button");
+    expect(publicCheckoutPage).toContain("billing-action-button");
   });
 
   it('keeps the billing action client free of server-only imports', () => {
@@ -22,8 +26,16 @@ describe('billing UI API security boundary', () => {
   it('routes checkout and portal actions through hardened API endpoints', () => {
     expect(billingActionButton).toContain("'/api/billing/checkout'");
     expect(billingActionButton).toContain("'/api/billing/portal?locale=");
+    expect(billingActionButton).toContain('returnPath=');
     expect(billingActionButton).toContain("method: 'POST'");
     expect(billingActionButton).toContain("action === 'checkout' ? JSON.stringify({ plan: planId, locale }) : undefined");
+  });
+
+  it('keeps Stripe portal returns scoped to an existing billing dashboard route', () => {
+    expect(billingPortalRoute).toContain("DEFAULT_BILLING_RETURN_PATH = '/dashboard/organizations/billing'");
+    expect(billingPortalRoute).toContain('returnPath');
+    expect(billingPortalRoute).toContain('^\\/dashboard\\/organizations\\/billing');
+    expect(billingPortalRoute).not.toContain('/settings/billing');
   });
 
   it('handles manage_billing step-up tokens before retrying billing mutations', () => {
