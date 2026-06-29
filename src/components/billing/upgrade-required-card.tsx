@@ -16,17 +16,17 @@ export function UpgradeRequiredCard({
   ctaLabel?: string;
 }) {
   return (
-    <section className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 shadow-2xl shadow-black/20">
+    <section className="enterprise-panel rounded-[2rem] p-8">
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div className="max-w-2xl">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-white/70">
+          <div className="enterprise-kicker mb-4 inline-flex items-center gap-2 rounded-full border border-border/70 bg-accent/50 px-3 py-1">
             <LockKeyhole className="h-3.5 w-3.5" />
             Plano {requiredPlan} requerido
           </div>
-          <h1 className="text-3xl font-semibold tracking-[-0.04em] text-white md:text-4xl">{title}</h1>
-          <p className="mt-3 text-sm leading-6 text-white/65 md:text-base">{description}</p>
+          <h1 className="text-3xl font-semibold tracking-[-0.04em] text-foreground md:text-4xl">{title}</h1>
+          <p className="enterprise-muted mt-3 text-sm leading-6 md:text-base">{description}</p>
         </div>
-        <Button asChild className="rounded-full bg-white text-slate-950 hover:bg-white/90">
+        <Button asChild className="rounded-full">
           <Link href={`/${locale}/pricing`}>
             {ctaLabel} <ArrowUpRight className="h-4 w-4" />
           </Link>
