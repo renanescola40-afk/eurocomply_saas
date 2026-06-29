@@ -217,17 +217,18 @@ describe('Stripe webhook billing hardening', () => {
         status: 'processing',
       }),
     );
-    expect(state.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        organization_id: 'org_a',
-        stripe_customer_id: 'cus_123',
-        stripe_subscription_id: 'sub_123',
-        plan: 'growth',
-        tier: 'growth',
-        status,
-      }),
-      { onConflict: 'organization_id' },
-    );
+
+    const [subscriptionPayload, upsertOptions] = state.upsert.mock.calls[0];
+    expect(subscriptionPayload).toMatchObject({
+      organization_id: 'org_a',
+      stripe_customer_id: 'cus_123',
+      stripe_subscription_id: 'sub_123',
+      plan: 'growth',
+      tier: 'growth',
+      status,
+    });
+    expect(subscriptionPayload.entitlements).toEqual(expect.objectContaining({ users: 15, vendorRisk: true }));
+    expect(upsertOptions).toEqual({ onConflict: 'organization_id' });
     expect(state.eventUpdates).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
