@@ -130,7 +130,7 @@
     "security:p0-runtime-gap": "node scripts/security/report-p0-runtime-evidence-gap.mjs",
     "security:p0-runtime-gap:strict": "node scripts/security/report-p0-runtime-evidence-gap.mjs --strict",
     "security:ci": "npm run security:package-lock && npm run security:npm-audit:all && npm run security:public-secrets && npm run security:production-secrets && npm run security:supply-chain && npm run security:ci-cd && npm run security:rls:advisory && npm run security:step-up && npm run security:client-boundaries && npm run security:auth-tokens && npm run security:authorization-bola && npm run security:server-action-identity && npm run security:protected-routes && npm run security:headers && npm run security:no-store && npm run security:origin-guards && npm run security:no-open-proxy && npm run security:internal-maintenance && npm run security:ops-readiness && npm run security:public-verifiers && npm run security:public-errors && npm run security:csv-exports && npm run security:document-filenames && npm run security:upload && npm run security:upload-content-scan && npm run security:upload-scanner:ci && npm run security:billing-webhook-body && npm run security:responses && npm run security:logs && npm run security:api-endpoints && npm run security:api-guards && npm run security:enterprise-api",
-    "release:deployment-smoke": "node scripts/release/run-deployment-smoke.mjs",
+    "release:deployment-smoke": "npm run production:smoke",
     "release:rollback:dry-run": "node scripts/release/run-rollback-dry-run.mjs",
     "release:enterprise-runtime-evidence": "node scripts/release/check-enterprise-runtime-evidence.mjs",
     "release:readiness": "npm run release:deployment-smoke && npm run release:rollback:dry-run && npm run security:release-candidate && npm run security:release-evidence && npm run security:release-approval && npm run security:release-go-no-go && npm run security:external-review && npm run security:release-rollback && npm run security:release-incident-response && npm run security:release-post-incident && npm run security:release-support-readiness && npm run security:release-operations && npm run security:p0-runtime-gap",
@@ -145,7 +145,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "production:smoke": "node scripts/release/run-deployment-smoke.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.32.0",

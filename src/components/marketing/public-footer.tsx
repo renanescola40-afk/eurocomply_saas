@@ -19,39 +19,39 @@ function makeLinks(labels: string[], hrefs: string[]): FooterLink[] {
 
 const footerCopy: Record<Locale, FooterCopy> = {
   en: {
-    tagline: 'AI governance evidence, risk and policy readiness for modern European teams.',
+    tagline: 'AI Act readiness, governance evidence and risk workflows for modern European teams.',
     productTitle: 'Product', companyTitle: 'Company', trustTitle: 'Trust',
-    productLinks: makeLinks(['Platform', 'Pricing', 'Enterprise', 'Book demo', 'FAQ'], ['/#platform', '/pricing', '/book-demo?plan=enterprise', '/book-demo', '/#faq']),
+    productLinks: makeLinks(['Platform', 'Pricing', 'Enterprise', 'Book demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
     companyLinks: makeLinks(['Home', 'Log in'], ['/', '/login']),
   },
   pt: {
-    tagline: 'Evidencias de AI governance, risco e policy readiness para equipas europeias.',
+    tagline: 'AI Act readiness, evidencias de governanca e workflows de risco para equipas europeias.',
     productTitle: 'Produto', companyTitle: 'Empresa', trustTitle: 'Confianca',
-    productLinks: makeLinks(['Plataforma', 'Precos', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/book-demo?plan=enterprise', '/book-demo', '/#faq']),
+    productLinks: makeLinks(['Plataforma', 'Precos', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
     companyLinks: makeLinks(['Inicio', 'Entrar'], ['/', '/login']),
   },
   es: {
-    tagline: 'Evidencias de AI governance, riesgo y policy readiness para equipos europeos.',
+    tagline: 'AI Act readiness, evidencias de gobernanza y workflows de riesgo para equipos europeos.',
     productTitle: 'Producto', companyTitle: 'Empresa', trustTitle: 'Confianza',
-    productLinks: makeLinks(['Plataforma', 'Precios', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/book-demo?plan=enterprise', '/book-demo', '/#faq']),
+    productLinks: makeLinks(['Plataforma', 'Precios', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
     companyLinks: makeLinks(['Inicio', 'Entrar'], ['/', '/login']),
   },
   fr: {
-    tagline: 'Preuves d’AI governance, risque et policy readiness pour equipes europeennes.',
+    tagline: 'AI Act readiness, preuves de gouvernance et workflows de risque pour equipes europeennes.',
     productTitle: 'Produit', companyTitle: 'Entreprise', trustTitle: 'Confiance',
-    productLinks: makeLinks(['Plateforme', 'Tarifs', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/book-demo?plan=enterprise', '/book-demo', '/#faq']),
+    productLinks: makeLinks(['Plateforme', 'Tarifs', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
     companyLinks: makeLinks(['Accueil', 'Connexion'], ['/', '/login']),
   },
   it: {
-    tagline: 'Evidenze di AI governance, rischio e policy readiness per team europei.',
+    tagline: 'AI Act readiness, evidenze di governance e workflow di rischio per team europei.',
     productTitle: 'Prodotto', companyTitle: 'Azienda', trustTitle: 'Fiducia',
-    productLinks: makeLinks(['Piattaforma', 'Prezzi', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/book-demo?plan=enterprise', '/book-demo', '/#faq']),
+    productLinks: makeLinks(['Piattaforma', 'Prezzi', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
     companyLinks: makeLinks(['Home', 'Accesso'], ['/', '/login']),
   },
   de: {
-    tagline: 'AI-Governance-Nachweise, Risiken und Policy Readiness fuer europaeische Teams.',
+    tagline: 'AI Act readiness, Governance-Nachweise und Risiko-Workflows fuer europaeische Teams.',
     productTitle: 'Produkt', companyTitle: 'Unternehmen', trustTitle: 'Vertrauen',
-    productLinks: makeLinks(['Plattform', 'Preise', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/book-demo?plan=enterprise', '/book-demo', '/#faq']),
+    productLinks: makeLinks(['Plattform', 'Preise', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
     companyLinks: makeLinks(['Startseite', 'Anmelden'], ['/', '/login']),
   },
 };

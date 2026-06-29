@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowRight, BarChart3, Bell, CheckCircle2, Clock3, Crown, FileText, Gauge, LockKeyhole, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
+import { ArrowRight, Bell, CheckCircle2, Clock3, Crown, FileText, Gauge, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react';
 import { DashboardCommandNavigation } from '@/components/dashboard/dashboard-command-navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -79,7 +79,7 @@ export default async function RisckComplyHomePage({ params }: { params: { locale
             <Badge variant="secondary" className="rounded-full">Comparativo Enterprise</Badge>
             <h2 className="mt-4 text-3xl font-semibold tracking-tight">Clientes Enterprise convidam funcionários e gerenciam múltiplos países.</h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {['✅ múltiplos NIFs europeus', '✅ convite de funcionários', '✅ relatórios avançados', '✅ suporte prioritário', '✅ histórico de notificações para toda equipe', '✅ trilha colaborativa de auditoria'].map((item) => <div key={item} className="rounded-2xl bg-background/10 p-4 text-sm">{item}</div>)}
+              {['múltiplos NIFs europeus', 'convite de funcionários', 'relatórios avançados', 'suporte prioritário', 'histórico de notificações para toda equipe', 'trilha colaborativa de auditoria'].map((item) => <div key={item} className="rounded-2xl bg-background/10 p-4 text-sm">{item}</div>)}
             </div>
             <Button asChild className="mt-6 rounded-full bg-background text-foreground transition hover:-translate-y-0.5 hover:bg-background/90 hover:shadow-lg"><Link href={`/${params.locale}/pricing`}>Comparar planos <ArrowRight className="h-4 w-4" /></Link></Button>
           </article>

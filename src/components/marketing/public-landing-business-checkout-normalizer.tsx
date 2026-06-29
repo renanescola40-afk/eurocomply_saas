@@ -7,7 +7,7 @@ function isSafeLocale(locale: string): locale is Locale {
   return locales.includes(locale as Locale);
 }
 
-function getBusinessCheckoutHref(anchor: HTMLAnchorElement, locale: string) {
+function getBusinessDemoHref(anchor: HTMLAnchorElement, locale: string) {
   const url = new URL(anchor.href, window.location.origin);
   if (url.origin !== window.location.origin) return null;
 
@@ -17,7 +17,7 @@ function getBusinessCheckoutHref(anchor: HTMLAnchorElement, locale: string) {
     return null;
   }
 
-  return `/${locale}/checkout?plan=business`;
+  return `/${locale}/book-demo?plan=business`;
 }
 
 export function PublicLandingBusinessCheckoutNormalizer({ locale }: { locale: string }) {
@@ -26,7 +26,7 @@ export function PublicLandingBusinessCheckoutNormalizer({ locale }: { locale: st
 
     const normalizeAnchors = () => {
       for (const anchor of Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href]'))) {
-        const normalizedHref = getBusinessCheckoutHref(anchor, locale);
+        const normalizedHref = getBusinessDemoHref(anchor, locale);
         if (normalizedHref) anchor.setAttribute('href', normalizedHref);
       }
     };
@@ -35,7 +35,7 @@ export function PublicLandingBusinessCheckoutNormalizer({ locale }: { locale: st
       const target = event.target instanceof Element ? event.target.closest('a[href]') : null;
       if (!(target instanceof HTMLAnchorElement)) return;
 
-      const normalizedHref = getBusinessCheckoutHref(target, locale);
+      const normalizedHref = getBusinessDemoHref(target, locale);
       if (!normalizedHref) return;
 
       event.preventDefault();

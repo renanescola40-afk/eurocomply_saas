@@ -4,14 +4,14 @@
 
 Risck Comply helps companies manage AI system inventory, EU AI Act readiness, risk evidence, governance documents and compliance ownership in one place.
 
-It is built for teams that have outgrown spreadsheets and need a clearer way to prove who owns AI systems, what evidence is missing and what is ready for review.
+It is built for teams that have outgrown spreadsheets and need a clearer way to prove who owns AI systems, what is missing and what is ready for review.
 
 ## Who it is for
 
-- CTOs and founders who need visibility over AI usage, readiness work and operational risk.
+- CTOs and founders who need visibility over AI usage and operational risk.
 - Compliance Managers who need ownership, deadlines and evidence.
-- Legal, security and DPO teams who need clearer AI system and data-processing visibility.
-- Product and operations leaders who need enterprise readiness before customer reviews.
+- Security and DPO teams who need clearer AI system and data-processing visibility.
+- Product and operations leaders preparing for customer reviews.
 - B2B vendors that need a stronger procurement answer for AI-enabled products.
 
 ## What Risck Comply centralizes
@@ -19,7 +19,7 @@ It is built for teams that have outgrown spreadsheets and need a clearer way to 
 - AI system register with owner, usage context, provider and risk signals.
 - EU AI Act readiness actions with accountable owners and deadlines.
 - Controlled documents with ownership, review dates and version context.
-- Vendor and DPA context where AI systems depend on external providers.
+- Vendor context where AI systems depend on external providers.
 - Audit trail and evidence packs for internal review and buyer questions.
 - Executive view of what is missing, overdue or high risk.
 
@@ -60,4 +60,4 @@ Suggested next step: bring your current AI inventory, risk spreadsheet and top 5
 
 ## Important note
 
-Risck Comply supports operational AI compliance management. It is not legal advice and does not guarantee legal compliance. Enterprise commitments are confirmed through the signed contract, DPA, Trust Center evidence and support terms.
+Risck Comply supports operational AI compliance management. Enterprise commitments are confirmed through signed commercial and trust documentation.

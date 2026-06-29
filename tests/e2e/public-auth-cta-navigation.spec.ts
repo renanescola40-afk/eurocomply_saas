@@ -24,6 +24,15 @@ test.describe('public landing auth CTA navigation', () => {
     await expectClickableLinkNavigation(page, /^Entrar$/i, `/${LOCALE}/login`);
   });
 
+  test('login page renders a real auth form without duplicate floating auth controls', async ({ page }) => {
+    await page.goto(`/${LOCALE}/login`, { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByRole('heading', { name: /Entrar na RISCK COMPLY/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Continuar com Google/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Entrar com segurança/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Criar conta$/i })).toHaveCount(1);
+  });
+
   test('floating create-account link navigates to signup with a plan and onboarding next', async ({ page }) => {
     test.skip(!CLERK_ENABLED, 'Floating Clerk controls are not rendered without NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.');
 
