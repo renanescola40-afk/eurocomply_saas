@@ -39,12 +39,16 @@ const DUPLICATE_CHECKOUT_BLOCKING_STATUSES = new Set([
 type CheckoutInput = z.infer<typeof checkoutInputSchema>;
 type PortalInput = z.infer<typeof portalInputSchema>;
 
+function actionError(message: string) {
+  return new Error(message);
+}
+
 async function requireBillingContext() {
   const user = await requireCurrentUser();
   const organization = await getCurrentOrganizationForUser(user.id);
 
   if (!organization) {
-    throw new Error('Organization access required');
+    throw actionError('Organization access required');
   }
 
   return { user, organization };
@@ -58,23 +62,34 @@ function getAppUrl() {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
   if (!appUrl) {
-    throw new Error('NEXT_PUBLIC_APP_URL is required');
+    throw actionError('Application URL is not configured');
   }
 
   const parsedUrl = new URL(appUrl);
 
   if (parsedUrl.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
-    throw new Error('NEXT_PUBLIC_APP_URL must use HTTPS in production');
+    throw actionError('Application URL must use HTTPS in production');
   }
 
   return parsedUrl.origin;
+}
+
+function failBillingAction(error: unknown, context: Record<string, unknown>, message: string): never {
+  reportError(error, context);
+  throw actionError(message);
+}
+
+function throwRateLimit(message: string, context: Record<string, unknown>): never {
+  const error = actionError(message);
+  reportError(error, context);
+  throw error;
 }
 
 export async function createCheckoutSession(input: CheckoutInput) {
   const parsed = checkoutInputSchema.safeParse(input);
 
   if (!parsed.success) {
-    throw new Error('Invalid checkout input');
+    throw actionError('Invalid checkout input');
   }
 
   const safeInput = parsed.data;
@@ -87,22 +102,20 @@ export async function createCheckoutSession(input: CheckoutInput) {
   });
 
   if (!rateLimit.allowed) {
-    const error = new Error('Too many checkout attempts. Please try again later.');
-    reportError(error, context);
-    throw error;
+    throwRateLimit('Too many checkout attempts. Please try again later.', context);
   }
 
   try {
     const plan = getBillingPlan(safeInput.planId);
 
     if (!plan) {
-      throw new Error('Invalid billing plan');
+      throw actionError('Invalid billing plan');
     }
 
     const priceId = getStripePriceId(plan);
 
     if (!priceId) {
-      throw new Error('Billing plan is not configured');
+      throw actionError('Billing plan is not configured');
     }
 
     const appUrl = getAppUrl();
@@ -117,11 +130,11 @@ export async function createCheckoutSession(input: CheckoutInput) {
       .maybeSingle();
 
     if (subscriptionError) {
-      throw subscriptionError;
+      failBillingAction(subscriptionError, context, 'Unable to create checkout session');
     }
 
     if (subscription?.plan === plan.id && isDuplicateCheckoutStatus(subscription.status)) {
-      throw new Error('Organization is already subscribed to this billing plan');
+      throw actionError('Organization is already subscribed to this billing plan');
     }
 
     const stripe = getStripeClient();
@@ -154,13 +167,12 @@ export async function createCheckoutSession(input: CheckoutInput) {
     });
 
     if (!session.url) {
-      throw new Error('Stripe did not return a checkout URL');
+      throw actionError('Stripe did not return a checkout URL');
     }
 
     return session.url;
   } catch (error) {
-    reportError(error, context);
-    throw new Error('Unable to create checkout session');
+    failBillingAction(error, context, 'Unable to create checkout session');
   }
 }
 
@@ -168,7 +180,7 @@ export async function createCustomerPortalSession(input: PortalInput) {
   const parsed = portalInputSchema.safeParse(input);
 
   if (!parsed.success) {
-    throw new Error('Invalid billing portal input');
+    throw actionError('Invalid billing portal input');
   }
 
   const safeInput = parsed.data;
@@ -181,9 +193,7 @@ export async function createCustomerPortalSession(input: PortalInput) {
   });
 
   if (!rateLimit.allowed) {
-    const error = new Error('Too many billing portal attempts. Please try again later.');
-    reportError(error, context);
-    throw error;
+    throwRateLimit('Too many billing portal attempts. Please try again later.', context);
   }
 
   try {
@@ -200,11 +210,11 @@ export async function createCustomerPortalSession(input: PortalInput) {
       .maybeSingle();
 
     if (subscriptionError) {
-      throw subscriptionError;
+      failBillingAction(subscriptionError, context, 'Unable to create customer portal session');
     }
 
     if (!subscription?.stripe_customer_id) {
-      throw new Error('Organization does not have a Stripe customer yet');
+      throw actionError('Organization does not have a Stripe customer yet');
     }
 
     const stripe = getStripeClient();
@@ -224,7 +234,6 @@ export async function createCustomerPortalSession(input: PortalInput) {
 
     return session.url;
   } catch (error) {
-    reportError(error, context);
-    throw new Error('Unable to create customer portal session');
+    failBillingAction(error, context, 'Unable to create customer portal session');
   }
 }
