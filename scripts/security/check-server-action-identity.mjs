@@ -72,6 +72,10 @@ const checks = [
     label: 'server action rethrows raw provider error',
     pattern: /if\s*\([^)]*error[^)]*\)\s*throw\s+error\b/s,
   },
+  {
+    label: 'server action rethrows raw caught error',
+    pattern: /catch\s*\(\s*error\s*\)\s*\{[\s\S]*?throw\s+error\b/s,
+  },
 ];
 
 for (const file of walk(actionsDir)) {

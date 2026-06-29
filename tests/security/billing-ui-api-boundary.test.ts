@@ -25,7 +25,7 @@ describe('billing UI API security boundary', () => {
 
   it('routes checkout and portal actions through hardened API endpoints', () => {
     expect(billingActionButton).toContain("'/api/billing/checkout'");
-    expect(billingActionButton).toContain("'/api/billing/portal?locale=");
+    expect(billingActionButton).toContain('/api/billing/portal?locale=');
     expect(billingActionButton).toContain('returnPath=');
     expect(billingActionButton).toContain("method: 'POST'");
     expect(billingActionButton).toContain("action === 'checkout' ? JSON.stringify({ plan: planId, locale }) : undefined");
