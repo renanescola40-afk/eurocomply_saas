@@ -32,9 +32,10 @@ describe('server action identity hardening invariants', () => {
     expect(vendorsAction).not.toContain('return message ||');
   });
 
-  it('does not pass authenticated user ids from page actions into risk or vendor actions', () => {
+  it('does not pass authenticated user ids from page actions into risk or vendor mutations', () => {
     expect(risksPage).not.toContain('currentUser.id,');
-    expect(vendorsPage).not.toContain('user.id);');
+    expect(vendorsPage).not.toContain('createVendor({ organizationId: current.id, ...input },');
+    expect(vendorsPage).not.toContain('deleteVendor(vendorId, current.id, user.id)');
     expect(risksPage).toContain('await createRisk({');
     expect(risksPage).toContain('await deleteRisk(riskId, currentOrganization.id)');
     expect(vendorsPage).toContain('await createVendor({ organizationId: current.id, ...input })');
