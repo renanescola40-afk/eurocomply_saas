@@ -28,7 +28,9 @@ import {
 const STORAGE_BUCKET = CONTROLLED_DOCUMENT_STORAGE_BUCKET;
 // The controlled-documents bucket is the only storage bucket permitted for enterprise document uploads.
 const SIGNATURE_MISMATCH_REASON = 'signature_mismatch';
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+const MULTIPART_UPLOAD_BODY_OVERHEAD_BYTES = 512 * 1024;
+const MAX_UPLOAD_REQUEST_BYTES = MAX_UPLOAD_BYTES + MULTIPART_UPLOAD_BODY_OVERHEAD_BYTES;
 
 function safeDocumentTitle(name: string) {
   return sanitizeUploadFileName(name)
@@ -44,6 +46,19 @@ function blockedScanStatus(scan: MalwareScanResult) {
 
 function uuidOrNull(value: string | null | undefined) {
   return value && UUID_PATTERN.test(value) ? value : null;
+}
+
+function getRequestContentLength(request: NextRequest) {
+  const value = request.headers.get('content-length');
+  if (!value) return null;
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function isMultipartRequestTooLarge(request: NextRequest) {
+  const contentLength = getRequestContentLength(request);
+  return typeof contentLength === 'number' && contentLength > MAX_UPLOAD_REQUEST_BYTES;
 }
 
 function preScanAuditMetadata(input: {
@@ -115,12 +130,38 @@ export async function POST(request: NextRequest) {
 
   const rateLimit = await checkDistributedRateLimit({
     key: `documents:upload:${organization.id}:${user.id}`,
+    policy: 'upload',
+    userId: user.id,
+    organizationId: organization.id,
+    action: 'document_upload',
+    route: '/api/documents/upload',
     limit: 10,
     windowMs: 60 * 1000,
+    failureMode: 'fail-closed',
   });
 
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit);
+  }
+
+  if (isMultipartRequestTooLarge(request)) {
+    await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadBlocked,
+      entityType: 'document',
+      entityId: organization.id,
+      metadata: buildUploadSecurityAuditMetadata({
+        reason: 'request_body_too_large',
+        organizationId: organization.id,
+        actorUserId: user.id,
+        actorRole: permission.role,
+        fileSize: getRequestContentLength(request),
+        accessPurpose: 'upload',
+      }),
+    });
+
+    return noStoreJson({ error: 'Upload request is too large.' }, { status: 413 });
   }
 
   const quota = await assertDocumentQuota(organization.id);
