@@ -22,10 +22,20 @@ function readRepoFile(filePath: string) {
   return readFileSync(join(process.cwd(), filePath), 'utf8');
 }
 
+function sourceForUnsupportedClaimScan(filePath: string) {
+  const source = readRepoFile(filePath);
+
+  if (filePath === 'src/lib/trust-center/content.ts') {
+    return source.replace(/export const TRUST_PROHIBITED_CLAIMS = \[[\s\S]*?\] as const;/, '');
+  }
+
+  return source;
+}
+
 describe('public trust and marketing claim safety', () => {
   it('does not make fake production, legal, certification, or absolute compliance claims', () => {
     const violations = marketingAndTrustFiles.flatMap((filePath) => {
-      const source = readRepoFile(filePath);
+      const source = sourceForUnsupportedClaimScan(filePath);
 
       return forbiddenClaimPatterns
         .filter(({ pattern }) => pattern.test(source))
