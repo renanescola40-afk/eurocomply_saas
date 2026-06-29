@@ -59,6 +59,9 @@ const requiredUploadTokens = [
   'assertOrganizationPermission',
   'manage_documents',
   'assertDocumentQuota',
+  'rejectOversizedMultipartRequest',
+  'MAX_MULTIPART_UPLOAD_BYTES',
+  'content-length',
   'validateUploadSecurityFile',
   'scanValidatedUploadForMalware',
   'shouldBlockUploadForMalwareScan',
@@ -82,6 +85,7 @@ const requiredUploadTokens = [
   'MAX_UPLOAD_BYTES',
   'ALLOWED_TYPES',
   'buildTenantScopedUploadPath',
+  "policy: 'upload'",
 ];
 
 const requiredServerActionTokens = [
@@ -109,6 +113,12 @@ const requiredDownloadTokens = [
   'downloadDenied',
   'createDocumentSignedDownloadUrl',
   'createDocumentSignedPreviewUrl',
+  'DOCUMENT_ID_PATTERN',
+  'isValidDocumentId',
+  'checkDistributedRateLimit',
+  "policy: 'export'",
+  'rate_limited',
+  'invalid_document_id',
   'assertTenantStoragePathInOrganization',
   'assertCurrentUserCan',
   'documents:read',
@@ -239,6 +249,7 @@ if (evidenceSource) assertTokens(evidenceSource, requiredEvidenceTokens, evidenc
 if (docSource) assertTokens(docSource, requiredDocTokens, uploadSecurityDoc);
 
 if (uploadSource.includes('contentType: file.type')) failures.push(`${uploadRoute} must never set storage contentType from client-declared MIME`);
+if (uploadSource.includes('request.formData()') && uploadSource.indexOf('rejectOversizedMultipartRequest') > uploadSource.indexOf('request.formData()')) failures.push(`${uploadRoute} must check request body size before parsing multipart formData`);
 if (uploadSource.includes('supabase.storage') && uploadSource.indexOf('validateUploadSecurityFile') > uploadSource.indexOf('supabase.storage')) failures.push(`${uploadRoute} validates upload security after storage access; complete validation must happen before upload`);
 if (uploadSource.includes('.upload(storagePath') && uploadSource.indexOf('shouldBlockUploadForMalwareScan') > uploadSource.indexOf('.upload(storagePath')) failures.push(`${uploadRoute} must enforce content scan policy before storing the upload`);
 if (uploadSource.includes('document_uploaded') && !uploadSource.includes('mimeDetected')) failures.push(`${uploadRoute} must include detected MIME evidence in successful upload audit metadata`);
@@ -246,6 +257,7 @@ if (contentScanSource && !hasFailClosedRequiredScanPolicy(contentScanSource)) fa
 if (serverActionSource.includes('buildDocumentStoragePath')) failures.push(`${serverActionUpload} must use buildTenantScopedUploadPath so storage paths are tenant scoped and filename-independent`);
 if (serverActionSource.includes('createDocumentSchema') && !serverActionSource.includes('enterprise_upload_scan_bypass')) failures.push(`${serverActionUpload} must block enterprise document metadata creation without clean scan metadata`);
 if (downloadSource.includes('createSignedUrl') && downloadSource.indexOf('assertTenantStoragePathInOrganization') > downloadSource.indexOf('createSignedUrl')) failures.push(`${downloadAction} must validate tenant storage path before signed URL creation`);
+if (downloadSource.includes('createSignedUrl') && downloadSource.indexOf('isValidDocumentId') > downloadSource.indexOf('createSignedUrl')) failures.push(`${downloadAction} must validate documentId before signed URL creation`);
 
 if (failures.length > 0) {
   console.error('Upload security coverage failures:');

@@ -17,17 +17,16 @@ import {
 } from '@/server/security/upload-security';
 
 const SIGNED_URL_EXPIRES_IN_SECONDS = SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS;
-const DOCUMENT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+const DOCUMENT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const DOCUMENT_SIGNED_URL_RATE_LIMIT = {
+  limit: 20,
+  windowMs: 60_000,
+} as const;
 
 type DocumentUrlAccessPurpose = 'download' | 'preview';
 
-function normalizeDocumentId(documentId: string) {
-  const normalized = String(documentId ?? '').trim();
-  if (!DOCUMENT_ID_PATTERN.test(normalized)) {
-    throw new Error('Document not found');
-  }
-
-  return normalized;
+function isValidDocumentId(documentId: string) {
+  return DOCUMENT_ID_PATTERN.test(documentId.trim());
 }
 
 async function auditDownloadRequested(input: {
@@ -95,58 +94,60 @@ async function auditRejectedDownloadUrl(input: {
   ]);
 }
 
-async function enforceSignedUrlRateLimit(input: {
+async function enforceDocumentUrlRateLimit(input: {
+  documentId: string;
   userId: string;
-  organizationIds: string[];
   accessPurpose: DocumentUrlAccessPurpose;
 }) {
   const rateLimit = await checkDistributedRateLimit({
-    key: `documents:signed-url:${input.accessPurpose}:${input.organizationIds.join(',')}:${input.userId}`,
+    key: `documents:signed-url:${input.accessPurpose}:${input.userId}:${input.documentId}`,
     policy: 'export',
     userId: input.userId,
-    organizationId: input.organizationIds[0] ?? null,
-    route: 'server-action:createDocumentSignedUrl',
-    action: `document_signed_${input.accessPurpose}_url`,
-    limit: 30,
-    windowMs: 60_000,
-    failureMode: 'fail-closed',
+    action: `document_${input.accessPurpose}_signed_url`,
+    route: 'server-action:document-downloads',
+    ...DOCUMENT_SIGNED_URL_RATE_LIMIT,
   });
 
   if (!rateLimit.allowed) {
-    throw new Error('Too many document access requests. Please try again later.');
+    await auditRejectedDownloadUrl({
+      documentId: input.documentId,
+      userId: input.userId,
+      reason: 'rate_limited',
+      accessPurpose: input.accessPurpose,
+    });
+    throw new Error('Too many document download requests. Please try again later.');
   }
 }
 
 async function createDocumentSignedUrl(documentId: string, accessPurpose: DocumentUrlAccessPurpose) {
   const user = await requireCurrentUser();
-  const safeDocumentId = (() => {
-    try {
-      return normalizeDocumentId(documentId);
-    } catch (error) {
-      void auditRejectedDownloadUrl({
-        documentId: 'invalid_document_id',
-        userId: user.id,
-        reason: 'invalid_document_id',
-        accessPurpose,
-      }).catch(() => null);
-      throw error;
-    }
-  })();
-  const memberships = await getUserOrganizationMemberships(user.id);
-  const organizationIds = memberships.map((membership) => membership.organization_id).sort();
-  const context = { area: 'document_signed_download_url', documentId: safeDocumentId, userId: user.id, accessPurpose };
+  const normalizedDocumentId = typeof documentId === 'string' ? documentId.trim() : '';
+  const context = { area: 'document_signed_download_url', documentId: normalizedDocumentId, userId: user.id, accessPurpose };
 
   await auditDownloadRequested({
-    documentId: safeDocumentId,
+    documentId: normalizedDocumentId || 'invalid_document_id',
     userId: user.id,
-    organizationId: organizationIds[0] ?? null,
-    membershipCount: organizationIds.length,
     accessPurpose,
   });
 
+  if (!isValidDocumentId(normalizedDocumentId)) {
+    await auditRejectedDownloadUrl({
+      documentId: normalizedDocumentId || 'invalid_document_id',
+      userId: user.id,
+      reason: 'invalid_document_id',
+      accessPurpose,
+    });
+    throw new Error('Document not found');
+  }
+
+  await enforceDocumentUrlRateLimit({ documentId: normalizedDocumentId, userId: user.id, accessPurpose });
+
+  const memberships = await getUserOrganizationMemberships(user.id);
+  const organizationIds = memberships.map((membership) => membership.organization_id);
+
   if (organizationIds.length === 0) {
     await auditRejectedDownloadUrl({
-      documentId: safeDocumentId,
+      documentId: normalizedDocumentId,
       userId: user.id,
       reason: 'no_organization_access',
       membershipCount: 0,
@@ -165,14 +166,14 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
   const { data: document, error: documentError } = await supabase
     .from('documents')
     .select('id,name,storage_path,organization_id')
-    .eq('id', safeDocumentId)
+    .eq('id', normalizedDocumentId)
     .in('organization_id', organizationIds)
     .maybeSingle();
 
   if (documentError || !document?.storage_path) {
     reportError(documentError ?? new Error('Document not found'), context);
     await auditRejectedDownloadUrl({
-      documentId: safeDocumentId,
+      documentId: normalizedDocumentId,
       userId: user.id,
       reason: 'document_not_found_or_cross_tenant',
       organizationId: organizationIds[0] ?? null,
@@ -187,7 +188,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
   } catch (error) {
     reportError(error, { ...context, organizationId: document.organization_id });
     await auditRejectedDownloadUrl({
-      documentId: safeDocumentId,
+      documentId: normalizedDocumentId,
       userId: user.id,
       reason: 'permission_denied',
       organizationId: document.organization_id,
@@ -203,7 +204,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
   } catch (error) {
     reportError(error, { ...context, organizationId: document.organization_id, hasStoragePath: Boolean(document.storage_path) });
     await auditRejectedDownloadUrl({
-      documentId: safeDocumentId,
+      documentId: normalizedDocumentId,
       userId: user.id,
       reason: 'invalid_storage_path',
       organizationId: document.organization_id,
@@ -227,7 +228,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
       organizationId: document.organization_id,
     });
     await auditRejectedDownloadUrl({
-      documentId: safeDocumentId,
+      documentId: normalizedDocumentId,
       userId: user.id,
       reason: 'signed_url_create_failed',
       organizationId: document.organization_id,
@@ -243,11 +244,11 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
     actorUserId: user.id,
     action: 'document.download_url_created',
     entityType: 'document',
-    entityId: safeDocumentId,
+    entityId: normalizedDocumentId,
     metadata: buildUploadSecurityAuditMetadata({
       organizationId: document.organization_id,
       actorUserId: user.id,
-      documentId: safeDocumentId,
+      documentId: normalizedDocumentId,
       accessPurpose,
       expiresInSeconds: SIGNED_URL_EXPIRES_IN_SECONDS,
     }),
