@@ -186,13 +186,15 @@ export async function scanValidatedUploadForMalware(input: {
     } satisfies MalwareScanResult;
   }
 
-  return scanUploadForMalware({
+  const scan = await scanUploadForMalware({
     buffer: input.validation.buffer,
     mimeType: input.validation.mimeDetected,
     filename: input.validation.fileNameSanitized,
     organizationId: input.organizationId,
     fileHash: input.validation.fileHash,
   });
+
+  return { ...scan, required } satisfies MalwareScanResult;
 }
 
 export function buildTenantScopedUploadPath(input: {
