@@ -40,7 +40,7 @@ function organizationActionError(message: string) {
   return new Error(message);
 }
 
-export async function createOrganization(input: CreateOrganizationInput) {
+export async function createOrganization(input: CreateOrganizationInput, _legacyUserId?: string, _legacyEmail?: string | null) {
   const user = await requireCurrentUser();
   const parsed = createOrganizationSchema.safeParse(input);
 
