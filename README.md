@@ -1,31 +1,32 @@
-# RISCK COMPLY / EuroComply
+# Risck Comply
 
-Enterprise AI compliance SaaS for European organizations that need to operationalize AI governance, EU AI Act readiness, risk controls, evidence, documents, audit trails, billing, and multi-tenant organization management.
+Risck Comply is a B2B SaaS platform for European organizations that need to operationalize AI compliance, EU AI Act readiness, AI system inventory, risk classification, evidence management, policy workflows, audit trails, billing, and multi-tenant organization operations.
 
-RISCK COMPLY / EuroComply is designed for B2B teams that need a practical control plane for how artificial intelligence is adopted, reviewed, documented, monitored, and governed across an organization.
-
-> This product helps teams organize compliance work and evidence. It does not replace legal advice, regulatory counsel, or a formal external audit.
+> Risck Comply helps teams organize compliance work and evidence. It does not replace legal advice, regulatory counsel, certification, or a formal external audit.
 
 ---
 
-## 1. Product name and short description
+## Product identity
 
-**RISCK COMPLY / EuroComply** is an enterprise-grade SaaS platform for AI compliance operations.
+- **Active product name:** Risck Comply
+- **Repository name:** `eurocomply_saas` is a legacy technical repository name kept for continuity.
+- **Category:** European AI compliance operations SaaS.
+- **Primary audience:** SaaS founders, CTOs, compliance teams, security teams, legal operators, AI agencies, fintech, HR tech, and B2B vendors using or selling AI-enabled systems in Europe.
+- **Positioning:** A practical operating system for AI governance evidence, not a legal guarantee.
 
-The application provides a structured workspace where organizations can register AI systems, classify risk, track EU AI Act readiness, manage governance evidence, generate or maintain compliance documents, review audit activity, and manage subscription billing.
+Customer-facing copy should use **Risck Comply** consistently. Historical labels such as EuroComply may appear in legacy migrations, archived evidence, or repository history, but should not be introduced into new product surfaces.
 
 ---
 
-## 2. Value proposition
+## Value proposition
 
-Companies adopting AI often struggle with scattered tools, undocumented usage, unclear ownership, inconsistent risk assessment, and weak evidence trails.
-
-RISCK COMPLY / EuroComply centralizes that operating model into one platform:
+Companies adopting AI often struggle with scattered tools, undocumented usage, unclear ownership, inconsistent risk assessment, and weak evidence trails. Risck Comply centralizes that operating model into one workspace:
 
 - One source of truth for AI systems and usage.
-- Risk and readiness views aligned with AI governance workflows.
-- Evidence and audit records that support internal reviews.
-- Organization-level access control for B2B teams.
+- EU AI Act readiness workflows tied to operational evidence.
+- Risk classification support for minimal, limited, high, and unacceptable risk patterns.
+- Evidence packs, policies, and document records that teams can maintain.
+- Organization-level access control for B2B customers.
 - Billing and plan gating for commercial SaaS operations.
 - Security checks and release gates built into the development workflow.
 
@@ -33,34 +34,23 @@ The goal is to help teams move from informal AI usage to documented, accountable
 
 ---
 
-## 3. Target audience
-
-The product is built for European and Europe-facing organizations, especially:
-
-- SaaS companies using or embedding AI features.
-- CTOs, founders, and engineering leaders managing AI adoption.
-- Compliance, risk, security, legal, and governance teams.
-- Fintechs, HR platforms, AI agencies, consultancies, and regulated B2B services.
-- SMEs and enterprise teams preparing for AI governance expectations.
-
----
-
-## 4. Key features
+## What the product does
 
 ### AI governance and readiness
 
-- AI inventory for internal and vendor AI systems.
-- Risk classification support for minimal, limited, high, and unacceptable risk patterns.
-- Readiness dashboard for AI compliance posture and operational gaps.
-- EU AI Act transparency workflows and deadline-oriented guidance.
+- Register internal and vendor AI systems.
+- Capture system owner, department, usage context, country, provider, and risk signals.
+- Classify and prioritize AI Act readiness work.
+- Track gaps, actions, evidence, and audit history.
+- Provide executive views for readiness and operational risk.
 
 ### Evidence and documentation
 
-- Compliance document records.
-- Assessment records and recommendations.
-- Governance evidence tracking.
-- Audit log support for important user and system actions.
-- CSV/export-oriented operational workflows where implemented.
+- Store compliance document records.
+- Support generated or maintained governance documents.
+- Connect assessments and recommendations to AI systems.
+- Maintain audit activity for important product and security-sensitive actions.
+- Support export-oriented workflows where implemented.
 
 ### Multi-tenant B2B operations
 
@@ -72,7 +62,7 @@ The product is built for European and Europe-facing organizations, especially:
 ### Billing
 
 - Stripe checkout integration for self-serve plans.
-- Stripe webhook handling for subscription/payment lifecycle events.
+- Stripe webhook handling for subscription and payment lifecycle events.
 - Server-side price mapping through environment variables.
 - Billing actions protected by authenticated user and permission checks.
 
@@ -84,16 +74,23 @@ The product is built for European and Europe-facing organizations, especially:
 
 ---
 
-## 5. Technical stack
+## Current readiness stance
 
-The stack is intentionally aligned with a modern B2B SaaS architecture:
+This repository contains many controls expected in a serious B2B SaaS, but readiness must be proven by the validation gates below and by environment-specific evidence.
 
-- **Framework:** Next.js 15 App Router.
+Risck Comply must **not** be described as enterprise-ready unless the relevant checks pass and any blockers are documented or resolved.
+
+No SOC 2, ISO 27001, formal penetration test, external certification, external legal review, or named customer proof is claimed in this repository unless a dated, reviewable artifact is added by the owner.
+
+---
+
+## Technical stack
+
+- **Framework:** Next.js App Router.
 - **Language:** TypeScript.
-- **Runtime/UI:** React 19.
-- **Styling:** Tailwind CSS 4, Radix UI primitives, shadcn-style components, custom enterprise UI system.
+- **Runtime/UI:** React.
+- **Styling:** Tailwind CSS, Radix UI primitives, shadcn-style components, custom enterprise UI system.
 - **Charts and dashboard UI:** Recharts and custom dashboard components.
-- **Animation:** Framer Motion where needed.
 - **Authentication:** Clerk integration in the active auth hook.
 - **Database:** Supabase/Postgres.
 - **Authorization:** Supabase Row Level Security and server-side permission guards.
@@ -104,13 +101,9 @@ The stack is intentionally aligned with a modern B2B SaaS architecture:
 - **Observability hooks:** Sentry configuration is supported by environment variables when enabled.
 - **Product analytics hooks:** PostHog EU configuration is supported by environment variables when enabled.
 
-No SOC 2, ISO 27001, formal penetration test, or external certification is claimed in this README.
-
 ---
 
-## 6. Architecture summary
-
-At a high level, the application follows this model:
+## Architecture summary
 
 ```text
 Browser / Client UI
@@ -133,9 +126,7 @@ Core design principles:
 
 ---
 
-## 7. Folder structure
-
-Representative structure of the application:
+## Representative folder structure
 
 ```text
 .
@@ -143,6 +134,8 @@ Representative structure of the application:
 │   ├── app/
 │   │   ├── [locale]/
 │   │   │   ├── page.tsx
+│   │   │   ├── pricing/
+│   │   │   ├── trust/
 │   │   │   └── dashboard/
 │   │   │       ├── page.tsx
 │   │   │       ├── organizations/
@@ -180,7 +173,7 @@ The exact folder tree may evolve as modules are split into smaller route groups 
 
 ---
 
-## 8. Required environment variables
+## Environment variables
 
 Use `.env.example` as the canonical template. Copy it locally and fill only the values required for the environment being used.
 
@@ -188,125 +181,25 @@ Use `.env.example` as the canonical template. Copy it locally and fill only the 
 cp .env.example .env.local
 ```
 
-### Application
+Common groups:
 
-```bash
-NEXT_PUBLIC_APP_URL=
-NEXT_PUBLIC_SITE_URL=
-TRUSTED_ORIGINS=
-NODE_ENV=
-RELEASE_TARGET=
-```
-
-### Clerk authentication
-
-```bash
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=
-NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=
-NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=
-```
-
-### Supabase
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-SUPABASE_ACCESS_TOKEN=
-```
-
-### Supabase Auth / OAuth redirect allowlist
-
-These values may be relevant for environments that still use Supabase Auth/OAuth configuration or migration paths. Keep the active authentication strategy consistent per environment.
-
-```bash
-SUPABASE_AUTH_SITE_URL=
-SUPABASE_AUTH_REDIRECT_URLS=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-```
-
-### Stripe
-
-```bash
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-STRIPE_PRICE_ESSENTIAL_MONTHLY=
-STRIPE_PRICE_PROFESSIONAL_MONTHLY=
-STRIPE_PRICE_BUSINESS_MONTHLY=
-```
-
-### Email
-
-```bash
-RESEND_API_KEY=
-EMAIL_FROM=
-SUPPORT_EMAIL=
-```
-
-### Security, health checks, jobs, and rate limiting
-
-```bash
-HEALTHCHECK_TOKEN=
-AUDIT_CHAIN_SIGNING_SECRET=
-EVIDENCE_PACK_SIGNING_SECRET=
-STEP_UP_SIGNING_SECRET=
-CRON_SECRET=
-INTERNAL_CRON_SECRET=
-DAILY_MAINTENANCE_JOB_TIMEOUT_MS=
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
-```
-
-### Upload scanning
-
-```bash
-REQUIRE_MALWARE_SCAN_FOR_UPLOADS=
-MALWARE_SCANNER_PROVIDER=
-MALWARE_SCANNER_ENDPOINT=
-MALWARE_SCANNER_URL=
-MALWARE_SCANNER_API_KEY=
-MALWARE_SCANNER_ALLOWED_HOSTS=
-MALWARE_SCANNER_CLAMAV_HOST=
-MALWARE_SCANNER_CLAMAV_PORT=
-MALWARE_SCANNER_TIMEOUT_MS=
-```
-
-### Observability and analytics
-
-```bash
-NEXT_PUBLIC_SENTRY_DSN=
-SENTRY_DSN=
-SENTRY_ORG=
-SENTRY_PROJECT=
-SENTRY_AUTH_TOKEN=
-NEXT_PUBLIC_POSTHOG_KEY=
-NEXT_PUBLIC_POSTHOG_HOST=
-NEXT_PUBLIC_POSTHOG_ASSET_HOST=
-```
-
-### CI/CD provider values
-
-```bash
-VERCEL_TOKEN=
-VERCEL_ORG_ID=
-VERCEL_PROJECT_ID=
-```
+- Application URL and trusted origins.
+- Clerk authentication keys and redirect URLs.
+- Supabase URL, anon key, service role key, and migration/automation credentials.
+- Stripe publishable key, secret key, webhook secret, and price IDs.
+- Email provider keys.
+- Security, health check, audit signing, cron, rate limiting, upload scanning, observability, analytics, and CI/CD provider values.
 
 Never commit real secrets. Public `NEXT_PUBLIC_*` variables are visible to the browser and must never contain private keys.
 
 ---
 
-## 9. Run locally
+## Run locally
 
 Prerequisites:
 
 - Node.js compatible with the project dependencies.
-- npm, using the package manager declared in `package.json`: `npm@10.8.2`.
+- npm, using the package manager declared in `package.json`.
 - Supabase project or local Supabase environment.
 - Clerk project for active authentication flows.
 - Stripe test account for billing flows.
@@ -323,8 +216,6 @@ Prepare environment variables:
 cp .env.example .env.local
 ```
 
-Fill `.env.local` with local/test values only.
-
 Run the development server:
 
 ```bash
@@ -333,131 +224,62 @@ npm run dev
 
 The app starts on `http://localhost:3000`.
 
-Debug mode is available through:
-
-```bash
-npm run dev:debug
-```
-
 ---
 
-## 10. Run tests
+## Validation commands
 
-Unit/integration tests:
-
-```bash
-npm run test
-```
-
-Watch mode:
-
-```bash
-npm run test:watch
-```
-
-End-to-end tests:
-
-```bash
-npm run test:e2e
-```
-
-Playwright UI mode:
-
-```bash
-npm run test:e2e:ui
-```
-
----
-
-## 11. Lint, typecheck, and build
-
-Run lint:
+Use the smallest relevant subset during development, then run the full gate before requesting review.
 
 ```bash
 npm run lint
-```
-
-Run TypeScript checks:
-
-```bash
 npm run typecheck
-```
-
-Run production build:
-
-```bash
+npm run test
 npm run build
 ```
 
-The build has a `prebuild` hook that runs:
+Route quality:
 
 ```bash
-npm run security:zod-compat
+npm run quality:routes
+npm run quality:routes:e2e
 ```
 
-Recommended combined verification:
-
-```bash
-npm run phase2:ci
-```
-
-Production readiness gate:
-
-```bash
-npm run release:production-readiness
-```
-
----
-
-## 12. Security checks
-
-Primary security gate:
+Security gates:
 
 ```bash
 npm run security:ci
-```
-
-Focused security checks:
-
-```bash
-npm run security:package-lock
-npm run security:npm-audit:all
-npm run security:public-secrets
-npm run security:production-secrets
-npm run security:supply-chain
-npm run security:ci-cd
-npm run security:rls:advisory
-npm run security:api-guards
-npm run security:headers
-npm run security:billing-webhook-body
-npm run security:upload
-npm run security:upload-content-scan
-npm run security:responses
-npm run security:logs
-```
-
-RLS checks:
-
-```bash
 npm run security:rls
-npm run security:rls:advisory
-npm run security:rls:live
+npm run security:api-guards
+npm run security:no-store
+npm run security:origin-guards
+npm run security:upload
+npm run security:billing-webhook-body
 ```
 
-Release security gates:
+Production readiness gates:
 
 ```bash
+npm run release:deployment-smoke
+npm run release:rollback:dry-run
 npm run release:readiness
 npm run release:enterprise-readiness
+```
+
+Phase 1 hygiene/credibility gate:
+
+```bash
+npm run phase1:check
+npm run quality:routes
+npm run test -- tests/phase1/brand-credibility.test.ts
 ```
 
 These scripts are engineering controls and evidence checks. They are not a substitute for external legal review, third-party audit, or formal certification.
 
 ---
 
-## 13. Deployment
+## Deployment
 
-The project is designed to deploy cleanly to Vercel or another Next.js-compatible platform.
+The project is designed to deploy to Vercel or another Next.js-compatible platform.
 
 Recommended deployment flow:
 
@@ -471,23 +293,11 @@ Recommended deployment flow:
 8. Deploy from the protected production branch.
 9. Verify auth, organization access, billing checkout, webhook handling, dashboard loading, and audit logs after deploy.
 
-Deployment readiness command:
-
-```bash
-npm run release:production-readiness
-```
-
-Vercel environment readiness:
-
-```bash
-npm run ops:vercel-readiness
-```
-
 Do not place production secrets in GitHub files, screenshots, issue comments, pull request descriptions, or public logs.
 
 ---
 
-## 14. Authentication model
+## Authentication model
 
 The active client authentication hook uses Clerk primitives for user, session, email/password sign-in, sign-up, Google OAuth redirect, and sign-out flows.
 
@@ -503,9 +313,9 @@ Google OAuth is configured through the active auth provider and redirect URLs. K
 
 ---
 
-## 15. Multi-tenant model
+## Multi-tenant model
 
-RISCK COMPLY / EuroComply is structured around organizations/workspaces.
+Risck Comply is structured around organizations/workspaces.
 
 Tenant isolation principles:
 
@@ -520,7 +330,7 @@ Common roles should be treated as implementation details unless explicitly enfor
 
 ---
 
-## 16. Stripe billing model
+## Stripe billing model
 
 Billing is implemented through server-side Stripe routes and webhook processing.
 
@@ -544,7 +354,7 @@ Important rules:
 
 ---
 
-## 17. Supabase RLS model
+## Supabase RLS model
 
 Supabase/Postgres is used for application data and tenant-scoped records.
 
@@ -579,7 +389,7 @@ RLS principles:
 
 ---
 
-## 18. Security and compliance posture
+## Security and compliance posture
 
 Current engineering posture includes security-oriented scripts, release gates, and product controls. This README does not claim external certification or completed third-party assurance.
 
@@ -608,7 +418,7 @@ Compliance positioning:
 
 ---
 
-## 19. Release checklist
+## Release checklist
 
 Before shipping a production release:
 
@@ -624,22 +434,15 @@ Before shipping a production release:
 - [ ] `npm run build` passes.
 - [ ] `npm run security:ci` passes or failures are documented and accepted by the owner.
 - [ ] `npm run release:readiness` passes for release evidence.
-- [ ] `npm run release:production-readiness` passes before production promotion.
 - [ ] Billing checkout tested with Stripe test mode before live promotion.
 - [ ] Webhook processing verified in target environment.
 - [ ] Audit/logging behavior reviewed for sensitive data exposure.
 - [ ] Rollback path identified before deployment.
 - [ ] No secrets, private keys, customer data, or sensitive screenshots are committed.
 
-Enterprise release gate:
-
-```bash
-npm run release:enterprise-readiness
-```
-
 ---
 
-## 20. Contributing
+## Contributing
 
 Contribution expectations:
 
@@ -663,7 +466,7 @@ npm run security:ci
 
 ---
 
-## 21. Security contact
+## Security contact
 
 For responsible disclosure or security concerns, contact the project owner through the configured support channel:
 
@@ -674,7 +477,7 @@ support@risckcomply.app
 Use a clear subject line such as:
 
 ```text
-[SECURITY] Vulnerability report for RISCK COMPLY / EuroComply
+[SECURITY] Vulnerability report for Risck Comply
 ```
 
 Please include:
