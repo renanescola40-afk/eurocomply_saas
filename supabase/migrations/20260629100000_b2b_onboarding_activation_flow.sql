@@ -96,6 +96,11 @@ create policy "Managers can create onboarding activation runs"
 on public.onboarding_activation_runs for insert
 with check (public.has_org_role(organization_id, array['owner','admin','compliance_manager']));
 
+drop policy if exists "Managers can delete onboarding activation runs" on public.onboarding_activation_runs;
+create policy "Managers can delete onboarding activation runs"
+on public.onboarding_activation_runs for delete
+using (public.has_org_role(organization_id, array['owner','admin','compliance_manager']));
+
 -- Org-scoped task access for activation tasks in environments that started from the workspace-scoped task table.
 drop policy if exists "Org members can read activation tasks" on public.compliance_tasks;
 create policy "Org members can read activation tasks"
