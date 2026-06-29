@@ -140,15 +140,17 @@ describe('Phase 5 dashboard invariants', () => {
   });
 
   it('passes workflow readiness from dashboard overview into next best actions', () => {
-    const content = read('src/components/dashboard/DashboardOverview.tsx');
+    const content = read('src/components/dashboard/dashboard-home-overview.tsx');
 
+    expect(content).toContain('workflowReadiness?: OrganizationWorkflowReadiness');
     expect(content).toContain('workflowReadiness={workflowReadiness}');
   });
 
   it('uses workflow readiness to prioritize next best actions', () => {
-    const content = read('src/components/dashboard/NextBestActionsCard.tsx');
+    const content = read('src/components/dashboard/next-best-actions.tsx');
 
-    expect(content).toContain('workflowReadiness?: OrganizationDashboardWorkflowReadiness');
-    expect(content).toContain('workflowReadiness?.onboardingCompleted === false');
+    expect(content).toContain('workflowReadiness?: OrganizationWorkflowReadiness');
+    expect(content).toContain('buildWorkflowReadinessAction');
+    expect(content).toContain('current workflow readiness');
   });
 });
