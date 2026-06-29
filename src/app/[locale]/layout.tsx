@@ -10,7 +10,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffects from '@/components/GlobalClientEffects';
 import GapAnalysisShortcut from '@/components/GapAnalysisShortcut';
-import { AuthProvider } from '@/hooks/useAuth';
+import { AuthProvider, DisabledAuthProvider } from '@/hooks/useAuth';
 import { routing, type Locale } from '@/lib/i18n/routing';
 
 import '../globals.css';
@@ -81,6 +81,16 @@ export default async function LocaleLayout({ children, params }: Props) {
   const onboardingUrl = `/${safeLocale}/onboarding`;
   const clerkEnabled = hasClerkPublishableKey();
 
+  const sharedShell = (
+    <>
+      {children}
+      <GapAnalysisShortcut />
+      <GlobalClientEffects />
+      <AnalyticsConsentBanner />
+      <Toaster />
+    </>
+  );
+
   const appShell = (
     <NextIntlClientProvider messages={messages}>
       <ThemeProvider
@@ -89,16 +99,16 @@ export default async function LocaleLayout({ children, params }: Props) {
         enableSystem={false}
         disableTransitionOnChange
       >
-        <AuthProvider>
-          <PostHogAnalyticsProvider>
-            {children}
-            {clerkEnabled ? <ClerkFloatingControls locale={safeLocale} /> : null}
-            <GapAnalysisShortcut />
-            <GlobalClientEffects />
-            <AnalyticsConsentBanner />
-            <Toaster />
-          </PostHogAnalyticsProvider>
-        </AuthProvider>
+        {clerkEnabled ? (
+          <AuthProvider>
+            <PostHogAnalyticsProvider>
+              {sharedShell}
+              <ClerkFloatingControls locale={safeLocale} />
+            </PostHogAnalyticsProvider>
+          </AuthProvider>
+        ) : (
+          <DisabledAuthProvider>{sharedShell}</DisabledAuthProvider>
+        )}
       </ThemeProvider>
     </NextIntlClientProvider>
   );
