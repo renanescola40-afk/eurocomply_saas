@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type FormEvent } from 'react';
 import { ArrowRight, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { STEP_UP_TOKEN_HEADER } from '@/server/security/step-up';
+
+const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
 
 type BillingActionButtonProps = {
   action: 'checkout' | 'portal';
@@ -134,7 +135,7 @@ async function requestBillingAction({
 export function BillingActionButton({ action, locale, planId, disabled, children, variant = 'default', className }: BillingActionButtonProps) {
   const [loading, setLoading] = useState(false);
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (disabled || loading) return;
 
