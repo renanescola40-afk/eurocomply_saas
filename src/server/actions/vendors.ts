@@ -1,6 +1,9 @@
 import { z } from 'zod';
+import { reportError } from '@/lib/observability/report-error';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { requireCurrentUser } from '@/server/queries/auth';
 import { logAuditEvent } from './audit';
 
 const vendorSchema = z.object({
@@ -17,6 +20,11 @@ const vendorSchema = z.object({
 
 const updateVendorSchema = vendorSchema.extend({
   vendorId: z.string().uuid(),
+});
+
+const deleteVendorSchema = z.object({
+  vendorId: z.string().uuid(),
+  organizationId: z.string().uuid(),
 });
 
 type SupabaseLikeError = {
@@ -38,7 +46,7 @@ function isMissingOptionalVendorColumn(error: SupabaseLikeError | null | undefin
   );
 }
 
-function toVendorErrorMessage(error: SupabaseLikeError | Error | unknown, action: 'criar' | 'atualizar') {
+function toVendorErrorMessage(error: SupabaseLikeError | Error | unknown, action: 'criar' | 'atualizar' | 'remover') {
   const message = error instanceof Error ? error.message : typeof error === 'object' && error !== null && 'message' in error ? String((error as SupabaseLikeError).message ?? '') : '';
   const lowerMessage = message.toLowerCase();
 
@@ -54,7 +62,7 @@ function toVendorErrorMessage(error: SupabaseLikeError | Error | unknown, action
     return `Sem permissão para ${action} fornecedores nesta organização.`;
   }
 
-  return message || `Não foi possível ${action} o fornecedor agora.`;
+  return `Não foi possível ${action} o fornecedor agora.`;
 }
 
 function toBaseVendorRecord(payload: z.infer<typeof vendorSchema>) {
@@ -78,118 +86,164 @@ function toFullVendorRecord(payload: z.infer<typeof vendorSchema>, userId: strin
   };
 }
 
-export async function createVendor(input: unknown, userId: string) {
-  const payload = vendorSchema.parse(input);
-  await assertCurrentUserCan(payload.organizationId, userId, 'vendors:write');
+async function enforceVendorActionRateLimit(input: {
+  action: 'vendor.create' | 'vendor.update' | 'vendor.delete';
+  organizationId: string;
+  userId: string;
+}) {
+  const rateLimit = await checkDistributedRateLimit({
+    key: `${input.action}:${input.organizationId}:${input.userId}`,
+    policy: 'general-api',
+    userId: input.userId,
+    organizationId: input.organizationId,
+    route: `server-action:${input.action}`,
+    action: input.action,
+    limit: 30,
+    windowMs: 60_000,
+    failureMode: 'fail-closed',
+  });
 
-  const supabase = createAdminClient();
-  const baseRecord = toBaseVendorRecord(payload);
-  const fullRecord = toFullVendorRecord(payload, userId);
-
-  const insertVendor = async (record: typeof baseRecord | typeof fullRecord) =>
-    supabase
-      .from('vendors')
-      .insert(record)
-      .select('*')
-      .single();
-
-  let { data, error } = await insertVendor(fullRecord);
-
-  if (error && isMissingOptionalVendorColumn(error)) {
-    console.warn('[vendors] legacy_schema_fallback', { code: error.code ?? 'unknown' });
-    const fallbackResult = await insertVendor(baseRecord);
-    data = fallbackResult.data;
-    error = fallbackResult.error;
+  if (!rateLimit.allowed) {
+    throw new Error('Too many vendor changes. Please try again later.');
   }
+}
 
-  if (error) {
+export async function createVendor(input: unknown) {
+  const user = await requireCurrentUser();
+  const payload = vendorSchema.parse(input);
+  const context = { area: 'vendor_create_action', organizationId: payload.organizationId, userId: user.id };
+
+  await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:write');
+  await enforceVendorActionRateLimit({ action: 'vendor.create', organizationId: payload.organizationId, userId: user.id });
+
+  try {
+    const supabase = createAdminClient();
+    const baseRecord = toBaseVendorRecord(payload);
+    const fullRecord = toFullVendorRecord(payload, user.id);
+
+    const insertVendor = async (record: typeof baseRecord | typeof fullRecord) =>
+      supabase
+        .from('vendors')
+        .insert(record)
+        .select('*')
+        .single();
+
+    let { data, error } = await insertVendor(fullRecord);
+
+    if (error && isMissingOptionalVendorColumn(error)) {
+      console.warn('[vendors] legacy_schema_fallback', { code: error.code ?? 'unknown' });
+      const fallbackResult = await insertVendor(baseRecord);
+      data = fallbackResult.data;
+      error = fallbackResult.error;
+    }
+
+    if (error) throw error;
+
+    await logAuditEvent({
+      organizationId: payload.organizationId,
+      actorUserId: user.id,
+      action: 'vendor.create',
+      entityType: 'vendor',
+      entityId: data.id,
+      metadata: { name: payload.name, riskLevel: payload.riskLevel },
+    });
+
+    return data;
+  } catch (error) {
+    reportError(error, context);
     throw new Error(toVendorErrorMessage(error, 'criar'));
   }
-
-  await logAuditEvent({
-    organizationId: payload.organizationId,
-    actorUserId: userId,
-    action: 'vendor.create',
-    entityType: 'vendor',
-    entityId: data.id,
-    metadata: { name: payload.name, riskLevel: payload.riskLevel },
-  });
-
-  return data;
 }
 
-export async function updateVendor(input: unknown, userId: string) {
+export async function updateVendor(input: unknown) {
+  const user = await requireCurrentUser();
   const payload = updateVendorSchema.parse(input);
-  await assertCurrentUserCan(payload.organizationId, userId, 'vendors:write');
+  const context = { area: 'vendor_update_action', organizationId: payload.organizationId, vendorId: payload.vendorId, userId: user.id };
 
-  const supabase = createAdminClient();
-  const baseRecord = toBaseVendorRecord(payload);
-  const fullRecord = {
-    ...baseRecord,
-    data_access_level: payload.dataAccessLevel,
-    dpa_signed: payload.dpaSigned,
-  };
+  await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:write');
+  await enforceVendorActionRateLimit({ action: 'vendor.update', organizationId: payload.organizationId, userId: user.id });
 
-  const updateVendorRecord = async (record: typeof baseRecord | typeof fullRecord) =>
-    supabase
-      .from('vendors')
-      .update(record)
-      .eq('id', payload.vendorId)
-      .eq('organization_id', payload.organizationId)
-      .select('*')
-      .single();
+  try {
+    const supabase = createAdminClient();
+    const baseRecord = toBaseVendorRecord(payload);
+    const fullRecord = {
+      ...baseRecord,
+      data_access_level: payload.dataAccessLevel,
+      dpa_signed: payload.dpaSigned,
+    };
 
-  let { data, error } = await updateVendorRecord(fullRecord);
+    const updateVendorRecord = async (record: typeof baseRecord | typeof fullRecord) =>
+      supabase
+        .from('vendors')
+        .update(record)
+        .eq('id', payload.vendorId)
+        .eq('organization_id', payload.organizationId)
+        .select('*')
+        .single();
 
-  if (error && isMissingOptionalVendorColumn(error)) {
-    console.warn('[vendors] legacy_schema_fallback', { code: error.code ?? 'unknown' });
-    const fallbackResult = await updateVendorRecord(baseRecord);
-    data = fallbackResult.data;
-    error = fallbackResult.error;
-  }
+    let { data, error } = await updateVendorRecord(fullRecord);
 
-  if (error) {
+    if (error && isMissingOptionalVendorColumn(error)) {
+      console.warn('[vendors] legacy_schema_fallback', { code: error.code ?? 'unknown' });
+      const fallbackResult = await updateVendorRecord(baseRecord);
+      data = fallbackResult.data;
+      error = fallbackResult.error;
+    }
+
+    if (error) throw error;
+
+    await logAuditEvent({
+      organizationId: payload.organizationId,
+      actorUserId: user.id,
+      action: 'vendor.update',
+      entityType: 'vendor',
+      entityId: payload.vendorId,
+      metadata: {
+        name: payload.name,
+        riskLevel: payload.riskLevel,
+        reviewStatus: payload.reviewStatus,
+      },
+    });
+
+    return data;
+  } catch (error) {
+    reportError(error, context);
     throw new Error(toVendorErrorMessage(error, 'atualizar'));
   }
-
-  await logAuditEvent({
-    organizationId: payload.organizationId,
-    actorUserId: userId,
-    action: 'vendor.update',
-    entityType: 'vendor',
-    entityId: payload.vendorId,
-    metadata: {
-      name: payload.name,
-      riskLevel: payload.riskLevel,
-      reviewStatus: payload.reviewStatus,
-    },
-  });
-
-  return data;
 }
 
-export async function deleteVendor(vendorId: string, organizationId: string, userId: string) {
-  await assertCurrentUserCan(organizationId, userId, 'vendors:delete');
+export async function deleteVendor(vendorId: string, organizationId: string) {
+  const user = await requireCurrentUser();
+  const payload = deleteVendorSchema.parse({ vendorId, organizationId });
+  const context = { area: 'vendor_delete_action', organizationId: payload.organizationId, vendorId: payload.vendorId, userId: user.id };
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('vendors')
-    .delete()
-    .eq('id', vendorId)
-    .eq('organization_id', organizationId)
-    .select('id,name,risk_level')
-    .single();
+  await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:delete');
+  await enforceVendorActionRateLimit({ action: 'vendor.delete', organizationId: payload.organizationId, userId: user.id });
 
-  if (error) throw error;
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('vendors')
+      .delete()
+      .eq('id', payload.vendorId)
+      .eq('organization_id', payload.organizationId)
+      .select('id,name,risk_level')
+      .single();
 
-  await logAuditEvent({
-    organizationId,
-    actorUserId: userId,
-    action: 'vendor.delete',
-    entityType: 'vendor',
-    entityId: vendorId,
-    metadata: { name: data.name, riskLevel: data.risk_level },
-  });
+    if (error) throw error;
 
-  return data;
+    await logAuditEvent({
+      organizationId: payload.organizationId,
+      actorUserId: user.id,
+      action: 'vendor.delete',
+      entityType: 'vendor',
+      entityId: payload.vendorId,
+      metadata: { name: data.name, riskLevel: data.risk_level },
+    });
+
+    return data;
+  } catch (error) {
+    reportError(error, context);
+    throw new Error(toVendorErrorMessage(error, 'remover'));
+  }
 }

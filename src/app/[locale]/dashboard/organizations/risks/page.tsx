@@ -56,13 +56,10 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
       redirect(`/${params.locale}/onboarding`);
     }
 
-    await createRisk(
-      {
-        ...input,
-        organizationId: currentOrganization.id,
-      },
-      currentUser.id,
-    );
+    await createRisk({
+      ...input,
+      organizationId: currentOrganization.id,
+    });
 
     revalidatePath(`/${params.locale}/dashboard/organizations/risks`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
@@ -83,7 +80,7 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
       redirect(`/${params.locale}/onboarding`);
     }
 
-    await deleteRisk(riskId, currentOrganization.id, currentUser.id);
+    await deleteRisk(riskId, currentOrganization.id);
 
     revalidatePath(`/${params.locale}/dashboard/organizations/risks`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
