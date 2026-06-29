@@ -20,6 +20,7 @@ function pdfFile(name = 'policy.pdf') {
 
 afterEach(() => {
   delete process.env.REQUIRE_MALWARE_SCAN_FOR_UPLOADS;
+  delete process.env.MALWARE_SCAN_REQUIRED;
   delete process.env.MALWARE_SCANNER_PROVIDER;
   delete process.env.MALWARE_SCANNER_ENDPOINT;
   delete process.env.MALWARE_SCANNER_URL;
@@ -79,6 +80,22 @@ describe('upload-security enterprise controls', () => {
 
   it('fails closed when enterprise malware scanning is required and scanner is unavailable', async () => {
     process.env.REQUIRE_MALWARE_SCAN_FOR_UPLOADS = 'true';
+    process.env.MALWARE_SCANNER_PROVIDER = 'unknown-provider';
+
+    const scan = await scanUploadForMalware({
+      buffer: Buffer.from(PDF_BYTES),
+      mimeType: 'application/pdf',
+      filename: 'policy.pdf',
+      organizationId: 'org-a',
+      fileHash: 'hash-a',
+    });
+
+    expect(scan).toMatchObject({ status: 'unavailable', provider: 'unknown-provider', required: true });
+    expect(shouldBlockUploadForMalwareScan(scan)).toBe(true);
+  });
+
+  it('honors the legacy malware scan required env when a scanner provider is configured', async () => {
+    process.env.MALWARE_SCAN_REQUIRED = 'true';
     process.env.MALWARE_SCANNER_PROVIDER = 'unknown-provider';
 
     const scan = await scanUploadForMalware({
@@ -161,22 +178,11 @@ describe('upload-security enterprise controls', () => {
 
   it('enforces short-lived signed URL expiry policy', () => {
     const issuedAt = new Date('2026-01-01T00:00:00.000Z');
+    const expiresAt = new Date(issuedAt.getTime() + SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS * 1000);
 
     expect(SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS).toBeLessThanOrEqual(60);
-    expect(
-      isSignedUrlExpired({
-        issuedAt,
-        expiresInSeconds: SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS,
-        now: new Date('2026-01-01T00:00:59.000Z'),
-      }),
-    ).toBe(false);
-    expect(
-      isSignedUrlExpired({
-        issuedAt,
-        expiresInSeconds: SIGNED_DOCUMENT_URL_EXPIRES_IN_SECONDS,
-        now: new Date('2026-01-01T00:01:00.000Z'),
-      }),
-    ).toBe(true);
-    expect(isSignedUrlExpired({ issuedAt, expiresInSeconds: 0, now: issuedAt })).toBe(true);
+    expect(isSignedUrlExpired(expiresAt, new Date('2026-01-01T00:00:59.000Z'))).toBe(false);
+    expect(isSignedUrlExpired(expiresAt, new Date('2026-01-01T00:01:00.000Z'))).toBe(true);
+    expect(isSignedUrlExpired(issuedAt, issuedAt)).toBe(true);
   });
 });
