@@ -41,6 +41,7 @@ function organizationActionError(message: string) {
 }
 
 export async function createOrganization(input: CreateOrganizationInput) {
+  const user = await requireCurrentUser();
   const parsed = createOrganizationSchema.safeParse(input);
 
   if (!parsed.success) {
@@ -48,7 +49,6 @@ export async function createOrganization(input: CreateOrganizationInput) {
   }
 
   const payload = parsed.data;
-  const user = await requireCurrentUser();
   const rateLimit = await checkDistributedRateLimit({
     key: `organization:create:${user.id}`,
     userId: user.id,
