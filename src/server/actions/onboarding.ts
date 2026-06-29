@@ -8,10 +8,12 @@ import {
   onboardingActivationSchema,
   onboardingDraftSchema,
   type OnboardingActivationInput,
+  type OnboardingActionResult,
   type OnboardingDraftInput,
 } from '@/lib/onboarding/activation';
 import { createOrganization } from '@/server/actions/organizations';
 import { classifyAiSystem, normalizeAiRiskDomain, normalizeAiSystemRole, normalizeAiSystemStatus } from '@/server/ai-governance/classifier';
+import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
 type CurrentUserForOnboarding = {
@@ -301,21 +303,12 @@ async function recordActivationRun(
   if (error) throw new Error(error.message);
 }
 
-export type OnboardingActionResult = {
-  organizationId: string;
-  status: 'saved' | 'completed';
-  readinessScore?: number;
-  riskLevel?: string;
-  dashboardPath?: string;
-  documentsCreated?: number;
-  tasksCreated?: number;
-  invitationsCreated?: number;
-};
-
 export async function saveOnboardingDraft(input: OnboardingDraftInput, user: CurrentUserForOnboarding): Promise<OnboardingActionResult> {
   const payload = onboardingDraftSchema.parse(input);
   const supabase = createAdminClient();
   const organizationId = await resolveOrganizationId(payload, user);
+
+  await assertCurrentUserCan(organizationId, user.id, 'organization:update');
 
   await updateOrganizationOnboardingProfile(supabase, organizationId, {
     ...payload,
@@ -336,6 +329,11 @@ export async function completeOnboardingActivation(
   const payload = onboardingActivationSchema.parse(input);
   const supabase = createAdminClient();
   const organizationId = await resolveOrganizationId(payload, user);
+
+  await assertCurrentUserCan(organizationId, user.id, 'organization:update');
+  if (payload.inviteEmails.length > 0) {
+    await assertCurrentUserCan(organizationId, user.id, 'team:invite');
+  }
 
   const classification = classifyAiSystem({
     role: normalizeAiSystemRole(payload.role),
