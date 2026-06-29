@@ -6,7 +6,7 @@ name: Full Security Suite
 # check-storage-security.mjs
 # check-enterprise-trust-evidence.mjs
 # semgrep --config auto
-# gitleaks/gitleaks-action@v2
+# gitleaks/gitleaks-action@v3
 # ossf/scorecard-action@v2.4.2
 # raven-actions/actionlint@v2
 
@@ -201,7 +201,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Run Gitleaks fail-closed scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
