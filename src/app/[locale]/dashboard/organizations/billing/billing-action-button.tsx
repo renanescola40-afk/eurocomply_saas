@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 
 const STEP_UP_TOKEN_HEADER = 'x-eurocomply-step-up-token';
 
+const DASHBOARD_BILLING_RETURN_PATH = '/dashboard/organizations/billing';
+
 type BillingActionButtonProps = {
   action: 'checkout' | 'portal';
   locale: string;
@@ -122,7 +124,8 @@ async function requestBillingAction({
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (stepUpToken) headers[STEP_UP_TOKEN_HEADER] = stepUpToken;
 
-  const response = await fetch(action === 'checkout' ? '/api/billing/checkout' : `/api/billing/portal?locale=${encodeURIComponent(locale)}`, {
+  const portalUrl = `/api/billing/portal?locale=${encodeURIComponent(locale)}&returnPath=${encodeURIComponent(DASHBOARD_BILLING_RETURN_PATH)}`;
+  const response = await fetch(action === 'checkout' ? '/api/billing/checkout' : portalUrl, {
     method: 'POST',
     headers,
     body: action === 'checkout' ? JSON.stringify({ plan: planId, locale }) : undefined,
