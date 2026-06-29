@@ -93,7 +93,7 @@ export async function createRisk(input: unknown) {
     return data;
   } catch (error) {
     if (error instanceof Error && error.message === 'Unable to create risk') {
-      throw error;
+      throw actionError('Unable to create risk');
     }
 
     reportError(error, context);
@@ -151,7 +151,7 @@ export async function deleteRisk(riskId: string, organizationId: string) {
     return data;
   } catch (error) {
     if (error instanceof Error && error.message === 'Unable to delete risk') {
-      throw error;
+      throw actionError('Unable to delete risk');
     }
 
     reportError(error, context);
