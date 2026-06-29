@@ -78,7 +78,10 @@ export async function createOrganization(input: CreateOrganizationInput, _legacy
       .select('*')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      reportError(error, context);
+      throw organizationActionError('Unable to create organization');
+    }
 
     const memberInsert = isUuid(user.id)
       ? {
