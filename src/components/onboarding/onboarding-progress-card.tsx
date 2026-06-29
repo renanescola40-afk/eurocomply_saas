@@ -12,11 +12,17 @@ type OnboardingProgressCardProps = {
 
 const estimates: Record<string, string> = {
   'create-organization': '2 min',
+  'choose-country': '30 sec',
+  'company-type': '30 sec',
+  sector: '30 sec',
+  'ai-usage': '1 min',
+  'first-ai-system': '2 min',
+  'risk-classification': '1 min',
+  'readiness-score': '30 sec',
+  'document-suggestions': '1 min',
+  'initial-tasks': '1 min',
   'invite-team': '1 min',
-  'upload-document': '2 min',
-  'create-risk': '2 min',
-  'add-vendor': '2 min',
-  'open-dashboard': '30 sec',
+  'plan-or-trial': '30 sec',
 };
 
 export function OnboardingProgressCard({ state }: OnboardingProgressCardProps) {
@@ -30,16 +36,16 @@ export function OnboardingProgressCard({ state }: OnboardingProgressCardProps) {
         progress={progress.percentage}
         hasOrganization={state.hasOrganization}
         hasMembers={state.hasMembers}
-        hasDocuments={state.hasDocuments}
-        hasRisks={state.hasRisks ?? state.hasComplianceTasks}
-        hasVendors={state.hasVendors}
-        hasDashboardOpened={Boolean(state.hasDashboardOpened)}
+        hasDocuments={state.hasDocumentSuggestions ?? state.hasDocuments}
+        hasRisks={state.hasRiskClassification ?? state.hasRisks ?? state.hasComplianceTasks}
+        hasVendors={state.hasFirstAiSystem ?? state.hasVendors}
+        hasDashboardOpened={Boolean(state.hasReadinessScore ?? state.hasDashboardOpened)}
       />
       <CardHeader>
         <Badge variant="outline" className="w-fit rounded-full">Activation checklist</Badge>
         <CardTitle>Get RISCK COMPLY audit-ready</CardTitle>
         <p className="text-sm leading-6 text-muted-foreground">
-          Follow this path to turn signup into enterprise value: organization, team, evidence, risk, vendor and dashboard.
+          Follow this path to turn signup into enterprise value: organization, country, company profile, first AI system, risk score, documents, tasks, team and plan.
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
