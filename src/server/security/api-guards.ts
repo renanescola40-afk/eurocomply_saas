@@ -215,7 +215,7 @@ export async function parseJsonBodyWithZod<TBody>(
   request: Request,
   schemaOrOptions: { parse: (value: unknown) => TBody } | ParseJsonBodyOptions<TBody>,
 ) {
-  const options = 'schema' in schemaOrOptions ? schemaOrOptions : { schema: schemaOrOptions };
+  const options: ParseJsonBodyOptions<TBody> = 'schema' in schemaOrOptions ? schemaOrOptions : { schema: schemaOrOptions };
   const rawBody = await readBoundedJsonRequest(request, {
     maxBytes: options.maxBytes ?? DEFAULT_JSON_BODY_MAX_BYTES,
     requireJsonContentType: options.requireJsonContentType ?? true,
