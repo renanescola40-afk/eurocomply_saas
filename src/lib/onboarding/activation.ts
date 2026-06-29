@@ -71,6 +71,17 @@ export type OnboardingActivationInitialState = {
   } | null;
 };
 
+export type OnboardingActionResult = {
+  organizationId: string;
+  status: 'saved' | 'completed';
+  readinessScore?: number;
+  riskLevel?: string;
+  dashboardPath?: string;
+  documentsCreated?: number;
+  tasksCreated?: number;
+  invitationsCreated?: number;
+};
+
 const slugPattern = new RegExp('^[a-z0-9-]+$');
 
 export function slugifyOrganization(value: string) {
