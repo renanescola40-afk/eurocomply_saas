@@ -40,12 +40,12 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
     if (!current) redirect(`/${params.locale}/onboarding`);
 
     try {
-      await createVendor({ organizationId: current.id, ...input }, user.id);
+      await createVendor({ organizationId: current.id, ...input });
       revalidatePath(`/${params.locale}/dashboard/organizations/vendors`);
       revalidatePath(`/${params.locale}/dashboard/organizations`);
       return {};
     } catch (error) {
-      console.error('[vendors] Failed to create vendor', error);
+      console.error('[vendors] Failed to create vendor', { error: error instanceof Error ? error.name : 'unknown' });
       return {
         error: error instanceof Error ? error.message : 'Não foi possível criar o fornecedor agora.',
       };
@@ -61,7 +61,7 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
     const current = await getCurrentOrganizationForUser(user.id);
     if (!current) redirect(`/${params.locale}/onboarding`);
 
-    await deleteVendor(vendorId, current.id, user.id);
+    await deleteVendor(vendorId, current.id);
 
     revalidatePath(`/${params.locale}/dashboard/organizations/vendors`);
     revalidatePath(`/${params.locale}/dashboard/organizations`);
