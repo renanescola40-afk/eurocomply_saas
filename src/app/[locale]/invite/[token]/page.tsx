@@ -28,11 +28,7 @@ export default async function AcceptInvitationPage({ params }: AcceptInvitationP
       redirect(`/login?redirectedFrom=/invite/${params.token}`);
     }
 
-    await acceptInvitation(
-      { token: params.token },
-      currentUser.id,
-      currentUser.email,
-    );
+    await acceptInvitation({ token: params.token });
 
     redirect('/dashboard/organizations');
   }
