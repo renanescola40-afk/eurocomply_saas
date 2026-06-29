@@ -223,7 +223,10 @@ end $$;
 -- Onboarding activation stores tenant setup state and should be org-scoped with manager writes.
 do $$
 begin
-  perform public.app_rls_harden_org_writable_table('onboarding_activation_runs', array[''owner'',''admin'',''compliance_manager'']::text[]::text);
+  perform public.app_rls_harden_org_writable_table(
+    'onboarding_activation_runs',
+    'array[''owner'',''admin'',''compliance_manager'']'
+  );
 end $$;
 
 -- The onboarding migration added extra compliance_tasks policies after the final lock. Remove them and rely on the strict writer-role policies.
