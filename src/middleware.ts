@@ -20,6 +20,7 @@ const PUBLIC_ROUTES = [
   '/auth',
   '/oauth/complete',
   '/pricing',
+  '/enterprise',
   '/checkout',
   '/resources',
   '/faq',

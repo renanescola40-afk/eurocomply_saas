@@ -38,7 +38,19 @@ test.describe('public landing', () => {
     await expect(page.getByRole('link', { name: /^Join waitlist/i })).toHaveAttribute('href', /\/en\/signup\?plan=professional&next=\/en\/onboarding/);
     await expect(page.getByRole('link', { name: /^Book demo/i }).first()).toHaveAttribute('href', /\/en\/contact\?intent=demo/);
     await expect(page.getByRole('link', { name: /^Talk to sales/i }).first()).toHaveAttribute('href', /\/en\/contact\?intent=sales/);
-    await expect(page.getByRole('link', { name: /^Start Essential/i })).toHaveAttribute('href', /\/en\/billing\/checkout\/essential/);
+    await expect(page.getByRole('link', { name: /^Start Essential/i })).toHaveAttribute('href', /\/en\/billing\/checkout\/essential|\/en\/checkout\?plan=essential/);
+    await expect(page.getByRole('link', { name: /^Choose Business/i })).toHaveAttribute('href', /\/en\/book-demo\?plan=business/);
+  });
+
+  test('renders the public enterprise sales page without requiring login', async ({ page }) => {
+    const response = await page.goto('/en/enterprise', { waitUntil: 'domcontentloaded' });
+
+    expect(response?.status(), 'enterprise page should not 404').not.toBe(404);
+    expect(response?.status(), 'enterprise page should not server-error').toBeLessThan(500);
+    await expect(page.locator('body')).toContainText(/Enterprise AI governance/i);
+    await expect(page.locator('body')).toContainText(/without unsupported legal or certification claims/i);
+    await expect(page.getByRole('link', { name: /Book Enterprise Readiness Demo/i })).toHaveAttribute('href', /\/en\/book-demo\?plan=enterprise/);
+    await expectNoHorizontalOverflow(page, 'enterprise sales page desktop');
   });
 
   test('renders required enterprise conversion sections on mobile', async ({ page }) => {
