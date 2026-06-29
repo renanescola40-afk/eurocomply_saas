@@ -56,10 +56,17 @@ function parseContentLength(request: NextRequest) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function rejectOversizedMultipartRequest(request: NextRequest) {
-  const contentLength = parseContentLength(request);
+function getRequestContentLength(request: NextRequest) {
+  return parseContentLength(request);
+}
 
-  if (contentLength !== null && contentLength > MAX_MULTIPART_UPLOAD_BYTES) {
+function isMultipartRequestTooLarge(request: NextRequest) {
+  const contentLength = getRequestContentLength(request);
+  return contentLength !== null && contentLength > MAX_MULTIPART_UPLOAD_BYTES;
+}
+
+function rejectOversizedMultipartRequest(request: NextRequest) {
+  if (isMultipartRequestTooLarge(request)) {
     return noStoreJson({ error: 'Upload request is too large.' }, { status: 413 });
   }
 
