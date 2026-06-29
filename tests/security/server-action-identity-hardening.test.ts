@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 const identityScanner = readFileSync(join(process.cwd(), 'scripts/security/check-server-action-identity.mjs'), 'utf8');
 const risksAction = readFileSync(join(process.cwd(), 'src/server/actions/risks.ts'), 'utf8');
 const vendorsAction = readFileSync(join(process.cwd(), 'src/server/actions/vendors.ts'), 'utf8');
+const complianceTasksAction = readFileSync(join(process.cwd(), 'src/server/actions/compliance-tasks.ts'), 'utf8');
 const billingActionPath = join(process.cwd(), 'src/server/actions/billing.ts');
 const documentDownloadsAction = readFileSync(join(process.cwd(), 'src/server/actions/document-downloads.ts'), 'utf8');
 const risksPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/risks/page.tsx'), 'utf8');
