@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
     route: subject.route ?? '/api/billing/checkout',
   })),
   stripeCheckoutCreate: vi.fn(),
+  stripeCustomerCreate: vi.fn(),
+  stripeCustomerUpdate: vi.fn(),
   getCurrentUser: vi.fn(),
   getCurrentOrganizationForUser: vi.fn(),
   assertOrganizationPermission: vi.fn(),
@@ -61,6 +63,10 @@ vi.mock('@/server/billing/app-url', () => ({
 
 vi.mock('@/server/billing/stripe', () => ({
   getStripeClient: () => ({
+    customers: {
+      create: mocks.stripeCustomerCreate,
+      update: mocks.stripeCustomerUpdate,
+    },
     checkout: {
       sessions: {
         create: mocks.stripeCheckoutCreate,
@@ -147,7 +153,7 @@ describe('billing checkout API security gates', () => {
     vi.clearAllMocks();
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
     mocks.getCurrentUser.mockResolvedValue({ id: 'user_admin', email: 'admin@example.test' });
-    mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a', clerk_org_id: 'clerk_org_a' });
+    mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a', name: 'Acme Corp', clerk_org_id: 'clerk_org_a' });
     mocks.assertOrganizationPermission.mockResolvedValue({ ok: true, role: 'admin' });
     mocks.permissionDeniedResponse.mockImplementation(() => new Response(JSON.stringify({ error: 'permission_denied' }), { status: 403 }));
     mocks.assertTrustedOrigin.mockReturnValue(null);
@@ -156,6 +162,8 @@ describe('billing checkout API security gates', () => {
       assessment: { action: 'manage_billing', verifiedAt: '2026-06-21T09:00:00.000Z' },
     });
     mocks.publicStepUpSummary.mockReturnValue({ verified: true });
+    mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_created_for_org_a' });
+    mocks.stripeCustomerUpdate.mockResolvedValue({ id: 'cus_existing_for_org_a' });
     mocks.stripeCheckoutCreate.mockResolvedValue({ id: 'checkout_session_fixture', url: 'https://checkout.stripe.test/session-fixture' });
     mocks.writeAuditLog.mockResolvedValue(undefined);
     mocks.supabaseMaybeSingle.mockResolvedValue({ data: null, error: null });
@@ -171,6 +179,7 @@ describe('billing checkout API security gates', () => {
     expect(body).toEqual({ error: 'unauthorized' });
     expect(mocks.getCurrentOrganizationForUser).not.toHaveBeenCalled();
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
     expect(mocks.writeAuditLog).not.toHaveBeenCalled();
   });
 
@@ -190,6 +199,7 @@ describe('billing checkout API security gates', () => {
     expect(mocks.assertTrustedOrigin).not.toHaveBeenCalled();
     expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
     expect(mocks.writeAuditLog).not.toHaveBeenCalled();
   });
 
@@ -205,6 +215,7 @@ describe('billing checkout API security gates', () => {
     expect(response.status).toBe(403);
     expect(body).toEqual({ error: 'step_up_required' });
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
     expect(mocks.writeAuditLog).not.toHaveBeenCalled();
   });
 
@@ -215,10 +226,11 @@ describe('billing checkout API security gates', () => {
     expect(response.status).toBe(400);
     expect(body).toEqual({ error: 'invalid_plan' });
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled();
+    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled();
     expect(mocks.requireStepUpForRequest).not.toHaveBeenCalled();
   });
 
-  it('creates checkout only from server-side organization, permission, step-up, and price mapping', async () => {
+  it('creates checkout only from server-side organization, permission, step-up, customer mapping and price mapping', async () => {
     const response = await POST(buildRequest({ plan: 'business', locale: 'en' }));
     const body = await response.json();
 
@@ -239,9 +251,23 @@ describe('billing checkout API security gates', () => {
         organizationId: 'org_a',
       }),
     );
+    expect(mocks.stripeCustomerCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'admin@example.test',
+        name: 'Acme Corp',
+        metadata: expect.objectContaining({
+          organization_id: 'org_a',
+          organizationId: 'org_a',
+          user_id: 'user_admin',
+          userId: 'user_admin',
+          plan: 'growth',
+        }),
+      }),
+    );
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: 'subscription',
+        customer: 'cus_created_for_org_a',
         line_items: [{ price: 'price_growth', quantity: 1 }],
         client_reference_id: 'org_a',
         metadata: expect.objectContaining({
@@ -281,6 +307,7 @@ describe('billing checkout API security gates', () => {
         entityId: 'checkout_session_fixture',
         metadata: expect.objectContaining({
           plan: 'growth',
+          stripeCustomerId: 'cus_created_for_org_a',
           rbacPermission: 'manage_billing',
           trustedOriginRequired: true,
           actorRole: 'admin',
