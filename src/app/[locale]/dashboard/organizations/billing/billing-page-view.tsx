@@ -1,11 +1,10 @@
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { ArrowRight, CheckCircle2, CreditCard, FileText, Gauge, LockKeyhole, RefreshCw, ShieldCheck, UsersRound } from 'lucide-react';
+import { CheckCircle2, CreditCard, FileText, Gauge, LockKeyhole, RefreshCw, ShieldCheck, UsersRound } from 'lucide-react';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { createCheckoutSession, createCustomerPortalSession } from '@/server/actions/billing';
 import type { OrganizationBillingContext } from '@/server/queries/billing';
+import { BillingActionButton } from './billing-action-button';
 
 type BillingPageViewProps = {
   locale: string;
@@ -121,43 +120,6 @@ function checkoutMessage(checkout?: string, billingError?: string) {
   return null;
 }
 
-function billingErrorRedirect(locale: string): never {
-  redirect(`/${locale}/dashboard/organizations/billing?billing_error=${encodeURIComponent('Billing action could not be completed. Please try again later.')}`);
-}
-
-async function startCheckout(formData: FormData) {
-  'use server';
-
-  const locale = String(formData.get('locale') ?? 'en');
-  const planId = String(formData.get('planId') ?? '');
-
-  try {
-    const url = await createCheckoutSession({
-      planId,
-      successPath: `/${locale}/dashboard/organizations/billing?checkout=success`,
-      cancelPath: `/${locale}/dashboard/organizations/billing?checkout=cancelled`,
-    });
-    redirect(url);
-  } catch {
-    billingErrorRedirect(locale);
-  }
-}
-
-async function openCustomerPortal(formData: FormData) {
-  'use server';
-
-  const locale = String(formData.get('locale') ?? 'en');
-
-  try {
-    const url = await createCustomerPortalSession({
-      returnPath: `/${locale}/dashboard/organizations/billing`,
-    });
-    redirect(url);
-  } catch {
-    billingErrorRedirect(locale);
-  }
-}
-
 export function BillingPageView({ locale, billing, checkout, billingError }: BillingPageViewProps) {
   const currentPlan = getBillingPlan(billing.plan) ?? BILLING_PLANS[0];
   const message = checkoutMessage(checkout, billingError);
@@ -211,11 +173,12 @@ export function BillingPageView({ locale, billing, checkout, billingError }: Bil
               <CardContent className="space-y-5">
                 <span className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${getStatusTone(billing.status)}`}>{formatStatus(billing.status)}</span>
                 <p className="text-sm leading-6 text-white/58">{upgradeRecommended ? 'Usage is approaching plan limits. Upgrade before work gets blocked.' : 'Usage is within current plan limits. Keep monitoring before procurement review.'}</p>
-                <form action={openCustomerPortal} className="flex flex-col gap-3 sm:flex-row">
-                  <input type="hidden" name="locale" value={locale} />
-                  <Button type="submit" className="rounded-full bg-white text-black hover:bg-white/90">Open billing portal <ArrowRight className="h-4 w-4" /></Button>
-                  <Button type="submit" variant="outline" formAction={refreshBilling} className="rounded-full border-white/15 bg-white/[0.04] text-white hover:bg-white/10"><RefreshCw className="h-4 w-4" /> Refresh</Button>
-                </form>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <BillingActionButton action="portal" locale={locale} className="rounded-full bg-white text-black hover:bg-white/90">Open billing portal</BillingActionButton>
+                  <form action={refreshBilling}>
+                    <Button type="submit" variant="outline" className="rounded-full border-white/15 bg-white/[0.04] text-white hover:bg-white/10"><RefreshCw className="h-4 w-4" /> Refresh</Button>
+                  </form>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -246,11 +209,7 @@ export function BillingPageView({ locale, billing, checkout, billingError }: Bil
                   <ul className="space-y-2 text-sm text-white/58">
                     {plan.features.map((highlight) => <li key={highlight} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-white" /> {highlight}</li>)}
                   </ul>
-                  <form action={startCheckout} className="mt-auto">
-                    <input type="hidden" name="locale" value={locale} />
-                    <input type="hidden" name="planId" value={plan.id} />
-                    <Button type="submit" className="w-full rounded-full" variant={isCurrent ? 'outline' : 'default'} disabled={isCurrent}>{isCurrent ? 'Current plan' : 'Upgrade plan'}</Button>
-                  </form>
+                  <BillingActionButton action="checkout" locale={locale} planId={plan.id} className="w-full rounded-full" variant={isCurrent ? 'outline' : 'default'} disabled={isCurrent}>{isCurrent ? 'Current plan' : 'Upgrade plan'}</BillingActionButton>
                 </CardContent>
               </Card>
             );
