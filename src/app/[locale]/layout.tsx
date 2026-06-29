@@ -30,6 +30,12 @@ type Props = {
   params: Promise<{ locale: string }>;
 };
 
+type LocaleShellProps = {
+  children: React.ReactNode;
+  locale: string;
+  messages: Awaited<ReturnType<typeof getMessages>>;
+};
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const labels: Record<Locale, { title: string; description: string }> = {
@@ -68,43 +74,76 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+function SharedShell({ children, locale, messages }: LocaleShellProps) {
+  return (
+    <NextIntlClientProvider messages={messages}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
+        enableSystem={false}
+        disableTransitionOnChange
+      >
+        <PostHogAnalyticsProvider>
+          {children}
+          <GapAnalysisShortcut />
+          <GlobalClientEffects />
+          <AnalyticsConsentBanner />
+          <Toaster />
+        </PostHogAnalyticsProvider>
+      </ThemeProvider>
+    </NextIntlClientProvider>
+  );
+}
+
+function ClerkShell({ children, locale, messages }: LocaleShellProps) {
+  const signInUrl = `/${locale}/login`;
+  const signUpUrl = `/${locale}/signup`;
+  const onboardingUrl = `/${locale}/onboarding`;
+
+  return (
+    <ClerkProvider
+      signInUrl={signInUrl}
+      signUpUrl={signUpUrl}
+      signInFallbackRedirectUrl={onboardingUrl}
+      signUpFallbackRedirectUrl={onboardingUrl}
+    >
+      <NextIntlClientProvider messages={messages}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <PostHogAnalyticsProvider>
+              {children}
+              <ClerkFloatingControls locale={locale} />
+              <GapAnalysisShortcut />
+              <GlobalClientEffects />
+              <AnalyticsConsentBanner />
+              <Toaster />
+            </PostHogAnalyticsProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </NextIntlClientProvider>
+    </ClerkProvider>
+  );
+}
+
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
   const safeLocale = routing.locales.includes(locale as Locale) ? locale : 'en';
   const messages = await getMessages();
-  const signInUrl = `/${safeLocale}/login`;
-  const signUpUrl = `/${safeLocale}/signup`;
-  const onboardingUrl = `/${safeLocale}/onboarding`;
+  const hasClerkPublishableKey = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
   return (
     <html lang={safeLocale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
-        <ClerkProvider
-          signInUrl={signInUrl}
-          signUpUrl={signUpUrl}
-          signInFallbackRedirectUrl={onboardingUrl}
-          signUpFallbackRedirectUrl={onboardingUrl}
-        >
-          <NextIntlClientProvider messages={messages}>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="dark"
-              enableSystem={false}
-              disableTransitionOnChange
-            >
-              <AuthProvider>
-                <PostHogAnalyticsProvider>
-                  {children}
-                  <ClerkFloatingControls locale={safeLocale} />
-                  <GapAnalysisShortcut />
-                  <GlobalClientEffects />
-                  <AnalyticsConsentBanner />
-                  <Toaster />
-                </PostHogAnalyticsProvider>
-              </AuthProvider>
-            </ThemeProvider>
-          </NextIntlClientProvider>
-        </ClerkProvider>
+        {hasClerkPublishableKey ? (
+          <ClerkShell locale={safeLocale} messages={messages}>{children}</ClerkShell>
+        ) : (
+          <SharedShell locale={safeLocale} messages={messages}>{children}</SharedShell>
+        )}
       </body>
     </html>
   );
