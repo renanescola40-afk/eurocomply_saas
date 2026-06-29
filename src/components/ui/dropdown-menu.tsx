@@ -53,7 +53,7 @@ const DropdownMenuSubTrigger = React.forwardRef<HTMLDivElement, DivProps>(({ cla
   <div
     ref={ref}
     className={cn(
-      "flex cursor-default gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent data-[state=open]:bg-accent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+      "flex cursor-default gap-2 select-none items-center rounded-lg px-2 py-2 text-sm outline-none focus:bg-accent/75 data-[state=open]:bg-accent/75 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
       inset && "pl-8",
       className,
     )}
@@ -69,7 +69,7 @@ const DropdownMenuSubContent = React.forwardRef<HTMLDivElement, DivProps>(({ cla
   <div
     ref={ref}
     className={cn(
-      "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg",
+      "enterprise-panel z-50 min-w-[8rem] overflow-hidden rounded-xl p-1 text-popover-foreground shadow-2xl",
       className,
     )}
     {...props}
@@ -82,7 +82,7 @@ const DropdownMenuContent = React.forwardRef<HTMLDivElement, DivProps>(({ classN
     ref={ref}
     data-align={align}
     className={cn(
-      "absolute right-0 z-50 mt-2 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md",
+      "enterprise-panel absolute right-0 z-50 mt-2 min-w-[8rem] overflow-hidden rounded-xl p-1 text-popover-foreground shadow-2xl",
       align === "start" && "left-0 right-auto",
       align === "center" && "left-1/2 right-auto -translate-x-1/2",
       className,
@@ -98,7 +98,7 @@ const DropdownMenuItem = React.forwardRef<HTMLDivElement, DivProps>(({ className
     role="menuitem"
     tabIndex={0}
     className={cn(
-      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+      "relative flex cursor-default select-none items-center gap-2 rounded-lg px-2 py-2 text-sm outline-none transition-colors hover:bg-accent/75 hover:text-accent-foreground focus:bg-accent/75 focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
       inset && "pl-8",
       className,
     )}
@@ -113,12 +113,12 @@ const DropdownMenuCheckboxItem = React.forwardRef<HTMLDivElement, DivProps>(({ c
     role="menuitemcheckbox"
     aria-checked={checked}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default select-none items-center rounded-lg py-2 pl-8 pr-2 text-sm outline-none transition-colors hover:bg-accent/75 hover:text-accent-foreground focus:bg-accent/75 focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
     )}
     {...props}
   >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center text-primary">
       {checked ? <Check className="h-4 w-4" /> : null}
     </span>
     {children}
@@ -132,12 +132,12 @@ const DropdownMenuRadioItem = React.forwardRef<HTMLDivElement, DivProps>(({ clas
     role="menuitemradio"
     aria-checked={checked}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default select-none items-center rounded-lg py-2 pl-8 pr-2 text-sm outline-none transition-colors hover:bg-accent/75 hover:text-accent-foreground focus:bg-accent/75 focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
     )}
     {...props}
   >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center text-primary">
       {checked ? <Circle className="h-2 w-2 fill-current" /> : null}
     </span>
     {children}
@@ -146,17 +146,17 @@ const DropdownMenuRadioItem = React.forwardRef<HTMLDivElement, DivProps>(({ clas
 DropdownMenuRadioItem.displayName = "DropdownMenuRadioItem"
 
 const DropdownMenuLabel = React.forwardRef<HTMLDivElement, DivProps>(({ className, inset, ...props }, ref) => (
-  <div ref={ref} className={cn("px-2 py-1.5 text-sm font-semibold", inset && "pl-8", className)} {...props} />
+  <div ref={ref} className={cn("px-2 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground", inset && "pl-8", className)} {...props} />
 ))
 DropdownMenuLabel.displayName = "DropdownMenuLabel"
 
 const DropdownMenuSeparator = React.forwardRef<HTMLDivElement, DivProps>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("-mx-1 my-1 h-px bg-muted", className)} {...props} />
+  <div ref={ref} className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />
 ))
 DropdownMenuSeparator.displayName = "DropdownMenuSeparator"
 
 const DropdownMenuShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => {
-  return <span className={cn("ml-auto text-xs tracking-widest opacity-60", className)} {...props} />
+  return <span className={cn("ml-auto text-xs tracking-widest text-muted-foreground", className)} {...props} />
 }
 DropdownMenuShortcut.displayName = "DropdownMenuShortcut"
 

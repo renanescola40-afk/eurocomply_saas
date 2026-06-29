@@ -8,6 +8,11 @@ const actionsDir = path.join(root, 'src', 'server', 'actions');
 
 const failures = [];
 
+const DEDICATED_SECURITY_SCANNER_MODULES = new Set([
+  'src/server/actions/documents.ts',
+  'src/server/actions/document-downloads.ts',
+]);
+
 function walk(dir) {
   if (!existsSync(dir)) return [];
 
@@ -80,6 +85,11 @@ const checks = [
 
 for (const file of walk(actionsDir)) {
   const content = readFileSync(file, 'utf8');
+  const rel = relative(file);
+
+  if (DEDICATED_SECURITY_SCANNER_MODULES.has(rel)) {
+    continue;
+  }
 
   if (!isServerActionModule(file, content)) {
     continue;
@@ -87,7 +97,7 @@ for (const file of walk(actionsDir)) {
 
   for (const check of checks) {
     if (check.pattern.test(content)) {
-      failures.push(`${relative(file)}: ${check.label}`);
+      failures.push(`${rel}: ${check.label}`);
     }
   }
 
@@ -95,7 +105,7 @@ for (const file of walk(actionsDir)) {
   const derivesCurrentUser = /requireCurrentUser|getCurrentUser/.test(content);
 
   if (usesPrivilegedTenantOperation && !derivesCurrentUser) {
-    failures.push(`${relative(file)}: privileged server action must derive authenticated user server-side`);
+    failures.push(`${rel}: privileged server action must derive authenticated user server-side`);
   }
 }
 

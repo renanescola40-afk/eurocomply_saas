@@ -4,8 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(__dirname, '..', '..');
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 const files = {
   checkoutRoute: 'src/app/api/billing/checkout/route.ts',
@@ -21,42 +20,15 @@ const files = {
   migration: 'supabase/migrations/20260623090000_stripe_webhook_events_enterprise_runtime.sql',
 };
 
-const evidenceLocations = Object.values(files);
-
-const controlsVerified = [
-  'Checkout requires authenticated user before creating Stripe sessions',
-  'Checkout requires active organization context before billing mutation',
-  'Checkout requires manage_billing RBAC permission',
-  'Checkout requires manage_billing step-up verification',
-  'Checkout requires trusted mutation origin and rate limiting',
-  'Checkout uses server-side self-serve plan allowlist and Stripe price mapping',
-  'Billing portal requires authenticated user before creating Stripe portal sessions',
-  'Billing portal requires active organization context and manage_billing RBAC permission',
-  'Billing portal requires manage_billing step-up verification and trusted mutation origin',
-  'Billing portal loads Stripe customer identifiers server-side only',
-  'Stripe webhook routes reject missing signatures before handler dispatch',
-  'Stripe webhook routes reject invalid signatures before handler dispatch',
-  'Stripe webhook events are claimed idempotently by event id before subscription mutation',
-  'Duplicate Stripe webhook events are skipped before subscription state mutation',
-  'Stripe webhook ledger records event id, type, status, processed_at, organization_id and redacted error',
-  'Stripe subscription sync validates organization metadata and customer/subscription binding',
-  'Stripe subscription sync normalizes plans server-side and does not trust client-controlled billing fields',
-  'Billing audit events cover checkout_created, billing_portal_created, webhook_received, webhook_rejected, webhook_replayed and subscription_synced',
-];
-
 function read(relativePath) {
   const absolutePath = join(repoRoot, relativePath);
-  if (!existsSync(absolutePath)) {
-    throw new Error(`Missing required file: ${relativePath}`);
-  }
+  if (!existsSync(absolutePath)) throw new Error(`Missing required file: ${relativePath}`);
   return readFileSync(absolutePath, 'utf8');
 }
 
 function assertIncludes(name, content, fragments) {
   for (const fragment of fragments) {
-    if (!content.includes(fragment)) {
-      throw new Error(`${name} is missing required runtime control marker: ${fragment}`);
-    }
+    if (!content.includes(fragment)) throw new Error(`${name} is missing required runtime control marker: ${fragment}`);
   }
 }
 
@@ -65,14 +37,6 @@ function getCommitSha() {
     return execSync('git rev-parse HEAD', { cwd: repoRoot, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
   } catch {
     return process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || 'unknown';
-  }
-}
-
-function getBranchName() {
-  try {
-    return execSync('git rev-parse --abbrev-ref HEAD', { cwd: repoRoot, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
-  } catch {
-    return process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || 'unknown';
   }
 }
 
@@ -157,9 +121,7 @@ const testCoverage = {
 };
 
 const failedCoverage = Object.entries(testCoverage).filter(([, passed]) => !passed).map(([name]) => name);
-if (failedCoverage.length > 0) {
-  throw new Error(`Missing Stripe billing test coverage markers: ${failedCoverage.join(', ')}`);
-}
+if (failedCoverage.length > 0) throw new Error(`Missing Stripe billing test coverage markers: ${failedCoverage.join(', ')}`);
 
 const timestamp = new Date().toISOString();
 const evidence = {
@@ -173,73 +135,25 @@ const evidence = {
   generatedAt: timestamp,
   commitSha: getCommitSha(),
   repository: process.env.GITHUB_REPOSITORY || 'renanescola40-afk/eurocomply_saas',
-  branch: getBranchName(),
-  summary: 'Stripe paid billing validation passed for checkout, billing portal, webhook signature enforcement, webhook idempotency, subscription sync, server-side plan enforcement, customer/subscription mapping validation and enterprise billing audit events.',
+  summary: 'Stripe paid billing validation passed for checkout, billing portal, webhook signature enforcement, webhook idempotency, subscription sync, server-side plan enforcement, customer/subscription mapping validation and billing audit events.',
   redactionConfirmation: 'Redaction confirmed for runtime evidence.',
-  evidenceLocations,
-  controlsVerified,
-  checkout: {
-    tested: true,
-    route: files.checkoutRoute,
-    requiresAuthenticatedUser: true,
-    requiresActiveOrganization: true,
-    requiresManageBillingPermission: true,
-    requiresStepUp: true,
-    requiresTrustedOrigin: true,
-    serverSidePlanAllowlist: true,
-    serverSidePriceMapping: true,
-    clientSuppliedPriceAccepted: false,
-    auditEvent: 'checkout_created',
-  },
-  portal: {
-    tested: true,
-    route: files.portalRoute,
-    requiresAuthenticatedUser: true,
-    requiresActiveOrganization: true,
-    requiresManageBillingPermission: true,
-    requiresStepUp: true,
-    requiresTrustedOrigin: true,
-    stripeCustomerLoadedServerSide: true,
-    auditEvent: 'billing_portal_created',
-  },
-  webhookSignature: {
-    tested: true,
-    routes: [files.stripeWebhookRoute, files.billingWebhookRoute],
-    missingSignatureRejected: true,
-    invalidSignatureRejected: true,
-    validSignatureRequiredBeforeDispatch: true,
-    auditEvents: ['webhook_received', 'webhook_rejected'],
-  },
-  webhookIdempotency: {
-    tested: true,
-    handler: files.webhookHandler,
-    canonicalLedgerTable: 'public.stripe_events_processed',
-    checklistCompatibleTable: 'public.stripe_webhook_events',
-    claimsEventBeforeMutation: true,
-    duplicateDoesNotMutateSubscriptionState: true,
-    processedEventsRecorded: true,
-    replayAuditEvent: 'webhook_replayed',
-  },
-  subscriptionSync: {
-    tested: true,
-    created: true,
-    updated: true,
-    deleted: true,
-    customerMismatchRejected: true,
-    serverSidePlanNormalization: true,
-    auditEvent: 'subscription_synced',
-  },
-  ledger: {
-    canonicalTable: 'public.stripe_events_processed',
-    checklistCompatibleTable: 'public.stripe_webhook_events',
-    stores: ['event id', 'type', 'status', 'processed_at', 'organization_id', 'redacted error'],
-  },
-  auditEvents: ['checkout_created', 'billing_portal_created', 'webhook_received', 'webhook_rejected', 'webhook_replayed', 'subscription_synced'],
+  evidenceLocations: Object.values(files),
+  controlsVerified: [
+    'Checkout requires authenticated user, active organization, manage_billing permission, step-up, trusted origin and rate limiting',
+    'Billing portal requires authenticated user, active organization, manage_billing permission, step-up and trusted origin',
+    'Stripe webhook routes reject missing and invalid signatures before handler dispatch',
+    'Stripe webhook events are claimed idempotently before subscription mutation',
+    'Stripe subscription sync validates organization metadata, customer binding and server-side plan mapping',
+  ],
+  checkout: { tested: true, serverSidePlanAllowlist: true, serverSidePriceMapping: true, clientSuppliedPriceAccepted: false },
+  portal: { tested: true, stripeCustomerLoadedServerSide: true },
+  webhookSignature: { tested: true, missingSignatureRejected: true, invalidSignatureRejected: true },
+  webhookIdempotency: { tested: true, canonicalLedgerTable: 'public.stripe_events_processed', checklistCompatibleTable: 'public.stripe_webhook_events' },
+  subscriptionSync: { tested: true, created: true, updated: true, deleted: true, customerMismatchRejected: true, serverSidePlanNormalization: true },
   tests: testCoverage,
 };
 
 const evidencePath = join(repoRoot, 'docs/security/evidence/runtime/stripe-billing-validation.json');
 mkdirSync(dirname(evidencePath), { recursive: true });
 writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
-
 console.log(JSON.stringify({ status: evidence.status, validationStatus: evidence.validationStatus, evidencePath: 'docs/security/evidence/runtime/stripe-billing-validation.json', commitSha: evidence.commitSha }, null, 2));

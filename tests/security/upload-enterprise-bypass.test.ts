@@ -7,6 +7,11 @@ const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   createAuditEvent: vi.fn(),
   logAuditEvent: vi.fn(),
+  requireCurrentUser: vi.fn(),
+}));
+
+vi.mock('@/server/queries/auth', () => ({
+  requireCurrentUser: mocks.requireCurrentUser,
 }));
 
 vi.mock('@/server/auth/permissions', () => ({
@@ -33,6 +38,7 @@ beforeEach(() => {
   delete process.env.REQUIRE_MALWARE_SCAN_FOR_UPLOADS;
   delete process.env.MALWARE_SCANNER_PROVIDER;
 
+  mocks.requireCurrentUser.mockResolvedValue({ id: USER_ID });
   mocks.assertCurrentUserCan.mockResolvedValue('owner');
   mocks.createAuditEvent.mockResolvedValue(undefined);
   mocks.logAuditEvent.mockResolvedValue(undefined);
@@ -44,23 +50,20 @@ describe('enterprise upload scan bypass protection', () => {
     process.env.MALWARE_SCANNER_PROVIDER = 'http';
 
     await expect(
-      createDocument(
-        {
-          organizationId: ORGANIZATION_ID,
-          name: 'Bypass attempt',
-          category: 'general',
-          storagePath: `${ORGANIZATION_ID}/${USER_ID}/bypass.pdf`,
-          mimeType: 'application/pdf',
-          sizeBytes: 12,
-          expiresAt: null,
-          metadata: {
-            scanStatus: 'not_configured',
-            scanRequired: true,
-            mimeDetected: 'application/pdf',
-          },
+      createDocument({
+        organizationId: ORGANIZATION_ID,
+        name: 'Bypass attempt',
+        category: 'general',
+        storagePath: `${ORGANIZATION_ID}/${USER_ID}/bypass.pdf`,
+        mimeType: 'application/pdf',
+        sizeBytes: 12,
+        expiresAt: null,
+        metadata: {
+          scanStatus: 'not_configured',
+          scanRequired: true,
+          mimeDetected: 'application/pdf',
         },
-        USER_ID,
-      ),
+      }),
     ).rejects.toThrow('enterprise upload scanning metadata is missing or not clean');
 
     expect(mocks.createAdminClient).not.toHaveBeenCalled();
@@ -91,22 +94,19 @@ describe('enterprise upload scan bypass protection', () => {
     mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => query) });
 
     await expect(
-      createDocument(
-        {
-          organizationId: ORGANIZATION_ID,
-          name: 'Generated template',
-          category: 'policy',
-          storagePath: `${ORGANIZATION_ID}/${USER_ID}/template.md`,
-          mimeType: 'text/markdown',
-          sizeBytes: 1024,
-          expiresAt: null,
-          metadata: {
-            source: 'template',
-            serverGenerated: true,
-          },
+      createDocument({
+        organizationId: ORGANIZATION_ID,
+        name: 'Generated template',
+        category: 'policy',
+        storagePath: `${ORGANIZATION_ID}/${USER_ID}/template.md`,
+        mimeType: 'text/markdown',
+        sizeBytes: 1024,
+        expiresAt: null,
+        metadata: {
+          source: 'template',
+          serverGenerated: true,
         },
-        USER_ID,
-      ),
+      }),
     ).resolves.toMatchObject({ id: 'template-doc' });
 
     expect(mocks.createAdminClient).toHaveBeenCalledTimes(1);

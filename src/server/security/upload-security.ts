@@ -22,6 +22,8 @@ import {
   type MalwareScannerProvider,
 } from '@/server/security/malware-scan';
 
+export type { MalwareScanResult } from '@/server/security/malware-scan';
+
 export const REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV = 'REQUIRE_MALWARE_SCAN_FOR_UPLOADS';
 export const LEGACY_MALWARE_SCAN_REQUIRED_ENV = 'MALWARE_SCAN_REQUIRED';
 export const MALWARE_SCANNER_PROVIDER_ENV = 'MALWARE_SCANNER_PROVIDER';
@@ -102,12 +104,17 @@ function sanitizeStoragePathSegment(segment: string, label: string) {
   return normalized;
 }
 
+function isTruthyEnv(value: string | undefined) {
+  return ['true', '1', 'yes', 'y', 'on', 'required'].includes(String(value ?? '').trim().toLowerCase());
+}
+
 export function isUploadMalwareScanRequired() {
-  return process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV] === 'true' || process.env[LEGACY_MALWARE_SCAN_REQUIRED_ENV] === 'true';
+  return isTruthyEnv(process.env[REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV]) || isTruthyEnv(process.env[LEGACY_MALWARE_SCAN_REQUIRED_ENV]);
 }
 
 export function currentUploadMalwareScannerProvider() {
-  return process.env[MALWARE_SCANNER_PROVIDER_ENV]?.trim() || 'not_configured';
+  const provider = process.env[MALWARE_SCANNER_PROVIDER_ENV]?.trim().toLowerCase();
+  return provider && provider !== 'none' && provider !== 'disabled' ? provider : 'not_configured';
 }
 
 export function sanitizeUploadFileName(fileName: string | null | undefined) {
@@ -281,10 +288,11 @@ export function buildUploadSecurityAuditMetadata(input: UploadSecurityAuditMetad
     scanProvider,
     scanRequired,
     scanCheckedAt,
+    scanReason: scan?.reason ?? null,
+    scanSignature: scan?.signature ?? null,
     fileHash,
     checksumSha256: fileHash,
     fileSize,
-    sizeBytes: fileSize,
     claimedMimeType: input.claimedMimeType ?? null,
     mimeDetected,
     declaredSignatureMatches: input.declaredSignatureMatches ?? null,
@@ -297,4 +305,4 @@ export function buildUploadSecurityAuditMetadata(input: UploadSecurityAuditMetad
   };
 }
 
-export { shouldBlockUploadForMalwareScan, type MalwareScanResult };
+export { shouldBlockUploadForMalwareScan };

@@ -102,7 +102,7 @@ export async function createOrganization(input: CreateOrganizationInput) {
       .insert(memberInsert as never);
 
     if (memberError) {
-      reportError(memberError, context);
+      reportError(memberError, { ...context, organizationId: organization.id });
       throw organizationActionError('Unable to create organization');
     }
 

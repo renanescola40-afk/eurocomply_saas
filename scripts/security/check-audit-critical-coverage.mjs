@@ -7,7 +7,10 @@ const criticalCoverageFiles = [
   'src/server/security/auth-audit.ts',
   'src/server/security/rbac.ts',
   'src/server/security/step-up.ts',
-  'src/server/actions/billing.ts',
+  'src/app/api/billing/checkout/route.ts',
+  'src/app/api/billing/portal/route.ts',
+  'src/app/api/billing/webhook/route.ts',
+  'src/server/billing/stripe-webhooks.ts',
   'src/server/actions/compliance-tasks.ts',
   'src/server/actions/document-downloads.ts',
   'src/server/actions/documents.ts',
@@ -25,6 +28,8 @@ const criticalCoverageFiles = [
   'docs/security/evidence/runtime/audit-chain-live-validation.json',
 ];
 
+const forbiddenLegacyFiles = ['src/server/actions/billing.ts'];
+
 const requiredCriticalActions = [
   'auth.login_attempt',
   'auth.login_success',
@@ -37,10 +42,10 @@ const requiredCriticalActions = [
   'auth.step_up_denied',
   'auth.step_up_expired',
   'securityEvent: \'rbac.denied\'',
-  'billing.checkout_start',
-  'billing.portal_start',
-  'billing.webhook_received',
-  'billing.webhook_failed',
+  'checkout_created',
+  'billing_portal_created',
+  'webhook_received',
+  'webhook_rejected',
   'billing.subscription_updated',
   'document.upload',
   'document.download',
@@ -104,6 +109,10 @@ function requireToken(path, source, token) {
 
 console.log('EuroComply audit critical coverage check');
 console.log('-----------------------------------------');
+
+for (const path of forbiddenLegacyFiles) {
+  if (existsSync(path)) failures.push(`${path} must remain removed; billing mutations must use API routes`);
+}
 
 const auditLog = read(auditLogPath);
 const serverActionAudit = read(serverActionAuditPath);
