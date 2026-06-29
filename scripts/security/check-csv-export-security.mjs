@@ -81,6 +81,22 @@ for (const path of reportRoutes) {
   if (!source.includes('csvDownloadResponse')) {
     failures.push(`${path} must use csvDownloadResponse instead of building CSV responses manually`);
   }
+
+  if (source.includes('NextResponse.json')) {
+    failures.push(`${path} must use noStoreJson for JSON failures instead of NextResponse.json`);
+  }
+
+  if (/error\s*:\s*error\.message/.test(source) || source.includes('error.message')) {
+    failures.push(`${path} must not expose provider/SQL error.message in responses or logs`);
+  }
+
+  if (source.includes('from(') && !source.includes(".eq('organization_id'") && !source.includes('.eq("organization_id"')) {
+    failures.push(`${path} must scope Supabase reads by organization_id`);
+  }
+
+  if (!source.includes("policy: 'export'")) {
+    failures.push(`${path} must use the export rate-limit policy`);
+  }
 }
 
 for (const path of walk('src')) {
