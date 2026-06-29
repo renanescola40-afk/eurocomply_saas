@@ -36,9 +36,9 @@ function buildTemplate(template: EmailTemplateKey, organizationName: string) {
     case 'welcome_onboarding':
       return welcomeOnboardingEmail({ organizationName, dashboardUrl: `${appUrl}/pt/dashboard` });
     case 'organization_created':
-      return organizationCreatedEmail({ organizationName, organizationUrl: `${appUrl}/pt/dashboard/organizations`, createdByName: 'RISCK COMPLY Admin' });
+      return organizationCreatedEmail({ organizationName, organizationUrl: `${appUrl}/pt/dashboard/organizations`, createdByName: 'Risck Comply Admin' });
     case 'member_invited':
-      return memberInvitedEmail({ organizationName, role: 'member', inviteUrl: `${appUrl}/pt/dashboard/organizations/invitations`, invitedByName: 'RISCK COMPLY Admin' });
+      return memberInvitedEmail({ organizationName, role: 'member', inviteUrl: `${appUrl}/pt/dashboard/organizations/invitations`, invitedByName: 'Risck Comply Admin' });
     case 'billing_started':
       return billingStartedEmail({ organizationName, planName: 'Professional', billingUrl: `${appUrl}/pt/dashboard/organizations/billing` });
     case 'invoice_failed':
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
   }
 
   const template = body.template ?? 'welcome_onboarding';
-  const organizationName = body.organizationName?.trim() || 'RISCK COMPLY Demo Org';
+  const organizationName = body.organizationName?.trim() || 'Risck Comply Demo Org';
   const email = buildTemplate(template, organizationName);
 
   const result = await sendEmail({
