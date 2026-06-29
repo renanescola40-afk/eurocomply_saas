@@ -57,7 +57,7 @@ export default async function ComplianceTemplatesPage({ params }: { params: { lo
     }
 
     const templateId = String(formData.get('templateId') ?? '');
-    await createTaskFromTemplate({ organizationId: currentOrganization.id, templateId }, currentUser.id);
+    await createTaskFromTemplate({ organizationId: currentOrganization.id, templateId });
     revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
     revalidatePath(`/${params.locale}/dashboard/organizations/templates`);
     redirect(`/${params.locale}/dashboard/organizations/tasks`);
