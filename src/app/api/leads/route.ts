@@ -54,8 +54,9 @@ async function enforceLeadCaptureRateLimit(request: NextRequest) {
     windowMs: RATE_LIMIT_WINDOW_MS,
     failureMode: 'fail-closed',
   });
+  const isRateLimited = (hint: string) => hint === ipHint && !result.allowed;
 
-  if (!result.allowed) {
+  if (isRateLimited(ipHint)) {
     return rateLimitResponse(result, 'Too many requests. Please try again in a minute.');
   }
 
