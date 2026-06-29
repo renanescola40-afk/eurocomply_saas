@@ -61,16 +61,19 @@ This checklist records the evidence required before EuroComply can be represente
 
 ## Deployment closeout sequence
 
-Run this exact sequence before treating deployment smoke evidence as validator-ready:
+Run this exact fail-closed sequence before treating deployment smoke evidence as validator-ready. Do not remove `set -euo pipefail`; the sequence must stop immediately when smoke evidence fails or remains Open.
 
 ```bash
+set -euo pipefail
+
 npm run release:deployment-smoke
+node -e "const evidence=require('./docs/security/evidence/runtime/deployment-smoke-validation.json'); if (evidence.status !== 'Complete' || evidence.outcome !== 'passed') { throw new Error('deployment smoke evidence is not Complete/passed'); }"
 node scripts/release/normalize-deployment-smoke-evidence.mjs
 node scripts/release/check-runtime-evidence-shape.mjs docs/security/evidence/runtime/deployment-smoke-validation.json smokeTargets
 node scripts/security/check-p0-runtime-evidence-files.mjs
 ```
 
-Do not mark `deployment-smoke-validation.json` as release-ready unless the normalization and evidence-file checks also pass for the exact promoted commit.
+Do not mark `deployment-smoke-validation.json` as release-ready unless the smoke command, explicit Complete/passed assertion, normalization and evidence-file checks all pass for the exact promoted commit.
 
 ## Deployment and runtime evidence
 
