@@ -54,8 +54,10 @@ describe('server action identity hardening invariants', () => {
     expect(vendorsAction).not.toContain('return message ||');
   });
 
-  it('sanitizes billing and document download provider failures', () => {
-    expect(billingAction).toContain('failBillingAction(error, context,');
+  it('keeps billing mutations API-only and document downloads sanitized', () => {
+    expect(billingAction).toContain('Billing mutations must go through the hardened /api/billing routes.');
+    expect(billingAction).not.toContain('stripe.checkout.sessions.create');
+    expect(billingAction).not.toContain('stripe.billingPortal.sessions.create');
     expect(billingAction).not.toContain('throw subscriptionError');
     expect(billingAction).not.toContain('throw error;');
     expect(documentDownloadsAction).toContain("throw actionError('Document not found')");
