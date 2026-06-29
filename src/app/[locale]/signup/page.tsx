@@ -56,6 +56,11 @@ function getSafeSignupContinuation(locale: string, nextPath: string | null, plan
   return normalizedNext;
 }
 
+function getSignInHref(locale: string, planId?: string) {
+  const baseHref = `/${locale}/login`;
+  return planId ? `${baseHref}?plan=${encodeURIComponent(planId)}` : baseHref;
+}
+
 export default function SignupPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -69,7 +74,7 @@ export default function SignupPage() {
     () => getSafeSignupContinuation(activeLocale, requestedNext, selectedPlan?.id),
     [activeLocale, requestedNext, selectedPlan?.id],
   );
-  const signInUrl = `/${activeLocale}/login`;
+  const signInUrl = getSignInHref(activeLocale, selectedPlan?.id);
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
