@@ -222,7 +222,7 @@ export function isTenantScopedStoragePath(storagePath: string | null | undefined
   return isDocumentStoragePathInOrganization(storagePath, organizationId);
 }
 
-export const isDocumentStoragePathInOrganizationAlias = isTenantScopedStoragePath;
+export { isDocumentStoragePathInOrganization };
 
 export function assertTenantStoragePathInOrganization(storagePath: string | null | undefined, organizationId: string) {
   return assertDocumentStoragePathInOrganization(storagePath, organizationId);
