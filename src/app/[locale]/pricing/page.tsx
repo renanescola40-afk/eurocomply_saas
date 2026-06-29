@@ -99,7 +99,6 @@ const billingFaqs = [
 ];
 
 function planHref(locale: string, plan: Plan) {
-  if (plan.id === 'enterprise') return `/${locale}/enterprise`;
   if (plan.salesLed) return `/${locale}/book-demo?plan=${plan.id}`;
   return `/${locale}/signup?plan=${plan.id}`;
 }
@@ -113,7 +112,7 @@ export default async function PricingPage({ params }: Props) {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <Link href={`/${locale}`} className="text-lg font-bold tracking-tight">RISCK COMPLY</Link>
           <nav className="flex items-center gap-2 text-sm">
-            <Link href={`/${locale}/enterprise`} className="hidden rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10 sm:inline-flex">Enterprise</Link>
+            <Link href={`/${locale}/book-demo?plan=enterprise`} className="hidden rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10 sm:inline-flex">Enterprise</Link>
             <Link href={`/${locale}/trust`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Trust Center</Link>
             <Link href={`/${locale}/login`} className="rounded-full border border-white/15 px-4 py-2 font-medium hover:bg-white/10">Sign in</Link>
             <Link href={`/${locale}/signup?plan=professional`} className="rounded-full bg-white px-4 py-2 font-semibold text-black hover:bg-white/90">Start trial</Link>
