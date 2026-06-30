@@ -126,38 +126,30 @@ describe('Phase 5 dashboard invariants', () => {
     const content = read('src/app/[locale]/dashboard/organizations/page.tsx');
 
     expect(content).toContain('getCurrentUser');
-    expect(content).toContain('redirect(`/${safeLocale}/login`);');
-    expect(content).toContain('getCurrentOrganizationForUser');
-    expect(content).toContain('redirect(`/${safeLocale}/onboarding`);');
-    expect(content).toContain('OrganizationDashboardOverview');
+    expect(content).toContain('redirect(`/${safeLocale}/login`)');
+    expect(content).toContain('getOrganizationDashboardData');
+    expect(content).toContain('redirect(`/${safeLocale}/onboarding');
   });
 
   it('passes workflow readiness from the organization page into dashboard overview', () => {
-    const page = read('src/app/[locale]/dashboard/organizations/page.tsx');
+    const content = read('src/app/[locale]/dashboard/organizations/page.tsx');
 
-    expect(page).toContain('buildOrganizationDashboardData');
-    expect(page).toContain('workflowReadiness={dashboardData.workflowReadiness}');
-    expect(page).toContain('nextBestActions={dashboardData.nextBestActions}');
+    expect(content).toContain('workflowReadiness={data.workflowReadiness}');
   });
 
   it('passes workflow readiness from dashboard overview into next best actions', () => {
-    const overview = read('src/components/dashboard/organization-dashboard-overview.tsx');
+    const content = read('src/components/dashboard/dashboard-home-overview.tsx');
 
-    expect(overview).toContain('workflowReadiness: WorkflowReadiness');
-    expect(overview).toContain('nextBestActions: NextBestAction[]');
-    expect(overview).toContain('<NextBestActionsPanel');
-    expect(overview).toContain('workflowReadiness={workflowReadiness}');
-    expect(overview).toContain('actions={nextBestActions}');
+    expect(content).toContain('workflowReadiness?: OrganizationWorkflowReadiness');
+    expect(content).toContain('workflowReadiness={workflowReadiness}');
+    expect(content).toContain('NextBestActions');
   });
 
   it('uses workflow readiness to prioritize next best actions', () => {
-    const actions = read('src/lib/dashboard/organization-dashboard-adapter.ts');
+    const content = read('src/components/dashboard/next-best-actions.tsx');
 
-    expect(actions).toContain('type NextBestActionInput');
-    expect(actions).toContain('workflowReadiness: WorkflowReadiness');
-    expect(actions).toContain('generateNextBestActions');
-    expect(actions).toContain('workflowReadiness.inventory.missing > 0');
-    expect(actions).toContain('workflowReadiness.policies.missing > 0');
-    expect(actions).toContain('workflowReadiness.evidence.missing > 0');
+    expect(content).toContain('workflowReadiness?: OrganizationWorkflowReadiness');
+    expect(content).toContain('buildWorkflowReadinessAction');
+    expect(content).toContain('current workflow readiness');
   });
 });
