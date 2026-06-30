@@ -8,8 +8,7 @@ import { dirname } from 'node:path';
 const evidencePath = 'docs/security/evidence/runtime/deployment-smoke-validation.json';
 const timeoutMs = Number.parseInt(process.env.RELEASE_SMOKE_TIMEOUT_MS || '10000', 10);
 const locale = (process.env.RELEASE_SMOKE_LOCALE || 'pt').trim().replace(/[^a-z-]/gi, '') || 'pt';
-const healthTokenEnv = ['HEALTHCHECK', 'TOKEN'].join('_');
-const healthToken = (process.env[healthTokenEnv] || '').trim();
+const readinessToken = (process.env.HEALTHCHECK_TOKEN || '').trim();
 const runObservabilitySmoke = process.env.RELEASE_RUN_OBSERVABILITY_SMOKE === 'true';
 
 const SECURITY_HEADER_REQUIREMENTS = [
@@ -21,15 +20,15 @@ const SECURITY_HEADER_REQUIREMENTS = [
   ['permissions-policy', (value) => value.length > 0],
 ];
 
-const SENSITIVE_READY_NAMES = [
-  'HEALTHCHECK_TOKEN',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET',
-  'UPSTASH_REDIS_REST_TOKEN',
-  'SENTRY_AUTH_TOKEN',
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-];
+const SENSITIVE_MARKERS = [
+  process.env.HEALTHCHECK_TOKEN,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  process.env.STRIPE_SECRET_KEY,
+  process.env.STRIPE_WEBHOOK_SECRET,
+  process.env.UPSTASH_REDIS_REST_TOKEN,
+  process.env.SENTRY_AUTH_TOKEN,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+].filter(Boolean);
 
 function now() {
   return new Date().toISOString();
@@ -108,13 +107,26 @@ function isRedirect(response) {
   return [301, 302, 303, 307, 308].includes(response.status);
 }
 
+function safeLocation(location) {
+  if (!location) return null;
+
+  try {
+    const parsed = location.startsWith('http')
+      ? new URL(location)
+      : new URL(location, 'https://example.invalid');
+    return `${parsed.pathname}${parsed.search ? '?<query-redacted>' : ''}`;
+  } catch {
+    return location.includes('?') ? `${location.split('?')[0]}?<query-redacted>` : location;
+  }
+}
+
 function safeResponseSummary(response) {
   return {
     status: response.status,
     error: response.error ?? null,
     contentType: headerValue(response.headers, 'content-type') || null,
     cacheControl: headerValue(response.headers, 'cache-control') || null,
-    location: headerValue(response.headers, 'location') || null,
+    location: safeLocation(headerValue(response.headers, 'location')),
     bodyStatus: response.body?.status ?? null,
   };
 }
@@ -134,7 +146,7 @@ function request(url, options = {}) {
       timeout: timeoutMs,
       headers: {
         Accept: accept,
-        'User-Agent': 'risck-comply-release-smoke/2.0',
+        'User-Agent': 'risck-comply-release-smoke/3.0',
         ...headers,
       },
     };
@@ -187,7 +199,7 @@ function readyGroupConfigured(body, name) {
 
 function readyEvidenceIsRedacted(body) {
   const serialized = JSON.stringify(body || {});
-  return SENSITIVE_READY_NAMES.every((name) => !serialized.includes(name));
+  return SENSITIVE_MARKERS.every((marker) => !serialized.includes(marker));
 }
 
 function locationPointsToLogin(location, localeValue) {
@@ -210,7 +222,7 @@ function releaseMetadata() {
   return {
     commit: commit ? { source: commit.name, sha: commit.value } : null,
     build: build ? { source: build.name, sha: build.value } : null,
-    rollback: rollback ? { source: rollback.name, value: rollback.value, url: normalizeUrl(rollback.value) } : null,
+    rollback: rollback ? { source: rollback.name, url: normalizeUrl(rollback.value) } : null,
   };
 }
 
@@ -221,17 +233,20 @@ async function smoke(baseUrl) {
     { name: 'pricingPublicLoads', path: `/${locale}/pricing` },
     { name: 'trustPublicLoads', path: `/${locale}/trust` },
     { name: 'loginPublicLoads', path: `/${locale}/login` },
+    { name: 'signupPublicLoads', path: `/${locale}/signup` },
   ];
 
   const pageResponses = {};
+  const pageResults = [];
   for (const page of publicPages) {
     const response = await request(route(baseUrl, page.path));
-    pageResponses[page.name] = safeResponseSummary(response);
-    checks.push(createCheck(page.name, isHtml(response), {
-      path: page.path,
-      ...safeResponseSummary(response),
-    }));
+    const passed = isHtml(response);
+    const summary = safeResponseSummary(response);
+    pageResponses[page.name] = summary;
+    pageResults.push({ name: page.name, path: page.path, passed, status: response.status });
+    checks.push(createCheck(page.name, passed, { path: page.path, ...summary }));
   }
+  checks.push(createCheck('publicLaunchPagesLoad', pageResults.every((page) => page.passed), { pages: pageResults }));
 
   const landingResponse = await request(route(baseUrl, `/${locale}`));
   const securityHeaders = Object.fromEntries(
@@ -256,51 +271,39 @@ async function smoke(baseUrl) {
   checks.push(createCheck('readyEndpointRejectsAnonymous', isJsonOk(readyAnonymous, 401) && readyAnonymous.body?.status === 'unauthorized', safeResponseSummary(readyAnonymous)));
   checks.push(createCheck('readyEndpointAnonymousNoStore', hasNoStore(readyAnonymous.headers), safeResponseSummary(readyAnonymous)));
 
-  const readyAuthenticated = healthToken
+  const readyAuthenticated = readinessToken
     ? await request(route(baseUrl, '/api/ready'), {
       accept: 'application/json',
-      headers: { Authorization: `${['Bear', 'er'].join('')} ${healthToken}` },
+      headers: { Authorization: `Bearer ${readinessToken}` },
     })
     : { status: 0, headers: {}, body: null, error: 'missing_protected_readiness_token' };
 
   checks.push(createCheck('readyEndpointOkWithToken', readyAuthenticated.status === 200 && readyAuthenticated.body?.status === 'ready', safeResponseSummary(readyAuthenticated)));
   checks.push(createCheck('readyEndpointTokenNoStore', hasNoStore(readyAuthenticated.headers), safeResponseSummary(readyAuthenticated)));
-  checks.push(createCheck('readyEndpointDoesNotExposeSecretNames', readyEvidenceIsRedacted(readyAuthenticated.body), {
-    redactedSecretNames: true,
-  }));
-  checks.push(createCheck('supabaseEnvironmentConfigured', readyGroupConfigured(readyAuthenticated.body, 'supabase'), {
-    group: readyGroup(readyAuthenticated.body, 'supabase') ?? null,
-  }));
-  checks.push(createCheck('stripeEnvironmentConfigured', readyGroupConfigured(readyAuthenticated.body, 'stripe'), {
-    group: readyGroup(readyAuthenticated.body, 'stripe') ?? null,
-  }));
-  checks.push(createCheck('sentryObservabilityConfigured', readyGroupConfigured(readyAuthenticated.body, 'sentry'), {
-    group: readyGroup(readyAuthenticated.body, 'sentry') ?? null,
-  }));
-  checks.push(createCheck('databaseReachable', readyAuthenticated.body?.checks?.databaseReachable === true, {
-    database: readyAuthenticated.body?.database ?? null,
-  }));
-  checks.push(createCheck('enterpriseStorageScannerReady', readyAuthenticated.body?.checks?.enterpriseStorageScannerConfigured === true, {
-    enterpriseStorageScanner: readyAuthenticated.body?.enterpriseStorageScanner ?? null,
-  }));
+  checks.push(createCheck('readyEndpointDoesNotExposeSecrets', readyEvidenceIsRedacted(readyAuthenticated.body), { valuesRedacted: true }));
+  checks.push(createCheck('supabaseEnvironmentConfigured', readyGroupConfigured(readyAuthenticated.body, 'supabase'), { group: readyGroup(readyAuthenticated.body, 'supabase') ?? null }));
+  checks.push(createCheck('stripeEnvironmentConfigured', readyGroupConfigured(readyAuthenticated.body, 'stripe'), { group: readyGroup(readyAuthenticated.body, 'stripe') ?? null }));
+  checks.push(createCheck('stripeApiReachable', readyAuthenticated.body?.checks?.stripeApiReachable === true, { stripe: readyAuthenticated.body?.stripe ?? null }));
+  checks.push(createCheck('sentryObservabilityConfigured', readyAuthenticated.body?.checks?.sentryObservabilityConfigured === true, { group: readyGroup(readyAuthenticated.body, 'sentry') ?? null }));
+  checks.push(createCheck('databaseReachable', readyAuthenticated.body?.checks?.databaseReachable === true, { database: readyAuthenticated.body?.database ?? null }));
+  checks.push(createCheck('enterpriseStorageScannerReady', readyAuthenticated.body?.checks?.enterpriseStorageScannerConfigured === true, { enterpriseStorageScanner: readyAuthenticated.body?.enterpriseStorageScanner ?? null }));
 
   const protectedRoutes = [
     { name: 'dashboardRequiresAuthentication', path: `/${locale}/dashboard` },
     { name: 'organizationDashboardRequiresAuthentication', path: `/${locale}/dashboard/organizations` },
   ];
+  const protectedRouteResults = [];
 
   for (const protectedRoute of protectedRoutes) {
     const response = await request(route(baseUrl, protectedRoute.path));
     const location = headerValue(response.headers, 'location');
-    checks.push(createCheck(protectedRoute.name, isRedirect(response) && locationPointsToLogin(location, locale), {
-      path: protectedRoute.path,
-      ...safeResponseSummary(response),
-    }));
-    checks.push(createCheck(`${protectedRoute.name}NoStore`, hasNoStore(response.headers), {
-      path: protectedRoute.path,
-      cacheControl: headerValue(response.headers, 'cache-control') || null,
-    }));
+    const redirectsToLogin = isRedirect(response) && locationPointsToLogin(location, locale);
+    const noStore = hasNoStore(response.headers);
+    protectedRouteResults.push({ name: protectedRoute.name, path: protectedRoute.path, redirectsToLogin, noStore, status: response.status });
+    checks.push(createCheck(protectedRoute.name, redirectsToLogin, { path: protectedRoute.path, ...safeResponseSummary(response) }));
+    checks.push(createCheck(`${protectedRoute.name}NoStore`, noStore, { path: protectedRoute.path, cacheControl: headerValue(response.headers, 'cache-control') || null }));
   }
+  checks.push(createCheck('privateRoutesHaveNoStore', protectedRouteResults.every((routeResult) => routeResult.noStore), { routes: protectedRouteResults }));
 
   const observabilityAnonymous = await request(route(baseUrl, '/api/observability/smoke'), {
     method: 'POST',
@@ -310,13 +313,21 @@ async function smoke(baseUrl) {
   checks.push(createCheck('observabilitySmokeRejectsAnonymous', observabilityAnonymous.status === 401 && observabilityAnonymous.body?.status === 'unauthorized', safeResponseSummary(observabilityAnonymous)));
   checks.push(createCheck('observabilitySmokeNoStore', hasNoStore(observabilityAnonymous.headers), safeResponseSummary(observabilityAnonymous)));
 
+  const sensitiveApiNoStore = [
+    { name: 'healthEndpointNoStore', noStore: hasNoStore(health.headers), status: health.status },
+    { name: 'readyEndpointAnonymousNoStore', noStore: hasNoStore(readyAnonymous.headers), status: readyAnonymous.status },
+    { name: 'readyEndpointTokenNoStore', noStore: hasNoStore(readyAuthenticated.headers), status: readyAuthenticated.status },
+    { name: 'observabilitySmokeNoStore', noStore: hasNoStore(observabilityAnonymous.headers), status: observabilityAnonymous.status },
+  ];
+  checks.push(createCheck('sensitiveApisHaveNoStore', sensitiveApiNoStore.every((api) => api.noStore), { apis: sensitiveApiNoStore }));
+
   let observabilityAuthenticated = null;
-  if (runObservabilitySmoke && healthToken) {
+  if (runObservabilitySmoke && readinessToken) {
     observabilityAuthenticated = await request(route(baseUrl, '/api/observability/smoke'), {
       method: 'POST',
       accept: 'application/json',
       headers: {
-        Authorization: `${['Bear', 'er'].join('')} ${healthToken}`,
+        Authorization: `Bearer ${readinessToken}`,
         Origin: baseUrl,
       },
     });
@@ -352,15 +363,15 @@ async function smoke(baseUrl) {
 async function validateRollbackTarget(metadata) {
   if (!metadata.rollback) {
     return createCheck('rollbackTargetConfigured', false, {
-      expectedEnv: ['RELEASE_ROLLBACK_TARGET', 'ROLLBACK_TARGET', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL', 'VERCEL_ROLLBACK_DEPLOYMENT_URL'],
+      configured: false,
     });
   }
 
   if (!metadata.rollback.url) {
-    return createCheck('rollbackTargetConfigured', true, {
+    return createCheck('rollbackTargetConfigured', false, {
       source: metadata.rollback.source,
       networkVerified: false,
-      note: 'Rollback target is configured but is not a URL, so deployment health was not probed.',
+      note: 'Rollback target must be a valid URL for public production release smoke.',
     });
   }
 
@@ -378,7 +389,7 @@ const targetUrls = targets();
 const metadata = releaseMetadata();
 const globalChecks = [
   createCheck('productionUrlConfigured', targetUrls.length > 0, { targetCount: targetUrls.length }),
-  createCheck('protectedReadinessTokenConfigured', Boolean(healthToken), { present: Boolean(healthToken) }),
+  createCheck('protectedReadinessTokenConfigured', Boolean(readinessToken), { present: Boolean(readinessToken) }),
   createCheck('lastCommitValidated', Boolean(metadata.commit?.sha), { source: metadata.commit?.source ?? null, sha: metadata.commit?.sha ?? null }),
   createCheck('buildShaRegistered', Boolean(metadata.build?.sha), { source: metadata.build?.source ?? null, sha: metadata.build?.sha ?? null }),
   await validateRollbackTarget(metadata),
@@ -417,7 +428,7 @@ const evidence = {
   reviewer: 'RISCK COMPLY release automation',
   releaseTarget: process.env.RELEASE_TARGET || 'production',
   summary: outcome === 'passed'
-    ? 'Production deployment smoke passed across public pages, protected routes, security headers, no-store controls, readiness, observability guard, rollback target, and build metadata.'
+    ? 'Production deployment smoke passed across public launch pages, protected routes, security headers, no-store controls, readiness, Stripe/Supabase/Sentry checks, rollback target, and build metadata.'
     : 'Production deployment smoke is missing or failed; release remains blocked.',
   redactionConfirmation: 'Redaction confirmed: no token, cookie, authorization header, secret value, or secret environment variable name is written to this evidence file.',
   evidenceLocations: [
@@ -431,7 +442,7 @@ const evidence = {
   controlsVerified: outcome === 'passed' ? passedControls : [],
   runtimeConfiguration: {
     targetCount: targetUrls.length,
-    hasProtectedReadinessToken: Boolean(healthToken),
+    hasProtectedReadinessToken: Boolean(readinessToken),
     timeoutMs,
     locale,
     observabilitySmokeEmissionEnabled: runObservabilitySmoke,

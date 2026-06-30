@@ -49,7 +49,7 @@ describe('billing UI API boundary', () => {
 
   it('keeps checkout session creation ready for European B2B billing', () => {
     expect(billingCheckoutRoute).toContain('locale,');
-    expect(billingCheckoutRoute).toContain('cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`');
+    expect(billingCheckoutRoute).toContain("cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`");
     expect(billingCheckoutRoute).toContain("billing_address_collection: 'required'");
     expect(billingCheckoutRoute).toContain('customer_update');
     expect(billingCheckoutRoute).toContain('tax_id_collection');

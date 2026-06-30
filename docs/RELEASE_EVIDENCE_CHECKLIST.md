@@ -27,6 +27,13 @@ This checklist records the evidence required before EuroComply can be represente
 | External review evidence | Open/not_started until real external review or pentest evidence exists | Required for enterprise |
 | Release decision | No-Go until the exact commit has passing evidence bundle and zero P0 Open/Exception blockers | Yes |
 
+## Required P0 evidence statements
+
+These statements intentionally match the P0 progress gate wording. They do **not** mark runtime evidence as complete; they declare the required evidence that must exist before Go.
+
+- Live RLS validation completed against the target Supabase project is mandatory before production or enterprise Go.
+- External security review or pentest completed is mandatory before enterprise pilot, enterprise procurement, or enterprise-ready claims.
+
 ## GitHub enterprise evidence
 
 | Evidence | Status | Required before Go |
