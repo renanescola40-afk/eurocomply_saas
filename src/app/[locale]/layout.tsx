@@ -4,6 +4,7 @@ import { getMessages } from 'next-intl/server';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { PostHogAnalyticsProvider } from '@/components/analytics/PostHogAnalyticsProvider';
 import { AnalyticsConsentBanner } from '@/components/analytics/AnalyticsConsentBanner';
+import { AuthFloatingControls } from '@/components/auth/AuthFloatingControls';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffects from '@/components/GlobalClientEffects';
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     it: {
       title: 'Risck Comply - Sistema Operativo di Compliance IA',
-      description: 'AI Act readiness, inventario dei sistemi IA, evidenze di rischio, documenti di governance e workflow d’audit per team B2B europei.',
+      description: 'AI Act readiness, inventario dei sistemi IA, evidenze di rischio, documenti di governance e workflow d’audit pour team B2B europei.',
     },
     de: {
       title: 'Risck Comply - Betriebssystem für KI-Compliance',
@@ -71,6 +72,16 @@ export default async function LocaleLayout({ children, params }: Props) {
   const safeLocale = routing.locales.includes(locale as Locale) ? locale : 'en';
   const messages = await getMessages();
 
+  const sharedShell = (
+    <>
+      {children}
+      <GapAnalysisShortcut />
+      <GlobalClientEffects />
+      <AnalyticsConsentBanner />
+      <Toaster />
+    </>
+  );
+
   return (
     <html lang={safeLocale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
@@ -83,11 +94,8 @@ export default async function LocaleLayout({ children, params }: Props) {
           >
             <AuthProvider>
               <PostHogAnalyticsProvider>
-                {children}
-                <GapAnalysisShortcut />
-                <GlobalClientEffects />
-                <AnalyticsConsentBanner />
-                <Toaster />
+                {sharedShell}
+                <AuthFloatingControls locale={safeLocale} />
               </PostHogAnalyticsProvider>
             </AuthProvider>
           </ThemeProvider>
