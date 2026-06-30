@@ -61,6 +61,8 @@ describe('Phase 5 dashboard invariants', () => {
     expect(login).toContain('authenticateWithRedirect');
     expect(login).toContain('signIn.create({ identifier: email, password });');
     expect(login).not.toContain('<SignIn');
+    expect(login).not.toContain('fallbackRedirectUrl={afterSignInUrl}');
+    expect(login).not.toContain('forceRedirectUrl={afterSignInUrl}');
   });
 
   it('keeps signup continuation defaulted to onboarding with a custom stable entry template', () => {
@@ -83,6 +85,8 @@ describe('Phase 5 dashboard invariants', () => {
     expect(signup).toContain('!selectedPlan');
     expect(signup).toContain('getSignupPlanHref');
     expect(signup).not.toContain('<SignUp');
+    expect(signup).not.toContain('fallbackRedirectUrl={continuationHref}');
+    expect(signup).not.toContain('forceRedirectUrl={continuationHref}');
     expect(signup).not.toContain(signupNextPattern);
     expect(signup).not.toContain(loginNextPattern);
   });
