@@ -1,4 +1,4 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 type CurrentAppUser = {
   id: string;
@@ -6,33 +6,38 @@ type CurrentAppUser = {
   firstName?: string | null;
   lastName?: string | null;
   imageUrl?: string | null;
-  source: 'clerk';
-  clerkUserId: string;
-  supabaseUserId?: null;
+  source: 'supabase';
+  clerkUserId?: null;
+  supabaseUserId: string;
 };
+
+function readMetadataString(metadata: Record<string, unknown>, key: string) {
+  const value = metadata[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
 
 export async function getCurrentUser(): Promise<CurrentAppUser | null> {
   try {
-    const clerkAuth = await auth();
+    const supabase = await createServerSupabaseClient();
+    const { data, error } = await supabase.auth.getUser();
 
-    if (!clerkAuth.userId) {
+    if (error || !data.user) {
       return null;
     }
 
-    const clerkUser = await currentUser().catch(() => null);
-    const primaryEmail = clerkUser?.emailAddresses.find((email) => email.id === clerkUser.primaryEmailAddressId)?.emailAddress
-      ?? clerkUser?.emailAddresses[0]?.emailAddress
-      ?? null;
+    const metadata = data.user.user_metadata ?? {};
+    const fullName = readMetadataString(metadata, 'full_name') ?? readMetadataString(metadata, 'name');
+    const nameParts = fullName?.split(/\s+/).filter(Boolean) ?? [];
 
     return {
-      id: clerkAuth.userId,
-      clerkUserId: clerkAuth.userId,
-      supabaseUserId: null,
-      email: primaryEmail,
-      firstName: clerkUser?.firstName ?? null,
-      lastName: clerkUser?.lastName ?? null,
-      imageUrl: clerkUser?.imageUrl ?? null,
-      source: 'clerk',
+      id: data.user.id,
+      supabaseUserId: data.user.id,
+      clerkUserId: null,
+      email: data.user.email ?? null,
+      firstName: readMetadataString(metadata, 'first_name') ?? nameParts[0] ?? null,
+      lastName: readMetadataString(metadata, 'last_name') ?? nameParts.slice(1).join(' ') || null,
+      imageUrl: readMetadataString(metadata, 'avatar_url') ?? readMetadataString(metadata, 'picture'),
+      source: 'supabase',
     };
   } catch {
     return null;
