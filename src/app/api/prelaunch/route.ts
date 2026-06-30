@@ -157,14 +157,13 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Waitlist capture is not configured yet.' }, { status: 503 });
   }
 
-  return noStoreJson(
-    {
-      ok: true,
-      status: 'confirmed',
-      message: 'You are on the Risck Comply waitlist.',
-      joinedAt: record.updated_at,
-      launchAt: record.launch_target_at,
-    },
-    { status: 201 },
-  );
+  const responseBody = {
+    ok: true,
+    status: 'confirmed',
+    message: 'You are on the Risck Comply waitlist.',
+    joinedAt: record.updated_at,
+    launchAt: record.launch_target_at,
+  };
+
+  return noStoreJson(responseBody, { status: 201 });
 }
