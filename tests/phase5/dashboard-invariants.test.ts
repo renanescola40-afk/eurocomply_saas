@@ -129,6 +129,13 @@ describe('Phase 5 dashboard invariants', () => {
     const content = read('src/app/[locale]/dashboard/organizations/page.tsx');
 
     expect(content).toContain('workflowReadiness={data.workflowReadiness}');
+  });
+
+  it('uses workflow readiness to prioritize next best actions', () => {
+    const content = read('src/components/dashboard/next-best-actions.tsx');
+
+    expect(content).toContain('workflowReadiness?: OrganizationWorkflowReadiness');
     expect(content).toContain('buildWorkflowReadinessAction');
+    expect(content).toContain('current workflow readiness');
   });
 });
