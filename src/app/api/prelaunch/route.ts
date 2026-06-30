@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 
-import { sendPrelaunchWaitlistEmail } from '@/lib/email/prelaunch-waitlist';
+import { sendInternalWaitlistNotification, sendPrelaunchWaitlistEmail } from '@/lib/email/prelaunch-waitlist';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
@@ -30,6 +30,11 @@ type WaitlistLeadRecord = {
   status: string;
   launch_target_at: string;
   updated_at: string;
+};
+
+type WaitlistSaveResult = {
+  saved: boolean;
+  totalLeads: number | null;
 };
 
 function getClientHint(request: NextRequest) {
@@ -123,9 +128,9 @@ function buildRecord(body: Record<string, unknown>): WaitlistLeadRecord | null {
   };
 }
 
-async function saveWaitlistLead(record: WaitlistLeadRecord) {
+async function saveWaitlistLead(record: WaitlistLeadRecord): Promise<WaitlistSaveResult> {
   const supabase = tryCreateAdminClient();
-  if (!supabase) return false;
+  if (!supabase) return { saved: false, totalLeads: null };
 
   const { error } = await supabase
     .from('waitlist_leads')
@@ -133,10 +138,18 @@ async function saveWaitlistLead(record: WaitlistLeadRecord) {
 
   if (error) {
     console.error('[prelaunch] Supabase insert failed', { reason: 'waitlist_lead_insert_failed' });
-    return false;
+    return { saved: false, totalLeads: null };
   }
 
-  return true;
+  const { count, error: countError } = await supabase
+    .from('waitlist_leads')
+    .select('email', { count: 'exact', head: true });
+
+  if (countError) {
+    console.error('[prelaunch] Supabase count failed', { reason: 'waitlist_lead_count_failed' });
+  }
+
+  return { saved: true, totalLeads: typeof count === 'number' ? count : null };
 }
 
 async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord) {
@@ -154,6 +167,26 @@ async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord
     return result.sent;
   } catch {
     console.error('[prelaunch] Confirmation email failed', { reason: 'confirmation_email_failed' });
+    return false;
+  }
+}
+
+async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadRecord, totalLeads: number | null) {
+  try {
+    const result = await sendInternalWaitlistNotification({
+      to: record.email,
+      companyName: record.company_name,
+      role: record.role,
+      locale: record.locale,
+      joinedAt: record.updated_at,
+      launchAt: record.launch_target_at,
+      waitlistUrl: getWaitlistUrl(request, record.locale),
+      totalLeads,
+    });
+
+    return result.sent;
+  } catch {
+    console.error('[prelaunch] Internal notification failed', { reason: 'internal_notification_failed' });
     return false;
   }
 }
@@ -176,8 +209,9 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Please provide company name, work email and role.' }, { status: 400 });
   }
 
-  const saved = await saveWaitlistLead(record);
+  const { saved, totalLeads } = await saveWaitlistLead(record);
   const emailed = await sendConfirmation(request, record);
+  const internalNotified = await notifyInternalTeam(request, record, totalLeads);
 
   return noStoreJson(
     {
@@ -186,6 +220,8 @@ export async function POST(request: NextRequest) {
       message: 'You are on the Risck Comply waitlist.',
       saved,
       emailed,
+      internalNotified,
+      totalLeads,
       joinedAt: record.updated_at,
       launchAt: record.launch_target_at,
     },
