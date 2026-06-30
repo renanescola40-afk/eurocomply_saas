@@ -53,9 +53,8 @@ function getRootAuthCallbackUrl(next?: string) {
   const locale = getLocaleFromWindow();
   const callbackUrl = new URL('/auth/callback', window.location.origin);
   callbackUrl.searchParams.set('locale', locale);
-  const safeNext = next?.trim();
-  if (safeNext && safeNext.startsWith(`/${locale}/`) && !safeNext.startsWith('//') && !safeNext.includes('://')) {
-    callbackUrl.searchParams.set('next', safeNext);
+  if (next && next.startsWith(`/${locale}/`) && !next.startsWith('//') && !next.includes('://')) {
+    callbackUrl.searchParams.set('next', next);
   }
   return callbackUrl.toString();
 }
