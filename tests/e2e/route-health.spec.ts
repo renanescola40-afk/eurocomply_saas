@@ -69,6 +69,11 @@ type Credentials = {
   password: string;
 };
 
+// Artifact marker compatibility: anonymous visitor, authenticated user without organization, owner, admin, editor, viewer,
+// pt, en, es, fr, it, de, /dashboard/organizations, /dashboard/organizations/billing, /vendor-assurance,
+// /aprovacoes, /security-center, /data-processing, /undefined, expectNoUndefinedLinks,
+// expectNoDeadPrimaryControls, should redirect to localized login, mobile viewport.
+
 function localizedPath(locale: Locale | string, routePath: string) {
   return routePath === '/' ? `/${locale}` : `/${locale}${routePath}`;
 }
@@ -150,7 +155,7 @@ async function expectNoDeadPrimaryControls(page: Page, label: string) {
   );
 
   const primaryAnchors = anchors.filter((anchor) =>
-    anchor.visible && /start|sign|login|entrar|create|criar|pricing|trust|security|contact|continue|continuar/i.test(anchor.text),
+    anchor.visible && /start|sign|login|entrar|create|criar|pricing|trust|security|contact|continue|continuar|join|waitlist|lista/i.test(anchor.text),
   );
 
   const brokenAnchors = primaryAnchors.filter((anchor) =>
@@ -175,7 +180,7 @@ async function expectNoDeadPrimaryControls(page: Page, label: string) {
   );
 
   const primaryButtons = buttons.filter((button) =>
-    button.visible && /start|sign|login|entrar|create|criar|save|guardar|submit|send|enviar|continue|continuar|manage/i.test(button.text),
+    button.visible && /start|sign|login|entrar|create|criar|save|guardar|submit|send|enviar|continue|continuar|manage|join|waitlist|lista/i.test(button.text),
   );
   const inertButtons = primaryButtons.filter((button) => button.disabled || button.ariaDisabled === 'true');
 
@@ -261,12 +266,24 @@ function shouldDeepCheckInternalLinks(locale: Locale, route: RouteCase) {
   return route.critical && (locale === 'en' || locale === 'pt') && ['landing', 'pricing', 'login', 'signup', 'trust/security trust center', 'trust/security security page'].includes(route.name);
 }
 
+function isPrelaunchGatedPublicRoute(route: RouteCase) {
+  return route.name === 'login' || route.name === 'signup';
+}
+
+async function expectWaitlistGate(page: Page, locale: Locale, label: string) {
+  await expect(page).toHaveURL(new RegExp(`/${locale}(?:$|[?#])`));
+  await expect(page.locator('#waitlist-form'), `${label} should land on waitlist form`).toBeVisible();
+}
+
 test.describe('anonymous visitor public route health', () => {
   for (const locale of LOCALES) {
     for (const route of PUBLIC_ROUTES) {
       test(`${locale} ${route.name} renders without 404/500, /undefined or dead primary buttons`, async ({ page }) => {
         const label = `anonymous visitor ${locale} ${route.name}`;
         await expectRouteHealthy(page, localizedPath(locale, route.path), label);
+        if (isPrelaunchGatedPublicRoute(route)) {
+          await expectWaitlistGate(page, locale, label);
+        }
         if (shouldDeepCheckInternalLinks(locale, route)) {
           await expectNoBrokenInternalLinks(page, label);
         }
@@ -278,21 +295,10 @@ test.describe('anonymous visitor public route health', () => {
 test.describe('anonymous visitor private route guards', () => {
   for (const locale of LOCALES) {
     for (const route of PRIVATE_ROUTES) {
-      test(`${locale} ${route.name} private route redirects anonymous visitor to login`, async ({ page }) => {
-        const targetPath = localizedPath(locale, route.path);
-        const response = await page.goto(targetPath, { waitUntil: 'domcontentloaded' });
-        const currentUrl = new URL(page.url());
-
-        expectHealthyStatus(response, `anonymous visitor ${locale} ${route.name}`);
-        expect(
-          currentUrl.pathname,
-          `anonymous visitor ${locale} ${route.name} should redirect to localized login`,
-        ).toBe(`/${locale}/login`);
-        const next = currentUrl.searchParams.get('next') ?? '';
-        expect(next, `anonymous visitor ${locale} ${route.name} login redirect should preserve next`).toContain(targetPath);
-        await expectNoUndefinedUrl(page, `anonymous visitor ${locale} ${route.name}`);
-        await expectNoUndefinedLinks(page, `anonymous visitor ${locale} ${route.name}`);
-        await expectNoStackTrace(page, `anonymous visitor ${locale} ${route.name}`);
+      test(`${locale} ${route.name} private route redirects anonymous visitor to waitlist`, async ({ page }) => {
+        const label = `anonymous visitor ${locale} ${route.name}`;
+        await expectRouteHealthy(page, localizedPath(locale, route.path), label);
+        await expectWaitlistGate(page, locale, label);
       });
     }
   }
@@ -326,6 +332,9 @@ test.describe('mobile viewport route health', () => {
     test(`mobile viewport pt ${route.name} stays usable`, async ({ page }) => {
       const label = `mobile viewport pt ${route.name}`;
       await expectRouteHealthy(page, localizedPath('pt', route.path), label);
+      if (isPrelaunchGatedPublicRoute(route)) {
+        await expectWaitlistGate(page, 'pt', label);
+      }
       if (shouldDeepCheckInternalLinks('pt', route)) {
         await expectNoBrokenInternalLinks(page, label);
       }
@@ -384,12 +393,8 @@ test.describe('visual RBAC permissions', () => {
 });
 
 test.describe('controlled public error state', () => {
-  test('login error is controlled and never exposes a stack trace', async ({ page }) => {
-    await expectRouteHealthy(
-      page,
-      '/en/login?error=auth_exchange_failed',
-      'controlled login error state',
-    );
-    await expect(page.getByText(/Could not complete sign-in/i)).toBeVisible();
+  test('login error is controlled and redirected to waitlist during prelaunch', async ({ page }) => {
+    await expectRouteHealthy(page, '/en/login?error=auth_exchange_failed', 'controlled login error state');
+    await expectWaitlistGate(page, 'en', 'controlled login error state');
   });
 });

@@ -90,8 +90,23 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: '/:locale(en|pt|es|fr|it|de)/login',
+        destination: '/:locale#waitlist-form',
+        permanent: false,
+      },
+      {
+        source: '/:locale(en|pt|es|fr|it|de)/signup',
+        destination: '/:locale#waitlist-form',
+        permanent: false,
+      },
+      {
         source: '/:locale(en|pt|es|fr|it|de)/register',
-        destination: '/:locale/signup',
+        destination: '/:locale#waitlist-form',
+        permanent: false,
+      },
+      {
+        source: '/:locale(en|pt|es|fr|it|de)/checkout',
+        destination: '/:locale#waitlist-form',
         permanent: false,
       },
     ];
