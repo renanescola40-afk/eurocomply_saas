@@ -18,14 +18,18 @@ import {
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 const CHECKOUT_JSON_MAX_BYTES = 2 * 1024;
+const CHECKOUT_LOCALES = ['en', 'pt', 'es', 'fr', 'it', 'de'] as const satisfies readonly Stripe.Checkout.SessionCreateParams.Locale[];
+
+type CheckoutLocale = (typeof CHECKOUT_LOCALES)[number];
 
 const checkoutBodySchema = z.object({
   plan: z.string().trim().min(1).max(64),
   locale: z.string().trim().max(16).optional().default('en'),
 });
 
-function normalizeCheckoutLocale(locale: string) {
-  return locale.match(/^(en|pt|es|fr|it|de)$/) ? locale : 'en';
+function normalizeCheckoutLocale(locale: string): CheckoutLocale {
+  const normalized = locale.trim().toLowerCase();
+  return CHECKOUT_LOCALES.includes(normalized as CheckoutLocale) ? normalized as CheckoutLocale : 'en';
 }
 
 async function getOrganizationStripeCustomerId(organizationId: string) {
@@ -158,12 +162,22 @@ export async function POST(request: Request) {
       customer: stripeCustomerId,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
-      cancel_url: `${returnBaseUrl.appUrl}/${locale}/pricing?checkout=cancelled`,
+      cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`,
       client_reference_id: organization.id,
+      locale,
       metadata,
       subscription_data: {
         metadata,
       },
+      billing_address_collection: 'required',
+      customer_update: {
+        address: 'auto',
+        name: 'auto',
+      },
+      tax_id_collection: {
+        enabled: true,
+      },
+      payment_method_collection: 'always',
       allow_promotion_codes: true,
     });
 

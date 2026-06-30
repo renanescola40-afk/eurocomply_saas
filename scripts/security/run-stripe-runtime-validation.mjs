@@ -51,6 +51,12 @@ assertIncludes('checkout route', source.checkoutRoute, [
   'isSelfServePlan',
   'getStripePriceId',
   "action: 'checkout_created'",
+  'locale,',
+  'checkout?plan=${plan}&checkout=cancelled',
+  "billing_address_collection: 'required'",
+  'customer_update',
+  'tax_id_collection',
+  "payment_method_collection: 'always'",
 ]);
 
 assertIncludes('billing portal route', source.portalRoute, [
@@ -118,6 +124,7 @@ const testCoverage = {
   subscriptionUpdated: source.webhookHandlerTest.includes('customer.subscription.updated'),
   subscriptionDeleted: source.webhookHandlerTest.includes('customer.subscription.deleted'),
   customerMismatch: source.webhookHandlerTest.includes('Stripe customer does not match organization billing profile'),
+  checkoutSessionHardening: source.checkoutRoute.includes("billing_address_collection: 'required'") && source.checkoutRoute.includes('tax_id_collection'),
 };
 
 const failedCoverage = Object.entries(testCoverage).filter(([, passed]) => !passed).map(([name]) => name);
@@ -135,17 +142,18 @@ const evidence = {
   generatedAt: timestamp,
   commitSha: getCommitSha(),
   repository: process.env.GITHUB_REPOSITORY || 'renanescola40-afk/eurocomply_saas',
-  summary: 'Stripe paid billing validation passed for checkout, billing portal, webhook signature enforcement, webhook idempotency, subscription sync, server-side plan enforcement, customer/subscription mapping validation and billing audit events.',
+  summary: 'Stripe paid billing validation passed for checkout, billing portal, webhook signature enforcement, webhook idempotency, subscription sync, server-side plan enforcement, hardened checkout session collection, customer/subscription mapping validation and billing audit events.',
   redactionConfirmation: 'Redaction confirmed for runtime evidence.',
   evidenceLocations: Object.values(files),
   controlsVerified: [
     'Checkout requires authenticated user, active organization, manage_billing permission, step-up, trusted origin and rate limiting',
+    'Checkout session keeps plan-aware cancellation, locale, billing address collection, tax ID collection and payment method collection controls',
     'Billing portal requires authenticated user, active organization, manage_billing permission, step-up and trusted origin',
     'Stripe webhook routes reject missing and invalid signatures before handler dispatch',
     'Stripe webhook events are claimed idempotently before subscription mutation',
     'Stripe subscription sync validates organization metadata, customer binding and server-side plan mapping',
   ],
-  checkout: { tested: true, serverSidePlanAllowlist: true, serverSidePriceMapping: true, clientSuppliedPriceAccepted: false },
+  checkout: { tested: true, serverSidePlanAllowlist: true, serverSidePriceMapping: true, clientSuppliedPriceAccepted: false, sessionCollectionHardened: true },
   portal: { tested: true, stripeCustomerLoadedServerSide: true },
   webhookSignature: { tested: true, missingSignatureRejected: true, invalidSignatureRejected: true },
   webhookIdempotency: { tested: true, canonicalLedgerTable: 'public.stripe_events_processed', checklistCompatibleTable: 'public.stripe_webhook_events' },
