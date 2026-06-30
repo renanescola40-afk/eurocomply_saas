@@ -125,5 +125,6 @@ describe('Phase 5 dashboard invariants', () => {
     const content = read('src/app/[locale]/dashboard/organizations/page.tsx');
 
     expect(content).toContain('workflowReadiness={data.workflowReadiness}');
+    expect(content).toContain('buildWorkflowReadinessAction');
   });
 });
