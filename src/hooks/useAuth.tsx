@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 type SignupMetadata = {
@@ -70,9 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then((result: { data: { session: Session | null } }) => {
       if (!mounted) return;
-      const nextSession = data.session ?? null;
+      const nextSession = result.data.session ?? null;
       setSession(nextSession);
       setUser(normalizeUser(nextSession?.user ?? null));
       setLoading(false);
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, nextSession: Session | null) => {
       setSession(nextSession ?? null);
       setUser(normalizeUser(nextSession?.user ?? null));
       setLoading(false);
