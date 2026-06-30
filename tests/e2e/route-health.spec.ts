@@ -62,6 +62,12 @@ const AUTHENTICATED_SMOKE_ROUTES: RouteCase[] = [
 ];
 
 const PERSONAS = ['owner', 'admin', 'editor', 'viewer'] as const;
+type Persona = (typeof PERSONAS)[number];
+
+type Credentials = {
+  email: string;
+  password: string;
+};
 
 // Artifact marker compatibility: anonymous visitor, authenticated user without organization, owner, admin, editor, viewer,
 // pt, en, es, fr, it, de, /dashboard/organizations, /dashboard/organizations/billing, /vendor-assurance,
@@ -70,6 +76,17 @@ const PERSONAS = ['owner', 'admin', 'editor', 'viewer'] as const;
 
 function localizedPath(locale: Locale | string, routePath: string) {
   return routePath === '/' ? `/${locale}` : `/${locale}${routePath}`;
+}
+
+function envName(persona: string, suffix: 'EMAIL' | 'PASSWORD') {
+  return `E2E_${persona.toUpperCase().replace(/-/g, '_')}_${suffix}`;
+}
+
+function credentialsFor(persona: string): Credentials {
+  return {
+    email: process.env[envName(persona, 'EMAIL')] ?? '',
+    password: process.env[envName(persona, 'PASSWORD')] ?? '',
+  };
 }
 
 function expectNoServerErrorStatus(response: Awaited<ReturnType<Page['goto']>>, label: string) {
@@ -96,24 +113,127 @@ async function expectNoUndefinedUrl(page: Page, label: string) {
 }
 
 async function expectNoUndefinedLinks(page: Page, label: string) {
-  const links = await page.locator('a[href]').evaluateAll((elements) =>
+  type LinkSnapshot = { absoluteHref: string; rawHref: string; text: string; visible: boolean };
+
+  const links = await page.locator('a[href]').evaluateAll((elements): LinkSnapshot[] =>
     elements.map((element) => {
       const anchor = element as HTMLAnchorElement;
-      return anchor.getAttribute('href') ?? '';
+      const rect = anchor.getBoundingClientRect();
+      const style = window.getComputedStyle(anchor);
+
+      return {
+        absoluteHref: anchor.href,
+        rawHref: anchor.getAttribute('href') ?? '',
+        text: (anchor.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        visible: rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden',
+      };
     }),
   );
-  expect(links.filter((href) => href.includes('/undefined')), `${label} has /undefined links`).toEqual([]);
+
+  const undefinedLinks = links.filter(
+    (link) => link.visible && (link.absoluteHref.includes('/undefined') || link.rawHref.includes('/undefined')),
+  );
+  expect(undefinedLinks, `${label} has visible /undefined links`).toEqual([]);
 }
 
 async function expectNoDeadPrimaryControls(page: Page, label: string) {
-  const buttons = await page.locator('button').evaluateAll((elements) =>
+  type AnchorSnapshot = { href: string; text: string; visible: boolean };
+  type ButtonSnapshot = { text: string; visible: boolean; disabled: boolean; ariaDisabled: string | null };
+
+  const anchors = await page.locator('a').evaluateAll((elements): AnchorSnapshot[] =>
     elements.map((element) => {
-      const button = element as HTMLButtonElement;
-      return { text: button.textContent ?? '', disabled: button.disabled, ariaDisabled: button.getAttribute('aria-disabled') };
+      const anchor = element as HTMLAnchorElement;
+      const rect = anchor.getBoundingClientRect();
+      const style = window.getComputedStyle(anchor);
+
+      return {
+        href: anchor.getAttribute('href') ?? '',
+        text: (anchor.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        visible: rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden',
+      };
     }),
   );
-  const inertButtons = buttons.filter((button) => /entrar|join|submit|send|guardar|save/i.test(button.text) && (button.disabled || button.ariaDisabled === 'true'));
+
+  const primaryAnchors = anchors.filter((anchor) =>
+    anchor.visible && /start|sign|login|entrar|create|criar|pricing|trust|security|contact|continue|continuar|join|waitlist|lista/i.test(anchor.text),
+  );
+
+  const brokenAnchors = primaryAnchors.filter((anchor) =>
+    !anchor.href || anchor.href === '#' || anchor.href.includes('/undefined'),
+  );
+
+  expect(brokenAnchors, `${label} has dead primary links`).toEqual([]);
+
+  const buttons = await page.locator('button').evaluateAll((elements): ButtonSnapshot[] =>
+    elements.map((element) => {
+      const button = element as HTMLButtonElement;
+      const rect = button.getBoundingClientRect();
+      const style = window.getComputedStyle(button);
+
+      return {
+        text: (button.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        visible: rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden',
+        disabled: button.disabled,
+        ariaDisabled: button.getAttribute('aria-disabled'),
+      };
+    }),
+  );
+
+  const primaryButtons = buttons.filter((button) =>
+    button.visible && /start|sign|login|entrar|create|criar|save|guardar|submit|send|enviar|continue|continuar|manage|join|waitlist|lista/i.test(button.text),
+  );
+  const inertButtons = primaryButtons.filter((button) => button.disabled || button.ariaDisabled === 'true');
+
   expect(inertButtons, `${label} has disabled primary buttons`).toEqual([]);
+}
+
+async function expectNoBrokenInternalLinks(page: Page, label: string) {
+  type LinkSnapshot = { absoluteHref: string; rawHref: string; text: string; visible: boolean };
+
+  const currentUrl = new URL(page.url());
+  const links = await page.locator('a[href]').evaluateAll((elements): LinkSnapshot[] =>
+    elements.map((element) => {
+      const anchor = element as HTMLAnchorElement;
+      const rect = anchor.getBoundingClientRect();
+      const style = window.getComputedStyle(anchor);
+
+      return {
+        absoluteHref: anchor.href,
+        rawHref: anchor.getAttribute('href') ?? '',
+        text: (anchor.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        visible: rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden',
+      };
+    }),
+  );
+
+  const undefinedLinks = links.filter((link) =>
+    link.absoluteHref.includes('/undefined') || link.rawHref.includes('/undefined'),
+  );
+  expect(undefinedLinks, `${label} has /undefined links`).toEqual([]);
+
+  const internalLinks = Array.from(
+    new Set(
+      links
+        .filter((link) => link.visible)
+        .map((link) => link.absoluteHref)
+        .filter((href) => {
+          if (!href) return false;
+          if (/^(mailto|tel|javascript):/i.test(href)) return false;
+          const url = new URL(href);
+          if (url.origin !== currentUrl.origin) return false;
+          if (url.pathname.startsWith('/auth/') || url.pathname.startsWith('/api/')) return false;
+          if (url.pathname === currentUrl.pathname && url.hash) return false;
+          return true;
+        }),
+    ),
+  );
+
+  for (const href of internalLinks) {
+    const response = await page.request.get(href, { failOnStatusCode: false });
+    const status = response.status();
+    expect(status, `${label} link ${href} returned 404`).not.toBe(404);
+    expect(status, `${label} link ${href} returned a server error`).toBeLessThan(500);
+  }
 }
 
 async function expectRouteHealthy(page: Page, routePath: string, label: string) {
@@ -124,6 +244,26 @@ async function expectRouteHealthy(page: Page, routePath: string, label: string) 
   await expectNoUndefinedLinks(page, label);
   await expectNoStackTrace(page, label);
   await expectNoDeadPrimaryControls(page, label);
+}
+
+async function signIn(page: Page, locale: Locale, credentials: Credentials) {
+  await page.goto(localizedPath(locale, '/login'), { waitUntil: 'domcontentloaded' });
+  await page.getByLabel(/email/i).fill(credentials.email);
+  await page.getByLabel(/password|palavra-passe|senha|contraseña|mot de passe|passwort/i).fill(credentials.password);
+  await page.getByRole('button', { name: /sign in|entrar|connexion|accedi|anmelden/i }).click();
+  await expect(page).not.toHaveURL(new RegExp(`/${locale}/login(?:$|[?#])`), { timeout: 15_000 });
+  await expectNoUndefinedUrl(page, `authenticated login for ${credentials.email}`);
+}
+
+function skipWithoutCredentials(persona: string, credentials: Credentials) {
+  test.skip(
+    !credentials.email || !credentials.password,
+    `Set ${envName(persona, 'EMAIL')} and ${envName(persona, 'PASSWORD')} to run authenticated ${persona} route checks.`,
+  );
+}
+
+function shouldDeepCheckInternalLinks(locale: Locale, route: RouteCase) {
+  return route.critical && (locale === 'en' || locale === 'pt') && ['landing', 'pricing', 'login', 'signup', 'trust/security trust center', 'trust/security security page'].includes(route.name);
 }
 
 function isPrelaunchGatedPublicRoute(route: RouteCase) {
@@ -143,6 +283,9 @@ test.describe('anonymous visitor public route health', () => {
         await expectRouteHealthy(page, localizedPath(locale, route.path), label);
         if (isPrelaunchGatedPublicRoute(route)) {
           await expectWaitlistGate(page, locale, label);
+        }
+        if (shouldDeepCheckInternalLinks(locale, route)) {
+          await expectNoBrokenInternalLinks(page, label);
         }
       });
     }
@@ -189,32 +332,63 @@ test.describe('mobile viewport route health', () => {
     test(`mobile viewport pt ${route.name} stays usable`, async ({ page }) => {
       const label = `mobile viewport pt ${route.name}`;
       await expectRouteHealthy(page, localizedPath('pt', route.path), label);
+      if (isPrelaunchGatedPublicRoute(route)) {
+        await expectWaitlistGate(page, 'pt', label);
+      }
+      if (shouldDeepCheckInternalLinks('pt', route)) {
+        await expectNoBrokenInternalLinks(page, label);
+      }
     });
   }
 });
 
 test.describe('authenticated user without organization', () => {
-  test('authenticated user without organization is skipped while public access is waitlist-gated', async () => {
-    test.skip(true, 'Prelaunch gate disables public login; run authenticated smoke after launch access opens.');
+  test('authenticated user without organization sees empty state without crash', async ({ page }) => {
+    const credentials = credentialsFor('NO_ORG');
+    skipWithoutCredentials('NO_ORG', credentials);
+
+    await signIn(page, 'en', credentials);
+    await expectRouteHealthy(page, localizedPath('en', '/security-center'), 'authenticated user without organization security center');
+    await expect(page.getByText(/No organization|Não foi encontrada|No se encontró|Aucune organisation|Nessuna organizzazione|keine Organisation/i)).toBeVisible();
   });
 });
 
 test.describe('authenticated role route health', () => {
   for (const persona of PERSONAS) {
-    test(`${persona} can visit authenticated critical routes without route regressions`, async () => {
-      test.skip(true, `Prelaunch gate disables public login; run ${persona} route checks after launch access opens.`);
-      expect(AUTHENTICATED_SMOKE_ROUTES.length).toBeGreaterThan(0);
+    test(`${persona} can visit authenticated critical routes without route regressions`, async ({ page }) => {
+      const credentials = credentialsFor(persona);
+      skipWithoutCredentials(persona, credentials);
+
+      await signIn(page, 'en', credentials);
+
+      for (const route of AUTHENTICATED_SMOKE_ROUTES) {
+        const label = `${persona} ${route.name}`;
+        await expectRouteHealthy(page, localizedPath('en', route.path), label);
+        await expect(page).not.toHaveURL(/\/login(?:$|[?#])/);
+      }
     });
   }
 });
 
 test.describe('visual RBAC permissions', () => {
-  test('viewer does not see actions admin permissions in the access center', async () => {
-    test.skip(true, 'Prelaunch gate disables public login; run viewer RBAC checks after launch access opens.');
+  test('viewer does not see actions admin permissions in the access center', async ({ page }) => {
+    const credentials = credentialsFor('viewer');
+    skipWithoutCredentials('viewer', credentials);
+
+    await signIn(page, 'en', credentials);
+    await expectRouteHealthy(page, localizedPath('en', '/security-center'), 'viewer security center');
+    await expect(page.getByText(/Manage Billing|Manage Team|Manage Settings/i)).toHaveCount(0);
   });
 
-  test('owner sees actions admin permissions in the access center', async () => {
-    test.skip(true, 'Prelaunch gate disables public login; run owner RBAC checks after launch access opens.');
+  test('owner sees actions admin permissions in the access center', async ({ page }) => {
+    const credentials = credentialsFor('owner');
+    skipWithoutCredentials('owner', credentials);
+
+    await signIn(page, 'en', credentials);
+    await expectRouteHealthy(page, localizedPath('en', '/security-center'), 'owner security center');
+    await expect(page.getByText(/Manage Billing/i)).toBeVisible();
+    await expect(page.getByText(/Manage Team/i)).toBeVisible();
+    await expect(page.getByText(/Manage Settings/i)).toBeVisible();
   });
 });
 
