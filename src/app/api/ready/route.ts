@@ -1,3 +1,4 @@
+import Stripe from 'stripe';
 import { reportError } from '@/lib/observability/report-error';
 import { DOCUMENT_BUCKET } from '@/lib/documents/upload';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
@@ -27,6 +28,11 @@ const REQUIRED_ENV_GROUPS = {
   sentry: ['NEXT_PUBLIC_SENTRY_DSN'],
 } as const;
 
+const STRIPE_PRICE_ENV = [
+  'STRIPE_PRICE_ESSENTIAL_MONTHLY',
+  'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
+  'STRIPE_PRICE_BUSINESS_MONTHLY',
+] as const;
 const SENTRY_RELEASE_UPLOAD_ENV = ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN'] as const;
 const REAL_MALWARE_SCANNER_PROVIDERS = new Set(['clamav', 'clamd', 'http', 'generic-http', 'webhook']);
 const HTTP_MALWARE_SCANNER_PROVIDERS = new Set(['http', 'generic-http', 'webhook']);
@@ -57,6 +63,13 @@ type ReadyDatabaseCheck = {
   detail: 'ok' | 'not_ready';
 };
 
+type ReadyStripeCheck = {
+  configured: boolean;
+  apiReachable: boolean;
+  priceLookup: boolean;
+  detail: 'ok' | 'not_ready' | 'not_configured';
+};
+
 function hasHealthcheckToken(request: Request) {
   return validateBearerToken(request, process.env.HEALTHCHECK_TOKEN, {
     allowMissingTokenOutsideProduction: false,
@@ -73,6 +86,15 @@ function hasValidTcpPortEnv(name: string) {
 
   const port = Number(rawPort);
   return Number.isInteger(port) && port >= MIN_TCP_PORT && port <= MAX_TCP_PORT;
+}
+
+function configuredStripePriceId() {
+  for (const variable of STRIPE_PRICE_ENV) {
+    const value = process.env[variable]?.trim();
+    if (value) return value;
+  }
+
+  return null;
 }
 
 export function isEnterpriseReadinessRequired() {
@@ -161,6 +183,42 @@ async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
   return database;
 }
 
+async function checkStripeConnectivity(stripeConfigured: boolean): Promise<ReadyStripeCheck> {
+  const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
+  const priceId = configuredStripePriceId();
+
+  if (!stripeConfigured || !secretKey || !priceId) {
+    return {
+      configured: stripeConfigured,
+      apiReachable: false,
+      priceLookup: false,
+      detail: 'not_configured',
+    };
+  }
+
+  try {
+    const stripe = new Stripe(secretKey);
+    const price = await stripe.prices.retrieve(priceId);
+    const priceLookup = Boolean(price?.id);
+
+    return {
+      configured: stripeConfigured,
+      apiReachable: priceLookup,
+      priceLookup,
+      detail: priceLookup ? 'ok' : 'not_ready',
+    };
+  } catch (error) {
+    reportError(error, { area: 'ready_stripe_check' });
+
+    return {
+      configured: stripeConfigured,
+      apiReachable: false,
+      priceLookup: false,
+      detail: 'not_ready',
+    };
+  }
+}
+
 export async function GET(request: Request) {
   const requestId = requestIdFromHeaders(request.headers);
 
@@ -183,13 +241,16 @@ export async function GET(request: Request) {
   const stripeConfigured = checkConfigured(environment, 'stripe');
   const redisConfigured = checkConfigured(environment, 'redis');
   const sentryConfigured = checkConfigured(environment, 'sentry');
+  const stripe = await checkStripeConnectivity(stripeConfigured);
   const databaseReachable = database.adminClient && database.subscriptionsReadable;
+  const stripeApiReachable = stripe.apiReachable && stripe.priceLookup;
   const enterpriseStorageScannerConfigured = enterpriseStorageScanner.configured;
   const ok = supabaseConfigured
     && stripeConfigured
     && redisConfigured
     && sentryConfigured
     && databaseReachable
+    && stripeApiReachable
     && enterpriseStorageScannerConfigured;
 
   return noStoreJson(
@@ -199,14 +260,17 @@ export async function GET(request: Request) {
       requestId,
       environment,
       database,
+      stripe,
       sentryReleaseUploads,
       enterpriseStorageScanner,
       checks: {
         supabaseConfigured,
         databaseReachable,
         stripeConfigured,
+        stripeApiReachable,
         redisConfigured,
         sentryConfigured,
+        sentryObservabilityConfigured: sentryConfigured,
         enterpriseStorageScannerConfigured,
         healthcheckProtected: Boolean(process.env.HEALTHCHECK_TOKEN),
       },
