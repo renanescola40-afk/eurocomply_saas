@@ -1,5 +1,8 @@
-import { NextResponse } from 'next/server';
-
 export async function POST() {
-  return NextResponse.json({ error: 'gone' }, { status: 410 });
+  return new Response(null, {
+    status: 410,
+    headers: {
+      'Cache-Control': 'private, no-store, max-age=0',
+    },
+  });
 }
