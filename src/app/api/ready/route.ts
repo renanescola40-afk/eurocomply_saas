@@ -15,24 +15,25 @@ import { logSecurityEvent, requestIdFromHeaders } from '@/server/observability/l
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const STRIPE_PRICE_ENV = [
+  'STRIPE_PRICE_STARTER_MONTHLY',
+  'STRIPE_PRICE_GROWTH_MONTHLY',
+  'STRIPE_PRICE_ENTERPRISE_MONTHLY',
+] as const;
+
+const LEGACY_STRIPE_PRICE_FALLBACKS = {
+  STRIPE_PRICE_STARTER_MONTHLY: ['STRIPE_PRICE_ESSENTIAL_MONTHLY'],
+  STRIPE_PRICE_GROWTH_MONTHLY: ['STRIPE_PRICE_PROFESSIONAL_MONTHLY', 'STRIPE_PRICE_BUSINESS_MONTHLY'],
+  STRIPE_PRICE_ENTERPRISE_MONTHLY: ['STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
+} as const;
+
 const REQUIRED_ENV_GROUPS = {
   supabase: ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'],
-  stripe: [
-    'STRIPE_SECRET_KEY',
-    'STRIPE_WEBHOOK_SECRET',
-    'STRIPE_PRICE_ESSENTIAL_MONTHLY',
-    'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
-    'STRIPE_PRICE_BUSINESS_MONTHLY',
-  ],
+  stripe: ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', ...STRIPE_PRICE_ENV],
   redis: ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN'],
   sentry: ['NEXT_PUBLIC_SENTRY_DSN'],
 } as const;
 
-const STRIPE_PRICE_ENV = [
-  'STRIPE_PRICE_ESSENTIAL_MONTHLY',
-  'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
-  'STRIPE_PRICE_BUSINESS_MONTHLY',
-] as const;
 const STRIPE_READINESS_TIMEOUT_MS = 1_500;
 const TEST_PLACEHOLDER_VALUE = 'configured';
 const SENTRY_RELEASE_UPLOAD_ENV = ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN'] as const;
@@ -79,8 +80,21 @@ function hasHealthcheckToken(request: Request) {
   });
 }
 
+function configuredEnvValue(name: string) {
+  const primary = process.env[name]?.trim();
+  if (primary) return primary;
+
+  const fallbacks = LEGACY_STRIPE_PRICE_FALLBACKS[name as keyof typeof LEGACY_STRIPE_PRICE_FALLBACKS] ?? [];
+  for (const fallback of fallbacks) {
+    const fallbackValue = process.env[fallback]?.trim();
+    if (fallbackValue) return fallbackValue;
+  }
+
+  return '';
+}
+
 function hasConfiguredEnvValue(name: string) {
-  return Boolean(process.env[name]?.trim());
+  return Boolean(configuredEnvValue(name));
 }
 
 function hasValidTcpPortEnv(name: string) {
@@ -93,7 +107,7 @@ function hasValidTcpPortEnv(name: string) {
 
 function configuredStripePriceIds() {
   return STRIPE_PRICE_ENV
-    .map((variable) => process.env[variable]?.trim() ?? '')
+    .map((variable) => configuredEnvValue(variable))
     .filter(Boolean);
 }
 
