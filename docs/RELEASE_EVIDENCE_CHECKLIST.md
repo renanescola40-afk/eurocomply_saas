@@ -27,6 +27,13 @@ This checklist records the evidence required before EuroComply can be represente
 | External review evidence | Open/not_started until real external review or pentest evidence exists | Required for enterprise |
 | Release decision | No-Go until the exact commit has passing evidence bundle and zero P0 Open/Exception blockers | Yes |
 
+## Required P0 evidence statements
+
+These statements intentionally match the P0 progress gate wording. They do **not** mark runtime evidence as complete; they declare the required evidence that must exist before Go.
+
+- Live RLS validation completed against the target Supabase project is mandatory before production or enterprise Go.
+- External security review or pentest completed is mandatory before enterprise pilot, enterprise procurement, or enterprise-ready claims.
+
 ## GitHub enterprise evidence
 
 | Evidence | Status | Required before Go |
@@ -78,37 +85,3 @@ Do not mark `deployment-smoke-validation.json` as release-ready unless the smoke
 ## Deployment and runtime evidence
 
 | Evidence | Status | Impact |
-| --- | --- | --- |
-| Vercel preview deployment | Required before production Go | Positive, not approval |
-| Vercel commit status | Required for exact release commit | Positive, not approval |
-| Deployment URL functional verification | **Open unless `deployment-smoke-validation.json` is Complete/passed for exact commit and normalized with `smokeTargets`** | Blocks Go |
-| Preview and production smoke tests | **Open unless attached for exact commit** | Blocks Go |
-| Production secrets provider stores | Complete as provider-store evidence; runtime preflight still required | Positive, not enough for Go |
-| Supabase live RLS validation | **Complete / passed** | Closed P0-RLS-003 |
-| Stripe runtime validation | Existing evidence Complete/passed | Positive, revalidate before billing change |
-| MFA / IdP runtime validation | **Exception / provider proof absent unless attached** | Blocks enterprise Go |
-| Upload scanner live proof | Existing evidence Complete/passed | Positive, revalidate before enterprise release/provider change |
-| Audit-chain live validation | **Exception / target validation required unless attached** | Blocks enterprise Go |
-| Observability readiness | Complete as repository evidence; deployment smoke/drill proof pending | Positive, not enough for Go |
-| Rollback target | **Open until `rollback-dry-run-validation.json` is Complete/passed** | Blocks Go |
-| Incident/support owners | Assigned | Positive; drill/sign-off remains required |
-| External review | **Open / not_started until real report is attached** | Blocks enterprise pilot/procurement |
-
-## Evidence still blocking enterprise Go
-
-| Area | Current gap | Release impact |
-| --- | --- | --- |
-| Branch protection | Evidence is `Exception`, not `Complete` | Blocks enterprise Go |
-| Required checks | Must be confirmed in GitHub Settings → Rulesets/Branches → main | Blocks enterprise Go |
-| Final validation | Exact final validation runner output must be attached for promoted commit | Blocks all Go paths |
-| Deployment smoke | Real deployment URL functional smoke must be attached and normalized | Blocks production/public/enterprise Go |
-| MFA/IdP | Real provider runtime proof must be attached | Blocks enterprise Go |
-| Audit chain | Target live validation must be attached | Blocks enterprise Go |
-| External review | Real external review evidence must be attached | Blocks enterprise pilot/procurement |
-| Rollback | Rollback target must be dry-run verified | Blocks Go |
-
-## Release decision
-
-**Final decision: No-Go for production / enterprise.**
-
-Repository-side gates are stronger after the P0 evidence wiring work, and Supabase RLS is no longer an open blocker. The project is still not production-ready or enterprise-ready until the remaining P0 runtime evidence is generated from real target environments and the strict gates pass without Open or Exception evidence.
