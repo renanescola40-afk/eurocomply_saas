@@ -6,6 +6,7 @@ const billingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard
 const publicCheckoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
 const enterpriseHome = readFileSync(join(process.cwd(), 'src/components/marketing/enterprise-home.tsx'), 'utf8');
 const billingActionButton = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx'), 'utf8');
+const billingCheckoutRoute = readFileSync(join(process.cwd(), 'src/app/api/billing/checkout/route.ts'), 'utf8');
 const billingPortalRoute = readFileSync(join(process.cwd(), 'src/app/api/billing/portal/route.ts'), 'utf8');
 const legacyBillingActionsPath = join(process.cwd(), 'src/server/actions/billing.ts');
 
@@ -44,6 +45,16 @@ describe('billing UI API boundary', () => {
     expect(publicCheckoutPage).toContain('checkoutContinuationPath');
     expect(publicCheckoutPage).toContain('next=${encodeURIComponent(checkoutContinuationPath)}');
     expect(publicCheckoutPage).toContain('/onboarding?next=');
+  });
+
+  it('keeps checkout session creation ready for European B2B billing', () => {
+    expect(billingCheckoutRoute).toContain('locale,');
+    expect(billingCheckoutRoute).toContain('cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`');
+    expect(billingCheckoutRoute).toContain("billing_address_collection: 'required'");
+    expect(billingCheckoutRoute).toContain('customer_update');
+    expect(billingCheckoutRoute).toContain('tax_id_collection');
+    expect(billingCheckoutRoute).toContain("payment_method_collection: 'always'");
+    expect(billingCheckoutRoute).toContain('allow_promotion_codes: true');
   });
 
   it('keeps Stripe portal returns scoped to the billing dashboard route', () => {
