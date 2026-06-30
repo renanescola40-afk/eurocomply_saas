@@ -45,7 +45,7 @@ export default function PerfilPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<MessageState>(null);
 
-  const metadata = user?.user_metadata ?? {};
+  const metadata = useMemo(() => user?.user_metadata ?? {}, [user?.user_metadata]);
   const primaryEmail = user?.email ?? '';
   const metadataFullName = typeof metadata.full_name === 'string'
     ? metadata.full_name
