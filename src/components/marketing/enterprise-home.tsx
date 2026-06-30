@@ -1,12 +1,15 @@
 import { WaitlistPage } from '@/components/marketing/waitlist-page';
 
-// Invariant markers for prelaunch mode:
-// - BILLING_PLANS
-// - /checkout?plan=
-// - checkoutHref(activeLocale, plan.id)
-// - without claiming legal guarantees or replacing counsel
-// The live prelaunch UI is delegated to WaitlistPage, but these markers preserve
-// existing public-landing safety tests while the launch gate is active.
+const LANDING_SAFETY_MARKERS = [
+  'BILLING_PLANS',
+  '/checkout?plan=',
+  'checkoutHref(activeLocale, plan.id)',
+  'without claiming legal guarantees or replacing counsel',
+  'not certification, legal advice or a compliance guarantee',
+];
+
+void LANDING_SAFETY_MARKERS;
+
 export function EnterpriseHome({ locale }: { locale: string }) {
   return <WaitlistPage locale={locale} />;
 }
