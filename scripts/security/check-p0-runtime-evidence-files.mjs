@@ -215,6 +215,26 @@ function checkCompleteEvidence(file, evidence) {
   }
 }
 
+function checkExceptionEvidence(file, evidence) {
+  requireString(file, evidence, 'reviewer', 3);
+  requireString(file, evidence, 'reviewedAt', 10);
+  requireString(file, evidence, 'summary', 40);
+  requireArray(file, evidence, 'evidenceLocations', 1);
+
+  if (!hasValidRedactionText(evidence)) {
+    failures.push(`${file} missing redaction confirmation`);
+  }
+
+  const exception = requireObject(file, evidence, 'exception');
+  if (!exception) return;
+
+  requireString(file, exception, 'riskOwner', 3);
+  requireString(file, exception, 'rationale', 20);
+  requireArray(file, exception, 'compensatingControls', 1);
+  requireString(file, exception, 'expiresAt', 10);
+  requireString(file, exception, 'approvalReference', 5);
+}
+
 const files = listJsonFiles(evidenceDir);
 
 for (const file of files) {
@@ -232,6 +252,11 @@ for (const file of files) {
 
   if (evidence.status === 'Complete') {
     checkCompleteEvidence(file, evidence);
+    continue;
+  }
+
+  if (evidence.status === 'Exception') {
+    checkExceptionEvidence(file, evidence);
     continue;
   }
 
