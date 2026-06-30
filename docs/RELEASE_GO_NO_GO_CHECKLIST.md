@@ -1,170 +1,90 @@
 # Release Go/No-Go Checklist
 
-This checklist is the final decision aid for promoting EuroComply to beta, production, enterprise pilot, or enterprise procurement use.
-
-It complements:
-
-* `docs/RELEASE_EVIDENCE_CHECKLIST.md`
-* `docs/RELEASE_APPROVAL_RECORD.md`
-* `docs/RELEASE_FINAL_READINESS_REPORT.md`
-* `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md`
+Final gate for paid public production launch.
 
 ## Current release decision
 
-* Release name: EuroComply P0 Enterprise Evidence Gate Wiring - 2026-06-28
-* Date: 2026-06-28
-* Latest assessed branch: `p0-enterprise-readiness-wiring`
-* Release owner: @renansilva2002 / renanescola40-afk
-* Security owner: @renansilva2002 / renanescola40-afk
-* Approver: no approval granted
-* Environment: production / enterprise candidate
-* Decision: **No-Go**
+- Release name: Public Production Readiness 100% Gate - 2026-06-30
+- Latest assessed branch: `release/public-production-readiness-100`
+- Release owner: @renansilva2002 / renanescola40-afk
+- Security owner: @renansilva2002 / renanescola40-afk
+- Environment: production / staging launch candidate
+- Decision: **No-Go** until `npm run release` passes and writes complete runtime evidence for the promoted commit.
 
-## Decision outcomes
+## Required command
 
-A release decision must result in exactly one of the following outcomes:
+```bash
+npm run release
+```
 
-* **Private Beta Go**: private beta gates pass and any private-beta-only exceptions are accepted with owner and expiry date.
-* **Public Production Go**: production gates pass with no P0 open.
-* **Enterprise Pilot Go**: enterprise pilot gates pass, including live tenant isolation, real MFA/IdP, fail-closed upload scanning, Stripe webhook validation, external review status, branch protection evidence, deployment smoke, rollback dry-run, and final validation evidence marked `Complete`.
-* **Enterprise Procurement Go**: enterprise procurement gates pass with real external review evidence and no unsupported security claims.
-* **Conditional Go**: non-blocking gaps are formally accepted with owners and expiry dates; not allowed for unresolved P0.
-* **No-Go**: at least one blocking gate is missing, failing, unreviewed, contradicted, `Open`, or under P0 `Exception`.
+The `release` script is recursion-safe. It does not call itself. It expands the requested release loop into concrete gates: deterministic install, lint, typecheck, tests twice, build, security, deployment smoke, rollback dry-run and release readiness.
 
-## Mandatory Go criteria
+## Required evidence files
 
-A release may be marked **Go** only when all of these are true:
+The release command must write these files with `status: Complete` and `outcome: passed`:
 
-* Exact final validation runner has passed and attached logs plus `docs/security/evidence/runtime/final-validation-runner.json`.
-* Security CI is green for the promoted commit.
-* Full Security Suite is green for the promoted commit.
-* The promoted commit SHA is recorded in the release approval record.
-* Release evidence is complete according to the release evidence checklist.
-* Branch protection/ruleset evidence for `main` is `Complete`, not `Exception` or `Open`.
-* Direct push to `main` has not bypassed PR review for the promoted commit; if it did, the exception response is attached.
-* Supply-chain status is reviewed, including lockfile alignment, deterministic install, SBOM, and audit evidence.
-* Supabase RLS live validation evidence is attached and marked Complete/passed for production or enterprise release.
-* Deployment smoke evidence proves `/api/health` and protected `/api/ready` for the target URL.
-* Rollback target and previous known-good SHA are functionally verified with dry-run evidence.
-* Audit-chain target-environment evidence is attached for enterprise release.
-* Upload security evidence is attached, including content scanning policy and fail-closed scanner behavior.
-* Step-up authentication coverage is reviewed and real MFA/IdP provider execution is attached for enterprise.
-* Billing and webhook behavior are validated for the target environment.
-* Incident owner, rollback owner, support owner and customer communication owner are recorded.
-* External review evidence is recorded for enterprise pilot/procurement.
-* No high or critical vulnerability is untriaged.
+- `docs/security/evidence/runtime/deployment-smoke-validation.json`
+- `docs/security/evidence/runtime/rollback-dry-run-validation.json`
+- `docs/security/evidence/runtime/production-final-validation.json`
+
+## Mandatory Public Production Go criteria
+
+Public Production Go is allowed only when all items below pass for the same commit SHA:
+
+- `npm ci`
+- `npm run lint`
+- `npm run typecheck`
+- `npm run test` twice
+- `npm run build`
+- `npm run security`
+- deployment smoke against the configured production or staging URL
+- `/api/health` returns HTTP 200 and JSON `status: ok`
+- `/api/ready` rejects anonymous requests
+- `/api/ready` accepts the configured bearer health token
+- `/api/ready` validates Supabase environment and database reachability
+- `/api/ready` validates Stripe environment and live price lookup
+- `/api/ready` validates Sentry / observability configuration
+- landing, pricing, trust, login and signup pages load
+- dashboard routes redirect unauthenticated users to login
+- private routes return `Cache-Control: no-store`
+- sensitive APIs return `Cache-Control: no-store`
+- required security headers are present
+- rollback target URL exists and passes `/api/health`
+- last validated commit SHA is recorded
+- build SHA is recorded
+- runtime evidence is redacted and contains no credential material
 
 ## Automatic No-Go criteria
 
-A release is **No-Go** if any of the following is true:
+Keep **No-Go** if any critical gate fails or if any required evidence file is missing, `Open`, failed, stale, invalid JSON, or tied to a different commit or runtime target.
 
-* Final validation runner output is missing or failed.
-* Any required command output is missing for the promoted commit.
-* Build/deployment evidence is failing or missing.
-* Deployment URL functional smoke is missing.
-* Rollback dry-run evidence is missing or incomplete.
-* The promoted commit differs from the commit in the approval record.
-* Release evidence is missing for build, CI, supply chain, database, audit-chain, upload scanning, MFA/IdP, billing, rollback, owners, or branch protection.
-* Branch protection evidence is `Exception`, `Open`, missing, stale, or not backed by GitHub ruleset/branch protection proof for `main`.
-* Supabase live RLS evidence is Open, missing, failed, or not generated by the target-environment live script.
-* A billing webhook or checkout flow is unverified for a paid production release.
-* A required upload scanning policy is enabled but no provider or fail-closed behavior is verified.
-* Real MFA/IdP evidence is missing for enterprise release.
-* Incident, rollback, support, or customer communication ownership is missing.
-* Enterprise release is attempted while external review evidence is missing, Open, or not Complete.
-* Enterprise release is attempted while audit-chain target-live evidence is missing, Exception, or not Complete.
-* Strict P0 runtime gap report fails.
-* High or critical npm audit findings are present without triage.
-* Strict public scanning is absent, report-only mode is used, or a real hardcoded secret is detected.
+Never downgrade a critical failure to a warning. Public Production Go requires real passing JSON evidence.
 
 ## Current evidence mapping
 
 | Area | Required evidence | Current status | Decision |
 | --- | --- | --- | --- |
-| Build and CI | CI run URL, command logs, commit SHA | Final runner now writes `final-validation-runner.json`; passing run not yet attached | No-Go |
-| Branch protection | GitHub Rulesets/Branches proof for required checks on `main` | `branch-protection-required-checks.json` remains `Exception` until UI/API proof is attached | No-Go for enterprise |
-| Secret scanning | Strict public-secret gate | Strict gate exists; exact promoted commit run still required | No-Go until green |
-| Supply chain | lockfile, install, audit summary, triage notes, SBOM | Required; do not change dependency metadata without lockfile alignment | No-Go until green |
-| Vercel deployment | Ready deployment and build log | Required for exact promoted commit | No-Go |
-| Deployment smoke | `/api/health` and protected `/api/ready` | `release:deployment-smoke` added; evidence still Open until real target run passes | No-Go |
-| Final validation runner | Passing final command bundle | Runner now includes smoke/rollback/readiness and writes runtime evidence; passing artifact still required | No-Go |
-| Database and RLS | Live validation output | Supabase live RLS evidence is Complete/passed | Closed P0-RLS-003 |
-| Audit chain | Target-live validation | Repository evidence exists; target live validation required | No-Go for enterprise |
-| Upload security | scanning policy and live scanner proof | Existing evidence says Complete/passed; revalidate before enterprise/provider change | Positive, not enough for Go |
-| Step-up auth | real MFA/IdP provider proof | Provider proof absent / Exception | No-Go for enterprise |
-| Billing | Stripe checkout, portal, webhook evidence | Existing evidence says Complete/passed; revalidate before billing change | Positive, not enough for Go |
-| Observability | health/ready controls, incident owner, rollback readiness | Repository evidence Complete; deployment smoke/drill proof pending | No-Go |
-| External review | real external review evidence | Open/not_started placeholder only | No-Go for enterprise |
-| Rollback | previous known-good deployment and dry-run | `release:rollback:dry-run` added; evidence remains Open until verified | No-Go |
-| Support | support and communication owner | Assigned | Positive, but sign-off/drill still required |
+| Final release command | `production-final-validation.json` Complete/passed | Runner added; target run still required | No-Go |
+| Deployment smoke | `deployment-smoke-validation.json` Complete/passed | Smoke expanded with signup, Stripe, no-store and rollback URL checks | No-Go until target run passes |
+| Rollback | `rollback-dry-run-validation.json` Complete/passed | Existing dry-run gate retained | No-Go until target run passes |
+| Supabase | `/api/ready` database reachable | Runtime check enforced | No-Go until target run passes |
+| Stripe | `/api/ready` live price lookup | Runtime check enforced | No-Go until target run passes |
+| Sentry / observability | `/api/ready` observability configured | Runtime check enforced | No-Go until target run passes |
+| Public pages | landing, pricing, trust, login, signup | Smoke enforced | No-Go until target run passes |
+| Private controls | auth redirect and no-store | Smoke enforced | No-Go until target run passes |
+| Build metadata | commit SHA and build SHA | Required by final evidence | No-Go until present |
 
-## Final decision record
+## Current blockers
 
-The final decision must be copied into `docs/RELEASE_APPROVAL_RECORD.md` with:
-
-* decision outcome
-* commit SHA
-* release owner
-* security owner
-* support owner
-* incident owner
-* final approver
-* exception list
-* rollback owner
-* release date
-
-Current decision copied: **No-Go**.
-
-## Enterprise rule
-
-Enterprise release cannot use Conditional Go to bypass:
-
-* branch protection/ruleset evidence marked `Exception` or `Open`;
-* missing required GitHub checks on `main`;
-* direct push to `main` without governance exception handling;
-* missing deployment smoke evidence;
-* missing rollback dry-run evidence;
-* missing real external review evidence;
-* missing upload scan fail-closed evidence;
-* missing real MFA/IdP evidence;
-* missing audit-chain target-live evidence;
-* missing Stripe webhook validation;
-* untriaged high/critical vulnerabilities;
-* missing owner sign-off;
-* missing final validation runner proof.
-
-Before enterprise release, run and attach:
-
-```bash
-npm ci
-npm run lint
-npm run typecheck
-npm run test
-npm run test:e2e
-npm run build
-npm run security:ci
-npm run release:deployment-smoke
-npm run release:rollback:dry-run
-RELEASE_TARGET=enterprise RISCK_COMPLY_ENTERPRISE_RELEASE=true npm run security:branch-protection-evidence
-npm run release:readiness
-npm run release:enterprise-readiness
-RELEASE_TARGET=enterprise node scripts/release/run-final-validation.mjs
-```
-
-## Current No-Go blockers
-
-| Blocker | Owner | Required closure evidence |
+| Blocker | Owner | Closure evidence |
 | --- | --- | --- |
-| Exact final validation runner not proven passed | @renansilva2002 / renanescola40-afk | Passing summary, logs, and `final-validation-runner.json` for promoted commit |
-| Deployment URL smoke not verified | @renansilva2002 / renanescola40-afk | Passing `deployment-smoke-validation.json` for target deployment |
-| Rollback target not verified | @renansilva2002 / renanescola40-afk | Verified previous known-good URL/SHA and passing `rollback-dry-run-validation.json` |
-| Branch protection evidence is `Exception` | @renansilva2002 / renanescola40-afk | GitHub Rulesets/Branches proof that `main` requires every required check |
-| Real MFA/IdP runtime proof missing | @renansilva2002 / renanescola40-afk | Redacted runtime evidence with real provider proof |
-| Audit-chain target live proof missing | @renansilva2002 / renanescola40-afk | Complete target-environment validation and reviewer confirmation |
-| External review Open/not_started | @renansilva2002 / renanescola40-afk | Real external review report/reference, findings triage, and retest/risk acceptance evidence |
+| Final `npm run release` not proven passed | @renansilva2002 / renanescola40-afk | Passing `production-final-validation.json` |
+| Deployment smoke not proven passed | @renansilva2002 / renanescola40-afk | Passing `deployment-smoke-validation.json` |
+| Rollback target not proven passed | @renansilva2002 / renanescola40-afk | Passing `rollback-dry-run-validation.json` |
+| Runtime services not proven on target | @renansilva2002 / renanescola40-afk | `/api/ready` Complete/passed for Supabase, Stripe and observability |
 
 ## Final decision
 
 **No-Go.**
 
-The gates are now stricter and better wired, but production and enterprise release remain blocked until real runtime evidence is attached and all strict P0 gates pass without Open or Exception evidence.
+The release system is now wired for a paid public launch gate, but the product must not be marked Public Production Go until all P0 checks pass with real JSON evidence.
