@@ -61,16 +61,6 @@ function copy(locale: Locale) {
       };
 }
 
-function getPublicErrors(locale: Locale): Record<PublicAuthErrorCode, string> {
-  const text = copy(locale);
-  return {
-    missing_oauth_code: text.failed,
-    auth_configuration_unavailable: text.failed,
-    auth_exchange_failed: text.failed,
-    email_sign_in_failed: text.failed,
-  };
-}
-
 function LoginContent() {
   const params = useParams();
   const router = useRouter();
@@ -82,7 +72,6 @@ function LoginContent() {
   const createAccountUrl = signUpHref(locale, planId, afterSignInUrl);
   const publicErrorCode = searchParams.get('error') ? normalizePublicAuthErrorCode(searchParams.get('error')) : null;
   const text = copy(locale);
-  const publicErrorMessages = getPublicErrors(locale);
   const { loading, signInWithEmail, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
