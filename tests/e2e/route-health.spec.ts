@@ -9,6 +9,11 @@ type RouteCase = {
   critical?: boolean;
 };
 
+type Credentials = {
+  email: string;
+  password: string;
+};
+
 const PUBLIC_ROUTES: RouteCase[] = [
   { name: 'landing', path: '/', critical: true },
   { name: 'pricing', path: '/pricing', critical: true },
@@ -62,12 +67,6 @@ const AUTHENTICATED_SMOKE_ROUTES: RouteCase[] = [
 ];
 
 const PERSONAS = ['owner', 'admin', 'editor', 'viewer'] as const;
-type Persona = (typeof PERSONAS)[number];
-
-type Credentials = {
-  email: string;
-  password: string;
-};
 
 // Artifact marker compatibility: anonymous visitor, authenticated user without organization, owner, admin, editor, viewer,
 // pt, en, es, fr, it, de, /dashboard/organizations, /dashboard/organizations/billing, /vendor-assurance,
@@ -87,6 +86,10 @@ function credentialsFor(persona: string): Credentials {
     email: process.env[envName(persona, 'EMAIL')] ?? '',
     password: process.env[envName(persona, 'PASSWORD')] ?? '',
   };
+}
+
+function isPrelaunchMode() {
+  return process.env.E2E_PRELAUNCH_GATE === 'true' || process.env.NEXT_PUBLIC_PRELAUNCH_GATE === 'true';
 }
 
 function expectNoServerErrorStatus(response: Awaited<ReturnType<Page['goto']>>, label: string) {
@@ -255,7 +258,8 @@ async function signIn(page: Page, locale: Locale, credentials: Credentials) {
   await expectNoUndefinedUrl(page, `authenticated login for ${credentials.email}`);
 }
 
-function skipWithoutCredentials(persona: string, credentials: Credentials) {
+function skipAuthenticatedWhenUnavailable(persona: string, credentials: Credentials) {
+  test.skip(isPrelaunchMode(), 'Prelaunch mode redirects public login/signup to the waitlist. Set E2E_PRELAUNCH_GATE=false to run credentialed route checks.');
   test.skip(
     !credentials.email || !credentials.password,
     `Set ${envName(persona, 'EMAIL')} and ${envName(persona, 'PASSWORD')} to run authenticated ${persona} route checks.`,
@@ -345,7 +349,7 @@ test.describe('mobile viewport route health', () => {
 test.describe('authenticated user without organization', () => {
   test('authenticated user without organization sees empty state without crash', async ({ page }) => {
     const credentials = credentialsFor('NO_ORG');
-    skipWithoutCredentials('NO_ORG', credentials);
+    skipAuthenticatedWhenUnavailable('NO_ORG', credentials);
 
     await signIn(page, 'en', credentials);
     await expectRouteHealthy(page, localizedPath('en', '/security-center'), 'authenticated user without organization security center');
@@ -357,7 +361,7 @@ test.describe('authenticated role route health', () => {
   for (const persona of PERSONAS) {
     test(`${persona} can visit authenticated critical routes without route regressions`, async ({ page }) => {
       const credentials = credentialsFor(persona);
-      skipWithoutCredentials(persona, credentials);
+      skipAuthenticatedWhenUnavailable(persona, credentials);
 
       await signIn(page, 'en', credentials);
 
@@ -373,7 +377,7 @@ test.describe('authenticated role route health', () => {
 test.describe('visual RBAC permissions', () => {
   test('viewer does not see actions admin permissions in the access center', async ({ page }) => {
     const credentials = credentialsFor('viewer');
-    skipWithoutCredentials('viewer', credentials);
+    skipAuthenticatedWhenUnavailable('viewer', credentials);
 
     await signIn(page, 'en', credentials);
     await expectRouteHealthy(page, localizedPath('en', '/security-center'), 'viewer security center');
@@ -382,7 +386,7 @@ test.describe('visual RBAC permissions', () => {
 
   test('owner sees actions admin permissions in the access center', async ({ page }) => {
     const credentials = credentialsFor('owner');
-    skipWithoutCredentials('owner', credentials);
+    skipAuthenticatedWhenUnavailable('owner', credentials);
 
     await signIn(page, 'en', credentials);
     await expectRouteHealthy(page, localizedPath('en', '/security-center'), 'owner security center');

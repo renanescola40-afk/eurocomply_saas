@@ -17,6 +17,7 @@ const publicEndpointAllowlist = [
   { pattern: new RegExp(`${appApiPrefixPattern}\\/stripe\\/webhook\\/route\\.ts$`), reason: 'Stripe webhook validates provider signature instead of user session' },
   { pattern: new RegExp(`${appApiPrefixPattern}\\/audit\\/evidence-pack\\/verify\\/route\\.ts$`), reason: 'Public verifier; must remain no-store/rate-limited' },
   { pattern: new RegExp(`${appApiPrefixPattern}\\/leads\\/route\\.ts$`), reason: 'Public lead capture accepts no tenant data and must stay bounded, validated, no-store and rate-limited' },
+  { pattern: new RegExp(`${appApiPrefixPattern}\\/prelaunch\\/route\\.ts$`), reason: 'Public prelaunch waitlist capture accepts no tenant data and must stay bounded, validated, no-store and rate-limited' },
   { pattern: new RegExp(`${appApiPrefixPattern}\\/ops\\/.*\\/route\\.ts$`), reason: 'Ops routes use internal token instead of user session' },
   { pattern: new RegExp(`${appApiPrefixPattern}\\/ready\\/route\\.ts$`), reason: 'Public readiness check without tenant data' },
 ];
