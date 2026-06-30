@@ -9,6 +9,11 @@ type RouteCase = {
   critical?: boolean;
 };
 
+type Credentials = {
+  email: string;
+  password: string;
+};
+
 const PUBLIC_ROUTES: RouteCase[] = [
   { name: 'landing', path: '/', critical: true },
   { name: 'pricing', path: '/pricing', critical: true },
@@ -70,6 +75,21 @@ const PERSONAS = ['owner', 'admin', 'editor', 'viewer'] as const;
 
 function localizedPath(locale: Locale | string, routePath: string) {
   return routePath === '/' ? `/${locale}` : `/${locale}${routePath}`;
+}
+
+function envName(persona: string, suffix: 'EMAIL' | 'PASSWORD') {
+  return `E2E_${persona.toUpperCase().replace(/-/g, '_')}_${suffix}`;
+}
+
+function credentialsFor(persona: string): Credentials {
+  return {
+    email: process.env[envName(persona, 'EMAIL')] ?? '',
+    password: process.env[envName(persona, 'PASSWORD')] ?? '',
+  };
+}
+
+function isPrelaunchMode() {
+  return process.env.E2E_PRELAUNCH_GATE === 'true' || process.env.NEXT_PUBLIC_PRELAUNCH_GATE === 'true';
 }
 
 function expectNoServerErrorStatus(response: Awaited<ReturnType<Page['goto']>>, label: string) {
@@ -229,8 +249,21 @@ async function expectRouteHealthy(page: Page, routePath: string, label: string) 
   await expectNoDeadPrimaryControls(page, label);
 }
 
-function skipAuthenticatedDuringPrelaunch() {
-  test.skip(true, 'Prelaunch mode intentionally redirects public login/signup to the waitlist. Run authenticated route checks after reopening access.');
+async function signIn(page: Page, locale: Locale, credentials: Credentials) {
+  await page.goto(localizedPath(locale, '/login'), { waitUntil: 'domcontentloaded' });
+  await page.getByLabel(/email/i).fill(credentials.email);
+  await page.getByLabel(/password|palavra-passe|senha|contraseña|mot de passe|passwort/i).fill(credentials.password);
+  await page.getByRole('button', { name: /sign in|entrar|connexion|accedi|anmelden/i }).click();
+  await expect(page).not.toHaveURL(new RegExp(`/${locale}/login(?:$|[?#])`), { timeout: 15_000 });
+  await expectNoUndefinedUrl(page, `authenticated login for ${credentials.email}`);
+}
+
+function skipAuthenticatedWhenUnavailable(persona: string, credentials: Credentials) {
+  test.skip(isPrelaunchMode(), 'Prelaunch mode redirects public login/signup to the waitlist. Set E2E_PRELAUNCH_GATE=false to run credentialed route checks.');
+  test.skip(
+    !credentials.email || !credentials.password,
+    `Set ${envName(persona, 'EMAIL')} and ${envName(persona, 'PASSWORD')} to run authenticated ${persona} route checks.`,
+  );
 }
 
 function shouldDeepCheckInternalLinks(locale: Locale, route: RouteCase) {
@@ -314,27 +347,52 @@ test.describe('mobile viewport route health', () => {
 });
 
 test.describe('authenticated user without organization', () => {
-  test('authenticated user without organization is skipped during prelaunch gate', async () => {
-    skipAuthenticatedDuringPrelaunch();
+  test('authenticated user without organization sees empty state without crash', async ({ page }) => {
+    const credentials = credentialsFor('NO_ORG');
+    skipAuthenticatedWhenUnavailable('NO_ORG', credentials);
+
+    await signIn(page, 'en', credentials);
+    await expectRouteHealthy(page, localizedPath('en', '/security-center'), 'authenticated user without organization security center');
+    await expect(page.getByText(/No organization|Não foi encontrada|No se encontró|Aucune organisation|Nessuna organizzazione|keine Organisation/i)).toBeVisible();
   });
 });
 
 test.describe('authenticated role route health', () => {
   for (const persona of PERSONAS) {
-    test(`${persona} route checks are skipped during prelaunch gate`, async () => {
-      skipAuthenticatedDuringPrelaunch();
-      expect(AUTHENTICATED_SMOKE_ROUTES.length).toBeGreaterThan(0);
+    test(`${persona} can visit authenticated critical routes without route regressions`, async ({ page }) => {
+      const credentials = credentialsFor(persona);
+      skipAuthenticatedWhenUnavailable(persona, credentials);
+
+      await signIn(page, 'en', credentials);
+
+      for (const route of AUTHENTICATED_SMOKE_ROUTES) {
+        const label = `${persona} ${route.name}`;
+        await expectRouteHealthy(page, localizedPath('en', route.path), label);
+        await expect(page).not.toHaveURL(/\/login(?:$|[?#])/);
+      }
     });
   }
 });
 
 test.describe('visual RBAC permissions', () => {
-  test('viewer RBAC check is skipped during prelaunch gate', async () => {
-    skipAuthenticatedDuringPrelaunch();
+  test('viewer does not see actions admin permissions in the access center', async ({ page }) => {
+    const credentials = credentialsFor('viewer');
+    skipAuthenticatedWhenUnavailable('viewer', credentials);
+
+    await signIn(page, 'en', credentials);
+    await expectRouteHealthy(page, localizedPath('en', '/security-center'), 'viewer security center');
+    await expect(page.getByText(/Manage Billing|Manage Team|Manage Settings/i)).toHaveCount(0);
   });
 
-  test('owner RBAC check is skipped during prelaunch gate', async () => {
-    skipAuthenticatedDuringPrelaunch();
+  test('owner sees actions admin permissions in the access center', async ({ page }) => {
+    const credentials = credentialsFor('owner');
+    skipAuthenticatedWhenUnavailable('owner', credentials);
+
+    await signIn(page, 'en', credentials);
+    await expectRouteHealthy(page, localizedPath('en', '/security-center'), 'owner security center');
+    await expect(page.getByText(/Manage Billing/i)).toBeVisible();
+    await expect(page.getByText(/Manage Team/i)).toBeVisible();
+    await expect(page.getByText(/Manage Settings/i)).toBeVisible();
   });
 });
 
