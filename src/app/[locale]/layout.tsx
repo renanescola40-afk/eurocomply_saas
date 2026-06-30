@@ -1,16 +1,15 @@
 import type { Metadata } from 'next';
-import { ClerkProvider } from '@clerk/nextjs';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { PostHogAnalyticsProvider } from '@/components/analytics/PostHogAnalyticsProvider';
 import { AnalyticsConsentBanner } from '@/components/analytics/AnalyticsConsentBanner';
-import { ClerkFloatingControls } from '@/components/auth/ClerkFloatingControls';
+import { AuthFloatingControls } from '@/components/auth/AuthFloatingControls';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffects from '@/components/GlobalClientEffects';
 import GapAnalysisShortcut from '@/components/GapAnalysisShortcut';
-import { AuthProvider, DisabledAuthProvider } from '@/hooks/useAuth';
+import { AuthProvider } from '@/hooks/useAuth';
 import { routing, type Locale } from '@/lib/i18n/routing';
 
 import '../globals.css';
@@ -29,10 +28,6 @@ type Props = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 };
-
-function hasClerkPublishableKey() {
-  return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim());
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
@@ -55,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     it: {
       title: 'Risck Comply - Sistema Operativo di Compliance IA',
-      description: 'AI Act readiness, inventario dei sistemi IA, evidenze di rischio, documenti di governance e workflow di audit per team B2B europei.',
+      description: 'AI Act readiness, inventario dei sistemi IA, evidenze di rischio, documenti di governance e workflow d’audit per team B2B europei.',
     },
     de: {
       title: 'Risck Comply - Betriebssystem für KI-Compliance',
@@ -76,10 +71,6 @@ export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
   const safeLocale = routing.locales.includes(locale as Locale) ? locale : 'en';
   const messages = await getMessages();
-  const signInUrl = `/${safeLocale}/login`;
-  const signUpUrl = `/${safeLocale}/signup`;
-  const onboardingUrl = `/${safeLocale}/onboarding`;
-  const clerkEnabled = hasClerkPublishableKey();
 
   const sharedShell = (
     <>
@@ -91,43 +82,24 @@ export default async function LocaleLayout({ children, params }: Props) {
     </>
   );
 
-  const appShell = (
-    <NextIntlClientProvider messages={messages}>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="dark"
-        enableSystem={false}
-        disableTransitionOnChange
-      >
-        {clerkEnabled ? (
-          <AuthProvider>
-            <PostHogAnalyticsProvider>
-              {sharedShell}
-              <ClerkFloatingControls locale={safeLocale} />
-            </PostHogAnalyticsProvider>
-          </AuthProvider>
-        ) : (
-          <DisabledAuthProvider>{sharedShell}</DisabledAuthProvider>
-        )}
-      </ThemeProvider>
-    </NextIntlClientProvider>
-  );
-
   return (
     <html lang={safeLocale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
-        {clerkEnabled ? (
-          <ClerkProvider
-            signInUrl={signInUrl}
-            signUpUrl={signUpUrl}
-            signInFallbackRedirectUrl={onboardingUrl}
-            signUpFallbackRedirectUrl={onboardingUrl}
+        <NextIntlClientProvider messages={messages}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem={false}
+            disableTransitionOnChange
           >
-            {appShell}
-          </ClerkProvider>
-        ) : (
-          appShell
-        )}
+            <AuthProvider>
+              <PostHogAnalyticsProvider>
+                {sharedShell}
+                <AuthFloatingControls locale={safeLocale} />
+              </PostHogAnalyticsProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );
