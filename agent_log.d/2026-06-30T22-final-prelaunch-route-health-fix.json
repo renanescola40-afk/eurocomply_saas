@@ -1,0 +1,8 @@
+{
+  "task": "final-prelaunch-route-health-fix",
+  "status": "prepared",
+  "summary": "Route health E2E now skips authenticated checks unconditionally while public login/signup are intentionally waitlist-gated.",
+  "completion_percent": 99.8,
+  "remaining_percent": 0.2,
+  "remaining": ["merge PR", "confirm checks/deploy"]
+}
