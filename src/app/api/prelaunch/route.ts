@@ -15,7 +15,7 @@ const WAITLIST_RATE_LIMIT_WINDOW_MS = 60_000;
 const WAITLIST_RATE_LIMIT_MAX = 5;
 const WAITLIST_ROUTE = '/api/prelaunch';
 const WAITLIST_ACTION = 'prelaunch_waitlist';
-const LAUNCH_TARGET_AT = '2026-07-01T07:00:00+01:00';
+const LAUNCH_TARGET_AT = '2026-08-01T07:00:00+01:00';
 const ALLOWED_LOCALES = new Set(['en', 'pt', 'es', 'fr', 'it', 'de']);
 const PUBLIC_WAITLIST_ROUTE_CONTRACT = 'requireEnterpriseApiAccess is intentionally not applied because /api/prelaunch is a public waitlist capture route; it stays bounded, rate-limited, no-store and consent-only.';
 
