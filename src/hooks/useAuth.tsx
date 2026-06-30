@@ -63,6 +63,21 @@ export function getLocalizedDashboardPath() {
   return getLocalizedPath('/dashboard/organizations');
 }
 
+const disabledAuthValue: AuthContextType = {
+  user: null,
+  session: null,
+  loading: false,
+  signInWithEmail: async () => ({ error: new Error('Authentication is not configured.') }),
+  signUpWithEmail: async () => ({ error: new Error('Authentication is not configured.') }),
+  signInWithGoogle: async () => ({ error: new Error('Authentication is not configured.') }),
+  signOut: async () => ({ error: null }),
+  resetPassword: async () => ({ error: new Error('Authentication is not configured.') }),
+};
+
+export function DisabledAuthProvider({ children }: { children: React.ReactNode }) {
+  return <AuthContext.Provider value={disabledAuthValue}>{children}</AuthContext.Provider>;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<AppUser | null>(null);
@@ -70,9 +85,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then((result: { data: { session: Session | null } }) => {
       if (!mounted) return;
-      const nextSession = data.session ?? null;
+      const nextSession = result.data.session ?? null;
       setSession(nextSession);
       setUser(normalizeUser(nextSession?.user ?? null));
       setLoading(false);
@@ -83,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((_event: string, nextSession: Session | null) => {
       setSession(nextSession ?? null);
       setUser(normalizeUser(nextSession?.user ?? null));
       setLoading(false);
