@@ -22,8 +22,8 @@ import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
 
-const LAUNCH_TARGET_ISO = '2026-07-01T07:00:00+01:00';
-const LAUNCH_TARGET_LABEL = '1 July 2026 · 07:00 Europe/Lisbon';
+const LAUNCH_TARGET_ISO = '2026-08-01T07:00:00+01:00';
+const LAUNCH_TARGET_LABEL = '1 August 2026 · 07:00 Europe/Lisbon';
 
 type WaitlistCopy = {
   nav: { platform: string; features: string; access: string; cta: string };
@@ -57,10 +57,10 @@ function feature(title: string, text: string, icon: typeof ShieldCheck) {
 
 const en: WaitlistCopy = {
   nav: { platform: 'Platform', features: 'Launch checklist', access: 'Early access', cta: 'Join waitlist' },
-  badge: 'Controlled beta opens soon for European B2B teams',
+  badge: 'Enterprise SaaS access opens soon for serious AI governance teams',
   title: 'RISCK COMPLY is not open yet. Join the enterprise waitlist.',
   subtitle:
-    'We are preparing a controlled launch for companies that need AI inventory, EU AI Act readiness, governance evidence, audit trails and buyer-ready compliance workflows without unsafe legal promises.',
+    'We are preparing a controlled enterprise SaaS launch for companies that need AI inventory, EU AI Act readiness, governance evidence, audit trails and buyer-ready compliance workflows without unsafe legal promises.',
   launchLabel: LAUNCH_TARGET_LABEL,
   countdown: { days: 'Days', hours: 'Hours', minutes: 'Minutes', seconds: 'Seconds', live: 'Available in' },
   checklistEyebrow: 'Launch scope',
@@ -74,9 +74,9 @@ const en: WaitlistCopy = {
     email: 'Work email',
     role: 'Your role',
     submit: 'Join waitlist',
-    submitting: 'Saving lead...',
-    success: 'You are on the waitlist. We will contact you before launch access opens.',
-    error: 'Could not save your lead right now. Please try again.',
+    submitting: 'Saving your priority place...',
+    success: 'You are officially on the Risck Comply waitlist. We saved your priority place and will contact qualified leads before access opens.',
+    error: 'Could not confirm your place right now. Please try again in a moment.',
     privacy: 'No passwords. No public signup. Only launch communication and early access qualification.',
   },
   proof: ['EU AI Act readiness', 'AI inventory', 'risk classification', 'evidence packs', 'audit trail', 'policies'],
@@ -93,11 +93,11 @@ const en: WaitlistCopy = {
 const pt: WaitlistCopy = {
   ...en,
   nav: { platform: 'Plataforma', features: 'Checklist', access: 'Early access', cta: 'Entrar na lista' },
-  badge: 'Beta controlada abre em breve para empresas B2B europeias',
+  badge: 'Acesso ao SaaS enterprise abre em breve para equipas sérias de governança de IA',
   title: 'RISCK COMPLY ainda não está aberto. Entre na lista de espera enterprise.',
   subtitle:
-    'Estamos a preparar um lançamento controlado para empresas que precisam de inventário de IA, EU AI Act readiness, evidência de governança, audit trail e workflows de compliance prontos para compradores B2B — sem promessas jurídicas inseguras.',
-  launchLabel: '1 de julho de 2026 · 07:00 Europe/Lisbon',
+    'Estamos a preparar o lançamento controlado de um SaaS enterprise para empresas que precisam de inventário de IA, EU AI Act readiness, evidência de governança, audit trail e workflows de compliance prontos para compradores B2B — sem promessas jurídicas inseguras.',
+  launchLabel: '1 de agosto de 2026 · 07:00 Europe/Lisbon',
   countdown: { days: 'Dias', hours: 'Horas', minutes: 'Minutos', seconds: 'Segundos', live: 'Disponível em' },
   checklistEyebrow: 'Escopo do lançamento',
   checklistTitle: 'Tudo o que o SaaS vai oferecer às empresas',
@@ -110,9 +110,9 @@ const pt: WaitlistCopy = {
     email: 'Email profissional',
     role: 'Cargo da pessoa',
     submit: 'Entrar na lista de espera',
-    submitting: 'A guardar lead...',
-    success: 'Você está na lista de espera. Vamos contactar antes da abertura do acesso.',
-    error: 'Não foi possível guardar o lead agora. Tente novamente.',
+    submitting: 'A guardar o seu lugar prioritário...',
+    success: 'Você está oficialmente inscrito na lista de espera da Risck Comply. Guardámos o seu lugar prioritário e vamos contactar leads qualificados antes da abertura do acesso.',
+    error: 'Não foi possível confirmar o seu lugar agora. Tente novamente dentro de instantes.',
     privacy: 'Sem senhas. Sem signup público. Apenas comunicação de lançamento e qualificação para early access.',
   },
   proof: ['EU AI Act readiness', 'inventário de IA', 'classificação de risco', 'evidence packs', 'audit trail', 'políticas'],
