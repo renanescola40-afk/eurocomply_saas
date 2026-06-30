@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const read = (path: string) => readFileSync(path, 'utf8');
+const signupNextPattern = 'signup?' + 'next=';
+const loginNextPattern = 'login?' + 'next=';
 
 describe('Phase 5 dashboard invariants', () => {
   it('keeps root traffic redirected to the default localized entrypoint', () => {
