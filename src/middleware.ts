@@ -1,4 +1,5 @@
 // middleware.ts - Combined i18n + Supabase Auth
+// getSupabaseUserId invariant: hasSupabaseSession is the active Supabase user guard.
 
 import { createServerClient } from '@supabase/ssr';
 import createIntlMiddleware from 'next-intl/middleware';
