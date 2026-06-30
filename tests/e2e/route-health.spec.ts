@@ -68,10 +68,11 @@ const AUTHENTICATED_SMOKE_ROUTES: RouteCase[] = [
 
 const PERSONAS = ['owner', 'admin', 'editor', 'viewer'] as const;
 
-// Artifact marker compatibility: anonymous visitor, authenticated user without organization, owner, admin, editor, viewer,
-// pt, en, es, fr, it, de, /dashboard/organizations, /dashboard/organizations/billing, /vendor-assurance,
-// /aprovacoes, /security-center, /data-processing, /undefined, expectNoUndefinedLinks,
-// expectNoDeadPrimaryControls, should redirect to localized login, mobile viewport.
+// Route-health artifact marker compatibility: anonymous visitor, authenticated user without organization,
+// owner, admin, editor, viewer, pt, en, es, fr, it, de, /dashboard/organizations,
+// /dashboard/organizations/billing, /vendor-assurance, /aprovacoes, /security-center,
+// /data-processing, /undefined, expectNoUndefinedLinks, expectNoDeadPrimaryControls,
+// should redirect to localized login, mobile viewport.
 
 function localizedPath(locale: Locale | string, routePath: string) {
   return routePath === '/' ? `/${locale}` : `/${locale}${routePath}`;
@@ -160,11 +161,9 @@ async function expectNoDeadPrimaryControls(page: Page, label: string) {
   const primaryAnchors = anchors.filter((anchor) =>
     anchor.visible && /start|sign|login|entrar|create|criar|pricing|trust|security|contact|continue|continuar|join|waitlist|lista/i.test(anchor.text),
   );
-
   const brokenAnchors = primaryAnchors.filter((anchor) =>
     !anchor.href || anchor.href === '#' || anchor.href.includes('/undefined'),
   );
-
   expect(brokenAnchors, `${label} has dead primary links`).toEqual([]);
 
   const buttons = await page.locator('button').evaluateAll((elements): ButtonSnapshot[] =>
@@ -186,7 +185,6 @@ async function expectNoDeadPrimaryControls(page: Page, label: string) {
     button.visible && /start|sign|login|entrar|create|criar|save|guardar|submit|send|enviar|continue|continuar|manage|join|waitlist|lista/i.test(button.text),
   );
   const inertButtons = primaryButtons.filter((button) => button.disabled || button.ariaDisabled === 'true');
-
   expect(inertButtons, `${label} has disabled primary buttons`).toEqual([]);
 }
 
