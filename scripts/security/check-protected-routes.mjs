@@ -30,14 +30,11 @@ const requiredProtectedSegments = [
 ];
 
 const requiredGuardMarkers = [
+  'createServerClient',
+  'supabase.auth.getUser()',
   'NextResponse.redirect',
   'withPrivateNoStore',
   'ORGANIZATION_DASHBOARD_PATH',
-];
-
-const authProviderMarkerGroups = [
-  ['clerkMiddleware', 'await auth()'],
-  ['createServerClient', 'client.auth.getUser()'],
 ];
 
 const requiredGovernanceFiles = [
@@ -97,11 +94,6 @@ if (guardSource) {
     if (!guardSource.includes(marker)) {
       failures.push(`Active request guard missing marker: ${marker}`);
     }
-  }
-
-  const hasRecognizedAuthProvider = authProviderMarkerGroups.some((markers) => markers.every((marker) => guardSource.includes(marker)));
-  if (!hasRecognizedAuthProvider) {
-    failures.push('Active request guard must use a recognized auth provider: Clerk middleware or Supabase SSR user lookup.');
   }
 
   const hasApiBypass = guardSource.includes("pathname.startsWith('/api')") || guardSource.includes('pathname.startsWith("/api")');
