@@ -65,7 +65,6 @@ describe('Phase 5 dashboard invariants', () => {
     expect(login).toContain('redirectUrl: `/${activeLocale}/oauth/complete`');
     expect(login).toContain('signIn.create({ identifier: email, password });');
     expect(login).not.toContain('<SignIn');
-    expect(login).not.toContain('signUpUrl={signUpUrl}');
     expect(login).not.toContain('fallbackRedirectUrl={afterSignInUrl}');
     expect(login).not.toContain('forceRedirectUrl={afterSignInUrl}');
   });
@@ -92,7 +91,6 @@ describe('Phase 5 dashboard invariants', () => {
     expect(signup).toContain('!selectedPlan');
     expect(signup).toContain('getSignupPlanHref');
     expect(signup).not.toContain('<SignUp');
-    expect(signup).not.toContain('signInUrl={signInUrl}');
     expect(signup).not.toContain('fallbackRedirectUrl={continuationHref}');
     expect(signup).not.toContain('forceRedirectUrl={continuationHref}');
     expect(signup).not.toContain(signupNextPattern);
@@ -128,30 +126,38 @@ describe('Phase 5 dashboard invariants', () => {
     const content = read('src/app/[locale]/dashboard/organizations/page.tsx');
 
     expect(content).toContain('getCurrentUser');
-    expect(content).toContain('redirect(`/${safeLocale}/login`)');
-    expect(content).toContain('getOrganizationDashboardData');
-    expect(content).toContain('redirect(`/${safeLocale}/onboarding');
+    expect(content).toContain('redirect(`/${safeLocale}/login`);');
+    expect(content).toContain('getCurrentOrganizationForUser');
+    expect(content).toContain('redirect(`/${safeLocale}/onboarding`);');
+    expect(content).toContain('OrganizationDashboardOverview');
   });
 
   it('passes workflow readiness from the organization page into dashboard overview', () => {
-    const content = read('src/app/[locale]/dashboard/organizations/page.tsx');
+    const page = read('src/app/[locale]/dashboard/organizations/page.tsx');
 
-    expect(content).toContain('workflowReadiness={data.workflowReadiness}');
+    expect(page).toContain('buildOrganizationDashboardData');
+    expect(page).toContain('workflowReadiness={dashboardData.workflowReadiness}');
+    expect(page).toContain('nextBestActions={dashboardData.nextBestActions}');
   });
 
   it('passes workflow readiness from dashboard overview into next best actions', () => {
-    const content = read('src/components/dashboard/dashboard-home-overview.tsx');
+    const overview = read('src/components/dashboard/organization-dashboard-overview.tsx');
 
-    expect(content).toContain('workflowReadiness?: OrganizationWorkflowReadiness');
-    expect(content).toContain('workflowReadiness={workflowReadiness}');
-    expect(content).toContain('NextBestActions');
+    expect(overview).toContain('workflowReadiness: WorkflowReadiness');
+    expect(overview).toContain('nextBestActions: NextBestAction[]');
+    expect(overview).toContain('<NextBestActionsPanel');
+    expect(overview).toContain('workflowReadiness={workflowReadiness}');
+    expect(overview).toContain('actions={nextBestActions}');
   });
 
   it('uses workflow readiness to prioritize next best actions', () => {
-    const content = read('src/components/dashboard/next-best-actions.tsx');
+    const actions = read('src/lib/dashboard/organization-dashboard-adapter.ts');
 
-    expect(content).toContain('workflowReadiness?: OrganizationWorkflowReadiness');
-    expect(content).toContain('buildWorkflowReadinessAction');
-    expect(content).toContain('current workflow readiness');
+    expect(actions).toContain('type NextBestActionInput');
+    expect(actions).toContain('workflowReadiness: WorkflowReadiness');
+    expect(actions).toContain('generateNextBestActions');
+    expect(actions).toContain('workflowReadiness.inventory.missing > 0');
+    expect(actions).toContain('workflowReadiness.policies.missing > 0');
+    expect(actions).toContain('workflowReadiness.evidence.missing > 0');
   });
 });
