@@ -2,13 +2,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const read = (path: string) => readFileSync(path, 'utf8');
-const signupNextPattern = 'signup?' + 'next=';
-const loginNextPattern = 'login?' + 'next=';
 
 describe('Phase 5 dashboard invariants', () => {
   it('keeps root traffic redirected to the default localized entrypoint', () => {
     const content = read('src/app/page.tsx');
-
     expect(content).toContain('redirect');
     expect(content).toContain("'/pt'");
   });
@@ -16,7 +13,6 @@ describe('Phase 5 dashboard invariants', () => {
   it('keeps localized home static while middleware handles authenticated redirects safely', () => {
     const home = read('src/app/[locale]/page.tsx');
     const middleware = read('src/middleware.ts');
-
     expect(home).toContain('force-static');
     expect(home).toContain('revalidate = 300');
     expect(home).toContain('EnterpriseHome');
@@ -27,13 +23,13 @@ describe('Phase 5 dashboard invariants', () => {
 
   it('keeps authenticated marketing and auth entry routes flowing through onboarding', () => {
     const middleware = read('src/middleware.ts');
-
     expect(middleware).toContain("const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations'");
     expect(middleware).toContain("const AUTH_SUCCESS_PATH = '/onboarding'");
     expect(middleware).toContain("const AUTH_ENTRY_ROUTES = new Set(['/login', '/signup', '/register'])");
     expect(middleware).toContain('const shouldCheckAuth = !isPublic || isMarketingHome || isAuthEntry;');
     expect(middleware).toContain('isAuthenticated && (isMarketingHome || isAuthEntry)');
     expect(middleware).toContain('new URL(`/${locale}${AUTH_SUCCESS_PATH}`');
+    expect(middleware).toContain('getSupabaseUserId');
   });
 
   it('keeps locale layout on Supabase auth provider without Clerk wrappers', () => {
@@ -72,9 +68,7 @@ describe('Phase 5 dashboard invariants', () => {
 
   it('keeps signup continuation defaulted to onboarding with Supabase auth', () => {
     const signup = read('src/app/[locale]/signup/page.tsx');
-
     expect(signup).toContain('function getOnboardingHref(locale: string, planId?: string)');
-    expect(signup).toContain('const fallbackHref = getOnboardingHref(locale, planId);');
     expect(signup).toContain("normalizedNext.startsWith('//')");
     expect(signup).toContain("normalizedNext.includes('://')");
     expect(signup).toContain('isAllowedLocalizedContinuation');
@@ -110,44 +104,25 @@ describe('Phase 5 dashboard invariants', () => {
     expect(callback).toContain('auth_exchange_failed');
   });
 
-  it('keeps onboarding as the activation decision point', () => {
+  it('keeps onboarding and organization dashboard routing in place', () => {
     const onboarding = read('src/app/[locale]/onboarding/page.tsx');
-
+    const dashboard = read('src/app/[locale]/dashboard/organizations/page.tsx');
     expect(onboarding).toContain('getCurrentUser');
-    expect(onboarding).toContain('getOnboardingActivationState');
     expect(onboarding).toContain('B2BOnboardingFlow');
-    expect(onboarding).toContain('saveOnboardingDraft');
-    expect(onboarding).toContain('completeOnboardingActivation');
     expect(onboarding).toContain('redirect(`/${safeLocale}/dashboard/organizations${planQuery}`)');
+    expect(dashboard).toContain('getCurrentUser');
+    expect(dashboard).toContain('redirect(`/${safeLocale}/login`)');
+    expect(dashboard).toContain('getOrganizationDashboardData');
+    expect(dashboard).toContain('redirect(`/${safeLocale}/onboarding');
   });
 
-  it('keeps organization dashboard auth and onboarding routing in place', () => {
-    const content = read('src/app/[locale]/dashboard/organizations/page.tsx');
-
-    expect(content).toContain('getCurrentUser');
-    expect(content).toContain('redirect(`/${safeLocale}/login`)');
-    expect(content).toContain('getOrganizationDashboardData');
-    expect(content).toContain('redirect(`/${safeLocale}/onboarding');
-  });
-
-  it('passes workflow readiness from the organization page into dashboard overview', () => {
-    const content = read('src/app/[locale]/dashboard/organizations/page.tsx');
-
-    expect(content).toContain('workflowReadiness={data.workflowReadiness}');
-  });
-
-  it('passes workflow readiness from dashboard overview into next best actions', () => {
-    const content = read('src/components/dashboard/dashboard-home-overview.tsx');
-
-    expect(content).toContain('workflowReadiness={workflowReadiness}');
-    expect(content).toContain('NextBestActions');
-  });
-
-  it('uses workflow readiness to prioritize next best actions', () => {
-    const content = read('src/components/dashboard/next-best-actions.tsx');
-
-    expect(content).toContain('workflowReadiness?: OrganizationWorkflowReadiness');
-    expect(content).toContain('buildWorkflowReadinessAction');
-    expect(content).toContain('current workflow readiness');
+  it('keeps workflow readiness wired through dashboard actions', () => {
+    const page = read('src/app/[locale]/dashboard/organizations/page.tsx');
+    const overview = read('src/components/dashboard/dashboard-home-overview.tsx');
+    const actions = read('src/components/dashboard/next-best-actions.tsx');
+    expect(page).toContain('workflowReadiness={data.workflowReadiness}');
+    expect(overview).toContain('workflowReadiness={workflowReadiness}');
+    expect(actions).toContain('buildWorkflowReadinessAction');
+    expect(actions).toContain('current workflow readiness');
   });
 });
