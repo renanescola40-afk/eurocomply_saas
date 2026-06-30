@@ -83,7 +83,7 @@ function getSignupCopy(activeLocale: Locale) {
         home: 'Voltar à landing',
         contact: 'Falar com suporte',
         authLoading: 'A autenticação ainda está a carregar. Tente novamente dentro de alguns segundos.',
-        authNotConfigured: 'A autenticação não está configurada neste deployment. Adicione as chaves Clerk publishable e secret na Vercel e faça novo deploy.',
+        authNotConfigured: 'A autenticação está temporariamente indisponível. Contacte o suporte ou tente novamente mais tarde.',
         authExchangeFailed: 'Não foi possível concluir a criação da conta. Tente novamente.',
         fallbackError: 'Não foi possível criar a conta. Tente novamente.',
       }
@@ -109,7 +109,7 @@ function getSignupCopy(activeLocale: Locale) {
         home: 'Back to landing',
         contact: 'Contact support',
         authLoading: 'Authentication is still loading. Please try again in a moment.',
-        authNotConfigured: 'Authentication is not configured for this deployment. Add the Clerk publishable and secret keys in Vercel, then redeploy.',
+        authNotConfigured: 'Authentication is temporarily unavailable. Please contact support or try again later.',
         authExchangeFailed: 'Could not complete account creation. Please try again.',
         fallbackError: 'Could not create the account. Please try again.',
       };

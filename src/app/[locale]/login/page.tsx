@@ -15,7 +15,7 @@ const publicErrors = {
     auth_exchange_failed: 'Could not complete sign-in. Please try again.',
     email_sign_in_failed: 'Could not complete sign-in. Please try again.',
     auth_loading: 'Authentication is still loading. Please try again in a moment.',
-    auth_not_configured: 'Authentication is not configured for this deployment. Add the Clerk publishable and secret keys in Vercel, then redeploy.',
+    auth_not_configured: 'Authentication is temporarily unavailable. Please contact support or try again later.',
   },
   pt: {
     missing_oauth_code: 'O pedido de entrada expirou. Tente novamente.',
@@ -23,7 +23,7 @@ const publicErrors = {
     auth_exchange_failed: 'Não foi possível concluir a entrada. Tente novamente.',
     email_sign_in_failed: 'Não foi possível concluir a entrada. Tente novamente.',
     auth_loading: 'A autenticação ainda está a carregar. Tente novamente dentro de alguns segundos.',
-    auth_not_configured: 'A autenticação não está configurada neste deployment. Adicione as chaves Clerk publishable e secret na Vercel e faça novo deploy.',
+    auth_not_configured: 'A autenticação está temporariamente indisponível. Contacte o suporte ou tente novamente mais tarde.',
   },
 } as const;
 
