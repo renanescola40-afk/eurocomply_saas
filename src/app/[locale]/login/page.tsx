@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getBillingPlan } from '@/lib/billing/plans';
+import { normalizePublicAuthErrorCode, type PublicAuthErrorCode } from '@/lib/auth/public-errors';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
 function successHref(locale: string, planId?: string | null) {
@@ -60,6 +61,16 @@ function copy(locale: Locale) {
       };
 }
 
+function publicErrors(locale: Locale): Record<PublicAuthErrorCode, string> {
+  const text = copy(locale);
+  return {
+    missing_oauth_code: text.failed,
+    auth_configuration_unavailable: text.failed,
+    auth_exchange_failed: text.failed,
+    email_sign_in_failed: text.failed,
+  };
+}
+
 function LoginContent() {
   const params = useParams();
   const router = useRouter();
@@ -70,11 +81,13 @@ function LoginContent() {
   const afterSignInUrl = safeNext(searchParams.get('next'), locale, planId);
   const createAccountUrl = signUpHref(locale, planId, afterSignInUrl);
   const text = copy(locale);
+  const authErrorCode = normalizePublicAuthErrorCode(searchParams.get('error'), 'email_sign_in_failed');
+  const initialError = searchParams.get('error') ? publicErrors(locale)[authErrorCode] : null;
   const { loading, signInWithEmail, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
 
   async function handleProvider() {
     if (loading) {
@@ -85,7 +98,7 @@ function LoginContent() {
     setError(null);
     const result = await signInWithGoogle({ next: afterSignInUrl });
     if (result.error) {
-      setError(text.failed);
+      setError(publicErrors(locale).auth_exchange_failed);
       setBusy(false);
     }
   }
@@ -100,7 +113,7 @@ function LoginContent() {
     setError(null);
     const result = await signInWithEmail(email, secret);
     if (result.error) {
-      setError(text.failed);
+      setError(publicErrors(locale).email_sign_in_failed);
       setBusy(false);
       return;
     }
