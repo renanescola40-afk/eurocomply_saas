@@ -1,0 +1,36 @@
+{
+  "evidenceItem": "vercel-deployment-status",
+  "status": "Complete",
+  "outcome": "deployment_status_success_observed",
+  "observedAt": "2026-06-30T08:20:00Z",
+  "reviewedAt": "2026-06-30T08:20:00Z",
+  "reviewer": "ChatGPT release engineering connector session",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "branch": "main",
+  "commitSha": "4890c4cb0c47deef5dfd78b22f6888e4acd0c4b7",
+  "commitMessage": "Merge pull request #701 from renanescola40-afk/fix/internal-email-test-hardening",
+  "source": "GitHub combined commit status",
+  "observedStatuses": [
+    {
+      "context": "Vercel",
+      "state": "success",
+      "targetUrlKind": "vercel_project_deployment_status_url"
+    }
+  ],
+  "scope": "Deployment status presence only. This confirms Vercel reported success for the latest main commit through GitHub status checks.",
+  "doesNotProve": [
+    "Functional production smoke passed",
+    "Protected readiness token was configured",
+    "Health and ready endpoints were checked from a network-capable release runner",
+    "Rollback target was verified",
+    "Authenticated E2E flows passed",
+    "Enterprise-ready or production Go decision"
+  ],
+  "requiredNextEvidence": [
+    "docs/security/evidence/runtime/deployment-smoke-validation.json with status Complete and outcome passed for the exact promoted commit",
+    "docs/security/evidence/runtime/rollback-dry-run-validation.json with status Complete and outcome passed",
+    "Updated P0_RUNTIME_EVIDENCE_REGISTER.md only after real runtime evidence is attached"
+  ],
+  "redactionConfirmation": "No tokens, cookies, authorization headers, provider secrets, deployment secrets, or customer data are stored in this evidence file.",
+  "releaseGate": "Positive partial evidence only. Public production and enterprise release remain blocked while deployment smoke, rollback, branch protection, and external-review evidence remain Open or Exception."
+}
