@@ -1,13 +1,8 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useMemo } from 'react';
-import {
-  useClerk,
-  useSession,
-  useSignIn,
-  useSignUp,
-  useUser,
-} from '@clerk/nextjs';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import type { Session, User } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 type SignupMetadata = {
   name?: string;
@@ -15,33 +10,19 @@ type SignupMetadata = {
   requested_plan?: string;
 };
 
-type ClerkCompatUser = {
-  id: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  fullName: string | null;
-  imageUrl: string;
-  user_metadata: Record<string, unknown>;
-  publicMetadata: Record<string, unknown>;
+type AppUser = User & {
+  firstName?: string | null;
+  lastName?: string | null;
+  fullName?: string | null;
+  imageUrl?: string | null;
 };
 
-type ClerkCompatSession = {
-  id: string;
-  access_token: string;
-  token_type: 'bearer';
-} | null;
-
 interface AuthContextType {
-  user: ClerkCompatUser | null;
-  session: ClerkCompatSession;
+  user: AppUser | null;
+  session: Session | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUpWithEmail: (
-    email: string,
-    password: string,
-    metadata?: SignupMetadata
-  ) => Promise<{ error: Error | null }>;
+  signUpWithEmail: (email: string, password: string, metadata?: SignupMetadata) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -49,191 +30,113 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function getPrimaryEmail(user: ReturnType<typeof useUser>['user']) {
-  return user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses?.[0]?.emailAddress ?? null;
-}
-
 function getLocalizedPath(path: string) {
   if (typeof window === 'undefined') return `/pt${path.startsWith('/') ? path : `/${path}`}`;
-  const segments = window.location.pathname.split('/').filter(Boolean);
-  const locale = segments[0] ?? 'pt';
+  const locale = window.location.pathname.split('/').filter(Boolean)[0] ?? 'pt';
   return `/${locale}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-function getRedirectUrl(path = '/dashboard/organizations') {
+function getRedirectUrl(path = '/onboarding') {
   if (typeof window === 'undefined') return getLocalizedPath(path);
   return new URL(getLocalizedPath(path), window.location.origin).toString();
 }
 
-function addMetadataAlias(metadata: Record<string, unknown>, key: string, value: string | null | undefined) {
-  const normalized = value?.trim();
-  if (normalized) {
-    metadata[key] = normalized;
-  }
+function normalizeUser(user: User | null): AppUser | null {
+  if (!user) return null;
+  const metadata = user.user_metadata ?? {};
+  const fullName = typeof metadata.full_name === 'string' ? metadata.full_name : typeof metadata.name === 'string' ? metadata.name : null;
+  const nameParts = fullName?.split(/\s+/).filter(Boolean) ?? [];
+  return {
+    ...user,
+    firstName: typeof metadata.first_name === 'string' ? metadata.first_name : nameParts[0] ?? null,
+    lastName: typeof metadata.last_name === 'string' ? metadata.last_name : nameParts.slice(1).join(' ') || null,
+    fullName,
+    imageUrl: typeof metadata.avatar_url === 'string' ? metadata.avatar_url : typeof metadata.picture === 'string' ? metadata.picture : null,
+  };
 }
 
-function clerkDisabledError() {
-  return new Error('Authentication is disabled because Clerk is not configured.');
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error || 'Authentication error'));
 }
 
 export function getLocalizedDashboardPath() {
   return getLocalizedPath('/dashboard/organizations');
 }
 
-export function DisabledAuthProvider({ children }: { children: React.ReactNode }) {
-  const value = useMemo<AuthContextType>(() => ({
-    user: null,
-    session: null,
-    loading: false,
-    signInWithEmail: async () => ({ error: clerkDisabledError() }),
-    signUpWithEmail: async () => ({ error: clerkDisabledError() }),
-    signInWithGoogle: async () => ({ error: clerkDisabledError() }),
-    signOut: async () => ({ error: null }),
-    resetPassword: async () => ({ error: clerkDisabledError() }),
-  }), []);
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { user: clerkUser, isLoaded: userLoaded } = useUser();
-  const { session: clerkSession, isLoaded: sessionLoaded } = useSession();
-  const { signOut: clerkSignOut } = useClerk();
-  const { signIn, setActive: setSignInActive, isLoaded: signInLoaded } = useSignIn();
-  const { signUp, setActive: setSignUpActive, isLoaded: signUpLoaded } = useSignUp();
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const user = useMemo<ClerkCompatUser | null>(() => {
-    if (!clerkUser) return null;
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      const nextSession = data.session ?? null;
+      setSession(nextSession);
+      setUser(normalizeUser(nextSession?.user ?? null));
+      setLoading(false);
+    }).catch(() => {
+      if (!mounted) return;
+      setSession(null);
+      setUser(null);
+      setLoading(false);
+    });
 
-    const publicMetadata = clerkUser.publicMetadata as Record<string, unknown>;
-    const unsafeMetadata = clerkUser.unsafeMetadata as Record<string, unknown>;
-    const userMetadata = {
-      ...publicMetadata,
-      ...unsafeMetadata,
-      email: getPrimaryEmail(clerkUser),
-    } satisfies Record<string, unknown>;
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession ?? null);
+      setUser(normalizeUser(nextSession?.user ?? null));
+      setLoading(false);
+    });
 
-    addMetadataAlias(userMetadata, 'name', clerkUser.fullName);
-    addMetadataAlias(userMetadata, 'full_name', clerkUser.fullName);
-    addMetadataAlias(userMetadata, 'first_name', clerkUser.firstName);
-    addMetadataAlias(userMetadata, 'last_name', clerkUser.lastName);
-
-    return {
-      id: clerkUser.id,
-      email: getPrimaryEmail(clerkUser),
-      firstName: clerkUser.firstName,
-      lastName: clerkUser.lastName,
-      fullName: clerkUser.fullName,
-      imageUrl: clerkUser.imageUrl,
-      user_metadata: userMetadata,
-      publicMetadata,
-    };
-  }, [clerkUser]);
-
-  const session = useMemo<ClerkCompatSession>(() => {
-    if (!clerkSession) return null;
-    return {
-      id: clerkSession.id,
-      access_token: clerkSession.id,
-      token_type: 'bearer',
-    };
-  }, [clerkSession]);
-
-  const loading = !userLoaded || !sessionLoaded;
-
-  const signInWithEmail = useCallback(async (email: string, password: string) => {
-    try {
-      if (!signInLoaded || !signIn || !setSignInActive) {
-        return { error: new Error('Clerk sign-in is not ready yet') };
-      }
-
-      const result = await signIn.create({
-        identifier: email,
-        password,
-      });
-
-      if (result.status !== 'complete') {
-        return { error: new Error('Additional sign-in verification is required') };
-      }
-
-      await setSignInActive({ session: result.createdSessionId });
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
-    }
-  }, [setSignInActive, signIn, signInLoaded]);
-
-  const signUpWithEmail = useCallback(async (
-    email: string,
-    password: string,
-    metadata?: SignupMetadata,
-  ) => {
-    try {
-      if (!signUpLoaded || !signUp || !setSignUpActive) {
-        return { error: new Error('Clerk sign-up is not ready yet') };
-      }
-
-      const nameParts = metadata?.name?.trim().split(/\s+/).filter(Boolean) ?? [];
-      const firstName = nameParts[0];
-      const lastName = nameParts.slice(1).join(' ') || undefined;
-
-      const result = await signUp.create({
-        emailAddress: email,
-        password,
-        firstName,
-        lastName,
-        unsafeMetadata: {
-          company_name: metadata?.company_name,
-          requested_plan: metadata?.requested_plan,
-        },
-      });
-
-      if (result.status === 'complete') {
-        await setSignUpActive({ session: result.createdSessionId });
-        return { error: null };
-      }
-
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
-    }
-  }, [setSignUpActive, signUp, signUpLoaded]);
-
-  const signInWithGoogle = useCallback(async () => {
-    try {
-      if (!signInLoaded || !signIn) {
-        return { error: new Error('Clerk sign-in is not ready yet') };
-      }
-
-      await signIn.authenticateWithRedirect({
-        strategy: 'oauth_google',
-        redirectUrl: getRedirectUrl('/login'),
-        redirectUrlComplete: getRedirectUrl('/dashboard/organizations'),
-      });
-
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
-    }
-  }, [signIn, signInLoaded]);
-
-  const signOut = useCallback(async () => {
-    try {
-      await clerkSignOut({ redirectUrl: '/' });
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
-    }
-  }, [clerkSignOut]);
-
-  const resetPassword = useCallback(async () => {
-    return {
-      error: new Error('Use Clerk account recovery from the sign-in page.'),
+    return () => {
+      mounted = false;
+      data.subscription.unsubscribe();
     };
   }, []);
 
-  const value: AuthContextType = {
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error ? toError(error) : null };
+  }, []);
+
+  const signUpWithEmail = useCallback(async (email: string, password: string, metadata?: SignupMetadata) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: getRedirectUrl('/onboarding'),
+        data: {
+          name: metadata?.name,
+          full_name: metadata?.name,
+          company_name: metadata?.company_name,
+          requested_plan: metadata?.requested_plan,
+        },
+      },
+    });
+    return { error: error ? toError(error) : null };
+  }, []);
+
+  const signInWithGoogle = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: getRedirectUrl('/auth/callback') },
+    });
+    return { error: error ? toError(error) : null };
+  }, []);
+
+  const signOut = useCallback(async () => {
+    const { error } = await supabase.auth.signOut();
+    if (!error && typeof window !== 'undefined') window.location.assign(getLocalizedPath('/login'));
+    return { error: error ? toError(error) : null };
+  }, []);
+
+  const resetPassword = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: getRedirectUrl('/reset-password') });
+    return { error: error ? toError(error) : null };
+  }, []);
+
+  const value = useMemo<AuthContextType>(() => ({
     user,
     session,
     loading,
@@ -242,15 +145,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGoogle,
     signOut,
     resetPassword,
-  };
+  }), [loading, resetPassword, session, signInWithEmail, signInWithGoogle, signOut, signUpWithEmail, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }
