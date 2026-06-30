@@ -103,46 +103,6 @@ function withPrivateNoStore(response: NextResponse) {
   return response;
 }
 
-function copyAuthCookies(target: NextResponse, source: NextResponse) {
-  for (const cookie of source.cookies.getAll()) {
-    target.cookies.set(cookie);
-  }
-
-  return target;
-}
-
-async function getSupabaseAuthState(req: NextRequest) {
-  let authResponse = NextResponse.next({ request: { headers: req.headers } });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return req.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            req.cookies.set(name, value);
-          });
-          authResponse = NextResponse.next({ request: { headers: req.headers } });
-          cookiesToSet.forEach(({ name, value, options }) => {
-            authResponse.cookies.set(name, value, options);
-          });
-        },
-      },
-    },
-  );
-
-  const { data, error } = await supabase.auth.getUser();
-
-  return {
-    userId: error ? null : data.user?.id ?? null,
-    response: authResponse,
-  };
-}
-
 function detectLocale(req: NextRequest): string {
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
   if (cookieLocale && locales.includes(cookieLocale as 'en')) {
@@ -209,6 +169,33 @@ function getCheckoutPlanRedirect(pathname: string, req: NextRequest) {
   return NextResponse.redirect(pricingUrl);
 }
 
+async function hasSupabaseSession(req: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return false;
+  }
+
+  const response = NextResponse.next({ request: { headers: req.headers } });
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return req.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
+
+  const { data, error } = await supabase.auth.getUser();
+  if (error) return false;
+  return Boolean(data.user);
+}
+
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
@@ -251,18 +238,17 @@ export default async function middleware(req: NextRequest) {
     const isMarketingHome = shouldCheckMarketingHomeAuth(pathname, locale);
     const isAuthEntry = isAuthEntryRoute(pathname, locale);
     const shouldCheckAuth = !isPublic || isMarketingHome || isAuthEntry;
-    const authState = shouldCheckAuth ? await getSupabaseAuthState(req) : { userId: null, response: NextResponse.next() };
-    const isAuthenticated = Boolean(authState.userId);
+    const isAuthenticated = shouldCheckAuth ? await hasSupabaseSession(req) : false;
 
     if (!isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
       loginUrl.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
-      return copyAuthCookies(withPrivateNoStore(NextResponse.redirect(loginUrl)), authState.response);
+      return withPrivateNoStore(NextResponse.redirect(loginUrl));
     }
 
     if (isAuthenticated && (isMarketingHome || isAuthEntry)) {
       const dashboardUrl = new URL(`/${locale}${AUTH_SUCCESS_PATH}`, req.url);
-      return copyAuthCookies(withPrivateNoStore(NextResponse.redirect(dashboardUrl)), authState.response);
+      return withPrivateNoStore(NextResponse.redirect(dashboardUrl));
     }
 
     const response = intlMiddleware(req);
@@ -273,7 +259,7 @@ export default async function middleware(req: NextRequest) {
       sameSite: 'lax',
     });
 
-    return copyAuthCookies(response, authState.response);
+    return response;
   }
 
   if (pathname.startsWith('/api')) {
