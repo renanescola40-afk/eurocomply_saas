@@ -1,13 +1,17 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 type SignupMetadata = {
   name?: string;
   company_name?: string;
   requested_plan?: string;
+};
+
+type OAuthOptions = {
+  next?: string;
 };
 
 type AppUser = User & {
@@ -23,17 +27,21 @@ interface AuthContextType {
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUpWithEmail: (email: string, password: string, metadata?: SignupMetadata) => Promise<{ error: Error | null }>;
-  signInWithGoogle: () => Promise<{ error: Error | null }>;
+  signInWithGoogle: (options?: OAuthOptions) => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function getLocaleFromWindow() {
+  if (typeof window === 'undefined') return 'pt';
+  return window.location.pathname.split('/').filter(Boolean)[0] ?? 'pt';
+}
+
 function getLocalizedPath(path: string) {
-  if (typeof window === 'undefined') return `/pt${path.startsWith('/') ? path : `/${path}`}`;
-  const locale = window.location.pathname.split('/').filter(Boolean)[0] ?? 'pt';
-  return `/${locale}${path.startsWith('/') ? path : `/${path}`}`;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `/${getLocaleFromWindow()}${normalizedPath}`;
 }
 
 function getRedirectUrl(path = '/onboarding') {
@@ -41,17 +49,33 @@ function getRedirectUrl(path = '/onboarding') {
   return new URL(getLocalizedPath(path), window.location.origin).toString();
 }
 
+function getRootAuthCallbackUrl(next?: string) {
+  const locale = getLocaleFromWindow();
+  const callbackUrl = new URL('/auth/callback', window.location.origin);
+  callbackUrl.searchParams.set('locale', locale);
+  if (next && next.startsWith(`/${locale}/`) && !next.startsWith('//') && !next.includes('://')) {
+    callbackUrl.searchParams.set('next', next);
+  }
+  return callbackUrl.toString();
+}
+
+function readMetadataString(metadata: Record<string, unknown>, key: string) {
+  const value = metadata[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
 function normalizeUser(user: User | null): AppUser | null {
   if (!user) return null;
   const metadata = user.user_metadata ?? {};
-  const fullName = typeof metadata.full_name === 'string' ? metadata.full_name : typeof metadata.name === 'string' ? metadata.name : null;
+  const fullName = readMetadataString(metadata, 'full_name') ?? readMetadataString(metadata, 'name');
   const nameParts = fullName?.split(/\s+/).filter(Boolean) ?? [];
+  const inferredLastName = nameParts.slice(1).join(' ') || null;
   return {
     ...user,
-    firstName: typeof metadata.first_name === 'string' ? metadata.first_name : nameParts[0] ?? null,
-    lastName: typeof metadata.last_name === 'string' ? metadata.last_name : nameParts.slice(1).join(' ') || null,
+    firstName: readMetadataString(metadata, 'first_name') ?? nameParts[0] ?? null,
+    lastName: readMetadataString(metadata, 'last_name') ?? inferredLastName,
     fullName,
-    imageUrl: typeof metadata.avatar_url === 'string' ? metadata.avatar_url : typeof metadata.picture === 'string' ? metadata.picture : null,
+    imageUrl: readMetadataString(metadata, 'avatar_url') ?? readMetadataString(metadata, 'picture'),
   };
 }
 
@@ -83,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, nextSession: Session | null) => {
+    const { data } = supabase.auth.onAuthStateChange((_event: string, nextSession: Session | null) => {
       setSession(nextSession ?? null);
       setUser(normalizeUser(nextSession?.user ?? null));
       setLoading(false);
@@ -117,10 +141,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error ? toError(error) : null };
   }, []);
 
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = useCallback(async (options?: OAuthOptions) => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: getRedirectUrl('/auth/callback') },
+      options: { redirectTo: getRootAuthCallbackUrl(options?.next) },
     });
     return { error: error ? toError(error) : null };
   }, []);
