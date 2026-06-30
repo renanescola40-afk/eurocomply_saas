@@ -5,8 +5,15 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getBillingPlan } from '@/lib/billing/plans';
-import { normalizePublicAuthErrorCode, type PublicAuthErrorCode } from '@/lib/auth/public-errors';
+import { normalizePublicAuthErrorCode } from '@/lib/auth/public-errors';
 import { locales, type Locale } from '@/lib/i18n/routing';
+
+const publicErrors = {
+  missing_oauth_code: 'Unable to complete sign-in. Please try again.',
+  auth_configuration_unavailable: 'Sign-in is temporarily unavailable. Please try again later.',
+  auth_exchange_failed: 'Unable to verify sign-in. Please try again.',
+  email_sign_in_failed: 'Could not sign in. Check your details and try again.',
+};
 
 function successHref(locale: string, planId?: string | null) {
   const base = `/${locale}/onboarding`;
@@ -80,6 +87,7 @@ function LoginContent() {
   const planId = searchParams.get('plan');
   const afterSignInUrl = safeNext(searchParams.get('next'), locale, planId);
   const createAccountUrl = signUpHref(locale, planId, afterSignInUrl);
+  const publicErrorCode = searchParams.get('error') ? normalizePublicAuthErrorCode(searchParams.get('error')) : null;
   const text = copy(locale);
   const authErrorCode = normalizePublicAuthErrorCode(searchParams.get('error'), 'email_sign_in_failed');
   const initialError = searchParams.get('error') ? publicErrors(locale)[authErrorCode] : null;
@@ -87,7 +95,7 @@ function LoginContent() {
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(initialError);
+  const [error, setError] = useState<string | null>(publicErrorCode ? publicErrors[publicErrorCode] : null);
 
   async function handleProvider() {
     if (loading) {
@@ -98,7 +106,7 @@ function LoginContent() {
     setError(null);
     const result = await signInWithGoogle({ next: afterSignInUrl });
     if (result.error) {
-      setError(publicErrors(locale).auth_exchange_failed);
+      setError(publicErrors.auth_exchange_failed);
       setBusy(false);
     }
   }
@@ -113,7 +121,7 @@ function LoginContent() {
     setError(null);
     const result = await signInWithEmail(email, secret);
     if (result.error) {
-      setError(publicErrors(locale).email_sign_in_failed);
+      setError(publicErrors.email_sign_in_failed);
       setBusy(false);
       return;
     }
