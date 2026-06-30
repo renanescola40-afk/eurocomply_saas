@@ -205,8 +205,14 @@ describe('billing checkout API security gates', () => {
       customer: 'cus_org_a',
       line_items: [{ price: 'price_growth_monthly', quantity: 1 }],
       success_url: 'https://app.eurocomply.test/pt/dashboard/organizations?checkout=success',
-      cancel_url: 'https://app.eurocomply.test/pt/pricing?checkout=cancelled',
+      cancel_url: 'https://app.eurocomply.test/pt/checkout?plan=growth&checkout=cancelled',
       client_reference_id: 'org_a',
+      locale: 'pt',
+      billing_address_collection: 'required',
+      customer_update: { address: 'auto', name: 'auto' },
+      tax_id_collection: { enabled: true },
+      payment_method_collection: 'always',
+      allow_promotion_codes: true,
       metadata: expect.objectContaining({
         organization_id: 'org_a',
         organizationId: 'org_a',
@@ -215,11 +221,17 @@ describe('billing checkout API security gates', () => {
         user_id: 'user_admin',
         userId: 'user_admin',
         plan: 'growth',
+        actor_role: 'admin',
+        step_up_action: 'manage_billing',
+        step_up_verified_at: '2026-06-22T09:00:00.000Z',
       }),
       subscription_data: expect.objectContaining({
         metadata: expect.objectContaining({
           organization_id: 'org_a',
+          user_id: 'user_admin',
           plan: 'growth',
+          actor_role: 'admin',
+          step_up_action: 'manage_billing',
         }),
       }),
     }));
