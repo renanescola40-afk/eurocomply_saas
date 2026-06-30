@@ -15,17 +15,23 @@ This file records release evidence for the current assessed commit. Partial stat
 
 ## Evidence status
 
-| Evidence item | Status | Notes | Next action |
-| --- | --- | --- | --- |
-| CI run for assessed commit | Open | The latest main merge commit did not return reviewable workflow-run URLs in this connector session. | Attach exact final workflow-run URLs and output before Go. |
-| Current main Vercel deployment status | Open | Vercel status was observed as success, but that does not prove functional runtime smoke. | Attach real smoke output before Go. |
-| Deployment URL functional verification | Open | Health, readiness, preview, and production smoke output are still missing. | Required before Go. |
-| Final validation runner | Open | Final validation output is still missing. | Required before Go. |
-| Rollback dry-run | Open | Rollback dry-run output is still missing. | Required before Go. |
-| External review | Open | External review evidence is still missing. | Required before enterprise Go. |
+| Evidence item | Status | Required evidence | Owner | Next action |
+| --- | --- | --- | --- | --- |
+| Branch protection applied on `main` | Exception | Repository evidence exists; exception owner must re-confirm current branch rules for the final release commit | Release owner | Revalidate for final release commit |
+| Required status checks configured | Exception | Repository evidence exists; exception owner must confirm required checks for the final release commit | Release owner | Revalidate for final release commit |
+| Production provider configuration evidence | Complete | Runtime evidence json exists for provider settings review; attach runtime preflight output before Go | Release owner | Attach runtime preflight before Go |
+| Supabase live RLS validation completed | Complete | Runtime evidence json records passed live RLS validation and reviewed command output | Security reviewer | Revalidate before major data model change |
+| External review | Open | External review report or approved review evidence is still missing | Security reviewer | Required before enterprise Go |
+| Deterministic npm lockfile committed | Complete | Package lockfile commit evidence exists; attach exact final runner install output before Go | Engineering owner | Attach final runner output |
+| Floating dependency specs removed | Complete | Dependency report evidence exists and records no forbidden floating specs | Engineering owner | Attach final security output before Go |
+| CI run for assessed commit | Open | The latest main merge commit did not return reviewable workflow-run URLs in this connector session | Engineering owner | Attach exact final workflow-run URLs and output before Go |
+| Current main Vercel deployment status | Open | Vercel status was observed as success, but that does not prove functional runtime smoke | Platform owner | Attach real smoke output before Go |
+| Deployment URL functional verification | Open | Health, readiness, preview, and production smoke output are still missing | Platform owner | Required before Go |
+| Final validation runner | Open | Final validation output is still missing | Release owner | Required before Go |
+| Rollback dry-run | Open | Rollback dry-run output is still missing | Release owner | Required before Go |
 
 ## Go/No-Go rule
 
-Release remains blocked while any required P0 runtime evidence item is Open.
+Release remains blocked while any required P0 runtime evidence item is Open or under release-blocking Exception.
 
 Current final decision: **No-Go**.
