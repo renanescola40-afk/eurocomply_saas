@@ -96,6 +96,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/waitlist',
+        destination: '/api/prelaunch',
+      },
+    ];
+  },
   async headers() {
     return [
       {
