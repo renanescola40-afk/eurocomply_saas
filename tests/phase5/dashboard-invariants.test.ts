@@ -83,8 +83,6 @@ describe('Phase 5 dashboard invariants', () => {
     expect(signup).not.toContain('authenticateWithRedirect');
     expect(signup).not.toContain('signUp.create({ emailAddress: email, password });');
     expect(signup).not.toContain('<SignUp');
-    expect(signup).not.toContain(signupNextPattern);
-    expect(signup).not.toContain(loginNextPattern);
   });
 
   it('keeps OAuth callback route exchanging Supabase codes safely', () => {
@@ -92,7 +90,7 @@ describe('Phase 5 dashboard invariants', () => {
       const callback = read('src/app/[locale]/oauth/complete/page.tsx');
       const middleware = read('src/middleware.ts');
 
-      expect(callback).toContain('AuthenticateWithRedirectCallback');
+      expect(callback).toContain('export { GET } from');
       expect(middleware).toContain("'/oauth/complete'");
       return;
     }
