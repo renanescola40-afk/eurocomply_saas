@@ -44,7 +44,7 @@ function allowedRateLimitResult(overrides: Record<string, unknown> = {}) {
     highRisk: false,
     failureMode: 'fail-closed',
     audit: false,
-    key: 'internal-email-test:203.0.113.10',
+    key: 'internal-email-test:route',
     userId: null,
     organizationId: null,
     route: '/api/internal/email/test',
@@ -172,7 +172,7 @@ describe('internal email test route hardening', () => {
     const response = await POST(
       buildRequest(
         { to: 'qa@example.test', template: 'security_alert', organizationName: 'Risck Comply QA' },
-        { authorization: 'Bearer test-secret' },
+        { authorization: 'Bearer test-secret', 'x-forwarded-for': '198.51.100.99' },
       ),
     );
     const body = await response.json();
@@ -189,7 +189,8 @@ describe('internal email test route hardening', () => {
     });
     expect(mocks.checkDistributedRateLimit).toHaveBeenCalledWith(
       expect.objectContaining({
-        key: 'internal-email-test:203.0.113.10',
+        key: 'internal-email-test:route',
+        ip: null,
         policy: 'health-internal',
         route: '/api/internal/email/test',
         action: 'send_test_email',
