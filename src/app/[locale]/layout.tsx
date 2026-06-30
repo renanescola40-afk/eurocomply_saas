@@ -10,7 +10,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffects from '@/components/GlobalClientEffects';
 import GapAnalysisShortcut from '@/components/GapAnalysisShortcut';
-import { AuthProvider, DisabledAuthProvider } from '@/hooks/useAuth';
+import { AuthProvider } from '@/hooks/useAuth';
 import { routing, type Locale } from '@/lib/i18n/routing';
 
 import '../globals.css';
@@ -99,16 +99,12 @@ export default async function LocaleLayout({ children, params }: Props) {
         enableSystem={false}
         disableTransitionOnChange
       >
-        {clerkEnabled ? (
-          <AuthProvider>
-            <PostHogAnalyticsProvider>
-              {sharedShell}
-              <ClerkFloatingControls locale={safeLocale} />
-            </PostHogAnalyticsProvider>
-          </AuthProvider>
-        ) : (
-          <DisabledAuthProvider>{sharedShell}</DisabledAuthProvider>
-        )}
+        <AuthProvider>
+          <PostHogAnalyticsProvider>
+            {sharedShell}
+            {clerkEnabled ? <ClerkFloatingControls locale={safeLocale} /> : null}
+          </PostHogAnalyticsProvider>
+        </AuthProvider>
       </ThemeProvider>
     </NextIntlClientProvider>
   );
