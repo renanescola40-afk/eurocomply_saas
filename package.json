@@ -12,7 +12,6 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "preflight": "node scripts/preflight.mjs",
-    "clerk:env": "node scripts/dev/check-clerk-env.mjs",
     "phase1:check": "node scripts/dev/run-phase1-checks.mjs",
     "phase1:capture": "node scripts/dev/capture-phase1-evidence.mjs",
     "phase1:smoke": "node scripts/dev/capture-phase1-smoke.mjs",
