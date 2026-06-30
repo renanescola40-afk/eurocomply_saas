@@ -28,6 +28,7 @@ export async function getCurrentUser(): Promise<CurrentAppUser | null> {
     const metadata = data.user.user_metadata ?? {};
     const fullName = readMetadataString(metadata, 'full_name') ?? readMetadataString(metadata, 'name');
     const nameParts = fullName?.split(/\s+/).filter(Boolean) ?? [];
+    const inferredLastName = nameParts.slice(1).join(' ') || null;
 
     return {
       id: data.user.id,
@@ -35,7 +36,7 @@ export async function getCurrentUser(): Promise<CurrentAppUser | null> {
       clerkUserId: null,
       email: data.user.email ?? null,
       firstName: readMetadataString(metadata, 'first_name') ?? nameParts[0] ?? null,
-      lastName: readMetadataString(metadata, 'last_name') ?? nameParts.slice(1).join(' ') || null,
+      lastName: readMetadataString(metadata, 'last_name') ?? inferredLastName,
       imageUrl: readMetadataString(metadata, 'avatar_url') ?? readMetadataString(metadata, 'picture'),
       source: 'supabase',
     };
