@@ -160,6 +160,7 @@ function checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence) {
   if (evidence.evidenceItem !== 'enterprise-final-readiness-validation' || evidence.status !== 'Open') return false;
 
   requireString(file, evidence, 'reviewer', 3);
+  requireString(file, evidence, 'reviewedAt', 10);
   requireString(file, evidence, 'summary', 40);
   requireArray(file, evidence, 'evidenceLocations', 1);
 
@@ -167,12 +168,36 @@ function checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence) {
     failures.push(`${file} missing redaction confirmation`);
   }
 
-  if (evidence.outcome !== 'failed') {
-    failures.push(`${file} Open enterprise final readiness evidence must have outcome failed`);
+  if (evidence.outcome !== 'no_go') {
+    failures.push(`${file} Open enterprise final readiness evidence must have outcome no_go`);
   }
 
-  if (!String(evidence.releaseGate ?? '').toLowerCase().includes('blocked')) {
-    failures.push(`${file} Open enterprise final readiness evidence must keep release blocked`);
+  if (evidence.releaseDecision !== 'No-Go') {
+    failures.push(`${file} Open enterprise final readiness evidence must keep releaseDecision No-Go`);
+  }
+
+  if (!String(evidence.productionGate ?? '').toLowerCase().includes('blocked')) {
+    failures.push(`${file} Open enterprise final readiness evidence must keep production blocked`);
+  }
+
+  if (!String(evidence.completionRule ?? '').toLowerCase().includes('complete')) {
+    failures.push(`${file} Open enterprise final readiness evidence must include completion rule`);
+  }
+
+  if (!evidence.blockingEvidence || typeof evidence.blockingEvidence !== 'object' || Array.isArray(evidence.blockingEvidence)) {
+    failures.push(`${file} Open enterprise final readiness evidence must document blockingEvidence`);
+  }
+
+  if (evidence.evidenceIntegrity?.placeholderOnly !== true) {
+    failures.push(`${file} Open enterprise final readiness evidence must be marked placeholderOnly`);
+  }
+
+  if (evidence.evidenceIntegrity?.realRuntimeEvidenceAttached !== false) {
+    failures.push(`${file} Open enterprise final readiness evidence must confirm no real runtime evidence is attached`);
+  }
+
+  if (evidence.evidenceIntegrity?.customerFacingProof !== false) {
+    failures.push(`${file} Open enterprise final readiness evidence must not be customer-facing proof`);
   }
 
   return true;
