@@ -33,9 +33,9 @@ function stubReadyEnvironment() {
   vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'service-role');
   vi.stubEnv('STRIPE_SECRET_KEY', 'configured');
   vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'configured');
-  vi.stubEnv('STRIPE_PRICE_ESSENTIAL_MONTHLY', 'configured');
-  vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', 'configured');
-  vi.stubEnv('STRIPE_PRICE_BUSINESS_MONTHLY', 'configured');
+  vi.stubEnv('STRIPE_PRICE_STARTER_MONTHLY', 'configured');
+  vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', 'configured');
+  vi.stubEnv('STRIPE_PRICE_ENTERPRISE_MONTHLY', 'configured');
   vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://redis.example');
   vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'configured');
   vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', 'https://public@example.ingest.sentry.io/1');
@@ -122,6 +122,22 @@ describe('ready endpoint hardening', () => {
     ]));
   });
 
+  it('accepts legacy Stripe price envs only as backwards-compatible readiness fallbacks', () => {
+    vi.stubEnv('STRIPE_SECRET_KEY', 'configured');
+    vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'configured');
+    vi.stubEnv('STRIPE_PRICE_ESSENTIAL_MONTHLY', 'configured');
+    vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', 'configured');
+    vi.stubEnv('STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY', 'configured');
+
+    expect(readyEnvironmentCheck()).toEqual(expect.arrayContaining([
+      {
+        name: 'stripe',
+        configured: true,
+        missingCount: 0,
+      },
+    ]));
+  });
+
   it('fails without a healthcheck token', async () => {
     stubReadyEnvironment();
     const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -188,7 +204,7 @@ describe('ready endpoint hardening', () => {
 
   it('requires all configured Stripe prices to be present', async () => {
     stubReadyEnvironment();
-    vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', '');
 
     const response = await GET(makeRequest('expected-token'));
     const body = await response.json();
@@ -322,9 +338,9 @@ describe('ready endpoint hardening', () => {
     vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', '');
     vi.stubEnv('STRIPE_SECRET_KEY', '');
     vi.stubEnv('STRIPE_WEBHOOK_SECRET', '');
-    vi.stubEnv('STRIPE_PRICE_ESSENTIAL_MONTHLY', '');
-    vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', '');
-    vi.stubEnv('STRIPE_PRICE_BUSINESS_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_STARTER_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_GROWTH_MONTHLY', '');
+    vi.stubEnv('STRIPE_PRICE_ENTERPRISE_MONTHLY', '');
     vi.stubEnv('UPSTASH_REDIS_REST_URL', '');
     vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', '');
     vi.stubEnv('NEXT_PUBLIC_SENTRY_DSN', '');
