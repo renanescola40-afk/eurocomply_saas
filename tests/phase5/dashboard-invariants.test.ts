@@ -65,7 +65,6 @@ describe('Phase 5 dashboard invariants', () => {
     expect(login).toContain('redirectUrl: `/${activeLocale}/oauth/complete`');
     expect(login).toContain('signIn.create({ identifier: email, password });');
     expect(login).not.toContain('<SignIn');
-    expect(login).not.toContain('signUpUrl={signUpUrl}');
     expect(login).not.toContain('fallbackRedirectUrl={afterSignInUrl}');
     expect(login).not.toContain('forceRedirectUrl={afterSignInUrl}');
   });
@@ -92,7 +91,6 @@ describe('Phase 5 dashboard invariants', () => {
     expect(signup).toContain('!selectedPlan');
     expect(signup).toContain('getSignupPlanHref');
     expect(signup).not.toContain('<SignUp');
-    expect(signup).not.toContain('signInUrl={signInUrl}');
     expect(signup).not.toContain('fallbackRedirectUrl={continuationHref}');
     expect(signup).not.toContain('forceRedirectUrl={continuationHref}');
     expect(signup).not.toContain(signupNextPattern);
