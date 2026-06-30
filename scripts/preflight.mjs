@@ -7,6 +7,12 @@ const supabaseServiceEnv = env('SUPABASE', 'SERVICE', 'ROLE', 'KEY');
 const supabaseAccessTokenEnv = env('SUPABASE', 'ACCESS', 'TOKEN');
 const enterpriseReleaseEnv = env('RISCK', 'COMPLY', 'ENTERPRISE', 'RELEASE');
 const legacyEnterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
+const paidBillingRequiredEnv = env('RISCK', 'COMPLY', 'PAID', 'BILLING', 'REQUIRED');
+const stripeSecretKeyEnv = env('STRIPE', 'SECRET', 'KEY');
+const stripeWebhookSecretEnv = env('STRIPE', 'WEBHOOK', 'SECRET');
+const stripePriceStarterEnv = env('STRIPE', 'PRICE', 'STARTER', 'MONTHLY');
+const stripePriceGrowthEnv = env('STRIPE', 'PRICE', 'GROWTH', 'MONTHLY');
+const stripePriceEnterpriseEnv = env('STRIPE', 'PRICE', 'ENTERPRISE', 'MONTHLY');
 const stepUpProviderEnv = env('STEP', 'UP', 'PROVIDER', 'MODE');
 const stepUpSigningEnv = env('STEP', 'UP', 'SIGNING', 'SECRET');
 const auditSigningEnv = env('AUDIT', 'CHAIN', 'SIGNING', 'SECRET');
@@ -23,16 +29,22 @@ const malwareScannerApiKeyEnv = env('MALWARE', 'SCANNER', 'API', 'KEY');
 const malwareScannerClamAvHostEnv = env('MALWARE', 'SCANNER', 'CLAMAV', 'HOST');
 const malwareScannerClamAvPortEnv = env('MALWARE', 'SCANNER', 'CLAMAV', 'PORT');
 
+const stripePriceEnvGroups = {
+  starter: [stripePriceStarterEnv, env('STRIPE', 'PRICE', 'ESSENTIAL', 'MONTHLY')],
+  growth: [stripePriceGrowthEnv, env('STRIPE', 'PRICE', 'PROFESSIONAL', 'MONTHLY'), env('STRIPE', 'PRICE', 'BUSINESS', 'MONTHLY')],
+  enterprise: [stripePriceEnterpriseEnv, env('STRIPE', 'PRICE', 'BUSINESS', 'ENTERPRISE', 'MONTHLY')],
+};
+
 const required = [supabaseUrlEnv, supabaseAnonEnv, supabaseServiceEnv];
 
 const recommended = [
   env('NEXT', 'PUBLIC', 'APP', 'URL'),
   env('TRUSTED', 'ORIGINS'),
-  env('STRIPE', 'SECRET', 'KEY'),
-  env('STRIPE', 'WEBHOOK', 'SECRET'),
-  env('STRIPE', 'PRICE', 'ESSENTIAL', 'MONTHLY'),
-  env('STRIPE', 'PRICE', 'PROFESSIONAL', 'MONTHLY'),
-  env('STRIPE', 'PRICE', 'BUSINESS', 'MONTHLY'),
+  stripeSecretKeyEnv,
+  stripeWebhookSecretEnv,
+  stripePriceStarterEnv,
+  stripePriceGrowthEnv,
+  stripePriceEnterpriseEnv,
   env('HEALTHCHECK', 'TOKEN'),
   env('EVIDENCE', 'PACK', 'SIGNING', 'SECRET'),
   auditSigningEnv,
@@ -139,12 +151,24 @@ function isEnterpriseReleaseEnabled() {
   return process.env[enterpriseReleaseEnv] === 'true' || process.env[legacyEnterpriseReleaseEnv] === 'true';
 }
 
+function isPaidBillingRequired() {
+  return process.env[paidBillingRequiredEnv] === 'true' || isEnterpriseReleaseEnabled();
+}
+
 function isHttpScannerProvider(provider) {
   return ['http', 'generic-http', 'webhook'].includes(provider);
 }
 
 function isClamAvScannerProvider(provider) {
   return ['clamav', 'clamd'].includes(provider);
+}
+
+function firstConfiguredEnv(names) {
+  for (const name of names) {
+    const value = readRuntimeSetting(name);
+    if (value) return { name, value };
+  }
+  return null;
 }
 
 function readAuditChainRuntimeEvidence() {
@@ -201,6 +225,7 @@ const missingRequired = required.filter((key) => !process.env[key]);
 const missingRecommended = recommended.filter((key) => !process.env[key]);
 const missingFiles = requiredFiles.filter((path) => !existsSync(path));
 const enterpriseReleaseEnabled = isEnterpriseReleaseEnabled();
+const paidBillingRequired = isPaidBillingRequired();
 const auditChainEvidence = readAuditChainRuntimeEvidence();
 
 console.log('RISCK COMPLY production preflight');
@@ -235,15 +260,43 @@ if (appUrl && !/^https?:\/\//.test(appUrl)) {
   process.exitCode = 1;
 }
 
-const stripePrices = [
-  process.env[env('STRIPE', 'PRICE', 'ESSENTIAL', 'MONTHLY')],
-  process.env[env('STRIPE', 'PRICE', 'PROFESSIONAL', 'MONTHLY')],
-  process.env[env('STRIPE', 'PRICE', 'BUSINESS', 'MONTHLY')],
-].filter(Boolean);
+const stripePriceConfig = Object.fromEntries(
+  Object.entries(stripePriceEnvGroups).map(([plan, names]) => [plan, firstConfiguredEnv(names)]),
+);
+const configuredStripePrices = Object.values(stripePriceConfig).filter(Boolean);
 
-for (const price of stripePrices) {
-  if (!price.startsWith('price_')) {
-    console.error(`Stripe price id looks invalid: ${price}`);
+for (const configured of configuredStripePrices) {
+  if (!configured.value.startsWith('price_')) {
+    console.error(`Stripe price id looks invalid for ${configured.name}.`);
+    process.exitCode = 1;
+  }
+}
+
+const plansMissingStripePrices = Object.entries(stripePriceConfig).filter(([, configured]) => !configured).map(([plan]) => plan);
+if (plansMissingStripePrices.length > 0) {
+  const message = `Stripe billing plans missing price envs: ${plansMissingStripePrices.join(', ')}. Preferred envs: ${stripePriceStarterEnv}, ${stripePriceGrowthEnv}, ${stripePriceEnterpriseEnv}.`;
+  if (paidBillingRequired || readRuntimeSetting(stripeSecretKeyEnv)) {
+    console.error(message);
+    process.exitCode = 1;
+  } else {
+    console.warn(message);
+  }
+}
+
+for (const [plan, configured] of Object.entries(stripePriceConfig)) {
+  if (configured && configured.name !== stripePriceEnvGroups[plan][0]) {
+    console.warn(`Stripe ${plan} price is using legacy env ${configured.name}; prefer ${stripePriceEnvGroups[plan][0]} before launch.`);
+  }
+}
+
+if (paidBillingRequired) {
+  if (!readRuntimeSetting(stripeSecretKeyEnv)) {
+    console.error(`Paid billing release requires ${stripeSecretKeyEnv}.`);
+    process.exitCode = 1;
+  }
+
+  if (!readRuntimeSetting(stripeWebhookSecretEnv)) {
+    console.error(`Paid billing release requires ${stripeWebhookSecretEnv}.`);
     process.exitCode = 1;
   }
 }
