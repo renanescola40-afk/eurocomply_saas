@@ -9,9 +9,8 @@ const NEXT_PUBLIC_SUPABASE_ANON_KEY = envName('NEXT', 'PUBLIC', 'SUPABASE', 'ANO
 const NEXT_PUBLIC_APP_URL = envName('NEXT', 'PUBLIC', 'APP', 'URL');
 const STRIPE_SECRET_KEY = envName('STRIPE', 'SECRET', 'KEY');
 const STRIPE_WEBHOOK_SECRET = envName('STRIPE', 'WEBHOOK', 'SECRET');
-const STRIPE_PRICE_ESSENTIAL_MONTHLY = envName('STRIPE', 'PRICE', 'ESSENTIAL', 'MONTHLY');
-const STRIPE_PRICE_PROFESSIONAL_MONTHLY = envName('STRIPE', 'PRICE', 'PROFESSIONAL', 'MONTHLY');
-const STRIPE_PRICE_BUSINESS_MONTHLY = envName('STRIPE', 'PRICE', 'BUSINESS', 'MONTHLY');
+const STRIPE_PRICE_STARTER_MONTHLY = envName('STRIPE', 'PRICE', 'STARTER', 'MONTHLY');
+const STRIPE_PRICE_GROWTH_MONTHLY = envName('STRIPE', 'PRICE', 'GROWTH', 'MONTHLY');
 const STRIPE_PRICE_ENTERPRISE_MONTHLY = envName('STRIPE', 'PRICE', 'ENTERPRISE', 'MONTHLY');
 const AUTH_SECRET = envName('AUTH', 'SECRET');
 const UPSTASH_REDIS_REST_URL = envName('UPSTASH', 'REDIS', 'REST', 'URL');
@@ -24,10 +23,9 @@ const envSchema = z.object({
   [NEXT_PUBLIC_SUPABASE_ANON_KEY]: z.string().min(1, `${NEXT_PUBLIC_SUPABASE_ANON_KEY} não pode estar vazio`),
   [STRIPE_SECRET_KEY]: z.string().startsWith('sk_', `${STRIPE_SECRET_KEY} deve começar com sk_`),
   [STRIPE_WEBHOOK_SECRET]: z.string().startsWith('whsec_', `${STRIPE_WEBHOOK_SECRET} deve começar com whsec_`),
-  [STRIPE_PRICE_ESSENTIAL_MONTHLY]: z.string().min(1, `${STRIPE_PRICE_ESSENTIAL_MONTHLY} é obrigatório`),
-  [STRIPE_PRICE_PROFESSIONAL_MONTHLY]: z.string().min(1, `${STRIPE_PRICE_PROFESSIONAL_MONTHLY} é obrigatório`),
-  [STRIPE_PRICE_BUSINESS_MONTHLY]: z.string().min(1, `${STRIPE_PRICE_BUSINESS_MONTHLY} é obrigatório`),
-  [STRIPE_PRICE_ENTERPRISE_MONTHLY]: z.string().optional().default(''),
+  [STRIPE_PRICE_STARTER_MONTHLY]: z.string().min(1, `${STRIPE_PRICE_STARTER_MONTHLY} é obrigatório`),
+  [STRIPE_PRICE_GROWTH_MONTHLY]: z.string().min(1, `${STRIPE_PRICE_GROWTH_MONTHLY} é obrigatório`),
+  [STRIPE_PRICE_ENTERPRISE_MONTHLY]: z.string().min(1, `${STRIPE_PRICE_ENTERPRISE_MONTHLY} é obrigatório`),
   [NEXT_PUBLIC_APP_URL]: z.string().url(`${NEXT_PUBLIC_APP_URL} deve ser uma URL`),
   [AUTH_SECRET]: z.string().min(32, `${AUTH_SECRET} deve ter pelo menos 32 caracteres`).optional().default(DEFAULT_DEV_AUTH_SECRET),
   [UPSTASH_REDIS_REST_URL]: z.string().url().optional(),
@@ -47,19 +45,20 @@ const resolvedEnv = {
     process.env.SUPABASE_KEY ||
     process.env.SUPABASE_ANON_KEY ||
     '',
-  [STRIPE_PRICE_ESSENTIAL_MONTHLY]:
-    process.env[STRIPE_PRICE_ESSENTIAL_MONTHLY] ||
+  [STRIPE_PRICE_STARTER_MONTHLY]:
+    process.env[STRIPE_PRICE_STARTER_MONTHLY] ||
+    process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY ||
     process.env.STRIPE_STARTER_PRICE_ID ||
     '',
-  [STRIPE_PRICE_PROFESSIONAL_MONTHLY]:
-    process.env[STRIPE_PRICE_PROFESSIONAL_MONTHLY] ||
+  [STRIPE_PRICE_GROWTH_MONTHLY]:
+    process.env[STRIPE_PRICE_GROWTH_MONTHLY] ||
+    process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY ||
+    process.env.STRIPE_PRICE_BUSINESS_MONTHLY ||
     process.env.STRIPE_GROWTH_PRICE_ID ||
-    '',
-  [STRIPE_PRICE_BUSINESS_MONTHLY]:
-    process.env[STRIPE_PRICE_BUSINESS_MONTHLY] ||
     '',
   [STRIPE_PRICE_ENTERPRISE_MONTHLY]:
     process.env[STRIPE_PRICE_ENTERPRISE_MONTHLY] ||
+    process.env.STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY ||
     process.env.STRIPE_ENTERPRISE_PRICE_ID ||
     '',
 };
