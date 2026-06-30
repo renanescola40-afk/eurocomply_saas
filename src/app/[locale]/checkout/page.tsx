@@ -6,7 +6,7 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
-const DEFAULT_PLAN_ID = 'professional';
+const DEFAULT_PLAN_ID = 'growth';
 const CURRENT_PLAN_BLOCKING_STATUSES = new Set([
   'active',
   'trialing',
@@ -16,7 +16,7 @@ const CURRENT_PLAN_BLOCKING_STATUSES = new Set([
 ]);
 
 const checkoutProof = [
-  ['Stripe secure billing', 'Card, invoice details and tax data are handled by Stripe Checkout.'],
+  ['Stripe secure billing', 'Card, invoice details, tax IDs and billing addresses are handled by Stripe Checkout.'],
   ['Workspace-linked subscription', 'The selected plan is connected to your organization after Stripe confirms the subscription.'],
   ['Transparent monthly pricing', 'The plan price comes from the SaaS billing catalog, with no hidden setup fee.'],
 ];
@@ -82,7 +82,8 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const billing = organization ? await getOrganizationBillingContext(organization.id).catch(() => null) : null;
   const selectedPlanIsCurrent = billing?.plan === selectedPlan.id && isCurrentPlanSubscription(billing.status);
   const message = checkoutMessage(checkoutStatus);
-  const authContinuationPath = `/${locale}/dashboard/organizations/billing`;
+  const checkoutContinuationPath = `/${locale}/checkout?plan=${selectedPlan.id}`;
+  const billingDashboardPath = `/${locale}/dashboard/organizations/billing`;
 
   return (
     <main className="min-h-screen bg-[#05060a] text-white">
@@ -92,9 +93,9 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
           <nav className="flex items-center gap-2 text-sm">
             <Link href={`/${locale}/pricing`} className="rounded-full border border-white/15 px-4 py-2 font-medium text-slate-200 hover:bg-white/10">Plans</Link>
             {user ? (
-              <Link href={`/${locale}/dashboard/organizations/billing`} className="rounded-full bg-white px-4 py-2 font-semibold text-black hover:bg-white/90">Billing</Link>
+              <Link href={billingDashboardPath} className="rounded-full bg-white px-4 py-2 font-semibold text-black hover:bg-white/90">Billing</Link>
             ) : (
-              <Link href={`/${locale}/login?next=${encodeURIComponent(authContinuationPath)}`} className="rounded-full bg-white px-4 py-2 font-semibold text-black hover:bg-white/90">Sign in</Link>
+              <Link href={`/${locale}/login?next=${encodeURIComponent(checkoutContinuationPath)}`} className="rounded-full bg-white px-4 py-2 font-semibold text-black hover:bg-white/90">Sign in</Link>
             )}
           </nav>
         </div>
@@ -189,15 +190,15 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
                 <p className="mt-3 text-center text-xs text-slate-500">Workspace: {organization.name}</p>
               </div>
             ) : user ? (
-              <Link href={`/${locale}/onboarding`} className="mt-6 flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
+              <Link href={`/${locale}/onboarding?next=${encodeURIComponent(checkoutContinuationPath)}`} className="mt-6 flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
                 Create workspace before checkout
               </Link>
             ) : (
               <div className="mt-6 grid gap-3">
-                <Link href={`/${locale}/signup?plan=${selectedPlan.id}&next=${encodeURIComponent(authContinuationPath)}`} className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
+                <Link href={`/${locale}/signup?plan=${selectedPlan.id}&next=${encodeURIComponent(checkoutContinuationPath)}`} className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
                   Create account and continue
                 </Link>
-                <Link href={`/${locale}/login?next=${encodeURIComponent(authContinuationPath)}`} className="flex h-12 w-full items-center justify-center rounded-full border border-white/15 px-6 text-sm font-bold hover:bg-white/10">
+                <Link href={`/${locale}/login?next=${encodeURIComponent(checkoutContinuationPath)}`} className="flex h-12 w-full items-center justify-center rounded-full border border-white/15 px-6 text-sm font-bold hover:bg-white/10">
                   Sign in to continue
                 </Link>
               </div>
