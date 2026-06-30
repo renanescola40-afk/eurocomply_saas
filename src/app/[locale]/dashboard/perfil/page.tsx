@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useClerk, useUser } from '@clerk/nextjs';
 import { useParams } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 
 type MessageState = {
@@ -39,14 +40,19 @@ function downloadJson(filename: string, data: unknown) {
 export default function PerfilPage() {
   const params = useParams<{ locale?: string }>();
   const locale = getLocale(params?.locale);
-  const { user, isLoaded } = useUser();
-  const { openUserProfile, signOut } = useClerk();
+  const { user, loading, signOut, resetPassword } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<MessageState>(null);
 
-  const primaryEmail = user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses?.[0]?.emailAddress ?? '';
-  const fullName = user?.fullName ?? [user?.firstName, user?.lastName].filter(Boolean).join(' ');
+  const metadata = user?.user_metadata ?? {};
+  const primaryEmail = user?.email ?? '';
+  const metadataFullName = typeof metadata.full_name === 'string'
+    ? metadata.full_name
+    : typeof metadata.name === 'string'
+      ? metadata.name
+      : '';
+  const fullName = user?.fullName ?? metadataFullName;
 
   const profileData = useMemo(() => ({
     id: user?.id ?? null,
@@ -55,16 +61,15 @@ export default function PerfilPage() {
     lastName: user?.lastName ?? null,
     fullName: fullName || null,
     imageUrl: user?.imageUrl ?? null,
-    createdAt: user?.createdAt ?? null,
-    updatedAt: user?.updatedAt ?? null,
-    publicMetadata: user?.publicMetadata ?? {},
-    unsafeMetadata: user?.unsafeMetadata ?? {},
-  }), [fullName, primaryEmail, user]);
+    createdAt: user?.created_at ?? null,
+    updatedAt: user?.updated_at ?? null,
+    userMetadata: metadata,
+  }), [fullName, metadata, primaryEmail, user]);
 
   useEffect(() => {
-    if (!isLoaded || !user) return;
+    if (loading || !user) return;
     setDisplayName(fullName || '');
-  }, [fullName, isLoaded, user]);
+  }, [fullName, loading, user]);
 
   useEffect(() => {
     if (!message) return;
@@ -85,8 +90,17 @@ export default function PerfilPage() {
     setSaving(true);
 
     try {
-      await user.update({ firstName, lastName });
-      await user.reload();
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          ...metadata,
+          name: normalizedName,
+          full_name: normalizedName,
+          first_name: firstName,
+          last_name: lastName,
+        },
+      });
+
+      if (error) throw error;
       setMessage({ tone: 'success', text: 'Nome atualizado com sucesso.' });
     } catch {
       setMessage({ tone: 'error', text: 'Não foi possível atualizar o nome agora.' });
@@ -100,11 +114,23 @@ export default function PerfilPage() {
     setMessage({ tone: 'success', text: 'Dados exportados com sucesso.' });
   }
 
-  async function handleSignOut() {
-    await signOut({ redirectUrl: `/${locale}/login` });
+  async function handleResetPassword() {
+    if (!primaryEmail) {
+      setMessage({ tone: 'error', text: 'Email indisponível para recuperação de senha.' });
+      return;
+    }
+
+    const { error } = await resetPassword(primaryEmail);
+    setMessage(error
+      ? { tone: 'error', text: 'Não foi possível enviar o email de recuperação agora.' }
+      : { tone: 'success', text: 'Email de recuperação enviado.' });
   }
 
-  if (!isLoaded) {
+  async function handleSignOut() {
+    await signOut();
+  }
+
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-sm text-slate-500">Carregando perfil...</div>
@@ -187,15 +213,15 @@ export default function PerfilPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-950">Segurança da conta</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Altere senha, métodos de autenticação e sessões diretamente no painel seguro da conta.
+            Envie um email de recuperação de senha ou termine a sessão atual.
           </p>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
-              onClick={() => openUserProfile()}
+              onClick={handleResetPassword}
               className="rounded-lg bg-slate-900 px-5 py-2 font-medium text-white transition hover:bg-slate-800"
             >
-              Abrir configurações da conta
+              Enviar recuperação de senha
             </button>
             <button
               type="button"
@@ -224,15 +250,14 @@ export default function PerfilPage() {
         <section className="rounded-2xl border border-red-100 bg-red-50 p-6">
           <h2 className="text-lg font-semibold text-red-950">Zona de perigo</h2>
           <p className="mt-1 text-sm text-red-700">
-            Para exclusão de conta, abra as configurações da conta ou contacte o suporte. Esta ação deve passar por confirmação segura.
+            Para exclusão de conta, contacte o suporte. Esta ação deve passar por confirmação segura.
           </p>
-          <button
-            type="button"
-            onClick={() => openUserProfile()}
-            className="mt-5 rounded-lg bg-red-600 px-5 py-2 font-medium text-white transition hover:bg-red-700"
+          <a
+            href={`/${locale}/support`}
+            className="mt-5 inline-flex rounded-lg bg-red-600 px-5 py-2 font-medium text-white transition hover:bg-red-700"
           >
-            Gerir conta
-          </button>
+            Contactar suporte
+          </a>
         </section>
       </div>
     </div>
