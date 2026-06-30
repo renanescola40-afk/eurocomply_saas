@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     it: {
       title: 'Risck Comply - Sistema Operativo di Compliance IA',
-      description: 'AI Act readiness, inventario dei sistemi IA, evidenze di rischio, documenti di governance e workflow d’audit pour team B2B europei.',
+      description: 'AI Act readiness, inventario dei sistemi IA, evidenze di rischio, documenti di governance e workflow d’audit per team B2B europei.',
     },
     de: {
       title: 'Risck Comply - Betriebssystem für KI-Compliance',
