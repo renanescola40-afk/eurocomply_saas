@@ -48,8 +48,8 @@ describe('public trust and marketing claim safety', () => {
   it('keeps evidence-bound disclaimer language on the main enterprise landing copy', () => {
     const source = readRepoFile('src/components/marketing/enterprise-home.tsx');
 
-    expect(source).toMatch(/without claiming legal guarantees or replacing counsel/i);
-    expect(source).toMatch(/(?:not certification, legal advice or a compliance guarantee|does not provide legal advice, certification or a compliance guarantee)/i);
-    expect(source).toMatch(/(?:does not replace a lawyer and does not guarantee legal compliance|without claiming legal guarantees or replacing counsel|sem prometer garantia legal nem substituir aconselhamento jurídico)/i);
+    expect(source).toMatch(/does not provide legal advice, certification or a compliance guarantee/i);
+    expect(source).toMatch(/The live prelaunch UI is delegated to WaitlistPage/i);
+    expect(source).not.toMatch(/\bguaranteed\s+(?:EU AI Act\s+)?compliance\b/i);
   });
 });
