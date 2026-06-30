@@ -24,6 +24,7 @@ import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
 
 const LAUNCH_TARGET_ISO = '2026-08-01T07:00:00+01:00';
 const LAUNCH_TARGET_LABEL = '1 August 2026 · 07:00 Europe/Lisbon';
+const COMMERCIAL_EMAIL = 'comercial@risckcomply.com';
 
 type WaitlistCopy = {
   nav: { platform: string; features: string; access: string; cta: string };
@@ -46,6 +47,7 @@ type WaitlistCopy = {
     success: string;
     error: string;
     privacy: string;
+    contact: string;
   };
   proof: string[];
   features: { title: string; text: string; icon: typeof ShieldCheck }[];
@@ -76,8 +78,9 @@ const en: WaitlistCopy = {
     submit: 'Join waitlist',
     submitting: 'Saving your priority place...',
     success: 'You are officially on the Risck Comply waitlist — and you are special. We saved your priority place and sent a confirmation email with your join date, launch date and remaining time.',
-    error: 'Could not confirm your place right now. Please try again in a moment.',
+    error: 'Could not confirm your place right now. You can also contact us directly at comercial@risckcomply.com.',
     privacy: 'No passwords. No public signup. Only launch communication and early access qualification.',
+    contact: 'Questions or want to speak with our team? Email us at',
   },
   proof: ['EU AI Act readiness', 'AI inventory', 'risk classification', 'evidence packs', 'audit trail', 'policies'],
   features: [
@@ -112,8 +115,9 @@ const pt: WaitlistCopy = {
     submit: 'Entrar na lista de espera',
     submitting: 'A guardar o seu lugar prioritário...',
     success: 'Você está oficialmente inscrito na lista de espera da Risck Comply — e você é especial. Guardámos o seu lugar prioritário e enviámos um email com o dia da inscrição, a data de abertura e o tempo que falta.',
-    error: 'Não foi possível confirmar o seu lugar agora. Tente novamente dentro de instantes.',
+    error: 'Não foi possível confirmar o seu lugar agora. Você também pode falar connosco diretamente em comercial@risckcomply.com.',
     privacy: 'Sem senhas. Sem signup público. Apenas comunicação de lançamento e qualificação para early access.',
+    contact: 'Dúvidas ou quer falar com a nossa equipa? Envie email para',
   },
   proof: ['EU AI Act readiness', 'inventário de IA', 'classificação de risco', 'evidence packs', 'audit trail', 'políticas'],
   features: [
@@ -196,19 +200,23 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
   const [role, setRole] = useState('');
   const [website, setWebsite] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus('submitting');
+    setErrorMessage(null);
 
     try {
-      const response = await fetch('/api/waitlist', {
+      const response = await fetch('/api/prelaunch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ companyName, email, role, locale: activeLocale, website }),
       });
 
       if (!response.ok) {
+        const payload = await response.json().catch(() => null) as { error?: string } | null;
+        setErrorMessage(payload?.error || copy.form.error);
         setStatus('error');
         return;
       }
@@ -219,6 +227,7 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
       setRole('');
       setWebsite('');
     } catch {
+      setErrorMessage(copy.form.error);
       setStatus('error');
     }
   }
@@ -256,13 +265,19 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
       </div>
 
       {status === 'success' ? <p className="mt-5 rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-50" role="status">{copy.form.success}</p> : null}
-      {status === 'error' ? <p className="mt-5 rounded-2xl border border-red-300/25 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-50" role="alert">{copy.form.error}</p> : null}
+      {status === 'error' ? <p className="mt-5 rounded-2xl border border-red-300/25 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-50" role="alert">{errorMessage || copy.form.error}</p> : null}
 
       <button type="submit" disabled={status === 'submitting'} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 text-sm font-bold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60">
         {status === 'submitting' ? copy.form.submitting : copy.form.submit}
         <ArrowRight className="h-4 w-4" />
       </button>
       <p className="mt-4 text-xs leading-5 text-white/38">{copy.form.privacy}</p>
+      <p className="mt-3 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.06] px-4 py-3 text-xs leading-5 text-cyan-50/78">
+        {copy.form.contact}{' '}
+        <a href={`mailto:${COMMERCIAL_EMAIL}`} className="font-semibold text-white underline decoration-cyan-200/40 underline-offset-4 hover:text-cyan-100">
+          {COMMERCIAL_EMAIL}
+        </a>
+      </p>
     </form>
   );
 }
