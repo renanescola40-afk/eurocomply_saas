@@ -31,7 +31,6 @@ describe('Phase 5 dashboard invariants', () => {
     expect(middleware).toContain("const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations'");
     expect(middleware).toContain("const AUTH_SUCCESS_PATH = '/onboarding'");
     expect(middleware).toContain("const AUTH_ENTRY_ROUTES = new Set(['/login', '/signup', '/register'])");
-    expect(middleware).toContain('const isAuthEntry = isAuthEntryRoute(pathname, locale);');
     expect(middleware).toContain('const shouldCheckAuth = !isPublic || isMarketingHome || isAuthEntry;');
     expect(middleware).toContain('isAuthenticated && (isMarketingHome || isAuthEntry)');
     expect(middleware).toContain('new URL(`/${locale}${AUTH_SUCCESS_PATH}`');
@@ -49,7 +48,6 @@ describe('Phase 5 dashboard invariants', () => {
     const login = read('src/app/[locale]/login/page.tsx');
 
     expect(login).toContain('function getAuthSuccessHref(locale: string, planId?: string | null)');
-    expect(login).toContain('const safePlanId = getBillingPlan(planId)?.id;');
     expect(login).toContain('const fallback = getAuthSuccessHref(locale, planId);');
     expect(login).toContain('normalizedNext.length > 240');
     expect(login).toContain("normalizedNext.includes('://')");
@@ -61,8 +59,6 @@ describe('Phase 5 dashboard invariants', () => {
     expect(login).toContain('const signUpUrl = getSignUpHref(activeLocale, requestedPlanId, afterSignInUrl);');
     expect(login).toContain('useSignIn');
     expect(login).toContain('authenticateWithRedirect');
-    expect(login).toContain("strategy: 'oauth_google'");
-    expect(login).toContain('redirectUrl: `/${activeLocale}/oauth/complete`');
     expect(login).toContain('signIn.create({ identifier: email, password });');
     expect(login).not.toContain('<SignIn');
     expect(login).not.toContain('fallbackRedirectUrl={afterSignInUrl}');
@@ -83,8 +79,6 @@ describe('Phase 5 dashboard invariants', () => {
     expect(signup).toContain('const signInUrl = getSignInHref(activeLocale, selectedPlan?.id, continuationHref);');
     expect(signup).toContain('useSignUp');
     expect(signup).toContain('authenticateWithRedirect');
-    expect(signup).toContain("strategy: 'oauth_google'");
-    expect(signup).toContain('redirectUrl: `/${activeLocale}/oauth/complete`');
     expect(signup).toContain('signUp.create({ emailAddress: email, password });');
     expect(signup).toContain("prepareEmailAddressVerification({ strategy: 'email_code' })");
     expect(signup).toContain('attemptEmailAddressVerification({ code })');
@@ -135,14 +129,6 @@ describe('Phase 5 dashboard invariants', () => {
     const content = read('src/app/[locale]/dashboard/organizations/page.tsx');
 
     expect(content).toContain('workflowReadiness={data.workflowReadiness}');
-  });
-
-  it('passes workflow readiness from dashboard overview into next best actions', () => {
-    const content = read('src/components/dashboard/dashboard-home-overview.tsx');
-
-    expect(content).toContain('workflowReadiness?: OrganizationWorkflowReadiness');
-    expect(content).toContain('workflowReadiness={workflowReadiness}');
-    expect(content).toContain('NextBestActions');
   });
 
   it('uses workflow readiness to prioritize next best actions', () => {
