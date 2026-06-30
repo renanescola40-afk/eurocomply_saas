@@ -52,10 +52,11 @@ function normalizeUser(user: User | null): AppUser | null {
   const metadata = user.user_metadata ?? {};
   const fullName = readMetadataString(metadata, 'full_name') ?? readMetadataString(metadata, 'name');
   const nameParts = fullName?.split(/\s+/).filter(Boolean) ?? [];
+  const inferredLastName = nameParts.slice(1).join(' ') || null;
   return {
     ...user,
     firstName: readMetadataString(metadata, 'first_name') ?? nameParts[0] ?? null,
-    lastName: readMetadataString(metadata, 'last_name') ?? nameParts.slice(1).join(' ') || null,
+    lastName: readMetadataString(metadata, 'last_name') ?? inferredLastName,
     fullName,
     imageUrl: readMetadataString(metadata, 'avatar_url') ?? readMetadataString(metadata, 'picture'),
   };
@@ -76,9 +77,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then((result: { data: { session: Session | null } }) => {
       if (!mounted) return;
-      const nextSession = data.session ?? null;
+      const nextSession = result.data.session ?? null;
       setSession(nextSession);
       setUser(normalizeUser(nextSession?.user ?? null));
       setLoading(false);
@@ -89,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((_event: string, nextSession: Session | null) => {
       setSession(nextSession ?? null);
       setUser(normalizeUser(nextSession?.user ?? null));
       setLoading(false);
