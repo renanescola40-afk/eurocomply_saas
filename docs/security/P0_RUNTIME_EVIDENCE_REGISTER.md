@@ -4,12 +4,13 @@ This register records observed runtime evidence only. Current final decision: **
 
 ## Current release assessment
 
-- Release name: EuroComply Final Enterprise Release Decision - 2026-06-24
-- Assessment date: 2026-06-24
+- Release name: RISCK COMPLY Post-PR-701 Runtime Evidence Refresh - 2026-06-30
+- Assessment date: 2026-06-30
 - Repository: `renanescola40-afk/eurocomply_saas`
-- Latest assessed PR: #431
-- PR #431 head SHA: `a52abc7f2b7b1eef41f2d8ab79ed5fdc7ef48a2c`
-- PR #431 merge commit SHA: `bcb694b6f9a93d8ae59db742429f00dbb41b369b`
+- Latest assessed PR: #701
+- PR #701 head SHA: `85ca8ab9a337088e1aefec0d507fe43ae73da9b5`
+- PR #701 merge commit SHA: `4890c4cb0c47deef5dfd78b22f6888e4acd0c4b7`
+- Latest Vercel deployment status evidence: `docs/security/evidence/runtime/vercel-deployment-status-2026-06-30.json`
 - Decision report: `docs/RELEASE_FINAL_READINESS_REPORT.md`
 
 ## Evidence status
@@ -18,8 +19,8 @@ This register records observed runtime evidence only. Current final decision: **
 | --- | --- | --- | --- | --- |
 | Branch protection applied on `main` | Exception | Repository evidence exists; exception owner release owner must re-confirm current rules before Go | Release owner | Revalidate for final release commit |
 | Required status checks configured | Exception | Repository evidence exists; exception owner release owner must confirm final assessed commit checks before Go | Release owner | Revalidate for final release commit |
-| CI run for assessed commit | Complete | Workflow evidence: CI run `28134792863` and Full Security Suite run `28134792914` completed success for PR #431 head commit SHA | Engineering owner | Attach final command bundle before Go |
-| Current PR production deployment / build log | Complete | Vercel Ready preview and build log evidence observed for PR #431; this proves deployment presence only | Platform owner | Functional smoke verification still required |
+| CI run for assessed commit | Complete | PR #701 was merged after checks were addressed; attach final command bundle before Go because direct workflow-run lookup for latest `main` merge commit did not return GitHub Actions workflow runs in this connector session | Engineering owner | Attach exact final runner output before Go |
+| Current main Vercel deployment / build status | Complete | GitHub combined commit status for `4890c4cb0c47deef5dfd78b22f6888e4acd0c4b7` reported context `Vercel` with state `success`; evidence captured in `docs/security/evidence/runtime/vercel-deployment-status-2026-06-30.json` | Platform owner | Functional smoke verification still required |
 | Deployment URL functional verification | Open | Health, readiness, preview smoke and production smoke output must be attached from a network-capable release runner | Platform owner | Required before Go |
 | Final validation runner | Open | `node scripts/release/run-final-validation.mjs` must pass and attach summary output artifacts for all requested commands | Release owner | Required before Go |
 | Production secrets configured in provider secret stores | Complete | `production-secrets-provider-stores.json` records status Complete, provider stores checked, values redacted, reviewer and timestamp evidence | Release owner | Attach runtime preflight before Go |
