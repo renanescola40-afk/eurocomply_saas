@@ -64,10 +64,9 @@ export async function requireOrganizationContext(slug?: string): Promise<Authent
   const authState = await auth().catch(() => null);
   const activeClerkOrgId = authState?.orgId ?? null;
   const activeClerkRole = normalizeClerkRole((authState as { orgRole?: string | null } | null)?.orgRole);
-  const authProviderSource = user.source as string;
 
-  if (authProviderSource === 'clerk' && activeClerkOrgId) {
-    await ensureActiveClerkOrganizationSynced(user.id, activeClerkOrgId, activeClerkRole);
+  if (activeClerkOrgId && user.clerkUserId) {
+    await ensureActiveClerkOrganizationSynced(user.clerkUserId, activeClerkOrgId, activeClerkRole);
   }
 
   const organization = await getCurrentOrganizationForUser(user.id, slug, activeClerkOrgId);
@@ -128,4 +127,10 @@ export function assertMutationAllowed(context: AuthenticatedOrganizationContext)
 
 export function assertAdminAllowed(context: AuthenticatedOrganizationContext) {
   assertPrivilegedOrganizationRole(context.role);
+}
+
+export async function requirePrivilegedOrganizationContext(slug?: string) {
+  const context = await requireOrganizationContext(slug);
+  assertAdminAllowed(context);
+  return context;
 }
