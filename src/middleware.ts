@@ -1,6 +1,6 @@
-// middleware.ts - Combined i18n + Clerk Auth
+// middleware.ts - Combined i18n + Supabase Auth
 
-import { clerkMiddleware } from '@clerk/nextjs/server';
+import { createServerClient } from '@supabase/ssr';
 import createIntlMiddleware from 'next-intl/middleware';
 import { NextRequest, NextResponse } from 'next/server';
 import { routing, locales, defaultLocale, COUNTRY_TO_LOCALE } from '@/lib/i18n/routing';
@@ -169,10 +169,37 @@ function getCheckoutPlanRedirect(pathname: string, req: NextRequest) {
   return NextResponse.redirect(pricingUrl);
 }
 
-export default clerkMiddleware(async (auth, req) => {
+async function hasSupabaseSession(req: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return false;
+  }
+
+  const response = NextResponse.next({ request: { headers: req.headers } });
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return req.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
+
+  const { data, error } = await supabase.auth.getUser();
+  if (error) return false;
+  return Boolean(data.user);
+}
+
+export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
-  if (pathname.startsWith('/__clerk') || pathname === SENTRY_TUNNEL_PATH || pathname.startsWith(`${SENTRY_TUNNEL_PATH}/`)) {
+  if (pathname === SENTRY_TUNNEL_PATH || pathname.startsWith(`${SENTRY_TUNNEL_PATH}/`)) {
     return NextResponse.next();
   }
 
@@ -211,8 +238,7 @@ export default clerkMiddleware(async (auth, req) => {
     const isMarketingHome = shouldCheckMarketingHomeAuth(pathname, locale);
     const isAuthEntry = isAuthEntryRoute(pathname, locale);
     const shouldCheckAuth = !isPublic || isMarketingHome || isAuthEntry;
-    const { userId } = shouldCheckAuth ? await auth() : { userId: null };
-    const isAuthenticated = Boolean(userId);
+    const isAuthenticated = shouldCheckAuth ? await hasSupabaseSession(req) : false;
 
     if (!isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
@@ -252,11 +278,10 @@ export default clerkMiddleware(async (auth, req) => {
   });
 
   return response;
-});
+}
 
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|monitoring|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-    '/__clerk/:path*',
   ],
 };
