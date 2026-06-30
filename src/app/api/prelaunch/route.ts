@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 
+import { sendPrelaunchWaitlistEmail } from '@/lib/email/prelaunch-waitlist';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
@@ -53,6 +54,10 @@ function normalizeLocale(value: unknown) {
 
 function isHoneypotFilled(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function getWaitlistUrl(request: NextRequest, locale: string) {
+  return `${request.nextUrl.origin}/${locale}#waitlist-form`;
 }
 
 async function enforceRateLimit(request: NextRequest) {
@@ -134,6 +139,25 @@ async function saveWaitlistLead(record: WaitlistLeadRecord) {
   return true;
 }
 
+async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord) {
+  try {
+    const result = await sendPrelaunchWaitlistEmail({
+      to: record.email,
+      companyName: record.company_name,
+      role: record.role,
+      locale: record.locale,
+      joinedAt: record.updated_at,
+      launchAt: record.launch_target_at,
+      waitlistUrl: getWaitlistUrl(request, record.locale),
+    });
+
+    return result.sent;
+  } catch {
+    console.error('[prelaunch] Confirmation email failed', { reason: 'confirmation_email_failed' });
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   const rateLimited = await enforceRateLimit(request);
   if (rateLimited) return rateLimited;
@@ -153,6 +177,7 @@ export async function POST(request: NextRequest) {
   }
 
   const saved = await saveWaitlistLead(record);
+  const emailed = await sendConfirmation(request, record);
 
   return noStoreJson(
     {
@@ -160,6 +185,7 @@ export async function POST(request: NextRequest) {
       status: 'confirmed',
       message: 'You are on the Risck Comply waitlist.',
       saved,
+      emailed,
       joinedAt: record.updated_at,
       launchAt: record.launch_target_at,
     },
