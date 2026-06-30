@@ -205,7 +205,7 @@ describe('billing checkout API security gates', () => {
       customer: 'cus_org_a',
       line_items: [{ price: 'price_growth_monthly', quantity: 1 }],
       success_url: 'https://app.eurocomply.test/pt/dashboard/organizations?checkout=success',
-      cancel_url: 'https://app.eurocomply.test/pt/pricing?checkout=cancelled',
+      cancel_url: 'https://app.eurocomply.test/pt/checkout?plan=growth&checkout=cancelled',
       client_reference_id: 'org_a',
       metadata: expect.objectContaining({
         organization_id: 'org_a',
