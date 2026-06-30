@@ -1,11 +1,9 @@
 import type { Metadata } from 'next';
-import { ClerkProvider } from '@clerk/nextjs';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { PostHogAnalyticsProvider } from '@/components/analytics/PostHogAnalyticsProvider';
 import { AnalyticsConsentBanner } from '@/components/analytics/AnalyticsConsentBanner';
-import { ClerkFloatingControls } from '@/components/auth/ClerkFloatingControls';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffects from '@/components/GlobalClientEffects';
@@ -29,10 +27,6 @@ type Props = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 };
-
-function hasClerkPublishableKey() {
-  return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim());
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
@@ -76,54 +70,28 @@ export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
   const safeLocale = routing.locales.includes(locale as Locale) ? locale : 'en';
   const messages = await getMessages();
-  const signInUrl = `/${safeLocale}/login`;
-  const signUpUrl = `/${safeLocale}/signup`;
-  const onboardingUrl = `/${safeLocale}/onboarding`;
-  const clerkEnabled = hasClerkPublishableKey();
-
-  const sharedShell = (
-    <>
-      {children}
-      <GapAnalysisShortcut />
-      <GlobalClientEffects />
-      <AnalyticsConsentBanner />
-      <Toaster />
-    </>
-  );
-
-  const appShell = (
-    <NextIntlClientProvider messages={messages}>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="dark"
-        enableSystem={false}
-        disableTransitionOnChange
-      >
-        <AuthProvider>
-          <PostHogAnalyticsProvider>
-            {sharedShell}
-            {clerkEnabled ? <ClerkFloatingControls locale={safeLocale} /> : null}
-          </PostHogAnalyticsProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </NextIntlClientProvider>
-  );
 
   return (
     <html lang={safeLocale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
-        {clerkEnabled ? (
-          <ClerkProvider
-            signInUrl={signInUrl}
-            signUpUrl={signUpUrl}
-            signInFallbackRedirectUrl={onboardingUrl}
-            signUpFallbackRedirectUrl={onboardingUrl}
+        <NextIntlClientProvider messages={messages}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem={false}
+            disableTransitionOnChange
           >
-            {appShell}
-          </ClerkProvider>
-        ) : (
-          appShell
-        )}
+            <AuthProvider>
+              <PostHogAnalyticsProvider>
+                {children}
+                <GapAnalysisShortcut />
+                <GlobalClientEffects />
+                <AnalyticsConsentBanner />
+                <Toaster />
+              </PostHogAnalyticsProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );
