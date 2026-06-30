@@ -121,10 +121,14 @@ describe('Phase 5 dashboard invariants', () => {
     expect(content).toContain('redirect(`/${safeLocale}/onboarding');
   });
 
-  it('passes workflow readiness from the organization page into dashboard overview', () => {
-    const content = read('src/app/[locale]/dashboard/organizations/page.tsx');
+  it('passes workflow readiness from the organization page into dashboard overview and recommended actions', () => {
+    const page = read('src/app/[locale]/dashboard/organizations/page.tsx');
+    const overview = read('src/components/dashboard/dashboard-home-overview.tsx');
+    const nextBestActions = read('src/components/dashboard/next-best-actions.tsx');
 
-    expect(content).toContain('workflowReadiness={data.workflowReadiness}');
-    expect(content).toContain('buildWorkflowReadinessAction');
+    expect(page).toContain('workflowReadiness={data.workflowReadiness}');
+    expect(overview).toContain('workflowReadiness={workflowReadiness}');
+    expect(overview).toContain('NextBestActions');
+    expect(nextBestActions).toContain('buildWorkflowReadinessAction');
   });
 });
