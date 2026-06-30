@@ -10,6 +10,10 @@ type SignupMetadata = {
   requested_plan?: string;
 };
 
+type OAuthOptions = {
+  next?: string;
+};
+
 type AppUser = User & {
   firstName?: string | null;
   lastName?: string | null;
@@ -23,23 +27,36 @@ interface AuthContextType {
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUpWithEmail: (email: string, password: string, metadata?: SignupMetadata) => Promise<{ error: Error | null }>;
-  signInWithGoogle: () => Promise<{ error: Error | null }>;
+  signInWithGoogle: (options?: OAuthOptions) => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function getLocaleFromWindow() {
+  if (typeof window === 'undefined') return 'pt';
+  return window.location.pathname.split('/').filter(Boolean)[0] ?? 'pt';
+}
+
 function getLocalizedPath(path: string) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  if (typeof window === 'undefined') return `/pt${normalizedPath}`;
-  const locale = window.location.pathname.split('/').filter(Boolean)[0] ?? 'pt';
-  return `/${locale}${normalizedPath}`;
+  return `/${getLocaleFromWindow()}${normalizedPath}`;
 }
 
 function getRedirectUrl(path = '/onboarding') {
   if (typeof window === 'undefined') return getLocalizedPath(path);
   return new URL(getLocalizedPath(path), window.location.origin).toString();
+}
+
+function getRootAuthCallbackUrl(next?: string) {
+  const locale = getLocaleFromWindow();
+  const callbackUrl = new URL('/auth/callback', window.location.origin);
+  callbackUrl.searchParams.set('locale', locale);
+  if (next && next.startsWith(`/${locale}/`) && !next.startsWith('//') && !next.includes('://')) {
+    callbackUrl.searchParams.set('next', next);
+  }
+  return callbackUrl.toString();
 }
 
 function readMetadataString(metadata: Record<string, unknown>, key: string) {
@@ -124,10 +141,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error ? toError(error) : null };
   }, []);
 
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = useCallback(async (options?: OAuthOptions) => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: getRedirectUrl('/auth/callback') },
+      options: { redirectTo: getRootAuthCallbackUrl(options?.next) },
     });
     return { error: error ? toError(error) : null };
   }, []);

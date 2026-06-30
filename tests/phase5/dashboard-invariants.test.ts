@@ -36,36 +36,41 @@ describe('Phase 5 dashboard invariants', () => {
     expect(middleware).toContain('new URL(`/${locale}${AUTH_SUCCESS_PATH}`');
   });
 
-  it('keeps Clerk post-auth fallback URLs pointed at localized onboarding', () => {
+  it('keeps locale layout on Supabase auth provider without Clerk wrappers', () => {
     const layout = read('src/app/[locale]/layout.tsx');
+    const auth = read('src/hooks/useAuth.tsx');
 
-    expect(layout).toContain('const onboardingUrl = `/${safeLocale}/onboarding`;');
-    expect(layout).toContain('signInFallbackRedirectUrl={onboardingUrl}');
-    expect(layout).toContain('signUpFallbackRedirectUrl={onboardingUrl}');
+    expect(layout).toContain('AuthProvider');
+    expect(layout).toContain('AuthFloatingControls');
+    expect(layout).not.toContain('ClerkProvider');
+    expect(layout).not.toContain('DisabledAuthProvider');
+    expect(auth).toContain("import { supabase } from '@/integrations/supabase/client'");
+    expect(auth).not.toContain('@ts-nocheck');
+    expect(auth).not.toContain('@clerk/nextjs');
   });
 
-  it('keeps login success fallback on onboarding while using a custom stable entry template', () => {
+  it('keeps login success fallback on onboarding while using Supabase auth', () => {
     const login = read('src/app/[locale]/login/page.tsx');
 
-    expect(login).toContain('function getAuthSuccessHref(locale: string, planId?: string | null)');
-    expect(login).toContain('const fallback = getAuthSuccessHref(locale, planId);');
-    expect(login).toContain('normalizedNext.length > 240');
-    expect(login).toContain("normalizedNext.includes('://')");
-    expect(login).toContain("normalizedNext.startsWith('//')");
-    expect(login).toContain('isSafeLocalizedContinuation');
+    expect(login).toContain('function successHref(locale: string, planId?: string | null)');
+    expect(login).toContain('const fallback = successHref(locale, planId);');
+    expect(login).toContain('value.length > 240');
+    expect(login).toContain("value.includes('://')");
+    expect(login).toContain("value.startsWith('//')");
+    expect(login).toContain('signInWithEmail');
+    expect(login).toContain('signInWithGoogle');
+    expect(login).toContain('router.replace(afterSignInUrl)');
     expect(login).toContain('`/${locale}/onboarding`');
     expect(login).toContain('`/${locale}/dashboard/organizations`');
     expect(login).toContain('`/${locale}/checkout`');
-    expect(login).toContain('const signUpUrl = getSignUpHref(activeLocale, requestedPlanId, afterSignInUrl);');
-    expect(login).toContain('useSignIn');
-    expect(login).toContain('authenticateWithRedirect');
-    expect(login).toContain('signIn.create({ identifier: email, password });');
+    expect(login).not.toContain('@clerk/nextjs');
+    expect(login).not.toContain('useSignIn');
+    expect(login).not.toContain('authenticateWithRedirect');
+    expect(login).not.toContain('signIn.create({ identifier: email, password });');
     expect(login).not.toContain('<SignIn');
-    expect(login).not.toContain('fallbackRedirectUrl={afterSignInUrl}');
-    expect(login).not.toContain('forceRedirectUrl={afterSignInUrl}');
   });
 
-  it('keeps signup continuation defaulted to onboarding with a custom stable entry template', () => {
+  it('keeps signup continuation defaulted to onboarding with Supabase auth', () => {
     const signup = read('src/app/[locale]/signup/page.tsx');
 
     expect(signup).toContain('function getOnboardingHref(locale: string, planId?: string)');
@@ -76,22 +81,19 @@ describe('Phase 5 dashboard invariants', () => {
     expect(signup).toContain('`/${locale}/onboarding`');
     expect(signup).toContain('`/${locale}/checkout`');
     expect(signup).toContain('function getSignInHref(locale: string, planId?: string, nextPath?: string)');
-    expect(signup).toContain('const signInUrl = getSignInHref(activeLocale, selectedPlan?.id, continuationHref);');
-    expect(signup).toContain('useSignUp');
-    expect(signup).toContain('authenticateWithRedirect');
-    expect(signup).toContain('signUp.create({ emailAddress: email, password });');
-    expect(signup).toContain("prepareEmailAddressVerification({ strategy: 'email_code' })");
-    expect(signup).toContain('attemptEmailAddressVerification({ code })');
-    expect(signup).toContain('!selectedPlan');
+    expect(signup).toContain('signUpWithEmail');
+    expect(signup).toContain('signInWithGoogle');
     expect(signup).toContain('getSignupPlanHref');
+    expect(signup).not.toContain('@clerk/nextjs');
+    expect(signup).not.toContain('useSignUp');
+    expect(signup).not.toContain('authenticateWithRedirect');
+    expect(signup).not.toContain('signUp.create({ emailAddress: email, password });');
     expect(signup).not.toContain('<SignUp');
-    expect(signup).not.toContain('fallbackRedirectUrl={continuationHref}');
-    expect(signup).not.toContain('forceRedirectUrl={continuationHref}');
     expect(signup).not.toContain(signupNextPattern);
     expect(signup).not.toContain(loginNextPattern);
   });
 
-  it('keeps OAuth callback route available for Google redirects', () => {
+  it('keeps OAuth callback route exchanging Supabase codes safely', () => {
     if (existsSync('src/app/[locale]/oauth/complete/page.tsx')) {
       const callback = read('src/app/[locale]/oauth/complete/page.tsx');
       const middleware = read('src/middleware.ts');
@@ -101,8 +103,11 @@ describe('Phase 5 dashboard invariants', () => {
       return;
     }
 
-    const callback = read('src/app/[locale]/auth/callback/route.ts');
-    expect(callback).toContain("export { GET } from '@/app/auth/callback/route'");
+    const callback = read('src/app/auth/callback/route.ts');
+    expect(callback).toContain('createServerSupabaseClient');
+    expect(callback).toContain('exchangeCodeForSession');
+    expect(callback).toContain('missing_oauth_code');
+    expect(callback).toContain('auth_exchange_failed');
   });
 
   it('keeps onboarding as the activation decision point', () => {

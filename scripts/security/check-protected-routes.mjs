@@ -30,8 +30,8 @@ const requiredProtectedSegments = [
 ];
 
 const requiredGuardMarkers = [
-  'clerkMiddleware',
-  'await auth()',
+  'createServerClient',
+  'supabase.auth.getUser()',
   'NextResponse.redirect',
   'withPrivateNoStore',
   'ORGANIZATION_DASHBOARD_PATH',
