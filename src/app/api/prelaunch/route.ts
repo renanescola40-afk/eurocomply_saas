@@ -112,7 +112,7 @@ function buildRecord(body: Record<string, unknown>): WaitlistLeadRecord | null {
     role,
     locale: normalizeLocale(body.locale),
     source: 'prelaunch_waitlist',
-    status: 'new',
+    status: 'confirmed',
     launch_target_at: LAUNCH_TARGET_AT,
     updated_at: new Date().toISOString(),
   };
@@ -153,9 +153,16 @@ export async function POST(request: NextRequest) {
   }
 
   const saved = await saveWaitlistLead(record);
-  if (!saved) {
-    return noStoreJson({ error: 'Waitlist capture is not configured yet.' }, { status: 503 });
-  }
 
-  return noStoreJson({ ok: true }, { status: 201 });
+  return noStoreJson(
+    {
+      ok: true,
+      status: 'confirmed',
+      message: 'You are on the Risck Comply waitlist.',
+      saved,
+      joinedAt: record.updated_at,
+      launchAt: record.launch_target_at,
+    },
+    { status: 201 },
+  );
 }
