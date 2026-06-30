@@ -31,9 +31,10 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function getLocalizedPath(path: string) {
-  if (typeof window === 'undefined') return `/pt${path.startsWith('/') ? path : `/${path}`}`;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  if (typeof window === 'undefined') return `/pt${normalizedPath}`;
   const locale = window.location.pathname.split('/').filter(Boolean)[0] ?? 'pt';
-  return `/${locale}${path.startsWith('/') ? path : `/${path}`}`;
+  return `/${locale}${normalizedPath}`;
 }
 
 function getRedirectUrl(path = '/onboarding') {
@@ -41,17 +42,22 @@ function getRedirectUrl(path = '/onboarding') {
   return new URL(getLocalizedPath(path), window.location.origin).toString();
 }
 
+function readMetadataString(metadata: Record<string, unknown>, key: string) {
+  const value = metadata[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
 function normalizeUser(user: User | null): AppUser | null {
   if (!user) return null;
   const metadata = user.user_metadata ?? {};
-  const fullName = typeof metadata.full_name === 'string' ? metadata.full_name : typeof metadata.name === 'string' ? metadata.name : null;
+  const fullName = readMetadataString(metadata, 'full_name') ?? readMetadataString(metadata, 'name');
   const nameParts = fullName?.split(/\s+/).filter(Boolean) ?? [];
   return {
     ...user,
-    firstName: typeof metadata.first_name === 'string' ? metadata.first_name : nameParts[0] ?? null,
-    lastName: typeof metadata.last_name === 'string' ? metadata.last_name : nameParts.slice(1).join(' ') || null,
+    firstName: readMetadataString(metadata, 'first_name') ?? nameParts[0] ?? null,
+    lastName: readMetadataString(metadata, 'last_name') ?? nameParts.slice(1).join(' ') || null,
     fullName,
-    imageUrl: typeof metadata.avatar_url === 'string' ? metadata.avatar_url : typeof metadata.picture === 'string' ? metadata.picture : null,
+    imageUrl: readMetadataString(metadata, 'avatar_url') ?? readMetadataString(metadata, 'picture'),
   };
 }
 
