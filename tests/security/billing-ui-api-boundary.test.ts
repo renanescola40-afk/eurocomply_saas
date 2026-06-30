@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const billingPage = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-page-view.tsx'), 'utf8');
 const publicCheckoutPage = readFileSync(join(process.cwd(), 'src/app/[locale]/checkout/page.tsx'), 'utf8');
+const enterpriseHome = readFileSync(join(process.cwd(), 'src/components/marketing/enterprise-home.tsx'), 'utf8');
 const billingActionButton = readFileSync(join(process.cwd(), 'src/app/[locale]/dashboard/organizations/billing/billing-action-button.tsx'), 'utf8');
 const billingPortalRoute = readFileSync(join(process.cwd(), 'src/app/api/billing/portal/route.ts'), 'utf8');
 const legacyBillingActionsPath = join(process.cwd(), 'src/server/actions/billing.ts');
@@ -29,6 +30,20 @@ describe('billing UI API boundary', () => {
     expect(billingActionButton).toContain('returnPath=');
     expect(billingActionButton).toContain("method: 'POST'");
     expect(billingActionButton).toContain("action === 'checkout' ? JSON.stringify({ plan: planId, locale }) : undefined");
+  });
+
+  it('keeps public pricing buttons aligned with the canonical checkout page', () => {
+    expect(enterpriseHome).toContain('BILLING_PLANS');
+    expect(enterpriseHome).toContain('/checkout?plan=');
+    expect(enterpriseHome).toContain('checkoutHref(activeLocale, plan.id)');
+    expect(enterpriseHome).not.toContain('/billing/checkout/');
+    expect(enterpriseHome).not.toContain("planKey: 'business'");
+  });
+
+  it('keeps the selected plan through account creation and onboarding before checkout', () => {
+    expect(publicCheckoutPage).toContain('checkoutContinuationPath');
+    expect(publicCheckoutPage).toContain('next=${encodeURIComponent(checkoutContinuationPath)}');
+    expect(publicCheckoutPage).toContain('/onboarding?next=');
   });
 
   it('keeps Stripe portal returns scoped to the billing dashboard route', () => {
