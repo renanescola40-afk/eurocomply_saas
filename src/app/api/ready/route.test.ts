@@ -161,10 +161,19 @@ describe('ready endpoint hardening', () => {
       supabaseConfigured: true,
       databaseReachable: true,
       stripeConfigured: true,
+      stripeApiReachable: true,
       redisConfigured: true,
       sentryConfigured: true,
+      sentryObservabilityConfigured: true,
       enterpriseStorageScannerConfigured: true,
       healthcheckProtected: true,
+    });
+    expect(body.stripe).toEqual({
+      configured: true,
+      apiReachable: true,
+      priceLookup: true,
+      pricesChecked: 3,
+      detail: 'ok',
     });
     expect(body.enterpriseStorageScanner).toEqual({
       required: false,
@@ -175,6 +184,25 @@ describe('ready endpoint hardening', () => {
       scannerTransportConfigured: false,
     });
     expect(body.sentryReleaseUploads.sourceMapsUploadRequiresAuthToken).toBe(true);
+  });
+
+  it('requires all configured Stripe prices to be present', async () => {
+    stubReadyEnvironment();
+    vi.stubEnv('STRIPE_PRICE_PROFESSIONAL_MONTHLY', '');
+
+    const response = await GET(makeRequest('expected-token'));
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.status).toBe('not_ready');
+    expect(body.stripe).toMatchObject({
+      configured: false,
+      apiReachable: false,
+      priceLookup: false,
+      pricesChecked: 2,
+      detail: 'not_configured',
+    });
+    expect(body.checks.stripeApiReachable).toBe(false);
   });
 
   it('requires storage and scanner readiness for enterprise releases', async () => {

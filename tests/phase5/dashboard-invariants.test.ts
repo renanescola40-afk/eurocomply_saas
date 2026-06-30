@@ -61,6 +61,8 @@ describe('Phase 5 dashboard invariants', () => {
     expect(login).toContain('authenticateWithRedirect');
     expect(login).toContain('signIn.create({ identifier: email, password });');
     expect(login).not.toContain('<SignIn');
+    expect(login).not.toContain('fallbackRedirectUrl={afterSignInUrl}');
+    expect(login).not.toContain('forceRedirectUrl={afterSignInUrl}');
   });
 
   it('keeps signup continuation defaulted to onboarding with a custom stable entry template', () => {
@@ -83,6 +85,8 @@ describe('Phase 5 dashboard invariants', () => {
     expect(signup).toContain('!selectedPlan');
     expect(signup).toContain('getSignupPlanHref');
     expect(signup).not.toContain('<SignUp');
+    expect(signup).not.toContain('fallbackRedirectUrl={continuationHref}');
+    expect(signup).not.toContain('forceRedirectUrl={continuationHref}');
     expect(signup).not.toContain(signupNextPattern);
     expect(signup).not.toContain(loginNextPattern);
   });
@@ -121,10 +125,14 @@ describe('Phase 5 dashboard invariants', () => {
     expect(content).toContain('redirect(`/${safeLocale}/onboarding');
   });
 
-  it('passes workflow readiness from the organization page into dashboard overview and recommended actions', () => {
-    const page = read('src/app/[locale]/dashboard/organizations/page.tsx');
-    const overview = read('src/components/dashboard/dashboard-home-overview.tsx');
-    const nextBestActions = read('src/components/dashboard/next-best-actions.tsx');
+  it('passes workflow readiness from the organization page into dashboard overview', () => {
+    const content = read('src/app/[locale]/dashboard/organizations/page.tsx');
+
+    expect(content).toContain('workflowReadiness={data.workflowReadiness}');
+  });
+
+  it('uses workflow readiness to prioritize next best actions', () => {
+    const content = read('src/components/dashboard/next-best-actions.tsx');
 
     expect(page).toContain('workflowReadiness={data.workflowReadiness}');
     expect(overview).toContain('workflowReadiness={workflowReadiness}');
