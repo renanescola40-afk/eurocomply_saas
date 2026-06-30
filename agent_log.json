@@ -84,6 +84,21 @@
         "Validated lead capture remains bounded, rate-limited, no-store, and avoids secret/token exposure.",
         "Prepared branch agent/email-invite-token-fallback-audit to restore plaintext invitation fallback redaction."
       ]
+    },
+    {
+      "timestamp": "2026-06-30T01:07:22Z",
+      "cycle": "scheduled_audit",
+      "status": "safe_fix_prepared",
+      "summary": "Audited main and open PRs. Found PR #701 safely hardens the internal email test endpoint but its checks were blocked by known brittle dashboard/auth and public-claim invariants rather than the endpoint change. Applied the safe test/docs alignment from PR #698 onto PR #701 and recorded this audit action.",
+      "base_commit": "99a279529d751ba9759adb78ef001ad717bc3793",
+      "pull_request": 701,
+      "actions_taken": [
+        "Validated main still has no workflow runs on the latest commit.",
+        "Validated cron remains a single protected daily maintenance aggregator.",
+        "Validated billing checkout intent still enforces authentication, organization scope, RBAC, trusted origin on POST, distributed rate limit, bounded JSON parsing, and no-store responses.",
+        "Validated lead/demo capture remains bounded, rate-limited, no-store, and avoids secret/token exposure.",
+        "Patched PR #701 tests/docs to remove brittle false-negative assertions while preserving onboarding-first auth flow, no hosted Clerk templates, evidence-bound claims, and P0 release evidence requirements."
+      ]
     }
   ]
 }
