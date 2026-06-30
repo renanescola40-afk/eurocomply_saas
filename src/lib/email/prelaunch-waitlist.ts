@@ -40,7 +40,7 @@ function formatRemaining(joinedAt: string, launchAt: string, locale: string) {
 export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
   const isPt = input.locale === 'pt';
   const joinedAt = formatJoinedAt(input.joinedAt, input.locale);
-  const launchLabel = isPt ? '1 de julho de 2026, 07:00 Europe/Lisbon' : '1 July 2026, 07:00 Europe/Lisbon';
+  const launchLabel = isPt ? '1 de agosto de 2026, 07:00 Europe/Lisbon' : '1 August 2026, 07:00 Europe/Lisbon';
   const remaining = formatRemaining(input.joinedAt, input.launchAt, input.locale);
   const headline = isPt
     ? 'Você está inscrito na lista de espera da Risck Comply — e você é especial.'
