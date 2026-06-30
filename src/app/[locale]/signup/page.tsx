@@ -206,7 +206,7 @@ function SignupAuthForm({ activeLocale, selectedPlan, continuationHref, signInUr
 
     setIsSubmitting(true);
     setFormError(null);
-    const result = await signInWithGoogle();
+    const result = await signInWithGoogle({ next: continuationHref });
     if (result.error) {
       setFormError(text.authExchangeFailed);
       setIsSubmitting(false);
