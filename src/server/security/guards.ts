@@ -65,8 +65,8 @@ export async function requireOrganizationContext(slug?: string): Promise<Authent
   const activeClerkOrgId = authState?.orgId ?? null;
   const activeClerkRole = normalizeClerkRole((authState as { orgRole?: string | null } | null)?.orgRole);
 
-  if (user.source === 'clerk' && activeClerkOrgId) {
-    await ensureActiveClerkOrganizationSynced(user.id, activeClerkOrgId, activeClerkRole);
+  if (activeClerkOrgId && user.clerkUserId) {
+    await ensureActiveClerkOrganizationSynced(user.clerkUserId, activeClerkOrgId, activeClerkRole);
   }
 
   const organization = await getCurrentOrganizationForUser(user.id, slug, activeClerkOrgId);
