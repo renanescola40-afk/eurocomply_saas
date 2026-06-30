@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 import { applyNoStoreHeaders, noStoreJson } from '@/server/security/no-store';
 import { resolveAuthAppBaseUrl } from '@/server/security/auth-callback';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-const DASHBOARD_PATH = '/dashboard/organizations';
+const ONBOARDING_PATH = '/onboarding';
 const LOCALE_COOKIE = 'NEXT_LOCALE';
 
 function getLocaleFromRequest(request: NextRequest): Locale {
@@ -17,9 +18,9 @@ function getLocaleFromRequest(request: NextRequest): Locale {
 }
 
 function getSafeNextPath(rawNext: string | null, locale: Locale) {
-  const fallback = `/${locale}${DASHBOARD_PATH}`;
+  const fallback = `/${locale}${ONBOARDING_PATH}`;
 
-  if (!rawNext || !rawNext.startsWith('/') || rawNext.startsWith('//')) {
+  if (!rawNext || !rawNext.startsWith('/') || rawNext.startsWith('//') || rawNext.includes('://')) {
     return fallback;
   }
 
@@ -37,10 +38,24 @@ export async function GET(request: NextRequest) {
 
   const locale = getLocaleFromRequest(request);
   const next = getSafeNextPath(requestUrl.searchParams.get('next'), locale);
+  const code = requestUrl.searchParams.get('code');
   const loginUrl = new URL(`/${locale}/login`, appBaseUrl);
 
-  loginUrl.searchParams.set('next', next);
-  loginUrl.searchParams.set('notice', 'legacy_callback_route');
+  if (!code) {
+    loginUrl.searchParams.set('error', 'missing_oauth_code');
+    loginUrl.searchParams.set('next', next);
+    return applyNoStoreHeaders(NextResponse.redirect(loginUrl));
+  }
 
-  return applyNoStoreHeaders(NextResponse.redirect(loginUrl));
+  const supabase = await createServerSupabaseClient();
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    console.warn('auth_exchange_failed');
+    loginUrl.searchParams.set('error', 'auth_exchange_failed');
+    loginUrl.searchParams.set('next', next);
+    return applyNoStoreHeaders(NextResponse.redirect(loginUrl));
+  }
+
+  return applyNoStoreHeaders(NextResponse.redirect(new URL(next, appBaseUrl)));
 }

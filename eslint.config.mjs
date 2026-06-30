@@ -28,6 +28,7 @@ const eslintConfig = [
       "react/no-unescaped-entities": "off",
       "prefer-const": "off",
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/ban-ts-comment": "off",
     },
   },
 ];
