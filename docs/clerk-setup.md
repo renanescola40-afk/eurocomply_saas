@@ -1,21 +1,21 @@
 # Clerk setup for RISCK COMPLY
 
-This branch migrates application authentication from Supabase Auth to Clerk while keeping Supabase available as the application database/data API.
+> Legacy note: Clerk runtime integration has been removed from the application shell. RISCK COMPLY currently uses Supabase Auth for login, signup and session handling. This document is retained only as historical context for the previous Clerk evaluation and for any future rollback investigation.
 
 ## Security first
 
-A Clerk backend secret was exposed outside the provider dashboard during setup. Rotate it in Clerk before using Clerk in any environment.
+A Clerk backend secret was exposed outside the provider dashboard during setup. If any Clerk project from this evaluation still exists, rotate or revoke that secret in Clerk before reusing the project in any environment.
 
-Required action in Clerk dashboard:
+Required action in Clerk dashboard when retaining an old Clerk project:
 
 1. Open **Configure → API Keys**.
 2. Revoke or rotate the exposed backend secret.
-3. Copy the new value only into local development env files and deployment secret stores.
+3. Remove unused Clerk values from local development env files and deployment secret stores.
 4. Never commit real Clerk secrets to GitHub.
 
-## Environment variables
+## Historical environment variables
 
-Local development needs these variable names configured with your own values:
+These names were used only by the retired Clerk evaluation:
 
 ```env
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
@@ -26,53 +26,25 @@ NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/pt/dashboard/organizations
 NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/pt/dashboard/organizations
 ```
 
-Production values must be configured in Vercel/GitHub/Supabase provider secret stores, not committed.
+Do not add these values back unless a new reviewed Clerk migration PR intentionally restores Clerk runtime support.
 
-## What this branch changes
+## Historical branch changes
 
-- Wraps the localized app layout with `ClerkProvider`.
-- Replaces the Supabase-backed compatibility hook in `src/hooks/useAuth.tsx` with Clerk hooks.
-- Replaces the localized login and signup pages with Clerk `SignIn` and `SignUp` components.
-- Replaces Supabase session checks in `src/middleware.ts` with Clerk middleware checks.
-- Keeps Supabase imports where the app still uses Supabase for tenant data, documents, logs, billing state, and compliance records.
+The retired Clerk evaluation previously attempted to:
 
-## Required local command
+- Wrap the localized app layout with `ClerkProvider`.
+- Replace the Supabase-backed compatibility hook in `src/hooks/useAuth.tsx` with Clerk hooks.
+- Replace the localized login and signup pages with Clerk `SignIn` and `SignUp` components.
+- Replace Supabase session checks in `src/middleware.ts` with Clerk middleware checks.
+- Keep Supabase imports where the app still uses Supabase for tenant data, documents, logs, billing state, and compliance records.
 
-The dependency was added to `package.json`, but the lockfile must be regenerated locally:
-
-```bash
-npm install
-```
-
-Commit the resulting `package-lock.json` update before opening/merging the PR.
-
-## Enterprise/B2B target
-
-Use Clerk Organizations as the B2B identity layer:
-
-- Organization/workspace switcher
-- `org:admin` and `org:member` roles
-- Permissions for billing, members, API keys, audit logs, and settings
-- Clerk organization ID mapped to the existing workspace/organization model
-- Organization ID stored on every tenant-owned row
-
-Recommended first permissions:
-
-```txt
-dashboard:view
-members:manage
-billing:manage
-api_keys:manage
-settings:update
-audit_logs:view
-```
+Those runtime changes are obsolete and should not be used as the current auth runbook.
 
 ## Validation commands
 
-After rotating the Clerk secret and running `npm install`, run:
+The obsolete `npm run clerk:env` package alias has been removed. For the current Supabase Auth release path, run the supported project checks instead:
 
 ```bash
-npm run clerk:env
 npm run lint
 npm run typecheck
 npm run test
@@ -80,4 +52,4 @@ npm run build
 npm run security:public-secrets
 ```
 
-Do not proceed to production until all commands pass and the exposed Clerk backend secret has been rotated.
+Do not proceed to production until the current supported checks pass and any unused legacy Clerk provider secrets have been removed or revoked.
