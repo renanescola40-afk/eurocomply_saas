@@ -28,6 +28,7 @@ const TEST_EMAIL_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const TEST_EMAIL_RATE_LIMIT_MAX = 5;
 const TEST_EMAIL_ROUTE = '/api/internal/email/test';
 const TEST_EMAIL_ACTION = 'send_test_email';
+const TEST_EMAIL_RATE_LIMIT_KEY = 'internal-email-test:route';
 const TEST_EMAIL_DEFAULT_ORG_NAME = 'Risck Comply Demo Org';
 
 const TEST_EMAIL_TEMPLATES = [
@@ -60,10 +61,6 @@ function getAppUrl() {
 
 function hasInternalAuthMaterial(request: Request) {
   return Boolean(request.headers.get('authorization') || request.headers.get('x-internal-cron-secret'));
-}
-
-function getClientHint(request: Request) {
-  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 }
 
 function splitList(value: string | undefined) {
@@ -164,14 +161,13 @@ async function readPayload(request: Request) {
   return result.data;
 }
 
-async function enforceRateLimit(request: Request) {
-  const ipHint = getClientHint(request);
+async function enforceRateLimit() {
   const rateLimit = await checkDistributedRateLimit({
-    key: `internal-email-test:${ipHint}`,
+    key: TEST_EMAIL_RATE_LIMIT_KEY,
     policy: 'health-internal',
     route: TEST_EMAIL_ROUTE,
     action: TEST_EMAIL_ACTION,
-    ip: ipHint,
+    ip: null,
     userAgent: null,
     limit: TEST_EMAIL_RATE_LIMIT_MAX,
     windowMs: TEST_EMAIL_RATE_LIMIT_WINDOW_MS,
@@ -200,7 +196,7 @@ export async function POST(request: Request) {
     return noStoreJson({ error: 'unauthorized' }, { status: hasInternalAuthMaterial(request) ? 403 : 401 });
   }
 
-  const rateLimited = await enforceRateLimit(request);
+  const rateLimited = await enforceRateLimit();
   if (rateLimited) return rateLimited;
 
   let body: TestEmailPayload;
