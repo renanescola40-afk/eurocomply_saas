@@ -1,6 +1,6 @@
-// middleware.ts - Combined i18n + Clerk Auth
+// middleware.ts - Combined i18n + Supabase Auth
 
-import { clerkMiddleware } from '@clerk/nextjs/server';
+import { createServerClient } from '@supabase/ssr';
 import createIntlMiddleware from 'next-intl/middleware';
 import { NextRequest, NextResponse } from 'next/server';
 import { routing, locales, defaultLocale, COUNTRY_TO_LOCALE } from '@/lib/i18n/routing';
@@ -103,6 +103,46 @@ function withPrivateNoStore(response: NextResponse) {
   return response;
 }
 
+function copyAuthCookies(target: NextResponse, source: NextResponse) {
+  for (const cookie of source.cookies.getAll()) {
+    target.cookies.set(cookie);
+  }
+
+  return target;
+}
+
+async function getSupabaseAuthState(req: NextRequest) {
+  let authResponse = NextResponse.next({ request: { headers: req.headers } });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            req.cookies.set(name, value);
+          });
+          authResponse = NextResponse.next({ request: { headers: req.headers } });
+          cookiesToSet.forEach(({ name, value, options }) => {
+            authResponse.cookies.set(name, value, options);
+          });
+        },
+      },
+    },
+  );
+
+  const { data, error } = await supabase.auth.getUser();
+
+  return {
+    userId: error ? null : data.user?.id ?? null,
+    response: authResponse,
+  };
+}
+
 function detectLocale(req: NextRequest): string {
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
   if (cookieLocale && locales.includes(cookieLocale as 'en')) {
@@ -169,10 +209,10 @@ function getCheckoutPlanRedirect(pathname: string, req: NextRequest) {
   return NextResponse.redirect(pricingUrl);
 }
 
-export default clerkMiddleware(async (auth, req) => {
+export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
-  if (pathname.startsWith('/__clerk') || pathname === SENTRY_TUNNEL_PATH || pathname.startsWith(`${SENTRY_TUNNEL_PATH}/`)) {
+  if (pathname === SENTRY_TUNNEL_PATH || pathname.startsWith(`${SENTRY_TUNNEL_PATH}/`)) {
     return NextResponse.next();
   }
 
@@ -211,18 +251,18 @@ export default clerkMiddleware(async (auth, req) => {
     const isMarketingHome = shouldCheckMarketingHomeAuth(pathname, locale);
     const isAuthEntry = isAuthEntryRoute(pathname, locale);
     const shouldCheckAuth = !isPublic || isMarketingHome || isAuthEntry;
-    const { userId } = shouldCheckAuth ? await auth() : { userId: null };
-    const isAuthenticated = Boolean(userId);
+    const authState = shouldCheckAuth ? await getSupabaseAuthState(req) : { userId: null, response: NextResponse.next() };
+    const isAuthenticated = Boolean(authState.userId);
 
     if (!isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
       loginUrl.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
-      return withPrivateNoStore(NextResponse.redirect(loginUrl));
+      return copyAuthCookies(withPrivateNoStore(NextResponse.redirect(loginUrl)), authState.response);
     }
 
     if (isAuthenticated && (isMarketingHome || isAuthEntry)) {
       const dashboardUrl = new URL(`/${locale}${AUTH_SUCCESS_PATH}`, req.url);
-      return withPrivateNoStore(NextResponse.redirect(dashboardUrl));
+      return copyAuthCookies(withPrivateNoStore(NextResponse.redirect(dashboardUrl)), authState.response);
     }
 
     const response = intlMiddleware(req);
@@ -233,7 +273,7 @@ export default clerkMiddleware(async (auth, req) => {
       sameSite: 'lax',
     });
 
-    return response;
+    return copyAuthCookies(response, authState.response);
   }
 
   if (pathname.startsWith('/api')) {
@@ -252,11 +292,10 @@ export default clerkMiddleware(async (auth, req) => {
   });
 
   return response;
-});
+}
 
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|monitoring|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-    '/__clerk/:path*',
   ],
 };
