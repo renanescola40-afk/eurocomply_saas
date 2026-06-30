@@ -10,7 +10,7 @@ This document describes the non-sensitive checkout intent layer used before a re
 
 ```json
 {
-  "planId": "enterprise"
+  "planId": "growth"
 }
 ```
 
@@ -31,21 +31,24 @@ Required controls:
 
 ## Supported plan ids
 
-Commercial plan ids:
+Canonical self-serve billing plan ids:
 
 - `starter`
 - `growth`
-- `business`
 - `enterprise`
 
-Entitlement plan mapping:
+Legacy/commercial aliases may still be accepted for backwards compatibility, but public pricing and checkout links must use canonical ids only. This prevents a public pricing label from pointing at a different Stripe price than the one the buyer sees.
 
-- `starter` -> `essential`
-- `growth` -> `professional`
-- `business` -> `business`
+Canonical plan mapping:
+
+- `starter` -> `starter`
+- `growth` -> `growth`
 - `enterprise` -> `enterprise`
 
-This mapping is required because public pricing names and internal entitlement names are not identical.
+Legacy alias mapping:
+
+- `essential` -> `starter`
+- `professional` / `pro` / `business` -> `growth`
 
 ## Response shape
 
@@ -54,17 +57,17 @@ This mapping is required because public pricing names and internal entitlement n
   "ok": true,
   "checkoutIntent": {
     "plan": {
-      "id": "enterprise",
-      "name": "Enterprise",
-      "priceMonthly": 990,
-      "targetEntitlementPlan": "enterprise"
+      "id": "growth",
+      "name": "Growth",
+      "priceMonthly": 149,
+      "targetEntitlementPlan": "professional"
     },
     "organization": {
       "id": "org-id",
       "name": "Organization name",
       "slug": "organization-slug"
     },
-    "currentPlan": "business",
+    "currentPlan": "starter",
     "alreadyOnPlan": false,
     "checkoutReady": true,
     "nextAction": "create_checkout_session"
@@ -91,11 +94,11 @@ When wiring the real checkout session:
 1. Keep this route as the validation gate.
 2. Do not return provider secrets or price identifiers to the client.
 3. If `checkoutReady` is false and `nextAction` is `configure_plan_price`, show a safe admin/support message rather than failing silently.
-4. Create the provider checkout session only after validating user, organization, plan, target entitlement and `manage_billing` permission.
+4. Create the provider checkout session only after validating user, organization, canonical plan, target entitlement and `manage_billing` permission.
 5. Include metadata in the provider session/subscription so the webhook can persist:
    - `organization_id`
-   - `billing_plan_id`
-   - `target_entitlement_plan`
+   - `plan`
+   - `user_id`
 6. The existing billing webhook should update the organization subscription state only after the provider confirms payment/subscription status.
 7. Add-on purchases should write to `organization_add_ons` through the webhook using item or price metadata such as `add_on_id`.
 
