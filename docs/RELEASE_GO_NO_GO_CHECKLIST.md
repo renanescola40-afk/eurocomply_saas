@@ -2,6 +2,14 @@
 
 Final gate for paid public production launch.
 
+This checklist remains compatible with the automated release gate files:
+
+- `docs/RELEASE_APPROVAL_RECORD.md`
+- `docs/RELEASE_EVIDENCE_CHECKLIST.md`
+- `docs/RELEASE_CANDIDATE_VALIDATION.md`
+- `docs/RELEASE_APPROVAL_LINKAGE.md`
+- `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md`
+
 ## Current release decision
 
 - Release name: Public Production Readiness 100% Gate - 2026-06-30
@@ -27,7 +35,7 @@ The release command must write these files with `status: Complete` and `outcome:
 - `docs/security/evidence/runtime/rollback-dry-run-validation.json`
 - `docs/security/evidence/runtime/production-final-validation.json`
 
-## Mandatory Public Production Go criteria
+## Mandatory Go criteria
 
 Public Production Go is allowed only when all items below pass for the same commit SHA:
 
@@ -52,6 +60,7 @@ Public Production Go is allowed only when all items below pass for the same comm
 - rollback target URL exists and passes `/api/health`
 - last validated commit SHA is recorded
 - build SHA is recorded
+- Supabase RLS live validation evidence is attached and marked Complete/passed for public production.
 - runtime evidence is redacted and contains no credential material
 
 ## Automatic No-Go criteria
@@ -60,14 +69,14 @@ Keep **No-Go** if any critical gate fails or if any required evidence file is mi
 
 Never downgrade a critical failure to a warning. Public Production Go requires real passing JSON evidence.
 
-## Current evidence mapping
+## Evidence mapping
 
 | Area | Required evidence | Current status | Decision |
 | --- | --- | --- | --- |
 | Final release command | `production-final-validation.json` Complete/passed | Runner added; target run still required | No-Go |
 | Deployment smoke | `deployment-smoke-validation.json` Complete/passed | Smoke expanded with signup, Stripe, no-store and rollback URL checks | No-Go until target run passes |
 | Rollback | `rollback-dry-run-validation.json` Complete/passed | Existing dry-run gate retained | No-Go until target run passes |
-| Supabase | `/api/ready` database reachable | Runtime check enforced | No-Go until target run passes |
+| Supabase | `/api/ready` database reachable and Supabase RLS live validation evidence is attached | Runtime check enforced | No-Go until target run passes |
 | Stripe | `/api/ready` live price lookup | Runtime check enforced | No-Go until target run passes |
 | Sentry / observability | `/api/ready` observability configured | Runtime check enforced | No-Go until target run passes |
 | Public pages | landing, pricing, trust, login, signup | Smoke enforced | No-Go until target run passes |
@@ -82,6 +91,18 @@ Never downgrade a critical failure to a warning. Public Production Go requires r
 | Deployment smoke not proven passed | @renansilva2002 / renanescola40-afk | Passing `deployment-smoke-validation.json` |
 | Rollback target not proven passed | @renansilva2002 / renanescola40-afk | Passing `rollback-dry-run-validation.json` |
 | Runtime services not proven on target | @renansilva2002 / renanescola40-afk | `/api/ready` Complete/passed for Supabase, Stripe and observability |
+
+## Decision outcomes
+
+- **Go**: all mandatory criteria pass with complete evidence for the promoted commit.
+- **Conditional Go**: allowed only for non-P0 gaps with owner, expiry date and written approval.
+- **No-Go**: selected whenever any P0 gate is missing, failing, stale or incomplete.
+
+## Enterprise rule
+
+Enterprise Pilot Go and Enterprise Procurement Go require stronger evidence than public production, including external security review or pentest evidence, real MFA/IdP proof, audit-chain target-live evidence, branch-protection evidence and any enterprise-only runtime gates.
+
+Public Production Go does not claim enterprise procurement readiness or completed external review unless those evidence files are separately Complete/passed.
 
 ## Final decision
 

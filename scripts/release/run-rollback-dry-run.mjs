@@ -6,9 +6,34 @@ import { dirname } from 'node:path';
 const evidencePath = 'docs/security/evidence/runtime/rollback-dry-run-validation.json';
 const shaPattern = /^[a-f0-9]{40}$/i;
 const generatedAt = new Date().toISOString();
-const targetUrl = (process.env.RELEASE_ROLLBACK_TARGET_URL || process.env.ROLLBACK_TARGET_URL || process.env.PREVIOUS_KNOWN_GOOD_URL || '').trim();
-const targetSha = (process.env.RELEASE_ROLLBACK_TARGET_SHA || process.env.ROLLBACK_TARGET_SHA || process.env.PREVIOUS_KNOWN_GOOD_SHA || '').trim();
-const currentSha = process.env.GITHUB_SHA || process.env.RELEASE_CURRENT_SHA || '';
+
+function firstConfigured(names) {
+  for (const name of names) {
+    const value = (process.env[name] || '').trim();
+    if (value) return { name, value };
+  }
+
+  return null;
+}
+
+const targetUrlConfig = firstConfigured([
+  'RELEASE_ROLLBACK_TARGET_URL',
+  'RELEASE_ROLLBACK_TARGET',
+  'ROLLBACK_TARGET_URL',
+  'ROLLBACK_TARGET',
+  'PREVIOUS_KNOWN_GOOD_URL',
+  'LAST_KNOWN_GOOD_DEPLOYMENT_URL',
+  'VERCEL_ROLLBACK_DEPLOYMENT_URL',
+]);
+const targetShaConfig = firstConfigured([
+  'RELEASE_ROLLBACK_TARGET_SHA',
+  'ROLLBACK_TARGET_SHA',
+  'PREVIOUS_KNOWN_GOOD_SHA',
+  'LAST_KNOWN_GOOD_SHA',
+]);
+const targetUrl = targetUrlConfig?.value || '';
+const targetSha = targetShaConfig?.value || '';
+const currentSha = process.env.GITHUB_SHA || process.env.RELEASE_CURRENT_SHA || process.env.RELEASE_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || '';
 const targetValidationProof = process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true';
 const failures = [];
 
@@ -28,10 +53,16 @@ const evidence = {
   reviewer: 'EuroComply release automation',
   releaseTarget: process.env.RELEASE_TARGET || 'production',
   summary: outcome === 'passed' ? 'Rollback dry-run verified previous known-good metadata and reviewer target validation proof.' : 'Rollback dry-run evidence is incomplete; release remains blocked.',
-  redactionConfirmation: 'Redaction confirmed for runtime evidence.',
+  redactionConfirmation: 'Redaction confirmed for runtime evidence. Rollback target values are not written to evidence.',
   evidenceLocations: ['scripts/release/run-rollback-dry-run.mjs', 'docs/RELEASE_ROLLBACK_PLAN.md', evidencePath],
   controlsVerified: outcome === 'passed' ? ['Previous known-good URL was configured.', 'Previous known-good full commit SHA was configured.', 'Reviewer confirmed functional target validation proof.', 'Dry-run performed no production mutation.'] : [],
-  rollbackTarget: { urlConfigured: Boolean(targetUrl), shaPrefix: targetSha ? `${targetSha.slice(0, 12)}…` : null, shaFullRecordedPrivately: shaPattern.test(targetSha) },
+  rollbackTarget: {
+    urlConfigured: Boolean(targetUrl),
+    urlSource: targetUrlConfig?.name ?? null,
+    shaSource: targetShaConfig?.name ?? null,
+    shaPrefix: targetSha ? `${targetSha.slice(0, 12)}…` : null,
+    shaFullRecordedPrivately: shaPattern.test(targetSha),
+  },
   dryRun: { mutatesProduction: false, commandMode: 'metadata-plus-reviewed-target-validation' },
   targetValidation: { passed: targetValidationProof, requiredEnv: 'RELEASE_ROLLBACK_TARGET_VALIDATED=true' },
   failures,

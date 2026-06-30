@@ -26,7 +26,15 @@ const commands = [
   { slug: '06-security', label: 'npm run security', command: 'npm', args: ['run', 'security'], critical: true },
   { slug: '07-release-smoke', label: 'npm run release:deployment-smoke', command: 'npm', args: ['run', 'release:deployment-smoke'], critical: true },
   { slug: '08-release-rollback', label: 'npm run release:rollback', command: 'npm', args: ['run', 'release:rollback'], critical: true },
-  { slug: '09-release-readiness', label: 'npm run release:readiness', command: 'npm', args: ['run', 'release:readiness'], critical: true },
+  { slug: '09-release-candidate', label: 'npm run security:release-candidate', command: 'npm', args: ['run', 'security:release-candidate'], critical: true },
+  { slug: '10-release-evidence', label: 'npm run security:release-evidence', command: 'npm', args: ['run', 'security:release-evidence'], critical: true },
+  { slug: '11-release-approval', label: 'npm run security:release-approval', command: 'npm', args: ['run', 'security:release-approval'], critical: true },
+  { slug: '12-release-go-no-go', label: 'npm run security:release-go-no-go', command: 'npm', args: ['run', 'security:release-go-no-go'], critical: true },
+  { slug: '13-release-rollback-docs', label: 'npm run security:release-rollback', command: 'npm', args: ['run', 'security:release-rollback'], critical: true },
+  { slug: '14-release-incident-response', label: 'npm run security:release-incident-response', command: 'npm', args: ['run', 'security:release-incident-response'], critical: true },
+  { slug: '15-release-post-incident', label: 'npm run security:release-post-incident', command: 'npm', args: ['run', 'security:release-post-incident'], critical: true },
+  { slug: '16-release-support', label: 'npm run security:release-support-readiness', command: 'npm', args: ['run', 'security:release-support-readiness'], critical: true },
+  { slug: '17-release-operations', label: 'npm run security:release-operations', command: 'npm', args: ['run', 'security:release-operations'], critical: true },
 ];
 
 mkdirSync(logDir, { recursive: true });
@@ -161,7 +169,7 @@ const summary = {
   runtimeEvidence,
   recursionGuard: {
     npmRunReleaseDoesNotInvokeItself: true,
-    note: 'The user-requested recursive npm run release steps are expanded into release:deployment-smoke, release:rollback, and release:readiness to avoid infinite recursion.',
+    note: 'The user-requested recursive npm run release steps are expanded into public release gates to avoid infinite recursion and avoid enterprise-only blockers such as external review.',
   },
 };
 
@@ -221,7 +229,7 @@ const evidence = {
       'security suite',
       'deployment smoke',
       'rollback dry-run',
-      'release readiness',
+      'public release readiness',
       'commit SHA recorded',
       'build SHA recorded',
     ]
