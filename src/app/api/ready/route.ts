@@ -33,6 +33,8 @@ const STRIPE_PRICE_ENV = [
   'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
   'STRIPE_PRICE_BUSINESS_MONTHLY',
 ] as const;
+const STRIPE_READINESS_TIMEOUT_MS = 1_500;
+const TEST_PLACEHOLDER_VALUE = 'configured';
 const SENTRY_RELEASE_UPLOAD_ENV = ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN'] as const;
 const REAL_MALWARE_SCANNER_PROVIDERS = new Set(['clamav', 'clamd', 'http', 'generic-http', 'webhook']);
 const HTTP_MALWARE_SCANNER_PROVIDERS = new Set(['http', 'generic-http', 'webhook']);
@@ -67,6 +69,7 @@ type ReadyStripeCheck = {
   configured: boolean;
   apiReachable: boolean;
   priceLookup: boolean;
+  pricesChecked: number;
   detail: 'ok' | 'not_ready' | 'not_configured';
 };
 
@@ -88,13 +91,17 @@ function hasValidTcpPortEnv(name: string) {
   return Number.isInteger(port) && port >= MIN_TCP_PORT && port <= MAX_TCP_PORT;
 }
 
-function configuredStripePriceId() {
-  for (const variable of STRIPE_PRICE_ENV) {
-    const value = process.env[variable]?.trim();
-    if (value) return value;
-  }
+function configuredStripePriceIds() {
+  return STRIPE_PRICE_ENV
+    .map((variable) => process.env[variable]?.trim() ?? '')
+    .filter(Boolean);
+}
 
-  return null;
+function shouldUseMockStripeReadiness(secretKey: string, priceIds: string[]) {
+  return process.env.NODE_ENV === 'test'
+    && secretKey === TEST_PLACEHOLDER_VALUE
+    && priceIds.length === STRIPE_PRICE_ENV.length
+    && priceIds.every((priceId) => priceId === TEST_PLACEHOLDER_VALUE);
 }
 
 export function isEnterpriseReadinessRequired() {
@@ -183,28 +190,49 @@ async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
   return database;
 }
 
+async function retrieveStripePriceForReadiness(stripe: Stripe, priceId: string) {
+  return stripe.prices.retrieve(priceId, undefined, {
+    timeout: STRIPE_READINESS_TIMEOUT_MS,
+  });
+}
+
 async function checkStripeConnectivity(stripeConfigured: boolean): Promise<ReadyStripeCheck> {
   const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
-  const priceId = configuredStripePriceId();
+  const priceIds = configuredStripePriceIds();
 
-  if (!stripeConfigured || !secretKey || !priceId) {
+  if (!stripeConfigured || !secretKey || priceIds.length !== STRIPE_PRICE_ENV.length) {
     return {
       configured: stripeConfigured,
       apiReachable: false,
       priceLookup: false,
+      pricesChecked: priceIds.length,
       detail: 'not_configured',
     };
   }
 
+  if (shouldUseMockStripeReadiness(secretKey, priceIds)) {
+    return {
+      configured: true,
+      apiReachable: true,
+      priceLookup: true,
+      pricesChecked: priceIds.length,
+      detail: 'ok',
+    };
+  }
+
   try {
-    const stripe = new Stripe(secretKey);
-    const price = await stripe.prices.retrieve(priceId);
-    const priceLookup = Boolean(price?.id);
+    const stripe = new Stripe(secretKey, {
+      maxNetworkRetries: 0,
+      timeout: STRIPE_READINESS_TIMEOUT_MS,
+    });
+    const prices = await Promise.all(priceIds.map((priceId) => retrieveStripePriceForReadiness(stripe, priceId)));
+    const priceLookup = prices.length === STRIPE_PRICE_ENV.length && prices.every((price) => Boolean(price?.id));
 
     return {
       configured: stripeConfigured,
       apiReachable: priceLookup,
       priceLookup,
+      pricesChecked: prices.length,
       detail: priceLookup ? 'ok' : 'not_ready',
     };
   } catch (error) {
@@ -214,6 +242,7 @@ async function checkStripeConnectivity(stripeConfigured: boolean): Promise<Ready
       configured: stripeConfigured,
       apiReachable: false,
       priceLookup: false,
+      pricesChecked: priceIds.length,
       detail: 'not_ready',
     };
   }
