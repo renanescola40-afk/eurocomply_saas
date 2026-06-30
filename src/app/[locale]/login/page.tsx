@@ -83,7 +83,7 @@ function LoginContent() {
     }
     setBusy(true);
     setError(null);
-    const result = await signInWithGoogle();
+    const result = await signInWithGoogle({ next: afterSignInUrl });
     if (result.error) {
       setError(text.failed);
       setBusy(false);
