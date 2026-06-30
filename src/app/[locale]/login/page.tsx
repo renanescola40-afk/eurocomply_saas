@@ -8,6 +8,13 @@ import { getBillingPlan } from '@/lib/billing/plans';
 import { normalizePublicAuthErrorCode, type PublicAuthErrorCode } from '@/lib/auth/public-errors';
 import { locales, type Locale } from '@/lib/i18n/routing';
 
+const publicErrors = {
+  missing_oauth_code: 'Could not complete sign-in. Please try again.',
+  auth_configuration_unavailable: 'Sign-in is temporarily unavailable. Please try again later.',
+  auth_exchange_failed: 'Could not complete sign-in. Please try again.',
+  email_sign_in_failed: 'Could not sign in. Check your details and try again.',
+} satisfies Record<PublicAuthErrorCode, string>;
+
 function successHref(locale: string, planId?: string | null) {
   const base = `/${locale}/onboarding`;
   const plan = getBillingPlan(planId)?.id;
