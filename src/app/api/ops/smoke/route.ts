@@ -8,10 +8,16 @@ const REQUIRED_ENV_GROUPS = {
   stripe: [
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
-    'STRIPE_PRICE_ESSENTIAL_MONTHLY',
-    'STRIPE_PRICE_PROFESSIONAL_MONTHLY',
-    'STRIPE_PRICE_BUSINESS_MONTHLY',
+    'STRIPE_PRICE_STARTER_MONTHLY',
+    'STRIPE_PRICE_GROWTH_MONTHLY',
+    'STRIPE_PRICE_ENTERPRISE_MONTHLY',
   ],
+} as const;
+
+const LEGACY_STRIPE_PRICE_FALLBACKS = {
+  STRIPE_PRICE_STARTER_MONTHLY: ['STRIPE_PRICE_ESSENTIAL_MONTHLY'],
+  STRIPE_PRICE_GROWTH_MONTHLY: ['STRIPE_PRICE_PROFESSIONAL_MONTHLY', 'STRIPE_PRICE_BUSINESS_MONTHLY'],
+  STRIPE_PRICE_ENTERPRISE_MONTHLY: ['STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
 } as const;
 
 type EnvGroupName = keyof typeof REQUIRED_ENV_GROUPS;
@@ -20,9 +26,15 @@ function hasBearerToken(request: Request) {
   return validateBearerToken(request, process.env.HEALTHCHECK_TOKEN);
 }
 
+function hasRequiredEnv(variable: string) {
+  if (process.env[variable]) return true;
+  const fallbacks = LEGACY_STRIPE_PRICE_FALLBACKS[variable as keyof typeof LEGACY_STRIPE_PRICE_FALLBACKS] ?? [];
+  return fallbacks.some((fallback) => Boolean(process.env[fallback]));
+}
+
 export function envGroupCheck() {
   return Object.entries(REQUIRED_ENV_GROUPS).map(([name, variables]) => {
-    const missingCount = variables.filter((variable) => !process.env[variable]).length;
+    const missingCount = variables.filter((variable) => !hasRequiredEnv(variable)).length;
     return {
       name: name as EnvGroupName,
       configured: missingCount === 0,
