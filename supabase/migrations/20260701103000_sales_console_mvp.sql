@@ -80,6 +80,26 @@ alter table public.sales_lead_activity_events enable row level security;
 create index if not exists sales_lead_activity_events_lead_created_idx on public.sales_lead_activity_events (lead_id, created_at desc);
 create index if not exists sales_lead_activity_events_action_idx on public.sales_lead_activity_events (action);
 
+-- Normalize legacy rows before adding update-time constraints. NOT VALID skips the
+-- initial scan, but PostgreSQL still enforces these checks on future row updates.
+update public.sales_leads
+set
+  message = left(message, 1000),
+  current_process = left(current_process, 700),
+  notes = left(notes, 2000),
+  user_agent = left(user_agent, 300),
+  ip_hint = left(ip_hint, 120)
+where
+  char_length(coalesce(message, '')) > 1000
+  or char_length(coalesce(current_process, '')) > 700
+  or char_length(coalesce(notes, '')) > 2000
+  or char_length(coalesce(user_agent, '')) > 300
+  or char_length(coalesce(ip_hint, '')) > 120;
+
+update public.sales_lead_notes
+set body = left(body, 2000)
+where char_length(body) > 2000;
+
 -- Defensive database constraints for app-layer validation drift. NOT VALID keeps the
 -- migration safe for any existing legacy rows while enforcing the checks on new writes.
 do $$
