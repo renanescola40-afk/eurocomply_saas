@@ -45,6 +45,7 @@ type WaitlistCopy = {
     submit: string;
     submitting: string;
     success: string;
+    emailSuccess: string;
     error: string;
     privacy: string;
     contact: string;
@@ -77,7 +78,8 @@ const en: WaitlistCopy = {
     role: 'Your role',
     submit: 'Join waitlist',
     submitting: 'Saving your priority place...',
-    success: 'You are officially on the Risck Comply waitlist — and you are special. We saved your priority place and sent a confirmation email with your join date, launch date and remaining time.',
+    success: 'You are officially on the Risck Comply waitlist — and you are special. We saved your priority place and will contact qualified leads as early access opens.',
+    emailSuccess: 'You are officially on the Risck Comply waitlist — and you are special. We saved your priority place and sent a confirmation email with your join date, launch date and remaining time.',
     error: 'Could not confirm your place right now. You can also contact us directly at comercial@risckcomply.com.',
     privacy: 'No passwords. No public signup. Only launch communication and early access qualification.',
     contact: 'Questions or want to speak with our team? Email us at',
@@ -114,7 +116,8 @@ const pt: WaitlistCopy = {
     role: 'Cargo da pessoa',
     submit: 'Entrar na lista de espera',
     submitting: 'A guardar o seu lugar prioritário...',
-    success: 'Você está oficialmente inscrito na lista de espera da Risck Comply — e você é especial. Guardámos o seu lugar prioritário e enviámos um email com o dia da inscrição, a data de abertura e o tempo que falta.',
+    success: 'Você está oficialmente inscrito na lista de espera da Risck Comply — e você é especial. Guardámos o seu lugar prioritário e vamos contactar leads qualificados quando o acesso abrir.',
+    emailSuccess: 'Você está oficialmente inscrito na lista de espera da Risck Comply — e você é especial. Guardámos o seu lugar prioritário e enviámos um email com o dia da inscrição, a data de abertura e o tempo que falta.',
     error: 'Não foi possível confirmar o seu lugar agora. Você também pode falar connosco diretamente em comercial@risckcomply.com.',
     privacy: 'Sem senhas. Sem signup público. Apenas comunicação de lançamento e qualificação para early access.',
     contact: 'Dúvidas ou quer falar com a nossa equipa? Envie email para',
@@ -224,7 +227,7 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ companyName, email, role, locale: activeLocale, website }),
       });
-      const payload = await response.json().catch(() => null) as WaitlistApiResponse | null;
+      const payload = (await response.json().catch(() => null)) as WaitlistApiResponse | null;
 
       if (!response.ok) {
         setMessage(payload?.error || copy.form.error);
@@ -232,12 +235,12 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
         return;
       }
 
-      if (payload?.emailed === true) {
-        setMessage(copy.form.success);
-        setStatus('success');
-      } else {
+      if (payload?.emailed === false) {
         setMessage(emailWarningMessage(activeLocale, payload));
         setStatus('warning');
+      } else {
+        setMessage(payload?.emailed === true ? copy.form.emailSuccess : copy.form.success);
+        setStatus('success');
       }
 
       setCompanyName('');
