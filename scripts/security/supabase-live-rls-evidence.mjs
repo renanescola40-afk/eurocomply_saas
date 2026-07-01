@@ -2,20 +2,33 @@ import crypto from 'node:crypto';
 
 export const runner = 'scripts/security/run-supabase-live-tenant-isolation.mjs';
 
-export const criticalTables = [
+export const customerTenantTables = [
   'organizations',
   'organization_members',
+  'ai_systems',
+  'compliance_tasks',
   'documents',
-  'audit_events',
   'risks',
   'vendors',
-  'compliance_tasks',
   'subscriptions',
-  'notifications',
-  'profiles',
+  'audit_logs',
+  'invitations',
+  'onboarding_activation_runs',
+  'monitoring_preferences',
 ];
 
-export const optionalTables = ['tasks'];
+export const globalReferenceTables = ['regulatory_updates'];
+
+export const criticalTables = [...customerTenantTables, ...globalReferenceTables];
+
+export const optionalTables = [
+  'tasks',
+  'audit_events',
+  'notifications',
+  'profiles',
+  'ai_incidents',
+  'organization_invites',
+];
 
 export const requiredCoverageOperations = [
   'cross_tenant_read',
@@ -24,65 +37,46 @@ export const requiredCoverageOperations = [
   'cross_tenant_delete',
 ];
 
+export const requiredSameTenantReadOperations = [
+  'same_tenant_read',
+  'same_tenant_read_backend_only',
+];
+
 export const requiredBackendWriteDenyOperations = [
   'same_tenant_insert_denied',
   'same_tenant_update_denied',
   'same_tenant_delete_denied',
 ];
 
-export const requiredViewerAdminDenyOperations = [];
-
-export const requiredUserScopedTable = 'profiles';
-
-export const requiredUserScopedOperations = [
-  'rls_enabled',
-  'cross_tenant_read',
-  'cross_tenant_insert',
-  'cross_tenant_update',
-  'cross_tenant_delete',
-  'same_tenant_read',
+export const requiredViewerAdminDenyOperations = [
+  'viewer_same_tenant_admin_insert_denied',
+  'viewer_same_tenant_admin_update_denied',
+  'viewer_same_tenant_admin_delete_denied',
 ];
 
-export const requiredProfileProofCases = [
-  {
-    table: requiredUserScopedTable,
-    operation: 'rls_enabled',
-    requirement: 'public.profiles has row-level security enabled with at least one self-scoped authenticated policy.',
-  },
-  {
-    table: requiredUserScopedTable,
-    operation: 'cross_tenant_read',
-    requirement: 'Authenticated user/tenant A cannot read the profile row owned by authenticated user B.',
-  },
-  {
-    table: requiredUserScopedTable,
-    operation: 'cross_tenant_insert',
-    requirement: 'Authenticated user/tenant A cannot insert a profile row for another user.',
-  },
-  {
-    table: requiredUserScopedTable,
-    operation: 'cross_tenant_update',
-    requirement: 'Authenticated user/tenant A cannot update the profile row owned by authenticated user B.',
-  },
-  {
-    table: requiredUserScopedTable,
-    operation: 'cross_tenant_delete',
-    requirement: 'Authenticated user/tenant A cannot delete the profile row owned by authenticated user B.',
-  },
-  {
-    table: requiredUserScopedTable,
-    operation: 'same_tenant_read',
-    requirement: 'Authenticated user B can read their own public.profiles row.',
-  },
+export const backendOwnedTables = [
+  'subscriptions',
+  'audit_logs',
+  'invitations',
 ];
 
-const sameTenantWritableTables = new Set([
+export const sameTenantWritableTables = [
+  'ai_systems',
+  'compliance_tasks',
   'documents',
   'risks',
   'vendors',
-  'tasks',
-  'compliance_tasks',
-]);
+  'onboarding_activation_runs',
+  'monitoring_preferences',
+];
+
+export const requiredGlobalReferenceOperations = [
+  'rls_enabled',
+  'authenticated_read_allowed',
+  'authenticated_insert_denied',
+  'authenticated_update_denied',
+  'authenticated_delete_denied',
+];
 
 export function commandUsed(argv = process.argv.slice(2)) {
   return `node ${runner}${argv.length > 0 ? ` ${argv.join(' ')}` : ''}`;
@@ -134,6 +128,10 @@ export function redactProjectReferenceFromUrl(url) {
   return `redacted:sha256:${digest}`;
 }
 
+function hasAnyPassedOperation(testMap, operations) {
+  return operations.some((operation) => testMap.get(operation) === true);
+}
+
 export function tableCoverageFrom(testCases) {
   const tables = testCases
     .map((test) => test.table)
@@ -155,12 +153,16 @@ export function tableCoverageFrom(testCases) {
         crossTenantInsertDenied: byOperation.get('cross_tenant_insert') === true,
         crossTenantUpdateDenied: byOperation.get('cross_tenant_update') === true,
         crossTenantDeleteDenied: byOperation.get('cross_tenant_delete') === true,
-        sameTenantReadAllowed:
-          byOperation.get('same_tenant_read') === true ||
-          byOperation.get('same_tenant_read_backend_only') === true,
+        sameTenantReadAllowed: hasAnyPassedOperation(byOperation, requiredSameTenantReadOperations),
         sameTenantInsertAllowed:
           byOperation.get('same_tenant_insert') === true ||
-          !sameTenantWritableTables.has(table),
+          !sameTenantWritableTables.includes(table),
+        backendWritesDenied:
+          !backendOwnedTables.includes(table) ||
+          requiredBackendWriteDenyOperations.every((operation) => byOperation.get(operation) === true),
+        globalReferenceReadOnly:
+          !globalReferenceTables.includes(table) ||
+          requiredGlobalReferenceOperations.every((operation) => byOperation.get(operation) === true),
       },
     };
   });
@@ -196,6 +198,21 @@ function requirePassedTest(
     )
   ) {
     errors.push(message);
+  }
+}
+
+function requireAnyPassedTest(tests, table, operations, errors) {
+  if (
+    !operations.some((operation) =>
+      tests.some(
+        (test) =>
+          test?.table === table &&
+          test?.operation === operation &&
+          test?.passed === true,
+      ),
+    )
+  ) {
+    errors.push(`missing live RLS operation coverage: ${table}:${operations.join('|')}`);
   }
 }
 
@@ -275,14 +292,32 @@ export function validatePassingEvidence(evidence) {
     errors.push('all testCases must pass');
   }
 
-  for (const { table, operation } of requiredProfileProofCases) {
-    requirePassedTest(
-      tests,
-      table,
-      operation,
-      errors,
-      `missing live RLS user-scoped table coverage: ${table}:${operation}`,
-    );
+  for (const table of customerTenantTables) {
+    requirePassedTest(tests, table, 'rls_enabled', errors);
+    for (const operation of requiredCoverageOperations) {
+      requirePassedTest(tests, table, operation, errors);
+    }
+    requireAnyPassedTest(tests, table, requiredSameTenantReadOperations, errors);
+  }
+
+  for (const table of sameTenantWritableTables) {
+    requirePassedTest(tests, table, 'same_tenant_insert', errors);
+  }
+
+  for (const table of backendOwnedTables) {
+    for (const operation of requiredBackendWriteDenyOperations) {
+      requirePassedTest(tests, table, operation, errors);
+    }
+  }
+
+  for (const operation of requiredViewerAdminDenyOperations) {
+    requirePassedTest(tests, 'organization_members', operation, errors);
+  }
+
+  for (const table of globalReferenceTables) {
+    for (const operation of requiredGlobalReferenceOperations) {
+      requirePassedTest(tests, table, operation, errors);
+    }
   }
 
   if (!Array.isArray(evidence.testsRun) || evidence.testsRun.length !== tests.length) {
@@ -333,7 +368,7 @@ export function buildEvidencePayload({
     supabaseProjectReferenceRedacted: true,
     summary:
       status === 'Complete' && outcome === 'passed'
-        ? 'Live Supabase tenant-isolation RLS validation passed.'
+        ? 'Live Supabase production/staging RLS validation passed for customer tenant tables and global reference tables.'
         : 'Live Supabase tenant-isolation RLS validation did not pass.',
     redactionConfirmation:
       'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
@@ -347,19 +382,20 @@ export function buildEvidencePayload({
     controlsVerified:
       status === 'Complete' && outcome === 'passed'
         ? [
-            'Tenant isolation verified for critical tables',
-            'Cross-tenant access denied',
-            'Same-tenant read coverage verified',
-            'Backend-owned write denials verified',
+            'RLS enabled on customer and reference tables',
+            'Tenant A cannot read Tenant B rows',
+            'Tenant A cannot insert Tenant B scoped rows',
+            'Tenant A cannot update Tenant B rows',
+            'Tenant A cannot delete Tenant B rows',
+            'Owner/admin/member behavior verified',
+            'Backend-owned tables are not client-writable',
+            'Regulatory updates are authenticated read-only',
           ]
         : [],
+    customerTenantTables,
+    globalReferenceTables,
     criticalTables,
     optionalTables,
-    requiredProfileProofCases,
-    profileProofExecutionState:
-      status === 'Complete' && outcome === 'passed'
-        ? 'executed_and_passed'
-        : outcome,
     tablesReviewed,
     testsRun: testCases.map((test) => `${test.table}:${test.operation}`),
     testsPassed: testCases
