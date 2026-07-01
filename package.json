@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "npm@10.8.2",
+  "engines": {
+    "node": ">=22 <23",
+    "npm": ">=10 <11"
+  },
   "scripts": {
     "dev": "next dev --turbopack -H 0.0.0.0",
     "dev:debug": "NODE_OPTIONS='--inspect' next dev -H 0.0.0.0",

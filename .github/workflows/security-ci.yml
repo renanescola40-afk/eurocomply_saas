@@ -43,9 +43,6 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Refresh lockfile for current package manifest
-        run: npm install --package-lock-only --ignore-scripts
-
       - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
 
