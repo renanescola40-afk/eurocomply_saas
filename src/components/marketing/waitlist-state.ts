@@ -1,0 +1,1 @@
+export const WAITLIST_STATE_HELPER_VERSION = 1;
