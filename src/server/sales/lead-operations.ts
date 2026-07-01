@@ -197,6 +197,8 @@ export async function updateLeadFollowUp(request: Request, formData: FormData) {
 export async function createLeadNote(request: Request, formData: FormData) {
   const payload = createLeadNoteSchema.parse({ leadId: readFormText(formData, 'leadId'), body: readFormText(formData, 'body') });
   const user = await requireLeadOperationAccess(request, 'sales_lead.note_created');
+  await getLeadState(payload.leadId);
+
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('sales_lead_notes')
