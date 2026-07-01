@@ -106,11 +106,18 @@ function normalizeStatus(value: string | string[] | undefined): SalesLeadStatus 
   return SALES_LEAD_STATUSES.includes(normalized as SalesLeadStatus) ? (normalized as SalesLeadStatus) : undefined;
 }
 
-function normalizeDate(value: string | string[] | undefined) {
+function normalizeDate(value: string | string[] | undefined, boundary: 'start' | 'end' = 'start') {
   const text = boundedText(value, 32);
   if (!text) return undefined;
+
   const date = new Date(text);
-  return Number.isFinite(date.getTime()) ? date.toISOString() : undefined;
+  if (!Number.isFinite(date.getTime())) return undefined;
+
+  if (boundary === 'end' && /^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    date.setUTCHours(23, 59, 59, 999);
+  }
+
+  return date.toISOString();
 }
 
 function escapeIlike(value: string) {
@@ -124,7 +131,7 @@ export function normalizeSalesLeadFilters(searchParams: Record<string, string | 
     timeline: boundedText(searchParams.timeline, 120),
     companySize: boundedText(searchParams.companySize, 80),
     from: normalizeDate(searchParams.from),
-    to: normalizeDate(searchParams.to),
+    to: normalizeDate(searchParams.to, 'end'),
     search: boundedText(searchParams.search, 160),
     page: normalizePage(searchParams.page),
     pageSize: normalizePageSize(searchParams.pageSize),
