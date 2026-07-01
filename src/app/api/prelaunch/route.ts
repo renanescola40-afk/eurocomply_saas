@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Unable to join waitlist right now.' }, { status: 503 });
   }
 
-  const confirmation = await sendConfirmation(request, record);
+  await sendConfirmation(request, record);
 
   if (shouldNotifyInternalTeam(saveResult)) {
     await notifyInternalTeam(request, record);
@@ -241,7 +241,6 @@ export async function POST(request: NextRequest) {
     {
       ok: true,
       status: 'confirmed',
-      emailed: confirmation.sent,
       message: 'You are on the Risck Comply waitlist.',
       joinedAt: record.updated_at,
       launchAt: record.launch_target_at,
