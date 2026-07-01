@@ -95,6 +95,8 @@ export function getOrganizationPermissionMatrix() {
 }
 
 export function roleHasPermission(role: string | null | undefined, permission: OrganizationPermission) {
+  if (!role) return false;
+
   const normalizedRole = normalizeOrganizationRole(role);
   return ROLE_PERMISSIONS[normalizedRole].includes(permission);
 }
