@@ -1,0 +1,53 @@
+name: Public Production Final
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_target:
+        description: Runtime target label for the evidence bundle
+        required: true
+        default: production
+      require_runtime_evidence:
+        description: Keep true for public launch validation
+        required: true
+        default: 'true'
+
+permissions:
+  contents: read
+
+env:
+  RELEASE_TARGET: public-production
+  RELEASE_RUNTIME_TARGET: ${{ inputs.release_target }}
+  RELEASE_REQUIRE_RUNTIME_EVIDENCE: ${{ inputs.require_runtime_evidence }}
+
+jobs:
+  production-final:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Run public production final gate
+        run: npm run release:production-final
+
+      - name: Upload release validation logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: public-production-final-validation
+          path: |
+            release-validation/public-production/**
+            docs/security/evidence/runtime/deployment-smoke-validation.json
+            docs/security/evidence/runtime/rollback-dry-run-validation.json
+            docs/security/evidence/runtime/production-final-validation.json
+          retention-days: 30
+          if-no-files-found: warn
