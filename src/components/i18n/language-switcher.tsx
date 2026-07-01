@@ -52,7 +52,11 @@ export function LanguageSwitcher({ currentLocale, variant = 'light', compact = f
   const isDark = variant === 'dark';
 
   return (
-    <div className={`flex items-center gap-1 rounded-full border p-1 ${isDark ? 'border-white/15 bg-black/30 text-white backdrop-blur' : 'border-border bg-background/80 text-foreground shadow-sm backdrop-blur'}`} aria-label={languageLabels[currentLocale]}>
+    <div
+      className={`notranslate flex items-center gap-1 rounded-full border p-1 ${isDark ? 'border-white/15 bg-black/30 text-white backdrop-blur' : 'border-border bg-background/80 text-foreground shadow-sm backdrop-blur'}`}
+      aria-label={languageLabels[currentLocale]}
+      translate="no"
+    >
       {!compact ? <Globe2 className={`ml-2 h-4 w-4 ${isDark ? 'text-white/60' : 'text-muted-foreground'}`} /> : null}
       {locales.map((locale) => {
         const active = locale === currentLocale;
@@ -69,9 +73,10 @@ export function LanguageSwitcher({ currentLocale, variant = 'light', compact = f
                 window.location.assign(withCurrentLocationState(baseTargetPath));
               }
             }}
-            className={`${mobileVisibility} rounded-full px-2.5 py-1.5 text-xs font-bold uppercase tracking-[0.18em] transition ${active ? (isDark ? 'bg-white text-black' : 'bg-foreground text-background') : isDark ? 'text-white/60 hover:bg-white/10 hover:text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            className={`${mobileVisibility} notranslate rounded-full px-2.5 py-1.5 text-xs font-bold uppercase tracking-[0.18em] transition ${active ? (isDark ? 'bg-white text-black' : 'bg-foreground text-background') : isDark ? 'text-white/60 hover:bg-white/10 hover:text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
             title={LOCALE_META[locale].nativeName}
             prefetch={false}
+            translate="no"
           >
             {locale}
           </Link>
