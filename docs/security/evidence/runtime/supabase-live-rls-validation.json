@@ -1,7 +1,7 @@
 {
   "evidenceItem": "supabase-live-rls-validation",
   "status": "Open",
-  "outcome": "blocked",
+  "outcome": "not_run",
   "timestamp": "2026-07-01T19:14:31Z",
   "generatedAt": "2026-07-01T19:14:31Z",
   "runner": "scripts/security/run-supabase-live-tenant-isolation.mjs",
@@ -12,7 +12,7 @@
   "supabaseProjectReference": "redacted:not-executed",
   "supabaseProjectReferenceRedacted": true,
   "summary": "Expanded Supabase tenant-isolation evidence is intentionally Open until the new live validator runs against staging or production with the current migrations applied.",
-  "redactionConfirmation": "Supabase project reference, credentials, tokens, secrets, connection strings, service-role values, and access-granting values are redacted. No customer data was used.",
+  "redactionConfirmation": "Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "docs/security/evidence/runtime/supabase-live-rls-validation.json"
   ],
