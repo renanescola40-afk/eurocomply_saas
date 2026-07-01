@@ -97,9 +97,10 @@ describe('organization permission matrix', () => {
     }
   });
 
-  it('denies unauthenticated or unknown roles by normalizing them to viewer only', () => {
-    expect(hasOrganizationPermission(null, 'read_documents')).toBe(true);
+  it('denies unauthenticated roles instead of silently granting viewer permissions', () => {
+    expect(hasOrganizationPermission(null, 'read_documents')).toBe(false);
     expect(hasOrganizationPermission(undefined, 'manage_billing')).toBe(false);
+    expect(() => assertOrganizationPermission(null, 'read_documents')).toThrow('read_documents');
     expect(() => assertOrganizationPermission(undefined, 'manage_billing')).toThrow('manage_billing');
   });
 
