@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 
-import { sendPrelaunchWaitlistEmail } from '@/lib/email/prelaunch-waitlist';
+import { sendInternalWaitlistNotification, sendPrelaunchWaitlistEmail } from '@/lib/email/prelaunch-waitlist';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
@@ -30,6 +30,11 @@ type WaitlistLeadRecord = {
   status: string;
   launch_target_at: string;
   updated_at: string;
+};
+
+type SaveWaitlistLeadResult = {
+  saved: boolean;
+  inserted: boolean;
 };
 
 function getClientHint(request: NextRequest) {
@@ -93,7 +98,7 @@ async function readBody(request: NextRequest) {
     return body && typeof body === 'object' ? (body as Record<string, unknown>) : null;
   } catch (error) {
     if (!(error instanceof ValidationError)) {
-      console.error('[prelaunch] Request body read failed', { reason: 'unexpected_body_read_error' });
+      console.error('[prelaunch] unexpected_body_read_error');
     }
 
     return null;
@@ -123,20 +128,22 @@ function buildRecord(body: Record<string, unknown>): WaitlistLeadRecord | null {
   };
 }
 
-async function saveWaitlistLead(record: WaitlistLeadRecord) {
+async function saveWaitlistLead(record: WaitlistLeadRecord): Promise<SaveWaitlistLeadResult> {
   const supabase = tryCreateAdminClient();
-  if (!supabase) return false;
+  if (!supabase) return { saved: false, inserted: false };
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('waitlist_leads')
-    .upsert(record, { onConflict: 'email' });
+    .upsert(record, { onConflict: 'email', ignoreDuplicates: true })
+    .select('email')
+    .maybeSingle<{ email: string }>();
 
   if (error) {
-    console.error('[prelaunch] Supabase insert failed', { reason: 'waitlist_lead_insert_failed' });
-    return false;
+    console.error('[prelaunch] waitlist_lead_insert_failed');
+    return { saved: false, inserted: false };
   }
 
-  return true;
+  return { saved: true, inserted: Boolean(data?.email) };
 }
 
 async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord) {
@@ -153,7 +160,27 @@ async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord
 
     return result.sent;
   } catch {
-    console.error('[prelaunch] Confirmation email failed', { reason: 'confirmation_email_failed' });
+    console.error('[prelaunch] confirmation_email_failed');
+    return false;
+  }
+}
+
+async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadRecord) {
+  try {
+    const result = await sendInternalWaitlistNotification({
+      to: record.email,
+      companyName: record.company_name,
+      role: record.role,
+      locale: record.locale,
+      joinedAt: record.updated_at,
+      launchAt: record.launch_target_at,
+      waitlistUrl: getWaitlistUrl(request, record.locale),
+      totalLeads: null,
+    });
+
+    return result.sent;
+  } catch {
+    console.error('[prelaunch] internal_notification_failed');
     return false;
   }
 }
@@ -176,15 +203,24 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Please provide company name, work email and role.' }, { status: 400 });
   }
 
-  const saved = await saveWaitlistLead(record);
+  const saveResult = await saveWaitlistLead(record);
+  if (!saveResult.saved) {
+    return noStoreJson(
+      { error: 'We could not save your waitlist request. Please try again later.' },
+      { status: 503 },
+    );
+  }
+
   const emailed = await sendConfirmation(request, record);
+  if (saveResult.inserted) {
+    await notifyInternalTeam(request, record);
+  }
 
   return noStoreJson(
     {
       ok: true,
       status: 'confirmed',
       message: 'You are on the Risck Comply waitlist.',
-      saved,
       emailed,
       joinedAt: record.updated_at,
       launchAt: record.launch_target_at,
