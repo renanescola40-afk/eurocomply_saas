@@ -235,12 +235,12 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
         return;
       }
 
-      if (payload?.emailed === false) {
+      if (payload?.emailed === true) {
+        setMessage(copy.form.emailSuccess);
+        setStatus('success');
+      } else {
         setMessage(emailWarningMessage(activeLocale, payload));
         setStatus('warning');
-      } else {
-        setMessage(payload?.emailed === true ? copy.form.emailSuccess : copy.form.success);
-        setStatus('success');
       }
 
       setCompanyName('');
