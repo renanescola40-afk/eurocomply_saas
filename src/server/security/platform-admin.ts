@@ -45,3 +45,16 @@ export async function getPlatformAdminMembership(userId: string): Promise<Platfo
 
   return { userId: data.user_id, role, enabled: data.enabled };
 }
+
+export async function requirePlatformAdmin(
+  userId: string,
+  allowedRoles: PlatformAdminRole[] = ['owner', 'sales_admin'],
+): Promise<PlatformAdminMembership> {
+  const membership = await getPlatformAdminMembership(userId);
+
+  if (!membership || !allowedRoles.includes(membership.role)) {
+    throw new PlatformAdminError('platform_admin_required', 403);
+  }
+
+  return membership;
+}
