@@ -20,6 +20,7 @@ import {
 
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { PublicFooter } from '@/components/marketing/public-footer';
+import { resolveWaitlistSubmitFeedback } from '@/components/marketing/waitlist-state';
 import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
 
 const LAUNCH_TARGET_ISO = '2026-08-01T07:00:00+01:00';
@@ -235,16 +236,15 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
         return;
       }
 
-      if (payload?.emailed === true) {
-        setMessage(copy.form.emailSuccess);
-        setStatus('success');
-      } else if (payload?.emailed === false) {
-        setMessage(emailWarningMessage(activeLocale, payload));
-        setStatus('warning');
-      } else {
-        setMessage(copy.form.success);
-        setStatus('success');
-      }
+      const feedback = resolveWaitlistSubmitFeedback({
+        signal: payload?.emailed,
+        successMessage: copy.form.success,
+        confirmedMessage: copy.form.emailSuccess,
+        warningMessage: emailWarningMessage(activeLocale, payload),
+      });
+
+      setMessage(feedback.message);
+      setStatus(feedback.status);
 
       setCompanyName('');
       setEmail('');
@@ -317,7 +317,6 @@ export function WaitlistPage({ locale }: { locale: string }) {
     <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_10%_8%,rgba(14,165,233,.28),transparent_30rem),radial-gradient(circle_at_82%_12%,rgba(16,185,129,.16),transparent_29rem),radial-gradient(circle_at_50%_80%,rgba(59,130,246,.14),transparent_36rem),linear-gradient(180deg,#050505_0%,#071018_48%,#050505_100%)]" />
       <div className="pointer-events-none fixed inset-0 tech-grid opacity-25" />
-
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#050505]/75 backdrop-blur-2xl">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Link href={`/${activeLocale}`} className="flex items-center gap-3" aria-label="RISCK COMPLY home">
