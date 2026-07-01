@@ -5,8 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 import { requireCurrentUser } from '@/server/queries/auth';
 import { SALES_LEAD_PRIORITIES, SALES_LEAD_STATUSES, type SalesLeadPriority, type SalesLeadStatus } from '@/server/queries/sales-leads';
-import { requirePlatformAdmin } from '@/server/security/platform-admin';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
+import { requirePlatformAdmin } from '@/server/security/platform-admin';
 
 const leadIdSchema = z.string().uuid();
 
@@ -92,22 +92,39 @@ async function getLeadState(leadId: string) {
   return data as { id: string; status: SalesLeadStatus; priority: SalesLeadPriority; next_follow_up_at: string | null };
 }
 
+function statusActivityBody(previousStatus: string, nextStatus: string) {
+  return `Status changed from ${previousStatus} to ${nextStatus}.`;
+}
+
 async function recordLeadActivity(input: {
   leadId: string;
   actorUserId: string;
   action: LeadAction;
+  type: 'note' | 'status_change' | 'follow_up';
+  body: string;
+  metadata?: Record<string, unknown>;
   previousValue?: Record<string, unknown> | null;
   nextValue?: Record<string, unknown> | null;
 }) {
   const supabase = createAdminClient();
-  const { error } = await supabase.from('sales_lead_activity_events').insert({
-    lead_id: input.leadId,
-    actor_user_id: input.actorUserId,
+  const metadata = {
     action: input.action,
-    previous_value: input.previousValue ?? null,
-    next_value: input.nextValue ?? null,
-    metadata: {},
-  });
+    previousValue: input.previousValue ?? null,
+    nextValue: input.nextValue ?? null,
+    ...(input.metadata ?? {}),
+  };
+
+  const { data, error } = await supabase
+    .from('sales_lead_activities')
+    .insert({
+      lead_id: input.leadId,
+      created_by: input.actorUserId,
+      type: input.type,
+      body: input.body,
+      metadata,
+    })
+    .select('id')
+    .single();
 
   if (error) throw actionError('Unable to record lead activity.');
 
@@ -117,11 +134,10 @@ async function recordLeadActivity(input: {
     action: input.action,
     entityType: 'sales_lead',
     entityId: input.leadId,
-    metadata: {
-      previousValue: input.previousValue ?? null,
-      nextValue: input.nextValue ?? null,
-    },
+    metadata,
   });
+
+  return data as { id: string };
 }
 
 export async function updateLeadStatus(request: Request, formData: FormData) {
@@ -130,9 +146,16 @@ export async function updateLeadStatus(request: Request, formData: FormData) {
   const previous = await getLeadState(payload.leadId);
   const now = new Date().toISOString();
   const supabase = createAdminClient();
+  const contactStatuses: SalesLeadStatus[] = ['qualified', 'demo_scheduled', 'proposal_sent', 'won', 'lost'];
   const { error } = await supabase
     .from('sales_leads')
-    .update({ status: payload.status, updated_by: user.id, updated_at: now, last_activity_at: now })
+    .update({
+      status: payload.status,
+      updated_by: user.id,
+      updated_at: now,
+      last_activity_at: now,
+      last_contacted_at: contactStatuses.includes(payload.status) ? now : undefined,
+    })
     .eq('id', payload.leadId)
     .is('gdpr_deleted_at', null);
 
@@ -142,6 +165,8 @@ export async function updateLeadStatus(request: Request, formData: FormData) {
     leadId: payload.leadId,
     actorUserId: user.id,
     action: 'sales_lead.status_changed',
+    type: 'status_change',
+    body: statusActivityBody(previous.status, payload.status),
     previousValue: { status: previous.status },
     nextValue: { status: payload.status },
   });
@@ -165,6 +190,8 @@ export async function updateLeadPriority(request: Request, formData: FormData) {
     leadId: payload.leadId,
     actorUserId: user.id,
     action: 'sales_lead.priority_changed',
+    type: 'follow_up',
+    body: `Priority changed from ${previous.priority} to ${payload.priority}.`,
     previousValue: { priority: previous.priority },
     nextValue: { priority: payload.priority },
   });
@@ -189,6 +216,8 @@ export async function updateLeadFollowUp(request: Request, formData: FormData) {
     leadId: payload.leadId,
     actorUserId: user.id,
     action: 'sales_lead.follow_up_changed',
+    type: 'follow_up',
+    body: nextFollowUpAt ? `Next follow-up set to ${nextFollowUpAt}.` : 'Next follow-up cleared.',
     previousValue: { nextFollowUpAt: previous.next_follow_up_at },
     nextValue: { nextFollowUpAt },
   });
@@ -199,26 +228,21 @@ export async function createLeadNote(request: Request, formData: FormData) {
   const user = await requireLeadOperationAccess(request, 'sales_lead.note_created');
   await getLeadState(payload.leadId);
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('sales_lead_notes')
-    .insert({ lead_id: payload.leadId, created_by: user.id, body: payload.body })
-    .select('id')
-    .single();
-
-  if (error) throw actionError('Unable to create internal note.');
+  const activity = await recordLeadActivity({
+    leadId: payload.leadId,
+    actorUserId: user.id,
+    action: 'sales_lead.note_created',
+    type: 'note',
+    body: payload.body,
+  });
 
   const now = new Date().toISOString();
+  const supabase = createAdminClient();
   await supabase
     .from('sales_leads')
     .update({ updated_by: user.id, updated_at: now, last_activity_at: now })
     .eq('id', payload.leadId)
     .is('gdpr_deleted_at', null);
 
-  await recordLeadActivity({
-    leadId: payload.leadId,
-    actorUserId: user.id,
-    action: 'sales_lead.note_created',
-    nextValue: { noteId: data.id },
-  });
+  return activity;
 }
