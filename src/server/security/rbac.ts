@@ -28,7 +28,16 @@ export type PermissionCheckResult = {
 };
 
 function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value);
+  const uuidParts = value.split('-');
+  if (uuidParts.length !== 5) return false;
+  const [first, second, third, fourth, fifth] = uuidParts;
+  return Boolean(
+    first?.match(/^[0-9a-f]{8}$/i) &&
+    second?.match(/^[0-9a-f]{4}$/i) &&
+    third?.match(/^[1-5][0-9a-f]{3}$/i) &&
+    fourth?.match(/^[89ab][0-9a-f]{3}$/i) &&
+    fifth?.match(/^[0-9a-f]{12}$/i),
+  );
 }
 
 async function recordRbacDeniedAuditEvent({
