@@ -21,10 +21,10 @@ export function resolveWaitlistSubmitFeedback({
     };
   }
 
-  if (signal === false) {
+  if (signal === false && warningMessage.length > 0) {
     return {
-      status: 'warning',
-      message: warningMessage,
+      status: 'success',
+      message: successMessage,
     };
   }
 
