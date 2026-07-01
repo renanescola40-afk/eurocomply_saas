@@ -53,10 +53,8 @@ function actionError(message: string) {
 
 export function assertSalesConsoleFormRequest(request: Request) {
   const contentLength = request.headers.get('content-length');
-  if (!contentLength) return;
-
-  const parsed = Number.parseInt(contentLength, 10);
-  if (Number.isFinite(parsed) && parsed > MAX_SALES_CONSOLE_FORM_BYTES) {
+  const parsed = Number.parseInt(contentLength ?? '', 10);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > MAX_SALES_CONSOLE_FORM_BYTES) {
     throw actionError('Sales Console request body is too large.');
   }
 }
