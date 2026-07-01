@@ -140,6 +140,8 @@ const waitlistCopy: Record<Locale, WaitlistCopy> = {
 };
 
 type Remaining = { days: string; hours: string; minutes: string; seconds: string };
+type WaitlistSubmitStatus = 'idle' | 'submitting' | 'success' | 'warning' | 'error';
+type WaitlistApiResponse = { emailed?: boolean; emailStatus?: string; emailAttempts?: number; error?: string };
 
 function calculateRemaining(): Remaining {
   const diff = Math.max(0, new Date(LAUNCH_TARGET_ISO).getTime() - Date.now());
@@ -155,6 +157,15 @@ function calculateRemaining(): Remaining {
     minutes: String(minutes).padStart(2, '0'),
     seconds: String(seconds).padStart(2, '0'),
   };
+}
+
+function emailWarningMessage(locale: Locale, payload: WaitlistApiResponse | null) {
+  const status = payload?.emailStatus ? ` (${payload.emailStatus})` : '';
+  if (locale === 'pt') {
+    return `O seu lugar foi guardado, mas o email automático de confirmação ainda não saiu${status}. A nossa equipa foi alertada e também pode falar connosco em ${COMMERCIAL_EMAIL}.`;
+  }
+
+  return `Your place was saved, but the automatic confirmation email was not delivered yet${status}. Our team has been alerted and you can also contact us at ${COMMERCIAL_EMAIL}.`;
 }
 
 function WaitlistCountdown({ copy }: { copy: WaitlistCopy }) {
@@ -199,13 +210,13 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
   const [website, setWebsite] = useState('');
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [status, setStatus] = useState<WaitlistSubmitStatus>('idle');
+  const [message, setMessage] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus('submitting');
-    setErrorMessage(null);
+    setMessage(null);
 
     try {
       const response = await fetch('/api/prelaunch', {
@@ -213,21 +224,28 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ companyName, email, role, locale: activeLocale, website }),
       });
+      const payload = await response.json().catch(() => null) as WaitlistApiResponse | null;
 
       if (!response.ok) {
-        const payload = await response.json().catch(() => null) as { error?: string } | null;
-        setErrorMessage(payload?.error || copy.form.error);
+        setMessage(payload?.error || copy.form.error);
         setStatus('error');
         return;
       }
 
-      setStatus('success');
+      if (payload?.emailed === false) {
+        setMessage(emailWarningMessage(activeLocale, payload));
+        setStatus('warning');
+      } else {
+        setMessage(copy.form.success);
+        setStatus('success');
+      }
+
       setCompanyName('');
       setEmail('');
       setRole('');
       setWebsite('');
     } catch {
-      setErrorMessage(copy.form.error);
+      setMessage(copy.form.error);
       setStatus('error');
     }
   }
@@ -264,8 +282,9 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
         </label>
       </div>
 
-      {status === 'success' ? <p className="mt-5 rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-50" role="status">{copy.form.success}</p> : null}
-      {status === 'error' ? <p className="mt-5 rounded-2xl border border-red-300/25 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-50" role="alert">{errorMessage || copy.form.error}</p> : null}
+      {status === 'success' ? <p className="mt-5 rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-50" role="status">{message || copy.form.success}</p> : null}
+      {status === 'warning' ? <p className="mt-5 rounded-2xl border border-amber-300/30 bg-amber-400/10 px-4 py-3 text-sm leading-6 text-amber-50" role="status">{message}</p> : null}
+      {status === 'error' ? <p className="mt-5 rounded-2xl border border-red-300/25 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-50" role="alert">{message || copy.form.error}</p> : null}
 
       <button type="submit" disabled={status === 'submitting'} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 text-sm font-bold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60">
         {status === 'submitting' ? copy.form.submitting : copy.form.submit}
