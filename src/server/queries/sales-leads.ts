@@ -11,7 +11,6 @@ export const SALES_LEAD_STATUSES = [
 ] as const;
 
 export const SALES_LEAD_PRIORITIES = ['low', 'normal', 'high', 'urgent'] as const;
-
 export const SALES_LEAD_ACTIVITY_TYPES = ['note', 'status_change', 'follow_up', 'email', 'call', 'demo', 'proposal'] as const;
 
 export type SalesLeadStatus = (typeof SALES_LEAD_STATUSES)[number];
@@ -80,6 +79,7 @@ export type SalesLeadMetrics = Record<SalesLeadStatus, number>;
 
 const MAX_PAGE_SIZE = 50;
 const DEFAULT_PAGE_SIZE = 25;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -114,6 +114,10 @@ function normalizePriority(value: string | string[] | undefined): SalesLeadPrior
 
 function escapeIlike(value: string) {
   return value.replace(/[%,_()]/g, '').slice(0, 160);
+}
+
+export function isSalesLeadId(value: string) {
+  return UUID_PATTERN.test(value);
 }
 
 export function normalizeSalesLeadFilters(searchParams: Record<string, string | string[] | undefined> = {}): SalesLeadFilters {
@@ -190,6 +194,8 @@ export async function getSalesLeadMetrics() {
 }
 
 export async function getSalesLeadDetail(leadId: string) {
+  if (!isSalesLeadId(leadId)) return null;
+
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('sales_leads')
@@ -208,6 +214,8 @@ export async function getSalesLeadDetail(leadId: string) {
 }
 
 export async function listSalesLeadActivities(leadId: string) {
+  if (!isSalesLeadId(leadId)) return [];
+
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('sales_lead_activities')
@@ -224,6 +232,8 @@ export async function listSalesLeadActivities(leadId: string) {
 }
 
 export async function listSalesLeadNotes(leadId: string) {
+  if (!isSalesLeadId(leadId)) return [];
+
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('sales_lead_activities')
