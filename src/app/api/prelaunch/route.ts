@@ -186,13 +186,34 @@ async function saveWaitlistLead(request: NextRequest, record: WaitlistLeadRecord
 
   console.error('[prelaunch] waitlist_lead_insert_failed');
 
-  const { error: fallbackError } = await supabase.from('sales_leads').insert(buildSalesLeadFallbackRecord(request, record));
+  const fallbackRecord = buildSalesLeadFallbackRecord(request, record);
+  const { data: existingFallback, error: lookupError } = await supabase
+    .from('sales_leads')
+    .select('id')
+    .eq('work_email', record.email)
+    .eq('source', fallbackRecord.source)
+    .maybeSingle<{ id: string }>();
+
+  if (!lookupError && existingFallback?.id) {
+    return { saved: true, inserted: false, storage: 'sales_leads' };
+  }
+
+  if (lookupError) {
+    console.error('[prelaunch] waitlist_sales_lead_fallback_lookup_failed');
+  }
+
+  const { data: insertedFallback, error: fallbackError } = await supabase
+    .from('sales_leads')
+    .insert(fallbackRecord)
+    .select('id')
+    .maybeSingle<{ id: string }>();
+
   if (fallbackError) {
     console.error('[prelaunch] waitlist_sales_lead_fallback_failed');
     return { saved: false, inserted: false, storage: 'none' };
   }
 
-  return { saved: true, inserted: true, storage: 'sales_leads' };
+  return { saved: true, inserted: Boolean(insertedFallback?.id), storage: 'sales_leads' };
 }
 
 async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord): Promise<WaitlistEmailDelivery> {
