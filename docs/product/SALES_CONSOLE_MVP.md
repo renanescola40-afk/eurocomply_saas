@@ -37,8 +37,23 @@ The MVP adds:
 - next follow-up updates
 - internal notes
 - activity timeline
-- no-store rendering for sensitive pages
+- loading, empty and generic error states
+- no-store rendering and no-store redirects for sensitive pages/actions
 - server-side Supabase admin access only after app-layer authorization
+
+## Outside MVP scope
+
+Do not add these until there is clear revenue-operations need and legal/privacy review:
+
+- public CRM marketing copy
+- customer-facing CRM pages
+- bulk lead export
+- AI lead scoring
+- enrichment from third-party data brokers
+- marketing sequences
+- quota dashboards
+- multi-pipeline customization
+- two-way CRM sync that can overwrite internal compliance data
 
 ## Data model
 
@@ -67,6 +82,29 @@ The MVP also adds `sales_lead_activities` for commercial activity history:
 
 RLS is enabled. No public policies are created. Direct `anon` and `authenticated` access is revoked for internal sales tables.
 
+## Personal data and privacy
+
+Lead records can contain personal/commercial data, including:
+
+- name
+- work email
+- company
+- role
+- message/current process
+- IP hint
+- user-agent
+- internal notes
+- follow-up timestamps
+
+Rules for handling this data:
+
+- do not render lead data in normal customer dashboards
+- do not log email, original messages, notes, IP hints or user-agent values in application errors
+- use generic client-facing errors and redirects
+- keep internal notes concise and avoid unnecessary sensitive data
+- keep pages and mutation responses no-store
+- use retention/redaction before any broad export or CRM sync
+
 ## Allowed statuses
 
 The internal pipeline uses these statuses only:
@@ -78,6 +116,15 @@ The internal pipeline uses these statuses only:
 - `won`
 - `lost`
 - `nurture`
+
+## Allowed priorities
+
+The internal priority field uses these values only:
+
+- `low`
+- `normal`
+- `high`
+- `urgent`
 
 ## Security model
 
@@ -94,17 +141,23 @@ Mutations also use:
 
 - trusted origin checks
 - distributed rate limit
+- bounded form body checks
 - Zod validation
 - note body length limit
+- follow-up date validation
+- activity metadata length limit
 - safe error redirects without internal details
 - audit logging for important lead operations
+- database constraints for status, priority, non-negative estimated value and sensitive text length limits
 
 ## Local testing
 
 Run the focused checks:
 
 ```bash
+npm ci
 npm run test -- src/server/queries/sales-leads.test.ts src/server/sales/lead-operations.test.ts
+npm run lint
 npm run typecheck
 npm run build
 ```
@@ -119,7 +172,23 @@ Manual verification:
 6. Change status, priority and follow-up.
 7. Add a note.
 8. Confirm `sales_lead_activities` contains the status/follow-up/note events.
-9. Log in as a normal customer organization user and confirm the admin sales pages redirect away.
+9. Confirm `audit_logs` contains the internal operation event without lead PII in metadata beyond state transitions.
+10. Log in as a normal customer organization user and confirm the admin sales pages redirect away.
+11. Confirm normal dashboard pages do not render `sales_leads` data.
+12. Submit `/api/leads` and confirm public Book Demo flow still works.
+
+## Release checklist
+
+Before merging:
+
+- `npm ci` succeeds with the committed lockfile
+- focused Sales Console tests pass
+- lint passes
+- typecheck passes
+- production build passes
+- Supabase migration applies cleanly to a staging database
+- no public `sales_leads` or `sales_lead_activities` policies are introduced
+- no public marketing page calls this an enterprise CRM product
 
 ## Future evolution
 
