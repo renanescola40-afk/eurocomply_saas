@@ -34,16 +34,7 @@ const commands = [
   { slug: '07-security-ci', label: 'npm run security:ci', command: 'npm', args: ['run', 'security:ci'], critical: true },
   { slug: '08-release-smoke', label: 'npm run release:deployment-smoke', command: 'npm', args: ['run', 'release:deployment-smoke'], critical: true },
   { slug: '09-release-rollback-dry-run', label: 'npm run release:rollback:dry-run', command: 'npm', args: ['run', 'release:rollback:dry-run'], critical: true },
-  { slug: '10-release-candidate', label: 'npm run security:release-candidate', command: 'npm', args: ['run', 'security:release-candidate'], critical: true },
-  { slug: '11-release-evidence', label: 'npm run security:release-evidence', command: 'npm', args: ['run', 'security:release-evidence'], critical: true },
-  { slug: '12-release-approval', label: 'npm run security:release-approval', command: 'npm', args: ['run', 'security:release-approval'], critical: true },
-  { slug: '13-release-go-no-go', label: 'npm run security:release-go-no-go', command: 'npm', args: ['run', 'security:release-go-no-go'], critical: true },
-  { slug: '14-release-rollback', label: 'npm run security:release-rollback', command: 'npm', args: ['run', 'security:release-rollback'], critical: true },
-  { slug: '15-release-incident-response', label: 'npm run security:release-incident-response', command: 'npm', args: ['run', 'security:release-incident-response'], critical: true },
-  { slug: '16-release-post-incident', label: 'npm run security:release-post-incident', command: 'npm', args: ['run', 'security:release-post-incident'], critical: true },
-  { slug: '17-release-support-readiness', label: 'npm run security:release-support-readiness', command: 'npm', args: ['run', 'security:release-support-readiness'], critical: true },
-  { slug: '18-release-operations', label: 'npm run security:release-operations', command: 'npm', args: ['run', 'security:release-operations'], critical: true },
-  { slug: '19-p0-runtime-gap', label: 'npm run security:p0-runtime-gap', command: 'npm', args: ['run', 'security:p0-runtime-gap'], critical: true },
+  { slug: '10-release-readiness', label: 'npm run release:readiness', command: 'npm', args: ['run', 'release:readiness'], critical: true },
 ];
 
 mkdirSync(logDir, { recursive: true });
@@ -179,12 +170,12 @@ const summary = {
   commands: results,
   runtimeEvidence,
   publicReadinessScope: {
-    excludesEnterpriseExternalReview: true,
-    note: 'Public production readiness intentionally excludes security:external-review. Enterprise readiness remains enforced by release:enterprise-readiness.',
+    excludesEnterpriseExternalReview: false,
+    note: 'Public production readiness delegates release gates to npm run release:readiness so the shared Go/No-Go contract remains canonical.',
   },
   recursionGuard: {
     npmRunReleaseDoesNotInvokeItself: true,
-    note: 'The release:production-final entrypoint expands the requested production launch sequence into concrete commands to avoid recursive npm run loops.',
+    note: 'The release:production-final entrypoint expands the requested production launch sequence into concrete commands and delegates final release gates to release:readiness to avoid recursive npm run loops.',
   },
 };
 
@@ -247,7 +238,7 @@ const evidence = {
       'security:ci suite',
       'deployment smoke',
       'rollback dry-run',
-      'public release readiness without enterprise external-review dependency',
+      'release readiness gate',
       'commit SHA recorded',
       'build SHA recorded',
     ]
@@ -277,5 +268,3 @@ if (overallResult !== 'passed') {
   console.error('Public production release validation failed. See release-validation/public-production/summary.json and docs/security/evidence/runtime/production-final-validation.json.');
   process.exit(1);
 }
-
-console.log('Public production release validation passed.');
