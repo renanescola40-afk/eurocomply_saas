@@ -15,6 +15,7 @@ export const customerTenantTables = [
   'invitations',
   'onboarding_activation_runs',
   'monitoring_preferences',
+  'profiles',
 ];
 
 export const globalReferenceTables = ['regulatory_updates'];
@@ -25,7 +26,6 @@ export const optionalTables = [
   'tasks',
   'audit_events',
   'notifications',
-  'profiles',
   'ai_incidents',
   'organization_invites',
 ];
@@ -368,7 +368,7 @@ export function buildEvidencePayload({
     supabaseProjectReferenceRedacted: true,
     summary:
       status === 'Complete' && outcome === 'passed'
-        ? 'Live Supabase production/staging RLS validation passed for customer tenant tables and global reference tables.'
+        ? 'Live Supabase production/staging RLS validation passed for customer tenant tables, profiles, and global reference tables.'
         : 'Live Supabase tenant-isolation RLS validation did not pass.',
     redactionConfirmation:
       'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
@@ -382,7 +382,7 @@ export function buildEvidencePayload({
     controlsVerified:
       status === 'Complete' && outcome === 'passed'
         ? [
-            'RLS enabled on customer and reference tables',
+            'RLS enabled on customer, profiles, and reference tables',
             'Tenant A cannot read Tenant B rows',
             'Tenant A cannot insert Tenant B scoped rows',
             'Tenant A cannot update Tenant B rows',
