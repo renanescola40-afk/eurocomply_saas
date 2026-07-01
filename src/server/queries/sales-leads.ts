@@ -3,26 +3,25 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export const SALES_LEAD_STATUSES = [
   'new',
   'qualified',
-  'contacted',
   'demo_scheduled',
-  'trial_started',
-  'customer',
+  'proposal_sent',
+  'won',
   'lost',
-  'disqualified',
+  'nurture',
 ] as const;
 
 export const SALES_LEAD_PRIORITIES = ['low', 'normal', 'high', 'urgent'] as const;
 
+export const SALES_LEAD_ACTIVITY_TYPES = ['note', 'status_change', 'follow_up', 'email', 'call', 'demo', 'proposal'] as const;
+
 export type SalesLeadStatus = (typeof SALES_LEAD_STATUSES)[number];
 export type SalesLeadPriority = (typeof SALES_LEAD_PRIORITIES)[number];
+export type SalesLeadActivityType = (typeof SALES_LEAD_ACTIVITY_TYPES)[number];
 
 export type SalesLeadFilters = {
   status?: SalesLeadStatus;
+  priority?: SalesLeadPriority;
   source?: string;
-  timeline?: string;
-  companySize?: string;
-  from?: string;
-  to?: string;
   search?: string;
   page: number;
   pageSize: number;
@@ -52,9 +51,11 @@ export type SalesLeadDetail = SalesLeadListItem & {
   consent_to_contact: boolean;
   locale: string | null;
   last_contacted_at: string | null;
+  estimated_value_cents: number | null;
+  currency: string;
+  plan_interest: string | null;
   updated_at: string;
   lost_reason: string | null;
-  disqualified_reason: string | null;
 };
 
 export type SalesLeadNote = {
@@ -63,19 +64,19 @@ export type SalesLeadNote = {
   created_by: string | null;
   body: string;
   created_at: string;
-  updated_at: string;
 };
 
-export type SalesLeadActivityEvent = {
+export type SalesLeadActivity = {
   id: string;
   lead_id: string;
-  actor_user_id: string | null;
-  action: string;
-  previous_value: Record<string, unknown> | null;
-  next_value: Record<string, unknown> | null;
+  created_by: string | null;
+  type: SalesLeadActivityType | string;
+  body: string;
   metadata: Record<string, unknown>;
   created_at: string;
 };
+
+export type SalesLeadMetrics = Record<SalesLeadStatus, number>;
 
 const MAX_PAGE_SIZE = 50;
 const DEFAULT_PAGE_SIZE = 25;
@@ -106,18 +107,9 @@ function normalizeStatus(value: string | string[] | undefined): SalesLeadStatus 
   return SALES_LEAD_STATUSES.includes(normalized as SalesLeadStatus) ? (normalized as SalesLeadStatus) : undefined;
 }
 
-function normalizeDate(value: string | string[] | undefined, boundary: 'start' | 'end' = 'start') {
-  const text = boundedText(value, 32);
-  if (!text) return undefined;
-
-  const date = new Date(text);
-  if (!Number.isFinite(date.getTime())) return undefined;
-
-  if (boundary === 'end' && /^\d{4}-\d{2}-\d{2}$/.test(text)) {
-    date.setUTCHours(23, 59, 59, 999);
-  }
-
-  return date.toISOString();
+function normalizePriority(value: string | string[] | undefined): SalesLeadPriority | undefined {
+  const normalized = boundedText(value, 40);
+  return SALES_LEAD_PRIORITIES.includes(normalized as SalesLeadPriority) ? (normalized as SalesLeadPriority) : undefined;
 }
 
 function escapeIlike(value: string) {
@@ -127,15 +119,16 @@ function escapeIlike(value: string) {
 export function normalizeSalesLeadFilters(searchParams: Record<string, string | string[] | undefined> = {}): SalesLeadFilters {
   return {
     status: normalizeStatus(searchParams.status),
+    priority: normalizePriority(searchParams.priority),
     source: boundedText(searchParams.source, 120),
-    timeline: boundedText(searchParams.timeline, 120),
-    companySize: boundedText(searchParams.companySize, 80),
-    from: normalizeDate(searchParams.from),
-    to: normalizeDate(searchParams.to, 'end'),
     search: boundedText(searchParams.search, 160),
     page: normalizePage(searchParams.page),
     pageSize: normalizePageSize(searchParams.pageSize),
   };
+}
+
+export function emptySalesLeadMetrics(): SalesLeadMetrics {
+  return SALES_LEAD_STATUSES.reduce((acc, status) => ({ ...acc, [status]: 0 }), {} as SalesLeadMetrics);
 }
 
 export async function listSalesLeads(filters: SalesLeadFilters) {
@@ -154,11 +147,8 @@ export async function listSalesLeads(filters: SalesLeadFilters) {
     .range(offset, last);
 
   if (filters.status) query = query.eq('status', filters.status);
+  if (filters.priority) query = query.eq('priority', filters.priority);
   if (filters.source) query = query.eq('source', filters.source);
-  if (filters.timeline) query = query.eq('timeline', filters.timeline);
-  if (filters.companySize) query = query.eq('company_size', filters.companySize);
-  if (filters.from) query = query.gte('created_at', filters.from);
-  if (filters.to) query = query.lte('created_at', filters.to);
   if (filters.search) {
     const search = escapeIlike(filters.search);
     query = query.or(`company_name.ilike.%${search}%,work_email.ilike.%${search}%`);
@@ -178,12 +168,33 @@ export async function listSalesLeads(filters: SalesLeadFilters) {
   };
 }
 
+export async function getSalesLeadMetrics() {
+  const supabase = createAdminClient();
+  const metrics = emptySalesLeadMetrics();
+
+  const { data, error } = await supabase
+    .from('sales_leads')
+    .select('status')
+    .is('gdpr_deleted_at', null);
+
+  if (error) {
+    throw new Error('Unable to load sales lead metrics.');
+  }
+
+  for (const row of data ?? []) {
+    const status = row.status as SalesLeadStatus;
+    if (SALES_LEAD_STATUSES.includes(status)) metrics[status] += 1;
+  }
+
+  return metrics;
+}
+
 export async function getSalesLeadDetail(leadId: string) {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('sales_leads')
     .select(
-      'id, created_at, full_name, work_email, company_name, role, company_size, region, compliance_drivers, timeline, current_process, message, source, locale, consent_to_contact, status, priority, next_follow_up_at, last_contacted_at, last_activity_at, updated_at, lost_reason, disqualified_reason',
+      'id, created_at, full_name, work_email, company_name, role, company_size, region, compliance_drivers, timeline, current_process, message, source, locale, consent_to_contact, status, priority, next_follow_up_at, last_contacted_at, last_activity_at, estimated_value_cents, currency, plan_interest, updated_at, lost_reason',
     )
     .eq('id', leadId)
     .is('gdpr_deleted_at', null)
@@ -196,27 +207,11 @@ export async function getSalesLeadDetail(leadId: string) {
   return data as SalesLeadDetail | null;
 }
 
-export async function listSalesLeadNotes(leadId: string) {
+export async function listSalesLeadActivities(leadId: string) {
   const supabase = createAdminClient();
   const { data, error } = await supabase
-    .from('sales_lead_notes')
-    .select('id, lead_id, created_by, body, created_at, updated_at')
-    .eq('lead_id', leadId)
-    .order('created_at', { ascending: false })
-    .limit(25);
-
-  if (error) {
-    throw new Error('Unable to load sales lead notes.');
-  }
-
-  return (data ?? []) as SalesLeadNote[];
-}
-
-export async function listSalesLeadActivityEvents(leadId: string) {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('sales_lead_activity_events')
-    .select('id, lead_id, actor_user_id, action, previous_value, next_value, metadata, created_at')
+    .from('sales_lead_activities')
+    .select('id, lead_id, created_by, type, body, metadata, created_at')
     .eq('lead_id', leadId)
     .order('created_at', { ascending: false })
     .limit(50);
@@ -225,5 +220,22 @@ export async function listSalesLeadActivityEvents(leadId: string) {
     throw new Error('Unable to load sales lead activity.');
   }
 
-  return (data ?? []) as SalesLeadActivityEvent[];
+  return (data ?? []) as SalesLeadActivity[];
+}
+
+export async function listSalesLeadNotes(leadId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('sales_lead_activities')
+    .select('id, lead_id, created_by, body, created_at')
+    .eq('lead_id', leadId)
+    .eq('type', 'note')
+    .order('created_at', { ascending: false })
+    .limit(25);
+
+  if (error) {
+    throw new Error('Unable to load sales lead notes.');
+  }
+
+  return (data ?? []) as SalesLeadNote[];
 }
