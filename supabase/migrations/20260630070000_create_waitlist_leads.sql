@@ -6,7 +6,7 @@ create table if not exists public.waitlist_leads (
   locale text not null default 'pt',
   source text not null default 'prelaunch_waitlist',
   status text not null default 'new',
-  launch_target_at timestamptz not null default timestamptz '2026-07-01 07:00:00+01',
+  launch_target_at timestamptz not null default timestamptz '2026-08-01 07:00:00+01',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
