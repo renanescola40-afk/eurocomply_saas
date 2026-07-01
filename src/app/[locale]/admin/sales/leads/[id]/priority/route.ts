@@ -18,7 +18,9 @@ export async function POST(request: Request, context: RouteContext) {
   const { locale, id } = await context.params;
 
   try {
-    await updateLeadPriority(request, await request.formData());
+    const formData = await request.formData();
+    formData.set('leadId', id);
+    await updateLeadPriority(request, formData);
     return redirectToLead(request, locale, id);
   } catch {
     return redirectToLead(request, locale, id, 'priority_update_failed');
