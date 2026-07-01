@@ -100,7 +100,7 @@ async function recordLeadActivity(input: {
   nextValue?: Record<string, unknown> | null;
 }) {
   const supabase = createAdminClient();
-  await supabase.from('sales_lead_activity_events').insert({
+  const { error } = await supabase.from('sales_lead_activity_events').insert({
     lead_id: input.leadId,
     actor_user_id: input.actorUserId,
     action: input.action,
@@ -108,6 +108,8 @@ async function recordLeadActivity(input: {
     next_value: input.nextValue ?? null,
     metadata: {},
   });
+
+  if (error) throw actionError('Unable to record lead activity.');
 
   await logAuditEvent({
     organizationId: null,
