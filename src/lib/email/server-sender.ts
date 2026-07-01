@@ -94,7 +94,7 @@ function getTemplate(input: Pick<SendEmailInput, 'template' | 'subject'>) {
 }
 
 function getDefaultFromAddress() {
-  return process.env.EMAIL_FROM ?? 'RISCK COMPLY <no-reply@risckcomply.app>';
+  return process.env.EMAIL_FROM ?? 'RISCK COMPLY <comercial@risckcomply.com>';
 }
 
 function sleep(ms: number) {
@@ -281,7 +281,6 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         providerId,
         attempts: attempt,
       });
-
       return { sent: true, provider: 'resend', id: providerId, status: 'sent', attempts: attempt };
     } catch (error) {
       lastError = error;
