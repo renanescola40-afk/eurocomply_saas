@@ -305,7 +305,7 @@ async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadReco
 }
 
 function shouldNotifyInternalTeam(saveResult: SaveWaitlistLeadResult) {
-  return saveResult.inserted;
+  return saveResult.inserted || !saveResult.saved;
 }
 
 export async function POST(request: NextRequest) {
@@ -327,26 +327,7 @@ export async function POST(request: NextRequest) {
   }
 
   const saveResult = await saveWaitlistLead(request, record);
-  if (!saveResult.saved) {
-    const fallbackNotification = await notifyInternalTeam(request, record);
-
-    if (!fallbackNotification.sent) {
-      return noStoreJson({ error: 'Unable to join waitlist right now.' }, { status: 503 });
-    }
-
-    return noStoreJson(
-      {
-        ok: true,
-        status: 'received',
-        message: 'Your request was received by the Risck Comply team.',
-        joinedAt: record.updated_at,
-        launchAt: record.launch_target_at,
-      },
-      { status: 202 },
-    );
-  }
-
-  await sendConfirmation(request, record);
+  const confirmation = await sendConfirmation(request, record);
 
   if (shouldNotifyInternalTeam(saveResult)) {
     await notifyInternalTeam(request, record);
@@ -355,11 +336,12 @@ export async function POST(request: NextRequest) {
   return noStoreJson(
     {
       ok: true,
-      status: 'confirmed',
-      message: 'You are on the Risck Comply waitlist.',
+      status: saveResult.saved ? 'confirmed' : 'received',
+      emailed: confirmation.sent,
+      message: saveResult.saved ? 'You are on the Risck Comply waitlist.' : 'Your request was received by the Risck Comply team.',
       joinedAt: record.updated_at,
       launchAt: record.launch_target_at,
     },
-    { status: 201 },
+    { status: saveResult.saved ? 201 : 202 },
   );
 }
