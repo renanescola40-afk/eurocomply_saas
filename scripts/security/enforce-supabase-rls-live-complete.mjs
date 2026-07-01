@@ -2,10 +2,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  backendOwnedTables,
   criticalTables,
-  requiredUserScopedOperations,
-  requiredUserScopedTable,
+  customerTenantTables,
+  globalReferenceTables,
+  requiredBackendWriteDenyOperations,
+  requiredCoverageOperations,
+  requiredGlobalReferenceOperations,
+  requiredSameTenantReadOperations,
+  requiredViewerAdminDenyOperations,
   runner,
+  sameTenantWritableTables,
   validatePassingEvidence,
 } from './supabase-live-rls-evidence.mjs';
 
@@ -67,6 +74,14 @@ function validateGithubActionsProvenance(evidence) {
   }
 }
 
+function hasPassed(testCases, table, operation) {
+  return testCases.some((test) => test?.table === table && test?.operation === operation && test?.passed === true);
+}
+
+function hasAnyPassed(testCases, table, operations) {
+  return operations.some((operation) => hasPassed(testCases, table, operation));
+}
+
 function validateScope(evidence) {
   const tables = Array.isArray(evidence.criticalTables) ? evidence.criticalTables : [];
   const expected = criticalTables.join(',');
@@ -75,15 +90,43 @@ function validateScope(evidence) {
     fail(`${evidencePath} criticalTables must match the P0 live RLS proof scope: ${expected}`);
   }
 
-  const testCases = Array.isArray(evidence.testCases) ? evidence.testCases : [];
-  const coveredTables = new Set(testCases.map((test) => test?.table).filter(Boolean));
-  for (const table of criticalTables) {
-    if (!coveredTables.has(table)) fail(`${evidencePath} missing P0 live RLS proof table coverage: ${table}`);
+  if (Array.isArray(evidence.customerTenantTables) && evidence.customerTenantTables.join(',') !== customerTenantTables.join(',')) {
+    fail(`${evidencePath} customerTenantTables must match the P0 customer tenant scope`);
   }
 
-  for (const operation of requiredUserScopedOperations) {
-    if (!testCases.some((test) => test?.table === requiredUserScopedTable && test?.operation === operation && test?.passed === true)) {
-      fail(`${evidencePath} missing P0 profiles proof operation: ${requiredUserScopedTable}:${operation}`);
+  if (Array.isArray(evidence.globalReferenceTables) && evidence.globalReferenceTables.join(',') !== globalReferenceTables.join(',')) {
+    fail(`${evidencePath} globalReferenceTables must match the P0 global reference scope`);
+  }
+
+  const testCases = Array.isArray(evidence.testCases) ? evidence.testCases : [];
+
+  for (const table of customerTenantTables) {
+    if (!hasPassed(testCases, table, 'rls_enabled')) fail(`${evidencePath} missing RLS enablement proof: ${table}`);
+    for (const operation of requiredCoverageOperations) {
+      if (!hasPassed(testCases, table, operation)) fail(`${evidencePath} missing tenant isolation proof: ${table}:${operation}`);
+    }
+    if (!hasAnyPassed(testCases, table, requiredSameTenantReadOperations)) {
+      fail(`${evidencePath} missing same-tenant read proof: ${table}`);
+    }
+  }
+
+  for (const table of sameTenantWritableTables) {
+    if (!hasPassed(testCases, table, 'same_tenant_insert')) fail(`${evidencePath} missing same-tenant write proof: ${table}`);
+  }
+
+  for (const table of backendOwnedTables) {
+    for (const operation of requiredBackendWriteDenyOperations) {
+      if (!hasPassed(testCases, table, operation)) fail(`${evidencePath} missing backend-owned write denial proof: ${table}:${operation}`);
+    }
+  }
+
+  for (const operation of requiredViewerAdminDenyOperations) {
+    if (!hasPassed(testCases, 'organization_members', operation)) fail(`${evidencePath} missing member privilege denial proof: organization_members:${operation}`);
+  }
+
+  for (const table of globalReferenceTables) {
+    for (const operation of requiredGlobalReferenceOperations) {
+      if (!hasPassed(testCases, table, operation)) fail(`${evidencePath} missing global reference read-only proof: ${table}:${operation}`);
     }
   }
 }
@@ -114,4 +157,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Supabase live RLS production gate passed for the P0 profiles proof scope.');
+console.log('Supabase live RLS production gate passed for the expanded P0 tenant isolation proof scope.');
