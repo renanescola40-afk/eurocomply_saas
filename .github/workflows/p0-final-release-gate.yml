@@ -43,10 +43,51 @@ jobs:
           changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
           echo "$changed_files"
 
-          if echo "$changed_files" | grep -Eq '^(docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md|docs/security/evidence/runtime/)'; then
-            echo "strict=true" >> "$GITHUB_OUTPUT"
-          else
+          if ! echo "$changed_files" | grep -Eq '^(docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md|docs/security/evidence/runtime/)'; then
             echo "strict=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if echo "$changed_files" | grep -Eq '^docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md$'; then
+            echo "strict=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf '%s\n' "$changed_files" | node <<'NODE'
+          import { readFileSync, existsSync } from 'node:fs';
+
+          const changed = readFileSync(0, 'utf8')
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .filter((file) => file.startsWith('docs/security/evidence/runtime/') && file.endsWith('.json'));
+
+          const allowedOpenOutcomes = new Set(['not_run', 'not_started', 'failed', 'no_go']);
+          const failures = [];
+
+          for (const file of changed) {
+            if (!existsSync(file)) continue;
+            const evidence = JSON.parse(readFileSync(file, 'utf8'));
+            const gateText = String(evidence.productionGate ?? evidence.releaseGate ?? '').toLowerCase();
+
+            if (evidence.status !== 'Open') failures.push(`${file} changed to non-Open runtime evidence`);
+            if (!allowedOpenOutcomes.has(evidence.outcome)) failures.push(`${file} has non-placeholder Open outcome`);
+            if (!gateText.includes('blocked')) failures.push(`${file} does not keep release/production blocked`);
+            if (Array.isArray(evidence.controlsVerified) && evidence.controlsVerified.length > 0) {
+              failures.push(`${file} Open placeholder must not claim controlsVerified`);
+            }
+          }
+
+          if (failures.length > 0 || changed.length === 0) {
+            for (const failure of failures) console.error(failure);
+            process.exit(1);
+          }
+          NODE
+
+          if [ "$?" -eq 0 ]; then
+            echo "strict=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "strict=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Validate runtime evidence register
@@ -64,4 +105,4 @@ jobs:
 
       - name: Skip strict runtime evidence gap for gate-only changes
         if: steps.runtime_changes.outputs.strict != 'true'
-        run: echo "Skipping strict runtime evidence gap because this PR does not modify runtime evidence or the runtime evidence register."
+        run: echo "Skipping strict runtime evidence gap because this PR does not modify runtime evidence, or only adds Open/blocked placeholder evidence that keeps production No-Go."
