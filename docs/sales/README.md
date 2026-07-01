@@ -30,6 +30,7 @@ This folder is the source of truth for GTM positioning, sales demos, discovery c
 - Purpose: private Early Access demo follow-up for the RISCK COMPLY team.
 - Boundary: not a customer-facing product module.
 - Language: use “Sales Console”, “Lead Operations”, “Demo Pipeline” or “Early Access Pipeline”.
+- Access runbook: [`../ops/SALES_CONSOLE_ACCESS.md`](../ops/SALES_CONSOLE_ACCESS.md).
 
 ## Positioning
 
