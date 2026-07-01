@@ -224,15 +224,18 @@ export async function listSalesLeadActivities(leadId: string) {
 }
 
 export async function listSalesLeadNotes(leadId: string) {
-  const activities = await listSalesLeadActivities(leadId);
-  return activities
-    .filter((activity) => activity.type === 'note')
-    .slice(0, 25)
-    .map((activity) => ({
-      id: activity.id,
-      lead_id: activity.lead_id,
-      created_by: activity.created_by,
-      body: activity.body,
-      created_at: activity.created_at,
-    })) satisfies SalesLeadNote[];
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('sales_lead_activities')
+    .select('id, lead_id, created_by, body, created_at')
+    .eq('lead_id', leadId)
+    .eq('type', 'note')
+    .order('created_at', { ascending: false })
+    .limit(25);
+
+  if (error) {
+    throw new Error('Unable to load sales lead notes.');
+  }
+
+  return (data ?? []) as SalesLeadNote[];
 }
