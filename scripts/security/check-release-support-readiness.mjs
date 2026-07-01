@@ -12,7 +12,7 @@ function requireFile(path) {
 }
 
 function requireIncludes(content, token, context) {
-  if (!content.includes(token)) {
+  if (!content.toLowerCase().includes(token.toLowerCase())) {
     checks.push(`${context} must include: ${token}`);
   }
 }
