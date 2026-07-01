@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
   }
 
   const saveResult = await saveWaitlistLead(record);
-  const emailDelivery = await sendConfirmation(request, record);
+  await sendConfirmation(request, record);
 
   if (shouldNotifyInternalTeam(saveResult)) {
     await notifyInternalTeam(request, record, saveResult);
@@ -238,9 +238,6 @@ export async function POST(request: NextRequest) {
       ok: true,
       status: 'confirmed',
       message: 'You are on the Risck Comply waitlist.',
-      emailed: emailDelivery.sent,
-      emailStatus: emailDelivery.status,
-      emailAttempts: emailDelivery.attempts,
       joinedAt: record.updated_at,
       launchAt: record.launch_target_at,
     },
