@@ -45,6 +45,7 @@ type WaitlistCopy = {
     submit: string;
     submitting: string;
     success: string;
+    emailSuccess: string;
     error: string;
     privacy: string;
     contact: string;
@@ -78,6 +79,7 @@ const en: WaitlistCopy = {
     submit: 'Join waitlist',
     submitting: 'Saving your priority place...',
     success: 'You are officially on the Risck Comply waitlist — and you are special. We saved your priority place and will contact qualified leads as early access opens.',
+    emailSuccess: 'You are officially on the Risck Comply waitlist — and you are special. We saved your priority place and sent a confirmation email with your join date, launch date and remaining time.',
     error: 'Could not confirm your place right now. You can also contact us directly at comercial@risckcomply.com.',
     privacy: 'No passwords. No public signup. Only launch communication and early access qualification.',
     contact: 'Questions or want to speak with our team? Email us at',
@@ -115,6 +117,7 @@ const pt: WaitlistCopy = {
     submit: 'Entrar na lista de espera',
     submitting: 'A guardar o seu lugar prioritário...',
     success: 'Você está oficialmente inscrito na lista de espera da Risck Comply — e você é especial. Guardámos o seu lugar prioritário e vamos contactar leads qualificados quando o acesso abrir.',
+    emailSuccess: 'Você está oficialmente inscrito na lista de espera da Risck Comply — e você é especial. Guardámos o seu lugar prioritário e enviámos um email com o dia da inscrição, a data de abertura e o tempo que falta.',
     error: 'Não foi possível confirmar o seu lugar agora. Você também pode falar connosco diretamente em comercial@risckcomply.com.',
     privacy: 'Sem senhas. Sem signup público. Apenas comunicação de lançamento e qualificação para early access.',
     contact: 'Dúvidas ou quer falar com a nossa equipa? Envie email para',
@@ -162,10 +165,10 @@ function calculateRemaining(): Remaining {
 function emailWarningMessage(locale: Locale, payload: WaitlistApiResponse | null) {
   const status = payload?.emailStatus ? ` (${payload.emailStatus})` : '';
   if (locale === 'pt') {
-    return `O seu lugar foi guardado, mas o email automático de confirmação ainda não saiu${status}. Pode falar connosco diretamente em ${COMMERCIAL_EMAIL}.`;
+    return `O seu lugar foi guardado, mas ainda não recebemos confirmação automática de envio do email${status}. Pode falar connosco diretamente em ${COMMERCIAL_EMAIL}.`;
   }
 
-  return `Your place was saved, but the automatic confirmation email was not delivered yet${status}. You can contact us directly at ${COMMERCIAL_EMAIL}.`;
+  return `Your place was saved, but we do not yet have automatic confirmation that the email was delivered${status}. You can contact us directly at ${COMMERCIAL_EMAIL}.`;
 }
 
 function WaitlistCountdown({ copy }: { copy: WaitlistCopy }) {
@@ -224,7 +227,7 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ companyName, email, role, locale: activeLocale, website }),
       });
-      const payload = await response.json().catch(() => null) as WaitlistApiResponse | null;
+      const payload = (await response.json().catch(() => null)) as WaitlistApiResponse | null;
 
       if (!response.ok) {
         setMessage(payload?.error || copy.form.error);
@@ -236,7 +239,7 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
         setMessage(emailWarningMessage(activeLocale, payload));
         setStatus('warning');
       } else {
-        setMessage(copy.form.success);
+        setMessage(payload?.emailed === true ? copy.form.emailSuccess : copy.form.success);
         setStatus('success');
       }
 
@@ -358,41 +361,38 @@ export function WaitlistPage({ locale }: { locale: string }) {
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.82fr_1.18fr] lg:items-start">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200/55">{copy.checklistEyebrow}</p>
-            <h2 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">{copy.checklistTitle}</h2>
-            <p className="mt-5 text-lg leading-8 text-white/58">{copy.checklistSubtitle}</p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] text-white sm:text-5xl">{copy.checklistTitle}</h2>
+            <p className="mt-5 max-w-3xl text-sm leading-7 text-white/56 md:text-base">{copy.checklistSubtitle}</p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div id="features" className="grid gap-4 md:grid-cols-2">
             {copy.features.map(({ title, text, icon: Icon }) => (
-              <div key={title} className="rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5">
-                <Icon className="h-5 w-5 text-cyan-100" />
-                <h3 className="mt-4 text-lg font-semibold text-white">{title}</h3>
-                <p className="mt-2 text-sm leading-6 text-white/52">{text}</p>
-              </div>
+              <article key={title} className="rounded-[1.65rem] border border-white/10 bg-black/25 p-5 shadow-xl backdrop-blur">
+                <div className="flex items-start gap-4">
+                  <div className="rounded-2xl bg-white/10 p-3 text-white"><Icon className="h-5 w-5" /></div>
+                  <div>
+                    <h3 className="font-semibold text-white">{title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-white/50">{text}</p>
+                  </div>
+                </div>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
       <section className="relative z-10 px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[.92fr_1.08fr] lg:items-start">
-          <WaitlistForm activeLocale={activeLocale} copy={copy} />
-          <div className="rounded-[2rem] border border-white/10 bg-black/35 p-6 shadow-2xl backdrop-blur-xl">
-            <div className="flex items-center gap-3 text-emerald-50">
-              <CheckCircle2 className="h-6 w-6" />
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-100/72">Controlled launch</p>
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.92fr_1.08fr] lg:items-center">
+          <div className="rounded-[2rem] border border-white/10 bg-black/25 p-6">
+            <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.24em] text-emerald-100/70">
+              <CheckCircle2 className="h-4 w-4" /> Controlled launch
             </div>
-            <h2 className="mt-5 text-4xl font-semibold tracking-[-0.05em] text-white">No generic signup. No fake enterprise claims.</h2>
-            <p className="mt-5 text-base leading-8 text-white/58">
-              Risck Comply is being prepared as a serious B2B SaaS. The waitlist lets us qualify teams, validate demand and open access without pretending the product replaces legal counsel or certified auditors.
-            </p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {['Evidence-first workflows', 'Buyer-ready positioning', 'Security-conscious release', 'Early access qualification'].map((item) => (
-                <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-medium text-white/68">{item}</div>
-              ))}
-            </div>
+            <p className="mt-5 text-3xl font-semibold tracking-[-0.04em] text-white">No open signup until the launch gate opens.</p>
+            <p className="mt-4 text-sm leading-7 text-white/54">For now, public login, signup, checkout and demo CTAs send companies here so the product can collect qualified leads before release.</p>
           </div>
+          <WaitlistForm activeLocale={activeLocale} copy={copy} />
         </div>
       </section>
+
       <PublicFooter locale={activeLocale} />
     </main>
   );
