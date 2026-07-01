@@ -147,15 +147,18 @@ export async function updateLeadStatus(request: Request, formData: FormData) {
   const now = new Date().toISOString();
   const supabase = createAdminClient();
   const contactStatuses: SalesLeadStatus[] = ['qualified', 'demo_scheduled', 'proposal_sent', 'won', 'lost'];
+  const updatePayload: Record<string, unknown> = {
+    status: payload.status,
+    updated_by: user.id,
+    updated_at: now,
+    last_activity_at: now,
+  };
+
+  if (contactStatuses.includes(payload.status)) updatePayload.last_contacted_at = now;
+
   const { error } = await supabase
     .from('sales_leads')
-    .update({
-      status: payload.status,
-      updated_by: user.id,
-      updated_at: now,
-      last_activity_at: now,
-      last_contacted_at: contactStatuses.includes(payload.status) ? now : undefined,
-    })
+    .update(updatePayload)
     .eq('id', payload.leadId)
     .is('gdpr_deleted_at', null);
 
