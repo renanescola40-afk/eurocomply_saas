@@ -103,7 +103,7 @@
       "summary": "Audited main and open PRs. PR #719 is the current safe non-breaking correction candidate for auth-provider drift: it aligns localized login/signup/layout and auth callback behavior with Supabase instead of mixed Clerk assumptions. Production remains no-go because latest main has no workflow runs and PR #719 currently has CI typecheck failure plus Security CI protected-routes gate failure.",
       "base_commit": "18cc24a2470e6c22d4ee17e88834d0a8e86d4de0",
       "pull_request": 719,
-      "actions_taken": ["Validated main still has no workflow runs on the latest checked commit.", "Validated PR #719 is open and mergeable but not merge-ready because CI failed at typecheck and Security CI failed at protected routes gate.", "Validated PR #719 preserves a safe auth callback redirect allowlist and exchanges Supabase OAuth codes server-side.", "Validated cron remains a single protected daily maintenance aggregator.", "Validated lead/demo capture remains bounded, rate-limited, no-store, and avoids sensitive exposure.", "Recorded this audit action in agent_log.json on the PR branch without applying additional risky code changes."]
+      "actions_taken": ["Validated main still has no workflow runs on the latest checked commit.", "Validated PR #719 is open and mergeable but not merge-ready because CI failed at typecheck and Security CI failed at protected routes gate.", "Validated PR #719 preserves a safe auth callback redirect allowlist and exchanges Supabase OAuth codes server-side.", "Validated cron remains a single protected daily maintenance aggregator.", "Validated lead/demo capture remains bounded, rate-limited, no-store, and avoids sensitive exposure.", "Recorded this audit action in agent_log.json on PR #719 without applying additional risky code changes."]
     },
     {
       "timestamp": "2026-06-30T13:04:16Z",
@@ -167,6 +167,15 @@
       "base_commit": "5f603814d9839399be837f4b1ad7d7276f621a22",
       "pull_request": 749,
       "actions_taken": ["Validated PR #749 is open and mergeable but not merge-ready due to Security CI and Full Security Suite failures.", "Validated CI lint/typecheck/tests/build passed on the previous #749 head while Security CI failed at Log sanitization gate.", "Patched src/app/api/prelaunch/route.ts to make persistence fail closed with 503 before sending emails or returning success.", "Patched prelaunch console errors to log event codes only, with no object payloads or request-derived values.", "Recorded this action in agent_log.json on the PR branch."]
+    },
+    {
+      "timestamp": "2026-07-01T04:10:00Z",
+      "cycle": "scheduled_audit",
+      "status": "safe_fix_prepared_not_merge_ready",
+      "summary": "Audited main and PR #749. PR #749 had turned green and mergeable, but merge was blocked by an unresolved review thread about duplicate public waitlist submissions sending repeated internal new-lead alerts. Applied a safe idempotency correction so internal notifications only send for newly inserted waitlist records while duplicate submissions can still receive confirmation without exposing internal state.",
+      "base_commit": "5f603814d9839399be837f4b1ad7d7276f621a22",
+      "pull_request": 749,
+      "actions_taken": ["Validated PR #749 head had CI, Security CI, Full Security Suite, CodeQL, Gitleaks, Semgrep, Dependency Review and P0 gates passing before merge was attempted.", "Merge was blocked by a required unresolved review conversation.", "Patched src/app/api/prelaunch/route.ts to use duplicate-ignoring upsert and track whether a waitlist lead was newly inserted.", "Patched the public prelaunch route to send internal waitlist notifications only when saveWaitlistLead reports a new insert.", "Recorded this action in agent_log.json on the PR branch."]
     }
   ]
 }
