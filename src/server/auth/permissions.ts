@@ -1,35 +1,30 @@
-import { assertOrganizationPermission, type OrganizationPermission, type OrganizationRole } from '@/lib/security/permissions';
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
-
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
+import {
+  assertOrganizationPermission,
+  getOrganizationMembership,
+  type OrganizationPermission,
+  type OrganizationRole,
+} from '@/server/security/rbac';
 
 export async function getOrganizationRoleForUser(organizationId: string, userId: string): Promise<OrganizationRole | null> {
-  const supabase = tryCreateAdminClient();
+  const { membership, error } = await getOrganizationMembership(userId, organizationId);
 
-  if (!supabase) {
-    console.error('[auth] Missing Supabase admin client while checking organization permissions');
+  if (error || !membership?.role) {
     return null;
   }
 
-  const identityColumn = isUuid(userId) ? 'user_id' : 'clerk_user_id';
-  const { data, error } = await supabase
-    .from('organization_members')
-    .select('role')
-    .eq('organization_id', organizationId)
-    .eq(identityColumn, userId)
-    .maybeSingle();
-
-  if (error || !data?.role) {
-    return null;
-  }
-
-  return data.role as OrganizationRole;
+  return membership.role as OrganizationRole;
 }
 
 export async function assertCurrentUserCan(organizationId: string, userId: string, permission: OrganizationPermission) {
-  const role = await getOrganizationRoleForUser(organizationId, userId);
-  assertOrganizationPermission(role, permission);
-  return role;
+  const result = await assertOrganizationPermission({
+    userId,
+    organizationId,
+    permission,
+  });
+
+  if (!result.ok) {
+    throw new Error(`Missing required organization permission: ${permission}`);
+  }
+
+  return result.role ?? null;
 }
