@@ -238,9 +238,12 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
       if (payload?.emailed === true) {
         setMessage(copy.form.emailSuccess);
         setStatus('success');
-      } else {
+      } else if (payload?.emailed === false) {
         setMessage(emailWarningMessage(activeLocale, payload));
         setStatus('warning');
+      } else {
+        setMessage(copy.form.success);
+        setStatus('success');
       }
 
       setCompanyName('');
