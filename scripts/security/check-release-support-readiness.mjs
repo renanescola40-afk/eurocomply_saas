@@ -17,6 +17,12 @@ function requireIncludes(content, token, context) {
   }
 }
 
+function requireExactIncludes(content, token, context) {
+  if (!content.includes(token)) {
+    checks.push(`${context} must include exact token: ${token}`);
+  }
+}
+
 const support = requireFile('docs/RELEASE_SUPPORT_READINESS.md');
 const customerComms = requireFile('docs/RELEASE_CUSTOMER_COMMUNICATION_PLAN.md');
 const incident = requireFile('docs/RELEASE_INCIDENT_RESPONSE_PLAN.md');
@@ -72,8 +78,8 @@ const packageJson = requireFile('package.json');
   'customer communication',
 ].forEach((token) => requireIncludes(evidence, token, 'docs/RELEASE_EVIDENCE_CHECKLIST.md'));
 
-requireIncludes(packageJson, 'security:release-support-readiness', 'package.json');
-requireIncludes(packageJson, 'release:readiness', 'package.json');
+requireExactIncludes(packageJson, 'security:release-support-readiness', 'package.json');
+requireExactIncludes(packageJson, 'release:readiness', 'package.json');
 
 if (checks.length > 0) {
   console.error('Release support readiness failures:');
