@@ -281,7 +281,6 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         providerId,
         attempts: attempt,
       });
-
       return { sent: true, provider: 'resend', id: providerId, status: 'sent', attempts: attempt };
     } catch (error) {
       lastError = error;

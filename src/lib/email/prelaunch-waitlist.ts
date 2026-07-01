@@ -18,6 +18,7 @@ type InternalWaitlistNotificationInput = WaitlistEmailInput & {
 };
 
 const INTERNAL_WAITLIST_NOTIFY_EMAIL = 'comercial@risckcomply.com';
+const WAITLIST_COMMERCIAL_FROM = 'RISCK COMPLY <comercial@risckcomply.com>';
 
 function escapeHtml(value: string | number | null | undefined) {
   return String(value ?? '')
@@ -119,6 +120,7 @@ export async function sendPrelaunchWaitlistEmail(input: WaitlistEmailInput) {
 
   return sendEmail({
     to: input.to,
+    from: WAITLIST_COMMERCIAL_FROM,
     subject: isPt ? 'O seu acesso prioritário à Risck Comply foi confirmado' : 'Your Risck Comply priority access is confirmed',
     html: premiumEmailShell(title, preview, body),
     text,

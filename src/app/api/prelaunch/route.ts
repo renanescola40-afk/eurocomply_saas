@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import { sendInternalWaitlistNotification, sendPrelaunchWaitlistEmail } from '@/lib/email/prelaunch-waitlist';
+import type { SendEmailResult } from '@/lib/email/client';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
@@ -37,6 +38,15 @@ type SaveWaitlistLeadResult = {
   inserted: boolean;
 };
 
+type WaitlistEmailDelivery = Pick<SendEmailResult, 'sent' | 'provider' | 'status' | 'attempts'>;
+
+const EMAIL_FAILED_RESULT: WaitlistEmailDelivery = {
+  sent: false,
+  provider: 'console',
+  status: 'failed',
+  attempts: 0,
+};
+
 function getClientHint(request: NextRequest) {
   return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 }
@@ -63,6 +73,15 @@ function isHoneypotFilled(value: unknown) {
 
 function getWaitlistUrl(request: NextRequest, locale: string) {
   return `${request.nextUrl.origin}/${locale}#waitlist-form`;
+}
+
+function emailDiagnostics(result: WaitlistEmailDelivery) {
+  return {
+    sent: result.sent,
+    provider: result.provider,
+    status: result.status,
+    attempts: result.attempts,
+  };
 }
 
 async function enforceRateLimit(request: NextRequest) {
@@ -146,7 +165,7 @@ async function saveWaitlistLead(record: WaitlistLeadRecord): Promise<SaveWaitlis
   return { saved: true, inserted: Boolean(data?.email) };
 }
 
-async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord) {
+async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord): Promise<WaitlistEmailDelivery> {
   try {
     const result = await sendPrelaunchWaitlistEmail({
       to: record.email,
@@ -158,14 +177,14 @@ async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord
       waitlistUrl: getWaitlistUrl(request, record.locale),
     });
 
-    return result.sent;
+    return emailDiagnostics(result);
   } catch {
     console.error('[prelaunch] confirmation_email_failed');
-    return false;
+    return EMAIL_FAILED_RESULT;
   }
 }
 
-async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadRecord, saveResult: SaveWaitlistLeadResult) {
+async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadRecord, saveResult: SaveWaitlistLeadResult): Promise<WaitlistEmailDelivery> {
   try {
     const result = await sendInternalWaitlistNotification({
       to: record.email,
@@ -178,10 +197,10 @@ async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadReco
       totalLeads: null,
     });
 
-    return result.sent;
+    return emailDiagnostics(result);
   } catch {
     console.error('[prelaunch] internal_notification_failed');
-    return false;
+    return EMAIL_FAILED_RESULT;
   }
 }
 
@@ -204,8 +223,8 @@ export async function POST(request: NextRequest) {
   }
 
   const saveResult = await saveWaitlistLead(record);
-  const emailed = await sendConfirmation(request, record);
-  const internalNotified = await notifyInternalTeam(request, record, saveResult);
+  const emailDelivery = await sendConfirmation(request, record);
+  const internalDelivery = await notifyInternalTeam(request, record, saveResult);
 
   return noStoreJson(
     {
@@ -214,8 +233,13 @@ export async function POST(request: NextRequest) {
       message: 'You are on the Risck Comply waitlist.',
       saved: saveResult.saved,
       inserted: saveResult.inserted,
-      emailed,
-      internalNotified,
+      emailed: emailDelivery.sent,
+      emailStatus: emailDelivery.status,
+      emailProvider: emailDelivery.provider,
+      emailAttempts: emailDelivery.attempts,
+      internalNotified: internalDelivery.sent,
+      internalEmailStatus: internalDelivery.status,
+      internalEmailProvider: internalDelivery.provider,
       joinedAt: record.updated_at,
       launchAt: record.launch_target_at,
     },
