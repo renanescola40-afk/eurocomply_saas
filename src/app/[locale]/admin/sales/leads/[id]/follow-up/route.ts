@@ -18,7 +18,9 @@ export async function POST(request: Request, context: RouteContext) {
   const { locale, id } = await context.params;
 
   try {
-    await updateLeadFollowUp(request, await request.formData());
+    const formData = await request.formData();
+    formData.set('leadId', id);
+    await updateLeadFollowUp(request, formData);
     return redirectToLead(request, locale, id);
   } catch {
     return redirectToLead(request, locale, id, 'follow_up_update_failed');
