@@ -21,12 +21,29 @@ const commands = [
   { slug: '01-lint', label: 'npm run lint', command: 'npm', args: ['run', 'lint'], critical: true },
   { slug: '02-typecheck', label: 'npm run typecheck', command: 'npm', args: ['run', 'typecheck'], critical: true },
   { slug: '03-test', label: 'npm run test', command: 'npm', args: ['run', 'test'], critical: true },
-  { slug: '04-test-e2e', label: 'npm run test:e2e', command: 'npm', args: ['run', 'test:e2e'], critical: true },
-  { slug: '05-build', label: 'npm run build', command: 'npm', args: ['run', 'build'], critical: true },
-  { slug: '06-security-ci', label: 'npm run security:ci', command: 'npm', args: ['run', 'security:ci'], critical: true },
-  { slug: '07-release-smoke', label: 'npm run release:deployment-smoke', command: 'npm', args: ['run', 'release:deployment-smoke'], critical: true },
-  { slug: '08-release-rollback-dry-run', label: 'npm run release:rollback:dry-run', command: 'npm', args: ['run', 'release:rollback:dry-run'], critical: true },
-  { slug: '09-release-readiness', label: 'npm run release:readiness', command: 'npm', args: ['run', 'release:readiness'], critical: true },
+  {
+    slug: '04-playwright-install',
+    label: 'npx playwright install --with-deps',
+    command: 'npx',
+    args: ['playwright', 'install', '--with-deps'],
+    critical: true,
+    prerequisiteFor: 'npm run test:e2e',
+  },
+  { slug: '05-test-e2e', label: 'npm run test:e2e', command: 'npm', args: ['run', 'test:e2e'], critical: true },
+  { slug: '06-build', label: 'npm run build', command: 'npm', args: ['run', 'build'], critical: true },
+  { slug: '07-security-ci', label: 'npm run security:ci', command: 'npm', args: ['run', 'security:ci'], critical: true },
+  { slug: '08-release-smoke', label: 'npm run release:deployment-smoke', command: 'npm', args: ['run', 'release:deployment-smoke'], critical: true },
+  { slug: '09-release-rollback-dry-run', label: 'npm run release:rollback:dry-run', command: 'npm', args: ['run', 'release:rollback:dry-run'], critical: true },
+  { slug: '10-release-candidate', label: 'npm run security:release-candidate', command: 'npm', args: ['run', 'security:release-candidate'], critical: true },
+  { slug: '11-release-evidence', label: 'npm run security:release-evidence', command: 'npm', args: ['run', 'security:release-evidence'], critical: true },
+  { slug: '12-release-approval', label: 'npm run security:release-approval', command: 'npm', args: ['run', 'security:release-approval'], critical: true },
+  { slug: '13-release-go-no-go', label: 'npm run security:release-go-no-go', command: 'npm', args: ['run', 'security:release-go-no-go'], critical: true },
+  { slug: '14-release-rollback', label: 'npm run security:release-rollback', command: 'npm', args: ['run', 'security:release-rollback'], critical: true },
+  { slug: '15-release-incident-response', label: 'npm run security:release-incident-response', command: 'npm', args: ['run', 'security:release-incident-response'], critical: true },
+  { slug: '16-release-post-incident', label: 'npm run security:release-post-incident', command: 'npm', args: ['run', 'security:release-post-incident'], critical: true },
+  { slug: '17-release-support-readiness', label: 'npm run security:release-support-readiness', command: 'npm', args: ['run', 'security:release-support-readiness'], critical: true },
+  { slug: '18-release-operations', label: 'npm run security:release-operations', command: 'npm', args: ['run', 'security:release-operations'], critical: true },
+  { slug: '19-p0-runtime-gap', label: 'npm run security:p0-runtime-gap', command: 'npm', args: ['run', 'security:p0-runtime-gap'], critical: true },
 ];
 
 mkdirSync(logDir, { recursive: true });
@@ -74,8 +91,9 @@ function runCommand(step) {
     `Command: ${commandLine(step)}`,
     `Started: ${startedAt}`,
     `Release target: ${releaseTarget}`,
+    step.prerequisiteFor ? `Prerequisite for: ${step.prerequisiteFor}` : null,
     '',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 
   process.stdout.write(`${header}\n`);
 
@@ -121,6 +139,7 @@ function runCommand(step) {
     passed: exitStatus === 0,
     result: exitStatus === 0 ? 'passed' : 'failed',
     log: logPath,
+    prerequisiteFor: step.prerequisiteFor || null,
   };
 }
 
@@ -159,6 +178,10 @@ const summary = {
   metadataFailures,
   commands: results,
   runtimeEvidence,
+  publicReadinessScope: {
+    excludesEnterpriseExternalReview: true,
+    note: 'Public production readiness intentionally excludes security:external-review. Enterprise readiness remains enforced by release:enterprise-readiness.',
+  },
   recursionGuard: {
     npmRunReleaseDoesNotInvokeItself: true,
     note: 'The release:production-final entrypoint expands the requested production launch sequence into concrete commands to avoid recursive npm run loops.',
@@ -178,6 +201,7 @@ const markdown = [
   `- Ref: ${summary.refName || 'local/not in GitHub Actions'}`,
   `- Release target: ${summary.releaseTarget}`,
   `- Overall result: **${summary.overallResult}**`,
+  `- Public readiness excludes enterprise external review: **${summary.publicReadinessScope.excludesEnterpriseExternalReview ? 'yes' : 'no'}**`,
   '',
   '| Command | Critical | Result | Exit status | Log |',
   '| --- | --- | --- | --- | --- |',
@@ -217,18 +241,20 @@ const evidence = {
       'lint',
       'typecheck',
       'unit tests',
+      'playwright browsers installed before e2e',
       'e2e tests',
       'build',
       'security:ci suite',
       'deployment smoke',
       'rollback dry-run',
-      'release readiness',
+      'public release readiness without enterprise external-review dependency',
       'commit SHA recorded',
       'build SHA recorded',
     ]
     : [],
   commands: summary.commands,
   runtimeEvidence: summary.runtimeEvidence,
+  publicReadinessScope: summary.publicReadinessScope,
   failures: {
     commandFailures,
     evidenceFailures,
