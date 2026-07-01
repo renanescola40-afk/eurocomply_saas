@@ -184,6 +184,15 @@
       "summary": "Audited main after PR #754 merged. Production remains no-go because the latest main merge commit has no GitHub Actions workflow runs. Found that PR #754 restored public email delivery diagnostics on /api/prelaunch; prepared a safe response-hardening correction to keep confirmation best-effort while removing public emailed/emailStatus/emailAttempts fields.",
       "base_commit": "7063cb6f2f9fd846a8d380661c972e7baab38b43",
       "actions_taken": ["Validated PR #754 was merged into main and changed only src/app/api/prelaunch/route.ts.", "Validated the latest main merge commit has no GitHub Actions workflow runs.", "Validated cron remains a single protected daily maintenance aggregator.", "Validated billing checkout still enforces authentication, organization scope, RBAC, trusted mutation, step-up, Stripe metadata, audit logging and no-store responses.", "Patched src/app/api/prelaunch/route.ts to remove public email delivery diagnostics while preserving success response shape, joinedAt and launchAt.", "Recorded this audit action in agent_log.json on branch agent/harden-waitlist-email-response."]
+    },
+    {
+      "timestamp": "2026-07-01T14:04:07Z",
+      "cycle": "scheduled_audit",
+      "status": "safe_fix_prepared_not_merge_ready",
+      "summary": "Audited main and open PR #770 after the Sales Console MVP follow-up. Production remains no-go because latest main has no workflow runs and Vercel is failing on build-rate limit. PR #770 has scanner/P0 successes but CI and Full Security Suite failed because the sales lead query test used an untyped vi.fn select mock that caused TypeScript tuple access errors. Applied a safe test-only typecheck correction and recorded this action.",
+      "base_commit": "fbe7132cc99e4639ce873a65b1f86f1c8c900175",
+      "pull_request": 770,
+      "actions_taken": ["Validated latest main commit fbe7132cc99e4639ce873a65b1f86f1c8c900175 has no GitHub Actions workflow runs and Vercel reports build-rate-limit failure.", "Validated PR #770 is open and targets main with Sales Console hardening changes.", "Validated PR #770 head had Dependency Review, P0 Runtime Gap Report, P0 Runtime Evidence, P0 Progress, Gitleaks, Actionlint, Semgrep, Secret Scanning, Security CI, Upload Security CI and CodeQL passing, while CI and Full Security Suite failed.", "Inspected CI logs and confirmed typecheck failed only at src/server/queries/sales-leads.test.ts because query.select.mock.calls[0][0] inferred an empty tuple.", "Patched src/server/queries/sales-leads.test.ts to type the select mock argument and read selected columns through a guarded local variable without changing runtime code.", "Recorded this action in agent_log.json on PR #770 branch."]
     }
   ]
 }
