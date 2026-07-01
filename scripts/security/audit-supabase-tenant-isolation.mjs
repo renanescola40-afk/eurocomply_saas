@@ -25,7 +25,7 @@ const additionalTenantTables = new Set([
   'onboarding_activation_runs',
 ]);
 const backendOnlyTables = new Set(['audit_events', 'audit_logs', 'subscriptions', 'organization_invites', 'invitations']);
-const userScopedAllowList = new Set(['profiles', 'users']);
+const userScopedAllowList = new Set(['profiles', 'users', 'platform_admin_users']);
 const staleBackendWritePolicySuffixes = [
   'insert_member',
   'insert_writer',
