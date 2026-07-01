@@ -8,6 +8,8 @@ import { SALES_LEAD_PRIORITIES, SALES_LEAD_STATUSES, type SalesLeadPriority, typ
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { requirePlatformAdmin } from '@/server/security/platform-admin';
 
+const MAX_SALES_CONSOLE_FORM_BYTES = 8 * 1024;
+const MAX_ACTIVITY_METADATA_BYTES = 4 * 1024;
 const leadIdSchema = z.string().uuid();
 
 export const updateLeadStatusSchema = z.object({
@@ -22,7 +24,16 @@ export const updateLeadPrioritySchema = z.object({
 
 export const updateLeadFollowUpSchema = z.object({
   leadId: leadIdSchema,
-  nextFollowUpAt: z.string().max(40).optional().nullable(),
+  nextFollowUpAt: z
+    .string()
+    .trim()
+    .max(40)
+    .optional()
+    .nullable()
+    .refine((value) => {
+      if (!value) return true;
+      return Number.isFinite(new Date(value).getTime());
+    }, 'Invalid follow-up date.'),
 });
 
 export const createLeadNoteSchema = z.object({
@@ -38,6 +49,16 @@ type LeadAction =
 
 function actionError(message: string) {
   return new Error(message);
+}
+
+export function assertSalesConsoleFormRequest(request: Request) {
+  const contentLength = request.headers.get('content-length');
+  if (!contentLength) return;
+
+  const parsed = Number.parseInt(contentLength, 10);
+  if (Number.isFinite(parsed) && parsed > MAX_SALES_CONSOLE_FORM_BYTES) {
+    throw actionError('Sales Console request body is too large.');
+  }
 }
 
 export function readFormText(formData: FormData, key: string) {
@@ -77,6 +98,15 @@ function normalizeFollowUp(value: string | null | undefined) {
   return date.toISOString();
 }
 
+function boundedActivityMetadata(metadata: Record<string, unknown>) {
+  const serialized = JSON.stringify(metadata);
+  if (serialized.length > MAX_ACTIVITY_METADATA_BYTES) {
+    throw actionError('Activity metadata is too large.');
+  }
+
+  return metadata;
+}
+
 async function getLeadState(leadId: string) {
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -107,12 +137,12 @@ async function recordLeadActivity(input: {
   nextValue?: Record<string, unknown> | null;
 }) {
   const supabase = createAdminClient();
-  const metadata = {
+  const metadata = boundedActivityMetadata({
     action: input.action,
     previousValue: input.previousValue ?? null,
     nextValue: input.nextValue ?? null,
     ...(input.metadata ?? {}),
-  };
+  });
 
   const { data, error } = await supabase
     .from('sales_lead_activities')
