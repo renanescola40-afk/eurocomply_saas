@@ -32,6 +32,11 @@ type WaitlistLeadRecord = {
   updated_at: string;
 };
 
+type SaveWaitlistLeadResult = {
+  saved: boolean;
+  inserted: boolean;
+};
+
 function getClientHint(request: NextRequest) {
   return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 }
@@ -123,20 +128,22 @@ function buildRecord(body: Record<string, unknown>): WaitlistLeadRecord | null {
   };
 }
 
-async function saveWaitlistLead(record: WaitlistLeadRecord) {
+async function saveWaitlistLead(record: WaitlistLeadRecord): Promise<SaveWaitlistLeadResult> {
   const supabase = tryCreateAdminClient();
-  if (!supabase) return false;
+  if (!supabase) return { saved: false, inserted: false };
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('waitlist_leads')
-    .upsert(record, { onConflict: 'email' });
+    .upsert(record, { onConflict: 'email', ignoreDuplicates: true })
+    .select('email')
+    .maybeSingle<{ email: string }>();
 
   if (error) {
     console.error('[prelaunch] waitlist_lead_insert_failed');
-    return false;
+    return { saved: false, inserted: false };
   }
 
-  return true;
+  return { saved: true, inserted: Boolean(data?.email) };
 }
 
 async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord) {
@@ -196,8 +203,8 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Please provide company name, work email and role.' }, { status: 400 });
   }
 
-  const saved = await saveWaitlistLead(record);
-  if (!saved) {
+  const saveResult = await saveWaitlistLead(record);
+  if (!saveResult.saved) {
     return noStoreJson(
       { error: 'We could not save your waitlist request. Please try again later.' },
       { status: 503 },
@@ -205,7 +212,9 @@ export async function POST(request: NextRequest) {
   }
 
   const emailed = await sendConfirmation(request, record);
-  await notifyInternalTeam(request, record);
+  if (saveResult.inserted) {
+    await notifyInternalTeam(request, record);
+  }
 
   return noStoreJson(
     {
