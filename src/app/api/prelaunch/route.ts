@@ -184,11 +184,11 @@ async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord
   }
 }
 
-async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadRecord, saveResult: SaveWaitlistLeadResult): Promise<WaitlistEmailDelivery> {
+async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadRecord): Promise<WaitlistEmailDelivery> {
   try {
     const result = await sendInternalWaitlistNotification({
       to: record.email,
-      companyName: saveResult.saved ? record.company_name : `${record.company_name} (not saved in database)`,
+      companyName: record.company_name,
       role: record.role,
       locale: record.locale,
       joinedAt: record.updated_at,
@@ -205,7 +205,7 @@ async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadReco
 }
 
 function shouldNotifyInternalTeam(saveResult: SaveWaitlistLeadResult) {
-  return saveResult.inserted || !saveResult.saved;
+  return saveResult.inserted;
 }
 
 export async function POST(request: NextRequest) {
@@ -227,10 +227,14 @@ export async function POST(request: NextRequest) {
   }
 
   const saveResult = await saveWaitlistLead(record);
-  const emailDelivery = await sendConfirmation(request, record);
+  if (!saveResult.saved) {
+    return noStoreJson({ error: 'Unable to join waitlist right now.' }, { status: 503 });
+  }
+
+  await sendConfirmation(request, record);
 
   if (shouldNotifyInternalTeam(saveResult)) {
-    await notifyInternalTeam(request, record, saveResult);
+    await notifyInternalTeam(request, record);
   }
 
   return noStoreJson(
@@ -238,9 +242,6 @@ export async function POST(request: NextRequest) {
       ok: true,
       status: 'confirmed',
       message: 'You are on the Risck Comply waitlist.',
-      emailed: emailDelivery.sent,
-      emailStatus: emailDelivery.status,
-      emailAttempts: emailDelivery.attempts,
       joinedAt: record.updated_at,
       launchAt: record.launch_target_at,
     },
