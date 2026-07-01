@@ -18,7 +18,9 @@ export async function POST(request: Request, context: RouteContext) {
   const { locale, id } = await context.params;
 
   try {
-    await createLeadNote(request, await request.formData());
+    const formData = await request.formData();
+    formData.set('leadId', id);
+    await createLeadNote(request, formData);
     return redirectToLead(request, locale, id);
   } catch {
     return redirectToLead(request, locale, id, 'note_create_failed');
