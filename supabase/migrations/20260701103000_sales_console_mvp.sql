@@ -2,6 +2,7 @@
 -- This is an internal/admin surface only. It is not customer-facing CRM functionality.
 
 alter table public.sales_leads
+  add column if not exists status text not null default 'new',
   add column if not exists priority text not null default 'normal',
   add column if not exists owner_user_id uuid references auth.users(id) on delete set null,
   add column if not exists next_follow_up_at timestamptz,
@@ -16,6 +17,9 @@ alter table public.sales_leads
   add column if not exists disqualified_reason text,
   add column if not exists gdpr_deleted_at timestamptz;
 
+alter table public.sales_leads enable row level security;
+
+create index if not exists sales_leads_status_idx on public.sales_leads (status);
 create index if not exists sales_leads_source_idx on public.sales_leads (source);
 create index if not exists sales_leads_timeline_idx on public.sales_leads (timeline);
 create index if not exists sales_leads_company_size_idx on public.sales_leads (company_size);
@@ -78,6 +82,7 @@ create index if not exists sales_lead_activity_events_action_idx on public.sales
 
 -- Keep these internal tables inaccessible to direct anon/authenticated clients.
 -- Next.js server code uses the service role only after app-layer platform-admin checks.
+revoke all on public.sales_leads from anon, authenticated;
 revoke all on public.platform_admin_users from anon, authenticated;
 revoke all on public.sales_lead_activities from anon, authenticated;
 revoke all on public.sales_lead_notes from anon, authenticated;
