@@ -114,7 +114,7 @@ function normalizeDate(value: string | string[] | undefined) {
 }
 
 function escapeIlike(value: string) {
-  return value.replace(/[%,_]/g, '');
+  return value.replace(/[%,_()]/g, '').slice(0, 160);
 }
 
 export function normalizeSalesLeadFilters(searchParams: Record<string, string | string[] | undefined> = {}): SalesLeadFilters {
