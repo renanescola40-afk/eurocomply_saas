@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic';
 const WAITLIST_BODY_MAX_BYTES = 8 * 1024;
 const WAITLIST_RATE_LIMIT_WINDOW_MS = 60_000;
 const WAITLIST_RATE_LIMIT_MAX = 5;
+const WEBHOOK_TIMEOUT_MS = 3_500;
 const WAITLIST_ROUTE = '/api/prelaunch';
 const WAITLIST_ACTION = 'prelaunch_waitlist';
 const LAUNCH_TARGET_AT = '2026-08-01T07:00:00+01:00';
@@ -36,7 +37,7 @@ type WaitlistLeadRecord = {
 type SaveWaitlistLeadResult = {
   saved: boolean;
   inserted: boolean;
-  storage: 'waitlist_leads' | 'sales_leads' | 'none';
+  storage: 'waitlist_leads' | 'sales_leads' | 'webhook' | 'none';
 };
 
 type WaitlistEmailDelivery = Pick<SendEmailResult, 'sent' | 'provider' | 'status' | 'attempts'>;
@@ -170,9 +171,51 @@ function buildSalesLeadFallbackRecord(request: NextRequest, record: WaitlistLead
   };
 }
 
+async function sendWaitlistWebhook(request: NextRequest, record: WaitlistLeadRecord) {
+  const webhookUrl = process.env.RISCK_COMPLY_LEAD_WEBHOOK_URL;
+  if (!webhookUrl) return false;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: 'waitlist_lead.created',
+        lead: buildSalesLeadFallbackRecord(request, record),
+        waitlist: {
+          email: record.email,
+          companyName: record.company_name,
+          role: record.role,
+          locale: record.locale,
+          launchAt: record.launch_target_at,
+          joinedAt: record.updated_at,
+          source: record.source,
+        },
+      }),
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+
+    return response.ok;
+  } catch {
+    console.error('[prelaunch] waitlist_webhook_failed');
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function saveWaitlistLead(request: NextRequest, record: WaitlistLeadRecord): Promise<SaveWaitlistLeadResult> {
   const supabase = tryCreateAdminClient();
-  if (!supabase) return { saved: false, inserted: false, storage: 'none' };
+  if (!supabase) {
+    const webhookSaved = await sendWaitlistWebhook(request, record);
+    return webhookSaved
+      ? { saved: true, inserted: true, storage: 'webhook' }
+      : { saved: false, inserted: false, storage: 'none' };
+  }
 
   const { data, error } = await supabase
     .from('waitlist_leads')
@@ -208,12 +251,18 @@ async function saveWaitlistLead(request: NextRequest, record: WaitlistLeadRecord
     .select('id')
     .maybeSingle<{ id: string }>();
 
-  if (fallbackError) {
-    console.error('[prelaunch] waitlist_sales_lead_fallback_failed');
-    return { saved: false, inserted: false, storage: 'none' };
+  if (!fallbackError) {
+    return { saved: true, inserted: Boolean(insertedFallback?.id), storage: 'sales_leads' };
   }
 
-  return { saved: true, inserted: Boolean(insertedFallback?.id), storage: 'sales_leads' };
+  console.error('[prelaunch] waitlist_sales_lead_fallback_failed');
+
+  const webhookSaved = await sendWaitlistWebhook(request, record);
+  if (webhookSaved) {
+    return { saved: true, inserted: true, storage: 'webhook' };
+  }
+
+  return { saved: false, inserted: false, storage: 'none' };
 }
 
 async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord): Promise<WaitlistEmailDelivery> {
@@ -289,7 +338,6 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         status: 'received',
-        emailed: false,
         message: 'Your request was received by the Risck Comply team.',
         joinedAt: record.updated_at,
         launchAt: record.launch_target_at,
