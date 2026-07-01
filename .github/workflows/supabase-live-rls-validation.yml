@@ -47,11 +47,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Install dependencies
-        run: |
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          npm ci --ignore-scripts --no-audit --no-fund
-          git checkout -- package-lock.json
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Apply live RLS policy and inventory helper migrations
         if: ${{ inputs.apply_migrations }}
