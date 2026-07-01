@@ -80,6 +80,86 @@ alter table public.sales_lead_activity_events enable row level security;
 create index if not exists sales_lead_activity_events_lead_created_idx on public.sales_lead_activity_events (lead_id, created_at desc);
 create index if not exists sales_lead_activity_events_action_idx on public.sales_lead_activity_events (action);
 
+-- Normalize legacy rows before adding update-time constraints. NOT VALID skips the
+-- initial scan, but PostgreSQL still enforces these checks on future row updates.
+update public.sales_leads
+set
+  message = left(message, 1000),
+  current_process = left(current_process, 700),
+  notes = left(notes, 2000),
+  user_agent = left(user_agent, 300),
+  ip_hint = left(ip_hint, 120)
+where
+  char_length(coalesce(message, '')) > 1000
+  or char_length(coalesce(current_process, '')) > 700
+  or char_length(coalesce(notes, '')) > 2000
+  or char_length(coalesce(user_agent, '')) > 300
+  or char_length(coalesce(ip_hint, '')) > 120;
+
+update public.sales_lead_notes
+set body = left(body, 2000)
+where char_length(body) > 2000;
+
+-- Defensive database constraints for app-layer validation drift. NOT VALID keeps the
+-- migration safe for any existing legacy rows while enforcing the checks on new writes.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'sales_leads_status_allowed') then
+    alter table public.sales_leads add constraint sales_leads_status_allowed
+      check (status in ('new', 'qualified', 'demo_scheduled', 'proposal_sent', 'won', 'lost', 'nurture')) not valid;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'sales_leads_priority_allowed') then
+    alter table public.sales_leads add constraint sales_leads_priority_allowed
+      check (priority in ('low', 'normal', 'high', 'urgent')) not valid;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'sales_leads_estimated_value_non_negative') then
+    alter table public.sales_leads add constraint sales_leads_estimated_value_non_negative
+      check (estimated_value_cents is null or estimated_value_cents >= 0) not valid;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'sales_leads_message_length') then
+    alter table public.sales_leads add constraint sales_leads_message_length
+      check (message is null or char_length(message) <= 1000) not valid;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'sales_leads_current_process_length') then
+    alter table public.sales_leads add constraint sales_leads_current_process_length
+      check (current_process is null or char_length(current_process) <= 700) not valid;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'sales_leads_notes_length') then
+    alter table public.sales_leads add constraint sales_leads_notes_length
+      check (notes is null or char_length(notes) <= 2000) not valid;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'sales_leads_user_agent_length') then
+    alter table public.sales_leads add constraint sales_leads_user_agent_length
+      check (user_agent is null or char_length(user_agent) <= 300) not valid;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'sales_leads_ip_hint_length') then
+    alter table public.sales_leads add constraint sales_leads_ip_hint_length
+      check (ip_hint is null or char_length(ip_hint) <= 120) not valid;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'sales_lead_activities_body_length') then
+    alter table public.sales_lead_activities add constraint sales_lead_activities_body_length
+      check (char_length(body) <= 2000) not valid;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'sales_lead_activities_metadata_length') then
+    alter table public.sales_lead_activities add constraint sales_lead_activities_metadata_length
+      check (char_length(metadata::text) <= 4096) not valid;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'sales_lead_notes_body_length') then
+    alter table public.sales_lead_notes add constraint sales_lead_notes_body_length
+      check (char_length(body) <= 2000) not valid;
+  end if;
+end $$;
+
 -- Keep these internal tables inaccessible to direct anon/authenticated clients.
 -- Next.js server code uses the service role only after app-layer platform-admin checks.
 revoke all on public.sales_leads from anon, authenticated;

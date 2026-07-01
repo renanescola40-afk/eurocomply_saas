@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 
-import { createLeadNote } from '@/server/sales/lead-operations';
+import { assertSalesConsoleFormRequest, createLeadNote } from '@/server/sales/lead-operations';
+
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 type RouteContext = {
   params: Promise<{ locale: string; id: string }>;
@@ -18,6 +21,7 @@ export async function POST(request: Request, context: RouteContext) {
   const { locale, id } = await context.params;
 
   try {
+    assertSalesConsoleFormRequest(request);
     const formData = await request.formData();
     formData.set('leadId', id);
     await createLeadNote(request, formData);
