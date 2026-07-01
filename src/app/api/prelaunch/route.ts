@@ -165,11 +165,11 @@ async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord
   }
 }
 
-async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadRecord) {
+async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadRecord, saveResult: SaveWaitlistLeadResult) {
   try {
     const result = await sendInternalWaitlistNotification({
       to: record.email,
-      companyName: record.company_name,
+      companyName: saveResult.saved ? record.company_name : `${record.company_name} (not saved in database)`,
       role: record.role,
       locale: record.locale,
       joinedAt: record.updated_at,
@@ -204,24 +204,18 @@ export async function POST(request: NextRequest) {
   }
 
   const saveResult = await saveWaitlistLead(record);
-  if (!saveResult.saved) {
-    return noStoreJson(
-      { error: 'We could not save your waitlist request. Please try again later.' },
-      { status: 503 },
-    );
-  }
-
   const emailed = await sendConfirmation(request, record);
-  if (saveResult.inserted) {
-    await notifyInternalTeam(request, record);
-  }
+  const internalNotified = await notifyInternalTeam(request, record, saveResult);
 
   return noStoreJson(
     {
       ok: true,
       status: 'confirmed',
       message: 'You are on the Risck Comply waitlist.',
+      saved: saveResult.saved,
+      inserted: saveResult.inserted,
       emailed,
+      internalNotified,
       joinedAt: record.updated_at,
       launchAt: record.launch_target_at,
     },
