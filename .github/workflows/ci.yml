@@ -20,8 +20,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Refresh lockfile for current package manifest
-        run: npm install --package-lock-only --ignore-scripts
       - run: npm ci --ignore-scripts
       - run: npm run phase3:strict
       - run: npm run phase3:closeout
