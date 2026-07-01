@@ -1,23 +1,16 @@
 import { noStoreJson } from '@/server/security/no-store';
+import { normalizeOrganizationRole, roleHasPermission, type OrganizationPermission, type OrganizationRole } from '@/lib/security/permissions';
 
-export type OrganizationRole = 'owner' | 'admin' | 'editor' | 'viewer' | 'member';
-
-export type OrganizationPermission =
-  | 'manage_billing'
-  | 'manage_team'
-  | 'manage_documents'
-  | 'read_documents'
-  | 'manage_vendors'
-  | 'read_vendors'
-  | 'manage_risks'
-  | 'read_risks'
-  | 'manage_ai_governance'
-  | 'read_ai_governance'
-  | 'manage_ai_incidents'
-  | 'read_ai_incidents'
-  | 'read_audit'
-  | 'export_data'
-  | 'manage_settings';
+export {
+  getOrganizationPermissionMatrix,
+  getRolePermissions,
+  normalizeOrganizationRole,
+  ORGANIZATION_PERMISSIONS,
+  ORGANIZATION_ROLES,
+  roleHasPermission,
+  type OrganizationPermission,
+  type OrganizationRole,
+} from '@/lib/security/permissions';
 
 type MembershipRow = {
   organization_id: string;
@@ -34,118 +27,17 @@ export type PermissionCheckResult = {
   permission: OrganizationPermission;
 };
 
-export const ORGANIZATION_ROLES: OrganizationRole[] = ['owner', 'admin', 'editor', 'member', 'viewer'];
-
-export const ORGANIZATION_PERMISSIONS: OrganizationPermission[] = [
-  'manage_billing',
-  'manage_team',
-  'manage_documents',
-  'read_documents',
-  'manage_vendors',
-  'read_vendors',
-  'manage_risks',
-  'read_risks',
-  'manage_ai_governance',
-  'read_ai_governance',
-  'manage_ai_incidents',
-  'read_ai_incidents',
-  'read_audit',
-  'export_data',
-  'manage_settings',
-];
-
-const ROLE_PERMISSIONS: Record<OrganizationRole, OrganizationPermission[]> = {
-  owner: [
-    'manage_billing',
-    'manage_team',
-    'manage_documents',
-    'read_documents',
-    'manage_vendors',
-    'read_vendors',
-    'manage_risks',
-    'read_risks',
-    'manage_ai_governance',
-    'read_ai_governance',
-    'manage_ai_incidents',
-    'read_ai_incidents',
-    'read_audit',
-    'export_data',
-    'manage_settings',
-  ],
-  admin: [
-    'manage_billing',
-    'manage_team',
-    'manage_documents',
-    'read_documents',
-    'manage_vendors',
-    'read_vendors',
-    'manage_risks',
-    'read_risks',
-    'manage_ai_governance',
-    'read_ai_governance',
-    'manage_ai_incidents',
-    'read_ai_incidents',
-    'read_audit',
-    'export_data',
-    'manage_settings',
-  ],
-  editor: [
-    'manage_documents',
-    'read_documents',
-    'manage_vendors',
-    'read_vendors',
-    'manage_risks',
-    'read_risks',
-    'manage_ai_governance',
-    'read_ai_governance',
-    'manage_ai_incidents',
-    'read_ai_incidents',
-    'export_data',
-  ],
-  member: [
-    'manage_documents',
-    'read_documents',
-    'read_vendors',
-    'read_risks',
-    'read_ai_governance',
-    'read_ai_incidents',
-  ],
-  viewer: ['read_documents', 'read_vendors', 'read_risks', 'read_ai_governance', 'read_ai_incidents'],
-};
-
 function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-export function getRolePermissions(role: string | null | undefined) {
-  return [...ROLE_PERMISSIONS[normalizeOrganizationRole(role)]];
-}
-
-export function getOrganizationPermissionMatrix() {
-  return ORGANIZATION_ROLES.map((role) => ({
-    role,
-    permissions: getRolePermissions(role),
-  }));
-}
-
-export function normalizeOrganizationRole(role: string | null | undefined): OrganizationRole {
-  const normalized = String(role ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/^org:/, '');
-
-  if (['owner', 'proprietario', 'proprietário', 'dono'].includes(normalized)) return 'owner';
-  if (['admin', 'administrator', 'administrador'].includes(normalized)) return 'admin';
-  if (['editor', 'manager', 'gestor'].includes(normalized)) return 'editor';
-  if (['visualizador', 'viewer', 'read_only', 'readonly', 'leitor'].includes(normalized)) return 'viewer';
-  if (['member', 'membro'].includes(normalized)) return 'member';
-
-  return 'viewer';
-}
-
-export function roleHasPermission(role: string | null | undefined, permission: OrganizationPermission) {
-  const normalizedRole = normalizeOrganizationRole(role);
-  return ROLE_PERMISSIONS[normalizedRole].includes(permission);
+  const uuidParts = value.split('-');
+  if (uuidParts.length !== 5) return false;
+  const [first, second, third, fourth, fifth] = uuidParts;
+  return Boolean(
+    first?.match(/^[0-9a-f]{8}$/i) &&
+    second?.match(/^[0-9a-f]{4}$/i) &&
+    third?.match(/^[1-5][0-9a-f]{3}$/i) &&
+    fourth?.match(/^[89ab][0-9a-f]{3}$/i) &&
+    fifth?.match(/^[0-9a-f]{12}$/i),
+  );
 }
 
 async function recordRbacDeniedAuditEvent({

@@ -3,91 +3,116 @@ import {
   assertOrganizationPermission,
   getOrganizationPermissions,
   hasOrganizationPermission,
+  ORGANIZATION_PERMISSIONS,
+  ORGANIZATION_ROLES,
   type OrganizationPermission,
   type OrganizationRole,
 } from '@/lib/security/permissions';
 
-const destructivePermissions: OrganizationPermission[] = [
-  'documents:delete',
-  'vendors:delete',
-  'risks:delete',
-  'tasks:delete',
-  'team:remove',
+const readOnlyPermissions: OrganizationPermission[] = [
+  'read_documents',
+  'read_vendors',
+  'read_risks',
+  'read_ai_governance',
+  'read_ai_incidents',
 ];
 
-const memberDeniedPermissions: OrganizationPermission[] = [
-  ...destructivePermissions,
-  'billing:manage',
-  'team:invite',
-  'audit:read',
-  'organization:update',
+const privilegedPermissions: OrganizationPermission[] = [
+  'manage_billing',
+  'manage_team',
+  'manage_settings',
+  'read_audit',
+  'export_data',
 ];
 
-const writePermissions: OrganizationPermission[] = [
-  'documents:write',
-  'vendors:write',
-  'risks:write',
-  'tasks:write',
+const mutationPermissions: OrganizationPermission[] = [
+  'manage_documents',
+  'manage_vendors',
+  'manage_risks',
+  'manage_ai_governance',
+  'manage_ai_incidents',
 ];
 
 describe('organization permission matrix', () => {
-  it('allows owners to perform every registered permission', () => {
-    for (const permission of getOrganizationPermissions('owner')) {
-      expect(hasOrganizationPermission('owner', permission)).toBe(true);
-      expect(() => assertOrganizationPermission('owner', permission)).not.toThrow();
+  it('allows owners and admins to perform every registered permission', () => {
+    for (const role of ['owner', 'admin'] satisfies OrganizationRole[]) {
+      for (const permission of ORGANIZATION_PERMISSIONS) {
+        expect(hasOrganizationPermission(role, permission)).toBe(true);
+        expect(() => assertOrganizationPermission(role, permission)).not.toThrow();
+      }
     }
   });
 
-  it('allows admins to manage operational and billing workflows', () => {
-    const expectedAdminPermissions: OrganizationPermission[] = [
-      ...destructivePermissions,
-      'billing:manage',
-      'team:invite',
-      'audit:read',
-      'exports:create',
+  it('allows editors to manage operational workflows but not enterprise administration', () => {
+    const allowedEditorPermissions: OrganizationPermission[] = [...readOnlyPermissions, ...mutationPermissions, 'export_data'];
+
+    for (const permission of allowedEditorPermissions) {
+      expect(hasOrganizationPermission('editor', permission), `editor should allow ${permission}`).toBe(true);
+    }
+
+    for (const permission of ['manage_billing', 'manage_team', 'manage_settings', 'read_audit'] satisfies OrganizationPermission[]) {
+      expect(hasOrganizationPermission('editor', permission), `editor should deny ${permission}`).toBe(false);
+      expect(() => assertOrganizationPermission('editor', permission)).toThrow(permission);
+    }
+  });
+
+  it('blocks members from billing, team, settings, audit, exports and privileged mutations', () => {
+    const memberDeniedPermissions: OrganizationPermission[] = [
+      ...privilegedPermissions,
+      'manage_vendors',
+      'manage_risks',
+      'manage_ai_governance',
+      'manage_ai_incidents',
     ];
 
-    for (const permission of expectedAdminPermissions) {
-      expect(hasOrganizationPermission('admin', permission)).toBe(true);
-      expect(() => assertOrganizationPermission('admin', permission)).not.toThrow();
-    }
-  });
-
-  it('blocks members from destructive, billing, team invite and audit actions', () => {
     for (const permission of memberDeniedPermissions) {
-      expect(hasOrganizationPermission('member', permission)).toBe(false);
+      expect(hasOrganizationPermission('member', permission), `member should deny ${permission}`).toBe(false);
       expect(() => assertOrganizationPermission('member', permission)).toThrow(permission);
     }
   });
 
-  it('allows members to contribute operational records and exports', () => {
+  it('allows members to contribute documents and read operational records', () => {
     const allowedMemberPermissions: OrganizationPermission[] = [
-      'organization:read',
-      'team:read',
-      'documents:read',
-      'vendors:read',
-      'risks:read',
-      'tasks:read',
-      'reports:read',
-      'exports:create',
-      ...writePermissions,
+      'manage_documents',
+      'read_documents',
+      'read_vendors',
+      'read_risks',
+      'read_ai_governance',
+      'read_ai_incidents',
     ];
 
     for (const permission of allowedMemberPermissions) {
-      expect(hasOrganizationPermission('member', permission)).toBe(true);
+      expect(hasOrganizationPermission('member', permission), `member should allow ${permission}`).toBe(true);
       expect(() => assertOrganizationPermission('member', permission)).not.toThrow();
     }
   });
 
-  it('denies unauthenticated or unknown roles', () => {
-    expect(hasOrganizationPermission(null, 'organization:read')).toBe(false);
-    expect(hasOrganizationPermission(undefined, 'organization:read')).toBe(false);
-    expect(() => assertOrganizationPermission(null, 'organization:read')).toThrow('organization:read');
+  it('keeps viewers read-only', () => {
+    for (const permission of readOnlyPermissions) {
+      expect(hasOrganizationPermission('viewer', permission), `viewer should allow ${permission}`).toBe(true);
+    }
+
+    for (const permission of [...privilegedPermissions, ...mutationPermissions]) {
+      expect(hasOrganizationPermission('viewer', permission), `viewer should deny ${permission}`).toBe(false);
+    }
   });
 
-  it('documents the supported roles', () => {
-    const supportedRoles: OrganizationRole[] = ['owner', 'admin', 'member'];
+  it('denies unauthenticated roles instead of silently granting viewer permissions', () => {
+    expect(hasOrganizationPermission(null, 'read_documents')).toBe(false);
+    expect(hasOrganizationPermission(undefined, 'manage_billing')).toBe(false);
+    expect(() => assertOrganizationPermission(null, 'read_documents')).toThrow('read_documents');
+    expect(() => assertOrganizationPermission(undefined, 'manage_billing')).toThrow('manage_billing');
+  });
 
-    expect(supportedRoles).toEqual(['owner', 'admin', 'member']);
+  it('documents the supported enterprise roles', () => {
+    expect(ORGANIZATION_ROLES).toEqual(['owner', 'admin', 'editor', 'member', 'viewer']);
+    expect(new Set(ORGANIZATION_ROLES).size).toBe(ORGANIZATION_ROLES.length);
+  });
+
+  it('returns copies of permission arrays', () => {
+    const permissions = getOrganizationPermissions('viewer');
+    permissions.push('manage_billing');
+
+    expect(getOrganizationPermissions('viewer')).not.toContain('manage_billing');
   });
 });

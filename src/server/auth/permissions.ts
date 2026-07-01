@@ -1,35 +1,84 @@
-import { assertOrganizationPermission, type OrganizationPermission, type OrganizationRole } from '@/lib/security/permissions';
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import {
+  assertOrganizationPermission,
+  getOrganizationMembership,
+  type OrganizationPermission,
+  type OrganizationRole,
+} from '@/server/security/rbac';
 
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+export type LegacyOrganizationPermission =
+  | 'organization:read'
+  | 'organization:update'
+  | 'team:read'
+  | 'team:invite'
+  | 'team:remove'
+  | 'billing:manage'
+  | 'documents:read'
+  | 'documents:write'
+  | 'documents:delete'
+  | 'vendors:read'
+  | 'vendors:write'
+  | 'vendors:delete'
+  | 'risks:read'
+  | 'risks:write'
+  | 'risks:delete'
+  | 'tasks:read'
+  | 'tasks:write'
+  | 'tasks:delete'
+  | 'reports:read'
+  | 'exports:create'
+  | 'audit:read';
+
+const LEGACY_PERMISSION_MAP: Record<LegacyOrganizationPermission, OrganizationPermission> = {
+  'organization:read': 'read_ai_governance',
+  'organization:update': 'manage_settings',
+  'team:read': 'manage_team',
+  'team:invite': 'manage_team',
+  'team:remove': 'manage_team',
+  'billing:manage': 'manage_billing',
+  'documents:read': 'read_documents',
+  'documents:write': 'manage_documents',
+  'documents:delete': 'manage_documents',
+  'vendors:read': 'read_vendors',
+  'vendors:write': 'manage_vendors',
+  'vendors:delete': 'manage_vendors',
+  'risks:read': 'read_risks',
+  'risks:write': 'manage_risks',
+  'risks:delete': 'manage_risks',
+  'tasks:read': 'read_ai_governance',
+  'tasks:write': 'manage_ai_governance',
+  'tasks:delete': 'manage_ai_governance',
+  'reports:read': 'read_ai_governance',
+  'exports:create': 'export_data',
+  'audit:read': 'read_audit',
+};
+
+export type ServerActionPermission = OrganizationPermission | LegacyOrganizationPermission;
+
+function normalizeServerActionPermission(permission: ServerActionPermission): OrganizationPermission {
+  return LEGACY_PERMISSION_MAP[permission as LegacyOrganizationPermission] ?? (permission as OrganizationPermission);
 }
 
 export async function getOrganizationRoleForUser(organizationId: string, userId: string): Promise<OrganizationRole | null> {
-  const supabase = tryCreateAdminClient();
+  const { membership, error } = await getOrganizationMembership(userId, organizationId);
 
-  if (!supabase) {
-    console.error('[auth] Missing Supabase admin client while checking organization permissions');
+  if (error || !membership?.role) {
     return null;
   }
 
-  const identityColumn = isUuid(userId) ? 'user_id' : 'clerk_user_id';
-  const { data, error } = await supabase
-    .from('organization_members')
-    .select('role')
-    .eq('organization_id', organizationId)
-    .eq(identityColumn, userId)
-    .maybeSingle();
-
-  if (error || !data?.role) {
-    return null;
-  }
-
-  return data.role as OrganizationRole;
+  return membership.role as OrganizationRole;
 }
 
-export async function assertCurrentUserCan(organizationId: string, userId: string, permission: OrganizationPermission) {
-  const role = await getOrganizationRoleForUser(organizationId, userId);
-  assertOrganizationPermission(role, permission);
-  return role;
+export async function assertCurrentUserCan(organizationId: string, userId: string, permission: ServerActionPermission) {
+  const requiredPermission = normalizeServerActionPermission(permission);
+  const result = await assertOrganizationPermission({
+    userId,
+    organizationId,
+    permission: requiredPermission,
+  });
+
+  if (!result.ok) {
+    throw new Error(`Missing required organization permission: ${permission}`);
+  }
+
+  return result.role ?? null;
 }
