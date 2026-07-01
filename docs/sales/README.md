@@ -24,6 +24,13 @@ This folder is the source of truth for GTM positioning, sales demos, discovery c
 - Security questionnaire center: `/<locale>/security-questionnaire`
 - Printable one-pager: `/sales/risck-comply-one-pager.html`
 
+## Internal Sales Console
+
+- Path: `/<locale>/admin/sales/leads`
+- Purpose: private Early Access demo follow-up for the RISCK COMPLY team.
+- Boundary: not a customer-facing product module.
+- Language: use “Sales Console”, “Lead Operations”, “Demo Pipeline” or “Early Access Pipeline”.
+
 ## Positioning
 
 **RISCK COMPLY helps European companies prepare AI governance evidence by organizing AI systems, risk, owners, policies and audit-ready records in one workspace.**
