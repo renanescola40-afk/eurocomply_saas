@@ -60,7 +60,18 @@ jobs:
             'npm run security:ci',
             'npm run release:deployment-smoke',
             'npm run release:rollback:dry-run',
-            'npm run release:readiness',
+          ];
+          const requiredReadinessSteps = [
+            'npm run security:release-candidate',
+            'npm run security:release-evidence',
+            'npm run security:release-approval',
+            'npm run security:release-go-no-go',
+            'npm run security:release-rollback',
+            'npm run security:release-incident-response',
+            'npm run security:release-post-incident',
+            'npm run security:release-support-readiness',
+            'npm run security:release-operations',
+            'npm run security:p0-runtime-gap',
           ];
           const requiredEvidence = [
             'deployment-smoke-validation.json',
@@ -73,6 +84,11 @@ jobs:
           }
           for (const step of requiredSteps) {
             if (!runner.includes(step)) failures.push(`missing production-final step ${step}`);
+          }
+          if (!runner.includes('npm run release:readiness')) {
+            for (const step of requiredReadinessSteps) {
+              if (!runner.includes(step)) failures.push(`missing production-final readiness step ${step}`);
+            }
           }
           for (const evidence of requiredEvidence) {
             if (!runner.includes(evidence)) failures.push(`missing evidence reference ${evidence}`);
