@@ -46,16 +46,20 @@ describe('prelaunch waitlist capture resilience', () => {
     expect(finalFailureIndex).toBeGreaterThan(salesFallbackFailureIndex);
   });
 
-  it('does not immediately fail public submissions before trying the internal notification fallback', () => {
+  it('notifies the internal team and returns a received state when durable capture is degraded', () => {
     const source = routeSource();
-    const failedSaveIndex = source.indexOf('if (!saveResult.saved) {');
-    const notifyIndex = source.indexOf('const fallbackNotification = await notifyInternalTeam(request, record);');
-    const unavailableIndex = source.indexOf("{ error: 'Unable to join waitlist right now.' }");
+    const saveResultIndex = source.indexOf('const saveResult = await saveWaitlistLead(request, record);');
+    const notifyPredicateIndex = source.indexOf('return saveResult.inserted || !saveResult.saved;');
+    const notifyIndex = source.indexOf('await notifyInternalTeam(request, record);');
+    const receivedStatusIndex = source.indexOf("status: saveResult.saved ? 'confirmed' : 'received'");
+    const receivedMessageIndex = source.indexOf("'Your request was received by the Risck Comply team.'");
+    const acceptedStatusIndex = source.indexOf('{ status: saveResult.saved ? 201 : 202 }');
 
-    expect(failedSaveIndex).toBeGreaterThan(-1);
-    expect(notifyIndex).toBeGreaterThan(failedSaveIndex);
-    expect(unavailableIndex).toBeGreaterThan(notifyIndex);
-    expect(source).toContain("status: 'received'");
-    expect(source).toContain('{ status: 202 }');
+    expect(saveResultIndex).toBeGreaterThan(-1);
+    expect(notifyPredicateIndex).toBeGreaterThan(-1);
+    expect(notifyIndex).toBeGreaterThan(saveResultIndex);
+    expect(receivedStatusIndex).toBeGreaterThan(notifyIndex);
+    expect(receivedMessageIndex).toBeGreaterThan(receivedStatusIndex);
+    expect(acceptedStatusIndex).toBeGreaterThan(receivedMessageIndex);
   });
 });
