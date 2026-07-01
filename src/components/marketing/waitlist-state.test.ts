@@ -37,16 +37,17 @@ describe('waitlist state resolver', () => {
     expect(result).toEqual({ status: 'success', message: 'saved' });
   });
 
-  it('keeps the page branch order aligned with the tri-state contract', () => {
+  it('wires the waitlist page through the shared response-state resolver', () => {
     const source = readFileSync('src/components/marketing/waitlist-page.tsx', 'utf8');
     const flag = 'email' + 'ed';
-    const positiveBranch = `payload?.${flag} === true`;
-    const fallbackBranch = `payload?.${flag} === false`;
 
-    expect(source).toContain(positiveBranch);
-    expect(source).toContain(fallbackBranch);
-    expect(source).toContain('copy.form.success');
-    expect(source.indexOf(positiveBranch)).toBeLessThan(source.indexOf(fallbackBranch));
-    expect(source.indexOf(fallbackBranch)).toBeLessThan(source.lastIndexOf('copy.form.success'));
+    expect(source).toContain("import { resolveWaitlistSubmitFeedback } from '@/components/marketing/waitlist-state';");
+    expect(source).toContain('const feedback = resolveWaitlistSubmitFeedback({');
+    expect(source).toContain(`signal: payload?.${flag}`);
+    expect(source).toContain('successMessage: copy.form.success');
+    expect(source).toContain('confirmedMessage: copy.form.emailSuccess');
+    expect(source).toContain('warningMessage: emailWarningMessage(activeLocale, payload)');
+    expect(source).toContain('setMessage(feedback.message)');
+    expect(source).toContain('setStatus(feedback.status)');
   });
 });
