@@ -205,7 +205,7 @@ async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadReco
 }
 
 function shouldNotifyInternalTeam(saveResult: SaveWaitlistLeadResult) {
-  return saveResult.inserted || !saveResult.saved;
+  return saveResult.inserted;
 }
 
 export async function POST(request: NextRequest) {
@@ -227,6 +227,10 @@ export async function POST(request: NextRequest) {
   }
 
   const saveResult = await saveWaitlistLead(record);
+  if (!saveResult.saved) {
+    return noStoreJson({ error: 'Unable to join waitlist right now.' }, { status: 503 });
+  }
+
   const confirmation = await sendConfirmation(request, record);
 
   if (shouldNotifyInternalTeam(saveResult)) {
