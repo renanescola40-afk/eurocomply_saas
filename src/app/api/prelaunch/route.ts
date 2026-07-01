@@ -36,6 +36,7 @@ type WaitlistLeadRecord = {
 type SaveWaitlistLeadResult = {
   saved: boolean;
   inserted: boolean;
+  storage: 'waitlist_leads' | 'sales_leads' | 'none';
 };
 
 type WaitlistEmailDelivery = Pick<SendEmailResult, 'sent' | 'provider' | 'status' | 'attempts'>;
@@ -147,9 +148,31 @@ function buildRecord(body: Record<string, unknown>): WaitlistLeadRecord | null {
   };
 }
 
-async function saveWaitlistLead(record: WaitlistLeadRecord): Promise<SaveWaitlistLeadResult> {
+function buildSalesLeadFallbackRecord(request: NextRequest, record: WaitlistLeadRecord) {
+  return {
+    full_name: record.company_name,
+    work_email: record.email,
+    company_name: record.company_name,
+    role: record.role,
+    company_size: null,
+    region: null,
+    compliance_drivers: 'Early access waitlist / EU AI Act readiness',
+    timeline: 'prelaunch_waitlist',
+    current_process: null,
+    message: 'Captured from the public prelaunch waitlist form after the dedicated waitlist table was unavailable.',
+    source: 'prelaunch_waitlist',
+    locale: record.locale,
+    consent_to_contact: true,
+    user_agent: text(request.headers.get('user-agent'), 300),
+    ip_hint: getClientHint(request),
+    status: 'new',
+    notes: 'Fallback capture: verify public.waitlist_leads migration in production Supabase.',
+  };
+}
+
+async function saveWaitlistLead(request: NextRequest, record: WaitlistLeadRecord): Promise<SaveWaitlistLeadResult> {
   const supabase = tryCreateAdminClient();
-  if (!supabase) return { saved: false, inserted: false };
+  if (!supabase) return { saved: false, inserted: false, storage: 'none' };
 
   const { data, error } = await supabase
     .from('waitlist_leads')
@@ -157,12 +180,19 @@ async function saveWaitlistLead(record: WaitlistLeadRecord): Promise<SaveWaitlis
     .select('email')
     .maybeSingle<{ email: string }>();
 
-  if (error) {
-    console.error('[prelaunch] waitlist_lead_insert_failed');
-    return { saved: false, inserted: false };
+  if (!error) {
+    return { saved: true, inserted: Boolean(data?.email), storage: 'waitlist_leads' };
   }
 
-  return { saved: true, inserted: Boolean(data?.email) };
+  console.error('[prelaunch] waitlist_lead_insert_failed');
+
+  const { error: fallbackError } = await supabase.from('sales_leads').insert(buildSalesLeadFallbackRecord(request, record));
+  if (fallbackError) {
+    console.error('[prelaunch] waitlist_sales_lead_fallback_failed');
+    return { saved: false, inserted: false, storage: 'none' };
+  }
+
+  return { saved: true, inserted: true, storage: 'sales_leads' };
 }
 
 async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord): Promise<WaitlistEmailDelivery> {
@@ -226,9 +256,25 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Please provide company name, work email and role.' }, { status: 400 });
   }
 
-  const saveResult = await saveWaitlistLead(record);
+  const saveResult = await saveWaitlistLead(request, record);
   if (!saveResult.saved) {
-    return noStoreJson({ error: 'Unable to join waitlist right now.' }, { status: 503 });
+    const fallbackNotification = await notifyInternalTeam(request, record);
+
+    if (!fallbackNotification.sent) {
+      return noStoreJson({ error: 'Unable to join waitlist right now.' }, { status: 503 });
+    }
+
+    return noStoreJson(
+      {
+        ok: true,
+        status: 'received',
+        emailed: false,
+        message: 'Your request was received by the Risck Comply team.',
+        joinedAt: record.updated_at,
+        launchAt: record.launch_target_at,
+      },
+      { status: 202 },
+    );
   }
 
   const confirmation = await sendConfirmation(request, record);
