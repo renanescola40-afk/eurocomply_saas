@@ -107,7 +107,7 @@ describe('sales lead queries', () => {
 
   it('loads a lead detail without selecting raw network hints', async () => {
     const query = {
-      select: vi.fn(() => query),
+      select: vi.fn((_columns: string) => query),
       eq: vi.fn(() => query),
       is: vi.fn(() => query),
       maybeSingle: vi.fn(async () => ({ data: { id: leadId, company_name: 'Acme' }, error: null })),
@@ -116,9 +116,10 @@ describe('sales lead queries', () => {
     mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => query) });
 
     const detail = await getSalesLeadDetail(leadId);
+    const selectedColumns = query.select.mock.calls.at(0)?.[0] ?? '';
 
     expect(detail?.id).toBe(leadId);
-    expect(query.select.mock.calls[0][0]).not.toContain('ip_hint');
-    expect(query.select.mock.calls[0][0]).not.toContain('user_agent');
+    expect(selectedColumns).not.toContain('ip_hint');
+    expect(selectedColumns).not.toContain('user_agent');
   });
 });
