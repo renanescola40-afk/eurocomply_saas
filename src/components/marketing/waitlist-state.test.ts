@@ -15,7 +15,7 @@ describe('waitlist state resolver', () => {
     expect(result).toEqual({ status: 'success', message: 'positive' });
   });
 
-  it('maps false signal to warning fallback', () => {
+  it('keeps a saved submission successful when confirmation is unavailable', () => {
     const result = resolveWaitlistSubmitFeedback({
       signal: false,
       successMessage: 'saved',
@@ -23,7 +23,7 @@ describe('waitlist state resolver', () => {
       warningMessage: 'fallback',
     });
 
-    expect(result).toEqual({ status: 'warning', message: 'fallback' });
+    expect(result).toEqual({ status: 'success', message: 'saved' });
   });
 
   it('maps missing signal to neutral success', () => {
