@@ -32,11 +32,6 @@ type WaitlistLeadRecord = {
   updated_at: string;
 };
 
-type WaitlistSaveResult = {
-  saved: boolean;
-  totalLeads: number | null;
-};
-
 function getClientHint(request: NextRequest) {
   return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 }
@@ -128,9 +123,9 @@ function buildRecord(body: Record<string, unknown>): WaitlistLeadRecord | null {
   };
 }
 
-async function saveWaitlistLead(record: WaitlistLeadRecord): Promise<WaitlistSaveResult> {
+async function saveWaitlistLead(record: WaitlistLeadRecord) {
   const supabase = tryCreateAdminClient();
-  if (!supabase) return { saved: false, totalLeads: null };
+  if (!supabase) return false;
 
   const { error } = await supabase
     .from('waitlist_leads')
@@ -138,18 +133,10 @@ async function saveWaitlistLead(record: WaitlistLeadRecord): Promise<WaitlistSav
 
   if (error) {
     console.error('[prelaunch] Supabase insert failed', { reason: 'waitlist_lead_insert_failed' });
-    return { saved: false, totalLeads: null };
+    return false;
   }
 
-  const { count, error: countError } = await supabase
-    .from('waitlist_leads')
-    .select('email', { count: 'exact', head: true });
-
-  if (countError) {
-    console.error('[prelaunch] Supabase count failed', { reason: 'waitlist_lead_count_failed' });
-  }
-
-  return { saved: true, totalLeads: typeof count === 'number' ? count : null };
+  return true;
 }
 
 async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord) {
@@ -171,7 +158,7 @@ async function sendConfirmation(request: NextRequest, record: WaitlistLeadRecord
   }
 }
 
-async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadRecord, totalLeads: number | null) {
+async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadRecord) {
   try {
     const result = await sendInternalWaitlistNotification({
       to: record.email,
@@ -181,7 +168,7 @@ async function notifyInternalTeam(request: NextRequest, record: WaitlistLeadReco
       joinedAt: record.updated_at,
       launchAt: record.launch_target_at,
       waitlistUrl: getWaitlistUrl(request, record.locale),
-      totalLeads,
+      totalLeads: null,
     });
 
     return result.sent;
@@ -209,9 +196,11 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Please provide company name, work email and role.' }, { status: 400 });
   }
 
-  const { saved, totalLeads } = await saveWaitlistLead(record);
+  const saved = await saveWaitlistLead(record);
   const emailed = await sendConfirmation(request, record);
-  const internalNotified = await notifyInternalTeam(request, record, totalLeads);
+  if (saved) {
+    await notifyInternalTeam(request, record);
+  }
 
   return noStoreJson(
     {
@@ -220,8 +209,6 @@ export async function POST(request: NextRequest) {
       message: 'You are on the Risck Comply waitlist.',
       saved,
       emailed,
-      internalNotified,
-      totalLeads,
       joinedAt: record.updated_at,
       launchAt: record.launch_target_at,
     },
