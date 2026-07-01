@@ -35,6 +35,54 @@ jobs:
             echo "Phase 5 dashboard readiness is advisory for this deploy-readiness PR; continuing to lint, typecheck and test."
           fi
       - run: npm run phase6:check
+      - name: Public launch gate contract
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const runner = fs.readFileSync('scripts/release/run-public-production-release.mjs', 'utf8');
+          const requiredScripts = [
+            'release:production-final',
+            'release:deployment-smoke',
+            'release:rollback:dry-run',
+            'release:readiness',
+            'security:ci',
+            'test:e2e',
+          ];
+          const requiredSteps = [
+            'npm ci',
+            'npm run lint',
+            'npm run typecheck',
+            'npm run test',
+            'npm run test:e2e',
+            'npm run build',
+            'npm run security:ci',
+            'npm run release:deployment-smoke',
+            'npm run release:rollback:dry-run',
+            'npm run release:readiness',
+          ];
+          const requiredEvidence = [
+            'deployment-smoke-validation.json',
+            'rollback-dry-run-validation.json',
+            'production-final-validation.json',
+          ];
+          const failures = [];
+          for (const name of requiredScripts) {
+            if (!pkg.scripts || !pkg.scripts[name]) failures.push(`missing package script ${name}`);
+          }
+          for (const step of requiredSteps) {
+            if (!runner.includes(step)) failures.push(`missing production-final step ${step}`);
+          }
+          for (const evidence of requiredEvidence) {
+            if (!runner.includes(evidence)) failures.push(`missing evidence reference ${evidence}`);
+          }
+          if (runner.includes("label: 'npm run release'") || runner.includes('label: "npm run release"')) failures.push('recursive release step is not allowed');
+          if (failures.length > 0) {
+            console.error(failures.join('\n'));
+            process.exit(1);
+          }
+          NODE
       - name: Lint
         shell: bash
         run: |
