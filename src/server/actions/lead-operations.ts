@@ -1,1 +1,1 @@
-export async function createLeadOperationNoteAction() {}
+export { createLeadNote as createLeadOperationNoteAction } from '@/server/sales/lead-operations';
