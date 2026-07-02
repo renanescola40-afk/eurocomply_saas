@@ -75,6 +75,9 @@ jobs:
             supabase/migrations/20260624223000_live_rls_audit_entity_id_text.sql \
             supabase/migrations/20260624170400_live_rls_validation_drop_apply_helpers.sql \
             supabase/migrations/20260624170500_live_rls_validation_policy_patch.sql \
+            supabase/migrations/20260625193000_clerk_organization_identity_mapping.sql \
+            supabase/migrations/20260626120000_clerk_uuid_safe_rls_helpers.sql \
+            supabase/migrations/20260629110000_enterprise_tenant_rls_cleanup_indexes.sql \
             supabase/migrations/20260701150000_supabase_production_rls_proof_hardening.sql \
             supabase/migrations/20260702112000_apply_invitations_live_rls_validation.sql
           do
