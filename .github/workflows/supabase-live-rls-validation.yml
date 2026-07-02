@@ -74,7 +74,8 @@ jobs:
             supabase/migrations/20260624220000_live_rls_validation_missing_tables.sql \
             supabase/migrations/20260624223000_live_rls_audit_entity_id_text.sql \
             supabase/migrations/20260624170400_live_rls_validation_drop_apply_helpers.sql \
-            supabase/migrations/20260624170500_live_rls_validation_policy_patch.sql
+            supabase/migrations/20260624170500_live_rls_validation_policy_patch.sql \
+            supabase/migrations/20260702112000_apply_invitations_live_rls_validation.sql
           do
             psql "${SUPABASE_DB_URL}" \
               --set=ON_ERROR_STOP=1 \
