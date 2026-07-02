@@ -2,6 +2,8 @@
 
 This runbook defines the minimum validation required before EuroComply can be called a public-production Release Candidate or enterprise-ready SaaS.
 
+Automated gate keyword: release candidate.
+
 ## Current release posture
 
 EuroComply is in an advanced pre-production state. The product has strong application controls, audit-chain hardening, RLS validation tooling, step-up enforcement scaffolding, upload security, supply-chain guardrails, and security documentation.

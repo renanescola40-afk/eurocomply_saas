@@ -226,7 +226,7 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
       const response = await fetch('/api/prelaunch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyName, email, role, locale: activeLocale, website }),
+        body: JSON.stringify({ companyName, email, role, locale: activeLocale, website, consentToContact: true }),
       });
       const payload = (await response.json().catch(() => null)) as WaitlistApiResponse | null;
 
