@@ -11,6 +11,20 @@ on:
         description: Keep true for public launch validation
         required: true
         default: 'true'
+      production_url:
+        description: Public deployment URL to validate
+        required: true
+        default: https://risckcomply.com
+      rollback_url:
+        description: Previously validated rollback deployment URL
+        required: true
+      rollback_sha:
+        description: Previously validated rollback commit SHA
+        required: true
+      rollback_validated:
+        description: Set true only after rollback target was manually verified
+        required: true
+        default: 'false'
 
 permissions:
   contents: read
@@ -19,6 +33,14 @@ env:
   RELEASE_TARGET: public-production
   RELEASE_RUNTIME_TARGET: ${{ inputs.release_target }}
   RELEASE_REQUIRE_RUNTIME_EVIDENCE: ${{ inputs.require_runtime_evidence }}
+  RELEASE_DEPLOYMENT_URL: ${{ inputs.production_url }}
+  RELEASE_PRODUCTION_URL: ${{ inputs.production_url }}
+  NEXT_PUBLIC_APP_URL: ${{ inputs.production_url }}
+  NEXT_PUBLIC_SITE_URL: ${{ inputs.production_url }}
+  RELEASE_ROLLBACK_TARGET_URL: ${{ inputs.rollback_url }}
+  RELEASE_ROLLBACK_TARGET_SHA: ${{ inputs.rollback_sha }}
+  RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ inputs.rollback_validated }}
+  HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
 
 jobs:
   production-final:
@@ -35,6 +57,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      - name: Install Playwright browser
+        run: npx playwright install chromium
 
       - name: Run public production final gate
         run: npm run release:production-final
