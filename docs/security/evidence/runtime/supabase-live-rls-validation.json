@@ -1,23 +1,32 @@
 {
   "evidenceItem": "supabase-live-rls-validation",
-  "status": "Open",
-  "outcome": "not_run",
-  "timestamp": "2026-07-01T19:14:31Z",
-  "generatedAt": "2026-07-01T19:14:31Z",
+  "status": "Complete",
+  "outcome": "passed",
+  "timestamp": "2026-07-02T22:12:44Z",
+  "generatedAt": "2026-07-02T22:12:44Z",
   "runner": "scripts/security/run-supabase-live-tenant-isolation.mjs",
-  "reviewer": "security-automation",
-  "reviewedAt": "2026-07-01T19:14:31Z",
-  "commandUsed": "node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register",
-  "commitSha": "pending-live-run",
-  "supabaseProjectReference": "redacted:not-executed",
+  "reviewer": "renanescola40-afk",
+  "reviewedAt": "2026-07-02T22:12:44Z",
+  "commandUsed": "node scripts/security/run-supabase-live-tenant-isolation.mjs",
+  "commitSha": "406d10854afef4f898fc074bb53bc6103c21cc07",
+  "supabaseProjectReference": "redacted:sha256:bd5ab31fe970bac1",
   "supabaseProjectReferenceRedacted": true,
-  "summary": "Expanded Supabase tenant-isolation evidence is intentionally Open until the new live validator runs against staging or production with the current migrations applied.",
+  "summary": "Live Supabase production/staging RLS validation passed for customer tenant tables, profiles, and global reference tables.",
   "redactionConfirmation": "Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "docs/security/evidence/runtime/supabase-live-rls-validation.json"
   ],
-  "productionGate": "P0 production release remains blocked until this evidence is regenerated as Complete/passed by the live Supabase tenant-isolation runner.",
-  "controlsVerified": [],
+  "productionGate": "P0 production release may proceed only if all other P0 runtime evidence is satisfied.",
+  "controlsVerified": [
+    "RLS enabled on customer, profiles, and reference tables",
+    "Tenant A cannot read Tenant B rows",
+    "Tenant A cannot insert Tenant B scoped rows",
+    "Tenant A cannot update Tenant B rows",
+    "Tenant A cannot delete Tenant B rows",
+    "Owner/admin/member behavior verified",
+    "Backend-owned tables are not client-writable",
+    "Regulatory updates are authenticated read-only"
+  ],
   "customerTenantTables": [
     "organizations",
     "organization_members",
@@ -30,7 +39,8 @@
     "audit_logs",
     "invitations",
     "onboarding_activation_runs",
-    "monitoring_preferences"
+    "monitoring_preferences",
+    "profiles"
   ],
   "globalReferenceTables": [
     "regulatory_updates"
@@ -48,45 +58,1748 @@
     "invitations",
     "onboarding_activation_runs",
     "monitoring_preferences",
+    "profiles",
     "regulatory_updates"
   ],
   "optionalTables": [
     "tasks",
     "audit_events",
     "notifications",
-    "profiles",
     "ai_incidents",
     "organization_invites"
   ],
-  "tablesReviewed": [],
-  "testsRun": [],
-  "testsPassed": [],
-  "testsFailed": [],
-  "testCases": [],
-  "failures": [
-    "Live Supabase environment variables were not available in this repository-editing session, so the validator was not executed.",
-    "Previous Complete evidence covered an older table set and is invalidated for the expanded production/staging RLS proof requested here."
+  "tablesReviewed": [
+    {
+      "table": "organizations",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "organization_members",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "ai_systems",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "compliance_tasks",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "documents",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "risks",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "vendors",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "subscriptions",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "audit_logs",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "invitations",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "onboarding_activation_runs",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "monitoring_preferences",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "profiles",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "regulatory_updates",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": false,
+        "crossTenantInsertDenied": false,
+        "crossTenantUpdateDenied": false,
+        "crossTenantDeleteDenied": false,
+        "sameTenantReadAllowed": false,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "tasks",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "audit_events",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "notifications",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    },
+    {
+      "table": "ai_incidents",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
+    }
   ],
+  "testsRun": [
+    "organizations:rls_enabled",
+    "organization_members:rls_enabled",
+    "ai_systems:rls_enabled",
+    "compliance_tasks:rls_enabled",
+    "documents:rls_enabled",
+    "risks:rls_enabled",
+    "vendors:rls_enabled",
+    "subscriptions:rls_enabled",
+    "audit_logs:rls_enabled",
+    "invitations:rls_enabled",
+    "onboarding_activation_runs:rls_enabled",
+    "monitoring_preferences:rls_enabled",
+    "profiles:rls_enabled",
+    "regulatory_updates:rls_enabled",
+    "tasks:rls_enabled",
+    "audit_events:rls_enabled",
+    "notifications:rls_enabled",
+    "ai_incidents:rls_enabled",
+    "organizations:cross_tenant_read",
+    "organizations:cross_tenant_insert",
+    "organizations:cross_tenant_update",
+    "organizations:cross_tenant_delete",
+    "organizations:same_tenant_read",
+    "organization_members:cross_tenant_read",
+    "organization_members:cross_tenant_insert",
+    "organization_members:cross_tenant_update",
+    "organization_members:cross_tenant_delete",
+    "organization_members:same_tenant_read",
+    "ai_systems:cross_tenant_read",
+    "ai_systems:cross_tenant_insert",
+    "ai_systems:cross_tenant_update",
+    "ai_systems:cross_tenant_delete",
+    "ai_systems:same_tenant_read",
+    "ai_systems:same_tenant_insert",
+    "compliance_tasks:cross_tenant_read",
+    "compliance_tasks:cross_tenant_insert",
+    "compliance_tasks:cross_tenant_update",
+    "compliance_tasks:cross_tenant_delete",
+    "compliance_tasks:same_tenant_read",
+    "compliance_tasks:same_tenant_insert",
+    "documents:cross_tenant_read",
+    "documents:cross_tenant_insert",
+    "documents:cross_tenant_update",
+    "documents:cross_tenant_delete",
+    "documents:same_tenant_read",
+    "documents:same_tenant_insert",
+    "risks:cross_tenant_read",
+    "risks:cross_tenant_insert",
+    "risks:cross_tenant_update",
+    "risks:cross_tenant_delete",
+    "risks:same_tenant_read",
+    "risks:same_tenant_insert",
+    "vendors:cross_tenant_read",
+    "vendors:cross_tenant_insert",
+    "vendors:cross_tenant_update",
+    "vendors:cross_tenant_delete",
+    "vendors:same_tenant_read",
+    "vendors:same_tenant_insert",
+    "subscriptions:cross_tenant_read",
+    "subscriptions:cross_tenant_insert",
+    "subscriptions:cross_tenant_update",
+    "subscriptions:cross_tenant_delete",
+    "subscriptions:same_tenant_read_backend_only",
+    "subscriptions:same_tenant_insert_denied",
+    "subscriptions:same_tenant_update_denied",
+    "subscriptions:same_tenant_delete_denied",
+    "audit_logs:cross_tenant_read",
+    "audit_logs:cross_tenant_insert",
+    "audit_logs:cross_tenant_update",
+    "audit_logs:cross_tenant_delete",
+    "audit_logs:same_tenant_read_backend_only",
+    "audit_logs:same_tenant_insert_denied",
+    "audit_logs:same_tenant_update_denied",
+    "audit_logs:same_tenant_delete_denied",
+    "invitations:cross_tenant_read",
+    "invitations:cross_tenant_insert",
+    "invitations:cross_tenant_update",
+    "invitations:cross_tenant_delete",
+    "invitations:same_tenant_read_backend_only",
+    "invitations:same_tenant_insert_denied",
+    "invitations:same_tenant_update_denied",
+    "invitations:same_tenant_delete_denied",
+    "onboarding_activation_runs:cross_tenant_read",
+    "onboarding_activation_runs:cross_tenant_insert",
+    "onboarding_activation_runs:cross_tenant_update",
+    "onboarding_activation_runs:cross_tenant_delete",
+    "onboarding_activation_runs:same_tenant_read",
+    "onboarding_activation_runs:same_tenant_insert",
+    "monitoring_preferences:cross_tenant_read",
+    "monitoring_preferences:cross_tenant_insert",
+    "monitoring_preferences:cross_tenant_update",
+    "monitoring_preferences:cross_tenant_delete",
+    "monitoring_preferences:same_tenant_read",
+    "monitoring_preferences:same_tenant_insert",
+    "profiles:cross_tenant_read",
+    "profiles:cross_tenant_insert",
+    "profiles:cross_tenant_update",
+    "profiles:cross_tenant_delete",
+    "profiles:same_tenant_read",
+    "tasks:cross_tenant_read",
+    "tasks:cross_tenant_insert",
+    "tasks:cross_tenant_update",
+    "tasks:cross_tenant_delete",
+    "tasks:same_tenant_read",
+    "tasks:same_tenant_insert",
+    "audit_events:cross_tenant_read",
+    "audit_events:cross_tenant_insert",
+    "audit_events:cross_tenant_update",
+    "audit_events:cross_tenant_delete",
+    "audit_events:same_tenant_read_backend_only",
+    "audit_events:same_tenant_insert_denied",
+    "audit_events:same_tenant_update_denied",
+    "audit_events:same_tenant_delete_denied",
+    "notifications:cross_tenant_read",
+    "notifications:cross_tenant_insert",
+    "notifications:cross_tenant_update",
+    "notifications:cross_tenant_delete",
+    "notifications:same_tenant_read",
+    "ai_incidents:cross_tenant_read",
+    "ai_incidents:cross_tenant_insert",
+    "ai_incidents:cross_tenant_update",
+    "ai_incidents:cross_tenant_delete",
+    "ai_incidents:same_tenant_read",
+    "ai_incidents:same_tenant_insert",
+    "regulatory_updates:authenticated_read_allowed",
+    "regulatory_updates:authenticated_insert_denied",
+    "regulatory_updates:authenticated_update_denied",
+    "regulatory_updates:authenticated_delete_denied",
+    "organization_members:viewer_same_tenant_admin_insert_denied",
+    "organization_members:viewer_same_tenant_admin_update_denied",
+    "organization_members:viewer_same_tenant_admin_delete_denied"
+  ],
+  "testsPassed": [
+    "organizations:rls_enabled",
+    "organization_members:rls_enabled",
+    "ai_systems:rls_enabled",
+    "compliance_tasks:rls_enabled",
+    "documents:rls_enabled",
+    "risks:rls_enabled",
+    "vendors:rls_enabled",
+    "subscriptions:rls_enabled",
+    "audit_logs:rls_enabled",
+    "invitations:rls_enabled",
+    "onboarding_activation_runs:rls_enabled",
+    "monitoring_preferences:rls_enabled",
+    "profiles:rls_enabled",
+    "regulatory_updates:rls_enabled",
+    "tasks:rls_enabled",
+    "audit_events:rls_enabled",
+    "notifications:rls_enabled",
+    "ai_incidents:rls_enabled",
+    "organizations:cross_tenant_read",
+    "organizations:cross_tenant_insert",
+    "organizations:cross_tenant_update",
+    "organizations:cross_tenant_delete",
+    "organizations:same_tenant_read",
+    "organization_members:cross_tenant_read",
+    "organization_members:cross_tenant_insert",
+    "organization_members:cross_tenant_update",
+    "organization_members:cross_tenant_delete",
+    "organization_members:same_tenant_read",
+    "ai_systems:cross_tenant_read",
+    "ai_systems:cross_tenant_insert",
+    "ai_systems:cross_tenant_update",
+    "ai_systems:cross_tenant_delete",
+    "ai_systems:same_tenant_read",
+    "ai_systems:same_tenant_insert",
+    "compliance_tasks:cross_tenant_read",
+    "compliance_tasks:cross_tenant_insert",
+    "compliance_tasks:cross_tenant_update",
+    "compliance_tasks:cross_tenant_delete",
+    "compliance_tasks:same_tenant_read",
+    "compliance_tasks:same_tenant_insert",
+    "documents:cross_tenant_read",
+    "documents:cross_tenant_insert",
+    "documents:cross_tenant_update",
+    "documents:cross_tenant_delete",
+    "documents:same_tenant_read",
+    "documents:same_tenant_insert",
+    "risks:cross_tenant_read",
+    "risks:cross_tenant_insert",
+    "risks:cross_tenant_update",
+    "risks:cross_tenant_delete",
+    "risks:same_tenant_read",
+    "risks:same_tenant_insert",
+    "vendors:cross_tenant_read",
+    "vendors:cross_tenant_insert",
+    "vendors:cross_tenant_update",
+    "vendors:cross_tenant_delete",
+    "vendors:same_tenant_read",
+    "vendors:same_tenant_insert",
+    "subscriptions:cross_tenant_read",
+    "subscriptions:cross_tenant_insert",
+    "subscriptions:cross_tenant_update",
+    "subscriptions:cross_tenant_delete",
+    "subscriptions:same_tenant_read_backend_only",
+    "subscriptions:same_tenant_insert_denied",
+    "subscriptions:same_tenant_update_denied",
+    "subscriptions:same_tenant_delete_denied",
+    "audit_logs:cross_tenant_read",
+    "audit_logs:cross_tenant_insert",
+    "audit_logs:cross_tenant_update",
+    "audit_logs:cross_tenant_delete",
+    "audit_logs:same_tenant_read_backend_only",
+    "audit_logs:same_tenant_insert_denied",
+    "audit_logs:same_tenant_update_denied",
+    "audit_logs:same_tenant_delete_denied",
+    "invitations:cross_tenant_read",
+    "invitations:cross_tenant_insert",
+    "invitations:cross_tenant_update",
+    "invitations:cross_tenant_delete",
+    "invitations:same_tenant_read_backend_only",
+    "invitations:same_tenant_insert_denied",
+    "invitations:same_tenant_update_denied",
+    "invitations:same_tenant_delete_denied",
+    "onboarding_activation_runs:cross_tenant_read",
+    "onboarding_activation_runs:cross_tenant_insert",
+    "onboarding_activation_runs:cross_tenant_update",
+    "onboarding_activation_runs:cross_tenant_delete",
+    "onboarding_activation_runs:same_tenant_read",
+    "onboarding_activation_runs:same_tenant_insert",
+    "monitoring_preferences:cross_tenant_read",
+    "monitoring_preferences:cross_tenant_insert",
+    "monitoring_preferences:cross_tenant_update",
+    "monitoring_preferences:cross_tenant_delete",
+    "monitoring_preferences:same_tenant_read",
+    "monitoring_preferences:same_tenant_insert",
+    "profiles:cross_tenant_read",
+    "profiles:cross_tenant_insert",
+    "profiles:cross_tenant_update",
+    "profiles:cross_tenant_delete",
+    "profiles:same_tenant_read",
+    "tasks:cross_tenant_read",
+    "tasks:cross_tenant_insert",
+    "tasks:cross_tenant_update",
+    "tasks:cross_tenant_delete",
+    "tasks:same_tenant_read",
+    "tasks:same_tenant_insert",
+    "audit_events:cross_tenant_read",
+    "audit_events:cross_tenant_insert",
+    "audit_events:cross_tenant_update",
+    "audit_events:cross_tenant_delete",
+    "audit_events:same_tenant_read_backend_only",
+    "audit_events:same_tenant_insert_denied",
+    "audit_events:same_tenant_update_denied",
+    "audit_events:same_tenant_delete_denied",
+    "notifications:cross_tenant_read",
+    "notifications:cross_tenant_insert",
+    "notifications:cross_tenant_update",
+    "notifications:cross_tenant_delete",
+    "notifications:same_tenant_read",
+    "ai_incidents:cross_tenant_read",
+    "ai_incidents:cross_tenant_insert",
+    "ai_incidents:cross_tenant_update",
+    "ai_incidents:cross_tenant_delete",
+    "ai_incidents:same_tenant_read",
+    "ai_incidents:same_tenant_insert",
+    "regulatory_updates:authenticated_read_allowed",
+    "regulatory_updates:authenticated_insert_denied",
+    "regulatory_updates:authenticated_update_denied",
+    "regulatory_updates:authenticated_delete_denied",
+    "organization_members:viewer_same_tenant_admin_insert_denied",
+    "organization_members:viewer_same_tenant_admin_update_denied",
+    "organization_members:viewer_same_tenant_admin_delete_denied"
+  ],
+  "testsFailed": [],
+  "testCases": [
+    {
+      "table": "organizations",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": false,
+      "policyCount": 8
+    },
+    {
+      "table": "organization_members",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": false,
+      "policyCount": 11
+    },
+    {
+      "table": "ai_systems",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 16
+    },
+    {
+      "table": "compliance_tasks",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 14
+    },
+    {
+      "table": "documents",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 14
+    },
+    {
+      "table": "risks",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 14
+    },
+    {
+      "table": "vendors",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 14
+    },
+    {
+      "table": "subscriptions",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 13
+    },
+    {
+      "table": "audit_logs",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 12
+    },
+    {
+      "table": "invitations",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 8
+    },
+    {
+      "table": "onboarding_activation_runs",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 8
+    },
+    {
+      "table": "monitoring_preferences",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 8
+    },
+    {
+      "table": "profiles",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": false,
+      "policyCount": 10
+    },
+    {
+      "table": "regulatory_updates",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 8
+    },
+    {
+      "table": "tasks",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": false,
+      "policyCount": 12
+    },
+    {
+      "table": "audit_events",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 13
+    },
+    {
+      "table": "notifications",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 16
+    },
+    {
+      "table": "ai_incidents",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": false,
+      "policyCount": 11
+    },
+    {
+      "table": "organizations",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "organizations",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy for table \"organizations\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "organizations",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "organizations",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "organizations",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "organization_members",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "organization_members",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy \"live_val_members_insert_deny\" for table \"organization_members\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "organization_members",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "organization_members",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "organization_members",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "ai_systems",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "ai_systems",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy \"live_val_ai_systems_insert_guard\" for table \"ai_systems\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "ai_systems",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "ai_systems",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "ai_systems",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "ai_systems",
+      "operation": "same_tenant_insert",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1,
+      "insertedId": "f18ec13f-b61b-41b2-bb25-182f539a34f0",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "compliance_tasks",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "compliance_tasks",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy \"live_val_compliance_tasks_insert_guard\" for table \"compliance_tasks\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "compliance_tasks",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "compliance_tasks",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "compliance_tasks",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "compliance_tasks",
+      "operation": "same_tenant_insert",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1,
+      "insertedId": "2b3a0ea8-d1fa-4498-b9c2-85169f63e5c2",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "documents",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "documents",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy \"live_val_documents_insert_guard\" for table \"documents\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": [
+        "storage_path",
+        "uploaded_by"
+      ]
+    },
+    {
+      "table": "documents",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "documents",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "documents",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "documents",
+      "operation": "same_tenant_insert",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1,
+      "insertedId": "3b636e9a-d3ea-44a1-90e6-01a23b8a6745",
+      "removedMissingColumns": [
+        "storage_path",
+        "uploaded_by"
+      ]
+    },
+    {
+      "table": "risks",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "risks",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy \"live_val_risks_insert_guard\" for table \"risks\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "risks",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "risks",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "risks",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "risks",
+      "operation": "same_tenant_insert",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1,
+      "insertedId": "f5250139-07cd-445f-a08b-18ee44c02b17",
+      "removedMissingColumns": [
+        "owner_user_id"
+      ]
+    },
+    {
+      "table": "vendors",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "vendors",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy \"live_val_vendors_insert_guard\" for table \"vendors\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "vendors",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "vendors",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "vendors",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "vendors",
+      "operation": "same_tenant_insert",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1,
+      "insertedId": "b10156d8-8f27-4724-b3d4-b50d9f3fbbd8",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "subscriptions",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "subscriptions",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table subscriptions"
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "subscriptions",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table subscriptions"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "subscriptions",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table subscriptions"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "subscriptions",
+      "operation": "same_tenant_read_backend_only",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "subscriptions",
+      "operation": "same_tenant_insert_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table subscriptions"
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "subscriptions",
+      "operation": "same_tenant_update_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table subscriptions"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "subscriptions",
+      "operation": "same_tenant_delete_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table subscriptions"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "audit_logs",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "audit_logs",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table audit_logs"
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": [
+        "actor_user_id"
+      ]
+    },
+    {
+      "table": "audit_logs",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table audit_logs"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "audit_logs",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table audit_logs"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "audit_logs",
+      "operation": "same_tenant_read_backend_only",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "audit_logs",
+      "operation": "same_tenant_insert_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table audit_logs"
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": [
+        "actor_user_id"
+      ]
+    },
+    {
+      "table": "audit_logs",
+      "operation": "same_tenant_update_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table audit_logs"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "audit_logs",
+      "operation": "same_tenant_delete_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table audit_logs"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "invitations",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "invitations",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy for table \"invitations\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "invitations",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "invitations",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "invitations",
+      "operation": "same_tenant_read_backend_only",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "invitations",
+      "operation": "same_tenant_insert_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy for table \"invitations\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "invitations",
+      "operation": "same_tenant_update_denied",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "invitations",
+      "operation": "same_tenant_delete_denied",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "onboarding_activation_runs",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "onboarding_activation_runs",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy for table \"onboarding_activation_runs\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "onboarding_activation_runs",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "onboarding_activation_runs",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "onboarding_activation_runs",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "onboarding_activation_runs",
+      "operation": "same_tenant_insert",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1,
+      "insertedId": "71112ff2-01c9-42f4-b4ee-507929f88ad2",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "monitoring_preferences",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "monitoring_preferences",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy for table \"monitoring_preferences\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "monitoring_preferences",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "monitoring_preferences",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "monitoring_preferences",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "monitoring_preferences",
+      "operation": "same_tenant_insert",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1,
+      "insertedId": "25b308dc-fee6-4fae-ae41-7c54ff00bdbc",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "profiles",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "profiles",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy \"live_val_profiles_insert_self\" for table \"profiles\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "profiles",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "profiles",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "profiles",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "tasks",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "tasks",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy \"live_val_tasks_insert_guard\" for table \"tasks\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "tasks",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "tasks",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "tasks",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "tasks",
+      "operation": "same_tenant_insert",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1,
+      "insertedId": "4e53e459-021c-4e7b-8fa6-503167cc452e",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "audit_events",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "audit_events",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table audit_events"
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "audit_events",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table audit_events"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "audit_events",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table audit_events"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "audit_events",
+      "operation": "same_tenant_read_backend_only",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "audit_events",
+      "operation": "same_tenant_insert_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table audit_events"
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "audit_events",
+      "operation": "same_tenant_update_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table audit_events"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "audit_events",
+      "operation": "same_tenant_delete_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table audit_events"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "notifications",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "notifications",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table notifications"
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "notifications",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "notifications",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "notifications",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "ai_incidents",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "ai_incidents",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy \"live_val_ai_incidents_insert_guard\" for table \"ai_incidents\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "ai_incidents",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "ai_incidents",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "ai_incidents",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "ai_incidents",
+      "operation": "same_tenant_insert",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1,
+      "insertedId": "748fd505-516a-4d48-883a-d15b5d1bcbe9",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "regulatory_updates",
+      "operation": "authenticated_read_allowed",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "regulatory_updates",
+      "operation": "authenticated_insert_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table regulatory_updates"
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "regulatory_updates",
+      "operation": "authenticated_update_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table regulatory_updates"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "regulatory_updates",
+      "operation": "authenticated_delete_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "permission denied for table regulatory_updates"
+      },
+      "returnedRows": 0
+    },
+    {
+      "table": "organization_members",
+      "operation": "viewer_same_tenant_admin_insert_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy \"live_val_members_insert_deny\" for table \"organization_members\""
+      },
+      "returnedRows": 0,
+      "denialMode": "rls_or_permission_error",
+      "removedMissingColumns": []
+    },
+    {
+      "table": "organization_members",
+      "operation": "viewer_same_tenant_admin_update_denied",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "organization_members",
+      "operation": "viewer_same_tenant_admin_delete_denied",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    }
+  ],
+  "failures": [],
   "serviceRolePaths": [
     {
       "path": "fixture_setup",
-      "purpose": "Use service role only inside the live validation runner to create synthetic tenants, users, and seed rows."
+      "purpose": "Creates synthetic tenants, users, and seed rows before authenticated-client assertions."
     },
     {
       "path": "rls_inventory",
-      "purpose": "Use service role only inside the runner to read RLS metadata from public.eurocomply_live_rls_inventory."
+      "purpose": "Reads live RLS metadata through public.eurocomply_live_rls_inventory."
     },
     {
       "path": "post_assertion_integrity_checks",
-      "purpose": "Use service role only inside the runner to verify denied client writes did not mutate protected rows."
+      "purpose": "Verifies denied client writes did not mutate or delete protected rows."
     },
     {
       "path": "fixture_cleanup",
-      "purpose": "Use service role only inside the runner to remove synthetic validation rows and test auth users."
+      "purpose": "Deletes validation rows and test auth users unless --keep-fixtures is set."
     }
   ],
-  "registerUpdated": false,
-  "blockingReason": "Run the live validator with NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and the server-side Supabase service role key configured in staging or production secrets. Do not mark Complete until every cross-tenant test is denied and every same-tenant role test behaves as expected.",
-  "completionRule": "Only scripts/security/run-supabase-live-tenant-isolation.mjs may mark this evidence Complete after a successful live run against the target Supabase project.",
-  "nextReviewDue": null
+  "registerUpdated": true,
+  "completionRule": "Only scripts/security/run-supabase-live-tenant-isolation.mjs may mark this evidence Complete after a successful live tenant-isolation RLS run against the target Supabase project.",
+  "nextReviewDue": null,
+  "githubActions": {
+    "generatedInGitHubActions": true,
+    "workflow": "Supabase Live RLS Validation",
+    "runId": "28624784929",
+    "runAttempt": "1",
+    "runUrl": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28624784929",
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "commitSha": "406d10854afef4f898fc074bb53bc6103c21cc07",
+    "refName": "main",
+    "actor": "renanescola40-afk",
+    "eventName": "workflow_dispatch",
+    "stampedAt": "2026-07-02T22:12:51.025Z"
+  }
 }
