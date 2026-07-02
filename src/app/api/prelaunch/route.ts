@@ -327,7 +327,7 @@ export async function POST(request: NextRequest) {
   }
 
   const saveResult = await saveWaitlistLead(request, record);
-  await sendConfirmation(request, record);
+  const confirmation = await sendConfirmation(request, record);
 
   if (shouldNotifyInternalTeam(saveResult)) {
     await notifyInternalTeam(request, record);
@@ -337,6 +337,7 @@ export async function POST(request: NextRequest) {
     {
       ok: true,
       status: saveResult.saved ? 'confirmed' : 'received',
+      emailed: confirmation.sent,
       message: saveResult.saved ? 'You are on the Risck Comply waitlist.' : 'Your request was received by the Risck Comply team.',
       joinedAt: record.updated_at,
       launchAt: record.launch_target_at,
