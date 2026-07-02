@@ -33,6 +33,8 @@ These statements intentionally match the P0 progress gate wording. They do **not
 
 - Live RLS validation completed against the target Supabase project is mandatory before production or enterprise Go.
 - External security review or pentest completed is mandatory before enterprise pilot, enterprise procurement, or enterprise-ready claims.
+- Support readiness evidence must prove support ownership, escalation paths, and launch response coverage.
+- Customer communication evidence must prove launch, incident, rollback, and degraded-service communication paths.
 
 ## GitHub enterprise evidence
 

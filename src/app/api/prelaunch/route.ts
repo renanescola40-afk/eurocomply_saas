@@ -73,6 +73,10 @@ function isHoneypotFilled(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+function hasConsentToContact(value: unknown) {
+  return value === true || value === 'true';
+}
+
 function getWaitlistUrl(request: NextRequest, locale: string) {
   return `${request.nextUrl.origin}/${locale}#waitlist-form`;
 }
@@ -132,6 +136,10 @@ function buildRecord(body: Record<string, unknown>): WaitlistLeadRecord | null {
   const email = text(body.email, 254)?.toLowerCase() ?? null;
   const companyName = text(body.companyName, 120);
   const role = text(body.role, 90);
+
+  if (!hasConsentToContact(body.consentToContact)) {
+    return null;
+  }
 
   if (!email || !validateEmail(email) || !companyName || !role) {
     return null;
@@ -323,7 +331,7 @@ export async function POST(request: NextRequest) {
 
   const record = buildRecord(body);
   if (!record) {
-    return noStoreJson({ error: 'Please provide company name, work email and role.' }, { status: 400 });
+    return noStoreJson({ error: 'Please provide company name, work email, role and consent to contact.' }, { status: 400 });
   }
 
   const saveResult = await saveWaitlistLead(request, record);

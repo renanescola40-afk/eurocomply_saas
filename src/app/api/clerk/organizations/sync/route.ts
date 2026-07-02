@@ -1,4 +1,5 @@
 const RETIRED_CLERK_ORGANIZATION_SYNC_CONTRACT = [
+  '@/server/security/api-guard',
   'const authState = await auth()',
   'const userId = authState.userId',
   'const orgId = authState.orgId',
