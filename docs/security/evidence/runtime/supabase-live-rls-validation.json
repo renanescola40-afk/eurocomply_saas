@@ -2,13 +2,13 @@
   "evidenceItem": "supabase-live-rls-validation",
   "status": "Complete",
   "outcome": "passed",
-  "timestamp": "2026-07-02T22:12:44Z",
-  "generatedAt": "2026-07-02T22:12:44Z",
+  "timestamp": "2026-07-02T22:28:25Z",
+  "generatedAt": "2026-07-02T22:28:25Z",
   "runner": "scripts/security/run-supabase-live-tenant-isolation.mjs",
   "reviewer": "renanescola40-afk",
-  "reviewedAt": "2026-07-02T22:12:44Z",
+  "reviewedAt": "2026-07-02T22:28:25Z",
   "commandUsed": "node scripts/security/run-supabase-live-tenant-isolation.mjs",
-  "commitSha": "406d10854afef4f898fc074bb53bc6103c21cc07",
+  "commitSha": "3f32674bcc44f01dce533798976ed59738e637e9",
   "supabaseProjectReference": "redacted:sha256:bd5ab31fe970bac1",
   "supabaseProjectReferenceRedacted": true,
   "summary": "Live Supabase production/staging RLS validation passed for customer tenant tables, profiles, and global reference tables.",
@@ -914,7 +914,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "f18ec13f-b61b-41b2-bb25-182f539a34f0",
+      "insertedId": "e4ac27a7-70d1-4ef4-995f-8971775da6e1",
       "removedMissingColumns": []
     },
     {
@@ -963,7 +963,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "2b3a0ea8-d1fa-4498-b9c2-85169f63e5c2",
+      "insertedId": "404556ce-1a90-439a-930c-5d6a51250baf",
       "removedMissingColumns": []
     },
     {
@@ -1015,7 +1015,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "3b636e9a-d3ea-44a1-90e6-01a23b8a6745",
+      "insertedId": "fb7c423b-e08a-4f33-b8a1-afe542227a9b",
       "removedMissingColumns": [
         "storage_path",
         "uploaded_by"
@@ -1067,7 +1067,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "f5250139-07cd-445f-a08b-18ee44c02b17",
+      "insertedId": "989d04b5-7340-4560-81ec-9522b50a7cd2",
       "removedMissingColumns": [
         "owner_user_id"
       ]
@@ -1118,7 +1118,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "b10156d8-8f27-4724-b3d4-b50d9f3fbbd8",
+      "insertedId": "a9e9b7de-df86-47e5-8301-7ede42e4e080",
       "removedMissingColumns": []
     },
     {
@@ -1393,7 +1393,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "71112ff2-01c9-42f4-b4ee-507929f88ad2",
+      "insertedId": "ef22eb50-450b-4560-bfab-8b4213f77541",
       "removedMissingColumns": []
     },
     {
@@ -1442,7 +1442,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "25b308dc-fee6-4fae-ae41-7c54ff00bdbc",
+      "insertedId": "a78abfac-6c22-40f7-9496-090544595b85",
       "removedMissingColumns": []
     },
     {
@@ -1531,7 +1531,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "4e53e459-021c-4e7b-8fa6-503167cc452e",
+      "insertedId": "413c4a4f-9fe9-4173-a9b9-2933880fbea5",
       "removedMissingColumns": []
     },
     {
@@ -1698,7 +1698,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "748fd505-516a-4d48-883a-d15b5d1bcbe9",
+      "insertedId": "57fd8992-81c3-4f5c-9356-10d40100eb00",
       "removedMissingColumns": []
     },
     {
@@ -1792,14 +1792,14 @@
   "githubActions": {
     "generatedInGitHubActions": true,
     "workflow": "Supabase Live RLS Validation",
-    "runId": "28624784929",
+    "runId": "28625514539",
     "runAttempt": "1",
-    "runUrl": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28624784929",
+    "runUrl": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28625514539",
     "repository": "renanescola40-afk/eurocomply_saas",
-    "commitSha": "406d10854afef4f898fc074bb53bc6103c21cc07",
+    "commitSha": "3f32674bcc44f01dce533798976ed59738e637e9",
     "refName": "main",
     "actor": "renanescola40-afk",
     "eventName": "workflow_dispatch",
-    "stampedAt": "2026-07-02T22:12:51.025Z"
+    "stampedAt": "2026-07-02T22:28:31.190Z"
   }
 }
