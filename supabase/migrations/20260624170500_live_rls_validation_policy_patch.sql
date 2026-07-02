@@ -65,7 +65,29 @@ begin
 end;
 $$;
 
+create or replace function public.live_rls_validation_apply_reference_readonly(target_table_name text)
+returns void language plpgsql set search_path = public as $$
+begin
+  if to_regclass(format('public.%I', target_table_name)) is null then
+    return;
+  end if;
+  execute format('alter table public.%I enable row level security', target_table_name);
+  execute format('grant select, insert, update, delete on public.%I to authenticated', target_table_name);
+  execute format('drop policy if exists %I on public.%I', 'live_rls_' || target_table_name || '_select_authenticated', target_table_name);
+  execute format('drop policy if exists %I on public.%I', 'live_rls_' || target_table_name || '_insert_deny', target_table_name);
+  execute format('drop policy if exists %I on public.%I', 'live_rls_' || target_table_name || '_update_deny', target_table_name);
+  execute format('drop policy if exists %I on public.%I', 'live_rls_' || target_table_name || '_delete_deny', target_table_name);
+  execute format('create policy %I on public.%I for select to authenticated using (true)', 'live_rls_' || target_table_name || '_select_authenticated', target_table_name);
+  execute format('create policy %I on public.%I for insert to authenticated with check (false)', 'live_rls_' || target_table_name || '_insert_deny', target_table_name);
+  execute format('create policy %I on public.%I for update to authenticated using (false) with check (false)', 'live_rls_' || target_table_name || '_update_deny', target_table_name);
+  execute format('create policy %I on public.%I for delete to authenticated using (false)', 'live_rls_' || target_table_name || '_delete_deny', target_table_name);
+end;
+$$;
+
 select public.live_rls_validation_apply_backend_only('audit_events');
 select public.live_rls_validation_apply_org_scoped('tasks');
 select public.live_rls_validation_apply_org_scoped('notifications');
+select public.live_rls_validation_apply_org_scoped('onboarding_activation_runs');
+select public.live_rls_validation_apply_org_scoped('monitoring_preferences');
+select public.live_rls_validation_apply_reference_readonly('regulatory_updates');
 notify pgrst, 'reload schema';
