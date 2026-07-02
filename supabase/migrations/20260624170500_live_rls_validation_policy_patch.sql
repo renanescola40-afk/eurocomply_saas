@@ -109,7 +109,6 @@ create table if not exists public.regulatory_updates (
 );
 
 select public.live_rls_validation_apply_backend_only('audit_events');
-select public.live_rls_validation_apply_backend_only('invitations');
 select public.live_rls_validation_apply_org_scoped('tasks');
 select public.live_rls_validation_apply_org_scoped('notifications');
 select public.live_rls_validation_apply_org_scoped('onboarding_activation_runs');
