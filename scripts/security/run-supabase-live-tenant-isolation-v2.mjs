@@ -5,7 +5,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
-import { buildEvidencePayload, criticalTables, optionalTables, requiredBackendWriteDenyOperations, validatePassingEvidence, tableCoverageFrom } from './supabase-live-rls-evidence.mjs';
+import {
+  backendOwnedTables as expectedBackendOwnedTables,
+  buildEvidencePayload,
+  criticalTables,
+  globalReferenceTables,
+  optionalTables,
+  requiredBackendWriteDenyOperations,
+  requiredGlobalReferenceOperations,
+  sameTenantWritableTables as expectedSameTenantWritableTables,
+  tableCoverageFrom,
+  validatePassingEvidence,
+} from './supabase-live-rls-evidence.mjs';
 
 const evidencePath = path.join('docs', 'security', 'evidence', 'runtime', 'supabase-live-rls-validation.json');
 const registerPath = path.join('docs', 'security', 'P0_RUNTIME_EVIDENCE_REGISTER.md');
@@ -19,8 +30,8 @@ const envPrivileged = ['SUPABASE', 'SERVICE', 'ROLE', 'KEY'].join('_');
 const requiredEnv = [envUrl, envAnon, envPrivileged];
 const credentialField = 'password';
 const authOptions = { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } };
-const backendOwnedTables = new Set(['audit_events', 'audit_logs', 'subscriptions']);
-const sameTenantWritableTables = new Set(['documents', 'risks', 'vendors', 'tasks', 'compliance_tasks', 'ai_systems', 'ai_incidents']);
+const backendOwnedTables = new Set([...expectedBackendOwnedTables, 'audit_events']);
+const sameTenantWritableTables = new Set([...expectedSameTenantWritableTables, 'tasks', 'ai_incidents']);
 const expectedDenialCodes = new Set(['42501']);
 const expectedDenialText = /(row-level security|permission denied|not authorized|unauthorized|forbidden|new row violates)/i;
 
@@ -50,7 +61,7 @@ function writeEvidence(payload) {
 
 function serviceRolePaths() {
   return [
-    { path: 'fixture_setup', purpose: 'Creates tenant A, tenant B, owner A, viewer A, owner B, and seed rows before authenticated-client assertions.' },
+    { path: 'fixture_setup', purpose: 'Creates synthetic tenants, users, and seed rows before authenticated-client assertions.' },
     { path: 'rls_inventory', purpose: 'Reads live RLS metadata through public.eurocomply_live_rls_inventory.' },
     { path: 'post_assertion_integrity_checks', purpose: 'Verifies denied client writes did not mutate or delete protected rows.' },
     { path: 'fixture_cleanup', purpose: 'Deletes validation rows and test auth users unless --keep-fixtures is set.' },
@@ -154,8 +165,9 @@ function rlsInventoryCases(inventory) {
     .map((table) => rlsEnabledCase(table, inventory));
 }
 
-function tableSpecs({ suffix, orgB, orgInsertTarget, userA, userAViewer, userB, memberB }) {
+function tableSpecs({ suffix, orgB, orgInsertTarget, userA, userAViewer, userB, userBMember, memberB }) {
   const org = orgB.id;
+  const futureIso = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   return {
     organizations: { seed: orgB, insert: { name: `cross-org-${suffix}`, slug: `cross-org-${suffix}`, created_by: userA.id }, update: { name: `mutated-org-${suffix}` } },
     organization_members: { seed: memberB, insert: { organization_id: org, user_id: userA.id, role: 'viewer' }, viewerAdminInsert: { organization_id: orgInsertTarget.id, user_id: userAViewer.id, role: 'admin' }, viewerAdminUpdate: { role: 'admin' }, update: { role: 'admin' } },
@@ -169,8 +181,12 @@ function tableSpecs({ suffix, orgB, orgInsertTarget, userA, userAViewer, userB, 
     notifications: { seed: { organization_id: org, user_id: userB.id, title: `tenant-b-notification-${suffix}`, message: 'tenant B only', type: 'info' }, insert: { organization_id: org, user_id: userA.id, title: `cross-notification-${suffix}`, message: 'cross tenant attempt', type: 'info' }, update: { read_at: now() } },
     compliance_tasks: { seed: { organization_id: org, created_by: userB.id, assigned_to: userB.id, title: `tenant-b-compliance-task-${suffix}`, category: 'general' }, insert: { organization_id: org, created_by: userA.id, title: `cross-compliance-task-${suffix}`, category: 'general' }, sameInsert: { organization_id: org, created_by: userB.id, assigned_to: userB.id, title: `same-compliance-task-${suffix}`, category: 'general' }, update: { title: `mutated-compliance-task-${suffix}` } },
     audit_logs: { seed: { organization_id: org, actor_user_id: userB.id, action: 'seeded_log', entity_type: 'rls_validation', entity_id: suffix }, insert: { organization_id: org, actor_user_id: userA.id, action: 'cross_tenant_attempt', entity_type: 'rls_validation', entity_id: suffix }, sameDeniedInsert: { organization_id: org, actor_user_id: userB.id, action: 'same_tenant_write_attempt', entity_type: 'rls_validation', entity_id: suffix }, update: { action: 'mutated_log' } },
+    invitations: { seed: { organization_id: org, email: `tenant-b-${suffix}@example.com`, role: 'member', token: `seed-${suffix}`, invited_by: userB.id, expires_at: futureIso }, insert: { organization_id: org, email: `cross-${suffix}@example.com`, role: 'member', token: `cross-${suffix}`, invited_by: userA.id, expires_at: futureIso }, sameDeniedInsert: { organization_id: org, email: `same-denied-${suffix}@example.com`, role: 'member', token: `same-denied-${suffix}`, invited_by: userB.id, expires_at: futureIso }, update: { role: 'admin' } },
     ai_systems: { seed: { organization_id: org, name: `tenant-b-ai-system-${suffix}`, use_case: 'rls validation', created_by: userB.id }, insert: { organization_id: org, name: `cross-ai-system-${suffix}`, use_case: 'rls validation', created_by: userA.id }, sameInsert: { organization_id: org, name: `same-ai-system-${suffix}`, use_case: 'rls validation', created_by: userB.id }, update: { name: `mutated-ai-system-${suffix}` } },
     ai_incidents: { seed: { organization_id: org, title: `tenant-b-ai-incident-${suffix}`, summary: 'tenant B only', created_by: userB.id }, insert: { organization_id: org, title: `cross-ai-incident-${suffix}`, summary: 'cross tenant attempt', created_by: userA.id }, sameInsert: { organization_id: org, title: `same-ai-incident-${suffix}`, summary: 'same tenant allowed', created_by: userB.id }, update: { title: `mutated-ai-incident-${suffix}` } },
+    onboarding_activation_runs: { seed: { organization_id: org, created_by: userB.id, country: 'PT', company_type: 'startup', sector: 'technology', ai_usage_level: 'active', initial_risk_level: 'limited', readiness_score: 42, status: 'completed' }, insert: { organization_id: org, created_by: userA.id, country: 'PT', company_type: 'startup', sector: 'technology', ai_usage_level: 'active', initial_risk_level: 'limited', readiness_score: 38, status: 'completed' }, sameInsert: { organization_id: org, created_by: userB.id, country: 'PT', company_type: 'startup', sector: 'technology', ai_usage_level: 'active', initial_risk_level: 'limited', readiness_score: 75, status: 'completed' }, update: { readiness_score: 44 } },
+    monitoring_preferences: { seed: { organization_id: org, user_id: userB.id, email: userB.email, regulatory_change_alerts: true, monthly_review_reminders: true, low_score_alerts: true }, insert: { organization_id: org, user_id: userA.id, email: userA.email, regulatory_change_alerts: true, monthly_review_reminders: false, low_score_alerts: true }, sameInsert: { organization_id: org, user_id: userBMember.id, email: userBMember.email, regulatory_change_alerts: true, monthly_review_reminders: true, low_score_alerts: false }, update: { low_score_alerts: false } },
+    regulatory_updates: { seed: { title: `tenant-reference-update-${suffix}`, summary: 'Live validation reference row', severity: 'low', source_url: 'https://example.com/live-rls-validation', published_at: now() }, insert: { title: `cross-reference-insert-${suffix}`, summary: 'should be denied', severity: 'low', source_url: 'https://example.com/live-rls-validation', published_at: now() }, update: { title: `mutated-reference-${suffix}` } },
   };
 }
 
@@ -188,6 +204,7 @@ async function setup(admin) {
   const userA = await makeUser('owner-a');
   const userAViewer = await makeUser('viewer-a');
   const userB = await makeUser('owner-b');
+  const userBMember = await makeUser('member-b');
   const orgA = await insertOne(admin, 'organizations', { name: `RLS Tenant A ${suffix}`, slug: `rls-tenant-a-${suffix}`, created_by: userA.id });
   const orgB = await insertOne(admin, 'organizations', { name: `RLS Tenant B ${suffix}`, slug: `rls-tenant-b-${suffix}`, created_by: userB.id });
   const orgInsertTarget = await insertOne(admin, 'organizations', { name: `RLS Insert Target ${suffix}`, slug: `rls-insert-target-${suffix}`, created_by: userB.id });
@@ -195,16 +212,19 @@ async function setup(admin) {
   const memberA = await insertOne(admin, 'organization_members', { organization_id: orgA.id, user_id: userA.id, role: 'owner' });
   const viewerA = await insertOne(admin, 'organization_members', { organization_id: orgA.id, user_id: userAViewer.id, role: 'viewer' });
   const memberB = await insertOne(admin, 'organization_members', { organization_id: orgB.id, user_id: userB.id, role: 'owner' });
-  created.rows.push(['organization_members', memberA.id], ['organization_members', viewerA.id], ['organization_members', memberB.id]);
-  const specs = tableSpecs({ suffix, orgB, orgInsertTarget, userA, userAViewer, userB, memberB });
+  const memberBExtra = await insertOne(admin, 'organization_members', { organization_id: orgB.id, user_id: userBMember.id, role: 'member' });
+  created.rows.push(['organization_members', memberA.id], ['organization_members', viewerA.id], ['organization_members', memberB.id], ['organization_members', memberBExtra.id]);
+  const specs = tableSpecs({ suffix, orgB, orgInsertTarget, userA, userAViewer, userB, userBMember, memberB });
   const missing = [];
   for (const table of [...criticalTables, ...optionalTables]) {
     if (['organizations', 'organization_members'].includes(table)) continue;
     if (!(await tableExists(admin, table))) { missing.push(table); continue; }
-    specs[table].seed = await insertOne(admin, table, specs[table].seed);
+    const spec = specs[table];
+    if (!spec?.seed) { missing.push(table); continue; }
+    specs[table].seed = await insertOne(admin, table, spec.seed);
     created.rows.push([table, specs[table].seed.id]);
   }
-  return { phrase, userA, userAViewer, userB, orgA, orgB, orgInsertTarget, memberA, viewerA, memberB, specs, missing, created };
+  return { phrase, userA, userAViewer, userB, userBMember, orgA, orgB, orgInsertTarget, memberA, viewerA, memberB, specs, missing, created };
 }
 
 async function cleanup(admin, created) {
@@ -282,12 +302,13 @@ export async function main() {
     if (rlsFailures.length > 0) throw new Error(`Required reviewed tables are missing RLS or policies: ${rlsFailures.map((test) => test.table).join(', ')}`);
     ctx = await setup(admin);
     const missingRequired = ctx.missing.filter((table) => criticalTables.includes(table));
-    if (missingRequired.length > 0) throw new Error(`Required validation tables are missing: ${missingRequired.join(', ')}`);
+    if (missingRequired.length > 0) throw new Error(`Required validation tables are missing or lack runner fixtures: ${missingRequired.join(', ')}`);
     await signIn(tenantA, ctx.userA.email, ctx.phrase);
     await signIn(tenantAViewer, ctx.userAViewer.email, ctx.phrase);
     await signIn(tenantB, ctx.userB.email, ctx.phrase);
 
     for (const table of [...criticalTables, ...optionalTables]) {
+      if (globalReferenceTables.includes(table)) continue;
       const spec = ctx.specs[table];
       if (!spec?.seed?.id) continue;
       testCases.push({ table, operation: 'cross_tenant_read', ...(await crossTenantReadDenied(tenantA, table, spec.seed.id)) });
@@ -306,6 +327,18 @@ export async function main() {
           if (operation === 'same_tenant_update_denied') testCases.push({ table, operation, ...(await updateDenied(admin, tenantB, table, spec.seed.id, spec.update)) });
           if (operation === 'same_tenant_delete_denied') testCases.push({ table, operation, ...(await deleteDenied(admin, tenantB, table, spec.seed.id)) });
         }
+      }
+    }
+
+    for (const table of globalReferenceTables) {
+      const spec = ctx.specs[table];
+      if (!spec?.seed?.id) continue;
+      for (const operation of requiredGlobalReferenceOperations) {
+        if (operation === 'rls_enabled') continue;
+        if (operation === 'authenticated_read_allowed') testCases.push({ table, operation, ...(await sameTenantReadAllowed(tenantB, table, spec.seed.id)) });
+        if (operation === 'authenticated_insert_denied') testCases.push({ table, operation, ...(await insertDenied(tenantB, table, spec.insert)) });
+        if (operation === 'authenticated_update_denied') testCases.push({ table, operation, ...(await updateDenied(admin, tenantB, table, spec.seed.id, spec.update)) });
+        if (operation === 'authenticated_delete_denied') testCases.push({ table, operation, ...(await deleteDenied(admin, tenantB, table, spec.seed.id)) });
       }
     }
 
