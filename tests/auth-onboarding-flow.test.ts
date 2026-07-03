@@ -41,10 +41,11 @@ describe('auth and onboarding redirect invariants', () => {
 
   it('does not mark onboarding as completed when schema or admin fallback data is incomplete', () => {
     const onboardingQuery = readRepoFile('src/server/queries/onboarding.ts');
+    const currentOrganization = readRepoFile('src/server/queries/current-organization.ts');
 
     expect(onboardingQuery).not.toContain("onboardingStatus: 'completed' as const");
     expect(onboardingQuery).toContain('onboardingStatus: membership.onboarding_status');
-    expect(onboardingQuery).toContain('normalizeOnboardingStatus(organization.onboarding_status)');
+    expect(currentOrganization).toContain('normalizeOnboardingStatus(organization.onboarding_status)');
   });
 
   it('preserves only safe localized continuations and rejects open redirects', () => {
