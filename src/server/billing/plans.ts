@@ -84,8 +84,13 @@ export function normalizeBillingPlanId(plan: string | null | undefined): Billing
   return undefined;
 }
 
-export function isSelfServePlan(plan: string): plan is BillingPlan {
-  return Boolean(normalizeBillingPlanId(plan));
+export function isSelfServePlan(plan: string): plan is Exclude<BillingPlan, 'enterprise'> {
+  const normalized = normalizeBillingPlanId(plan);
+  return normalized === 'starter' || normalized === 'growth';
+}
+
+export function isSalesLedPlan(plan: string): plan is Extract<BillingPlan, 'enterprise'> {
+  return normalizeBillingPlanId(plan) === 'enterprise';
 }
 
 export function getBillingPlan(plan: string | null | undefined) {
