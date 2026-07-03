@@ -93,7 +93,7 @@ describe('Phase 5 dashboard invariants', () => {
     expect(onboarding).toContain('B2BOnboardingFlow');
     expect(onboarding).toContain('redirect(`/${safeLocale}/dashboard/organizations${planQuery}`)');
     expect(dashboard).toContain('getCurrentUser');
-    expect(dashboard).toContain('redirect(`/${safeLocale}/login`)');
+    expect(dashboard).toContain('getLoginPath(safeLocale, dashboardPath)');
     expect(dashboard).toContain('getOrganizationDashboardData');
     expect(dashboard).toContain('redirect(`/${safeLocale}/onboarding');
   });
