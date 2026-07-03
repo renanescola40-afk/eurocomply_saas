@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 const publicRoutes = [
-  { path: '/en', heading: /EuroComply|compliance/i },
+  { path: '/en', heading: /RISCK COMPLY|Risck Comply|compliance/i },
   { path: '/en/pricing', heading: /pricing|plan/i },
 ];
 
