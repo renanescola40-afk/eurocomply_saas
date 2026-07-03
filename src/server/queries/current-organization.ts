@@ -4,8 +4,17 @@ function isUuid(value: string) {
   return value.length === 36 && /^[0-9a-f-]+$/i.test(value);
 }
 
-function normalizeOnboardingStatus(value: unknown): 'not_started' | 'in_progress' | 'completed' {
+export type NormalizedOnboardingStatus = 'not_started' | 'in_progress' | 'completed';
+
+export function normalizeOnboardingStatus(value: unknown): NormalizedOnboardingStatus {
   return value === 'completed' || value === 'in_progress' || value === 'not_started' ? value : 'not_started';
+}
+
+export function isOrganizationOnboardingCompleted(input: {
+  onboarding_status?: string | null;
+  onboarding_completed_at?: string | null;
+}) {
+  return normalizeOnboardingStatus(input.onboarding_status) === 'completed' && Boolean(input.onboarding_completed_at);
 }
 
 type RawOrganizationMembership = {
@@ -38,7 +47,7 @@ export type CurrentOrganizationMembership = {
   name: string;
   slug: string | null;
   clerk_org_id: string | null;
-  onboarding_status: 'not_started' | 'in_progress' | 'completed';
+  onboarding_status: NormalizedOnboardingStatus;
   onboarding_completed_at: string | null;
   is_onboarding_completed: boolean;
   organization: {
@@ -46,7 +55,7 @@ export type CurrentOrganizationMembership = {
     name: string;
     slug: string | null;
     clerk_org_id: string | null;
-    onboarding_status: 'not_started' | 'in_progress' | 'completed';
+    onboarding_status: NormalizedOnboardingStatus;
     onboarding_completed_at: string | null;
   };
   organizations: {
@@ -54,7 +63,7 @@ export type CurrentOrganizationMembership = {
     name: string;
     slug: string | null;
     clerk_org_id: string | null;
-    onboarding_status: 'not_started' | 'in_progress' | 'completed';
+    onboarding_status: NormalizedOnboardingStatus;
     onboarding_completed_at: string | null;
   };
 };
@@ -88,7 +97,10 @@ function normalizeMembership(membership: RawOrganizationMembership): CurrentOrga
     clerk_org_id: organization.clerk_org_id,
     onboarding_status: onboardingStatus,
     onboarding_completed_at: onboardingCompletedAt,
-    is_onboarding_completed: onboardingStatus === 'completed' && Boolean(onboardingCompletedAt),
+    is_onboarding_completed: isOrganizationOnboardingCompleted({
+      onboarding_status: onboardingStatus,
+      onboarding_completed_at: onboardingCompletedAt,
+    }),
     organization: normalizedOrganization,
     organizations: normalizedOrganization,
   };
