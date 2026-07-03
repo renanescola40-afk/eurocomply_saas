@@ -27,11 +27,13 @@ describe('auth and onboarding redirect invariants', () => {
     expect(dashboard).toContain('`/${locale}/login?next=');
   });
 
-  it('blocks every organization dashboard route until onboarding is completed', () => {
+  it('blocks every organization dashboard route until onboarding is completed from the shared layout', () => {
+    const dashboard = readRepoFile('src/app/[locale]/dashboard/organizations/page.tsx');
     const dashboardLayout = readRepoFile('src/app/[locale]/dashboard/organizations/layout.tsx');
     const dashboardAccess = readRepoFile('src/server/queries/organization-dashboard-access.ts');
     const currentOrganization = readRepoFile('src/server/queries/current-organization.ts');
 
+    expect(dashboard).not.toContain('getCurrentOrganizationForUser(user.id)');
     expect(dashboardLayout).toContain('getOrganizationDashboardRedirect(safeLocale)');
     expect(dashboardLayout).toContain("await import('next/navigation')");
     expect(dashboardLayout).toContain('navigation.redirect(redirectTarget)');
