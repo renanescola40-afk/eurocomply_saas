@@ -21,10 +21,14 @@ describe('auth and onboarding redirect invariants', () => {
 
   it('keeps unauthenticated dashboard users on login with a safe localized next value', () => {
     const dashboard = readRepoFile('src/app/[locale]/dashboard/organizations/page.tsx');
+    const observability = readRepoFile('src/app/[locale]/dashboard/observability/page.tsx');
 
     expect(dashboard).toContain('getLoginPath(safeLocale, dashboardPath)');
     expect(dashboard).toContain('encodeURIComponent(nextPath)');
     expect(dashboard).toContain('`/${locale}/login?next=');
+    expect(observability).toContain('getLoginPath(safeLocale, dashboardPath)');
+    expect(observability).toContain('encodeURIComponent(nextPath)');
+    expect(observability).toContain('`/${locale}/dashboard/observability`');
   });
 
   it('blocks every organization dashboard route until onboarding is completed from the shared layout', () => {
@@ -43,6 +47,14 @@ describe('auth and onboarding redirect invariants', () => {
     expect(currentOrganization).toContain('onboarding_status');
     expect(currentOrganization).toContain('onboarding_completed_at');
     expect(currentOrganization).toContain('isOrganizationOnboardingCompleted({');
+  });
+
+  it('blocks observability dashboard access until onboarding is completed', () => {
+    const observability = readRepoFile('src/app/[locale]/dashboard/observability/page.tsx');
+
+    expect(observability).toContain('getCurrentOrganizationForUser(user.id)');
+    expect(observability).toContain('!currentOrganization || !currentOrganization.is_onboarding_completed');
+    expect(observability).toContain('redirect(`/${safeLocale}/onboarding`)');
   });
 
   it('uses one completion predicate for dashboard and onboarding redirects', () => {
@@ -75,6 +87,7 @@ describe('auth and onboarding redirect invariants', () => {
     expect(login).toContain("value.includes('://')");
     expect(login).toContain('`/${locale}/onboarding`');
     expect(login).toContain('`/${locale}/dashboard/organizations`');
+    expect(login).toContain('`/${locale}/dashboard/observability`');
     expect(signup).toContain("normalizedNext.startsWith('//')");
     expect(signup).toContain("normalizedNext.includes('://')");
     expect(signup).toContain('`/${locale}/onboarding`');
