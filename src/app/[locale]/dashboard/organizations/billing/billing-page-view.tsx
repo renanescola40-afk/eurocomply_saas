@@ -1,4 +1,5 @@
 import { revalidatePath } from 'next/cache';
+import Link from 'next/link';
 import { CheckCircle2, CreditCard, FileText, Gauge, LockKeyhole, RefreshCw, ShieldCheck, UsersRound } from 'lucide-react';
 import { BILLING_PLANS, getBillingPlan } from '@/lib/billing/plans';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,8 @@ type BillingPageViewProps = {
   checkout?: string;
   billingError?: string;
 };
+
+const SALES_LED_PLAN_IDS = new Set(['enterprise']);
 
 function formatStatus(status: string | null) {
   if (!status) return 'No active Stripe subscription';
@@ -191,6 +194,7 @@ export function BillingPageView({ locale, billing, checkout, billingError }: Bil
         <section className="grid gap-5 lg:grid-cols-3">
           {BILLING_PLANS.map((plan) => {
             const isCurrent = plan.id === currentPlan.id;
+            const isSalesLed = SALES_LED_PLAN_IDS.has(plan.id);
             const description = `${formatLimitValue(plan.limits.users)} users, ${formatLimitValue(plan.limits.documents)} documents and ${formatLimitValue(plan.limits.vendors)} vendors included.`;
 
             return (
@@ -202,6 +206,7 @@ export function BillingPageView({ locale, billing, checkout, billingError }: Bil
                       <CardDescription className="mt-2 text-white/52">{description}</CardDescription>
                     </div>
                     {isCurrent ? <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-black">Current</span> : null}
+                    {isSalesLed && !isCurrent ? <span className="rounded-full border border-cyan-200/30 px-3 py-1 text-xs font-bold text-cyan-100">Sales-led</span> : null}
                   </div>
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col gap-5">
@@ -209,7 +214,11 @@ export function BillingPageView({ locale, billing, checkout, billingError }: Bil
                   <ul className="space-y-2 text-sm text-white/58">
                     {plan.features.map((highlight) => <li key={highlight} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-white" /> {highlight}</li>)}
                   </ul>
-                  <BillingActionButton action="checkout" locale={locale} planId={plan.id} className="w-full rounded-full" variant={isCurrent ? 'outline' : 'default'} disabled={isCurrent}>{isCurrent ? 'Current plan' : 'Upgrade plan'}</BillingActionButton>
+                  {isSalesLed && !isCurrent ? (
+                    <Link href={`/${locale}/contact?intent=sales&plan=${plan.id}`} className="inline-flex h-10 w-full items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-black hover:bg-white/90">Talk to sales</Link>
+                  ) : (
+                    <BillingActionButton action="checkout" locale={locale} planId={plan.id} className="w-full rounded-full" variant={isCurrent ? 'outline' : 'default'} disabled={isCurrent}>{isCurrent ? 'Current plan' : 'Upgrade plan'}</BillingActionButton>
+                  )}
                 </CardContent>
               </Card>
             );
