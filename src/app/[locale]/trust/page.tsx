@@ -115,6 +115,7 @@ export default async function TrustPage({ params }: PageProps) {
 
   const locale = rawLocale;
   const copy = TRUST_COPY[locale];
+  void copy;
 
-  return <TrustCenterPage locale={locale} kind="trust" copy={copy} />;
+  return <TrustCenterPage locale={locale} kind="trust" />;
 }

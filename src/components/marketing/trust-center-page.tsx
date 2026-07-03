@@ -125,7 +125,7 @@ const providerRows: ProviderRow[] = [
   { name: 'Vercel', purpose: 'Application hosting, deployment and edge delivery', data: 'Application traffic, deployment metadata and logs depending on configuration', region: 'Managed global infrastructure; runtime region depends on project configuration', status: 'Production provider where configured' },
   { name: 'Supabase', purpose: 'Database, authentication, storage and Row Level Security', data: 'Account data, organization records, workflow data and audit events', region: 'Configured project region; disclose exact region in the security pack', status: 'Core production provider where configured' },
   { name: 'Stripe', purpose: 'Subscription billing, checkout, customer portal and webhook processing', data: 'Billing identifiers, subscription status and payment metadata', region: 'Global payments infrastructure', status: 'Used when billing is enabled' },
-  { name: 'Sentry', purpose: 'Error monitoring and diagnostics', data: 'Error events, stack traces and diagnostic metadata depending on configuration', region: 'Configured account/project region', status: 'Optional monitoring provider' },
+  { name: 'Sentry', purpose: 'Monitoring and diagnostics', data: 'Diagnostic events, stack traces and metadata depending on configuration', region: 'Configured account/project region', status: 'Optional monitoring provider' },
   { name: 'PostHog', purpose: 'Product analytics and usage insights', data: 'Product analytics events where enabled and appropriate', region: 'Configured account/project region', status: 'Optional analytics provider' },
 ];
 
@@ -219,288 +219,165 @@ const PAGE_CONTENT: Record<TrustPageKind, TrustPageContent> = {
       { title: 'Support path', description: 'Support expectations should be tied to the customer plan and contract.', items: ['Route security issues to the security contact.', 'Route buying and implementation questions through sales.', 'Prioritize incidents by severity and customer impact.'], icon: LifeBuoy },
       { title: 'Incident communication', description: 'Status updates should be evidence-based and timely.', items: ['Publish updates through the status surface.', 'Avoid unsupported RCA claims before investigation.', 'Document remediation and follow-up actions.'], icon: ShieldAlert },
     ],
-    disclosure: 'Formal SLA terms must be captured in the signed agreement or order form.',
+    disclosure: 'This SLA page is informational and does not create a standalone uptime commitment.',
   },
   status: {
     eyebrow: 'Status',
-    title: 'Public service status and incident communication surface.',
-    subtitle: 'A fallback status page that can link to Better Stack, Instatus or another provider when configured.',
+    title: 'Public status and operational availability surface.',
+    subtitle: 'A lightweight public status page for uptime, incidents, maintenance and monitoring-provider integration.',
     badge: 'Status page',
     summaryTitle: 'Current status model',
-    summary: ['This route is the public status entry point.', 'External status automation is only claimed when NEXT_PUBLIC_STATUS_PAGE_URL is configured.', 'Provider-specific health depends on the active deployment.'],
-    sections: [{ title: 'Operational model', description: 'Keep status claims tied to real monitoring evidence.', items: ['Manual updates are acceptable until external status integration is configured.', 'Do not claim automated incident detection unless it is deployed.', 'Use this route as the public fallback.'], icon: Activity }],
+    summary: ['This route is the public status entry point.', 'External provider integration can be linked when configured.', 'Incident communication should be evidence-based and time stamped.'],
+    sections: [{ title: 'Status communication', description: 'Customers should have a simple place to check known incidents.', items: ['Publish active incidents and maintenance windows.', 'Avoid unsupported uptime or RCA claims.', 'Link to external monitoring only when configured.'], icon: Activity }],
     statusRows,
-    disclosure: 'Status information is informational and not a contractual SLA unless separately agreed.',
+    disclosure: 'This page is not a substitute for contractual SLA terms.',
   },
   compliance: {
-    eyebrow: 'Compliance posture',
-    title: 'Built for European compliance teams.',
-    subtitle: 'Risck comply helps companies organize evidence, responsibilities, deadlines and audit trails across European operations.',
-    badge: 'Compliance overview',
-    summaryTitle: 'Compliance operating model',
-    summary: ['GDPR-oriented workflows.', 'Roadmap alignment for AI Act, DORA and NIS2 needs.', 'Audit-ready evidence surfaces for operational review.'],
+    eyebrow: 'Compliance',
+    title: 'AI governance and EU AI Act readiness without legal overclaiming.',
+    subtitle: 'A public explanation of what the product helps organize and where professional advice remains necessary.',
+    badge: 'Compliance posture',
+    summaryTitle: 'Compliance support model',
+    summary: ['The platform helps organize AI systems, risks, documents, vendors, tasks and evidence.', 'It does not replace legal counsel, certification bodies or external audits.', 'Readiness outputs should be reviewed by qualified professionals before reliance.'],
     sections: [
-      { title: 'Governance workflows', description: 'Organize responsibilities, documents and reviews.', items: ['Compliance records.', 'Vendor evidence.', 'Operational approvals.'], icon: ClipboardCheck },
-      { title: 'Evidence readiness', description: 'Help teams prove what happened and when.', items: ['Audit trails.', 'Document metadata.', 'Status and readiness reporting.'], icon: FileCheck2 },
+      { title: 'What the platform supports', description: 'Operational compliance work needs structure and evidence.', items: ['AI inventory and system records.', 'Risk classification workflow support.', 'Document and policy generation from controlled inputs.', 'Evidence and audit trail organization.'], icon: ClipboardCheck },
+      { title: 'What is not claimed', description: 'Compliance claims stay conservative.', items: ['No automatic legal compliance guarantee.', 'No certification claim.', 'No replacement for counsel or external audit.'], icon: AlertTriangle },
     ],
-    disclosure: 'This page is a product and security overview. Formal legal commitments are governed by signed agreements.',
+    disclosure: 'Compliance outputs are operational aids and should be reviewed before legal or regulatory reliance.',
   },
   'data-processing': {
-    eyebrow: 'Data Processing',
-    title: 'How Risck comply handles customer data.',
-    subtitle: 'A practical overview for procurement, privacy and review teams evaluating Risck comply as a European compliance platform.',
+    eyebrow: 'Data processing',
+    title: 'Data processing overview for procurement and GDPR review.',
+    subtitle: 'How customer data categories, purposes, subprocessors and deletion expectations are described publicly.',
     badge: 'Data processing overview',
     summaryTitle: 'Processing summary',
-    summary: ['Customer data is processed to provide the service.', 'Access is scoped by authenticated users and organization membership.', 'Controlled documents and audit events support compliance operations.'],
+    summary: ['Customer business records are processed to deliver the service.', 'Subprocessors and regions depend on configured providers.', 'Enterprise customers can request updated evidence and DPA review.'],
     sections: [
-      { title: 'Customer data', description: 'The platform processes business records needed to deliver compliance workflows.', items: ['Organization profiles.', 'Compliance records.', 'Documents, vendors and audit events.'], icon: Database },
-      { title: 'Minimisation', description: 'Collect only what is needed for product operation and customer workflows.', items: ['Limit uploaded data to the use case.', 'Review retention and deletion requirements.', 'Use processor and subprocessor documentation during procurement.'], icon: LockKeyhole },
+      { title: 'Operational data', description: 'Data entered into the platform supports compliance workflows.', items: ['AI systems and vendors.', 'Risks, controls, documents, tasks and audit entries.', 'Users, roles, organization metadata and billing references.'], icon: Database },
+      { title: 'Retention and deletion', description: 'Deletion posture should be confirmed in the signed agreement.', items: ['Workspace admins can request export or deletion support.', 'Backups and provider logs may follow provider-specific retention windows.'], icon: ClipboardCheck },
     ],
-    disclosure: 'This overview is informational and should be read with the Privacy Policy, DPA and Subprocessors list.',
+    disclosure: 'This data-processing overview is informational and does not replace a signed DPA.',
   },
 };
 
-function getLocale(rawLocale: string) {
-  return normalizeLocale(rawLocale);
+function getLocalizedPrefix(locale: string) {
+  const normalized = normalizeLocale(locale);
+  return `/${normalized}`;
 }
 
-function localHref(locale: string, path: string) {
-  return `/${locale}${path}`;
+function localizeHref(locale: string, href: string) {
+  const prefix = getLocalizedPrefix(locale);
+  return href === '/' ? prefix : `${prefix}${href}`;
 }
 
-function trustCopyToContent(copy: LocalizedTrustCopy): TrustPageContent {
-  return {
-    eyebrow: copy.eyebrow,
-    title: copy.title,
-    subtitle: copy.subtitle,
-    badge: copy.notice,
-    summaryTitle: copy.evidenceTitle,
-    summary: copy.evidenceItems,
-    cards: copy.cards.map((card, index) => ({
-      title: card.title,
-      description: card.body,
-      href: card.href,
-      icon: trustCardIcons[index] ?? ShieldCheck,
-    })),
-    sections: [
-      {
-        title: copy.procurementTitle,
-        description: copy.notice,
-        items: copy.procurementItems,
-        icon: ClipboardCheck,
-      },
-      ...sharedSecuritySections,
-      {
-        title: 'Security contact',
-        description: 'Security and procurement questions should go through a dedicated route.',
-        items: [`Security contact: ${SECURITY_EMAIL}.`, 'Include company name, use case, regions, data categories and procurement deadline.'],
-        icon: Mail,
-      },
-    ],
-    disclosure: copy.notice,
-  };
-}
-
-function CtaRow({ locale }: { locale: string }) {
-  return (
-    <div className="mt-8 flex flex-wrap gap-3">
-      <Link href={localHref(locale, '/contact')} className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-white/90">
-        Contact sales
-      </Link>
-      <Link href={localHref(locale, '/trust')} className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
-        Open Trust Center
-      </Link>
-    </div>
-  );
-}
-
-function StatusBadge({ children }: { children: string }) {
-  return <span className="inline-flex rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-white/75">{children}</span>;
-}
-
-function ProviderTable({ providers }: { providers: ProviderRow[] }) {
-  return (
-    <section className="mx-auto max-w-7xl px-6 pb-12">
-      <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.035]">
-        <div className="grid grid-cols-5 gap-4 border-b border-white/10 px-5 py-4 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">
-          <span>Provider</span>
-          <span>Purpose</span>
-          <span>Data</span>
-          <span>Region</span>
-          <span>Status</span>
-        </div>
-        {providers.map((provider) => (
-          <div key={provider.name} className="grid grid-cols-1 gap-3 border-b border-white/10 px-5 py-5 text-sm leading-6 text-white/65 last:border-b-0 md:grid-cols-5">
-            <strong className="text-white">{provider.name}</strong>
-            <span>{provider.purpose}</span>
-            <span>{provider.data}</span>
-            <span>{provider.region}</span>
-            <span>{provider.status}</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function StatusTable({ rows }: { rows: StatusRow[] }) {
-  return (
-    <section className="mx-auto max-w-7xl px-6 pb-12">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {rows.map((row) => (
-          <article key={row.name} className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-6">
-            <StatusBadge>{row.state}</StatusBadge>
-            <h2 className="mt-5 text-xl font-semibold text-white">{row.name}</h2>
-            <p className="mt-3 text-sm leading-7 text-white/60">{row.description}</p>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-export function TrustCenterPage({ locale: rawLocale, kind, copy }: { locale: string; kind: TrustPageKind; copy?: LocalizedTrustCopy }) {
-  const locale = getLocale(rawLocale);
-  const content = kind === 'trust' && copy ? trustCopyToContent(copy) : PAGE_CONTENT[kind];
-  const externalStatusPageUrl = process.env.NEXT_PUBLIC_STATUS_PAGE_URL;
+export function TrustCenterPage({ locale, kind }: { locale: string; kind: TrustPageKind }) {
+  const content = PAGE_CONTENT[kind] ?? PAGE_CONTENT.trust;
+  const prefix = getLocalizedPrefix(locale);
 
   return (
-    <main className="min-h-screen bg-[#0A0A0F] text-[#E0E0E0]">
-      <section className="relative overflow-hidden px-6 py-20 md:py-24">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_10%,rgba(255,255,255,.12),transparent_30%),radial-gradient(circle_at_78%_12%,rgba(255,255,255,.08),transparent_28%),linear-gradient(to_bottom,#0A0A0F,#050508)]" />
-        <div className="mx-auto max-w-7xl">
-          <Link href={localHref(locale, '')} className="text-sm text-white/60 transition hover:text-white">
-            Risck comply
-          </Link>
-          <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-medium text-white/80">
+    <main className="min-h-screen bg-[#050505] text-white">
+      <section className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,.22),transparent_30rem),linear-gradient(180deg,#050505_0%,#071018_100%)] px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <Link href={prefix} className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200/70">Risck comply</Link>
+          <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-300/[0.08] px-4 py-2 text-sm text-cyan-50/80">
             <ShieldCheck className="h-4 w-4" /> {content.badge}
           </div>
-          <p className="mt-8 text-sm font-semibold uppercase tracking-[0.32em] text-white/45">{content.eyebrow}</p>
-          <h1 className="mt-5 max-w-5xl text-4xl font-semibold tracking-[-0.055em] text-white md:text-6xl lg:text-7xl">{content.title}</h1>
-          <p className="mt-7 max-w-3xl text-lg leading-8 text-white/65 md:text-xl">{content.subtitle}</p>
-          <CtaRow locale={locale} />
+          <p className="mt-6 text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200/60">{content.eyebrow}</p>
+          <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-0.055em] text-white sm:text-6xl">{content.title}</h1>
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-white/62">{content.subtitle}</p>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-5 px-6 pb-12 lg:grid-cols-[0.9fr_1.1fr]">
-        <article className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-8 shadow-2xl shadow-black/20">
-          <div className="flex items-center gap-3 text-white">
-            <ClipboardCheck className="h-5 w-5" />
-            <h2 className="text-2xl font-semibold">{content.summaryTitle}</h2>
-          </div>
-          <ul className="mt-6 space-y-4 text-sm leading-7 text-white/65">
-            {content.summary.map((item) => (
-              <li key={item} className="flex gap-3">
-                <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-white" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-7 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm leading-6 text-amber-100/80">
-            Last reviewed: {LAST_REVIEWED}. Certification claims are shown only when evidence exists.
-          </div>
-        </article>
-
-        <article className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-8 shadow-2xl shadow-black/20">
-          <div className="flex items-center gap-3 text-white">
-            <Mail className="h-5 w-5" />
-            <h2 className="text-2xl font-semibold">Enterprise request path</h2>
-          </div>
-          <div className="mt-6 grid gap-3 text-sm leading-7 text-white/65 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <p className="font-semibold text-white">1. Request pack</p>
-              <p className="mt-2">Ask for security questionnaire support, DPA review and current evidence.</p>
+      <section className="px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[.86fr_1.14fr]">
+          <aside className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-100/60">{content.summaryTitle}</p>
+            <div className="mt-5 space-y-3">
+              {content.summary.map((item) => (
+                <p key={item} className="text-sm leading-7 text-white/58">{item}</p>
+              ))}
             </div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <p className="font-semibold text-white">2. Validate scope</p>
-              <p className="mt-2">Confirm regions, data categories, plan, integrations and contractual commitments.</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <p className="font-semibold text-white">3. Attach evidence</p>
-              <p className="mt-2">Use dated release, RLS, backup, monitoring and provider evidence before signature.</p>
-            </div>
-          </div>
-          <p className="mt-6 text-sm leading-7 text-white/55">
-            Security contact: <a href={`mailto:${SECURITY_EMAIL}`} className="text-white underline decoration-white/30 underline-offset-4 hover:decoration-white">{SECURITY_EMAIL}</a>. Include your company name, target region, use case and procurement deadline.
-          </p>
-        </article>
-      </section>
+            <p className="mt-6 text-xs leading-6 text-white/36">Last reviewed: {LAST_REVIEWED}. Certification claims are shown only when evidence exists.</p>
+          </aside>
 
-      {content.cards ? (
-        <section className="mx-auto grid max-w-7xl gap-5 px-6 pb-12 md:grid-cols-2 lg:grid-cols-3">
-          {content.cards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Link key={card.href} href={localHref(locale, card.href)} className="group rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-6 transition hover:-translate-y-1 hover:bg-white/[0.07]">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white text-black">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h2 className="mt-5 text-xl font-semibold text-white">{card.title}</h2>
-                <p className="mt-3 text-sm leading-7 text-white/60">{card.description}</p>
-                <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-white/80 group-hover:text-white">
-                  Open page <ArrowRight className="h-4 w-4" />
-                </span>
-              </Link>
-            );
-          })}
-        </section>
-      ) : null}
-
-      {content.providers ? <ProviderTable providers={content.providers} /> : null}
-      {content.statusRows ? <StatusTable rows={content.statusRows} /> : null}
-
-      {kind === 'status' ? (
-        <section className="mx-auto max-w-7xl px-6 pb-12">
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-8">
-            <h2 className="text-2xl font-semibold text-white">External status provider</h2>
-            {externalStatusPageUrl ? (
-              <a href={externalStatusPageUrl} className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-black transition hover:bg-zinc-200">
-                Open external status page <ArrowRight className="h-4 w-4" />
-              </a>
-            ) : (
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-white/60">
-                No external Better Stack/Instatus URL is configured in this build. Set NEXT_PUBLIC_STATUS_PAGE_URL when the external status page is ready, and keep this route as the public fallback.
-              </p>
-            )}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="mx-auto grid max-w-7xl gap-5 px-6 pb-16 md:grid-cols-2">
-        {content.sections.map((section) => {
-          const Icon = section.icon;
-          return (
-            <article key={section.title} className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-6">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white text-black">
-                <Icon className="h-5 w-5" />
+          <div className="space-y-5">
+            {content.cards ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {content.cards.map((card, index) => {
+                  const Icon = card.icon ?? trustCardIcons[index % trustCardIcons.length];
+                  return (
+                    <Link key={card.href} href={localizeHref(locale, card.href)} className="group rounded-[1.6rem] border border-white/10 bg-black/30 p-5 transition hover:border-cyan-200/40 hover:bg-cyan-300/[0.06]">
+                      <div className="flex items-start gap-4">
+                        <div className="rounded-2xl bg-white/10 p-3 text-white"><Icon className="h-5 w-5" /></div>
+                        <div>
+                          <h2 className="font-semibold text-white">{card.title}</h2>
+                          <p className="mt-2 text-sm leading-6 text-white/52">{card.description}</p>
+                          <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-cyan-100">Open <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
-              <h2 className="mt-5 text-xl font-semibold text-white">{section.title}</h2>
-              <p className="mt-3 text-sm leading-7 text-white/60">{section.description}</p>
-              <ul className="mt-5 space-y-3 text-sm leading-7 text-white/70">
-                {section.items.map((item) => (
-                  <li key={item} className="flex gap-3">
-                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-white/70" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </article>
-          );
-        })}
-      </section>
+            ) : null}
 
-      <section className="mx-auto max-w-7xl px-6 pb-20">
-        <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-8">
-          <div className="flex items-center gap-3 text-white">
-            <AlertTriangle className="h-5 w-5" />
-            <h2 className="text-2xl font-semibold">Important disclosure</h2>
+            {content.sections.map((section) => {
+              const Icon = section.icon;
+              return (
+                <article key={section.title} className="rounded-[1.8rem] border border-white/10 bg-black/28 p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="rounded-2xl bg-white/10 p-3 text-white"><Icon className="h-5 w-5" /></div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-white">{section.title}</h2>
+                      <p className="mt-2 text-sm leading-7 text-white/54">{section.description}</p>
+                      <ul className="mt-4 space-y-2">
+                        {section.items.map((item) => (
+                          <li key={item} className="flex gap-2 text-sm leading-6 text-white/56"><CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-cyan-100" /> {item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+
+            {content.providers ? (
+              <div className="overflow-hidden rounded-[1.8rem] border border-white/10 bg-black/30">
+                {content.providers.map((provider) => (
+                  <div key={provider.name} className="grid gap-3 border-b border-white/10 p-5 last:border-b-0 md:grid-cols-[.7fr_1fr_1fr_.8fr_.8fr]">
+                    <strong>{provider.name}</strong>
+                    <span className="text-sm text-white/55">{provider.purpose}</span>
+                    <span className="text-sm text-white/55">{provider.data}</span>
+                    <span className="text-sm text-white/55">{provider.region}</span>
+                    <span className="text-sm text-cyan-100/70">{provider.status}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {content.statusRows ? (
+              <div className="overflow-hidden rounded-[1.8rem] border border-white/10 bg-black/30">
+                {content.statusRows.map((row) => (
+                  <div key={row.name} className="grid gap-3 border-b border-white/10 p-5 last:border-b-0 md:grid-cols-[.7fr_.7fr_1.4fr]">
+                    <strong>{row.name}</strong>
+                    <span className="text-sm text-cyan-100/70">{row.state}</span>
+                    <span className="text-sm text-white/55">{row.description}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
-          <p className="mt-4 max-w-4xl text-sm leading-7 text-white/65">{content.disclosure}</p>
-          <CtaRow locale={locale} />
         </div>
       </section>
 
-      <PublicFooter locale={locale} />
+      <section className="border-y border-white/10 bg-white/[0.03] px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 text-sm leading-7 text-white/50 md:flex-row md:items-center md:justify-between">
+          <p>{content.disclosure}</p>
+          <Link href={localizeHref(locale, '/trust')} className="inline-flex items-center gap-2 font-semibold text-cyan-100">Open Trust Center <ArrowRight className="h-4 w-4" /></Link>
+        </div>
+      </section>
+
+      <PublicFooter locale={normalizeLocale(locale)} />
     </main>
   );
 }
