@@ -170,7 +170,7 @@ export function inferInitialRiskLevel(input: {
 export function getRiskLevelLabel(level: AiActRiskLevel) {
   switch (level) {
     case 'prohibited_review':
-      return 'Prohibited-practice review';
+      return 'Restricted-use review';
     case 'high_risk_review':
       return 'High-risk review';
     case 'limited_transparency':
@@ -188,68 +188,28 @@ export function getRecommendedDocuments(input: {
   sector: CompanySector | string;
 }): OnboardingRecommendation[] {
   const docs: OnboardingRecommendation[] = [
-    {
-      id: 'ai-system-inventory',
-      title: 'AI system inventory',
-      category: 'governance',
-      priority: 'high',
-      reason: 'Every AI use case needs an owner, purpose, lifecycle status and organization_id trail.',
-    },
-    {
-      id: 'employee-ai-use-policy',
-      title: 'Employee AI usage policy',
-      category: 'policy',
-      priority: 'medium',
-      reason: 'Staff need clear rules for approved tools, data handling and escalation.',
-    },
-    {
-      id: 'ai-governance-summary',
-      title: 'AI governance board summary',
-      category: 'reporting',
-      priority: 'medium',
-      reason: 'Leadership should see readiness, open gaps and ownership from day one.',
-    },
+    { id: 'ai-system-inventory', title: 'AI system inventory', category: 'governance', priority: 'high', reason: 'Record owner, purpose, lifecycle status and organization scope.' },
+    { id: 'employee-ai-use-policy', title: 'Employee AI usage policy', category: 'policy', priority: 'medium', reason: 'Staff need rules for approved tools, data handling and escalation.' },
+    { id: 'ai-governance-summary', title: 'AI governance board summary', category: 'reporting', priority: 'medium', reason: 'Leadership should see readiness, open gaps and ownership from day one.' },
   ];
 
   if (input.usesPersonalData) {
-    docs.push({
-      id: 'personal-data-ai-dpia-screening',
-      title: 'AI personal data DPIA screening',
-      category: 'privacy',
-      priority: 'high',
-      reason: 'Personal data use should be checked against GDPR lawful basis, minimisation and DPIA triggers.',
-    });
+    docs.push({ id: 'personal-data-ai-dpia-screening', title: 'AI personal data DPIA screening', category: 'privacy', priority: 'high', reason: 'Personal data use needs documented privacy review.' });
   }
 
   if (input.interactsWithPeople || input.generatesContent) {
-    docs.push({
-      id: 'transparency-notice',
-      title: 'User-facing AI transparency notice',
-      category: 'transparency',
-      priority: 'high',
-      reason: 'EU AI Act transparency duties apply when people interact with or receive AI-generated content.',
-    });
+    docs.push({ id: 'transparency-notice', title: 'User-facing AI transparency notice', category: 'transparency', priority: 'high', reason: 'User-facing AI should have clear disclosure and content handling notes.' });
   }
 
-  if (input.riskLevel === 'high_risk_review') {
-    docs.push({
-      id: 'high-risk-classification-record',
-      title: 'High-risk classification record',
-      category: 'risk',
-      priority: 'critical',
-      reason: 'Potential high-risk use cases need documented classification rationale and control ownership.',
-    });
+  if (input.riskLevel === 'high_risk_review' || input.riskLevel === 'prohibited_review') {
+    docs.push({ id: 'high-risk-classification-record', title: 'Risk classification record', category: 'risk', priority: 'critical', reason: 'Elevated risk use cases need documented classification rationale.' });
   }
 
   if (input.sector === 'hr_recruiting' || input.sector === 'financial_services' || input.sector === 'fintech') {
-    docs.push({
-      id: 'human-oversight-playbook',
-      title: 'Human oversight playbook',
-      category: 'operations',
-      priority: 'high',
-      reason: 'Regulated workflows need human review, escalation and accountability controls.',
-    });
+    docs.push({ id: 'human-oversight-playbook', title: 'Human oversight playbook', category: 'operations', priority: 'high', reason: 'Regulated workflows need review, escalation and accountability controls.' });
   }
 
   return docs;
 }
+
+export { calculateInitialReadinessScore, getSuggestedTasks } from './activation-scoring';
