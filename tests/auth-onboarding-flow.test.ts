@@ -28,7 +28,7 @@ describe('auth and onboarding redirect invariants', () => {
     expect(dashboard).toContain('`/${locale}/login?next=');
     expect(observability).toContain('getLoginPath(safeLocale, dashboardPath)');
     expect(observability).toContain('encodeURIComponent(nextPath)');
-    expect(observability).toContain('`/${locale}/dashboard/observability`');
+    expect(observability).toContain('`/${safeLocale}/dashboard/observability`');
   });
 
   it('blocks every organization dashboard route until onboarding is completed from the shared layout', () => {
