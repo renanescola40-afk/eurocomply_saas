@@ -11,7 +11,6 @@ import { locales, type Locale } from '@/lib/i18n/routing';
 import { getDashboardCopy } from '@/lib/i18n/dashboard-copy';
 import { formatLimit } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
-import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { listOrganizationMembers, listPendingInvitations } from '@/server/queries/members';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
 
@@ -109,13 +108,6 @@ export default async function OrganizationDashboardPage({ params, searchParams }
 
   if (!user) {
     redirect(getLoginPath(safeLocale, dashboardPath));
-  }
-
-  const currentOrganization = await getCurrentOrganizationForUser(user.id);
-
-  if (!currentOrganization || !currentOrganization.is_onboarding_completed) {
-    const requestedPlan = getPlanQuery(resolvedSearchParams.plan);
-    redirect(`/${safeLocale}/onboarding${requestedPlan}`);
   }
 
   const data = await getOrganizationDashboardData(user.id);
