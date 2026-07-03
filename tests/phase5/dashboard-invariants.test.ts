@@ -2,8 +2,6 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const read = (path: string) => readFileSync(path, 'utf8');
-const signupNextPattern = 'signup?' + 'next=';
-const loginNextPattern = 'login?' + 'next=';
 
 describe('Phase 5 dashboard invariants', () => {
   it('keeps root and localized marketing entrypoints stable', () => {
@@ -34,14 +32,16 @@ describe('Phase 5 dashboard invariants', () => {
     expect(auth).toContain("import { supabase } from '@/integrations/supabase/client'");
     expect(auth).not.toContain('@ts-nocheck');
     expect(login).toContain('successHref');
+    expect(login).toContain('signUpHref');
+    expect(login).toContain('safeNext');
     expect(login).toContain('signInWithEmail');
     expect(login).toContain('signInWithGoogle');
-    expect(login).toContain(loginNextPattern);
     expect(signup).toContain('getOnboardingHref');
     expect(signup).toContain('isAllowedLocalizedContinuation');
+    expect(signup).toContain('getSignInHref');
+    expect(signup).toContain('getSignupPlanHref');
     expect(signup).toContain('signUpWithEmail');
     expect(signup).toContain('signInWithGoogle');
-    expect(signup).toContain(signupNextPattern);
   });
 
   it('keeps OAuth callback exchanging Supabase codes safely', () => {
