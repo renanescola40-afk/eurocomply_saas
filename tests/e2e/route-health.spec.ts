@@ -14,18 +14,22 @@ type RouteCase = {
 const PUBLIC_ROUTES: RouteCase[] = [
   { name: 'landing', path: '/', critical: true },
   { name: 'pricing', path: '/pricing', critical: true },
+  { name: 'trust/security trust center', path: '/trust', critical: true },
+  { name: 'trust/security security page', path: '/security', critical: true },
+  { name: 'privacy', path: '/privacy', critical: true },
+  { name: 'terms', path: '/terms', critical: true },
+  { name: 'contact', path: '/contact', critical: true },
+  { name: 'book demo', path: '/book-demo', critical: true },
+  { name: 'checkout selected plan', path: '/checkout?plan=professional', critical: true },
   { name: 'login', path: '/login', critical: true },
   { name: 'signup', path: '/signup', critical: true },
   { name: 'password reset', path: '/recuperar-senha', critical: true },
-  { name: 'trust/security trust center', path: '/trust', critical: true },
-  { name: 'trust/security security page', path: '/security', critical: true },
+  { name: 'password reset continuation', path: '/atualizar-senha', critical: true },
+  { name: 'vulnerability disclosure', path: '/vulnerability-disclosure', critical: true },
   { name: 'compliance', path: '/compliance' },
   { name: 'resources', path: '/resources' },
   { name: 'faq', path: '/faq' },
   { name: 'about', path: '/about' },
-  { name: 'contact', path: '/contact' },
-  { name: 'privacy', path: '/privacy' },
-  { name: 'terms', path: '/terms' },
   { name: 'data processing', path: '/data-processing' },
   { name: 'service commitments', path: '/sla' },
   { name: 'dpa', path: '/dpa' },
@@ -34,15 +38,19 @@ const PUBLIC_ROUTES: RouteCase[] = [
 ];
 
 const PRIVATE_ROUTES: RouteCase[] = [
+  { name: 'onboarding', path: '/onboarding', critical: true },
   { name: 'dashboard', path: '/dashboard', critical: true },
   { name: 'organizations', path: '/dashboard/organizations', critical: true },
+  { name: 'team', path: '/dashboard/organizations/team', critical: true },
   { name: 'documents', path: '/dashboard/organizations/documents', critical: true },
   { name: 'vendors', path: '/vendor-assurance', critical: true },
   { name: 'risks', path: '/dashboard/organizations/risks', critical: true },
   { name: 'tasks/approvals', path: '/aprovacoes', critical: true },
   { name: 'tasks dashboard', path: '/dashboard/tasks', critical: true },
   { name: 'reports', path: '/dashboard/organizations/reports-governance', critical: true },
-  { name: 'audit', path: '/auditoria', critical: true },
+  { name: 'AI systems/inventory', path: '/ai-systems', critical: true },
+  { name: 'legacy inventory', path: '/dashboard/inventario', critical: true },
+  { name: 'audit/logs', path: '/auditoria', critical: true },
   { name: 'settings', path: '/settings', critical: true },
   { name: 'billing', path: '/billing', critical: true },
   { name: 'organization billing', path: '/dashboard/organizations/billing', critical: true },
@@ -50,10 +58,11 @@ const PRIVATE_ROUTES: RouteCase[] = [
 ];
 
 // Route-health artifact marker compatibility: anonymous visitor, authenticated user without organization,
-// owner, admin, editor, viewer, pt, en, es, fr, it, de, /dashboard/organizations,
-// /dashboard/organizations/billing, /vendor-assurance, /aprovacoes, /security-center,
-// /data-processing, /undefined, expectNoUndefinedLinks, expectNoDeadPrimaryControls,
-// should redirect to localized login, mobile viewport.
+// owner, admin, member, editor, viewer, pt, en, es, fr, it, de, /dashboard/organizations,
+// /dashboard/organizations/team, /dashboard/organizations/billing, /vendor-assurance,
+// /aprovacoes, /ai-systems, /dashboard/inventario, /security-center, /checkout?plan=professional,
+// /book-demo, /privacy, /terms, /data-processing, /undefined, expectNoUndefinedLinks,
+// expectNoDeadPrimaryControls, should redirect to localized login, mobile viewport.
 
 function localizedPath(locale: Locale | string, routePath: string) {
   return routePath === '/' ? `/${locale}` : `/${locale}${routePath}`;
@@ -125,7 +134,7 @@ async function expectNoDeadPrimaryControls(page: Page, label: string) {
   );
 
   const primaryAnchors = anchors.filter((anchor) =>
-    anchor.visible && /start|sign|login|entrar|create|criar|pricing|trust|security|contact|continue|continuar|join|waitlist|lista/i.test(anchor.text),
+    anchor.visible && /start|sign|login|entrar|create|criar|pricing|trust|security|contact|continue|continuar|join|waitlist|lista|demo|book|checkout|billing/i.test(anchor.text),
   );
   const brokenAnchors = primaryAnchors.filter((anchor) =>
     !anchor.href || anchor.href === '#' || anchor.href.includes('/undefined'),
@@ -148,7 +157,7 @@ async function expectNoDeadPrimaryControls(page: Page, label: string) {
   );
 
   const primaryButtons = buttons.filter((button) =>
-    button.visible && /start|sign|login|entrar|create|criar|save|guardar|submit|send|enviar|continue|continuar|manage|join|waitlist|lista/i.test(button.text),
+    button.visible && /start|sign|login|entrar|create|criar|save|guardar|submit|send|enviar|continue|continuar|manage|join|waitlist|lista|demo|book|checkout|billing/i.test(button.text),
   );
   const inertButtons = primaryButtons.filter((button) => button.disabled || button.ariaDisabled === 'true');
   expect(inertButtons, `${label} has disabled primary buttons`).toEqual([]);
@@ -214,7 +223,21 @@ async function expectRouteHealthy(page: Page, routePath: string, label: string) 
 }
 
 function shouldDeepCheckInternalLinks(locale: Locale, route: RouteCase) {
-  return route.critical && (locale === 'en' || locale === 'pt') && ['landing', 'pricing', 'login', 'signup', 'trust/security trust center', 'trust/security security page'].includes(route.name);
+  const deeplyCheckedRoutes = [
+    'landing',
+    'pricing',
+    'book demo',
+    'checkout selected plan',
+    'login',
+    'signup',
+    'contact',
+    'trust/security trust center',
+    'trust/security security page',
+    'privacy',
+    'terms',
+  ];
+
+  return route.critical && (locale === 'en' || locale === 'pt') && deeplyCheckedRoutes.includes(route.name);
 }
 
 function isPrelaunchGatedPublicRoute(route: RouteCase) {
@@ -308,9 +331,9 @@ test.describe('authenticated user without organization', () => {
 });
 
 test.describe('authenticated role route health', () => {
-  for (const persona of ['owner', 'admin', 'editor', 'viewer'] as const) {
+  for (const persona of ['owner', 'admin', 'member', 'editor', 'viewer'] as const) {
     test(`${persona} route checks are skipped without seeded auth fixtures`, async () => {
-      test.skip(true, 'Authenticated role route-health coverage requires seeded auth fixtures outside this anonymous smoke suite.');
+      test.skip(true, 'Authenticated route-health coverage requires seeded auth fixtures outside this anonymous smoke suite.');
     });
   }
 });
