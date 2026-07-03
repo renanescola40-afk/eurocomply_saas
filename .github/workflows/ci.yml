@@ -41,7 +41,13 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          const runner = fs.readFileSync('scripts/release/run-public-production-release.mjs', 'utf8');
+          const runner = [
+            'scripts/release/run-public-production-release.mjs',
+            'scripts/release/run-public-production-release-v2.mjs',
+          ]
+            .filter((path) => fs.existsSync(path))
+            .map((path) => fs.readFileSync(path, 'utf8'))
+            .join('\n');
           const requiredScripts = [
             'release:production-final',
             'release:deployment-smoke',
@@ -103,38 +109,32 @@ jobs:
         shell: bash
         run: |
           npm run lint 2>&1 | tee lint.log
-          test "${PIPESTATUS[0]}" -eq 0
       - name: Upload lint diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
+        if: failure()
+        uses: actions/upload-artifact@v4
         with:
           name: ci-lint-diagnostics
           path: lint.log
-          retention-days: 7
-          if-no-files-found: warn
+          if-no-files-found: ignore
       - name: Typecheck
         shell: bash
         run: |
           npm run typecheck 2>&1 | tee typecheck.log
-          test "${PIPESTATUS[0]}" -eq 0
       - name: Upload typecheck diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
+        if: failure()
+        uses: actions/upload-artifact@v4
         with:
           name: ci-typecheck-diagnostics
           path: typecheck.log
-          retention-days: 7
-          if-no-files-found: warn
+          if-no-files-found: ignore
       - name: Test
         shell: bash
         run: |
           npm run test 2>&1 | tee test.log
-          test "${PIPESTATUS[0]}" -eq 0
       - name: Upload test diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
+        if: failure()
+        uses: actions/upload-artifact@v4
         with:
           name: ci-test-diagnostics
           path: test.log
-          retention-days: 7
-          if-no-files-found: warn
+          if-no-files-found: ignore
