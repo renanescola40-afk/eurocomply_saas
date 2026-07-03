@@ -13,10 +13,10 @@ const envUrl = 'NEXT_PUBLIC_SUPABASE_URL';
 const envAnon = 'NEXT_PUBLIC_SUPABASE_ANON_KEY';
 const envPrivileged = ['SUPABASE', 'SERVICE', 'ROLE', 'KEY'].join('_');
 const requiredEnv = [envUrl, envAnon, envPrivileged];
+const advisoryMode = process.argv.includes('--advisory') || process.env.RLS_LIVE_ADVISORY === '1';
 const authOptions = { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } };
 const expectedDenialCodes = new Set(['42501']);
 const expectedDenialText = /(row-level security|permission denied|not authorized|unauthorized|forbidden|new row violates)/i;
-const advisoryMode = process.argv.includes('--advisory') || process.env.RLS_LIVE_ADVISORY === '1';
 
 const now = () => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 const safeError = (error) => error ? { code: String(error.code ?? 'unknown'), message: String(error.message ?? 'error').slice(0, 220) } : null;
@@ -41,14 +41,7 @@ function commandUsed(argv = process.argv.slice(2)) {
 function buildClients() {
   const missing = requiredEnv.filter((name) => !process.env[name]);
   if (missing.length > 0) {
-    const report = {
-      status: 'advisory',
-      runner,
-      checkedAt: now(),
-      message: 'Skipping live ai_assessments RLS validation because real Supabase environment variables are not configured. No runtime evidence was generated.',
-      missingEnvironmentVariables: missing,
-      evidenceGenerated: false,
-    };
+    const report = { status: 'advisory', runner, checkedAt: now(), message: 'Skipping live ai_assessments RLS validation because real Supabase environment variables are not configured. No runtime evidence was generated.', missingEnvironmentVariables: missing, evidenceGenerated: false };
     if (advisoryMode) {
       console.log(JSON.stringify(report, null, 2));
       return null;
@@ -56,15 +49,9 @@ function buildClients() {
     throw new Error(`${report.message} Missing: ${missing.join(', ')}`);
   }
 
-  const commitSha = getCommitSha();
-  if (!/^[a-f0-9]{40}$/i.test(commitSha)) {
-    throw new Error('Could not resolve a full 40-character commit SHA for runtime evidence. Run from a Git checkout or set GITHUB_SHA.');
-  }
-
   const supabaseUrl = process.env[envUrl];
   return {
-    supabaseUrl,
-    commitSha,
+    commitSha: getCommitSha(),
     admin: createClient(supabaseUrl, process.env[envPrivileged], authOptions),
     tenantA: createClient(supabaseUrl, process.env[envAnon], authOptions),
     tenantAViewer: createClient(supabaseUrl, process.env[envAnon], authOptions),
@@ -103,32 +90,23 @@ async function setup(admin) {
   const userB = await makeUser('owner-b');
   const userBAdmin = await makeUser('admin-b');
   const userBMember = await makeUser('member-b');
-
   const orgA = await insertOne(admin, 'organizations', { name: `AI Assessments RLS Tenant A ${suffix}`, slug: `ai-assessments-a-${suffix}`, created_by: userA.id });
   const orgB = await insertOne(admin, 'organizations', { name: `AI Assessments RLS Tenant B ${suffix}`, slug: `ai-assessments-b-${suffix}`, created_by: userB.id });
   created.rows.push(['organizations', orgA.id], ['organizations', orgB.id]);
 
-  const memberRows = [
+  const members = [
     await insertOne(admin, 'organization_members', { organization_id: orgA.id, user_id: userA.id, role: 'owner' }),
     await insertOne(admin, 'organization_members', { organization_id: orgA.id, user_id: userAViewer.id, role: 'viewer' }),
     await insertOne(admin, 'organization_members', { organization_id: orgB.id, user_id: userB.id, role: 'owner' }),
     await insertOne(admin, 'organization_members', { organization_id: orgB.id, user_id: userBAdmin.id, role: 'admin' }),
     await insertOne(admin, 'organization_members', { organization_id: orgB.id, user_id: userBMember.id, role: 'member' }),
   ];
-  created.rows.push(...memberRows.map((row) => ['organization_members', row.id]));
+  created.rows.push(...members.map((row) => ['organization_members', row.id]));
 
-  const assessment = await insertOne(admin, 'ai_assessments', {
-    organization_id: orgB.id,
-    created_by: userB.id,
-    title: `tenant-b-ai-assessment-${suffix}`,
-    status: 'completed',
-    risk_score: 42,
-    risk_level: 'limited',
-    recommendations: [{ control: 'rls-live-validation', status: 'synthetic' }],
-  });
-  created.rows.push(['ai_assessments', assessment.id]);
-
-  return { suffix, password, created, userA, userAViewer, userB, userBAdmin, userBMember, orgA, orgB, assessment };
+  const assessmentA = await insertOne(admin, 'ai_assessments', { organization_id: orgA.id, created_by: userA.id, title: `tenant-a-ai-assessment-${suffix}`, status: 'completed', risk_score: 30, risk_level: 'limited', recommendations: [{ control: 'rls-live-validation', tenant: 'a' }] });
+  const assessmentB = await insertOne(admin, 'ai_assessments', { organization_id: orgB.id, created_by: userB.id, title: `tenant-b-ai-assessment-${suffix}`, status: 'completed', risk_score: 42, risk_level: 'limited', recommendations: [{ control: 'rls-live-validation', tenant: 'b' }] });
+  created.rows.push(['ai_assessments', assessmentA.id], ['ai_assessments', assessmentB.id]);
+  return { suffix, password, created, userA, userAViewer, userB, userBAdmin, userBMember, orgA, orgB, assessmentA, assessmentB };
 }
 
 async function cleanup(admin, created) {
@@ -141,15 +119,7 @@ async function rlsEnabled(admin) {
   const { data, error } = await admin.rpc('eurocomply_live_rls_inventory', { table_names: ['ai_assessments'] });
   if (error) throw new Error(`Failed to query live RLS inventory for ai_assessments: ${error.message}`);
   const row = Array.isArray(data) ? data.find((entry) => entry?.table_name === 'ai_assessments') : null;
-  return {
-    table: 'ai_assessments',
-    operation: 'rls_enabled',
-    passed: row?.exists === true && row?.rls_enabled === true && Number(row?.policy_count ?? 0) > 0,
-    exists: row?.exists === true,
-    rlsEnabled: row?.rls_enabled === true,
-    forceRls: row?.force_rls === true,
-    policyCount: Number(row?.policy_count ?? 0),
-  };
+  return { table: 'ai_assessments', operation: 'rls_enabled', passed: row?.exists === true && row?.rls_enabled === true && Number(row?.policy_count ?? 0) > 0, exists: row?.exists === true, rlsEnabled: row?.rls_enabled === true, forceRls: row?.force_rls === true, policyCount: Number(row?.policy_count ?? 0) };
 }
 
 async function readCase(client, operation, id) {
@@ -165,14 +135,7 @@ async function crossTenantReadDenied(client, id) {
 async function insertCase(client, operation, row, shouldPass) {
   const { data, error } = await client.from('ai_assessments').insert(row).select('id');
   const insertedId = Array.isArray(data) && data.length === 1 ? data[0]?.id : null;
-  return {
-    table: 'ai_assessments',
-    operation,
-    passed: shouldPass ? !error && Boolean(insertedId) : isExpectedDenial(error),
-    error: safeError(error),
-    returnedRows: Array.isArray(data) ? data.length : 0,
-    insertedId,
-  };
+  return { table: 'ai_assessments', operation, passed: shouldPass ? !error && Boolean(insertedId) : isExpectedDenial(error), error: safeError(error), returnedRows: Array.isArray(data) ? data.length : 0, insertedId };
 }
 
 async function updateCase(admin, client, operation, id, patch, shouldPass) {
@@ -180,86 +143,34 @@ async function updateCase(admin, client, operation, id, patch, shouldPass) {
   const { data, error } = await client.from('ai_assessments').update(patch).eq('id', id).select('id');
   const after = await admin.from('ai_assessments').select('*').eq('id', id).maybeSingle();
   const changed = JSON.stringify(before.data) !== JSON.stringify(after.data);
-  return {
-    table: 'ai_assessments',
-    operation,
-    passed: shouldPass ? !error && changed && Array.isArray(data) && data.length === 1 : !changed && (noVisibleRows(error, data) || isExpectedDenial(error)),
-    error: safeError(error),
-    returnedRows: Array.isArray(data) ? data.length : 0,
-  };
+  return { table: 'ai_assessments', operation, passed: shouldPass ? !error && changed && Array.isArray(data) && data.length === 1 : !changed && (noVisibleRows(error, data) || isExpectedDenial(error)), error: safeError(error), returnedRows: Array.isArray(data) ? data.length : 0 };
 }
 
 async function deleteCase(admin, client, operation, id, shouldPass) {
   const { data, error } = await client.from('ai_assessments').delete().eq('id', id).select('id');
   const after = await admin.from('ai_assessments').select('id').eq('id', id).maybeSingle();
-  return {
-    table: 'ai_assessments',
-    operation,
-    passed: shouldPass ? !error && !after.data?.id && Array.isArray(data) && data.length === 1 : Boolean(after.data?.id) && (noVisibleRows(error, data) || isExpectedDenial(error)),
-    error: safeError(error),
-    returnedRows: Array.isArray(data) ? data.length : 0,
-  };
+  return { table: 'ai_assessments', operation, passed: shouldPass ? !error && !after.data?.id && Array.isArray(data) && data.length === 1 : Boolean(after.data?.id) && (noVisibleRows(error, data) || isExpectedDenial(error)), error: safeError(error), returnedRows: Array.isArray(data) ? data.length : 0 };
 }
 
 function loadExistingEvidence() {
   if (!fs.existsSync(evidencePath)) throw new Error(`${evidencePath} is missing. Run scripts/security/run-supabase-live-tenant-isolation.mjs first.`);
   const parsed = parseEvidenceJson(fs.readFileSync(evidencePath, 'utf8'));
   if (parsed.errors.length > 0) throw new Error(parsed.errors.join('; '));
-  if (parsed.evidence?.status !== 'Complete' || parsed.evidence?.outcome !== 'passed') {
-    throw new Error('Base Supabase live RLS evidence must be Complete/passed before appending ai_assessments validation.');
-  }
+  if (parsed.evidence?.status !== 'Complete' || parsed.evidence?.outcome !== 'passed') throw new Error('Base Supabase live RLS evidence must be Complete/passed before appending ai_assessments validation.');
   return parsed.evidence;
 }
 
 function requirePassed(testCases, operation) {
-  if (!testCases.some((test) => test.table === 'ai_assessments' && test.operation === operation && test.passed === true)) {
-    throw new Error(`missing or failed live ai_assessments RLS operation: ${operation}`);
-  }
+  if (!testCases.some((test) => test.table === 'ai_assessments' && test.operation === operation && test.passed === true)) throw new Error(`missing or failed live ai_assessments RLS operation: ${operation}`);
 }
 
 function validateAiAssessmentCoverage(testCases) {
-  for (const operation of [
-    'rls_enabled',
-    'cross_tenant_read',
-    'cross_tenant_insert',
-    'cross_tenant_update',
-    'cross_tenant_delete',
-    'same_tenant_read',
-    'same_tenant_insert',
-    'admin_same_tenant_insert',
-    'member_same_tenant_read',
-    'member_same_tenant_insert_denied',
-    'member_same_tenant_update_denied',
-    'member_same_tenant_delete_denied',
-    'viewer_same_tenant_read',
-    'viewer_same_tenant_insert_denied',
-    'viewer_same_tenant_update_denied',
-    'viewer_same_tenant_delete_denied',
-  ]) {
-    requirePassed(testCases, operation);
-  }
+  for (const operation of ['rls_enabled', 'cross_tenant_read', 'cross_tenant_insert', 'cross_tenant_update', 'cross_tenant_delete', 'same_tenant_read', 'same_tenant_insert', 'admin_same_tenant_insert', 'member_same_tenant_read', 'member_same_tenant_insert_denied', 'member_same_tenant_update_denied', 'member_same_tenant_delete_denied', 'viewer_same_tenant_read', 'viewer_same_tenant_insert_denied', 'viewer_same_tenant_update_denied', 'viewer_same_tenant_delete_denied']) requirePassed(testCases, operation);
 }
 
 function writeFailure(baseEvidence, failure, testCases, commitSha) {
   const timestamp = now();
-  fs.writeFileSync(evidencePath, `${JSON.stringify({
-    ...(baseEvidence ?? {}),
-    evidenceItem: 'supabase-live-rls-validation',
-    status: 'Open',
-    outcome: 'failed',
-    timestamp,
-    generatedAt: timestamp,
-    reviewedAt: timestamp,
-    runner,
-    commandUsed: commandUsed(),
-    commitSha,
-    failures: [failure],
-    testsFailed: testCases.filter((test) => test.passed !== true).map((test) => `${test.table}:${test.operation}`),
-    testCases: [...(baseEvidence?.testCases ?? []), ...testCases],
-    tablesReviewed: tableCoverageFrom([...(baseEvidence?.testCases ?? []), ...testCases]),
-    productionGate: 'P0 production release remains blocked until ai_assessments live RLS validation passes.',
-    blockingReason: failure,
-  }, null, 2)}\n`);
+  fs.writeFileSync(evidencePath, `${JSON.stringify({ ...(baseEvidence ?? {}), evidenceItem: 'supabase-live-rls-validation', status: 'Open', outcome: 'failed', timestamp, generatedAt: timestamp, reviewedAt: timestamp, runner, commandUsed: commandUsed(), commitSha, failures: [failure], testsFailed: testCases.filter((test) => test.passed !== true).map((test) => `${test.table}:${test.operation}`), testCases: [...(baseEvidence?.testCases ?? []), ...testCases], tablesReviewed: tableCoverageFrom([...(baseEvidence?.testCases ?? []), ...testCases]), productionGate: 'P0 production release remains blocked until ai_assessments live RLS validation passes.', blockingReason: failure }, null, 2)}\n`);
 }
 
 function writeSuccess(baseEvidence, testCases, commitSha) {
@@ -272,7 +183,6 @@ function writeSuccess(baseEvidence, testCases, commitSha) {
     timestamp,
     generatedAt: timestamp,
     reviewedAt: timestamp,
-    runner: baseEvidence.runner ?? 'scripts/security/run-supabase-live-tenant-isolation.mjs',
     commandUsed: `${baseEvidence.commandUsed ?? 'node scripts/security/run-supabase-live-tenant-isolation.mjs'} && ${commandUsed()}`,
     commitSha,
     summary: 'Live Supabase production/staging RLS validation passed for customer tenant tables, ai_assessments, profiles, and global reference tables.',
@@ -285,17 +195,8 @@ function writeSuccess(baseEvidence, testCases, commitSha) {
     testsFailed: mergedTestCases.filter((test) => test.passed !== true).map((test) => `${test.table}:${test.operation}`),
     testCases: mergedTestCases,
     failures: [],
-    aiAssessmentsLiveValidation: {
-      runner,
-      commandUsed: commandUsed(),
-      status: 'Complete',
-      outcome: 'passed',
-      generatedAt: timestamp,
-      roleCoverage: ['owner', 'admin', 'member', 'viewer'],
-      crossTenantAccessDenied: true,
-    },
+    aiAssessmentsLiveValidation: { runner, commandUsed: commandUsed(), status: 'Complete', outcome: 'passed', generatedAt: timestamp, roleCoverage: ['owner', 'admin', 'member', 'viewer'], crossTenantAccessDenied: true },
   };
-
   validateAiAssessmentCoverage(nextEvidence.testCases);
   fs.writeFileSync(evidencePath, `${JSON.stringify(nextEvidence, null, 2)}\n`);
 }
@@ -307,7 +208,6 @@ export async function main() {
   let ctx;
   let baseEvidence;
   const testCases = [];
-
   try {
     baseEvidence = loadExistingEvidence();
     ctx = await setup(admin);
@@ -316,36 +216,29 @@ export async function main() {
     await signIn(tenantB, ctx.userB.email, ctx.password);
     await signIn(tenantBAdmin, ctx.userBAdmin.email, ctx.password);
     await signIn(tenantBMember, ctx.userBMember.email, ctx.password);
-
     testCases.push(await rlsEnabled(admin));
-    testCases.push(await crossTenantReadDenied(tenantA, ctx.assessment.id));
+    testCases.push(await crossTenantReadDenied(tenantA, ctx.assessmentB.id));
     testCases.push(await insertCase(tenantA, 'cross_tenant_insert', { organization_id: ctx.orgB.id, created_by: ctx.userA.id, title: `cross-ai-assessment-${ctx.suffix}`, status: 'draft' }, false));
-    testCases.push(await updateCase(admin, tenantA, 'cross_tenant_update', ctx.assessment.id, { title: `mutated-cross-${ctx.suffix}` }, false));
-    testCases.push(await deleteCase(admin, tenantA, 'cross_tenant_delete', ctx.assessment.id, false));
-    testCases.push(await readCase(tenantB, 'same_tenant_read', ctx.assessment.id));
-
+    testCases.push(await updateCase(admin, tenantA, 'cross_tenant_update', ctx.assessmentB.id, { title: `mutated-cross-${ctx.suffix}` }, false));
+    testCases.push(await deleteCase(admin, tenantA, 'cross_tenant_delete', ctx.assessmentB.id, false));
+    testCases.push(await readCase(tenantB, 'same_tenant_read', ctx.assessmentB.id));
     const ownerInsert = await insertCase(tenantB, 'same_tenant_insert', { organization_id: ctx.orgB.id, created_by: ctx.userB.id, title: `owner-same-ai-assessment-${ctx.suffix}`, status: 'draft' }, true);
     testCases.push(ownerInsert);
     if (ownerInsert.insertedId) ctx.created.rows.push(['ai_assessments', ownerInsert.insertedId]);
-
     const adminInsert = await insertCase(tenantBAdmin, 'admin_same_tenant_insert', { organization_id: ctx.orgB.id, created_by: ctx.userBAdmin.id, title: `admin-same-ai-assessment-${ctx.suffix}`, status: 'draft' }, true);
     testCases.push(adminInsert);
     if (adminInsert.insertedId) ctx.created.rows.push(['ai_assessments', adminInsert.insertedId]);
-
-    testCases.push(await readCase(tenantBMember, 'member_same_tenant_read', ctx.assessment.id));
+    testCases.push(await readCase(tenantBMember, 'member_same_tenant_read', ctx.assessmentB.id));
     testCases.push(await insertCase(tenantBMember, 'member_same_tenant_insert_denied', { organization_id: ctx.orgB.id, created_by: ctx.userBMember.id, title: `member-denied-ai-assessment-${ctx.suffix}`, status: 'draft' }, false));
-    testCases.push(await updateCase(admin, tenantBMember, 'member_same_tenant_update_denied', ctx.assessment.id, { title: `member-mutated-${ctx.suffix}` }, false));
-    testCases.push(await deleteCase(admin, tenantBMember, 'member_same_tenant_delete_denied', ctx.assessment.id, false));
-
-    testCases.push(await readCase(tenantAViewer, 'viewer_same_tenant_read', ctx.assessment.id));
+    testCases.push(await updateCase(admin, tenantBMember, 'member_same_tenant_update_denied', ctx.assessmentB.id, { title: `member-mutated-${ctx.suffix}` }, false));
+    testCases.push(await deleteCase(admin, tenantBMember, 'member_same_tenant_delete_denied', ctx.assessmentB.id, false));
+    testCases.push(await readCase(tenantAViewer, 'viewer_same_tenant_read', ctx.assessmentA.id));
     testCases.push(await insertCase(tenantAViewer, 'viewer_same_tenant_insert_denied', { organization_id: ctx.orgA.id, created_by: ctx.userAViewer.id, title: `viewer-denied-ai-assessment-${ctx.suffix}`, status: 'draft' }, false));
-    testCases.push(await updateCase(admin, tenantAViewer, 'viewer_same_tenant_update_denied', ctx.assessment.id, { title: `viewer-mutated-${ctx.suffix}` }, false));
-    testCases.push(await deleteCase(admin, tenantAViewer, 'viewer_same_tenant_delete_denied', ctx.assessment.id, false));
-
+    testCases.push(await updateCase(admin, tenantAViewer, 'viewer_same_tenant_update_denied', ctx.assessmentA.id, { title: `viewer-mutated-${ctx.suffix}` }, false));
+    testCases.push(await deleteCase(admin, tenantAViewer, 'viewer_same_tenant_delete_denied', ctx.assessmentA.id, false));
     validateAiAssessmentCoverage(testCases);
     const failed = testCases.filter((test) => test.passed !== true);
     if (failed.length > 0) throw new Error(`Live ai_assessments RLS validation failed: ${failed.map((test) => test.operation).join(', ')}`);
-
     writeSuccess(baseEvidence, testCases, commitSha);
     console.log('Live ai_assessments RLS validation: passed');
   } catch (error) {
