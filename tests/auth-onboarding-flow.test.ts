@@ -24,28 +24,45 @@ describe('auth and onboarding redirect invariants', () => {
 
     expect(dashboard).toContain('getLoginPath(safeLocale, dashboardPath)');
     expect(dashboard).toContain('encodeURIComponent(nextPath)');
-    expect(dashboard).toContain("`/${locale}/login?next=");
+    expect(dashboard).toContain('`/${locale}/login?next=');
   });
 
-  it('blocks dashboard access until the organization onboarding is completed', () => {
-    const dashboard = readRepoFile('src/app/[locale]/dashboard/organizations/page.tsx');
+  it('blocks every organization dashboard route until onboarding is completed', () => {
+    const dashboardLayout = readRepoFile('src/app/[locale]/dashboard/organizations/layout.tsx');
+    const dashboardAccess = readRepoFile('src/server/queries/organization-dashboard-access.ts');
     const currentOrganization = readRepoFile('src/server/queries/current-organization.ts');
 
-    expect(dashboard).toContain('getCurrentOrganizationForUser(user.id)');
-    expect(dashboard).toContain('!currentOrganization || !currentOrganization.is_onboarding_completed');
-    expect(dashboard).toContain("redirect(`/${safeLocale}/onboarding${requestedPlan}`)");
+    expect(dashboardLayout).toContain('getOrganizationDashboardRedirect(safeLocale)');
+    expect(dashboardLayout).toContain("await import('next/navigation')");
+    expect(dashboardLayout).toContain('navigation.redirect(redirectTarget)');
+    expect(dashboardAccess).toContain('getCurrentOrganizationForUser(user.id)');
+    expect(dashboardAccess).toContain('!currentOrganization || !currentOrganization.is_onboarding_completed');
+    expect(dashboardAccess).toContain('`/${locale}/onboarding`');
     expect(currentOrganization).toContain('onboarding_status');
     expect(currentOrganization).toContain('onboarding_completed_at');
-    expect(currentOrganization).toContain("onboardingStatus === 'completed' && Boolean(onboardingCompletedAt)");
+    expect(currentOrganization).toContain('isOrganizationOnboardingCompleted({');
+  });
+
+  it('uses one completion predicate for dashboard and onboarding redirects', () => {
+    const onboardingPage = readRepoFile('src/app/[locale]/onboarding/page.tsx');
+    const onboardingQuery = readRepoFile('src/server/queries/onboarding.ts');
+    const currentOrganization = readRepoFile('src/server/queries/current-organization.ts');
+
+    expect(currentOrganization).toContain('export function isOrganizationOnboardingCompleted');
+    expect(currentOrganization).toContain("normalizeOnboardingStatus(input.onboarding_status) === 'completed'");
+    expect(currentOrganization).toContain('Boolean(input.onboarding_completed_at)');
+    expect(onboardingQuery).toContain('isOrganizationOnboardingCompleted({');
+    expect(onboardingQuery).toContain('isOnboardingCompleted:');
+    expect(onboardingPage).toContain('initialState.organization?.isOnboardingCompleted');
+    expect(onboardingPage).not.toContain("initialState.organization?.onboardingStatus === 'completed'");
   });
 
   it('does not mark onboarding as completed when schema or admin fallback data is incomplete', () => {
     const onboardingQuery = readRepoFile('src/server/queries/onboarding.ts');
-    const currentOrganization = readRepoFile('src/server/queries/current-organization.ts');
 
     expect(onboardingQuery).not.toContain("onboardingStatus: 'completed' as const");
     expect(onboardingQuery).toContain('onboardingStatus: membership.onboarding_status');
-    expect(currentOrganization).toContain('normalizeOnboardingStatus(organization.onboarding_status)');
+    expect(onboardingQuery).toContain('isOnboardingCompleted: membership.is_onboarding_completed');
   });
 
   it('preserves only safe localized continuations and rejects open redirects', () => {
@@ -54,12 +71,12 @@ describe('auth and onboarding redirect invariants', () => {
 
     expect(login).toContain("value.startsWith('//')");
     expect(login).toContain("value.includes('://')");
-    expect(login).toContain("`/${locale}/onboarding`");
-    expect(login).toContain("`/${locale}/dashboard/organizations`");
+    expect(login).toContain('`/${locale}/onboarding`');
+    expect(login).toContain('`/${locale}/dashboard/organizations`');
     expect(signup).toContain("normalizedNext.startsWith('//')");
     expect(signup).toContain("normalizedNext.includes('://')");
-    expect(signup).toContain("`/${locale}/onboarding`");
-    expect(signup).toContain("`/${locale}/checkout`");
+    expect(signup).toContain('`/${locale}/onboarding`');
+    expect(signup).toContain('`/${locale}/checkout`');
   });
 
   it('keeps pt and en covered through the shared locale guard', () => {
