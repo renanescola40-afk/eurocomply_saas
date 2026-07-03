@@ -41,6 +41,9 @@ env:
   RELEASE_ROLLBACK_TARGET_SHA: ${{ inputs.rollback_sha }}
   RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ inputs.rollback_validated }}
   HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
 jobs:
   production-final:
@@ -73,6 +76,7 @@ jobs:
             release-validation/public-production/**
             docs/security/evidence/runtime/deployment-smoke-validation.json
             docs/security/evidence/runtime/rollback-dry-run-validation.json
+            docs/security/evidence/runtime/supabase-live-rls-validation.json
             docs/security/evidence/runtime/production-final-validation.json
           retention-days: 30
           if-no-files-found: warn
