@@ -15,7 +15,8 @@ describe('auth and onboarding redirect invariants', () => {
     expect(middleware).toContain("const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations'");
     expect(middleware).toContain("const AUTH_SUCCESS_PATH = '/onboarding'");
     expect(middleware).toContain('isAuthenticated && (isMarketingHome || isAuthEntry)');
-    expect(middleware).toContain('`${locale}${AUTH_SUCCESS_PATH}`');
+    expect(middleware).toContain('AUTH_SUCCESS_PATH');
+    expect(middleware).toContain('NextResponse.redirect(dashboardUrl)');
   });
 
   it('keeps unauthenticated dashboard users on login with a safe localized next value', () => {
@@ -43,7 +44,7 @@ describe('auth and onboarding redirect invariants', () => {
 
     expect(onboardingQuery).not.toContain("onboardingStatus: 'completed' as const");
     expect(onboardingQuery).toContain('onboardingStatus: membership.onboarding_status');
-    expect(onboardingQuery).toContain("normalizeOnboardingStatus(organization.onboarding_status)");
+    expect(onboardingQuery).toContain('normalizeOnboardingStatus(organization.onboarding_status)');
   });
 
   it('preserves only safe localized continuations and rejects open redirects', () => {
