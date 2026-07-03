@@ -9,9 +9,11 @@ const required = [
   "'/pt'",
   'src/app/[locale]/page.tsx',
   'dashboard/organizations',
+  'src/app/[locale]/dashboard/organizations/layout.tsx',
+  'src/server/queries/organization-dashboard-access.ts',
+  'getOrganizationDashboardRedirect(safeLocale)',
   'src/app/[locale]/dashboard/organizations/page.tsx',
-  'redirect(`/${safeLocale}/login`)',
-  'redirect(`/${safeLocale}/onboarding',
+  'getLoginPath(safeLocale, dashboardPath)',
   'src/server/queries/organization-dashboard.ts',
   "eq('organization_id', organizationId)",
   "from('compliance_tasks')",
@@ -20,7 +22,8 @@ const required = [
   "from('documents')",
   'src/server/queries/current-organization.ts',
   "from('organization_members')",
-  "eq('user_id', userId)",
+  'onboarding_completed_at',
+  'isOrganizationOnboardingCompleted',
   'membership.slug === slug',
 ];
 
