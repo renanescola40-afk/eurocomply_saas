@@ -2,16 +2,12 @@ import { unstable_noStore as noStore } from 'next/cache';
 
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import type { AiActRiskLevel, OnboardingActivationInitialState, OnboardingRecommendation, OnboardingTaskSuggestion } from '@/lib/onboarding/activation';
-import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
+import { getCurrentOrganizationForUser, isOrganizationOnboardingCompleted, normalizeOnboardingStatus } from '@/server/queries/current-organization';
 
 type QueryError = { code?: string; message?: string } | null;
 
 function isExpectedSchemaFallback(error: QueryError) {
   return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST204' || error?.code === 'PGRST205';
-}
-
-function normalizeOnboardingStatus(value: unknown): 'not_started' | 'in_progress' | 'completed' {
-  return value === 'completed' || value === 'in_progress' || value === 'not_started' ? value : 'not_started';
 }
 
 function normalizeRecommendationArray(value: unknown): OnboardingRecommendation[] {
@@ -65,6 +61,8 @@ export async function getOnboardingActivationState(userId: string): Promise<Onbo
         sector: null,
         aiUsageSummary: null,
         onboardingStatus: membership.onboarding_status,
+        onboardingCompletedAt: membership.onboarding_completed_at,
+        isOnboardingCompleted: membership.is_onboarding_completed,
         onboardingStep: null,
         readinessScore: null,
         selectedPlan: null,
@@ -90,6 +88,8 @@ export async function getOnboardingActivationState(userId: string): Promise<Onbo
         sector: null,
         aiUsageSummary: null,
         onboardingStatus: membership.onboarding_status,
+        onboardingCompletedAt: membership.onboarding_completed_at,
+        isOnboardingCompleted: membership.is_onboarding_completed,
         onboardingStep: null,
         readinessScore: null,
         selectedPlan: null,
@@ -104,6 +104,11 @@ export async function getOnboardingActivationState(userId: string): Promise<Onbo
           sector: (organization.sector as string | null) ?? null,
           aiUsageSummary: (organization.ai_usage_summary as string | null) ?? null,
           onboardingStatus: normalizeOnboardingStatus(organization.onboarding_status),
+          onboardingCompletedAt: (organization.onboarding_completed_at as string | null) ?? null,
+          isOnboardingCompleted: isOrganizationOnboardingCompleted({
+            onboarding_status: organization.onboarding_status as string | null,
+            onboarding_completed_at: (organization.onboarding_completed_at as string | null) ?? null,
+          }),
           onboardingStep: (organization.onboarding_step as string | null) ?? null,
           readinessScore: typeof organization.readiness_score === 'number' ? organization.readiness_score : null,
           selectedPlan: (organization.selected_plan as string | null) ?? null,
@@ -117,6 +122,8 @@ export async function getOnboardingActivationState(userId: string): Promise<Onbo
           sector: null,
           aiUsageSummary: null,
           onboardingStatus: membership.onboarding_status,
+          onboardingCompletedAt: membership.onboarding_completed_at,
+          isOnboardingCompleted: membership.is_onboarding_completed,
           onboardingStep: null,
           readinessScore: null,
           selectedPlan: null,
