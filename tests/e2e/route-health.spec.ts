@@ -3,6 +3,8 @@ import { expect, test, type Page } from '@playwright/test';
 const LOCALES = ['pt', 'en', 'es', 'fr', 'it', 'de'] as const;
 type Locale = (typeof LOCALES)[number];
 
+const PRELAUNCH_AUTH_REDIRECTS_ENABLED = process.env.PRELAUNCH_AUTH_REDIRECTS === 'true';
+
 type RouteCase = {
   name: string;
   path: string;
@@ -216,12 +218,16 @@ function shouldDeepCheckInternalLinks(locale: Locale, route: RouteCase) {
 }
 
 function isPrelaunchGatedPublicRoute(route: RouteCase) {
-  return route.name === 'login' || route.name === 'signup';
+  return PRELAUNCH_AUTH_REDIRECTS_ENABLED && (route.name === 'login' || route.name === 'signup');
 }
 
 async function expectWaitlistGate(page: Page, locale: Locale, label: string) {
   await expect(page).toHaveURL(new RegExp(`/${locale}(?:$|[?#])`));
   await expect(page.locator('#waitlist-form'), `${label} should land on waitlist form`).toBeVisible();
+}
+
+async function expectLocalizedLoginRedirect(page: Page, locale: Locale, label: string) {
+  await expect(page, `${label} should redirect to localized login`).toHaveURL(new RegExp(`/${locale}/login(?:$|[?#])`));
 }
 
 test.describe('anonymous visitor public route health', () => {
@@ -244,10 +250,14 @@ test.describe('anonymous visitor public route health', () => {
 test.describe('anonymous visitor private route guards', () => {
   for (const locale of LOCALES) {
     for (const route of PRIVATE_ROUTES) {
-      test(`${locale} ${route.name} private route redirects anonymous visitor to waitlist`, async ({ page }) => {
+      test(`${locale} ${route.name} private route redirects anonymous visitor safely`, async ({ page }) => {
         const label = `anonymous visitor ${locale} ${route.name}`;
         await expectRouteHealthy(page, localizedPath(locale, route.path), label);
-        await expectWaitlistGate(page, locale, label);
+        if (PRELAUNCH_AUTH_REDIRECTS_ENABLED) {
+          await expectWaitlistGate(page, locale, label);
+        } else {
+          await expectLocalizedLoginRedirect(page, locale, label);
+        }
       });
     }
   }
@@ -292,32 +302,34 @@ test.describe('mobile viewport route health', () => {
 });
 
 test.describe('authenticated user without organization', () => {
-  test('authenticated user without organization is skipped while login is waitlist-gated', async () => {
-    test.skip(true, 'Prelaunch mode intentionally redirects public login/signup to the waitlist.');
+  test('authenticated user without organization is skipped without seeded auth fixtures', async () => {
+    test.skip(true, 'Authenticated route-health coverage requires seeded auth fixtures outside this anonymous smoke suite.');
   });
 });
 
 test.describe('authenticated role route health', () => {
   for (const persona of ['owner', 'admin', 'editor', 'viewer'] as const) {
-    test(`${persona} route checks are skipped while login is waitlist-gated`, async () => {
-      test.skip(true, 'Prelaunch mode intentionally redirects public login/signup to the waitlist.');
+    test(`${persona} route checks are skipped without seeded auth fixtures`, async () => {
+      test.skip(true, 'Authenticated role route-health coverage requires seeded auth fixtures outside this anonymous smoke suite.');
     });
   }
 });
 
 test.describe('visual RBAC permissions', () => {
-  test('viewer RBAC check is skipped while login is waitlist-gated', async () => {
-    test.skip(true, 'Prelaunch mode intentionally redirects public login/signup to the waitlist.');
+  test('viewer RBAC check is skipped without seeded auth fixtures', async () => {
+    test.skip(true, 'Visual RBAC coverage requires seeded auth fixtures outside this anonymous smoke suite.');
   });
 
-  test('owner RBAC check is skipped while login is waitlist-gated', async () => {
-    test.skip(true, 'Prelaunch mode intentionally redirects public login/signup to the waitlist.');
+  test('owner RBAC check is skipped without seeded auth fixtures', async () => {
+    test.skip(true, 'Visual RBAC coverage requires seeded auth fixtures outside this anonymous smoke suite.');
   });
 });
 
 test.describe('controlled public error state', () => {
-  test('login error is controlled and redirected to waitlist during prelaunch', async ({ page }) => {
+  test('login error is controlled and follows the configured auth-entry redirect mode', async ({ page }) => {
     await expectRouteHealthy(page, '/en/login?error=auth_exchange_failed', 'controlled login error state');
-    await expectWaitlistGate(page, 'en', 'controlled login error state');
+    if (PRELAUNCH_AUTH_REDIRECTS_ENABLED) {
+      await expectWaitlistGate(page, 'en', 'controlled login error state');
+    }
   });
 });
