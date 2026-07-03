@@ -49,7 +49,7 @@ export default async function OnboardingPage({ params, searchParams }: Onboardin
 
   const initialState = await getOnboardingActivationState(user.id);
 
-  if (initialState.organization?.onboardingStatus === 'completed') {
+  if (initialState.organization?.isOnboardingCompleted) {
     redirect(`/${safeLocale}/dashboard/organizations${planQuery}`);
   }
 

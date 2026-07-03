@@ -91,7 +91,7 @@ describe('onboarding activation', () => {
       selectedPlan: 'trial',
     });
 
-    expect(recommendedDocuments.map((document) => document.id)).toContain('high-risk-ai-assessment');
+    expect(recommendedDocuments.map((document) => document.id)).toContain('high-risk-classification-record');
     expect(recommendedDocuments.map((document) => document.id)).toContain('personal-data-ai-dpia-screening');
     expect(suggestedTasks[0]?.id).toBe('schedule-risk-review');
     expect(score).toBeGreaterThanOrEqual(0);

@@ -35,6 +35,19 @@ function getSafeLocale(locale: string): Locale {
   return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
 }
 
+function getPlanQuery(plan?: string | null) {
+  return getBillingPlan(plan)?.id ? `?plan=${encodeURIComponent(getBillingPlan(plan)!.id)}` : '';
+}
+
+function getLocalizedDashboardPath(locale: Locale, plan?: string | null) {
+  const planQuery = getPlanQuery(plan);
+  return `/${locale}/dashboard/organizations${planQuery}`;
+}
+
+function getLoginPath(locale: Locale, nextPath: string) {
+  return `/${locale}/login?next=${encodeURIComponent(nextPath)}`;
+}
+
 function isActivePendingInvitation(invitation: { expires_at?: string | null }) {
   if (!invitation.expires_at) return true;
   const expiresAt = new Date(invitation.expires_at).getTime();
@@ -90,16 +103,17 @@ export default async function OrganizationDashboardPage({ params, searchParams }
   const safeLocale = getSafeLocale(locale);
   const copy = getDashboardCopy(safeLocale);
   const organizationCopy = copy.organization;
+  const dashboardPath = getLocalizedDashboardPath(safeLocale, resolvedSearchParams.plan);
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect(`/${safeLocale}/login`);
+    redirect(getLoginPath(safeLocale, dashboardPath));
   }
 
   const data = await getOrganizationDashboardData(user.id);
 
   if (!data) {
-    const requestedPlan = resolvedSearchParams.plan ? `?plan=${encodeURIComponent(resolvedSearchParams.plan)}` : '';
+    const requestedPlan = getPlanQuery(resolvedSearchParams.plan);
     redirect(`/${safeLocale}/onboarding${requestedPlan}`);
   }
 
