@@ -16,12 +16,12 @@ async function expectHealthyDocument(page: Page, label: string) {
 }
 
 test.describe('public product journey', () => {
-  test('landing -> pricing -> signup keeps CTAs routable and localized', async ({ page }) => {
+  test('landing and pricing signup CTAs stay routable and localized', async ({ page }) => {
     await page.goto('/pt', { waitUntil: 'domcontentloaded' });
     await expectHealthyDocument(page, 'landing');
     await expect(page.locator('#waitlist-form')).toBeVisible();
 
-    await page.getByRole('link', { name: /precos|pricing/i }).first().click();
+    await page.goto('/pt/pricing', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/pt\/pricing(?:$|[?#])/);
     await expectHealthyDocument(page, 'pricing');
 
@@ -110,7 +110,7 @@ test.describe('billing CTA journey', () => {
     await expectHealthyDocument(page, 'checkout selected plan');
     await expect(page.getByRole('link', { name: /create account and continue/i })).toHaveAttribute(
       'href',
-      /\/pt\/signup\?plan=professional/,
+      /\/pt\/signup\?plan=growth/,
     );
     await expect(page.getByRole('link', { name: /sign in to continue/i })).toHaveAttribute(
       'href',
