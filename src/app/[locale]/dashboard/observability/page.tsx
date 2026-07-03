@@ -3,8 +3,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Activity, AlertTriangle, Clock3, CreditCard, Gauge, ShieldAlert } from 'lucide-react';
 
-import { getCurrentUser } from '@/server/queries/auth';
 import { locales, type Locale } from '@/lib/i18n/routing';
+import { getCurrentUser } from '@/server/queries/auth';
+import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -15,6 +16,10 @@ type PageProps = {
 
 function getSafeLocale(locale: string): Locale {
   return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+}
+
+function getLoginPath(locale: Locale, nextPath: string) {
+  return `/${locale}/login?next=${encodeURIComponent(nextPath)}`;
 }
 
 function getSentryProjectUrl() {
@@ -73,10 +78,17 @@ export default async function ObservabilityDashboardPage({ params }: PageProps) 
 
   const { locale } = await params;
   const safeLocale = getSafeLocale(locale);
+  const dashboardPath = `/${safeLocale}/dashboard/observability`;
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect(`/${safeLocale}/login`);
+    redirect(getLoginPath(safeLocale, dashboardPath));
+  }
+
+  const currentOrganization = await getCurrentOrganizationForUser(user.id);
+
+  if (!currentOrganization || !currentOrganization.is_onboarding_completed) {
+    redirect(`/${safeLocale}/onboarding`);
   }
 
   const sentryUrl = getSentryProjectUrl();
