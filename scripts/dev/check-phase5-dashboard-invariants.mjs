@@ -6,6 +6,8 @@ const files = {
   root: 'src/app/page.tsx',
   localeHome: 'src/app/[locale]/page.tsx',
   middleware: 'src/middleware.ts',
+  orgDashboardLayout: 'src/app/[locale]/dashboard/organizations/layout.tsx',
+  orgDashboardAccess: 'src/server/queries/organization-dashboard-access.ts',
   orgDashboard: 'src/app/[locale]/dashboard/organizations/page.tsx',
   dashboardHomeOverview: 'src/components/dashboard/dashboard-home-overview.tsx',
   nextBestActions: 'src/components/dashboard/next-best-actions.tsx',
@@ -17,7 +19,35 @@ const expectations = [
   [files.root, ['redirect', "'/pt'"]],
   [files.localeHome, ['force-static', 'revalidate = 300', 'EnterpriseHome']],
   [files.middleware, ['shouldCheckMarketingHomeAuth', 'ORGANIZATION_DASHBOARD_PATH', 'withPrivateNoStore']],
-  [files.orgDashboard, ['getCurrentUser', 'redirect(`/${safeLocale}/login`)', 'getOrganizationDashboardData', 'redirect(`/${safeLocale}/onboarding', 'workflowReadiness={data.workflowReadiness}']],
+  [
+    files.orgDashboardLayout,
+    [
+      'getOrganizationDashboardRedirect(safeLocale)',
+      "await import('next/navigation')",
+      'navigation.redirect(redirectTarget)',
+      'DashboardCommandNavigation',
+    ],
+  ],
+  [
+    files.orgDashboardAccess,
+    [
+      'getCurrentUser',
+      'getCurrentOrganizationForUser(user.id)',
+      '!currentOrganization || !currentOrganization.is_onboarding_completed',
+      'encodeURIComponent',
+      '`/${locale}/onboarding`',
+    ],
+  ],
+  [
+    files.orgDashboard,
+    [
+      'getCurrentUser',
+      'getLoginPath(safeLocale, dashboardPath)',
+      'encodeURIComponent(nextPath)',
+      'getOrganizationDashboardData',
+      'workflowReadiness={data.workflowReadiness}',
+    ],
+  ],
   [files.dashboardHomeOverview, ['OrganizationWorkflowReadiness', 'workflowReadiness', 'NextBestActions']],
   [files.nextBestActions, ['OrganizationWorkflowReadiness', 'buildWorkflowReadinessAction', 'workflowReadiness', 'current workflow readiness']],
   [
@@ -40,7 +70,18 @@ const expectations = [
       'ready-for-executive-review',
     ],
   ],
-  [files.currentOrganization, ["from('organization_members')", "eq('user_id', userId)", 'getCurrentOrganizationForUser', 'membership.slug === slug']],
+  [
+    files.currentOrganization,
+    [
+      "from('organization_members')",
+      'onboarding_status',
+      'onboarding_completed_at',
+      'is_onboarding_completed',
+      'isOrganizationOnboardingCompleted',
+      'getCurrentOrganizationForUser',
+      'membership.slug === slug',
+    ],
+  ],
 ];
 
 const failures = [];

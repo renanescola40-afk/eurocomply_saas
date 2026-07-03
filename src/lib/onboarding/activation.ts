@@ -42,6 +42,8 @@ export type OnboardingActivationInitialState = {
     sector: string | null;
     aiUsageSummary: string | null;
     onboardingStatus: 'not_started' | 'in_progress' | 'completed';
+    onboardingCompletedAt: string | null;
+    isOnboardingCompleted: boolean;
     onboardingStep: string | null;
     readinessScore: number | null;
     selectedPlan: string | null;
@@ -168,7 +170,7 @@ export function inferInitialRiskLevel(input: {
 export function getRiskLevelLabel(level: AiActRiskLevel) {
   switch (level) {
     case 'prohibited_review':
-      return 'Prohibited-practice review';
+      return 'Restricted-use review';
     case 'high_risk_review':
       return 'High-risk review';
     case 'limited_transparency':
@@ -186,159 +188,28 @@ export function getRecommendedDocuments(input: {
   sector: CompanySector | string;
 }): OnboardingRecommendation[] {
   const docs: OnboardingRecommendation[] = [
-    {
-      id: 'ai-system-inventory',
-      title: 'AI system inventory',
-      category: 'governance',
-      priority: 'high',
-      reason: 'Every AI use case needs an owner, purpose, lifecycle status and organization_id trail.',
-    },
-    {
-      id: 'employee-ai-use-policy',
-      title: 'Employee AI usage policy',
-      category: 'policy',
-      priority: 'medium',
-      reason: 'Staff need clear rules for approved tools, data handling and escalation.',
-    },
-    {
-      id: 'ai-governance-summary',
-      title: 'AI governance board summary',
-      category: 'reporting',
-      priority: 'medium',
-      reason: 'Leadership should see readiness, open gaps and ownership from day one.',
-    },
+    { id: 'ai-system-inventory', title: 'AI system inventory', category: 'governance', priority: 'high', reason: 'Record owner, purpose, lifecycle status and organization scope.' },
+    { id: 'employee-ai-use-policy', title: 'Employee AI usage policy', category: 'policy', priority: 'medium', reason: 'Staff need rules for approved tools, data handling and escalation.' },
+    { id: 'ai-governance-summary', title: 'AI governance board summary', category: 'reporting', priority: 'medium', reason: 'Leadership should see readiness, open gaps and ownership from day one.' },
   ];
 
   if (input.usesPersonalData) {
-    docs.push({
-      id: 'personal-data-ai-dpia-screening',
-      title: 'AI personal data DPIA screening',
-      category: 'privacy',
-      priority: 'high',
-      reason: 'Personal data use should be checked against GDPR lawful basis, minimisation and DPIA triggers.',
-    });
+    docs.push({ id: 'personal-data-ai-dpia-screening', title: 'AI personal data DPIA screening', category: 'privacy', priority: 'high', reason: 'Personal data use needs documented privacy review.' });
   }
 
-  if (input.interactsWithPeople || input.generatesContent || input.riskLevel === 'limited_transparency') {
-    docs.push({
-      id: 'ai-transparency-notice',
-      title: 'AI transparency notice',
-      category: 'transparency',
-      priority: 'medium',
-      reason: 'Customer or employee-facing AI may require disclosure and generated-content handling rules.',
-    });
+  if (input.interactsWithPeople || input.generatesContent) {
+    docs.push({ id: 'transparency-notice', title: 'User-facing AI transparency notice', category: 'transparency', priority: 'high', reason: 'User-facing AI should have clear disclosure and content handling notes.' });
   }
 
   if (input.riskLevel === 'high_risk_review' || input.riskLevel === 'prohibited_review') {
-    docs.push(
-      {
-        id: 'high-risk-ai-assessment',
-        title: 'High-risk AI assessment',
-        category: 'risk',
-        priority: input.riskLevel === 'prohibited_review' ? 'critical' : 'high',
-        reason: 'Potential high-risk or prohibited-practice exposure needs formal review before production use.',
-      },
-      {
-        id: 'vendor-model-due-diligence',
-        title: 'Vendor/model due diligence pack',
-        category: 'vendor_assurance',
-        priority: 'high',
-        reason: 'Enterprise customers will expect model/provider evidence, security posture and contractual controls.',
-      },
-      {
-        id: 'human-oversight-plan',
-        title: 'Human oversight plan',
-        category: 'control',
-        priority: 'high',
-        reason: 'High-risk workflows need accountable review, monitoring and escalation before scale.',
-      },
-    );
+    docs.push({ id: 'high-risk-classification-record', title: 'Risk classification record', category: 'risk', priority: 'critical', reason: 'Elevated risk use cases need documented classification rationale.' });
   }
 
-  if (input.sector === 'hr_recruiting' || input.sector === 'fintech' || input.sector === 'healthcare' || input.sector === 'financial_services') {
-    docs.push({
-      id: 'sector-ai-risk-addendum',
-      title: 'Sector AI risk addendum',
-      category: 'sector_controls',
-      priority: 'high',
-      reason: 'Your sector has elevated buyer and regulator expectations for AI evidence.',
-    });
+  if (input.sector === 'hr_recruiting' || input.sector === 'financial_services' || input.sector === 'fintech') {
+    docs.push({ id: 'human-oversight-playbook', title: 'Human oversight playbook', category: 'operations', priority: 'high', reason: 'Regulated workflows need review, escalation and accountability controls.' });
   }
 
   return docs;
 }
 
-export function getSuggestedTasks(input: {
-  riskLevel: AiActRiskLevel;
-  recommendedDocuments: OnboardingRecommendation[];
-  inviteEmails: string[];
-}): OnboardingTaskSuggestion[] {
-  const tasks: OnboardingTaskSuggestion[] = [
-    {
-      id: 'confirm-ai-system-owner',
-      title: 'Confirm accountable owner for first AI system',
-      description: 'Validate who owns the system, review cadence and escalation path.',
-      priority: 'high',
-      dueInDays: 3,
-    },
-    {
-      id: 'review-generated-documents',
-      title: 'Review recommended AI governance documents',
-      description: `Start with ${input.recommendedDocuments.slice(0, 3).map((document) => document.title).join(', ')}.`,
-      priority: 'medium',
-      dueInDays: 7,
-    },
-  ];
-
-  if (input.riskLevel === 'high_risk_review' || input.riskLevel === 'prohibited_review') {
-    tasks.unshift({
-      id: 'schedule-risk-review',
-      title: 'Schedule formal AI risk review',
-      description: 'Do not scale this system until legal, security or compliance has reviewed the classification.',
-      priority: input.riskLevel === 'prohibited_review' ? 'critical' : 'high',
-      dueInDays: 2,
-    });
-  }
-
-  if (input.inviteEmails.length === 0) {
-    tasks.push({
-      id: 'invite-compliance-collaborator',
-      title: 'Invite a compliance, legal or security teammate',
-      description: 'Onboarding can continue without a teammate, but readiness improves when ownership is shared.',
-      priority: 'low',
-      dueInDays: 10,
-    });
-  }
-
-  return tasks;
-}
-
-export function calculateInitialReadinessScore(input: {
-  hasOrganization: boolean;
-  hasCountry: boolean;
-  hasCompanyType: boolean;
-  hasSector: boolean;
-  hasAiUsage: boolean;
-  hasFirstAiSystem: boolean;
-  hasRiskClassification: boolean;
-  recommendedDocuments: OnboardingRecommendation[];
-  suggestedTasks: OnboardingTaskSuggestion[];
-  invitedEmails: string[];
-  selectedPlan: PlanIntent | string;
-}) {
-  let score = 0;
-
-  if (input.hasOrganization) score += 15;
-  if (input.hasCountry) score += 10;
-  if (input.hasCompanyType) score += 10;
-  if (input.hasSector) score += 10;
-  if (input.hasAiUsage) score += 10;
-  if (input.hasFirstAiSystem) score += 20;
-  if (input.hasRiskClassification) score += 10;
-  if (input.recommendedDocuments.length > 0) score += 5;
-  if (input.suggestedTasks.length > 0) score += 5;
-  if (input.invitedEmails.length > 0) score += 3;
-  if (input.selectedPlan !== 'trial') score += 2;
-
-  return Math.max(0, Math.min(100, score));
-}
+export { calculateInitialReadinessScore, getSuggestedTasks } from './activation-scoring';
