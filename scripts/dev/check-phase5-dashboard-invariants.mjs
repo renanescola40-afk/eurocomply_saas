@@ -17,7 +17,19 @@ const expectations = [
   [files.root, ['redirect', "'/pt'"]],
   [files.localeHome, ['force-static', 'revalidate = 300', 'EnterpriseHome']],
   [files.middleware, ['shouldCheckMarketingHomeAuth', 'ORGANIZATION_DASHBOARD_PATH', 'withPrivateNoStore']],
-  [files.orgDashboard, ['getCurrentUser', 'redirect(`/${safeLocale}/login`)', 'getOrganizationDashboardData', 'redirect(`/${safeLocale}/onboarding', 'workflowReadiness={data.workflowReadiness}']],
+  [
+    files.orgDashboard,
+    [
+      'getCurrentUser',
+      'getLoginPath(safeLocale, dashboardPath)',
+      'encodeURIComponent(nextPath)',
+      'getCurrentOrganizationForUser(user.id)',
+      '!currentOrganization || !currentOrganization.is_onboarding_completed',
+      'getOrganizationDashboardData',
+      'redirect(`/${safeLocale}/onboarding',
+      'workflowReadiness={data.workflowReadiness}',
+    ],
+  ],
   [files.dashboardHomeOverview, ['OrganizationWorkflowReadiness', 'workflowReadiness', 'NextBestActions']],
   [files.nextBestActions, ['OrganizationWorkflowReadiness', 'buildWorkflowReadinessAction', 'workflowReadiness', 'current workflow readiness']],
   [
@@ -40,7 +52,17 @@ const expectations = [
       'ready-for-executive-review',
     ],
   ],
-  [files.currentOrganization, ["from('organization_members')", "eq('user_id', userId)", 'getCurrentOrganizationForUser', 'membership.slug === slug']],
+  [
+    files.currentOrganization,
+    [
+      "from('organization_members')",
+      'onboarding_status',
+      'onboarding_completed_at',
+      'is_onboarding_completed',
+      'getCurrentOrganizationForUser',
+      'membership.slug === slug',
+    ],
+  ],
 ];
 
 const failures = [];
