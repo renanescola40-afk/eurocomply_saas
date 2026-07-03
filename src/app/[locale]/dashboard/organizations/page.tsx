@@ -11,6 +11,7 @@ import { locales, type Locale } from '@/lib/i18n/routing';
 import { getDashboardCopy } from '@/lib/i18n/dashboard-copy';
 import { formatLimit } from '@/server/billing/entitlements';
 import { getCurrentUser } from '@/server/queries/auth';
+import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { listOrganizationMembers, listPendingInvitations } from '@/server/queries/members';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
 
@@ -33,6 +34,19 @@ type PageProps = {
 
 function getSafeLocale(locale: string): Locale {
   return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+}
+
+function getPlanQuery(plan?: string | null) {
+  return getBillingPlan(plan)?.id ? `?plan=${encodeURIComponent(getBillingPlan(plan)!.id)}` : '';
+}
+
+function getLocalizedDashboardPath(locale: Locale, plan?: string | null) {
+  const planQuery = getPlanQuery(plan);
+  return `/${locale}/dashboard/organizations${planQuery}`;
+}
+
+function getLoginPath(locale: Locale, nextPath: string) {
+  return `/${locale}/login?next=${encodeURIComponent(nextPath)}`;
 }
 
 function isActivePendingInvitation(invitation: { expires_at?: string | null }) {
@@ -90,16 +104,24 @@ export default async function OrganizationDashboardPage({ params, searchParams }
   const safeLocale = getSafeLocale(locale);
   const copy = getDashboardCopy(safeLocale);
   const organizationCopy = copy.organization;
+  const dashboardPath = getLocalizedDashboardPath(safeLocale, resolvedSearchParams.plan);
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect(`/${safeLocale}/login`);
+    redirect(getLoginPath(safeLocale, dashboardPath));
+  }
+
+  const currentOrganization = await getCurrentOrganizationForUser(user.id);
+
+  if (!currentOrganization || !currentOrganization.is_onboarding_completed) {
+    const requestedPlan = getPlanQuery(resolvedSearchParams.plan);
+    redirect(`/${safeLocale}/onboarding${requestedPlan}`);
   }
 
   const data = await getOrganizationDashboardData(user.id);
 
   if (!data) {
-    const requestedPlan = resolvedSearchParams.plan ? `?plan=${encodeURIComponent(resolvedSearchParams.plan)}` : '';
+    const requestedPlan = getPlanQuery(resolvedSearchParams.plan);
     redirect(`/${safeLocale}/onboarding${requestedPlan}`);
   }
 
