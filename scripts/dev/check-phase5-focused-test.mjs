@@ -10,7 +10,7 @@ const required = [
   'src/app/[locale]/page.tsx',
   'dashboard/organizations',
   'src/app/[locale]/dashboard/organizations/page.tsx',
-  'redirect(`/${safeLocale}/login`)',
+  'getLoginPath(safeLocale, dashboardPath)',
   'redirect(`/${safeLocale}/onboarding',
   'src/server/queries/organization-dashboard.ts',
   "eq('organization_id', organizationId)",
