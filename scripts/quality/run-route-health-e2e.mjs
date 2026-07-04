@@ -1,9 +1,33 @@
 #!/usr/bin/env node
 
+import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { join } from 'node:path';
 
-const PLAYWRIGHT_COMMAND = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-const PLAYWRIGHT_ARGS = ['playwright', 'test', 'tests/e2e/route-health.spec.ts', '--project=chromium'];
+const PLAYWRIGHT_BIN = process.platform === 'win32'
+  ? join('node_modules', '.bin', 'playwright.cmd')
+  : join('node_modules', '.bin', 'playwright');
+const PLAYWRIGHT_ARGS = ['test', 'tests/e2e/route-health.spec.ts', '--project=chromium'];
+
+function failMissingPlaywright() {
+  console.error([
+    'Route health E2E cannot start because Playwright is not installed in node_modules.',
+    '',
+    'Run the local validation bootstrap first:',
+    '  npm ci',
+    '  npx playwright install --with-deps chromium',
+    '',
+    'Then retry:',
+    '  npm run quality:routes:e2e',
+    '',
+    'The production release runner already performs npm ci and Playwright browser installation before E2E checks.',
+  ].join('\n'));
+  process.exit(1);
+}
+
+if (!existsSync(PLAYWRIGHT_BIN)) {
+  failMissingPlaywright();
+}
 
 function normalizeUrl(value) {
   const trimmed = String(value ?? '').trim();
@@ -86,7 +110,7 @@ for (const target of uniqueTargets) {
   }
 
   console.log(`\n▶ Route health E2E target: ${target.name} (${target.url ?? target.source})`);
-  const result = spawnSync(PLAYWRIGHT_COMMAND, PLAYWRIGHT_ARGS, {
+  const result = spawnSync(PLAYWRIGHT_BIN, PLAYWRIGHT_ARGS, {
     cwd: process.cwd(),
     env,
     shell: false,
