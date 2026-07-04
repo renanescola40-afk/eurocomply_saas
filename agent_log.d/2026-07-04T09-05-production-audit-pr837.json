@@ -2,7 +2,7 @@
   "timestamp": "2026-07-04T08:05:42Z",
   "cycle": "scheduled_audit",
   "status": "safe_fix_merged_no_go",
-  "summary": "Audited EuroComply SaaS main and open PR #837 for build status, security risks, broken routes, configuration drift, billing/demo exposure, cron limits, and recent changes. PR #837 was a safe non-runtime local validation hardening change with green CI/security checks, so it was merged. Production remains no-go until GitHub Actions run on the new main merge/log commits.",
+  "summary": "Audited EuroComply SaaS main and open PR #837 for build status, security risks, broken routes, configuration drift, billing/demo exposure, cron limits, and recent changes. PR #837 was a safe non-runtime local validation hardening change with green CI/security checks, so it was merged. Production remains no-go until GitHub Actions run on the new main merge/log commits. The unused Clerk dependency drift remains unresolved and should be removed in a dedicated dependency PR after package-lock alignment.",
   "base_commit_before_merge": "c4adf7b28b1db6da6f85dbf502c58a3dbd394e4c",
   "merged_pull_request": 837,
   "merged_commit": "cd9cc6a510bd212e245eb6171b305b3685b058db",
@@ -15,7 +15,7 @@
     "ready_guard": "healthcheck_bearer_token_required",
     "prelaunch_guard": "bounded_rate_limited_consent_only_honeypot_no_store",
     "billing_checkout_guard": "source_review_required_previous_guard_state_unchanged",
-    "configuration_drift": "unused_clerk_dependency_not_observed_in_current_main_package_json"
+    "configuration_drift": "unresolved_unused_clerk_dependency_present_in_package_json_and_lockfile_without_runtime_imports"
   },
   "actions_taken": [
     "Validated PR #837 changed only local/bootstrap validation scripts and documentation plus a release contract comment; no runtime product, Supabase, Stripe, Clerk, RLS, auth, or database changes were included.",
@@ -26,11 +26,13 @@
     "Validated /api/internal/daily-maintenance still requires internal cron authorization and uses no-store downstream POST calls.",
     "Validated /api/ready still requires HEALTHCHECK_TOKEN bearer validation and returns no-store readiness output.",
     "Validated /api/prelaunch remains bounded, rate-limited, consent-gated, honeypot-aware, and no-store.",
+    "Validated @clerk/nextjs remains present in package.json/package-lock while repository search shows no runtime Clerk imports; this remains an unresolved configuration drift item, not a cleared item.",
     "Recorded this audit in append-only agent_log.d because rewriting the full aggregate agent_log.json risks dropping historical entries."
   ],
   "next_cycle_focus": [
     "Verify GitHub Actions on the latest main commit after the merge and log commit.",
     "Inspect billing checkout source again if a new billing-related PR appears.",
+    "Remove unused @clerk/nextjs and package-lock entries in a dedicated safe dependency-alignment PR if checks confirm no runtime usage.",
     "Keep aggregate agent_log.json historical entries intact; prefer append-only logs unless a safe full-file update is available."
   ]
 }
