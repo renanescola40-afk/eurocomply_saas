@@ -126,7 +126,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
               </div>
             )}
 
-            {selectedPlanIsSalesLed && (
+            {selectedPlanIsSalesLed && !selectedPlanIsCurrent && (
               <div className="mt-6 rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-4 text-emerald-100">
                 <p className="font-semibold">Enterprise is sales-led</p>
                 <p className="mt-1 text-sm opacity-85">Enterprise requires procurement, rollout scope and agreed commercial terms before subscription activation.</p>
@@ -156,11 +156,11 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-3xl font-semibold">{selectedPlan.name}</h2>
-                  <p className="mt-2 text-sm leading-6 text-blue-100/80">{selectedPlanIsSalesLed ? 'Sales-led compliance rollout for procurement-driven teams.' : 'Monthly subscription for your compliance workspace.'}</p>
+                  <p className="mt-2 text-sm leading-6 text-blue-100/80">{selectedPlanIsSalesLed && !selectedPlanIsCurrent ? 'Sales-led compliance rollout for procurement-driven teams.' : 'Monthly subscription for your compliance workspace.'}</p>
                 </div>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-950">{selectedPlanIsSalesLed ? 'Sales-led' : selectedPlanIsCurrent ? 'Current' : 'Selected'}</span>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-950">{selectedPlanIsCurrent ? 'Current' : selectedPlanIsSalesLed ? 'Sales-led' : 'Selected'}</span>
               </div>
-              <p className="mt-6 text-5xl font-bold">{selectedPlanIsSalesLed ? 'Custom' : `€${selectedPlan.priceMonthly}`}{!selectedPlanIsSalesLed && <span className="text-base font-normal text-blue-100/70">/mo</span>}</p>
+              <p className="mt-6 text-5xl font-bold">{selectedPlanIsSalesLed && !selectedPlanIsCurrent ? 'Custom' : `€${selectedPlan.priceMonthly}`}{(!selectedPlanIsSalesLed || selectedPlanIsCurrent) && <span className="text-base font-normal text-blue-100/70">/mo</span>}</p>
             </div>
 
             <div className="mt-5 grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
@@ -188,7 +188,20 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
               ))}
             </ul>
 
-            {selectedPlanIsSalesLed ? (
+            {selectedPlanIsCurrent && organization ? (
+              <div className="mt-6">
+                <BillingActionButton
+                  action="checkout"
+                  locale={locale}
+                  planId={selectedPlan.id}
+                  disabled
+                  className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/40"
+                >
+                  Current plan
+                </BillingActionButton>
+                <p className="mt-3 text-center text-xs text-slate-500">Workspace: {organization.name}</p>
+              </div>
+            ) : selectedPlanIsSalesLed ? (
               <div className="mt-6">
                 <Link href={salesLedPath} className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-black hover:bg-white/90">
                   Talk to sales
