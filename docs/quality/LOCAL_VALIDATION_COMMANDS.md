@@ -3,8 +3,10 @@
 Fresh Codespaces/local workspace:
 
 ```bash
-node scripts/dev/bootstrap-local-validation.mjs
+npm run bootstrap:local
 ```
+
+This command runs `npm ci` and installs the Chromium browser needed by Playwright.
 
 Then run:
 
