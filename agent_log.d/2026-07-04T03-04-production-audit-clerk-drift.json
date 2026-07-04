@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-07-04T03:04:00Z",
+  "cycle": "scheduled_audit",
+  "status": "no_go_config_drift_found",
+  "summary": "Audited EuroComply production readiness surfaces on main. No open PRs were found. Main commit 3762c6fe has Vercel success but no GitHub Actions workflow runs, so build/security remain unverified. A safe config/supply-chain drift was identified: @clerk/nextjs remains declared in package.json and package-lock.json while repository search found no Clerk runtime imports/usages; project auth is Supabase-based. The dependency should be removed with a regenerated lockfile via npm install --package-lock-only --ignore-scripts before merge.",
+  "main_commit": "3762c6feab337ca06bb2dc20fc63365de4b9c0cf",
+  "actions_taken": [
+    "Checked repository metadata and confirmed main as default branch.",
+    "Confirmed no open pull requests.",
+    "Confirmed latest main has Vercel success but no GitHub Actions workflow runs.",
+    "Reviewed release scripts and confirmed release:production-final remains wired to scripts/release/run-public-production-release.mjs.",
+    "Reviewed /api/ready and confirmed bearer-token protection and no-store response behavior.",
+    "Reviewed vercel.json and confirmed a single cron entry pointing to /api/internal/daily-maintenance.",
+    "Reviewed /api/internal/daily-maintenance and confirmed internal cron authorization, no-store responses, configured base URL guard, and bounded job timeout.",
+    "Reviewed /api/prelaunch and confirmed bounded JSON, consent gate, honeypot, rate limit, and no-store behavior.",
+    "Reviewed billing checkout and confirmed authenticated user, organization scope, manage_billing RBAC, trusted mutation/rate-limit, step-up, self-serve plan boundary, audit log, and no-store response.",
+    "Searched for Clerk runtime imports/usages and found none while @clerk/nextjs is still declared in dependency manifests. Prepared this audit log entry instead of directly editing dependency manifests because the lockfile must be regenerated atomically to avoid package-lock drift."
+  ],
+  "recommended_safe_fix": [
+    "Remove @clerk/nextjs from package.json dependencies.",
+    "Regenerate package-lock.json with npm install --package-lock-only --ignore-scripts on Node 22/npm 10.",
+    "Run npm ci, npm run lint, npm run typecheck, npm run test, npm run build, and npm run security:ci before merging."
+  ],
+  "agent_log_json_note": "Direct rewrite of the large historical agent_log.json was not attempted to avoid truncating or losing audit history; this append-only log shard records the audit safely."
+}
