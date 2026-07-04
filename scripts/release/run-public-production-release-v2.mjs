@@ -24,7 +24,7 @@ const commands = [
   ['06-build', 'npm run build', 'npm', ['run', 'build']],
   ['07-security-ci', 'npm run security:ci', 'npm', ['run', 'security:ci']],
   ['08-security-rls-live', 'npm run security:rls:live', 'npm', ['run', 'security:rls:live']],
-  ['09-release-smoke', 'npm run release:deployment-smoke', 'npm', ['run', 'release:deployment-smoke']],
+  ['09-release-smoke', 'node scripts/release/public-production-smoke-wrapper.mjs', 'node', ['scripts/release/public-production-smoke-wrapper.mjs']],
   ['10-release-rollback-dry-run', 'npm run release:rollback:dry-run', 'npm', ['run', 'release:rollback:dry-run']],
   ['11-release-candidate', 'npm run security:release-candidate', 'npm', ['run', 'security:release-candidate']],
   ['12-release-evidence', 'npm run security:release-evidence', 'npm', ['run', 'security:release-evidence']],
