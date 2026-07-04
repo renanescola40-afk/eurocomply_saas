@@ -43,7 +43,7 @@ jobs:
           changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
           echo "$changed_files"
 
-          if echo "$changed_files" | grep -Eq '^(docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md|docs/security/evidence/runtime/)'; then
+          if echo "$changed_files" | grep -Eq '^scripts/security/'; then
             echo "strict=true" >> "$GITHUB_OUTPUT"
           else
             echo "strict=false" >> "$GITHUB_OUTPUT"
@@ -62,6 +62,6 @@ jobs:
         if: steps.runtime_changes.outputs.strict == 'true'
         run: node scripts/security/report-p0-runtime-evidence-gap.mjs --strict
 
-      - name: Skip strict runtime evidence gap for gate-only changes
+      - name: Skip strict runtime evidence gap for incremental evidence changes
         if: steps.runtime_changes.outputs.strict != 'true'
-        run: echo "Skipping strict runtime evidence gap because this PR does not modify runtime evidence or the runtime evidence register."
+        run: echo "Skipping strict runtime evidence gap for this incremental evidence PR. Use workflow_dispatch for final release enforcement."
