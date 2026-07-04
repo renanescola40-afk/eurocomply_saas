@@ -18,7 +18,7 @@ That is an environment bootstrap problem, not proof that the merged QA route/act
 Run the bootstrap before any local E2E or route-health command:
 
 ```bash
-node scripts/dev/bootstrap-local-validation.mjs
+npm run bootstrap:local
 ```
 
 The bootstrap performs:
