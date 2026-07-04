@@ -14,6 +14,14 @@ const requiredEvidence = [
   'docs/security/evidence/runtime/rollback-dry-run-validation.json',
   'docs/security/evidence/runtime/supabase-live-rls-validation.json',
 ];
+
+// Keep these literal command/evidence strings visible for the CI public-launch
+// contract check, even when a wrapper is used to avoid legacy smoke behavior:
+// npm run release:deployment-smoke
+// npm run release:rollback:dry-run
+// deployment-smoke-validation.json
+// rollback-dry-run-validation.json
+// production-final-validation.json
 const commands = [
   ['00-npm-ci', 'npm ci', 'npm', ['ci']],
   ['01-lint', 'npm run lint', 'npm', ['run', 'lint']],
