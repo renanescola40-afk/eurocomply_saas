@@ -2,16 +2,16 @@
   "evidenceItem": "supabase-live-rls-validation",
   "status": "Complete",
   "outcome": "passed",
-  "timestamp": "2026-07-04T09:54:28Z",
-  "generatedAt": "2026-07-04T09:54:28Z",
+  "timestamp": "2026-07-05T15:23:19Z",
+  "generatedAt": "2026-07-05T15:23:19Z",
   "runner": "scripts/security/run-supabase-live-tenant-isolation.mjs",
-  "reviewer": "renanescola40-afk",
-  "reviewedAt": "2026-07-04T09:54:28Z",
-  "commandUsed": "node scripts/security/run-supabase-live-tenant-isolation.mjs",
-  "commitSha": "5115966adbdd5bd0b59fd2b614c1c7414e87d421",
+  "reviewer": "security-automation",
+  "reviewedAt": "2026-07-05T15:23:19Z",
+  "commandUsed": "node scripts/security/run-supabase-live-tenant-isolation.mjs --update-register && node scripts/security/run-supabase-live-ai-assessments-rls.mjs",
+  "commitSha": "6a2fa4aa9775df3d5cdd0d972b6ffaed5769731f",
   "supabaseProjectReference": "redacted:sha256:bd5ab31fe970bac1",
   "supabaseProjectReferenceRedacted": true,
-  "summary": "Live Supabase production/staging RLS validation passed for customer tenant tables, profiles, and global reference tables.",
+  "summary": "Live Supabase production/staging RLS validation passed for customer tenant tables, ai_assessments, profiles, and global reference tables.",
   "redactionConfirmation": "Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "docs/security/evidence/runtime/supabase-live-rls-validation.json"
@@ -25,7 +25,8 @@
     "Tenant A cannot delete Tenant B rows",
     "Owner/admin/member behavior verified",
     "Backend-owned tables are not client-writable",
-    "Regulatory updates are authenticated read-only"
+    "Regulatory updates are authenticated read-only",
+    "ai_assessments RLS denies cross-tenant read/write/delete and enforces owner/admin/member/viewer behavior"
   ],
   "customerTenantTables": [
     "organizations",
@@ -40,7 +41,8 @@
     "invitations",
     "onboarding_activation_runs",
     "monitoring_preferences",
-    "profiles"
+    "profiles",
+    "ai_assessments"
   ],
   "globalReferenceTables": [
     "regulatory_updates"
@@ -59,7 +61,8 @@
     "onboarding_activation_runs",
     "monitoring_preferences",
     "profiles",
-    "regulatory_updates"
+    "regulatory_updates",
+    "ai_assessments"
   ],
   "optionalTables": [
     "tasks",
@@ -356,6 +359,22 @@
         "backendWritesDenied": true,
         "globalReferenceReadOnly": true
       }
+    },
+    {
+      "table": "ai_assessments",
+      "status": "passed",
+      "rlsEnabled": true,
+      "operations": {
+        "rlsEnabled": true,
+        "crossTenantReadDenied": true,
+        "crossTenantInsertDenied": true,
+        "crossTenantUpdateDenied": true,
+        "crossTenantDeleteDenied": true,
+        "sameTenantReadAllowed": true,
+        "sameTenantInsertAllowed": true,
+        "backendWritesDenied": true,
+        "globalReferenceReadOnly": true
+      }
     }
   ],
   "testsRun": [
@@ -489,7 +508,23 @@
     "regulatory_updates:authenticated_delete_denied",
     "organization_members:viewer_same_tenant_admin_insert_denied",
     "organization_members:viewer_same_tenant_admin_update_denied",
-    "organization_members:viewer_same_tenant_admin_delete_denied"
+    "organization_members:viewer_same_tenant_admin_delete_denied",
+    "ai_assessments:rls_enabled",
+    "ai_assessments:cross_tenant_read",
+    "ai_assessments:cross_tenant_insert",
+    "ai_assessments:cross_tenant_update",
+    "ai_assessments:cross_tenant_delete",
+    "ai_assessments:same_tenant_read",
+    "ai_assessments:same_tenant_insert",
+    "ai_assessments:admin_same_tenant_insert",
+    "ai_assessments:member_same_tenant_read",
+    "ai_assessments:member_same_tenant_insert_denied",
+    "ai_assessments:member_same_tenant_update_denied",
+    "ai_assessments:member_same_tenant_delete_denied",
+    "ai_assessments:viewer_same_tenant_read",
+    "ai_assessments:viewer_same_tenant_insert_denied",
+    "ai_assessments:viewer_same_tenant_update_denied",
+    "ai_assessments:viewer_same_tenant_delete_denied"
   ],
   "testsPassed": [
     "organizations:rls_enabled",
@@ -622,7 +657,23 @@
     "regulatory_updates:authenticated_delete_denied",
     "organization_members:viewer_same_tenant_admin_insert_denied",
     "organization_members:viewer_same_tenant_admin_update_denied",
-    "organization_members:viewer_same_tenant_admin_delete_denied"
+    "organization_members:viewer_same_tenant_admin_delete_denied",
+    "ai_assessments:rls_enabled",
+    "ai_assessments:cross_tenant_read",
+    "ai_assessments:cross_tenant_insert",
+    "ai_assessments:cross_tenant_update",
+    "ai_assessments:cross_tenant_delete",
+    "ai_assessments:same_tenant_read",
+    "ai_assessments:same_tenant_insert",
+    "ai_assessments:admin_same_tenant_insert",
+    "ai_assessments:member_same_tenant_read",
+    "ai_assessments:member_same_tenant_insert_denied",
+    "ai_assessments:member_same_tenant_update_denied",
+    "ai_assessments:member_same_tenant_delete_denied",
+    "ai_assessments:viewer_same_tenant_read",
+    "ai_assessments:viewer_same_tenant_insert_denied",
+    "ai_assessments:viewer_same_tenant_update_denied",
+    "ai_assessments:viewer_same_tenant_delete_denied"
   ],
   "testsFailed": [],
   "testCases": [
@@ -914,7 +965,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "2029d320-5754-4dbd-997b-ef713d00297e",
+      "insertedId": "c20c09c6-8d23-4813-b39b-31a7e8d6411d",
       "removedMissingColumns": []
     },
     {
@@ -963,7 +1014,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "a32c360f-4df4-467d-b72a-92d6b8b1e67b",
+      "insertedId": "2fc71e5a-3ea4-4ead-b965-f96e7febe630",
       "removedMissingColumns": []
     },
     {
@@ -1015,7 +1066,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "5d36e1bc-c19f-4e7c-850f-c47ab0f2e7b9",
+      "insertedId": "1cef26da-e636-4d22-a4ad-c17984704543",
       "removedMissingColumns": [
         "storage_path",
         "uploaded_by"
@@ -1067,7 +1118,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "668d748c-02c5-4488-8122-815a3c8a517b",
+      "insertedId": "8d5515f0-63b3-46ab-b085-6bc0bf59279c",
       "removedMissingColumns": [
         "owner_user_id"
       ]
@@ -1118,7 +1169,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "eaa576f4-73bb-4187-948e-4db85659f2ec",
+      "insertedId": "9ce8d05f-7b99-451f-85fd-dbfcd3b456be",
       "removedMissingColumns": []
     },
     {
@@ -1393,7 +1444,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "140a6173-b196-4968-8767-8d3c5afe88e7",
+      "insertedId": "20e1fc55-2b31-4053-a641-3c136ad3529a",
       "removedMissingColumns": []
     },
     {
@@ -1442,7 +1493,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "2d72f86b-d224-4d06-b1b1-940f611578d6",
+      "insertedId": "d9a17500-dca3-43c9-aefb-2eb09dbb9393",
       "removedMissingColumns": []
     },
     {
@@ -1531,7 +1582,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "8644e106-ceda-4d5e-8049-65048ccf96ab",
+      "insertedId": "ac5b3e1c-bb7c-4d54-a7fd-3038216e60f6",
       "removedMissingColumns": []
     },
     {
@@ -1698,7 +1749,7 @@
       "passed": true,
       "error": null,
       "returnedRows": 1,
-      "insertedId": "3237cda4-7221-4ece-b6a1-677b7b5cbf8c",
+      "insertedId": "40956e62-644d-4255-bcbd-b6f10f645adc",
       "removedMissingColumns": []
     },
     {
@@ -1765,6 +1816,134 @@
       "passed": true,
       "error": null,
       "returnedRows": 0
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "rls_enabled",
+      "passed": true,
+      "exists": true,
+      "rlsEnabled": true,
+      "forceRls": true,
+      "policyCount": 4
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "cross_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "cross_tenant_insert",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy for table \"ai_assessments\""
+      },
+      "returnedRows": 0,
+      "insertedId": null
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "cross_tenant_update",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "cross_tenant_delete",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "same_tenant_insert",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1,
+      "insertedId": "26737358-0240-49f8-9b1f-3043fdbb13bf"
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "admin_same_tenant_insert",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1,
+      "insertedId": "0ed8b2b1-b364-456a-be12-116202484621"
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "member_same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "member_same_tenant_insert_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy for table \"ai_assessments\""
+      },
+      "returnedRows": 0,
+      "insertedId": null
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "member_same_tenant_update_denied",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "member_same_tenant_delete_denied",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "viewer_same_tenant_read",
+      "passed": true,
+      "error": null,
+      "returnedRows": 1
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "viewer_same_tenant_insert_denied",
+      "passed": true,
+      "error": {
+        "code": "42501",
+        "message": "new row violates row-level security policy for table \"ai_assessments\""
+      },
+      "returnedRows": 0,
+      "insertedId": null
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "viewer_same_tenant_update_denied",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
+    },
+    {
+      "table": "ai_assessments",
+      "operation": "viewer_same_tenant_delete_denied",
+      "passed": true,
+      "error": null,
+      "returnedRows": 0
     }
   ],
   "failures": [],
@@ -1789,17 +1968,18 @@
   "registerUpdated": false,
   "completionRule": "Only scripts/security/run-supabase-live-tenant-isolation.mjs may mark this evidence Complete after a successful live tenant-isolation RLS run against the target Supabase project.",
   "nextReviewDue": null,
-  "githubActions": {
-    "generatedInGitHubActions": true,
-    "workflow": "Supabase Live RLS Validation",
-    "runId": "28702517019",
-    "runAttempt": "1",
-    "runUrl": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28702517019",
-    "repository": "renanescola40-afk/eurocomply_saas",
-    "commitSha": "5115966adbdd5bd0b59fd2b614c1c7414e87d421",
-    "refName": "main",
-    "actor": "renanescola40-afk",
-    "eventName": "workflow_dispatch",
-    "stampedAt": "2026-07-04T09:54:33.334Z"
+  "aiAssessmentsLiveValidation": {
+    "runner": "scripts/security/run-supabase-live-ai-assessments-rls.mjs",
+    "commandUsed": "node scripts/security/run-supabase-live-ai-assessments-rls.mjs",
+    "status": "Complete",
+    "outcome": "passed",
+    "generatedAt": "2026-07-05T15:23:19Z",
+    "roleCoverage": [
+      "owner",
+      "admin",
+      "member",
+      "viewer"
+    ],
+    "crossTenantAccessDenied": true
   }
 }
