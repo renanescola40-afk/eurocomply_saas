@@ -117,7 +117,15 @@ async function expectNoUndefinedLinks(page: Page, label: string) {
 
 async function expectNoDeadPrimaryControls(page: Page, label: string) {
   type AnchorSnapshot = { href: string; text: string; visible: boolean };
-  type ButtonSnapshot = { text: string; visible: boolean; disabled: boolean; ariaDisabled: string | null };
+  type ButtonSnapshot = {
+    text: string;
+    visible: boolean;
+    disabled: boolean;
+    ariaDisabled: string | null;
+    type: string;
+    formId: string;
+    hasRequiredEmptyField: boolean;
+  };
 
   const anchors = await page.locator('a').evaluateAll((elements): AnchorSnapshot[] =>
     elements.map((element) => {
@@ -146,12 +154,26 @@ async function expectNoDeadPrimaryControls(page: Page, label: string) {
       const button = element as HTMLButtonElement;
       const rect = button.getBoundingClientRect();
       const style = window.getComputedStyle(button);
+      const form = button.form;
+      const requiredFields = Array.from(form?.elements ?? []).filter((candidate): candidate is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement => {
+        if (!(candidate instanceof HTMLInputElement || candidate instanceof HTMLSelectElement || candidate instanceof HTMLTextAreaElement)) {
+          return false;
+        }
+        if (!candidate.required || candidate.disabled) return false;
+        if (candidate instanceof HTMLInputElement && (candidate.type === 'checkbox' || candidate.type === 'radio')) {
+          return !candidate.checked;
+        }
+        return !candidate.value;
+      });
 
       return {
         text: (button.textContent ?? '').replace(/\s+/g, ' ').trim(),
         visible: rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden',
         disabled: button.disabled,
         ariaDisabled: button.getAttribute('aria-disabled'),
+        type: button.type || 'submit',
+        formId: form?.id ?? '',
+        hasRequiredEmptyField: requiredFields.length > 0,
       };
     }),
   );
@@ -159,8 +181,16 @@ async function expectNoDeadPrimaryControls(page: Page, label: string) {
   const primaryButtons = buttons.filter((button) =>
     button.visible && /start|sign|login|entrar|create|criar|save|guardar|submit|send|enviar|continue|continuar|manage|join|waitlist|lista|demo|book|checkout|billing/i.test(button.text),
   );
-  const inertButtons = primaryButtons.filter((button) => button.disabled || button.ariaDisabled === 'true');
-  expect(inertButtons, `${label} has disabled primary buttons`).toEqual([]);
+  const inertButtons = primaryButtons.filter((button) => {
+    if (!(button.disabled || button.ariaDisabled === 'true')) return false;
+
+    // A disabled submit button is expected when the form contains required empty fields.
+    // Route-health should catch broken navigation and unusable pages, not fail a valid initial form state.
+    if ((button.type === 'submit' || button.formId) && button.hasRequiredEmptyField) return false;
+
+    return true;
+  });
+  expect(inertButtons, `${label} has disabled primary buttons outside an incomplete form state`).toEqual([]);
 }
 
 async function expectNoBrokenInternalLinks(page: Page, label: string) {
