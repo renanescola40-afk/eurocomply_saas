@@ -43,7 +43,7 @@ type SupabaseState = {
   eventReclaimData?: { id: string } | null;
   organizationData?: { id: string; name?: string; created_by?: string; clerk_org_id?: string | null } | null;
   organizationError?: { code?: string; message?: string } | null;
-  subscriptionData?: Record<string, unknown> | null;
+  subscriptionData?: Record<string, unknown> | Array<Record<string, unknown>> | null;
   subscriptionError?: { code?: string; message?: string } | null;
   upsertError?: { code?: string; message?: string } | null;
   eventInsert: ReturnType<typeof vi.fn>;
@@ -276,11 +276,13 @@ describe('Stripe webhook billing hardening', () => {
   });
 
   it('handles failed payment waves without creating or upgrading entitlements', async () => {
-    state.subscriptionData = {
-      organization_id: 'org_a',
-      stripe_subscription_id: 'sub_123',
-      stripe_customer_id: 'cus_123',
-    };
+    state.subscriptionData = [
+      {
+        organization_id: 'org_a',
+        stripe_subscription_id: 'sub_123',
+        stripe_customer_id: 'cus_123',
+      },
+    ];
 
     const result = await handleStripeWebhookEvent(makeStripeEvent('invoice.payment_failed', makeInvoicePaymentFailed()));
 
