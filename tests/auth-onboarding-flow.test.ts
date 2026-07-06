@@ -75,11 +75,14 @@ describe('auth and onboarding redirect invariants', () => {
     expect(callback).toContain('auth_exchange_failed');
   });
 
-  it('keeps signup email verification returning to onboarding', () => {
+  it('keeps signup email verification on the selected safe continuation', () => {
     const auth = readRepoFile('src/hooks/useAuth.tsx');
+    const signup = readRepoFile('src/app/[locale]/signup/page.tsx');
 
-    expect(auth).toContain("emailRedirectTo: getRedirectUrl('/onboarding')");
+    expect(auth).toContain('next?: string');
+    expect(auth).toContain('getSignupRedirectUrl(metadata?.next)');
     expect(auth).toContain('requested_plan: metadata?.requested_plan');
+    expect(signup).toContain('next: continuationHref');
   });
 
   it('blocks observability dashboard access until onboarding is completed', () => {
