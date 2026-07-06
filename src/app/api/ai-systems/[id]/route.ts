@@ -1,12 +1,12 @@
 import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
 import { aiSystemBodySchema, asText, classifyParsedAiSystemBody } from '@/server/ai-governance/system-payload';
-import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { createAiSystem, listAiSystems } from '@/server/queries/ai-systems';
 import { createAuditEvent } from '@/server/queries/audit-events';
-import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { getAiSystem, listAiSystemHistory, updateAiSystem } from '@/server/queries/ai-systems';
+import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { parseJsonBodyWithZod, requireApiUser, secureApiError } from '@/server/security/api-guards';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
-import { parseJsonBodyWithZod, requireApiUser, secureApiError } from '@/server/security/api-guards';
+import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 
 const AI_SYSTEM_JSON_MAX_BYTES = 64 * 1024;
 
@@ -29,8 +29,13 @@ function rateLimitDeniedResponse(result: RateLimitResult) {
   );
 }
 
-export async function GET() {
+type AiSystemRouteParams = {
+  params: Promise<{ id: string }>;
+};
+
+export async function GET(_request: Request, { params }: AiSystemRouteParams) {
   try {
+    const { id } = await params;
     const user = await requireApiUser();
     const organization = await getCurrentOrganizationForUser(user.id);
 
@@ -48,18 +53,27 @@ export async function GET() {
       return permissionDeniedResponse(permission);
     }
 
-    const systems = await listAiSystems(organization.id);
-    return noStoreJson({ systems, role: permission.role });
+    const [system, history] = await Promise.all([
+      getAiSystem(id, organization.id),
+      listAiSystemHistory(id, organization.id),
+    ]);
+
+    if (!system) {
+      return noStoreJson({ error: 'ai_system_not_found' }, { status: 404 });
+    }
+
+    return noStoreJson({ system, history, role: permission.role });
   } catch (error) {
     return secureApiError(error);
   }
 }
 
-export async function POST(request: Request) {
+export async function PATCH(request: Request, { params }: AiSystemRouteParams) {
   try {
     const originDenied = assertTrustedOrigin(request);
     if (originDenied) return originDenied;
 
+    const { id } = await params;
     const user = await requireApiUser();
     const organization = await getCurrentOrganizationForUser(user.id);
 
@@ -78,13 +92,18 @@ export async function POST(request: Request) {
     }
 
     const rateLimit = await checkDistributedRateLimit({
-      key: `ai-systems:create:${organization.id}:${user.id}`,
-      limit: 20,
+      key: `ai-systems:update:${organization.id}:${user.id}`,
+      limit: 30,
       windowMs: 60 * 1000,
     });
 
     if (!rateLimit.allowed) {
       return rateLimitDeniedResponse(rateLimit);
+    }
+
+    const existing = await getAiSystem(id, organization.id);
+    if (!existing) {
+      return noStoreJson({ error: 'ai_system_not_found' }, { status: 404 });
     }
 
     const body = await parseJsonBodyWithZod(request, {
@@ -93,9 +112,8 @@ export async function POST(request: Request) {
     });
     const result = classifyParsedAiSystemBody(body);
 
-    const system = await createAiSystem({
-      organizationId: organization.id,
-      createdBy: user.id,
+    const system = await updateAiSystem(id, organization.id, {
+      reassessedBy: user.id,
       name: body.name,
       ownerTeam: asText(body.ownerTeam) || null,
       category: asText(body.category) || null,
@@ -121,22 +139,21 @@ export async function POST(request: Request) {
     await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
-      action: 'ai_system_created',
+      action: 'ai_system_reassessed',
       entityType: 'ai_system',
       entityId: system.id,
       metadata: {
+        previousRiskLevel: existing.risk_level,
         riskLevel: system.risk_level,
-        selectedRole: result.role,
-        recommendedRole: result.roleAssessment.recommendedRole,
-        roleConfidence: result.roleAssessment.confidence,
-        needsLegalReview: result.roleAssessment.needsLegalReview,
+        previousLifecycleStatus: existing.lifecycle_status,
         lifecycleStatus: system.lifecycle_status,
-        riskDomain: system.risk_domain,
         actorRole: permission.role,
       },
     });
 
-    return noStoreJson({ system, roleAssessment: result.roleAssessment });
+    const history = await listAiSystemHistory(system.id, organization.id);
+
+    return noStoreJson({ system, history, roleAssessment: result.roleAssessment });
   } catch (error) {
     return secureApiError(error);
   }
