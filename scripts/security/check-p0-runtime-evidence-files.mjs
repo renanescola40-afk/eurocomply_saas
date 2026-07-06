@@ -19,6 +19,7 @@ const allowedItems = new Set([
   'audit-chain-live-validation',
   'stripe-billing-validation',
   'observability-readiness',
+  'observability-smoke-validation',
   'rate-limit-validation',
   'enterprise-final-readiness-validation',
   // GDPR privacy evidence added by the enterprise privacy controls package.
@@ -29,6 +30,8 @@ const redactionTexts = new Set([
   'Redaction confirmed for runtime evidence.',
   'Redaction confirmed for runtime evidence. Rollback target values are not written to evidence.',
   'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
+  'No token, cookie, authorization header, secret value, raw rollback URL, or full private provider value is stored in this evidence file.',
+  'No token, cookie, authorization header, secret value, DSN, or raw provider credential is stored in this evidence file.',
 ]);
 const failures = [];
 
@@ -97,7 +100,13 @@ function checkGenericOpenBlockedEvidence(file, evidence, allowedOpenOutcomes) {
 function checkReleaseOpenPlaceholder(file, evidence) {
   if (!new Set(['deployment-smoke-validation', 'rollback-dry-run-validation', 'final-validation-runner']).has(evidence.evidenceItem)) return false;
 
-  return checkGenericOpenBlockedEvidence(file, evidence, new Set(['failed']));
+  return checkGenericOpenBlockedEvidence(file, evidence, new Set(['failed', 'not_run_in_connector']));
+}
+
+function checkObservabilityOpenPlaceholder(file, evidence) {
+  if (evidence.evidenceItem !== 'observability-smoke-validation') return false;
+
+  return checkGenericOpenBlockedEvidence(file, evidence, new Set(['failed', 'not_run_in_connector']));
 }
 
 function checkSupabaseOpenPlaceholder(file, evidence) {
@@ -246,6 +255,7 @@ for (const file of files) {
   }
 
   if (checkReleaseOpenPlaceholder(file, evidence)) continue;
+  if (checkObservabilityOpenPlaceholder(file, evidence)) continue;
   if (checkSupabaseOpenPlaceholder(file, evidence)) continue;
   if (checkExternalReviewOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence)) continue;
