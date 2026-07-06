@@ -34,6 +34,10 @@ function emptyBillingContext(): OrganizationBillingContext {
   };
 }
 
+function hasPaidEntitlementStatus(status: string | null | undefined) {
+  return ACTIVE_BILLING_STATUSES.includes(status as (typeof ACTIVE_BILLING_STATUSES)[number]);
+}
+
 async function countRows(supabase: SupabaseAdminClient, table: BillingCountTable, organizationId: string) {
   const { count, error } = await supabase
     .from(table)
@@ -53,7 +57,6 @@ async function getSubscription(supabase: SupabaseAdminClient, organizationId: st
     .from('subscriptions')
     .select('plan,status,updated_at,created_at')
     .eq('organization_id', organizationId)
-    .in('status', [...ACTIVE_BILLING_STATUSES])
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -82,9 +85,14 @@ export async function getOrganizationBillingContext(
     countRows(supabase, 'risks', organizationId),
   ]);
 
+  const status = subscription?.status ?? null;
+  const plan = hasPaidEntitlementStatus(status)
+    ? normalizePlan(subscription?.plan ?? SAFE_DEFAULT_PLAN)
+    : SAFE_DEFAULT_PLAN;
+
   return {
-    plan: subscription?.status ? normalizePlan(subscription.plan ?? SAFE_DEFAULT_PLAN) : SAFE_DEFAULT_PLAN,
-    status: subscription?.status ?? null,
+    plan,
+    status,
     usage: {
       users,
       documents,
