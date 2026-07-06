@@ -1,0 +1,42 @@
+{
+  "evidenceItem": "rollback-dry-run-validation",
+  "status": "Open",
+  "outcome": "not_run_in_connector",
+  "generatedAt": "2026-07-06T09:00:00.000Z",
+  "reviewedAt": "2026-07-06T09:00:00.000Z",
+  "reviewer": "RISCK COMPLY release automation",
+  "releaseTarget": "production",
+  "summary": "Rollback dry-run script now performs real runtime health validation. This evidence remains Open until npm run release:rollback:dry-run is executed with a real previous known-good target and validation proof.",
+  "redactionConfirmation": "No token, cookie, authorization header, secret value, raw rollback URL, or full private provider value is stored in this evidence file.",
+  "evidenceLocations": [
+    "scripts/release/run-rollback-dry-run.mjs",
+    "docs/operations/ROLLBACK_RUNBOOK.md",
+    "docs/RELEASE_ROLLBACK_PLAN.md",
+    "docs/security/evidence/runtime/rollback-dry-run-validation.json"
+  ],
+  "controlsExpected": [
+    "rollbackTargetUrlConfigured",
+    "rollbackTargetUrlValid",
+    "rollbackTargetShaConfigured",
+    "rollbackTargetDiffersFromCurrentRelease",
+    "rollbackRunbookPresent",
+    "functionalValidationProofRecorded",
+    "rollbackTargetHealthOk",
+    "rollbackTargetHealthNoStore",
+    "rollbackTargetReadyOk when RELEASE_ROLLBACK_CHECK_READY=true and HEALTHCHECK_TOKEN is configured"
+  ],
+  "requiredCommand": "npm run release:rollback:dry-run",
+  "requiredEnvironment": [
+    "RELEASE_ROLLBACK_TARGET or LAST_KNOWN_GOOD_DEPLOYMENT_URL",
+    "RELEASE_ROLLBACK_TARGET_SHA or LAST_KNOWN_GOOD_SHA",
+    "RELEASE_ROLLBACK_TARGET_VALIDATED=true",
+    "HEALTHCHECK_TOKEN when RELEASE_ROLLBACK_CHECK_READY=true"
+  ],
+  "releaseGate": "Do not mark rollback ready until this evidence is regenerated as Complete/passed against the real previous known-good deployment.",
+  "evidenceIntegrity": {
+    "containsSensitiveValues": false,
+    "valuesRedacted": true,
+    "authorizationHeaderStored": false,
+    "cookiesStored": false
+  }
+}
