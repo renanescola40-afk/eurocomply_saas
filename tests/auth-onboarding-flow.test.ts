@@ -65,6 +65,23 @@ describe('auth and onboarding redirect invariants', () => {
     expect(currentOrganization).toContain('memberships.find((membership) => membership.is_onboarding_completed) ?? memberships[0] ?? null');
   });
 
+  it('keeps the OAuth callback no-store and fallback-safe', () => {
+    const callback = readRepoFile('src/app/auth/callback/route.ts');
+
+    expect(callback).toContain('applyNoStoreHeaders');
+    expect(callback).toContain('getSafeNextPath');
+    expect(callback).toContain("rawNext.includes('://')");
+    expect(callback).toContain('missing_oauth_code');
+    expect(callback).toContain('auth_exchange_failed');
+  });
+
+  it('keeps signup email verification returning to onboarding', () => {
+    const auth = readRepoFile('src/hooks/useAuth.tsx');
+
+    expect(auth).toContain("emailRedirectTo: getRedirectUrl('/onboarding')");
+    expect(auth).toContain('requested_plan: metadata?.requested_plan');
+  });
+
   it('blocks observability dashboard access until onboarding is completed', () => {
     const observability = readRepoFile('src/app/[locale]/dashboard/observability/page.tsx');
 
