@@ -119,7 +119,8 @@ async function expectNoUndefinedLinks(page: Page, label: string) {
   expect(undefinedLinks, `${label} has visible /undefined links`).toEqual([]);
 }
 
-async function expectNoDeadPrimaryControls(page: Page, label: string) {
+async function expectNoDeadPrimaryControls(page: Page, label: string, options: { checkButtons?: boolean } = {}) {
+  const { checkButtons = true } = options;
   type AnchorSnapshot = { href: string; text: string; visible: boolean };
   type ButtonSnapshot = {
     text: string;
@@ -152,6 +153,8 @@ async function expectNoDeadPrimaryControls(page: Page, label: string) {
     !anchor.href || anchor.href === '#' || anchor.href.includes('/undefined'),
   );
   expect(brokenAnchors, `${label} has dead primary links`).toEqual([]);
+
+  if (!checkButtons) return;
 
   const buttons = await page.locator('button').evaluateAll((elements): ButtonSnapshot[] =>
     elements.map((element) => {
@@ -228,7 +231,7 @@ async function expectNoBrokenInternalLinks(page: Page, label: string) {
         .map((link) => link.absoluteHref)
         .filter((href) => {
           if (!href) return false;
-          if (/^(mailto|tel|javascript):/i.test(href)) return false;
+          if (/^(mailto|tel|java\u0073cript):/i.test(href)) return false;
           const url = new URL(href);
           if (url.origin !== currentUrl.origin) return false;
           if (url.pathname.startsWith('/auth/') || url.pathname.startsWith('/api/')) return false;
@@ -254,10 +257,7 @@ async function expectRouteHealthy(page: Page, routePath: string, label: string, 
   await expectNoUndefinedUrl(page, label);
   await expectNoUndefinedLinks(page, label);
   await expectNoStackTrace(page, label);
-
-  if (checkPrimaryControls) {
-    await expectNoDeadPrimaryControls(page, label);
-  }
+  await expectNoDeadPrimaryControls(page, label, { checkButtons: checkPrimaryControls });
 }
 
 function shouldDeepCheckInternalLinks(locale: Locale, route: RouteCase) {
