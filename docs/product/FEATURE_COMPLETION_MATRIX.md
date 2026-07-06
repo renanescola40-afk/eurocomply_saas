@@ -45,8 +45,10 @@ This estimate is intentionally product-focused, not cosmetic. It measures whethe
 
 ## Product safety notes
 
+- The product must not claim guaranteed legal compliance.
+- The product supports AI Act readiness and governance operations, but it does not replace legal counsel.
+- High-risk and prohibited-practice outputs are framed as review requirements, not legal determinations.
 - Avoid over-claiming product readiness.
-- High-risk and prohibited-practice outputs are framed as review requirements, not final determinations.
 - Private details should be summarized in metadata, not copied in full.
 - Any export button must be removed or disabled unless it maps to a real route and artifact.
 
