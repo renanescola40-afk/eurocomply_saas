@@ -18,11 +18,15 @@ import { parseJsonBodyWithZod, requireApiUser, secureApiError } from '@/server/s
 
 const AI_SYSTEM_JSON_MAX_BYTES = 64 * 1024;
 
-const aiSystemBodySchema = z.object({
+export const aiSystemBodySchema = z.object({
   name: z.string().trim().min(2).max(160),
   useCase: z.string().trim().min(8).max(4000),
   ownerTeam: z.string().trim().max(160).nullable().optional(),
+  category: z.string().trim().max(120).nullable().optional(),
+  countryMarket: z.string().trim().max(120).nullable().optional(),
+  processedData: z.string().trim().max(2000).nullable().optional(),
   vendorName: z.string().trim().max(160).nullable().optional(),
+  modelName: z.string().trim().max(160).nullable().optional(),
   role: z.unknown().optional(),
   lifecycleStatus: z.unknown().optional(),
   riskDomain: z.unknown().optional(),
@@ -33,12 +37,62 @@ const aiSystemBodySchema = z.object({
   manipulativeOrExploitative: z.unknown().optional(),
 });
 
-function asText(value: unknown, fallback = '') {
+export type ParsedAiSystemBody = z.infer<typeof aiSystemBodySchema>;
+
+export function asText(value: unknown, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
 }
 
-function asBoolean(value: unknown) {
+export function asBoolean(value: unknown) {
   return value === true || value === 'true' || value === 'on';
+}
+
+export function classifyParsedAiSystemBody(body: ParsedAiSystemBody) {
+  const role = normalizeAiSystemRole(body.role);
+  const lifecycleStatus = normalizeAiSystemStatus(body.lifecycleStatus);
+  const riskDomain = normalizeAiRiskDomain(body.riskDomain);
+  const usesPersonalData = asBoolean(body.usesPersonalData);
+  const interactsWithPeople = asBoolean(body.interactsWithPeople);
+  const generatesContent = asBoolean(body.generatesContent);
+  const biometricIdentification = asBoolean(body.biometricIdentification);
+  const manipulativeOrExploitative = asBoolean(body.manipulativeOrExploitative);
+  const vendorName = asText(body.vendorName) || null;
+
+  const classification = classifyAiSystem({
+    role,
+    riskDomain,
+    usesPersonalData,
+    interactsWithPeople,
+    generatesContent,
+    biometricIdentification,
+    manipulativeOrExploitative,
+  });
+
+  const roleAssessment = evaluateAiGovernanceRole({
+    role,
+    vendorName,
+    useCase: body.useCase,
+    riskDomain,
+    usesPersonalData,
+    interactsWithPeople,
+    generatesContent,
+    biometricIdentification,
+    manipulativeOrExploitative,
+  });
+
+  return {
+    role,
+    lifecycleStatus,
+    riskDomain,
+    usesPersonalData,
+    interactsWithPeople,
+    generatesContent,
+    biometricIdentification,
+    manipulativeOrExploitative,
+    vendorName,
+    classification,
+    roleAssessment,
+  };
 }
 
 function rateLimitDeniedResponse(result: RateLimitResult) {
@@ -122,57 +176,31 @@ export async function POST(request: Request) {
       schema: aiSystemBodySchema,
       maxBytes: AI_SYSTEM_JSON_MAX_BYTES,
     });
-    const role = normalizeAiSystemRole(body.role);
-    const lifecycleStatus = normalizeAiSystemStatus(body.lifecycleStatus);
-    const riskDomain = normalizeAiRiskDomain(body.riskDomain);
-    const usesPersonalData = asBoolean(body.usesPersonalData);
-    const interactsWithPeople = asBoolean(body.interactsWithPeople);
-    const generatesContent = asBoolean(body.generatesContent);
-    const biometricIdentification = asBoolean(body.biometricIdentification);
-    const manipulativeOrExploitative = asBoolean(body.manipulativeOrExploitative);
-    const vendorName = asText(body.vendorName) || null;
-
-    const classification = classifyAiSystem({
-      role,
-      riskDomain,
-      usesPersonalData,
-      interactsWithPeople,
-      generatesContent,
-      biometricIdentification,
-      manipulativeOrExploitative,
-    });
-
-    const roleAssessment = evaluateAiGovernanceRole({
-      role,
-      vendorName,
-      useCase: body.useCase,
-      riskDomain,
-      usesPersonalData,
-      interactsWithPeople,
-      generatesContent,
-      biometricIdentification,
-      manipulativeOrExploitative,
-    });
+    const result = classifyParsedAiSystemBody(body);
 
     const system = await createAiSystem({
       organizationId: organization.id,
       createdBy: user.id,
       name: body.name,
       ownerTeam: asText(body.ownerTeam) || null,
-      vendorName,
+      category: asText(body.category) || null,
+      countryMarket: asText(body.countryMarket) || null,
+      processedData: asText(body.processedData) || null,
+      vendorName: result.vendorName,
+      modelName: asText(body.modelName) || null,
       useCase: body.useCase,
-      role,
-      lifecycleStatus,
-      riskDomain,
-      usesPersonalData,
-      interactsWithPeople,
-      generatesContent,
-      biometricIdentification,
-      manipulativeOrExploitative,
-      riskLevel: classification.riskLevel,
-      classificationSummary: classification.summary,
-      obligations: classification.obligations,
-      nextActions: classification.nextActions,
+      role: result.role,
+      lifecycleStatus: result.lifecycleStatus,
+      riskDomain: result.riskDomain,
+      usesPersonalData: result.usesPersonalData,
+      interactsWithPeople: result.interactsWithPeople,
+      generatesContent: result.generatesContent,
+      biometricIdentification: result.biometricIdentification,
+      manipulativeOrExploitative: result.manipulativeOrExploitative,
+      riskLevel: result.classification.riskLevel,
+      classificationSummary: result.classification.summary,
+      obligations: result.classification.obligations,
+      nextActions: result.classification.nextActions,
     });
 
     await createAuditEvent({
@@ -183,17 +211,17 @@ export async function POST(request: Request) {
       entityId: system.id,
       metadata: {
         riskLevel: system.risk_level,
-        selectedRole: role,
-        recommendedRole: roleAssessment.recommendedRole,
-        roleConfidence: roleAssessment.confidence,
-        needsLegalReview: roleAssessment.needsLegalReview,
+        selectedRole: result.role,
+        recommendedRole: result.roleAssessment.recommendedRole,
+        roleConfidence: result.roleAssessment.confidence,
+        needsLegalReview: result.roleAssessment.needsLegalReview,
         lifecycleStatus: system.lifecycle_status,
         riskDomain: system.risk_domain,
         actorRole: permission.role,
       },
     });
 
-    return noStoreJson({ system, roleAssessment });
+    return noStoreJson({ system, roleAssessment: result.roleAssessment });
   } catch (error) {
     return secureApiError(error);
   }
