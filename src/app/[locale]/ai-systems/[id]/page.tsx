@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
+import { roleHasPermission } from '@/lib/security/permissions';
 import { getAiSystem, listAiSystemHistory } from '@/server/queries/ai-systems';
 import { getCurrentUser } from '@/server/queries/auth';
-import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
+import { getCurrentOrganizationForUser, listUserOrganizations } from '@/server/queries/organizations';
 import { AiSystemEditForm } from './ai-system-edit-form';
 
 type AiSystemDetailPageProps = {
@@ -31,14 +32,21 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
     redirect(`/${locale}/onboarding`);
   }
 
-  const [system, history] = await Promise.all([
+  const [system, history, memberships] = await Promise.all([
     getAiSystem(id, organization.id),
     listAiSystemHistory(id, organization.id),
+    listUserOrganizations(user.id),
   ]);
 
   if (!system) {
     notFound();
   }
+
+  const currentMembership = memberships.find((membership) => {
+    const membershipOrganization = Array.isArray(membership.organizations) ? membership.organizations[0] : membership.organizations;
+    return membershipOrganization?.id === organization.id;
+  });
+  const canManageAiGovernance = roleHasPermission(currentMembership?.role, 'manage_ai_governance');
 
   return (
     <main className="min-h-screen bg-[#050505] px-5 py-8 text-white lg:px-8">
@@ -97,7 +105,16 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
               </dl>
             </div>
 
-            <AiSystemEditForm system={system} />
+            {canManageAiGovernance ? (
+              <AiSystemEditForm system={system} />
+            ) : (
+              <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+                <h2 className="text-xl font-semibold">Reassessment locked</h2>
+                <p className="mt-2 text-sm text-white/60">
+                  Your organization role can view this AI system, but reassessment changes require AI governance management permission.
+                </p>
+              </div>
+            )}
           </div>
 
           <aside className="space-y-4">
