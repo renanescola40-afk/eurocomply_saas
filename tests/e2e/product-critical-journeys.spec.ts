@@ -77,7 +77,7 @@ test.describe('public product journey', () => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ error: 'synthetic_failure' }),
+        body: JSON.stringify({ error: 'Unable to process this synthetic request. Please try again.' }),
       });
     });
 
@@ -123,7 +123,7 @@ test.describe('public product journey', () => {
       await route.fulfill({
         status: 503,
         contentType: 'application/json',
-        body: JSON.stringify({ error: 'synthetic_failure' }),
+        body: JSON.stringify({ error: 'Unable to process this synthetic request. Please try again.' }),
       });
     });
 
