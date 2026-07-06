@@ -8,7 +8,7 @@ type PageProps = {
   params: Promise<{ locale: string }>;
 };
 
-function formatWhen(value: string | null) {
+function formatWhen(value: string | null | undefined) {
   if (!value) return 'Unknown time';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 'Unknown time' : date.toLocaleString('en-GB');
