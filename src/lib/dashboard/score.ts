@@ -14,7 +14,7 @@ export function getComplianceScoreLabel(score: number) {
     critical: 'Critical',
     weak: 'Needs attention',
     moderate: 'Improving',
-    strong: 'Audit-ready',
+    strong: 'Strong readiness',
   };
 
   return labels[level];
