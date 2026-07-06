@@ -94,7 +94,7 @@ export const BILLING_PLANS: BillingPlanCatalog = [
       customPolicies: true,
       prioritySupport: false,
     },
-    features: ['Advanced governance', 'Vendor risk workflows', 'Custom policies', 'Board-ready exports', '180-day audit logs'],
+    features: ['Advanced governance workflows', 'Vendor risk workflows', 'Custom policy templates', 'Board reporting exports', '180-day audit logs'],
   },
   {
     id: 'enterprise',
@@ -115,7 +115,7 @@ export const BILLING_PLANS: BillingPlanCatalog = [
       customPolicies: true,
       prioritySupport: true,
     },
-    features: ['Enterprise governance', 'Unlimited exports', 'Evidence pack', 'Priority support', '10-year audit logs'],
+    features: ['Advanced governance support', 'Unlimited exports', 'Evidence preparation pack', 'Priority support', '10-year audit logs'],
   },
 ];
 
