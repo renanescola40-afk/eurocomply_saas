@@ -176,10 +176,21 @@ if (targetUrl && runReadyCheck && readinessToken) {
   });
   checks.push(createCheck('rollbackTargetReadyOk', rollbackReady.status === 200 && rollbackReady.body?.status === 'ready', safeResponseSummary(rollbackReady)));
   checks.push(createCheck('rollbackTargetReadyNoStore', hasNoStore(rollbackReady.headers), safeResponseSummary(rollbackReady)));
+} else if (runReadyCheck) {
+  checks.push(createCheck('rollbackTargetReadyOk', false, {
+    skipped: false,
+    reason: targetUrl ? 'missing_healthcheck_token' : 'missing_valid_rollback_target_url',
+    requiredEnv: readinessToken ? null : 'HEALTHCHECK_TOKEN',
+  }));
+  checks.push(createCheck('rollbackTargetReadyNoStore', false, {
+    skipped: false,
+    reason: targetUrl ? 'missing_healthcheck_token' : 'missing_valid_rollback_target_url',
+    requiredEnv: readinessToken ? null : 'HEALTHCHECK_TOKEN',
+  }));
 } else {
-  checks.push(createCheck('rollbackTargetReadyOk', !runReadyCheck, {
-    skipped: !runReadyCheck,
-    reason: runReadyCheck ? 'missing_target_or_healthcheck_token' : 'set RELEASE_ROLLBACK_CHECK_READY=true to verify protected readiness on the rollback target',
+  checks.push(createCheck('rollbackTargetReadyOk', true, {
+    skipped: true,
+    reason: 'set RELEASE_ROLLBACK_CHECK_READY=true to verify protected readiness on the rollback target',
   }, false));
 }
 
