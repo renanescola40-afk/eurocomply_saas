@@ -19,6 +19,7 @@ import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/
 
 const CHECKOUT_JSON_MAX_BYTES = 2 * 1024;
 const CHECKOUT_LOCALES = ['en', 'pt', 'es', 'fr', 'it', 'de'] as const satisfies readonly Stripe.Checkout.SessionCreateParams.Locale[];
+const STRIPE_CHECKOUT_URL_HOST = 'checkout.stripe.com';
 
 type CheckoutLocale = (typeof CHECKOUT_LOCALES)[number];
 
@@ -30,6 +31,17 @@ const checkoutBodySchema = z.object({
 function normalizeCheckoutLocale(locale: string): CheckoutLocale {
   const normalized = locale.trim().toLowerCase();
   return CHECKOUT_LOCALES.includes(normalized as CheckoutLocale) ? normalized as CheckoutLocale : 'en';
+}
+
+function isSafeStripeCheckoutUrl(url: string | null): url is string {
+  if (!url) return false;
+
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.protocol === 'https:' && parsedUrl.hostname === STRIPE_CHECKOUT_URL_HOST;
+  } catch {
+    return false;
+  }
 }
 
 async function getOrganizationStripeCustomerId(organizationId: string) {
@@ -181,7 +193,7 @@ export async function POST(request: Request) {
       allow_promotion_codes: true,
     });
 
-    if (!session.url) {
+    if (!isSafeStripeCheckoutUrl(session.url)) {
       return noStoreJson({ error: 'checkout_session_unavailable' }, { status: 502 });
     }
 
@@ -201,6 +213,7 @@ export async function POST(request: Request) {
         stepUpVerifiedAt: stepUp.assessment.verifiedAt ?? null,
         trustedOriginRequired: true,
         rbacPermission: 'manage_billing',
+        stripeCheckoutHost: STRIPE_CHECKOUT_URL_HOST,
       },
     });
 

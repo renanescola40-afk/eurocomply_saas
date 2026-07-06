@@ -1,0 +1,41 @@
+{
+  "evidenceItem": "observability-readiness",
+  "status": "Exception",
+  "outcome": "not_run",
+  "generatedAt": "2026-07-06T09:00:00.000Z",
+  "reviewedAt": "2026-07-06T09:00:00.000Z",
+  "reviewer": "RISCK COMPLY release automation",
+  "releaseTarget": "production",
+  "summary": "Repository-side observability smoke controls and validation script are present, but real runtime execution is not attached in this connector run. Production release remains blocked until the smoke command is executed against the deployed target and stores Complete evidence.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "evidenceLocations": [
+    "scripts/release/run-observability-smoke-validation.mjs",
+    "src/app/api/observability/smoke/route.ts",
+    "docs/security/evidence/runtime/observability-smoke-validation.json"
+  ],
+  "requiredCommand": "npm run release:observability-smoke",
+  "requiredEnvironment": [
+    "RELEASE_DEPLOYMENT_URL or RELEASE_PRODUCTION_URL or NEXT_PUBLIC_APP_URL",
+    "Sentry configuration when smoke emission is enabled",
+    "Healthcheck token when protected smoke emission is enabled"
+  ],
+  "productionGate": "Production release remains blocked until observability smoke evidence is regenerated as Complete/passed against the deployed target.",
+  "exception": {
+    "riskOwner": "Release owner",
+    "rationale": "This pull request adds the runtime smoke validation script and route/runbook wiring, but cannot execute production observability smoke from the connector environment.",
+    "compensatingControls": [
+      "The validation script writes runtime evidence only when executed against a configured deployment.",
+      "Release readiness remains blocked until the generated evidence is Complete/passed.",
+      "The smoke endpoint remains protected and no-store."
+    ],
+    "expiresAt": "2026-08-01",
+    "approvalReference": "PR-857-ops-observability-placeholder"
+  },
+  "evidenceIntegrity": {
+    "containsSensitiveValues": false,
+    "valuesRedacted": true,
+    "authorizationHeaderStored": false,
+    "cookiesStored": false,
+    "customerFacingProof": false
+  }
+}

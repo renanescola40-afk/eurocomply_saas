@@ -1,7 +1,17 @@
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 function isUuid(value: string) {
-  return value.length === 36 && /^[0-9a-f-]+$/i.test(value);
+  const uuidParts = value.split('-');
+  if (uuidParts.length !== 5) return false;
+  const [first, second, third, fourth, fifth] = uuidParts;
+
+  return Boolean(
+    first?.match(/^[0-9a-f]{8}$/i) &&
+    second?.match(/^[0-9a-f]{4}$/i) &&
+    third?.match(/^[1-5][0-9a-f]{3}$/i) &&
+    fourth?.match(/^[89ab][0-9a-f]{3}$/i) &&
+    fifth?.match(/^[0-9a-f]{12}$/i),
+  );
 }
 
 export type NormalizedOnboardingStatus = 'not_started' | 'in_progress' | 'completed';
@@ -17,26 +27,21 @@ export function isOrganizationOnboardingCompleted(input: {
   return normalizeOnboardingStatus(input.onboarding_status) === 'completed' && Boolean(input.onboarding_completed_at);
 }
 
+type OrganizationSummary = {
+  id: string;
+  name: string;
+  slug: string | null;
+  clerk_org_id: string | null;
+  onboarding_status: NormalizedOnboardingStatus;
+  onboarding_completed_at: string | null;
+};
+
 type RawOrganizationMembership = {
   organization_id: string;
   role: string;
   organizations:
-    | {
-        id: string;
-        name: string;
-        slug: string | null;
-        clerk_org_id: string | null;
-        onboarding_status?: string | null;
-        onboarding_completed_at?: string | null;
-      }
-    | Array<{
-        id: string;
-        name: string;
-        slug: string | null;
-        clerk_org_id: string | null;
-        onboarding_status?: string | null;
-        onboarding_completed_at?: string | null;
-      }>
+    | (Omit<OrganizationSummary, 'onboarding_status'> & { onboarding_status?: string | null })
+    | Array<Omit<OrganizationSummary, 'onboarding_status'> & { onboarding_status?: string | null }>
     | null;
 };
 
@@ -50,36 +55,17 @@ export type CurrentOrganizationMembership = {
   onboarding_status: NormalizedOnboardingStatus;
   onboarding_completed_at: string | null;
   is_onboarding_completed: boolean;
-  organization: {
-    id: string;
-    name: string;
-    slug: string | null;
-    clerk_org_id: string | null;
-    onboarding_status: NormalizedOnboardingStatus;
-    onboarding_completed_at: string | null;
-  };
-  organizations: {
-    id: string;
-    name: string;
-    slug: string | null;
-    clerk_org_id: string | null;
-    onboarding_status: NormalizedOnboardingStatus;
-    onboarding_completed_at: string | null;
-  };
-};
-
-type GetUserOrganizationMembershipsOptions = {
-  limit?: number;
+  organization: OrganizationSummary;
+  organizations: OrganizationSummary;
 };
 
 function normalizeMembership(membership: RawOrganizationMembership): CurrentOrganizationMembership | null {
   const organization = Array.isArray(membership.organizations) ? membership.organizations[0] : membership.organizations;
-
   if (!organization) return null;
 
   const onboardingStatus = normalizeOnboardingStatus(organization.onboarding_status);
   const onboardingCompletedAt = organization.onboarding_completed_at ?? null;
-  const normalizedOrganization = {
+  const normalizedOrganization: OrganizationSummary = {
     id: organization.id,
     name: organization.name,
     slug: organization.slug,
@@ -97,19 +83,13 @@ function normalizeMembership(membership: RawOrganizationMembership): CurrentOrga
     clerk_org_id: organization.clerk_org_id,
     onboarding_status: onboardingStatus,
     onboarding_completed_at: onboardingCompletedAt,
-    is_onboarding_completed: isOrganizationOnboardingCompleted({
-      onboarding_status: onboardingStatus,
-      onboarding_completed_at: onboardingCompletedAt,
-    }),
+    is_onboarding_completed: isOrganizationOnboardingCompleted({ onboarding_status: onboardingStatus, onboarding_completed_at: onboardingCompletedAt }),
     organization: normalizedOrganization,
     organizations: normalizedOrganization,
   };
 }
 
-export async function getUserOrganizationMemberships(
-  userId: string,
-  options: GetUserOrganizationMembershipsOptions = {},
-) {
+export async function getUserOrganizationMemberships(userId: string, options: { limit?: number } = {}) {
   const supabase = tryCreateAdminClient();
   if (!supabase) return [];
 
@@ -140,5 +120,5 @@ export async function getCurrentOrganizationForUser(userId: string, slug?: strin
     return memberships.find((membership) => membership.slug === slug) ?? null;
   }
 
-  return memberships[0] ?? null;
+  return memberships.find((membership) => membership.is_onboarding_completed) ?? memberships[0] ?? null;
 }

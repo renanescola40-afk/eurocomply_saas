@@ -22,7 +22,11 @@ type AiSystemsClientProps = {
 type FormState = {
   name: string;
   ownerTeam: string;
+  category: string;
+  countryMarket: string;
+  processedData: string;
   vendorName: string;
+  modelName: string;
   useCase: string;
   role: string;
   lifecycleStatus: string;
@@ -37,7 +41,11 @@ type FormState = {
 const defaultForm: FormState = {
   name: '',
   ownerTeam: '',
+  category: '',
+  countryMarket: '',
+  processedData: '',
   vendorName: '',
+  modelName: '',
   useCase: '',
   role: 'deployer',
   lifecycleStatus: 'planned',
@@ -53,39 +61,88 @@ const copy = {
   en: {
     badge: 'AI Governance',
     title: 'AI systems inventory',
-    subtitle: 'Register AI tools, classify AI Act exposure and keep obligations, evidence and governance gaps visible for audit readiness.',
-    org: 'Organization', total: 'AI systems', high: 'High-risk review', transparency: 'Transparency', addTitle: 'Register AI system', addSubtitle: 'Start with the facts: purpose, role, domain, personal data and user interaction.', name: 'System name', ownerTeam: 'Owner team', vendorName: 'Vendor or model provider', useCasePlaceholder: 'Example: summarises customer support tickets and suggests replies to agents.', role: 'Organization role', status: 'Lifecycle status', domain: 'Risk domain', checks: 'Assessment flags', personalData: 'Processes personal data', people: 'Interacts directly with people', content: 'Generates content or decisions', biometric: 'Biometric identification or categorisation', prohibited: 'Could manipulate, exploit vulnerability or enable prohibited use', submit: 'Classify and save', saving: 'Classifying...', empty: 'No AI systems registered yet. Add the first one to build your AI Act inventory.', obligations: 'Initial obligations', nextActions: 'Next actions', error: 'Could not create AI system.', migration: 'The AI governance table is not available yet. Apply the Supabase migration before saving systems.', review: 'Review',
+    subtitle: 'Register AI systems with owners, market, data, model facts, AI Act exposure, obligations and history-backed next actions.',
+    org: 'Organization',
+    total: 'AI systems',
+    high: 'High-risk review',
+    transparency: 'Transparency',
+    addTitle: 'Register AI system',
+    addSubtitle: 'Start with the facts a compliance team needs: owner, category, market, data, model, use case and risk signals.',
+    name: 'System name',
+    ownerTeam: 'Owner team',
+    category: 'Category',
+    countryMarket: 'Country or market',
+    processedData: 'Data processed',
+    vendorName: 'Vendor or model provider',
+    modelName: 'Model name',
+    useCasePlaceholder: 'Example: summarises customer support tickets and suggests replies to agents.',
+    role: 'Organization role',
+    status: 'Lifecycle status',
+    domain: 'Risk domain',
+    checks: 'Assessment flags',
+    personalData: 'Processes personal data',
+    people: 'Interacts directly with people',
+    content: 'Generates content or decisions',
+    biometric: 'Biometric identification or categorisation',
+    prohibited: 'Could manipulate, exploit vulnerability or enable prohibited use',
+    submit: 'Classify and save',
+    saving: 'Classifying...',
+    empty: 'No AI systems registered yet. Add the first one to build your AI Act inventory.',
+    obligations: 'Initial obligations',
+    nextActions: 'Next actions',
+    error: 'Could not create AI system.',
+    migration: 'The AI governance table is not available yet. Apply the Supabase migration before saving systems.',
+    review: 'Open detail',
+    model: 'Model',
+    market: 'Market',
+    data: 'Data',
+    lastReassessed: 'Last reassessed',
   },
   pt: {
     badge: 'Governação de IA',
     title: 'Inventário de sistemas de IA',
-    subtitle: 'Registe ferramentas de IA, classifique exposição ao AI Act e mantenha obrigações, evidências e gaps visíveis para auditoria.',
-    org: 'Organização', total: 'Sistemas de IA', high: 'Revisão alto risco', transparency: 'Transparência', addTitle: 'Registar sistema de IA', addSubtitle: 'Comece pelos factos: finalidade, papel, domínio, dados pessoais e interação com utilizadores.', name: 'Nome do sistema', ownerTeam: 'Equipa responsável', vendorName: 'Fornecedor ou provedor do modelo', useCasePlaceholder: 'Exemplo: resume tickets de suporte e sugere respostas aos agentes.', role: 'Papel da organização', status: 'Estado do ciclo de vida', domain: 'Domínio de risco', checks: 'Sinais de avaliação', personalData: 'Trata dados pessoais', people: 'Interage diretamente com pessoas', content: 'Gera conteúdo ou decisões', biometric: 'Identificação ou categorização biométrica', prohibited: 'Pode manipular, explorar vulnerabilidade ou permitir uso proibido', submit: 'Classificar e guardar', saving: 'A classificar...', empty: 'Ainda não há sistemas de IA registados. Adicione o primeiro para construir o inventário AI Act.', obligations: 'Obrigações iniciais', nextActions: 'Próximas ações', error: 'Não foi possível criar o sistema de IA.', migration: 'A tabela de governação de IA ainda não está disponível. Aplique a migration Supabase antes de guardar sistemas.', review: 'Rever',
-  },
-  es: {
-    badge: 'Gobierno de IA',
-    title: 'Inventario de sistemas de IA',
-    subtitle: 'Registra herramientas de IA, clasifica exposición al AI Act y mantiene obligaciones, evidencias y brechas visibles.',
-    org: 'Organización', total: 'Sistemas de IA', high: 'Revisión alto riesgo', transparency: 'Transparencia', addTitle: 'Registrar sistema de IA', addSubtitle: 'Empieza por los hechos: finalidad, rol, dominio, datos personales e interacción con usuarios.', name: 'Nombre del sistema', ownerTeam: 'Equipo responsable', vendorName: 'Proveedor o modelo', useCasePlaceholder: 'Ejemplo: resume tickets de soporte y sugiere respuestas a agentes.', role: 'Rol de la organización', status: 'Estado del ciclo de vida', domain: 'Dominio de riesgo', checks: 'Señales de evaluación', personalData: 'Procesa datos personales', people: 'Interactúa directamente con personas', content: 'Genera contenido o decisiones', biometric: 'Identificación o categorización biométrica', prohibited: 'Podría manipular, explotar vulnerabilidad o permitir uso prohibido', submit: 'Clasificar y guardar', saving: 'Clasificando...', empty: 'Todavía no hay sistemas de IA registrados. Añade el primero para construir el inventario AI Act.', obligations: 'Obligaciones iniciales', nextActions: 'Próximas acciones', error: 'No se pudo crear el sistema de IA.', migration: 'La tabla de gobierno de IA aún no está disponible. Aplica la migración de Supabase antes de guardar sistemas.', review: 'Revisar',
-  },
-  fr: {
-    badge: 'Gouvernance IA', title: 'Inventaire des systèmes IA', subtitle: 'Recensez les outils IA, classez l’exposition AI Act et gardez obligations, preuves et écarts visibles.', org: 'Organisation', total: 'Systèmes IA', high: 'Revue haut risque', transparency: 'Transparence', addTitle: 'Enregistrer un système IA', addSubtitle: 'Commencez par les faits : finalité, rôle, domaine, données personnelles et interaction utilisateur.', name: 'Nom du système', ownerTeam: 'Équipe responsable', vendorName: 'Fournisseur ou modèle', useCasePlaceholder: 'Exemple : résume les tickets support et suggère des réponses.', role: 'Rôle de l’organisation', status: 'Statut du cycle de vie', domain: 'Domaine de risque', checks: 'Signaux d’évaluation', personalData: 'Traite des données personnelles', people: 'Interagit directement avec des personnes', content: 'Génère du contenu ou des décisions', biometric: 'Identification ou catégorisation biométrique', prohibited: 'Peut manipuler, exploiter une vulnérabilité ou permettre un usage interdit', submit: 'Classer et enregistrer', saving: 'Classification...', empty: 'Aucun système IA enregistré. Ajoutez le premier pour construire l’inventaire AI Act.', obligations: 'Obligations initiales', nextActions: 'Prochaines actions', error: 'Impossible de créer le système IA.', migration: 'La table de gouvernance IA n’est pas encore disponible. Appliquez la migration Supabase avant d’enregistrer.', review: 'Revoir',
-  },
-  it: {
-    badge: 'Governance IA', title: 'Inventario dei sistemi IA', subtitle: 'Registra strumenti IA, classifica l’esposizione all’AI Act e mantieni visibili obblighi, evidenze e gap.', org: 'Organizzazione', total: 'Sistemi IA', high: 'Revisione alto rischio', transparency: 'Trasparenza', addTitle: 'Registra sistema IA', addSubtitle: 'Parti dai fatti: finalità, ruolo, dominio, dati personali e interazione con utenti.', name: 'Nome del sistema', ownerTeam: 'Team responsabile', vendorName: 'Fornitore o modello', useCasePlaceholder: 'Esempio: riassume ticket di supporto e suggerisce risposte.', role: 'Ruolo dell’organizzazione', status: 'Stato ciclo di vita', domain: 'Dominio di rischio', checks: 'Segnali di valutazione', personalData: 'Tratta dati personali', people: 'Interagisce direttamente con persone', content: 'Genera contenuto o decisioni', biometric: 'Identificazione o categorizzazione biometrica', prohibited: 'Potrebbe manipolare, sfruttare vulnerabilità o abilitare uso vietato', submit: 'Classifica e salva', saving: 'Classificazione...', empty: 'Nessun sistema IA registrato. Aggiungi il primo per costruire l’inventario AI Act.', obligations: 'Obblighi iniziali', nextActions: 'Prossime azioni', error: 'Impossibile creare il sistema IA.', migration: 'La tabella di governance IA non è ancora disponibile. Applica la migration Supabase prima di salvare.', review: 'Rivedi',
-  },
-  de: {
-    badge: 'KI-Governance', title: 'Inventar der KI-Systeme', subtitle: 'Erfassen Sie KI-Tools, klassifizieren Sie AI-Act-Exposition und halten Sie Pflichten, Nachweise und Gaps sichtbar.', org: 'Organisation', total: 'KI-Systeme', high: 'High-Risk-Prüfung', transparency: 'Transparenz', addTitle: 'KI-System erfassen', addSubtitle: 'Beginnen Sie mit Fakten: Zweck, Rolle, Bereich, personenbezogene Daten und Nutzerinteraktion.', name: 'Systemname', ownerTeam: 'Verantwortliches Team', vendorName: 'Anbieter oder Modell', useCasePlaceholder: 'Beispiel: fasst Support-Tickets zusammen und schlägt Antworten vor.', role: 'Rolle der Organisation', status: 'Lebenszyklusstatus', domain: 'Risikobereich', checks: 'Bewertungssignale', personalData: 'Verarbeitet personenbezogene Daten', people: 'Interagiert direkt mit Personen', content: 'Erzeugt Inhalte oder Entscheidungen', biometric: 'Biometrische Identifikation oder Kategorisierung', prohibited: 'Könnte manipulieren, Schwachstellen ausnutzen oder verbotene Nutzung ermöglichen', submit: 'Klassifizieren und speichern', saving: 'Klassifizierung...', empty: 'Noch keine KI-Systeme erfasst. Fügen Sie das erste hinzu, um das AI-Act-Inventar aufzubauen.', obligations: 'Erste Pflichten', nextActions: 'Nächste Schritte', error: 'KI-System konnte nicht erstellt werden.', migration: 'Die KI-Governance-Tabelle ist noch nicht verfügbar. Wenden Sie die Supabase-Migration vor dem Speichern an.', review: 'Prüfen',
+    subtitle: 'Registe sistemas de IA com owner, mercado, dados, modelo, exposição ao AI Act, obrigações e próximas ações com histórico.',
+    org: 'Organização',
+    total: 'Sistemas de IA',
+    high: 'Revisão alto risco',
+    transparency: 'Transparência',
+    addTitle: 'Registar sistema de IA',
+    addSubtitle: 'Comece pelos factos que uma equipa de compliance precisa: owner, categoria, mercado, dados, modelo, caso de uso e sinais de risco.',
+    name: 'Nome do sistema',
+    ownerTeam: 'Equipa responsável',
+    category: 'Categoria',
+    countryMarket: 'País ou mercado',
+    processedData: 'Dados processados',
+    vendorName: 'Fornecedor ou provedor do modelo',
+    modelName: 'Nome do modelo',
+    useCasePlaceholder: 'Exemplo: resume tickets de suporte e sugere respostas aos agentes.',
+    role: 'Papel da organização',
+    status: 'Estado do ciclo de vida',
+    domain: 'Domínio de risco',
+    checks: 'Sinais de avaliação',
+    personalData: 'Trata dados pessoais',
+    people: 'Interage diretamente com pessoas',
+    content: 'Gera conteúdo ou decisões',
+    biometric: 'Identificação ou categorização biométrica',
+    prohibited: 'Pode manipular, explorar vulnerabilidade ou permitir uso proibido',
+    submit: 'Classificar e guardar',
+    saving: 'A classificar...',
+    empty: 'Ainda não há sistemas de IA registados. Adicione o primeiro para construir o inventário AI Act.',
+    obligations: 'Obrigações iniciais',
+    nextActions: 'Próximas ações',
+    error: 'Não foi possível criar o sistema de IA.',
+    migration: 'A tabela de governação de IA ainda não está disponível. Aplique a migration Supabase antes de guardar sistemas.',
+    review: 'Abrir detalhe',
+    model: 'Modelo',
+    market: 'Mercado',
+    data: 'Dados',
+    lastReassessed: 'Última reavaliação',
   },
 } as const;
 
 const readinessCopy = {
-  en: { score: 'Readiness score', notAssessed: 'Not assessed', board: 'Board/audit summary', gaps: 'Gap analysis', actions: 'Role-based action plan', country: 'Country-aware compliance context', productMap: 'AI compliance product map', productSubtitle: 'Every CTA points to a working route. Metrics are only shown when backed by workspace data.', questionnaire: 'Run usage questionnaire', policy: 'Generate policy pack', documents: 'Open document generator', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'No critical gaps detected from current data.', dataSource: 'Data source' },
-  pt: { score: 'Score de prontidão', notAssessed: 'Não avaliado', board: 'Resumo board/auditoria', gaps: 'Análise de gaps', actions: 'Plano de ação por papel', country: 'Contexto compliance por país', productMap: 'Mapa do produto AI compliance', productSubtitle: 'Cada CTA aponta para uma rota funcional. Métricas só aparecem quando existem dados reais.', questionnaire: 'Executar questionário de uso', policy: 'Gerar policy pack', documents: 'Abrir gerador de documentos', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'Nenhum gap crítico detetado a partir dos dados atuais.', dataSource: 'Fonte de dados' },
-  es: { score: 'Score de preparación', notAssessed: 'No evaluado', board: 'Resumen board/auditoría', gaps: 'Análisis de brechas', actions: 'Plan de acción por rol', country: 'Contexto compliance por país', productMap: 'Mapa del producto AI compliance', productSubtitle: 'Cada CTA apunta a una ruta funcional. Las métricas solo aparecen con datos reales.', questionnaire: 'Ejecutar cuestionario', policy: 'Generar policy pack', documents: 'Abrir generador de documentos', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'No se detectaron brechas críticas con los datos actuales.', dataSource: 'Fuente de datos' },
-  fr: { score: 'Score de préparation', notAssessed: 'Non évalué', board: 'Synthèse board/audit', gaps: 'Analyse des écarts', actions: 'Plan d’action par rôle', country: 'Contexte compliance par pays', productMap: 'Carte produit AI compliance', productSubtitle: 'Chaque CTA pointe vers une route fonctionnelle. Les métriques existent uniquement avec des données réelles.', questionnaire: 'Lancer le questionnaire', policy: 'Générer le policy pack', documents: 'Ouvrir le générateur', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'Aucun écart critique détecté avec les données actuelles.', dataSource: 'Source de données' },
-  it: { score: 'Score readiness', notAssessed: 'Non valutato', board: 'Sintesi board/audit', gaps: 'Gap analysis', actions: 'Piano d’azione per ruolo', country: 'Contesto compliance per paese', productMap: 'Mappa prodotto AI compliance', productSubtitle: 'Ogni CTA punta a una rotta funzionante. Le metriche appaiono solo con dati reali.', questionnaire: 'Esegui questionario', policy: 'Genera policy pack', documents: 'Apri generatore documenti', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'Nessun gap critico rilevato dai dati attuali.', dataSource: 'Fonte dati' },
-  de: { score: 'Readiness-Score', notAssessed: 'Nicht bewertet', board: 'Board-/Audit-Zusammenfassung', gaps: 'Gap-Analyse', actions: 'Aktionsplan nach Rolle', country: 'Länderspezifischer Compliance-Kontext', productMap: 'AI-Compliance-Produktkarte', productSubtitle: 'Jeder CTA führt zu einer funktionierenden Route. Metriken erscheinen nur bei echten Workspace-Daten.', questionnaire: 'Fragebogen starten', policy: 'Policy-Pack generieren', documents: 'Dokumentgenerator öffnen', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'Keine kritischen Gaps aus aktuellen Daten erkannt.', dataSource: 'Datenquelle' },
+  en: { score: 'Readiness score', notAssessed: 'Not assessed', gaps: 'Gap analysis', actions: 'Role-based action plan', country: 'Country-aware compliance context', productMap: 'AI compliance product map', productSubtitle: 'Every CTA points to a working route. Metrics are only shown when backed by workspace data.', questionnaire: 'Run usage questionnaire', policy: 'Generate policy pack', documents: 'Open document generator', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'No critical gaps detected from current data.', dataSource: 'Data source' },
+  pt: { score: 'Score de prontidão', notAssessed: 'Não avaliado', gaps: 'Análise de gaps', actions: 'Plano de ação por papel', country: 'Contexto compliance por país', productMap: 'Mapa do produto AI compliance', productSubtitle: 'Cada CTA aponta para uma rota funcional. Métricas só aparecem quando existem dados reais.', questionnaire: 'Executar questionário de uso', policy: 'Gerar policy pack', documents: 'Abrir gerador de documentos', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'Nenhum gap crítico detetado a partir dos dados atuais.', dataSource: 'Fonte de dados' },
 } as const;
 
 const roleOptions = [['provider', 'Provider'], ['deployer', 'Deployer'], ['importer', 'Importer'], ['distributor', 'Distributor'], ['other', 'Other']] as const;
@@ -304,10 +361,14 @@ export function AiSystemsClient({ locale, initialSystems, organizationName, read
           <div className="grid gap-3 md:grid-cols-2">
             <input required value={form.name} onChange={(event) => update('name', event.target.value)} placeholder={t.name} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
             <input value={form.ownerTeam} onChange={(event) => update('ownerTeam', event.target.value)} placeholder={t.ownerTeam} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
+            <input value={form.category} onChange={(event) => update('category', event.target.value)} placeholder={t.category} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
+            <input value={form.countryMarket} onChange={(event) => update('countryMarket', event.target.value)} placeholder={t.countryMarket} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
             <input value={form.vendorName} onChange={(event) => update('vendorName', event.target.value)} placeholder={t.vendorName} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
+            <input value={form.modelName} onChange={(event) => update('modelName', event.target.value)} placeholder={t.modelName} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" />
             <select value={form.role} onChange={(event) => update('role', event.target.value)} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" aria-label={t.role}>{roleOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
             <select value={form.lifecycleStatus} onChange={(event) => update('lifecycleStatus', event.target.value)} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" aria-label={t.status}>{statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-            <select value={form.riskDomain} onChange={(event) => update('riskDomain', event.target.value)} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary" aria-label={t.domain}>{domainOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+            <select value={form.riskDomain} onChange={(event) => update('riskDomain', event.target.value)} className="rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary md:col-span-2" aria-label={t.domain}>{domainOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+            <textarea value={form.processedData} onChange={(event) => update('processedData', event.target.value)} placeholder={t.processedData} className="min-h-24 rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary md:col-span-2" />
             <textarea required minLength={8} value={form.useCase} onChange={(event) => update('useCase', event.target.value)} placeholder={t.useCasePlaceholder} className="min-h-28 rounded-2xl border bg-background px-4 py-3 text-sm outline-none focus:border-primary md:col-span-2" />
           </div>
           <fieldset className="mt-5 grid gap-3 rounded-2xl border bg-background p-4 md:grid-cols-2">
@@ -339,13 +400,21 @@ export function AiSystemsClient({ locale, initialSystems, organizationName, read
                 <div>
                   <div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-semibold">{system.name}</h2><span className={`rounded-full border px-3 py-1 text-xs font-medium ${getRiskTone(system.risk_level)}`}>{getRiskLabel(system.risk_level)}</span></div>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{system.use_case}</p>
-                  <div className="mt-3 flex flex-wrap gap-2"><Badge variant="outline">{system.role}</Badge><Badge variant="outline">{system.lifecycle_status}</Badge><Badge variant="outline">{system.risk_domain}</Badge>{system.vendor_name ? <Badge variant="outline">{system.vendor_name}</Badge> : null}</div>
+                  <div className="mt-3 flex flex-wrap gap-2"><Badge variant="outline">{system.role}</Badge><Badge variant="outline">{system.lifecycle_status}</Badge><Badge variant="outline">{system.category ?? system.risk_domain}</Badge>{system.country_market ? <Badge variant="outline">{system.country_market}</Badge> : null}{system.vendor_name ? <Badge variant="outline">{system.vendor_name}</Badge> : null}{system.model_name ? <Badge variant="outline">{t.model}: {system.model_name}</Badge> : null}</div>
                 </div>
-                <CheckCircle2 className="h-6 w-6 text-primary" />
+                <div className="flex items-center gap-3">
+                  <Button asChild variant="outline" className="rounded-full"><Link href={localizedRoute(locale, `/ai-systems/${system.id}`)}>{t.review}</Link></Button>
+                  <CheckCircle2 className="h-6 w-6 text-primary" />
+                </div>
               </div>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl border bg-muted/20 p-4"><p className="font-medium">{system.classification_summary}</p><h3 className="mt-4 text-sm font-semibold">{t.obligations}</h3><ul className="mt-2 space-y-2 text-sm text-muted-foreground">{system.obligations.map((item) => <li key={item}>• {item}</li>)}</ul></div>
                 <div className="rounded-2xl border bg-muted/20 p-4"><h3 className="text-sm font-semibold">{t.nextActions}</h3><ul className="mt-2 space-y-2 text-sm text-muted-foreground">{system.next_actions.map((item) => <li key={item}>• {item}</li>)}</ul></div>
+              </div>
+              <div className="mt-4 grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
+                <div className="rounded-2xl border bg-muted/20 p-3"><p className="text-xs uppercase tracking-[0.18em]">{t.data}</p><p className="mt-1">{system.processed_data ?? '—'}</p></div>
+                <div className="rounded-2xl border bg-muted/20 p-3"><p className="text-xs uppercase tracking-[0.18em]">{t.market}</p><p className="mt-1">{system.country_market ?? '—'}</p></div>
+                <div className="rounded-2xl border bg-muted/20 p-3"><p className="text-xs uppercase tracking-[0.18em]">{t.lastReassessed}</p><p className="mt-1">{system.last_reassessed_at ?? system.updated_at}</p></div>
               </div>
             </article>
           ))}

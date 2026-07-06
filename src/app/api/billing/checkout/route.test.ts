@@ -164,7 +164,7 @@ describe('billing checkout API security gates', () => {
     mocks.publicStepUpSummary.mockReturnValue({ verified: true });
     mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_created_for_org_a' });
     mocks.stripeCustomerUpdate.mockResolvedValue({ id: 'cus_existing_for_org_a' });
-    mocks.stripeCheckoutCreate.mockResolvedValue({ id: 'checkout_session_fixture', url: 'https://checkout.stripe.test/session-fixture' });
+    mocks.stripeCheckoutCreate.mockResolvedValue({ id: 'checkout_session_fixture', url: 'https://checkout.stripe.com/session-fixture' });
     mocks.writeAuditLog.mockResolvedValue(undefined);
     mocks.supabaseMaybeSingle.mockResolvedValue({ data: null, error: null });
   });
@@ -235,7 +235,7 @@ describe('billing checkout API security gates', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ url: 'https://checkout.stripe.test/session-fixture', stepUp: { verified: true } });
+    expect(body).toEqual({ url: 'https://checkout.stripe.com/session-fixture', stepUp: { verified: true } });
     expect(mocks.assertOrganizationPermission).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user_admin',

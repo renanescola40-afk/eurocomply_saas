@@ -19,6 +19,16 @@ describe('auth and onboarding redirect invariants', () => {
     expect(middleware).toContain('NextResponse.redirect(dashboardUrl)');
   });
 
+  it('preserves only allowlisted billing plans when auth entries redirect to onboarding', () => {
+    const middleware = readRepoFile('src/middleware.ts');
+
+    expect(middleware).toContain('function appendSafeAuthQuery(url: URL, req: NextRequest)');
+    expect(middleware).toContain("req.nextUrl.searchParams.get('plan')?.trim().toLowerCase()");
+    expect(middleware).toContain('CHECKOUT_PLAN_IDS.has(plan)');
+    expect(middleware).toContain("url.searchParams.set('plan', plan)");
+    expect(middleware).toContain('appendSafeAuthQuery(dashboardUrl, req)');
+  });
+
   it('keeps unauthenticated dashboard users on login with a safe localized next value', () => {
     const dashboard = readRepoFile('src/app/[locale]/dashboard/organizations/page.tsx');
     const observability = readRepoFile('src/app/[locale]/dashboard/observability/page.tsx');
@@ -47,6 +57,12 @@ describe('auth and onboarding redirect invariants', () => {
     expect(currentOrganization).toContain('onboarding_status');
     expect(currentOrganization).toContain('onboarding_completed_at');
     expect(currentOrganization).toContain('isOrganizationOnboardingCompleted({');
+  });
+
+  it('prefers a completed organization before falling back to the oldest membership', () => {
+    const currentOrganization = readRepoFile('src/server/queries/current-organization.ts');
+
+    expect(currentOrganization).toContain('memberships.find((membership) => membership.is_onboarding_completed) ?? memberships[0] ?? null');
   });
 
   it('blocks observability dashboard access until onboarding is completed', () => {
