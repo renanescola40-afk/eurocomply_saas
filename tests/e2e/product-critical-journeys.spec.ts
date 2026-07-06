@@ -31,6 +31,26 @@ test.describe('public product journey', () => {
     await expect(page.getByText(/professional/i).first()).toBeVisible();
   });
 
+  test('pricing exposes only actionable critical CTAs', async ({ page }) => {
+    await page.goto('/pt/pricing', { waitUntil: 'domcontentloaded' });
+    await expectHealthyDocument(page, 'pricing CTA audit');
+
+    const expectedCtas = [
+      { name: /start essential/i, href: '/pt/signup?plan=essential' },
+      { name: /start professional trial/i, href: '/pt/signup?plan=professional' },
+      { name: /book business demo/i, href: '/pt/book-demo?plan=business' },
+      { name: /talk to sales/i, href: '/pt/enterprise' },
+      { name: /review trust center/i, href: '/pt/trust' },
+    ];
+
+    for (const cta of expectedCtas) {
+      await expect(page.getByRole('link', { name: cta.name }).first()).toHaveAttribute('href', cta.href);
+    }
+
+    const brokenCriticalLinks = await page.locator('a[href="#"], a:not([href]), a[href*="/undefined"]').count();
+    expect(brokenCriticalLinks, 'pricing should not expose placeholder or /undefined links').toBe(0);
+  });
+
   test('landing waitlist form has loading and success feedback with synthetic data', async ({ page }) => {
     await page.route('**/api/prelaunch', async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -50,6 +70,27 @@ test.describe('public product journey', () => {
     await submit.click();
     await expect(submit).toBeDisabled();
     await expect(page.locator('#waitlist-form [role="status"]')).toContainText(/waitlist|lista de espera/i);
+  });
+
+  test('landing waitlist form shows controlled error feedback', async ({ page }) => {
+    await page.route('**/api/prelaunch', async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'synthetic_failure' }),
+      });
+    });
+
+    await page.goto('/pt', { waitUntil: 'domcontentloaded' });
+    await page.locator('#waitlist-form input[placeholder="Acme Europe"]').fill(syntheticLead.companyName);
+    await page.locator('#waitlist-form input[type="email"]').fill(syntheticLead.workEmail);
+    await page.locator('#waitlist-form input[placeholder*="Founder"]').fill(syntheticLead.role);
+
+    await page.locator('#waitlist-form button[type="submit"]').click();
+    await expect(page.locator('#waitlist-form [role="status"], #waitlist-form [role="alert"]')).toContainText(
+      /try again|erro|failed|problem|tentar/i,
+    );
+    await expectHealthyDocument(page, 'waitlist controlled error');
   });
 
   test('book demo form has a real handler, loading state and feedback', async ({ page }) => {
@@ -75,6 +116,29 @@ test.describe('public product journey', () => {
     await submit.click();
     await expect(submit).toBeDisabled();
     await expect(page.locator('[aria-live="polite"]')).toContainText(/demo request received/i);
+  });
+
+  test('book demo form shows controlled error feedback', async ({ page }) => {
+    await page.route('**/api/leads', async (route) => {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'synthetic_failure' }),
+      });
+    });
+
+    await page.goto('/pt/book-demo', { waitUntil: 'domcontentloaded' });
+    await page.getByLabel(/full name/i).fill(syntheticLead.fullName);
+    await page.getByLabel(/work email/i).fill(syntheticLead.workEmail);
+    await page.getByLabel(/company \*/i).fill(syntheticLead.companyName);
+    await page.getByLabel(/role/i).fill(syntheticLead.role);
+    await page.getByLabel(/i agree to be contacted/i).check();
+
+    await page.getByRole('button', { name: /book demo/i }).click();
+    await expect(page.locator('[aria-live="polite"], [role="alert"]')).toContainText(
+      /try again|erro|failed|problem|tentar/i,
+    );
+    await expectHealthyDocument(page, 'book demo controlled error');
   });
 });
 
@@ -102,6 +166,26 @@ test.describe('auth redirect journey', () => {
       expect(decodeURIComponent(new URL(page.url()).searchParams.get('next') ?? '')).toContain(route.split('?')[0]);
     });
   }
+
+  test('anonymous private redirect response is no-store and preserves the next URL', async ({ request }) => {
+    const response = await request.get('/pt/dashboard/organizations/billing', {
+      failOnStatusCode: false,
+      maxRedirects: 0,
+    });
+
+    expect(response.status()).toBeGreaterThanOrEqual(300);
+    expect(response.status()).toBeLessThan(400);
+    expect(response.headers().location).toContain('/pt/login?next=');
+    expect(response.headers()['cache-control']).toMatch(/no-store/i);
+  });
+
+  test('login page accepts next continuation without losing the target', async ({ page }) => {
+    await page.goto('/pt/login?next=%2Fpt%2Fdashboard%2Forganizations%2Fbilling', {
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(page).toHaveURL(/\/pt\/login\?next=/);
+    await expectHealthyDocument(page, 'login continuation');
+  });
 });
 
 test.describe('billing CTA journey', () => {
@@ -116,6 +200,12 @@ test.describe('billing CTA journey', () => {
       'href',
       /\/pt\/login\?next=/,
     );
+  });
+
+  test('checkout without a valid plan redirects to pricing with feedback marker', async ({ page }) => {
+    await page.goto('/pt/checkout', { waitUntil: 'domcontentloaded' });
+    await expect(page).toHaveURL(/\/pt\/pricing\?checkout=select_plan/);
+    await expectHealthyDocument(page, 'checkout missing plan redirect');
   });
 
   test('business and enterprise sales CTAs resolve to existing sales routes', async ({ page }) => {
@@ -194,5 +284,22 @@ test.describe('seeded authenticated journeys', () => {
     test.skip(process.env.E2E_ALLOW_SYNTHETIC_ONBOARDING_WRITE !== 'true', 'Enable only in disposable QA Supabase projects; this flow creates synthetic test organization data.');
     await page.goto('/pt/onboarding?plan=professional', { waitUntil: 'domcontentloaded' });
     await expectHealthyDocument(page, 'seeded onboarding');
+  });
+
+  test('create AI system journey is guarded behind synthetic fixture opt-in', async ({ page }) => {
+    test.skip(process.env.E2E_ALLOW_SYNTHETIC_APP_WRITES !== 'true', 'Enable only in disposable QA Supabase projects; this flow creates synthetic AI system data.');
+    await page.goto('/pt/ai-systems', { waitUntil: 'domcontentloaded' });
+    await expectHealthyDocument(page, 'seeded AI systems');
+  });
+
+  test('create task/document journey is guarded behind synthetic fixture opt-in', async ({ page }) => {
+    test.skip(process.env.E2E_ALLOW_SYNTHETIC_APP_WRITES !== 'true', 'Enable only in disposable QA Supabase projects; this flow creates synthetic task/document data.');
+    await page.goto('/pt/dashboard/organizations/documents', { waitUntil: 'domcontentloaded' });
+    await expectHealthyDocument(page, 'seeded documents/tasks');
+  });
+
+  test('billing CTA renders for a seeded billing-capable persona', async ({ page }) => {
+    await page.goto('/pt/dashboard/organizations/billing', { waitUntil: 'domcontentloaded' });
+    await expectHealthyDocument(page, 'seeded billing');
   });
 });
