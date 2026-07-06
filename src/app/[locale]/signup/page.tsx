@@ -32,6 +32,16 @@ function getSafeSignupContinuation(locale: string, nextPath: string | null, plan
   return normalizedNext;
 }
 
+function getPlanContinuationHref(nextPath: string, planId: string) {
+  const encodedPlan = encodeURIComponent(planId);
+
+  if (/([?&])plan=/.test(nextPath)) {
+    return nextPath.replace(/([?&])plan=[^&]*/, `$1plan=${encodedPlan}`);
+  }
+
+  return `${nextPath}${nextPath.includes('?') ? '&' : '?'}plan=${encodedPlan}`;
+}
+
 function getSignInHref(locale: string, planId?: string, nextPath?: string) {
   const params = new URLSearchParams();
   if (planId) params.set('plan', planId);
@@ -154,22 +164,26 @@ function PlanSelection({ activeLocale, planSelectionNextHref, signInUrl }: { act
     <SignupChrome activeLocale={activeLocale}>
       <SignupHeader title={text.choosePlanTitle} subtitle={text.choosePlanSubtitle} />
       <div className="mt-6 grid gap-3">
-        {BILLING_PLANS.map((plan) => (
-          <Link
-            key={plan.id}
-            href={getSignupPlanHref(activeLocale, plan.id, planSelectionNextHref.replace(/plan=[^&]+/, `plan=${encodeURIComponent(plan.id)}`))}
-            className="rounded-2xl border border-white/10 bg-black/30 p-4 transition hover:border-blue-300/60 hover:bg-blue-500/10"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-lg font-semibold text-white">{plan.name}</p>
-                <p className="mt-1 text-xs leading-5 text-white/50">{plan.features[0]}</p>
+        {BILLING_PLANS.map((plan) => {
+          const nextWithPlan = getPlanContinuationHref(planSelectionNextHref, plan.id);
+
+          return (
+            <Link
+              key={plan.id}
+              href={getSignupPlanHref(activeLocale, plan.id, nextWithPlan)}
+              className="rounded-2xl border border-white/10 bg-black/30 p-4 transition hover:border-blue-300/60 hover:bg-blue-500/10"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-lg font-semibold text-white">{plan.name}</p>
+                  <p className="mt-1 text-xs leading-5 text-white/50">{plan.features[0]}</p>
+                </div>
+                <p className="text-right text-xl font-bold text-blue-100">€{plan.priceMonthly}<span className="text-xs font-normal text-white/45">/mo</span></p>
               </div>
-              <p className="text-right text-xl font-bold text-blue-100">€{plan.priceMonthly}<span className="text-xs font-normal text-white/45">/mo</span></p>
-            </div>
-            <span className="mt-3 inline-flex text-sm font-semibold text-blue-200">{text.selectPlan} →</span>
-          </Link>
-        ))}
+              <span className="mt-3 inline-flex text-sm font-semibold text-blue-200">{text.selectPlan} →</span>
+            </Link>
+          );
+        })}
       </div>
       <p className="mt-6 text-center text-sm text-white/50">
         {text.haveAccount}{' '}
@@ -289,8 +303,8 @@ function SignupAuthForm({ activeLocale, selectedPlan, continuationHref, signInUr
 function SignupContent() {
   const params = useParams<{ locale: string }>();
   const searchParams = useSearchParams();
-  const localeParam = params?.locale ?? 'pt';
-  const activeLocale = (locales.includes(localeParam as Locale) ? localeParam : 'pt') as Locale;
+  const locale = params?.locale ?? 'pt';
+  const activeLocale = (locales.includes(locale as Locale) ? locale : 'pt') as Locale;
   const selectedPlanId = normalizePlanId(searchParams.get('plan'));
   const continuationHref = getSafeSignupContinuation(activeLocale, searchParams.get('next'), selectedPlanId);
   const signInUrl = getSignInHref(activeLocale, selectedPlanId, continuationHref);
