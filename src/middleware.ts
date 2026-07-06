@@ -104,6 +104,14 @@ function withPrivateNoStore(response: NextResponse) {
   return response;
 }
 
+function appendSafeAuthQuery(url: URL, req: NextRequest) {
+  const plan = req.nextUrl.searchParams.get('plan')?.trim().toLowerCase();
+
+  if (plan && CHECKOUT_PLAN_IDS.has(plan)) {
+    url.searchParams.set('plan', plan);
+  }
+}
+
 function detectLocale(req: NextRequest): string {
   const cookieLocale = req.cookies.get(LOCALE_COOKIE)?.value;
   if (cookieLocale && locales.includes(cookieLocale as 'en')) {
@@ -249,6 +257,7 @@ export default async function middleware(req: NextRequest) {
 
     if (isAuthenticated && (isMarketingHome || isAuthEntry)) {
       const dashboardUrl = new URL(`/${locale}${AUTH_SUCCESS_PATH}`, req.url);
+      appendSafeAuthQuery(dashboardUrl, req);
       return withPrivateNoStore(NextResponse.redirect(dashboardUrl));
     }
 
