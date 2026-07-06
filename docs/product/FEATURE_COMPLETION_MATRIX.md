@@ -8,7 +8,7 @@ Status legend:
 
 ## Current completion estimate
 
-**88% complete / 12% remaining** for the core workflow acceptance path.
+**92% complete / 8% remaining** for the core workflow acceptance path.
 
 This estimate is intentionally product-focused, not cosmetic. It measures whether a real company can create an organization, register an AI system, see risk/readiness, receive tasks/documents context, and inspect audit-backed activity without relying on mock-only screens.
 
@@ -23,10 +23,10 @@ This estimate is intentionally product-focused, not cosmetic. It measures whethe
 | Risk classification | Complete | Classifier returns practical risk levels, explanation, obligations and next actions. Create/reassessment flows persist the result. | Add more jurisdiction-specific prompts and review questions over time. |
 | Readiness score | Partial | Readiness card and dashboard use organization data, inventory signals and governance gaps. | Continue linking score to more document/task/vendor evidence as schema expands. |
 | Documents | Partial | Organization document pages and approval/download actions exist in the codebase. Dashboard tracks missing/expiring documents. | Ensure every download/export button maps to a real artifact and align statuses to draft/review/approved/expired. |
-| Tasks | Partial | Compliance task create/delete actions are persisted, protected by role checks and audited; dashboard consumes open tasks. | Add mark-done UX and entity relationship fields where missing. |
-| Vendors | Partial | Vendor queries and CSV reporting exist; dashboard highlights vendors requiring review. | Add vendor create/edit UI, model linkage and due diligence checklist completion flow if not already present in active routes. |
+| Tasks | Partial | Compliance task create/delete/update actions are persisted, protected by role checks and audited; dashboard consumes open tasks. | Add explicit entity relationship fields where missing. |
+| Vendors | Partial | Vendor create/update/delete actions, vendor queries and CSV reporting exist; dashboard highlights vendors requiring review. | Add model linkage and due diligence checklist completion flow if not already present in active routes. |
 | Reports | Partial | CSV report routes exist for some areas and dashboard produces organization readiness summary. | Do not show PDF exports until a real PDF renderer/report pipeline exists. |
-| Audit Timeline | Partial | Audit logs exist and AI system create/reassessment writes audit events. Dashboard previews audit events. AI system history has explicit database access policies. | Add a dedicated organization timeline page with actor display and safe metadata rendering. |
+| Audit Timeline | Partial | Audit events are persisted through `audit_events`, legacy `audit_logs` fallback exists, and `listAuditEvents(organizationId)` provides organization-scoped timeline data with sanitized metadata. | Add the dedicated UI route using the existing query. |
 | RBAC | Partial | API/server actions use organization permission checks for sensitive mutations. | Continue standardizing permissions across every dashboard route and export endpoint. |
 | i18n | Partial | AI inventory UI includes Portuguese and English copy with fallback; existing app has broader locale routing. | Add translations for newly added AI inventory strings in all supported locales. |
 
@@ -41,7 +41,7 @@ This estimate is intentionally product-focused, not cosmetic. It measures whethe
 | Company can re-evaluate AI system facts | Complete through the detail page edit/reassessment workflow. |
 | Company receives documents/tasks | Partial; task and document foundations exist, but generated document/task automation should be verified end-to-end from onboarding. |
 | Company understands readiness | Partial/usable; readiness score, gaps and next actions are shown from organization data. |
-| Important activity is auditable | Partial/usable; AI inventory create/reassessment and task actions write audit events, and AI system history is persisted. |
+| Important activity is auditable | Partial/usable; AI inventory create/reassessment and task actions write audit events, AI system history is persisted, and organization-scoped audit query support exists. |
 
 ## Product safety notes
 
@@ -52,8 +52,8 @@ This estimate is intentionally product-focused, not cosmetic. It measures whethe
 
 ## Follow-up backlog
 
-1. Add automated tests for AI inventory create/detail/reassessment and route-level permission denial.
-2. Connect AI system records to vendors, documents, risks and tasks via explicit relationship fields.
-3. Add dedicated organization audit timeline route.
+1. Add dedicated organization audit timeline UI route using `listAuditEvents(organizationId)`.
+2. Add automated tests for AI inventory create/detail/reassessment and route-level permission denial.
+3. Connect AI system records to vendors, documents, risks and tasks via explicit relationship fields.
 4. Expand new AI inventory labels to every supported locale.
 5. Live smoke test onboarding → organization → AI inventory → risk → readiness after migrations are applied.
