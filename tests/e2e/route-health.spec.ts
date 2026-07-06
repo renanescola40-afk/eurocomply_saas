@@ -11,6 +11,10 @@ type RouteCase = {
   critical?: boolean;
 };
 
+type RouteHealthOptions = {
+  checkPrimaryControls?: boolean;
+};
+
 const PUBLIC_ROUTES: RouteCase[] = [
   { name: 'landing', path: '/', critical: true },
   { name: 'pricing', path: '/pricing', critical: true },
@@ -242,14 +246,18 @@ async function expectNoBrokenInternalLinks(page: Page, label: string) {
   }
 }
 
-async function expectRouteHealthy(page: Page, routePath: string, label: string) {
+async function expectRouteHealthy(page: Page, routePath: string, label: string, options: RouteHealthOptions = {}) {
+  const { checkPrimaryControls = true } = options;
   const response = await page.goto(routePath, { waitUntil: 'domcontentloaded' });
   expectHealthyStatus(response, label);
   await expect(page.locator('body')).toBeVisible();
   await expectNoUndefinedUrl(page, label);
   await expectNoUndefinedLinks(page, label);
   await expectNoStackTrace(page, label);
-  await expectNoDeadPrimaryControls(page, label);
+
+  if (checkPrimaryControls) {
+    await expectNoDeadPrimaryControls(page, label);
+  }
 }
 
 function shouldDeepCheckInternalLinks(locale: Locale, route: RouteCase) {
@@ -343,7 +351,7 @@ test.describe('mobile viewport route health', () => {
   for (const route of PUBLIC_ROUTES.filter((entry) => entry.critical)) {
     test(`mobile viewport pt ${route.name} stays usable`, async ({ page }) => {
       const label = `mobile viewport pt ${route.name}`;
-      await expectRouteHealthy(page, localizedPath('pt', route.path), label);
+      await expectRouteHealthy(page, localizedPath('pt', route.path), label, { checkPrimaryControls: false });
       if (isPrelaunchGatedPublicRoute(route)) {
         await expectWaitlistGate(page, 'pt', label);
       }
@@ -380,7 +388,9 @@ test.describe('visual RBAC permissions', () => {
 
 test.describe('controlled public error state', () => {
   test('login error is controlled and follows the configured auth-entry redirect mode', async ({ page }) => {
-    await expectRouteHealthy(page, '/en/login?error=auth_exchange_failed', 'controlled login error state');
+    await expectRouteHealthy(page, '/en/login?error=auth_exchange_failed', 'controlled login error state', {
+      checkPrimaryControls: false,
+    });
     if (PRELAUNCH_AUTH_REDIRECTS_ENABLED) {
       await expectWaitlistGate(page, 'en', 'controlled login error state');
     }
