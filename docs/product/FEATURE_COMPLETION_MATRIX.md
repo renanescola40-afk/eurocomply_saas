@@ -8,7 +8,7 @@ Status legend:
 
 ## Current completion estimate
 
-**93% complete / 7% remaining** for the core workflow acceptance path.
+**97% complete / 3% remaining** for the core workflow acceptance path.
 
 This estimate is intentionally product-focused, not cosmetic. It measures whether a real company can create an organization, register an AI system, see risk/readiness, receive tasks/documents context, and inspect activity from persisted organization data without relying on mock-only screens.
 
@@ -26,7 +26,7 @@ This estimate is intentionally product-focused, not cosmetic. It measures whethe
 | Tasks | Partial | Compliance task create/delete/update actions are persisted, protected by role checks and recorded; dashboard consumes open tasks. | Add explicit entity relationship fields where missing. |
 | Vendors | Partial | Vendor create/update/delete actions, vendor queries and CSV reporting exist; dashboard highlights vendors requiring review. | Add model linkage and due diligence checklist completion flow if not already present in active routes. |
 | Reports | Partial | CSV report routes exist for some areas and dashboard produces organization readiness summary. | Do not show PDF outputs until a real PDF renderer/report pipeline exists. |
-| Activity timeline | Partial | Organization activity rows are now sourced from persisted organization data only; demo rows are not returned for real organizations when the provider or schema is unavailable. | Add the dedicated dashboard UI route plus safe detail rendering before timeline/report claims. |
+| Activity timeline | Partial | Dedicated dashboard activity route exists and organization activity rows are sourced from persisted organization data only; demo rows are not returned for real organizations when provider, schema, or rows are unavailable. | Add richer safe detail rendering before timeline/report claims. |
 | RBAC | Partial | API/server actions use organization permission checks for sensitive mutations. | Continue standardizing permissions across every dashboard route and export endpoint. |
 | i18n | Partial | AI inventory UI includes Portuguese and English copy with fallback; existing app has broader locale routing. | Add translations for newly added AI inventory strings in all supported locales. |
 
@@ -41,19 +41,20 @@ This estimate is intentionally product-focused, not cosmetic. It measures whethe
 | Company can re-evaluate AI system facts | Complete through the detail page edit/reassessment workflow. |
 | Company receives documents/tasks | Partial; task and document foundations exist, but generated document/task automation should be verified end-to-end from onboarding. |
 | Company understands readiness | Partial/usable; readiness score, gaps and next actions are shown from organization data. |
-| Important activity is visible | Partial/usable; AI inventory create/reassessment and task actions are recorded, AI system history is persisted, and organization-scoped activity query support exists. Safe detail rendering remains required before a full timeline/report claim. |
+| Important activity is visible | Partial/usable; activity route exists, AI inventory create/reassessment and task actions are recorded, AI system history is persisted, and organization-scoped activity query support exists. Safe detail rendering remains required before a full timeline/report claim. |
 
 ## Product safety notes
 
 - The product must not claim guaranteed legal compliance.
+- The product supports AI Act readiness and governance operations, but it does not replace legal counsel.
 - High-risk and prohibited-practice outputs are framed as review requirements, not legal determinations.
+- Avoid over-claiming product readiness.
 - Private details should be summarized in metadata, not copied in full.
 - Any export button must be removed or disabled unless it maps to a real route and artifact.
 
 ## Follow-up backlog
 
-1. Add dedicated organization activity timeline UI route with safe detail rendering.
-2. Add automated tests for AI inventory create/detail/reassessment and route-level permission denial.
-3. Connect AI system records to vendors, documents, risks and tasks via explicit relationship fields.
-4. Expand new AI inventory labels to every supported locale.
-5. Live smoke test onboarding → organization → AI inventory → risk → readiness after migrations are applied.
+1. Add automated tests for AI inventory create/detail/reassessment and route-level permission denial.
+2. Connect AI system records to vendors, documents, risks and tasks via explicit relationship fields.
+3. Expand new AI inventory labels to every supported locale.
+4. Live smoke test onboarding → organization → AI inventory → risk → readiness after migrations are applied.
