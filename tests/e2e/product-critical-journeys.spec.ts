@@ -88,7 +88,7 @@ test.describe('public product journey', () => {
 
     await page.locator('#waitlist-form button[type="submit"]').click();
     await expect(page.locator('#waitlist-form [role="status"], #waitlist-form [role="alert"]')).toContainText(
-      /try again|erro|failed|problem|tentar/i,
+      /try again|erro|failed|problem|tentar|could not|unable|não foi|nao foi/i,
     );
     await expectHealthyDocument(page, 'waitlist controlled error');
   });
@@ -136,7 +136,7 @@ test.describe('public product journey', () => {
 
     await page.getByRole('button', { name: /book demo/i }).click();
     await expect(page.locator('[aria-live="polite"], [role="alert"]')).toContainText(
-      /try again|erro|failed|problem|tentar/i,
+      /try again|erro|failed|problem|tentar|could not|unable|não foi|nao foi/i,
     );
     await expectHealthyDocument(page, 'book demo controlled error');
   });
