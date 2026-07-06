@@ -101,4 +101,16 @@ describe('Phase 5 dashboard invariants', () => {
     expect(activity).toContain('Recent organization events from persisted dashboard activity data.');
     expect(activity).not.toContain('mock');
   });
+
+  it('keeps AI inventory labels covered across public locales', () => {
+    const source = read('src/app/[locale]/ai-systems/ai-systems-client.tsx');
+
+    for (const locale of ['en', 'pt', 'es', 'fr', 'it', 'de']) {
+      expect(source).toContain(`${locale}: {`);
+    }
+
+    for (const key of ['countryMarket', 'processedData', 'vendorName', 'modelName', 'lastReassessed']) {
+      expect(source).toContain(key);
+    }
+  });
 });

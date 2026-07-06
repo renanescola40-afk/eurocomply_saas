@@ -140,9 +140,25 @@ const copy = {
   },
 } as const;
 
+const localizedCopy = {
+  ...copy,
+  es: copy.en,
+  fr: copy.en,
+  it: copy.en,
+  de: copy.en,
+} as const;
+
 const readinessCopy = {
   en: { score: 'Readiness score', notAssessed: 'Not assessed', gaps: 'Gap analysis', actions: 'Role-based action plan', country: 'Country-aware compliance context', productMap: 'AI compliance product map', productSubtitle: 'Every CTA points to a working route. Metrics are only shown when backed by workspace data.', questionnaire: 'Run usage questionnaire', policy: 'Generate policy pack', documents: 'Open document generator', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'No critical gaps detected from current data.', dataSource: 'Data source' },
   pt: { score: 'Score de prontidão', notAssessed: 'Não avaliado', gaps: 'Análise de gaps', actions: 'Plano de ação por papel', country: 'Contexto compliance por país', productMap: 'Mapa do produto AI compliance', productSubtitle: 'Cada CTA aponta para uma rota funcional. Métricas só aparecem quando existem dados reais.', questionnaire: 'Executar questionário de uso', policy: 'Gerar policy pack', documents: 'Abrir gerador de documentos', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'Nenhum gap crítico detetado a partir dos dados atuais.', dataSource: 'Fonte de dados' },
+} as const;
+
+const localizedReadinessCopy = {
+  ...readinessCopy,
+  es: readinessCopy.en,
+  fr: readinessCopy.en,
+  it: readinessCopy.en,
+  de: readinessCopy.en,
 } as const;
 
 const roleOptions = [['provider', 'Provider'], ['deployer', 'Deployer'], ['importer', 'Importer'], ['distributor', 'Distributor'], ['other', 'Other']] as const;
@@ -152,11 +168,11 @@ const domainOptions = [
 ] as const;
 
 function getCopy(locale: string) {
-  return copy[locale as keyof typeof copy] ?? copy.en;
+  return localizedCopy[locale as keyof typeof localizedCopy] ?? localizedCopy.en;
 }
 
 function getReadinessCopy(locale: string) {
-  return readinessCopy[locale as keyof typeof readinessCopy] ?? readinessCopy.en;
+  return localizedReadinessCopy[locale as keyof typeof localizedReadinessCopy] ?? localizedReadinessCopy.en;
 }
 
 function localizedRoute(locale: string, route: string) {
