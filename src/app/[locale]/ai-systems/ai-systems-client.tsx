@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Bot, BrainCircuit, CheckCircle2, ClipboardCheck, Database, FileText, Plus, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Bot, BrainCircuit, Database, FileText, Plus, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { AiActRiskLevel } from '@/server/ai-governance/classifier';
@@ -57,55 +57,57 @@ const defaultForm: FormState = {
   manipulativeOrExploitative: false,
 };
 
+const baseInventoryCopy = {
+  badge: 'AI Governance',
+  title: 'AI systems inventory',
+  subtitle: 'Register AI systems with owners, market, data, model facts, AI Act exposure, obligations and history-backed next actions.',
+  org: 'Organization',
+  total: 'AI systems',
+  high: 'High-risk review',
+  transparency: 'Transparency',
+  addTitle: 'Register AI system',
+  addSubtitle: 'Start with the facts a compliance team needs: owner, category, market, data, model, use case and risk signals.',
+  name: 'System name',
+  ownerTeam: 'Owner team',
+  category: 'Category',
+  countryMarket: 'Country or market',
+  processedData: 'Data processed',
+  vendorName: 'Vendor or model provider',
+  modelName: 'Model name',
+  useCasePlaceholder: 'Example: summarises customer support tickets and suggests replies to agents.',
+  role: 'Organization role',
+  status: 'Lifecycle status',
+  domain: 'Risk domain',
+  checks: 'Assessment flags',
+  personalData: 'Processes personal data',
+  people: 'Interacts directly with people',
+  content: 'Generates content or decisions',
+  biometric: 'Biometric identification or categorisation',
+  prohibited: 'Could manipulate, exploit vulnerability or enable prohibited use',
+  submit: 'Classify and save',
+  saving: 'Classifying...',
+  empty: 'No AI systems registered yet. Add the first one to build your AI Act inventory.',
+  obligations: 'Initial obligations',
+  nextActions: 'Next actions',
+  error: 'Could not create AI system.',
+  migration: 'The AI governance table is not available yet. Apply the Supabase migration before saving systems.',
+  review: 'Open detail',
+  model: 'Model',
+  market: 'Market',
+  data: 'Data',
+  lastReassessed: 'Last reassessed',
+};
+
 const copy = {
-  en: {
-    badge: 'AI Governance',
-    title: 'AI systems inventory',
-    subtitle: 'Register AI systems with owners, market, data, model facts, AI Act exposure, obligations and history-backed next actions.',
-    org: 'Organization',
-    total: 'AI systems',
-    high: 'High-risk review',
-    transparency: 'Transparency',
-    addTitle: 'Register AI system',
-    addSubtitle: 'Start with the facts a compliance team needs: owner, category, market, data, model, use case and risk signals.',
-    name: 'System name',
-    ownerTeam: 'Owner team',
-    category: 'Category',
-    countryMarket: 'Country or market',
-    processedData: 'Data processed',
-    vendorName: 'Vendor or model provider',
-    modelName: 'Model name',
-    useCasePlaceholder: 'Example: summarises customer support tickets and suggests replies to agents.',
-    role: 'Organization role',
-    status: 'Lifecycle status',
-    domain: 'Risk domain',
-    checks: 'Assessment flags',
-    personalData: 'Processes personal data',
-    people: 'Interacts directly with people',
-    content: 'Generates content or decisions',
-    biometric: 'Biometric identification or categorisation',
-    prohibited: 'Could manipulate, exploit vulnerability or enable prohibited use',
-    submit: 'Classify and save',
-    saving: 'Classifying...',
-    empty: 'No AI systems registered yet. Add the first one to build your AI Act inventory.',
-    obligations: 'Initial obligations',
-    nextActions: 'Next actions',
-    error: 'Could not create AI system.',
-    migration: 'The AI governance table is not available yet. Apply the Supabase migration before saving systems.',
-    review: 'Open detail',
-    model: 'Model',
-    market: 'Market',
-    data: 'Data',
-    lastReassessed: 'Last reassessed',
-  },
+  en: { ...baseInventoryCopy },
   pt: {
+    ...baseInventoryCopy,
     badge: 'Governação de IA',
     title: 'Inventário de sistemas de IA',
     subtitle: 'Registe sistemas de IA com owner, mercado, dados, modelo, exposição ao AI Act, obrigações e próximas ações com histórico.',
     org: 'Organização',
     total: 'Sistemas de IA',
     high: 'Revisão alto risco',
-    transparency: 'Transparência',
     addTitle: 'Registar sistema de IA',
     addSubtitle: 'Comece pelos factos que uma equipa de compliance precisa: owner, categoria, mercado, dados, modelo, caso de uso e sinais de risco.',
     name: 'Nome do sistema',
@@ -115,50 +117,27 @@ const copy = {
     processedData: 'Dados processados',
     vendorName: 'Fornecedor ou provedor do modelo',
     modelName: 'Nome do modelo',
-    useCasePlaceholder: 'Exemplo: resume tickets de suporte e sugere respostas aos agentes.',
-    role: 'Papel da organização',
-    status: 'Estado do ciclo de vida',
-    domain: 'Domínio de risco',
-    checks: 'Sinais de avaliação',
-    personalData: 'Trata dados pessoais',
-    people: 'Interage diretamente com pessoas',
-    content: 'Gera conteúdo ou decisões',
-    biometric: 'Identificação ou categorização biométrica',
-    prohibited: 'Pode manipular, explorar vulnerabilidade ou permitir uso proibido',
     submit: 'Classificar e guardar',
     saving: 'A classificar...',
-    empty: 'Ainda não há sistemas de IA registados. Adicione o primeiro para construir o inventário AI Act.',
-    obligations: 'Obrigações iniciais',
-    nextActions: 'Próximas ações',
-    error: 'Não foi possível criar o sistema de IA.',
-    migration: 'A tabela de governação de IA ainda não está disponível. Aplique a migration Supabase antes de guardar sistemas.',
     review: 'Abrir detalhe',
     model: 'Modelo',
     market: 'Mercado',
     data: 'Dados',
     lastReassessed: 'Última reavaliação',
   },
-} as const;
-
-const localizedCopy = {
-  ...copy,
-  es: copy.en,
-  fr: copy.en,
-  it: copy.en,
-  de: copy.en,
+  es: { ...baseInventoryCopy },
+  fr: { ...baseInventoryCopy },
+  it: { ...baseInventoryCopy },
+  de: { ...baseInventoryCopy },
 } as const;
 
 const readinessCopy = {
   en: { score: 'Readiness score', notAssessed: 'Not assessed', gaps: 'Gap analysis', actions: 'Role-based action plan', country: 'Country-aware compliance context', productMap: 'AI compliance product map', productSubtitle: 'Every CTA points to a working route. Metrics are only shown when backed by workspace data.', questionnaire: 'Run usage questionnaire', policy: 'Generate policy pack', documents: 'Open document generator', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'No critical gaps detected from current data.', dataSource: 'Data source' },
   pt: { score: 'Score de prontidão', notAssessed: 'Não avaliado', gaps: 'Análise de gaps', actions: 'Plano de ação por papel', country: 'Contexto compliance por país', productMap: 'Mapa do produto AI compliance', productSubtitle: 'Cada CTA aponta para uma rota funcional. Métricas só aparecem quando existem dados reais.', questionnaire: 'Executar questionário de uso', policy: 'Gerar policy pack', documents: 'Abrir gerador de documentos', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'Nenhum gap crítico detetado a partir dos dados atuais.', dataSource: 'Fonte de dados' },
-} as const;
-
-const localizedReadinessCopy = {
-  ...readinessCopy,
-  es: readinessCopy.en,
-  fr: readinessCopy.en,
-  it: readinessCopy.en,
-  de: readinessCopy.en,
+  es: { score: 'Readiness score', notAssessed: 'Not assessed', gaps: 'Gap analysis', actions: 'Role-based action plan', country: 'Country-aware compliance context', productMap: 'AI compliance product map', productSubtitle: 'Every CTA points to a working route. Metrics are only shown when backed by workspace data.', questionnaire: 'Run usage questionnaire', policy: 'Generate policy pack', documents: 'Open document generator', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'No critical gaps detected from current data.', dataSource: 'Data source' },
+  fr: { score: 'Readiness score', notAssessed: 'Not assessed', gaps: 'Gap analysis', actions: 'Role-based action plan', country: 'Country-aware compliance context', productMap: 'AI compliance product map', productSubtitle: 'Every CTA points to a working route. Metrics are only shown when backed by workspace data.', questionnaire: 'Run usage questionnaire', policy: 'Generate policy pack', documents: 'Open document generator', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'No critical gaps detected from current data.', dataSource: 'Data source' },
+  it: { score: 'Readiness score', notAssessed: 'Not assessed', gaps: 'Gap analysis', actions: 'Role-based action plan', country: 'Country-aware compliance context', productMap: 'AI compliance product map', productSubtitle: 'Every CTA points to a working route. Metrics are only shown when backed by workspace data.', questionnaire: 'Run usage questionnaire', policy: 'Generate policy pack', documents: 'Open document generator', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'No critical gaps detected from current data.', dataSource: 'Data source' },
+  de: { score: 'Readiness score', notAssessed: 'Not assessed', gaps: 'Gap analysis', actions: 'Role-based action plan', country: 'Country-aware compliance context', productMap: 'AI compliance product map', productSubtitle: 'Every CTA points to a working route. Metrics are only shown when backed by workspace data.', questionnaire: 'Run usage questionnaire', policy: 'Generate policy pack', documents: 'Open document generator', owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Viewer', noGaps: 'No critical gaps detected from current data.', dataSource: 'Data source' },
 } as const;
 
 const roleOptions = [['provider', 'Provider'], ['deployer', 'Deployer'], ['importer', 'Importer'], ['distributor', 'Distributor'], ['other', 'Other']] as const;
@@ -168,11 +147,11 @@ const domainOptions = [
 ] as const;
 
 function getCopy(locale: string) {
-  return localizedCopy[locale as keyof typeof localizedCopy] ?? localizedCopy.en;
+  return copy[locale as keyof typeof copy] ?? copy.en;
 }
 
 function getReadinessCopy(locale: string) {
-  return localizedReadinessCopy[locale as keyof typeof localizedReadinessCopy] ?? localizedReadinessCopy.en;
+  return readinessCopy[locale as keyof typeof readinessCopy] ?? readinessCopy.en;
 }
 
 function localizedRoute(locale: string, route: string) {
@@ -296,13 +275,7 @@ export function AiSystemsClient({ locale, initialSystems, organizationName, read
 
         <section className="mt-6 grid gap-4 lg:grid-cols-[1fr_0.8fr]">
           <div className="rounded-3xl border bg-background p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">{rt.gaps}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{readiness.gaps.length === 0 ? rt.noGaps : readiness.boardSummary}</p>
-              </div>
-              <ClipboardCheck className="h-5 w-5 text-primary" />
-            </div>
+            <h2 className="text-lg font-semibold">{rt.gaps}</h2>
             <div className="mt-4 grid gap-3">
               {readiness.gaps.length === 0 ? (
                 <div className="rounded-2xl border border-dashed bg-muted/20 p-5 text-sm text-muted-foreground">{rt.noGaps}</div>
@@ -332,40 +305,6 @@ export function AiSystemsClient({ locale, initialSystems, organizationName, read
                 </Link>
               ))}
             </div>
-          </div>
-        </section>
-
-        <section id="country-aware-context" className="mt-6 rounded-3xl border bg-background p-5">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">{rt.country}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{readiness.countryContext.regionLabel} · {readiness.countryContext.language}</p>
-            </div>
-            <Badge variant="outline" className="w-fit rounded-full">{readiness.countryContext.locale}</Badge>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {readiness.countryContext.guidance.map((item) => (
-              <div key={item} className="rounded-2xl border bg-muted/20 p-4 text-sm leading-6 text-muted-foreground">{item}</div>
-            ))}
-          </div>
-        </section>
-
-        <section id="product-map" className="mt-6 rounded-3xl border bg-background p-5">
-          <div>
-            <h2 className="text-lg font-semibold">{rt.productMap}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{rt.productSubtitle}</p>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {readiness.capabilities.map((capability) => (
-              <Link key={capability.id} href={localizedRoute(locale, capability.route)} className="group rounded-2xl border bg-muted/20 p-4 transition hover:border-primary/40 hover:bg-muted/30">
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-semibold leading-6">{capability.title}</h3>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary" />
-                </div>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{capability.outcome}</p>
-                <Badge variant="outline" className="mt-3 rounded-full">{rt.dataSource}: {capability.dataSource}</Badge>
-              </Link>
-            ))}
           </div>
         </section>
 
@@ -412,25 +351,31 @@ export function AiSystemsClient({ locale, initialSystems, organizationName, read
             <div className="rounded-3xl border border-dashed bg-muted/20 p-8 text-center text-sm text-muted-foreground"><Bot className="mx-auto mb-3 h-8 w-8" />{t.empty}</div>
           ) : systems.map((system) => (
             <article key={system.id} className="rounded-3xl border bg-background p-5 shadow-sm">
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-semibold">{system.name}</h2><span className={`rounded-full border px-3 py-1 text-xs font-medium ${getRiskTone(system.risk_level)}`}>{getRiskLabel(system.risk_level)}</span></div>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{system.use_case}</p>
-                  <div className="mt-3 flex flex-wrap gap-2"><Badge variant="outline">{system.role}</Badge><Badge variant="outline">{system.lifecycle_status}</Badge><Badge variant="outline">{system.category ?? system.risk_domain}</Badge>{system.country_market ? <Badge variant="outline">{system.country_market}</Badge> : null}{system.vendor_name ? <Badge variant="outline">{system.vendor_name}</Badge> : null}{system.model_name ? <Badge variant="outline">{t.model}: {system.model_name}</Badge> : null}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-lg font-semibold">{system.name}</h3>
+                    <Badge variant="outline" className={getRiskTone(system.risk_level)}>{getRiskLabel(system.risk_level)}</Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">{system.classification_summary}</p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <span>{t.model}: {system.model_name ?? '—'}</span>
+                    <span>{t.market}: {system.country_market ?? '—'}</span>
+                    <span>{t.data}: {system.processed_data ?? '—'}</span>
+                    <span>{t.lastReassessed}: {system.last_reassessed_at ?? '—'}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Button asChild variant="outline" className="rounded-full"><Link href={localizedRoute(locale, `/ai-systems/${system.id}`)}>{t.review}</Link></Button>
-                  <CheckCircle2 className="h-6 w-6 text-primary" />
+                <Button asChild variant="outline" className="rounded-full"><Link href={localizedRoute(locale, `/ai-systems/${system.id}`)}>{t.review}</Link></Button>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="rounded-2xl border bg-muted/20 p-4">
+                  <p className="text-sm font-medium">{t.obligations}</p>
+                  <ul className="mt-2 space-y-1 text-sm text-muted-foreground">{system.obligations.map((item) => <li key={item}>• {item}</li>)}</ul>
                 </div>
-              </div>
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border bg-muted/20 p-4"><p className="font-medium">{system.classification_summary}</p><h3 className="mt-4 text-sm font-semibold">{t.obligations}</h3><ul className="mt-2 space-y-2 text-sm text-muted-foreground">{system.obligations.map((item) => <li key={item}>• {item}</li>)}</ul></div>
-                <div className="rounded-2xl border bg-muted/20 p-4"><h3 className="text-sm font-semibold">{t.nextActions}</h3><ul className="mt-2 space-y-2 text-sm text-muted-foreground">{system.next_actions.map((item) => <li key={item}>• {item}</li>)}</ul></div>
-              </div>
-              <div className="mt-4 grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
-                <div className="rounded-2xl border bg-muted/20 p-3"><p className="text-xs uppercase tracking-[0.18em]">{t.data}</p><p className="mt-1">{system.processed_data ?? '—'}</p></div>
-                <div className="rounded-2xl border bg-muted/20 p-3"><p className="text-xs uppercase tracking-[0.18em]">{t.market}</p><p className="mt-1">{system.country_market ?? '—'}</p></div>
-                <div className="rounded-2xl border bg-muted/20 p-3"><p className="text-xs uppercase tracking-[0.18em]">{t.lastReassessed}</p><p className="mt-1">{system.last_reassessed_at ?? system.updated_at}</p></div>
+                <div className="rounded-2xl border bg-muted/20 p-4">
+                  <p className="text-sm font-medium">{t.nextActions}</p>
+                  <ul className="mt-2 space-y-1 text-sm text-muted-foreground">{system.next_actions.map((item) => <li key={item}>• {item}</li>)}</ul>
+                </div>
               </div>
             </article>
           ))}
