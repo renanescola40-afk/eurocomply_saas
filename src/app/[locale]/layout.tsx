@@ -33,27 +33,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const labels: Record<Locale, { title: string; description: string }> = {
     en: {
-      title: 'RISCK COMPLY - AI Governance Readiness Platform',
-      description: 'AI Act readiness support, AI inventory, risk visibility, governance evidence preparation and compliance operations workflows for European B2B teams.',
+      title: 'Risck Comply - AI Compliance Operating System',
+      description: 'EU AI Act readiness, AI system inventory, risk evidence, governance documents and audit workflows for European B2B teams.',
     },
     pt: {
-      title: 'RISCK COMPLY - Plataforma de AI Governance Readiness',
+      title: 'Risck Comply - Plataforma de AI Governance Readiness',
       description: 'Suporte a AI Act readiness, inventario de IA, visibilidade de risco, preparacao de evidencias de governanca e workflows de operacoes de compliance para equipas B2B europeias.',
     },
     es: {
-      title: 'RISCK COMPLY - Plataforma de AI Governance Readiness',
+      title: 'Risck Comply - Plataforma de AI Governance Readiness',
       description: 'Soporte de AI Act readiness, inventario de IA, visibilidad de riesgos, preparacion de evidencias de gobernanza y workflows de operaciones de compliance para equipos B2B europeos.',
     },
     fr: {
-      title: 'RISCK COMPLY - Plateforme AI Governance Readiness',
+      title: 'Risck Comply - Plateforme AI Governance Readiness',
       description: 'Support AI Act readiness, inventaire IA, visibilite des risques, preparation des preuves de gouvernance et workflows operations compliance pour equipes B2B europeennes.',
     },
     it: {
-      title: 'RISCK COMPLY - Piattaforma AI Governance Readiness',
+      title: 'Risck Comply - Piattaforma AI Governance Readiness',
       description: 'Supporto AI Act readiness, inventario IA, visibilita del rischio, preparazione delle evidenze di governance e workflow operativi di compliance per team B2B europei.',
     },
     de: {
-      title: 'RISCK COMPLY - Plattform fuer AI Governance Readiness',
+      title: 'Risck Comply - Plattform fuer AI Governance Readiness',
       description: 'AI Act Readiness Support, KI-Inventar, Risikosichtbarkeit, Governance-Nachweisvorbereitung und Compliance-Operations-Workflows fuer europaeische B2B-Teams.',
     },
   };
