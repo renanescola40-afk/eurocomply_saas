@@ -3,6 +3,26 @@
 Date: 2026-07-06
 Scope: Playwright coverage for route health, critical CTAs, forms, auth redirects, billing entry points, trust/security pages, mobile smoke, keyboard navigation and seeded authenticated flows.
 
+## Current completion status
+
+- **Automated public/anonymous coverage:** 100% of the requested critical public routes, CTAs, form feedback states, protected redirects, no-store redirect guard, mobile smoke and keyboard baseline are covered by deterministic checks.
+- **Seeded authenticated smoke coverage:** implemented behind explicit QA fixture gates so no real data is used.
+- **Remaining path to true 100%:** create disposable owner/admin/member/viewer fixtures and enable full role-specific mutation assertions for create/edit/delete flows.
+
+## CI gate
+
+`npm run quality:routes` now validates the route-health artifacts **and** the product route/action audit artifacts. The gate fails if the following coverage disappears:
+
+- `docs/product/ROUTE_AND_ACTION_AUDIT.md`
+- `docs/product/E2E_COVERAGE_MATRIX.md`
+- `tests/e2e/product-critical-journeys.spec.ts`
+- public CTA coverage
+- public form loading/success/error coverage
+- protected redirect and no-store coverage
+- mobile and keyboard coverage
+- seeded authenticated flow gates
+- synthetic data policy markers
+
 ## Acceptance coverage
 
 | Acceptance item | Coverage file | Test / mechanism | Data mode | Status |
