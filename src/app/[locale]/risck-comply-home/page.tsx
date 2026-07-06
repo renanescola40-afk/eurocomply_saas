@@ -8,9 +8,9 @@ import { getCurrentUser } from '@/server/queries/auth';
 import { getOrganizationDashboardData } from '@/server/queries/organization-dashboard';
 
 const quickActions = [
-  { label: 'Abrir Command Center', description: 'Entrar no cockpit executivo de compliance.', href: '/dashboard/organizations/command-center', icon: Gauge },
-  { label: 'Ver documentos', description: 'Rever evidências, políticas e provas.', href: '/dashboard/organizations/documents', icon: FileText },
-  { label: 'Abrir notificações', description: 'Ver feed premium de atividades da equipa.', href: '/notificacoes', icon: Bell },
+  { label: 'Abrir Command Center', description: 'Entrar no painel operacional de governance e readiness.', href: '/dashboard/organizations/command-center', icon: Gauge },
+  { label: 'Ver documentos', description: 'Rever evidencias, politicas e materiais de suporte.', href: '/dashboard/organizations/documents', icon: FileText },
+  { label: 'Abrir notificacoes', description: 'Ver feed de atividades e proximas acoes da equipa.', href: '/notificacoes', icon: Bell },
 ];
 
 export default async function RisckComplyHomePage({ params }: { params: { locale: string } }) {
@@ -26,9 +26,9 @@ export default async function RisckComplyHomePage({ params }: { params: { locale
   const upcomingTasks = data.tasks.filter((task) => Boolean(task.dueDate)).length;
 
   const macroCards = [
-    { label: 'Documentos pendentes', value: `${pendingDocuments}`, description: 'Itens que ainda podem fragilizar auditoria, procurement ou board review.', icon: FileText },
-    { label: 'Score de compliance', value: `${data.summary.complianceScore}%`, description: 'Indicador agregado para liderança e customer confidence.', icon: CheckCircle2 },
-    { label: 'Próximos prazos', value: `${upcomingTasks}`, description: 'Datas úteis para manter evidências e tarefas sem atraso.', icon: Clock3 },
+    { label: 'Documentos pendentes', value: `${pendingDocuments}`, description: 'Itens que podem exigir revisao antes de security review, procurement ou board reporting.', icon: FileText },
+    { label: 'Readiness score', value: `${data.summary.complianceScore}%`, description: 'Indicador operacional para visibilidade interna, nao uma garantia legal de compliance.', icon: CheckCircle2 },
+    { label: 'Proximos prazos', value: `${upcomingTasks}`, description: 'Datas uteis para manter evidencias e tarefas sem atraso.', icon: Clock3 },
   ];
 
   return (
@@ -41,12 +41,12 @@ export default async function RisckComplyHomePage({ params }: { params: { locale
           <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
             <div className="space-y-6">
               <div className="flex flex-wrap items-center gap-3">
-                <Badge className="gap-2 rounded-full px-3 py-1 text-xs uppercase tracking-[0.2em]"><Crown className="h-3.5 w-3.5" /> Cliente Risck Comply</Badge>
+                <Badge className="gap-2 rounded-full px-3 py-1 text-xs uppercase tracking-[0.2em]"><Crown className="h-3.5 w-3.5" /> Cliente RISCK COMPLY</Badge>
                 <Badge variant="outline" className="gap-2 rounded-full px-3 py-1 text-xs"><LockKeyhole className="h-3.5 w-3.5" /> Plano {currentPlan}</Badge>
               </div>
               <div className="space-y-3">
                 <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.04em] md:text-6xl">Bem-vindo, {data.organization.name}.</h1>
-                <p className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">Home interna limpa com métricas macro, links rápidos e motivos concretos para evoluir para uma operação Enterprise.</p>
+                <p className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">Home interna com metricas macro, links rapidos e proximas acoes para organizar AI Act readiness sem prometer resultado juridico.</p>
               </div>
               <div className="flex flex-wrap gap-3">
                 <Button asChild size="lg" className="rounded-full"><Link href={`/${params.locale}/dashboard/organizations/command-center`}>Entrar no Command Center <ArrowRight className="h-4 w-4" /></Link></Button>
@@ -57,7 +57,7 @@ export default async function RisckComplyHomePage({ params }: { params: { locale
               <p className="text-sm font-medium text-muted-foreground">Workspace</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight">{data.organization.name}</p>
               <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-2xl bg-background/70 p-3"><p className="text-2xl font-bold">{data.summary.complianceScore}%</p><p className="text-xs text-muted-foreground">Score</p></div>
+                <div className="rounded-2xl bg-background/70 p-3"><p className="text-2xl font-bold">{data.summary.complianceScore}%</p><p className="text-xs text-muted-foreground">Readiness</p></div>
                 <div className="rounded-2xl bg-background/70 p-3"><p className="text-2xl font-bold">{pendingDocuments}</p><p className="text-xs text-muted-foreground">Pendentes</p></div>
                 <div className="rounded-2xl bg-background/70 p-3"><p className="text-2xl font-bold">{upcomingTasks}</p><p className="text-xs text-muted-foreground">Prazos</p></div>
               </div>
@@ -76,24 +76,24 @@ export default async function RisckComplyHomePage({ params }: { params: { locale
 
         <section className="grid gap-6 lg:grid-cols-[1fr_0.72fr]">
           <article className="rounded-[2rem] border bg-foreground p-6 text-background shadow-2xl shadow-primary/10 md:p-8">
-            <Badge variant="secondary" className="rounded-full">Comparativo Enterprise</Badge>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight">Clientes Enterprise convidam funcionários e gerenciam múltiplos países.</h2>
+            <Badge variant="secondary" className="rounded-full">Comparativo de planos</Badge>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight">Planos avancados ajudam equipas a coordenar owners, paises e evidencias.</h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {['múltiplos NIFs europeus', 'convite de funcionários', 'relatórios avançados', 'suporte prioritário', 'histórico de notificações para toda equipe', 'trilha colaborativa de auditoria'].map((item) => <div key={item} className="rounded-2xl bg-background/10 p-4 text-sm">{item}</div>)}
+              {['multiplos NIFs europeus', 'convite de funcionarios', 'relatorios para lideranca', 'suporte prioritario quando contratado', 'historico de notificacoes da equipa', 'trilha colaborativa de atividades'].map((item) => <div key={item} className="rounded-2xl bg-background/10 p-4 text-sm">{item}</div>)}
             </div>
             <Button asChild className="mt-6 rounded-full bg-background text-foreground transition hover:-translate-y-0.5 hover:bg-background/90 hover:shadow-lg"><Link href={`/${params.locale}/pricing`}>Comparar planos <ArrowRight className="h-4 w-4" /></Link></Button>
           </article>
 
           <article className="rounded-[2rem] border bg-background/88 p-6 shadow-sm backdrop-blur md:p-8">
-            <div className="flex items-center gap-3 text-primary"><ShieldCheck className="h-5 w-5" /><p className="text-sm font-semibold uppercase tracking-[0.2em]">Próximo passo Enterprise</p></div>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight">Prepare a operação para auditoria, procurement e expansão europeia.</h2>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">Use este painel para revisar evidências, gaps e workflows antes de ativar módulos avançados ou envolver equipes adicionais.</p>
-            <div className="mt-5 rounded-2xl bg-muted/40 p-4 text-sm text-muted-foreground">Revise o plano atual, confirme requisitos internos e avance para Enterprise apenas quando a assinatura e as permissões estiverem alinhadas.</div>
+            <div className="flex items-center gap-3 text-primary"><ShieldCheck className="h-5 w-5" /><p className="text-sm font-semibold uppercase tracking-[0.2em]">Proximo passo</p></div>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight">Prepare a operacao para revisoes internas, procurement e expansao europeia.</h2>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">Use este painel para revisar evidencias, gaps e workflows antes de ativar modulos avancados ou envolver equipas adicionais.</p>
+            <div className="mt-5 rounded-2xl bg-muted/40 p-4 text-sm text-muted-foreground">RISCK COMPLY apoia organizacao e preparacao de evidencias. Nao substitui advogado, DPO ou compliance officer.</div>
           </article>
         </section>
 
         <section className="rounded-[2rem] border bg-background/82 p-5 shadow-sm backdrop-blur md:p-6">
-          <div><p className="text-sm font-medium uppercase tracking-[0.2em] text-primary">Links rápidos</p><h2 className="mt-2 text-2xl font-semibold tracking-tight">Ir direto para a função certa</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Cada ação abre a página final da ferramenta, sem scroll manual e sem cliques intermediários.</p></div>
+          <div><p className="text-sm font-medium uppercase tracking-[0.2em] text-primary">Links rapidos</p><h2 className="mt-2 text-2xl font-semibold tracking-tight">Ir direto para a funcao certa</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Cada acao abre a pagina final da ferramenta, sem scroll manual e sem cliques intermediarios.</p></div>
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             {quickActions.map((action) => { const Icon = action.icon; return (
               <Link key={action.href} href={`/${params.locale}${action.href}`} className="group rounded-2xl border bg-muted/20 p-4 transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5 hover:shadow-lg">
