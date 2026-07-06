@@ -6,13 +6,31 @@ import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 
+const DEFAULT_METRIC_SNAPSHOT_ORGANIZATION_LIMIT = 50;
+const MAX_METRIC_SNAPSHOT_ORGANIZATION_LIMIT = 200;
+
+function getMetricSnapshotOrganizationLimit() {
+  const configuredLimit = Number(process.env.METRIC_SNAPSHOT_ORGANIZATION_LIMIT);
+
+  if (!Number.isFinite(configuredLimit) || configuredLimit <= 0) {
+    return DEFAULT_METRIC_SNAPSHOT_ORGANIZATION_LIMIT;
+  }
+
+  return Math.min(Math.trunc(configuredLimit), MAX_METRIC_SNAPSHOT_ORGANIZATION_LIMIT);
+}
+
 export async function POST(request: Request) {
   if (!isAuthorizedInternalCronRequest(request)) {
     return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const supabase = createAdminClient();
-  const { data: organizations, error } = await supabase.from('organizations').select('id,name').order('created_at', { ascending: true });
+  const limit = getMetricSnapshotOrganizationLimit();
+  const { data: organizations, error } = await supabase
+    .from('organizations')
+    .select('id,name')
+    .order('created_at', { ascending: true })
+    .limit(limit);
 
   if (error) {
     reportError(error, { area: 'metric_snapshot_job', step: 'list_organizations' });
@@ -22,6 +40,7 @@ export async function POST(request: Request) {
   const results = {
     processed: 0,
     failed: 0,
+    limit,
     failures: [] as Array<{ organizationId: string; message: string }>,
   };
 
