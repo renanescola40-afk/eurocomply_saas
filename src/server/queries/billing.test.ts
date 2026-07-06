@@ -75,7 +75,7 @@ describe('organization billing context', () => {
 
     const context = await getOrganizationBillingContext('org_a');
 
-    expect(subscriptionStatusFilters).toEqual(['active', 'trialing']);
+    expect(subscriptionStatusFilters).toEqual([]);
     expect(context).toEqual({
       plan: 'growth',
       status: 'active',
@@ -88,12 +88,22 @@ describe('organization billing context', () => {
     });
   });
 
-  it('does not grant paid entitlements when there is no active or trialing subscription row', async () => {
+  it('preserves delinquent subscription status without granting paid entitlements', async () => {
+    subscriptionRow = { plan: 'business', status: 'past_due' };
+
+    const context = await getOrganizationBillingContext('org_a');
+
+    expect(subscriptionStatusFilters).toEqual([]);
+    expect(context.plan).toBe('starter');
+    expect(context.status).toBe('past_due');
+  });
+
+  it('does not grant paid entitlements when there is no subscription row', async () => {
     subscriptionRow = null;
 
     const context = await getOrganizationBillingContext('org_a');
 
-    expect(subscriptionStatusFilters).toEqual(['active', 'trialing']);
+    expect(subscriptionStatusFilters).toEqual([]);
     expect(context.plan).toBe('starter');
     expect(context.status).toBeNull();
   });
