@@ -1,0 +1,42 @@
+{
+  "evidenceItem": "observability-smoke-validation",
+  "status": "Open",
+  "outcome": "not_run_in_connector",
+  "generatedAt": "2026-07-06T09:00:00.000Z",
+  "reviewedAt": "2026-07-06T09:00:00.000Z",
+  "reviewer": "RISCK COMPLY release automation",
+  "releaseTarget": "production",
+  "summary": "Repository-side controls and runtime validation script are present. This evidence remains Open until npm run release:observability-smoke is executed against a real deployment with the required environment variables.",
+  "redactionConfirmation": "No token, cookie, authorization header, secret value, DSN, or raw provider credential is stored in this evidence file.",
+  "evidenceLocations": [
+    "scripts/release/run-observability-smoke-validation.mjs",
+    "src/app/api/observability/smoke/route.ts",
+    "src/lib/observability/report-error.ts",
+    "src/server/observability/logger.ts",
+    "docs/security/evidence/runtime/observability-smoke-validation.json"
+  ],
+  "controlsExpected": [
+    "productionUrlConfigured",
+    "sentryDsnConfigured",
+    "observabilitySmokeRejectsAnonymous",
+    "observabilitySmokeAnonymousNoStore",
+    "observabilitySmokeAnonymousHasRequestId",
+    "observabilitySmokeAnonymousDoesNotExposeSecrets",
+    "observabilitySmokeGetRejected",
+    "observabilitySmokeGetNoStore",
+    "observabilitySmokeEventSent when RELEASE_RUN_OBSERVABILITY_SMOKE=true and HEALTHCHECK_TOKEN is configured"
+  ],
+  "requiredCommand": "npm run release:observability-smoke",
+  "requiredEnvironment": [
+    "RELEASE_DEPLOYMENT_URL or RELEASE_PRODUCTION_URL or NEXT_PUBLIC_APP_URL",
+    "NEXT_PUBLIC_SENTRY_DSN or SENTRY_DSN",
+    "HEALTHCHECK_TOKEN when RELEASE_RUN_OBSERVABILITY_SMOKE=true"
+  ],
+  "releaseGate": "Production and enterprise release remain blocked until this evidence is regenerated as Complete/passed against the deployed target.",
+  "evidenceIntegrity": {
+    "containsSensitiveValues": false,
+    "valuesRedacted": true,
+    "authorizationHeaderStored": false,
+    "cookiesStored": false
+  }
+}
