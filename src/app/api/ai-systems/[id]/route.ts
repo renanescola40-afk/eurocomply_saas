@@ -1,4 +1,5 @@
 import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
+import { aiSystemBodySchema, asText, classifyParsedAiSystemBody } from '@/server/ai-governance/system-payload';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { getAiSystem, listAiSystemHistory, updateAiSystem } from '@/server/queries/ai-systems';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -6,7 +7,6 @@ import { parseJsonBodyWithZod, requireApiUser, secureApiError } from '@/server/s
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { noStoreJson } from '@/server/security/no-store';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
-import { aiSystemBodySchema, asText, classifyParsedAiSystemBody } from '../route';
 
 const AI_SYSTEM_JSON_MAX_BYTES = 64 * 1024;
 
