@@ -24,6 +24,42 @@ create index if not exists ai_system_history_org_idx on public.ai_system_history
 
 alter table public.ai_system_history enable row level security;
 
+drop policy if exists "Organization members can read ai system history" on public.ai_system_history;
+create policy "Organization members can read ai system history"
+  on public.ai_system_history for select
+  using (
+    exists (
+      select 1
+      from public.organization_members om
+      where om.organization_id = ai_system_history.organization_id
+        and om.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Organization members can insert ai system history" on public.ai_system_history;
+create policy "Organization members can insert ai system history"
+  on public.ai_system_history for insert
+  with check (
+    exists (
+      select 1
+      from public.organization_members om
+      where om.organization_id = ai_system_history.organization_id
+        and om.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Organization members can delete ai system history" on public.ai_system_history;
+create policy "Organization members can delete ai system history"
+  on public.ai_system_history for delete
+  using (
+    exists (
+      select 1
+      from public.organization_members om
+      where om.organization_id = ai_system_history.organization_id
+        and om.user_id = auth.uid()
+    )
+  );
+
 update public.ai_systems
 set last_reassessed_at = coalesce(last_reassessed_at, updated_at, created_at)
 where last_reassessed_at is null;
