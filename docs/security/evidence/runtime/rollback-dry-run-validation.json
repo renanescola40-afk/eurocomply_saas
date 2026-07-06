@@ -1,7 +1,7 @@
 {
   "evidenceItem": "rollback-dry-run-validation",
   "status": "Open",
-  "outcome": "not_run_in_connector",
+  "outcome": "failed",
   "generatedAt": "2026-07-06T09:00:00.000Z",
   "reviewedAt": "2026-07-06T09:00:00.000Z",
   "reviewer": "RISCK COMPLY release automation",
