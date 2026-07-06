@@ -1,0 +1,101 @@
+{
+  "id": "stripe-runtime-validation",
+  "evidenceItem": "stripe-runtime-validation",
+  "status": "Code review complete - pending CI/runtime execution",
+  "validationStatus": "pending_runtime_validation",
+  "reviewedAt": "2026-07-06T09:00:00.000Z",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "branch": "hardening/stripe-subscriptions-ready",
+  "secretsRedacted": true,
+  "realCustomerDataUsed": false,
+  "summary": "Stripe SaaS subscriptions billing hardening evidence for checkout, portal, webhook idempotency, subscription status gating and entitlement safety. This evidence intentionally does not claim production readiness until CI and a signed Stripe webhook runtime proof have executed successfully.",
+  "criticalReadinessGate": {
+    "mayAcceptRealPayments": false,
+    "reason": "Webhook handling has been code-hardened and covered by tests, but this branch still requires CI/runtime validation before marking paid launch ready. Do not mark ready without a passing signed webhook validation run."
+  },
+  "filesReviewed": [
+    "src/app/api/billing/checkout/route.ts",
+    "src/app/api/billing/portal/route.ts",
+    "src/app/api/stripe/webhook/route.ts",
+    "src/server/billing/stripe-webhooks.ts",
+    "src/server/queries/billing.ts",
+    "src/server/queries/subscription.ts",
+    "src/server/billing/plans.ts",
+    "src/server/billing/stripe-webhooks.test.ts",
+    "src/app/api/stripe/webhook/route.test.ts",
+    "src/server/queries/billing.test.ts",
+    "tests/security/billing-ui-api-boundary.test.ts"
+  ],
+  "controlsVerifiedByCodeReview": {
+    "checkout": {
+      "requiresAuth": true,
+      "requiresOrganization": true,
+      "requiresManageBillingPermission": true,
+      "validatesSelfServePlan": true,
+      "createsCustomerPerOrganization": true,
+      "usesServerSideStripePriceMapping": true,
+      "usesSafeMetadata": true,
+      "doesNotExposeStripeSecret": true,
+      "returnsOnlyStripeCheckoutUrl": true,
+      "requiresTrustedOrigin": true,
+      "hasRateLimit": true,
+      "requiresStepUpWhenConfigured": true,
+      "auditLog": "checkout_created"
+    },
+    "portal": {
+      "requiresAuth": true,
+      "requiresOrganization": true,
+      "requiresManageBillingPermission": true,
+      "loadsStripeCustomerByCurrentOrganizationOnly": true,
+      "returnUrlScopedToBillingDashboard": true,
+      "requiresTrustedOrigin": true,
+      "hasRateLimit": true,
+      "requiresStepUpWhenConfigured": true,
+      "auditLog": "billing_portal_created"
+    },
+    "webhook": {
+      "usesRawBody": true,
+      "validatesStripeSignatureBeforeDispatch": true,
+      "hasPayloadSizeLimit": true,
+      "handlesEventsIdempotently": true,
+      "recordsDuplicateReplays": true,
+      "updatesSubscriptionCreated": true,
+      "updatesSubscriptionUpdated": true,
+      "updatesSubscriptionDeleted": true,
+      "handlesPaymentFailedWithoutGrantingEntitlements": true,
+      "recordsAuditLogs": true,
+      "sanitizesWebhookFailureErrors": true
+    },
+    "entitlements": {
+      "premiumRequiresActiveOrTrialingSubscriptionInBillingContext": true,
+      "canceledSubscriptionFallsBackToStarter": true,
+      "missingSubscriptionFallsBackToStarter": true,
+      "clientCannotGrantPremiumPlan": true
+    }
+  },
+  "testsAddedOrExpanded": [
+    "src/server/queries/billing.test.ts: active subscription grants normalized plan and missing valid subscription falls back to starter",
+    "src/server/billing/stripe-webhooks.test.ts: failed payment wave sends billing email/audit and does not upsert entitlements",
+    "existing webhook tests cover invalid signature, duplicate event and subscription created/updated/deleted sync"
+  ],
+  "acceptanceCriteriaCoverage": {
+    "semAuth": "covered by API guard usage and existing route tests/security checks",
+    "semOrganizacao": "covered by explicit organization_required branch in checkout and portal",
+    "memberSemPermissao": "covered by requirePermission('manage_billing')",
+    "ownerPermitido": "covered by manage_billing happy path design and existing boundary tests",
+    "planoInvalido": "covered by checkout plan allowlist",
+    "assinaturaCriada": "covered by customer.subscription.created test",
+    "assinaturaCancelada": "covered by customer.subscription.deleted test plus billing-context active/trialing gate",
+    "pagamentoFalhou": "covered by invoice.payment_failed test without entitlement upsert",
+    "webhookSignatureInvalida": "covered by route signature validation test",
+    "webhookDuplicado": "covered by duplicate idempotency test",
+    "entitlementAtualizadoCorretamente": "covered by subscription sync entitlement assertion and billing-context status gate"
+  },
+  "commandsToRunBeforeMarkingReady": [
+    "npm run test -- src/app/api/stripe/webhook/route.test.ts src/server/billing/stripe-webhooks.test.ts src/server/queries/billing.test.ts tests/security/billing-ui-api-boundary.test.ts",
+    "npm run typecheck",
+    "npm run security:billing-webhook-body",
+    "npm run security:ci"
+  ],
+  "finalDecision": "not_ready_until_ci_and_signed_webhook_runtime_validation_pass"
+}
