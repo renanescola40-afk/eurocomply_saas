@@ -37,7 +37,7 @@ function buildWorkflowReadinessAction(workflowReadiness: OrganizationWorkflowRea
       title: 'Stabilize blocked workflow readiness',
       description: 'Your organization workflow readiness is blocked. Review the highest-impact risk, evidence, vendor and task gaps before executive reporting.',
       priority: 'Critical',
-      impact: 'Restores a clear path to audit-ready operations.',
+      impact: 'Restores a clear path to structured governance review.',
       href: `${basePath}/risks`,
     };
   }
@@ -45,7 +45,7 @@ function buildWorkflowReadinessAction(workflowReadiness: OrganizationWorkflowRea
   if (workflowReadiness.status === 'attention') {
     return {
       title: 'Resolve workflow readiness blockers',
-      description: `${workflowReadiness.reasons.length} readiness signal${workflowReadiness.reasons.length === 1 ? '' : 's'} need review before the next compliance checkpoint.`,
+      description: `${workflowReadiness.reasons.length} readiness signal${workflowReadiness.reasons.length === 1 ? '' : 's'} need review before the next governance checkpoint.`,
       priority: 'High',
       impact: 'Improves operational confidence before leadership review.',
       href: `${basePath}/tasks`,
@@ -54,7 +54,7 @@ function buildWorkflowReadinessAction(workflowReadiness: OrganizationWorkflowRea
 
   return {
     title: 'Capture workflow readiness evidence',
-    description: 'Your organization workflow readiness is healthy. Generate an executive pack while the current state is clean.',
+    description: 'Your organization workflow readiness looks healthy. Generate an executive pack while the current state is structured.',
     priority: 'Low',
     impact: 'Creates a shareable readiness snapshot.',
     href: `${basePath}/reports`,
@@ -74,7 +74,7 @@ function buildActions(summary: DashboardSummary, basePath: string, workflowReadi
       title: 'Reduce critical risk exposure',
       description: `${summary.criticalRisks} critical risk${summary.criticalRisks === 1 ? '' : 's'} need owner review and treatment decisions.`,
       priority: 'Critical',
-      impact: 'Improves board confidence and audit readiness.',
+      impact: 'Improves board confidence and governance readiness.',
       href: `${basePath}/risks`,
     });
   }
@@ -94,14 +94,14 @@ function buildActions(summary: DashboardSummary, basePath: string, workflowReadi
       title: 'Close evidence gaps',
       description: `${summary.missingDocuments} document${summary.missingDocuments === 1 ? '' : 's'} are missing or not ready for review.`,
       priority: 'High',
-      impact: 'Improves evidence completeness for audits and customers.',
+      impact: 'Improves evidence completeness for reviews and customer questions.',
       href: `${basePath}/documents`,
     });
   }
 
   if (summary.openTasks > 0) {
     actions.push({
-      title: 'Clear open compliance work',
+      title: 'Clear open governance work',
       description: `${summary.openTasks} task${summary.openTasks === 1 ? '' : 's'} are still open across the program.`,
       priority: actions.length > 0 ? 'Medium' : 'High',
       impact: 'Improves execution velocity and ownership clarity.',
@@ -115,7 +115,7 @@ function buildActions(summary: DashboardSummary, basePath: string, workflowReadi
         title: 'Generate an executive report',
         description: 'Your operational posture looks healthy. Capture the current state for leadership or customer review.',
         priority: 'Low',
-        impact: 'Creates a shareable compliance snapshot.',
+        impact: 'Creates a shareable governance snapshot.',
         href: `${basePath}/reports`,
       },
     );
