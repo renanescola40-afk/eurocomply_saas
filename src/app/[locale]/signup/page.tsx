@@ -223,7 +223,7 @@ function SignupAuthForm({ activeLocale, selectedPlan, continuationHref, signInUr
 
     setIsSubmitting(true);
     setFormError(null);
-    const result = await signUpWithEmail(email, secret, { requested_plan: selectedPlan.id });
+    const result = await signUpWithEmail(email, secret, { requested_plan: selectedPlan.id, next: continuationHref });
     if (result.error) {
       setFormError(text.fallbackError);
       setIsSubmitting(false);
@@ -282,46 +282,35 @@ function SignupAuthForm({ activeLocale, selectedPlan, continuationHref, signInUr
           </form>
         </>
       )}
-
-      <p className="mt-6 text-center text-sm text-white/50">
-        {text.haveAccount}{' '}
-        <Link href={signInUrl} className="font-semibold text-white hover:text-blue-200">
-          {text.signIn}
-        </Link>
-      </p>
     </SignupChrome>
   );
 }
 
-function SignupPageContent() {
-  const params = useParams();
+function SignupContent() {
+  const params = useParams<{ locale: string }>();
   const searchParams = useSearchParams();
-  const locale = (params.locale as string) || 'pt';
-  const activeLocale = (locales.includes(locale as Locale) ? locale : 'pt') as Locale;
+  const localeParam = params?.locale ?? 'pt';
+  const activeLocale = (locales.includes(localeParam as Locale) ? localeParam : 'pt') as Locale;
   const selectedPlanId = normalizePlanId(searchParams.get('plan'));
-  const selectedPlan = selectedPlanId ? getBillingPlan(selectedPlanId) : undefined;
-  const continuationHref = getSafeSignupContinuation(activeLocale, searchParams.get('next'), selectedPlan?.id);
-  const planSelectionNextHref = getOnboardingHref(activeLocale, selectedPlan?.id ?? BILLING_PLANS[1]?.id);
-  const signInUrl = getSignInHref(activeLocale, selectedPlan?.id, continuationHref);
+  const continuationHref = getSafeSignupContinuation(activeLocale, searchParams.get('next'), selectedPlanId);
+  const signInUrl = getSignInHref(activeLocale, selectedPlanId, continuationHref);
 
-  if (!selectedPlan) {
-    return <PlanSelection activeLocale={activeLocale} planSelectionNextHref={planSelectionNextHref} signInUrl={signInUrl} />;
+  if (!selectedPlanId) {
+    return <PlanSelection activeLocale={activeLocale} planSelectionNextHref={continuationHref} signInUrl={signInUrl} />;
   }
 
-  return (
-    <SignupAuthForm
-      activeLocale={activeLocale}
-      selectedPlan={selectedPlan}
-      continuationHref={continuationHref}
-      signInUrl={signInUrl}
-    />
-  );
+  const selectedPlan = getBillingPlan(selectedPlanId);
+  if (!selectedPlan) {
+    return <PlanSelection activeLocale={activeLocale} planSelectionNextHref={continuationHref} signInUrl={signInUrl} />;
+  }
+
+  return <SignupAuthForm activeLocale={activeLocale} selectedPlan={selectedPlan} continuationHref={continuationHref} signInUrl={signInUrl} />;
 }
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen bg-[#050505]" />}>
-      <SignupPageContent />
+    <Suspense fallback={<div className="min-h-screen bg-[#050505]" />}>
+      <SignupContent />
     </Suspense>
   );
 }
