@@ -64,6 +64,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/reports/vendors.csv/route.ts` | tenant-scoped | CSV export of private vendor data; auth, tenant context, no-store/download hardening. |
 | `src/app/api/reports/documents.csv/route.ts` | tenant-scoped | CSV export of private document data; auth, tenant context, no-store/download hardening. |
 | `src/app/api/ai-systems/route.ts` | tenant-scoped | AI governance data; auth, tenant membership, RBAC read/manage permission. |
+| `src/app/api/ai-systems/[id]/route.ts` | high-risk | AI governance detail/reassessment endpoint; GET requires tenant-scoped read_ai_governance, PATCH requires trusted origin, rate limit, Zod body validation, manage_ai_governance, tenant ownership validation, no-store and audit. |
 | `src/app/api/ai-incidents/route.ts` | tenant-scoped | AI incident data; auth, tenant membership, RBAC read/manage permission. |
 
 ## Legacy route namespace
