@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   writeAuditLog: vi.fn(),
   reportError: vi.fn(),
   sendEmail: vi.fn(),
+  getUserEmailById: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -29,6 +30,10 @@ vi.mock('@/lib/email/templates', () => ({
   paymentFailedEmail: () => ({ subject: 'Payment failed', html: '<p>Payment failed</p>', text: 'Payment failed' }),
 }));
 
+vi.mock('@/server/users/email', () => ({
+  getUserEmailById: mocks.getUserEmailById,
+}));
+
 import { handleStripeWebhookEvent } from './stripe-webhooks';
 
 type SupabaseState = {
@@ -36,9 +41,9 @@ type SupabaseState = {
   eventUpdateError?: { code?: string; message?: string } | null;
   eventLookupData?: { id: string; status: string | null } | null;
   eventReclaimData?: { id: string } | null;
-  organizationData?: { id: string } | null;
+  organizationData?: { id: string; name?: string; created_by?: string; clerk_org_id?: string | null } | null;
   organizationError?: { code?: string; message?: string } | null;
-  subscriptionData?: Record<string, unknown> | null;
+  subscriptionData?: Record<string, unknown> | Array<Record<string, unknown>> | null;
   subscriptionError?: { code?: string; message?: string } | null;
   upsertError?: { code?: string; message?: string } | null;
   eventInsert: ReturnType<typeof vi.fn>;
@@ -57,6 +62,9 @@ function makeSelectBuilder(result: () => { data: unknown; error: unknown }) {
     limit: vi.fn(() => builder),
     single: vi.fn(async () => result()),
     maybeSingle: vi.fn(async () => result()),
+    then: (resolve: (value: { data: unknown; error: unknown }) => unknown, reject?: (reason: unknown) => unknown) => {
+      return Promise.resolve(result()).then(resolve, reject);
+    },
   };
 
   return builder;
@@ -102,7 +110,10 @@ function buildSupabaseClient() {
       }
 
       if (table === 'organizations') {
-        return makeSelectBuilder(() => ({ data: state.organizationData ?? { id: 'org_a' }, error: state.organizationError ?? null }));
+        return makeSelectBuilder(() => ({
+          data: state.organizationData ?? { id: 'org_a', name: 'Acme Compliance', created_by: 'user_admin', clerk_org_id: null },
+          error: state.organizationError ?? null,
+        }));
       }
 
       if (table === 'subscriptions') {
@@ -145,6 +156,15 @@ function makeSubscription(status: string, plan = 'business') {
   };
 }
 
+function makeInvoicePaymentFailed() {
+  return {
+    id: 'in_123',
+    object: 'invoice',
+    customer: 'cus_123',
+    subscription: 'sub_123',
+  };
+}
+
 describe('Stripe webhook billing hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -153,7 +173,7 @@ describe('Stripe webhook billing hardening', () => {
       eventUpdateError: null,
       eventLookupData: null,
       eventReclaimData: null,
-      organizationData: { id: 'org_a' },
+      organizationData: { id: 'org_a', name: 'Acme Compliance', created_by: 'user_admin', clerk_org_id: null },
       organizationError: null,
       subscriptionData: null,
       subscriptionError: null,
@@ -164,6 +184,8 @@ describe('Stripe webhook billing hardening', () => {
     };
     mocks.createAdminClient.mockImplementation(buildSupabaseClient);
     mocks.writeAuditLog.mockResolvedValue(undefined);
+    mocks.getUserEmailById.mockResolvedValue('billing@example.test');
+    mocks.sendEmail.mockResolvedValue(undefined);
   });
 
   it('ignores unsupported Stripe events without claiming idempotency', async () => {
@@ -248,6 +270,40 @@ describe('Stripe webhook billing hardening', () => {
           plan: 'growth',
           metadataPlan: 'business',
           planSource: 'subscription_metadata_fallback',
+        }),
+      }),
+    );
+  });
+
+  it('handles failed payment waves without creating or upgrading entitlements', async () => {
+    state.subscriptionData = [
+      {
+        organization_id: 'org_a',
+        stripe_subscription_id: 'sub_123',
+        stripe_customer_id: 'cus_123',
+      },
+    ];
+
+    const result = await handleStripeWebhookEvent(makeStripeEvent('invoice.payment_failed', makeInvoicePaymentFailed()));
+
+    expect(result).toEqual({ skipped: false });
+    expect(state.upsert).not.toHaveBeenCalled();
+    expect(mocks.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'billing@example.test',
+        subject: 'Payment failed',
+      }),
+    );
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'billing.payment_failed',
+        organizationId: 'org_a',
+        userId: 'user_admin',
+        entityType: 'stripe_invoice',
+        entityId: 'in_123',
+        metadata: expect.objectContaining({
+          stripeCustomerId: 'cus_123',
+          stripeSubscriptionId: 'sub_123',
         }),
       }),
     );

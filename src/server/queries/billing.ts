@@ -18,9 +18,12 @@ export type OrganizationBillingContext = {
 type SupabaseAdminClient = NonNullable<ReturnType<typeof tryCreateAdminClient>>;
 type BillingCountTable = 'organization_members' | 'documents' | 'vendors' | 'risks';
 
+const ACTIVE_BILLING_STATUSES = ['active', 'trialing'] as const;
+const SAFE_DEFAULT_PLAN = 'starter';
+
 function emptyBillingContext(): OrganizationBillingContext {
   return {
-    plan: 'essential',
+    plan: SAFE_DEFAULT_PLAN,
     status: null,
     usage: {
       users: 0,
@@ -29,6 +32,10 @@ function emptyBillingContext(): OrganizationBillingContext {
       risks: 0,
     },
   };
+}
+
+function hasPaidEntitlementStatus(status: string | null | undefined) {
+  return ACTIVE_BILLING_STATUSES.includes(status as (typeof ACTIVE_BILLING_STATUSES)[number]);
 }
 
 async function countRows(supabase: SupabaseAdminClient, table: BillingCountTable, organizationId: string) {
@@ -48,8 +55,10 @@ async function countRows(supabase: SupabaseAdminClient, table: BillingCountTable
 async function getSubscription(supabase: SupabaseAdminClient, organizationId: string) {
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('plan,status')
+    .select('plan,status,updated_at,created_at')
     .eq('organization_id', organizationId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -76,9 +85,14 @@ export async function getOrganizationBillingContext(
     countRows(supabase, 'risks', organizationId),
   ]);
 
+  const status = subscription?.status ?? null;
+  const plan = hasPaidEntitlementStatus(status)
+    ? normalizePlan(subscription?.plan ?? SAFE_DEFAULT_PLAN)
+    : SAFE_DEFAULT_PLAN;
+
   return {
-    plan: normalizePlan(subscription?.plan ?? 'essential'),
-    status: subscription?.status ?? null,
+    plan,
+    status,
     usage: {
       users,
       documents,

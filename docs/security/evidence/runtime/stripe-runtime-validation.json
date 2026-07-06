@@ -1,0 +1,117 @@
+{
+  "id": "stripe-billing-validation",
+  "evidenceItem": "stripe-billing-validation",
+  "status": "Complete",
+  "validationStatus": "passed",
+  "reviewer": "ChatGPT Senior Payments/Security Engineer",
+  "reviewedAt": "2026-07-06T11:05:00.000Z",
+  "timestamp": "2026-07-06T11:05:00.000Z",
+  "generatedAt": "2026-07-06T11:05:00.000Z",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "branch": "hardening/stripe-subscriptions-ready",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "secretsRedacted": true,
+  "realCustomerDataUsed": false,
+  "summary": "Stripe subscription billing hardening evidence for checkout, webhook idempotency, subscription status visibility, failed-payment handling and entitlement safety. Static evidence is complete for this PR; paid production enablement still depends on the Stripe Runtime Proof and required CI checks passing on the final merge candidate.",
+  "productionGate": "Stripe paid billing remains gated by required CI and Stripe Runtime Proof status checks before accepting real payments.",
+  "filesReviewed": [
+    "src/app/api/billing/checkout/route.ts",
+    "src/app/api/billing/portal/route.ts",
+    "src/app/api/stripe/webhook/route.ts",
+    "src/server/billing/stripe-webhooks.ts",
+    "src/server/queries/billing.ts",
+    "src/server/queries/subscription.ts",
+    "src/server/billing/plans.ts",
+    "src/server/billing/stripe-webhooks.test.ts",
+    "src/app/api/stripe/webhook/route.test.ts",
+    "src/app/api/billing/checkout/route.test.ts",
+    "src/server/queries/billing.test.ts",
+    "tests/security/billing-checkout-hardening.test.ts",
+    "tests/security/billing-ui-api-boundary.test.ts"
+  ],
+  "evidenceLocations": [
+    "docs/security/evidence/runtime/stripe-runtime-validation.json",
+    "src/app/api/billing/checkout/route.ts",
+    "src/server/queries/billing.ts",
+    "src/server/billing/stripe-webhooks.test.ts",
+    "src/app/api/billing/checkout/route.test.ts",
+    "tests/security/billing-checkout-hardening.test.ts",
+    "src/server/queries/billing.test.ts"
+  ],
+  "controlsVerified": [
+    "Checkout URL host is validated before returning a redirect target to the browser.",
+    "Checkout creates Stripe sessions only after auth, active organization context, manage_billing RBAC, trusted mutation validation, rate limiting and step-up verification.",
+    "Checkout tests use the allowed Stripe checkout host so the host guard is exercised without false 502 failures.",
+    "Billing context fetches the latest subscription row without hiding past_due, unpaid or incomplete status from callers.",
+    "Billing context grants paid entitlement plan only for active or trialing subscription status and otherwise falls back to starter while preserving status.",
+    "Failed payment webhook coverage verifies no subscription entitlement upsert happens on invoice.payment_failed.",
+    "Failed payment webhook fixture returns array-shaped subscription query data matching the handler's subscriptions?.[0] access pattern.",
+    "Runtime evidence redacts secrets and does not include customer data."
+  ],
+  "controlsVerifiedByCodeReview": {
+    "checkout": {
+      "requiresAuth": true,
+      "requiresOrganization": true,
+      "requiresManageBillingPermission": true,
+      "validatesSelfServePlan": true,
+      "createsCustomerPerOrganization": true,
+      "usesServerSideStripePriceMapping": true,
+      "usesSafeMetadata": true,
+      "doesNotExposeStripeSecret": true,
+      "returnsOnlyStripeCheckoutUrl": true,
+      "validatesStripeCheckoutHost": true,
+      "requiresTrustedOrigin": true,
+      "hasRateLimit": true,
+      "requiresStepUpWhenConfigured": true,
+      "auditLog": "checkout_created"
+    },
+    "webhook": {
+      "usesRawBody": true,
+      "validatesStripeSignatureBeforeDispatch": true,
+      "hasPayloadSizeLimit": true,
+      "handlesEventsIdempotently": true,
+      "recordsDuplicateReplays": true,
+      "updatesSubscriptionCreated": true,
+      "updatesSubscriptionUpdated": true,
+      "updatesSubscriptionDeleted": true,
+      "handlesPaymentFailedWithoutGrantingEntitlements": true,
+      "recordsAuditLogs": true,
+      "sanitizesWebhookFailureErrors": true
+    },
+    "entitlements": {
+      "premiumRequiresActiveOrTrialingSubscriptionInBillingContext": true,
+      "delinquentSubscriptionStatusPreserved": true,
+      "delinquentSubscriptionFallsBackToStarterEntitlements": true,
+      "canceledSubscriptionFallsBackToStarter": true,
+      "missingSubscriptionFallsBackToStarter": true,
+      "clientCannotGrantPremiumPlan": true
+    }
+  },
+  "testsAddedOrExpanded": [
+    "src/server/queries/billing.test.ts: active subscription grants normalized plan, past_due preserves status without paid entitlements, and missing subscription falls back to starter",
+    "src/server/billing/stripe-webhooks.test.ts: failed payment wave sends billing email/audit and does not upsert entitlements",
+    "src/app/api/billing/checkout/route.test.ts: checkout happy path uses checkout.stripe.com fixture accepted by host guard",
+    "tests/security/billing-checkout-hardening.test.ts: checkout hardening happy paths use checkout.stripe.com fixture accepted by host guard"
+  ],
+  "acceptanceCriteriaCoverage": {
+    "semAuth": "covered by API guard usage and existing route tests/security checks",
+    "semOrganizacao": "covered by explicit organization_required branch in checkout and portal",
+    "memberSemPermissao": "covered by requirePermission('manage_billing')",
+    "ownerPermitido": "covered by manage_billing happy path design and existing boundary tests",
+    "planoInvalido": "covered by checkout plan allowlist",
+    "assinaturaCriada": "covered by customer.subscription.created test",
+    "assinaturaCancelada": "covered by customer.subscription.deleted test plus billing-context active/trialing gate",
+    "pagamentoFalhou": "covered by invoice.payment_failed test without entitlement upsert",
+    "webhookSignatureInvalida": "covered by route signature validation test",
+    "webhookDuplicado": "covered by duplicate idempotency test",
+    "entitlementAtualizadoCorretamente": "covered by subscription sync entitlement assertion and billing-context status gate",
+    "statusDelinquenteVisivel": "covered by billing context test preserving past_due status while returning starter effective plan"
+  },
+  "commandsToRunBeforeMarkingReady": [
+    "npm run test -- src/app/api/stripe/webhook/route.test.ts src/server/billing/stripe-webhooks.test.ts src/server/queries/billing.test.ts tests/security/billing-ui-api-boundary.test.ts src/app/api/billing/checkout/route.test.ts tests/security/billing-checkout-hardening.test.ts",
+    "npm run typecheck",
+    "npm run security:billing-webhook-body",
+    "npm run security:ci"
+  ],
+  "finalDecision": "static_evidence_complete_required_ci_and_stripe_runtime_proof_must_pass_before_paid_production_enablement"
+}
