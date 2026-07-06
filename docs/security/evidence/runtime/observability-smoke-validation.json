@@ -1,42 +1,41 @@
 {
-  "evidenceItem": "observability-smoke-validation",
-  "status": "Open",
-  "outcome": "not_run_in_connector",
+  "evidenceItem": "observability-readiness",
+  "status": "Exception",
+  "outcome": "not_run",
   "generatedAt": "2026-07-06T09:00:00.000Z",
   "reviewedAt": "2026-07-06T09:00:00.000Z",
   "reviewer": "RISCK COMPLY release automation",
   "releaseTarget": "production",
-  "summary": "Repository-side controls and runtime validation script are present. This evidence remains Open until npm run release:observability-smoke is executed against a real deployment with the required environment variables.",
-  "redactionConfirmation": "No token, cookie, authorization header, secret value, DSN, or raw provider credential is stored in this evidence file.",
+  "summary": "Repository-side observability smoke controls and validation script are present, but real runtime execution is not attached in this connector run. Production release remains blocked until the smoke command is executed against the deployed target and stores Complete evidence.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "evidenceLocations": [
     "scripts/release/run-observability-smoke-validation.mjs",
     "src/app/api/observability/smoke/route.ts",
-    "src/lib/observability/report-error.ts",
-    "src/server/observability/logger.ts",
     "docs/security/evidence/runtime/observability-smoke-validation.json"
-  ],
-  "controlsExpected": [
-    "productionUrlConfigured",
-    "sentryDsnConfigured",
-    "observabilitySmokeRejectsAnonymous",
-    "observabilitySmokeAnonymousNoStore",
-    "observabilitySmokeAnonymousHasRequestId",
-    "observabilitySmokeAnonymousDoesNotExposeSecrets",
-    "observabilitySmokeGetRejected",
-    "observabilitySmokeGetNoStore",
-    "observabilitySmokeEventSent when RELEASE_RUN_OBSERVABILITY_SMOKE=true and HEALTHCHECK_TOKEN is configured"
   ],
   "requiredCommand": "npm run release:observability-smoke",
   "requiredEnvironment": [
     "RELEASE_DEPLOYMENT_URL or RELEASE_PRODUCTION_URL or NEXT_PUBLIC_APP_URL",
-    "NEXT_PUBLIC_SENTRY_DSN or SENTRY_DSN",
-    "HEALTHCHECK_TOKEN when RELEASE_RUN_OBSERVABILITY_SMOKE=true"
+    "Sentry configuration when smoke emission is enabled",
+    "Healthcheck token when protected smoke emission is enabled"
   ],
-  "releaseGate": "Production and enterprise release remain blocked until this evidence is regenerated as Complete/passed against the deployed target.",
+  "productionGate": "Production release remains blocked until observability smoke evidence is regenerated as Complete/passed against the deployed target.",
+  "exception": {
+    "riskOwner": "Release owner",
+    "rationale": "This pull request adds the runtime smoke validation script and route/runbook wiring, but cannot execute production observability smoke from the connector environment.",
+    "compensatingControls": [
+      "The validation script writes runtime evidence only when executed against a configured deployment.",
+      "Release readiness remains blocked until the generated evidence is Complete/passed.",
+      "The smoke endpoint remains protected and no-store."
+    ],
+    "expiresAt": "2026-08-01",
+    "approvalReference": "PR-857-ops-observability-placeholder"
+  },
   "evidenceIntegrity": {
     "containsSensitiveValues": false,
     "valuesRedacted": true,
     "authorizationHeaderStored": false,
-    "cookiesStored": false
+    "cookiesStored": false,
+    "customerFacingProof": false
   }
 }
