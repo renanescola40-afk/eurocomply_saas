@@ -7,7 +7,7 @@
   "reviewer": "RISCK COMPLY release automation",
   "releaseTarget": "production",
   "summary": "Rollback dry-run script now performs real runtime health validation. This evidence remains Open until npm run release:rollback:dry-run is executed with a real previous known-good target and validation proof.",
-  "redactionConfirmation": "No token, cookie, authorization header, secret value, raw rollback URL, or full private provider value is stored in this evidence file.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence. Rollback target values are not written to evidence.",
   "evidenceLocations": [
     "scripts/release/run-rollback-dry-run.mjs",
     "docs/operations/ROLLBACK_RUNBOOK.md",
@@ -32,7 +32,7 @@
     "RELEASE_ROLLBACK_TARGET_VALIDATED=true",
     "HEALTHCHECK_TOKEN when RELEASE_ROLLBACK_CHECK_READY=true"
   ],
-  "releaseGate": "Do not mark rollback ready until this evidence is regenerated as Complete/passed against the real previous known-good deployment.",
+  "releaseGate": "Release remains blocked until rollback dry-run evidence is regenerated as Complete/passed against the real previous known-good deployment.",
   "evidenceIntegrity": {
     "containsSensitiveValues": false,
     "valuesRedacted": true,
