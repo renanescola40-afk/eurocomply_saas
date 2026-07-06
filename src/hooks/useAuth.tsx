@@ -8,6 +8,7 @@ type SignupMetadata = {
   name?: string;
   company_name?: string;
   requested_plan?: string;
+  next?: string;
 };
 
 type OAuthOptions = {
@@ -47,6 +48,21 @@ function getLocalizedPath(path: string) {
 function getRedirectUrl(path = '/onboarding') {
   if (typeof window === 'undefined') return getLocalizedPath(path);
   return new URL(getLocalizedPath(path), window.location.origin).toString();
+}
+
+function getSignupRedirectPath(next?: string) {
+  const locale = getLocaleFromWindow();
+  const fallback = `/${locale}/onboarding`;
+  const value = next?.trim();
+  if (!value || value.length > 240 || value.startsWith('//') || value.includes('://')) return fallback;
+  if (!value.startsWith(`/${locale}/`)) return fallback;
+  const allowed = [`/${locale}/onboarding`, `/${locale}/checkout`, `/${locale}/dashboard/organizations`];
+  return allowed.some((path) => value === path || value.startsWith(`${path}/`) || value.startsWith(`${path}?`)) ? value : fallback;
+}
+
+function getSignupRedirectUrl(next?: string) {
+  if (typeof window === 'undefined') return getLocalizedPath('/onboarding');
+  return new URL(getSignupRedirectPath(next), window.location.origin).toString();
 }
 
 function getRootAuthCallbackUrl(next?: string) {
@@ -129,7 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: getRedirectUrl('/onboarding'),
+        emailRedirectTo: getSignupRedirectUrl(metadata?.next),
         data: {
           name: metadata?.name,
           full_name: metadata?.name,

@@ -6,6 +6,12 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 const ONBOARDING_PATH = '/onboarding';
 const LOCALE_COOKIE = 'NEXT_LOCALE';
+const CALLBACK_CONTINUATION_PATHS = [
+  ONBOARDING_PATH,
+  '/checkout',
+  '/dashboard/organizations',
+  '/dashboard/observability',
+] as const;
 
 function getLocaleFromRequest(request: NextRequest): Locale {
   const requestUrl = new URL(request.url);
@@ -17,14 +23,22 @@ function getLocaleFromRequest(request: NextRequest): Locale {
   return rawLocale && locales.includes(rawLocale as Locale) ? rawLocale as Locale : defaultLocale;
 }
 
+function isAllowedCallbackContinuation(path: string, locale: Locale) {
+  return CALLBACK_CONTINUATION_PATHS.some((allowedPath) => {
+    const localizedPath = `/${locale}${allowedPath}`;
+    return path === localizedPath || path.startsWith(`${localizedPath}/`) || path.startsWith(`${localizedPath}?`);
+  });
+}
+
 function getSafeNextPath(rawNext: string | null, locale: Locale) {
   const fallback = `/${locale}${ONBOARDING_PATH}`;
+  const normalizedNext = rawNext?.trim();
 
-  if (!rawNext || !rawNext.startsWith('/') || rawNext.startsWith('//') || rawNext.includes('://')) {
+  if (!normalizedNext || normalizedNext.length > 240 || normalizedNext.startsWith('//') || normalizedNext.includes('://')) {
     return fallback;
   }
 
-  return rawNext.startsWith(`/${locale}/`) ? rawNext : fallback;
+  return isAllowedCallbackContinuation(normalizedNext, locale) ? normalizedNext : fallback;
 }
 
 export async function GET(request: NextRequest) {

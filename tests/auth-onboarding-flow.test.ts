@@ -70,16 +70,31 @@ describe('auth and onboarding redirect invariants', () => {
 
     expect(callback).toContain('applyNoStoreHeaders');
     expect(callback).toContain('getSafeNextPath');
-    expect(callback).toContain("rawNext.includes('://')");
+    expect(callback).toContain('normalizedNext.length > 240');
+    expect(callback).toContain("normalizedNext.includes('://')");
     expect(callback).toContain('missing_oauth_code');
     expect(callback).toContain('auth_exchange_failed');
   });
 
-  it('keeps signup email verification returning to onboarding', () => {
-    const auth = readRepoFile('src/hooks/useAuth.tsx');
+  it('restricts OAuth callback continuation to safe product destinations', () => {
+    const callback = readRepoFile('src/app/auth/callback/route.ts');
 
-    expect(auth).toContain("emailRedirectTo: getRedirectUrl('/onboarding')");
+    expect(callback).toContain('CALLBACK_CONTINUATION_PATHS');
+    expect(callback).toContain("'/checkout'");
+    expect(callback).toContain("'/dashboard/organizations'");
+    expect(callback).toContain("'/dashboard/observability'");
+    expect(callback).toContain('isAllowedCallbackContinuation(normalizedNext, locale)');
+    expect(callback).not.toContain('rawNext.startsWith(`/${locale}/`) ? rawNext : fallback');
+  });
+
+  it('keeps signup email verification on the selected safe continuation', () => {
+    const auth = readRepoFile('src/hooks/useAuth.tsx');
+    const signup = readRepoFile('src/app/[locale]/signup/page.tsx');
+
+    expect(auth).toContain('next?: string');
+    expect(auth).toContain('getSignupRedirectUrl(metadata?.next)');
     expect(auth).toContain('requested_plan: metadata?.requested_plan');
+    expect(signup).toContain('next: continuationHref');
   });
 
   it('blocks observability dashboard access until onboarding is completed', () => {
