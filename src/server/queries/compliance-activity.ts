@@ -48,7 +48,7 @@ export async function listAuditEventsForUser(userId: string): Promise<AuditLogIt
   const supabase = tryCreateAdminClient();
 
   if (!supabase) {
-    return demoAuditRows;
+    return [];
   }
 
   const { data, error } = await supabase
@@ -63,11 +63,11 @@ export async function listAuditEventsForUser(userId: string): Promise<AuditLogIt
       console.warn('[audit] list_failed', { code: error.code ?? 'unknown' });
     }
 
-    return demoAuditRows;
+    return [];
   }
 
   if (!data?.length) {
-    return demoAuditRows;
+    return [];
   }
 
   return data.map((item) => ({
@@ -89,7 +89,7 @@ export async function listNotificationsForUser(userId: string): Promise<Notifica
   const supabase = tryCreateAdminClient();
 
   if (!supabase) {
-    return demoNotifications;
+    return [];
   }
 
   const { data, error } = await supabase
@@ -104,11 +104,11 @@ export async function listNotificationsForUser(userId: string): Promise<Notifica
       console.warn('[notifications] list_failed', { code: error.code ?? 'unknown' });
     }
 
-    return demoNotifications;
+    return [];
   }
 
   if (!data?.length) {
-    return demoNotifications;
+    return [];
   }
 
   return data.map((item) => ({
