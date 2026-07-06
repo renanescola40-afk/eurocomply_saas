@@ -18,9 +18,12 @@ export type OrganizationBillingContext = {
 type SupabaseAdminClient = NonNullable<ReturnType<typeof tryCreateAdminClient>>;
 type BillingCountTable = 'organization_members' | 'documents' | 'vendors' | 'risks';
 
+const ACTIVE_BILLING_STATUSES = ['active', 'trialing'] as const;
+const SAFE_DEFAULT_PLAN = 'starter';
+
 function emptyBillingContext(): OrganizationBillingContext {
   return {
-    plan: 'essential',
+    plan: SAFE_DEFAULT_PLAN,
     status: null,
     usage: {
       users: 0,
@@ -48,8 +51,11 @@ async function countRows(supabase: SupabaseAdminClient, table: BillingCountTable
 async function getSubscription(supabase: SupabaseAdminClient, organizationId: string) {
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('plan,status')
+    .select('plan,status,updated_at,created_at')
     .eq('organization_id', organizationId)
+    .in('status', [...ACTIVE_BILLING_STATUSES])
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -77,7 +83,7 @@ export async function getOrganizationBillingContext(
   ]);
 
   return {
-    plan: normalizePlan(subscription?.plan ?? 'essential'),
+    plan: subscription?.status ? normalizePlan(subscription.plan ?? SAFE_DEFAULT_PLAN) : SAFE_DEFAULT_PLAN,
     status: subscription?.status ?? null,
     usage: {
       users,
