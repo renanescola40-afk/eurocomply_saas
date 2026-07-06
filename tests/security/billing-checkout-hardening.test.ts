@@ -124,7 +124,7 @@ describe('billing checkout API security gates', () => {
     mocks.stripeCustomerUpdate.mockResolvedValue({ id: 'cus_existing_org_a' });
     mocks.stripeCheckoutCreate.mockResolvedValue({
       id: 'cs_test_fixture',
-      url: 'https://checkout.stripe.test/session-fixture',
+      url: 'https://checkout.stripe.com/session-fixture',
     });
     mocks.writeAuditLog.mockResolvedValue(undefined);
   });
@@ -189,7 +189,7 @@ describe('billing checkout API security gates', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ url: 'https://checkout.stripe.test/session-fixture', stepUp: { verified: true } });
+    expect(body).toEqual({ url: 'https://checkout.stripe.com/session-fixture', stepUp: { verified: true } });
     expect(mocks.requirePermission).toHaveBeenCalledWith({ userId: 'user_admin', organizationId: 'org_a', permission: 'manage_billing' });
     expect(mocks.stripeCustomerCreate).toHaveBeenCalledWith(expect.objectContaining({
       email: 'admin@example.test',
