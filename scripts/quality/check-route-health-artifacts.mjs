@@ -12,7 +12,10 @@ const s = 'security';
 const required = [
   'docs/quality/ROUTE_INVENTORY.md',
   'docs/quality/ROUTE_HEALTH_REPORT.md',
+  'docs/product/ROUTE_AND_ACTION_AUDIT.md',
+  'docs/product/E2E_COVERAGE_MATRIX.md',
   'tests/e2e/route-health.spec.ts',
+  'tests/e2e/product-critical-journeys.spec.ts',
   'scripts/quality/run-route-health-e2e.mjs',
   `${app}/page.tsx`,
   `${app}/pricing/page.tsx`,
@@ -62,6 +65,30 @@ const contentMarkers = {
     'expectNoDeadPrimaryControls',
     'should redirect to localized login',
     'mobile viewport',
+  ],
+  'tests/e2e/product-critical-journeys.spec.ts': [
+    'landing and pricing signup CTAs stay routable and localized',
+    'pricing exposes only actionable critical CTAs',
+    'landing waitlist form has loading and success feedback',
+    'landing waitlist form shows controlled error feedback',
+    'book demo form has a real handler',
+    'book demo form shows controlled error feedback',
+    'redirects anonymous visitor to login and preserves next',
+    'anonymous private redirect response is no-store',
+    'checkout selected plan shows anonymous account and sign-in CTAs',
+    'checkout without a valid plan redirects to pricing',
+    'business and enterprise sales CTAs resolve to existing sales routes',
+    'trust and security public pages',
+    'mobile viewport smoke',
+    'basic keyboard navigation',
+    'dashboard load journey renders for a seeded authenticated persona',
+    'onboarding complete journey is guarded behind synthetic fixture opt-in',
+    'create AI system journey is guarded behind synthetic fixture opt-in',
+    'create task/document journey is guarded behind synthetic fixture opt-in',
+    'billing CTA renders for a seeded billing-capable persona',
+    'E2E_AUTH_STORAGE_STATE',
+    'E2E_ALLOW_SYNTHETIC_ONBOARDING_WRITE',
+    'E2E_ALLOW_SYNTHETIC_APP_WRITES',
   ],
   'scripts/quality/run-route-health-e2e.mjs': [
     'local',
@@ -119,6 +146,52 @@ const contentMarkers = {
     'production',
     'CI blocks merge',
   ],
+  'docs/product/ROUTE_AND_ACTION_AUDIT.md': [
+    'Route matrix',
+    'Action matrix',
+    'Public/private',
+    'Needs auth?',
+    'Needs org?',
+    'Needs role?',
+    'Expected without session',
+    'Expected with session',
+    'Expected without organization',
+    'Expected with insufficient permission',
+    'Join waitlist',
+    'Start Professional Trial',
+    'Book Business Demo',
+    'Talk to Sales',
+    'Create account and continue',
+    'Continue to secure checkout',
+    'Onboarding complete',
+    'Create AI system',
+    'Create task/document',
+    'Mobile behavior',
+    'Required role',
+    'no-store',
+    '/undefined',
+  ],
+  'docs/product/E2E_COVERAGE_MATRIX.md': [
+    'Landing -> pricing -> signup',
+    'Login redirect',
+    'Protected route redirect',
+    'Protected route no-store',
+    'Onboarding complete',
+    'Dashboard load',
+    'Create AI system',
+    'Create task/document',
+    'Billing CTA',
+    'Trust/security pages',
+    'Mobile smoke',
+    'Keyboard basic navigation',
+    'Public form loading/success',
+    'Public form error feedback',
+    'Checkout without plan',
+    'Synthetic data policy',
+    'E2E_AUTH_STORAGE_STATE',
+    'E2E_ALLOW_SYNTHETIC_ONBOARDING_WRITE',
+    'E2E_ALLOW_SYNTHETIC_APP_WRITES',
+  ],
 };
 
 let failed = false;
@@ -129,7 +202,7 @@ function fail(message) {
 }
 
 for (const file of required) {
-  if (!existsSync(join(root, file))) fail(`Missing route health artifact: ${file}`);
+  if (!existsSync(join(root, file))) fail(`Missing route/product health artifact: ${file}`);
 }
 
 for (const [file, markers] of Object.entries(contentMarkers)) {
@@ -143,4 +216,4 @@ for (const [file, markers] of Object.entries(contentMarkers)) {
 }
 
 if (failed) process.exit(1);
-console.log('Route health artifacts and coverage markers are present.');
+console.log('Route health, product action audit, and E2E coverage markers are present.');
