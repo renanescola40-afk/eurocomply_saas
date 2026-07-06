@@ -375,13 +375,6 @@ export async function completeOnboardingActivation(
     selectedPlan: payload.selectedPlan,
   });
 
-  await updateOrganizationOnboardingProfile(supabase, organizationId, {
-    ...payload,
-    readinessScore,
-    onboardingStep: 'completed',
-    status: 'completed',
-  });
-
   const firstAiSystemId = await upsertFirstAiSystem(supabase, organizationId, user.id, payload, classification);
   const [documentResult, taskResult, invitationResult] = await Promise.all([
     createRecommendedDocumentRecords(supabase, organizationId, user.id, recommendedDocuments),
@@ -400,6 +393,13 @@ export async function completeOnboardingActivation(
     suggestedTasks,
     classification.riskLevel,
   );
+
+  await updateOrganizationOnboardingProfile(supabase, organizationId, {
+    ...payload,
+    readinessScore,
+    onboardingStep: 'completed',
+    status: 'completed',
+  });
 
   return {
     organizationId,
