@@ -17,6 +17,68 @@ export function isOrganizationOnboardingCompleted(input: {
   return normalizeOnboardingStatus(input.onboarding_status) === 'completed' && Boolean(input.onboarding_completed_at);
 }
 
+type OrganizationSummary = {
+  id: string;
+  name: string;
+  slug: string | null;
+  clerk_org_id: string | null;
+  onboarding_status: NormalizedOnboardingStatus;
+  onboarding_completed_at: string | null;
+};
+
+type RawOrganizationMembership = {
+  organization_id: string;
+  role: string;
+  organizations:
+    | (Omit<OrganizationSummary, 'onboarding_status'> & { onboarding_status?: string | null })
+    | Array<Omit<OrganizationSummary, 'onboarding_status'> & { onboarding_status?: string | null }>
+    | null;
+};
+
+export type CurrentOrganizationMembership = {
+  organization_id: string;
+  id: string;
+  role: string;
+  name: string;
+  slug: string | null;
+  clerk_org_id: string | null;
+  onboarding_status: NormalizedOnboardingStatus;
+  onboarding_completed_at: string | null;
+  is_onboarding_completed: boolean;
+  organization: OrganizationSummary;
+  organizations: OrganizationSummary;
+};
+
+function normalizeMembership(membership: RawOrganizationMembership): CurrentOrganizationMembership | null {
+  const organization = Array.isArray(membership.organizations) ? membership.organizations[0] : membership.organizations;
+  if (!organization) return null;
+
+  const onboardingStatus = normalizeOnboardingStatus(organization.onboarding_status);
+  const onboardingCompletedAt = organization.onboarding_completed_at ?? null;
+  const normalizedOrganization: OrganizationSummary = {
+    id: organization.id,
+    name: organization.name,
+    slug: organization.slug,
+    clerk_org_id: organization.clerk_org_id,
+    onboarding_status: onboardingStatus,
+    onboarding_completed_at: onboardingCompletedAt,
+  };
+
+  return {
+    organization_id: membership.organization_id,
+    id: organization.id,
+    role: membership.role,
+    name: organization.name,
+    slug: organization.slug,
+    clerk_org_id: organization.clerk_org_id,
+    onboarding_status: onboardingStatus,
+    onboarding_completed_at: onboardingCompletedAt,
+    is_onboarding_completed: isOrganizationOnboardingCompleted({ onboarding_status: onboardingStatus, onboarding_completed_at: onboardingCompletedAt }),
+    organization: normalizedOrganization,
+    organizations: normalizedOrganization,
+  };
+}
+
 export async function getUserOrganizationMemberships(userId: string, options: { limit?: number } = {}) {
   const supabase = tryCreateAdminClient();
   if (!supabase) return [];
@@ -36,35 +98,9 @@ export async function getUserOrganizationMemberships(userId: string, options: { 
     return [];
   }
 
-  return ((data ?? []) as any[])
-    .map((membership) => {
-      const organization = Array.isArray(membership.organizations) ? membership.organizations[0] : membership.organizations;
-      if (!organization) return null;
-      const onboardingStatus = normalizeOnboardingStatus(organization.onboarding_status);
-      const onboardingCompletedAt = organization.onboarding_completed_at ?? null;
-      const normalizedOrganization = {
-        id: organization.id,
-        name: organization.name,
-        slug: organization.slug,
-        clerk_org_id: organization.clerk_org_id,
-        onboarding_status: onboardingStatus,
-        onboarding_completed_at: onboardingCompletedAt,
-      };
-      return {
-        organization_id: membership.organization_id,
-        id: organization.id,
-        role: membership.role,
-        name: organization.name,
-        slug: organization.slug,
-        clerk_org_id: organization.clerk_org_id,
-        onboarding_status: onboardingStatus,
-        onboarding_completed_at: onboardingCompletedAt,
-        is_onboarding_completed: isOrganizationOnboardingCompleted({ onboarding_status: onboardingStatus, onboarding_completed_at: onboardingCompletedAt }),
-        organization: normalizedOrganization,
-        organizations: normalizedOrganization,
-      };
-    })
-    .filter(Boolean);
+  return ((data ?? []) as RawOrganizationMembership[])
+    .map(normalizeMembership)
+    .filter((membership): membership is CurrentOrganizationMembership => Boolean(membership));
 }
 
 export async function getCurrentOrganizationForUser(userId: string, slug?: string, _activeLegacyOrgId?: string | null) {
