@@ -1,141 +1,33 @@
 {
   "landing": {
-    "nav": {
-      "platform": "Features",
-      "governance": "Security",
-      "pricing": "Plans",
-      "login": "Log in",
-      "cta": "Subscribe now"
-    },
-    "badge": "European compliance operating system",
-    "heroTitle": "Compliance that accelerates your business. Not slows it down.",
-    "heroSubtitle": "Companies using RISCK COMPLY reduce fiscal risk by 73% and save 40h/month in bureaucracy.",
-    "cta": {
-      "start": "Subscribe now",
-      "demo": "View demo"
-    },
-    "badges": {
-      "gdpr": "GDPR compliant",
-      "euHost": "European operations",
-      "auditLogs": "Immutable audit trail",
-      "soc": "ISO 27001 in preparation"
-    },
-    "security": {
-      "title": "Security your company requires",
-      "subtitle": "Controls already applied in the platform and additional layers planned for Business and Enterprise customers."
-    },
-    "platform": {
-      "badge": "Features",
-      "title": "What you gain by subscribing to RISCK COMPLY",
-      "subtitle": "Replace spreadsheets, forgotten deadlines and improvised audits with one executive compliance cockpit."
-    },
+    "nav": { "platform": "Features", "governance": "Security", "pricing": "Plans", "login": "Log in", "cta": "Request access" },
+    "badge": "AI governance readiness for European teams",
+    "heroTitle": "Prepare AI governance evidence with more structure.",
+    "heroSubtitle": "RISCK COMPLY helps teams organize AI inventory, risk visibility, governance workflows and evidence preparation for business review.",
+    "cta": { "start": "Request access", "demo": "View demo" },
+    "badges": { "gdpr": "GDPR-oriented workflows", "euHost": "European operations", "auditLogs": "Reviewable audit trail", "soc": "Security readiness planning" },
+    "security": { "title": "Security review support for serious teams", "subtitle": "Controls are described conservatively and tied to available evidence." },
+    "platform": { "badge": "Features", "title": "What RISCK COMPLY helps your team organize", "subtitle": "Replace scattered spreadsheets and improvised evidence collection with one governance operations workspace." },
     "features": {
-      "calendar": "AI calendar",
-      "calendarText": "Never miss a fiscal deadline again. Automatic alerts for new obligations.",
-      "news": "Multilingual news",
-      "newsText": "Compliance news in PT, FR, ES, EN, IT and DE, updated by AI.",
-      "risk": "Risk matrix",
-      "riskText": "Identify, assess and mitigate risks before they become fines.",
-      "employees": "Employee invitations",
-      "employeesText": "Keep your whole team aligned. Available on Enterprise workflows.",
-      "taxIds": "Multiple tax IDs by country",
-      "taxIdsText": "Expand into France, Germany, Italy, Spain and Portugal with less fiscal friction.",
-      "audit": "Audit log",
-      "auditText": "Every action recorded. Ready for inspections, board reviews and client evidence requests."
+      "calendar": "AI calendar", "calendarText": "Track important regulatory dates and review obligations with structured reminders.",
+      "news": "Multilingual news", "newsText": "Compliance news in PT, FR, ES, EN, IT and DE, supported by AI review workflows.",
+      "risk": "Risk matrix", "riskText": "Identify, assess and prioritize risks before they become operational problems.",
+      "employees": "Employee invitations", "employeesText": "Keep your team aligned through advanced governance workflows.",
+      "taxIds": "Multiple tax IDs by country", "taxIdsText": "Organize multi-country company context for European operations.",
+      "audit": "Audit log", "auditText": "Record relevant actions for internal reviews, board reporting and customer evidence requests."
     },
-    "infrastructure": {
-      "title": "Our team works continuously to protect your data.",
-      "subtitle": "Real-time updates, secure infrastructure and a compliance platform built for European companies.",
-      "cta": "Explore our infrastructure"
-    },
+    "infrastructure": { "title": "Built to support security-conscious teams.", "subtitle": "Managed infrastructure, conservative trust documentation and operational workflows for European companies.", "cta": "Explore our infrastructure" },
     "pricing": {
-      "badge": "Plans",
-      "title": "Choose the right plan for your company",
-      "subtitle": "The entry plan removes friction. Higher plans unlock teams, countries and enterprise evidence.",
-      "essential": {
-        "name": "Essential",
-        "description": "For micro-companies, consultants and teams with one country.",
-        "price": "€49",
-        "features": ["1 fiscal country", "1 user", "Basic legal calendar", "Basic regulatory news", "Company profile", "Up to 10 documents", "Simple risk matrix", "Basic notifications"],
-        "cta": "Start Essential"
-      },
-      "professional": {
-        "name": "Professional",
-        "description": "For SMEs with real obligations, documents, risks and deadlines.",
-        "price": "€149",
-        "features": ["Up to 2 fiscal countries", "AI calendar", "Controlled documents", "Versioning", "Complete risk matrix", "Audit log", "Basic reports", "Premium notifications", "Up to 3 users"],
-        "cta": "Choose Professional"
-      },
-      "business": {
-        "name": "Business",
-        "description": "For companies growing across Europe with internal teams.",
-        "price": "€399",
-        "features": ["Up to 5 fiscal countries", "Multi-country tax IDs", "Approval workflows", "Executive reports", "Audit packs", "AI news by country/category", "RACI matrix", "Up to 10 users", "Priority support"],
-        "cta": "Choose Business"
-      },
-      "enterprise": {
-        "name": "Enterprise",
-        "description": "For regulated companies, groups, fintechs, healthtechs and large B2B suppliers.",
-        "price": "From €990",
-        "features": ["Unlimited countries", "Advanced users", "Role-based permissions", "White-label reports", "Assisted onboarding", "SLA", "DORA, NIS2, ISO 27001 and AI Act modules", "Advanced metrics", "Full audit trail"],
-        "cta": "Talk to sales"
-      },
-      "popular": "Best balance",
-      "perMonth": "per month"
+      "badge": "Plans", "title": "Choose the right plan for your company", "subtitle": "The entry plan removes friction. Higher plans unlock teams, countries and evidence preparation workflows.",
+      "essential": { "name": "Starter", "description": "For micro-companies, consultants and teams starting with one country.", "price": "€49", "features": ["1 fiscal country", "1 user", "Basic legal calendar", "Basic regulatory news", "Company profile", "Up to 10 documents", "Simple risk matrix", "Basic notifications"], "cta": "Start Starter" },
+      "professional": { "name": "Growth", "description": "For SMEs organizing obligations, documents, risks and deadlines.", "price": "€149", "features": ["Up to 2 fiscal countries", "AI calendar", "Controlled documents", "Versioning", "Complete risk matrix", "Audit log", "Basic reports", "Advanced notifications", "Up to 3 users"], "cta": "Choose Growth" },
+      "business": { "name": "Business", "description": "For companies coordinating governance across internal teams.", "price": "€399", "features": ["Up to 5 fiscal countries", "Multi-country tax IDs", "Approval workflows", "Executive reports", "Evidence preparation packs", "AI news by country/category", "RACI matrix", "Up to 10 users", "Priority support when contracted"], "cta": "Choose Business" },
+      "enterprise": { "name": "Enterprise", "description": "For larger teams that need higher limits, review support and advanced governance workflows.", "price": "From €990", "features": ["Expanded country coverage", "Advanced users", "Role-based permissions", "Custom report templates", "Assisted onboarding", "Contract-specific SLA", "AI Act readiness modules", "Advanced metrics", "Extended audit trail"], "cta": "Talk to sales" },
+      "popular": "Best balance", "perMonth": "per month"
     },
-    "finalCta": {
-      "title": "Compliance does not need to be a nightmare. Leave it with people who understand it.",
-      "subtitle": "14-day free trial. No commitment.",
-      "button": "Subscribe to RISCK COMPLY now"
-    },
-    "footer": {
-      "tagline": "European compliance infrastructure for serious B2B companies.",
-      "badges": "GDPR · Audit trail · Risk matrix · Legal calendar"
-    }
+    "finalCta": { "title": "Organize readiness work before customers ask for evidence.", "subtitle": "Request access and prepare your team for structured governance review.", "button": "Request RISCK COMPLY access" },
+    "footer": { "tagline": "AI Act readiness support for serious European B2B companies.", "badges": "Risk visibility · Audit trail · Evidence preparation · Governance workflows" }
   },
-  "auth": {
-    "secure": "Secure access",
-    "loginTitle": "Log in to your account",
-    "registerTitle": "Create a new account",
-    "subtitle": "Start managing fiscal, legal and operational compliance in Europe.",
-    "continueWithGoogle": "Continue with Google",
-    "fullName": "Full name",
-    "companyName": "Company name",
-    "email": "Email",
-    "password": "Password",
-    "loggingIn": "Logging in...",
-    "creating": "Creating account...",
-    "loginBtn": "Log in",
-    "registerBtn": "Create account",
-    "noAccount": "No account yet? Create one.",
-    "hasAccount": "Already have an account? Log in.",
-    "successWorkspace": "Workspace created successfully.",
-    "errorOnboarding": "Unable to complete onboarding.",
-    "errorCreating": "Unable to create your workspace."
-  },
-  "onboarding": {
-    "badge": "Company details",
-    "title": "Tell us about your company",
-    "fullName": "Full name",
-    "companyName": "Company name",
-    "companySize": {
-      "label": "Company size",
-      "s1": "1-10 employees",
-      "s2": "11-50 employees",
-      "s3": "51-200 employees",
-      "s4": "201-1000 employees",
-      "s5": "1000+ employees"
-    },
-    "industry": {
-      "label": "Industry",
-      "tech": "Technology",
-      "finance": "Finance",
-      "healthcare": "Healthcare",
-      "retail": "Retail",
-      "manufacturing": "Manufacturing",
-      "other": "Other"
-    },
-    "loading": "Loading...",
-    "cta": "Complete profile"
-  }
+  "auth": { "secure": "Secure access", "loginTitle": "Log in to your account", "registerTitle": "Create a new account", "subtitle": "Start managing fiscal, legal and operational compliance in Europe.", "continueWithGoogle": "Continue with Google", "fullName": "Full name", "companyName": "Company name", "email": "Email", "password": "Password", "loggingIn": "Logging in...", "creating": "Creating account...", "loginBtn": "Log in", "registerBtn": "Create account", "noAccount": "No account yet? Create one.", "hasAccount": "Already have an account? Log in.", "successWorkspace": "Workspace created successfully.", "errorOnboarding": "Unable to complete onboarding.", "errorCreating": "Unable to create your workspace." },
+  "onboarding": { "badge": "Company details", "title": "Tell us about your company", "fullName": "Full name", "companyName": "Company name", "companySize": { "label": "Company size", "s1": "1-10 employees", "s2": "11-50 employees", "s3": "51-200 employees", "s4": "201-1000 employees", "s5": "1000+ employees" }, "industry": { "label": "Industry", "tech": "Technology", "finance": "Finance", "healthcare": "Healthcare", "retail": "Retail", "manufacturing": "Manufacturing", "other": "Other" }, "loading": "Loading...", "cta": "Complete profile" }
 }
