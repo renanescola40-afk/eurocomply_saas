@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 
 import { CreateComplianceTaskForm, type CreateComplianceTaskFormInput } from '@/components/compliance/create-compliance-task-form';
 import { ComplianceTaskList } from '@/components/dashboard/compliance-task-list';
-import { createComplianceTask, deleteComplianceTask } from '@/server/actions/compliance-tasks';
+import { createComplianceTask, deleteComplianceTask, updateComplianceTask } from '@/server/actions/compliance-tasks';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { getCurrentUser } from '@/server/queries/auth';
 import { listComplianceTasks } from '@/server/queries/compliance-tasks';
@@ -52,6 +52,26 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
     revalidatePath(`/${params.locale}/dashboard/organizations`);
   }
 
+  async function handleCompleteTask(taskId: string) {
+    'use server';
+
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      redirect(`/${params.locale}/login`);
+    }
+
+    const currentOrganization = await getCurrentOrganizationForUser(currentUser.id);
+
+    if (!currentOrganization) {
+      redirect(`/${params.locale}/onboarding`);
+    }
+
+    await updateComplianceTask(taskId, currentOrganization.id, { status: 'done' });
+    revalidatePath(`/${params.locale}/dashboard/organizations/tasks`);
+    revalidatePath(`/${params.locale}/dashboard/organizations`);
+  }
+
   async function handleDeleteTask(taskId: string) {
     'use server';
 
@@ -87,7 +107,7 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
         </div>
 
         <CreateComplianceTaskForm onSubmit={handleCreateTask} />
-        <ComplianceTaskList tasks={tasks} onDelete={handleDeleteTask} />
+        <ComplianceTaskList tasks={tasks} onDelete={handleDeleteTask} onComplete={handleCompleteTask} />
       </div>
     </main>
   );
