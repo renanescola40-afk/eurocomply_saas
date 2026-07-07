@@ -38,7 +38,7 @@ jobs:
               const response = await github.rest.repos.getBranchProtection({ owner, repo, branch });
               protection = response.data;
             } catch (error) {
-              core.setFailed(`Unable to read branch protection for ${owner}/${repo}@${branch}: ${error.message}. Run this workflow after branch protection is configured and with a token that can read repository administration/protection settings.`);
+              core.setFailed(`Unable to read branch protection for ${owner}/${repo}@${branch}: ${error.message}. Run this workflow after branch protection is configured and with a token that can read repository branch protection settings.`);
               return;
             }
 
@@ -47,7 +47,7 @@ jobs:
               'Full Security Suite / Actionlint',
               'Full Security Suite / Secret scanning (Gitleaks)',
               'Full Security Suite / Semgrep SAST',
-              'Full Security Suite / CodeQL (javascript-typescript)',
+              'Full Security Suite / CodeQL',
               'Full Security Suite / Dependency Review',
               'Full Security Suite / OSSF Scorecard',
               'Full Security Suite / Enterprise merge/deploy gate',
@@ -75,10 +75,17 @@ jobs:
 
             const complete = controlsVerified.length === 8;
             const evidence = {
-              evidenceItem: 'branch-protection-main',
+              schema_version: 4,
+              evidenceItem: 'required-status-checks',
               status: complete ? 'Complete' : 'Exception',
+              repository: `${owner}/${repo}`,
+              branch,
+              evidence_type: 'branch-protection-required-checks',
+              captured_at: new Date().toISOString(),
               reviewer: '@renansilva2002',
               reviewedAt: new Date().toISOString(),
+              source: 'github-api-branch-protection-workflow',
+              policy_document: 'docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md',
               summary: complete
                 ? 'GitHub branch protection for main was read through the GitHub API and matched the enterprise protection requirements.'
                 : `GitHub branch protection for main was read through the GitHub API, but ${8 - controlsVerified.length} required control(s) are missing or not detectable.`,
@@ -86,9 +93,23 @@ jobs:
                 `GitHub Actions run: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
                 'Artifact: p0-branch-protection-evidence/branch-protection-main.generated.json',
               ],
-              redactionConfirmation: 'I confirm all secrets, tokens, keys, connection strings, and access-granting values are redacted.',
+              redactionConfirmation: 'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
               controlsVerified,
-              source: {
+              branch_protection: {
+                protect_branch: true,
+                require_pull_request: Boolean(protection.required_pull_request_reviews),
+                required_approving_reviews: protection.required_pull_request_reviews?.required_approving_review_count ?? 0,
+                require_code_owner_review: Boolean(protection.required_pull_request_reviews?.require_code_owner_reviews),
+                dismiss_stale_reviews: Boolean(protection.required_pull_request_reviews?.dismiss_stale_reviews),
+                require_conversation_resolution: Boolean(protection.required_conversation_resolution),
+                require_status_checks: Boolean(protection.required_status_checks),
+                require_up_to_date_branch: Boolean(protection.required_status_checks?.strict),
+                block_force_pushes: protection.allow_force_pushes?.enabled === false,
+                block_deletions: protection.allow_deletions?.enabled === false,
+                restrict_direct_pushes: Boolean(protection.restrictions),
+              },
+              required_status_checks: requiredChecks,
+              sourceDetails: {
                 repository: `${owner}/${repo}`,
                 branch,
                 runId: String(context.runId),
@@ -100,10 +121,10 @@ jobs:
             if (!complete) {
               evidence.exception = {
                 riskOwner: '@renansilva2002',
-                rationale: 'Generated evidence draft detected that branch protection is not fully configured or not fully visible to the workflow token.',
+                rationale: 'Generated evidence detected that branch protection is not fully configured or not fully visible to the workflow token.',
                 compensatingControls: ['Do not mark this evidence Complete until branch protection evidence is complete and Full Security Suite is required.'],
                 expiryDate: 'YYYY-MM-DD',
-                approvalReference: 'P0 tracking issue #76',
+                approvalReference: 'P0 branch protection required checks rollout',
               };
             }
 
