@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const publicRoutes = ['/en', '/en/pricing', '/en/trust', '/en/security'] as const;
 
-async function expectSeoMetadata(page: Parameters<typeof expect>[0], path: string) {
+async function expectSeoMetadata(page: Page, path: string) {
   await expect(page.locator('main')).toBeVisible();
   await expect(page.locator('h1').first()).toBeVisible();
   await expect(page.locator('title')).not.toHaveText('');
@@ -10,7 +10,10 @@ async function expectSeoMetadata(page: Parameters<typeof expect>[0], path: strin
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', /RISCK|Security|Trust|Pricing/i);
   await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', /RISCK|AI|Security|Trust|readiness|governance/i);
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', /summary/);
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', new RegExp(`${path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
+
+  const canonicalHref = await page.locator('link[rel="canonical"]').getAttribute('href');
+  expect(canonicalHref?.endsWith(path)).toBe(true);
+
   await expect(page.locator('link[rel="alternate"][hreflang="pt-PT"]')).toHaveCount(1);
   await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveCount(1);
 }
