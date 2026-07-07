@@ -78,6 +78,12 @@ function normalizeCountryScope(countryScope?: string[]) {
   return normalized.length > 0 ? normalized : ['EU'];
 }
 
+async function resolveOrganizationAiSystemId(organizationId: string, aiSystemId?: string | null) {
+  if (!aiSystemId) return null;
+  const systems = await listAiSystems(organizationId);
+  return systems.some((system) => system.id === aiSystemId) ? aiSystemId : null;
+}
+
 async function createEvidencePackWorkflow(input: {
   organizationId: string;
   actorUserId: string;
@@ -321,11 +327,15 @@ export async function POST(request: Request) {
 
     if (workflow === 'vendor_due_diligence') {
       const body = await parseJsonBodyWithZod(request, { schema: vendorDiligenceBodySchema, maxBytes: AI_SYSTEM_JSON_MAX_BYTES });
+      const aiSystemId = await resolveOrganizationAiSystemId(organization.id, body.aiSystemId);
+      if (body.aiSystemId && !aiSystemId) {
+        return noStoreJson({ error: 'ai_system_not_found' }, { status: 404 });
+      }
       const vendorReview = await createVendorDiligenceWorkflow({
         organizationId: organization.id,
         actorUserId: user.id,
         vendorName: body.vendorName,
-        aiSystemId: body.aiSystemId,
+        aiSystemId,
         riskLevel: body.riskLevel,
         nextReviewAt: body.nextReviewAt,
         notes: body.notes,
@@ -343,10 +353,14 @@ export async function POST(request: Request) {
 
     if (workflow === 'risk_review') {
       const body = await parseJsonBodyWithZod(request, { schema: riskReviewBodySchema, maxBytes: AI_SYSTEM_JSON_MAX_BYTES });
+      const aiSystemId = await resolveOrganizationAiSystemId(organization.id, body.aiSystemId);
+      if (body.aiSystemId && !aiSystemId) {
+        return noStoreJson({ error: 'ai_system_not_found' }, { status: 404 });
+      }
       const riskReview = await createRiskReviewWorkflow({
         organizationId: organization.id,
         actorUserId: user.id,
-        aiSystemId: body.aiSystemId,
+        aiSystemId,
         riskLevel: body.riskLevel,
         dueAt: body.dueAt,
         notes: body.notes,
