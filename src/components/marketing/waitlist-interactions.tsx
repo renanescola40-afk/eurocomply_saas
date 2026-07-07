@@ -88,7 +88,7 @@ export function WaitlistCountdown({ copy, launchTargetIso }: { copy: WaitlistInt
   );
 }
 
-export function WaitlistForm({ activeLocale, copy, contactEmail }: { activeLocale: Locale; copy: WaitlistInteractionCopy; contactEmail: string }) {
+export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLocale: Locale; copy: WaitlistInteractionCopy; commercialEmail: string }) {
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
@@ -119,7 +119,7 @@ export function WaitlistForm({ activeLocale, copy, contactEmail }: { activeLocal
         signal: payload?.emailed,
         successMessage: copy.form.success,
         confirmedMessage: copy.form.emailSuccess,
-        warningMessage: emailWarningMessage(activeLocale, payload, contactEmail),
+        warningMessage: emailWarningMessage(activeLocale, payload, commercialEmail),
       });
 
       setMessage(feedback.message);
@@ -172,8 +172,8 @@ export function WaitlistForm({ activeLocale, copy, contactEmail }: { activeLocal
       <p className="mt-4 text-xs leading-5 text-white/38">{copy.form.privacy}</p>
       <p className="mt-3 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.06] px-4 py-3 text-xs leading-5 text-cyan-50/78">
         {copy.form.contact}{' '}
-        <a href={`mailto:${contactEmail}`} className="font-semibold text-white underline decoration-cyan-200/40 underline-offset-4 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-black">
-          {contactEmail}
+        <a href={`mailto:${commercialEmail}`} className="font-semibold text-white underline decoration-cyan-200/40 underline-offset-4 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-black">
+          {commercialEmail}
         </a>
       </p>
     </form>
