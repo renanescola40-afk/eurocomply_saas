@@ -8,6 +8,7 @@ This document defines the baseline supply-chain controls for source code, depend
 - `.npmrc` keeps `package-lock=true`, `audit=true`, `fund=false` and `save-exact=true`.
 - `package-lock.json` is committed and must stay aligned with `package.json`.
 - CI must use `npm ci --ignore-scripts`.
+- The supply-chain gate reports `npm runtime drift` when the local/CI npm version differs from the package manager pin.
 - The safe lockfile refresh command is `npm run supply-chain:lockfile`, which expands to `npm install --package-lock-only --ignore-scripts`.
 - Historical marker for the existing gate: `npm install --ignore-scripts` was the temporary mode before the lockfile existed and must not be reintroduced into CI.
 - Historical marker for the existing gate: `cache disabled until lockfile exists`. Current target state is cache enabled only after lockfile exists and only with lockfile-backed `npm ci`.
