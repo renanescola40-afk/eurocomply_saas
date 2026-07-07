@@ -92,6 +92,7 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
+  const [website, setWebsite] = useState('');
   const [status, setStatus] = useState<WaitlistSubmitStatus>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const feedbackId = 'waitlist-feedback';
@@ -105,7 +106,7 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
       const response = await fetch('/api/prelaunch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyName, email, role, locale: activeLocale, consentToContact: true }),
+        body: JSON.stringify({ companyName, email, role, website, locale: activeLocale, consentToContact: true }),
       });
       const payload = (await response.json().catch(() => null)) as WaitlistApiResponse | null;
 
@@ -127,6 +128,7 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
       setCompanyName('');
       setEmail('');
       setRole('');
+      setWebsite('');
     } catch {
       setMessage(copy.form.error);
       setStatus('error');
@@ -159,6 +161,10 @@ export function WaitlistForm({ activeLocale, copy, commercialEmail }: { activeLo
           {copy.form.role}
           <input value={role} onChange={(event) => setRole(event.target.value)} required minLength={2} maxLength={90} autoComplete="organization-title" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-cyan-200/70 focus-visible:ring-2 focus-visible:ring-cyan-200/70" placeholder="Founder, CTO, Compliance Officer" />
         </label>
+        <div className="hidden" aria-hidden="true">
+          <label htmlFor="waitlist-website">Website</label>
+          <input id="waitlist-website" name="website" value={website} onChange={(event) => setWebsite(event.target.value)} autoComplete="off" tabIndex={-1} />
+        </div>
       </div>
 
       {status === 'success' ? <p id={feedbackId} className="mt-5 rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-50" role="status">{message || copy.form.success}</p> : null}
