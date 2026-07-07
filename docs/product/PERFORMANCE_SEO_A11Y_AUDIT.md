@@ -9,6 +9,15 @@ RISCK COMPLY already had a strong security/release foundation and several public
 
 This change keeps the premium visual direction and i18n structure while reducing unnecessary client JavaScript, strengthening localized metadata, improving indexability, and adding source/E2E checks for SEO and accessibility regressions.
 
+## Follow-up hardening after merge
+
+After the initial SEO/a11y PR was merged, the remaining acquisition-performance risk was the locale layout still loading auth/session code and global effects on every localized route. The follow-up hardening adds:
+
+- `AuthProviderGate` so Supabase auth/session initialization is only mounted on auth, onboarding, checkout, billing, settings, team, profile and dashboard routes.
+- `GlobalClientEffectsGate` so global client effects are dynamically loaded only on operational routes that need them.
+- `X-Robots-Tag: noindex, nofollow, noarchive` and `Cache-Control: no-store, max-age=0` headers for localized auth/private routes.
+- Expanded source gate coverage so regressions in auth-provider gating, global-effects gating and private-route noindex headers fail quality validation.
+
 ## Changes applied
 
 ### Performance
@@ -20,6 +29,8 @@ This change keeps the premium visual direction and i18n structure while reducing
 - Preserved the brand wordmark dimensions to reduce layout shift.
 - Added explicit lazy loading for the footer wordmark.
 - Avoided broad lazy-loading of important above-the-fold content.
+- Removed direct global `AuthProvider` mounting from public SEO pages via `AuthProviderGate`.
+- Lazy-loaded `GlobalClientEffects` behind an operational-route gate.
 
 ### SEO
 
@@ -32,6 +43,7 @@ This change keeps the premium visual direction and i18n structure while reducing
 - Added `/pricing` to the sitemap.
 - Reworked sitemap alternates to use real language tags such as `pt-PT`, `es-ES`, `fr-FR`, `it-IT` and `de-DE`.
 - Reworked robots rules to disallow localized private/auth routes such as `/en/dashboard/`, `/pt/login`, `/en/signup`, `/en/onboarding` and `/en/checkout`.
+- Added response-level noindex headers for private/auth routes so crawlers get the directive even if they hit the page directly.
 
 ### Accessibility
 
@@ -47,13 +59,13 @@ This change keeps the premium visual direction and i18n structure while reducing
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Landing | Improved | Mostly server-rendered now; countdown/form remain client-side. |
-| Pricing | Improved | Static page, localized metadata, structured data, accessible comparison table. |
-| Trust | Improved | Public metadata and static trust route optimization added. |
-| Security | Improved | Public metadata added. |
-| Login/signup | Partially covered | Robots now disallows localized auth routes. Route-level `noindex` metadata should be added in a future patch if route layout writes are available. |
-| Onboarding | Verified posture | Already dynamic and no-store because it depends on auth/user state. Keep it non-indexed/private. |
-| Dashboard | Verified posture | Dashboard entry redirects to organization dashboard and should remain private/no-store. |
+| Landing | Improved | Mostly server-rendered now; countdown/form remain client-side. Auth/session provider no longer mounts on this route. |
+| Pricing | Improved | Static page, localized metadata, structured data, accessible comparison table. Auth/session provider no longer mounts on this route. |
+| Trust | Improved | Public metadata and static trust route optimization added. Auth/session provider no longer mounts on this route. |
+| Security | Improved | Public metadata added. Auth/session provider no longer mounts on this route. |
+| Login/signup | Improved | Robots blocks localized auth routes and response headers now add noindex/no-store. Auth provider remains available for the form. |
+| Onboarding | Improved | Dynamic/no-store due auth state, plus response-level noindex/no-store headers. |
+| Dashboard | Improved | Dashboard stays private/no-store and response-level noindex headers are applied. |
 | Images | Improved | Wordmark dimensions preserved; footer wordmark lazy-loaded. |
 | Fonts | Reviewed | `next/font/google` is used. A future optimization could remove duplicate font setup between root and locale layouts if the app routing model allows it safely. |
 
@@ -65,6 +77,8 @@ This change keeps the premium visual direction and i18n structure while reducing
   - Verifies waitlist landing is not a full client component.
   - Verifies pricing structured data and accessible table headers.
   - Verifies robots and sitemap include important rules.
+  - Verifies auth-provider gating and global-effects lazy gating.
+  - Verifies private/auth noindex and no-store headers are configured.
   - Verifies this audit document exists.
 
 - `tests/e2e/public-seo-a11y.spec.ts`
@@ -88,8 +102,7 @@ npm run build
 ## Known limitations
 
 - Lighthouse was not run in this change because it requires a built/local or deployed target plus a browser run in the validation environment.
-- Bundle-size measurement was not generated here. The structural client-boundary change is expected to reduce landing hydration cost, but final bundle impact should be confirmed with a production build analyzer or Next build output.
-- Auth pages are now blocked in `robots.ts`, but route-level `noindex` metadata for login/signup remains a follow-up because those pages are client components and need route layout metadata added safely.
+- Bundle-size measurement was not generated here. The structural client-boundary and provider-gating changes are expected to reduce landing hydration/runtime cost, but final bundle impact should be confirmed with a production build analyzer or Next build output.
 - The waitlist anti-spam honeypot should be reviewed with the `/api/prelaunch` server validation if stronger bot filtering is required.
 
 ## Merge checklist
@@ -98,4 +111,6 @@ npm run build
 - Pricing CTAs still route to signup/demo/enterprise as expected.
 - Trust/security pages are still visible and conservative in claims.
 - Robots and sitemap point to the production domain from `NEXT_PUBLIC_APP_URL` or fallback to `https://risckcomply.app`.
+- Auth/session provider is not mounted on public SEO pages.
+- Private/auth routes send noindex and no-store headers.
 - CI passes lint, typecheck, unit tests, E2E smoke and build.
