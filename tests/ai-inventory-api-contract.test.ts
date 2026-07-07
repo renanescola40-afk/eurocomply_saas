@@ -18,7 +18,8 @@ describe('AI inventory API contracts', () => {
     expect(source).toContain('requireApiUser()');
     expect(source).toContain('getCurrentOrganizationForUser(user.id)');
     expect(source).toContain("permission: 'read_ai_governance'");
-    expect(source).toContain("permission: 'manage_ai_governance'");
+    expect(source).toContain("return 'manage_ai_governance'");
+    expect(source).toContain('permission: getWorkflowPermission(workflow)');
     expect(source).toContain('permissionDeniedResponse(permission)');
     expect(source).toContain('assertTrustedOrigin(request)');
     expect(source).toContain('checkDistributedRateLimit({');
