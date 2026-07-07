@@ -85,6 +85,11 @@ const securityHeaders = [
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=()' },
 ];
 
+const noIndexHeaders = [
+  { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+  { key: 'Cache-Control', value: 'no-store, max-age=0' },
+] as const;
+
 const prelaunchAuthRedirects = [
   {
     source: '/:locale(en|pt|es|fr|it|de)/login',
@@ -127,6 +132,10 @@ const nextConfig: NextConfig = {
       {
         source: '/(.*)',
         headers: securityHeaders,
+      },
+      {
+        source: '/:locale(en|pt|es|fr|it|de)/(login|signup|register|reset-password|onboarding|checkout|dashboard|settings|billing|team|profile)(/:path*)?',
+        headers: [...noIndexHeaders],
       },
       {
         source: '/:locale(en|pt|es|fr|it|de)/(pricing|resources|faq|about|contact|trust|security|compliance|privacy|terms|data-processing|sla|dpa|subprocessors|status)',
