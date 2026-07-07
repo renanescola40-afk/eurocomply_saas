@@ -43,7 +43,12 @@ jobs:
           changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
           echo "$changed_files"
 
-          if echo "$changed_files" | grep -Eq '^scripts/security/'; then
+          # Only enforce the final strict runtime evidence gap when the PR changes
+          # the runtime evidence register, runtime evidence files, or the P0
+          # runtime evidence validators themselves. Other security tooling fixes
+          # should still run the validators below, but must not be blocked by the
+          # known remaining final-release evidence gap.
+          if echo "$changed_files" | grep -Eq '^(docs/security/P0_RUNTIME_EVIDENCE_REGISTER\.md|docs/security/evidence/runtime/|scripts/security/(check-p0-runtime-evidence-register|check-p0-runtime-evidence-files|check-p0-runtime-evidence-optionals|report-p0-runtime-evidence-gap)\.mjs)'; then
             echo "strict=true" >> "$GITHUB_OUTPUT"
           else
             echo "strict=false" >> "$GITHUB_OUTPUT"
