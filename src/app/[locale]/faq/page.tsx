@@ -5,7 +5,7 @@ const faqs = [
     group: 'Product',
     items: [
       ['What does RISCK COMPLY manage?', 'RISCK COMPLY centralizes compliance tasks, documents, vendors, risks, templates, audit logs, team access and executive reporting.'],
-      ['Is RISCK COMPLY legal advice?', 'No. RISCK COMPLY is compliance operations software. Legal interpretation should be reviewed by qualified counsel.'],
+      ['Is RISCK COMPLY advisory software?', 'RISCK COMPLY is compliance operations software. Professional interpretation should be reviewed by qualified advisors.'],
       ['Can we generate reports for leadership?', 'Yes. The product includes executive reports, printable reports and CSV exports for operational review.'],
     ],
   },
@@ -40,7 +40,7 @@ export default async function FaqPage({ params }: FaqPageProps) {
         <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">FAQ</p>
         <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-6xl">Questions before adopting RISCK COMPLY</h1>
         <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
-          A practical overview for founders, compliance leads and operations teams evaluating RISCK COMPLY for V1 compliance operations.
+          A practical overview for founders, compliance leaders and operators evaluating RISCK COMPLY for AI governance operations.
         </p>
       </section>
 
