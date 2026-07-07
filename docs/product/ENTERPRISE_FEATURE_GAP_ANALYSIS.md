@@ -2,6 +2,24 @@
 
 This document compares the current product surface with the operational standard expected from serious AI governance and compliance platforms.
 
+## Current functionality audit
+
+| Product area | Current maturity | Notes |
+| --- | --- | --- |
+| AI inventory | Functional foundation | Real AI system records exist with organization scoping, owner, market, vendor/model and risk fields. |
+| Risk classification | Functional foundation | Classification persists risk level, obligations and next actions. It is readiness guidance, not legal determination. |
+| Readiness score | Functional dashboard | Dashboard and AI governance surfaces show score/readiness signals from workspace data. |
+| Documents | Partial operational | Document generation and document workflows exist, but evidence-pack item approval is still maturing. |
+| Evidence pack | New P0 foundation | This package adds pack and item persistence; review/export depth remains roadmap. |
+| Vendors | Partial operational | Vendor signals exist; this package adds structured AI vendor due diligence records. |
+| Tasks | Functional foundation | Tasks exist and appear in dashboard/calendar signals. Cross-workflow reminder logic remains P1. |
+| Audit logs | Strong foundation | Audit helpers exist; sensitive new workflows now write audit events. |
+| Reports | Partial operational | Executive dashboard exists; this package adds report signals in the AI system enterprise view. |
+| Billing | Functional foundation | Billing and plan limits exist; no new billing claims are added in this package. |
+| Team/roles | Functional foundation | RBAC exists and is reused for workflow creation permissions. |
+| Trust Center | Public trust foundation | Trust/docs exist; procurement packet assembly remains P1. |
+| Onboarding | Functional foundation | Onboarding creates the initial organization context required for tenant-scoped workflows. |
+
 ## Current strengths
 
 - AI inventory exists and stores real AI system records with organization scoping.
