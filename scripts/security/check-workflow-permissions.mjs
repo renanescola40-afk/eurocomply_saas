@@ -5,6 +5,7 @@ const workflowDir = '.github/workflows';
 const allowedPullRequestTargetWorkflows = new Set([]);
 const checkoutCredentialExceptions = new Set([
   '.github/workflows/p0-commit-lockfile.yml',
+  '.github/workflows/supabase-live-rls-validation.yml',
 ]);
 const failures = [];
 const warnings = [];
@@ -55,7 +56,7 @@ for (const file of workflowFiles()) {
 
   if (!hasCheckoutPersistCredentialsFalse(source)) {
     if (hasJustifiedCheckoutWriteException(file, source)) {
-      warnings.push(`${file}: checkout credentials are persisted only because this workflow commits/pushes a lockfile.`);
+      warnings.push(`${file}: checkout credentials are persisted only because this workflow commits/pushes a controlled repository artifact.`);
     } else {
       failures.push(`${file}: actions/checkout must set persist-credentials: false when the workflow does not push back to the repository`);
     }
