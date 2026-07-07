@@ -75,7 +75,7 @@ export function EnterpriseDashboardOverview({
       title: copy.panels.compliance.title,
       body: copy.panels.compliance.body,
       metric: `${summary.complianceScore}%`,
-      tone: 'audit-ready',
+      tone: 'readiness review',
       href: `${basePath}/reports-governance`,
     },
     {
@@ -111,7 +111,7 @@ export function EnterpriseDashboardOverview({
       title: copy.panels.vendors.title,
       body: copy.panels.vendors.body,
       metric: `${formatCount(summary.highRiskVendors)} high`,
-      tone: 'vendor assurance',
+      tone: 'vendor review',
       href: `${localizedRoot}/vendor-assurance`,
     },
     {
@@ -152,7 +152,7 @@ export function EnterpriseDashboardOverview({
             <p className="mt-3 text-sm leading-6 text-white/58 md:text-base">{copy.subtitle}</p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs font-medium text-white/52">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1"><ShieldCheck className="h-3.5 w-3.5" /> audit-ready</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1"><ShieldCheck className="h-3.5 w-3.5" /> readiness review</span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1"><LockKeyhole className="h-3.5 w-3.5" /> tenant isolated</span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.035] px-3 py-1"><UsersRound className="h-3.5 w-3.5" /> role-based access</span>
           </div>
