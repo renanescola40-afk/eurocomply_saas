@@ -5,7 +5,6 @@ const workflowDir = '.github/workflows';
 const allowedPullRequestTargetWorkflows = new Set([]);
 const checkoutCredentialExceptions = new Set([
   '.github/workflows/p0-commit-lockfile.yml',
-  '.github/workflows/supabase-live-rls-validation.yml',
 ]);
 const failures = [];
 const warnings = [];
@@ -43,7 +42,7 @@ for (const file of workflowFiles()) {
   const source = readFileSync(file, 'utf8');
 
   if (!hasTopLevelPermissions(source)) {
-    warnings.push(`${file}: missing top-level permissions block; add explicit least-privilege permissions in the next workflow hardening pass`);
+    failures.push(`${file}: missing top-level permissions block`);
   }
 
   if (usesWriteAll(source)) {
@@ -56,9 +55,9 @@ for (const file of workflowFiles()) {
 
   if (!hasCheckoutPersistCredentialsFalse(source)) {
     if (hasJustifiedCheckoutWriteException(file, source)) {
-      warnings.push(`${file}: checkout credentials are persisted only because this workflow commits/pushes a controlled repository artifact.`);
+      warnings.push(`${file}: checkout credentials are persisted only because this workflow commits/pushes a lockfile.`);
     } else {
-      warnings.push(`${file}: actions/checkout should set persist-credentials: false when the workflow does not push back to the repository`);
+      failures.push(`${file}: actions/checkout must set persist-credentials: false when the workflow does not push back to the repository`);
     }
   }
 }
