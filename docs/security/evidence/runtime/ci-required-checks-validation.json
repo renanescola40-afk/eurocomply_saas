@@ -1,10 +1,26 @@
 {
   "schema_version": 1,
   "evidence_type": "ci-required-checks-validation",
+  "evidenceItem": "ci-required-checks-validation",
   "repository": "renanescola40-afk/eurocomply_saas",
   "branch": "main",
   "generated_at": "2026-07-07T09:00:00.000+01:00",
   "status": "Complete",
+  "reviewer": "repo-side-ci-required-checks-gate",
+  "reviewedAt": "2026-07-07T09:00:00.000+01:00",
+  "summary": "Repository-side validation confirms documented required checks map to real GitHub workflow and job names that run on pull_request, reducing required-check drift and expected-status deadlocks.",
+  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
+  "evidenceLocations": [
+    "scripts/security/check-ci-required-checks-validation.mjs",
+    "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
+    "docs/security/evidence/runtime/branch-protection-required-checks.json"
+  ],
+  "controlsVerified": [
+    "required-check-name-to-workflow-job mapping",
+    "pull_request trigger coverage for required checks",
+    "pull_request_target workflow absence for PR review automation",
+    "documented branch-protection UI verification exception"
+  ],
   "source": "repo-side-required-check-validation",
   "policy_document": "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
   "branch_protection_ui_verified": false,
