@@ -63,85 +63,87 @@ function feature(title: string, text: string, icon: typeof ShieldCheck) {
 }
 
 const en: WaitlistCopy = {
-  nav: { platform: 'Platform', features: 'Launch checklist', access: 'Early access', cta: 'Join waitlist' },
-  badge: 'Controlled SaaS access opens soon for serious AI governance teams',
-  title: 'Prepare AI Act readiness without unsafe legal promises.',
+  nav: { platform: 'Platform', features: 'Outputs', access: 'Early access', cta: 'Request access' },
+  badge: 'Controlled access for serious AI governance and compliance teams',
+  title: 'Turn AI governance into board-ready compliance evidence.',
   subtitle:
-    'RISCK COMPLY helps European teams organize AI inventory, risk visibility, governance workflows, audit trails and evidence preparation for internal review, security review and B2B procurement conversations. It does not replace legal counsel or guarantee compliance outcomes.',
+    'RISCK COMPLY helps European teams organize AI systems, ownership, risk signals, evidence packs, policy drafts and audit trails in one controlled workspace for compliance, security, procurement and legal review. It supports professional decision-making, but does not replace counsel or guarantee regulatory outcomes.',
   launchLabel: LAUNCH_TARGET_LABEL,
   countdown: { days: 'Days', hours: 'Hours', minutes: 'Minutes', seconds: 'Seconds', live: 'Available in' },
-  checklistEyebrow: 'Launch scope',
-  checklistTitle: 'What teams can organize inside the SaaS',
+  checklistEyebrow: 'Enterprise operating layer',
+  checklistTitle: 'Premium outputs for compliance, security, procurement and executive review',
   checklistSubtitle:
-    'The first release focuses on practical compliance operations: structure AI usage, assign ownership, understand risk signals, prepare documentation and keep evidence reviewable.',
+    'Built for teams that need more than a checklist: structured ownership, traceable decisions, risk visibility, evidence preparation and documentation workflows that make AI governance reviewable.',
   audienceNote:
-    'Priority access is for founders, CTOs, compliance officers, security teams and B2B operators preparing AI governance before customer, investor or procurement pressure arrives.',
-  gateTitle: 'No open signup until the controlled launch gate opens.',
-  gateText: 'For now, public login, signup, checkout and demo CTAs send companies here so RISCK COMPLY can qualify demand before release.',
+    'Priority access is reserved for founders, CTOs, compliance leaders, security teams and B2B operators who want to look prepared before customer, investor or procurement pressure arrives.',
+  gateTitle: 'Controlled early access. Serious teams first.',
+  gateText:
+    'Public login, signup, checkout and demo CTAs currently route here so RISCK COMPLY can qualify companies before release, protect product quality and keep the first customer cohort focused.',
   form: {
-    title: 'Enter the waitlist',
-    subtitle: 'Add your company details and we will contact qualified leads when early access opens.',
+    title: 'Request early access',
+    subtitle: 'Tell us who you are and we will contact qualified companies when controlled access opens.',
     company: 'Company name',
     email: 'Work email',
     role: 'Your role',
-    submit: 'Join waitlist',
-    submitting: 'Saving your place...',
-    success: 'You are on the RISCK COMPLY waitlist. We saved your place and will contact qualified leads as early access opens.',
+    submit: 'Request access',
+    submitting: 'Securing your place...',
+    success: 'You are on the RISCK COMPLY waitlist. We saved your place and will contact qualified companies as early access opens.',
     emailSuccess: 'You are on the RISCK COMPLY waitlist. We saved your place and sent a confirmation email with your join date, launch date and remaining time.',
     error: 'Could not confirm your place right now. You can also contact us directly at comercial@risckcomply.com.',
-    privacy: 'No passwords. No public signup. Only launch communication and early access qualification.',
+    privacy: 'No passwords. No open signup. Only launch communication and early access qualification.',
     contact: 'Questions or want to speak with our team? Email us at',
   },
-  proof: ['AI Act readiness', 'AI inventory', 'risk visibility', 'evidence preparation', 'audit trail', 'governance workflows'],
+  proof: ['board-ready evidence', 'AI Act readiness', 'risk visibility', 'procurement support', 'audit trail', 'governance workflows'],
   features: [
-    feature('AI inventory', 'Register systems, use cases, owners, departments, providers, countries and data context in one workspace.', Database),
-    feature('Risk visibility', 'Structure readiness signals into risk levels, owners, review status and follow-up actions.', Scale),
-    feature('Evidence preparation', 'Create reviewable summaries, documents and governance evidence connected to the AI inventory.', ClipboardCheck),
-    feature('Policy workflows', 'Draft internal AI usage policies, employee guidance and governance documents from controlled inputs.', FileText),
-    feature('Team governance', 'Invite owners, assign responsibilities, track tasks and keep the organization aligned before reviews.', Users),
-    feature('Audit trail', 'Keep review history, evidence updates and governance activity traceable for security-conscious buyers.', ShieldCheck),
+    feature('Board-ready evidence', 'Produce structured outputs that show what AI is used, who owns it, what risks exist and what evidence is ready for review.', ClipboardCheck),
+    feature('Legal review support', 'Prepare decision logs, policy drafts and evidence summaries that internal or external counsel can assess. RISCK COMPLY does not provide legal advice.', Scale),
+    feature('AI system inventory', 'Register systems, use cases, owners, departments, providers, countries and data context in one controlled workspace.', Database),
+    feature('Procurement confidence', 'Prepare clean summaries for buyers, security reviewers and enterprise stakeholders without claiming unsupported certifications.', FileText),
+    feature('Team governance', 'Invite owners, assign responsibilities, track tasks and keep the organization aligned before internal and external reviews.', Users),
+    feature('Audit trail', 'Keep review history, evidence updates and governance activity traceable for security-conscious customers and partners.', ShieldCheck),
   ],
 };
 
 const pt: WaitlistCopy = {
   ...en,
-  nav: { platform: 'Plataforma', features: 'Checklist', access: 'Early access', cta: 'Entrar na lista' },
-  badge: 'Acesso controlado ao SaaS abre em breve para equipas serias de governanca de IA',
-  title: 'Prepare AI Act readiness sem promessas juridicas inseguras.',
+  nav: { platform: 'Plataforma', features: 'Resultados', access: 'Early access', cta: 'Pedir acesso' },
+  badge: 'Acesso controlado para equipas sérias de governança de IA e compliance',
+  title: 'Transforme governança de IA em evidência de compliance pronta para direção.',
   subtitle:
-    'RISCK COMPLY ajuda equipas europeias a organizar inventario de IA, visibilidade de risco, workflows de governanca, audit trail e preparacao de evidencias para revisao interna, security review e conversas de procurement B2B. Nao substitui aconselhamento juridico nem garante resultados de compliance.',
+    'RISCK COMPLY ajuda equipas europeias a organizar sistemas de IA, responsáveis, sinais de risco, packs de evidência, rascunhos de políticas e audit trails num workspace controlado para revisão de compliance, segurança, procurement e jurídico. Apoia a tomada de decisão profissional, mas não substitui advogados nem garante resultados regulatórios.',
   launchLabel: '1 de agosto de 2026 · 07:00 Europe/Lisbon',
-  countdown: { days: 'Dias', hours: 'Horas', minutes: 'Minutos', seconds: 'Segundos', live: 'Disponivel em' },
-  checklistEyebrow: 'Escopo do lancamento',
-  checklistTitle: 'O que as equipas podem organizar no SaaS',
+  countdown: { days: 'Dias', hours: 'Horas', minutes: 'Minutos', seconds: 'Segundos', live: 'Disponível em' },
+  checklistEyebrow: 'Camada operacional enterprise',
+  checklistTitle: 'Resultados premium para revisão de compliance, segurança, procurement e direção',
   checklistSubtitle:
-    'A primeira versao foca operacoes praticas de compliance: estruturar uso de IA, atribuir responsaveis, entender sinais de risco, preparar documentacao e manter evidencias revisaveis.',
+    'Criado para equipas que precisam de mais do que uma checklist: responsabilidades claras, decisões rastreáveis, visibilidade de risco, preparação de evidências e workflows documentais que tornam a governança de IA revisável.',
   audienceNote:
-    'Acesso prioritario e para founders, CTOs, compliance officers, equipas de seguranca e operadores B2B que estao a preparar governanca de IA antes da pressao de clientes, investidores ou procurement.',
-  gateTitle: 'Sem signup publico ate a abertura controlada do lancamento.',
-  gateText: 'Por agora, CTAs publicos de login, signup, checkout e demo enviam empresas para esta lista para a RISCK COMPLY qualificar a procura antes do release.',
+    'Acesso prioritário reservado para founders, CTOs, líderes de compliance, equipas de segurança e operadores B2B que querem parecer preparados antes da pressão de clientes, investidores ou procurement.',
+  gateTitle: 'Early access controlado. Primeiro, equipas sérias.',
+  gateText:
+    'Por agora, CTAs públicos de login, signup, checkout e demo enviam empresas para esta lista para a RISCK COMPLY qualificar empresas antes do release, proteger a qualidade do produto e manter a primeira cohort de clientes focada.',
   form: {
-    title: 'Entre na lista de espera',
-    subtitle: 'Adicione os dados da empresa e vamos contactar leads qualificados quando o early access abrir.',
+    title: 'Pedir early access',
+    subtitle: 'Diga-nos quem você é e vamos contactar empresas qualificadas quando o acesso controlado abrir.',
     company: 'Nome da empresa',
     email: 'Email profissional',
     role: 'Cargo da pessoa',
-    submit: 'Entrar na lista de espera',
-    submitting: 'A guardar o seu lugar...',
-    success: 'Voce esta na lista de espera da RISCK COMPLY. Guardamos o seu lugar e vamos contactar leads qualificados quando o early access abrir.',
-    emailSuccess: 'Voce esta na lista de espera da RISCK COMPLY. Guardamos o seu lugar e enviamos um email com o dia da inscricao, a data de abertura e o tempo que falta.',
-    error: 'Nao foi possivel confirmar o seu lugar agora. Voce tambem pode falar connosco diretamente em comercial@risckcomply.com.',
-    privacy: 'Sem senhas. Sem signup publico. Apenas comunicacao de lancamento e qualificacao para early access.',
-    contact: 'Duvidas ou quer falar com a nossa equipa? Envie email para',
+    submit: 'Pedir acesso',
+    submitting: 'A proteger o seu lugar...',
+    success: 'Você está na lista de espera da RISCK COMPLY. Guardamos o seu lugar e vamos contactar empresas qualificadas quando o early access abrir.',
+    emailSuccess: 'Você está na lista de espera da RISCK COMPLY. Guardamos o seu lugar e enviámos um email com o dia da inscrição, a data de abertura e o tempo que falta.',
+    error: 'Não foi possível confirmar o seu lugar agora. Você também pode falar connosco diretamente em comercial@risckcomply.com.',
+    privacy: 'Sem senhas. Sem signup aberto. Apenas comunicação de lançamento e qualificação para early access.',
+    contact: 'Dúvidas ou quer falar com a nossa equipa? Envie email para',
   },
-  proof: ['AI Act readiness', 'inventario de IA', 'visibilidade de risco', 'preparacao de evidencias', 'audit trail', 'workflows de governanca'],
+  proof: ['evidência para direção', 'AI Act readiness', 'visibilidade de risco', 'suporte a procurement', 'audit trail', 'workflows de governança'],
   features: [
-    feature('Inventario de IA', 'Registe sistemas, casos de uso, owners, departamentos, fornecedores, paises e contexto de dados num workspace.', Database),
-    feature('Visibilidade de risco', 'Estruture sinais de readiness em niveis de risco, owners, estado de revisao e proximas acoes.', Scale),
-    feature('Preparacao de evidencias', 'Crie resumos, documentos e evidencias de governanca revisaveis ligados ao inventario de IA.', ClipboardCheck),
-    feature('Workflows de politicas', 'Rascunhe politicas internas de uso de IA, guias para colaboradores e documentos de governanca com inputs controlados.', FileText),
-    feature('Governanca de equipa', 'Convide responsaveis, atribua tarefas e mantenha a organizacao alinhada antes de revisoes.', Users),
-    feature('Audit trail', 'Mantenha historico de revisao, atualizacao de evidencias e atividade de governanca rastreavel para compradores exigentes.', ShieldCheck),
+    feature('Evidência para direção', 'Produza outputs estruturados que mostram que IA é usada, quem é responsável, que riscos existem e que evidências estão prontas para revisão.', ClipboardCheck),
+    feature('Suporte à revisão jurídica', 'Prepare logs de decisão, rascunhos de políticas e resumos de evidência para avaliação por counsel interno ou externo. A RISCK COMPLY não presta aconselhamento jurídico.', Scale),
+    feature('Inventário de sistemas de IA', 'Registe sistemas, casos de uso, owners, departamentos, fornecedores, países e contexto de dados num workspace controlado.', Database),
+    feature('Confiança para procurement', 'Prepare resumos limpos para compradores, security reviewers e stakeholders enterprise sem afirmar certificações não suportadas.', FileText),
+    feature('Governança de equipa', 'Convide responsáveis, atribua tarefas e mantenha a organização alinhada antes de revisões internas e externas.', Users),
+    feature('Audit trail', 'Mantenha histórico de revisão, atualização de evidências e atividade de governança rastreável para clientes e parceiros exigentes.', ShieldCheck),
   ],
 };
 
@@ -177,7 +179,7 @@ function calculateRemaining(): Remaining {
 function emailWarningMessage(locale: Locale, payload: WaitlistApiResponse | null) {
   const status = payload?.emailStatus ? ` (${payload.emailStatus})` : '';
   if (locale === 'pt') {
-    return `O seu lugar foi guardado, mas ainda nao recebemos confirmacao automatica de envio do email${status}. Pode falar connosco diretamente em ${COMMERCIAL_EMAIL}.`;
+    return `O seu lugar foi guardado, mas ainda não recebemos confirmação automática de envio do email${status}. Pode falar connosco diretamente em ${COMMERCIAL_EMAIL}.`;
   }
 
   return `Your place was saved, but we do not yet have automatic confirmation that the email was delivered${status}. You can contact us directly at ${COMMERCIAL_EMAIL}.`;
