@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const evidencePath = 'docs/security/evidence/runtime/branch-protection-required-checks.json';
+const ciRequiredChecksEvidencePath = 'docs/security/evidence/runtime/ci-required-checks-validation.json';
 const policyPath = 'docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md';
 const auditTriagePath = 'docs/security/NPM_AUDIT_TRIAGE.md';
 const isEnterpriseRelease = process.env.RELEASE_TARGET === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
@@ -10,7 +11,7 @@ const requiredChecks = [
   'Full Security Suite / Actionlint',
   'Full Security Suite / Secret scanning (Gitleaks)',
   'Full Security Suite / Semgrep SAST',
-  'Full Security Suite / CodeQL (javascript-typescript)',
+  'Full Security Suite / CodeQL',
   'Full Security Suite / Dependency Review',
   'Full Security Suite / OSSF Scorecard',
   'Full Security Suite / Enterprise merge/deploy gate',
@@ -60,24 +61,28 @@ function readText(path) {
   return readFileSync(path, 'utf8');
 }
 
+function readJson(path) {
+  const source = readText(path);
+  if (!source) return {};
+
+  try {
+    return JSON.parse(source);
+  } catch (error) {
+    failures.push(`${path} is not valid JSON: ${error.message}`);
+    return {};
+  }
+}
+
 function requireTrue(object, key, prefix) {
   if (object?.[key] !== true) {
     failures.push(`${prefix}.${key} must be true`);
   }
 }
 
-const evidenceSource = readText(evidencePath);
+const evidence = readJson(evidencePath);
+const ciRequiredChecksEvidence = readJson(ciRequiredChecksEvidencePath);
 const policySource = readText(policyPath);
 readText(auditTriagePath);
-
-let evidence = {};
-if (evidenceSource) {
-  try {
-    evidence = JSON.parse(evidenceSource);
-  } catch (error) {
-    failures.push(`${evidencePath} is not valid JSON: ${error.message}`);
-  }
-}
 
 if (evidence.repository !== 'renanescola40-afk/eurocomply_saas') {
   failures.push(`${evidencePath} repository must be renanescola40-afk/eurocomply_saas`);
@@ -120,10 +125,18 @@ for (const check of requiredChecks) {
     failures.push(`${evidencePath} missing required status check: ${check}`);
   }
 
+  if (!ciRequiredChecksEvidence.required_status_checks?.includes(check)) {
+    failures.push(`${ciRequiredChecksEvidencePath} missing required status check: ${check}`);
+  }
+
   const checkName = check.split(' / ').pop();
   if (policySource && !policySource.includes(checkName)) {
     failures.push(`${policyPath} missing required status check name: ${checkName}`);
   }
+}
+
+if (ciRequiredChecksEvidence.status !== 'Complete') {
+  failures.push(`${ciRequiredChecksEvidencePath} status must be Complete`);
 }
 
 for (const blocker of requiredReleaseBlockers) {
