@@ -14,12 +14,12 @@ import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { isPlanAtLeast } from '@/server/queries/subscription';
 
 const copy = {
-  en: { badge: 'Document generator', title: 'AI compliance document generator', subtitle: 'Turn live AI governance data into export-ready board, audit, policy and action-plan outputs.', empty: 'Documents will become richer after you register AI systems and classify risk exposure.', inventory: 'Open inventory', print: 'Open print-ready report' },
-  pt: { badge: 'Gerador de documentos', title: 'Gerador de documentos de AI compliance', subtitle: 'Transforme dados reais de governação de IA em relatórios para board, auditoria, políticas e planos de ação.', empty: 'Os documentos ficam mais completos depois de registar sistemas de IA e classificar riscos.', inventory: 'Abrir inventário', print: 'Abrir relatório pronto para impressão' },
-  es: { badge: 'Generador de documentos', title: 'Generador de documentos AI compliance', subtitle: 'Convierte datos reales de gobierno de IA en outputs para board, auditoría, políticas y plan de acción.', empty: 'Los documentos serán más completos tras registrar sistemas de IA y clasificar riesgos.', inventory: 'Abrir inventario', print: 'Abrir informe imprimible' },
-  fr: { badge: 'Générateur documents', title: 'Générateur documents AI compliance', subtitle: 'Transformez les données réelles de gouvernance IA en outputs board, audit, politiques et actions.', empty: 'Les documents seront plus complets après l’inventaire et la classification.', inventory: 'Ouvrir l’inventaire', print: 'Ouvrir le rapport imprimable' },
-  it: { badge: 'Generatore documenti', title: 'Generatore documenti AI compliance', subtitle: 'Trasforma dati reali di governance IA in output board, audit, policy e action plan.', empty: 'I documenti saranno più completi dopo inventario e classificazione rischi.', inventory: 'Apri inventario', print: 'Apri report stampabile' },
-  de: { badge: 'Dokumentgenerator', title: 'AI-Compliance-Dokumentgenerator', subtitle: 'Verwandeln Sie echte KI-Governance-Daten in Board-, Audit-, Policy- und Aktionsplan-Outputs.', empty: 'Dokumente werden nach Inventar und Risikoklassifizierung vollständiger.', inventory: 'Inventar öffnen', print: 'Druckfertigen Bericht öffnen' },
+  en: { badge: 'Document generator', title: 'AI governance document generator', subtitle: 'Turn live AI governance data into review packages, policy drafts and action-plan outputs.', empty: 'Documents will become richer after you register AI systems and classify risk exposure.', inventory: 'Open inventory', print: 'Open printable report' },
+  pt: { badge: 'Gerador de documentos', title: 'Gerador de documentos de governanca de IA', subtitle: 'Transforme dados reais de governanca de IA em pacotes de revisao, politicas e planos de acao.', empty: 'Os documentos ficam mais completos depois de registar sistemas de IA e classificar riscos.', inventory: 'Abrir inventario', print: 'Abrir relatorio imprimivel' },
+  es: { badge: 'Generador de documentos', title: 'Generador de documentos de gobernanza de IA', subtitle: 'Convierte datos reales de gobierno de IA en paquetes de revision, politicas y plan de accion.', empty: 'Los documentos seran mas completos tras registrar sistemas de IA y clasificar riesgos.', inventory: 'Abrir inventario', print: 'Abrir informe imprimible' },
+  fr: { badge: 'Generateur documents', title: 'Generateur de documents de gouvernance IA', subtitle: 'Transformez les donnees de gouvernance IA en dossiers de revue, politiques et actions.', empty: 'Les documents seront plus complets apres inventaire et classification.', inventory: 'Ouvrir inventaire', print: 'Ouvrir le rapport imprimable' },
+  it: { badge: 'Generatore documenti', title: 'Generatore documenti governance IA', subtitle: 'Trasforma dati di governance IA in pacchetti di revisione, policy e action plan.', empty: 'I documenti saranno piu completi dopo inventario e classificazione rischi.', inventory: 'Apri inventario', print: 'Apri report stampabile' },
+  de: { badge: 'Dokumentgenerator', title: 'KI-Governance-Dokumentgenerator', subtitle: 'Verwandeln Sie KI-Governance-Daten in Review-Pakete, Policy-Entwurfe und Aktionsplane.', empty: 'Dokumente werden nach Inventar und Risikoklassifizierung vollstandiger.', inventory: 'Inventar offnen', print: 'Druckbericht offnen' },
 } as const;
 
 function getCopy(locale: string) {
@@ -43,8 +43,8 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
   const readiness = buildAiGovernanceReadiness({ locale, systems, incidents });
   const hasInventory = systems.length > 0;
   const documents = [
-    { title: 'Board / audit summary', description: readiness.boardSummary, href: '/dashboard/organizations/reports-governance', status: hasInventory ? 'ready' : 'needs inventory' },
-    { title: 'Evidence pack cover', description: 'Structured audit snapshot linked to inventory, incidents, gaps and evidence routes.', href: '/audit-pack', status: hasInventory ? 'ready' : 'needs inventory' },
+    { title: 'Board / review summary', description: readiness.boardSummary, href: '/dashboard/organizations/reports-governance', status: hasInventory ? 'ready' : 'needs inventory' },
+    { title: 'Evidence pack cover', description: 'Structured review snapshot linked to inventory, incidents, gaps and evidence routes.', href: '/audit-pack', status: hasInventory ? 'ready' : 'needs inventory' },
     { title: 'Gap analysis', description: `${readiness.gaps.length} governance gap${readiness.gaps.length === 1 ? '' : 's'} available from current workspace data.`, href: '/dashboard/gap-analysis', status: hasInventory ? 'ready' : 'needs inventory' },
     { title: 'Action plan', description: `${readiness.actionPlan.length} role-based action${readiness.actionPlan.length === 1 ? '' : 's'} prepared for owner/admin/member/viewer workflow.`, href: '/aprovacoes', status: 'ready' },
     { title: 'Policy pack', description: 'Employee AI usage policy, transparency guidance and escalation rules.', href: '/policy-pack', status: hasInventory ? 'ready' : 'needs inventory' },
@@ -95,7 +95,7 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
             <section id="generated-report" className="mt-6 rounded-3xl border bg-background p-6 shadow-sm print:shadow-none">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <h2 className="text-2xl font-semibold tracking-tight">{organization?.name ?? 'Organization'} · AI Compliance Report</h2>
+                  <h2 className="text-2xl font-semibold tracking-tight">{organization?.name ?? 'Organization'} · AI Governance Report</h2>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{readiness.boardSummary}</p>
                 </div>
                 <Badge variant="outline" className="w-fit rounded-full">Readiness: {readiness.score === null ? '—' : `${readiness.score}%`}</Badge>
@@ -114,8 +114,8 @@ export default async function DocumentGeneratorPage({ params }: { params: Promis
               <UpgradeRequiredCard
                 locale={locale}
                 requiredPlan="Business"
-                title="Print-ready AI compliance reports require Business"
-                description="Board and audit-ready AI compliance reports include executive summaries, gap analysis and action plans. Upgrade to Business to unlock printable executive evidence packs."
+                title="Printable AI governance reports require Business"
+                description="Board and review reports include executive summaries, gap analysis and action plans. Upgrade to Business to unlock printable evidence packs."
               />
             </div>
           )}
