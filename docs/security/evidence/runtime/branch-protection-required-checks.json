@@ -1,21 +1,23 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "evidenceItem": "required-status-checks",
   "status": "Exception",
   "repository": "renanescola40-afk/eurocomply_saas",
   "branch": "main",
   "evidence_type": "branch-protection-required-checks",
-  "captured_at": "2026-06-25T00:00:00.000+01:00",
+  "captured_at": "2026-07-07T09:00:00.000+01:00",
   "reviewer": "@renansilva2002",
-  "reviewedAt": "2026-06-25T00:00:00.000+01:00",
+  "reviewedAt": "2026-07-07T09:00:00.000+01:00",
   "source": "repo-policy-evidence",
   "policy_document": "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
-  "summary": "Required status checks and branch protection controls are documented for main. This evidence remains an Exception because this PR cannot verify or mutate repository ruleset/branch protection UI state through the available connector action. Enterprise release validation fails while this status is Exception or Open.",
+  "summary": "Required status checks and branch protection controls are documented for main. Repository-side required-check validation is added separately in docs/security/evidence/runtime/ci-required-checks-validation.json. This evidence remains an Exception because this PR cannot verify or mutate repository ruleset/branch protection UI state through the available connector action. Enterprise release validation fails while this status is Exception or Open.",
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
     "docs/security/evidence/runtime/branch-protection-required-checks.json",
+    "docs/security/evidence/runtime/ci-required-checks-validation.json",
     "scripts/security/check-branch-protection-evidence.mjs",
+    "scripts/security/check-ci-required-checks-validation.mjs",
     ".github/workflows/full-security-suite.yml"
   ],
   "branch_protection": {
@@ -47,7 +49,7 @@
     "Full Security Suite / Actionlint",
     "Full Security Suite / Secret scanning (Gitleaks)",
     "Full Security Suite / Semgrep SAST",
-    "Full Security Suite / CodeQL (javascript-typescript)",
+    "Full Security Suite / CodeQL",
     "Full Security Suite / Dependency Review",
     "Full Security Suite / OSSF Scorecard",
     "Full Security Suite / Enterprise merge/deploy gate",
@@ -80,14 +82,15 @@
   },
   "exception": {
     "riskOwner": "@renansilva2002",
-    "rationale": "Repository policy evidence is committed, but GitHub branch protection/ruleset configuration must be verified by an administrator before this evidence can be marked Complete. The available connector did not expose a branch-protection mutation or verification action for rulesets.",
+    "rationale": "Repository policy evidence is committed and repository-side required-check names are validated, but GitHub branch protection/ruleset configuration must be verified by an administrator before this evidence can be marked Complete. The available connector did not expose a branch-protection mutation or verification action for rulesets.",
     "compensatingControls": [
       "Do not promote an enterprise release unless branch protection evidence is Complete and the enterprise release validation command passes for the exact commit.",
       "Keep docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md aligned with required GitHub status checks.",
+      "Run node scripts/security/check-ci-required-checks-validation.mjs after required-check policy changes.",
       "Run .github/workflows/p0-branch-protection-evidence.yml after branch protection is configured and review the generated artifact.",
       "For enterprise release validation, scripts/security/check-branch-protection-evidence.mjs fails while this evidence is Exception or Open."
     ],
-    "expiresAt": "2026-06-27",
+    "expiresAt": "2026-07-14",
     "approvalReference": "P0 branch protection required checks rollout"
   },
   "verification_note": "Settings → Rulesets/Branches → main must be configured to match this evidence before release promotion. Do not mark this evidence Complete without API-generated or screenshot-backed proof that each required check is configured."

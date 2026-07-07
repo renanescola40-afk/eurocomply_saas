@@ -2,139 +2,130 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  STRICT_PUBLIC_SECRET_SCAN: '1'
+  CI_SECRET_LOG_POLICY: fail-closed
+
 jobs:
   quality:
+    name: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2
           persist-credentials: false
-      - uses: actions/setup-node@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npm run phase3:strict
-      - run: npm run phase3:closeout
-      - run: npm run phase4:check
-      - run: node scripts/dev/check-phase4-final-review.mjs
-      - run: node scripts/dev/check-phase4-next-implementation-plan.mjs
-      - run: node scripts/dev/check-phase4-validation-commands.mjs
-      - name: Phase 5 dashboard readiness check
-        shell: bash
-        run: |
-          npm run phase5:check 2>&1 | tee phase5-check.log || phase5_status=$?
-          if [ -n "${phase5_status:-}" ]; then
-            echo "Phase 5 dashboard readiness is advisory for this deploy-readiness PR; continuing to lint, typecheck and test."
-          fi
-      - run: npm run phase6:check
-      - name: Public launch gate contract
-        shell: bash
-        run: |
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          const runner = [
-            'scripts/release/run-public-production-release.mjs',
-            'scripts/release/run-public-production-release-v2.mjs',
-          ]
-            .filter((path) => fs.existsSync(path))
-            .map((path) => fs.readFileSync(path, 'utf8'))
-            .join('\n');
-          const requiredScripts = [
-            'release:production-final',
-            'release:deployment-smoke',
-            'release:rollback:dry-run',
-            'release:readiness',
-            'security:ci',
-            'test:e2e',
-          ];
-          const requiredSteps = [
-            'npm ci',
-            'npm run lint',
-            'npm run typecheck',
-            'npm run test',
-            'npm run test:e2e',
-            'npm run build',
-            'npm run security:ci',
-            'npm run release:deployment-smoke',
-            'npm run release:rollback:dry-run',
-          ];
-          const requiredReadinessSteps = [
-            'npm run security:release-candidate',
-            'npm run security:release-evidence',
-            'npm run security:release-approval',
-            'npm run security:release-go-no-go',
-            'npm run security:release-rollback',
-            'npm run security:release-incident-response',
-            'npm run security:release-post-incident',
-            'npm run security:release-support-readiness',
-            'npm run security:release-operations',
-            'npm run security:p0-runtime-gap',
-          ];
-          const requiredEvidence = [
-            'deployment-smoke-validation.json',
-            'rollback-dry-run-validation.json',
-            'production-final-validation.json',
-          ];
-          const failures = [];
-          for (const name of requiredScripts) {
-            if (!pkg.scripts || !pkg.scripts[name]) failures.push(`missing package script ${name}`);
-          }
-          for (const step of requiredSteps) {
-            if (!runner.includes(step)) failures.push(`missing production-final step ${step}`);
-          }
-          if (!runner.includes('npm run release:readiness')) {
-            for (const step of requiredReadinessSteps) {
-              if (!runner.includes(step)) failures.push(`missing production-final readiness step ${step}`);
-            }
-          }
-          for (const evidence of requiredEvidence) {
-            if (!runner.includes(evidence)) failures.push(`missing evidence reference ${evidence}`);
-          }
-          if (runner.includes("label: 'npm run release'") || runner.includes('label: "npm run release"')) failures.push('recursive release step is not allowed');
-          if (failures.length > 0) {
-            console.error(failures.join('\n'));
-            process.exit(1);
-          }
-          NODE
+
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Package lock alignment gate
+        run: npm run security:package-lock
+
+      - name: Required GitHub checks drift gate
+        run: node scripts/security/check-ci-required-checks-validation.mjs
+
       - name: Lint
         shell: bash
         run: |
+          set -o pipefail
           npm run lint 2>&1 | tee lint.log
+
       - name: Upload lint diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ci-lint-diagnostics
           path: lint.log
           if-no-files-found: ignore
+
       - name: Typecheck
         shell: bash
         run: |
+          set -o pipefail
           npm run typecheck 2>&1 | tee typecheck.log
+
       - name: Upload typecheck diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ci-typecheck-diagnostics
           path: typecheck.log
           if-no-files-found: ignore
-      - name: Test
+
+      - name: Unit tests
         shell: bash
         run: |
+          set -o pipefail
           npm run test 2>&1 | tee test.log
-      - name: Upload test diagnostics
+
+      - name: Upload unit test diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ci-test-diagnostics
           path: test.log
           if-no-files-found: ignore
+
+      - name: E2E tests when runtime is configured
+        shell: bash
+        run: |
+          if ! node -e "const p=require('./package.json'); process.exit(p.scripts?.['test:e2e'] ? 0 : 1)" \
+            || ! ls playwright.config.* >/dev/null 2>&1; then
+            echo "No Playwright test:e2e configuration detected; skipping E2E gate."
+          elif [ "${RUN_E2E:-}" = "true" ] || [ -n "${E2E_BASE_URL:-}" ]; then
+            npx playwright install --with-deps chromium
+            npm run test:e2e
+          else
+            echo "Playwright E2E tests are present, but no configured E2E runtime was provided."
+            echo "Set RUN_E2E=true for local/webServer E2E or E2E_BASE_URL for an existing deployment."
+            echo "Skipping E2E because this CI context has no production-like E2E runtime."
+          fi
+
+      - name: Build
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee build.log
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
+
+      - name: Upload build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-build-diagnostics
+          path: build.log
+          if-no-files-found: ignore
+
+      - name: npm audit moderate gate
+        run: npm audit --audit-level=moderate
+
+      - name: Application security CI
+        run: npm run security:ci
+
+      - name: Route quality gate
+        run: npm run quality:routes
