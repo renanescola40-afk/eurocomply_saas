@@ -3,8 +3,8 @@ import { PublicFooter } from '@/components/marketing/public-footer';
 
 const resources = [
   {
-    title: 'GDPR readiness checklist',
-    description: 'Track core evidence: ROPA, DPIA, retention, consent, DSR handling and vendor DPAs.',
+    title: 'AI governance evidence checklist',
+    description: 'Track AI systems, owners, risk signals, policy coverage, evidence status and review history before buyer review starts.',
     type: 'Checklist',
   },
   {
@@ -30,9 +30,9 @@ export default async function ResourcesPage({ params }: ResourcesPageProps) {
     <main className="min-h-screen bg-background">
       <section className="mx-auto max-w-5xl px-6 py-20">
         <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Resources</p>
-        <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-6xl">Practical compliance operations resources</h1>
+        <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-6xl">Enterprise AI governance resources</h1>
         <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
-          Lightweight guides and checklists for teams moving from scattered compliance evidence to an operating cadence.
+          Practical guides and checklists for teams moving from scattered AI governance files to a controlled evidence operating cadence.
         </p>
       </section>
 
