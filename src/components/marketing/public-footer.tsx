@@ -41,7 +41,7 @@ export function PublicFooter({ locale }: { locale: string }) {
         <div>
           <Image src="/brand/risck-comply-wordmark.svg" alt="Risck Comply wordmark" width={170} height={42} className="h-10 w-auto object-contain" />
           <p className="mt-4 max-w-md leading-7 text-white/58">
-            AI governance workflows, evidence preparation and risk visibility for European teams preparing for compliance review.
+            AI Act readiness, governance evidence and risk workflows for European teams preparing for compliance review.
           </p>
           <p className="mt-5 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.06] px-4 py-3 text-xs leading-5 text-cyan-50/72">
             Built for evidence preparation and operational governance support. No certification, audit or compliance guarantee is claimed.
