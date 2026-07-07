@@ -8,7 +8,7 @@ import { AuthFloatingControls } from '@/components/auth/AuthFloatingControls';
 import { AuthProviderGate } from '@/components/auth/AuthProviderGate';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
-import GlobalClientEffects from '@/components/GlobalClientEffects';
+import GlobalClientEffectsGate from '@/components/GlobalClientEffectsGate';
 import GapAnalysisShortcut from '@/components/GapAnalysisShortcut';
 import { routing, type Locale } from '@/lib/i18n/routing';
 
@@ -76,7 +76,7 @@ export default async function LocaleLayout({ children, params }: Props) {
     <>
       {children}
       <GapAnalysisShortcut />
-      <GlobalClientEffects />
+      <GlobalClientEffectsGate />
       <AnalyticsConsentBanner />
       <Toaster />
     </>
