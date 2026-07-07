@@ -37,16 +37,19 @@ describe('waitlist state resolver', () => {
     expect(result).toEqual({ status: 'success', message: 'saved' });
   });
 
-  it('wires the waitlist page through the shared response-state resolver', () => {
-    const source = readFileSync('src/components/marketing/waitlist-page.tsx', 'utf8');
+  it('wires the waitlist client boundary through the shared response-state resolver and honeypot payload', () => {
+    const source = readFileSync('src/components/marketing/waitlist-interactions.tsx', 'utf8');
     const flag = 'email' + 'ed';
 
     expect(source).toContain("import { resolveWaitlistSubmitFeedback } from '@/components/marketing/waitlist-state';");
+    expect(source).toContain('const [website, setWebsite] = useState');
+    expect(source).toContain('body: JSON.stringify({ companyName, email, role, website, locale: activeLocale, consentToContact: true })');
+    expect(source).toContain('name="website"');
     expect(source).toContain('const feedback = resolveWaitlistSubmitFeedback({');
     expect(source).toContain(`signal: payload?.${flag}`);
     expect(source).toContain('successMessage: copy.form.success');
     expect(source).toContain('confirmedMessage: copy.form.emailSuccess');
-    expect(source).toContain('warningMessage: emailWarningMessage(activeLocale, payload)');
+    expect(source).toContain('warningMessage: emailWarningMessage(activeLocale, payload, commercialEmail)');
     expect(source).toContain('setMessage(feedback.message)');
     expect(source).toContain('setStatus(feedback.status)');
   });
