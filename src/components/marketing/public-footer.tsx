@@ -1,98 +1,63 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { getTrustCenterPages } from '@/lib/trust-center/content';
+
 import { locales, type Locale } from '@/lib/i18n/routing';
+import { getTrustCenterPages } from '@/lib/trust-center/content';
 
 type FooterLink = { label: string; href: string };
-type FooterCopy = {
-  tagline: string;
-  productTitle: string;
-  companyTitle: string;
-  trustTitle: string;
-  productLinks: FooterLink[];
-  companyLinks: FooterLink[];
-};
 
-function makeLinks(labels: string[], hrefs: string[]): FooterLink[] {
-  return labels.map((label, index) => ({ label, href: hrefs[index] ?? hrefs[0] ?? '/' }));
+const productLinks: FooterLink[] = [
+  { label: 'Platform', href: '/#platform' },
+  { label: 'Pricing', href: '/pricing' },
+  { label: 'Enterprise', href: '/enterprise' },
+  { label: 'Request demo', href: '/book-demo' },
+];
+
+function getActiveLocale(locale: string): Locale {
+  return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
 }
-
-const footerCopy: Record<Locale, FooterCopy> = {
-  en: {
-    tagline: 'AI Act readiness, governance evidence and risk workflows for modern European teams.',
-    productTitle: 'Product', companyTitle: 'Company', trustTitle: 'Trust',
-    productLinks: makeLinks(['Platform', 'Pricing', 'Enterprise', 'Book demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
-    companyLinks: makeLinks(['Home', 'Log in'], ['/', '/login']),
-  },
-  pt: {
-    tagline: 'AI Act readiness, evidencias de governanca e workflows de risco para equipas europeias.',
-    productTitle: 'Produto', companyTitle: 'Empresa', trustTitle: 'Confianca',
-    productLinks: makeLinks(['Plataforma', 'Precos', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
-    companyLinks: makeLinks(['Inicio', 'Entrar'], ['/', '/login']),
-  },
-  es: {
-    tagline: 'AI Act readiness, evidencias de gobernanza y workflows de riesgo para equipos europeos.',
-    productTitle: 'Producto', companyTitle: 'Empresa', trustTitle: 'Confianza',
-    productLinks: makeLinks(['Plataforma', 'Precios', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
-    companyLinks: makeLinks(['Inicio', 'Entrar'], ['/', '/login']),
-  },
-  fr: {
-    tagline: 'AI Act readiness, preuves de gouvernance et workflows de risque pour equipes europeennes.',
-    productTitle: 'Produit', companyTitle: 'Entreprise', trustTitle: 'Confiance',
-    productLinks: makeLinks(['Plateforme', 'Tarifs', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
-    companyLinks: makeLinks(['Accueil', 'Connexion'], ['/', '/login']),
-  },
-  it: {
-    tagline: 'AI Act readiness, evidenze di governance e workflow di rischio per team europei.',
-    productTitle: 'Prodotto', companyTitle: 'Azienda', trustTitle: 'Fiducia',
-    productLinks: makeLinks(['Piattaforma', 'Prezzi', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
-    companyLinks: makeLinks(['Home', 'Accesso'], ['/', '/login']),
-  },
-  de: {
-    tagline: 'AI Act readiness, Governance-Nachweise und Risiko-Workflows fuer europaeische Teams.',
-    productTitle: 'Produkt', companyTitle: 'Unternehmen', trustTitle: 'Vertrauen',
-    productLinks: makeLinks(['Plattform', 'Preise', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
-    companyLinks: makeLinks(['Startseite', 'Anmelden'], ['/', '/login']),
-  },
-};
 
 function localizeHref(locale: Locale, href: string) {
   if (href.startsWith('/#')) return `/${locale}${href.slice(1)}`;
   return `/${locale}${href}`;
 }
 
-function FooterNav({ title, links, locale }: { title: string; links: FooterLink[]; locale: Locale }) {
-  return (
-    <nav aria-label={title}>
-      <p className="font-medium text-foreground">{title}</p>
-      <ul className="mt-3 space-y-2">
-        {links.map((link) => (
-          <li key={link.href}>
-            <Link href={localizeHref(locale, link.href)} className="rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-              {link.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  );
-}
-
 export function PublicFooter({ locale }: { locale: string }) {
-  const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
-  const copy = footerCopy[activeLocale];
+  const activeLocale = getActiveLocale(locale);
   const trustLinks = getTrustCenterPages(activeLocale).map((page) => ({ label: page.navLabel, href: `/${page.slug}` }));
 
   return (
-    <footer className="border-t bg-background px-6 py-10 text-sm text-muted-foreground">
-      <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+    <footer className="border-t border-white/10 bg-[#050505] px-6 py-12 text-sm text-white/55">
+      <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[1.45fr_1fr_1fr]">
         <div>
-          <Image src="/brand/risck-comply-wordmark.svg" alt="Risck Comply wordmark" width={160} height={40} className="h-9 w-auto object-contain" loading="lazy" />
-          <p className="mt-3 max-w-md leading-6">{copy.tagline}</p>
+          <Image src="/brand/risck-comply-wordmark.svg" alt="Risck Comply wordmark" width={170} height={42} className="h-10 w-auto object-contain" />
+          <p className="mt-4 max-w-md leading-7 text-white/58">
+            AI governance workflows, evidence preparation and risk visibility for European teams preparing for compliance review.
+          </p>
+          <p className="mt-5 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.06] px-4 py-3 text-xs leading-5 text-cyan-50/72">
+            Built for evidence preparation and operational governance support. No certification, audit or compliance guarantee is claimed.
+          </p>
         </div>
-        <FooterNav title={copy.productTitle} links={copy.productLinks} locale={activeLocale} />
-        <FooterNav title={copy.companyTitle} links={copy.companyLinks} locale={activeLocale} />
-        <FooterNav title={copy.trustTitle} links={trustLinks} locale={activeLocale} />
+        <nav aria-label="Product links">
+          <p className="font-semibold text-white">Platform</p>
+          <ul className="mt-4 space-y-2.5">
+            {productLinks.map((link) => (
+              <li key={link.href}>
+                <Link href={localizeHref(activeLocale, link.href)} className="transition hover:text-white">{link.label}</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <nav aria-label="Trust links">
+          <p className="font-semibold text-white">Trust</p>
+          <ul className="mt-4 space-y-2.5">
+            {trustLinks.map((link) => (
+              <li key={link.href}>
+                <Link href={localizeHref(activeLocale, link.href)} className="transition hover:text-white">{link.label}</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
     </footer>
   );
