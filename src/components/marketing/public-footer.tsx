@@ -61,6 +61,23 @@ function localizeHref(locale: Locale, href: string) {
   return `/${locale}${href}`;
 }
 
+function FooterNav({ title, links, locale }: { title: string; links: FooterLink[]; locale: Locale }) {
+  return (
+    <nav aria-label={title}>
+      <p className="font-medium text-foreground">{title}</p>
+      <ul className="mt-3 space-y-2">
+        {links.map((link) => (
+          <li key={link.href}>
+            <Link href={localizeHref(locale, link.href)} className="rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 export function PublicFooter({ locale }: { locale: string }) {
   const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
   const copy = footerCopy[activeLocale];
@@ -70,12 +87,12 @@ export function PublicFooter({ locale }: { locale: string }) {
     <footer className="border-t bg-background px-6 py-10 text-sm text-muted-foreground">
       <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
-          <Image src="/brand/risck-comply-wordmark.svg" alt="Risck Comply wordmark" width={160} height={40} className="h-9 w-auto object-contain" />
+          <Image src="/brand/risck-comply-wordmark.svg" alt="Risck Comply wordmark" width={160} height={40} className="h-9 w-auto object-contain" loading="lazy" />
           <p className="mt-3 max-w-md leading-6">{copy.tagline}</p>
         </div>
-        <nav><p className="font-medium text-foreground">{copy.productTitle}</p><ul className="mt-3 space-y-2">{copy.productLinks.map((link) => <li key={link.href}><Link href={localizeHref(activeLocale, link.href)} className="hover:text-foreground">{link.label}</Link></li>)}</ul></nav>
-        <nav><p className="font-medium text-foreground">{copy.companyTitle}</p><ul className="mt-3 space-y-2">{copy.companyLinks.map((link) => <li key={link.href}><Link href={localizeHref(activeLocale, link.href)} className="hover:text-foreground">{link.label}</Link></li>)}</ul></nav>
-        <nav><p className="font-medium text-foreground">{copy.trustTitle}</p><ul className="mt-3 space-y-2">{trustLinks.map((link) => <li key={link.href}><Link href={localizeHref(activeLocale, link.href)} className="hover:text-foreground">{link.label}</Link></li>)}</ul></nav>
+        <FooterNav title={copy.productTitle} links={copy.productLinks} locale={activeLocale} />
+        <FooterNav title={copy.companyTitle} links={copy.companyLinks} locale={activeLocale} />
+        <FooterNav title={copy.trustTitle} links={trustLinks} locale={activeLocale} />
       </div>
     </footer>
   );
