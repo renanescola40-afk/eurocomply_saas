@@ -43,7 +43,7 @@ export default async function ResourcesPage({ params }: ResourcesPageProps) {
             <h2 className="mt-3 text-2xl font-semibold">{resource.title}</h2>
             <p className="mt-4 flex-1 text-sm leading-6 text-muted-foreground">{resource.description}</p>
             <Link href={`/${locale}/signup`} className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-              Use templates in EuroComply
+              Use templates in RISCK COMPLY
             </Link>
           </article>
         ))}
