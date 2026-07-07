@@ -74,7 +74,7 @@ async function getTeamActivationStatus(organizationId: string) {
 
 function DashboardHomeOverviewSkeleton() {
   return (
-    <div className="space-y-6" aria-label="Loading audit-ready dashboard overview" role="status" aria-live="polite">
+    <div className="space-y-6" aria-label="Loading dashboard overview" role="status" aria-live="polite">
       <div className="grid gap-4 md:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
           <div key={index} className="premium-card rounded-[1.5rem] p-5">
