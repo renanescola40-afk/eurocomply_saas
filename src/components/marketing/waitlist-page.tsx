@@ -74,19 +74,19 @@ const en: WaitlistCopy = {
     submit: 'Request access',
     submitting: 'Securing your place...',
     success: 'You are on the RISCK COMPLY waitlist. We saved your place and will contact qualified companies as early access opens.',
-    emailSuccess: 'You are on the RISCK COMPLY waitlist. We saved your place and sent a confirmation email with launch details.',
+    emailSuccess: 'You are on the RISCK COMPLY waitlist. We saved your place and sent a confirmation email with your join date, launch date and remaining time.',
     error: 'Could not confirm your place right now. You can also contact us directly at comercial@risckcomply.com.',
     privacy: 'No passwords. No open signup. Only launch communication and early access qualification.',
     contact: 'Questions or want to speak with our team? Email us at',
   },
   proof: ['board-ready evidence', 'AI Act readiness', 'risk visibility', 'procurement support', 'audit trail', 'governance workflows'],
   features: [
-    feature('Board-ready evidence', 'Show what AI is used, who owns it, what risks exist and what evidence is ready for review.', ClipboardCheck),
-    feature('Legal review support', 'Prepare decision logs, policy drafts and evidence summaries for internal or external counsel review.', Scale),
-    feature('AI system inventory', 'Register systems, use cases, owners, departments, providers, countries and data context in one workspace.', Database),
-    feature('Procurement confidence', 'Prepare clean summaries for buyers, security reviewers and enterprise stakeholders.', FileText),
-    feature('Team governance', 'Invite owners, assign responsibilities, track tasks and keep the organization aligned before reviews.', Users),
-    feature('Audit trail', 'Keep review history, evidence updates and governance activity traceable.', ShieldCheck),
+    feature('Board-ready evidence', 'Produce structured outputs that show what AI is used, who owns it, what risks exist and what evidence is ready for review.', ClipboardCheck),
+    feature('Legal review support', 'Prepare decision logs, policy drafts and evidence summaries that internal or external counsel can assess. RISCK COMPLY does not provide legal advice.', Scale),
+    feature('AI system inventory', 'Register systems, use cases, owners, departments, providers, countries and data context in one controlled workspace.', Database),
+    feature('Procurement confidence', 'Prepare clean summaries for buyers, security reviewers and enterprise stakeholders without claiming unsupported certifications.', FileText),
+    feature('Team governance', 'Invite owners, assign responsibilities, track tasks and keep the organization aligned before internal and external reviews.', Users),
+    feature('Audit trail', 'Keep review history, evidence updates and governance activity traceable for security-conscious customers and partners.', ShieldCheck),
   ],
 };
 
@@ -95,14 +95,20 @@ const pt: WaitlistCopy = {
   nav: { platform: 'Plataforma', features: 'Resultados', access: 'Early access', cta: 'Pedir acesso' },
   badge: 'Acesso controlado para equipas sérias de governança de IA e compliance',
   title: 'Transforme governança de IA em evidência de compliance pronta para direção.',
-  subtitle: 'RISCK COMPLY ajuda equipas europeias a organizar sistemas de IA, responsáveis, sinais de risco, packs de evidência, rascunhos de políticas e audit trails num workspace controlado para revisão de compliance, segurança, procurement e jurídico. Apoia a tomada de decisão profissional, mas não substitui advogados nem garante resultados regulatórios.',
+  subtitle:
+    'RISCK COMPLY ajuda equipas europeias a organizar sistemas de IA, responsáveis, sinais de risco, packs de evidência, rascunhos de políticas e audit trails num workspace controlado para revisão de compliance, segurança, procurement e jurídico. Apoia a tomada de decisão profissional, mas não substitui advogados nem garante resultados regulatórios.',
   launchLabel: '1 de agosto de 2026 · 07:00 Europe/Lisbon',
   countdown: { days: 'Dias', hours: 'Horas', minutes: 'Minutos', seconds: 'Segundos', live: 'Disponível em' },
   checklistEyebrow: 'Camada operacional enterprise',
   checklistTitle: 'Resultados premium para revisão de compliance, segurança, procurement e direção',
-  checklistSubtitle: 'Responsabilidades claras, decisões rastreáveis, visibilidade de risco, preparação de evidências e workflows documentais tornam a governança de IA revisável.',
+  checklistSubtitle:
+    'Criado para equipas que precisam de mais do que uma checklist: responsabilidades claras, decisões rastreáveis, visibilidade de risco, preparação de evidências e workflows documentais que tornam a governança de IA revisável.',
+  audienceNote:
+    'Acesso prioritário reservado para founders, CTOs, líderes de compliance, equipas de segurança e operadores B2B que querem parecer preparados antes da pressão de clientes, investidores ou procurement.',
+  gateTitle: 'Early access controlado. Primeiro, equipas sérias.',
+  gateText:
+    'Por agora, CTAs públicos de login, signup, checkout e demo enviam empresas para esta lista para a RISCK COMPLY qualificar empresas antes do release, proteger a qualidade do produto e manter a primeira cohort de clientes focada.',
   form: {
-    ...en.form,
     title: 'Pedir early access',
     subtitle: 'Diga-nos quem você é e vamos contactar empresas qualificadas quando o acesso controlado abrir.',
     company: 'Nome da empresa',
@@ -111,10 +117,20 @@ const pt: WaitlistCopy = {
     submit: 'Pedir acesso',
     submitting: 'A proteger o seu lugar...',
     success: 'Você está na lista de espera da RISCK COMPLY. Guardamos o seu lugar e vamos contactar empresas qualificadas quando o early access abrir.',
-    emailSuccess: 'Você está na lista de espera da RISCK COMPLY. Guardamos o seu lugar e enviámos um email de confirmação.',
+    emailSuccess: 'Você está na lista de espera da RISCK COMPLY. Guardamos o seu lugar e enviámos um email com o dia da inscrição, a data de abertura e o tempo que falta.',
     error: 'Não foi possível confirmar o seu lugar agora. Você também pode falar connosco diretamente em comercial@risckcomply.com.',
     privacy: 'Sem senhas. Sem signup aberto. Apenas comunicação de lançamento e qualificação para early access.',
+    contact: 'Dúvidas ou quer falar com a nossa equipa? Envie email para',
   },
+  proof: ['evidência para direção', 'AI Act readiness', 'visibilidade de risco', 'suporte a procurement', 'audit trail', 'workflows de governança'],
+  features: [
+    feature('Evidência para direção', 'Produza outputs estruturados que mostram que IA é usada, quem é responsável, que riscos existem e que evidências estão prontas para revisão.', ClipboardCheck),
+    feature('Suporte à revisão jurídica', 'Prepare logs de decisão, rascunhos de políticas e resumos de evidência para avaliação por counsel interno ou externo. A RISCK COMPLY não presta aconselhamento jurídico.', Scale),
+    feature('Inventário de sistemas de IA', 'Registe sistemas, casos de uso, owners, departamentos, fornecedores, países e contexto de dados num workspace controlado.', Database),
+    feature('Confiança para procurement', 'Prepare resumos limpos para compradores, security reviewers e stakeholders enterprise sem afirmar certificações não suportadas.', FileText),
+    feature('Governança de equipa', 'Convide responsáveis, atribua tarefas e mantenha a organização alinhada antes de revisões internas e externas.', Users),
+    feature('Audit trail', 'Mantenha histórico de revisão, atualização de evidências e atividade de governança rastreável para clientes e parceiros exigentes.', ShieldCheck),
+  ],
 };
 
 const waitlistCopy: Record<Locale, WaitlistCopy> = { en, pt, es: en, fr: en, it: en, de: en };
@@ -132,7 +148,10 @@ function calculateRemaining(): Remaining {
 
 function emailWarningMessage(locale: Locale, payload: WaitlistApiResponse | null) {
   const status = payload?.emailStatus ? ` (${payload.emailStatus})` : '';
-  if (locale === 'pt') return `O seu lugar foi guardado, mas ainda não recebemos confirmação automática de envio do email${status}. Pode falar connosco diretamente em ${COMMERCIAL_EMAIL}.`;
+  if (locale === 'pt') {
+    return `O seu lugar foi guardado, mas ainda não recebemos confirmação automática de envio do email${status}. Pode falar connosco diretamente em ${COMMERCIAL_EMAIL}.`;
+  }
+
   return `Your place was saved, but we do not yet have automatic confirmation that the email was delivered${status}. You can contact us directly at ${COMMERCIAL_EMAIL}.`;
 }
 

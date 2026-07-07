@@ -5,6 +5,15 @@ import { locales, type Locale } from '@/lib/i18n/routing';
 import { getTrustCenterPages } from '@/lib/trust-center/content';
 
 type FooterLink = { label: string; href: string };
+type FooterCopy = {
+  tagline: string;
+  assuranceNote: string;
+  productTitle: string;
+  companyTitle: string;
+  trustTitle: string;
+  productLinks: FooterLink[];
+  companyLinks: FooterLink[];
+};
 
 const productLinks: FooterLink[] = [
   { label: 'Platform', href: '/#platform' },
