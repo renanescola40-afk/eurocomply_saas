@@ -174,7 +174,7 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
             </div>
 
             {canManageAiGovernance ? (
-              <AiSystemEditForm system={system} />
+              <AiSystemEditForm system={system} locale={locale} />
             ) : (
               <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
                 <h2 className="text-xl font-semibold">Reassessment locked</h2>
