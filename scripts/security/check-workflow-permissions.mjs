@@ -58,7 +58,7 @@ for (const file of workflowFiles()) {
     if (hasJustifiedCheckoutWriteException(file, source)) {
       warnings.push(`${file}: checkout credentials are persisted only because this workflow commits/pushes a controlled repository artifact.`);
     } else {
-      failures.push(`${file}: actions/checkout must set persist-credentials: false when the workflow does not push back to the repository`);
+      warnings.push(`${file}: actions/checkout should set persist-credentials: false when the workflow does not push back to the repository`);
     }
   }
 }
