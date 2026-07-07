@@ -3,20 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import {
-  ArrowRight,
-  Building2,
-  CheckCircle2,
-  ClipboardCheck,
-  Clock3,
-  Database,
-  FileText,
-  LockKeyhole,
-  Scale,
-  ShieldCheck,
-  Sparkles,
-  Users,
-} from 'lucide-react';
+import { ArrowRight, Building2, CheckCircle2, ClipboardCheck, Clock3, Database, FileText, LockKeyhole, Scale, ShieldCheck, Sparkles, Users } from 'lucide-react';
 
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { PublicFooter } from '@/components/marketing/public-footer';
@@ -24,7 +11,6 @@ import { resolveWaitlistSubmitFeedback } from '@/components/marketing/waitlist-s
 import { LOCALE_META, locales, type Locale } from '@/lib/i18n/routing';
 
 const LAUNCH_TARGET_ISO = '2026-08-01T07:00:00+01:00';
-const LAUNCH_TARGET_LABEL = '1 August 2026 · 07:00 Europe/Lisbon';
 const COMMERCIAL_EMAIL = 'comercial@risckcomply.com';
 
 type WaitlistCopy = {
@@ -58,6 +44,10 @@ type WaitlistCopy = {
   features: { title: string; text: string; icon: typeof ShieldCheck }[];
 };
 
+type Remaining = { days: string; hours: string; minutes: string; seconds: string };
+type WaitlistSubmitStatus = 'idle' | 'submitting' | 'success' | 'warning' | 'error';
+type WaitlistApiResponse = { emailed?: boolean; emailStatus?: string; emailAttempts?: number; error?: string };
+
 function feature(title: string, text: string, icon: typeof ShieldCheck) {
   return { title, text, icon };
 }
@@ -66,19 +56,15 @@ const en: WaitlistCopy = {
   nav: { platform: 'Platform', features: 'Outputs', access: 'Early access', cta: 'Request access' },
   badge: 'Controlled access for serious AI governance and compliance teams',
   title: 'Turn AI governance into board-ready compliance evidence.',
-  subtitle:
-    'RISCK COMPLY helps European teams organize AI systems, ownership, risk signals, evidence packs, policy drafts and audit trails in one controlled workspace for compliance, security, procurement and legal review. It supports professional decision-making, but does not replace counsel or guarantee regulatory outcomes.',
-  launchLabel: LAUNCH_TARGET_LABEL,
+  subtitle: 'RISCK COMPLY helps European teams organize AI systems, ownership, risk signals, evidence packs, policy drafts and audit trails in one controlled workspace for compliance, security, procurement and legal review. It supports professional decision-making, but does not replace counsel or guarantee regulatory outcomes.',
+  launchLabel: '1 August 2026 · 07:00 Europe/Lisbon',
   countdown: { days: 'Days', hours: 'Hours', minutes: 'Minutes', seconds: 'Seconds', live: 'Available in' },
   checklistEyebrow: 'Enterprise operating layer',
   checklistTitle: 'Premium outputs for compliance, security, procurement and executive review',
-  checklistSubtitle:
-    'Built for teams that need more than a checklist: structured ownership, traceable decisions, risk visibility, evidence preparation and documentation workflows that make AI governance reviewable.',
-  audienceNote:
-    'Priority access is reserved for founders, CTOs, compliance leaders, security teams and B2B operators who want to look prepared before customer, investor or procurement pressure arrives.',
+  checklistSubtitle: 'Structured ownership, traceable decisions, risk visibility, evidence preparation and documentation workflows make AI governance reviewable.',
+  audienceNote: 'Priority access is reserved for founders, CTOs, compliance leaders, security teams and B2B operators who want to look prepared before customer, investor or procurement pressure arrives.',
   gateTitle: 'Controlled early access. Serious teams first.',
-  gateText:
-    'Public login, signup, checkout and demo CTAs currently route here so RISCK COMPLY can qualify companies before release, protect product quality and keep the first customer cohort focused.',
+  gateText: 'Public login, signup, checkout and demo CTAs currently route here so RISCK COMPLY can qualify companies before release and protect the first customer cohort.',
   form: {
     title: 'Request early access',
     subtitle: 'Tell us who you are and we will contact qualified companies when controlled access opens.',
@@ -147,32 +133,16 @@ const pt: WaitlistCopy = {
   ],
 };
 
-const waitlistCopy: Record<Locale, WaitlistCopy> = {
-  en,
-  pt,
-  es: en,
-  fr: en,
-  it: en,
-  de: en,
-};
-
-type Remaining = { days: string; hours: string; minutes: string; seconds: string };
-type WaitlistSubmitStatus = 'idle' | 'submitting' | 'success' | 'warning' | 'error';
-type WaitlistApiResponse = { emailed?: boolean; emailStatus?: string; emailAttempts?: number; error?: string };
+const waitlistCopy: Record<Locale, WaitlistCopy> = { en, pt, es: en, fr: en, it: en, de: en };
 
 function calculateRemaining(): Remaining {
   const diff = Math.max(0, new Date(LAUNCH_TARGET_ISO).getTime() - Date.now());
   const totalSeconds = Math.floor(diff / 1000);
-  const days = Math.floor(totalSeconds / 86_400);
-  const hours = Math.floor((totalSeconds % 86_400) / 3_600);
-  const minutes = Math.floor((totalSeconds % 3_600) / 60);
-  const seconds = totalSeconds % 60;
-
   return {
-    days: String(days).padStart(2, '0'),
-    hours: String(hours).padStart(2, '0'),
-    minutes: String(minutes).padStart(2, '0'),
-    seconds: String(seconds).padStart(2, '0'),
+    days: String(Math.floor(totalSeconds / 86_400)).padStart(2, '0'),
+    hours: String(Math.floor((totalSeconds % 86_400) / 3_600)).padStart(2, '0'),
+    minutes: String(Math.floor((totalSeconds % 3_600) / 60)).padStart(2, '0'),
+    seconds: String(totalSeconds % 60).padStart(2, '0'),
   };
 }
 
@@ -195,29 +165,15 @@ function WaitlistCountdown({ copy }: { copy: WaitlistCopy }) {
     return () => window.clearInterval(interval);
   }, []);
 
-  const units = [
-    [copy.countdown.days, remaining.days],
-    [copy.countdown.hours, remaining.hours],
-    [copy.countdown.minutes, remaining.minutes],
-    [copy.countdown.seconds, remaining.seconds],
-  ];
+  const units = [[copy.countdown.days, remaining.days], [copy.countdown.hours, remaining.hours], [copy.countdown.minutes, remaining.minutes], [copy.countdown.seconds, remaining.seconds]];
 
   return (
     <div className="rounded-[2rem] border border-white/10 bg-black/35 p-5 shadow-2xl backdrop-blur-xl">
-      <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-100/70">
-        <Clock3 className="h-4 w-4" /> {copy.countdown.live}
-      </div>
+      <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-100/70"><Clock3 className="h-4 w-4" /> {copy.countdown.live}</div>
       <div className="mt-5 grid grid-cols-4 gap-2" aria-live="polite">
-        {units.map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-center">
-            <p className="text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">{value}</p>
-            <p className="mt-1 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</p>
-          </div>
-        ))}
+        {units.map(([label, value]) => <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-center"><p className="text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">{value}</p><p className="mt-1 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</p></div>)}
       </div>
-      <p className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.08] px-4 py-3 text-sm font-medium text-emerald-50/80">
-        {copy.launchLabel}
-      </p>
+      <p className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.08] px-4 py-3 text-sm font-medium text-emerald-50/80">{copy.launchLabel}</p>
     </div>
   );
 }
@@ -249,16 +205,9 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
         return;
       }
 
-      const feedback = resolveWaitlistSubmitFeedback({
-        signal: payload?.emailed,
-        successMessage: copy.form.success,
-        confirmedMessage: copy.form.emailSuccess,
-        warningMessage: emailWarningMessage(activeLocale, payload),
-      });
-
+      const feedback = resolveWaitlistSubmitFeedback({ signal: payload?.emailed, successMessage: copy.form.success, confirmedMessage: copy.form.emailSuccess, warningMessage: emailWarningMessage(activeLocale, payload) });
       setMessage(feedback.message);
       setStatus(feedback.status);
-
       setCompanyName('');
       setEmail('');
       setRole('');
@@ -272,50 +221,21 @@ function WaitlistForm({ activeLocale, copy }: { activeLocale: Locale; copy: Wait
   return (
     <form onSubmit={handleSubmit} className="rounded-[2rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl backdrop-blur-xl" id="waitlist-form">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-100/65">Early access</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">{copy.form.title}</h2>
-          <p className="mt-3 text-sm leading-6 text-white/55">{copy.form.subtitle}</p>
-        </div>
-        <div className="rounded-2xl border border-cyan-200/20 bg-cyan-300/10 p-3 text-cyan-50">
-          <Sparkles className="h-5 w-5" />
-        </div>
+        <div><p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-100/65">Early access</p><h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">{copy.form.title}</h2><p className="mt-3 text-sm leading-6 text-white/55">{copy.form.subtitle}</p></div>
+        <div className="rounded-2xl border border-cyan-200/20 bg-cyan-300/10 p-3 text-cyan-50"><Sparkles className="h-5 w-5" /></div>
       </div>
-
       <div className="mt-6 space-y-4">
-        <label className="block text-sm font-medium text-white/70">
-          {copy.form.company}
-          <input value={companyName} onChange={(event) => setCompanyName(event.target.value)} required minLength={2} maxLength={120} autoComplete="organization" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-cyan-200/70" placeholder="Acme Europe" />
-        </label>
-        <label className="block text-sm font-medium text-white/70">
-          {copy.form.email}
-          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required maxLength={254} autoComplete="email" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-cyan-200/70" placeholder="you@company.com" />
-        </label>
-        <label className="block text-sm font-medium text-white/70">
-          {copy.form.role}
-          <input value={role} onChange={(event) => setRole(event.target.value)} required minLength={2} maxLength={90} autoComplete="organization-title" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-cyan-200/70" placeholder="Founder, CTO, Compliance Officer" />
-        </label>
-        <label className="hidden" aria-hidden="true">
-          Website
-          <input value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" />
-        </label>
+        <label className="block text-sm font-medium text-white/70">{copy.form.company}<input value={companyName} onChange={(event) => setCompanyName(event.target.value)} required minLength={2} maxLength={120} autoComplete="organization" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-cyan-200/70" placeholder="Acme Europe" /></label>
+        <label className="block text-sm font-medium text-white/70">{copy.form.email}<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required maxLength={254} autoComplete="email" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-cyan-200/70" placeholder="you@company.com" /></label>
+        <label className="block text-sm font-medium text-white/70">{copy.form.role}<input value={role} onChange={(event) => setRole(event.target.value)} required minLength={2} maxLength={90} autoComplete="organization-title" className="mt-2 w-full rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-white outline-none transition placeholder:text-white/28 focus:border-cyan-200/70" placeholder="Founder, CTO, Compliance Officer" /></label>
+        <label className="hidden" aria-hidden="true">Website<input value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" /></label>
       </div>
-
       {status === 'success' ? <p className="mt-5 rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-50" role="status">{message || copy.form.success}</p> : null}
       {status === 'warning' ? <p className="mt-5 rounded-2xl border border-amber-300/30 bg-amber-400/10 px-4 py-3 text-sm leading-6 text-amber-50" role="status">{message}</p> : null}
       {status === 'error' ? <p className="mt-5 rounded-2xl border border-red-300/25 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-50" role="alert">{message || copy.form.error}</p> : null}
-
-      <button type="submit" disabled={status === 'submitting'} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 text-sm font-bold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60">
-        {status === 'submitting' ? copy.form.submitting : copy.form.submit}
-        <ArrowRight className="h-4 w-4" />
-      </button>
+      <button type="submit" disabled={status === 'submitting'} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 text-sm font-bold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60">{status === 'submitting' ? copy.form.submitting : copy.form.submit}<ArrowRight className="h-4 w-4" /></button>
       <p className="mt-4 text-xs leading-5 text-white/38">{copy.form.privacy}</p>
-      <p className="mt-3 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.06] px-4 py-3 text-xs leading-5 text-cyan-50/78">
-        {copy.form.contact}{' '}
-        <a href={`mailto:${COMMERCIAL_EMAIL}`} className="font-semibold text-white underline decoration-cyan-200/40 underline-offset-4 hover:text-cyan-100">
-          {COMMERCIAL_EMAIL}
-        </a>
-      </p>
+      <p className="mt-3 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.06] px-4 py-3 text-xs leading-5 text-cyan-50/78">{copy.form.contact} <a href={`mailto:${COMMERCIAL_EMAIL}`} className="font-semibold text-white underline decoration-cyan-200/40 underline-offset-4 hover:text-cyan-100">{COMMERCIAL_EMAIL}</a></p>
     </form>
   );
 }
@@ -332,82 +252,21 @@ export function WaitlistPage({ locale }: { locale: string }) {
       <div className="pointer-events-none fixed inset-0 tech-grid opacity-25" />
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#050505]/75 backdrop-blur-2xl">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link href={`/${activeLocale}`} className="flex items-center gap-3" aria-label="RISCK COMPLY home">
-            <Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={180} height={44} className="h-10 w-auto object-contain" priority />
-          </Link>
-          <div className="hidden items-center gap-7 text-sm text-white/58 lg:flex">
-            <a href="#platform" className="transition hover:text-white">{copy.nav.platform}</a>
-            <a href="#features" className="transition hover:text-white">{copy.nav.features}</a>
-            <a href="#waitlist-form" className="transition hover:text-white">{copy.nav.access}</a>
-            <span className="text-white/32">{localeName}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher currentLocale={activeLocale} variant="dark" compact />
-            <a href="#waitlist-form" className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black shadow-[0_0_40px_rgba(255,255,255,.18)] transition hover:bg-zinc-200">{copy.nav.cta}</a>
-          </div>
+          <Link href={`/${activeLocale}`} className="flex items-center gap-3" aria-label="RISCK COMPLY home"><Image src="/brand/risck-comply-wordmark.svg" alt="RISCK COMPLY" width={180} height={44} className="h-10 w-auto object-contain" priority /></Link>
+          <div className="hidden items-center gap-7 text-sm text-white/58 lg:flex"><a href="#platform" className="transition hover:text-white">{copy.nav.platform}</a><a href="#features" className="transition hover:text-white">{copy.nav.features}</a><a href="#waitlist-form" className="transition hover:text-white">{copy.nav.access}</a><span className="text-white/32">{localeName}</span></div>
+          <div className="flex items-center gap-3"><LanguageSwitcher currentLocale={activeLocale} variant="dark" compact /><a href="#waitlist-form" className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black shadow-[0_0_40px_rgba(255,255,255,.18)] transition hover:bg-zinc-200">{copy.nav.cta}</a></div>
         </nav>
       </header>
-
-      <section className="relative z-10 px-4 pb-14 pt-32 sm:px-6 lg:px-8 lg:pt-40">
+      <section className="relative z-10 px-4 pb-14 pt-32 sm:px-6 lg:px-8 lg:pt-40" aria-labelledby="landing-title">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.08fr_.92fr] lg:items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-300/[0.06] px-4 py-2 text-sm font-medium text-cyan-50/82">
-              <LockKeyhole className="h-4 w-4" /> {copy.badge}
-            </div>
-            <h1 className="mt-8 max-w-5xl text-5xl font-semibold leading-[1.02] tracking-[-0.067em] text-white sm:text-6xl lg:text-7xl">{copy.title}</h1>
-            <p className="mt-7 max-w-3xl text-lg leading-8 text-white/66 sm:text-xl">{copy.subtitle}</p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {copy.proof.map((item) => <span key={item} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white/52">{item}</span>)}
-            </div>
-          </div>
-          <div className="space-y-4">
-            <WaitlistCountdown copy={copy} />
-            <div className="rounded-[2rem] border border-cyan-200/15 bg-cyan-300/[0.06] p-5">
-              <div className="flex items-start gap-3">
-                <Building2 className="mt-1 h-5 w-5 text-cyan-50" />
-                <p className="text-sm leading-6 text-white/66">{copy.audienceNote}</p>
-              </div>
-            </div>
-          </div>
+          <div><div className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-300/[0.06] px-4 py-2 text-sm font-medium text-cyan-50/82"><LockKeyhole className="h-4 w-4" /> {copy.badge}</div><h1 id="landing-title" className="mt-8 max-w-5xl text-5xl font-semibold leading-[1.02] tracking-[-0.067em] text-white sm:text-6xl lg:text-7xl">{copy.title}</h1><p className="mt-7 max-w-3xl text-lg leading-8 text-white/66 sm:text-xl">{copy.subtitle}</p><div className="mt-6 flex flex-wrap gap-2">{copy.proof.map((item) => <span key={item} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white/52">{item}</span>)}</div></div>
+          <div className="space-y-4"><WaitlistCountdown copy={copy} /><div className="rounded-[2rem] border border-cyan-200/15 bg-cyan-300/[0.06] p-5"><div className="flex items-start gap-3"><Building2 className="mt-1 h-5 w-5 text-cyan-50" /><p className="text-sm leading-6 text-white/66">{copy.audienceNote}</p></div></div></div>
         </div>
       </section>
-
       <section id="platform" className="relative z-10 border-y border-white/10 bg-white/[0.02] px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.82fr_1.18fr] lg:items-start">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200/55">{copy.checklistEyebrow}</p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] text-white sm:text-5xl">{copy.checklistTitle}</h2>
-            <p className="mt-5 max-w-3xl text-sm leading-7 text-white/56 md:text-base">{copy.checklistSubtitle}</p>
-          </div>
-          <div id="features" className="grid gap-4 md:grid-cols-2">
-            {copy.features.map(({ title, text, icon: Icon }) => (
-              <article key={title} className="rounded-[1.65rem] border border-white/10 bg-black/25 p-5 shadow-xl backdrop-blur">
-                <div className="flex items-start gap-4">
-                  <div className="rounded-2xl bg-white/10 p-3 text-white"><Icon className="h-5 w-5" /></div>
-                  <div>
-                    <h3 className="font-semibold text-white">{title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-white/50">{text}</p>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.82fr_1.18fr] lg:items-start"><div><p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200/55">{copy.checklistEyebrow}</p><h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] text-white sm:text-5xl">{copy.checklistTitle}</h2><p className="mt-5 max-w-3xl text-sm leading-7 text-white/56 md:text-base">{copy.checklistSubtitle}</p></div><div id="features" className="grid gap-4 md:grid-cols-2">{copy.features.map(({ title, text, icon: Icon }) => <article key={title} className="rounded-[1.65rem] border border-white/10 bg-black/25 p-5 shadow-xl backdrop-blur"><div className="flex items-start gap-4"><div className="rounded-2xl bg-white/10 p-3 text-white"><Icon className="h-5 w-5" /></div><div><h3 className="font-semibold text-white">{title}</h3><p className="mt-2 text-sm leading-6 text-white/50">{text}</p></div></div></article>)}</div></div>
       </section>
-
-      <section className="relative z-10 px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.92fr_1.08fr] lg:items-center">
-          <div className="rounded-[2rem] border border-white/10 bg-black/25 p-6">
-            <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.24em] text-emerald-100/70">
-              <CheckCircle2 className="h-4 w-4" /> Controlled launch
-            </div>
-            <p className="mt-5 text-3xl font-semibold tracking-[-0.04em] text-white">{copy.gateTitle}</p>
-            <p className="mt-4 text-sm leading-7 text-white/54">{copy.gateText}</p>
-          </div>
-          <WaitlistForm activeLocale={activeLocale} copy={copy} />
-        </div>
-      </section>
-
+      <section className="relative z-10 px-4 py-16 sm:px-6 lg:px-8"><div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[.92fr_1.08fr] lg:items-center"><div className="rounded-[2rem] border border-white/10 bg-black/25 p-6"><div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.24em] text-emerald-100/70"><CheckCircle2 className="h-4 w-4" /> Controlled launch</div><p className="mt-5 text-3xl font-semibold tracking-[-0.04em] text-white">{copy.gateTitle}</p><p className="mt-4 text-sm leading-7 text-white/54">{copy.gateText}</p></div><WaitlistForm activeLocale={activeLocale} copy={copy} /></div></section>
       <PublicFooter locale={activeLocale} />
     </main>
   );

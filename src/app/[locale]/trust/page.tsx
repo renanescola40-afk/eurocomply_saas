@@ -1,7 +1,9 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { TrustCenterPage, type LocalizedTrustCopy } from '@/components/marketing/trust-center-page';
 import { isSupportedLocale, type SupportedLocale } from '@/lib/i18n/locales';
+import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
 
 export const revalidate = 300;
 export const dynamic = 'force-static';
@@ -108,6 +110,19 @@ const TRUST_COPY: Record<SupportedLocale, LocalizedTrustCopy> = {
     procurementItems: ['Datenkategorien und Use Case validieren.', 'Aktivierte Anbieter bestätigen.', 'Release-Nachweise und Trust-Dokumentation anhängen.'],
   },
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  const locale = getSafeLocale(rawLocale);
+  const copy = TRUST_COPY[locale];
+
+  return makePublicMetadata({
+    locale,
+    path: '/trust',
+    title: `${copy.eyebrow} - RISCK COMPLY`,
+    description: copy.subtitle,
+  });
+}
 
 export default async function TrustPage({ params }: PageProps) {
   const { locale: rawLocale } = await params;
