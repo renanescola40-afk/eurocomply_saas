@@ -1,28 +1,35 @@
 name: Code Review
+
 on:
-  pull_request_target:
-    types:
-      - opened
-      - reopened
-      - synchronize
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
 
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: read
+
+concurrency:
+  group: code-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  setup-deepseek-review:
-    runs-on: ubuntu-latest
+  code-review:
     name: Code Review
-    env:
-      DEEPSEEK_REVIEW_CREDENTIAL: ${{ secrets.CHAT_TOKEN }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Skip DeepSeek code review when CHAT_TOKEN is not configured
-        if: env.DEEPSEEK_REVIEW_CREDENTIAL == ''
-        run: echo "CHAT_TOKEN is not configured; skipping DeepSeek Code Review."
-
-      - name: DeepSeek Code Review
-        if: env.DEEPSEEK_REVIEW_CREDENTIAL != ''
-        uses: hustcer/deepseek-review@v1
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
-          chat-token: ${{ env.DEEPSEEK_REVIEW_CREDENTIAL }}
+          persist-credentials: false
+
+      - name: Workflow pattern gate
+        run: node scripts/security/check-workflow-sensitive-patterns.mjs
+
+      - name: Workflow permissions gate
+        run: node scripts/security/check-workflow-permissions.mjs
+
+      - name: Required checks gate
+        run: node scripts/security/check-ci-required-checks-validation.mjs
