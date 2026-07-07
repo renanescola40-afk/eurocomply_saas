@@ -45,133 +45,31 @@ jobs:
 
       - name: Wait for live ClamAV scanner
         shell: bash
-        run: |
-          node <<'NODE'
-          import { createConnection } from 'node:net';
-
-          const host = '127.0.0.1';
-          const port = 3310;
-          const attempts = 90;
-          const delayMs = 5_000;
-
-          function sleep(ms) {
-            return new Promise((resolve) => setTimeout(resolve, ms));
-          }
-
-          function pingClamd() {
-            return new Promise((resolve, reject) => {
-              const socket = createConnection({ host, port });
-              let response = '';
-              const timeout = setTimeout(() => {
-                socket.destroy();
-                reject(new Error('clamd ping timed out'));
-              }, 3_000);
-
-              socket.on('connect', () => socket.write('PING\n', 'utf8'));
-              socket.on('data', (chunk) => {
-                response += chunk.toString('utf8');
-                if (response.includes('PONG')) {
-                  clearTimeout(timeout);
-                  socket.destroy();
-                  resolve();
-                }
-              });
-              socket.on('error', (error) => {
-                clearTimeout(timeout);
-                reject(error);
-              });
-              socket.on('end', () => {
-                clearTimeout(timeout);
-                if (response.includes('PONG')) resolve();
-                else reject(new Error(`clamd ping ended without PONG: ${response.trim() || '<empty>'}`));
-              });
-            });
-          }
-
-          for (let attempt = 1; attempt <= attempts; attempt += 1) {
-            try {
-              await pingClamd();
-              console.log(`ClamAV scanner is ready on ${host}:${port}.`);
-              process.exit(0);
-            } catch (error) {
-              const message = error instanceof Error ? error.message : String(error);
-              console.log(`Waiting for ClamAV scanner (${attempt}/${attempts}): ${message}`);
-              await sleep(delayMs);
-            }
-          }
-
-          console.error(`ClamAV scanner did not become ready on ${host}:${port}.`);
-          process.exit(1);
-          NODE
+        run: node scripts/security/wait-for-clamav.mjs
 
       - name: Upload validation and tenant isolation static gate
-        shell: bash
-        run: |
-          npm run security:upload 2>&1 | tee upload-security.log
-          test "${PIPESTATUS[0]}" -eq 0
+        run: npm run security:upload
 
       - name: Upload content scanning fail-closed gate
-        shell: bash
-        run: |
-          npm run security:upload-content-scan 2>&1 | tee upload-content-scan.log
-          test "${PIPESTATUS[0]}" -eq 0
+        run: npm run security:upload-content-scan
 
       - name: Enterprise scanner bypass gate
-        shell: bash
-        run: |
-          npm run security:upload-scanner:ci 2>&1 | tee upload-scanner-runtime-ci.log
-          test "${PIPESTATUS[0]}" -eq 0
+        run: npm run security:upload-scanner:ci
 
       - name: Live ClamAV scanner proof and P0 evidence generation
-        shell: bash
         env:
           REQUIRE_MALWARE_SCAN_FOR_UPLOADS: 'true'
           MALWARE_SCANNER_PROVIDER: clamav
           MALWARE_SCANNER_CLAMAV_HOST: 127.0.0.1
           MALWARE_SCANNER_CLAMAV_PORT: '3310'
           MALWARE_SCANNER_TIMEOUT_MS: '30000'
+        run: npm run security:upload-scanner:runtime -- --update-register
+
+      - name: Validate generated runtime evidence
         run: |
-          npm run security:upload-scanner:runtime 2>&1 | tee upload-clamav-live-proof.log
-          test "${PIPESTATUS[0]}" -eq 0
-
-      - name: Validate live ClamAV evidence artifact
-        shell: bash
-        run: |
-          node <<'NODE'
-          import { readFileSync } from 'node:fs';
-
-          const evidencePath = 'docs/security/evidence/runtime/upload-malware-scan-validation.json';
-          const evidence = JSON.parse(readFileSync(evidencePath, 'utf8'));
-          const failures = [];
-
-          if (evidence.status !== 'Complete') failures.push('evidence.status must be Complete');
-          if (evidence.outcome !== 'passed') failures.push('evidence.outcome must be passed');
-          if (evidence.liveProviderProof?.status !== 'passed') failures.push('liveProviderProof.status must be passed');
-          if (evidence.liveProviderProof?.provider !== 'clamav') failures.push('liveProviderProof.provider must be clamav');
-          if (evidence.liveProviderProof?.providerIsReal !== true) failures.push('liveProviderProof.providerIsReal must be true');
-          if (evidence.liveProviderProof?.scanStatus !== 'clean') failures.push('liveProviderProof.scanStatus must be clean');
-          if (evidence.liveProviderProof?.blockedIfNotClean !== false) failures.push('clean live verdict should not be blocked');
-          if (evidence.acceptanceCriteria?.enterpriseUploadRequiresCleanScan !== true) failures.push('enterpriseUploadRequiresCleanScan must be true');
-          if (evidence.acceptanceCriteria?.scannerUnavailableBlocksUpload !== true) failures.push('scannerUnavailableBlocksUpload must be true');
-          if (evidence.acceptanceCriteria?.scannerTimeoutBlocksUpload !== true) failures.push('scannerTimeoutBlocksUpload must be true');
-          if (evidence.acceptanceCriteria?.scannerMalwareOrSuspiciousBlocksUpload !== true) failures.push('scannerMalwareOrSuspiciousBlocksUpload must be true');
-          if (evidence.acceptanceCriteria?.liveProviderProofExists !== true) failures.push('liveProviderProofExists must be true');
-          if (evidence.acceptanceCriteria?.p0RegisterMayBeUpdated !== true) failures.push('p0RegisterMayBeUpdated must be true');
-          if (evidence.liveProviderProof?.providerResponseBodyPersisted !== false) failures.push('provider response body must not be persisted');
-          if (evidence.liveProviderProof?.providerResponseMessagePersisted !== false) failures.push('provider response message must not be persisted');
-          if (!evidence.runtimeContext?.workflowRunUrl) failures.push('runtimeContext.workflowRunUrl must be present in GitHub Actions');
-
-          if (failures.length > 0) {
-            console.error('Upload live ClamAV evidence validation failed:');
-            for (const failure of failures) console.error(`- ${failure}`);
-            process.exit(1);
-          }
-
-          console.log('Upload live ClamAV evidence validation: ok');
-          NODE
           node scripts/security/check-p0-runtime-evidence-register.mjs
           node scripts/security/check-p0-runtime-evidence-files.mjs
-          git diff -- docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md docs/security/evidence/runtime/upload-malware-scan-validation.json > upload-clamav-live-proof.diff
+          git diff -- docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md docs/security/evidence/runtime > upload-runtime-proof.diff
 
       - name: Upload diagnostics
         if: always()
@@ -179,12 +77,8 @@ jobs:
         with:
           name: upload-security-ci-diagnostics
           path: |
-            upload-security.log
-            upload-content-scan.log
-            upload-scanner-runtime-ci.log
-            upload-clamav-live-proof.log
-            upload-clamav-live-proof.diff
-            docs/security/evidence/runtime/upload-malware-scan-validation.json
+            upload-runtime-proof.diff
+            docs/security/evidence/runtime/*.json
             docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md
           retention-days: 14
           if-no-files-found: warn
