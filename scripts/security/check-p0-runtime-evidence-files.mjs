@@ -5,6 +5,7 @@ const evidenceDir = 'docs/security/evidence/runtime';
 const allowedItems = new Set([
   'branch-protection-main',
   'required-status-checks',
+  'ci-required-checks-validation',
   'ci-assessed-commit-validation',
   'deployment-health-validation',
   'deployment-smoke-validation',
