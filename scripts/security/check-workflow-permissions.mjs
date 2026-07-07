@@ -16,8 +16,8 @@ function workflowFiles() {
     .map((name) => join(workflowDir, name));
 }
 
-function hasTopLevelPermissions(source) {
-  return /^permissions:\s*$/m.test(source) || /^permissions:\s*\{[^}]*\}\s*$/m.test(source);
+function hasExplicitPermissions(source) {
+  return /^\s*permissions:\s*(?:$|\{[^}]*\}\s*$)/m.test(source);
 }
 
 function usesWriteAll(source) {
@@ -41,8 +41,8 @@ function hasJustifiedCheckoutWriteException(file, source) {
 for (const file of workflowFiles()) {
   const source = readFileSync(file, 'utf8');
 
-  if (!hasTopLevelPermissions(source)) {
-    failures.push(`${file}: missing top-level permissions block`);
+  if (!hasExplicitPermissions(source)) {
+    failures.push(`${file}: missing explicit top-level or job-level permissions block`);
   }
 
   if (usesWriteAll(source)) {
