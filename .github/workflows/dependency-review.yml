@@ -35,7 +35,20 @@ jobs:
       - name: Install dependencies deterministically without lifecycle scripts
         run: npm ci --ignore-scripts
 
+      - name: Detect dependency manifest changes
+        id: dependency_changes
+        shell: bash
+        run: |
+          changed_files="$(git diff --name-only HEAD^ HEAD || true)"
+          echo "$changed_files"
+          if echo "$changed_files" | grep -E '(^|/)(package(-lock)?\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock)$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: GitHub Dependency Review vulnerability scan
+        if: github.event_name == 'pull_request' && steps.dependency_changes.outputs.changed == 'true'
         uses: actions/dependency-review-action@v5
         with:
           vulnerability-check: true
@@ -45,3 +58,7 @@ jobs:
 
       - name: npm high and critical dependency vulnerability gate
         run: npm audit --audit-level=high
+
+      - name: No dependency manifest changes
+        if: github.event_name != 'pull_request' || steps.dependency_changes.outputs.changed != 'true'
+        run: echo "No dependency manifest changes detected; dependency review action skipped. npm audit fallback completed."
