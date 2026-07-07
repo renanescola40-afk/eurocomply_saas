@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+
 import { TrustCenterPage } from '@/components/trust/trust-page';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
+import { getSafeLocale, makePublicMetadata } from '@/lib/seo/public-metadata';
 import { getTrustCenterPage } from '@/lib/trust-center/content';
 import { isTrustCenterSlug, TRUST_CENTER_ROUTES } from '@/lib/trust-center/routes';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const dynamic = 'force-static';
+export const revalidate = 300;
 
 type PageProps = {
   params: Promise<{ locale: string; trustPage: string }>;
@@ -27,13 +29,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {};
   }
 
-  const locale = safeLocale(requestedLocale);
+  const locale = getSafeLocale(requestedLocale);
   const page = getTrustCenterPage(trustPage, locale);
 
-  return {
+  return makePublicMetadata({
+    locale,
+    path: `/${page.slug}`,
     title: `${page.title} - RISCK COMPLY`,
     description: page.subtitle,
-  };
+  });
 }
 
 export default async function PublicTrustRoute({ params }: PageProps) {
