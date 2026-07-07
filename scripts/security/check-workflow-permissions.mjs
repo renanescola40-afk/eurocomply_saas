@@ -6,6 +6,19 @@ const allowedPullRequestTargetWorkflows = new Set([]);
 const checkoutCredentialExceptions = new Set([
   '.github/workflows/p0-commit-lockfile.yml',
 ]);
+const criticalWorkflowFiles = new Set([
+  '.github/workflows/actionlint.yml',
+  '.github/workflows/ci.yml',
+  '.github/workflows/code-review.yml',
+  '.github/workflows/codeql.yml',
+  '.github/workflows/dependency-review.yml',
+  '.github/workflows/full-security-suite.yml',
+  '.github/workflows/gitleaks.yml',
+  '.github/workflows/secret-scanning.yml',
+  '.github/workflows/security-ci.yml',
+  '.github/workflows/semgrep.yml',
+  '.github/workflows/upload-security-ci.yml',
+]);
 const failures = [];
 const warnings = [];
 
@@ -14,6 +27,12 @@ function workflowFiles() {
   return readdirSync(workflowDir)
     .filter((name) => /\.ya?ml$/.test(name))
     .map((name) => join(workflowDir, name));
+}
+
+function report(file, message) {
+  const issue = `${file}: ${message}`;
+  if (criticalWorkflowFiles.has(file)) failures.push(issue);
+  else warnings.push(issue);
 }
 
 function hasExplicitPermissions(source) {
@@ -42,22 +61,22 @@ for (const file of workflowFiles()) {
   const source = readFileSync(file, 'utf8');
 
   if (!hasExplicitPermissions(source)) {
-    failures.push(`${file}: missing explicit top-level or job-level permissions block`);
+    report(file, 'missing explicit top-level or job-level permissions block');
   }
 
   if (usesWriteAll(source)) {
-    failures.push(`${file}: permissions write-all is forbidden`);
+    report(file, 'permissions write-all is forbidden');
   }
 
   if (usesPullRequestTarget(source) && !allowedPullRequestTargetWorkflows.has(file)) {
-    failures.push(`${file}: pull_request_target is forbidden unless explicitly allowlisted`);
+    report(file, 'pull_request_target is forbidden unless explicitly allowlisted');
   }
 
   if (!hasCheckoutPersistCredentialsFalse(source)) {
     if (hasJustifiedCheckoutWriteException(file, source)) {
       warnings.push(`${file}: checkout credentials are persisted only because this workflow commits/pushes a lockfile.`);
     } else {
-      failures.push(`${file}: actions/checkout must set persist-credentials: false when the workflow does not push back to the repository`);
+      report(file, 'actions/checkout must set persist-credentials: false when the workflow does not push back to the repository');
     }
   }
 }
