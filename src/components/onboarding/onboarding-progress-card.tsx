@@ -43,9 +43,9 @@ export function OnboardingProgressCard({ state }: OnboardingProgressCardProps) {
       />
       <CardHeader>
         <Badge variant="outline" className="w-fit rounded-full">Activation checklist</Badge>
-        <CardTitle>Get RISCK COMPLY audit-ready</CardTitle>
+        <CardTitle>Prepare RISCK COMPLY for review</CardTitle>
         <p className="text-sm leading-6 text-muted-foreground">
-          Follow this path to turn signup into enterprise value: organization, country, company profile, first AI system, risk score, documents, tasks, team and plan.
+          Follow this path to turn signup into structured value: organization, country, company profile, first AI system, risk score, documents, tasks, team and plan.
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
