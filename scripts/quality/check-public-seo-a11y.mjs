@@ -20,6 +20,8 @@ const requiredFiles = [
   'src/app/[locale]/[trustPage]/page.tsx',
   'src/app/sitemap.ts',
   'src/app/robots.ts',
+  'src/components/auth/AuthProviderGate.tsx',
+  'src/components/GlobalClientEffectsGate.tsx',
   'src/components/marketing/waitlist-page.tsx',
   'src/components/marketing/waitlist-interactions.tsx',
   'tests/e2e/public-seo-a11y.spec.ts',
@@ -55,10 +57,24 @@ assert(!waitlistPage.startsWith("'use client'"), 'Waitlist landing page must not
 assert(waitlistInteractions.startsWith("'use client'"), 'Waitlist interactions must be isolated in a client boundary.');
 assert(waitlistPage.includes('aria-labelledby="landing-title"'), 'Landing hero should be labelled for assistive tech.');
 
+const localeLayout = read('src/app/[locale]/layout.tsx');
+const authProviderGate = read('src/components/auth/AuthProviderGate.tsx');
+const globalEffectsGate = read('src/components/GlobalClientEffectsGate.tsx');
+assert(localeLayout.includes('AuthProviderGate'), 'Locale layout must gate the auth provider away from public SEO routes.');
+assert(!localeLayout.includes('import { AuthProvider }'), 'Locale layout must not import AuthProvider directly.');
+assert(authProviderGate.includes('AUTH_PROVIDER_SEGMENTS'), 'AuthProviderGate must explicitly document auth/private route segments.');
+assert(globalEffectsGate.includes('dynamic('), 'Global effects should be dynamically loaded.');
+assert(globalEffectsGate.includes('isOperationalRoute'), 'Global effects gate should only run on operational routes.');
+
 const robots = read('src/app/robots.ts');
 assert(robots.includes('/api/'), 'robots.ts must disallow API routes.');
 assert(robots.includes('/dashboard/'), 'robots.ts must disallow dashboard routes.');
 assert(robots.includes('localizedDisallow'), 'robots.ts must generate localized private disallows.');
+
+const nextConfig = read('next.config.ts');
+assert(nextConfig.includes('X-Robots-Tag'), 'Private/auth routes must send X-Robots-Tag headers.');
+assert(nextConfig.includes('noindex, nofollow, noarchive'), 'Private/auth route robots header must be strict.');
+assert(nextConfig.includes('no-store, max-age=0'), 'Private/auth routes must send no-store caching headers.');
 
 const sitemap = read('src/app/sitemap.ts');
 assert(sitemap.includes('/pricing'), 'sitemap must include pricing.');
