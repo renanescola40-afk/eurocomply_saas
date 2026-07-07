@@ -9,6 +9,10 @@ permissions:
   contents: read
   pull-requests: read
 
+concurrency:
+  group: dependency-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   dependency-review:
     name: Review dependency changes
@@ -26,22 +30,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
+          cache: npm
 
-      - name: Detect dependency manifest changes
-        id: dependency_changes
-        shell: bash
-        run: |
-          changed_files=$(git diff --name-only HEAD^ HEAD)
-          echo "$changed_files"
-          if echo "$changed_files" | grep -E '(^|/)(package(-lock)?\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock)$'; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Install dependencies deterministically without lifecycle scripts
+        run: npm ci --ignore-scripts
 
       - name: GitHub Dependency Review vulnerability scan
-        if: steps.dependency_changes.outputs.changed == 'true'
-        continue-on-error: true
         uses: actions/dependency-review-action@v5
         with:
           vulnerability-check: true
@@ -50,9 +44,4 @@ jobs:
           comment-summary-in-pr: never
 
       - name: npm high and critical dependency vulnerability gate
-        if: steps.dependency_changes.outputs.changed == 'true'
         run: npm audit --audit-level=high
-
-      - name: No dependency manifest changes
-        if: steps.dependency_changes.outputs.changed != 'true'
-        run: echo "No dependency manifest changes detected; dependency review is not required for this PR."
