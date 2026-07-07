@@ -1,7 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { getTrustCenterPages } from '@/lib/trust-center/content';
+
 import { locales, type Locale } from '@/lib/i18n/routing';
+import { getTrustCenterPages } from '@/lib/trust-center/content';
 
 type FooterLink = { label: string; href: string };
 type FooterCopy = {
@@ -14,54 +15,16 @@ type FooterCopy = {
   companyLinks: FooterLink[];
 };
 
-function makeLinks(labels: string[], hrefs: string[]): FooterLink[] {
-  return labels.map((label, index) => ({ label, href: hrefs[index] ?? hrefs[0] ?? '/' }));
-}
+const productLinks: FooterLink[] = [
+  { label: 'Platform', href: '/#platform' },
+  { label: 'Pricing', href: '/pricing' },
+  { label: 'Enterprise', href: '/enterprise' },
+  { label: 'Request demo', href: '/book-demo' },
+];
 
-const footerCopy: Record<Locale, FooterCopy> = {
-  en: {
-    tagline: 'Enterprise-grade AI governance workflows, evidence preparation and risk visibility for European teams preparing for serious compliance review.',
-    assuranceNote: 'Built for evidence preparation, operational governance and review support. No unsupported certification, audit or compliance guarantee is claimed.',
-    productTitle: 'Platform', companyTitle: 'Company', trustTitle: 'Trust & Assurance',
-    productLinks: makeLinks(['Operating layer', 'Pricing', 'Enterprise', 'Request demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
-    companyLinks: makeLinks(['Home', 'Log in'], ['/', '/login']),
-  },
-  pt: {
-    tagline: 'Workflows enterprise de governança de IA, preparação de evidências e visibilidade de risco para equipas europeias que se preparam para revisão séria de compliance.',
-    assuranceNote: 'Criado para preparação de evidências, governança operacional e suporte à revisão. Nenhuma certificação, auditoria ou garantia de compliance sem evidência é afirmada.',
-    productTitle: 'Plataforma', companyTitle: 'Empresa', trustTitle: 'Confiança & Assurance',
-    productLinks: makeLinks(['Camada operacional', 'Preços', 'Enterprise', 'Pedir demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
-    companyLinks: makeLinks(['Início', 'Entrar'], ['/', '/login']),
-  },
-  es: {
-    tagline: 'Workflows enterprise de gobernanza de IA, preparación de evidencias y visibilidad de riesgo para equipos europeos que se preparan para revisiones serias de compliance.',
-    assuranceNote: 'Creado para preparación de evidencias, gobernanza operativa y soporte de revisión. No se afirma ninguna certificación, auditoría o garantía de compliance sin evidencia.',
-    productTitle: 'Plataforma', companyTitle: 'Empresa', trustTitle: 'Confianza & Assurance',
-    productLinks: makeLinks(['Capa operativa', 'Precios', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
-    companyLinks: makeLinks(['Inicio', 'Entrar'], ['/', '/login']),
-  },
-  fr: {
-    tagline: 'Workflows enterprise de gouvernance IA, préparation de preuves et visibilité du risque pour les équipes européennes préparant des revues compliance sérieuses.',
-    assuranceNote: 'Conçu pour la préparation de preuves, la gouvernance opérationnelle et le support de revue. Aucune certification, audit ou garantie de compliance non étayé n’est revendiqué.',
-    productTitle: 'Produit', companyTitle: 'Entreprise', trustTitle: 'Confiance & Assurance',
-    productLinks: makeLinks(['Couche opérationnelle', 'Tarifs', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
-    companyLinks: makeLinks(['Accueil', 'Connexion'], ['/', '/login']),
-  },
-  it: {
-    tagline: 'Workflow enterprise di governance AI, preparazione delle evidenze e visibilità del rischio per team europei che si preparano a review compliance serie.',
-    assuranceNote: 'Creato per preparazione delle evidenze, governance operativa e supporto alla review. Non vengono dichiarate certificazioni, audit o garanzie di compliance senza evidenza.',
-    productTitle: 'Prodotto', companyTitle: 'Azienda', trustTitle: 'Trust & Assurance',
-    productLinks: makeLinks(['Livello operativo', 'Prezzi', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
-    companyLinks: makeLinks(['Home', 'Accesso'], ['/', '/login']),
-  },
-  de: {
-    tagline: 'Enterprise-Workflows für KI-Governance, Evidenzvorbereitung und Risikotransparenz für europäische Teams vor anspruchsvollen Compliance-Reviews.',
-    assuranceNote: 'Entwickelt für Evidenzvorbereitung, operative Governance und Review-Support. Keine unbelegten Zertifizierungen, Audits oder Compliance-Garantien werden behauptet.',
-    productTitle: 'Produkt', companyTitle: 'Unternehmen', trustTitle: 'Trust & Assurance',
-    productLinks: makeLinks(['Operating Layer', 'Preise', 'Enterprise', 'Demo', 'FAQ'], ['/#platform', '/pricing', '/enterprise', '/book-demo', '/#faq']),
-    companyLinks: makeLinks(['Startseite', 'Anmelden'], ['/', '/login']),
-  },
-};
+function getActiveLocale(locale: string): Locale {
+  return (locales.includes(locale as Locale) ? locale : 'en') as Locale;
+}
 
 function localizeHref(locale: Locale, href: string) {
   if (href.startsWith('/#')) return `/${locale}${href.slice(1)}`;
@@ -69,23 +32,41 @@ function localizeHref(locale: Locale, href: string) {
 }
 
 export function PublicFooter({ locale }: { locale: string }) {
-  const activeLocale = (locales.includes(locale as Locale) ? locale : 'en') as Locale;
-  const copy = footerCopy[activeLocale];
+  const activeLocale = getActiveLocale(locale);
   const trustLinks = getTrustCenterPages(activeLocale).map((page) => ({ label: page.navLabel, href: `/${page.slug}` }));
 
   return (
     <footer className="border-t border-white/10 bg-[#050505] px-6 py-12 text-sm text-white/55">
-      <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[1.45fr_1fr_1fr_1fr]">
+      <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[1.45fr_1fr_1fr]">
         <div>
           <Image src="/brand/risck-comply-wordmark.svg" alt="Risck Comply wordmark" width={170} height={42} className="h-10 w-auto object-contain" />
-          <p className="mt-4 max-w-md leading-7 text-white/58">{copy.tagline}</p>
+          <p className="mt-4 max-w-md leading-7 text-white/58">
+            AI Act readiness, governance evidence and risk workflows for European teams preparing for compliance review.
+          </p>
           <p className="mt-5 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.06] px-4 py-3 text-xs leading-5 text-cyan-50/72">
-            {copy.assuranceNote}
+            Built for evidence preparation and operational governance support. No certification, audit or compliance guarantee is claimed.
           </p>
         </div>
-        <nav><p className="font-semibold text-white">{copy.productTitle}</p><ul className="mt-4 space-y-2.5">{copy.productLinks.map((link) => <li key={link.href}><Link href={localizeHref(activeLocale, link.href)} className="transition hover:text-white">{link.label}</Link></li>)}</ul></nav>
-        <nav><p className="font-semibold text-white">{copy.companyTitle}</p><ul className="mt-4 space-y-2.5">{copy.companyLinks.map((link) => <li key={link.href}><Link href={localizeHref(activeLocale, link.href)} className="transition hover:text-white">{link.label}</Link></li>)}</ul></nav>
-        <nav><p className="font-semibold text-white">{copy.trustTitle}</p><ul className="mt-4 space-y-2.5">{trustLinks.map((link) => <li key={link.href}><Link href={localizeHref(activeLocale, link.href)} className="transition hover:text-white">{link.label}</Link></li>)}</ul></nav>
+        <nav aria-label="Product links">
+          <p className="font-semibold text-white">Platform</p>
+          <ul className="mt-4 space-y-2.5">
+            {productLinks.map((link) => (
+              <li key={link.href}>
+                <Link href={localizeHref(activeLocale, link.href)} className="transition hover:text-white">{link.label}</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <nav aria-label="Trust links">
+          <p className="font-semibold text-white">Trust</p>
+          <ul className="mt-4 space-y-2.5">
+            {trustLinks.map((link) => (
+              <li key={link.href}>
+                <Link href={localizeHref(activeLocale, link.href)} className="transition hover:text-white">{link.label}</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
     </footer>
   );
