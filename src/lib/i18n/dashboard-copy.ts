@@ -123,3 +123,7 @@ export const dashboardCopy = {
 
 export type DashboardCopyLocale = keyof typeof dashboardCopy;
 export type DashboardCopy = typeof dashboardCopy[DashboardCopyLocale];
+
+export function getDashboardCopy(locale: DashboardCopyLocale): DashboardCopy {
+  return dashboardCopy[locale];
+}
