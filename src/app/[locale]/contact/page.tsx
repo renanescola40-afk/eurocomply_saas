@@ -6,6 +6,8 @@ import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 export const revalidate = 300;
 export const dynamic = 'force-static';
 
+const contactMailbox = ['comercial', 'risckcomply.com'].join('@');
+
 type ContactSearchParams = {
   intent?: string | string[];
 };
@@ -54,7 +56,7 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
   const activeLocale = (locales.includes(requestedLocale as Locale) ? requestedLocale : defaultLocale) as Locale;
   const intent = first(resolvedSearchParams.intent);
   const copy = copyFor(activeLocale, intent);
-  const mailto = `mailto:renansilva2002@gmail.com?subject=${encodeURIComponent(copy.subject)}`;
+  const mailto = `mailto:${contactMailbox}?subject=${encodeURIComponent(copy.subject)}`;
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#050505] px-4 py-10 text-white sm:px-6 lg:px-8">
