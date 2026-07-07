@@ -87,4 +87,30 @@ describe('Phase 5 dashboard invariants', () => {
     expect(query).toContain("from('vendors')");
     expect(query).toContain("from('documents')");
   });
+
+  it('keeps organization activity page protected and data-backed', () => {
+    const activity = read('src/app/[locale]/dashboard/organizations/activity/page.tsx');
+
+    expect(activity).toContain('noStore();');
+    expect(activity).toContain('getCurrentUser()');
+    expect(activity).toContain('getOrganizationDashboardData(user.id)');
+    expect(activity).toContain('redirect(`/${locale}/login`);');
+    expect(activity).toContain('redirect(`/${locale}/onboarding`);');
+    expect(activity).toContain('data.auditEvents.length === 0');
+    expect(activity).toContain('data.auditEvents.map((event)');
+    expect(activity).toContain('Recent organization events from persisted dashboard activity data.');
+    expect(activity).not.toContain('mock');
+  });
+
+  it('keeps AI inventory labels covered across public locales', () => {
+    const source = read('src/app/[locale]/ai-systems/ai-systems-client.tsx');
+
+    for (const locale of ['en', 'pt', 'es', 'fr', 'it', 'de']) {
+      expect(source).toContain(`${locale}: {`);
+    }
+
+    for (const key of ['countryMarket', 'processedData', 'vendorName', 'modelName', 'lastReassessed']) {
+      expect(source).toContain(key);
+    }
+  });
 });

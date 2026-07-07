@@ -6,32 +6,35 @@ This file records release evidence for the current assessed commit. Partial stat
 
 ## Current release assessment
 
-- Assessment date: 2026-06-30
+- Assessment date: 2026-07-07
 - Repository: `renanescola40-afk/eurocomply_saas`
-- Latest assessed PR: #701
-- PR #701 head SHA: `85ca8ab9a337088e1aefec0d507fe43ae73da9b5`
-- PR #701 merge commit SHA: `4890c4cb0c47deef5dfd78b22f6888e4acd0c4b7`
-- Vercel observation: GitHub status showed `Vercel` as `success` for `4890c4cb0c47deef5dfd78b22f6888e4acd0c4b7`. This is partial status evidence only.
+- Scope: public production release readiness
+- Decision: No-Go until every release-blocking item below is `Complete` for the exact final release commit.
 
 ## Evidence status
 
 | Evidence item | Status | Required evidence | Owner | Next action |
 | --- | --- | --- | --- | --- |
-| Branch protection applied on `main` | Exception | Repository evidence exists; exception owner must re-confirm current branch rules for the final release commit | Release owner | Revalidate for final release commit |
-| Required status checks configured | Exception | Repository evidence exists; exception owner must confirm required checks for the final release commit | Release owner | Revalidate for final release commit |
-| Production provider configuration evidence | Complete | Runtime evidence json exists for provider settings review; attach runtime preflight output before Go | Release owner | Attach runtime preflight before Go |
-| Supabase live RLS validation completed | Complete | `docs/security/evidence/runtime/supabase-live-rls-validation.json` records status `Complete`, outcome `passed`, timestamp, redacted Supabase project reference, tables reviewed, tests passed/failed, zero failures, reviewer, command used, commit SHA, RLS enablement, tenant A/B cross-tenant read/insert/update/delete denial, profiles user-scoped read/insert/update/delete proof, viewer/admin separation, same-tenant allowed behavior, and backend-owned write denial | Security reviewer |
-| External review | Open | External review report or approved review evidence is still missing | Security reviewer | Required before enterprise Go |
+| Branch protection applied on `main` | Open | `docs/security/evidence/runtime/branch-protection-required-checks.json` must prove the final release branch protection rules for the assessed commit | Release owner | Revalidate branch protection for the final release commit |
+| Required status checks configured | Open | `docs/security/evidence/runtime/branch-protection-required-checks.json` must prove required checks are enforced on `main` | Release owner | Revalidate required checks for the final release commit |
+| Production provider configuration evidence | Open | Provider settings review evidence must prove required production providers are configured without exposing secret values | Release owner | Confirm Vercel, GitHub, Supabase, Stripe and Sentry provider settings before Go |
+| Supabase live RLS validation completed | Complete | `docs/security/evidence/runtime/supabase-live-rls-validation.json` records status `Complete`, outcome `passed`, timestamp, redacted Supabase project reference, tables reviewed, tests passed/failed, zero failures, reviewer, command used, commit SHA, RLS enablement, tenant isolation, profile scoping, role separation, same-tenant allowed behavior, and backend-owned write denial | Security reviewer | Re-run only if production Supabase project or policies changed |
+| External review | Open | External security review report, pentest report, or approved exception evidence must be attached before enterprise Go | Security reviewer | Attach external review evidence or approved exception before enterprise Go |
 | Deterministic npm lockfile committed | Complete | Package lockfile commit evidence exists; attach exact final runner install output before Go | Engineering owner | Attach final runner output |
 | Floating dependency specs removed | Complete | Dependency report evidence exists and records no forbidden floating specs | Engineering owner | Attach final security output before Go |
-| CI run for assessed commit | Open | The latest main merge commit did not return reviewable workflow-run URLs in this connector session | Engineering owner | Attach exact final workflow-run URLs and output before Go |
-| Current main Vercel deployment status | Open | Vercel status was observed as success, but that does not prove functional runtime smoke | Platform owner | Attach real smoke output before Go |
-| Deployment URL functional verification | Open | Health, readiness, preview, and production smoke output are still missing | Platform owner | Required before Go |
-| Final validation runner | Open | Final validation output is still missing | Release owner | Required before Go |
-| Rollback dry-run | Open | Rollback dry-run output is still missing | Release owner | Required before Go |
+| Deployment URL functional verification | Open | `docs/security/evidence/runtime/deployment-smoke-validation.json` must record a passing production smoke test for the target deployment URL | Platform owner | Configure production URL/readiness token/build metadata and rerun deployment smoke |
+| Final validation runner | Open | `docs/security/evidence/runtime/final-validation-runner.json` or `docs/security/evidence/runtime/production-final-validation.json` must record final runner output for the exact release commit | Release owner | Attach final runner output after all runtime checks pass |
+| Audit-chain live validation | Open | `docs/security/evidence/runtime/audit-chain-live-validation.json` must prove live audit-chain integrity for the target deployment/project | Security reviewer | Run live audit-chain validation |
+| Upload malware/content scanning validation | Open | `docs/security/evidence/runtime/upload-malware-scan-validation.json` must prove upload scanning behavior in the target runtime | Security reviewer | Run upload scanner runtime validation |
+| Step-up MFA / IdP validation | Open | `docs/security/evidence/runtime/step-up-mfa-validation.json` must prove step-up MFA or IdP enforcement where required | Security reviewer | Run step-up runtime validation |
+| Stripe billing runtime validation | Open | `docs/security/evidence/runtime/stripe-billing-validation.json` must prove checkout, portal, webhook, idempotency, and safe error behavior in target runtime | Billing owner | Run Stripe billing runtime validation with test-mode/synthetic data only |
+| Observability readiness | Open | `docs/security/evidence/runtime/observability-readiness.json` must prove Sentry, logging and smoke observability work without leaking sensitive values | SRE owner | Run observability readiness validation |
+| Rollback owner and rollback target | Open | `docs/security/evidence/runtime/rollback-dry-run-validation.json` must prove last-known-good URL, rollback target SHA, owner approval, health/no-store, and functional validation proof | Release owner | Configure rollback target URL/SHA and rerun rollback dry-run |
 
 ## Go/No-Go rule
 
-Release remains blocked while any required P0 runtime evidence item is Open or under release-blocking Exception.
+Release remains blocked while any required P0 runtime evidence item is `Open`, `Exception`, or missing from this register.
+
+`Complete` means the evidence file exists, is for the exact release commit or approved target, has redacted secret handling, and records an outcome of `passed` or an explicitly approved exception where the release policy allows it.
 
 Current final decision: **No-Go**.
