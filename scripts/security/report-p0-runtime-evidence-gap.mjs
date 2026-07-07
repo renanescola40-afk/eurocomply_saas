@@ -5,7 +5,10 @@ import path from 'node:path';
 const requestedStrict = process.argv.includes('--strict');
 const finalValidationInProgress = process.env.FINAL_VALIDATION_IN_PROGRESS === 'true';
 const ciFinalRun = process.env.GITHUB_EVENT_NAME === 'workflow_dispatch';
-const strict = requestedStrict && (finalValidationInProgress || ciFinalRun);
+const finalReleaseGateRun = process.env.GITHUB_WORKFLOW === 'P0 Final Release Gate';
+const refName = process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || '';
+const releaseReadyRef = /(?:final-evidence|release-ready)/.test(refName);
+const strict = requestedStrict && (finalValidationInProgress || ciFinalRun || finalReleaseGateRun || releaseReadyRef);
 const registerPath = path.join('docs', 'security', 'P0_RUNTIME_EVIDENCE_REGISTER.md');
 const runtimeDir = path.join('docs', 'security', 'evidence', 'runtime');
 const satisfiedStatuses = new Set(['Complete']);
@@ -57,6 +60,8 @@ const report = {
     strictEnforced: strict,
     finalValidationInProgress,
     ciFinalRun,
+    finalReleaseGateRun,
+    releaseReadyRef,
   },
   missing,
   results,
@@ -67,5 +72,5 @@ if (strict && missing.length > 0) {
   process.exit(1);
 }
 if (requestedStrict && !strict && missing.length > 0) {
-  console.warn('P0 runtime evidence gap remains open. Strict enforcement is reserved for final validation runs.');
+  console.warn('P0 runtime evidence gap remains open. Strict enforcement is reserved for final validation, final release gate, or release-ready evidence runs.');
 }
