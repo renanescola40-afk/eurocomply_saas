@@ -1,33 +1,35 @@
-# EuroComply Supply Chain Security Standard
+# RISCK COMPLY Supply Chain Security Standard
 
-This document defines the baseline supply-chain security controls for EuroComply source code, dependencies and GitHub Actions workflows.
+This document defines the baseline supply-chain security controls for RISCK COMPLY source code, dependencies and GitHub Actions workflows.
 
 ## Purpose
 
-EuroComply depends on the Node.js/npm ecosystem, GitHub Actions and third-party packages. The goal of this standard is to reduce dependency confusion, malicious lifecycle script execution, vulnerable dependency drift and license risk.
+RISCK COMPLY depends on the Node.js/npm ecosystem, GitHub Actions and third-party packages. The goal of this standard is to reduce dependency confusion, malicious lifecycle script execution, vulnerable dependency drift, check-name drift, secret exposure and unsafe PR automation.
 
-## Current Controls
+## Current controls
 
 | Control | Location |
 | --- | --- |
 | Package manager pinning | `package.json` `packageManager` |
-| npm runtime drift warning | `scripts/security/check-supply-chain.mjs` |
 | npm repository policy | `.npmrc` |
+| Committed npm lockfile | `package-lock.json` |
+| Lockfile alignment gate | `npm run security:package-lock` |
 | Safe lockfile generation command | `package.json` `supply-chain:lockfile` |
 | Floating dependency triage command | `package.json` `supply-chain:floating-deps` |
+| npm runtime drift warning | `scripts/security/check-supply-chain.mjs` |
+| npm audit gates | `security:npm-audit:prod`, `security:npm-audit:all`, `security:npm-audit:json` |
 | Zod error API compatibility guard | `package.json` `security:zod-compat` |
 | Final security readiness command | `package.json` `security:final-readiness` |
 | Final security readiness JSON report | `package.json` `security:final-readiness:report` |
-| npm audit triage commands | `package.json` audit scripts |
-| Non-blocking npm audit summary | `.github/workflows/security-ci.yml` |
-| Floating dependency spec warnings | `scripts/security/check-supply-chain.mjs` |
 | Dependency Review | `.github/workflows/dependency-review.yml` |
-| CodeQL SAST | `.github/workflows/codeql.yml` |
-| Internal security CI | `.github/workflows/security-ci.yml` |
+| CodeQL SAST | `.github/workflows/codeql.yml` and `.github/workflows/full-security-suite.yml` |
+| Secret scanning / Gitleaks | `.github/workflows/gitleaks.yml` and `.github/workflows/full-security-suite.yml` |
+| Required-check drift gate | `scripts/security/check-ci-required-checks-validation.mjs` |
+| Required-check evidence | `docs/security/evidence/runtime/ci-required-checks-validation.json` |
 | Supply-chain regression gate | `scripts/security/check-supply-chain.mjs` |
 | Workflow regression gate | `scripts/security/check-github-security-workflows.mjs` |
 
-## npm Policy
+## npm policy
 
 The repository `.npmrc` enforces:
 
@@ -38,14 +40,9 @@ fund=false
 save-exact=true
 ```
 
-This means:
+This means npm generates/keeps a lockfile, npm audit remains enabled, funding prompts are disabled for deterministic CI logs, and newly saved package versions are exact instead of broad ranges.
 
-- npm should generate a lockfile when dependencies are installed.
-- npm audit remains enabled.
-- funding prompts are disabled for deterministic CI logs.
-- newly saved package versions are exact instead of broad ranges.
-
-## Package Manager Runtime Policy
+## Package manager runtime policy
 
 The repository pins the expected package manager in `package.json`:
 
@@ -53,11 +50,9 @@ The repository pins the expected package manager in `package.json`:
 npm@10.8.2
 ```
 
-`npm run security:supply-chain` warns on npm runtime drift when `npm --version` does not match the pinned `packageManager` value.
+`npm run security:supply-chain` reports npm runtime drift when `npm --version` does not match the pinned `packageManager` value. This warning should be resolved before regenerating `package-lock.json` or using npm audit output for dependency triage.
 
-This warning is intentionally non-blocking until `package-lock.json` is committed. Before generating the lockfile or using `npm-audit.json` for dependency updates, align local/CI npm with the pinned package manager so the lockfile and audit output are reproducible.
-
-## Lifecycle Script Policy
+## Lifecycle script policy
 
 The repository must not define these lifecycle scripts in `package.json`:
 
@@ -68,45 +63,68 @@ postinstall
 prepare
 ```
 
-The security CI and Vercel deploy install dependencies with:
-
-```txt
-npm install --ignore-scripts
-```
-
-This reduces risk from dependency lifecycle scripts while the project does not yet have a committed `package-lock.json`.
-
-## GitHub Actions npm Cache Policy
-
-The Security CI currently keeps npm cache disabled until lockfile exists.
-
-```txt
-cache disabled until lockfile exists
-```
-
-Reason:
-
-```txt
-package-lock.json is the dependency graph source of truth for reproducible npm cache keys.
-```
-
-While `package-lock.json` is missing, `.github/workflows/security-ci.yml` must not use:
-
-```txt
-cache: npm
-```
-
-Once `package-lock.json` is committed and CI switches to:
+CI installs dependencies with:
 
 ```txt
 npm ci --ignore-scripts
 ```
 
-then npm cache can be re-enabled using the lockfile-backed cache key from `actions/setup-node`.
+This keeps dependency installation deterministic and prevents dependency lifecycle scripts from executing in PR/build contexts.
 
-The supply-chain gate enforces this by failing if `cache: npm` appears in Security CI before `package-lock.json` exists.
+The only approved lockfile refresh command is:
 
-## npm Audit Triage
+```txt
+npm run supply-chain:lockfile
+```
+
+It expands to:
+
+```txt
+npm install --package-lock-only --ignore-scripts
+```
+
+This updates only `package-lock.json` and avoids lifecycle scripts during lockfile triage.
+
+## GitHub Actions npm cache policy
+
+`package-lock.json` is committed and is the dependency graph source of truth for reproducible npm cache keys.
+
+```txt
+cache enabled after lockfile exists
+```
+
+GitHub Actions may use `cache: npm` through `actions/setup-node` when the workflow also uses `npm ci --ignore-scripts`. Workflows must not fall back to `npm install` for CI validation.
+
+## Required-check drift policy
+
+GitHub branch protection required checks must match real workflow/job names. A stale name creates a permanent `Expected` check and can block safe merges or tempt unsafe bypasses.
+
+The repository-side validator is:
+
+```bash
+node scripts/security/check-ci-required-checks-validation.mjs
+```
+
+Evidence is committed in:
+
+```txt
+docs/security/evidence/runtime/ci-required-checks-validation.json
+```
+
+This `ci-required-checks-validation` evidence records required checks, missing required checks, checks that do not run on `pull_request`, and whether any workflow uses `pull_request_target`.
+
+## pull_request_target policy
+
+PR workflows must not run untrusted code with repository secrets or privileged write tokens.
+
+Rules:
+
+- Use `pull_request` for normal PR validation.
+- Do not use `pull_request_target` unless a future workflow is explicitly designed to avoid checkout/execution of PR code and is reviewed as a security exception.
+- Do not load third-party AI review actions with secrets on PR code.
+- Keep `persist-credentials: false` on `actions/checkout` unless a workflow has an explicit reviewed push-back exception.
+
+## npm audit triage
 
 The project exposes explicit npm audit commands:
 
@@ -114,23 +132,13 @@ The project exposes explicit npm audit commands:
 npm run security:npm-audit:prod
 npm run security:npm-audit:all
 npm run security:npm-audit:json
-npm run security:npm-audit:summary
 ```
 
-Use `security:npm-audit:prod` first to determine whether any high-severity advisory affects production dependencies.
-Use `security:npm-audit:json` when Vercel or npm only prints a summarized vulnerability count and package-level detail is needed.
-Use `security:npm-audit:summary` after generating `npm-audit.json` to print the package, severity, vulnerable range, affected paths and advertised fix.
+`security:npm-audit:prod` checks production dependencies at high severity. `security:npm-audit:all` is part of the security gate and uses a moderate threshold. `security:npm-audit:json` captures machine-readable audit evidence when package-level triage is needed.
 
-Security CI currently captures and prints the npm audit summary as a non-blocking diagnostic step:
+High and critical findings are release blockers until fixed or triaged in `docs/security/NPM_AUDIT_TRIAGE.md` with owner, reachability decision, remediation plan and expiry.
 
-```txt
-npm run security:npm-audit:json > npm-audit.json || true
-npm run security:npm-audit:summary || true
-```
-
-This diagnostic step is intentionally warning-only. Promote `security:npm-audit:prod` into `security:ci` only after the production audit is clean or an accepted exception is documented.
-
-## Floating Version Spec Policy
+## Floating version spec policy
 
 `npm run security:supply-chain` warns when existing dependencies use highly floating version specs such as:
 
@@ -149,9 +157,7 @@ Use the dedicated triage command to print only the floating dependency list:
 npm run supply-chain:floating-deps
 ```
 
-This command does not contact npm. It reads `package.json` and lists the exact dependency paths that must be replaced during lockfile/audit triage.
-
-These warnings are not hard failures yet because the repository still lacks a committed `package-lock.json` and the current npm audit findings need package-level triage first.
+When replacing a floating version, prefer the exact version resolved in the audited lockfile instead of blindly choosing the newest version.
 
 Target state:
 
@@ -159,52 +165,64 @@ Target state:
 No dependency uses latest or open-ended ranges
 package-lock.json committed
 npm ci --ignore-scripts used in CI
-floating dependency specs treated as failures
+floating version specs treated as failures after triage
 ```
 
-When replacing a floating spec, prefer the exact version resolved in the audited lockfile instead of blindly choosing the newest version.
+## Dependency Review policy
 
-## Zod Compatibility Policy
+Pull requests are checked by GitHub Dependency Review.
 
-The project uses Zod v4, where validation issues should be read from `ZodError.issues`.
+The workflow must fail closed and must not use `continue-on-error: true`.
 
-The compatibility guard is exposed through:
+The workflow fails on:
 
 ```txt
-npm run security:zod-compat
+high severity vulnerabilities
 ```
 
-This command scans source and script files for deprecated `.error.errors` access. It is included in `security:ci` before `typecheck` so a regression is reported with a targeted message instead of surfacing later as a Next.js build type error.
-
-## Lockfile Status
-
-`package-lock.json` is currently treated as a warning rather than a hard failure.
-
-Generate the first lockfile with the repository-managed command:
+License enforcement is intentionally set to:
 
 ```txt
-npm run supply-chain:lockfile
+license-check: false
 ```
 
-This command expands to:
+A broad deny-license policy is not enforced in this workflow because license decisions require separate legal/product triage.
+
+## CodeQL policy
+
+CodeQL runs on:
+
+- push to `main`
+- pull requests targeting `main`
+- weekly schedule
+
+Queries enabled in the standalone CodeQL workflow:
 
 ```txt
-npm install --package-lock-only --ignore-scripts
+security-extended
+security-and-quality
 ```
 
-Use this command only after aligning local npm with `packageManager`. Review the generated `package-lock.json`, then run the audit triage commands before replacing floating dependency specs.
+The Full Security Suite also includes a CodeQL job so branch protection can depend on `Full Security Suite / CodeQL`.
 
-Target state:
+## SBOM policy
+
+The Full Security Suite generates a CycloneDX SBOM from the committed `package-lock.json` and uploads it as the `risck-comply-sbom` artifact.
+
+Expected runtime path:
 
 ```txt
-package-lock.json committed
-npm ci --ignore-scripts used in CI
-missing lockfile treated as a failure
+docs/security/evidence/runtime/sbom.cyclonedx.json
 ```
 
-This will improve build reproducibility and supply-chain traceability.
+## Remaining risks and required follow-up
 
-## Final Security Readiness
+- GitHub branch protection/ruleset configuration still requires admin verification in the GitHub UI before `docs/security/evidence/runtime/branch-protection-required-checks.json` can be marked `Complete`.
+- Several GitHub Actions still use version tags instead of immutable full-length SHAs. Treat this as supply-chain risk until each action ref is pinned to a reviewed commit SHA.
+- Floating dependency specs remain warnings until dependency triage replaces them with exact audited versions.
+- `@clerk/nextjs` remains listed in `package.json` while runtime import checks prevent Clerk usage. Remove it in a separate lockfile PR only after confirming no Clerk migration code still requires the package.
+
+## Final security readiness
 
 Use the manual readiness command before treating dependency and supply-chain hardening as complete:
 
@@ -218,53 +236,4 @@ Security CI also emits a machine-readable readiness report through:
 npm run security:final-readiness:report
 ```
 
-The JSON report is written to `final-security-readiness.json` and is uploaded inside the `npm-audit-triage` GitHub Actions artifact. This report is intentionally non-blocking until the lockfile, audit findings and floating dependency specs are resolved.
-
-The readiness command is intentionally not part of `security:ci` yet because it is expected to fail until the lockfile is committed, `npm-audit.json` has been generated and the remaining floating dependency specs have been replaced with exact audited versions.
-
-The command reports release/security readiness blockers for:
-
-- missing `package-lock.json`
-- missing `npm-audit.json`
-- remaining floating dependency specs
-- npm audit findings still present in `npm-audit.json`
-- package manager pin drift
-
-Promote this readiness check into CI only after the project reaches the target supply-chain state.
-
-## Dependency Review Policy
-
-Pull requests are checked by GitHub Dependency Review.
-
-The workflow fails on:
-
-```txt
-high severity vulnerabilities
-```
-
-The workflow also denies selected strong-copyleft licenses:
-
-```txt
-GPL-2.0
-GPL-3.0
-AGPL-1.0
-AGPL-3.0
-LGPL-2.0
-LGPL-2.1
-LGPL-3.0
-```
-
-## CodeQL Policy
-
-CodeQL runs on:
-
-- push to `main`
-- pull requests targeting `main`
-- weekly schedule
-
-Queries enabled:
-
-```txt
-security-extended
-security-and-quality
-```
+The JSON report is written to `final-security-readiness.json` and is uploaded inside the `npm-audit-triage` GitHub Actions artifact.
