@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Download, FileArchive, FileCheck2, FileText, PackageCheck, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, Download, FileArchive, FileCheck2, FileText, PackageCheck, ShieldCheck, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,13 +13,13 @@ import { auditPackToText, buildAuditPackData, type AuditPackData } from '@/lib/a
 const copy = {
   en: {
     back: 'Back to dashboard',
-    badge: 'Audit Pack Generator',
-    title: 'Generate your EU AI Act audit pack',
-    subtitle: 'Consolidate your latest Gap Analysis, findings, tasks and evidence into an audit-ready package.',
-    generate: 'Generate Audit Pack',
+    badge: 'Review Package Generator',
+    title: 'Generate your EU AI Act review package',
+    subtitle: 'Consolidate your latest Gap Analysis, findings, tasks and evidence into a structured review package.',
+    generate: 'Generate Review Package',
     export: 'Export TXT',
-    score: 'Compliance Score',
-    readiness: 'Audit Readiness',
+    score: 'Readiness Score',
+    readiness: 'Review Readiness',
     findings: 'Critical Findings',
     tasks: 'Open Tasks',
     evidence: 'Evidence Coverage',
@@ -30,64 +30,64 @@ const copy = {
   },
   pt: {
     back: 'Voltar ao dashboard',
-    badge: 'Gerador de Audit Pack',
-    title: 'Gere seu pacote de auditoria EU AI Act',
-    subtitle: 'Consolide o último Gap Analysis, findings, tarefas e evidências em um pacote pronto para auditoria.',
-    generate: 'Gerar Audit Pack',
+    badge: 'Gerador de pacote de revisao',
+    title: 'Gere seu pacote de revisao EU AI Act',
+    subtitle: 'Consolide o ultimo Gap Analysis, findings, tarefas e evidencias em um pacote estruturado de revisao.',
+    generate: 'Gerar pacote de revisao',
     export: 'Exportar TXT',
-    score: 'Score de Compliance',
-    readiness: 'Prontidão de Auditoria',
-    findings: 'Findings Críticos',
-    tasks: 'Tarefas Abertas',
-    evidence: 'Cobertura de Evidências',
-    register: 'Registro de Evidências',
-    openFindings: 'Findings Abertos',
-    openTasks: 'Tarefas Abertas',
-    empty: 'Ainda não há dados. Execute o Gap Analysis e adicione evidências primeiro.',
+    score: 'Score de readiness',
+    readiness: 'Readiness de revisao',
+    findings: 'Findings criticos',
+    tasks: 'Tarefas abertas',
+    evidence: 'Cobertura de evidencias',
+    register: 'Registro de evidencias',
+    openFindings: 'Findings abertos',
+    openTasks: 'Tarefas abertas',
+    empty: 'Ainda nao ha dados. Execute o Gap Analysis e adicione evidencias primeiro.',
   },
   es: {
     back: 'Volver al dashboard',
-    badge: 'Generador de Audit Pack',
-    title: 'Genera tu paquete de auditoría EU AI Act',
-    subtitle: 'Consolida Gap Analysis, hallazgos, tareas y evidencias en un paquete listo para auditoría.',
-    generate: 'Generar Audit Pack',
+    badge: 'Generador de paquete de revision',
+    title: 'Genera tu paquete de revision EU AI Act',
+    subtitle: 'Consolida Gap Analysis, hallazgos, tareas y evidencias en un paquete estructurado de revision.',
+    generate: 'Generar paquete de revision',
     export: 'Exportar TXT',
-    score: 'Puntuación de cumplimiento',
-    readiness: 'Preparación de auditoría',
-    findings: 'Hallazgos críticos',
+    score: 'Puntuacion de preparacion',
+    readiness: 'Preparacion de revision',
+    findings: 'Hallazgos criticos',
     tasks: 'Tareas abiertas',
     evidence: 'Cobertura de evidencias',
     register: 'Registro de evidencias',
     openFindings: 'Hallazgos abiertos',
     openTasks: 'Tareas abiertas',
-    empty: 'Aún no hay datos. Ejecuta Gap Analysis y agrega evidencias primero.',
+    empty: 'Aun no hay datos. Ejecuta Gap Analysis y agrega evidencias primero.',
   },
   fr: {
     back: 'Retour au dashboard',
-    badge: 'Générateur Audit Pack',
-    title: 'Générez votre pack d’audit EU AI Act',
-    subtitle: 'Consolidez Gap Analysis, écarts, tâches et preuves dans un pack prêt pour audit.',
-    generate: 'Générer Audit Pack',
+    badge: 'Generateur de dossier de revue',
+    title: 'Generez votre dossier de revue EU AI Act',
+    subtitle: 'Consolidez Gap Analysis, ecarts, taches et preuves dans un dossier structure de revue.',
+    generate: 'Generer le dossier',
     export: 'Exporter TXT',
-    score: 'Score conformité',
-    readiness: 'Préparation audit',
-    findings: 'Écarts critiques',
-    tasks: 'Tâches ouvertes',
+    score: 'Score de preparation',
+    readiness: 'Preparation revue',
+    findings: 'Ecarts critiques',
+    tasks: 'Taches ouvertes',
     evidence: 'Couverture preuves',
     register: 'Registre des preuves',
-    openFindings: 'Écarts ouverts',
-    openTasks: 'Tâches ouvertes',
-    empty: 'Aucune donnée. Lancez le Gap Analysis et ajoutez des preuves d’abord.',
+    openFindings: 'Ecarts ouverts',
+    openTasks: 'Taches ouvertes',
+    empty: 'Aucune donnee. Lancez le Gap Analysis et ajoutez des preuves d abord.',
   },
   it: {
     back: 'Torna alla dashboard',
-    badge: 'Generatore Audit Pack',
-    title: 'Genera il tuo audit pack EU AI Act',
-    subtitle: 'Consolida Gap Analysis, finding, task ed evidenze in un pacchetto pronto per audit.',
-    generate: 'Genera Audit Pack',
+    badge: 'Generatore pacchetto review',
+    title: 'Genera il tuo pacchetto di review EU AI Act',
+    subtitle: 'Consolida Gap Analysis, finding, task ed evidenze in un pacchetto strutturato di review.',
+    generate: 'Genera pacchetto review',
     export: 'Esporta TXT',
-    score: 'Punteggio compliance',
-    readiness: 'Audit Readiness',
+    score: 'Punteggio readiness',
+    readiness: 'Readiness review',
     findings: 'Finding critici',
     tasks: 'Task aperti',
     evidence: 'Copertura evidenze',
@@ -97,21 +97,21 @@ const copy = {
     empty: 'Nessun dato. Esegui Gap Analysis e aggiungi evidenze prima.',
   },
   de: {
-    back: 'Zurück zum Dashboard',
-    badge: 'Audit Pack Generator',
-    title: 'EU-AI-Act-Audit-Pack erstellen',
-    subtitle: 'Konsolidieren Sie Gap Analysis, Findings, Aufgaben und Nachweise zu einem auditfähigen Paket.',
-    generate: 'Audit Pack erstellen',
+    back: 'Zuruck zum Dashboard',
+    badge: 'Review Package Generator',
+    title: 'EU-AI-Act-Review-Paket erstellen',
+    subtitle: 'Konsolidieren Sie Gap Analysis, Findings, Aufgaben und Nachweise zu einem strukturierten Review-Paket.',
+    generate: 'Review-Paket erstellen',
     export: 'TXT exportieren',
-    score: 'Compliance Score',
-    readiness: 'Audit Readiness',
+    score: 'Readiness Score',
+    readiness: 'Review Readiness',
     findings: 'Kritische Findings',
     tasks: 'Offene Aufgaben',
     evidence: 'Nachweisabdeckung',
     register: 'Nachweisregister',
     openFindings: 'Offene Findings',
     openTasks: 'Offene Aufgaben',
-    empty: 'Noch keine Daten. Starten Sie Gap Analysis und fügen Sie Nachweise hinzu.',
+    empty: 'Noch keine Daten. Starten Sie Gap Analysis und fugen Sie Nachweise hinzu.',
   },
 } as const;
 
@@ -145,7 +145,7 @@ export default function AuditPackPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'eurocomply-audit-pack.txt';
+    link.download = 'risck-comply-review-package.txt';
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -178,8 +178,8 @@ export default function AuditPackPage() {
 
             <Card className="border-white/10 bg-black/20 text-white">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl"><PackageCheck className="h-5 w-5 text-blue-200" /> Audit packet status</CardTitle>
-                <CardDescription className="text-white/50">Board-ready export assembled from live compliance evidence.</CardDescription>
+                <CardTitle className="flex items-center gap-2 text-xl"><PackageCheck className="h-5 w-5 text-blue-200" /> Review package status</CardTitle>
+                <CardDescription className="text-white/50">Structured export assembled from live governance evidence.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-3 gap-3">
                 <MiniSignal label={t.score} value={data ? `${data.complianceScore}%` : '--'} />

@@ -59,7 +59,7 @@ function buildGroups(summary: DashboardSummary, basePath: string): NavigationGro
       label: 'Executive outputs',
       items: [
         { label: 'Reports', description: 'Executive packages', href: `${basePath}/reports`, icon: '▤', signal: 'Open', accent: 'emerald' },
-        { label: 'Printable Pack', description: 'Audit-ready print view', href: `${basePath}/reports/print`, icon: '⤓', signal: 'PDF', accent: 'sky' },
+        { label: 'Printable Pack', description: 'Structured print view', href: `${basePath}/reports/print`, icon: '⤓', signal: 'PDF', accent: 'sky' },
         { label: 'Billing', description: 'Plan and usage', href: `${basePath}/billing`, icon: '€', signal: 'Plan', accent: 'amber' },
       ],
     },
