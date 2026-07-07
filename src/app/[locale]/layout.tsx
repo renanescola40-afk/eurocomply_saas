@@ -5,11 +5,11 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { PostHogAnalyticsProvider } from '@/components/analytics/PostHogAnalyticsProvider';
 import { AnalyticsConsentBanner } from '@/components/analytics/AnalyticsConsentBanner';
 import { AuthFloatingControls } from '@/components/auth/AuthFloatingControls';
+import { AuthProviderGate } from '@/components/auth/AuthProviderGate';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffects from '@/components/GlobalClientEffects';
 import GapAnalysisShortcut from '@/components/GapAnalysisShortcut';
-import { AuthProvider } from '@/hooks/useAuth';
 import { routing, type Locale } from '@/lib/i18n/routing';
 
 import '../globals.css';
@@ -92,12 +92,12 @@ export default async function LocaleLayout({ children, params }: Props) {
             enableSystem={false}
             disableTransitionOnChange
           >
-            <AuthProvider>
-              <PostHogAnalyticsProvider>
+            <PostHogAnalyticsProvider>
+              <AuthProviderGate>
                 {sharedShell}
                 <AuthFloatingControls locale={safeLocale} />
-              </PostHogAnalyticsProvider>
-            </AuthProvider>
+              </AuthProviderGate>
+            </PostHogAnalyticsProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>
