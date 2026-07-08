@@ -27,17 +27,8 @@ export type PermissionCheckResult = {
   permission: OrganizationPermission;
 };
 
-function isUuid(value: string) {
-  const uuidParts = value.split('-');
-  if (uuidParts.length !== 5) return false;
-  const [first, second, third, fourth, fifth] = uuidParts;
-  return Boolean(
-    first?.match(/^[0-9a-f]{8}$/i) &&
-    second?.match(/^[0-9a-f]{4}$/i) &&
-    third?.match(/^[1-5][0-9a-f]{3}$/i) &&
-    fourth?.match(/^[89ab][0-9a-f]{3}$/i) &&
-    fifth?.match(/^[0-9a-f]{12}$/i),
-  );
+function isSupabaseUserId(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 async function recordRbacDeniedAuditEvent({
@@ -72,15 +63,18 @@ async function recordRbacDeniedAuditEvent({
 }
 
 export async function getOrganizationMembership(userId: string, organizationId: string) {
+  if (!isSupabaseUserId(userId)) {
+    return { membership: null, error: null };
+  }
+
   const { createAdminClient } = await import('@/lib/supabase/admin');
   const supabase = createAdminClient();
-  const identityColumn = isUuid(userId) ? 'user_id' : 'clerk_user_id';
 
   const { data, error } = await supabase
     .from('organization_members')
     .select('organization_id, role')
     .eq('organization_id', organizationId)
-    .eq(identityColumn, userId)
+    .eq('user_id', userId)
     .maybeSingle();
 
   if (error) {
