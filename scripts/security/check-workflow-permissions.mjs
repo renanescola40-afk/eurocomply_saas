@@ -35,8 +35,57 @@ function report(file, message) {
   else warnings.push(issue);
 }
 
-function hasExplicitPermissions(source) {
-  return /^\s*permissions:\s*(?:$|\{[^}]*\}\s*$)/m.test(source);
+function lineIndent(line) {
+  return line.match(/^\s*/)?.[0].length ?? 0;
+}
+
+function stripInlineComment(line) {
+  return line.replace(/\s+#.*$/, '').trimEnd();
+}
+
+function hasTopLevelPermissions(source) {
+  return source
+    .split('\n')
+    .some((line) => /^permissions:\s*(?:$|\{[^}]*\}\s*$)/.test(stripInlineComment(line)));
+}
+
+function listJobsWithoutPermissions(source) {
+  if (hasTopLevelPermissions(source)) return [];
+
+  const lines = source.split('\n');
+  const jobsIndex = lines.findIndex((line) => /^jobs:\s*$/.test(stripInlineComment(line)));
+  if (jobsIndex === -1) return ['<jobs section missing>'];
+
+  const jobs = [];
+  for (let index = jobsIndex + 1; index < lines.length; index += 1) {
+    const line = stripInlineComment(lines[index]);
+    if (!line.trim() || line.trim().startsWith('#')) continue;
+    if (lineIndent(line) === 0) break;
+
+    const jobMatch = line.match(/^  ([A-Za-z0-9_-]+):\s*$/);
+    if (!jobMatch) continue;
+
+    const jobName = jobMatch[1];
+    let hasJobPermissions = false;
+    for (let inner = index + 1; inner < lines.length; inner += 1) {
+      const innerLine = stripInlineComment(lines[inner]);
+      if (!innerLine.trim() || innerLine.trim().startsWith('#')) continue;
+      const indent = lineIndent(innerLine);
+      if (indent <= 2) break;
+      if (/^    permissions:\s*(?:$|\{[^}]*\}\s*$)/.test(innerLine)) {
+        hasJobPermissions = true;
+        break;
+      }
+    }
+
+    if (!hasJobPermissions) jobs.push(jobName);
+  }
+
+  return jobs;
+}
+
+function hasExplicitPermissionsCoverage(source) {
+  return hasTopLevelPermissions(source) || listJobsWithoutPermissions(source).length === 0;
 }
 
 function usesWriteAll(source) {
@@ -60,8 +109,12 @@ function hasJustifiedCheckoutWriteException(file, source) {
 for (const file of workflowFiles()) {
   const source = readFileSync(file, 'utf8');
 
-  if (!hasExplicitPermissions(source)) {
-    report(file, 'missing explicit top-level or job-level permissions block');
+  if (!hasExplicitPermissionsCoverage(source)) {
+    const jobsWithoutPermissions = listJobsWithoutPermissions(source);
+    report(
+      file,
+      `missing explicit top-level permissions block and job-level permissions for: ${jobsWithoutPermissions.join(', ') || 'unknown jobs'}`,
+    );
   }
 
   if (usesWriteAll(source)) {
