@@ -1,0 +1,32 @@
+{
+  "evidenceItem": "deployment-smoke-validation",
+  "status": "Open",
+  "outcome": "failed",
+  "reviewer": "RISCK COMPLY release automation",
+  "reviewedAt": "2026-07-08T00:00:00.000Z",
+  "generatedAt": "2026-07-08T00:00:00.000Z",
+  "summary": "Deployment smoke evidence placeholder. This file intentionally keeps the release blocked until the deployment smoke command is executed against the target deployment and records Complete/passed proof.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "evidenceLocations": [
+    "scripts/release/run-deployment-smoke.mjs",
+    "scripts/release/run-deployment-smoke-v2.mjs",
+    "docs/security/evidence/runtime/deployment-smoke-validation.json"
+  ],
+  "targets": [],
+  "smokeTargets": {
+    "passed": [],
+    "failed": []
+  },
+  "requiredCommand": "npm run release:deployment-smoke",
+  "requiredEnvironment": [
+    "RELEASE_DEPLOYMENT_URL or RELEASE_PRODUCTION_URL or NEXT_PUBLIC_APP_URL",
+    "HEALTHCHECK_TOKEN for protected readiness checks"
+  ],
+  "productionGate": "Release remains blocked until deployment smoke evidence is regenerated as Complete/passed against the target deployment.",
+  "evidenceIntegrity": {
+    "placeholderOnly": true,
+    "containsSensitiveValues": false,
+    "valuesRedacted": true,
+    "customerFacingProof": false
+  }
+}

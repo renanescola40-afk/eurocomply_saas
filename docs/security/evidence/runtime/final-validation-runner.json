@@ -1,0 +1,32 @@
+{
+  "evidenceItem": "final-validation-runner",
+  "status": "Open",
+  "outcome": "failed",
+  "reviewer": "RISCK COMPLY release automation",
+  "reviewedAt": "2026-07-08T00:00:00.000Z",
+  "generatedAt": "2026-07-08T00:00:00.000Z",
+  "summary": "Final validation runner placeholder. This file intentionally keeps the release blocked until the final validation command set is executed for the exact release commit and records Complete/passed proof.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "evidenceLocations": [
+    "scripts/release/run-final-validation.mjs",
+    "scripts/release/check-enterprise-runtime-evidence.mjs",
+    "docs/security/evidence/runtime/final-validation-runner.json"
+  ],
+  "commands": [],
+  "requiredCommands": [
+    "npm ci",
+    "npm run lint",
+    "npm run typecheck",
+    "npm run test",
+    "npm run build",
+    "npm run security:ci",
+    "npm run release:enterprise-readiness"
+  ],
+  "productionGate": "Release remains blocked until final validation runner evidence is regenerated as Complete/passed for the exact release commit.",
+  "evidenceIntegrity": {
+    "placeholderOnly": true,
+    "containsSensitiveValues": false,
+    "valuesRedacted": true,
+    "customerFacingProof": false
+  }
+}

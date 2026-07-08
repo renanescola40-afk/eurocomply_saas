@@ -14,24 +14,91 @@ const runtimeDir = path.join('docs', 'security', 'evidence', 'runtime');
 const satisfiedStatuses = new Set(['Complete']);
 
 const requiredRuntimeItems = [
-  ['Branch protection applied on `main`', 'branch-protection-required-checks.json'],
-  ['Required status checks configured', 'branch-protection-required-checks.json'],
-  ['Deployment URL functional verification', 'deployment-smoke-validation.json'],
-  ['Final validation runner', 'final-validation-runner.json'],
-  ['Production secrets configured in provider secret stores', 'production-secrets-provider-stores.json'],
-  ['Supabase live RLS validation completed', 'supabase-live-rls-validation.json'],
-  ['External security review or pentest completed', 'external-security-review-or-pentest.json'],
-  ['Audit-chain live validation', 'audit-chain-live-validation.json'],
-  ['Upload malware/content scanning validation', 'upload-malware-scan-validation.json'],
-  ['Step-up MFA / IdP validation', 'step-up-mfa-validation.json'],
-  ['Stripe billing runtime validation', 'stripe-billing-validation.json'],
-  ['Observability readiness', 'observability-readiness.json'],
-  ['Rollback owner and rollback target', 'rollback-dry-run-validation.json'],
-].filter(([item]) => !(finalValidationInProgress && item === 'Final validation runner'));
+  {
+    item: 'Branch protection applied on `main`',
+    aliases: ['Branch protection applied on main'],
+    file: 'branch-protection-required-checks.json',
+  },
+  {
+    item: 'Required status checks configured',
+    file: 'branch-protection-required-checks.json',
+  },
+  {
+    item: 'Production provider configuration evidence',
+    aliases: ['Production secrets configured in provider secret stores'],
+    file: 'production-secrets-provider-stores.json',
+  },
+  {
+    item: 'Supabase live RLS validation completed',
+    file: 'supabase-live-rls-validation.json',
+  },
+  {
+    item: 'External review',
+    aliases: ['External security review or pentest completed'],
+    file: 'external-security-review-or-pentest.json',
+  },
+  {
+    item: 'Deployment URL functional verification',
+    file: 'deployment-smoke-validation.json',
+  },
+  {
+    item: 'Final validation runner',
+    file: 'final-validation-runner.json',
+    skipWhenFinalValidationInProgress: true,
+  },
+  {
+    item: 'Audit-chain live validation',
+    file: 'audit-chain-live-validation.json',
+  },
+  {
+    item: 'Upload malware/content scanning validation',
+    file: 'upload-malware-scan-validation.json',
+  },
+  {
+    item: 'Step-up MFA / IdP validation',
+    file: 'step-up-mfa-validation.json',
+  },
+  {
+    item: 'Stripe billing runtime validation',
+    file: 'stripe-billing-validation.json',
+  },
+  {
+    item: 'Observability readiness',
+    file: 'observability-smoke-validation.json',
+    aliases: ['Observability smoke validation'],
+  },
+  {
+    item: 'Rollback owner and rollback target',
+    file: 'rollback-dry-run-validation.json',
+  },
+].filter((entry) => !(finalValidationInProgress && entry.skipWhenFinalValidationInProgress));
 
 function fail(message) {
   console.error(`P0 runtime evidence gap report failed: ${message}`);
   process.exit(1);
+}
+
+function normalizeItem(item) {
+  return String(item ?? '').replace(/`/g, '').trim();
+}
+
+function readEvidence(file) {
+  const evidencePath = path.join(runtimeDir, file);
+  if (!fs.existsSync(evidencePath)) {
+    return { evidencePath, evidenceFileExists: false, evidenceStatus: 'missing', evidenceOutcome: 'missing', evidenceSatisfied: false };
+  }
+
+  try {
+    const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
+    const evidenceStatus = String(evidence.status ?? 'missing');
+    const evidenceOutcome = evidence.outcome === undefined ? 'not_recorded' : String(evidence.outcome);
+    const placeholderOnly = evidence.placeholderOnly === true || evidence.evidenceIntegrity?.placeholderOnly === true;
+    const evidenceSatisfied = evidenceStatus === 'Complete' && (evidence.outcome === undefined || evidenceOutcome === 'passed') && !placeholderOnly;
+
+    return { evidencePath, evidenceFileExists: true, evidenceStatus, evidenceOutcome, placeholderOnly, evidenceSatisfied };
+  } catch (error) {
+    return { evidencePath, evidenceFileExists: true, evidenceStatus: 'invalid_json', evidenceOutcome: 'invalid_json', evidenceSatisfied: false, parseError: error.message };
+  }
 }
 
 if (!fs.existsSync(registerPath)) fail(`missing register: ${registerPath}`);
@@ -40,14 +107,33 @@ const rows = fs.readFileSync(registerPath, 'utf8')
   .split('\n')
   .filter((line) => line.startsWith('|') && !line.includes('---'))
   .map((line) => line.split('|').map((cell) => cell.trim()).filter(Boolean));
-const statusByItem = new Map(rows.filter(([item]) => item && item !== 'Evidence item').map(([item, status]) => [item.replace(/`/g, ''), status.replace(/`/g, '')]));
+const statusByItem = new Map(rows.filter(([item]) => item && item !== 'Evidence item').map(([item, status]) => [normalizeItem(item), status.replace(/`/g, '')]));
 
-const results = requiredRuntimeItems.map(([item, file]) => {
-  const evidencePath = path.join(runtimeDir, file);
-  const status = statusByItem.get(item.replace(/`/g, '')) || 'Missing from register';
-  const evidenceFileExists = fs.existsSync(evidencePath);
+function statusFor(entry) {
+  const names = [entry.item, ...(entry.aliases ?? [])].map(normalizeItem);
+  for (const name of names) {
+    const status = statusByItem.get(name);
+    if (status) return status;
+  }
+  return 'Missing from register';
+}
+
+const results = requiredRuntimeItems.map((entry) => {
+  const status = statusFor(entry);
+  const evidence = readEvidence(entry.file);
   const satisfiedStatus = satisfiedStatuses.has(status);
-  return { item, registerStatus: status, evidenceFile: evidencePath, evidenceFileExists, satisfiedStatus, satisfied: satisfiedStatus && evidenceFileExists };
+  return {
+    item: entry.item,
+    registerStatus: status,
+    evidenceFile: evidence.evidencePath,
+    evidenceFileExists: evidence.evidenceFileExists,
+    evidenceStatus: evidence.evidenceStatus,
+    evidenceOutcome: evidence.evidenceOutcome,
+    placeholderOnly: evidence.placeholderOnly === true,
+    parseError: evidence.parseError,
+    satisfiedStatus,
+    satisfied: satisfiedStatus && evidence.evidenceSatisfied,
+  };
 });
 const missing = results.filter((entry) => !entry.satisfied);
 const report = {
