@@ -138,17 +138,28 @@ const provider = providerConfigured();
 const enterpriseRelease = readRuntimeSetting(enterpriseReleaseEnv) === 'true' || readRuntimeSetting(legacyEnterpriseReleaseEnv) === 'true';
 const providerProofPresent = provider.configured && readRuntimeSetting(providerProofEnv) === 'true';
 const generatedAt = new Date().toISOString();
+const sourcesPassed = sourceFailures.length === 0;
+const status = sourcesPassed && providerProofPresent ? 'Complete' : sourcesPassed ? 'Exception' : 'Exception';
+const outcome = sourcesPassed && providerProofPresent ? 'passed' : sourcesPassed ? 'blocked_pending_provider_proof' : 'failed_source_validation';
 
 const evidence = {
   evidenceItem: 'step-up-mfa-validation',
   id: 'step-up-mfa-validation',
-  status: sourceFailures.length === 0 ? (providerProofPresent ? 'Complete' : 'ProviderProofRequired') : 'Failed',
+  status,
+  outcome,
   generatedAt,
+  reviewedAt: generatedAt,
   reviewer: 'EuroComply security automation',
   control: 'P0-MFA real step-up validation for critical actions',
-  redactionConfirmation: 'Secrets, one-time codes, bearer tokens, cookies and provider credentials are never printed or stored in this evidence.',
+  summary: sourcesPassed && providerProofPresent
+    ? 'Step-up MFA runtime validation passed with real provider proof for the target runtime.'
+    : sourcesPassed
+      ? 'Step-up MFA source controls are present, but real provider proof is required before enterprise release can proceed.'
+      : 'Step-up MFA runtime validation source controls failed; enterprise release remains blocked.',
+  redactionConfirmation: 'Redaction confirmed for runtime evidence.',
+  releaseGate: sourcesPassed && providerProofPresent ? 'Step-up MFA runtime evidence passed.' : 'Enterprise release blocked until real step-up provider proof is attached.',
   sourceValidation: {
-    status: sourceFailures.length === 0,
+    status: sourcesPassed,
     failures: sourceFailures,
     files: criticalFiles,
   },
@@ -191,7 +202,24 @@ const evidence = {
     'audit_chain_export',
     'change_security_settings',
   ],
+  evidenceLocations: criticalFiles,
 };
+
+if (status === 'Exception') {
+  evidence.exception = {
+    riskOwner: 'Security reviewer',
+    rationale: sourcesPassed
+      ? 'Real Supabase MFA or enterprise IdP provider proof has not been attached for the target runtime.'
+      : 'Source validation failed for required step-up MFA controls.',
+    compensatingControls: [
+      'Enterprise release remains blocked until status is Complete.',
+      'Critical actions require step-up controls in code and source validation.',
+      'Provider proof must be generated only after a live MFA or IdP reauthentication run.',
+    ],
+    expiresAt: '2026-07-14',
+    approvalReference: 'P0 step-up MFA runtime validation',
+  };
+}
 
 mkdirSync(dirname(evidencePath), { recursive: true });
 writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
