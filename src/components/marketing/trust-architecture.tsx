@@ -8,18 +8,18 @@ const trustLayers = [
   {
     label: 'Evidence integrity',
     title: 'Private evidence with controlled access',
-    description: 'Evidence workflows support private storage, signed downloads, expiry awareness and metadata-driven audit readiness.',
+    description: 'Evidence workflows support private storage, signed downloads, expiry awareness and metadata-driven review readiness.',
     signal: 'Signed access',
   },
   {
     label: 'Executive confidence',
-    title: 'Board-ready reporting layer',
+    title: 'Leadership review reporting layer',
     description: 'Compliance score, maturity, trends, top risks and next best actions are packaged into executive-ready views.',
     signal: 'Report-ready',
   },
   {
     label: 'Operational resilience',
-    title: 'Audit trail and observability foundation',
+    title: 'Activity history and observability foundation',
     description: 'Critical actions, exports, billing and workspace changes are structured for traceability and production review.',
     signal: 'Traceable ops',
   },
@@ -45,7 +45,7 @@ export function TrustArchitecture() {
             Built to feel like infrastructure, not another compliance spreadsheet.
           </h2>
           <p className="mt-5 text-base leading-7 text-white/55">
-            EuroComply presents the operational signals B2B buyers care about: tenant boundaries, evidence control, audit traceability and executive reporting clarity.
+            RISCK COMPLY presents the operational signals B2B buyers care about: tenant boundaries, evidence control, activity traceability and executive reporting clarity.
           </p>
 
           <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5">
