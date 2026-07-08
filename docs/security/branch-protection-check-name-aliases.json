@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "evidenceItem": "branch-protection-check-name-aliases",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "branch": "main",
+  "summary": "GitHub branch protection may expose required checks as job display names instead of workflow-qualified names. The branch protection evidence workflow accepts both the policy names and these UI/API aliases.",
+  "aliases": {
+    "CI / quality": ["quality"],
+    "Full Security Suite / Core CI, build and npm audit": ["Core CI, build and npm audit"],
+    "RISCK COMPLY Security CI / Run security gates, typecheck and tests": ["Run security gates, typecheck and tests"],
+    "Full Security Suite / CodeQL": ["CodeQL"],
+    "Full Security Suite / Secret scanning (Gitleaks)": ["Secret scanning (Gitleaks)"],
+    "Full Security Suite / Semgrep SAST": ["Semgrep SAST"],
+    "Full Security Suite / Dependency Review": ["Dependency Review"],
+    "Full Security Suite / OSSF Scorecard": ["OSSF Scorecard"],
+    "Full Security Suite / Actionlint": ["Actionlint"],
+    "Full Security Suite / Enterprise merge/deploy gate": ["Enterprise merge/deploy gate"],
+    "Gitleaks / Scan repository for accidental secret exposure": ["Scan repository for accidental secret exposure", "Gitleaks"],
+    "Secret Scanning / Production secret readiness gate": ["Production secret readiness gate"]
+  },
+  "reviewer": "@renansilva2002",
+  "redactionConfirmation": "No secrets or credentials are included."
+}
