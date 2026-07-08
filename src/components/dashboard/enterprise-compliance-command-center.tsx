@@ -72,6 +72,11 @@ function readinessLabel(workflowReadiness?: OrganizationWorkflowReadiness) {
   return 'Strong readiness posture';
 }
 
+function documentReadiness(summary: DashboardSummary) {
+  if (summary.totals.documents <= 0) return 0;
+  return Math.max(0, Math.round(((summary.totals.documents - summary.missingDocuments) / summary.totals.documents) * 100));
+}
+
 export function EnterpriseComplianceCommandCenter({
   locale,
   summary,
@@ -91,6 +96,7 @@ export function EnterpriseComplianceCommandCenter({
   canManageBilling,
 }: EnterpriseCommandCenterProps) {
   const activityCount = Math.max(auditEvents.length, 0);
+  const evidenceScore = documentReadiness(summary);
   const cards = [
     {
       title: 'Readiness score',
@@ -122,7 +128,7 @@ export function EnterpriseComplianceCommandCenter({
     },
     {
       title: 'Evidence',
-      value: `${summary.evidenceCoverage}%`,
+      value: `${evidenceScore}%`,
       detail: `${formatCount(summary.missingDocuments)} missing documents`,
       href: `${basePath}/documents`,
       icon: FileText,
@@ -167,6 +173,7 @@ export function EnterpriseComplianceCommandCenter({
             <span className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1">Role: {currentUserRole}</span>
             <span className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1">Plan: {planName}</span>
             <span className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1">{limitsSummary}</span>
+            <span className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1">Locale: {locale}</span>
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
