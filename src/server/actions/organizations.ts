@@ -18,24 +18,6 @@ function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 }
 
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-function getOrganizationOwnerInsert(userId: string) {
-  if (isUuid(userId)) {
-    return {
-      created_by: userId,
-      created_by_clerk_user_id: null,
-    };
-  }
-
-  return {
-    created_by: null,
-    created_by_clerk_user_id: userId,
-  };
-}
-
 function organizationActionError(message: string) {
   return new Error(message);
 }
@@ -70,11 +52,10 @@ export async function createOrganization(input: CreateOrganizationInput) {
 
   try {
     const supabase = createAdminClient();
-    const ownerInsert = getOrganizationOwnerInsert(user.id);
 
     const { data: organization, error } = await supabase
       .from('organizations')
-      .insert({ name: payload.name, slug: payload.slug, ...ownerInsert })
+      .insert({ name: payload.name, slug: payload.slug, created_by: user.id })
       .select('*')
       .single();
 
@@ -83,23 +64,13 @@ export async function createOrganization(input: CreateOrganizationInput) {
       throw organizationActionError('Unable to create organization');
     }
 
-    const memberInsert = isUuid(user.id)
-      ? {
-          organization_id: organization.id,
-          user_id: user.id,
-          clerk_user_id: null,
-          role: 'owner',
-        }
-      : {
-          organization_id: organization.id,
-          user_id: null,
-          clerk_user_id: user.id,
-          role: 'owner',
-        };
-
     const { error: memberError } = await supabase
       .from('organization_members')
-      .insert(memberInsert as never);
+      .insert({
+        organization_id: organization.id,
+        user_id: user.id,
+        role: 'owner',
+      } as never);
 
     if (memberError) {
       reportError(memberError, { ...context, organizationId: organization.id });
