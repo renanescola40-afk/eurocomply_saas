@@ -78,19 +78,40 @@ describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
     }
   });
 
-  it('documents the final auth/RBAC review without fabricating runtime evidence', () => {
+  it('documents the final auth/RBAC review and No-Go runtime evidence status', () => {
     const reviewPath = 'docs/security/AUTH_RBAC_ENTERPRISE_REVIEW.md';
-    const runtimeEvidencePath = 'docs/security/evidence/runtime/auth-rbac-final-validation.json';
+    const evidencePath = 'docs/security/evidence/runtime/auth-rbac-final-validation.json';
 
     expect(existsSync(join(process.cwd(), reviewPath))).toBe(true);
-    expect(existsSync(join(process.cwd(), runtimeEvidencePath))).toBe(false);
+    expect(existsSync(join(process.cwd(), evidencePath))).toBe(true);
 
     const review = readRepoFile(reviewPath);
+    const evidence = JSON.parse(readRepoFile(evidencePath)) as {
+      primaryAuthStack?: string;
+      status?: string;
+      outcome?: string;
+      releaseDecision?: string;
+      goNoGo?: { status?: string };
+      evidenceIntegrity?: {
+        placeholderOnly?: boolean;
+        realRuntimeEvidenceAttached?: boolean;
+        customerFacingProof?: boolean;
+      };
+      validationCommands?: Array<{ command: string; status: string }>;
+    };
 
     expect(review).toContain('Supabase Auth');
     expect(review).toContain('Go/No-Go');
     expect(review).toContain('No-Go for enterprise production until CI and runtime gates pass');
     expect(review).toContain('Runtime validation was not executed in this GitHub patch session');
-    expect(review).toContain('npm run security:step-up');
+    expect(evidence.primaryAuthStack).toBe('supabase-auth');
+    expect(evidence.status).toBe('Open');
+    expect(evidence.outcome).toBe('no_go');
+    expect(evidence.releaseDecision).toBe('No-Go');
+    expect(evidence.goNoGo?.status).toBe('NO_GO');
+    expect(evidence.evidenceIntegrity?.placeholderOnly).toBe(true);
+    expect(evidence.evidenceIntegrity?.realRuntimeEvidenceAttached).toBe(false);
+    expect(evidence.evidenceIntegrity?.customerFacingProof).toBe(false);
+    expect(evidence.validationCommands?.some((item) => item.command === 'npm run security:step-up')).toBe(true);
   });
 });
