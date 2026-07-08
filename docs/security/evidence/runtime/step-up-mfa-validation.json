@@ -4,10 +4,10 @@
   "status": "Exception",
   "statusReason": "ProviderProofRequired",
   "reviewer": "EuroComply security automation",
-  "reviewedAt": "2026-06-23T00:00:00.000Z",
-  "generatedAt": "2026-06-23T00:00:00.000Z",
+  "reviewedAt": "2026-07-08T15:30:00.000+01:00",
+  "generatedAt": "2026-07-08T15:30:00.000+01:00",
   "control": "P0-MFA real step-up validation for critical actions",
-  "summary": "Step-up is now split into challenge and verify phases. POST /api/security/step-up/challenge authenticates the user, validates organization membership, validates high-risk action scope, applies rate limiting and creates a short-lived server-side challenge nonce. POST /api/security/step-up/verify validates a real Supabase MFA aal2 challenge or enterprise IdP ACR/AMR reauthentication claim, consumes the challenge nonce, and only then emits the short-lived signed HMAC token scoped to userId, organizationId and action. Enterprise release must fail closed without a provider and without explicit live provider proof.",
+  "summary": "Step-up MFA source controls are present and fail closed, but live Supabase MFA or enterprise IdP provider proof is still required before enterprise release can proceed.",
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "exception": {
     "riskOwner": "EuroComply Security",
@@ -17,7 +17,7 @@
       "Enterprise release gate fails closed without STEP_UP_RUNTIME_PROVIDER_PROOF=true and a runtime evidence file showing providerProof.present=true.",
       "Provider configuration is mandatory for enterprise mode and missing providers block critical actions."
     ],
-    "expiresAt": "2026-07-07T00:00:00.000Z",
+    "expiresAt": "2026-07-22T00:00:00.000+01:00",
     "approvalReference": "P0-MFA-provider-proof-required"
   },
   "evidenceLocations": [
@@ -52,7 +52,6 @@
     "supabase_mfa": {
       "mode": "STEP_UP_PROVIDER_MODE=supabase_mfa",
       "runtimeChecks": [
-        "Supabase auth client configuration is present for session validation.",
         "supabase.auth.mfa.listFactors returns enrolled verified factors.",
         "supabase.auth.mfa.challenge issues a provider challenge.",
         "supabase.auth.mfa.verify validates the submitted one-time code.",
@@ -63,7 +62,6 @@
     "enterprise_idp": {
       "mode": "STEP_UP_PROVIDER_MODE=enterprise_idp",
       "runtimeChecks": [
-        "Supabase auth client configuration is present for session claim validation.",
         "supabase.auth.getClaims returns verified session claims.",
         "auth_time or iat is fresh within STEP_UP_MAX_AGE_MS.",
         "acr matches STEP_UP_IDP_ACR_VALUES or amr matches STEP_UP_IDP_AMR_VALUES.",
@@ -78,7 +76,7 @@
       "present": false,
       "requiredEnv": "STEP_UP_RUNTIME_PROVIDER_PROOF=true",
       "requiredCommand": "node scripts/security/run-step-up-mfa-runtime-validation.mjs",
-      "note": "This repository commit intentionally does not claim live provider execution because no Supabase MFA/IdP runtime credentials were available in this session. Enterprise release must remain blocked until the command is executed in the target runtime after a real provider verification."
+      "note": "Enterprise release must remain blocked until the command is executed in the target runtime after a real provider verification."
     },
     "failClosedWithoutProvider": true,
     "enterpriseReleaseBlockedWithoutProvider": true,
@@ -90,24 +88,6 @@
     "enterpriseFailsClosedWithoutProvider": true,
     "runtimeEvidenceRequiresLiveProviderProof": true,
     "releaseEnterpriseBlockedIfProviderProofAbsent": true
-  },
-  "tokenProperties": {
-    "format": "base64url(json_payload).hmac_sha256_signature",
-    "maxAgeMs": 300000,
-    "scopedTo": ["userId", "organizationId", "action"],
-    "singleUseNonce": true,
-    "serverSideTokenHash": true,
-    "rawTokenStoredServerSide": false,
-    "expiresQuickly": true,
-    "consumedOnCriticalAction": true
-  },
-  "challengeProperties": {
-    "maxAgeMs": 120000,
-    "serverGeneratedNonce": true,
-    "serverSideNonceHash": true,
-    "singleUse": true,
-    "rawCodeStoredServerSide": false,
-    "rawTokenStoredServerSide": false
   },
   "criticalActions": {
     "export_data": [
