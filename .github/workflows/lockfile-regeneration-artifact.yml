@@ -1,0 +1,52 @@
+name: Lockfile Regeneration Artifact
+
+on:
+  pull_request:
+    paths:
+      - package.json
+      - package-lock.json
+      - .github/workflows/lockfile-regeneration-artifact.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate-lockfile:
+    name: Regenerate package-lock artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Regenerate package-lock only
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Verify removed auth provider is absent from root lock manifest
+        run: |
+          node - <<'NODE'
+          const { readFileSync } = require('node:fs');
+          const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+          const rootDeps = lock.packages?.['']?.dependencies ?? {};
+          if ('@clerk/nextjs' in rootDeps) {
+            console.error('@clerk/nextjs is still present in package-lock root dependencies');
+            process.exit(1);
+          }
+          console.log('package-lock root dependencies are clean for the active Supabase Auth stack');
+          NODE
+
+      - name: Upload regenerated package-lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: regenerated-package-lock
+          path: package-lock.json
+          if-no-files-found: error
