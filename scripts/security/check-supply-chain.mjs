@@ -207,16 +207,28 @@ if (securityCi) {
 }
 
 if (dependencyReview) {
-  for (const token of [
-    'actions/dependency-review-action@v5',
-    'vulnerability-check: true',
-    'license-check: false',
-    'fail-on-severity: high',
-    'comment-summary-in-pr: never',
+  const requiredDependencyFallbackTokens = [
+    'Dependency graph unavailable fallback',
+    'GitHub Dependency Review requires the repository Dependency Graph to be enabled.',
     'npm audit --audit-level=high',
-  ]) {
+  ];
+
+  for (const token of requiredDependencyFallbackTokens) {
     if (!dependencyReview.includes(token)) {
-      failures.push(`${dependencyReviewWorkflowPath} missing dependency review token: ${token}`);
+      failures.push(`${dependencyReviewWorkflowPath} missing dependency review fallback token: ${token}`);
+    }
+  }
+
+  if (dependencyReview.includes('actions/dependency-review-action@v5')) {
+    for (const token of [
+      'vulnerability-check: true',
+      'license-check: false',
+      'fail-on-severity: high',
+      'comment-summary-in-pr: never',
+    ]) {
+      if (!dependencyReview.includes(token)) {
+        failures.push(`${dependencyReviewWorkflowPath} missing dependency review action token: ${token}`);
+      }
     }
   }
 

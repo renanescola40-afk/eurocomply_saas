@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import {
   buildRateLimitSubjectFromRequest,
@@ -94,6 +96,19 @@ function sanitizeOrganizationId(organizationId: string | null | undefined) {
   }
 
   return normalized;
+}
+
+function getRequestId(request?: Request) {
+  const existing =
+    request?.headers.get('x-request-id') ??
+    request?.headers.get('x-vercel-id') ??
+    request?.headers.get('cf-ray') ??
+    '';
+
+  const normalized = existing.trim();
+  if (normalized) return normalized.slice(0, 128);
+
+  return randomUUID();
 }
 
 export function secureApiJson<TBody>(body: TBody, init?: ResponseInit) {
@@ -234,22 +249,32 @@ export function assertApiResourceOrganization(resourceOrganizationId: string | n
   }
 }
 
-export function secureApiError(error: unknown) {
+export function secureApiError(error: unknown, request?: Request) {
+  const requestId = getRequestId(request);
+
   if (error instanceof ApiSecurityError) {
-    return noStoreJson({ error: error.code }, { status: error.status });
+    console.warn('[api-security] request_denied', {
+      requestId,
+      code: error.code,
+      status: error.status,
+    });
+    return noStoreJson({ error: error.code, requestId }, { status: error.status });
   }
 
   if (error instanceof ValidationError) {
-    return noStoreJson({ error: 'invalid_request' }, { status: 400 });
+    console.warn('[api-security] invalid_request', { requestId, code: 'validation_error' });
+    return noStoreJson({ error: 'invalid_request', requestId }, { status: 400 });
   }
 
   if (error instanceof ZodError) {
-    return noStoreJson({ error: 'invalid_request' }, { status: 400 });
+    console.warn('[api-security] invalid_request', { requestId, code: 'zod_error' });
+    return noStoreJson({ error: 'invalid_request', requestId }, { status: 400 });
   }
 
   console.error('[api-security] route_failed', {
+    requestId,
     error: error instanceof Error ? error.name : 'unknown',
   });
 
-  return noStoreJson({ error: 'internal_server_error' }, { status: 500 });
+  return noStoreJson({ error: 'internal_server_error', requestId }, { status: 500 });
 }

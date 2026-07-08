@@ -106,7 +106,7 @@ describe('organization server action hardening', () => {
     expect(mocks.createAdminClient).not.toHaveBeenCalled();
   });
 
-  it('uses the authenticated user for owner, email and audit fields', async () => {
+  it('uses the authenticated Supabase user for owner, email and audit fields', async () => {
     const { organizationBuilder, memberBuilder } = installSupabaseMock();
 
     const result = await createOrganization({ name: 'Acme Corp', slug: 'acme-corp' });
@@ -116,13 +116,13 @@ describe('organization server action hardening', () => {
       expect.objectContaining({
         name: 'Acme Corp',
         slug: 'acme-corp',
-        created_by_clerk_user_id: 'user_auth',
+        created_by: 'user_auth',
       }),
     );
     expect(memberBuilder.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         organization_id: 'org_a',
-        clerk_user_id: 'user_auth',
+        user_id: 'user_auth',
         role: 'owner',
       }),
     );
