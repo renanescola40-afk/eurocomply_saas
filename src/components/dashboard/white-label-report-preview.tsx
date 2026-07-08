@@ -34,7 +34,7 @@ export function WhiteLabelReportPreview({ summary, trendComparison, basePath }: 
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">White-label reports</p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight">Client-branded executive reporting</h2>
           <p className="mt-4 text-sm leading-6 text-slate-400">
-            Preview how a board-ready report can look when packaged as a premium, client-facing compliance artifact.
+            Preview how a leadership review report can look when packaged as a premium, client-facing compliance artifact.
           </p>
 
           <div className="mt-6 grid gap-3">
@@ -44,7 +44,7 @@ export function WhiteLabelReportPreview({ summary, trendComparison, basePath }: 
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Audience</p>
-              <p className="mt-2 text-sm text-slate-300">Board, investors, enterprise customers and procurement teams.</p>
+              <p className="mt-2 text-sm text-slate-300">Leadership, investors, enterprise customers and procurement teams.</p>
             </div>
           </div>
 
@@ -62,13 +62,13 @@ export function WhiteLabelReportPreview({ summary, trendComparison, basePath }: 
           <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-5">
             <div>
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-sm font-bold text-white">EC</div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-sm font-bold text-white">RC</div>
                 <div>
-                  <p className="text-sm font-bold">EuroComply Report</p>
+                  <p className="text-sm font-bold">RISCK COMPLY Report</p>
                   <p className="text-xs text-slate-500">White-label preview</p>
                 </div>
               </div>
-              <h3 className="mt-6 max-w-xl text-3xl font-bold tracking-tight">Monthly Compliance Board Memo</h3>
+              <h3 className="mt-6 max-w-xl text-3xl font-bold tracking-tight">Monthly Compliance Leadership Memo</h3>
               <p className="mt-2 text-sm text-slate-500">{reportMonth} · Confidential executive package</p>
             </div>
             <div className="rounded-2xl border border-slate-200 px-4 py-3 text-right">
@@ -92,7 +92,7 @@ export function WhiteLabelReportPreview({ summary, trendComparison, basePath }: 
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Next board question</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Next leadership question</p>
               <p className="mt-3 text-sm leading-6 text-slate-600">
                 Which evidence gaps or third-party risks could delay an enterprise customer review?
               </p>
@@ -100,7 +100,7 @@ export function WhiteLabelReportPreview({ summary, trendComparison, basePath }: 
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
-            {['GDPR evidence', 'Vendor exposure', 'Risk treatment', 'Audit pack'].map((tag) => (
+            {['GDPR evidence', 'Vendor exposure', 'Risk treatment', 'Review pack'].map((tag) => (
               <span key={tag} className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500">{tag}</span>
             ))}
           </div>

@@ -55,8 +55,8 @@ function feature(title: string, text: string, icon: typeof ShieldCheck) {
 const en: WaitlistCopy = {
   nav: { platform: 'Platform', features: 'Outputs', access: 'Early access', cta: 'Request access' },
   badge: 'Controlled access for serious AI governance and compliance teams',
-  title: 'Turn AI governance into board-ready compliance evidence.',
-  subtitle: 'RISCK COMPLY helps European teams organize AI systems, ownership, risk signals, evidence packs, policy drafts and audit trails in one controlled workspace for compliance, security, procurement and legal review. It supports professional decision-making, but does not replace counsel or guarantee regulatory outcomes.',
+  title: 'Turn AI governance into structured compliance evidence.',
+  subtitle: 'RISCK COMPLY helps European teams organize AI systems, ownership, risk signals, evidence packs, policy drafts and activity history in one controlled workspace for compliance, security, procurement and legal review. It supports professional decision-making, but does not replace counsel or guarantee regulatory outcomes.',
   launchLabel: '1 August 2026 · 07:00 Europe/Lisbon',
   countdown: { days: 'Days', hours: 'Hours', minutes: 'Minutes', seconds: 'Seconds', live: 'Available in' },
   checklistEyebrow: 'Enterprise operating layer',
@@ -79,14 +79,14 @@ const en: WaitlistCopy = {
     privacy: 'No passwords. No open signup. Only launch communication and early access qualification.',
     contact: 'Questions or want to speak with our team? Email us at',
   },
-  proof: ['board-ready evidence', 'AI Act readiness', 'risk visibility', 'procurement support', 'audit trail', 'governance workflows'],
+  proof: ['review-ready evidence', 'AI Act readiness', 'risk visibility', 'procurement support', 'activity history', 'governance workflows'],
   features: [
-    feature('Board-ready evidence', 'Produce structured outputs that show what AI is used, who owns it, what risks exist and what evidence is ready for review.', ClipboardCheck),
+    feature('Review-ready evidence', 'Produce structured outputs that show what AI is used, who owns it, what risks exist and what evidence is ready for review.', ClipboardCheck),
     feature('Legal review support', 'Prepare decision logs, policy drafts and evidence summaries that internal or external counsel can assess. RISCK COMPLY does not provide legal advice.', Scale),
     feature('AI system inventory', 'Register systems, use cases, owners, departments, providers, countries and data context in one controlled workspace.', Database),
     feature('Procurement confidence', 'Prepare clean summaries for buyers, security reviewers and enterprise stakeholders without claiming unsupported certifications.', FileText),
     feature('Team governance', 'Invite owners, assign responsibilities, track tasks and keep the organization aligned before internal and external reviews.', Users),
-    feature('Audit trail', 'Keep review history, evidence updates and governance activity traceable for security-conscious customers and partners.', ShieldCheck),
+    feature('Activity history', 'Keep review history, evidence updates and governance activity traceable for security-conscious customers and partners.', ShieldCheck),
   ],
 };
 
@@ -94,9 +94,9 @@ const pt: WaitlistCopy = {
   ...en,
   nav: { platform: 'Plataforma', features: 'Resultados', access: 'Early access', cta: 'Pedir acesso' },
   badge: 'Acesso controlado para equipas sérias de governança de IA e compliance',
-  title: 'Transforme governança de IA em evidência de compliance pronta para direção.',
+  title: 'Transforme governança de IA em evidência de compliance pronta para revisão.',
   subtitle:
-    'RISCK COMPLY ajuda equipas europeias a organizar sistemas de IA, responsáveis, sinais de risco, packs de evidência, rascunhos de políticas e audit trails num workspace controlado para revisão de compliance, segurança, procurement e jurídico. Apoia a tomada de decisão profissional, mas não substitui advogados nem garante resultados regulatórios.',
+    'RISCK COMPLY ajuda equipas europeias a organizar sistemas de IA, responsáveis, sinais de risco, packs de evidência, rascunhos de políticas e histórico de atividade num workspace controlado para revisão de compliance, segurança, procurement e jurídico. Apoia a tomada de decisão profissional, mas não substitui advogados nem garante resultados regulatórios.',
   launchLabel: '1 de agosto de 2026 · 07:00 Europe/Lisbon',
   countdown: { days: 'Dias', hours: 'Horas', minutes: 'Minutos', seconds: 'Segundos', live: 'Disponível em' },
   checklistEyebrow: 'Camada operacional enterprise',
@@ -122,14 +122,14 @@ const pt: WaitlistCopy = {
     privacy: 'Sem senhas. Sem signup aberto. Apenas comunicação de lançamento e qualificação para early access.',
     contact: 'Dúvidas ou quer falar com a nossa equipa? Envie email para',
   },
-  proof: ['evidência para direção', 'AI Act readiness', 'visibilidade de risco', 'suporte a procurement', 'audit trail', 'workflows de governança'],
+  proof: ['evidência para revisão', 'AI Act readiness', 'visibilidade de risco', 'suporte a procurement', 'histórico de atividade', 'workflows de governança'],
   features: [
-    feature('Evidência para direção', 'Produza outputs estruturados que mostram que IA é usada, quem é responsável, que riscos existem e que evidências estão prontas para revisão.', ClipboardCheck),
+    feature('Evidência para revisão', 'Produza outputs estruturados que mostram que IA é usada, quem é responsável, que riscos existem e que evidências estão prontas para revisão.', ClipboardCheck),
     feature('Suporte à revisão jurídica', 'Prepare logs de decisão, rascunhos de políticas e resumos de evidência para avaliação por counsel interno ou externo. A RISCK COMPLY não presta aconselhamento jurídico.', Scale),
     feature('Inventário de sistemas de IA', 'Registe sistemas, casos de uso, owners, departamentos, fornecedores, países e contexto de dados num workspace controlado.', Database),
     feature('Confiança para procurement', 'Prepare resumos limpos para compradores, security reviewers e stakeholders enterprise sem afirmar certificações não suportadas.', FileText),
     feature('Governança de equipa', 'Convide responsáveis, atribua tarefas e mantenha a organização alinhada antes de revisões internas e externas.', Users),
-    feature('Audit trail', 'Mantenha histórico de revisão, atualização de evidências e atividade de governança rastreável para clientes e parceiros exigentes.', ShieldCheck),
+    feature('Histórico de atividade', 'Mantenha histórico de revisão, atualização de evidências e atividade de governança rastreável para clientes e parceiros exigentes.', ShieldCheck),
   ],
 };
 

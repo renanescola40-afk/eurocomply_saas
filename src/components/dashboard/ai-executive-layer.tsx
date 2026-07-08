@@ -26,9 +26,9 @@ function toneClasses(tone: PromptCard['tone']) {
 }
 
 function scorePosture(score: number) {
-  if (score >= 85) return 'ready for customer, board and investor review';
+  if (score >= 85) return 'ready for customer, leadership and investor review';
   if (score >= 70) return 'operationally active with a few important gaps to close';
-  if (score >= 50) return 'not yet board-ready and should be treated as an executive workstream';
+  if (score >= 50) return 'not yet ready for leadership review and should be treated as an executive workstream';
   return 'high risk and needs immediate leadership focus';
 }
 
@@ -48,7 +48,7 @@ function buildPrompts(summary: DashboardSummary, basePath: string): PromptCard[]
 
   return [
     {
-      question: 'Generate board summary',
+      question: 'Generate leadership summary',
       answer: `Compliance score is ${summary.complianceScore}%, which is ${scorePosture(summary.complianceScore)}. Primary exposure: ${exposure.detail}.`,
       href: `${basePath}/reports`,
       tone: summary.complianceScore >= 80 ? 'emerald' : summary.complianceScore >= 60 ? 'amber' : 'rose',
@@ -76,7 +76,7 @@ function buildPrompts(summary: DashboardSummary, basePath: string): PromptCard[]
 
 function getTrendNarrative(trendComparison?: DashboardTrendComparison) {
   const delta = trendComparison?.complianceScoreDelta;
-  if (delta === undefined || delta === null) return 'No previous trend snapshot is available yet. Start capturing daily posture to build a board trend line.';
+  if (delta === undefined || delta === null) return 'No previous trend snapshot is available yet. Start capturing daily posture to build a leadership trend line.';
   if (delta > 0) return `Compliance posture improved by ${delta} points since the previous snapshot.`;
   if (delta < 0) return `Compliance posture declined by ${Math.abs(delta)} points since the previous snapshot.`;
   return 'Compliance posture is stable compared with the previous snapshot.';
@@ -94,7 +94,7 @@ export function AiExecutiveLayer({ summary, trendComparison, basePath }: AiExecu
       <div className="relative grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
         <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200/80">AI executive layer</p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight">Board answers, generated from live posture</h2>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight">Leadership answers, generated from live posture</h2>
           <p className="mt-4 text-sm leading-6 text-slate-400">
             This v1 layer is deterministic and safe: it converts dashboard metrics into executive-ready answers before connecting a full AI copilot.
           </p>

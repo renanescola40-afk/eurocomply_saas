@@ -26,8 +26,8 @@ function statusClasses(status: ExperienceSignal['status']) {
 }
 
 function getOperatingGrade(summary: DashboardSummary) {
-  if (summary.complianceScore >= 85 && summary.criticalRisks === 0 && summary.missingDocuments <= 2) return 'Enterprise-ready';
-  if (summary.complianceScore >= 75) return 'Board-ready';
+  if (summary.complianceScore >= 85 && summary.criticalRisks === 0 && summary.missingDocuments <= 2) return 'Enterprise review-ready';
+  if (summary.complianceScore >= 75) return 'Leadership review-ready';
   if (summary.complianceScore >= 60) return 'Operational';
   return 'Needs focus';
 }
@@ -51,7 +51,7 @@ export function DashboardExperienceIndex({ summary, trendComparison, basePath }:
     {
       label: 'Evidence',
       value: String(summary.missingDocuments),
-      description: 'Missing evidence items that may weaken customer or board confidence.',
+      description: 'Missing evidence items that may weaken customer or leadership confidence.',
       href: `${basePath}/documents`,
       status: summary.missingDocuments === 0 ? 'strong' : summary.missingDocuments <= 3 ? 'active' : 'watch',
     },
