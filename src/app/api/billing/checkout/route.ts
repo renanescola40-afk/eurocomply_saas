@@ -147,13 +147,10 @@ export async function POST(request: Request) {
     const locale = normalizeCheckoutLocale(parsedBody.data.locale);
     const stripe = getStripeClient();
     const priceId = getStripePriceId(plan);
-    const clerkOrgId = typeof organization.clerk_org_id === 'string' ? organization.clerk_org_id : '';
     const organizationName = typeof organization.name === 'string' ? organization.name : null;
     const metadata = {
       organization_id: organization.id,
       organizationId: organization.id,
-      clerk_org_id: clerkOrgId,
-      clerkOrgId,
       user_id: user.id,
       userId: user.id,
       plan,
@@ -207,7 +204,6 @@ export async function POST(request: Request) {
         plan,
         priceId,
         stripeCustomerId,
-        clerkOrgId: clerkOrgId || null,
         actorRole: permission.role ?? 'unknown',
         stepUpAction: stepUp.assessment.action,
         stepUpVerifiedAt: stepUp.assessment.verifiedAt ?? null,
