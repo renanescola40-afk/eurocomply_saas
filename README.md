@@ -18,6 +18,16 @@ Customer-facing copy should use **Risck Comply** consistently. Historical labels
 
 ---
 
+## Current identity decision
+
+**Supabase Auth is the single primary authentication stack for the active application.**
+
+The product uses Supabase Auth for browser sessions, email/password, OAuth callback exchange, middleware session checks, server-side `getUser()` validation, and Postgres/RLS identity mapping. Organization membership and RBAC are resolved through Supabase/Postgres tables using the authenticated Supabase user UUID.
+
+No second identity provider should be added to login, signup, middleware, server queries, RBAC, API guards, onboarding, billing, or dashboard access unless the full identity architecture is redesigned, migrated, and documented in one PR.
+
+---
+
 ## Value proposition
 
 Companies adopting AI often struggle with scattered tools, undocumented usage, unclear ownership, inconsistent risk assessment, and weak evidence trails. Risck Comply centralizes that operating model into one workspace:
@@ -34,66 +44,16 @@ The goal is to help teams move from informal AI usage to documented, accountable
 
 ---
 
-## What the product does
-
-### AI governance and readiness
-
-- Register internal and vendor AI systems.
-- Capture system owner, department, usage context, country, provider, and risk signals.
-- Classify and prioritize AI Act readiness work.
-- Track gaps, actions, evidence, and audit history.
-- Provide executive views for readiness and operational risk.
-
-### Evidence and documentation
-
-- Store compliance document records.
-- Support generated or maintained governance documents.
-- Connect assessments and recommendations to AI systems.
-- Maintain audit activity for important product and security-sensitive actions.
-- Support export-oriented workflows where implemented.
-
-### Multi-tenant B2B operations
-
-- Organization/workspace model for customer isolation.
-- Membership-based access patterns.
-- Role-aware product and billing actions.
-- Plan-aware feature access.
-
-### Billing
-
-- Stripe checkout integration for self-serve plans.
-- Stripe webhook handling for subscription and payment lifecycle events.
-- Server-side price mapping through environment variables.
-- Billing actions protected by authenticated user and permission checks.
-
-### Security-oriented engineering
-
-- Security scripts for RLS, public secret scanning, production secret readiness, API hardening, headers, upload checks, webhook handling, audit coverage, supply-chain checks, and release readiness.
-- Explicit release gates for production and enterprise readiness.
-- No committed production secrets.
-
----
-
-## Current readiness stance
-
-This repository contains many controls expected in a serious B2B SaaS, but readiness must be proven by the validation gates below and by environment-specific evidence.
-
-Risck Comply must **not** be described as enterprise-ready unless the relevant checks pass and any blockers are documented or resolved.
-
-No SOC 2, ISO 27001, formal penetration test, external certification, external legal review, or named customer proof is claimed in this repository unless a dated, reviewable artifact is added by the owner.
-
----
-
 ## Technical stack
 
 - **Framework:** Next.js App Router.
 - **Language:** TypeScript.
 - **Runtime/UI:** React.
 - **Styling:** Tailwind CSS, Radix UI primitives, shadcn-style components, custom enterprise UI system.
-- **Charts and dashboard UI:** Recharts and custom dashboard components.
-- **Authentication:** Clerk integration in the active auth hook.
+- **Authentication:** Supabase Auth.
 - **Database:** Supabase/Postgres.
 - **Authorization:** Supabase Row Level Security and server-side permission guards.
+- **Tenant model:** `organizations` plus `organization_members.user_id` mapped to the authenticated Supabase user UUID.
 - **Payments:** Stripe.
 - **Validation:** Zod.
 - **Testing:** Vitest and Playwright.
@@ -108,8 +68,9 @@ No SOC 2, ISO 27001, formal penetration test, external certification, external l
 ```text
 Browser / Client UI
   -> Next.js App Router
-  -> Clerk user/session context
-  -> Server queries, API routes, and security guards
+  -> Supabase Auth client session
+  -> Middleware/server queries validate Supabase user with getUser()
+  -> Server actions/API routes validate user, organization membership and RBAC
   -> Supabase Postgres with tenant-aware tables and RLS
   -> Stripe checkout, customer, subscription, and webhook flows
   -> Audit/security evidence scripts and release gates
@@ -120,56 +81,25 @@ Core design principles:
 - Keep tenant data scoped by organization/workspace identifiers.
 - Never expose service-role credentials to the browser.
 - Validate user identity and permissions on server-side operations.
+- Treat UI state as display-only, never as an authorization source.
 - Keep billing authority on the server and in Stripe webhooks.
 - Use environment variables for provider configuration and secrets.
 - Treat security/release scripts as part of the product, not optional polish.
 
 ---
 
-## Representative folder structure
+## Auth and onboarding flow
 
-```text
-.
-├── src/
-│   ├── app/
-│   │   ├── [locale]/
-│   │   │   ├── page.tsx
-│   │   │   ├── pricing/
-│   │   │   ├── trust/
-│   │   │   └── dashboard/
-│   │   │       ├── page.tsx
-│   │   │       ├── organizations/
-│   │   │       ├── inventario/
-│   │   │       └── transparencia/
-│   │   ├── api/
-│   │   │   └── billing/
-│   │   │       ├── checkout/
-│   │   │       └── webhook/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   └── globals.css
-│   ├── components/
-│   ├── hooks/
-│   │   └── useAuth.tsx
-│   ├── integrations/
-│   │   └── supabase/
-│   ├── lib/
-│   └── server/
-├── scripts/
-│   ├── dev/
-│   ├── ops/
-│   ├── quality/
-│   └── security/
-├── supabase/
-├── docs/
-├── .github/
-│   └── workflows/
-├── package.json
-├── package-lock.json
-└── README.md
-```
-
-The exact folder tree may evolve as modules are split into smaller route groups and server packages.
+1. Anonymous users who access private routes are redirected to localized login with a safe `next` value.
+2. Login/signup success lands on localized onboarding.
+3. Onboarding checks the current Supabase user server-side.
+4. If the user has no organization, onboarding shows the organization creation flow.
+5. Organization creation writes an owner membership for `organization_members.user_id`.
+6. Completed onboarding redirects to localized organization dashboard.
+7. Users with a completed organization are redirected from onboarding to dashboard.
+8. Dashboard pages validate session and membership server-side.
+9. Private APIs validate user, organization, membership, RBAC and resource tenant ownership server-side.
+10. Sensitive responses use no-store headers and sanitized errors.
 
 ---
 
@@ -184,11 +114,10 @@ cp .env.example .env.local
 Common groups:
 
 - Application URL and trusted origins.
-- Clerk authentication keys and redirect URLs.
-- Supabase URL, anon key, service role key, and migration/automation credentials.
+- Supabase Auth URL, anon key, service role key, OAuth provider configuration and redirect allowlists.
 - Stripe publishable key, secret key, webhook secret, and price IDs.
 - Email provider keys.
-- Security, health check, audit signing, cron, rate limiting, upload scanning, observability, analytics, and CI/CD provider values.
+- Security, health check, audit signing, cron, rate limiting, upload scanning, observability, analytics, step-up, and CI/CD provider values.
 
 Never commit real secrets. Public `NEXT_PUBLIC_*` variables are visible to the browser and must never contain private keys.
 
@@ -201,7 +130,6 @@ Prerequisites:
 - Node.js compatible with the project dependencies.
 - npm, using the package manager declared in `package.json`.
 - Supabase project or local Supabase environment.
-- Clerk project for active authentication flows.
 - Stripe test account for billing flows.
 
 Install dependencies:
@@ -237,23 +165,14 @@ npm run test
 npm run build
 ```
 
-Route quality:
-
-```bash
-npm run quality:routes
-npm run quality:routes:e2e
-```
-
 Security gates:
 
 ```bash
+npm run security:auth-tokens
+npm run security:authorization-bola
+npm run security:protected-routes
+npm run security:step-up
 npm run security:ci
-npm run security:rls
-npm run security:api-guards
-npm run security:no-store
-npm run security:origin-guards
-npm run security:upload
-npm run security:billing-webhook-body
 ```
 
 Production readiness gates:
@@ -263,14 +182,6 @@ npm run release:deployment-smoke
 npm run release:rollback:dry-run
 npm run release:readiness
 npm run release:enterprise-readiness
-```
-
-Phase 1 hygiene/credibility gate:
-
-```bash
-npm run phase1:check
-npm run quality:routes
-npm run test -- tests/phase1/brand-credibility.test.ts
 ```
 
 These scripts are engineering controls and evidence checks. They are not a substitute for external legal review, third-party audit, or formal certification.
@@ -286,30 +197,14 @@ Recommended deployment flow:
 1. Configure production environment variables in the deployment provider secret store.
 2. Apply Supabase migrations in the target Supabase project.
 3. Confirm RLS is enabled and policies are aligned with tenant isolation requirements.
-4. Configure Clerk production domains and redirects.
+4. Configure Supabase Auth production Site URL, redirect URLs and OAuth providers.
 5. Configure Stripe live products, prices, and webhook endpoint.
 6. Set the billing webhook endpoint to `/api/billing/webhook`.
 7. Run local or CI readiness checks before promoting production.
 8. Deploy from the protected production branch.
-9. Verify auth, organization access, billing checkout, webhook handling, dashboard loading, and audit logs after deploy.
+9. Verify auth, organization access, billing checkout, webhook handling, dashboard loading, step-up and audit logs after deploy.
 
 Do not place production secrets in GitHub files, screenshots, issue comments, pull request descriptions, or public logs.
-
----
-
-## Authentication model
-
-The active client authentication hook uses Clerk primitives for user, session, email/password sign-in, sign-up, Google OAuth redirect, and sign-out flows.
-
-Auth responsibilities:
-
-- Clerk manages user identity and session state.
-- The application reads the authenticated user through client hooks and server-side auth helpers.
-- Protected server operations must re-check identity and permissions on the server.
-- UI state alone must never be treated as authorization.
-- Supabase stores application data and enforces tenant-aware access controls through RLS and server-side guards.
-
-Google OAuth is configured through the active auth provider and redirect URLs. Keep OAuth callback URLs exact for local, preview, and production environments.
 
 ---
 
@@ -321,62 +216,16 @@ Tenant isolation principles:
 
 - Each customer account is represented by an organization or workspace record.
 - Members are linked through membership tables such as `organization_members` and/or `workspace_members` depending on the active module.
-- Product data such as AI tools, assessments, documents, monitoring preferences, audit logs, subscriptions, and payments is scoped to the tenant identifier.
+- Product data such as AI systems, assessments, documents, monitoring preferences, audit logs, subscriptions, and payments is scoped to the tenant identifier.
 - Server-side queries resolve the current organization for the authenticated user.
-- Role and permission checks protect sensitive actions such as billing management.
-- Client-provided tenant IDs should be treated as untrusted unless validated against server-side membership.
-
-Common roles should be treated as implementation details unless explicitly enforced in code and database policies.
-
----
-
-## Stripe billing model
-
-Billing is implemented through server-side Stripe routes and webhook processing.
-
-Core flow:
-
-1. Authenticated user requests checkout for an allowed self-serve plan.
-2. Server validates the request body and normalizes the plan.
-3. Server resolves the current organization for the user.
-4. Server checks billing permission before creating checkout.
-5. Stripe price IDs are read from environment variables.
-6. Stripe redirects the customer through Checkout.
-7. Stripe sends lifecycle events to `/api/billing/webhook`.
-8. The webhook validates provider delivery, processes subscription/payment changes, and writes audit records where implemented.
-
-Important rules:
-
-- Do not trust client-supplied user IDs, organization IDs, plan prices, or Stripe customer IDs.
-- Keep `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` server-side only.
-- Use test mode keys locally and live keys only in production secret stores.
-- Keep price IDs environment-specific.
+- Role and permission checks protect sensitive actions such as billing management, team management, GDPR deletion, audit exports and security settings.
+- Client-provided tenant IDs are treated as untrusted until validated against server-side membership.
 
 ---
 
 ## Supabase RLS model
 
 Supabase/Postgres is used for application data and tenant-scoped records.
-
-Representative tables include:
-
-- `profiles`
-- `workspaces`
-- `workspace_members`
-- `ai_tools`
-- `ai_assessments`
-- `compliance_documents`
-- `monitoring_preferences`
-- `audit_logs`
-- `subscriptions`
-- `payments`
-- `regulatory_updates`
-
-Representative RLS/helper functions include:
-
-- `is_workspace_member`
-- `can_manage_workspace`
-- `can_use_monitoring`
 
 RLS principles:
 
@@ -423,15 +272,20 @@ Compliance positioning:
 Before shipping a production release:
 
 - [ ] Dependencies installed with `npm ci`.
+- [ ] `package.json` and `package-lock.json` aligned.
 - [ ] `.env.example` reviewed and production secrets configured only in provider secret stores.
 - [ ] Supabase migrations applied to the target environment.
+- [ ] Supabase Auth Site URL, redirect allowlist and OAuth providers configured.
 - [ ] RLS policies reviewed and validated.
-- [ ] Clerk production settings and redirects configured.
 - [ ] Stripe products, prices, and webhook endpoint configured.
 - [ ] `npm run lint` passes.
 - [ ] `npm run typecheck` passes.
 - [ ] `npm run test` passes.
 - [ ] `npm run build` passes.
+- [ ] `npm run security:auth-tokens` passes.
+- [ ] `npm run security:authorization-bola` passes.
+- [ ] `npm run security:protected-routes` passes.
+- [ ] `npm run security:step-up` passes.
 - [ ] `npm run security:ci` passes or failures are documented and accepted by the owner.
 - [ ] `npm run release:readiness` passes for release evidence.
 - [ ] Billing checkout tested with Stripe test mode before live promotion.
@@ -439,30 +293,6 @@ Before shipping a production release:
 - [ ] Audit/logging behavior reviewed for sensitive data exposure.
 - [ ] Rollback path identified before deployment.
 - [ ] No secrets, private keys, customer data, or sensitive screenshots are committed.
-
----
-
-## Contributing
-
-Contribution expectations:
-
-1. Create a focused branch for each change.
-2. Keep pull requests small enough to review.
-3. Include tests or validation notes for product, billing, auth, RLS, or security-sensitive changes.
-4. Run lint, typecheck, tests, build, and relevant security checks before requesting review.
-5. Update documentation when behavior, environment variables, routes, or deployment steps change.
-6. Never commit secrets, production data, access tokens, private keys, or customer exports.
-7. Treat changes to auth, billing, RLS, tenant isolation, file uploads, and audit logging as high-risk changes.
-
-Suggested local gate before opening a PR:
-
-```bash
-npm run lint
-npm run typecheck
-npm run test
-npm run build
-npm run security:ci
-```
 
 ---
 
@@ -480,12 +310,4 @@ Use a clear subject line such as:
 [SECURITY] Vulnerability report for Risck Comply
 ```
 
-Please include:
-
-- Affected route, feature, or component.
-- Reproduction steps.
-- Potential impact.
-- Any proof-of-concept details that are safe to share.
-- Suggested remediation, if available.
-
-Do not disclose suspected vulnerabilities publicly until the project owner has had reasonable time to investigate and remediate.
+Please include the affected route, reproduction steps, potential impact, safe proof-of-concept details and suggested remediation when available.
