@@ -15,7 +15,7 @@ const files = {
   auditChain: `${runtimeDir}/audit-chain-live-validation.json`,
   uploadScanner: `${runtimeDir}/upload-malware-scan-validation.json`,
   stripeBilling: `${runtimeDir}/stripe-billing-validation.json`,
-  observability: `${runtimeDir}/observability-readiness.json`,
+  observability: `${runtimeDir}/observability-smoke-validation.json`,
   branchProtection: `${runtimeDir}/branch-protection-required-checks.json`,
   externalReview: `${runtimeDir}/external-security-review-or-pentest.json`,
   finalValidation: `${runtimeDir}/final-validation-runner.json`,
