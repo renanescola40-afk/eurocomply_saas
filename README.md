@@ -16,6 +16,8 @@ Risck Comply is a B2B SaaS platform for European organizations that need to oper
 
 Customer-facing copy should use **Risck Comply** consistently. Historical labels such as EuroComply may appear in legacy migrations, archived evidence, or repository history, but should not be introduced into new product surfaces.
 
+Customer-facing copy must **not** be described as enterprise-ready unless the relevant checks pass and supporting runtime evidence is available.
+
 ---
 
 ## Current identity decision
