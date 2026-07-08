@@ -18,6 +18,7 @@ const files = {
   observability: `${runtimeDir}/observability-smoke-validation.json`,
   branchProtection: `${runtimeDir}/branch-protection-required-checks.json`,
   externalReview: `${runtimeDir}/external-security-review-or-pentest.json`,
+  authRbacFinal: `${runtimeDir}/auth-rbac-final-validation.json`,
   finalValidation: `${runtimeDir}/final-validation-runner.json`,
 };
 function readJson(path) {
@@ -79,6 +80,21 @@ if (complete(files.externalReview, external, 'External security review/pentest e
   if (external.evidenceIntegrity?.realExternalReportAttached !== true) failures.push(`${files.externalReview} must reference a real external report`);
   if (external.evidenceIntegrity?.placeholderOnly !== false) failures.push(`${files.externalReview} must not be placeholder-only when Complete`);
   if (!String(external.reportReference ?? '').trim()) failures.push(`${files.externalReview} must include reportReference`);
+}
+
+const authRbac = readJson(files.authRbacFinal);
+if (complete(files.authRbacFinal, authRbac, 'Auth/RBAC final runtime evidence')) {
+  if (authRbac.outcome !== 'passed') failures.push(`${files.authRbacFinal} outcome must be passed`);
+  if (authRbac.releaseDecision !== 'Go') failures.push(`${files.authRbacFinal} releaseDecision must be Go`);
+  if (authRbac.goNoGo?.status !== 'GO') failures.push(`${files.authRbacFinal} goNoGo.status must be GO`);
+  if (authRbac.runtimeEvidenceStatus !== 'executed_against_target_environment') failures.push(`${files.authRbacFinal} runtimeEvidenceStatus must be executed_against_target_environment`);
+  if (authRbac.evidenceIntegrity?.placeholderOnly !== false) failures.push(`${files.authRbacFinal} must not be placeholder-only when Complete`);
+  if (authRbac.evidenceIntegrity?.realRuntimeEvidenceAttached !== true) failures.push(`${files.authRbacFinal} must attach real runtime evidence before enterprise release`);
+  if (authRbac.evidenceIntegrity?.customerFacingProof !== true) failures.push(`${files.authRbacFinal} must be approved as customer-facing proof before enterprise release`);
+  const blockingEvidence = authRbac.blockingEvidence ?? {};
+  for (const [key, value] of Object.entries(blockingEvidence)) {
+    if (!['complete', 'passed', true].includes(value)) failures.push(`${files.authRbacFinal} blockingEvidence.${key} must be complete/passed`);
+  }
 }
 
 if (!finalValidationInProgress) {
