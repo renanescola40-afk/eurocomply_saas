@@ -35,21 +35,21 @@ function getTrend(trendComparison?: DashboardTrendComparison) {
 
 function getBoardReadout(summary: DashboardSummary) {
   if (summary.complianceScore >= 85 && summary.criticalRisks === 0 && summary.missingDocuments <= 2) {
-    return 'Ready for customer, investor and board review.';
+    return 'Ready for customer, investor and leadership review.';
   }
 
   if (summary.complianceScore >= 70) {
-    return 'Board-reviewable with focused remediation required.';
+    return 'Leadership-reviewable with focused remediation required.';
   }
 
-  return 'Not yet board-ready. Executive remediation should be prioritized.';
+  return 'Not yet ready for leadership review. Executive remediation should be prioritized.';
 }
 
 function getPrimaryAsk(summary: DashboardSummary) {
   if (summary.criticalRisks > 0) return 'Approve critical risk remediation plan.';
   if (summary.highRiskVendors > 0) return 'Approve vendor review sprint.';
   if (summary.missingDocuments > 0) return 'Approve evidence completion sprint.';
-  return 'Approve customer-ready compliance package.';
+  return 'Approve customer review compliance package.';
 }
 
 export function BoardModePreview({ summary, trendComparison, basePath }: BoardModePreviewProps) {
@@ -91,10 +91,10 @@ export function BoardModePreview({ summary, trendComparison, basePath }: BoardMo
 
       <div className="relative grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
         <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-200/80">Board mode</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-200/80">Leadership mode</p>
           <h2 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">Executive view without operational noise.</h2>
           <p className="mt-5 text-sm leading-6 text-slate-400">
-            A C-level summary designed for board meetings, investor updates and enterprise customer reviews.
+            A C-level summary designed for leadership meetings, investor updates and enterprise customer reviews.
           </p>
 
           <div className="mt-7 rounded-3xl border border-white/10 bg-black/20 p-5">
@@ -113,10 +113,10 @@ export function BoardModePreview({ summary, trendComparison, basePath }: BoardMo
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <Link href={`${basePath}/reports`} className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-bold text-slate-950 transition hover:bg-slate-100">
-              Open board report
+              Open leadership report
             </Link>
             <Link href={`${basePath}/reports/print`} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-bold transition hover:border-primary/50 hover:bg-white/[0.08]">
-              Prepare audit pack
+              Prepare review pack
             </Link>
           </div>
         </div>
@@ -126,7 +126,7 @@ export function BoardModePreview({ summary, trendComparison, basePath }: BoardMo
             <Link key={decision.label} href={decision.href} className="group rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5 transition hover:-translate-y-1 hover:border-primary/50 hover:bg-white/[0.075]">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{decision.label}</p>
-                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${toneClasses(decision.tone)}`}>Board</span>
+                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${toneClasses(decision.tone)}`}>Review</span>
               </div>
               <p className="mt-5 text-2xl font-semibold tracking-tight">{decision.value}</p>
               <p className="mt-4 min-h-12 text-sm leading-6 text-slate-400">{decision.detail}</p>

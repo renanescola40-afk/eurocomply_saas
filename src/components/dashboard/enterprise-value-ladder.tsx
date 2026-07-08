@@ -47,11 +47,11 @@ export function EnterpriseValueLadder({ summary, basePath }: EnterpriseValueLadd
       tone: 'emerald',
     },
     {
-      name: 'Board Reporting',
+      name: 'Leadership Reporting',
       priceSignal: 'Premium tier',
       readiness: clamp(summary.complianceScore - summary.missingDocuments),
-      description: 'Client-facing reports, white-label previews and board-ready compliance narratives.',
-      unlocks: ['Board memo', 'White-label preview', 'Audit pack'],
+      description: 'Client-facing reports, white-label previews and leadership review compliance narratives.',
+      unlocks: ['Leadership memo', 'White-label preview', 'Review pack'],
       href: `${basePath}/reports`,
       tone: 'sky',
     },
@@ -59,8 +59,8 @@ export function EnterpriseValueLadder({ summary, basePath }: EnterpriseValueLadd
       name: 'Enterprise Governance',
       priceSignal: 'Enterprise tier',
       readiness: clamp(evidenceReadiness - summary.criticalRisks * 3),
-      description: 'Approvals, department ownership, audit timeline and accountability workflows.',
-      unlocks: ['Approvals', 'Departments', 'Audit timeline'],
+      description: 'Approvals, department ownership, activity timeline and accountability workflows.',
+      unlocks: ['Approvals', 'Departments', 'Activity timeline'],
       href: `${basePath}/tasks`,
       tone: 'violet',
     },
@@ -125,7 +125,7 @@ export function EnterpriseValueLadder({ summary, basePath }: EnterpriseValueLadd
       <div className="relative mt-5 rounded-3xl border border-white/10 bg-black/20 p-5">
         <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Commercial positioning</p>
         <p className="mt-2 text-sm leading-6 text-slate-300">
-          Start with GDPR operations, then expand into board reporting, governance controls and paid framework modules. This creates a stronger pricing ladder than a flat checklist product.
+          Start with GDPR operations, then expand into leadership reporting, governance controls and paid framework modules. This creates a stronger pricing ladder than a flat checklist product.
         </p>
       </div>
     </section>

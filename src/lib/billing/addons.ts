@@ -53,7 +53,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
     id: 'executive_pdf_reports',
     name: 'Relatórios PDF Executivos',
     priceMonthly: 49,
-    description: 'Relatórios board-ready em PDF com dados da empresa, responsável, score, lacunas e plano de ação.',
+    description: 'Relatórios para direção em PDF com dados da empresa, responsável, score, lacunas e plano de ação.',
     includedFromPlan: 'enterprise',
     availableFromPlan: 'growth',
     category: 'reports',
@@ -69,9 +69,9 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
   },
   {
     id: 'evidence_audit_pack',
-    name: 'Evidence Pack / Audit Pack',
+    name: 'Evidence Pack / Review Pack',
     priceMonthly: 79,
-    description: 'Pacotes de auditoria com evidências, trilha de revisão, responsáveis e readiness operacional.',
+    description: 'Pacotes de revisão com evidências, trilha de revisão, responsáveis e readiness operacional.',
     includedFromPlan: 'enterprise',
     availableFromPlan: 'growth',
     category: 'risk',
@@ -80,7 +80,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
     id: 'white_label_reports',
     name: 'White-label nos Relatórios',
     priceMonthly: 99,
-    description: 'Relatórios com marca da empresa ou consultoria para clientes, direção e auditorias.',
+    description: 'Relatórios com marca da empresa ou consultoria para clientes, direção e revisões.',
     includedFromPlan: 'enterprise',
     availableFromPlan: 'growth',
     category: 'reports',
@@ -117,7 +117,7 @@ export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
 export const CREDIT_PACKS = [
   { id: 'credits_100', name: '100 créditos', price: 9, credits: 100, description: 'Para testar relatórios, resumos e pequenas análises.' },
   { id: 'credits_500', name: '500 créditos', price: 39, credits: 500, description: 'Para equipas pequenas que usam relatórios e análises com frequência.' },
-  { id: 'credits_1500', name: '1.500 créditos', price: 99, credits: 1500, description: 'Melhor custo-benefício para períodos de auditoria ou revisão regulatória.' },
+  { id: 'credits_1500', name: '1.500 créditos', price: 99, credits: 1500, description: 'Melhor custo-benefício para períodos de revisão regulatória.' },
   { id: 'credits_5000', name: '5.000 créditos', price: 249, credits: 5000, description: 'Volume alto para consultorias e times multi-país.' },
 ];
 

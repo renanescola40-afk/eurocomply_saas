@@ -12,8 +12,8 @@ function getScoreLabel(score: number) {
 }
 
 function getScoreNarrative(score: number) {
-  if (score >= 85) return 'The program is ready for board review, customer security discussions and leadership reporting.';
-  if (score >= 65) return 'The program is operational, with clear focus areas that should be closed before a formal audit or customer review.';
+  if (score >= 85) return 'The program is ready for leadership review, customer security discussions and executive reporting.';
+  if (score >= 65) return 'The program is operational, with clear focus areas that should be closed before a formal review or customer review.';
   return 'The program needs immediate attention across evidence, risk or vendor operations before external review.';
 }
 
@@ -47,7 +47,7 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
 
   const cards = [
     { label: 'Compliance score', value: `${summary.complianceScore}%`, detail: scoreLabel },
-    { label: 'Maturity', value: maturity.level, detail: 'Board readiness level' },
+    { label: 'Maturity', value: maturity.level, detail: 'Leadership readiness level' },
     { label: 'Open tasks', value: summary.openTasks, detail: `${summary.totals.tasks} total tasks` },
     { label: 'Open risks', value: summary.openRisks, detail: `${summary.criticalRisks} critical risks` },
     { label: 'High-risk vendors', value: summary.highRiskVendors, detail: `${summary.totals.vendors} total vendors` },
@@ -115,7 +115,7 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Narrative</p>
-            <h2 className="mt-2 text-2xl font-semibold">Board-ready commentary</h2>
+            <h2 className="mt-2 text-2xl font-semibold">Leadership review commentary</h2>
           </div>
           <p className="max-w-xl text-sm text-muted-foreground">Use this section as the executive framing for leadership, customers or advisory review.</p>
         </div>
