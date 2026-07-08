@@ -108,7 +108,7 @@ export function EnterpriseComplianceCommandCenter({
     {
       title: 'AI systems',
       value: formatCount(aiSystemSummary.total),
-      detail: `${formatCount(aiSystemSummary.highRisk)} high-risk systems`,
+      detail: `${formatCount(aiSystemSummary.high)} high-risk systems`,
       href: `${basePath}/ai-inventory`,
       icon: Gauge,
     },
