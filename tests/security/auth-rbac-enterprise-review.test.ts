@@ -25,20 +25,26 @@ describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
     const activeAuthorizationFiles = [
       'src/server/security/rbac.ts',
       'src/server/queries/current-organization.ts',
+      'src/server/queries/organizations.ts',
       'src/server/actions/organizations.ts',
+      'src/server/actions/members.ts',
+      'src/server/actions/onboarding.ts',
+      'src/app/api/internal/trial-reminders/route.ts',
     ];
 
     for (const file of activeAuthorizationFiles) {
       const source = readRepoFile(file);
-      expect(source).toContain('user_id');
       expect(source).not.toContain('clerk_user_id');
       expect(source).not.toContain('created_by_clerk_user_id');
       expect(source).not.toContain('clerk_org_id');
       expect(source).not.toContain('identityColumn');
+      expect(source).not.toContain('getOrganizationByClerkOrgId');
     }
 
     expect(readRepoFile('src/server/security/rbac.ts')).toContain(".eq('user_id', userId)");
+    expect(readRepoFile('src/server/queries/organizations.ts')).toContain(".eq('user_id', userId)");
     expect(readRepoFile('src/server/actions/organizations.ts')).toContain("role: 'owner'");
+    expect(readRepoFile('src/server/actions/onboarding.ts')).toContain('created_by: userId');
   });
 
   it('keeps open redirects rejected in login, signup and OAuth callback', () => {
