@@ -70,7 +70,7 @@ describe('AI systems API hardening', () => {
     const body = await response.json();
 
     expect(response.status).toBe(401);
-    expect(body).toEqual({ error: 'unauthorized' });
+    expect(body).toEqual({ error: 'unauthorized', requestId: expect.any(String) });
     expect(mocks.getCurrentOrganizationForUser).not.toHaveBeenCalled();
     expect(mocks.createAiSystem).not.toHaveBeenCalled();
   });
@@ -125,7 +125,7 @@ describe('AI systems API hardening', () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body).toEqual({ error: 'invalid_request' });
+    expect(body).toEqual({ error: 'invalid_request', requestId: expect.any(String) });
     expect(mocks.createAiSystem).not.toHaveBeenCalled();
   });
 });
