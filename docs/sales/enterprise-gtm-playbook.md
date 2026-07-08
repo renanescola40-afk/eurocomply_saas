@@ -2,11 +2,11 @@
 
 Status: implementation-ready GTM source of truth for positioning, pricing, sales copy and enterprise buyer enablement.
 
-Guardrails:
+## Guardrails
 
 - RISCK COMPLY does not provide legal advice.
 - RISCK COMPLY does not replace lawyers, DPOs, security teams or external auditors.
-- RISCK COMPLY supports operational readiness, evidence management, policy workflow, risk visibility and audit preparation.
+- RISCK COMPLY supports operational readiness, evidence management, policy workflow, risk visibility and review preparation.
 - Do not claim guaranteed AI Act compliance, certification, SOC 2, ISO 27001, third-party pentest, 24/7 monitoring or legal approval unless current evidence and contracts support it.
 - Do not invent customers, logos, testimonials, certifications or regulatory endorsements.
 
@@ -14,11 +14,11 @@ Guardrails:
 
 ### One-line positioning
 
-RISCK COMPLY is the AI governance and EU AI Act readiness workspace for European companies that need to turn scattered AI usage into risk-classified, policy-backed, audit-prepared evidence.
+RISCK COMPLY is the AI governance and EU AI Act readiness workspace for European companies that need to turn scattered AI usage into risk-classified, policy-backed, review-ready evidence.
 
 ### Homepage hero
 
-**Turn scattered AI use into board-ready governance evidence.**
+**Turn scattered AI use into structured governance evidence.**
 
 Map AI systems, classify risk, assign owners, generate policy assets and prepare evidence packs for EU AI Act readiness — without pretending software can replace legal counsel.
 
@@ -30,7 +30,7 @@ AI Risk, Policy and Evidence Management for European B2B teams
 
 ### Market frame
 
-European companies are moving from “we use AI tools” to “prove how AI is governed”. Buyers, regulators, boards and enterprise customers increasingly expect structured records of AI systems, owners, risks, policies, evidence and review activity.
+European companies are moving from “we use AI tools” to “show how AI is governed”. Buyers, boards and enterprise customers increasingly expect structured records of AI systems, owners, risks, policies, evidence and review activity.
 
 RISCK COMPLY turns that work into an operating system.
 
@@ -38,7 +38,7 @@ RISCK COMPLY turns that work into an operating system.
 
 ### Primary ICP
 
-European B2B companies using AI in product, operations, HR, support, sales, finance or decision workflows and needing a controlled readiness system before procurement, board review, audit or customer due diligence.
+European B2B companies using AI in product, operations, HR, support, sales, finance or decision workflows and needing a controlled readiness system before procurement, leadership review, external review or customer due diligence.
 
 ### Best-fit company profile
 
@@ -47,7 +47,7 @@ European B2B companies using AI in product, operations, HR, support, sales, fina
 | Geography | EU, EEA, UK, Switzerland or companies selling into Europe |
 | Size | 20-1,000 employees |
 | Maturity | Already using AI tools, but governance is fragmented |
-| Trigger | Customer security review, board request, audit preparation, enterprise sale, AI policy rollout |
+| Trigger | Customer security review, board request, review preparation, enterprise sale, AI policy rollout |
 | Buyer | Founder, CTO, Compliance Manager, DPO, Legal Ops, Security Lead, COO |
 | Budget motion | Self-serve for small teams; assisted sales for Business and Enterprise |
 | Urgency | Needs a readiness workspace before external pressure becomes a blocker |
@@ -65,12 +65,12 @@ European B2B companies using AI in product, operations, HR, support, sales, fina
 
 **Buyer:** Founder, CTO, Head of Security, Compliance Manager  
 **Pain:** Enterprise customers ask how AI is used, which vendors are involved, and whether there is evidence of governance.  
-**Message:** “Close enterprise reviews faster with a controlled AI inventory, risk register and evidence pack.”
+**Message:** “Support enterprise reviews with a controlled AI inventory, risk register and evidence pack.”
 
 ### Fintech / financial services
 
 **Buyer:** COO, Risk Lead, DPO, CTO, Compliance Officer  
-**Pain:** AI decisions, vendor risk, data protection and audit pressure create governance gaps.  
+**Pain:** AI decisions, vendor risk, data protection and review pressure create governance gaps.  
 **Message:** “Show disciplined AI oversight across owners, risk, policies and review evidence.”
 
 ### HR / recruiting / workforce platforms
@@ -110,7 +110,7 @@ The result:
 - weak risk classification;
 - policies disconnected from real tools;
 - slow procurement answers;
-- poor audit preparation;
+- poor review preparation;
 - leadership without a clear readiness view.
 
 ## 5. Safe promise
@@ -119,7 +119,7 @@ RISCK COMPLY helps teams build a structured AI governance operating layer: inven
 
 Safe promise:
 
-**Know where AI is used, who owns it, what risk it carries, what policies apply and what evidence exists — before the buyer, board or auditor asks.**
+**Know where AI is used, who owns it, what risk it carries, what policies apply and what evidence exists — before the buyer, board or reviewer asks.**
 
 Do not promise:
 
@@ -132,9 +132,9 @@ Do not promise:
 ## 6. Differentiators
 
 1. **AI-first governance, not generic GRC.** Built around AI systems, risk, evidence, owners and policy workflows.
-2. **European readiness language.** Focused on EU AI Act readiness, AI governance and audit preparation.
+2. **European readiness language.** Focused on EU AI Act readiness, AI governance and review preparation.
 3. **Evidence-led workflow.** Every output points back to owners, systems, status and evidence.
-4. **Buyer-ready posture.** Pricing, trust materials, security questionnaire and procurement packet support serious B2B review.
+4. **Enterprise review support.** Pricing, trust materials, security questionnaire and procurement packet support serious B2B review.
 5. **No fake legal guarantee.** Strong credibility because the product avoids unsupported legal claims.
 6. **Fast first value.** Start with one AI inventory and one evidence pack instead of a heavy consulting project.
 7. **Operational after the memo.** Lawyers can advise; RISCK COMPLY helps teams maintain the operating record.
@@ -181,7 +181,7 @@ Includes:
 - policy templates
 - evidence checklist
 - basic exports
-- 30-day audit history
+- 30-day activity history
 
 CTA: **Start Essential**
 
@@ -197,8 +197,8 @@ Includes:
 - evidence pack builder
 - policy generator
 - vendor/tool review
-- board-ready exports
-- 180-day audit history
+- leadership review exports
+- 180-day activity history
 
 CTA: **Start Professional Trial**
 
@@ -244,7 +244,7 @@ Use for Essential and Professional.
 
 Trial copy:
 
-**Start with your first AI inventory. Build a working evidence pack before your next customer or board review.**
+**Start with your first AI inventory. Build a working evidence pack before your next customer or leadership review.**
 
 Trial rules:
 
@@ -281,7 +281,7 @@ Start with AI readiness. Scale into enterprise governance.
 
 ### Hero subtitle
 
-Choose the plan that matches your AI footprint: from first inventory to multi-team evidence management and procurement-ready review.
+Choose the plan that matches your AI footprint: from first inventory to multi-team evidence management and procurement review.
 
 ### Value cards
 
@@ -292,7 +292,7 @@ Create a clear record of AI systems, owners, use cases, departments, countries a
 Turn vague AI concerns into structured risk signals, ownership and next actions.
 
 **Prepare evidence before pressure**  
-Generate policies, evidence packs and buyer-ready summaries without claiming legal guarantees.
+Generate policies, evidence packs and buyer review summaries without claiming legal guarantees.
 
 ### CTA row
 
@@ -308,7 +308,7 @@ RISCK COMPLY supports operational AI governance readiness. It is not legal advic
 
 ### “Can this make us compliant with the EU AI Act?”
 
-No software should promise that alone. RISCK COMPLY helps you organize the operational layer: AI inventory, owners, risk, policies, evidence and audit preparation. Legal interpretation remains with your legal counsel and advisors.
+No software should promise that alone. RISCK COMPLY helps you organize the operational layer: AI inventory, owners, risk, policies, evidence and review preparation. Legal interpretation remains with your legal counsel and advisors.
 
 ### “We already have spreadsheets.”
 
@@ -376,14 +376,14 @@ For Business and Enterprise, DPA review can be part of procurement subject to ap
 
 **Enterprise AI governance readiness without spreadsheet chaos.**
 
-RISCK COMPLY helps European organizations map AI systems, classify risk, assign owners, manage policy evidence and prepare procurement-ready answers — without unsupported legal or certification claims.
+RISCK COMPLY helps European organizations map AI systems, classify risk, assign owners, manage policy evidence and prepare procurement review answers — without unsupported legal or certification claims.
 
 ### Enterprise bullets
 
 - Multi-team AI inventory and ownership model
 - Risk classification and evidence status
 - Policy and document workflow
-- Buyer-ready AI governance summaries
+- Buyer review AI governance summaries
 - Security questionnaire support
 - Procurement packet checklist
 - Assisted onboarding and rollout planning
@@ -429,7 +429,7 @@ Never answer “yes” to a security capability unless implementation, testing, 
 ### 30-minute demo
 
 **0-3 min — Trigger**  
-“Before we show the product: what triggered the AI governance conversation now — customer review, board request, audit prep, AI policy rollout or procurement?”
+“Before we show the product: what triggered the AI governance conversation now — customer review, board request, review prep, AI policy rollout or procurement?”
 
 **3-6 min — Current workflow**  
 “Where is your AI inventory today? Spreadsheet, Notion, Slack, legal docs, procurement tool or nowhere?”
@@ -519,147 +519,4 @@ That gap is where RISCK COMPLY helps.
 
 ### Slide 1 — Title
 
-RISCK COMPLY  
-AI Governance Readiness for European B2B Teams
-
-### Slide 2 — Problem
-
-AI adoption is moving faster than governance.  
-Teams cannot prove where AI is used, who owns it, what risk it carries or what evidence exists.
-
-### Slide 3 — Why now
-
-EU AI Act readiness, enterprise procurement and board oversight are turning AI governance into an operating requirement.
-
-### Slide 4 — Solution
-
-RISCK COMPLY centralizes AI inventory, risk classification, ownership, policies, evidence packs and audit preparation.
-
-### Slide 5 — Product workflow
-
-Register AI systems → classify risk → assign owners → generate policies → collect evidence → prepare review.
-
-### Slide 6 — Buyer value
-
-- Faster customer/security reviews
-- Stronger internal accountability
-- Cleaner audit preparation
-- Less spreadsheet drift
-- Clear executive visibility
-
-### Slide 7 — Plans
-
-Essential €49, Professional €149, Business €399, Enterprise custom.
-
-### Slide 8 — Close
-
-Start with one AI inventory and one evidence pack.  
-CTA: Start Professional Trial or Book Enterprise Demo.
-
-## 19. ROI calculator outline
-
-### Inputs
-
-| Input | Description |
-| --- | --- |
-| A | Hours/month updating AI inventory spreadsheets |
-| B | Hours/month chasing owners for evidence |
-| C | Hours/month preparing customer/security/procurement responses |
-| D | Blended hourly cost |
-| E | Avoided consulting/admin cost |
-| F | Estimated value of faster enterprise review |
-| G | Monthly RISCK COMPLY subscription |
-
-### Formula
-
-```text
-Monthly gross value = ((A + B + C) × D) + E + F
-Monthly net value = Monthly gross value - G
-Annual net value = Monthly net value × 12
-Payback ratio = Monthly gross value / G
-```
-
-### Conservative version
-
-```text
-Conservative monthly value = ((A + B + C) × D) + E - G
-```
-
-### Output copy
-
-“Based on your own inputs, RISCK COMPLY is estimated to reduce manual governance work and evidence-preparation cost by approximately {{monthly_net_value}} per month. This is an operational estimate, not a guaranteed financial outcome.”
-
-## 20. Procurement packet checklist
-
-Attach or prepare:
-
-1. Product one-pager
-2. Pricing page / quote
-3. Enterprise order form
-4. DPA draft or approved DPA
-5. Subprocessor list
-6. Security overview
-7. Architecture overview
-8. Data protection overview
-9. Access control / RBAC overview
-10. Encryption overview
-11. Incident response overview
-12. Backup and recovery posture
-13. Security questionnaire export
-14. AI governance feature summary
-15. Support terms
-16. SLA terms if agreed
-17. Onboarding plan
-18. Implementation timeline
-19. Mutual action plan
-20. Legal disclaimer and claim guardrails
-
-## Pages to create or alter
-
-### Already created or improved in this GTM pass
-
-- `/[locale]/pricing` — align pricing and commercial copy with Essential, Professional, Business and Enterprise.
-- `/[locale]/enterprise` — sales-led enterprise page.
-- `/[locale]/book-demo` — demo copy aligned to AI governance readiness.
-- `docs/sales/enterprise-gtm-playbook.md` — source of truth for copy and sales scripts.
-- `docs/sales/README.md` — index updated.
-- `docs/trust/PROCUREMENT_CHECKLIST.md` — procurement packet aligned to AI governance buyer review.
-
-### Recommended next pages
-
-- `/[locale]/roi-calculator`
-- `/[locale]/resources/ai-act-readiness-checklist`
-- `/[locale]/security-questionnaire` public/controlled buyer mode if security decides it is safe
-- `/[locale]/waitlist`
-- `/[locale]/compare/spreadsheets`
-- `/[locale]/solutions/saas`
-- `/[locale]/solutions/fintech`
-- `/[locale]/solutions/hr`
-
-## CTA inventory
-
-Primary CTAs:
-
-- Start Professional Trial
-- Book Enterprise Demo
-- Start Essential
-- Book Business Demo
-- Talk to Sales
-
-Secondary CTAs:
-
-- Review Trust Center
-- Download Procurement Packet
-- Export Security Questionnaire
-- Calculate ROI
-- Join Waitlist
-- See Pricing
-- View Demo Agenda
-
-## Final sales claim boundary
-
-Best approved sentence:
-
-**RISCK COMPLY helps European companies prepare AI governance evidence by organizing AI systems, risk, owners, policies and audit-ready records in one workspace.**
-
-Do not weaken this with vague template language. Do not overstate it with legal guarantees.
+RISCK COMPLY: AI governance readiness for European B2B teams.
