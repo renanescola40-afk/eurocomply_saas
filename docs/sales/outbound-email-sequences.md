@@ -10,9 +10,9 @@ Hi {{first_name}},
 
 I noticed {{company}} is operating in a market where compliance, vendor reviews and customer procurement questions can quickly become a spreadsheet-heavy process.
 
-RISCK COMPLY helps finance and leadership teams centralize risks, documents, vendors, owners and audit evidence so they can see what is missing before it becomes urgent.
+RISCK COMPLY helps finance and leadership teams centralize risks, documents, vendors, owners and evidence so they can see what is missing before it becomes urgent.
 
-The value is simple: fewer manual updates, less owner chasing and clearer visibility before customer or audit reviews.
+The value is simple: fewer manual updates, less owner chasing and clearer visibility before customer or review cycles.
 
 Would it be worth mapping your current compliance workflow for 20 minutes next week?
 
@@ -34,7 +34,7 @@ RISCK COMPLY gives compliance teams one control room for:
 - vendor evidence,
 - review dates,
 - owners,
-- audit-ready activity history.
+- reviewable activity history.
 
 Could I show you a 10-minute demo using a sample European company workflow?
 
@@ -81,7 +81,7 @@ Hi {{first_name}},
 
 One useful way to frame this:
 
-Spreadsheets are good for starting compliance work. RISCK COMPLY is for when the company needs owners, review dates, vendor evidence and audit preparation in one place.
+Spreadsheets are good for starting compliance work. RISCK COMPLY is for when the company needs owners, review dates, vendor evidence and review preparation in one place.
 
 Happy to send a one-pager or show a 10-minute demo.
 
@@ -90,4 +90,4 @@ Best,
 
 ## LinkedIn connection note
 
-Hi {{first_name}}, I am building RISCK COMPLY for European teams managing risks, documents, vendors and audit evidence without spreadsheet chaos. Thought it could be relevant for your compliance/finance work.
+Hi {{first_name}}, I am building RISCK COMPLY for European teams managing risks, documents, vendors and evidence without spreadsheet chaos. Thought it could be relevant for your compliance/finance work.

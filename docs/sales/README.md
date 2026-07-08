@@ -34,12 +34,12 @@ This folder is the source of truth for GTM positioning, sales demos, discovery c
 
 ## Positioning
 
-**RISCK COMPLY helps European companies prepare AI governance evidence by organizing AI systems, risk, owners, policies and audit-ready records in one workspace.**
+**RISCK COMPLY helps European companies prepare AI governance evidence by organizing AI systems, risk, owners, policies and review-ready records in one workspace.**
 
 ## Sales rules
 
 - Do not claim guaranteed EU AI Act compliance, legal approval or regulator endorsement.
 - Do not present RISCK COMPLY as legal advice or a replacement for lawyers, DPOs, security teams or auditors.
 - Do not claim SOC 2, ISO 27001 certification, third-party pentest completion or guaranteed legal compliance unless the signed contract and Trust Center evidence explicitly support it.
-- Position RISCK COMPLY as an operational AI governance readiness system for inventory, risk, policy, evidence, workflow, visibility and audit preparation.
+- Position RISCK COMPLY as an operational AI governance readiness system for inventory, risk, policy, evidence, workflow, visibility and review preparation.
 - Enterprise commitments must be tied to contract, DPA, subprocessor list, support terms and security evidence.

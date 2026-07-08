@@ -4,7 +4,7 @@ Use this FAQ in sales calls, procurement conversations and follow-up emails.
 
 ## 1. What does RISCK COMPLY do?
 
-RISCK COMPLY helps European companies organize AI governance work across AI system inventory, risk classification, owners, policies, evidence, audit preparation and procurement review.
+RISCK COMPLY helps European companies organize AI governance work across AI system inventory, risk classification, owners, policies, evidence, review preparation and procurement review.
 
 It is designed to replace fragile spreadsheet-based workflows with a clearer operating system for AI governance accountability.
 
@@ -14,7 +14,7 @@ No. RISCK COMPLY is an operational AI governance readiness platform. It helps te
 
 ## 3. Does RISCK COMPLY guarantee EU AI Act compliance?
 
-No. No software should claim automatic legal compliance. RISCK COMPLY helps teams prepare and maintain the operational evidence layer: AI inventory, owners, risk, policies, evidence packs and audit preparation.
+No. No software should claim automatic legal compliance. RISCK COMPLY helps teams prepare and maintain the operational evidence layer: AI inventory, owners, risk, policies, evidence packs and review preparation.
 
 Final legal interpretation and regulatory decisions remain the responsibility of the customer and their advisors.
 
@@ -38,13 +38,13 @@ RISCK COMPLY can support EU AI Act readiness workflows by helping teams:
 - connect policies and documents to real AI systems;
 - prepare evidence packs;
 - maintain activity history;
-- prepare buyer, board, audit and procurement answers.
+- prepare buyer, board, review and procurement answers.
 
 This is operational readiness support, not legal advice.
 
 ## 7. How does RISCK COMPLY support GDPR-related work?
 
-RISCK COMPLY can support GDPR-oriented operational workflows such as vendor tracking, DPA status, evidence collection, document review cycles, ownership and audit-ready records.
+RISCK COMPLY can support GDPR-oriented operational workflows such as vendor tracking, DPA status, evidence collection, document review cycles, ownership and review-ready records.
 
 Final legal interpretation and regulatory decisions remain the responsibility of the customer and their advisors.
 
@@ -130,19 +130,11 @@ Bring:
 - Current risk spreadsheet.
 - Vendor list.
 - Top compliance documents.
-- Current audit, board, procurement or customer review questions.
+- Current board, procurement, customer or review questions.
 - Main owners: founder, CTO, compliance, DPO, legal, IT/security, product and procurement.
 
 ## 22. What is the safest sales claim?
 
 Use:
 
-“RISCK COMPLY helps European companies prepare AI governance evidence by organizing AI systems, risk, owners, policies and audit-ready records in one workspace.”
-
-Avoid:
-
-- “Guaranteed compliance.”
-- “Replaces lawyers.”
-- “Regulator-approved.”
-- “Certified AI Act compliance.”
-- “Avoid fines guaranteed.”
+“RISCK COMPLY helps European companies prepare AI governance evidence by organizing AI systems, risk, owners, policies and review-ready records in one workspace.”

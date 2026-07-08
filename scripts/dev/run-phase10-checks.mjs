@@ -11,7 +11,7 @@ const checks = [
       'npm run phase8:verify',
       'npm run phase9:review',
       'npm run phase9:verify',
-      'audit-ready package review',
+      'review package preparation',
       'organization readiness reporting',
       'export preparation surface',
     ],
