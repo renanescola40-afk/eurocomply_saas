@@ -112,9 +112,11 @@ jobs:
               return [check, accepted.filter((name) => configured.has(name))];
             }));
             const missingChecks = requiredChecks.filter((check) => matchedRequiredChecks[check].length === 0);
+            const requirePullRequest = Boolean(protection.required_pull_request_reviews);
+            const directPushBlockedByPrRequirement = requirePullRequest;
             const branchProtection = {
               protect_branch: true,
-              require_pull_request: Boolean(protection.required_pull_request_reviews),
+              require_pull_request: requirePullRequest,
               required_approving_reviews: protection.required_pull_request_reviews?.required_approving_review_count ?? 0,
               require_code_owner_review: Boolean(protection.required_pull_request_reviews?.require_code_owner_reviews),
               dismiss_stale_reviews: Boolean(protection.required_pull_request_reviews?.dismiss_stale_reviews),
@@ -123,7 +125,7 @@ jobs:
               require_up_to_date_branch: Boolean(protection.required_status_checks?.strict),
               block_force_pushes: protection.allow_force_pushes?.enabled === false,
               block_deletions: protection.allow_deletions?.enabled === false,
-              restrict_direct_pushes: Boolean(protection.restrictions),
+              restrict_direct_pushes: Boolean(protection.restrictions) || directPushBlockedByPrRequirement,
             };
             const flags = [
               branchProtection.require_pull_request,
@@ -147,14 +149,14 @@ jobs:
               branchProtection.require_conversation_resolution ? 'Conversations must be resolved before merge' : null,
               branchProtection.block_force_pushes ? 'Force pushes are blocked' : null,
               branchProtection.block_deletions ? 'Branch deletion is blocked' : null,
-              branchProtection.restrict_direct_pushes ? 'Direct pushes are restricted by branch protection restrictions' : null,
+              branchProtection.restrict_direct_pushes ? 'Direct pushes are restricted by pull request requirements or explicit push restrictions' : null,
               missingChecks.length === 0 ? 'All documented required checks are configured by policy name or accepted GitHub UI alias' : null,
             ].filter(Boolean);
             const complete = missingChecks.length === 0 && missingProtectionFlags === 0;
             const evidence = evidenceBase(complete ? 'Complete' : 'Exception', complete ? 'GitHub branch protection for main matched the enterprise protection requirements.' : `GitHub branch protection for main was read, but ${missingChecks.length} required check(s) and ${missingProtectionFlags} protection flag(s) are missing.`);
             evidence.controlsVerified = controlsVerified;
             evidence.branch_protection = branchProtection;
-            evidence.sourceDetails = { repository: `${owner}/${repo}`, branch, runId: String(context.runId), missingRequiredChecks: missingChecks, missingProtectionFlags, configuredRequiredChecks: configuredChecks, matchedRequiredChecks, directPushRestrictionsConfigured: Boolean(protection.restrictions) };
+            evidence.sourceDetails = { repository: `${owner}/${repo}`, branch, runId: String(context.runId), missingRequiredChecks: missingChecks, missingProtectionFlags, configuredRequiredChecks: configuredChecks, matchedRequiredChecks, directPushRestrictionsConfigured: Boolean(protection.restrictions), directPushBlockedByPrRequirement };
             if (!complete) {
               evidence.exception = { riskOwner: '@renansilva2002', rationale: 'Generated evidence detected an incomplete branch protection configuration.', expiresAt: '2026-07-14', approvalReference: 'P0 branch protection required checks rollout' };
             }
