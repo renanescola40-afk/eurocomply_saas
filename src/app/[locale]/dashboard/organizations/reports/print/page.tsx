@@ -15,7 +15,7 @@ function getScoreLabel(score: number) {
 function getScoreNarrative(score: number) {
   if (score >= 85) return 'Ready for executive review and external stakeholder conversations.';
   if (score >= 65) return 'Operationally active with a clear set of focus areas to close.';
-  return 'Requires leadership focus before external audit, customer or investor review.';
+  return 'Requires leadership focus before customer or investor review.';
 }
 
 const printReportStyles = `
@@ -95,7 +95,7 @@ export default async function PrintableExecutiveReportPage({ params }: { params:
 
   const executiveHighlights = [
     { label: 'Overall readiness', value: `${summary.complianceScore}%`, detail: scoreLabel },
-    { label: 'Maturity', value: maturity.level, detail: 'Board readiness' },
+    { label: 'Maturity', value: maturity.level, detail: 'Leadership readiness' },
     { label: 'Critical risks', value: summary.criticalRisks, detail: `${summary.openRisks} open risks` },
     { label: 'Evidence gap', value: summary.missingDocuments, detail: `${summary.totals.documents} total docs` },
   ];
@@ -113,7 +113,7 @@ export default async function PrintableExecutiveReportPage({ params }: { params:
       <section className="break-inside-avoid overflow-hidden rounded-3xl border bg-slate-950 text-white print:rounded-none print:border-slate-300">
         <div className="grid gap-6 p-8 md:grid-cols-[1.3fr_0.7fr] print:grid-cols-[1.3fr_0.7fr] print:p-6">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-slate-300">EuroComply Executive Report</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-slate-300">RISCK COMPLY Executive Report</p>
             <h1 className="mt-4 text-4xl font-bold tracking-tight print:text-3xl">{organization.name}</h1>
             <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-300">
               Generated on {generatedAt}. {getScoreNarrative(summary.complianceScore)}
@@ -139,7 +139,7 @@ export default async function PrintableExecutiveReportPage({ params }: { params:
       </section>
 
       <section className="break-inside-avoid py-4">
-        <h2 className="text-2xl font-bold">Board-ready commentary</h2>
+        <h2 className="text-2xl font-bold">Leadership review commentary</h2>
         <div className="mt-4 grid grid-cols-3 gap-4 text-sm leading-6 text-slate-600 print:gap-3">
           <article className="rounded-xl border bg-slate-50 p-4 print:p-3">{commentary.posture}</article>
           <article className="rounded-xl border bg-slate-50 p-4 print:p-3">{commentary.exposure}</article>
@@ -201,7 +201,7 @@ export default async function PrintableExecutiveReportPage({ params }: { params:
       </section>
 
       <footer className="mt-8 flex items-center justify-between gap-4 border-t pt-6 text-xs text-slate-500 print:mt-4">
-        <span>EuroComply report generated for {organization.name}.</span>
+        <span>RISCK COMPLY report generated for {organization.name}.</span>
         <span>Operational compliance summary · Not legal advice</span>
       </footer>
     </main>
