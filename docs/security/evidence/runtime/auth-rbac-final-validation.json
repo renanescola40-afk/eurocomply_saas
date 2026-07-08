@@ -4,12 +4,12 @@
   "status": "Open",
   "outcome": "no_go",
   "reviewer": "RISCK COMPLY release engineering",
-  "reviewedAt": "2026-07-08T19:10:00Z",
-  "generatedAt": "2026-07-08T19:10:00Z",
+  "reviewedAt": "2026-07-08T20:25:00Z",
+  "generatedAt": "2026-07-08T20:25:00Z",
   "primaryAuthStack": "supabase-auth",
   "scope": "final-auth-rbac-tenant-isolation-review",
   "reviewDocument": "docs/security/AUTH_RBAC_ENTERPRISE_REVIEW.md",
-  "summary": "Supabase Auth is the single active identity stack for the application code path. Enterprise production remains blocked until configured runtime validation passes in the target environment.",
+  "summary": "Supabase Auth is the single active identity stack for the application code path. Additional static cleanup removed legacy identity fallback from organization queries, onboarding activation, team member actions and trial reminders. Enterprise production remains blocked until configured runtime validation passes in the target environment.",
   "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "releaseDecision": "No-Go",
   "productionGate": "blocked until CI, Supabase project settings, RLS, step-up/MFA and production-like runtime validation evidence are complete",
@@ -24,7 +24,11 @@
     "tests/security/auth-rbac-enterprise-review.test.ts",
     "src/server/security/rbac.ts",
     "src/server/queries/current-organization.ts",
-    "src/server/actions/organizations.ts"
+    "src/server/queries/organizations.ts",
+    "src/server/actions/organizations.ts",
+    "src/server/actions/onboarding.ts",
+    "src/server/actions/members.ts",
+    "src/app/api/internal/trial-reminders/route.ts"
   ],
   "blockingEvidence": {
     "runtimeValidation": "not_executed_in_patch_session",
@@ -43,8 +47,26 @@
     "serverUserSource": "src/server/queries/auth.ts",
     "membershipBinding": "organization_members.user_id",
     "rbacSource": "src/server/security/rbac.ts",
-    "tenantIsolationSource": "organization_id"
+    "tenantIsolationSource": "organization_id",
+    "legacyIdentityFallback": "removed_from_active_runtime_files"
   },
+  "staticRegressionChecks": [
+    {
+      "control": "active_runtime_files_do_not_use_legacy_identity_columns",
+      "status": "covered_by_test",
+      "test": "tests/security/auth-rbac-enterprise-review.test.ts"
+    },
+    {
+      "control": "organization_queries_use_supabase_user_id",
+      "status": "covered_by_test",
+      "test": "tests/security/auth-rbac-enterprise-review.test.ts"
+    },
+    {
+      "control": "onboarding_activation_writes_supabase_user_id",
+      "status": "covered_by_test",
+      "test": "tests/security/auth-rbac-enterprise-review.test.ts"
+    }
+  ],
   "validationCommands": [
     {
       "command": "npm ci",

@@ -28,14 +28,6 @@ function onboardingActionError(message: string) {
   return new Error(message);
 }
 
-function isUuid(value: string | null | undefined) {
-  return Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value));
-}
-
-function getUuidUserId(userId: string) {
-  return isUuid(userId) ? userId : null;
-}
-
 function getDashboardPath(locale: string, plan?: string | null) {
   const query = plan && plan !== 'trial' ? `?plan=${encodeURIComponent(plan)}` : '?onboarding=completed';
   return `/${locale}/dashboard/organizations${query}`;
@@ -133,7 +125,7 @@ async function upsertFirstAiSystem(
     classification_summary: classification.summary,
     obligations: classification.obligations,
     next_actions: classification.nextActions,
-    created_by: getUuidUserId(userId),
+    created_by: userId,
   };
 
   if (input.aiSystemId) {
@@ -181,7 +173,7 @@ async function createRecommendedDocumentRecords(
   const now = new Date().toISOString();
   const rows = missingDocuments.map((document) => ({
     organization_id: organizationId,
-    uploaded_by: getUuidUserId(userId),
+    uploaded_by: userId,
     title: document.title,
     name: document.title,
     category: 'onboarding_recommended',
@@ -221,15 +213,14 @@ async function createInitialComplianceTasks(
 
   if (missingTasks.length === 0) return { inserted: 0 };
 
-  const createdBy = getUuidUserId(userId);
   const rows = missingTasks.map((task) => {
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + task.dueInDays);
 
     return {
       organization_id: organizationId,
-      created_by: createdBy,
-      user_id: createdBy,
+      created_by: userId,
+      user_id: userId,
       title: task.title,
       description: task.description,
       category: 'onboarding_activation',
@@ -257,13 +248,12 @@ async function createTeamInvitations(
 ) {
   if (emails.length === 0) return { inserted: 0 };
 
-  const invitedBy = getUuidUserId(userId);
   const rows = emails.map((email) => ({
     organization_id: organizationId,
     email,
     role: 'member',
     token: randomUUID(),
-    invited_by: invitedBy,
+    invited_by: userId,
   }));
 
   const { error } = await supabase
@@ -287,8 +277,7 @@ async function recordActivationRun(
 ) {
   const { error } = await supabase.from('onboarding_activation_runs').insert({
     organization_id: organizationId,
-    created_by: getUuidUserId(userId),
-    created_by_clerk_user_id: isUuid(userId) ? null : userId,
+    created_by: userId,
     country: input.country,
     company_type: input.companyType,
     sector: input.sector,
