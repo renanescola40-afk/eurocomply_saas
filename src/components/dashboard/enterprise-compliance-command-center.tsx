@@ -103,6 +103,10 @@ function documentReadiness(summary: DashboardSummary) {
   return Math.max(0, Math.round(((summary.totals.documents - summary.missingDocuments) / summary.totals.documents) * 100));
 }
 
+function localizedRoute(locale: Locale, path: string) {
+  return `/${locale}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 export function EnterpriseComplianceCommandCenter({
   locale,
   summary,
@@ -135,7 +139,7 @@ export function EnterpriseComplianceCommandCenter({
       title: 'AI systems',
       value: formatCount(aiSystemSummary.total),
       detail: `${formatCount(aiSystemSummary.high)} high-risk systems`,
-      href: `${basePath}/ai-inventory`,
+      href: localizedRoute(locale, '/ai-systems'),
       icon: Gauge,
     },
     {
@@ -147,7 +151,7 @@ export function EnterpriseComplianceCommandCenter({
     },
     {
       title: 'Open tasks',
-      value: formatCount(tasks.length),
+      value: formatCount(summary.openTasks),
       detail: 'Work queue for owners and reviewers',
       href: tasksPath,
       icon: CheckCircle2,
