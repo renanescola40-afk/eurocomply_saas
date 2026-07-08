@@ -59,7 +59,7 @@ jobs:
               'Full Security Suite / Enterprise merge/deploy gate': ['Enterprise merge/deploy gate'],
               'CI / quality': ['quality'],
               'RISCK COMPLY Security CI / Run security gates, typecheck and tests': ['Run security gates, typecheck and tests'],
-              'Gitleaks / Scan repository for accidental secret exposure': ['Scan repository for accidental secret exposure'],
+              'Gitleaks / Scan repository for accidental secret exposure': ['Scan repository for accidental secret exposure', 'Gitleaks'],
               'Secret Scanning / Production secret readiness gate': ['Production secret readiness gate'],
             };
             const evidenceBase = (status, summary) => ({
@@ -78,6 +78,7 @@ jobs:
               evidenceLocations: [
                 `GitHub Actions run: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
                 'Artifact: p0-branch-protection-evidence/branch-protection-main.generated.json',
+                'Reference: docs/security/branch-protection-check-name-aliases.json',
               ],
               redactionConfirmation: 'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
               required_status_checks: requiredChecks,
@@ -122,7 +123,7 @@ jobs:
               require_up_to_date_branch: Boolean(protection.required_status_checks?.strict),
               block_force_pushes: protection.allow_force_pushes?.enabled === false,
               block_deletions: protection.allow_deletions?.enabled === false,
-              restrict_direct_pushes: Boolean(protection.restrictions) || Boolean(protection.required_pull_request_reviews),
+              restrict_direct_pushes: Boolean(protection.restrictions),
             };
             const flags = [
               branchProtection.require_pull_request,
@@ -146,14 +147,14 @@ jobs:
               branchProtection.require_conversation_resolution ? 'Conversations must be resolved before merge' : null,
               branchProtection.block_force_pushes ? 'Force pushes are blocked' : null,
               branchProtection.block_deletions ? 'Branch deletion is blocked' : null,
-              branchProtection.restrict_direct_pushes ? 'Direct pushes are restricted' : null,
+              branchProtection.restrict_direct_pushes ? 'Direct pushes are restricted by branch protection restrictions' : null,
               missingChecks.length === 0 ? 'All documented required checks are configured by policy name or accepted GitHub UI alias' : null,
             ].filter(Boolean);
             const complete = missingChecks.length === 0 && missingProtectionFlags === 0;
             const evidence = evidenceBase(complete ? 'Complete' : 'Exception', complete ? 'GitHub branch protection for main matched the enterprise protection requirements.' : `GitHub branch protection for main was read, but ${missingChecks.length} required check(s) and ${missingProtectionFlags} protection flag(s) are missing.`);
             evidence.controlsVerified = controlsVerified;
             evidence.branch_protection = branchProtection;
-            evidence.sourceDetails = { repository: `${owner}/${repo}`, branch, runId: String(context.runId), missingRequiredChecks: missingChecks, missingProtectionFlags, configuredRequiredChecks: configuredChecks, matchedRequiredChecks };
+            evidence.sourceDetails = { repository: `${owner}/${repo}`, branch, runId: String(context.runId), missingRequiredChecks: missingChecks, missingProtectionFlags, configuredRequiredChecks: configuredChecks, matchedRequiredChecks, directPushRestrictionsConfigured: Boolean(protection.restrictions) };
             if (!complete) {
               evidence.exception = { riskOwner: '@renansilva2002', rationale: 'Generated evidence detected an incomplete branch protection configuration.', expiresAt: '2026-07-14', approvalReference: 'P0 branch protection required checks rollout' };
             }
