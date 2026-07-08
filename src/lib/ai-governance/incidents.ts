@@ -76,20 +76,20 @@ export function buildAiIncidentTriagePlan(input: {
           label: 'Authority reporting decision',
           dueAt: addDays(detected, 10),
           priority: 'high',
-          description: 'Decide whether the event is reportable and prepare authority-ready facts, timeline, mitigation and impact assessment.',
+          description: 'Decide whether the event is reportable and prepare authority review facts, timeline, mitigation and impact assessment.',
         },
         {
           label: 'Final incident package',
           dueAt: addDays(detected, 15),
           priority: 'standard',
-          description: 'Complete root-cause analysis, corrective actions and audit-ready incident record.',
+          description: 'Complete root-cause analysis, corrective actions and structured incident record.',
         },
       ],
       nextActions: [
         'Assign an incident owner and legal/compliance reviewer.',
         'Preserve prompts, logs, model outputs, user reports and mitigation evidence.',
         'Assess whether the incident created serious harm, rights impact, security impact or prohibited-use exposure.',
-        'Prepare a regulator-ready incident summary before closing the record.',
+        'Prepare a regulator review incident summary before closing the record.',
       ],
     };
   }
