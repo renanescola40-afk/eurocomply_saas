@@ -6,7 +6,7 @@ This file records release evidence for the current assessed commit. Partial stat
 
 ## Current release assessment
 
-- Assessment date: 2026-07-07
+- Assessment date: 2026-07-08
 - Repository: `renanescola40-afk/eurocomply_saas`
 - Scope: public production release readiness
 - Decision: No-Go until every release-blocking item below is `Complete` for the exact final release commit.
@@ -25,10 +25,10 @@ This file records release evidence for the current assessed commit. Partial stat
 | Deployment URL functional verification | Open | `docs/security/evidence/runtime/deployment-smoke-validation.json` must record a passing production smoke test for the target deployment URL | Platform owner | Configure production URL/readiness token/build metadata and rerun deployment smoke |
 | Final validation runner | Open | `docs/security/evidence/runtime/final-validation-runner.json` or `docs/security/evidence/runtime/production-final-validation.json` must record final runner output for the exact release commit | Release owner | Attach final runner output after all runtime checks pass |
 | Audit-chain live validation | Open | `docs/security/evidence/runtime/audit-chain-live-validation.json` must prove live audit-chain integrity for the target deployment/project | Security reviewer | Run live audit-chain validation |
-| Upload malware/content scanning validation | Open | `docs/security/evidence/runtime/upload-malware-scan-validation.json` must record proof for the exact release commit before this item can be marked Complete | Security reviewer | Re-run runtime validation for the exact final release commit |
+| Upload malware/content scanning validation | Open | `docs/security/evidence/runtime/upload-malware-scan-validation.json` must record proof for the exact final release commit before this item can be marked Complete | Security reviewer | Re-run runtime validation for the exact final release commit |
 | Step-up MFA / IdP validation | Open | `docs/security/evidence/runtime/step-up-mfa-validation.json` must prove step-up MFA or IdP enforcement where required | Security reviewer | Run step-up runtime validation |
 | Stripe billing runtime validation | Open | `docs/security/evidence/runtime/stripe-billing-validation.json` must prove checkout, portal, webhook, idempotency, and safe error behavior in target runtime | Billing owner | Run Stripe billing runtime validation with test-mode/synthetic data only |
-| Observability readiness | Open | `docs/security/evidence/runtime/observability-readiness.json` must prove Sentry, logging and smoke observability work without leaking sensitive values | SRE owner | Run observability readiness validation |
+| Observability readiness | Open | `docs/security/evidence/runtime/observability-smoke-validation.json` must prove Sentry/local logging, request IDs, protected smoke access, no-store behavior and secret redaction without leaking sensitive values | SRE owner | Run observability smoke validation against the target deployment |
 | Rollback owner and rollback target | Open | `docs/security/evidence/runtime/rollback-dry-run-validation.json` must prove last-known-good URL, rollback target SHA, owner approval, health/no-store, and functional validation proof | Release owner | Configure rollback target URL/SHA and rerun rollback dry-run |
 
 ## Go/No-Go rule
