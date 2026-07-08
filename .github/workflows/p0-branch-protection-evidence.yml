@@ -138,7 +138,7 @@ jobs:
                 riskOwner: '@renansilva2002',
                 rationale: 'Generated evidence detected that branch protection is not fully configured or not fully visible to the workflow token.',
                 compensatingControls: ['Do not mark this evidence Complete until branch protection evidence is complete and Full Security Suite is required.'],
-                expiryDate: 'YYYY-MM-DD',
+                expiresAt: 'YYYY-MM-DD',
                 approvalReference: 'P0 branch protection required checks rollout',
               };
             }
