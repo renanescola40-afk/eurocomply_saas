@@ -82,6 +82,25 @@ function normalizeItem(item) {
   return String(item ?? '').replace(/`/g, '').trim();
 }
 
+function readEvidence(file) {
+  const evidencePath = path.join(runtimeDir, file);
+  if (!fs.existsSync(evidencePath)) {
+    return { evidencePath, evidenceFileExists: false, evidenceStatus: 'missing', evidenceOutcome: 'missing', evidenceSatisfied: false };
+  }
+
+  try {
+    const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
+    const evidenceStatus = String(evidence.status ?? 'missing');
+    const evidenceOutcome = evidence.outcome === undefined ? 'not_recorded' : String(evidence.outcome);
+    const placeholderOnly = evidence.placeholderOnly === true || evidence.evidenceIntegrity?.placeholderOnly === true;
+    const evidenceSatisfied = evidenceStatus === 'Complete' && (evidence.outcome === undefined || evidenceOutcome === 'passed') && !placeholderOnly;
+
+    return { evidencePath, evidenceFileExists: true, evidenceStatus, evidenceOutcome, placeholderOnly, evidenceSatisfied };
+  } catch (error) {
+    return { evidencePath, evidenceFileExists: true, evidenceStatus: 'invalid_json', evidenceOutcome: 'invalid_json', evidenceSatisfied: false, parseError: error.message };
+  }
+}
+
 if (!fs.existsSync(registerPath)) fail(`missing register: ${registerPath}`);
 
 const rows = fs.readFileSync(registerPath, 'utf8')
@@ -100,17 +119,20 @@ function statusFor(entry) {
 }
 
 const results = requiredRuntimeItems.map((entry) => {
-  const evidencePath = path.join(runtimeDir, entry.file);
   const status = statusFor(entry);
-  const evidenceFileExists = fs.existsSync(evidencePath);
+  const evidence = readEvidence(entry.file);
   const satisfiedStatus = satisfiedStatuses.has(status);
   return {
     item: entry.item,
     registerStatus: status,
-    evidenceFile: evidencePath,
-    evidenceFileExists,
+    evidenceFile: evidence.evidencePath,
+    evidenceFileExists: evidence.evidenceFileExists,
+    evidenceStatus: evidence.evidenceStatus,
+    evidenceOutcome: evidence.evidenceOutcome,
+    placeholderOnly: evidence.placeholderOnly === true,
+    parseError: evidence.parseError,
     satisfiedStatus,
-    satisfied: satisfiedStatus && evidenceFileExists,
+    satisfied: satisfiedStatus && evidence.evidenceSatisfied,
   };
 });
 const missing = results.filter((entry) => !entry.satisfied);
