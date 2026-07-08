@@ -41,7 +41,7 @@ function getReadiness(summary: DashboardSummary) {
 }
 
 function getReadinessLabel(score: number) {
-  if (score >= 85) return 'Board-ready';
+  if (score >= 85) return 'Leadership review-ready';
   if (score >= 70) return 'Review-ready';
   if (score >= 50) return 'Needs remediation';
   return 'Not ready';
@@ -72,7 +72,7 @@ export function BoardReportCenter({ summary, trendComparison, basePath }: BoardR
     {
       title: 'Vendor appendix',
       status: summary.highRiskVendors === 0 ? 'ready' : 'attention',
-      description: `${summary.highRiskVendors} high-risk vendors should be explained before customer or board review.`,
+      description: `${summary.highRiskVendors} high-risk vendors should be explained before customer or leadership review.`,
       href: `${basePath}/vendors`,
     },
     {
@@ -90,7 +90,7 @@ export function BoardReportCenter({ summary, trendComparison, basePath }: BoardR
 
       <div className="relative grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
         <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-200/80">Board report center</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-200/80">Leadership report center</p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight">Monthly executive package</h2>
           <p className="mt-4 text-sm leading-6 text-slate-400">
             Package compliance posture, risks, vendors and evidence into a leadership-ready report without rebuilding context manually.
@@ -107,7 +107,7 @@ export function BoardReportCenter({ summary, trendComparison, basePath }: BoardR
               Open reports
             </Link>
             <Link href={`${basePath}/reports/print`} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-bold transition hover:border-primary/50 hover:bg-white/[0.08]">
-              Print audit pack
+              Print review pack
             </Link>
           </div>
         </div>
