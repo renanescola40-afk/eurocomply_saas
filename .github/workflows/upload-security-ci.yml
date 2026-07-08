@@ -2,6 +2,12 @@ name: RISCK COMPLY Upload Security CI
 
 on:
   workflow_dispatch:
+    inputs:
+      promote_p0_register:
+        description: 'Promote passing live ClamAV proof into the P0 runtime evidence register. Use only for final release validation on main.'
+        required: false
+        type: boolean
+        default: false
   push:
     branches:
       - main
@@ -122,7 +128,7 @@ jobs:
           npm run security:upload-scanner:ci 2>&1 | tee upload-scanner-runtime-ci.log
           test "${PIPESTATUS[0]}" -eq 0
 
-      - name: Live ClamAV scanner proof and P0 evidence generation
+      - name: Live ClamAV scanner proof and gated P0 evidence generation
         shell: bash
         env:
           REQUIRE_MALWARE_SCAN_FOR_UPLOADS: 'true'
@@ -130,12 +136,28 @@ jobs:
           MALWARE_SCANNER_CLAMAV_HOST: 127.0.0.1
           MALWARE_SCANNER_CLAMAV_PORT: '3310'
           MALWARE_SCANNER_TIMEOUT_MS: '30000'
+          PROMOTE_P0_REGISTER_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.promote_p0_register == true }}
+          PROMOTE_P0_REGISTER: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.promote_p0_register == true }}
         run: |
-          npm run security:upload-scanner:runtime 2>&1 | tee upload-clamav-live-proof.log
-          test "${PIPESTATUS[0]}" -eq 0
+          if [[ "${PROMOTE_P0_REGISTER_REQUESTED}" == "true" && "${PROMOTE_P0_REGISTER}" != "true" ]]; then
+            echo "::error::P0 register promotion is only allowed from a manual workflow_dispatch run on refs/heads/main."
+            exit 1
+          fi
+
+          if [[ "${PROMOTE_P0_REGISTER}" == "true" ]]; then
+            echo "P0 register promotion enabled for manual final validation on main."
+            npm run security:upload-scanner:runtime -- --update-register 2>&1 | tee upload-clamav-live-proof.log
+            test "${PIPESTATUS[0]}" -eq 0
+          else
+            echo "P0 register promotion disabled; generating live proof artifact only."
+            npm run security:upload-scanner:runtime 2>&1 | tee upload-clamav-live-proof.log
+            test "${PIPESTATUS[0]}" -eq 0
+          fi
 
       - name: Validate live ClamAV evidence artifact
         shell: bash
+        env:
+          PROMOTE_P0_REGISTER: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.promote_p0_register == true }}
         run: |
           node <<'NODE'
           import { readFileSync } from 'node:fs';
@@ -169,6 +191,10 @@ jobs:
 
           console.log('Upload live ClamAV evidence validation: ok');
           NODE
+          if [[ "${PROMOTE_P0_REGISTER}" != "true" ]] && ! git diff --quiet -- docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md; then
+            echo "::error::P0 register changed outside an explicit manual final-validation promotion."
+            exit 1
+          fi
           node scripts/security/check-p0-runtime-evidence-register.mjs
           node scripts/security/check-p0-runtime-evidence-files.mjs
           git diff -- docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md docs/security/evidence/runtime/upload-malware-scan-validation.json > upload-clamav-live-proof.diff
