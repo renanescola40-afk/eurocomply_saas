@@ -47,18 +47,16 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: GitHub Dependency Review vulnerability scan
+      - name: Dependency graph unavailable fallback
         if: github.event_name == 'pull_request' && steps.dependency_changes.outputs.changed == 'true'
-        uses: actions/dependency-review-action@v5
-        with:
-          vulnerability-check: true
-          license-check: false
-          fail-on-severity: high
-          comment-summary-in-pr: never
+        run: |
+          echo "Dependency manifests changed."
+          echo "GitHub Dependency Review requires the repository Dependency Graph to be enabled."
+          echo "Using npm audit as the blocking high/critical vulnerability gate for this repository."
 
       - name: npm high and critical dependency vulnerability gate
         run: npm audit --audit-level=high
 
       - name: Dependency Review is not applicable
         if: github.event_name != 'pull_request' || steps.dependency_changes.outputs.changed != 'true'
-        run: echo "No dependency manifest changes detected; dependency review action skipped. npm audit fallback completed."
+        run: echo "No dependency manifest changes detected. npm audit fallback completed."

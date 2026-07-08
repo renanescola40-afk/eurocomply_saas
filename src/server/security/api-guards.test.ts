@@ -126,7 +126,7 @@ describe('central API security guards', () => {
 
     expect(response.status).toBe(400);
     expect(response.headers.get('cache-control')).toContain('no-store');
-    expect(body).toEqual({ error: 'invalid_request' });
+    expect(body).toEqual({ error: 'invalid_request', requestId: expect.any(String) });
   });
 
   it('sanitizes oversized bounded JSON requests without leaking parser details', async () => {
@@ -154,7 +154,7 @@ describe('central API security guards', () => {
 
     expect(response.status).toBe(400);
     expect(response.headers.get('cache-control')).toContain('no-store');
-    expect(body).toEqual({ error: 'invalid_request' });
+    expect(body).toEqual({ error: 'invalid_request', requestId: expect.any(String) });
     expect(JSON.stringify(body)).not.toMatch(/too large|content-length|stack/i);
   });
 
@@ -230,7 +230,7 @@ describe('central API security guards', () => {
     const body = await response.json();
 
     expect(response.status).toBe(500);
-    expect(body).toEqual({ error: 'internal_server_error' });
+    expect(body).toEqual({ error: 'internal_server_error', requestId: expect.any(String) });
     expect(JSON.stringify(body)).not.toContain('database password leaked');
   });
 });

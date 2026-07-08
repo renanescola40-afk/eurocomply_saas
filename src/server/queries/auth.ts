@@ -7,7 +7,6 @@ type CurrentAppUser = {
   lastName?: string | null;
   imageUrl?: string | null;
   source: 'supabase';
-  clerkUserId?: null;
   supabaseUserId: string;
 };
 
@@ -33,7 +32,6 @@ export async function getCurrentUser(): Promise<CurrentAppUser | null> {
     return {
       id: data.user.id,
       supabaseUserId: data.user.id,
-      clerkUserId: null,
       email: data.user.email ?? null,
       firstName: readMetadataString(metadata, 'first_name') ?? nameParts[0] ?? null,
       lastName: readMetadataString(metadata, 'last_name') ?? inferredLastName,

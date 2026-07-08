@@ -1,19 +1,5 @@
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
-function isUuid(value: string) {
-  const uuidParts = value.split('-');
-  if (uuidParts.length !== 5) return false;
-  const [first, second, third, fourth, fifth] = uuidParts;
-
-  return Boolean(
-    first?.match(/^[0-9a-f]{8}$/i) &&
-    second?.match(/^[0-9a-f]{4}$/i) &&
-    third?.match(/^[1-5][0-9a-f]{3}$/i) &&
-    fourth?.match(/^[89ab][0-9a-f]{3}$/i) &&
-    fifth?.match(/^[0-9a-f]{12}$/i),
-  );
-}
-
 export type NormalizedOnboardingStatus = 'not_started' | 'in_progress' | 'completed';
 
 export function normalizeOnboardingStatus(value: unknown): NormalizedOnboardingStatus {
@@ -31,7 +17,6 @@ type OrganizationSummary = {
   id: string;
   name: string;
   slug: string | null;
-  clerk_org_id: string | null;
   onboarding_status: NormalizedOnboardingStatus;
   onboarding_completed_at: string | null;
 };
@@ -51,7 +36,6 @@ export type CurrentOrganizationMembership = {
   role: string;
   name: string;
   slug: string | null;
-  clerk_org_id: string | null;
   onboarding_status: NormalizedOnboardingStatus;
   onboarding_completed_at: string | null;
   is_onboarding_completed: boolean;
@@ -69,7 +53,6 @@ function normalizeMembership(membership: RawOrganizationMembership): CurrentOrga
     id: organization.id,
     name: organization.name,
     slug: organization.slug,
-    clerk_org_id: organization.clerk_org_id,
     onboarding_status: onboardingStatus,
     onboarding_completed_at: onboardingCompletedAt,
   };
@@ -80,7 +63,6 @@ function normalizeMembership(membership: RawOrganizationMembership): CurrentOrga
     role: membership.role,
     name: organization.name,
     slug: organization.slug,
-    clerk_org_id: organization.clerk_org_id,
     onboarding_status: onboardingStatus,
     onboarding_completed_at: onboardingCompletedAt,
     is_onboarding_completed: isOrganizationOnboardingCompleted({ onboarding_status: onboardingStatus, onboarding_completed_at: onboardingCompletedAt }),
@@ -94,12 +76,11 @@ export async function getUserOrganizationMemberships(userId: string, options: { 
   if (!supabase) return [];
 
   const safeLimit = Math.max(1, Math.min(options.limit ?? 25, 100));
-  const identityColumn = isUuid(userId) ? 'user_id' : 'clerk_user_id';
 
   const { data, error } = await supabase
     .from('organization_members')
-    .select('organization_id, role, organizations(id, name, slug, clerk_org_id, onboarding_status, onboarding_completed_at)')
-    .eq(identityColumn, userId)
+    .select('organization_id, role, organizations(id, name, slug, onboarding_status, onboarding_completed_at)')
+    .eq('user_id', userId)
     .order('created_at', { ascending: true })
     .range(0, safeLimit - 1);
 
