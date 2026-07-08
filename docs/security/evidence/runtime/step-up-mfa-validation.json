@@ -7,7 +7,7 @@
   "reviewedAt": "2026-07-08T15:30:00.000+01:00",
   "generatedAt": "2026-07-08T15:30:00.000+01:00",
   "control": "P0-MFA real step-up validation for critical actions",
-  "summary": "Step-up MFA source controls are present and fail closed, but live Supabase MFA or enterprise IdP provider proof is still required before enterprise release can proceed.",
+  "summary": "Step-up MFA source controls are present and fail closed for POST /api/security/step-up/challenge and POST /api/security/step-up/verify, but live Supabase MFA or enterprise IdP provider proof is still required before enterprise release can proceed.",
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "exception": {
     "riskOwner": "EuroComply Security",
@@ -25,7 +25,9 @@
     "src/server/security/step-up-provider.ts",
     "src/server/security/step-up-settings.ts",
     "src/app/api/security/step-up/challenge/route.ts",
+    "POST /api/security/step-up/challenge",
     "src/app/api/security/step-up/verify/route.ts",
+    "POST /api/security/step-up/verify",
     "src/components/security/step-up-mfa-dialog.tsx",
     "supabase/migrations/20260619143000_step_up_token_store.sql",
     "supabase/migrations/20260623120000_step_up_challenge_store.sql",
