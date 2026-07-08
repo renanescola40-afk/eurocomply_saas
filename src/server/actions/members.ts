@@ -158,7 +158,7 @@ export async function removeOrganizationMember(input: { organizationId: string; 
   const supabase = createAdminClient();
   const { data: member, error: memberError } = await supabase
     .from('organization_members')
-    .select('id,user_id,clerk_user_id,role,organization_id')
+    .select('id,user_id,role,organization_id')
     .eq('id', input.memberId)
     .eq('organization_id', input.organizationId)
     .maybeSingle();
@@ -171,7 +171,7 @@ export async function removeOrganizationMember(input: { organizationId: string; 
     throw actionError('Member not found');
   }
 
-  if (member.user_id === user.id || member.clerk_user_id === user.id) {
+  if (member.user_id === user.id) {
     throw actionError('You cannot remove your own access from here');
   }
 
@@ -207,6 +207,6 @@ export async function removeOrganizationMember(input: { organizationId: string; 
     action: 'team.member_removed',
     entityType: 'organization_member',
     entityId: input.memberId,
-    metadata: { removedUserId: member.user_id ?? member.clerk_user_id ?? null, role: member.role },
+    metadata: { removedUserId: member.user_id ?? null, role: member.role },
   });
 }
