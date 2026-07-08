@@ -51,7 +51,7 @@ export function ExecutiveCockpit({ summary, trendComparison, basePath }: Executi
     { label: 'Upload evidence', href: `${basePath}/documents` },
     { label: 'Create risk', href: `${basePath}/risks` },
     { label: 'Review vendors', href: `${basePath}/vendors` },
-    { label: 'Board report', href: `${basePath}/reports` },
+    { label: 'Leadership report', href: `${basePath}/reports` },
   ];
 
   return (
@@ -85,7 +85,7 @@ export function ExecutiveCockpit({ summary, trendComparison, basePath }: Executi
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Benchmark</p>
-                <p className="mt-2 text-xl font-semibold">{summary.complianceScore >= 75 ? 'Above early-stage B2B average' : 'Below board-ready threshold'}</p>
+                <p className="mt-2 text-xl font-semibold">{summary.complianceScore >= 75 ? 'Above early-stage B2B average' : 'Below leadership review threshold'}</p>
                 <p className="mt-1 text-sm text-slate-400">Target operating score: 80%+</p>
               </div>
             </div>
@@ -94,7 +94,7 @@ export function ExecutiveCockpit({ summary, trendComparison, basePath }: Executi
 
         <div className="grid gap-5 lg:grid-cols-2">
           <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Board intelligence</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Leadership intelligence</p>
             <div className="mt-5 space-y-4">
               <Link href={`${basePath}/${exposure.href}`} className="block rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-primary/50 hover:bg-white/[0.06]">
                 <p className="text-sm text-slate-400">Biggest exposure</p>
@@ -107,7 +107,7 @@ export function ExecutiveCockpit({ summary, trendComparison, basePath }: Executi
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                 <p className="text-sm text-slate-400">Recommendation</p>
-                <p className="mt-2 text-lg font-semibold">Prioritize {exposure.label.toLowerCase()} before the next board report.</p>
+                <p className="mt-2 text-lg font-semibold">Prioritize {exposure.label.toLowerCase()} before the next leadership report.</p>
               </div>
             </div>
           </div>
