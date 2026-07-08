@@ -14,7 +14,7 @@ const resources = [
   },
   {
     title: 'Executive compliance report guide',
-    description: 'Turn operational metrics into board-ready score, trends, risks and next best actions.',
+    description: 'Turn operational metrics into leadership review score, trends, risks and next best actions.',
     type: 'Guide',
   },
 ];
