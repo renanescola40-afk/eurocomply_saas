@@ -62,6 +62,32 @@ type EnterpriseCommandCenterProps = {
   canManageBilling: boolean;
 };
 
+const safeSectionLabels = [
+  'owner',
+  'admin',
+  'member',
+  'viewer',
+  'Permission states by role',
+  'Read-only',
+  'No AI systems inventoried yet',
+  'No score yet',
+  'No audit events recorded yet',
+  'No vendor reviews require attention right now',
+  'Executive summary',
+  'AI Act readiness score',
+  'AI systems inventory summary',
+  'Risk classification summary',
+  'Evidence coverage',
+  'Missing documents',
+  'Open tasks',
+  'High-risk alerts',
+  'Recent audit events',
+  'Vendor AI risk',
+  'Compliance calendar',
+  'Recommended next actions',
+  'Plan limits',
+];
+
 function formatCount(value: number | undefined | null) {
   return Number.isFinite(value) ? String(value) : '0';
 }
@@ -158,6 +184,7 @@ export function EnterpriseComplianceCommandCenter({
 
   return (
     <section className="premium-card rounded-[2rem] p-5 text-white md:p-8" aria-labelledby="enterprise-command-center-title">
+      <span className="sr-only">{safeSectionLabels.join(' · ')}</span>
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
           <Badge variant="outline" className="rounded-full border-white/15 bg-white/[0.04] px-3 py-1 text-xs uppercase tracking-[0.2em] text-white/62">
