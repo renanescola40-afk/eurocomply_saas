@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-07-08T19:10:00Z",
+  "primaryAuthStack": "supabase-auth",
+  "scope": "final-auth-rbac-tenant-isolation-review",
+  "reviewDocument": "docs/security/AUTH_RBAC_ENTERPRISE_REVIEW.md",
+  "summary": "Supabase Auth is the single active identity stack for the application code path. Enterprise production remains blocked until configured runtime validation passes in the target environment.",
+  "runtimeEvidenceStatus": "not_executed_in_patch_session",
+  "goNoGo": {
+    "status": "NO_GO",
+    "reason": "Code and static CI evidence are being validated in pull request checks; enterprise production still requires runtime validation against the configured Supabase/Vercel/Stripe environment."
+  },
+  "identityArchitecture": {
+    "browserSession": "supabase-auth-client",
+    "middlewareSessionValidation": "supabase-auth-get-user",
+    "serverUserSource": "src/server/queries/auth.ts",
+    "membershipBinding": "organization_members.user_id",
+    "rbacSource": "src/server/security/rbac.ts",
+    "tenantIsolationSource": "organization_id"
+  },
+  "validationCommands": [
+    {
+      "command": "npm ci",
+      "status": "required"
+    },
+    {
+      "command": "npm run lint",
+      "status": "required"
+    },
+    {
+      "command": "npm run typecheck",
+      "status": "required"
+    },
+    {
+      "command": "npm run test",
+      "status": "required"
+    },
+    {
+      "command": "npm run test:e2e",
+      "status": "required_with_runtime"
+    },
+    {
+      "command": "npm run security:auth-tokens",
+      "status": "required"
+    },
+    {
+      "command": "npm run security:authorization-bola",
+      "status": "required"
+    },
+    {
+      "command": "npm run security:protected-routes",
+      "status": "required"
+    },
+    {
+      "command": "npm run security:step-up",
+      "status": "required"
+    },
+    {
+      "command": "npm run security:ci",
+      "status": "required"
+    },
+    {
+      "command": "npm run release:enterprise-readiness",
+      "status": "required_with_runtime"
+    }
+  ],
+  "remainingRuntimeRequirements": [
+    "Verify Supabase Auth project Site URL and redirect allowlist in production.",
+    "Verify OAuth provider status and hosted auth rate limits in Supabase.",
+    "Validate RLS against the target Supabase database after migrations.",
+    "Generate real runtime evidence from the configured production-like environment.",
+    "Provide step-up/MFA provider proof before enterprise production Go."
+  ]
+}
