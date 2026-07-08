@@ -264,6 +264,10 @@ describe('billing checkout API security gates', () => {
         }),
       }),
     );
+    const customerParams = mocks.stripeCustomerCreate.mock.calls[0][0];
+    expect(customerParams.metadata).not.toHaveProperty('clerk_org_id');
+    expect(customerParams.metadata).not.toHaveProperty('clerkOrgId');
+
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: 'subscription',
@@ -273,8 +277,6 @@ describe('billing checkout API security gates', () => {
         metadata: expect.objectContaining({
           organization_id: 'org_a',
           organizationId: 'org_a',
-          clerk_org_id: 'clerk_org_a',
-          clerkOrgId: 'clerk_org_a',
           user_id: 'user_admin',
           userId: 'user_admin',
           plan: 'growth',
@@ -286,8 +288,6 @@ describe('billing checkout API security gates', () => {
           metadata: expect.objectContaining({
             organization_id: 'org_a',
             organizationId: 'org_a',
-            clerk_org_id: 'clerk_org_a',
-            clerkOrgId: 'clerk_org_a',
             user_id: 'user_admin',
             userId: 'user_admin',
             plan: 'growth',
@@ -298,6 +298,12 @@ describe('billing checkout API security gates', () => {
         }),
       }),
     );
+    const checkoutParams = mocks.stripeCheckoutCreate.mock.calls[0][0];
+    expect(checkoutParams.metadata).not.toHaveProperty('clerk_org_id');
+    expect(checkoutParams.metadata).not.toHaveProperty('clerkOrgId');
+    expect(checkoutParams.subscription_data.metadata).not.toHaveProperty('clerk_org_id');
+    expect(checkoutParams.subscription_data.metadata).not.toHaveProperty('clerkOrgId');
+
     expect(mocks.writeAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'checkout_created',
@@ -316,5 +322,8 @@ describe('billing checkout API security gates', () => {
         }),
       }),
     );
+    const auditPayload = mocks.writeAuditLog.mock.calls[0][0];
+    expect(auditPayload.metadata).not.toHaveProperty('clerkOrgId');
+    expect(auditPayload.metadata).not.toHaveProperty('clerk_org_id');
   });
 });
