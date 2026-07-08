@@ -20,6 +20,7 @@ const allowedItems = new Set([
   'audit-chain-live-validation',
   'stripe-billing-validation',
   'observability-readiness',
+  'observability-smoke-validation',
   'rate-limit-validation',
   'enterprise-final-readiness-validation',
   // GDPR privacy evidence added by the enterprise privacy controls package.
