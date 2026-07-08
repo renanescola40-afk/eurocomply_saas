@@ -28,9 +28,9 @@ const domainOptions = [
 const enterpriseCopy = {
   en: {
     title: 'Enterprise readiness workflows',
-    subtitle: 'Create real evidence, vendor and risk workflow records. Every action persists to Supabase and writes an audit event.',
+    subtitle: 'Create real evidence, vendor and risk workflow records. Every action persists to Supabase and writes an activity event.',
     evidenceTitle: 'Evidence Pack Builder',
-    evidenceBody: 'Build a procurement-ready evidence package from this AI system and current readiness signals.',
+    evidenceBody: 'Build a procurement review evidence package from this AI system and current readiness signals.',
     packName: 'Pack title',
     buildPack: 'Create evidence pack',
     vendorTitle: 'Vendor Due Diligence Checklist',
@@ -44,17 +44,17 @@ const enterpriseCopy = {
     riskNotes: 'Risk review notes',
     startRisk: 'Open risk review',
     reportTitle: 'Executive Readiness Report signals',
-    reportBody: 'Board-ready summary generated from actual system facts, not a fake compliance claim.',
-    success: 'Workflow created and audited.',
+    reportBody: 'Leadership review summary generated from actual system facts, not a fake compliance claim.',
+    success: 'Workflow created and recorded.',
     error: 'Could not create workflow.',
     loading: 'Creating...',
     emptyVendor: 'No vendor is set yet. Add a vendor above before starting diligence.',
   },
   pt: {
     title: 'Workflows enterprise de readiness',
-    subtitle: 'Crie registros reais de evidência, fornecedor e risco. Cada ação persiste no Supabase e escreve audit log.',
+    subtitle: 'Crie registros reais de evidência, fornecedor e risco. Cada ação persiste no Supabase e escreve um evento de atividade.',
     evidenceTitle: 'Evidence Pack Builder',
-    evidenceBody: 'Crie um pacote de evidências para procurement a partir deste sistema de IA e dos sinais atuais de readiness.',
+    evidenceBody: 'Crie um pacote de evidências para revisão de procurement a partir deste sistema de IA e dos sinais atuais de readiness.',
     packName: 'Título do pack',
     buildPack: 'Criar evidence pack',
     vendorTitle: 'Checklist de due diligence de fornecedor',
@@ -69,7 +69,7 @@ const enterpriseCopy = {
     startRisk: 'Abrir revisão de risco',
     reportTitle: 'Sinais do relatório executivo',
     reportBody: 'Resumo para liderança gerado a partir de fatos reais do sistema, sem claim falso de compliance.',
-    success: 'Workflow criado e auditado.',
+    success: 'Workflow criado e registrado.',
     error: 'Não foi possível criar o workflow.',
     loading: 'A criar...',
     emptyVendor: 'Nenhum fornecedor definido. Adicione um fornecedor acima antes da due diligence.',
@@ -257,7 +257,7 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5" aria-labelledby="enterprise-workflows-title">
         <div className="mb-5">
-          <p className="text-xs uppercase tracking-[0.22em] text-emerald-200/60">Supabase · RBAC · audit log</p>
+          <p className="text-xs uppercase tracking-[0.22em] text-emerald-200/60">Supabase · RBAC · activity history</p>
           <h2 id="enterprise-workflows-title" className="mt-2 text-xl font-semibold">{t.title}</h2>
           <p className="mt-1 text-sm leading-6 text-white/55">{t.subtitle}</p>
         </div>

@@ -156,7 +156,7 @@ function buildActivityItems({ tasks, topRisks, vendors, documents, basePath }: O
   const reportItem: ActivityItem = {
     id: 'report-ready',
     title: 'Executive report ready to export',
-    description: 'Generate a board-ready compliance snapshot',
+    description: 'Generate a leadership review compliance snapshot',
     group: 'Upcoming',
     type: 'report',
     href: `${basePath}/reports`,
