@@ -39,11 +39,19 @@ describe('Supabase auth runtime boundary', () => {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
+    const packageLock = JSON.parse(readRepoFile('package-lock.json')) as {
+      packages?: Record<string, { dependencies?: Record<string, string>; devDependencies?: Record<string, string> }>;
+    };
+    const lockText = readRepoFile('package-lock.json');
     const envExample = readRepoFile('.env.example');
     const readme = readRepoFile('README.md');
 
     expect(packageJson.dependencies?.['@clerk/nextjs']).toBeUndefined();
     expect(packageJson.devDependencies?.['@clerk/nextjs']).toBeUndefined();
+    expect(packageLock.packages?.['']?.dependencies?.['@clerk/nextjs']).toBeUndefined();
+    expect(packageLock.packages?.['']?.devDependencies?.['@clerk/nextjs']).toBeUndefined();
+    expect(lockText).not.toContain('node_modules/@clerk/');
+    expect(lockText).not.toContain('@clerk/nextjs');
     expect(envExample).toContain('Supabase Auth is the single primary identity provider');
     expect(envExample).not.toMatch(/CLERK_/);
     expect(readme).toContain('Supabase Auth is the single primary authentication stack');
