@@ -60,7 +60,7 @@ describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
     expect(apiGuards).toContain('getRequestId');
     expect(apiGuards).toContain('requestId');
     expect(apiGuards).toContain('noStoreJson({ error: error.code, requestId }');
-    expect(apiGuards).toContain("[api-security] route_failed");
+    expect(apiGuards).toContain('[api-security] route_failed');
     expect(apiGuards).not.toContain('message: error.message');
   });
 
@@ -78,24 +78,19 @@ describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
     }
   });
 
-  it('documents the final auth/RBAC review and runtime evidence status', () => {
+  it('documents the final auth/RBAC review without fabricating runtime evidence', () => {
     const reviewPath = 'docs/security/AUTH_RBAC_ENTERPRISE_REVIEW.md';
-    const evidencePath = 'docs/security/evidence/runtime/auth-rbac-final-validation.json';
+    const runtimeEvidencePath = 'docs/security/evidence/runtime/auth-rbac-final-validation.json';
 
     expect(existsSync(join(process.cwd(), reviewPath))).toBe(true);
-    expect(existsSync(join(process.cwd(), evidencePath))).toBe(true);
+    expect(existsSync(join(process.cwd(), runtimeEvidencePath))).toBe(false);
 
     const review = readRepoFile(reviewPath);
-    const evidence = JSON.parse(readRepoFile(evidencePath)) as {
-      primaryAuthStack?: string;
-      goNoGo?: { status?: string };
-      validationCommands?: Array<{ command: string; status: string }>;
-    };
 
     expect(review).toContain('Supabase Auth');
     expect(review).toContain('Go/No-Go');
-    expect(evidence.primaryAuthStack).toBe('supabase-auth');
-    expect(evidence.goNoGo?.status).toMatch(/GO|NO_GO/);
-    expect(evidence.validationCommands?.some((item) => item.command === 'npm run security:step-up')).toBe(true);
+    expect(review).toContain('No-Go for enterprise production until CI and runtime gates pass');
+    expect(review).toContain('Runtime validation was not executed in this GitHub patch session');
+    expect(review).toContain('npm run security:step-up');
   });
 });
