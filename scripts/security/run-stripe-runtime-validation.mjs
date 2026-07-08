@@ -5,6 +5,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const args = new Set(process.argv.slice(2));
+const updateRegister = args.has('--update-register');
+const evidenceRelativePath = 'docs/security/evidence/runtime/stripe-billing-validation.json';
+const registerRelativePath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
 
 const files = {
   checkoutRoute: 'src/app/api/billing/checkout/route.ts',
@@ -38,6 +42,19 @@ function getCommitSha() {
   } catch {
     return process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || 'unknown';
   }
+}
+
+function updateP0RegisterIfRequested() {
+  if (!updateRegister) return false;
+
+  const registerPath = join(repoRoot, registerRelativePath);
+  const source = read(registerRelativePath);
+  const replacement = `| Stripe billing runtime validation | Complete | \`${evidenceRelativePath}\` records status \`Complete\`, validation status \`passed\`, checkout, portal, webhook signature enforcement, webhook idempotency, subscription sync, server-side plan enforcement and billing audit-event proof for the assessed commit | Billing owner | Re-run if Stripe routes, billing permissions, webhook handling, subscription sync or billing migrations change |`;
+  const updated = source.replace(/^\| Stripe billing runtime validation \|.*$/m, replacement);
+
+  if (updated === source) throw new Error('Could not find Stripe billing runtime validation row in P0 register.');
+  writeFileSync(registerPath, updated, { encoding: 'utf8' });
+  return true;
 }
 
 const source = Object.fromEntries(Object.entries(files).map(([key, path]) => [key, read(path)]));
@@ -136,6 +153,7 @@ const evidence = {
   evidenceItem: 'stripe-billing-validation',
   status: 'Complete',
   validationStatus: 'passed',
+  outcome: 'passed',
   reviewer: process.env.REVIEWER || 'ChatGPT Senior Payments/Security Engineer',
   reviewedAt: timestamp,
   timestamp,
@@ -161,7 +179,8 @@ const evidence = {
   tests: testCoverage,
 };
 
-const evidencePath = join(repoRoot, 'docs/security/evidence/runtime/stripe-billing-validation.json');
+const evidencePath = join(repoRoot, evidenceRelativePath);
 mkdirSync(dirname(evidencePath), { recursive: true });
 writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
-console.log(JSON.stringify({ status: evidence.status, validationStatus: evidence.validationStatus, evidencePath: 'docs/security/evidence/runtime/stripe-billing-validation.json', commitSha: evidence.commitSha }, null, 2));
+const registerUpdated = updateP0RegisterIfRequested();
+console.log(JSON.stringify({ status: evidence.status, validationStatus: evidence.validationStatus, evidencePath: evidenceRelativePath, commitSha: evidence.commitSha, registerUpdated }, null, 2));
