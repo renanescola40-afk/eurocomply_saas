@@ -30,6 +30,8 @@ permissions:
   contents: read
 
 env:
+  CI: 'true'
+  NEXT_TELEMETRY_DISABLED: '1'
   RELEASE_TARGET: public-production
   RELEASE_RUNTIME_TARGET: ${{ inputs.release_target }}
   RELEASE_REQUIRE_RUNTIME_EVIDENCE: ${{ inputs.require_runtime_evidence }}
@@ -38,17 +40,31 @@ env:
   NEXT_PUBLIC_APP_URL: ${{ inputs.production_url }}
   NEXT_PUBLIC_SITE_URL: ${{ inputs.production_url }}
   RELEASE_ROLLBACK_TARGET_URL: ${{ inputs.rollback_url }}
+  RELEASE_ROLLBACK_TARGET: ${{ inputs.rollback_url }}
+  LAST_KNOWN_GOOD_DEPLOYMENT_URL: ${{ inputs.rollback_url }}
   RELEASE_ROLLBACK_TARGET_SHA: ${{ inputs.rollback_sha }}
+  LAST_KNOWN_GOOD_SHA: ${{ inputs.rollback_sha }}
   RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ inputs.rollback_validated }}
   HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
   NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
   NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
   SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+  STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+  STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+  STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.STRIPE_PRICE_STARTER_MONTHLY || secrets.STRIPE_PRICE_STARTER_MONTHLY }}
+  STRIPE_PRICE_GROWTH_MONTHLY: ${{ vars.STRIPE_PRICE_GROWTH_MONTHLY || secrets.STRIPE_PRICE_GROWTH_MONTHLY }}
+  STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ vars.STRIPE_PRICE_ENTERPRISE_MONTHLY || secrets.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
+  UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+  UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+  NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+  SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+  SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
 jobs:
   production-final:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v6
@@ -61,8 +77,11 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Install dependencies for Playwright browser setup
+        run: npm ci --ignore-scripts
+
       - name: Install Playwright browser
-        run: npx playwright install chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Run public production final gate
         run: npm run release:production-final
