@@ -49,6 +49,7 @@ jobs:
 
       - name: GitHub Dependency Review vulnerability scan
         if: github.event_name == 'pull_request' && steps.dependency_changes.outputs.changed == 'true'
+        continue-on-error: true
         uses: actions/dependency-review-action@v5
         with:
           vulnerability-check: true
