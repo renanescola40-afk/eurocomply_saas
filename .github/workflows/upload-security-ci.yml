@@ -131,7 +131,7 @@ jobs:
           MALWARE_SCANNER_CLAMAV_PORT: '3310'
           MALWARE_SCANNER_TIMEOUT_MS: '30000'
         run: |
-          npm run security:upload-scanner:runtime 2>&1 | tee upload-clamav-live-proof.log
+          npm run security:upload-scanner:runtime -- --update-register 2>&1 | tee upload-clamav-live-proof.log
           test "${PIPESTATUS[0]}" -eq 0
 
       - name: Validate live ClamAV evidence artifact
