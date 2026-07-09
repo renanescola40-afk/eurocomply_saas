@@ -185,6 +185,12 @@ jobs:
           node-version: '22'
           cache: npm
 
+      - name: Deterministic install for env preflight
+        run: npm ci
+
+      - name: Enterprise release env preflight
+        run: node scripts/release/check-enterprise-release-env.mjs
+
       - name: Enterprise production final gate
         run: npm run release:production-final
 
