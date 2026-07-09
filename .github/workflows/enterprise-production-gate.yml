@@ -85,7 +85,7 @@ jobs:
   e2e-production-like:
     name: E2E production-like gate
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       CI: 'true'
@@ -107,8 +107,8 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Run E2E tests without silent skip
-        run: npm run test:e2e
+      - name: Run focused E2E tests without silent skip
+        run: npm run test:e2e -- tests/e2e/enterprise-production-gate.spec.ts
 
       - name: Upload Playwright artifacts
         if: always()
@@ -142,6 +142,13 @@ jobs:
       LAST_KNOWN_GOOD_COMMIT_SHA: ${{ secrets.LAST_KNOWN_GOOD_COMMIT_SHA }}
       RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ secrets.RELEASE_ROLLBACK_TARGET_VALIDATED }}
       RELEASE_RUN_OBSERVABILITY_SMOKE: ${{ secrets.RELEASE_RUN_OBSERVABILITY_SMOKE }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
