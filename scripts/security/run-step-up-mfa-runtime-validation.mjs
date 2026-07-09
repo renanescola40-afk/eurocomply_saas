@@ -5,6 +5,9 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { loadLocalEnv } from '../lib/load-local-env.mjs';
+
+loadLocalEnv();
 
 const evidencePath = 'docs/security/evidence/runtime/step-up-mfa-validation.json';
 const env = (...parts) => parts.join('_');
