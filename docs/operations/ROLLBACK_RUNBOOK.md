@@ -13,16 +13,21 @@ Every production/enterprise release must record:
 - release owner;
 - incident owner;
 - rollback owner;
+- support owner;
 - customer communication owner;
+- escalation path;
 - promoted commit SHA;
+- build SHA;
 - previous known-good deployment URL or deployment ID;
 - previous known-good commit SHA;
 - database migration summary;
 - config/environment changes;
+- feature flag changes;
+- Stripe webhook/config changes;
 - rollback trigger threshold;
 - post-rollback validation owner.
 
-Release is **No-Go** if incident owner, rollback owner, previous known-good deployment, or rollback dry-run evidence is missing.
+Release is **No-Go** if incident owner, rollback owner, support owner, previous known-good deployment, previous known-good commit, escalation path or rollback dry-run evidence is missing.
 
 ## Required runtime configuration
 
@@ -31,14 +36,17 @@ The dry-run script accepts these variables:
 | Variable | Purpose |
 | --- | --- |
 | `RELEASE_ROLLBACK_TARGET` | Primary previous known-good deployment URL. |
+| `RELEASE_ROLLBACK_TARGET_URL` | Explicit previous known-good deployment URL. |
 | `LAST_KNOWN_GOOD_DEPLOYMENT_URL` | Alternative previous known-good deployment URL. |
 | `RELEASE_ROLLBACK_TARGET_SHA` | Full 40-character SHA for the previous known-good commit. |
-| `LAST_KNOWN_GOOD_SHA` | Alternative full 40-character SHA for the previous known-good commit. |
+| `RELEASE_ROLLBACK_TARGET_COMMIT_SHA` | Explicit previous known-good commit SHA for enterprise release records. |
+| `LAST_KNOWN_GOOD_COMMIT_SHA` | Alternative previous known-good commit SHA. |
+| `LAST_KNOWN_GOOD_SHA` | Legacy alternative previous known-good commit SHA. |
 | `RELEASE_ROLLBACK_TARGET_VALIDATED=true` | Manual proof that the target was functionally validated. Set only after validation. |
 | `RELEASE_ROLLBACK_CHECK_READY=true` | Optional protected `/api/ready` check against the rollback target. Requires `HEALTHCHECK_TOKEN`. |
 | `RELEASE_ROLLBACK_TIMEOUT_MS` | Optional request timeout override. |
 
-Do not commit raw secret values or private provider screenshots. Evidence files may record variable names and SHA prefixes only.
+Do not commit raw secret values, private provider screenshots or internal rollback URLs. Evidence files may record variable names, SHA prefixes and redacted status only.
 
 ## Dry-run command
 
@@ -55,6 +63,7 @@ The command must:
 - verify `Cache-Control` includes `no-store` on rollback health;
 - optionally call protected `/api/ready` when enabled;
 - write `docs/security/evidence/runtime/rollback-dry-run-validation.json`;
+- record `mutatesProduction=false`;
 - fail the process if any critical check fails.
 
 Do **not** mark rollback ready if the dry-run evidence is `Open` or `failed`.
@@ -69,22 +78,26 @@ Rollback is mandatory unless the incident commander explicitly approves a safer 
 - billing webhook processing is broken or creates incorrect customer state;
 - uploads are incorrectly accepted without scanning or clean uploads are broadly blocked;
 - auth/step-up is bypassed or unavailable for protected actions;
+- Redis/rate-limit controls fail open for sensitive endpoints;
 - customer impact is growing faster than the team can safely patch forward.
 
-## Application rollback
+## Vercel deployment rollback
 
-1. Confirm current deployment SHA and previous known-good deployment.
+1. Confirm current deployment SHA/build SHA and previous known-good deployment.
 2. Freeze additional deploys.
 3. Announce rollback decision in the incident channel.
-4. Run `npm run release:rollback:dry-run`.
-5. Promote or restore the previous known-good deployment using the hosting provider rollback path.
-6. Preserve the failed deployment SHA and Sentry release ID for post-incident review.
-7. Verify `/api/health` publicly.
-8. Verify `/api/ready` with `HEALTHCHECK_TOKEN`.
-9. Validate auth, dashboard load, document upload/download, billing portal/checkout when touched, and audit event creation.
-10. Attach sanitized evidence and customer communication timestamps.
+4. Configure `RELEASE_ROLLBACK_TARGET` or `LAST_KNOWN_GOOD_DEPLOYMENT_URL`.
+5. Configure `RELEASE_ROLLBACK_TARGET_SHA`, `RELEASE_ROLLBACK_TARGET_COMMIT_SHA` or `LAST_KNOWN_GOOD_COMMIT_SHA`.
+6. Set `RELEASE_ROLLBACK_TARGET_VALIDATED=true` only after functional validation.
+7. Run `npm run release:rollback:dry-run`.
+8. Promote or restore the previous known-good deployment using the hosting provider rollback path.
+9. Preserve the failed deployment SHA and Sentry release ID for post-incident review.
+10. Verify `/api/health` publicly.
+11. Verify `/api/ready` with `HEALTHCHECK_TOKEN`.
+12. Validate auth, dashboard load, document upload/download, billing portal/checkout when touched, and audit event creation.
+13. Attach sanitized evidence and customer communication timestamps.
 
-## Database rollback
+## Supabase migration rollback / forward-fix
 
 Database rollback is never automatic unless the migration is explicitly reversible and tested.
 
@@ -97,9 +110,29 @@ Before database rollback:
 - identify Supabase backup/restore options and expected data loss window;
 - get incident commander and database owner approval.
 
-Do not roll back database state if it would make tenant isolation or audit-chain integrity worse without a documented containment plan.
+Prefer forward-fix for Supabase migrations unless rollback is proven safe. Do not roll back database state if it would make tenant isolation or audit-chain integrity worse without a documented containment plan.
 
-## Configuration rollback
+## Stripe webhook replay and idempotency
+
+When billing/webhook behavior is affected:
+
+1. Preserve Stripe event IDs and delivery attempts.
+2. Confirm raw-body signature verification is intact.
+3. Confirm webhook idempotency before replay.
+4. Do not rotate `STRIPE_WEBHOOK_SECRET` during rollback without updating both Vercel and Stripe.
+5. Replay only after a safe test event verifies.
+6. Reconcile subscriptions/entitlements after replay.
+
+## Feature flag rollback
+
+When a feature flag caused impact:
+
+- prefer disabling the flag over redeploy when it safely restores service;
+- record flag name, old value, new value, owner and timestamp;
+- validate affected flows after the flag change;
+- keep the rollback owner responsible for closure evidence.
+
+## Configuration/env rollback
 
 Review and restore configuration changes for:
 
@@ -125,6 +158,7 @@ npm run typecheck
 npm run test
 npm run security:logs
 npm run release:observability-smoke
+npm run release:rollback:dry-run
 npm run build
 ```
 
@@ -148,7 +182,7 @@ If customers were affected:
 3. Avoid internal stack traces, secrets, raw logs, exploit detail or PII.
 4. Provide closure update after validation is complete.
 
-Use `docs/operations/CUSTOMER_COMMUNICATION_RUNBOOK.md` for templates.
+Use `docs/operations/CUSTOMER_COMMUNICATION_RUNBOOK.md` for templates when available.
 
 ## Closure
 
