@@ -34,7 +34,6 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       CI: 'true'
-      RELEASE_TARGET: ${{ inputs.release_target || 'enterprise' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
