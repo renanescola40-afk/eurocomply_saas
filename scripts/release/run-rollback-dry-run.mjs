@@ -15,16 +15,13 @@ function firstConfigured(names) {
     const value = (process.env[name] || '').trim();
     if (value) return { name, value };
   }
-
   return null;
 }
 
 function normalizeUrl(value) {
   const raw = String(value || '').trim();
   if (!raw) return null;
-
   const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-
   try {
     const url = new URL(candidate);
     url.search = '';
@@ -61,7 +58,6 @@ function safeResponseSummary(response) {
 
 function request(url, options = {}) {
   const { method = 'GET', accept = 'application/json', headers = {} } = options;
-
   return new Promise((resolve) => {
     let parsed;
     try {
@@ -77,7 +73,7 @@ function request(url, options = {}) {
       timeout: timeoutMs,
       headers: {
         Accept: accept,
-        'User-Agent': 'risck-comply-rollback-dry-run/2.0',
+        'User-Agent': 'risck-comply-rollback-dry-run/3.0',
         ...headers,
       },
     }, (response) => {
@@ -96,12 +92,7 @@ function request(url, options = {}) {
             body = { parseError: 'non_json_response' };
           }
         }
-
-        resolve({
-          status: response.statusCode || 0,
-          headers: response.headers,
-          body,
-        });
+        resolve({ status: response.statusCode || 0, headers: response.headers, body });
       });
     });
 
@@ -126,8 +117,12 @@ const targetUrlConfig = firstConfigured([
 ]);
 const targetShaConfig = firstConfigured([
   'RELEASE_ROLLBACK_TARGET_SHA',
+  'RELEASE_ROLLBACK_TARGET_COMMIT_SHA',
   'ROLLBACK_TARGET_SHA',
+  'ROLLBACK_TARGET_COMMIT_SHA',
   'PREVIOUS_KNOWN_GOOD_SHA',
+  'PREVIOUS_KNOWN_GOOD_COMMIT_SHA',
+  'LAST_KNOWN_GOOD_COMMIT_SHA',
   'LAST_KNOWN_GOOD_SHA',
 ]);
 const targetUrl = normalizeUrl(targetUrlConfig?.value);
@@ -194,23 +189,27 @@ if (targetUrl && runReadyCheck && readinessToken) {
   }, false));
 }
 
-const failures = checks
-  .filter((check) => check.critical && !check.passed)
-  .map((check) => check.name);
+const failures = checks.filter((check) => check.critical && !check.passed).map((check) => check.name);
 const outcome = failures.length === 0 ? 'passed' : 'failed';
 
 const evidence = {
+  schema: 'risck-comply.rollback-dry-run-validation.v2',
   evidenceItem: 'rollback-dry-run-validation',
   status: outcome === 'passed' ? 'Complete' : 'Open',
   outcome,
   generatedAt,
   reviewedAt: generatedAt,
   reviewer: 'RISCK COMPLY release automation',
+  runner: 'RISCK COMPLY release automation',
   releaseTarget: process.env.RELEASE_TARGET || 'production',
+  commitSha: process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null,
+  buildSha: process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || null,
   summary: outcome === 'passed'
     ? 'Rollback dry-run verified previous known-good metadata, public health, no-store controls, and functional validation proof without mutating production.'
     : 'Rollback dry-run evidence is incomplete or the rollback target failed runtime validation; release remains blocked.',
   redactionConfirmation: 'Redaction confirmed: no token, cookie, authorization header, secret value, or raw rollback URL is written to this evidence file.',
+  noSecretsStored: true,
+  commandsExecuted: ['npm run release:rollback:dry-run'],
   evidenceLocations: [
     'scripts/release/run-rollback-dry-run.mjs',
     'docs/operations/ROLLBACK_RUNBOOK.md',
