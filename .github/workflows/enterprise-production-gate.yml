@@ -84,12 +84,13 @@ jobs:
   e2e-production-like:
     name: E2E production-like gate
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       CI: 'true'
       RELEASE_TARGET: ${{ inputs.release_target || 'enterprise' }}
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0'
+      PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -102,6 +103,9 @@ jobs:
 
       - name: Deterministic install
         run: npm ci
+
+      - name: Build production app for production-like E2E
+        run: npm run build
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
@@ -129,6 +133,7 @@ jobs:
       CI: 'true'
       RELEASE_TARGET: ${{ inputs.release_target || 'enterprise' }}
       RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'
+      PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
       RELEASE_COMMIT_SHA: ${{ github.sha }}
       RELEASE_BUILD_SHA: ${{ github.sha }}
       RELEASE_DEPLOYMENT_URL: ${{ secrets.RELEASE_DEPLOYMENT_URL }}
@@ -145,8 +150,29 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      STRIPE_PRICE_STARTER_MONTHLY: ${{ secrets.STRIPE_PRICE_STARTER_MONTHLY }}
+      STRIPE_PRICE_GROWTH_MONTHLY: ${{ secrets.STRIPE_PRICE_GROWTH_MONTHLY }}
+      STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ secrets.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
+      STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ secrets.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
+      STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ secrets.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
+      STRIPE_PRICE_BUSINESS_MONTHLY: ${{ secrets.STRIPE_PRICE_BUSINESS_MONTHLY }}
+      STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY: ${{ secrets.STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY }}
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      REQUIRE_MALWARE_SCAN_FOR_UPLOADS: ${{ secrets.REQUIRE_MALWARE_SCAN_FOR_UPLOADS }}
+      MALWARE_SCAN_REQUIRED: ${{ secrets.MALWARE_SCAN_REQUIRED }}
+      MALWARE_SCANNER_PROVIDER: ${{ secrets.MALWARE_SCANNER_PROVIDER }}
+      MALWARE_SCANNER_ENDPOINT: ${{ secrets.MALWARE_SCANNER_ENDPOINT }}
+      MALWARE_SCANNER_URL: ${{ secrets.MALWARE_SCANNER_URL }}
+      MALWARE_SCANNER_ALLOWED_HOSTS: ${{ secrets.MALWARE_SCANNER_ALLOWED_HOSTS }}
+      MALWARE_SCANNER_CLAMAV_HOST: ${{ secrets.MALWARE_SCANNER_CLAMAV_HOST }}
+      MALWARE_SCANNER_CLAMAV_PORT: ${{ secrets.MALWARE_SCANNER_CLAMAV_PORT }}
+      MALWARE_SCANNER_TIMEOUT_MS: ${{ secrets.MALWARE_SCANNER_TIMEOUT_MS }}
     steps:
       - name: Confirm PR release validation scope
         if: github.event_name == 'pull_request'
@@ -165,6 +191,12 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+
+      - name: Deterministic install for env preflight
+        run: npm ci
+
+      - name: Enterprise release env preflight
+        run: node scripts/release/check-enterprise-release-env.mjs
 
       - name: Enterprise production final gate
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'

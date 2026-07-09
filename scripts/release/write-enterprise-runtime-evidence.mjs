@@ -14,6 +14,7 @@ const buildSha = process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_
 const finalValidationInProgress = process.env.FINAL_VALIDATION_IN_PROGRESS === 'true';
 
 const requiredEvidence = [
+  ['enterpriseEnvReadiness', `${runtimeDir}/enterprise-release-env-readiness.json`, true],
   ['deploymentSmoke', `${runtimeDir}/deployment-smoke-validation.json`, true],
   ['observabilitySmoke', `${runtimeDir}/observability-smoke-validation.json`, true],
   ['rollbackDryRun', `${runtimeDir}/rollback-dry-run-validation.json`, true],
@@ -117,6 +118,7 @@ const status = outcome === 'passed' ? 'Complete' : 'Open';
 const finalDecision = outcome === 'passed' ? 'Go' : 'No-Go';
 const controlsVerified = outcome === 'passed'
   ? [
+    'enterprise env readiness preflight',
     'CI/CD final command evidence',
     'production deployment smoke',
     'protected readiness',
@@ -146,12 +148,13 @@ const evidenceFiles = Object.fromEntries(Object.entries(evidence).map(([key, ite
 }]));
 
 const commandsExecuted = [
+  'node scripts/release/check-enterprise-release-env.mjs',
   'npm ci',
   'npm run lint',
   'npm run typecheck',
   'npm run test',
-  'npm run test:e2e',
   'npm run build',
+  'npm run test:e2e',
   'npm run security:ci',
   'npm run security:rls:live',
   'npm run release:deployment-smoke',

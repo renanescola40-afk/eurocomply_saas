@@ -36,9 +36,9 @@ const commands = [
   ['01-lint', 'npm run lint', 'npm', ['run', 'lint']],
   ['02-typecheck', 'npm run typecheck', 'npm', ['run', 'typecheck']],
   ['03-test', 'npm run test', 'npm', ['run', 'test']],
-  ['04-playwright-install', 'npx playwright install --with-deps', 'npx', ['playwright', 'install', '--with-deps']],
-  ['05-test-e2e', 'npm run test:e2e', 'npm', ['run', 'test:e2e']],
-  ['06-build', 'npm run build', 'npm', ['run', 'build']],
+  ['04-build-for-production-like-e2e', 'npm run build', 'npm', ['run', 'build']],
+  ['05-playwright-install', 'npx playwright install --with-deps', 'npx', ['playwright', 'install', '--with-deps']],
+  ['06-test-e2e-production-like', 'npm run test:e2e', 'npm', ['run', 'test:e2e']],
   ['07-security-ci', 'npm run security:ci', 'npm', ['run', 'security:ci']],
   ['08-security-rls-live', 'npm run security:rls:live', 'npm', ['run', 'security:rls:live']],
   ['09-release-deployment-smoke', 'npm run release:deployment-smoke', 'npm', ['run', 'release:deployment-smoke']],
@@ -102,6 +102,7 @@ function runStep(step) {
   ].join('\n');
 
   process.stdout.write(`${header}\n`);
+  const isE2eStep = step.slug.includes('test-e2e');
   const result = spawnSync(step.command, step.args, {
     encoding: 'utf8',
     maxBuffer,
@@ -113,6 +114,7 @@ function runStep(step) {
       RISCK_COMPLY_ENTERPRISE_RELEASE: 'true',
       PUBLIC_PRODUCTION_RELEASE_IN_PROGRESS: 'true',
       FINAL_VALIDATION_IN_PROGRESS: 'true',
+      ...(isE2eStep && !process.env.E2E_BASE_URL ? { PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true' } : {}),
     },
   });
 
@@ -171,6 +173,7 @@ const summary = {
   runtimeEvidence,
   enterpriseReadinessScope: {
     requiresProductionLikeE2e: true,
+    e2eMode: process.env.E2E_BASE_URL ? 'external-target-url' : 'built-next-start-server',
     requiresStrictLiveRlsEvidence: true,
     requiresObservabilitySmoke: true,
     requiresRollbackDryRun: true,
@@ -193,6 +196,7 @@ writeFileSync(join(outputDir, 'summary.md'), [
   `- Commit SHA: ${summary.commitSha || 'missing'}`,
   `- Build SHA: ${summary.buildSha || 'missing'}`,
   `- Release target: ${summary.releaseTarget}`,
+  `- E2E mode: ${summary.enterpriseReadinessScope.e2eMode}`,
   `- Overall result: **${summary.overallResult}**`,
   '',
   '| Command | Critical | Result | Exit status | Log |',
@@ -218,7 +222,7 @@ const evidence = {
   commitSha,
   buildSha,
   summary: overallResult === 'passed'
-    ? 'Enterprise production release validation passed with CI, E2E, build, security, live RLS, deployment smoke, observability smoke, rollback dry-run, enterprise runtime evidence, branch protection evidence, and build metadata.'
+    ? 'Enterprise production release validation passed with CI, production-like E2E, build, security, live RLS, deployment smoke, observability smoke, rollback dry-run, enterprise runtime evidence, branch protection evidence, and build metadata.'
     : 'Enterprise production release validation failed; release remains No-Go until every P0 command, runtime evidence file, rollback target, commit SHA, and build SHA passes.',
   redactionConfirmation: 'No token, cookie, authorization header, secret value, raw DSN, or secret environment variable value is written to this evidence file.',
   noSecretsStored: true,
