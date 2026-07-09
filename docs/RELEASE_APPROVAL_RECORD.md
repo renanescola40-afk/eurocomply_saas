@@ -16,7 +16,7 @@ This document is the release owner record used to approve or reject a RISCK COMP
 - Support owner: @renansilva2002 / renanescola40-afk
 - Security owner: @renansilva2002 / renanescola40-afk
 - Escalation path: Support owner -> Incident owner -> Rollback owner -> Security owner -> Release owner / Approver
-- Approver: **Not granted**
+- Approver: **Not granted**; blocked by open P0 runtime evidence and missing final validation runner proof.
 - Final decision: **No-Go**
 
 ## Status page and customer communication timing
@@ -35,7 +35,8 @@ This document is the release owner record used to approve or reject a RISCK COMP
 | Release readiness command completed | **Not proven passed** | `npm run release:production-final` must pass for the promoted commit. |
 | Enterprise runtime evidence completed | **Not proven passed** | `docs/security/evidence/runtime/enterprise-runtime-evidence.json` must be Complete/passed. |
 | Final Go/No-Go evidence completed | **Not proven passed** | `docs/security/evidence/runtime/release-go-no-go.json` must be Complete/passed with `finalDecision: Go`. |
-| Release approval selected | **Not approved** | Approval intentionally withheld while P0 blockers remain. |
+| Release approval selected | **Not approved** | Approval is intentionally withheld while P0 blockers remain open. |
+| Deployment URL functional verification | **Open** | Deployment URL is candidate-only; runtime URL was not functionally verified. |
 | Incident owner named | Complete | @renansilva2002 / renanescola40-afk. |
 | Rollback owner named | Complete | @renansilva2002 / renanescola40-afk. |
 | Support owner named | Complete | @renansilva2002 / renanescola40-afk. |
@@ -66,7 +67,7 @@ This document is the release owner record used to approve or reject a RISCK COMP
 | Production deployment smoke | **Not proven passed** | `deployment-smoke-validation.json` must be Complete/passed. |
 | Health endpoint | Code-ready, runtime proof required | `/api/health` must return public redacted `status: ok`. |
 | Protected readiness | Code-ready, runtime proof required | `/api/ready` must reject anonymous calls, accept `HEALTHCHECK_TOKEN`, fail closed with 503 and avoid secret leakage. |
-| Supabase live RLS | **Not proven passed for this final target in this run** | `supabase-live-rls-validation.json` Complete/passed against the correct project. |
+| Supabase live RLS | **Open/not_run** | Supabase RLS live validation is Open/not_run; `supabase-live-rls-validation.json` must be Complete/passed against the correct project. |
 | Stripe webhook/billing readiness | Required | `stripe-billing-validation.json` and readiness smoke. |
 | Redis/rate limit readiness | Required | Protected readiness and security gates. |
 | Sentry/observability readiness | Required | `observability-smoke-validation.json` Complete/passed. |
@@ -74,11 +75,27 @@ This document is the release owner record used to approve or reject a RISCK COMP
 | Branch protection evidence | Required | `branch-protection-required-checks.json` Complete/passed. |
 | Auth/RBAC final validation | Required | `auth-rbac-final-validation.json` Complete/passed with real target proof. |
 | Audit-chain live validation | Required | `audit-chain-live-validation.json` Complete/passed. |
-| External security review/pentest | **Not approved until real report proof exists** | `external-security-review-or-pentest.json` Complete/passed with real report reference. |
+| External security review/pentest | **Open/not_started** | External review/pentest is Open/not_started until real report proof, triage and acceptance/retest evidence are attached. |
+
+## Deployment URL
+
+Deployment URL: Not assigned for this pull request.
+
+The candidate runtime URL was not functionally verified in this PR session. This remains an explicit No-Go condition and must not be treated as production approval.
 
 ## Rollback target
 
 Rollback is **not approved** until the final dry-run evidence passes.
+
+Previous known-good deployment URL candidate: not assigned; functional verification and dry-run evidence not attached.
+
+Rollback target is candidate-only until `rollback-dry-run-validation.json` is Complete/passed for the exact target and commit.
+
+Rollback trigger criteria:
+
+- Any post-deploy health/readiness failure that cannot be mitigated within the incident response window.
+- Confirmed data exposure, auth/RBAC bypass, tenant isolation failure or severe billing/webhook regression.
+- Failed production smoke, observability smoke or Supabase live RLS validation for the promoted commit.
 
 Required configuration:
 
