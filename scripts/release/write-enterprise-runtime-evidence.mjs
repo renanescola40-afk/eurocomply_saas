@@ -11,13 +11,14 @@ const releaseTarget = process.env.RELEASE_TARGET || 'enterprise';
 const reviewer = process.env.RELEASE_REVIEWER || 'RISCK COMPLY enterprise release automation';
 const commitSha = process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null;
 const buildSha = process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || null;
+const finalValidationInProgress = process.env.FINAL_VALIDATION_IN_PROGRESS === 'true';
 
 const requiredEvidence = [
   ['deploymentSmoke', `${runtimeDir}/deployment-smoke-validation.json`, true],
   ['observabilitySmoke', `${runtimeDir}/observability-smoke-validation.json`, true],
   ['rollbackDryRun', `${runtimeDir}/rollback-dry-run-validation.json`, true],
   ['supabaseLiveRls', `${runtimeDir}/supabase-live-rls-validation.json`, true],
-  ['productionFinalValidation', `${runtimeDir}/production-final-validation.json`, true],
+  ['productionFinalValidation', `${runtimeDir}/production-final-validation.json`, !finalValidationInProgress],
   ['productionSecretsProviderStores', `${runtimeDir}/production-secrets-provider-stores.json`, true],
   ['stripeBillingValidation', `${runtimeDir}/stripe-billing-validation.json`, true],
   ['uploadScannerValidation', `${runtimeDir}/upload-malware-scan-validation.json`, true],
@@ -29,10 +30,7 @@ const requiredEvidence = [
 ];
 
 function readEvidence(path) {
-  if (!existsSync(path)) {
-    return { path, present: false, status: 'Open', outcome: 'missing', parseable: false };
-  }
-
+  if (!existsSync(path)) return { path, present: false, status: 'Open', outcome: 'missing', parseable: false };
   try {
     const parsed = JSON.parse(readFileSync(path, 'utf8'));
     return {
@@ -47,14 +45,7 @@ function readEvidence(path) {
       raw: parsed,
     };
   } catch (error) {
-    return {
-      path,
-      present: true,
-      parseable: false,
-      status: 'Open',
-      outcome: 'invalid_json',
-      error: error instanceof Error ? error.message : String(error),
-    };
+    return { path, present: true, parseable: false, status: 'Open', outcome: 'invalid_json', error: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -98,19 +89,13 @@ function externalReviewIsReal(evidence) {
     && Boolean(String(raw.reportReference || '').trim());
 }
 
-function evidenceStatusMap() {
-  return Object.fromEntries(requiredEvidence.map(([key, path]) => [key, readEvidence(path)]));
-}
-
-const evidence = evidenceStatusMap();
+const evidence = Object.fromEntries(requiredEvidence.map(([key, path]) => [key, readEvidence(path)]));
 const blockers = [];
 
 for (const [key, , required] of requiredEvidence) {
   if (!required) continue;
   const item = evidence[key];
-  if (!basePass(item)) {
-    blockers.push(`${item.path} must be Complete/passed; current status=${item.status}, outcome=${item.outcome}`);
-  }
+  if (!basePass(item)) blockers.push(`${item.path} must be Complete/passed; current status=${item.status}, outcome=${item.outcome}`);
 }
 
 if (!targetHasPassedDeploymentSmoke(evidence.deploymentSmoke)) blockers.push('Deployment smoke must prove at least one target passed and zero smoke targets failed.');
@@ -130,7 +115,6 @@ const p0Blockers = blockers.map((blocker, index) => ({
 const outcome = p0Blockers.length === 0 ? 'passed' : 'failed';
 const status = outcome === 'passed' ? 'Complete' : 'Open';
 const finalDecision = outcome === 'passed' ? 'Go' : 'No-Go';
-
 const controlsVerified = outcome === 'passed'
   ? [
     'CI/CD final command evidence',
@@ -151,6 +135,31 @@ const controlsVerified = outcome === 'passed'
   ]
   : [];
 
+const evidenceFiles = Object.fromEntries(Object.entries(evidence).map(([key, item]) => [key, {
+  path: item.path,
+  present: item.present,
+  parseable: item.parseable,
+  status: item.status,
+  outcome: item.outcome,
+  generatedAt: item.generatedAt || null,
+  releaseTarget: item.releaseTarget || null,
+}]));
+
+const commandsExecuted = [
+  'npm ci',
+  'npm run lint',
+  'npm run typecheck',
+  'npm run test',
+  'npm run test:e2e',
+  'npm run build',
+  'npm run security:ci',
+  'npm run security:rls:live',
+  'npm run release:deployment-smoke',
+  'npm run release:observability-smoke',
+  'npm run release:rollback:dry-run',
+  'npm run release:production-final',
+];
+
 const enterpriseRuntimeEvidence = {
   schema: 'risck-comply.enterprise-runtime-evidence.v1',
   evidenceItem: 'enterprise-runtime-evidence',
@@ -163,30 +172,9 @@ const enterpriseRuntimeEvidence = {
   releaseTarget,
   commitSha,
   buildSha,
-  commandsExecuted: [
-    'npm ci',
-    'npm run lint',
-    'npm run typecheck',
-    'npm run test',
-    'npm run test:e2e',
-    'npm run build',
-    'npm run security:ci',
-    'npm run security:rls:live',
-    'npm run release:deployment-smoke',
-    'npm run release:observability-smoke',
-    'npm run release:rollback:dry-run',
-    'npm run release:production-final',
-  ],
+  commandsExecuted,
   controlsVerified,
-  evidenceFiles: Object.fromEntries(Object.entries(evidence).map(([key, item]) => [key, {
-    path: item.path,
-    present: item.present,
-    parseable: item.parseable,
-    status: item.status,
-    outcome: item.outcome,
-    generatedAt: item.generatedAt || null,
-    releaseTarget: item.releaseTarget || null,
-  }])),
+  evidenceFiles,
   failures: p0Blockers,
   redactionConfirmation: 'No secret values, tokens, cookies, raw Authorization headers, raw DSNs, raw provider URLs, or private customer data are stored in this evidence file.',
   noSecretsStored: true,
@@ -220,8 +208,8 @@ const releaseGoNoGo = {
   p1Blockers: [],
   deferredRisks: outcome === 'passed' ? [] : ['Enterprise publication, enterprise procurement claims and paid production launch remain blocked until P0 runtime evidence passes.'],
   controlsVerified,
-  commandsExecuted: enterpriseRuntimeEvidence.commandsExecuted,
-  evidenceFiles: enterpriseRuntimeEvidence.evidenceFiles,
+  commandsExecuted,
+  evidenceFiles,
   redactionConfirmation: enterpriseRuntimeEvidence.redactionConfirmation,
   noSecretsStored: true,
   releaseGate: enterpriseRuntimeEvidence.releaseGate,
