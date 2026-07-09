@@ -10,6 +10,14 @@ function hasValue(name) {
   return Boolean((process.env[name] ?? '').trim());
 }
 
+function run(command, args, extraEnv = {}) {
+  return spawnSync(command, args, {
+    env: { ...process.env, ...extraEnv },
+    shell: false,
+    stdio: 'inherit',
+  });
+}
+
 const requiredSupabaseEnv = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
@@ -35,18 +43,23 @@ process.env.STEP_UP_SIGNING_SECRET = process.env.STEP_UP_SIGNING_SECRET || proce
 
 console.log('Running local enterprise readiness with .env.local loaded. Secret values are not printed. Provider proof must be explicitly supplied.');
 
-for (const command of [
-  ['npm', ['run', 'security:step-up:runtime']],
-  ['npm', ['run', 'release:enterprise-readiness']],
-]) {
-  const [binary, args] = command;
-  const result = spawnSync(binary, args, {
-    env: process.env,
-    shell: false,
-    stdio: 'inherit',
-  });
+const stepUpRuntime = run('npm', ['run', 'security:step-up:runtime']);
+const stepUpRuntimeExitCode = stepUpRuntime.status ?? 1;
 
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
-  }
+let enterpriseReadinessExitCode = 1;
+if (stepUpRuntimeExitCode === 0) {
+  const enterpriseReadiness = run('npm', ['run', 'release:enterprise-readiness']);
+  enterpriseReadinessExitCode = enterpriseReadiness.status ?? 1;
+} else {
+  console.error('Skipping enterprise readiness because step-up runtime validation failed.');
 }
+
+const finalEvidence = run('node', ['scripts/release/write-final-validation-runner-evidence.mjs'], {
+  FINAL_VALIDATION_LOCAL_RUNNER_EXIT_CODE: String(enterpriseReadinessExitCode === 0 && stepUpRuntimeExitCode === 0 ? 0 : 1),
+  FINAL_VALIDATION_ENTERPRISE_READINESS_EXIT_CODE: String(enterpriseReadinessExitCode),
+});
+const finalEvidenceExitCode = finalEvidence.status ?? 1;
+
+if (stepUpRuntimeExitCode !== 0) process.exit(stepUpRuntimeExitCode);
+if (enterpriseReadinessExitCode !== 0) process.exit(enterpriseReadinessExitCode);
+if (finalEvidenceExitCode !== 0) process.exit(finalEvidenceExitCode);
