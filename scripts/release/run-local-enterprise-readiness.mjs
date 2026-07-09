@@ -23,12 +23,17 @@ if (missingSupabaseEnv.length > 0) {
   process.exit(1);
 }
 
+if (!hasValue('STEP_UP_RUNTIME_PROVIDER_PROOF')) {
+  console.error('Local enterprise readiness requires STEP_UP_RUNTIME_PROVIDER_PROOF to be set explicitly after live MFA/IdP verification.');
+  console.error('Refusing to generate enterprise runtime evidence from local defaults.');
+  process.exit(1);
+}
+
 process.env.RISCK_COMPLY_ENTERPRISE_RELEASE = process.env.RISCK_COMPLY_ENTERPRISE_RELEASE || 'true';
 process.env.STEP_UP_PROVIDER_MODE = process.env.STEP_UP_PROVIDER_MODE || 'supabase_mfa';
-process.env.STEP_UP_RUNTIME_PROVIDER_PROOF = process.env.STEP_UP_RUNTIME_PROVIDER_PROOF || 'true';
 process.env.STEP_UP_SIGNING_SECRET = process.env.STEP_UP_SIGNING_SECRET || process.env.AUDIT_CHAIN_SIGNING_SECRET || randomBytes(32).toString('hex');
 
-console.log('Running local enterprise readiness with .env.local loaded. Secret values are not printed.');
+console.log('Running local enterprise readiness with .env.local loaded. Secret values are not printed. Provider proof must be explicitly supplied.');
 
 for (const command of [
   ['npm', ['run', 'security:step-up:runtime']],
