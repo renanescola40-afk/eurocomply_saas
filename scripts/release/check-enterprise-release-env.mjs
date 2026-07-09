@@ -8,6 +8,7 @@ const generatedAt = new Date().toISOString();
 const releaseTarget = process.env.RELEASE_TARGET || 'enterprise';
 const commitSha = process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null;
 const buildSha = process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || null;
+const allowedReleaseTargets = new Set(['enterprise', 'production', 'public-production']);
 
 function hasAny(names) {
   return names.some((name) => Boolean(String(process.env[name] || '').trim()));
@@ -36,9 +37,10 @@ const enterpriseScannerRequired = releaseTarget === 'enterprise' || process.env.
 const scannerTransportReady = ['clamav', 'clamd'].includes(scannerProvider)
   ? clamavScannerReady
   : ['http', 'generic-http', 'webhook'].includes(scannerProvider) && httpScannerReady;
+const sentrySourceMapUploadRequired = releaseTarget === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
 
 const checks = [
-  group('releaseTarget', true, releaseTarget === 'enterprise' || releaseTarget === 'production', { releaseTarget }),
+  group('releaseTarget', true, allowedReleaseTargets.has(releaseTarget), { releaseTarget, acceptedTargets: [...allowedReleaseTargets] }),
   group('deploymentTargetConfigured', true, hasAny(['RELEASE_DEPLOYMENT_URL', 'RELEASE_PRODUCTION_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL', 'VERCEL_URL']), {
     acceptedSources: ['RELEASE_DEPLOYMENT_URL', 'RELEASE_PRODUCTION_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL', 'VERCEL_URL'],
   }),
@@ -55,8 +57,8 @@ const checks = [
   }),
   group('redisConfigured', true, hasAll(['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']), { requiredCount: 2 }),
   group('sentryConfigured', true, hasAny(['NEXT_PUBLIC_SENTRY_DSN', 'SENTRY_DSN']), { requiresDsn: true }),
-  group('sentrySourceMapUploadConfigured', releaseTarget === 'enterprise', hasAll(['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN']), {
-    requiredForEnterprise: true,
+  group('sentrySourceMapUploadConfigured', sentrySourceMapUploadRequired, hasAll(['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN']), {
+    requiredForEnterprise: sentrySourceMapUploadRequired,
   }),
   group('rollbackTargetConfigured', true, hasAny(['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL']), {
     acceptedSources: ['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL'],
@@ -86,6 +88,18 @@ const evidence = {
   reviewer: 'RISCK COMPLY enterprise release automation',
   runner: 'RISCK COMPLY enterprise release automation',
   releaseTarget,
+  summary: outcome === 'passed'
+    ? 'Enterprise production environment preflight verified that every required provider configuration group was present in the runner environment without writing secret values.'
+    : 'Enterprise production environment preflight failed closed because one or more required provider configuration groups were missing from the runner environment.',
+  evidenceLocations: [
+    evidencePath,
+    'scripts/release/check-enterprise-release-env.mjs',
+    'scripts/release/run-public-production-release.mjs',
+    'scripts/release/run-public-production-release-v2.mjs',
+    '.github/workflows/enterprise-production-gate.yml',
+    '.github/workflows/public-production-final.yml',
+    'docs/operations/ENTERPRISE_PRODUCTION_ENVIRONMENT_CHECKLIST.md',
+  ],
   commitSha,
   buildSha,
   commandsExecuted: ['node scripts/release/check-enterprise-release-env.mjs'],
@@ -100,10 +114,11 @@ const evidence = {
     authorizationHeaderStored: false,
     cookiesStored: false,
     rawUrlsStored: false,
+    placeholderOnly: outcome !== 'passed',
   },
   releaseGate: outcome === 'passed'
     ? 'Enterprise release env preflight passed. Runtime smoke must still prove services are reachable.'
-    : 'Enterprise release remains No-Go until required production configuration is present in the runner environment.',
+    : 'Enterprise release is blocked and remains No-Go until required production configuration is present in the runner environment.',
 };
 
 mkdirSync(dirname(evidencePath), { recursive: true });
