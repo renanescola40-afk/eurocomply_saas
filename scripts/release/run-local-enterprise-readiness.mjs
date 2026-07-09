@@ -37,6 +37,7 @@ if (!hasValue('STEP_UP_RUNTIME_PROVIDER_PROOF')) {
   process.exit(1);
 }
 
+process.env.RELEASE_TARGET = process.env.RELEASE_TARGET || 'enterprise';
 process.env.RISCK_COMPLY_ENTERPRISE_RELEASE = process.env.RISCK_COMPLY_ENTERPRISE_RELEASE || 'true';
 process.env.STEP_UP_PROVIDER_MODE = process.env.STEP_UP_PROVIDER_MODE || 'supabase_mfa';
 process.env.STEP_UP_SIGNING_SECRET = process.env.STEP_UP_SIGNING_SECRET || process.env.AUDIT_CHAIN_SIGNING_SECRET || randomBytes(32).toString('hex');
@@ -46,20 +47,20 @@ console.log('Running local enterprise readiness with .env.local loaded. Secret v
 const stepUpRuntime = run('npm', ['run', 'security:step-up:runtime']);
 const stepUpRuntimeExitCode = stepUpRuntime.status ?? 1;
 
-let enterpriseReadinessExitCode = 1;
+let productionFinalExitCode = 1;
 if (stepUpRuntimeExitCode === 0) {
-  const enterpriseReadiness = run('npm', ['run', 'release:enterprise-readiness']);
-  enterpriseReadinessExitCode = enterpriseReadiness.status ?? 1;
+  const productionFinal = run('npm', ['run', 'release:production-final'], {
+    RELEASE_TARGET: 'enterprise',
+    RISCK_COMPLY_ENTERPRISE_RELEASE: 'true',
+  });
+  productionFinalExitCode = productionFinal.status ?? 1;
 } else {
-  console.error('Skipping enterprise readiness because step-up runtime validation failed.');
+  console.error('Skipping enterprise production final gate because step-up runtime validation failed.');
 }
 
-const finalEvidence = run('node', ['scripts/release/write-final-validation-runner-evidence.mjs'], {
-  FINAL_VALIDATION_LOCAL_RUNNER_EXIT_CODE: String(enterpriseReadinessExitCode === 0 && stepUpRuntimeExitCode === 0 ? 0 : 1),
-  FINAL_VALIDATION_ENTERPRISE_READINESS_EXIT_CODE: String(enterpriseReadinessExitCode),
-});
+const finalEvidence = run('node', ['scripts/release/write-final-validation-runner-evidence.mjs']);
 const finalEvidenceExitCode = finalEvidence.status ?? 1;
 
 if (stepUpRuntimeExitCode !== 0) process.exit(stepUpRuntimeExitCode);
-if (enterpriseReadinessExitCode !== 0) process.exit(enterpriseReadinessExitCode);
+if (productionFinalExitCode !== 0) process.exit(productionFinalExitCode);
 if (finalEvidenceExitCode !== 0) process.exit(finalEvidenceExitCode);
