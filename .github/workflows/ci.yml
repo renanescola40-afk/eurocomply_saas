@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - enterprise-production-gate-followup
+      - fix/observability-smoke-anonymous-401
   pull_request:
     branches:
       - main
