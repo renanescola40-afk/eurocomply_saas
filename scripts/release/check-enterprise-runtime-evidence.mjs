@@ -7,6 +7,7 @@ const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
 const finalValidationInProgress = process.env.FINAL_VALIDATION_IN_PROGRESS === 'true';
 const failures = [];
 const files = {
+  envReadiness: `${runtimeDir}/enterprise-release-env-readiness.json`,
   productionSecrets: `${runtimeDir}/production-secrets-provider-stores.json`,
   supabaseRls: `${runtimeDir}/supabase-live-rls-validation.json`,
   deploymentSmoke: `${runtimeDir}/deployment-smoke-validation.json`,
@@ -32,6 +33,20 @@ function complete(path, evidence, label) {
   return true;
 }
 function basic(label, path) { return complete(path, readJson(path), label); }
+function commandPassed(finalValidation, commandName) {
+  return (finalValidation.commands ?? []).some((command) => command.command === commandName && ['passed', 'Go', 'GO', true].includes(command.result ?? command.passed));
+}
+
+const envReadiness = readJson(files.envReadiness);
+if (complete(files.envReadiness, envReadiness, 'Enterprise env readiness evidence')) {
+  if (envReadiness.outcome !== 'passed') failures.push(`${files.envReadiness} outcome must be passed`);
+  if (envReadiness.noSecretsStored !== true) failures.push(`${files.envReadiness} must prove noSecretsStored=true`);
+  if (envReadiness.evidenceIntegrity?.containsSensitiveValues !== false) failures.push(`${files.envReadiness} must prove containsSensitiveValues=false`);
+  if (envReadiness.evidenceIntegrity?.rawUrlsStored !== false) failures.push(`${files.envReadiness} must not store raw URLs`);
+  for (const check of envReadiness.checks ?? []) {
+    if (check.required === true && check.passed !== true) failures.push(`${files.envReadiness} required check ${check.name ?? '<unknown>'} must pass`);
+  }
+}
 
 basic('Production secrets provider evidence', files.productionSecrets);
 const supabase = readJson(files.supabaseRls);
@@ -101,8 +116,24 @@ if (!finalValidationInProgress) {
   const finalValidation = readJson(files.finalValidation);
   if (complete(files.finalValidation, finalValidation, 'Final validation runner evidence')) {
     if (finalValidation.outcome !== 'passed') failures.push(`${files.finalValidation} outcome must be passed`);
-    const enterpriseCommand = (finalValidation.commands ?? []).find((command) => command.command === 'npm run release:enterprise-readiness');
-    if (!enterpriseCommand || enterpriseCommand.result !== 'passed') failures.push(`${files.finalValidation} must include passed npm run release:enterprise-readiness`);
+    const requiredCommands = [
+      'npm ci',
+      'npm run lint',
+      'npm run typecheck',
+      'npm run test',
+      'npm run build',
+      'npm run test:e2e',
+      'npm run security:ci',
+      'npm run security:rls:live',
+      'npm run release:deployment-smoke',
+      'npm run release:observability-smoke',
+      'npm run release:rollback:dry-run',
+      'npm run release:enterprise-runtime-evidence',
+      'npm run security:p0-runtime-gap:strict',
+    ];
+    for (const command of requiredCommands) {
+      if (!commandPassed(finalValidation, command)) failures.push(`${files.finalValidation} must include passed ${command}`);
+    }
   }
 }
 
