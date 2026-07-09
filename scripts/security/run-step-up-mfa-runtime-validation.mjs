@@ -175,8 +175,10 @@ const evidence = {
     providerProof: {
       present: providerProofPresent,
       requiredEnv: 'STEP_UP_RUNTIME_PROVIDER_PROOF=true',
+      missingStateToken: 'ProviderProofRequired',
       note: 'Set only after executing a real Supabase MFA aal2 verification or enterprise IdP ACR/AMR reauthentication in the target runtime.',
     },
+    supportedProviderModes: ['supabase_mfa', 'enterprise_idp', 'supabase_mfa_or_enterprise_idp'],
     failClosedWithoutProvider: !provider.configured,
     enterpriseReleaseBlockedWithoutProvider: enterpriseRelease && !provider.configured,
     enterpriseReleaseBlockedWithoutProviderProof: enterpriseRelease && !providerProofPresent,
@@ -205,6 +207,11 @@ const evidence = {
     'audit_chain_export',
     'change_security_settings',
   ],
+  endpointEvidence: [
+    'POST /api/security/step-up/challenge',
+    'POST /api/security/step-up/verify',
+  ],
+  evidenceGenerator: 'scripts/security/run-step-up-mfa-runtime-validation.mjs',
   evidenceLocations: criticalFiles,
 };
 
