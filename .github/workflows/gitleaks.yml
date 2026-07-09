@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - main
+      - fix/observability-smoke-anonymous-401
 
 permissions:
   contents: read

@@ -20,6 +20,16 @@ function hasHealthcheckToken(request: Request) {
 export async function POST(request: Request) {
   const requestId = requestIdFromHeaders(request.headers);
 
+  if (!hasHealthcheckToken(request)) {
+    logSecurityEvent('security_denied', {
+      requestId,
+      route: ROUTE,
+      reason: 'missing_or_invalid_healthcheck_token',
+    });
+
+    return noStoreJson({ status: 'unauthorized', requestId }, { status: 401 });
+  }
+
   const originDenied = requireTrustedOriginForMutation(request);
   if (originDenied) {
     logSecurityEvent('security_denied', {
@@ -29,16 +39,6 @@ export async function POST(request: Request) {
     });
 
     return originDenied;
-  }
-
-  if (!hasHealthcheckToken(request)) {
-    logSecurityEvent('security_denied', {
-      requestId,
-      route: ROUTE,
-      reason: 'missing_or_invalid_healthcheck_token',
-    });
-
-    return noStoreJson({ status: 'unauthorized', requestId }, { status: 401 });
   }
 
   const rateLimit = await checkDistributedRateLimit({
