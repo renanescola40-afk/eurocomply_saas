@@ -4,6 +4,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const outputPath = 'docs/security/evidence/runtime/final-validation-runner.json';
+const productionFinalPath = 'docs/security/evidence/runtime/production-final-validation.json';
+const enterpriseRuntimePath = 'docs/security/evidence/runtime/enterprise-runtime-evidence.json';
+const releaseGoNoGoPath = 'docs/security/evidence/runtime/release-go-no-go.json';
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
 
 function readJson(path) {
@@ -27,14 +30,41 @@ function readRegisterOpenItems() {
 }
 
 const generatedAt = new Date().toISOString();
-const targetCommit = process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || process.env.RELEASE_COMMIT_SHA || 'local-unset';
-const enterpriseRunnerExitCode = Number.parseInt(process.env.FINAL_VALIDATION_ENTERPRISE_READINESS_EXIT_CODE ?? '1', 10);
-const localRunnerExitCode = Number.parseInt(process.env.FINAL_VALIDATION_LOCAL_RUNNER_EXIT_CODE ?? `${enterpriseRunnerExitCode}`, 10);
+const productionFinal = readJson(productionFinalPath);
+const enterpriseRuntime = readJson(enterpriseRuntimePath);
+const releaseGoNoGo = readJson(releaseGoNoGoPath);
 const openItems = readRegisterOpenItems();
-const p0Gap = readJson('docs/security/evidence/runtime/p0-runtime-gap-report.json');
-const authRbac = readJson('docs/security/evidence/runtime/auth-rbac-final-validation.json');
+const targetCommit = process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || process.env.RELEASE_COMMIT_SHA || productionFinal?.commitSha || 'local-unset';
+const buildSha = process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || productionFinal?.buildSha || targetCommit;
+const requiredCommandLabels = [
+  'npm ci',
+  'npm run lint',
+  'npm run typecheck',
+  'npm run test',
+  'npm run build',
+  'npm run test:e2e',
+  'npm run security:ci',
+  'npm run security:rls:live',
+  'npm run release:deployment-smoke',
+  'npm run release:observability-smoke',
+  'npm run release:rollback:dry-run',
+  'npm run release:enterprise-runtime-evidence',
+  'npm run security:p0-runtime-gap:strict',
+];
 
-const passed = enterpriseRunnerExitCode === 0 && localRunnerExitCode === 0 && openItems.length === 0;
+function commandPassed(label) {
+  return (productionFinal?.commands ?? []).some((command) => command.command === label && (command.result === 'passed' || command.passed === true));
+}
+
+const missingCommands = requiredCommandLabels.filter((label) => !commandPassed(label));
+const passed = productionFinal?.status === 'Complete'
+  && productionFinal?.outcome === 'passed'
+  && enterpriseRuntime?.status === 'Complete'
+  && enterpriseRuntime?.outcome === 'passed'
+  && releaseGoNoGo?.status === 'Complete'
+  && releaseGoNoGo?.finalDecision === 'Go'
+  && openItems.length === 0
+  && missingCommands.length === 0;
 
 const evidence = {
   evidenceItem: 'final-validation-runner',
@@ -44,46 +74,51 @@ const evidence = {
   generatedAt,
   reviewedAt: generatedAt,
   reviewer: 'RISCK COMPLY release automation',
+  releaseTarget: process.env.RELEASE_TARGET || productionFinal?.releaseTarget || 'enterprise',
   targetCommit,
-  redactionConfirmation: 'No secret values are captured by this evidence writer.',
-  commands: [
-    {
-      command: 'node scripts/release/run-local-enterprise-readiness.mjs',
-      result: localRunnerExitCode === 0 ? 'passed' : 'blocked_or_not_run',
-      exitCode: localRunnerExitCode,
+  commitSha: targetCommit,
+  buildSha,
+  redactionConfirmation: 'No secret values, tokens, cookies, URLs, DSNs or Authorization headers are captured by this evidence writer.',
+  noSecretsStored: true,
+  commands: requiredCommandLabels.map((command) => ({
+    command,
+    result: commandPassed(command) ? 'passed' : 'missing_or_not_passed',
+  })),
+  evidenceSources: {
+    productionFinalValidation: {
+      path: productionFinalPath,
+      status: productionFinal?.status ?? 'missing',
+      outcome: productionFinal?.outcome ?? 'missing',
     },
-    {
-      command: 'npm run release:enterprise-readiness',
-      result: enterpriseRunnerExitCode === 0 ? 'passed' : 'blocked_or_not_run',
-      exitCode: enterpriseRunnerExitCode,
+    enterpriseRuntimeEvidence: {
+      path: enterpriseRuntimePath,
+      status: enterpriseRuntime?.status ?? 'missing',
+      outcome: enterpriseRuntime?.outcome ?? 'missing',
     },
-  ],
+    releaseGoNoGo: {
+      path: releaseGoNoGoPath,
+      status: releaseGoNoGo?.status ?? 'missing',
+      finalDecision: releaseGoNoGo?.finalDecision ?? 'missing',
+    },
+  },
   register: {
     path: registerPath,
     openItems,
     allComplete: openItems.length === 0,
   },
-  blockingEvidenceSnapshot: {
-    authRbacFinalValidation: authRbac
-      ? {
-          status: authRbac.status ?? null,
-          outcome: authRbac.outcome ?? null,
-          releaseDecision: authRbac.releaseDecision ?? null,
-          runtimeEvidenceStatus: authRbac.runtimeEvidenceStatus ?? null,
-          placeholderOnly: authRbac.evidenceIntegrity?.placeholderOnly ?? null,
-          realRuntimeEvidenceAttached: authRbac.evidenceIntegrity?.realRuntimeEvidenceAttached ?? null,
-        }
-      : null,
-    p0RuntimeGapReport: p0Gap
-      ? {
-          status: p0Gap.status ?? null,
-          outcome: p0Gap.outcome ?? null,
-        }
-      : null,
+  failures: {
+    missingCommands,
+    openItems,
   },
   releaseGate: passed
-    ? 'Final validation runner passed for the assessed commit.'
-    : 'Final validation runner remains blocked until all P0 runtime evidence is Complete and enterprise readiness exits 0.',
+    ? 'Final validation runner passed for the assessed commit and enterprise target.'
+    : 'Final validation runner remains blocked until production-final, enterprise-runtime and release-go-no-go evidence are Complete/passed for the same commit and target.',
+  evidenceIntegrity: {
+    containsSensitiveValues: false,
+    valuesRedacted: true,
+    authorizationHeaderStored: false,
+    cookiesStored: false,
+  },
 };
 
 mkdirSync(dirname(outputPath), { recursive: true });
@@ -91,7 +126,8 @@ writeFileSync(outputPath, `${JSON.stringify(evidence, null, 2)}\n`);
 console.log(`Wrote ${outputPath}`);
 
 if (!passed) {
-  console.error('Final validation runner evidence is Open/blocked. Remaining open items:');
-  for (const item of openItems) console.error(`- ${item}`);
+  console.error('Final validation runner evidence is Open/blocked.');
+  for (const command of missingCommands) console.error(`- Missing or not passed command: ${command}`);
+  for (const item of openItems) console.error(`- Open register item: ${item}`);
   process.exitCode = 1;
 }
