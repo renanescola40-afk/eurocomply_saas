@@ -18,6 +18,7 @@ on:
   push:
     branches:
       - main
+      - fix/observability-smoke-anonymous-401
 
 permissions:
   contents: read
@@ -134,8 +135,7 @@ jobs:
           const packageNameFromPath = (lockfilePath) => {
             const marker = 'node_modules/';
             const index = lockfilePath.lastIndexOf(marker);
-            if (index === -1) return null;
-            return lockfilePath.slice(index + marker.length);
+            return index === -1 ? null : lockfilePath.slice(index + marker.length);
           };
           const components = Object.entries(lock.packages ?? {})
             .map(([path, pkg]) => ({ path, pkg, name: pkg?.name ?? packageNameFromPath(path) }))
@@ -145,22 +145,14 @@ jobs:
               name,
               version: pkg.version,
               scope: pkg.dev ? 'optional' : 'required',
-              properties: [
-                { name: 'eurocomply:lockfilePath', value: path },
-              ],
+              properties: [{ name: 'eurocomply:lockfilePath', value: path }],
             }))
             .sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`));
           const sbom = {
             bomFormat: 'CycloneDX',
             specVersion: '1.5',
             version: 1,
-            metadata: {
-              component: {
-                type: 'application',
-                name: rootPackage.name ?? 'eurocomply-saas',
-                version: rootPackage.version ?? '0.0.0',
-              },
-            },
+            metadata: { component: { type: 'application', name: rootPackage.name ?? 'eurocomply-saas', version: rootPackage.version ?? '0.0.0' } },
             components,
           };
           fs.writeFileSync('docs/security/evidence/runtime/sbom.cyclonedx.json', JSON.stringify(sbom, null, 2));
