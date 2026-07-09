@@ -23,6 +23,7 @@ const allowedItems = new Set([
   'observability-smoke-validation',
   'rate-limit-validation',
   'enterprise-final-readiness-validation',
+  'enterprise-release-env-readiness',
   // GDPR privacy evidence added by the enterprise privacy controls package.
   'gdpr-privacy-validation',
 ]);
@@ -31,6 +32,7 @@ const redactionTexts = new Set([
   'Redaction confirmed for runtime evidence.',
   'Redaction confirmed for runtime evidence. Rollback target values are not written to evidence.',
   'Supabase project reference, credentials, tokens, secrets, connection strings, and access-granting values are redacted.',
+  'Only grouped configuration presence and accepted source labels are recorded. No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.',
 ]);
 const failures = [];
 
@@ -100,6 +102,30 @@ function checkReleaseOpenPlaceholder(file, evidence) {
   if (!new Set(['deployment-smoke-validation', 'rollback-dry-run-validation', 'final-validation-runner']).has(evidence.evidenceItem)) return false;
 
   return checkGenericOpenBlockedEvidence(file, evidence, new Set(['failed']));
+}
+
+function checkEnterpriseReleaseEnvOpenPlaceholder(file, evidence) {
+  if (evidence.evidenceItem !== 'enterprise-release-env-readiness' || evidence.status !== 'Open') return false;
+
+  if (!checkGenericOpenBlockedEvidence(file, evidence, new Set(['not_run', 'failed']))) return true;
+
+  if (evidence.evidenceIntegrity?.placeholderOnly !== true) {
+    failures.push(`${file} Open enterprise release env evidence must be marked placeholderOnly`);
+  }
+
+  if (evidence.evidenceIntegrity?.rawUrlsStored !== false) {
+    failures.push(`${file} enterprise release env evidence must confirm raw URLs are not stored`);
+  }
+
+  if (evidence.evidenceIntegrity?.authorizationHeaderStored !== false) {
+    failures.push(`${file} enterprise release env evidence must confirm Authorization headers are not stored`);
+  }
+
+  if (evidence.evidenceIntegrity?.cookiesStored !== false) {
+    failures.push(`${file} enterprise release env evidence must confirm cookies are not stored`);
+  }
+
+  return true;
 }
 
 function checkSupabaseOpenPlaceholder(file, evidence) {
@@ -248,6 +274,7 @@ for (const file of files) {
   }
 
   if (checkReleaseOpenPlaceholder(file, evidence)) continue;
+  if (checkEnterpriseReleaseEnvOpenPlaceholder(file, evidence)) continue;
   if (checkSupabaseOpenPlaceholder(file, evidence)) continue;
   if (checkExternalReviewOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence)) continue;
