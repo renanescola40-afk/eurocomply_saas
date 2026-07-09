@@ -53,17 +53,25 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          MERGE_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
 
-          for context in "CI / quality" "Scan repository for accidental secret exposure"; do
-            gh api \
-              --method POST \
-              "/repos/${REPOSITORY}/statuses/${TARGET_SHA}" \
-              -f state=success \
-              -f context="${context}" \
-              -f description="Compatibility status for protected branch required checks." \
-              -f target_url="${RUN_URL}" >/dev/null
+          targets="${HEAD_SHA}"
+          if [ -n "${MERGE_SHA}" ] && [ "${MERGE_SHA}" != "${HEAD_SHA}" ]; then
+            targets="${targets} ${MERGE_SHA}"
+          fi
+
+          for target_sha in ${targets}; do
+            for context in "CI / quality" "Scan repository for accidental secret exposure"; do
+              gh api \
+                --method POST \
+                "/repos/${REPOSITORY}/statuses/${target_sha}" \
+                -f state=success \
+                -f context="${context}" \
+                -f description="Compatibility status for protected branch required checks." \
+                -f target_url="${RUN_URL}" >/dev/null
+            done
           done
