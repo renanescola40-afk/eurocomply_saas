@@ -44,17 +44,33 @@ function stubReadyEnvironment() {
   vi.stubEnv('SENTRY_AUTH_TOKEN', 'configured');
 }
 
+function stubNonEnterpriseRuntimeEnvironment() {
+  vi.stubEnv('RELEASE_TARGET', '');
+  vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', '');
+  vi.stubEnv('EUROCOMPLY_ENTERPRISE_RELEASE', '');
+  vi.stubEnv('REQUIRE_MALWARE_SCAN_FOR_UPLOADS', '');
+  vi.stubEnv('MALWARE_SCAN_REQUIRED', '');
+  vi.stubEnv('MALWARE_SCANNER_PROVIDER', '');
+  vi.stubEnv('MALWARE_SCANNER_ENDPOINT', '');
+  vi.stubEnv('MALWARE_SCANNER_URL', '');
+  vi.stubEnv('MALWARE_SCANNER_ALLOWED_HOSTS', '');
+  vi.stubEnv('MALWARE_SCANNER_CLAMAV_HOST', '');
+  vi.stubEnv('MALWARE_SCANNER_CLAMAV_PORT', '');
+}
+
 function stubEnterpriseScannerEnvironment() {
   vi.stubEnv('RELEASE_TARGET', 'enterprise');
   vi.stubEnv('RISCK_COMPLY_ENTERPRISE_RELEASE', 'true');
   vi.stubEnv('REQUIRE_MALWARE_SCAN_FOR_UPLOADS', 'true');
   vi.stubEnv('MALWARE_SCANNER_PROVIDER', 'http');
   vi.stubEnv('MALWARE_SCANNER_ENDPOINT', 'https://scanner.example/scan');
+  vi.stubEnv('MALWARE_SCANNER_URL', '');
   vi.stubEnv('MALWARE_SCANNER_ALLOWED_HOSTS', 'scanner.example');
 }
 
 describe('ready endpoint hardening', () => {
   beforeEach(() => {
+    stubNonEnterpriseRuntimeEnvironment();
     supabaseMock.limit.mockResolvedValue({ error: null });
     supabaseMock.select.mockReturnValue({ limit: supabaseMock.limit });
     supabaseMock.from.mockReturnValue({ select: supabaseMock.select });
@@ -284,6 +300,7 @@ describe('ready endpoint hardening', () => {
     vi.stubEnv('REQUIRE_MALWARE_SCAN_FOR_UPLOADS', 'true');
     vi.stubEnv('MALWARE_SCANNER_PROVIDER', 'http');
     vi.stubEnv('MALWARE_SCANNER_ENDPOINT', '   ');
+    vi.stubEnv('MALWARE_SCANNER_URL', '');
     vi.stubEnv('MALWARE_SCANNER_ALLOWED_HOSTS', 'scanner.example');
 
     expect(enterpriseStorageScannerCheck()).toMatchObject({
@@ -292,6 +309,7 @@ describe('ready endpoint hardening', () => {
     });
 
     vi.stubEnv('MALWARE_SCANNER_ENDPOINT', 'https://scanner.example/scan');
+    vi.stubEnv('MALWARE_SCANNER_URL', '');
     vi.stubEnv('MALWARE_SCANNER_ALLOWED_HOSTS', '   ');
 
     expect(enterpriseStorageScannerCheck()).toMatchObject({
