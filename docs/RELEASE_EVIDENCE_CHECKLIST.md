@@ -9,7 +9,7 @@ This checklist records the evidence required before RISCK COMPLY can be represen
 - Repository: `renanescola40-afk/eurocomply_saas`
 - Release owner: @renansilva2002 / renanescola40-afk
 - Security owner: @renansilva2002 / renanescola40-afk
-- Support owner: @renansilva2002 / renanescola40-afk
+- Support readiness owner: @renansilva2002 / renanescola40-afk
 - Customer communication owner: @renansilva2002 / renanescola40-afk
 - Target environment: production / enterprise candidate
 - Implementation hardening: **99.9%**
@@ -22,6 +22,7 @@ This checklist records the evidence required before RISCK COMPLY can be represen
 | Build and CI evidence | Required from exact release commit final validation bundle | Yes |
 | Supply-chain evidence | Required from deterministic install, lockfile alignment, audit triage, SBOM and dependency review | Yes |
 | Enterprise env readiness | Required from `enterprise-release-env-readiness.json` | Yes |
+| Vercel runtime environment | Required from `/api/ready` deployment smoke against the promoted Production deployment | Yes |
 | Database and RLS evidence | Required from target Supabase project | Yes |
 | Audit-chain evidence | Required from target-live validation | Required for enterprise |
 | Step-up authentication evidence | Required from real MFA/IdP provider proof | Required for enterprise |
@@ -29,10 +30,28 @@ This checklist records the evidence required before RISCK COMPLY can be represen
 | Billing evidence | Required from Stripe runtime validation and webhook readiness | Yes |
 | Observability evidence | Required from deployment smoke and observability smoke | Yes |
 | Branch protection evidence | Required from GitHub ruleset/branch protection proof | Required for enterprise |
+| Support readiness | Required from support owner, escalation path, status-page/customer-update timing and handoff evidence | Required for enterprise |
+| Customer communication | Required from customer-safe incident/update templates that do not expose secrets or unsupported claims | Required for enterprise |
 | External review evidence | Required from real external review report or approved enterprise exception | Required for enterprise |
-| Support readiness | Required support owner, escalation path, incident communication cadence and customer handoff | Yes |
-| Customer communication | Required SEV communication timing, customer update owner and no-secret/no-PII messaging rules | Yes |
 | Release decision | No-Go until exact commit has passing evidence bundle and zero P0 Open/Exception blockers | Yes |
+
+## Required Vercel Production environment
+
+The GitHub Actions preflight only proves that GitHub Actions can read the release configuration. Deployment smoke proves that the live Vercel Production runtime can read the same operational configuration through `/api/ready`.
+
+Before Enterprise Go, Vercel Production must be redeployed after these values are configured:
+
+| Group | Required runtime names |
+| --- | --- |
+| Protected readiness | `HEALTHCHECK_TOKEN` |
+| Supabase | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` |
+| Stripe | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER_MONTHLY`, `STRIPE_PRICE_GROWTH_MONTHLY`, `STRIPE_PRICE_ENTERPRISE_MONTHLY` |
+| Redis / Upstash | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
+| Sentry | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` |
+| Upload scanner | `REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true`, `MALWARE_SCANNER_PROVIDER`, `MALWARE_SCANNER_URL`, `MALWARE_SCANNER_ALLOWED_HOSTS`, `CLOUDMERSIVE_API_KEY`, `MALWARE_SCANNER_API_KEY` |
+| Storage | Document upload bucket must resolve to `controlled-documents` through the project upload configuration. |
+
+If `/api/ready` returns `503`, the deployment smoke is correct to block Enterprise Go. Do not mark the release Go until the live deployment returns `status: ready` with no critical dependency gaps.
 
 ## Required command validation evidence
 
@@ -44,19 +63,12 @@ This checklist records the evidence required before RISCK COMPLY can be represen
 | `npm run typecheck` | Yes |
 | `npm run test` | Yes |
 | `npm run build` | Yes |
-| `npx playwright install --with-deps` | Yes |
 | `npm run test:e2e` | Yes |
 | `npm run security:ci` | Yes |
 | `npm run security:rls:live` | Yes |
 | `npm run release:deployment-smoke` | Yes |
 | `npm run release:observability-smoke` | Yes |
 | `npm run release:rollback:dry-run` | Yes |
-| `npm run security:branch-protection-evidence` | Required for enterprise |
-| `npm run security:release-candidate` | Required for enterprise |
-| `npm run security:release-evidence` | Required for enterprise |
-| `npm run security:release-approval` | Required for enterprise |
-| `npm run security:release-go-no-go` | Required for enterprise |
-| `npm run security:release-support-readiness` | Required for enterprise |
 | `node scripts/release/write-enterprise-runtime-evidence.mjs` | Yes |
 | `npm run release:enterprise-runtime-evidence` | Required for enterprise |
 | `npm run security:p0-runtime-gap:strict` | Required for enterprise |
@@ -83,27 +95,17 @@ This checklist records the evidence required before RISCK COMPLY can be represen
 | `enterprise-runtime-evidence.json` | Complete / passed | Enterprise |
 | `release-go-no-go.json` | Complete / passed with `finalDecision: Go` | Production + enterprise |
 
-## Support readiness and customer communication evidence
-
-Before Go, the release record must include:
-
-- support owner;
-- customer communication owner;
-- escalation path;
-- SEV-1/SEV-2 customer update timing;
-- rollback communication owner;
-- customer-safe message rules forbidding secrets, raw logs, tokens, cookies, stack traces, exploit details and customer PII;
-- status page decision criteria;
-- explicit No-Go/Conditional Go language for any unresolved exception.
-
 ## Evidence still blocking enterprise Go
 
 | Area | Current gap | Release impact |
 | --- | --- | --- |
-| GitHub Actions final run | Enterprise Production Gate still fails before all runtime evidence is Complete/passed | Blocks Go |
-| Vercel production deployment | Target deployment must expose all production runtime envs to `/api/ready` | Blocks Go |
-| Deployment smoke | `/api/ready` currently fails critical dependency readiness on `https://www.risckcomply.com` | Blocks Go |
-| Supabase live RLS | Current live RLS validation timed out querying inventory | Blocks Go |
+| GitHub Actions final run | Must run Enterprise Production Gate with production secrets | Blocks Go |
+| Vercel production deployment | Must be Ready for promoted commit and redeployed after env changes | Blocks Go |
+| Enterprise env readiness | Must be regenerated by real runner | Blocks Go |
+| Deployment smoke | Real deployment URL functional smoke must pass | Blocks Go |
+| Observability smoke | Auth/no-store/request ID/Sentry readiness must pass | Blocks Go |
+| Rollback | Known-good rollback target must be dry-run verified | Blocks Go |
+| Supabase live RLS | Must be target project proof for promoted release | Blocks Go |
 | Branch protection | Required checks/ruleset evidence must be Complete | Blocks enterprise Go |
 | MFA/IdP | Real provider runtime proof must be attached | Blocks enterprise Go |
 | Audit chain | Target live validation must pass | Blocks enterprise Go |
