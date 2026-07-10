@@ -4,7 +4,7 @@ This document lists the commands used to validate RISCK COMPLY before promoting 
 
 ## Current status
 
-As of 2026-07-10, implementation hardening is **98%**. Enterprise promotion remains **No-Go** until the exact production deployment has green CI, real runtime evidence, rollback evidence, branch protection evidence, external review evidence or approved exception, and final owner approval.
+As of 2026-07-10, implementation hardening is **99%**. Enterprise promotion remains **No-Go** until the exact production deployment has green CI, real runtime evidence, rollback evidence, branch protection evidence, external review evidence or approved exception, and final owner approval.
 
 ## Canonical final gate
 
