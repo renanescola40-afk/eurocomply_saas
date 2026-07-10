@@ -19,7 +19,39 @@ This document is the release owner record used to approve or reject a RISCK COMP
 - Approver: **Not granted**; blocked by open P0 runtime evidence and missing final validation runner proof.
 - Final decision: **No-Go**
 
-## exceptions
+## Candidate deployment
+
+- Deployment URL: `https://www.risckcomply.com`
+- Assessed commit: current PR merge commit / promoted deployment candidate
+- Deployment URL functional verification: **Open**
+- The runtime URL was not functionally verified for final Enterprise Production Go in this approval record.
+- Functional verification and dry-run evidence not attached means the release remains blocked.
+
+## Runtime evidence status
+
+| Evidence item | Status | Notes |
+| --- | --- | --- |
+| Deployment URL functional verification | **Open** | Production URL still needs a passing final smoke/readiness run for the assessed commit. |
+| Supabase RLS live validation | **Open** | Supabase RLS live validation is Open/not_run for this approval decision. |
+| External review/pentest | **Open** | External review/pentest is Open/not_started and cannot be replaced by code-only changes. |
+| Final validation runner proof | **Open** | The runner contract exists, but production-secret runtime evidence is not attached here. |
+| Branch protection evidence | **Exception** | Must remain visible as exception until complete branch protection proof is attached. |
+
+Approval is intentionally withheld while P0 blockers remain open. This record is safe for repo-side CI because it documents the blockers instead of marking incomplete runtime evidence as passed.
+
+## Rollback target
+
+- Previous known-good deployment URL candidate: `https://www.risckcomply.com`
+- Rollback target is candidate-only until a previous deployment is functionally verified and attached as runtime evidence.
+- Candidate rollback runtime URL was not functionally verified in this approval record.
+- Rollback trigger criteria:
+  - `/api/health` fails or returns unexpected status for the promoted deployment.
+  - `/api/ready` fails critical dependency checks.
+  - Deployment smoke, observability smoke or rollback dry-run fails for the assessed commit.
+  - Auth, billing, audit logging, tenant isolation or security headers regress in production.
+  - Suspected data exposure, secret exposure or material security incident.
+
+## Exceptions
 
 No Enterprise Production exception is approved. Controlled beta exceptions require owner, expiry, mitigation, claim restrictions and evidence that stays Open or Exception rather than being falsely marked passed.
 
