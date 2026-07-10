@@ -126,6 +126,7 @@ jobs:
   production-release-validation:
     name: Production release validation
     runs-on: ubuntu-latest
+    environment: Production
     needs: [quality-security-build, e2e-production-like]
     timeout-minutes: 90
     env:
