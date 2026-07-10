@@ -7,9 +7,9 @@ This checklist is intentionally strict. A release must remain **No-Go** when any
 ## Current release decision
 
 - Release name: RISCK COMPLY Enterprise Production Final Gate
-- Assessment date: 2026-07-09
+- Assessment date: 2026-07-10
 - Repository: `renanescola40-afk/eurocomply_saas`
-- Latest assessed branch: `enterprise-production-gate-final`
+- Latest assessed branch: `main`
 - Release owner: @renansilva2002 / renanescola40-afk
 - Incident owner: @renansilva2002 / renanescola40-afk
 - Rollback owner: @renansilva2002 / renanescola40-afk
@@ -18,6 +18,8 @@ This checklist is intentionally strict. A release must remain **No-Go** when any
 - Escalation path: Support owner -> Incident owner -> Rollback owner -> Security owner -> Release owner / Approver
 - Target environment: production / enterprise candidate
 - Decision: **No-Go** until `npm run release:production-final` passes in a production-like environment and all runtime evidence below is `Complete/passed` for the same commit and target.
+- Enterprise rule: Enterprise Production Go requires zero `Open`, `Exception`, stale, placeholder-only or failed P0 runtime evidence items.
+- Conditional Go: allowed only for explicitly scoped controlled beta or private pilot, with written owner, expiry, rollback plan, customer communication plan and accepted exceptions. Conditional Go is not Enterprise Production Go.
 
 ## Required command
 
@@ -31,9 +33,9 @@ The final runner expands into concrete critical commands and must not silently s
 2. `npm run lint`
 3. `npm run typecheck`
 4. `npm run test`
-5. `npx playwright install --with-deps`
-6. `npm run test:e2e`
-7. `npm run build`
+5. `npm run build`
+6. `npx playwright install --with-deps`
+7. `npm run test:e2e`
 8. `npm run security:ci`
 9. `npm run security:rls:live`
 10. `npm run release:deployment-smoke`
@@ -75,6 +77,16 @@ The final release command must write or validate these files with `status: Compl
 
 Evidence must contain schema/status/outcome/generatedAt/reviewer or runner/releaseTarget/commitSha/buildSha/commands executed/controls verified/failures/redaction confirmation/no secrets stored where applicable.
 
+## Evidence source documents
+
+The Go/No-Go decision must be read together with:
+
+- `docs/RELEASE_APPROVAL_RECORD.md`
+- `docs/RELEASE_EVIDENCE_CHECKLIST.md`
+- `docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md`
+- `docs/security/evidence/runtime/release-go-no-go.json`
+- `docs/security/evidence/runtime/enterprise-runtime-evidence.json`
+
 ## Mandatory Go criteria
 
 Enterprise Production Go is allowed only when every item below passes for the same commit SHA and target runtime:
@@ -84,6 +96,7 @@ Enterprise Production Go is allowed only when every item below passes for the sa
 - `/api/health` is public, simple, redacted and does not depend on Supabase/Stripe/Redis/Sentry.
 - `/api/ready` requires `HEALTHCHECK_TOKEN`, rejects anonymous requests, returns `503` when any critical dependency is absent/unavailable and does not expose env values or secret names.
 - Deployment smoke validates production URL, public pages, protected redirects, security headers and no-store controls.
+- Supabase RLS live validation evidence is attached and passed against the correct target project.
 - Observability smoke requires token, trusted origin, no-store, request ID and rate-limit/origin hardening.
 - Supabase live RLS validation passed against the correct target project.
 - Stripe webhook/billing validation proves raw-body signature verification and idempotency/replay readiness.
@@ -116,7 +129,7 @@ Keep **No-Go** if any of the following are true:
 
 | Area | Required evidence | Current status | Decision |
 | --- | --- | --- | --- |
-| Final release command | `production-final-validation.json` + `final-validation-runner.json` Complete/passed | Runner now aligned to enterprise gate | No-Go until target run passes |
+| Final release command | `production-final-validation.json` + `final-validation-runner.json` Complete/passed | Runner aligned to enterprise gate | No-Go until target run passes |
 | Deployment smoke | `deployment-smoke-validation.json` Complete/passed | Runtime required | No-Go until target run passes |
 | Observability smoke | `observability-smoke-validation.json` Complete/passed | Runtime required | No-Go until target run passes |
 | Rollback | `rollback-dry-run-validation.json` Complete/passed | Runtime required | No-Go until target run passes |
@@ -135,8 +148,8 @@ Keep **No-Go** if any of the following are true:
 | --- | --- | --- | --- |
 | Final enterprise production runner not proven passed for current promoted target | P0 | @renansilva2002 / renanescola40-afk | Passing `production-final-validation.json` and `final-validation-runner.json` |
 | Deployment smoke not proven passed on current production target | P0 | @renansilva2002 / renanescola40-afk | Passing `deployment-smoke-validation.json` |
-| Observability smoke not proven passed on current production target | P0 | @renansilva2002 / renanescola40-afk | Passing `observability-smoke-validation.json` |
-| Rollback target and last known-good commit not proven for this release | P0 | @renansilva2002 / renanescola40-afk | Passing `rollback-dry-run-validation.json` |
+| Supabase live RLS timed out / not proven passed | P0 | @renansilva2002 / renanescola40-afk | Passing `supabase-live-rls-validation.json` |
+| Branch protection required checks not proven Complete | P0 | @renansilva2002 / renanescola40-afk | Passing `branch-protection-required-checks.json` |
 | Enterprise runtime evidence not proven Complete/passed | P0 | @renansilva2002 / renanescola40-afk | Passing `enterprise-runtime-evidence.json` and `release-go-no-go.json` |
 | External security review/pentest evidence not proven real and complete | P0 for enterprise | @renansilva2002 / renanescola40-afk | Real report reference and retest/triage evidence |
 
