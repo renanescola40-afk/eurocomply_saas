@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const evidencePath = 'docs/security/evidence/runtime/enterprise-release-env-readiness.json';
+const setupChecklistPath = 'docs/operations/ENTERPRISE_GITHUB_ACTIONS_SECRETS_AND_VARS.md';
 const generatedAt = new Date().toISOString();
 const releaseTarget = process.env.RELEASE_TARGET || 'enterprise';
 const commitSha = process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null;
@@ -18,8 +19,8 @@ function hasAll(names) {
   return names.every((name) => Boolean(String(process.env[name] || '').trim()));
 }
 
-function group(name, required, passed, detail) {
-  return { name, required, passed: Boolean(passed), detail };
+function group(name, required, passed, detail, remediation) {
+  return { name, required, passed: Boolean(passed), detail, remediation };
 }
 
 const stripePricePrimary = ['STRIPE_PRICE_STARTER_MONTHLY', 'STRIPE_PRICE_GROWTH_MONTHLY', 'STRIPE_PRICE_ENTERPRISE_MONTHLY'];
@@ -40,42 +41,43 @@ const scannerTransportReady = ['clamav', 'clamd'].includes(scannerProvider)
 const sentrySourceMapUploadRequired = releaseTarget === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
 
 const checks = [
-  group('releaseTarget', true, allowedReleaseTargets.has(releaseTarget), { releaseTarget, acceptedTargets: [...allowedReleaseTargets] }),
+  group('releaseTarget', true, allowedReleaseTargets.has(releaseTarget), { releaseTarget, acceptedTargets: [...allowedReleaseTargets] }, 'Run the workflow with release_target set to enterprise or production.'),
   group('deploymentTargetConfigured', true, hasAny(['RELEASE_DEPLOYMENT_URL', 'RELEASE_PRODUCTION_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL', 'VERCEL_URL']), {
     acceptedSources: ['RELEASE_DEPLOYMENT_URL', 'RELEASE_PRODUCTION_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL', 'VERCEL_URL'],
-  }),
-  group('healthcheckTokenConfigured', true, hasAny(['HEALTHCHECK_TOKEN']), { acceptedSources: ['HEALTHCHECK_TOKEN'] }),
-  group('releaseCommitShaConfigured', true, Boolean(commitSha), { sourcePresent: Boolean(commitSha) }),
-  group('releaseBuildShaConfigured', true, Boolean(buildSha), { sourcePresent: Boolean(buildSha) }),
+  }, 'Set the production deployment URL in GitHub Actions configuration. Prefer a GitHub Variable for non-secret URLs.'),
+  group('healthcheckTokenConfigured', true, hasAny(['HEALTHCHECK_TOKEN']), { acceptedSources: ['HEALTHCHECK_TOKEN'] }, 'Set HEALTHCHECK_TOKEN as a GitHub Secret matching the protected readiness token.'),
+  group('releaseCommitShaConfigured', true, Boolean(commitSha), { sourcePresent: Boolean(commitSha) }, 'Set RELEASE_COMMIT_SHA or allow GitHub Actions to provide GITHUB_SHA.'),
+  group('releaseBuildShaConfigured', true, Boolean(buildSha), { sourcePresent: Boolean(buildSha) }, 'Set RELEASE_BUILD_SHA or allow GitHub Actions to provide GITHUB_SHA.'),
   group('supabaseConfigured', true, hasAll(['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']), {
     requiredCount: 3,
-  }),
+  }, 'Set Supabase URL, anon key and service-role key for the target production project.'),
   group('stripeConfigured', true, hasAll(['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET']) && stripePricesReady, {
     requiresSecretKey: true,
     requiresWebhookSecret: true,
     requiresStarterGrowthEnterprisePricesOrLegacyFallbacks: true,
-  }),
-  group('redisConfigured', true, hasAll(['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']), { requiredCount: 2 }),
-  group('sentryConfigured', true, hasAny(['NEXT_PUBLIC_SENTRY_DSN', 'SENTRY_DSN']), { requiresDsn: true }),
+  }, 'Set Stripe secret key, webhook secret and monthly price IDs for the configured pricing model.'),
+  group('redisConfigured', true, hasAll(['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']), { requiredCount: 2 }, 'Set Upstash Redis REST URL and token for rate-limit/session runtime checks.'),
+  group('sentryConfigured', true, hasAny(['NEXT_PUBLIC_SENTRY_DSN', 'SENTRY_DSN']), { requiresDsn: true }, 'Set at least one Sentry DSN source for runtime observability.'),
   group('sentrySourceMapUploadConfigured', sentrySourceMapUploadRequired, hasAll(['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN']), {
     requiredForEnterprise: sentrySourceMapUploadRequired,
-  }),
+  }, 'Set Sentry org, project and auth token for enterprise source-map release validation.'),
   group('rollbackTargetConfigured', true, hasAny(['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL']), {
     acceptedSources: ['RELEASE_ROLLBACK_TARGET', 'RELEASE_ROLLBACK_TARGET_URL', 'LAST_KNOWN_GOOD_DEPLOYMENT_URL'],
-  }),
+  }, 'Set the last-known-good deployment URL or rollback target URL.'),
   group('rollbackCommitConfigured', true, hasAny(['RELEASE_ROLLBACK_TARGET_SHA', 'RELEASE_ROLLBACK_TARGET_COMMIT_SHA', 'LAST_KNOWN_GOOD_COMMIT_SHA', 'LAST_KNOWN_GOOD_SHA']), {
     acceptedSources: ['RELEASE_ROLLBACK_TARGET_SHA', 'RELEASE_ROLLBACK_TARGET_COMMIT_SHA', 'LAST_KNOWN_GOOD_COMMIT_SHA', 'LAST_KNOWN_GOOD_SHA'],
-  }),
+  }, 'Set the last-known-good commit SHA associated with the rollback target.'),
   group('rollbackFunctionalValidationFlagConfigured', true, process.env.RELEASE_ROLLBACK_TARGET_VALIDATED === 'true', {
     requiredValue: 'RELEASE_ROLLBACK_TARGET_VALIDATED=true',
-  }),
+  }, 'Set RELEASE_ROLLBACK_TARGET_VALIDATED=true only after the rollback target has been smoke-tested.'),
   group('enterpriseUploadScannerConfigured', enterpriseScannerRequired, !enterpriseScannerRequired || (scannerProvider && !['none', 'disabled', 'not_configured'].includes(scannerProvider) && scannerTransportReady), {
     requiredForEnterprise: enterpriseScannerRequired,
     transport: scannerProvider ? (['clamav', 'clamd'].includes(scannerProvider) ? 'clamav' : 'http') : 'missing',
-  }),
+  }, 'Configure a real upload malware scanner transport for enterprise release.'),
 ];
 
-const failures = checks.filter((check) => check.required && !check.passed).map((check) => check.name);
+const failedChecks = checks.filter((check) => check.required && !check.passed);
+const failures = failedChecks.map((check) => check.name);
 const outcome = failures.length === 0 ? 'passed' : 'failed';
 
 const evidence = {
@@ -99,6 +101,7 @@ const evidence = {
     '.github/workflows/enterprise-production-gate.yml',
     '.github/workflows/public-production-final.yml',
     'docs/operations/ENTERPRISE_PRODUCTION_ENVIRONMENT_CHECKLIST.md',
+    setupChecklistPath,
   ],
   commitSha,
   buildSha,
@@ -106,6 +109,11 @@ const evidence = {
   controlsVerified: outcome === 'passed' ? checks.filter((check) => check.required && check.passed).map((check) => check.name) : [],
   checks,
   failures,
+  missingConfigurationGroups: failedChecks.map((check) => ({
+    name: check.name,
+    remediation: check.remediation,
+    acceptedSources: check.detail?.acceptedSources || null,
+  })),
   redactionConfirmation: 'Only grouped configuration presence and accepted source labels are recorded. No secret values, tokens, URLs, DSNs, cookies, Authorization headers or customer data are stored.',
   noSecretsStored: true,
   evidenceIntegrity: {
@@ -121,13 +129,41 @@ const evidence = {
     : 'Enterprise release is blocked and remains No-Go until required production configuration is present in the runner environment.',
 };
 
+function writeStepSummary() {
+  if (!process.env.GITHUB_STEP_SUMMARY) return;
+  const lines = [
+    '## RISCK COMPLY Enterprise Env Preflight',
+    '',
+    `Outcome: **${outcome}**`,
+    `Evidence: \`${evidencePath}\``,
+    `Setup checklist: \`${setupChecklistPath}\``,
+    '',
+  ];
+
+  if (failedChecks.length > 0) {
+    lines.push('### Missing configuration groups', '');
+    for (const check of failedChecks) {
+      lines.push(`- **${check.name}** — ${check.remediation}`);
+    }
+    lines.push('', 'No secret values were printed or written to evidence.');
+  } else {
+    lines.push('All required configuration groups are present. Runtime smoke still needs to pass against the target deployment.');
+  }
+
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+}
+
 mkdirSync(dirname(evidencePath), { recursive: true });
 writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+writeStepSummary();
 console.log(`Wrote ${evidencePath}`);
 
 if (failures.length > 0) {
   console.error('Enterprise release env preflight failed:');
-  for (const failure of failures) console.error(`- ${failure}`);
+  for (const check of failedChecks) {
+    console.error(`- ${check.name}: ${check.remediation}`);
+    console.error(`::error title=Enterprise env preflight missing ${check.name}::${check.remediation} See ${setupChecklistPath}.`);
+  }
   process.exit(1);
 }
 
