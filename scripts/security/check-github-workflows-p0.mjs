@@ -14,12 +14,20 @@ const required = [
       'npm run security:ci',
       'npm run quality:routes',
       'npm run ops:vercel-readiness',
-      'npm run release:readiness',
-      'npm run release:enterprise-readiness',
-      "if: env.RELEASE_TARGET == 'enterprise'",
+      'npm run release:production-final',
       'vercel pull',
       'vercel build --prod',
       'vercel deploy --prebuilt --prod',
+    ],
+  },
+  {
+    path: '.github/workflows/enterprise-production-gate.yml',
+    tokens: [
+      'name: Enterprise Production Gate',
+      'npm run release:production-final',
+      'PLAYWRIGHT_USE_PRODUCTION_SERVER',
+      'Enterprise release env preflight',
+      'enterprise-production-final-evidence',
     ],
   },
   {
