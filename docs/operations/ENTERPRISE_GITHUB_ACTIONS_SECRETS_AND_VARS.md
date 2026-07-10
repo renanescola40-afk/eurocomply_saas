@@ -4,13 +4,15 @@ This checklist defines the GitHub Actions configuration required for the RISCK C
 
 ## Status
 
-Implementation hardening is **99%**. Enterprise Go remains **No-Go** until the workflow runs against the real production runtime and `release-go-no-go.json` records `finalDecision: Go`.
+Implementation hardening is **99.5%**. Enterprise Go remains **No-Go** until the workflow runs against the real production runtime and `release-go-no-go.json` records `finalDecision: Go`.
 
 ## Why the gate can fail before release validation
 
 The `Production release validation` job intentionally starts with a fail-closed environment preflight. If required provider configuration is missing from the GitHub Actions runner, the job stops before running the final release gate.
 
 The preflight records only grouped presence checks. It must not print tokens, secret values, cookies, authorization headers, DSNs or raw private URLs.
+
+If values are stored as **Environment secrets** under `Production`, the GitHub Actions job must bind to `environment: Production`; otherwise GitHub will not inject those values into the runner.
 
 ## Required GitHub Secrets
 
@@ -39,6 +41,17 @@ For observability/runtime reporting, configure at least one Sentry DSN source:
 NEXT_PUBLIC_SENTRY_DSN
 SENTRY_DSN
 ```
+
+For the Cloudmersive malware scanner adapter, configure these as **secrets only**, not variables:
+
+```text
+CLOUDMERSIVE_API_KEY
+MALWARE_SCANNER_API_KEY
+```
+
+`CLOUDMERSIVE_API_KEY` is the external vendor key. `MALWARE_SCANNER_API_KEY` is the internal bearer token used by RISCK COMPLY when calling `/api/internal/malware/cloudmersive`.
+
+If either value was ever pasted into chat, screenshots, logs or a GitHub variable field, rotate it before using production.
 
 ## Required GitHub Variables or Secrets
 
@@ -71,9 +84,25 @@ STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY
 
 ## Enterprise upload scanner
 
-Enterprise release requires upload malware scanning. Configure one of these transports.
+Enterprise release requires upload malware scanning. The recommended managed provider path is the Cloudmersive adapter route:
 
-### HTTP scanner
+```text
+MALWARE_SCANNER_PROVIDER=http
+MALWARE_SCANNER_URL=https://<production-domain>/api/internal/malware/cloudmersive
+MALWARE_SCANNER_ALLOWED_HOSTS=<production-domain>
+```
+
+Example:
+
+```text
+MALWARE_SCANNER_PROVIDER=http
+MALWARE_SCANNER_URL=https://risckcomply.com/api/internal/malware/cloudmersive
+MALWARE_SCANNER_ALLOWED_HOSTS=risckcomply.com
+```
+
+The production deployment also needs the same `CLOUDMERSIVE_API_KEY` and `MALWARE_SCANNER_API_KEY` values configured in the runtime host, such as Vercel production environment variables, because the adapter runs inside the deployed application.
+
+### Alternative HTTP scanner
 
 ```text
 MALWARE_SCANNER_PROVIDER=http
@@ -89,7 +118,7 @@ MALWARE_SCANNER_ENDPOINT
 MALWARE_SCANNER_ALLOWED_HOSTS
 ```
 
-### ClamAV scanner
+### Alternative ClamAV scanner
 
 ```text
 MALWARE_SCANNER_PROVIDER=clamav

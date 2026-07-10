@@ -29,6 +29,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/internal/compliance-alerts/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
 | `src/app/api/internal/metric-snapshots/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
 | `src/app/api/internal/email/test/route.ts` | health/internal | Internal route guarded by shared internal authorization and no-store responses. |
+| `src/app/api/internal/malware/cloudmersive/route.ts` | health/internal | Internal Cloudmersive malware scan adapter; requires scanner/internal authorization, bounded raw body, no-store responses and sanitized provider errors. |
 | `src/app/api/intelligence/refresh/route.ts` | health/internal | Internal refresh endpoint; guarded by internal authorization. |
 | `src/app/api/billing/webhook/route.ts` | webhook | Stripe webhook; signature verification replaces trusted origin. |
 | `src/app/api/stripe/webhook/route.ts` | webhook | Stripe webhook; signature verification replaces trusted origin. |
