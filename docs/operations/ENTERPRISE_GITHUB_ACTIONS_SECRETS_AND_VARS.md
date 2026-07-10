@@ -12,9 +12,31 @@ The `Production release validation` job intentionally starts with a fail-closed 
 
 The preflight records only grouped presence checks. It must not print tokens, secret values, cookies, authorization headers, DSNs or raw private URLs.
 
+## Repository secrets versus environment secrets
+
+GitHub Actions treats **repository secrets** and **environment secrets** differently.
+
+- Repository secrets are available to any eligible workflow job in the repository.
+- Environment secrets are available only when the job declares the matching `environment`.
+
+If secrets are stored under the `Production` environment, the production validation job must run with:
+
+```yaml
+environment: Production
+```
+
+Without that environment binding, those `Production` secrets will appear empty in the runner even though they exist in GitHub Settings.
+
+For the current Enterprise Production Gate, use one consistent approach:
+
+1. Add the required runtime values as repository secrets/variables; or
+2. Keep them under the `Production` environment and ensure the workflow job binds to `environment: Production`.
+
+Do not split required production values across unrelated environments such as `staging`, `security-ci` or `supabase-live-rls-validation` unless the job explicitly targets that environment.
+
 ## Required GitHub Secrets
 
-Configure these as **Repository secrets** or **Environment secrets** for the production environment:
+Configure these as **Repository secrets** or as **Environment secrets** for the `Production` environment when the job is bound to that environment:
 
 ```text
 HEALTHCHECK_TOKEN
