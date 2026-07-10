@@ -1,9 +1,19 @@
 #!/usr/bin/env node
 
 // Compatibility wrapper for older release docs and automations.
-// The canonical final gate is now npm run release:production-final, which runs:
+// The canonical final gate is now npm run release:production-final.
+//
+// Day 1 control-plane compatibility contract:
+// The delegated canonical gate must continue to enforce these baseline release steps:
+// - npm ci
+// - npm run lint
+// - npm run typecheck
+// - npm run test
+// - npm run build
+//
+// The canonical gate also runs:
 // - enterprise env preflight
-// - CI/build/test/E2E/security checks
+// - E2E/security checks
 // - live RLS evidence
 // - deployment smoke
 // - observability smoke
