@@ -5,9 +5,9 @@ This document is the release owner record used to approve or reject a RISCK COMP
 ## Release identity
 
 - Release name: RISCK COMPLY Enterprise Production Final Gate
-- Date: 2026-07-09
+- Date: 2026-07-10
 - Repository: `renanescola40-afk/eurocomply_saas`
-- Evidence update branch: `enterprise-production-gate-final`
+- Evidence update branch: `main`
 - Target environment: Production / enterprise candidate
 - Release owner: @renansilva2002 / renanescola40-afk
 - Incident owner: @renansilva2002 / renanescola40-afk
@@ -25,6 +25,23 @@ This document is the release owner record used to approve or reject a RISCK COMP
 - SEV-2: declare within 15 minutes, assign incident owner within 15 minutes, first customer/status update within 30 minutes when customer-visible, follow-up every 60 minutes, post-incident review started within 2 business days.
 - Status page decision: required for confirmed SEV-1 customer impact and customer-visible SEV-2 incidents lasting more than 30 minutes.
 - Customer updates must not include secrets, stack traces, exploit detail, raw logs, cookies, tokens, DSNs, internal URLs or customer PII.
+
+## Exceptions
+
+No Enterprise Production Go exceptions are approved.
+
+A Conditional Go exception may only be considered for a controlled beta/private pilot when all of the following are recorded before customer exposure:
+
+- exception owner;
+- affected control/evidence item;
+- customer impact and scope limit;
+- expiry date;
+- rollback plan;
+- monitoring plan;
+- customer communication plan;
+- acceptance signature from release/security owner.
+
+Current exceptions status: **none approved for enterprise production**.
 
 ## Required checks
 
@@ -57,8 +74,8 @@ This document is the release owner record used to approve or reject a RISCK COMP
 | npm audit | Required | `npm audit --audit-level=moderate` / `security:ci`. |
 | Security CI | Required | `npm run security:ci`. |
 | Route quality | Required in workflow | `npm run quality:routes`. |
-| Production release validation job | Added / pending execution | `.github/workflows/enterprise-production-gate.yml`. |
-| Artifacts on failure | Added / pending execution | Workflow uploads runtime evidence, release-validation logs and Playwright artifacts. |
+| Production release validation job | Active | `.github/workflows/enterprise-production-gate.yml`. |
+| Artifacts on failure | Active | Workflow uploads runtime evidence, release-validation logs and Playwright artifacts. |
 
 ### Runtime/security gates
 
@@ -67,7 +84,7 @@ This document is the release owner record used to approve or reject a RISCK COMP
 | Production deployment smoke | **Not proven passed** | `deployment-smoke-validation.json` must be Complete/passed. |
 | Health endpoint | Code-ready, runtime proof required | `/api/health` must return public redacted `status: ok`. |
 | Protected readiness | Code-ready, runtime proof required | `/api/ready` must reject anonymous calls, accept `HEALTHCHECK_TOKEN`, fail closed with 503 and avoid secret leakage. |
-| Supabase live RLS | **Open/not_run** | Supabase RLS live validation is Open/not_run; `supabase-live-rls-validation.json` must be Complete/passed against the correct project. |
+| Supabase live RLS | **Open/failed** | Supabase RLS live validation must be Complete/passed against the correct project. |
 | Stripe webhook/billing readiness | Required | `stripe-billing-validation.json` and readiness smoke. |
 | Redis/rate limit readiness | Required | Protected readiness and security gates. |
 | Sentry/observability readiness | Required | `observability-smoke-validation.json` Complete/passed. |
@@ -79,15 +96,15 @@ This document is the release owner record used to approve or reject a RISCK COMP
 
 ## Deployment URL
 
-Deployment URL: Not assigned for this pull request.
+Deployment URL: `https://www.risckcomply.com`
 
-The candidate runtime URL was not functionally verified in this PR session. This remains an explicit No-Go condition and must not be treated as production approval.
+The candidate runtime URL must be functionally verified by `release:deployment-smoke`. This remains an explicit No-Go condition while readiness/dependency checks fail.
 
 ## Rollback target
 
 Rollback is **not approved** until the final dry-run evidence passes.
 
-Previous known-good deployment URL candidate: not assigned; functional verification and dry-run evidence not attached.
+Previous known-good deployment URL candidate: `https://www.risckcomply.com`. Functional verification and dry-run evidence must be attached by the final runner.
 
 Rollback target is candidate-only until `rollback-dry-run-validation.json` is Complete/passed for the exact target and commit.
 
@@ -130,9 +147,7 @@ The release gate has been hardened, but approval is withheld because the final e
 | --- | --- | --- | --- |
 | Final validation | Exact final command bundle not proven passed | @renansilva2002 / renanescola40-afk | `production-final-validation.json` + `final-validation-runner.json` Complete/passed |
 | Deployment smoke | Health/readiness/prod smoke not verified for target | @renansilva2002 / renanescola40-afk | `deployment-smoke-validation.json` Complete/passed |
-| Observability | Protected observability smoke not verified for target | @renansilva2002 / renanescola40-afk | `observability-smoke-validation.json` Complete/passed |
 | RLS live validation | Supabase live RLS must be proven against correct project | @renansilva2002 / renanescola40-afk | `supabase-live-rls-validation.json` Complete/passed |
-| Rollback | Rollback target and known-good commit not proven | @renansilva2002 / renanescola40-afk | `rollback-dry-run-validation.json` Complete/passed |
 | Branch protection | Required checks on `main` not proven for final gate | @renansilva2002 / renanescola40-afk | `branch-protection-required-checks.json` Complete/passed |
 | External review | External review/pentest proof not approved as real evidence | @renansilva2002 / renanescola40-afk | Real report reference, triage and retest/acceptance evidence |
 | Final Go/No-Go | Enterprise runtime and final Go/No-Go evidence absent/not passed | @renansilva2002 / renanescola40-afk | `enterprise-runtime-evidence.json` and `release-go-no-go.json` Complete/passed |
@@ -146,5 +161,5 @@ The release gate has been hardened, but approval is withheld because the final e
 - Support owner: @renansilva2002 / renanescola40-afk
 - Security owner: @renansilva2002 / renanescola40-afk
 - Approver: Not granted
-- Date: 2026-07-09
+- Date: 2026-07-10
 - Final notes: Release remains blocked. Do not present this package to customers, procurement or enterprise buyers as approved production/enterprise evidence until the final runner produces complete passing evidence.
