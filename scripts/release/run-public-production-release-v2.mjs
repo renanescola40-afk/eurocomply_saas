@@ -90,6 +90,31 @@ function readEvidence(path) {
   }
 }
 
+function buildStepEnv(step) {
+  const isE2eStep = step.slug.includes('test-e2e');
+  const isUnitTestStep = step.slug === '03-test';
+  const env = {
+    ...process.env,
+    CI: 'true',
+    NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED || '1',
+    RELEASE_TARGET: releaseTarget,
+    RISCK_COMPLY_ENTERPRISE_RELEASE: 'true',
+    PUBLIC_PRODUCTION_RELEASE_IN_PROGRESS: 'true',
+    FINAL_VALIDATION_IN_PROGRESS: 'true',
+    ...(isE2eStep && !process.env.E2E_BASE_URL ? { PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true' } : {}),
+  };
+
+  if (isUnitTestStep) {
+    env.RELEASE_TARGET = process.env.UNIT_TEST_RELEASE_TARGET || 'test';
+    env.RISCK_COMPLY_ENTERPRISE_RELEASE = '';
+    env.EUROCOMPLY_ENTERPRISE_RELEASE = '';
+    env.PUBLIC_PRODUCTION_RELEASE_IN_PROGRESS = '';
+    env.FINAL_VALIDATION_IN_PROGRESS = '';
+  }
+
+  return env;
+}
+
 function runStep(step) {
   const startedAt = now();
   const log = join(logDir, `${step.slug}.log`);
@@ -102,20 +127,10 @@ function runStep(step) {
   ].join('\n');
 
   process.stdout.write(`${header}\n`);
-  const isE2eStep = step.slug.includes('test-e2e');
   const result = spawnSync(step.command, step.args, {
     encoding: 'utf8',
     maxBuffer,
-    env: {
-      ...process.env,
-      CI: 'true',
-      NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED || '1',
-      RELEASE_TARGET: releaseTarget,
-      RISCK_COMPLY_ENTERPRISE_RELEASE: 'true',
-      PUBLIC_PRODUCTION_RELEASE_IN_PROGRESS: 'true',
-      FINAL_VALIDATION_IN_PROGRESS: 'true',
-      ...(isE2eStep && !process.env.E2E_BASE_URL ? { PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true' } : {}),
-    },
+    env: buildStepEnv(step),
   });
 
   const stdout = result.stdout || '';
