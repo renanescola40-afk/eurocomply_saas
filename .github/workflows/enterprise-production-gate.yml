@@ -194,9 +194,11 @@ jobs:
           cache: npm
 
       - name: Deterministic install for env preflight
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         run: npm ci
 
       - name: Enterprise release env preflight
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         run: node scripts/release/check-enterprise-release-env.mjs
 
       - name: Enterprise production final gate

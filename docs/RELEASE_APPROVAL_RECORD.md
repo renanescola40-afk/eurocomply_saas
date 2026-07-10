@@ -5,9 +5,9 @@ This document is the release owner record used to approve or reject a RISCK COMP
 ## Release identity
 
 - Release name: RISCK COMPLY Enterprise Production Final Gate
-- Date: 2026-07-09
+- Date: 2026-07-10
 - Repository: `renanescola40-afk/eurocomply_saas`
-- Evidence update branch: `enterprise-production-gate-final`
+- Evidence update branch: `fix-enterprise-final-runtime-gate`
 - Target environment: Production / enterprise candidate
 - Release owner: @renansilva2002 / renanescola40-afk
 - Incident owner: @renansilva2002 / renanescola40-afk
@@ -19,95 +19,41 @@ This document is the release owner record used to approve or reject a RISCK COMP
 - Approver: **Not granted**; blocked by open P0 runtime evidence and missing final validation runner proof.
 - Final decision: **No-Go**
 
-## Status page and customer communication timing
+## Candidate deployment
 
-- SEV-1: declare within 5 minutes, assign incident owner immediately, first customer/status update within 15 minutes after impact is confirmed, follow-up every 30 minutes, post-incident review started within 24 hours.
-- SEV-2: declare within 15 minutes, assign incident owner within 15 minutes, first customer/status update within 30 minutes when customer-visible, follow-up every 60 minutes, post-incident review started within 2 business days.
-- Status page decision: required for confirmed SEV-1 customer impact and customer-visible SEV-2 incidents lasting more than 30 minutes.
-- Customer updates must not include secrets, stack traces, exploit detail, raw logs, cookies, tokens, DSNs, internal URLs or customer PII.
+- Deployment URL: `https://www.risckcomply.com`
+- Assessed commit: current PR merge commit / promoted deployment candidate
+- Deployment URL functional verification: **Open**
+- The runtime URL was not functionally verified for final Enterprise Production Go in this approval record.
+- Functional verification and dry-run evidence not attached means the release remains blocked.
 
-## Required checks
+## Runtime evidence status
 
-### Governance gates
-
-| Gate | Status | Evidence / note |
+| Evidence item | Status | Notes |
 | --- | --- | --- |
-| Release readiness command completed | **Not proven passed** | `npm run release:production-final` must pass for the promoted commit. |
-| Enterprise runtime evidence completed | **Not proven passed** | `docs/security/evidence/runtime/enterprise-runtime-evidence.json` must be Complete/passed. |
-| Final Go/No-Go evidence completed | **Not proven passed** | `docs/security/evidence/runtime/release-go-no-go.json` must be Complete/passed with `finalDecision: Go`. |
-| Release approval selected | **Not approved** | Approval is intentionally withheld while P0 blockers remain open. |
-| Deployment URL functional verification | **Open** | Deployment URL is candidate-only; runtime URL was not functionally verified. |
-| Incident owner named | Complete | @renansilva2002 / renanescola40-afk. |
-| Rollback owner named | Complete | @renansilva2002 / renanescola40-afk. |
-| Support owner named | Complete | @renansilva2002 / renanescola40-afk. |
-| Customer communication owner named | Complete | @renansilva2002 / renanescola40-afk. |
-| Escalation path documented | Complete | Support owner -> Incident owner -> Rollback owner -> Security owner -> Release owner / Approver. |
+| Deployment URL functional verification | **Open** | Production URL still needs a passing final smoke/readiness run for the assessed commit. |
+| Supabase RLS live validation | **Open** | Supabase RLS live validation is Open/not_run for this approval decision. |
+| External review/pentest | **Open** | External review/pentest is Open/not_started and cannot be replaced by code-only changes. |
+| Final validation runner proof | **Open** | The runner contract exists, but production-secret runtime evidence is not attached here. |
+| Branch protection evidence | **Exception** | Must remain visible as exception until complete branch protection proof is attached. |
 
-### Build, deploy and CI
-
-| Gate | Status | Evidence / note |
-| --- | --- | --- |
-| Deterministic install | **Not proven for final target run** | Final runner must execute `npm ci`. |
-| Package-lock alignment | Required | `npm run security:package-lock`. |
-| Lint | Required | `npm run lint`. |
-| Typecheck | Required | `npm run typecheck`. |
-| Unit tests | Required | `npm run test`. |
-| E2E production-like | **Not proven for final target run** | `npm run test:e2e` must run and must not be silently skipped. |
-| Build | Required | `npm run build`. |
-| npm audit | Required | `npm audit --audit-level=moderate` / `security:ci`. |
-| Security CI | Required | `npm run security:ci`. |
-| Route quality | Required in workflow | `npm run quality:routes`. |
-| Production release validation job | Added / pending execution | `.github/workflows/enterprise-production-gate.yml`. |
-| Artifacts on failure | Added / pending execution | Workflow uploads runtime evidence, release-validation logs and Playwright artifacts. |
-
-### Runtime/security gates
-
-| Gate | Status | Evidence / note |
-| --- | --- | --- |
-| Production deployment smoke | **Not proven passed** | `deployment-smoke-validation.json` must be Complete/passed. |
-| Health endpoint | Code-ready, runtime proof required | `/api/health` must return public redacted `status: ok`. |
-| Protected readiness | Code-ready, runtime proof required | `/api/ready` must reject anonymous calls, accept `HEALTHCHECK_TOKEN`, fail closed with 503 and avoid secret leakage. |
-| Supabase live RLS | **Open/not_run** | Supabase RLS live validation is Open/not_run; `supabase-live-rls-validation.json` must be Complete/passed against the correct project. |
-| Stripe webhook/billing readiness | Required | `stripe-billing-validation.json` and readiness smoke. |
-| Redis/rate limit readiness | Required | Protected readiness and security gates. |
-| Sentry/observability readiness | Required | `observability-smoke-validation.json` Complete/passed. |
-| Enterprise upload scanner | Required | `upload-malware-scan-validation.json` Complete/passed. |
-| Branch protection evidence | Required | `branch-protection-required-checks.json` Complete/passed. |
-| Auth/RBAC final validation | Required | `auth-rbac-final-validation.json` Complete/passed with real target proof. |
-| Audit-chain live validation | Required | `audit-chain-live-validation.json` Complete/passed. |
-| External security review/pentest | **Open/not_started** | External review/pentest is Open/not_started until real report proof, triage and acceptance/retest evidence are attached. |
-
-## Deployment URL
-
-Deployment URL: Not assigned for this pull request.
-
-The candidate runtime URL was not functionally verified in this PR session. This remains an explicit No-Go condition and must not be treated as production approval.
+Approval is intentionally withheld while P0 blockers remain open. This record is safe for repo-side CI because it documents the blockers instead of marking incomplete runtime evidence as passed.
 
 ## Rollback target
 
-Rollback is **not approved** until the final dry-run evidence passes.
+- Previous known-good deployment URL candidate: `https://www.risckcomply.com`
+- Rollback target is candidate-only until a previous deployment is functionally verified and attached as runtime evidence.
+- Candidate rollback runtime URL was not functionally verified in this approval record.
+- Rollback trigger criteria:
+  - `/api/health` fails or returns unexpected status for the promoted deployment.
+  - `/api/ready` fails critical dependency checks.
+  - Deployment smoke, observability smoke or rollback dry-run fails for the assessed commit.
+  - Auth, billing, audit logging, tenant isolation or security headers regress in production.
+  - Suspected data exposure, secret exposure or material security incident.
 
-Previous known-good deployment URL candidate: not assigned; functional verification and dry-run evidence not attached.
+## Exceptions
 
-Rollback target is candidate-only until `rollback-dry-run-validation.json` is Complete/passed for the exact target and commit.
-
-Rollback trigger criteria:
-
-- Any post-deploy health/readiness failure that cannot be mitigated within the incident response window.
-- Confirmed data exposure, auth/RBAC bypass, tenant isolation failure or severe billing/webhook regression.
-- Failed production smoke, observability smoke or Supabase live RLS validation for the promoted commit.
-
-Required configuration:
-
-| Variable | Purpose |
-| --- | --- |
-| `RELEASE_ROLLBACK_TARGET` | Previous known-good deployment URL or deployment target. |
-| `LAST_KNOWN_GOOD_DEPLOYMENT_URL` | Alternative previous known-good deployment URL. |
-| `RELEASE_ROLLBACK_TARGET_SHA` | Previous known-good full commit SHA. |
-| `LAST_KNOWN_GOOD_COMMIT_SHA` | Alternative previous known-good commit SHA. |
-| `RELEASE_ROLLBACK_TARGET_VALIDATED=true` | Manual functional validation proof flag, only after target validation. |
-
-Rollback must preserve Stripe idempotency/replay safety and must not run destructive Supabase rollback without incident commander and database owner approval.
+No Enterprise Production exception is approved. Controlled beta exceptions require owner, expiry, mitigation, claim restrictions and evidence that stays Open or Exception rather than being falsely marked passed.
 
 ## Approval decision
 
@@ -123,28 +69,3 @@ Rollback must preserve Stripe idempotency/replay safety and must not run destruc
 **No-Go.**
 
 The release gate has been hardened, but approval is withheld because the final enterprise production runner has not produced complete runtime evidence for the current promoted target and commit. Enterprise claims, enterprise procurement readiness, paid production launch and customer-facing Go messaging remain blocked.
-
-## P0 blockers
-
-| Area | Blocker | Owner | Required closure evidence |
-| --- | --- | --- | --- |
-| Final validation | Exact final command bundle not proven passed | @renansilva2002 / renanescola40-afk | `production-final-validation.json` + `final-validation-runner.json` Complete/passed |
-| Deployment smoke | Health/readiness/prod smoke not verified for target | @renansilva2002 / renanescola40-afk | `deployment-smoke-validation.json` Complete/passed |
-| Observability | Protected observability smoke not verified for target | @renansilva2002 / renanescola40-afk | `observability-smoke-validation.json` Complete/passed |
-| RLS live validation | Supabase live RLS must be proven against correct project | @renansilva2002 / renanescola40-afk | `supabase-live-rls-validation.json` Complete/passed |
-| Rollback | Rollback target and known-good commit not proven | @renansilva2002 / renanescola40-afk | `rollback-dry-run-validation.json` Complete/passed |
-| Branch protection | Required checks on `main` not proven for final gate | @renansilva2002 / renanescola40-afk | `branch-protection-required-checks.json` Complete/passed |
-| External review | External review/pentest proof not approved as real evidence | @renansilva2002 / renanescola40-afk | Real report reference, triage and retest/acceptance evidence |
-| Final Go/No-Go | Enterprise runtime and final Go/No-Go evidence absent/not passed | @renansilva2002 / renanescola40-afk | `enterprise-runtime-evidence.json` and `release-go-no-go.json` Complete/passed |
-
-## Final sign-off
-
-- Release owner: @renansilva2002 / renanescola40-afk
-- Incident owner: @renansilva2002 / renanescola40-afk
-- Rollback owner: @renansilva2002 / renanescola40-afk
-- Customer communication owner: @renansilva2002 / renanescola40-afk
-- Support owner: @renansilva2002 / renanescola40-afk
-- Security owner: @renansilva2002 / renanescola40-afk
-- Approver: Not granted
-- Date: 2026-07-09
-- Final notes: Release remains blocked. Do not present this package to customers, procurement or enterprise buyers as approved production/enterprise evidence until the final runner produces complete passing evidence.

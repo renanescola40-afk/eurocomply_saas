@@ -7,48 +7,52 @@ async function expectNoHorizontalOverflow(page: Page, label: string) {
   expect(hasOverflow, `${label} has horizontal overflow`).toBe(false);
 }
 
-test.describe('public prelaunch landing', () => {
-  for (const locale of locales) {
-    test(`renders the ${locale.toUpperCase()} prelaunch waitlist landing`, async ({ page }) => {
-      const response = await page.goto(`/${locale}`, { waitUntil: 'domcontentloaded' });
+async function expectControlledAccessLanding(page: Page, locale: string) {
+  const response = await page.goto(`/${locale}`, { waitUntil: 'domcontentloaded' });
 
-      expect(response?.status(), `${locale} landing should not 404`).not.toBe(404);
-      expect(response?.status(), `${locale} landing should not server-error`).toBeLessThan(500);
-      await expect(page.getByRole('link', { name: /RISCK COMPLY/i }).first()).toBeVisible();
-      await expect(page.locator('body')).toContainText(/waitlist|lista de espera|Controlled beta|Beta controlada/i);
-      await expect(page.locator('body')).toContainText(/AI inventory|Inventário de IA|risk classification|classificação de risco/i);
-      await expect(page.locator('body')).toContainText(/1 July 2026|1 de julho de 2026|07:00 Europe\/Lisbon/i);
-      await expect(page.locator('#waitlist-form')).toBeVisible();
-      await expectNoHorizontalOverflow(page, `${locale} prelaunch landing desktop`);
+  expect(response?.status(), `${locale} landing should not 404`).not.toBe(404);
+  expect(response?.status(), `${locale} landing should not server-error`).toBeLessThan(500);
+  await expect(page.getByRole('link', { name: /RISCK COMPLY/i }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Turn AI governance into structured compliance evidence/i })).toBeVisible();
+  await expect(page.locator('body')).toContainText(/Controlled access|early access|Request access/i);
+  await expect(page.locator('body')).toContainText(/AI Act readiness|risk visibility|governance workflows|evidence preparation/i);
+  await expect(page.locator('body')).toContainText(/1 August 2026|07:00 Europe\/Lisbon/i);
+  await expect(page.locator('#early-access')).toBeVisible();
+}
+
+test.describe('public controlled-access landing', () => {
+  for (const locale of locales) {
+    test(`renders the ${locale.toUpperCase()} controlled-access landing`, async ({ page }) => {
+      await expectControlledAccessLanding(page, locale);
+      await expectNoHorizontalOverflow(page, `${locale} controlled-access landing desktop`);
     });
   }
 
   test('keeps language options visible before launch access', async ({ page }) => {
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('link', { name: /^EN$/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^PT$/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^ES$/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^FR$/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^en$/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^pt$/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^es$/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^fr$/i })).toBeVisible();
   });
 
-  test('keeps the waitlist CTA anchored to the lead form', async ({ page }) => {
+  test('keeps the request-access CTA anchored to the lead form', async ({ page }) => {
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('link', { name: /^Join waitlist$/i }).first()).toHaveAttribute('href', '#waitlist-form');
-    await expect(page.getByRole('button', { name: /^Join waitlist$/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Request access/i }).first()).toHaveAttribute('href', '#early-access');
+    await expect(page.getByRole('button', { name: /Request access/i })).toBeVisible();
   });
 
-  test('renders required prelaunch sections on mobile', async ({ page }) => {
+  test('renders required controlled-access sections on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByText('Launch checklist')).toBeVisible();
-    await expect(page.getByText('AI inventory').first()).toBeVisible();
-    await expect(page.getByText('Risk classification').first()).toBeVisible();
-    await expect(page.getByText('Evidence packs').first()).toBeVisible();
-    await expect(page.getByText('Policy generator').first()).toBeVisible();
-    await expect(page.locator('#waitlist-form')).toBeVisible();
-    await expectNoHorizontalOverflow(page, 'prelaunch landing mobile');
+    await expect(page.getByText('Enterprise operating layer')).toBeVisible();
+    await expect(page.getByText('Review-ready evidence').first()).toBeVisible();
+    await expect(page.getByText('Legal review support').first()).toBeVisible();
+    await expect(page.getByText('Procurement confidence').first()).toBeVisible();
+    await expect(page.locator('#early-access')).toBeVisible();
+    await expectNoHorizontalOverflow(page, 'controlled-access landing mobile');
   });
 });
