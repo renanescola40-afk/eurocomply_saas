@@ -14,10 +14,20 @@ const required = [
       'npm run security:ci',
       'npm run quality:routes',
       'npm run ops:vercel-readiness',
-      'npm run release:production-final',
       'vercel pull',
       'vercel build --prod',
       'vercel deploy --prebuilt --prod',
+    ],
+    anyOf: [
+      ['npm run release:production-final'],
+      ['npm run release:enterprise-readiness'],
+    ],
+  },
+  {
+    path: 'package.json',
+    tokens: [
+      '"release:production-final": "node scripts/release/run-public-production-release.mjs"',
+      '"release:enterprise-readiness": "RELEASE_TARGET=enterprise RISCK_COMPLY_ENTERPRISE_RELEASE=true npm run release:production-final"',
     ],
   },
   {
@@ -85,6 +95,11 @@ for (const check of required) {
   const source = readFileSync(check.path, 'utf8');
   for (const token of check.tokens) {
     if (!source.includes(token)) failures.push(`${check.path} missing required workflow/governance token: ${token}`);
+  }
+
+  if (Array.isArray(check.anyOf)) {
+    const satisfied = check.anyOf.some((tokens) => tokens.every((token) => source.includes(token)));
+    if (!satisfied) failures.push(`${check.path} must include one accepted canonical final gate path: ${check.anyOf.map((tokens) => tokens.join(' + ')).join(' OR ')}`);
   }
 }
 
