@@ -5,10 +5,7 @@ const publicRoutes = ['/en', '/en/pricing', '/en/trust', '/en/security'] as cons
 async function expectSeoMetadata(page: Page, path: string) {
   await expect(page.locator('main')).toBeVisible();
   await expect(page.locator('h1').first()).toBeVisible();
-
-  const title = await page.title();
-  expect(title.trim()).not.toBe('');
-
+  expect(await page.title()).not.toBe('');
   await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /RISCK|AI|Security|Trust|readiness|governance/i);
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', /RISCK|Security|Trust|Pricing/i);
   await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', /RISCK|AI|Security|Trust|readiness|governance/i);
