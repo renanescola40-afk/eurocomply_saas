@@ -15,23 +15,11 @@ This checklist records the evidence required before RISCK COMPLY can be represen
 - Implementation hardening: **99.9%**
 - Final decision: **No-Go until real runtime evidence is Complete/passed for the promoted commit**
 
-## Required Vercel Production environment
+## Runtime evidence principle
 
-The GitHub Actions preflight only proves that GitHub Actions can read the release configuration. Deployment smoke proves that the live Vercel Production runtime can read the same operational configuration through `/api/ready`.
+GitHub Actions configuration passing is not enough for Enterprise Go. The live Vercel Production runtime must also prove readiness through deployment smoke and `/api/ready`.
 
-Before Enterprise Go, Vercel Production must be redeployed after these values are configured:
-
-| Group | Required runtime names |
-| --- | --- |
-| Protected readiness | `HEALTHCHECK_TOKEN` |
-| Supabase | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` |
-| Stripe | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER_MONTHLY`, `STRIPE_PRICE_GROWTH_MONTHLY`, `STRIPE_PRICE_ENTERPRISE_MONTHLY` |
-| Redis / Upstash | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
-| Sentry | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` |
-| Upload scanner | `REQUIRE_MALWARE_SCAN_FOR_UPLOADS=true`, `MALWARE_SCANNER_PROVIDER`, `MALWARE_SCANNER_URL`, `MALWARE_SCANNER_ALLOWED_HOSTS`, `CLOUDMERSIVE_API_KEY`, `MALWARE_SCANNER_API_KEY` |
-| Storage | Document upload bucket must resolve to `controlled-documents` through the project upload configuration. |
-
-If `/api/ready` returns `503`, the deployment smoke is correct to block Enterprise Go. Do not mark the release Go until the live deployment returns `status: ready` with no critical dependency gaps.
+The Vercel Production deployment must be redeployed after operational values are added or changed. If `/api/ready` returns `503`, the deployment smoke is correct to block Enterprise Go.
 
 ## Required release evidence categories
 
@@ -52,6 +40,53 @@ If `/api/ready` returns `503`, the deployment smoke is correct to block Enterpri
 | Customer communication | Required from customer-safe incident/update templates that do not expose secrets or unsupported claims | Required for enterprise |
 | External review evidence | Required from real external review report or approved enterprise exception | Required for enterprise |
 | Release decision | No-Go until exact commit has passing evidence bundle and zero P0 Open/Exception blockers | Yes |
+
+## Required command validation evidence
+
+| Command | Required before Go |
+| --- | --- |
+| `npm run release:production-final` | Canonical final gate |
+| `npm run test:e2e` | Required |
+| `npm run security:ci` | Required |
+| `npm run security:rls:live` | Required |
+| `npm run release:deployment-smoke` | Required |
+| `npm run release:observability-smoke` | Required |
+| `npm run release:rollback:dry-run` | Required |
+| `npm run release:enterprise-runtime-evidence` | Required for enterprise |
+| `npm run security:p0-runtime-gap:strict` | Required for enterprise |
+
+## Required runtime evidence files
+
+| Evidence | Required status before Go | Blocks |
+| --- | --- | --- |
+| `enterprise-release-env-readiness.json` | Complete / passed | Production + enterprise |
+| `deployment-smoke-validation.json` | Complete / passed | Production + enterprise |
+| `observability-smoke-validation.json` | Complete / passed | Production + enterprise |
+| `rollback-dry-run-validation.json` | Complete / passed | Production + enterprise |
+| `supabase-live-rls-validation.json` | Complete / passed | Production + enterprise |
+| `stripe-billing-validation.json` | Complete / passed | Paid launch |
+| `upload-malware-scan-validation.json` | Complete / passed | Enterprise upload features |
+| `branch-protection-required-checks.json` | Complete / passed | Enterprise |
+| `step-up-mfa-validation.json` | Complete / passed | Enterprise |
+| `audit-chain-live-validation.json` | Complete / passed | Enterprise |
+| `auth-rbac-final-validation.json` | Complete / passed with real target proof | Enterprise |
+| `external-security-review-or-pentest.json` | Complete / passed with real report reference | Enterprise |
+| `final-validation-runner.json` | Complete / passed | Production + enterprise |
+| `enterprise-runtime-evidence.json` | Complete / passed | Enterprise |
+| `release-go-no-go.json` | Complete / passed with `finalDecision: Go` | Production + enterprise |
+
+## Evidence still blocking enterprise Go
+
+| Area | Current gap | Release impact |
+| --- | --- | --- |
+| GitHub Actions final run | Must run Enterprise Production Gate with production secrets | Blocks Go |
+| Vercel production deployment | Must be Ready for promoted commit and redeployed after env changes | Blocks Go |
+| Deployment smoke | Real deployment URL functional smoke must pass | Blocks Go |
+| Supabase live RLS | Must be target project proof for promoted release | Blocks Go |
+| Branch protection | Required checks/ruleset evidence must be Complete | Blocks enterprise Go |
+| MFA/IdP | Real provider runtime proof must be attached | Blocks enterprise Go |
+| Audit chain | Target live validation must pass | Blocks enterprise Go |
+| External review | Real report or approved enterprise exception must be attached | Blocks enterprise pilot/procurement |
 
 ## Release decision
 
