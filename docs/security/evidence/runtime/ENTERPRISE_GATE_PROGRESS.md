@@ -4,7 +4,7 @@ Last updated: 2026-07-09
 
 ## Current implementation progress
 
-- Implementation hardening: **91%**
+- Implementation hardening: **93%**
 - Enterprise Go approval: **No-Go**
 
 ## What improved in this follow-up
@@ -22,6 +22,7 @@ Last updated: 2026-07-09
 - Added enterprise env checklist:
   - `docs/operations/ENTERPRISE_PRODUCTION_ENVIRONMENT_CHECKLIST.md`
 - `npm run release:production-final` now fails closed before runtime smoke if required enterprise configuration is missing.
+- Final enterprise runtime checker now requires env readiness evidence and validates the actual final runner command contract.
 
 ## Remaining work for 100%
 
@@ -29,6 +30,7 @@ Last updated: 2026-07-09
 | --- | --- | --- |
 | GitHub Actions Enterprise Production Gate run | Open | Run workflow with production secrets configured. |
 | Vercel production deployment | Pending / external | Vercel must report Ready for the promoted commit. |
+| Enterprise env readiness | Open until runtime runner executes | `enterprise-release-env-readiness.json` Complete/passed. |
 | Deployment smoke | Open | `deployment-smoke-validation.json` Complete/passed. |
 | Observability smoke | Open | `observability-smoke-validation.json` Complete/passed. |
 | Rollback dry-run | Open | `rollback-dry-run-validation.json` Complete/passed with validated known-good target. |
