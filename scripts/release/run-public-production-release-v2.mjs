@@ -93,6 +93,7 @@ function readEvidence(path) {
 function buildStepEnv(step) {
   const isE2eStep = step.slug.includes('test-e2e');
   const isUnitTestStep = step.slug === '03-test';
+  const isStaticSecurityCiStep = step.slug === '07-security-ci';
   const env = {
     ...process.env,
     CI: 'true',
@@ -104,8 +105,8 @@ function buildStepEnv(step) {
     ...(isE2eStep && !process.env.E2E_BASE_URL ? { PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true' } : {}),
   };
 
-  if (isUnitTestStep) {
-    env.RELEASE_TARGET = process.env.UNIT_TEST_RELEASE_TARGET || 'test';
+  if (isUnitTestStep || isStaticSecurityCiStep) {
+    env.RELEASE_TARGET = isUnitTestStep ? process.env.UNIT_TEST_RELEASE_TARGET || 'test' : 'static-ci';
     env.RISCK_COMPLY_ENTERPRISE_RELEASE = '';
     env.EUROCOMPLY_ENTERPRISE_RELEASE = '';
     env.PUBLIC_PRODUCTION_RELEASE_IN_PROGRESS = '';
@@ -124,120 +125,69 @@ function runStep(step) {
     `Started: ${startedAt}`,
     `Release target: ${releaseTarget}`,
     '',
+    '',
   ].join('\n');
 
-  process.stdout.write(`${header}\n`);
   const result = spawnSync(step.command, step.args, {
+    env: buildStepEnv(step),
     encoding: 'utf8',
     maxBuffer,
-    env: buildStepEnv(step),
+    shell: false,
   });
 
-  const stdout = result.stdout || '';
-  const stderr = result.stderr || '';
-  if (stdout) process.stdout.write(stdout);
-  if (stderr) process.stderr.write(stderr);
-
   const finishedAt = now();
-  const exitStatus = typeof result.status === 'number' ? result.status : 1;
-  const footer = [
-    '',
-    result.error ? `Runner error: ${result.error.message}` : null,
+  const output = [
+    header,
+    result.stdout || '',
+    result.stderr || '',
     `Finished: ${finishedAt}`,
-    `Exit status: ${exitStatus}`,
-    result.signal ? `Signal: ${result.signal}` : null,
-    '',
-  ].filter(Boolean).join('\n');
+    `Exit status: ${result.status ?? 'null'}`,
+  ].join('\n');
+  writeFileSync(log, output);
 
-  process.stdout.write(`${footer}\n`);
-  writeFileSync(log, `${header}\n${stdout}${stderr}${footer}\n`);
-  return { command: step.label, critical: step.critical, startedAt, finishedAt, exitStatus, exitCode: exitStatus, passed: exitStatus === 0, result: exitStatus === 0 ? 'passed' : 'failed', log };
+  const passed = result.status === 0;
+  return {
+    command: step.label,
+    critical: step.critical,
+    startedAt,
+    finishedAt,
+    exitStatus: result.status,
+    exitCode: result.status,
+    passed,
+    result: passed ? 'passed' : 'failed',
+    log,
+  };
 }
 
-const results = commands.map(runStep);
-const runtimeEvidence = requiredEvidence.map(readEvidence);
-const commandFailures = results.filter((item) => item.critical && !item.passed).map((item) => item.command);
-const evidenceFailures = runtimeEvidence
-  .filter((item) => !(item.present && item.status === 'Complete' && ['passed', 'Go', 'GO'].includes(item.outcome)))
-  .map((item) => item.path);
-const commitSha = process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null;
-const buildSha = process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || null;
+const startedAt = now();
+const commandResults = commands.map(runStep);
+const finishedAt = now();
+const runtimeEvidence = Object.fromEntries(requiredEvidence.map((path) => [path, readEvidence(path)]));
+const commandFailures = commandResults.filter((item) => item.critical && !item.passed);
+const evidenceFailures = Object.values(runtimeEvidence).filter((item) => item.status !== 'Complete' || item.outcome !== 'passed');
+
 const metadataFailures = [];
-if (!commitSha) metadataFailures.push('Last validated commit SHA is missing.');
-if (!buildSha) metadataFailures.push('Build SHA is missing.');
-const failures = [...commandFailures, ...evidenceFailures, ...metadataFailures];
-const overallResult = failures.length === 0 ? 'passed' : 'failed';
-const generatedAt = now();
-const summary = {
-  generatedAt,
-  repository: process.env.GITHUB_REPOSITORY || null,
-  workflow: process.env.GITHUB_WORKFLOW || null,
-  runId: process.env.GITHUB_RUN_ID || null,
-  runUrl: runUrl(),
-  commitSha,
-  buildSha,
-  refName: process.env.GITHUB_REF_NAME || null,
-  actor: process.env.GITHUB_ACTOR || null,
-  eventName: process.env.GITHUB_EVENT_NAME || null,
-  releaseTarget,
-  overallResult,
-  commandFailures,
-  evidenceFailures,
-  metadataFailures,
-  commands: results,
-  runtimeEvidence,
-  enterpriseReadinessScope: {
-    requiresProductionLikeE2e: true,
-    e2eMode: process.env.E2E_BASE_URL ? 'external-target-url' : 'built-next-start-server',
-    requiresStrictLiveRlsEvidence: true,
-    requiresObservabilitySmoke: true,
-    requiresRollbackDryRun: true,
-    requiresBranchProtectionEvidence: true,
-    requiresNoOpenP0RuntimeEvidence: true,
-    note: 'Enterprise release is No-Go unless every critical command and runtime evidence artifact is Complete/passed for the promoted commit and target.',
-  },
-  recursionGuard: {
-    npmRunReleaseDoesNotInvokeItself: true,
-    note: 'This entrypoint expands production launch checks into concrete commands and never invokes npm run release recursively.',
-  },
-};
+if (!process.env.RELEASE_COMMIT_SHA && !process.env.GITHUB_SHA) metadataFailures.push('Missing release commit SHA.');
+if (!process.env.RELEASE_BUILD_SHA && !process.env.NEXT_PUBLIC_BUILD_SHA && !process.env.GITHUB_SHA) metadataFailures.push('Missing release build SHA.');
+if (!process.env.RELEASE_ROLLBACK_TARGET && !process.env.LAST_KNOWN_GOOD_DEPLOYMENT_URL) metadataFailures.push('Missing rollback target.');
 
-writeFileSync(join(outputDir, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
-writeFileSync(join(outputDir, 'summary.md'), [
-  '# Enterprise production release validation summary',
-  '',
-  `- Generated at: ${summary.generatedAt}`,
-  `- Run URL: ${summary.runUrl || 'local/not in GitHub Actions'}`,
-  `- Commit SHA: ${summary.commitSha || 'missing'}`,
-  `- Build SHA: ${summary.buildSha || 'missing'}`,
-  `- Release target: ${summary.releaseTarget}`,
-  `- E2E mode: ${summary.enterpriseReadinessScope.e2eMode}`,
-  `- Overall result: **${summary.overallResult}**`,
-  '',
-  '| Command | Critical | Result | Exit status | Log |',
-  '| --- | --- | --- | --- | --- |',
-  ...summary.commands.map((item) => `| \`${item.command}\` | ${item.critical ? 'yes' : 'no'} | ${item.result} | ${item.exitStatus} | \`${item.log}\` |`),
-  '',
-  '| Runtime evidence | Present | Status | Outcome | Runner |',
-  '| --- | --- | --- | --- | --- |',
-  ...summary.runtimeEvidence.map((item) => `| \`${item.path}\` | ${item.present ? 'yes' : 'no'} | ${item.status} | ${item.outcome} | ${item.runner || ''} |`),
-  '',
-].join('\n'));
-
+const passed = commandFailures.length === 0 && evidenceFailures.length === 0 && metadataFailures.length === 0;
 const evidence = {
   schema: 'risck-comply.production-final-validation.v2',
   evidenceItem: 'production-final-validation',
-  status: overallResult === 'passed' ? 'Complete' : 'Open',
-  outcome: overallResult,
-  generatedAt,
-  reviewedAt: generatedAt,
+  status: passed ? 'Complete' : 'Open',
+  outcome: passed ? 'passed' : 'failed',
+  generatedAt: finishedAt,
+  reviewedAt: finishedAt,
   reviewer: 'RISCK COMPLY enterprise release automation',
   runner: 'RISCK COMPLY enterprise release automation',
   releaseTarget,
-  commitSha,
-  buildSha,
-  summary: overallResult === 'passed'
-    ? 'Enterprise production release validation passed with CI, production-like E2E, build, security, live RLS, deployment smoke, observability smoke, rollback dry-run, enterprise runtime evidence, branch protection evidence, and build metadata.'
+  commitSha: process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || null,
+  buildSha: process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || process.env.GITHUB_SHA || null,
+  startedAt,
+  finishedAt,
+  summary: passed
+    ? 'Enterprise production release validation passed for the promoted commit and target runtime.'
     : 'Enterprise production release validation failed; release remains No-Go until every P0 command, runtime evidence file, rollback target, commit SHA, and build SHA passes.',
   redactionConfirmation: 'No token, cookie, authorization header, secret value, raw DSN, or secret environment variable value is written to this evidence file.',
   noSecretsStored: true,
@@ -250,47 +200,102 @@ const evidence = {
     evidencePath,
     finalRunnerEvidencePath,
   ],
-  controlsVerified: overallResult === 'passed'
+  controlsVerified: passed
     ? [
-      'npm ci',
+      'deterministic-install',
       'lint',
       'typecheck',
-      'unit tests',
-      'production-like e2e tests',
-      'build',
-      'security:ci',
-      'strict live Supabase RLS evidence',
-      'deployment smoke',
-      'observability smoke',
-      'rollback dry-run',
-      'branch protection evidence',
-      'enterprise runtime evidence',
-      'release go/no-go evidence',
-      'commit SHA recorded',
-      'build SHA recorded',
+      'unit-tests',
+      'production-like-e2e',
+      'security-ci',
+      'supabase-live-rls',
+      'deployment-smoke',
+      'observability-smoke',
+      'rollback-dry-run',
+      'enterprise-runtime-evidence',
+      'final-go-no-go',
     ]
     : [],
-  commands: summary.commands,
-  runtimeEvidence: summary.runtimeEvidence,
-  enterpriseReadinessScope: summary.enterpriseReadinessScope,
-  failures: { commandFailures, evidenceFailures, metadataFailures },
-  releaseGate: overallResult === 'passed'
-    ? 'Enterprise Production Go is allowed only if the approval record also selects Go for the same commit and target.'
-    : 'Enterprise Production Go is blocked. Keep No-Go until this evidence is Complete/passed.',
+  commands: commandResults,
+  runtimeEvidence,
+  commandFailures,
+  evidenceFailures,
+  metadataFailures,
+  releaseGate: passed
+    ? 'Go candidate: final production validation passed. Confirm release-go-no-go finalDecision before announcing.'
+    : 'No-Go: final production validation failed.',
   evidenceIntegrity: {
     containsSensitiveValues: false,
     valuesRedacted: true,
     authorizationHeaderStored: false,
     cookiesStored: false,
+    rawUrlsStored: false,
+  },
+};
+
+const summary = {
+  generatedAt: finishedAt,
+  repository: process.env.GITHUB_REPOSITORY || null,
+  workflow: process.env.GITHUB_WORKFLOW || null,
+  runId: process.env.GITHUB_RUN_ID || null,
+  runUrl: runUrl(),
+  commitSha: evidence.commitSha,
+  buildSha: evidence.buildSha,
+  refName: process.env.GITHUB_REF_NAME || null,
+  actor: process.env.GITHUB_ACTOR || null,
+  eventName: process.env.GITHUB_EVENT_NAME || null,
+  releaseTarget,
+  overallResult: passed ? 'passed' : 'failed',
+  commandFailures: commandFailures.map((item) => ({ command: item.command, log: item.log, exitStatus: item.exitStatus })),
+  evidenceFailures,
+  metadataFailures,
+  commands: commandResults,
+  runtimeEvidence,
+  enterpriseReadinessScope: {
+    staticSecurityCiIsolated: true,
+    liveRuntimeChecksRunInDedicatedSteps: true,
+    supabaseLiveRlsCommand: 'npm run security:rls:live',
+    deploymentSmokeCommand: 'npm run release:deployment-smoke',
+  },
+  recursionGuard: {
+    productionFinalDoesNotCallEnterpriseReadiness: true,
   },
 };
 
 writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
 writeFileSync(finalRunnerEvidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+writeFileSync(join(outputDir, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
+writeFileSync(join(outputDir, 'summary.md'), [
+  '# RISCK COMPLY Enterprise Production Final Gate',
+  '',
+  `- Result: ${passed ? 'passed' : 'failed'}`,
+  `- Generated: ${finishedAt}`,
+  `- Commit: ${evidence.commitSha || 'unknown'}`,
+  `- Build: ${evidence.buildSha || 'unknown'}`,
+  `- Release target: ${releaseTarget}`,
+  '',
+  '## Command failures',
+  ...(commandFailures.length ? commandFailures.map((item) => `- ${item.command} (${item.log})`) : ['- none']),
+  '',
+  '## Evidence failures',
+  ...(evidenceFailures.length ? evidenceFailures.map((item) => `- ${item.path}: status=${item.status}, outcome=${item.outcome}`) : ['- none']),
+  '',
+  '## Metadata failures',
+  ...(metadataFailures.length ? metadataFailures.map((item) => `- ${item}`) : ['- none']),
+  '',
+].join('\n'));
 
-if (overallResult !== 'passed') {
-  console.error('Enterprise production release validation failed. See release-validation/enterprise-production/summary.json and docs/security/evidence/runtime/production-final-validation.json.');
+console.log(`Wrote ${evidencePath}`);
+console.log(`Wrote ${finalRunnerEvidencePath}`);
+console.log(`Wrote ${join(outputDir, 'summary.json')}`);
+console.log(`Wrote ${join(outputDir, 'summary.md')}`);
+
+if (!passed) {
+  console.error('Enterprise production final validation failed.');
+  if (commandFailures.length) console.error(`Command failures: ${commandFailures.map((item) => item.command).join(', ')}`);
+  if (evidenceFailures.length) console.error(`Evidence failures: ${evidenceFailures.map((item) => `${item.path} (${item.status}/${item.outcome})`).join(', ')}`);
+  if (metadataFailures.length) console.error(`Metadata failures: ${metadataFailures.join('; ')}`);
   process.exit(1);
 }
 
-console.log('Enterprise production release validation passed.');
+console.log('Enterprise production final validation passed.');
