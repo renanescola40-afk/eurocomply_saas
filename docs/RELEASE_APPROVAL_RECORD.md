@@ -7,7 +7,7 @@ This document is the release owner record used to approve or reject a RISCK COMP
 - Release name: RISCK COMPLY Enterprise Production Final Gate
 - Date: 2026-07-10
 - Repository: `renanescola40-afk/eurocomply_saas`
-- Evidence update branch: `fix-enterprise-final-runtime-gate`
+- Evidence update branch: `fix-final-gate-runtime-followup`
 - Target environment: Production / enterprise candidate
 - Release owner: @renansilva2002 / renanescola40-afk
 - Incident owner: @renansilva2002 / renanescola40-afk
@@ -22,7 +22,8 @@ This document is the release owner record used to approve or reject a RISCK COMP
 ## Candidate deployment
 
 - Deployment URL: `https://www.risckcomply.com`
-- Assessed commit: current PR merge commit / promoted deployment candidate
+- Assessed commit SHA: current PR merge commit / promoted deployment candidate.
+- Build SHA: current PR merge commit / promoted deployment candidate.
 - Deployment URL functional verification: **Open**
 - The runtime URL was not functionally verified for final Enterprise Production Go in this approval record.
 - Functional verification and dry-run evidence not attached means the release remains blocked.
@@ -51,7 +52,7 @@ Approval is intentionally withheld while P0 blockers remain open. This record is
   - Auth, billing, audit logging, tenant isolation or security headers regress in production.
   - Suspected data exposure, secret exposure or material security incident.
 
-## Exceptions
+## exceptions
 
 No Enterprise Production exception is approved. Controlled beta exceptions require owner, expiry, mitigation, claim restrictions and evidence that stays Open or Exception rather than being falsely marked passed.
 
@@ -69,3 +70,15 @@ No Enterprise Production exception is approved. Controlled beta exceptions requi
 **No-Go.**
 
 The release gate has been hardened, but approval is withheld because the final enterprise production runner has not produced complete runtime evidence for the current promoted target and commit. Enterprise claims, enterprise procurement readiness, paid production launch and customer-facing Go messaging remain blocked.
+
+## Final sign-off
+
+- Release owner: @renansilva2002 / renanescola40-afk
+- Incident owner: @renansilva2002 / renanescola40-afk
+- Rollback owner: @renansilva2002 / renanescola40-afk
+- Customer communication owner: @renansilva2002 / renanescola40-afk
+- Support owner: @renansilva2002 / renanescola40-afk
+- Security owner: @renansilva2002 / renanescola40-afk
+- Approver: Not granted
+- Date: 2026-07-10
+- Final notes: Release remains blocked. Do not present this package to customers, procurement or enterprise buyers as approved production/enterprise evidence until the final runner produces complete passing evidence.
