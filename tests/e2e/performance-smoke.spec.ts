@@ -45,14 +45,14 @@ async function expectProtectedRouteStable(page: Page, path: string, label: strin
   }
 }
 
-test.describe('EuroComply performance smoke', () => {
+test.describe('RISCK COMPLY performance smoke', () => {
   test('landing page loads and records browser timing', async ({ page }) => {
     const response = await page.goto('/pt', { waitUntil: 'domcontentloaded' });
 
     expect(response?.status(), 'landing did not return a response').toBeDefined();
     expect(response?.status(), 'landing returned a server error').toBeLessThan(500);
     await expect(page.locator('body')).toBeVisible();
-    await expect(page.getByText(/EuroComply/i).first()).toBeVisible();
+    await expect(page.getByText(/RISCK COMPLY/i).first()).toBeVisible();
 
     const timing = await getNavigationTiming(page);
     test.info().annotations.push({

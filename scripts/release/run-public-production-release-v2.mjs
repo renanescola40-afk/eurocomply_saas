@@ -90,6 +90,17 @@ function readEvidence(path) {
   }
 }
 
+function disableLiveSupabaseRuntimeChecks(env) {
+  env.SUPABASE_ACCESS_TOKEN = '';
+  env.SUPABASE_DB_URL = '';
+  env.DATABASE_URL = '';
+  env.POSTGRES_URL = '';
+  env.POSTGRES_PRISMA_URL = '';
+  env.POSTGRES_URL_NON_POOLING = '';
+  env.SUPABASE_POOLER_URL = '';
+  env.SUPABASE_DIRECT_URL = '';
+}
+
 function buildStepEnv(step) {
   const isE2eStep = step.slug.includes('test-e2e');
   const isUnitTestStep = step.slug === '03-test';
@@ -111,6 +122,10 @@ function buildStepEnv(step) {
     env.EUROCOMPLY_ENTERPRISE_RELEASE = '';
     env.PUBLIC_PRODUCTION_RELEASE_IN_PROGRESS = '';
     env.FINAL_VALIDATION_IN_PROGRESS = '';
+  }
+
+  if (isStaticSecurityCiStep) {
+    disableLiveSupabaseRuntimeChecks(env);
   }
 
   return env;
@@ -253,6 +268,7 @@ const summary = {
   runtimeEvidence,
   enterpriseReadinessScope: {
     staticSecurityCiIsolated: true,
+    staticSecurityCiSkipsLiveSupabaseRuntimeConnections: true,
     liveRuntimeChecksRunInDedicatedSteps: true,
     supabaseLiveRlsCommand: 'npm run security:rls:live',
     deploymentSmokeCommand: 'npm run release:deployment-smoke',
@@ -288,14 +304,10 @@ writeFileSync(join(outputDir, 'summary.md'), [
 console.log(`Wrote ${evidencePath}`);
 console.log(`Wrote ${finalRunnerEvidencePath}`);
 console.log(`Wrote ${join(outputDir, 'summary.json')}`);
-console.log(`Wrote ${join(outputDir, 'summary.md')}`);
 
 if (!passed) {
-  console.error('Enterprise production final validation failed.');
-  if (commandFailures.length) console.error(`Command failures: ${commandFailures.map((item) => item.command).join(', ')}`);
-  if (evidenceFailures.length) console.error(`Evidence failures: ${evidenceFailures.map((item) => `${item.path} (${item.status}/${item.outcome})`).join(', ')}`);
-  if (metadataFailures.length) console.error(`Metadata failures: ${metadataFailures.join('; ')}`);
+  console.error('Enterprise production final gate failed.');
   process.exit(1);
 }
 
-console.log('Enterprise production final validation passed.');
+console.log('Enterprise production final gate passed.');
