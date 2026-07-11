@@ -29,20 +29,23 @@
     "made the Full Security Suite production-like Playwright E2E gate fail closed",
     "moved mandatory E2E after the production build",
     "added a contract test preventing E2E skip regression",
-    "corrected the proxy entrypoint description to Supabase Auth",
-    "added a safe dependency-free allowlisted load-smoke runner and tests",
+    "kept Supabase Auth as the authoritative runtime identity stack",
+    "removed unused tenant detail getters that propagated raw provider errors",
+    "sanitized active organization and member query errors",
+    "registered this audit as fail-closed Open/no_go evidence",
+    "added a safe dependency-free allowlisted same-origin load-smoke runner and discoverable tests",
     "created enterprise architecture, GDPR controls, database/RLS, UX and load-test documentation",
     "created docs/ENTERPRISE_10_10_FINAL_REPORT.md"
   ],
   "scores": {
-    "codeAndArchitecture": 8.8,
-    "securityAndCompliance": 8.4,
+    "codeAndArchitecture": 8.9,
+    "securityAndCompliance": 8.6,
     "databaseAndPerformance": 8.0,
     "uxAndFrontend": 7.9,
-    "infrastructureAndDeploy": 8.2,
+    "infrastructureAndDeploy": 8.4,
     "accessAndLogin": 8.7,
     "goToProductionEnterprise": 4.5,
-    "overall": 7.8
+    "overall": 7.9
   },
   "validation": {
     "connectorAuditOnly": true,
@@ -64,8 +67,10 @@
     "docs/performance/LOAD_TEST_PLAN.md",
     ".github/workflows/full-security-suite.yml",
     "tests/security/enterprise-e2e-gate.test.ts",
+    "tests/security/enterprise-audit-evidence-contract.test.ts",
+    "tests/security/server-query-error-sanitization.test.ts",
+    "tests/performance/run-http-load-smoke.test.ts",
     "scripts/performance/run-http-load-smoke.mjs",
-    "scripts/performance/run-http-load-smoke.test.mjs",
     "docs/security/evidence/runtime/enterprise-10-10-audit-2026-07-11.json"
   ],
   "evidenceIntegrity": {
