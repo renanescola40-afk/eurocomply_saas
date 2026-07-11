@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
 import { validateStepUpMfaRuntimeEvidence } from './validate-step-up-mfa-runtime-evidence.mjs';
 import { validateStripeRuntimeEvidence } from './validate-stripe-runtime-evidence.mjs';
+import { validateUploadScannerRuntimeEvidence } from './validate-upload-scanner-runtime-evidence.mjs';
 
 const runtimeDir = 'docs/security/evidence/runtime';
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
@@ -52,7 +53,11 @@ if (complete(files.envReadiness, envReadiness, 'Enterprise env readiness evidenc
 basic('Production secrets provider evidence', files.productionSecrets);
 const supabase = readJson(files.supabaseRls);
 if (complete(files.supabaseRls, supabase, 'Supabase live RLS evidence') && supabase.outcome !== 'passed') failures.push(`${files.supabaseRls} outcome must be passed`);
-basic('Upload scanner evidence', files.uploadScanner);
+const uploadScanner = readJson(files.uploadScanner);
+if (uploadScanner) {
+  for (const failure of validateUploadScannerRuntimeEvidence(uploadScanner)) failures.push(`${files.uploadScanner} ${failure}`);
+  complete(files.uploadScanner, uploadScanner, 'Upload scanner evidence');
+}
 const stripe = readJson(files.stripeBilling);
 if (stripe) {
   for (const failure of validateStripeRuntimeEvidence(stripe)) failures.push(`${files.stripeBilling} ${failure}`);
