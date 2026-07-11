@@ -1,4 +1,4 @@
-import { createAdminClient, tryCreateAdminClient } from '@/lib/supabase/admin';
+import { tryCreateAdminClient } from '@/lib/supabase/admin';
 
 export async function listRisks(organizationId: string) {
   const supabase = tryCreateAdminClient();
@@ -16,21 +16,4 @@ export async function listRisks(organizationId: string) {
   }
 
   return data ?? [];
-}
-
-export async function getRisk(riskId: string, organizationId: string) {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('risks')
-    .select('*')
-    .eq('id', riskId)
-    .eq('organization_id', organizationId)
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
 }
