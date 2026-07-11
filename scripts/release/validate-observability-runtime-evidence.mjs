@@ -5,7 +5,12 @@ function parseTimestamp(value) {
 
 export function validateObservabilityRuntimeEvidence(
   evidence,
-  { now = new Date(), maxAgeDays = 7 } = {},
+  {
+    now = new Date(),
+    maxAgeDays = 7,
+    expectedRepository = 'renanescola40-afk/eurocomply_saas',
+    expectedBranch = 'main',
+  } = {},
 ) {
   const failures = [];
   const nowMs = now instanceof Date ? now.getTime() : Date.parse(String(now));
@@ -37,6 +42,23 @@ export function validateObservabilityRuntimeEvidence(
   if (!['production', 'enterprise'].includes(evidence?.releaseTarget)) {
     failures.push('releaseTarget must be production or enterprise');
   }
+
+  if (evidence?.runtimeContext?.generatedByGithubActions !== true) {
+    failures.push('runtimeContext.generatedByGithubActions must be true');
+  }
+  if (!String(evidence?.runtimeContext?.githubRunId ?? '').trim()) {
+    failures.push('runtimeContext.githubRunId is required');
+  }
+  if (evidence?.runtimeContext?.repository !== expectedRepository) {
+    failures.push(`runtimeContext.repository must be ${expectedRepository}`);
+  }
+  if (evidence?.runtimeContext?.branch !== expectedBranch) {
+    failures.push(`runtimeContext.branch must be ${expectedBranch}`);
+  }
+  if (!/^[a-f0-9]{40}$/i.test(String(evidence?.runtimeContext?.commitSha ?? ''))) {
+    failures.push('runtimeContext.commitSha must be a full commit SHA');
+  }
+
   if (evidence?.runtimeConfiguration?.targetCount < 1) {
     failures.push('runtimeConfiguration.targetCount must be at least 1');
   }
