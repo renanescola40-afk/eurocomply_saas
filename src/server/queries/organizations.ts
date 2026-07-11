@@ -11,7 +11,8 @@ export async function listUserOrganizations(userId: string) {
     .order('created_at', { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    console.warn('[organizations] list_for_user_failed', { code: error.code ?? 'unknown' });
+    throw new Error('Unable to load organizations.');
   }
 
   return data ?? [];
@@ -27,20 +28,4 @@ export async function getCurrentOrganizationForUser(userId: string) {
   }
 
   return organization ?? null;
-}
-
-export async function getOrganizationBySlug(slug: string) {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('organizations')
-    .select('id, name, slug, created_at, updated_at')
-    .eq('slug', slug)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
 }
