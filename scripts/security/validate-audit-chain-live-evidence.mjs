@@ -17,6 +17,9 @@ export function validateAuditChainLiveEvidence(
   {
     now = new Date(),
     maxAgeDays = 7,
+    expectedRepository = 'renanescola40-afk/eurocomply_saas',
+    expectedBranch = 'main',
+    expectedCommitSha,
   } = {},
 ) {
   const failures = [];
@@ -49,35 +52,61 @@ export function validateAuditChainLiveEvidence(
     }
   }
 
-  if (evidence?.status === 'Complete') {
-    if (evidence?.outcome !== 'passed') {
-      failures.push('Complete evidence outcome must be passed');
-    }
+  if (evidence?.status !== 'Complete') return failures;
 
-    for (const check of requiredAuditChainChecks) {
-      if (evidence?.acceptanceCriteria?.[check] !== true) {
-        failures.push(`acceptanceCriteria.${check} must be true`);
-      }
-    }
+  if (evidence?.outcome !== 'passed') {
+    failures.push('Complete evidence outcome must be passed');
+  }
 
-    if (evidence?.targetLiveValidation?.status !== 'Complete') {
-      failures.push('targetLiveValidation.status must be Complete');
+  for (const check of requiredAuditChainChecks) {
+    if (evidence?.acceptanceCriteria?.[check] !== true) {
+      failures.push(`acceptanceCriteria.${check} must be true`);
     }
+  }
 
-    const proof = evidence?.verification_provenance;
-    if (!proof || typeof proof !== 'object') {
-      failures.push('Complete evidence requires verification_provenance');
-    } else {
-      if (!['github_actions', 'reviewed_runtime'].includes(proof.method)) {
-        failures.push('verification_provenance.method must be github_actions or reviewed_runtime');
-      }
-      if (!String(proof.reference ?? '').trim()) {
-        failures.push('verification_provenance.reference is required');
-      }
-      if (!parseTimestamp(proof.verifiedAt)) {
-        failures.push('verification_provenance.verifiedAt must be an ISO-8601 timestamp');
-      }
+  if (evidence?.targetLiveValidation?.status !== 'Complete') {
+    failures.push('targetLiveValidation.status must be Complete');
+  }
+
+  const proof = evidence?.verification_provenance;
+  if (!proof || typeof proof !== 'object') {
+    failures.push('Complete evidence requires verification_provenance');
+  } else {
+    if (proof.method !== 'github_actions') {
+      failures.push('verification_provenance.method must be github_actions');
     }
+    if (!String(proof.reference ?? '').trim()) {
+      failures.push('verification_provenance.reference is required');
+    }
+    if (!parseTimestamp(proof.verifiedAt)) {
+      failures.push('verification_provenance.verifiedAt must be an ISO-8601 timestamp');
+    }
+    if (proof.repository !== expectedRepository) {
+      failures.push(`verification_provenance.repository must be ${expectedRepository}`);
+    }
+    if (proof.branch !== expectedBranch) {
+      failures.push(`verification_provenance.branch must be ${expectedBranch}`);
+    }
+    if (!String(proof.githubRunId ?? '').trim()) {
+      failures.push('verification_provenance.githubRunId is required');
+    }
+    const commitSha = String(proof.commitSha ?? evidence?.commitSha ?? '');
+    if (!/^[a-f0-9]{40}$/i.test(commitSha)) {
+      failures.push('verification provenance commit SHA must be a full commit SHA');
+    }
+    if (expectedCommitSha && commitSha !== expectedCommitSha) {
+      failures.push(`verification provenance commit SHA must match ${expectedCommitSha}`);
+    }
+  }
+
+  if (evidence?.evidenceIntegrity?.containsSensitiveValues !== false) {
+    failures.push('evidenceIntegrity.containsSensitiveValues must be false');
+  }
+  if (evidence?.evidenceIntegrity?.credentialsStored !== false) {
+    failures.push('evidenceIntegrity.credentialsStored must be false');
+  }
+  if (evidence?.evidenceIntegrity?.rawAuditPayloadsStored !== false) {
+    failures.push('evidenceIntegrity.rawAuditPayloadsStored must be false');
   }
 
   return failures;
