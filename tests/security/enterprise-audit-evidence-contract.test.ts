@@ -9,7 +9,7 @@ const evidence = JSON.parse(
 describe('enterprise audit runtime evidence contract', () => {
   it('registers the audit evidence type without treating it as completed runtime proof', () => {
     expect(checker).toContain("'enterprise-10-10-audit'");
-    expect(checker).toContain('checkEnterpriseAuditOpenPlaceholder');
+    expect(checker).toMatch(/function checkEnterpriseAuditOpen(?:Evidence|Placeholder)\(/);
     expect(evidence.status).toBe('Open');
     expect(evidence.outcome).toBe('no_go');
     expect(evidence.decision).toBe('No-Go');
