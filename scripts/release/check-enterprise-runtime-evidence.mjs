@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
 import { validateDeploymentRuntimeEvidence } from './validate-deployment-runtime-evidence.mjs';
 import { validateObservabilityRuntimeEvidence } from './validate-observability-runtime-evidence.mjs';
+import { validateProductionSecretsRuntimeEvidence } from './validate-production-secrets-runtime-evidence.mjs';
 import { validateRollbackRuntimeEvidence } from './validate-rollback-runtime-evidence.mjs';
 import { validateStepUpMfaRuntimeEvidence } from './validate-step-up-mfa-runtime-evidence.mjs';
 import { validateStripeRuntimeEvidence } from './validate-stripe-runtime-evidence.mjs';
@@ -54,7 +55,11 @@ if (complete(files.envReadiness, envReadiness, 'Enterprise env readiness evidenc
   for (const check of envReadiness.checks ?? []) if (check.required === true && check.passed !== true) failures.push(`${files.envReadiness} required check ${check.name ?? '<unknown>'} must pass`);
 }
 
-basic('Production secrets provider evidence', files.productionSecrets);
+const productionSecrets = readJson(files.productionSecrets);
+if (productionSecrets) {
+  for (const failure of validateProductionSecretsRuntimeEvidence(productionSecrets, { expectedCommitSha: process.env.GITHUB_SHA })) failures.push(`${files.productionSecrets} ${failure}`);
+  complete(files.productionSecrets, productionSecrets, 'Production secrets provider evidence');
+}
 const supabase = readJson(files.supabaseRls);
 if (supabase) {
   for (const failure of validateSupabaseRlsRuntimeEvidence(supabase)) failures.push(`${files.supabaseRls} ${failure}`);
