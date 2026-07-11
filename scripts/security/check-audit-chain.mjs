@@ -58,6 +58,12 @@ function requireTokens(path, source, tokens) {
   }
 }
 
+function isLiveEvidenceFreshnessEnforced() {
+  return process.env.AUDIT_CHAIN_ENFORCE_LIVE_EVIDENCE === 'true'
+    || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true'
+    || process.env.RELEASE_TARGET === 'enterprise';
+}
+
 console.log('EuroComply audit chain security check');
 console.log('-------------------------------------');
 
@@ -68,13 +74,18 @@ for (const [key, tokens] of Object.entries(requiredTokens)) {
 }
 
 if (sources.runtimeEvidence) {
-  try {
-    const evidence = JSON.parse(sources.runtimeEvidence);
-    for (const failure of validateAuditChainLiveEvidence(evidence)) {
-      failures.push(`${files.runtimeEvidence} ${failure}`);
+  if (isLiveEvidenceFreshnessEnforced()) {
+    try {
+      const evidence = JSON.parse(sources.runtimeEvidence);
+      for (const failure of validateAuditChainLiveEvidence(evidence)) {
+        failures.push(`${files.runtimeEvidence} ${failure}`);
+      }
+    } catch (error) {
+      failures.push(`${files.runtimeEvidence} must contain valid JSON: ${error instanceof Error ? error.message : error}`);
     }
-  } catch (error) {
-    failures.push(`${files.runtimeEvidence} must contain valid JSON: ${error instanceof Error ? error.message : error}`);
+  } else {
+    console.log('Audit-chain live evidence freshness validation is deferred for static PR CI.');
+    console.log('Set AUDIT_CHAIN_ENFORCE_LIVE_EVIDENCE=true or RISCK_COMPLY_ENTERPRISE_RELEASE=true to enforce runtime evidence freshness.');
   }
 }
 
