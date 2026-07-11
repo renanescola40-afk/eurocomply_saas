@@ -2,14 +2,16 @@
 
 Audit date: 2026-07-11  
 Repository: `renanescola40-afk/eurocomply_saas`  
-Baseline: `main` at `78b05d4a31f7cc2545d02fb24add7f187cd2a7ac`  
-Remediation branch: `agent/enterprise-10-10-audit`
+Initial evidence baseline: `main` at `78b05d4a31f7cc2545d02fb24add7f187cd2a7ac`  
+Remediation branch merge base: `99e60215646cf7a2387a6d64b4131aeb49fdf312`  
+Remediation branch: `agent/enterprise-10-10-audit`  
+Pull request: `#969`
 
 ## Final decision
 
 # NO-GO for enterprise public production
 
-The repository has strong static controls and a mature release-gating framework, but the exact promoted commit does not have Complete/passed runtime evidence for deployment smoke, observability, rollback, final validation and external security review. A green repository CI status cannot replace those proofs.
+The repository has strong static controls and a mature release-gating framework, but the exact promoted commit does not have Complete/passed runtime evidence for deployment smoke, observability, rollback, final validation, current-commit tenant isolation, recovery and external security review. A green repository CI status cannot replace those proofs.
 
 The product may continue through internal/staging validation and controlled non-enterprise testing. It must not be marketed as certified, audited, pentested, fully compliant, guaranteed compliant, SOC 2 ready, ISO certified or production-enterprise approved.
 
@@ -28,7 +30,7 @@ The primary issue is not absence of controls. It is the difference between repos
 
 ## What was corrected in this audit
 
-### 1. Mandatory E2E gate
+### 1. Mandatory production-like E2E gate
 
 The Full Security Suite previously allowed the main Playwright E2E step to print a skip message and still let the core job succeed when runtime configuration was absent. This contradicted the stated No-Go policy.
 
@@ -38,7 +40,8 @@ Corrected behavior:
 - Playwright uses the built production server;
 - missing `test:e2e`, missing Playwright config or intentionally unavailable runtime exits non-zero;
 - no green skip path remains;
-- a Vitest contract test prevents regression.
+- a Vitest contract test prevents regression;
+- the enterprise production workflow uses deterministic install without dependency lifecycle scripts before the explicit build/test commands.
 
 ### 2. Authentication architecture drift
 
@@ -46,7 +49,33 @@ Corrected behavior:
 
 Historical Clerk-named migrations are not automatically deleted because already-applied migrations and evidence history may depend on them. They remain historical/non-runtime and must not be used as a second identity source.
 
-### 3. Safe load-smoke tooling
+### 3. Raw database error and dead-query cleanup
+
+The audit found four unused tenant detail getters in risks, vendors, compliance tasks and organizations. They used the Supabase admin client and propagated raw `error.message` values. The unused getters were removed.
+
+Active organization and membership queries were changed to:
+
+- log only a stable provider error code;
+- throw a generic application-safe message;
+- avoid exposing Postgres/Supabase error text;
+- retain organization scoping;
+- remain protected by a regression test that rejects raw provider-error propagation.
+
+### 4. Runtime evidence hygiene
+
+The enterprise audit JSON is registered as an explicit `Open/no_go` evidence type. Its contract requires:
+
+- decision `No-Go`;
+- blocked release language;
+- redaction confirmation;
+- `placeholderOnly=true`;
+- no customer data or sensitive values;
+- confirmation that runtime proof was not invented;
+- no completed controls presented as passed.
+
+P0 evidence hygiene can therefore validate the audit record without mistaking it for production proof.
+
+### 5. Safe load-smoke tooling
 
 Added a dependency-free Node.js load-smoke runner with:
 
@@ -59,9 +88,9 @@ Added a dependency-free Node.js load-smoke runner with:
 - redacted evidence output;
 - unit tests for allowlisting and percentile calculations.
 
-### 4. Required documentation
+### 6. Required documentation
 
-Created:
+Created or replaced:
 
 - `docs/architecture/ENTERPRISE_ARCHITECTURE.md`
 - `docs/compliance/GDPR_OPERATIONAL_CONTROLS.md`
@@ -74,7 +103,7 @@ Created:
 
 ### Repository/CI status
 
-The reviewed baseline commit reported success for:
+The initial reviewed baseline commit reported success for:
 
 - `CI / quality`;
 - repository secret exposure scan;
@@ -82,6 +111,8 @@ The reviewed baseline commit reported success for:
 - Vercel deployment status.
 
 This proves the configured checks passed for that commit. It does not prove enterprise production approval because runtime evidence gates intentionally remain separate.
+
+During remediation, GitHub Actions also demonstrated that lint and typecheck passed and that the test suite contained more than 600 security/product tests. A transient contract-test naming mismatch was identified from the uploaded CI diagnostics and corrected. The final branch SHA must still complete the full workflow set before merge.
 
 ### Runtime evidence status
 
@@ -92,8 +123,9 @@ This proves the configured checks passed for that commit. It does not prove ente
 | Observability smoke | `Exception / not_run` | Protected route/script exists, but no production execution proof |
 | Rollback dry-run | `Open / failed` | Previous known-good target and health proof not validated |
 | Enterprise final readiness | `Open / no_go` | Explicit repository decision remains No-Go |
+| Enterprise 10/10 audit | `Open / no_go` | Redacted assessment only; not runtime proof |
 | External security review/pentest | `Open / not_started` | No real third-party report; no pentest claim allowed |
-| Supabase live RLS | `Complete / passed` on commit `6a2fa4...` | Strong historical proof, but stale/unbound to reviewed commit |
+| Supabase live RLS | `Complete / passed` on commit `6a2fa4...` | Strong historical proof, but stale/unbound to reviewed release |
 | Upload malware scanner | `Complete` on commit `b9a190...` | Real ClamAV proof exists historically; current release freshness still required |
 | Stripe runtime/static evidence | Static controls marked complete | Paid production remains gated by current CI and runtime proof |
 
@@ -101,15 +133,15 @@ This proves the configured checks passed for that commit. It does not prove ente
 
 | Pillar | Score | Assessment |
 | --- | ---: | --- |
-| 1. Code & Architecture | 8.8/10 | Strong modular security/release controls; documentation drift corrected; full dead-code/duplication proof requires repository execution and deeper dependency graph analysis |
-| 2. Security & Compliance | 8.4/10 | Extensive OWASP controls and honest trust copy; external review, current runtime proof, retention/transfer evidence remain open |
+| 1. Code & Architecture | 8.9/10 | Strong modular security/release controls; auth drift, dead tenant getters and raw query errors corrected; complete dependency/dead-code graph proof still requires dedicated tooling |
+| 2. Security & Compliance | 8.6/10 | Extensive OWASP controls, fail-closed evidence contracts and honest trust copy; external review, current runtime proof, retention/transfer evidence remain open |
 | 3. Database & Performance | 8.0/10 | Mature RLS model and historical tenant A/B proof; current-SHA RLS, query plans, restore drill and measured RPO/RTO missing |
 | 4. UX & Frontend | 7.9/10 | Good enterprise state/copy architecture; production-like E2E, manual WCAG evidence and full viewport screenshots incomplete |
-| 5. Infrastructure & Deploy | 8.2/10 | Strong CI/SAST/secret/SBOM/release runner design; deployment/observability/rollback runtime proof incomplete |
+| 5. Infrastructure & Deploy | 8.4/10 | Strong CI/SAST/secret/SBOM/release runner design and mandatory E2E hardening; deployment/observability/rollback runtime proof incomplete |
 | 6. Access & Login | 8.7/10 | Supabase Auth is primary; middleware/onboarding flow is coherent and Clerk runtime imports are absent; current browser/session negative evidence still required |
 | 7. Go to Production Enterprise | 4.5/10 | Intentionally blocked by missing current runtime evidence, external review and recovery proof |
 
-**Overall engineering maturity: 7.8/10.**
+**Overall engineering maturity: 7.9/10.**
 
 This is not a 10/10 enterprise production state yet. The lower release score is deliberate: operational evidence and recovery capability carry more weight than the number of static scripts or documents.
 
@@ -172,24 +204,37 @@ The final command may pass only when every critical command and required evidenc
 
 ## Commands and checks actually observed during this connector audit
 
-No local `npm ci`, lint, typecheck, unit, E2E, build or security command was claimed as executed by the connector environment. The environment could not clone the repository or use `gh`; therefore, this audit used GitHub repository contents, commit metadata, status checks and committed evidence.
+No local `npm ci`, lint, typecheck, unit, E2E, build or security command was claimed as executed by the connector environment. The local environment could not clone the repository or use `gh`; therefore, this audit used GitHub repository contents, commit metadata, workflow steps, status checks, uploaded diagnostics and committed evidence.
 
-Observed on baseline commit through GitHub status:
+Observed through GitHub Actions during the audit:
 
-- `CI / quality`: success;
-- `Scan repository for accidental secret exposure`: success;
-- `Enterprise merge/deploy gate`: success;
-- `Vercel`: success.
+- deterministic dependency installation completed in CI;
+- package-lock alignment completed;
+- lint completed successfully;
+- typecheck completed successfully;
+- the test diagnostic run executed 605 tests, with 604 passing and one naming-contract failure that was corrected in a later commit;
+- P0 Final Release Gate passed after the enterprise audit evidence contract was registered;
+- P0 Runtime Evidence passed after the same correction;
+- Gitleaks, Semgrep, CodeQL, dependency review, secret scanning and upload-security workflows were observed running or passing on remediation SHAs.
 
-Validation of this remediation branch must come from the PR workflows. Until those checks complete successfully, branch changes remain unverified.
+The final remediation SHA must complete all required checks. Production release evidence remains separately blocked.
 
-## Files changed by this audit
+## Files changed by this audit PR
 
+- `.github/workflows/enterprise-production-gate.yml`
 - `.github/workflows/full-security-suite.yml`
 - `proxy.ts`
-- `tests/security/enterprise-e2e-gate.test.ts`
+- `src/server/queries/compliance-tasks.ts`
+- `src/server/queries/members.ts`
+- `src/server/queries/organizations.ts`
+- `src/server/queries/risks.ts`
+- `src/server/queries/vendors.ts`
+- `scripts/security/check-p0-runtime-evidence-files.mjs`
 - `scripts/performance/run-http-load-smoke.mjs`
 - `scripts/performance/run-http-load-smoke.test.mjs`
+- `tests/security/enterprise-audit-evidence-contract.test.ts`
+- `tests/security/enterprise-e2e-gate.test.ts`
+- `tests/security/server-query-error-sanitization.test.ts`
 - `docs/architecture/ENTERPRISE_ARCHITECTURE.md`
 - `docs/compliance/GDPR_OPERATIONAL_CONTROLS.md`
 - `docs/database/PERFORMANCE_AND_RLS_REVIEW.md`
@@ -200,7 +245,7 @@ Validation of this remediation branch must come from the PR workflows. Until tho
 
 ## Required next steps
 
-1. Review and merge this branch only after all PR checks pass.
+1. Keep PR #969 open and mergeable; merge only after every required PR check succeeds and review conversations are resolved.
 2. Promote a specific commit to a production-like target.
 3. Configure release URL, health token, Sentry, Supabase, Stripe, Redis, scanner, commit/build SHA and rollback target through secret/variable stores.
 4. Run `npm run release:production-final` in the approved runner.
