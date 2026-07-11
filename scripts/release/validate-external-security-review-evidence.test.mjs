@@ -10,7 +10,7 @@ function completeEvidence(overrides = {}) {
     methodology: 'OWASP ASVS and API Security Top 10',
     scope: ['auth','RBAC','tenant isolation','APIs','BOLA/IDOR','uploads','malware scanner','billing Stripe','webhooks','audit chain','exports','GDPR delete','rate limiting','observability','secrets'],
     findingsSummary: { critical: 0, high: 0, medium: 1, low: 2, informational: 1 },
-    findings: [], riskAcceptances: [], resolutionStatus: 'complete',
+    findings: [], criticalFindings: [], highFindings: [], riskAcceptances: [], acceptedRiskRecords: [], resolutionStatus: 'complete',
     evidenceIntegrity: { realExternalReportAttached: true, placeholderOnly: false, containsSecrets: false, valuesRedacted: true, noPentestClaimWithoutReport: true },
     ...overrides,
   };
@@ -28,15 +28,36 @@ describe('validateExternalSecurityReviewEvidence', () => {
     expect(validateExternalSecurityReviewEvidence(completeEvidence({ date: '2025-01-01T00:00:00Z' }), { now }))
       .toContain('external review is older than 180 days');
   });
-  it('rejects unresolved high findings', () => {
+  it('rejects unresolved high findings in the generic findings array', () => {
     const evidence = completeEvidence({ findingsSummary: { critical: 0, high: 1 } });
     evidence.findings = [{ severity: 'high', status: 'open' }];
+    expect(validateExternalSecurityReviewEvidence(evidence, { now }))
+      .toContain('all critical and high findings must be resolved, accepted, or false positive');
+  });
+  it('rejects unresolved findings in the documented highFindings array', () => {
+    const evidence = completeEvidence({
+      findingsSummary: { critical: 0, high: 1 },
+      highFindings: [{ id: 'EC-PT-002', status: 'open' }],
+    });
+    expect(validateExternalSecurityReviewEvidence(evidence, { now }))
+      .toContain('all critical and high findings must be resolved, accepted, or false positive');
+  });
+  it('rejects unresolved findings in the documented criticalFindings array', () => {
+    const evidence = completeEvidence({
+      findingsSummary: { critical: 1, high: 0 },
+      criticalFindings: [{ id: 'EC-PT-001', status: 'in progress' }],
+    });
     expect(validateExternalSecurityReviewEvidence(evidence, { now }))
       .toContain('all critical and high findings must be resolved, accepted, or false positive');
   });
   it('rejects expired risk acceptance', () => {
     const evidence = completeEvidence();
     evidence.riskAcceptances = [{ approver: 'CISO', rationale: 'temporary', expiry: '2026-07-10T00:00:00Z', customerImpact: 'none', compensatingControls: ['WAF'] }];
+    expect(validateExternalSecurityReviewEvidence(evidence, { now })).toContain('risk acceptance has expired');
+  });
+  it('rejects expired acceptedRiskRecords using the documented acceptedUntil field', () => {
+    const evidence = completeEvidence();
+    evidence.acceptedRiskRecords = [{ acceptedBy: 'CISO', rationale: 'temporary', acceptedUntil: '2026-07-10T00:00:00Z', customerImpact: 'none', compensatingControls: ['WAF'] }];
     expect(validateExternalSecurityReviewEvidence(evidence, { now })).toContain('risk acceptance has expired');
   });
 });
