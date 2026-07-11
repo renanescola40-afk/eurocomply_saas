@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
+import { validateStepUpMfaRuntimeEvidence } from './validate-step-up-mfa-runtime-evidence.mjs';
 
 const runtimeDir = 'docs/security/evidence/runtime';
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
@@ -78,9 +79,11 @@ if (complete(files.rollbackDryRun, rollback, 'Rollback dry-run evidence')) {
 }
 
 const stepUp = readJson(files.stepUpMfa);
-if (complete(files.stepUpMfa, stepUp, 'MFA/IdP provider proof evidence')) {
-  if (stepUp.runtimeValidation?.providerProof?.present !== true) failures.push(`${files.stepUpMfa} must show providerProof.present=true`);
-  if (stepUp.acceptanceCriteria?.releaseEnterpriseBlockedIfProviderProofAbsent !== true) failures.push(`${files.stepUpMfa} must preserve fail-closed provider proof criteria`);
+if (stepUp) {
+  for (const failure of validateStepUpMfaRuntimeEvidence(stepUp)) {
+    failures.push(`${files.stepUpMfa} ${failure}`);
+  }
+  complete(files.stepUpMfa, stepUp, 'MFA/IdP provider proof evidence');
 }
 
 const auditChain = readJson(files.auditChain);
