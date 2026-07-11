@@ -81,12 +81,14 @@ Added a dependency-free Node.js load-smoke runner with:
 
 - localhost by default;
 - explicit opt-in and exact allowlist for remote hosts;
+- every resolved request path constrained to the configured base origin;
+- rejection of network paths, backslashes and control characters;
 - maximum 500 requests and concurrency 10;
 - GET-only behavior;
 - p50/p95/p99, throughput and error-rate metrics;
 - no cookies, Authorization header or response-body persistence;
 - redacted evidence output;
-- unit tests for allowlisting and percentile calculations.
+- tests placed under `tests/performance` so the configured Vitest suite executes them.
 
 ### 6. Required documentation
 
@@ -231,7 +233,7 @@ The final remediation SHA must complete all required checks. Production release 
 - `src/server/queries/vendors.ts`
 - `scripts/security/check-p0-runtime-evidence-files.mjs`
 - `scripts/performance/run-http-load-smoke.mjs`
-- `scripts/performance/run-http-load-smoke.test.mjs`
+- `tests/performance/run-http-load-smoke.test.ts`
 - `tests/security/enterprise-audit-evidence-contract.test.ts`
 - `tests/security/enterprise-e2e-gate.test.ts`
 - `tests/security/server-query-error-sanitization.test.ts`
