@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync } from 'node:fs';
+import { validateBranchProtectionFreshness } from '../security/validate-branch-protection-freshness.mjs';
 import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
 import { validateDeploymentRuntimeEvidence } from './validate-deployment-runtime-evidence.mjs';
 import { validateEnterpriseEnvRuntimeEvidence } from './validate-enterprise-env-runtime-evidence.mjs';
@@ -42,7 +43,6 @@ function complete(path, evidence, label) {
   if (evidence.status !== 'Complete') { failures.push(`${label} must be Complete for enterprise release; current status is ${evidence.status ?? '<missing>'} (${path})`); return false; }
   return true;
 }
-function basic(label, path) { return complete(path, readJson(path), label); }
 function commandPassed(finalValidation, commandName) {
   return (finalValidation.commands ?? []).some((command) => command.command === commandName && ['passed', 'Go', 'GO', true].includes(command.result ?? command.passed));
 }
@@ -78,7 +78,11 @@ if (observability) {
   for (const failure of validateObservabilityRuntimeEvidence(observability)) failures.push(`${files.observability} ${failure}`);
   complete(files.observability, observability, 'Observability evidence');
 }
-basic('Branch protection/ruleset evidence', files.branchProtection);
+const branchProtection = readJson(files.branchProtection);
+if (branchProtection) {
+  for (const failure of validateBranchProtectionFreshness(branchProtection)) failures.push(`${files.branchProtection} ${failure}`);
+  complete(files.branchProtection, branchProtection, 'Branch protection/ruleset evidence');
+}
 
 const deployment = readJson(files.deploymentSmoke);
 if (deployment) {
