@@ -14,6 +14,13 @@ function isPlaceholder(value) {
   return !text || text.startsWith('__OPEN_UNTIL_');
 }
 
+function normalizeFinding(finding, severity) {
+  return {
+    ...finding,
+    severity: finding?.severity ?? severity,
+  };
+}
+
 export function validateExternalSecurityReviewEvidence(evidence, {
   now = new Date(),
   maxAgeDays = 180,
@@ -59,14 +66,27 @@ export function validateExternalSecurityReviewEvidence(evidence, {
 
   const critical = Number(evidence?.findingsSummary?.critical ?? evidence?.criticalFindings?.length ?? 0);
   const high = Number(evidence?.findingsSummary?.high ?? evidence?.highFindings?.length ?? 0);
-  const unresolvedCriticalOrHigh = (evidence?.findings ?? []).filter((finding) =>
+  const allFindings = [
+    ...(evidence?.findings ?? []),
+    ...(evidence?.criticalFindings ?? []).map((finding) => normalizeFinding(finding, 'critical')),
+    ...(evidence?.highFindings ?? []).map((finding) => normalizeFinding(finding, 'high')),
+  ];
+  const unresolvedCriticalOrHigh = allFindings.filter((finding) =>
     ['critical','high'].includes(String(finding?.severity ?? '').toLowerCase()) &&
-    !['resolved','accepted','false_positive'].includes(String(finding?.status ?? '').toLowerCase()),
+    !['resolved','accepted','formally accepted','false_positive','false positive'].includes(String(finding?.status ?? '').toLowerCase()),
   );
   if (unresolvedCriticalOrHigh.length > 0) failures.push('all critical and high findings must be resolved, accepted, or false positive');
   if ((critical > 0 || high > 0) && evidence?.resolutionStatus !== 'complete') failures.push('resolutionStatus must be complete when critical or high findings exist');
 
-  for (const acceptance of evidence?.riskAcceptances ?? []) {
+  const riskAcceptances = [
+    ...(evidence?.riskAcceptances ?? []),
+    ...(evidence?.acceptedRiskRecords ?? []).map((acceptance) => ({
+      ...acceptance,
+      approver: acceptance?.approver ?? acceptance?.acceptedBy,
+      expiry: acceptance?.expiry ?? acceptance?.acceptedUntil,
+    })),
+  ];
+  for (const acceptance of riskAcceptances) {
     for (const field of ['approver','rationale','expiry','customerImpact','compensatingControls']) {
       if (acceptance?.[field] == null || acceptance[field] === '' || (Array.isArray(acceptance[field]) && acceptance[field].length === 0)) {
         failures.push(`risk acceptance ${field} is required`);
