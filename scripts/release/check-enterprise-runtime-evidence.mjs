@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
 import { validateDeploymentRuntimeEvidence } from './validate-deployment-runtime-evidence.mjs';
 import { validateObservabilityRuntimeEvidence } from './validate-observability-runtime-evidence.mjs';
+import { validateRollbackRuntimeEvidence } from './validate-rollback-runtime-evidence.mjs';
 import { validateStepUpMfaRuntimeEvidence } from './validate-step-up-mfa-runtime-evidence.mjs';
 import { validateStripeRuntimeEvidence } from './validate-stripe-runtime-evidence.mjs';
 import { validateUploadScannerRuntimeEvidence } from './validate-upload-scanner-runtime-evidence.mjs';
@@ -79,10 +80,9 @@ if (deployment) {
 }
 
 const rollback = readJson(files.rollbackDryRun);
-if (complete(files.rollbackDryRun, rollback, 'Rollback dry-run evidence')) {
-  if (rollback.outcome !== 'passed') failures.push(`${files.rollbackDryRun} outcome must be passed`);
-  if (rollback.dryRun?.mutatesProduction !== false) failures.push(`${files.rollbackDryRun} must prove mutatesProduction=false`);
-  if (rollback.targetValidation?.passed !== true) failures.push(`${files.rollbackDryRun} targetValidation.passed must be true`);
+if (rollback) {
+  for (const failure of validateRollbackRuntimeEvidence(rollback)) failures.push(`${files.rollbackDryRun} ${failure}`);
+  complete(files.rollbackDryRun, rollback, 'Rollback dry-run evidence');
 }
 
 const stepUp = readJson(files.stepUpMfa);
