@@ -3,6 +3,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
 import { validateStepUpMfaRuntimeEvidence } from './validate-step-up-mfa-runtime-evidence.mjs';
+import { validateStripeRuntimeEvidence } from './validate-stripe-runtime-evidence.mjs';
 
 const runtimeDir = 'docs/security/evidence/runtime';
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
@@ -52,7 +53,11 @@ basic('Production secrets provider evidence', files.productionSecrets);
 const supabase = readJson(files.supabaseRls);
 if (complete(files.supabaseRls, supabase, 'Supabase live RLS evidence') && supabase.outcome !== 'passed') failures.push(`${files.supabaseRls} outcome must be passed`);
 basic('Upload scanner evidence', files.uploadScanner);
-basic('Stripe billing evidence', files.stripeBilling);
+const stripe = readJson(files.stripeBilling);
+if (stripe) {
+  for (const failure of validateStripeRuntimeEvidence(stripe)) failures.push(`${files.stripeBilling} ${failure}`);
+  complete(files.stripeBilling, stripe, 'Stripe billing evidence');
+}
 basic('Observability evidence', files.observability);
 basic('Branch protection/ruleset evidence', files.branchProtection);
 
@@ -80,9 +85,7 @@ if (complete(files.rollbackDryRun, rollback, 'Rollback dry-run evidence')) {
 
 const stepUp = readJson(files.stepUpMfa);
 if (stepUp) {
-  for (const failure of validateStepUpMfaRuntimeEvidence(stepUp)) {
-    failures.push(`${files.stepUpMfa} ${failure}`);
-  }
+  for (const failure of validateStepUpMfaRuntimeEvidence(stepUp)) failures.push(`${files.stepUpMfa} ${failure}`);
   complete(files.stepUpMfa, stepUp, 'MFA/IdP provider proof evidence');
 }
 
@@ -101,9 +104,7 @@ if (complete(files.externalReview, external, 'External security review/pentest e
 
 const authRbac = readJson(files.authRbacFinal);
 if (authRbac) {
-  for (const failure of validateAuthRbacRuntimeEvidence(authRbac)) {
-    failures.push(`${files.authRbacFinal} ${failure}`);
-  }
+  for (const failure of validateAuthRbacRuntimeEvidence(authRbac)) failures.push(`${files.authRbacFinal} ${failure}`);
   complete(files.authRbacFinal, authRbac, 'Auth/RBAC final runtime evidence');
 }
 
