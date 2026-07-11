@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync } from 'node:fs';
+import { validateAuditChainLiveEvidence } from '../security/validate-audit-chain-live-evidence.mjs';
 import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
 import { validateDeploymentRuntimeEvidence } from './validate-deployment-runtime-evidence.mjs';
 import { validateEnterpriseEnvRuntimeEvidence } from './validate-enterprise-env-runtime-evidence.mjs';
@@ -99,9 +100,9 @@ if (stepUp) {
 }
 
 const auditChain = readJson(files.auditChain);
-if (complete(files.auditChain, auditChain, 'Audit-chain target-live evidence')) {
-  const acceptance = auditChain.acceptanceCriteria ?? {};
-  for (const key of ['appendNormal', 'appendConcurrent', 'auditChainDetectsTampering', 'missingPreviousHashDetected', 'liveProofAttached']) if (acceptance[key] !== true) failures.push(`${files.auditChain} acceptanceCriteria.${key} must be true`);
+if (auditChain) {
+  for (const failure of validateAuditChainLiveEvidence(auditChain, { expectedCommitSha: process.env.GITHUB_SHA })) failures.push(`${files.auditChain} ${failure}`);
+  complete(files.auditChain, auditChain, 'Audit-chain target-live evidence');
 }
 
 const external = readJson(files.externalReview);
