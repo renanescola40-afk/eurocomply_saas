@@ -7,6 +7,7 @@ import { validateObservabilityRuntimeEvidence } from './validate-observability-r
 import { validateRollbackRuntimeEvidence } from './validate-rollback-runtime-evidence.mjs';
 import { validateStepUpMfaRuntimeEvidence } from './validate-step-up-mfa-runtime-evidence.mjs';
 import { validateStripeRuntimeEvidence } from './validate-stripe-runtime-evidence.mjs';
+import { validateSupabaseRlsRuntimeEvidence } from './validate-supabase-rls-runtime-evidence.mjs';
 import { validateUploadScannerRuntimeEvidence } from './validate-upload-scanner-runtime-evidence.mjs';
 
 const runtimeDir = 'docs/security/evidence/runtime';
@@ -55,7 +56,10 @@ if (complete(files.envReadiness, envReadiness, 'Enterprise env readiness evidenc
 
 basic('Production secrets provider evidence', files.productionSecrets);
 const supabase = readJson(files.supabaseRls);
-if (complete(files.supabaseRls, supabase, 'Supabase live RLS evidence') && supabase.outcome !== 'passed') failures.push(`${files.supabaseRls} outcome must be passed`);
+if (supabase) {
+  for (const failure of validateSupabaseRlsRuntimeEvidence(supabase)) failures.push(`${files.supabaseRls} ${failure}`);
+  complete(files.supabaseRls, supabase, 'Supabase live RLS evidence');
+}
 const uploadScanner = readJson(files.uploadScanner);
 if (uploadScanner) {
   for (const failure of validateUploadScannerRuntimeEvidence(uploadScanner)) failures.push(`${files.uploadScanner} ${failure}`);
