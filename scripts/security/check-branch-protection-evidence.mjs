@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { validateBranchProtectionFreshness } from './validate-branch-protection-freshness.mjs';
 
 const evidencePath = 'docs/security/evidence/runtime/branch-protection-required-checks.json';
 const policyPath = 'docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md';
@@ -79,12 +80,8 @@ if (evidenceSource) {
   }
 }
 
-if (evidence.repository !== 'renanescola40-afk/eurocomply_saas') {
-  failures.push(`${evidencePath} repository must be renanescola40-afk/eurocomply_saas`);
-}
-
-if (evidence.branch !== 'main') {
-  failures.push(`${evidencePath} branch must be main`);
+for (const failure of validateBranchProtectionFreshness(evidence)) {
+  failures.push(`${evidencePath} ${failure}`);
 }
 
 if (evidence.evidence_type !== 'branch-protection-required-checks') {
@@ -93,10 +90,6 @@ if (evidence.evidence_type !== 'branch-protection-required-checks') {
 
 if (!Number.isInteger(evidence.schema_version) || evidence.schema_version < 1) {
   failures.push(`${evidencePath} schema_version must be a positive integer`);
-}
-
-if (!Date.parse(evidence.captured_at ?? '')) {
-  failures.push(`${evidencePath} captured_at must be an ISO-8601 timestamp`);
 }
 
 if (isEnterpriseRelease && ['Exception', 'Open'].includes(evidence.status)) {
