@@ -6,6 +6,7 @@ import { validateBranchProtectionFreshness } from '../security/validate-branch-p
 import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
 import { validateDeploymentRuntimeEvidence } from './validate-deployment-runtime-evidence.mjs';
 import { validateEnterpriseEnvRuntimeEvidence } from './validate-enterprise-env-runtime-evidence.mjs';
+import { validateExternalSecurityReviewEvidence } from './validate-external-security-review-evidence.mjs';
 import { validateFinalValidationRuntimeEvidence } from './validate-final-validation-runtime-evidence.mjs';
 import { validateObservabilityRuntimeEvidence } from './validate-observability-runtime-evidence.mjs';
 import { validateProductionSecretsRuntimeEvidence } from './validate-production-secrets-runtime-evidence.mjs';
@@ -45,16 +46,12 @@ function complete(path, evidence, label) {
   if (evidence.status !== 'Complete') { failures.push(`${label} must be Complete for enterprise release; current status is ${evidence.status ?? '<missing>'} (${path})`); return false; }
   return true;
 }
-function commandPassed(finalValidation, commandName) {
-  return (finalValidation.commands ?? []).some((command) => command.command === commandName && ['passed', 'Go', 'GO', true].includes(command.result ?? command.passed));
-}
 
 const envReadiness = readJson(files.envReadiness);
 if (envReadiness) {
   for (const failure of validateEnterpriseEnvRuntimeEvidence(envReadiness, { expectedCommitSha: process.env.GITHUB_SHA })) failures.push(`${files.envReadiness} ${failure}`);
   complete(files.envReadiness, envReadiness, 'Enterprise env readiness evidence');
 }
-
 const productionSecrets = readJson(files.productionSecrets);
 if (productionSecrets) {
   for (const failure of validateProductionSecretsRuntimeEvidence(productionSecrets, { expectedCommitSha: process.env.GITHUB_SHA })) failures.push(`${files.productionSecrets} ${failure}`);
@@ -85,44 +82,36 @@ if (branchProtection) {
   for (const failure of validateBranchProtectionFreshness(branchProtection)) failures.push(`${files.branchProtection} ${failure}`);
   complete(files.branchProtection, branchProtection, 'Branch protection/ruleset evidence');
 }
-
 const deployment = readJson(files.deploymentSmoke);
 if (deployment) {
   for (const failure of validateDeploymentRuntimeEvidence(deployment)) failures.push(`${files.deploymentSmoke} ${failure}`);
   complete(files.deploymentSmoke, deployment, 'Deployment smoke evidence');
 }
-
 const rollback = readJson(files.rollbackDryRun);
 if (rollback) {
   for (const failure of validateRollbackRuntimeEvidence(rollback)) failures.push(`${files.rollbackDryRun} ${failure}`);
   complete(files.rollbackDryRun, rollback, 'Rollback dry-run evidence');
 }
-
 const stepUp = readJson(files.stepUpMfa);
 if (stepUp) {
   for (const failure of validateStepUpMfaRuntimeEvidence(stepUp)) failures.push(`${files.stepUpMfa} ${failure}`);
   complete(files.stepUpMfa, stepUp, 'MFA/IdP provider proof evidence');
 }
-
 const auditChain = readJson(files.auditChain);
 if (auditChain) {
   for (const failure of validateAuditChainLiveEvidence(auditChain, { expectedCommitSha: process.env.GITHUB_SHA })) failures.push(`${files.auditChain} ${failure}`);
   complete(files.auditChain, auditChain, 'Audit-chain target-live evidence');
 }
-
 const external = readJson(files.externalReview);
-if (complete(files.externalReview, external, 'External security review/pentest evidence')) {
-  if (external.evidenceIntegrity?.realExternalReportAttached !== true) failures.push(`${files.externalReview} must reference a real external report`);
-  if (external.evidenceIntegrity?.placeholderOnly !== false) failures.push(`${files.externalReview} must not be placeholder-only when Complete`);
-  if (!String(external.reportReference ?? '').trim()) failures.push(`${files.externalReview} must include reportReference`);
+if (external) {
+  for (const failure of validateExternalSecurityReviewEvidence(external)) failures.push(`${files.externalReview} ${failure}`);
+  complete(files.externalReview, external, 'External security review/pentest evidence');
 }
-
 const authRbac = readJson(files.authRbacFinal);
 if (authRbac) {
   for (const failure of validateAuthRbacRuntimeEvidence(authRbac)) failures.push(`${files.authRbacFinal} ${failure}`);
   complete(files.authRbacFinal, authRbac, 'Auth/RBAC final runtime evidence');
 }
-
 if (!finalValidationInProgress) {
   const finalValidation = readJson(files.finalValidation);
   if (finalValidation) {
@@ -130,7 +119,6 @@ if (!finalValidationInProgress) {
     complete(files.finalValidation, finalValidation, 'Final validation runner evidence');
   }
 }
-
 if (existsSync(registerPath)) {
   const rows = readFileSync(registerPath, 'utf8').split('\n').filter((line) => line.startsWith('|') && !line.includes('---'));
   for (const row of rows) {
@@ -138,6 +126,5 @@ if (existsSync(registerPath)) {
     if (item && item !== 'Evidence item' && status !== 'Complete') failures.push(`${registerPath} still has non-Complete item: ${item} = ${status}`);
   }
 } else failures.push(`${registerPath} is missing`);
-
 if (failures.length > 0) { console.error('Enterprise runtime evidence gate failed:'); for (const failure of failures) console.error(`- ${failure}`); process.exit(1); }
 console.log('Enterprise runtime evidence gate passed.');
