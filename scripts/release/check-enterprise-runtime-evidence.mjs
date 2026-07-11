@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
+import { validateObservabilityRuntimeEvidence } from './validate-observability-runtime-evidence.mjs';
 import { validateStepUpMfaRuntimeEvidence } from './validate-step-up-mfa-runtime-evidence.mjs';
 import { validateStripeRuntimeEvidence } from './validate-stripe-runtime-evidence.mjs';
 import { validateUploadScannerRuntimeEvidence } from './validate-upload-scanner-runtime-evidence.mjs';
@@ -63,7 +64,11 @@ if (stripe) {
   for (const failure of validateStripeRuntimeEvidence(stripe)) failures.push(`${files.stripeBilling} ${failure}`);
   complete(files.stripeBilling, stripe, 'Stripe billing evidence');
 }
-basic('Observability evidence', files.observability);
+const observability = readJson(files.observability);
+if (observability) {
+  for (const failure of validateObservabilityRuntimeEvidence(observability)) failures.push(`${files.observability} ${failure}`);
+  complete(files.observability, observability, 'Observability evidence');
+}
 basic('Branch protection/ruleset evidence', files.branchProtection);
 
 const deployment = readJson(files.deploymentSmoke);
