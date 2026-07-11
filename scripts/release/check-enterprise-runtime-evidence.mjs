@@ -3,6 +3,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
 import { validateDeploymentRuntimeEvidence } from './validate-deployment-runtime-evidence.mjs';
+import { validateEnterpriseEnvRuntimeEvidence } from './validate-enterprise-env-runtime-evidence.mjs';
 import { validateObservabilityRuntimeEvidence } from './validate-observability-runtime-evidence.mjs';
 import { validateProductionSecretsRuntimeEvidence } from './validate-production-secrets-runtime-evidence.mjs';
 import { validateRollbackRuntimeEvidence } from './validate-rollback-runtime-evidence.mjs';
@@ -47,12 +48,9 @@ function commandPassed(finalValidation, commandName) {
 }
 
 const envReadiness = readJson(files.envReadiness);
-if (complete(files.envReadiness, envReadiness, 'Enterprise env readiness evidence')) {
-  if (envReadiness.outcome !== 'passed') failures.push(`${files.envReadiness} outcome must be passed`);
-  if (envReadiness.noSecretsStored !== true) failures.push(`${files.envReadiness} must prove noSecretsStored=true`);
-  if (envReadiness.evidenceIntegrity?.containsSensitiveValues !== false) failures.push(`${files.envReadiness} must prove containsSensitiveValues=false`);
-  if (envReadiness.evidenceIntegrity?.rawUrlsStored !== false) failures.push(`${files.envReadiness} must not store raw URLs`);
-  for (const check of envReadiness.checks ?? []) if (check.required === true && check.passed !== true) failures.push(`${files.envReadiness} required check ${check.name ?? '<unknown>'} must pass`);
+if (envReadiness) {
+  for (const failure of validateEnterpriseEnvRuntimeEvidence(envReadiness, { expectedCommitSha: process.env.GITHUB_SHA })) failures.push(`${files.envReadiness} ${failure}`);
+  complete(files.envReadiness, envReadiness, 'Enterprise env readiness evidence');
 }
 
 const productionSecrets = readJson(files.productionSecrets);
