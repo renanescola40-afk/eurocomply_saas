@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { validateAuditChainLiveEvidence } from './validate-audit-chain-live-evidence.mjs';
 
 const auditSigningEnv = 'AUDIT_CHAIN_SIGNING_SECRET';
 
@@ -23,44 +24,10 @@ const files = {
 };
 
 const requiredTokens = {
-  helper: [
-    'canonicalizeAuditEvent',
-    'buildAuditEventHash',
-    'signAuditEventHash',
-    'buildAuditChainRecord',
-    'verifyAuditChain',
-    'createHash',
-    'createHmac',
-    auditSigningEnv,
-    'previous_hash_mismatch',
-    'event_hash_mismatch',
-    'signature_mismatch',
-  ],
-  helperTest: [
-    'canonicalizes metadata deterministically',
-    'builds deterministic hashes',
-    'detects previous hash tampering',
-    'detects event content tampering',
-    'signs hashes when an audit chain secret is configured',
-  ],
-  auditEvents: [
-    'buildAuditChainRecord',
-    'sanitizeAuditMetadata',
-    'requestContext',
-    'append_audit_event_chained',
-    'p_previous_hash',
-    'p_event_hash',
-    'p_hash_signature',
-    'transactional_append_unavailable',
-    'AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK',
-    'AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK',
-  ],
-  auditEventsTest: [
-    'persists through the transactional audit-chain RPC when available',
-    'retries the transactional RPC when Supabase reports a previous hash mismatch',
-    'fails closed instead of using non-transactional append when the RPC is unavailable by default',
-    'sanitizes audit metadata before hashing and persistence',
-  ],
+  helper: ['canonicalizeAuditEvent', 'buildAuditEventHash', 'signAuditEventHash', 'buildAuditChainRecord', 'verifyAuditChain', 'createHash', 'createHmac', auditSigningEnv, 'previous_hash_mismatch', 'event_hash_mismatch', 'signature_mismatch'],
+  helperTest: ['canonicalizes metadata deterministically', 'builds deterministic hashes', 'detects previous hash tampering', 'detects event content tampering', 'signs hashes when an audit chain secret is configured'],
+  auditEvents: ['buildAuditChainRecord', 'sanitizeAuditMetadata', 'requestContext', 'append_audit_event_chained', 'p_previous_hash', 'p_event_hash', 'p_hash_signature', 'transactional_append_unavailable', 'AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK', 'AUDIT_CHAIN_ALLOW_LEGACY_FALLBACK'],
+  auditEventsTest: ['persists through the transactional audit-chain RPC when available', 'retries the transactional RPC when Supabase reports a previous hash mismatch', 'fails closed instead of using non-transactional append when the RPC is unavailable by default', 'sanitizes audit metadata before hashing and persistence'],
   migration: ['previous_hash', 'event_hash', 'hash_algorithm', 'hash_signature'],
   rpcMigration: ['append_audit_event_chained', 'pg_advisory_xact_lock', 'p_previous_hash', 'security definer'],
   enterpriseMigration: ['drop function if exists public.append_audit_event_chained', 'p_id uuid', 'p_created_at timestamptz', 'pg_advisory_xact_lock', 'security definer'],
@@ -82,7 +49,6 @@ function read(path) {
     failures.push(`${path} is missing`);
     return '';
   }
-
   return readFileSync(path, 'utf8');
 }
 
@@ -92,6 +58,12 @@ function requireTokens(path, source, tokens) {
   }
 }
 
+function isLiveEvidenceFreshnessEnforced() {
+  return process.env.AUDIT_CHAIN_ENFORCE_LIVE_EVIDENCE === 'true'
+    || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true'
+    || process.env.RELEASE_TARGET === 'enterprise';
+}
+
 console.log('EuroComply audit chain security check');
 console.log('-------------------------------------');
 
@@ -99,6 +71,22 @@ const sources = Object.fromEntries(Object.entries(files).map(([key, path]) => [k
 
 for (const [key, tokens] of Object.entries(requiredTokens)) {
   if (sources[key]) requireTokens(files[key], sources[key], tokens);
+}
+
+if (sources.runtimeEvidence) {
+  if (isLiveEvidenceFreshnessEnforced()) {
+    try {
+      const evidence = JSON.parse(sources.runtimeEvidence);
+      for (const failure of validateAuditChainLiveEvidence(evidence)) {
+        failures.push(`${files.runtimeEvidence} ${failure}`);
+      }
+    } catch (error) {
+      failures.push(`${files.runtimeEvidence} must contain valid JSON: ${error instanceof Error ? error.message : error}`);
+    }
+  } else {
+    console.log('Audit-chain live evidence freshness validation is deferred for static PR CI.');
+    console.log('Set AUDIT_CHAIN_ENFORCE_LIVE_EVIDENCE=true or RISCK_COMPLY_ENTERPRISE_RELEASE=true to enforce runtime evidence freshness.');
+  }
 }
 
 if (sources.preflight && !(sources.preflight.includes(auditSigningEnv) || sources.preflight.includes('auditSigningEnv'))) {
@@ -117,25 +105,11 @@ if (sources.helper && !sources.helper.includes('.sort(([left], [right]) => left.
   failures.push(`${files.helper} must sort object keys during canonicalization`);
 }
 
-if (sources.helper && sources.helper.includes('Math.random')) {
-  failures.push(`${files.helper} must not use random values when building deterministic hashes`);
-}
-
-if (sources.helper && sources.helper.includes('new Date()')) {
-  failures.push(`${files.helper} must not introduce current timestamps when building deterministic hashes`);
-}
-
-if (sources.auditEvents && sources.auditEvents.includes('event_hash') && !sources.auditEvents.includes('previousHash')) {
-  failures.push(`${files.auditEvents} must return or track previousHash when writing chained audit events`);
-}
-
-if (sources.auditEvents && !sources.auditEvents.includes('randomUUID')) {
-  failures.push(`${files.auditEvents} must assign the audit event id before hashing`);
-}
-
-if (sources.auditEvents && !sources.auditEvents.includes('MAX_CHAIN_APPEND_ATTEMPTS = 4')) {
-  failures.push(`${files.auditEvents} must retry concurrent previous-hash conflicts more than once`);
-}
+if (sources.helper && sources.helper.includes('Math.random')) failures.push(`${files.helper} must not use random values when building deterministic hashes`);
+if (sources.helper && sources.helper.includes('new Date()')) failures.push(`${files.helper} must not introduce current timestamps when building deterministic hashes`);
+if (sources.auditEvents && sources.auditEvents.includes('event_hash') && !sources.auditEvents.includes('previousHash')) failures.push(`${files.auditEvents} must return or track previousHash when writing chained audit events`);
+if (sources.auditEvents && !sources.auditEvents.includes('randomUUID')) failures.push(`${files.auditEvents} must assign the audit event id before hashing`);
+if (sources.auditEvents && !sources.auditEvents.includes('MAX_CHAIN_APPEND_ATTEMPTS = 4')) failures.push(`${files.auditEvents} must retry concurrent previous-hash conflicts more than once`);
 
 const routeSilentlyClampsLimit = sources.verifyRoute.includes('Math.min(Math.max');
 if (sources.verifyRoute && routeSilentlyClampsLimit) failures.push(`${files.verifyRoute} must reject invalid verification limits instead of silently clamping them`);
