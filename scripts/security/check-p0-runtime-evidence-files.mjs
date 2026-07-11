@@ -24,9 +24,10 @@ const allowedItems = new Set([
   'rate-limit-validation',
   'enterprise-final-readiness-validation',
   'enterprise-release-env-readiness',
-  'enterprise-10-10-audit',
   // GDPR privacy evidence added by the enterprise privacy controls package.
   'gdpr-privacy-validation',
+  // Static enterprise audit evidence is allowed only as an honest No-Go/open audit record.
+  'enterprise-10-10-audit',
 ]);
 const redactionTexts = new Set([
   'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
@@ -232,32 +233,41 @@ function checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence) {
   return true;
 }
 
-function checkEnterpriseAuditOpenEvidence(file, evidence) {
-  if (evidence.evidenceItem !== 'enterprise-10-10-audit') return false;
+function checkEnterpriseAuditOpenPlaceholder(file, evidence) {
+  if (evidence.evidenceItem !== 'enterprise-10-10-audit' || evidence.status !== 'Open') return false;
 
-  if (!checkGenericOpenBlockedEvidence(file, evidence, new Set(['no_go']))) {
-    failures.push(`${file} enterprise audit evidence must remain Open/no_go until every P0 proof is complete`);
-    return true;
+  requireString(file, evidence, 'reviewer', 3);
+  requireString(file, evidence, 'reviewedAt', 10);
+  requireString(file, evidence, 'summary', 40);
+  requireArray(file, evidence, 'evidenceLocations', 1);
+  requireArray(file, evidence, 'decisionReasons', 1);
+
+  if (!hasValidRedactionText(evidence)) {
+    failures.push(`${file} missing redaction confirmation`);
+  }
+
+  if (evidence.outcome !== 'no_go') {
+    failures.push(`${file} Open enterprise audit evidence must have outcome no_go`);
   }
 
   if (evidence.decision !== 'No-Go') {
-    failures.push(`${file} enterprise audit evidence must keep decision No-Go`);
+    failures.push(`${file} Open enterprise audit evidence must keep decision No-Go`);
   }
 
-  if (evidence.evidenceIntegrity?.placeholderOnly !== true) {
-    failures.push(`${file} enterprise audit evidence must be marked placeholderOnly`);
+  if (!String(evidence.releaseGate ?? '').toLowerCase().includes('blocked')) {
+    failures.push(`${file} Open enterprise audit evidence must keep releaseGate blocked`);
+  }
+
+  if (evidence.evidenceIntegrity?.containsSensitiveValues !== false) {
+    failures.push(`${file} enterprise audit evidence must confirm no sensitive values are stored`);
   }
 
   if (evidence.evidenceIntegrity?.runtimeProofInvented !== false) {
     failures.push(`${file} enterprise audit evidence must confirm runtime proof was not invented`);
   }
 
-  if (evidence.evidenceIntegrity?.customerDataStored !== false) {
-    failures.push(`${file} enterprise audit evidence must confirm customer data is not stored`);
-  }
-
-  if (evidence.evidenceIntegrity?.customerFacingProof !== false) {
-    failures.push(`${file} enterprise audit evidence must not be customer-facing proof`);
+  if (Array.isArray(evidence.controlsVerified) && evidence.controlsVerified.length > 0) {
+    failures.push(`${file} Open enterprise audit evidence must not list controlsVerified as if passed`);
   }
 
   return true;
@@ -310,7 +320,7 @@ for (const file of files) {
   if (checkSupabaseOpenPlaceholder(file, evidence)) continue;
   if (checkExternalReviewOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence)) continue;
-  if (checkEnterpriseAuditOpenEvidence(file, evidence)) continue;
+  if (checkEnterpriseAuditOpenPlaceholder(file, evidence)) continue;
 
   if (evidence.status === 'Complete') {
     checkCompleteEvidence(file, evidence);
