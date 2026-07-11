@@ -233,7 +233,7 @@ function checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence) {
   return true;
 }
 
-function checkEnterpriseAuditOpenPlaceholder(file, evidence) {
+function checkEnterpriseAuditOpenEvidence(file, evidence) {
   if (evidence.evidenceItem !== 'enterprise-10-10-audit' || evidence.status !== 'Open') return false;
 
   requireString(file, evidence, 'reviewer', 3);
@@ -320,7 +320,7 @@ for (const file of files) {
   if (checkSupabaseOpenPlaceholder(file, evidence)) continue;
   if (checkExternalReviewOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence)) continue;
-  if (checkEnterpriseAuditOpenPlaceholder(file, evidence)) continue;
+  if (checkEnterpriseAuditOpenEvidence(file, evidence)) continue;
 
   if (evidence.status === 'Complete') {
     checkCompleteEvidence(file, evidence);
