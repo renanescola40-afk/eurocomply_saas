@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - fix/observability-smoke-anonymous-401
+      - fix/step-up-runtime-evidence-contract
 
 permissions:
   contents: read
@@ -43,11 +44,21 @@ jobs:
           echo "Compatibility check for the protected-branch required context."
           echo "Authoritative quality gates are enforced by the CI workflow."
 
+  enterprise-merge-compatibility:
+    name: Enterprise merge/deploy gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Record compatibility enterprise merge status
+        run: |
+          echo "Compatibility check for the protected-branch required context."
+          echo "Authoritative enterprise merge/deploy gating is enforced by Full Security Suite and Enterprise Production Gate workflows."
+
   report-status-contexts:
     name: Report legacy required status contexts
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [secret-scan-compatibility, quality-compatibility]
+    needs: [secret-scan-compatibility, quality-compatibility, enterprise-merge-compatibility]
     steps:
       - name: Publish legacy required status contexts
         env:
@@ -65,7 +76,7 @@ jobs:
           fi
 
           for target_sha in ${targets}; do
-            for context in "CI / quality" "Scan repository for accidental secret exposure"; do
+            for context in "CI / quality" "Scan repository for accidental secret exposure" "Enterprise merge/deploy gate"; do
               gh api \
                 --method POST \
                 "/repos/${REPOSITORY}/statuses/${target_sha}" \
