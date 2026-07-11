@@ -10,6 +10,7 @@ const DEFAULT_CONCURRENCY = 4;
 const HARD_MAX_REQUESTS = 500;
 const HARD_MAX_CONCURRENCY = 10;
 const evidencePath = 'docs/security/evidence/runtime/load-smoke-validation.json';
+const UNSAFE_PATH_PATTERN = /[\\\u0000-\u001f\u007f]/;
 
 export function percentile(values, percentileValue) {
   if (!Array.isArray(values) || values.length === 0) return null;
@@ -51,13 +52,33 @@ function positiveInteger(value, fallback, hardMaximum) {
   return Math.min(parsed, hardMaximum);
 }
 
-function normalizedPaths(value) {
+export function normalizedPaths(value) {
   if (!value) return DEFAULT_PATHS;
+
   const paths = String(value)
     .split(',')
     .map((path) => path.trim())
-    .filter((path) => path.startsWith('/') && !path.startsWith('//'));
+    .filter(Boolean);
+
+  const unsafePath = paths.find(
+    (path) => !path.startsWith('/') || path.startsWith('//') || UNSAFE_PATH_PATTERN.test(path),
+  );
+  if (unsafePath) {
+    throw new Error('LOAD_TEST_PATHS contains an unsafe or off-origin path. Use absolute same-origin paths beginning with a single forward slash.');
+  }
+
   return paths.length > 0 ? [...new Set(paths)] : DEFAULT_PATHS;
+}
+
+export function resolveSameOriginTarget(baseUrl, path) {
+  const base = baseUrl instanceof URL ? baseUrl : new URL(baseUrl);
+  const target = new URL(path, base);
+
+  if (target.origin !== base.origin) {
+    throw new Error('LOAD_TEST_PATHS resolved outside LOAD_TEST_BASE_URL origin.');
+  }
+
+  return target;
 }
 
 async function requestOnce(url, timeoutMs) {
@@ -127,10 +148,17 @@ export async function runLoadSmoke({
   const safeRequests = positiveInteger(requests, DEFAULT_MAX_REQUESTS, HARD_MAX_REQUESTS);
   const safeConcurrency = positiveInteger(concurrency, DEFAULT_CONCURRENCY, HARD_MAX_CONCURRENCY);
   const safePaths = normalizedPaths(Array.isArray(paths) ? paths.join(',') : paths);
+  const resolvedTargets = safePaths.map((path) => ({
+    path,
+    url: resolveSameOriginTarget(normalizedBase, path).toString(),
+  }));
   const tasks = Array.from({ length: safeRequests }, (_, index) => {
-    const path = safePaths[index % safePaths.length];
-    const target = new URL(path, normalizedBase).toString();
-    return async () => ({ path, targetHost: normalizedBase.host, ...(await requestOnce(target, timeoutMs)) });
+    const target = resolvedTargets[index % resolvedTargets.length];
+    return async () => ({
+      path: target.path,
+      targetHost: normalizedBase.host,
+      ...(await requestOnce(target.url, timeoutMs)),
+    });
   });
 
   const startedAt = new Date().toISOString();
