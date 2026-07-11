@@ -6,7 +6,7 @@ This file records release evidence for the current assessed commit. Partial stat
 
 ## Current release assessment
 
-- Assessment date: 2026-07-08
+- Assessment date: 2026-07-11
 - Repository: `renanescola40-afk/eurocomply_saas`
 - Scope: public production release readiness
 - Decision: No-Go until every release-blocking item below is `Complete` for the exact final release commit.
@@ -19,7 +19,7 @@ This file records release evidence for the current assessed commit. Partial stat
 | Required status checks configured | Open | `docs/security/evidence/runtime/branch-protection-required-checks.json` must prove required checks are enforced on `main` | Release owner | Revalidate required checks for the final release commit |
 | Production provider configuration evidence | Open | Provider settings review evidence must prove required production providers are configured without exposing secret values | Release owner | Confirm Vercel, GitHub, Supabase, Stripe and Sentry provider settings before Go |
 | Auth/RBAC final runtime validation | Open | `docs/security/evidence/runtime/auth-rbac-final-validation.json` must prove Supabase Auth, RBAC, tenant isolation, no legacy identity fallback, runtime validation, customer-facing proof approval, and all blocking evidence complete for the exact final release commit | Security reviewer | Run production-like auth/RBAC validation and replace placeholder No-Go evidence with real runtime proof |
-| Supabase live RLS validation completed | Complete | `docs/security/evidence/runtime/supabase-live-rls-validation.json` records status `Complete`, outcome `passed`, timestamp, redacted Supabase project reference, tables reviewed, tests passed/failed, zero failures, reviewer, command used, commit SHA, RLS enablement, tenant isolation, profile scoping, role separation, same-tenant allowed behavior, and backend-owned write denial | Security reviewer | Re-run only if production Supabase project or policies changed |
+| Supabase live RLS validation completed | Open | `docs/security/evidence/runtime/supabase-live-rls-validation.json` must pass the canonical freshness, provenance, branch, full-SHA, redaction, table coverage, tenant-operation, and profiles live-test validator for the exact final release commit | Security reviewer | Re-run `npm run security:rls:live` against the target Supabase project for the exact promoted `main` commit |
 | External review | Open | External security review report, pentest report, or approved exception evidence must be attached before enterprise Go | Security reviewer | Attach external review evidence or approved exception before enterprise Go |
 | Deterministic npm lockfile committed | Complete | Package lockfile commit evidence exists; attach exact final runner install output before Go | Engineering owner | Attach final runner output |
 | Floating dependency specs removed | Complete | Dependency report evidence exists and records no forbidden floating specs | Engineering owner | Attach final security output before Go |
