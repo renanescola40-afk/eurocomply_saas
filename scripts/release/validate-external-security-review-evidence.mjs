@@ -14,6 +14,12 @@ function isPlaceholder(value) {
   return !text || text.startsWith('__OPEN_UNTIL_');
 }
 
+function findingIsBlocking(finding) {
+  const severity = String(finding?.severity ?? '').toLowerCase();
+  const status = String(finding?.status ?? '').toLowerCase();
+  return ['critical','high'].includes(severity) && !['resolved','accepted','false_positive'].includes(status);
+}
+
 export function validateExternalSecurityReviewEvidence(evidence, {
   now = new Date(),
   maxAgeDays = 180,
@@ -59,14 +65,25 @@ export function validateExternalSecurityReviewEvidence(evidence, {
 
   const critical = Number(evidence?.findingsSummary?.critical ?? evidence?.criticalFindings?.length ?? 0);
   const high = Number(evidence?.findingsSummary?.high ?? evidence?.highFindings?.length ?? 0);
-  const unresolvedCriticalOrHigh = (evidence?.findings ?? []).filter((finding) =>
-    ['critical','high'].includes(String(finding?.severity ?? '').toLowerCase()) &&
-    !['resolved','accepted','false_positive'].includes(String(finding?.status ?? '').toLowerCase()),
-  );
-  if (unresolvedCriticalOrHigh.length > 0) failures.push('all critical and high findings must be resolved, accepted, or false positive');
+  const allFindings = [
+    ...(Array.isArray(evidence?.findings) ? evidence.findings : []),
+    ...(Array.isArray(evidence?.criticalFindings) ? evidence.criticalFindings.map((finding) => ({ severity: 'critical', ...finding })) : []),
+    ...(Array.isArray(evidence?.highFindings) ? evidence.highFindings.map((finding) => ({ severity: 'high', ...finding })) : []),
+  ];
+  if (allFindings.some(findingIsBlocking)) failures.push('all critical and high findings must be resolved, accepted, or false positive');
   if ((critical > 0 || high > 0) && evidence?.resolutionStatus !== 'complete') failures.push('resolutionStatus must be complete when critical or high findings exist');
 
-  for (const acceptance of evidence?.riskAcceptances ?? []) {
+  const riskAcceptances = [
+    ...(Array.isArray(evidence?.riskAcceptances) ? evidence.riskAcceptances : []),
+    ...(Array.isArray(evidence?.acceptedRiskRecords) ? evidence.acceptedRiskRecords.map((record) => ({
+      approver: record?.approver,
+      rationale: record?.rationale,
+      expiry: record?.acceptedUntil ?? record?.expiry,
+      customerImpact: record?.customerImpact,
+      compensatingControls: record?.compensatingControls,
+    })) : []),
+  ];
+  for (const acceptance of riskAcceptances) {
     for (const field of ['approver','rationale','expiry','customerImpact','compensatingControls']) {
       if (acceptance?.[field] == null || acceptance[field] === '' || (Array.isArray(acceptance[field]) && acceptance[field].length === 0)) {
         failures.push(`risk acceptance ${field} is required`);
