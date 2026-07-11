@@ -24,6 +24,7 @@ const allowedItems = new Set([
   'rate-limit-validation',
   'enterprise-final-readiness-validation',
   'enterprise-release-env-readiness',
+  'enterprise-10-10-audit',
   // GDPR privacy evidence added by the enterprise privacy controls package.
   'gdpr-privacy-validation',
 ]);
@@ -231,6 +232,37 @@ function checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence) {
   return true;
 }
 
+function checkEnterpriseAuditOpenEvidence(file, evidence) {
+  if (evidence.evidenceItem !== 'enterprise-10-10-audit') return false;
+
+  if (!checkGenericOpenBlockedEvidence(file, evidence, new Set(['no_go']))) {
+    failures.push(`${file} enterprise audit evidence must remain Open/no_go until every P0 proof is complete`);
+    return true;
+  }
+
+  if (evidence.decision !== 'No-Go') {
+    failures.push(`${file} enterprise audit evidence must keep decision No-Go`);
+  }
+
+  if (evidence.evidenceIntegrity?.placeholderOnly !== true) {
+    failures.push(`${file} enterprise audit evidence must be marked placeholderOnly`);
+  }
+
+  if (evidence.evidenceIntegrity?.runtimeProofInvented !== false) {
+    failures.push(`${file} enterprise audit evidence must confirm runtime proof was not invented`);
+  }
+
+  if (evidence.evidenceIntegrity?.customerDataStored !== false) {
+    failures.push(`${file} enterprise audit evidence must confirm customer data is not stored`);
+  }
+
+  if (evidence.evidenceIntegrity?.customerFacingProof !== false) {
+    failures.push(`${file} enterprise audit evidence must not be customer-facing proof`);
+  }
+
+  return true;
+}
+
 function checkCompleteEvidence(file, evidence) {
   requireString(file, evidence, 'reviewer', 3);
   requireString(file, evidence, 'reviewedAt', 10);
@@ -278,6 +310,7 @@ for (const file of files) {
   if (checkSupabaseOpenPlaceholder(file, evidence)) continue;
   if (checkExternalReviewOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence)) continue;
+  if (checkEnterpriseAuditOpenEvidence(file, evidence)) continue;
 
   if (evidence.status === 'Complete') {
     checkCompleteEvidence(file, evidence);
