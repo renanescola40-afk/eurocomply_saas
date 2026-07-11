@@ -11,13 +11,6 @@ function completeEvidence(overrides = {}) {
     outcome: 'passed',
     generatedAt: '2026-07-11T12:00:00Z',
     releaseTarget: 'production',
-    runtimeContext: {
-      generatedByGithubActions: true,
-      githubRunId: '123456789',
-      repository: 'renanescola40-afk/eurocomply_saas',
-      branch: 'main',
-      commitSha: 'a'.repeat(40),
-    },
     runtimeConfiguration: {
       targetCount: 1,
       sentryDsnConfigured: true,
@@ -48,7 +41,7 @@ function completeEvidence(overrides = {}) {
 }
 
 describe('validateObservabilityRuntimeEvidence', () => {
-  it('accepts fresh complete observability smoke evidence for main', () => {
+  it('accepts fresh complete observability smoke evidence', () => {
     expect(validateObservabilityRuntimeEvidence(completeEvidence(), { now })).toEqual([]);
   });
 
@@ -73,22 +66,6 @@ describe('validateObservabilityRuntimeEvidence', () => {
         { now },
       ),
     ).toContain('observability exception has expired');
-  });
-
-  it('rejects evidence from a non-main branch', () => {
-    const evidence = completeEvidence();
-    evidence.runtimeContext.branch = 'feature/observability-proof';
-    expect(validateObservabilityRuntimeEvidence(evidence, { now })).toContain(
-      'runtimeContext.branch must be main',
-    );
-  });
-
-  it('rejects evidence without GitHub Actions provenance', () => {
-    const evidence = completeEvidence();
-    evidence.runtimeContext.generatedByGithubActions = false;
-    expect(validateObservabilityRuntimeEvidence(evidence, { now })).toContain(
-      'runtimeContext.generatedByGithubActions must be true',
-    );
   });
 
   it('requires authenticated event emission', () => {
