@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { validateSupabaseRlsRuntimeEvidence } from '../release/validate-supabase-rls-runtime-evidence.mjs';
 
 const requestedStrict = process.argv.includes('--strict');
 const finalValidationInProgress = process.env.FINAL_VALIDATION_IN_PROGRESS === 'true';
@@ -31,6 +32,7 @@ const requiredRuntimeItems = [
   {
     item: 'Supabase live RLS validation completed',
     file: 'supabase-live-rls-validation.json',
+    validator: validateSupabaseRlsRuntimeEvidence,
   },
   {
     item: 'External review',
@@ -82,10 +84,10 @@ function normalizeItem(item) {
   return String(item ?? '').replace(/`/g, '').trim();
 }
 
-function readEvidence(file) {
+function readEvidence(file, validator) {
   const evidencePath = path.join(runtimeDir, file);
   if (!fs.existsSync(evidencePath)) {
-    return { evidencePath, evidenceFileExists: false, evidenceStatus: 'missing', evidenceOutcome: 'missing', evidenceSatisfied: false };
+    return { evidencePath, evidenceFileExists: false, evidenceStatus: 'missing', evidenceOutcome: 'missing', evidenceSatisfied: false, validatorFailures: [] };
   }
 
   try {
@@ -93,11 +95,33 @@ function readEvidence(file) {
     const evidenceStatus = String(evidence.status ?? 'missing');
     const evidenceOutcome = evidence.outcome === undefined ? 'not_recorded' : String(evidence.outcome);
     const placeholderOnly = evidence.placeholderOnly === true || evidence.evidenceIntegrity?.placeholderOnly === true;
-    const evidenceSatisfied = evidenceStatus === 'Complete' && (evidence.outcome === undefined || evidenceOutcome === 'passed') && !placeholderOnly;
+    const validatorFailures = typeof validator === 'function'
+      ? validator(evidence, { now: new Date(), expectedBranch: 'main' })
+      : [];
+    const evidenceSatisfied = evidenceStatus === 'Complete'
+      && (evidence.outcome === undefined || evidenceOutcome === 'passed')
+      && !placeholderOnly
+      && validatorFailures.length === 0;
 
-    return { evidencePath, evidenceFileExists: true, evidenceStatus, evidenceOutcome, placeholderOnly, evidenceSatisfied };
+    return {
+      evidencePath,
+      evidenceFileExists: true,
+      evidenceStatus,
+      evidenceOutcome,
+      placeholderOnly,
+      validatorFailures,
+      evidenceSatisfied,
+    };
   } catch (error) {
-    return { evidencePath, evidenceFileExists: true, evidenceStatus: 'invalid_json', evidenceOutcome: 'invalid_json', evidenceSatisfied: false, parseError: error.message };
+    return {
+      evidencePath,
+      evidenceFileExists: true,
+      evidenceStatus: 'invalid_json',
+      evidenceOutcome: 'invalid_json',
+      evidenceSatisfied: false,
+      validatorFailures: [],
+      parseError: error.message,
+    };
   }
 }
 
@@ -120,7 +144,7 @@ function statusFor(entry) {
 
 const results = requiredRuntimeItems.map((entry) => {
   const status = statusFor(entry);
-  const evidence = readEvidence(entry.file);
+  const evidence = readEvidence(entry.file, entry.validator);
   const satisfiedStatus = satisfiedStatuses.has(status);
   return {
     item: entry.item,
@@ -130,6 +154,7 @@ const results = requiredRuntimeItems.map((entry) => {
     evidenceStatus: evidence.evidenceStatus,
     evidenceOutcome: evidence.evidenceOutcome,
     placeholderOnly: evidence.placeholderOnly === true,
+    validatorFailures: evidence.validatorFailures,
     parseError: evidence.parseError,
     satisfiedStatus,
     satisfied: satisfiedStatus && evidence.evidenceSatisfied,
