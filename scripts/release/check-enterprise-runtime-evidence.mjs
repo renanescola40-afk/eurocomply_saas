@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync } from 'node:fs';
+import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
 
 const runtimeDir = 'docs/security/evidence/runtime';
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
@@ -43,9 +44,7 @@ if (complete(files.envReadiness, envReadiness, 'Enterprise env readiness evidenc
   if (envReadiness.noSecretsStored !== true) failures.push(`${files.envReadiness} must prove noSecretsStored=true`);
   if (envReadiness.evidenceIntegrity?.containsSensitiveValues !== false) failures.push(`${files.envReadiness} must prove containsSensitiveValues=false`);
   if (envReadiness.evidenceIntegrity?.rawUrlsStored !== false) failures.push(`${files.envReadiness} must not store raw URLs`);
-  for (const check of envReadiness.checks ?? []) {
-    if (check.required === true && check.passed !== true) failures.push(`${files.envReadiness} required check ${check.name ?? '<unknown>'} must pass`);
-  }
+  for (const check of envReadiness.checks ?? []) if (check.required === true && check.passed !== true) failures.push(`${files.envReadiness} required check ${check.name ?? '<unknown>'} must pass`);
 }
 
 basic('Production secrets provider evidence', files.productionSecrets);
@@ -98,42 +97,19 @@ if (complete(files.externalReview, external, 'External security review/pentest e
 }
 
 const authRbac = readJson(files.authRbacFinal);
-if (complete(files.authRbacFinal, authRbac, 'Auth/RBAC final runtime evidence')) {
-  if (authRbac.outcome !== 'passed') failures.push(`${files.authRbacFinal} outcome must be passed`);
-  if (authRbac.releaseDecision !== 'Go') failures.push(`${files.authRbacFinal} releaseDecision must be Go`);
-  if (authRbac.goNoGo?.status !== 'GO') failures.push(`${files.authRbacFinal} goNoGo.status must be GO`);
-  if (authRbac.runtimeEvidenceStatus !== 'executed_against_target_environment') failures.push(`${files.authRbacFinal} runtimeEvidenceStatus must be executed_against_target_environment`);
-  if (authRbac.evidenceIntegrity?.placeholderOnly !== false) failures.push(`${files.authRbacFinal} must not be placeholder-only when Complete`);
-  if (authRbac.evidenceIntegrity?.realRuntimeEvidenceAttached !== true) failures.push(`${files.authRbacFinal} must attach real runtime evidence before enterprise release`);
-  if (authRbac.evidenceIntegrity?.customerFacingProof !== true) failures.push(`${files.authRbacFinal} must be approved as customer-facing proof before enterprise release`);
-  const blockingEvidence = authRbac.blockingEvidence ?? {};
-  for (const [key, value] of Object.entries(blockingEvidence)) {
-    if (!['complete', 'passed', true].includes(value)) failures.push(`${files.authRbacFinal} blockingEvidence.${key} must be complete/passed`);
+if (authRbac) {
+  for (const failure of validateAuthRbacRuntimeEvidence(authRbac)) {
+    failures.push(`${files.authRbacFinal} ${failure}`);
   }
+  complete(files.authRbacFinal, authRbac, 'Auth/RBAC final runtime evidence');
 }
 
 if (!finalValidationInProgress) {
   const finalValidation = readJson(files.finalValidation);
   if (complete(files.finalValidation, finalValidation, 'Final validation runner evidence')) {
     if (finalValidation.outcome !== 'passed') failures.push(`${files.finalValidation} outcome must be passed`);
-    const requiredCommands = [
-      'npm ci',
-      'npm run lint',
-      'npm run typecheck',
-      'npm run test',
-      'npm run build',
-      'npm run test:e2e',
-      'npm run security:ci',
-      'npm run security:rls:live',
-      'npm run release:deployment-smoke',
-      'npm run release:observability-smoke',
-      'npm run release:rollback:dry-run',
-      'npm run release:enterprise-runtime-evidence',
-      'npm run security:p0-runtime-gap:strict',
-    ];
-    for (const command of requiredCommands) {
-      if (!commandPassed(finalValidation, command)) failures.push(`${files.finalValidation} must include passed ${command}`);
-    }
+    const requiredCommands = ['npm ci','npm run lint','npm run typecheck','npm run test','npm run build','npm run test:e2e','npm run security:ci','npm run security:rls:live','npm run release:deployment-smoke','npm run release:observability-smoke','npm run release:rollback:dry-run','npm run release:enterprise-runtime-evidence','npm run security:p0-runtime-gap:strict'];
+    for (const command of requiredCommands) if (!commandPassed(finalValidation, command)) failures.push(`${files.finalValidation} must include passed ${command}`);
   }
 }
 
