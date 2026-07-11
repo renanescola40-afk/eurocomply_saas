@@ -166,12 +166,12 @@ test.describe('enterprise critical SaaS flow coverage', () => {
     }
   }
 
-  test('landing exposes real conversion destinations without fake production or legal claims', async ({ page }) => {
+  test('landing exposes real controlled-access destinations without fake production or legal claims', async ({ page }) => {
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
     await expectControlledPage(page, 'en landing trust copy');
 
-    const conversionLinks = page.locator('a[href*="/en/signup"], a[href*="/en/billing"], a[href*="/en/contact"], a[href*="/en/pricing"]');
-    expect(await conversionLinks.count(), 'landing should expose several conversion links with real hrefs').toBeGreaterThanOrEqual(3);
+    const waitlistLinks = page.locator('a[href="#waitlist-form"], a[href^="mailto:"]');
+    expect(await waitlistLinks.count(), 'landing should expose controlled-access and contact destinations').toBeGreaterThanOrEqual(2);
 
     const bodyText = await page.locator('body').innerText();
     expect(bodyText, 'landing should not make absolute compliance guarantees').not.toMatch(
