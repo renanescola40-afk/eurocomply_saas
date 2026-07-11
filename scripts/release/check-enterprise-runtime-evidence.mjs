@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
+import { validateDeploymentRuntimeEvidence } from './validate-deployment-runtime-evidence.mjs';
 import { validateObservabilityRuntimeEvidence } from './validate-observability-runtime-evidence.mjs';
 import { validateStepUpMfaRuntimeEvidence } from './validate-step-up-mfa-runtime-evidence.mjs';
 import { validateStripeRuntimeEvidence } from './validate-stripe-runtime-evidence.mjs';
@@ -72,18 +73,9 @@ if (observability) {
 basic('Branch protection/ruleset evidence', files.branchProtection);
 
 const deployment = readJson(files.deploymentSmoke);
-if (complete(files.deploymentSmoke, deployment, 'Deployment smoke evidence')) {
-  if (deployment.outcome !== 'passed') failures.push(`${files.deploymentSmoke} outcome must be passed`);
-  if (!Array.isArray(deployment.targets) || deployment.targets.length === 0) failures.push(`${files.deploymentSmoke} must list smoke targets`);
-  if (!Array.isArray(deployment.smokeTargets?.passed) || !Array.isArray(deployment.smokeTargets?.failed)) failures.push(`${files.deploymentSmoke} must include normalized smokeTargets passed/failed arrays`);
-  if ((deployment.smokeTargets?.failed ?? []).length > 0) failures.push(`${files.deploymentSmoke} normalized smokeTargets.failed must be empty`);
-  if ((deployment.smokeTargets?.passed ?? []).length === 0) failures.push(`${files.deploymentSmoke} normalized smokeTargets.passed must not be empty`);
-  for (const target of deployment.targets ?? []) {
-    if (target?.passed !== true) failures.push(`${files.deploymentSmoke} has failing target ${target?.baseUrl ?? '<unknown>'}`);
-    if (target?.checks?.healthOk !== true) failures.push(`${files.deploymentSmoke} missing /api/health proof`);
-    if (target?.checks?.readyProtected !== true) failures.push(`${files.deploymentSmoke} missing protected /api/ready proof`);
-    if (target?.checks?.readyOk !== true) failures.push(`${files.deploymentSmoke} missing ready /api/ready proof`);
-  }
+if (deployment) {
+  for (const failure of validateDeploymentRuntimeEvidence(deployment)) failures.push(`${files.deploymentSmoke} ${failure}`);
+  complete(files.deploymentSmoke, deployment, 'Deployment smoke evidence');
 }
 
 const rollback = readJson(files.rollbackDryRun);
