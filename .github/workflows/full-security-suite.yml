@@ -69,20 +69,6 @@ jobs:
           if-no-files-found: ignore
       - name: Unit tests
         run: npm run test
-      - name: E2E tests when Playwright runtime is configured
-        shell: bash
-        run: |
-          if ! node -e "const p=require('./package.json'); process.exit(p.scripts?.['test:e2e'] ? 0 : 1)" \
-            || ! ls playwright.config.* >/dev/null 2>&1; then
-            echo "No Playwright test:e2e configuration detected; skipping E2E gate."
-          elif [ "${RUN_E2E:-}" = "true" ] || [ -n "${E2E_BASE_URL:-}" ]; then
-            npx playwright install --with-deps chromium
-            npm run test:e2e
-          else
-            echo "Playwright E2E tests are present, but no configured E2E runtime was provided."
-            echo "Set RUN_E2E=true for local/webServer E2E or E2E_BASE_URL for an existing deployment."
-            echo "Skipping E2E because this CI context has no production-like E2E runtime."
-          fi
       - name: Build
         shell: bash
         run: |
@@ -98,6 +84,30 @@ jobs:
           name: full-security-suite-build-diagnostics
           path: build.log
           if-no-files-found: ignore
+      - name: Required production-like Playwright E2E gate
+        shell: bash
+        env:
+          RUN_E2E: ${{ vars.RUN_E2E }}
+          E2E_BASE_URL: ${{ vars.E2E_BASE_URL }}
+          PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
+        run: |
+          set -euo pipefail
+          if ! node -e "const p=require('./package.json'); process.exit(p.scripts?.['test:e2e'] ? 0 : 1)"; then
+            echo "::error title=Missing Playwright E2E script::package.json must define test:e2e for the enterprise merge/deploy gate."
+            exit 1
+          fi
+          if ! ls playwright.config.* >/dev/null 2>&1; then
+            echo "::error title=Missing Playwright configuration::A Playwright config is required for the enterprise merge/deploy gate."
+            exit 1
+          fi
+          if [ -z "${E2E_BASE_URL:-}" ] && [ "${RUN_E2E:-true}" != "true" ]; then
+            echo "::error title=E2E runtime unavailable::Set RUN_E2E=true for the built local server or configure E2E_BASE_URL. Release and merge remain No-Go."
+            exit 1
+          fi
+          npx playwright install --with-deps chromium
+          npm run test:e2e
       - name: npm audit moderate gate
         run: npm audit --audit-level=moderate
       - name: Application security CI
