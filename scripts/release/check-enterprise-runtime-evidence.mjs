@@ -5,6 +5,7 @@ import { validateAuditChainLiveEvidence } from '../security/validate-audit-chain
 import { validateAuthRbacRuntimeEvidence } from './validate-auth-rbac-runtime-evidence.mjs';
 import { validateDeploymentRuntimeEvidence } from './validate-deployment-runtime-evidence.mjs';
 import { validateEnterpriseEnvRuntimeEvidence } from './validate-enterprise-env-runtime-evidence.mjs';
+import { validateFinalValidationRuntimeEvidence } from './validate-final-validation-runtime-evidence.mjs';
 import { validateObservabilityRuntimeEvidence } from './validate-observability-runtime-evidence.mjs';
 import { validateProductionSecretsRuntimeEvidence } from './validate-production-secrets-runtime-evidence.mjs';
 import { validateRollbackRuntimeEvidence } from './validate-rollback-runtime-evidence.mjs';
@@ -123,10 +124,9 @@ if (authRbac) {
 
 if (!finalValidationInProgress) {
   const finalValidation = readJson(files.finalValidation);
-  if (complete(files.finalValidation, finalValidation, 'Final validation runner evidence')) {
-    if (finalValidation.outcome !== 'passed') failures.push(`${files.finalValidation} outcome must be passed`);
-    const requiredCommands = ['npm ci','npm run lint','npm run typecheck','npm run test','npm run build','npm run test:e2e','npm run security:ci','npm run security:rls:live','npm run release:deployment-smoke','npm run release:observability-smoke','npm run release:rollback:dry-run','npm run release:enterprise-runtime-evidence','npm run security:p0-runtime-gap:strict'];
-    for (const command of requiredCommands) if (!commandPassed(finalValidation, command)) failures.push(`${files.finalValidation} must include passed ${command}`);
+  if (finalValidation) {
+    for (const failure of validateFinalValidationRuntimeEvidence(finalValidation, { expectedCommitSha: process.env.GITHUB_SHA })) failures.push(`${files.finalValidation} ${failure}`);
+    complete(files.finalValidation, finalValidation, 'Final validation runner evidence');
   }
 }
 
