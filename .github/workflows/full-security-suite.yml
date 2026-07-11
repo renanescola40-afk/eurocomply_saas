@@ -106,6 +106,9 @@ jobs:
             echo "::error title=E2E runtime unavailable::Set RUN_E2E=true for the built local server or configure E2E_BASE_URL. Release and merge remain No-Go."
             exit 1
           fi
+          if [ -z "${E2E_BASE_URL:-}" ]; then
+            unset E2E_BASE_URL
+          fi
           npx playwright install --with-deps chromium
           npm run test:e2e -- --reporter=html,line 2>&1 | tee playwright-e2e.log
       - name: Upload Playwright E2E diagnostics
