@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { SUPPORTED_LOCALES } from '../../src/lib/i18n/locales';
 
 type MessageValue = string | number | boolean | null | MessageValue[] | MessageCatalog;
-type MessageCatalog = Record<string, MessageValue>;
+interface MessageCatalog {
+  [key: string]: MessageValue;
+}
 
 function readCatalog(locale: string): MessageCatalog {
   const path = resolve(process.cwd(), 'src', 'messages', `${locale}.json`);
