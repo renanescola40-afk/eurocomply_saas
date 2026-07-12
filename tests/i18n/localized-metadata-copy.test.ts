@@ -24,7 +24,7 @@ describe('localized metadata copy', () => {
 
   it('does not regress to ASCII transliterations used by the previous metadata copy', () => {
     for (const obsoletePhrase of [
-      'inventario de IA',
+      'inventario de IA, visibilidade de risco',
       'preparacion de evidencias',
       'equipes B2B europeennes',
       'visibilita del rischio',
