@@ -1,0 +1,87 @@
+{
+  "schema": "risck-comply.enterprise-10-10-audit.v1",
+  "evidenceItem": "enterprise-10-10-audit",
+  "status": "Open",
+  "outcome": "no_go",
+  "generatedAt": "2026-07-11T15:00:00.000Z",
+  "reviewedAt": "2026-07-11T15:00:00.000Z",
+  "reviewer": "enterprise technical board audit",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "baselineBranch": "main",
+  "initialAuditBaselineCommitSha": "78b05d4a31f7cc2545d02fb24add7f187cd2a7ac",
+  "remediationBranchMergeBaseSha": "99e60215646cf7a2387a6d64b4131aeb49fdf312",
+  "remediationBranch": "agent/enterprise-10-10-audit",
+  "summary": "Repository-side architecture, security, database, UX, release and runtime-evidence audit. Static controls are strong, but enterprise production remains No-Go because current promoted-commit runtime evidence, rollback proof, recovery proof and external security review are incomplete.",
+  "decision": "No-Go",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "decisionReasons": [
+    "final-validation-runner evidence is Open/failed",
+    "deployment-smoke-validation evidence is Open/failed",
+    "observability-smoke-validation is Exception/not_run",
+    "rollback-dry-run-validation is Open/failed",
+    "enterprise-final-readiness-validation is Open/no_go",
+    "external-security-review-or-pentest is Open/not_started",
+    "live Supabase RLS evidence is tied to an older commit SHA",
+    "backup restore drill and measured RPO/RTO are not complete",
+    "production-like E2E for the remediation branch must still pass in GitHub Actions"
+  ],
+  "changes": [
+    "made the Full Security Suite production-like Playwright E2E gate fail closed",
+    "moved mandatory E2E after the production build",
+    "added a contract test preventing E2E skip regression",
+    "kept Supabase Auth as the authoritative runtime identity stack",
+    "removed unused tenant detail getters that propagated raw provider errors",
+    "sanitized active organization and member query errors",
+    "registered this audit as fail-closed Open/no_go evidence",
+    "added a safe dependency-free allowlisted same-origin load-smoke runner and discoverable tests",
+    "created enterprise architecture, GDPR controls, database/RLS, UX and load-test documentation",
+    "created docs/ENTERPRISE_10_10_FINAL_REPORT.md"
+  ],
+  "scores": {
+    "codeAndArchitecture": 8.9,
+    "securityAndCompliance": 8.6,
+    "databaseAndPerformance": 8.0,
+    "uxAndFrontend": 7.9,
+    "infrastructureAndDeploy": 8.4,
+    "accessAndLogin": 8.7,
+    "goToProductionEnterprise": 4.5,
+    "overall": 7.9
+  },
+  "validation": {
+    "connectorAuditOnly": true,
+    "localNpmCommandsExecuted": false,
+    "remediationBranchCiRequired": true,
+    "baselineStatusesObserved": [
+      "CI / quality: success",
+      "Scan repository for accidental secret exposure: success",
+      "Enterprise merge/deploy gate: success",
+      "Vercel: success"
+    ]
+  },
+  "evidenceLocations": [
+    "docs/ENTERPRISE_10_10_FINAL_REPORT.md",
+    "docs/architecture/ENTERPRISE_ARCHITECTURE.md",
+    "docs/compliance/GDPR_OPERATIONAL_CONTROLS.md",
+    "docs/database/PERFORMANCE_AND_RLS_REVIEW.md",
+    "docs/product/UX_ENTERPRISE_FINAL_REVIEW.md",
+    "docs/performance/LOAD_TEST_PLAN.md",
+    ".github/workflows/full-security-suite.yml",
+    "tests/security/enterprise-e2e-gate.test.ts",
+    "tests/security/enterprise-audit-evidence-contract.test.ts",
+    "tests/security/server-query-error-sanitization.test.ts",
+    "tests/performance/run-http-load-smoke.test.ts",
+    "scripts/performance/run-http-load-smoke.mjs",
+    "docs/security/evidence/runtime/enterprise-10-10-audit-2026-07-11.json"
+  ],
+  "evidenceIntegrity": {
+    "placeholderOnly": true,
+    "containsSensitiveValues": false,
+    "valuesRedacted": true,
+    "authorizationHeaderStored": false,
+    "cookiesStored": false,
+    "customerDataStored": false,
+    "runtimeProofInvented": false,
+    "customerFacingProof": false
+  },
+  "releaseGate": "Enterprise public production is blocked and remains No-Go until every P0 blocker is backed by current, commit-bound, Complete/passed evidence and PR/release validation succeeds."
+}

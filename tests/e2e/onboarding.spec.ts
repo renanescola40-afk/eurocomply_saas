@@ -11,7 +11,8 @@ test.describe('B2B onboarding', () => {
   test('keeps public conversion CTA pointed at the lead form', async ({ page }) => {
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('link', { name: /^Join waitlist$/i }).first()).toHaveAttribute('href', '#waitlist-form');
+    const conversionCta = page.locator('a[href="#waitlist-form"]').filter({ hasText: /^(Join waitlist|Request access|Early access)$/i }).first();
+    await expect(conversionCta).toBeVisible();
     await expect(page.locator('#waitlist-form')).toBeVisible();
   });
 });

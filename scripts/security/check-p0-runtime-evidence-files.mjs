@@ -26,6 +26,8 @@ const allowedItems = new Set([
   'enterprise-release-env-readiness',
   // GDPR privacy evidence added by the enterprise privacy controls package.
   'gdpr-privacy-validation',
+  // Static enterprise audit evidence is allowed only as an honest No-Go/open audit record.
+  'enterprise-10-10-audit',
 ]);
 const redactionTexts = new Set([
   'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
@@ -231,6 +233,46 @@ function checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence) {
   return true;
 }
 
+function checkEnterpriseAuditOpenEvidence(file, evidence) {
+  if (evidence.evidenceItem !== 'enterprise-10-10-audit' || evidence.status !== 'Open') return false;
+
+  requireString(file, evidence, 'reviewer', 3);
+  requireString(file, evidence, 'reviewedAt', 10);
+  requireString(file, evidence, 'summary', 40);
+  requireArray(file, evidence, 'evidenceLocations', 1);
+  requireArray(file, evidence, 'decisionReasons', 1);
+
+  if (!hasValidRedactionText(evidence)) {
+    failures.push(`${file} missing redaction confirmation`);
+  }
+
+  if (evidence.outcome !== 'no_go') {
+    failures.push(`${file} Open enterprise audit evidence must have outcome no_go`);
+  }
+
+  if (evidence.decision !== 'No-Go') {
+    failures.push(`${file} Open enterprise audit evidence must keep decision No-Go`);
+  }
+
+  if (!String(evidence.releaseGate ?? '').toLowerCase().includes('blocked')) {
+    failures.push(`${file} Open enterprise audit evidence must keep releaseGate blocked`);
+  }
+
+  if (evidence.evidenceIntegrity?.containsSensitiveValues !== false) {
+    failures.push(`${file} enterprise audit evidence must confirm no sensitive values are stored`);
+  }
+
+  if (evidence.evidenceIntegrity?.runtimeProofInvented !== false) {
+    failures.push(`${file} enterprise audit evidence must confirm runtime proof was not invented`);
+  }
+
+  if (Array.isArray(evidence.controlsVerified) && evidence.controlsVerified.length > 0) {
+    failures.push(`${file} Open enterprise audit evidence must not list controlsVerified as if passed`);
+  }
+
+  return true;
+}
+
 function checkCompleteEvidence(file, evidence) {
   requireString(file, evidence, 'reviewer', 3);
   requireString(file, evidence, 'reviewedAt', 10);
@@ -278,6 +320,7 @@ for (const file of files) {
   if (checkSupabaseOpenPlaceholder(file, evidence)) continue;
   if (checkExternalReviewOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence)) continue;
+  if (checkEnterpriseAuditOpenEvidence(file, evidence)) continue;
 
   if (evidence.status === 'Complete') {
     checkCompleteEvidence(file, evidence);

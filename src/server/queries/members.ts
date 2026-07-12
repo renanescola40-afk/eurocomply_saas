@@ -10,7 +10,8 @@ export async function listOrganizationMembers(organizationId: string) {
     .order('created_at', { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    console.warn('[members] list_failed', { code: error.code ?? 'unknown' });
+    throw new Error('Unable to load organization members.');
   }
 
   return data ?? [];
@@ -27,7 +28,8 @@ export async function listPendingInvitations(organizationId: string) {
     .order('created_at', { ascending: false });
 
   if (error) {
-    throw new Error(error.message);
+    console.warn('[members] pending_invitations_failed', { code: error.code ?? 'unknown' });
+    throw new Error('Unable to load pending invitations.');
   }
 
   return data ?? [];
