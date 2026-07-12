@@ -38,23 +38,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     pt: {
       title: 'Risck Comply - AI Compliance Operating System',
-      description: 'Suporte a AI Act readiness, inventario de IA, visibilidade de risco, preparacao de evidencias de governanca e workflows de operacoes de compliance para equipas B2B europeias.',
+      description: 'Apoio à preparação para o AI Act, inventário de IA, visibilidade de riscos, preparação de evidências de governança e fluxos operacionais de compliance para equipas B2B europeias.',
     },
     es: {
       title: 'Risck Comply - AI Compliance Operating System',
-      description: 'Soporte de AI Act readiness, inventario de IA, visibilidad de riesgos, preparacion de evidencias de gobernanza y workflows de operaciones de compliance para equipos B2B europeos.',
+      description: 'Apoyo para la preparación ante el AI Act, inventario de IA, visibilidad de riesgos, preparación de evidencias de gobernanza y flujos operativos de compliance para equipos B2B europeos.',
     },
     fr: {
       title: 'Risck Comply - AI Compliance Operating System',
-      description: 'Support AI Act readiness, inventaire IA, visibilite des risques, preparation des preuves de gouvernance et workflows operations compliance pour equipes B2B europeennes.',
+      description: 'Accompagnement à la préparation au AI Act, inventaire des systèmes d’IA, visibilité des risques, préparation des preuves de gouvernance et flux opérationnels de conformité pour les équipes B2B européennes.',
     },
     it: {
       title: 'Risck Comply - AI Compliance Operating System',
-      description: 'Supporto AI Act readiness, inventario IA, visibilita del rischio, preparazione delle evidenze di governance e workflow operativi di compliance per team B2B europei.',
+      description: 'Supporto alla preparazione per l’AI Act, inventario dei sistemi di IA, visibilità dei rischi, preparazione delle evidenze di governance e flussi operativi di compliance per team B2B europei.',
     },
     de: {
       title: 'Risck Comply - AI Compliance Operating System',
-      description: 'AI Act Readiness Support, KI-Inventar, Risikosichtbarkeit, Governance-Nachweisvorbereitung und Compliance-Operations-Workflows fuer europaeische B2B-Teams.',
+      description: 'Unterstützung bei der Vorbereitung auf den AI Act, KI-Inventar, Risikotransparenz, Vorbereitung von Governance-Nachweisen und Compliance-Workflows für europäische B2B-Teams.',
     },
   };
 
