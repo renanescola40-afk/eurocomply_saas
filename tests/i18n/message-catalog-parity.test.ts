@@ -15,7 +15,17 @@ function flattenCatalog(value: MessageValue, prefix = ''): Map<string, MessageVa
   const entries = new Map<string, MessageValue>();
 
   if (Array.isArray(value)) {
-    entries.set(prefix, value);
+    if (value.length === 0) {
+      entries.set(prefix, value);
+      return entries;
+    }
+
+    value.forEach((item, index) => {
+      const path = `${prefix}[${index}]`;
+      for (const [childPath, childValue] of flattenCatalog(item, path)) {
+        entries.set(childPath, childValue);
+      }
+    });
     return entries;
   }
 
@@ -53,7 +63,7 @@ describe('localized message catalogs', () => {
         return text.length === 0 || text.startsWith('__OPEN_UNTIL_') || text === 'TODO' || text === 'TBD';
       }
       if (Array.isArray(value)) {
-        return value.length === 0 || value.some((item) => typeof item !== 'string' || item.trim().length === 0);
+        return value.length === 0;
       }
       return value === null;
     });
