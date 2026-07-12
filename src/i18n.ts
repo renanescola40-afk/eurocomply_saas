@@ -1,12 +1,13 @@
 import { getRequestConfig } from 'next-intl/server';
+
+import { isSupportedLocale } from './lib/i18n/locales';
 import { routing } from './lib/i18n/routing';
 
 export default getRequestConfig(async ({ requestLocale }) => {
-  let locale = await requestLocale;
-
-  if (!locale || !routing.locales.includes(locale as 'en' | 'pt' | 'es' | 'fr' | 'it' | 'de')) {
-    locale = routing.defaultLocale;
-  }
+  const requestedLocale = await requestLocale;
+  const locale = isSupportedLocale(requestedLocale)
+    ? requestedLocale
+    : routing.defaultLocale;
 
   return {
     locale,
