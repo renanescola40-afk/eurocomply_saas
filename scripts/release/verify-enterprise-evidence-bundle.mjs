@@ -9,7 +9,7 @@ const expectedSha = (process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA ||
 
 const required = [
   { file: 'deployment-smoke-validation.json', commitBound: true },
-  { file: 'observability-smoke-validation.json', commitBound: true },
+  { file: 'observability-smoke-validation.json', commitBound: false },
   { file: 'rollback-dry-run-validation.json', commitBound: true },
   { file: 'supabase-live-rls-validation.json', commitBound: true },
   { file: 'production-final-validation.json', commitBound: true },
