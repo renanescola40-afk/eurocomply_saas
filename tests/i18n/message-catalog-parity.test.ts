@@ -11,21 +11,25 @@ function readCatalog(locale: string): MessageCatalog {
   return JSON.parse(readFileSync(path, 'utf8')) as MessageCatalog;
 }
 
+function isMessageArray(value: MessageValue): value is MessageValue[] {
+  return Array.isArray(value);
+}
+
 function flattenCatalog(value: MessageValue, prefix = ''): Map<string, MessageValue> {
   const entries = new Map<string, MessageValue>();
 
-  if (Array.isArray(value)) {
+  if (isMessageArray(value)) {
     if (value.length === 0) {
       entries.set(prefix, value);
       return entries;
     }
 
-    value.forEach((item, index) => {
+    for (const [index, item] of value.entries()) {
       const path = `${prefix}[${index}]`;
       for (const [childPath, childValue] of flattenCatalog(item, path)) {
         entries.set(childPath, childValue);
       }
-    });
+    }
     return entries;
   }
 
@@ -62,7 +66,7 @@ describe('localized message catalogs', () => {
         const text = value.trim();
         return text.length === 0 || text.startsWith('__OPEN_UNTIL_') || text === 'TODO' || text === 'TBD';
       }
-      if (Array.isArray(value)) {
+      if (isMessageArray(value)) {
         return value.length === 0;
       }
       return value === null;
