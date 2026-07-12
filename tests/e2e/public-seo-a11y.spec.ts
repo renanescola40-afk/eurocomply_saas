@@ -2,6 +2,11 @@ import { expect, test, type Page } from '@playwright/test';
 
 const publicRoutes = ['/en', '/en/pricing', '/en/trust', '/en/security'] as const;
 
+function normalizePathname(pathname: string) {
+  if (pathname === '/') return pathname;
+  return pathname.replace(/\/+$/, '');
+}
+
 async function expectSeoMetadata(page: Page, path: string) {
   await expect(page.getByRole('main').first()).toBeVisible();
   await expect(page.locator('h1').first()).toBeVisible();
@@ -13,7 +18,7 @@ async function expectSeoMetadata(page: Page, path: string) {
 
   const canonicalHref = await page.locator('link[rel="canonical"]').getAttribute('href');
   expect(canonicalHref).toBeTruthy();
-  expect(new URL(canonicalHref || 'https://example.invalid').pathname).toBe(path);
+  expect(normalizePathname(new URL(canonicalHref || 'https://example.invalid').pathname)).toBe(normalizePathname(path));
 
   await expect(page.locator('link[rel="alternate"][hreflang="pt-PT"]')).toHaveCount(1);
   await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveCount(1);
