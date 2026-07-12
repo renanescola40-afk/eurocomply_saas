@@ -48,7 +48,7 @@ test.describe('public controlled-access landing', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByText('Enterprise operating layer')).toBeVisible();
+    await expect(page.getByText('Enterprise operating layer').first()).toBeVisible();
     await expect(page.getByText('Review-ready evidence').first()).toBeVisible();
     await expect(page.getByText('Legal review support').first()).toBeVisible();
     await expect(page.getByText('Procurement confidence').first()).toBeVisible();
