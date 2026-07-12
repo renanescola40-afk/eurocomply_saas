@@ -2,7 +2,10 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 const root = process.cwd();
-const apiRoot = join(root, 'src', 'app', 'api');
+const routeRoots = [
+  join(root, 'src', 'app', 'api'),
+  join(root, 'src', 'app', 'next_api'),
+];
 const inventoryPath = join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.md');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
 
@@ -15,11 +18,6 @@ const allowedClasses = new Set([
   'high-risk',
   'webhook',
   'health/internal',
-]);
-
-const explicitRouteClassFallbacks = new Map([
-  ['src/app/api/clerk/organizations/sync/route.ts', 'tenant-scoped'],
-  ['src/app/api/security/step-up/verify/route.ts', 'high-risk'],
 ]);
 
 function walk(dir) {
@@ -49,33 +47,43 @@ function readInventory() {
 
   const source = readFileSync(inventoryPath, 'utf8');
   const routeClasses = new Map();
+  const failures = [];
   const rowPattern = /^\|\s*`([^`]+route\.ts)`\s*\|\s*([^|]+?)\s*\|/gm;
+
   for (const match of source.matchAll(rowPattern)) {
-    routeClasses.set(match[1], match[2].trim());
+    const route = match[1];
+    const routeClass = match[2].trim();
+
+    if (routeClasses.has(route)) {
+      failures.push(`${route}: duplicate API_ROUTE_INVENTORY.md classification`);
+      continue;
+    }
+
+    routeClasses.set(route, routeClass);
   }
 
-  for (const [route, routeClass] of explicitRouteClassFallbacks) {
-    if (!routeClasses.has(route)) routeClasses.set(route, routeClass);
-  }
-
-  return { routeClasses, failures: [] };
+  return { routeClasses, failures };
 }
 
 const inventory = readInventory();
-const routes = walk(apiRoot);
+const routes = routeRoots.flatMap((routeRoot) => walk(routeRoot));
+const routePaths = routes.map(normalizePath);
+const routePathSet = new Set(routePaths);
 const findings = [...inventory.failures];
 
-for (const route of routes) {
-  const normalized = normalizePath(route);
-  const routeClass = inventory.routeClasses.get(normalized);
+for (const route of routePaths) {
+  if (!inventory.routeClasses.has(route)) {
+    findings.push(`${route}: missing API_ROUTE_INVENTORY.md classification`);
+  }
+}
 
-  if (!routeClass) {
-    findings.push(`${normalized}: missing API_ROUTE_INVENTORY.md classification`);
-    continue;
+for (const [route, routeClass] of inventory.routeClasses) {
+  if (!allowedClasses.has(routeClass)) {
+    findings.push(`${route}: unknown API route classification: ${routeClass}`);
   }
 
-  if (!allowedClasses.has(routeClass)) {
-    findings.push(`${normalized}: unknown API route classification: ${routeClass}`);
+  if (!routePathSet.has(route)) {
+    findings.push(`${route}: stale API_ROUTE_INVENTORY.md classification for missing route`);
   }
 }
 
