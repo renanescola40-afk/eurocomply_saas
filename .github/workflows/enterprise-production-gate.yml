@@ -80,6 +80,7 @@ jobs:
             docs/security/evidence/runtime/**/*.json
             release-validation/**
           if-no-files-found: ignore
+          retention-days: 30
 
   e2e-production-like:
     name: E2E production-like gate
@@ -122,9 +123,39 @@ jobs:
             playwright-report/**
             test-results/**
           if-no-files-found: ignore
+          retention-days: 30
+
+  production-release-contract:
+    name: Production release contract
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate release runner syntax
+        run: |
+          node --check scripts/release/check-enterprise-release-env.mjs
+          node --check scripts/release/run-public-production-release.mjs
+          node --check scripts/release/run-public-production-release-v2.mjs
+          node --check scripts/release/verify-enterprise-evidence-bundle.mjs
+
+      - name: Assert fail-closed workflow contract
+        run: |
+          grep -Fq "npm run release:production-final" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "verify-enterprise-evidence-bundle.mjs" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "if-no-files-found: error" .github/workflows/enterprise-production-gate.yml
+          grep -Fq "environment: Production" .github/workflows/enterprise-production-gate.yml
 
   production-release-validation:
-    name: Production release validation
+    name: Production runtime validation
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: Production
     needs: [quality-security-build, e2e-production-like]
@@ -175,42 +206,65 @@ jobs:
       MALWARE_SCANNER_CLAMAV_PORT: ${{ secrets.MALWARE_SCANNER_CLAMAV_PORT }}
       MALWARE_SCANNER_TIMEOUT_MS: ${{ secrets.MALWARE_SCANNER_TIMEOUT_MS }}
     steps:
-      - name: Confirm PR release validation scope
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "Production release validation is deferred on pull_request because it requires protected production secrets."
-          echo "This PR still requires the quality, security, build, and production-like E2E gates to pass."
-          echo "Run the workflow_dispatch or main-branch production release validation before promotion."
-
       - name: Checkout
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         uses: actions/checkout@v4
 
       - name: Setup Node
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
 
       - name: Deterministic install for env preflight
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         run: npm ci
 
       - name: Enterprise release env preflight
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         run: node scripts/release/check-enterprise-release-env.mjs
 
       - name: Enterprise production final gate
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         run: npm run release:production-final
 
+      - name: Verify complete evidence bundle for promoted SHA
+        run: node scripts/release/verify-enterprise-evidence-bundle.mjs
+
       - name: Upload final release evidence
-        if: always() && (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main')
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: enterprise-production-final-evidence
+          name: enterprise-production-final-evidence-${{ github.sha }}
           path: |
             docs/security/evidence/runtime/**/*.json
             release-validation/**
-          if-no-files-found: ignore
+          if-no-files-found: error
+          retention-days: 90
+
+  enterprise-closure-status:
+    name: Enterprise closure status
+    if: always()
+    needs:
+      - quality-security-build
+      - e2e-production-like
+      - production-release-contract
+      - production-release-validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate required result for this event
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref }}
+          QUALITY_RESULT: ${{ needs.quality-security-build.result }}
+          E2E_RESULT: ${{ needs.e2e-production-like.result }}
+          CONTRACT_RESULT: ${{ needs.production-release-contract.result }}
+          RUNTIME_RESULT: ${{ needs.production-release-validation.result }}
+        run: |
+          set -euo pipefail
+          test "$QUALITY_RESULT" = "success"
+          test "$E2E_RESULT" = "success"
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            test "$CONTRACT_RESULT" = "success"
+            echo "PR enterprise contract passed. Runtime Go is intentionally not claimed on pull requests."
+          else
+            test "$RUNTIME_RESULT" = "success"
+            echo "Main/manual enterprise runtime validation passed for $GITHUB_SHA."
+          fi
