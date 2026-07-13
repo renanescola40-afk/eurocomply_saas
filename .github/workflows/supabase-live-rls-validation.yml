@@ -31,7 +31,7 @@ jobs:
     environment: supabase-live-rls-validation
     steps:
       - name: Checkout trusted main
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: main
           persist-credentials: true
