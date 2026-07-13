@@ -1,10 +1,33 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 const rootDir = process.cwd();
 const checkerPath = path.join(rootDir, 'scripts/security/check-public-claims.mjs');
+const temporaryDirectories: string[] = [];
+
+afterEach(() => {
+  for (const directory of temporaryDirectories.splice(0)) {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+function runCheckerForFixture(content: string) {
+  const directory = fs.mkdtempSync(path.join(rootDir, '.public-claims-fixture-'));
+  temporaryDirectories.push(directory);
+  const fixturePath = path.join(directory, 'copy.ts');
+  fs.writeFileSync(fixturePath, `${content}\n`);
+
+  return spawnSync(process.execPath, [checkerPath], {
+    cwd: rootDir,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PUBLIC_CLAIMS_SCAN_TARGETS: path.relative(rootDir, fixturePath),
+    },
+  });
+}
 
 describe('customer-facing claims guard', () => {
   it('passes against the current customer-facing copy surfaces', () => {
@@ -57,5 +80,21 @@ describe('customer-facing claims guard', () => {
     expect(retentionCenter).not.toContain('signed retention-policy export');
     expect(retentionCenter).toContain('Ready for evidence review');
     expect(retentionCenter).toContain('RISCK COMPLY');
+  });
+
+  it('allows signed-contract language when an export is mentioned separately', () => {
+    const result = runCheckerForFixture(
+      "const copy = { title: 'Retention and deletion', description: 'Deletion posture should be confirmed in the signed agreement.', items: ['Workspace admins can request export or deletion support.'] };",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Customer-facing claims: ok');
+  });
+
+  it('blocks actual signed retention-export claims', () => {
+    const result = runCheckerForFixture("const copy = 'Download a signed retention-policy export for procurement review.';");
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('possible unsupported signed retention export');
   });
 });
