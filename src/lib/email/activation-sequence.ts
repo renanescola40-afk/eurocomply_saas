@@ -73,7 +73,7 @@ export function buildActivationEmail(input: ActivationEmailInput, day: Activatio
     preview: 'Book an onboarding session and review upgrade options.',
     text: [
       `Let us help ${organization} finish activation.`,
-      'Bring one document, one risk and one vendor. We will help shape the workspace into an enterprise-ready compliance view.',
+      'Bring one document, one risk and one vendor. We will help shape the workspace into a structured compliance operations view for evidence preparation and internal review.',
       `Book onboarding: ${callUrl(input)}`,
       `Billing options: ${input.billingUrl}`,
     ].join('\n\n'),
