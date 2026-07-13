@@ -8,7 +8,7 @@ describe('enterprise release deployment target contract', () => {
     expect(source).toContain("const explicitProductionUrlSources = ['RELEASE_DEPLOYMENT_URL', 'RELEASE_PRODUCTION_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL'];");
     expect(source).toContain("hasAny(explicitProductionUrlSources)");
     expect(source).toContain("rejectedAmbiguousSources: ['VERCEL_URL']");
-    expect(source).not.toMatch(/hasAny\(\[[^\]]*'VERCEL_URL'[^\]]*\]\)/s);
+    expect(source.replaceAll('\n', ' ')).not.toMatch(/hasAny\(\[[^\]]*'VERCEL_URL'[^\]]*\]\)/);
   });
 
   it('records remediation that distinguishes production from preview deployments', () => {
