@@ -9,6 +9,7 @@ import { getUserEmailById } from '@/server/users/email';
 export const runtime = 'nodejs';
 
 const TRIAL_REMINDER_DAYS = 3;
+const UNIQUE_VIOLATION_CODE = '23505';
 
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
@@ -28,27 +29,12 @@ async function getOwnerEmail(userId: string) {
   return getUserEmailById(userId, 'trial_reminder_owner_lookup');
 }
 
-async function hasReminderBeenSent(organizationId: string, subscriptionId: string, recipientEmail: string) {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('email_notification_events')
-    .select('id')
-    .eq('organization_id', organizationId)
-    .eq('event_type', 'billing.trial_ending')
-    .eq('entity_type', 'subscription')
-    .eq('entity_id', subscriptionId)
-    .eq('recipient_email', recipientEmail)
-    .maybeSingle();
-
-  if (error) {
-    reportError(error, { area: 'trial_reminder_dedupe_lookup', organizationId, subscriptionId });
-    return false;
-  }
-
-  return Boolean(data?.id);
-}
-
-async function recordReminderSent(organizationId: string, subscriptionId: string, recipientEmail: string, currentPeriodEnd: string) {
+async function reserveReminder(
+  organizationId: string,
+  subscriptionId: string,
+  recipientEmail: string,
+  currentPeriodEnd: string,
+) {
   const supabase = createAdminClient();
   const { error } = await supabase.from('email_notification_events').insert({
     organization_id: organizationId,
@@ -59,8 +45,29 @@ async function recordReminderSent(organizationId: string, subscriptionId: string
     metadata: { currentPeriodEnd },
   });
 
+  if (!error) return true;
+
+  if (error.code === UNIQUE_VIOLATION_CODE) {
+    return false;
+  }
+
+  reportError(error, { area: 'trial_reminder_dedupe_reservation', organizationId, subscriptionId });
+  throw error;
+}
+
+async function releaseReminderReservation(organizationId: string, subscriptionId: string, recipientEmail: string) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from('email_notification_events')
+    .delete()
+    .eq('organization_id', organizationId)
+    .eq('event_type', 'billing.trial_ending')
+    .eq('entity_type', 'subscription')
+    .eq('entity_id', subscriptionId)
+    .eq('recipient_email', recipientEmail);
+
   if (error) {
-    reportError(error, { area: 'trial_reminder_dedupe_record', organizationId, subscriptionId });
+    reportError(error, { area: 'trial_reminder_dedupe_release', organizationId, subscriptionId });
   }
 }
 
@@ -97,7 +104,14 @@ async function sendTrialReminders() {
 
     if (!recipientEmail) continue;
 
-    if (await hasReminderBeenSent(subscription.organization_id, subscription.id, recipientEmail)) {
+    const reserved = await reserveReminder(
+      subscription.organization_id,
+      subscription.id,
+      recipientEmail,
+      subscription.current_period_end,
+    );
+
+    if (!reserved) {
       skipped += 1;
       continue;
     }
@@ -123,9 +137,9 @@ async function sendTrialReminders() {
           currentPeriodEnd: subscription.current_period_end,
         },
       });
-      await recordReminderSent(subscription.organization_id, subscription.id, recipientEmail, subscription.current_period_end);
       sent += 1;
     } catch (error) {
+      await releaseReminderReservation(subscription.organization_id, subscription.id, recipientEmail);
       reportError(error, { area: 'trial_reminder_email', subscriptionId: subscription.id, organizationId: subscription.organization_id });
     }
   }
