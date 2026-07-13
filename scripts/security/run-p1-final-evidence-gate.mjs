@@ -32,6 +32,9 @@ const requiredCommands = [
 
 for (const [command, args] of requiredCommands) run(command, args);
 
-run('git', ['diff', '--exit-code', 'docs/security/evidence/p1/P1_PROGRESS.md'], { allowFailure: !strict });
+// Dashboard consistency is an integrity invariant in every mode. Non-strict PR
+// validation may tolerate missing final evidence, but it must never tolerate a
+// committed dashboard that disagrees with the canonical evidence index.
+run('git', ['diff', '--exit-code', 'docs/security/evidence/p1/P1_PROGRESS.md']);
 
 console.log(`[p1-final-evidence-gate] passed${strict ? ' in strict mode' : ''}`);
