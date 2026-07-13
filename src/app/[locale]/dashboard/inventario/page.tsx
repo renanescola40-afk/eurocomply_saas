@@ -187,7 +187,7 @@ function InventarioContent() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'inventario-ia-eurocomply.csv';
+    a.download = 'inventario-ia-risck-comply.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
