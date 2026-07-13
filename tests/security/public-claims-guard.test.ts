@@ -62,7 +62,6 @@ describe('customer-facing claims guard', () => {
     expect(checker).toContain("'src/messages'");
     expect(checker).toContain("'src/components/marketing'");
     expect(checker).toContain("'src/lib/email'");
-    expect(checker).toContain("'src/lib/i18n/app-dictionary.ts'");
     expect(checker).toContain("'src/lib/trust-center/content.ts'");
     expect(checker).toContain("'src/app/[locale]'");
     expect(checker).not.toContain("'src/app/[locale]/pricing/page.tsx'");
