@@ -22,10 +22,10 @@ const COPY: Record<SupportedLocale, {
 }> = {
   en: {
     title: 'Vendor Assurance Center',
-    subtitle: 'Operational view of key providers, subprocessors and vendor review evidence used to run EuroComply.',
+    subtitle: 'Operational view of key providers, subprocessors and vendor-review evidence used to operate RISCK COMPLY.',
     score: 'Assurance score',
     status: 'Status',
-    ready: 'Ready controls',
+    ready: 'Review-ready controls',
     tracked: 'Tracked controls',
     review: 'Need review',
     criticalOpen: 'Critical open items',
@@ -34,14 +34,14 @@ const COPY: Record<SupportedLocale, {
     cadence: 'Cadence',
     nextActions: 'Next actions',
     exportLabel: 'Export vendor assurance JSON',
-    exportDescription: 'Download a signed supplier assurance export for customer procurement reviews.',
+    exportDescription: 'Download a structured supplier-assurance JSON export for customer procurement reviews.',
   },
   pt: {
     title: 'Centro de Garantia de Fornecedores',
-    subtitle: 'Visão operacional dos fornecedores, subprocessadores e evidências usadas para operar o EuroComply.',
-    score: 'Score de garantia',
+    subtitle: 'Visão operacional dos principais fornecedores, subprocessadores e evidências de revisão usados para operar a RISCK COMPLY.',
+    score: 'Índice de garantia',
     status: 'Estado',
-    ready: 'Controlos prontos',
+    ready: 'Controlos prontos para revisão',
     tracked: 'Controlos acompanhados',
     review: 'Precisam de revisão',
     criticalOpen: 'Itens críticos abertos',
@@ -49,15 +49,15 @@ const COPY: Record<SupportedLocale, {
     evidence: 'Evidências',
     cadence: 'Cadência',
     nextActions: 'Próximas ações',
-    exportLabel: 'Exportar fornecedores JSON',
-    exportDescription: 'Baixe um export assinado de garantia de fornecedores para procurement de clientes.',
+    exportLabel: 'Exportar garantia de fornecedores em JSON',
+    exportDescription: 'Transfira um ficheiro JSON estruturado de garantia de fornecedores para processos de aquisição de clientes.',
   },
   es: {
     title: 'Centro de Garantía de Proveedores',
-    subtitle: 'Vista operativa de proveedores, subprocesadores y evidencias usadas para operar EuroComply.',
+    subtitle: 'Vista operativa de los principales proveedores, subprocesadores y evidencias de revisión utilizados para operar RISCK COMPLY.',
     score: 'Puntuación de garantía',
     status: 'Estado',
-    ready: 'Controles listos',
+    ready: 'Controles preparados para revisión',
     tracked: 'Controles monitorizados',
     review: 'Necesitan revisión',
     criticalOpen: 'Elementos críticos abiertos',
@@ -65,15 +65,15 @@ const COPY: Record<SupportedLocale, {
     evidence: 'Evidencias',
     cadence: 'Cadencia',
     nextActions: 'Próximas acciones',
-    exportLabel: 'Exportar proveedores JSON',
-    exportDescription: 'Descarga un export firmado de garantía de proveedores para procurement.',
+    exportLabel: 'Exportar garantía de proveedores en JSON',
+    exportDescription: 'Descarga una exportación JSON estructurada de garantía de proveedores para revisiones de compras de clientes.',
   },
   fr: {
-    title: 'Centre Assurance Fournisseurs',
-    subtitle: 'Vue opérationnelle des prestataires, sous-traitants et preuves utilisées pour exploiter EuroComply.',
-    score: 'Score assurance',
+    title: 'Centre d’assurance fournisseurs',
+    subtitle: 'Vue opérationnelle des principaux prestataires, sous-traitants et preuves de revue utilisés pour exploiter RISCK COMPLY.',
+    score: 'Score d’assurance',
     status: 'Statut',
-    ready: 'Contrôles prêts',
+    ready: 'Contrôles prêts pour la revue',
     tracked: 'Contrôles suivis',
     review: 'À revoir',
     criticalOpen: 'Points critiques ouverts',
@@ -81,45 +81,45 @@ const COPY: Record<SupportedLocale, {
     evidence: 'Preuves',
     cadence: 'Cadence',
     nextActions: 'Prochaines actions',
-    exportLabel: 'Exporter fournisseurs JSON',
-    exportDescription: 'Télécharger un export signé d’assurance fournisseurs pour procurement client.',
+    exportLabel: 'Exporter l’assurance fournisseurs en JSON',
+    exportDescription: 'Téléchargez un export JSON structuré d’assurance fournisseurs pour les revues achats des clients.',
   },
   it: {
-    title: 'Centro Assurance Fornitori',
-    subtitle: 'Vista operativa di provider, subprocessori ed evidenze usate per gestire EuroComply.',
-    score: 'Punteggio assurance',
+    title: 'Centro di garanzia dei fornitori',
+    subtitle: 'Vista operativa dei principali fornitori, sub-responsabili ed evidenze di revisione utilizzati per gestire RISCK COMPLY.',
+    score: 'Punteggio di garanzia',
     status: 'Stato',
-    ready: 'Controlli pronti',
+    ready: 'Controlli pronti per la revisione',
     tracked: 'Controlli monitorati',
     review: 'Da rivedere',
     criticalOpen: 'Elementi critici aperti',
-    controls: 'Controlli fornitori',
+    controls: 'Controlli dei fornitori',
     evidence: 'Evidenze',
     cadence: 'Cadenza',
     nextActions: 'Prossime azioni',
-    exportLabel: 'Esporta fornitori JSON',
-    exportDescription: 'Scarica un export firmato di assurance fornitori per procurement clienti.',
+    exportLabel: 'Esporta la garanzia fornitori in JSON',
+    exportDescription: 'Scarica un export JSON strutturato della garanzia fornitori per le revisioni acquisti dei clienti.',
   },
   de: {
-    title: 'Vendor Assurance Center',
-    subtitle: 'Operative Sicht auf Anbieter, Unterauftragsverarbeiter und Nachweise für den Betrieb von EuroComply.',
-    score: 'Assurance-Score',
+    title: 'Übersicht zur Lieferantenprüfung',
+    subtitle: 'Operative Übersicht der wichtigsten Anbieter, Unterauftragsverarbeiter und Prüfnachweise für den Betrieb von RISCK COMPLY.',
+    score: 'Prüfwert',
     status: 'Status',
-    ready: 'Bereite Kontrollen',
+    ready: 'Für die Prüfung vorbereitete Kontrollen',
     tracked: 'Verfolgte Kontrollen',
     review: 'Prüfung erforderlich',
     criticalOpen: 'Offene kritische Punkte',
     controls: 'Anbieterkontrollen',
     evidence: 'Nachweise',
-    cadence: 'Kadenz',
+    cadence: 'Prüfintervall',
     nextActions: 'Nächste Schritte',
-    exportLabel: 'Vendor Assurance JSON exportieren',
-    exportDescription: 'Signierten Anbieter-Assurance-Export für Customer Procurement herunterladen.',
+    exportLabel: 'Lieferantenprüfung als JSON exportieren',
+    exportDescription: 'Laden Sie einen strukturierten JSON-Export zur Lieferantenprüfung für Beschaffungsprüfungen von Kunden herunter.',
   },
 };
 
 function statusLabel(status: string) {
-  if (status === 'enterprise_ready') return 'Enterprise ready';
+  if (status === 'enterprise_ready') return 'Evidence review ready';
   if (status === 'operational') return 'Operational';
   return 'Foundation';
 }
@@ -137,7 +137,7 @@ export default async function VendorAssurancePage({ params }: { params: Promise<
         <div className="rounded-[2rem] border bg-background/90 p-8 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">Enterprise Governance</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">Vendor governance</p>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight">{copy.title}</h1>
               <p className="mt-4 max-w-3xl text-muted-foreground">{copy.subtitle}</p>
               <Link href="/api/vendor-assurance/export" className="mt-5 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:-translate-y-0.5">

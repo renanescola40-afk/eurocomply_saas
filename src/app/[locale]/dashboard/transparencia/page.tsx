@@ -316,7 +316,7 @@ Para outros usos, é obrigatório informar as pessoas antes da análise.
 Prazo para marcação de conteúdo sintético: ${DEADLINES.synthetic}
 
 ---
-Gerado por EuroComply AI · Euro AI Act Art. 50 Compliance`;
+Gerado por RISCK COMPLY · Euro AI Act Art. 50 Compliance`;
 
     const customerPolicy = `# Política de Transparência de IA para Clientes
 
@@ -346,7 +346,7 @@ Para questões sobre o nosso uso de IA: [dpo@empresa.pt]
 Esta política é revista anualmente ou quando necessário.
 
 ---
-Gerado por EuroComply AI · Euro AI Act Art. 50 Compliance`;
+Gerado por RISCK COMPLY · Euro AI Act Art. 50 Compliance`;
 
     setGeneratedPolicy(isEmployee ? employeePolicy : customerPolicy);
   };
@@ -381,7 +381,7 @@ Gerado por EuroComply AI · Euro AI Act Art. 50 Compliance`;
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'art50-checklist-eurocomply.csv';
+    a.download = 'art50-checklist-risck-comply.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
