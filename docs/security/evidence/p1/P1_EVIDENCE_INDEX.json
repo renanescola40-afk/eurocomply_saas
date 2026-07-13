@@ -31,11 +31,8 @@
     {
       "controlId": "P1-05",
       "control": "dast-automated",
-      "status": "Complete",
-      "evidencePath": "docs/security/evidence/p1/dast-automated.json",
-      "reviewedAt": "2026-06-18T21:52:00Z",
-      "reviewer": "renan silva <renansilva2002@gmail.com>",
-      "nextReviewDue": "2026-09-18"
+      "status": "Open",
+      "evidencePath": "docs/security/evidence/p1/dast-automated.json"
     },
     {
       "controlId": "P1-06",
@@ -55,11 +52,8 @@
     {
       "controlId": "P1-08",
       "control": "centralized-logging-alerts",
-      "status": "Complete",
-      "evidencePath": "docs/security/evidence/p1/centralized-logging-alerts.json",
-      "reviewedAt": "2026-06-18T21:29:00Z",
-      "reviewer": "renan silva <renansilva2002@gmail.com>",
-      "nextReviewDue": "2026-09-18"
+      "status": "Open",
+      "evidencePath": "docs/security/evidence/p1/centralized-logging-alerts.json"
     },
     {
       "controlId": "P1-09",
@@ -70,11 +64,8 @@
     {
       "controlId": "P1-10",
       "control": "waf-cdn-ddos",
-      "status": "Complete",
-      "evidencePath": "docs/security/evidence/p1/waf-cdn-ddos.json",
-      "reviewedAt": "2026-06-18T21:29:00Z",
-      "reviewer": "renan silva <renansilva2002@gmail.com>",
-      "nextReviewDue": "2026-09-18"
+      "status": "Open",
+      "evidencePath": "docs/security/evidence/p1/waf-cdn-ddos.json"
     }
   ]
 }
