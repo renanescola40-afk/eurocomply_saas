@@ -1,5 +1,6 @@
 import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { requireEnterpriseRateLimit } from '@/server/security/api-guards';
 import { validateBearerToken } from '@/server/security/bearer-token';
 import { noStoreJson } from '@/server/security/no-store';
 
@@ -23,7 +24,9 @@ const LEGACY_STRIPE_PRICE_FALLBACKS = {
 type EnvGroupName = keyof typeof REQUIRED_ENV_GROUPS;
 
 function hasBearerToken(request: Request) {
-  return validateBearerToken(request, process.env.HEALTHCHECK_TOKEN);
+  return validateBearerToken(request, process.env.HEALTHCHECK_TOKEN, {
+    allowMissingTokenOutsideProduction: false,
+  });
 }
 
 function hasRequiredEnv(variable: string) {
@@ -44,6 +47,14 @@ export function envGroupCheck() {
 }
 
 export async function GET(request: Request) {
+  const rateLimitDenied = await requireEnterpriseRateLimit(request, {
+    policy: 'health-internal',
+    action: 'ops_smoke_auth',
+    route: '/api/ops/smoke',
+    failureMode: 'fail-closed',
+  });
+  if (rateLimitDenied) return rateLimitDenied;
+
   if (!hasBearerToken(request)) {
     return noStoreJson({ status: 'unauthorized' }, { status: 401 });
   }
