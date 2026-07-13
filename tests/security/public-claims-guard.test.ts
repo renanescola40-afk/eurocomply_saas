@@ -41,5 +41,21 @@ describe('customer-facing claims guard', () => {
     expect(checker).toContain("'src/lib/email'");
     expect(checker).toContain("'src/lib/trust-center/content.ts'");
     expect(checker).toContain("'src/app/[locale]/pricing/page.tsx'");
+    expect(checker).toContain("'src/app/[locale]/enterprise/page.tsx'");
+    expect(checker).toContain("'src/app/[locale]/retention-center/page.tsx'");
+  });
+
+  it('keeps activation and retention copy evidence-safe and on-brand', () => {
+    const activationEmail = fs.readFileSync(path.join(rootDir, 'src/lib/email/activation-sequence.ts'), 'utf8');
+    const retentionCenter = fs.readFileSync(path.join(rootDir, 'src/app/[locale]/retention-center/page.tsx'), 'utf8');
+
+    expect(activationEmail).not.toContain('enterprise-ready compliance view');
+    expect(activationEmail).toContain('structured compliance operations view for evidence preparation and internal review');
+
+    expect(retentionCenter).not.toContain('EuroComply');
+    expect(retentionCenter).not.toContain("enterpriseReady: 'Enterprise-ready'");
+    expect(retentionCenter).not.toContain('signed retention-policy export');
+    expect(retentionCenter).toContain('Ready for evidence review');
+    expect(retentionCenter).toContain('RISCK COMPLY');
   });
 });
