@@ -39,4 +39,11 @@ describe('trial reminder dedupe safety', () => {
     expect(recordErrorBlock).toBeDefined();
     expect(recordErrorBlock).toContain('throw error;');
   });
+
+  it('uses the existing unique event identity for concurrent completion writes', () => {
+    expect(routeSource).toContain("const REMINDER_EVENT_CONFLICT_COLUMNS = 'organization_id,event_type,entity_type,entity_id,recipient_email';");
+    expect(routeSource).toContain(".from('email_notification_events').upsert(");
+    expect(routeSource).toContain('onConflict: REMINDER_EVENT_CONFLICT_COLUMNS');
+    expect(routeSource).toContain('ignoreDuplicates: true');
+  });
 });
