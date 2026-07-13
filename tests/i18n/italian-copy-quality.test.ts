@@ -16,10 +16,20 @@ type ItalianCatalog = {
   onboarding: { industry: { healthcare: string } };
 };
 
+function collectStringValues(value: unknown): string[] {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(collectStringValues);
+  if (value && typeof value === 'object') {
+    return Object.values(value).flatMap(collectStringValues);
+  }
+  return [];
+}
+
 const catalog = JSON.parse(
   readFileSync(resolve(process.cwd(), 'src/messages/it.json'), 'utf8'),
 ) as ItalianCatalog;
 const serialized = JSON.stringify(catalog);
+const translatedValues = collectStringValues(catalog).join('\n');
 
 describe('Italian product copy quality', () => {
   it('uses native Italian diacritics and professional vocabulary', () => {
@@ -42,7 +52,7 @@ describe('Italian product copy quality', () => {
       'Hai gia',
       'Sanita',
     ]) {
-      expect(serialized).not.toContain(legacyTerm);
+      expect(translatedValues).not.toContain(legacyTerm);
     }
   });
 
