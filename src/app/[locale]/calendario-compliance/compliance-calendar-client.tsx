@@ -118,10 +118,10 @@ function createObligationFromSuggestion(suggestion?: IntelligenceSuggestion): Ob
     due: addDaysIso(30),
     owner: 'Compliance Lead',
     status: 'Pendente',
-    description: suggestion.description || 'Sugestão criada a partir do EuroComply Intelligence para revisão interna.',
-    legalBasis: 'EuroComply Intelligence — análise regulatória e tecnológica.',
+    description: suggestion.description || 'Sugestão criada a partir do RISCK COMPLY Intelligence para revisão interna.',
+    legalBasis: 'RISCK COMPLY Intelligence — análise regulatória e tecnológica.',
     penalty: 'Risco de atraso na análise regulatória, evidências incompletas ou resposta operacional tardia.',
-    source: 'EuroComply Intelligence',
+    source: 'RISCK COMPLY Intelligence',
     sourceUrl: '#',
   };
 }
