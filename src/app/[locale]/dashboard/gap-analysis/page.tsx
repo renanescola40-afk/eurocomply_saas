@@ -179,7 +179,7 @@ export default function GapAnalysisPage() {
 
   const downloadReport = () => {
     const lines = [
-      'EuroComply AI - EU AI Act Gap Analysis',
+      'RISCK COMPLY - EU AI Act Gap Analysis',
       `${t.score}: ${result.score}%`,
       `${t.questions}: ${result.completed}/${result.total}`,
       '',
@@ -193,7 +193,7 @@ export default function GapAnalysisPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'eurocomply-gap-analysis.txt';
+    link.download = 'risck-comply-gap-analysis.txt';
     link.click();
     URL.revokeObjectURL(url);
   };

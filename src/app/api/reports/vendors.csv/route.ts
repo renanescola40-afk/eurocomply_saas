@@ -62,15 +62,8 @@ export async function GET() {
 
   const supabase = tryCreateAdminClient();
   if (!supabase) {
-    await writeAuditLog({
-      action: 'report.export',
-      organizationId: organization.id,
-      userId: user.id,
-      entityType: 'report',
-      entityId: 'vendors.csv',
-      metadata: { format: 'csv', report: 'vendors', fallback: true },
-    });
-    return csvDownloadResponse([VENDORS_CSV_HEADER], 'vendors-report.csv');
+    reportError(new Error('Vendors CSV export backend unavailable'), { area: 'vendors_csv_export_configuration', organizationId: organization.id, userId: user.id });
+    return noStoreJson({ error: 'Unable to export vendors report' }, { status: 503 });
   }
 
   const { data, error } = await supabase

@@ -20,7 +20,7 @@ const copy: Record<SupportedLocale, {
 }> = {
   en: {
     title: 'Continuity Center',
-    subtitle: 'Operational view of EuroComply continuity controls, recovery posture and enterprise readiness gaps.',
+    subtitle: 'Operational view of RISCK COMPLY continuity controls, recovery posture and evidence gaps.',
     score: 'Continuity readiness',
     controls: 'Ready controls',
     critical: 'Critical controls',
@@ -33,7 +33,7 @@ const copy: Record<SupportedLocale, {
   },
   pt: {
     title: 'Centro de Continuidade',
-    subtitle: 'Visão operacional dos controlos de continuidade, postura de recuperação e lacunas para readiness enterprise.',
+    subtitle: 'Visão operacional dos controlos de continuidade da RISCK COMPLY, postura de recuperação e lacunas de evidência.',
     score: 'Prontidão de continuidade',
     controls: 'Controlos prontos',
     critical: 'Controlos críticos',
@@ -42,11 +42,11 @@ const copy: Record<SupportedLocale, {
     ready: 'Pronto',
     needsEvidence: 'Precisa de evidência',
     exportJson: 'Exportar evidência de continuidade',
-    exportHint: 'Export Business+ com hash de integridade e trilho de auditoria.',
+    exportHint: 'Exportação Business+ com hash de integridade e trilho de auditoria.',
   },
   es: {
     title: 'Centro de Continuidad',
-    subtitle: 'Vista operativa de controles de continuidad, recuperación y brechas de preparación enterprise.',
+    subtitle: 'Vista operativa de los controles de continuidad de RISCK COMPLY, la postura de recuperación y las brechas de evidencia.',
     score: 'Preparación de continuidad',
     controls: 'Controles listos',
     critical: 'Controles críticos',
@@ -55,11 +55,11 @@ const copy: Record<SupportedLocale, {
     ready: 'Listo',
     needsEvidence: 'Necesita evidencia',
     exportJson: 'Exportar evidencia de continuidad',
-    exportHint: 'Export Business+ con hash de integridad y auditoría.',
+    exportHint: 'Exportación Business+ con hash de integridad y registro de auditoría.',
   },
   fr: {
     title: 'Centre de Continuité',
-    subtitle: 'Vue opérationnelle des contrôles de continuité, posture de récupération et écarts enterprise.',
+    subtitle: 'Vue opérationnelle des contrôles de continuité de RISCK COMPLY, de la posture de reprise et des lacunes de preuve.',
     score: 'Préparation continuité',
     controls: 'Contrôles prêts',
     critical: 'Contrôles critiques',
@@ -68,33 +68,33 @@ const copy: Record<SupportedLocale, {
     ready: 'Prêt',
     needsEvidence: 'Preuve requise',
     exportJson: 'Exporter la preuve de continuité',
-    exportHint: 'Export Business+ avec hash d’intégrité et journal d’audit.',
+    exportHint: 'Export Business+ avec empreinte d’intégrité et journal d’audit.',
   },
   it: {
-    title: 'Centro Continuità',
-    subtitle: 'Vista operativa di controlli di continuità, recovery posture e gap enterprise.',
-    score: 'Prontezza continuità',
+    title: 'Centro di Continuità',
+    subtitle: 'Vista operativa dei controlli di continuità di RISCK COMPLY, della postura di ripristino e delle lacune nelle evidenze.',
+    score: 'Preparazione alla continuità',
     controls: 'Controlli pronti',
     critical: 'Controlli critici',
-    gaps: 'Gap critici aperti',
+    gaps: 'Lacune critiche aperte',
     nextActions: 'Prossime azioni',
     ready: 'Pronto',
     needsEvidence: 'Richiede evidenza',
     exportJson: 'Esporta evidenza di continuità',
-    exportHint: 'Export Business+ con hash di integrità e audit trail.',
+    exportHint: 'Esportazione Business+ con hash di integrità e registro di audit.',
   },
   de: {
     title: 'Continuity Center',
-    subtitle: 'Operative Sicht auf Kontinuitätskontrollen, Wiederherstellungsreife und Enterprise-Lücken.',
-    score: 'Continuity-Reife',
+    subtitle: 'Operative Übersicht der Kontinuitätskontrollen von RISCK COMPLY, der Wiederherstellungsposition und offener Nachweislücken.',
+    score: 'Kontinuitätsreife',
     controls: 'Bereite Kontrollen',
     critical: 'Kritische Kontrollen',
     gaps: 'Offene kritische Lücken',
     nextActions: 'Nächste Schritte',
     ready: 'Bereit',
     needsEvidence: 'Nachweis erforderlich',
-    exportJson: 'Continuity-Nachweis exportieren',
-    exportHint: 'Business+ Export mit Integritäts-Hash und Audit Trail.',
+    exportJson: 'Kontinuitätsnachweis exportieren',
+    exportHint: 'Business+-Export mit Integritäts-Hash und Audit-Protokoll.',
   },
 };
 
@@ -123,7 +123,7 @@ export default async function ContinuityCenterPage({ params }: { params: Promise
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-sm text-muted-foreground">
-                <RotateCcw className="h-4 w-4" /> Enterprise operations
+                <RotateCcw className="h-4 w-4" /> Continuity operations
               </div>
               <h1 className="mt-5 text-4xl font-semibold tracking-tight text-foreground">{t.title}</h1>
               <p className="mt-4 text-lg leading-8 text-muted-foreground">{t.subtitle}</p>
