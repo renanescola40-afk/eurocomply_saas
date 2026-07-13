@@ -17,6 +17,12 @@ function requireToken(source, token, message) {
   if (!source.includes(token)) failures.push(message);
 }
 
+function requireBefore(source, first, second, message) {
+  const firstIndex = source.indexOf(first);
+  const secondIndex = source.indexOf(second);
+  if (firstIndex < 0 || secondIndex < 0 || firstIndex >= secondIndex) failures.push(message);
+}
+
 function forbidToken(source, token, message) {
   if (source.includes(token)) failures.push(message);
 }
@@ -32,6 +38,20 @@ requireToken(source, 'readyEnvironmentCheck', 'ready endpoint must expose groupe
 requireToken(source, 'missingCount', 'ready endpoint must count missing configuration without returning key names.');
 requireToken(source, 'databaseReachable', 'ready endpoint must expose grouped database reachability.');
 requireToken(source, 'reportError', 'ready endpoint must keep detailed provider errors server-side only.');
+requireToken(source, "policy: 'health-internal'", 'ready endpoint must use the health-internal distributed rate-limit policy.');
+requireToken(source, "failureMode: 'fail-closed'", 'ready endpoint must fail closed when readiness rate limiting is unavailable.');
+requireBefore(
+  source,
+  'await requireEnterpriseRateLimit',
+  'if (!hasHealthcheckToken(request))',
+  'ready endpoint must rate limit requests before bearer-token validation.',
+);
+requireBefore(
+  source,
+  'await requireEnterpriseRateLimit',
+  'await checkSupabaseConnectivity()',
+  'ready endpoint must rate limit requests before live dependency checks.',
+);
 
 forbidToken(source, 'NextResponse.json', 'ready endpoint must not bypass noStoreJson.');
 forbidToken(source, 'error.message', 'ready endpoint must not reflect raw exception messages.');
