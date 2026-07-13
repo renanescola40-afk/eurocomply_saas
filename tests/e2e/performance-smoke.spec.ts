@@ -85,10 +85,10 @@ test.describe('RISCK COMPLY performance smoke', () => {
     await expect(response).toBeOK();
   });
 
-  test('readiness API is protected and never cached when unauthorized', async ({ page }) => {
+  test('readiness API fails closed or rejects unauthorized access without caching', async ({ page }) => {
     const response = await page.request.get('/api/ready', { failOnStatusCode: false });
 
-    expect(response.status()).toBe(401);
-    await expectNoSensitiveCache(response, '/api/ready unauthorized');
+    expect([401, 503], 'readiness must reject unauthorized access or fail closed when its limiter is unavailable').toContain(response.status());
+    await expectNoSensitiveCache(response, '/api/ready protected response');
   });
 });
