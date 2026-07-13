@@ -71,7 +71,7 @@ describe('/api/observability/smoke', () => {
     expect(mocks.reportError).not.toHaveBeenCalled();
   });
 
-  it('rate limits authorized smoke checks', async () => {
+  it('rate limits requests before credential validation', async () => {
     mocks.validateBearerToken.mockReturnValue(true);
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: false });
 
@@ -81,7 +81,25 @@ describe('/api/observability/smoke', () => {
     expect(response.status).toBe(429);
     expect(response.headers.get('cache-control')).toContain('no-store');
     expect(response.headers.get('retry-after')).toBe('60');
-    expect(body).toEqual({ status: 'rate_limited', requestId: 'req_limited' });
+    expect(body).toEqual({ error: 'Too many requests' });
+    expect(mocks.validateBearerToken).not.toHaveBeenCalled();
+    expect(mocks.reportError).not.toHaveBeenCalled();
+  });
+
+  it('fails closed before credential validation when the limiter is unavailable', async () => {
+    mocks.validateBearerToken.mockReturnValue(true);
+    mocks.checkDistributedRateLimit.mockResolvedValue({
+      allowed: false,
+      failureMode: 'fail-closed',
+      reason: 'backend_unavailable',
+    });
+
+    const response = await POST(buildRequest('POST', { 'x-request-id': 'req_unavailable' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(body).toEqual({ error: 'security_control_unavailable' });
     expect(mocks.validateBearerToken).not.toHaveBeenCalled();
     expect(mocks.reportError).not.toHaveBeenCalled();
   });
