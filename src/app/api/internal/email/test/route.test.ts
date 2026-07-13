@@ -12,6 +12,8 @@ vi.mock('@/lib/security/internal-cron', () => ({
 
 vi.mock('@/lib/security/rate-limit', () => ({
   checkDistributedRateLimit: mocks.checkDistributedRateLimit,
+  getClientIpFromRequest: (request: Request) => request.headers.get('x-forwarded-for'),
+  getUserAgentFromRequest: (request: Request) => request.headers.get('user-agent'),
 }));
 
 vi.mock('@/lib/email/client', () => ({
@@ -69,7 +71,7 @@ describe('internal email test route hardening', () => {
     });
   });
 
-  it('rejects requests without an internal secret before rate limit or body parsing', async () => {
+  it('rate limits requests before rejecting a missing internal secret', async () => {
     mocks.isAuthorizedInternalCronRequest.mockReturnValue(false);
 
     const response = await POST(buildRequest({ to: 'qa@example.test' }));
@@ -78,11 +80,20 @@ describe('internal email test route hardening', () => {
     expect(response.status).toBe(401);
     expect(response.headers.get('cache-control')).toContain('no-store');
     expect(body).toEqual({ error: 'unauthorized' });
-    expect(mocks.checkDistributedRateLimit).not.toHaveBeenCalled();
+    expect(mocks.checkDistributedRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        key: 'internal-auth:/api/internal/email/test',
+        policy: 'auth',
+        route: '/api/internal/email/test',
+        action: 'authenticate_internal_email_test',
+        ip: '203.0.113.10',
+        failureMode: 'fail-closed',
+      }),
+    );
     expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
-  it('rejects requests with an invalid internal secret as forbidden', async () => {
+  it('rate limits requests before rejecting an invalid internal secret', async () => {
     mocks.isAuthorizedInternalCronRequest.mockReturnValue(false);
 
     const response = await POST(buildRequest({ to: 'qa@example.test' }, { authorization: 'Bearer wrong-secret' }));
@@ -91,7 +102,15 @@ describe('internal email test route hardening', () => {
     expect(response.status).toBe(403);
     expect(response.headers.get('cache-control')).toContain('no-store');
     expect(body).toEqual({ error: 'unauthorized' });
-    expect(mocks.checkDistributedRateLimit).not.toHaveBeenCalled();
+    expect(mocks.checkDistributedRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        key: 'internal-auth:/api/internal/email/test',
+        policy: 'auth',
+        action: 'authenticate_internal_email_test',
+        ip: '203.0.113.10',
+        failureMode: 'fail-closed',
+      }),
+    );
     expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
@@ -144,7 +163,7 @@ describe('internal email test route hardening', () => {
     expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
-  it('returns 429 when the internal route is rate limited', async () => {
+  it('returns 429 when the internal route authentication is rate limited', async () => {
     mocks.checkDistributedRateLimit.mockResolvedValue(
       allowedRateLimitResult({
         allowed: false,
@@ -165,6 +184,7 @@ describe('internal email test route hardening', () => {
     expect(response.headers.get('cache-control')).toContain('no-store');
     expect(response.headers.get('retry-after')).toBeTruthy();
     expect(body.error).toBe('rate_limit_exceeded');
+    expect(mocks.isAuthorizedInternalCronRequest).not.toHaveBeenCalled();
     expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 

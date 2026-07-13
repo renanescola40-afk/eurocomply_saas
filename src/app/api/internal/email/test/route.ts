@@ -18,6 +18,7 @@ import {
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError, validationErrorResponse } from '@/lib/security/validate';
+import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
@@ -28,6 +29,7 @@ const TEST_EMAIL_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const TEST_EMAIL_RATE_LIMIT_MAX = 5;
 const TEST_EMAIL_ROUTE = '/api/internal/email/test';
 const TEST_EMAIL_ACTION = 'send_test_email';
+const TEST_EMAIL_AUTH_ACTION = 'authenticate_internal_email_test';
 const TEST_EMAIL_RATE_LIMIT_KEY = 'internal-email-test:route';
 const TEST_EMAIL_DEFAULT_ORG_NAME = 'Risck Comply Demo Org';
 
@@ -192,6 +194,12 @@ async function enforceRateLimit() {
 }
 
 export async function POST(request: Request) {
+  const authRateLimited = await enforceInternalAuthenticationRateLimit(request, {
+    route: TEST_EMAIL_ROUTE,
+    action: TEST_EMAIL_AUTH_ACTION,
+  });
+  if (authRateLimited) return authRateLimited;
+
   if (!isAuthorizedInternalCronRequest(request)) {
     return noStoreJson({ error: 'unauthorized' }, { status: hasInternalAuthMaterial(request) ? 403 : 401 });
   }
