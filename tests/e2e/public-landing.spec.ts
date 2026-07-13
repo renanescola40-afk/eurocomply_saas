@@ -13,7 +13,7 @@ async function expectControlledAccessLanding(page: Page, locale: string) {
   expect(response?.status(), `${locale} landing should not 404`).not.toBe(404);
   expect(response?.status(), `${locale} landing should not server-error`).toBeLessThan(500);
   await expect(page.getByRole('link', { name: /RISCK COMPLY/i }).first()).toBeVisible();
-  await expect(page.locator('h1')).toContainText(/AI governance|governança de IA/i);
+  await expect(page.locator('main h1:visible').first()).toContainText(/AI governance|governança de IA/i);
   await expect(page.locator('body')).toContainText(/Controlled access|early access|Request access|Pedir acesso/i);
   await expect(page.locator('body')).toContainText(/AI Act readiness|risk visibility|governance workflows|evidence preparation|visibilidade de risco/i);
   await expect(page.locator('body')).toContainText(/1 August 2026|1 de agosto de 2026|07:00 Europe\/Lisbon/i);
