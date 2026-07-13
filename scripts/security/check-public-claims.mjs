@@ -22,7 +22,8 @@ const configuredScanTargets = (process.env.PUBLIC_CLAIMS_SCAN_TARGETS ?? '')
 const SCAN_TARGETS = configuredScanTargets.length > 0 ? configuredScanTargets : DEFAULT_SCAN_TARGETS;
 
 const SUPPORTED_EXTENSIONS = new Set(['.json', '.ts', '.tsx']);
-const SOURCE_STRING_PATTERN = /(['"`])((?:\\.|(?!\1).)*)\1/g;
+const SOURCE_STRING_PATTERN = /(['"])((?:\\.|(?!\1).)*)\1/g;
+const TEMPLATE_LITERAL_PATTERN = /`((?:\\[\s\S]|[^\\`])*)`/g;
 const INLINE_JSX_TEXT_PATTERN = />([^<{]+)</g;
 const PLAIN_JSX_TEXT_PATTERN = /^[\p{L}\p{N}][^{}()[\];:=<>]*$/u;
 
@@ -92,8 +93,7 @@ function isTechnicalString(value) {
     /^(?:@\/|\.{1,2}\/|\/)/.test(normalized) ||
     /^x-[a-z0-9-]+$/.test(normalized) ||
     /^[A-Z][A-Z0-9_]+$/.test(normalized) ||
-    /^[a-z0-9]+(?:[_./:][a-z0-9-]+)+$/.test(normalized) ||
-    /^[a-z0-9][a-z0-9._-]*\.(?:csv|json|txt|pdf|zip)$/i.test(normalized)
+    /^[a-z0-9]+(?:[_./:][a-z0-9-]+)+$/.test(normalized)
   );
 }
 
@@ -107,6 +107,21 @@ function scanValue(source, value) {
 
   for (const { label, pattern } of PROHIBITED_CLAIM_PATTERNS) {
     if (pattern.test(normalized)) failures.push(`${source}: possible ${label}`);
+  }
+}
+
+function scanTemplateLiterals(relativePath, content) {
+  let templateIndex = 0;
+
+  for (const match of content.matchAll(TEMPLATE_LITERAL_PATTERN)) {
+    templateIndex += 1;
+    const matchIndex = match.index ?? 0;
+    const lineStart = content.lastIndexOf('\n', matchIndex) + 1;
+    const context = content.slice(lineStart, matchIndex);
+    if (isTechnicalLiteralContext(context)) continue;
+
+    const lineNumber = content.slice(0, matchIndex).split('\n').length;
+    scanValue(`${relativePath}:${lineNumber}:template-${templateIndex}`, match[1]);
   }
 }
 
@@ -144,7 +159,9 @@ function scanFile(relativePath) {
     return;
   }
 
-  stripPolicyDefinitions(relativePath, content)
+  const scannableContent = stripPolicyDefinitions(relativePath, content);
+  scanTemplateLiterals(relativePath, scannableContent);
+  scannableContent
     .split('\n')
     .forEach((line, index) => scanSourceLine(relativePath, line, index + 1));
 }
