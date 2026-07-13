@@ -17,7 +17,7 @@ export default async function AcceptInvitationPage({ params }: AcceptInvitationP
   const organization = Array.isArray(invitation?.organizations)
     ? invitation?.organizations[0]
     : invitation?.organizations;
-  const organizationName = organization?.name ?? 'EuroComply organization';
+  const organizationName = organization?.name ?? 'RISCK COMPLY organization';
 
   async function acceptCurrentInvitation() {
     'use server';
