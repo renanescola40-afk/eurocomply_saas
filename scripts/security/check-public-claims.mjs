@@ -10,7 +10,6 @@ const DEFAULT_SCAN_TARGETS = [
   'src/messages',
   'src/components/marketing',
   'src/lib/email',
-  'src/lib/i18n/app-dictionary.ts',
   'src/lib/trust-center/content.ts',
   'src/app/[locale]',
 ];
