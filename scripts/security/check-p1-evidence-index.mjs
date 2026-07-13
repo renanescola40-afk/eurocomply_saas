@@ -2,7 +2,25 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const indexPath = process.argv[2] || path.join('docs', 'security', 'evidence', 'p1', 'P1_EVIDENCE_INDEX.json');
+const args = process.argv.slice(2);
+const strict = args.includes('--strict');
+const unknownFlags = args.filter((argument) => argument.startsWith('--') && argument !== '--strict');
+const positionalArgs = args.filter((argument) => !argument.startsWith('--'));
+
+function fail(message) {
+  console.error(`[p1-evidence-index] ${message}`);
+  process.exit(1);
+}
+
+if (unknownFlags.length > 0) {
+  fail(`unknown option(s): ${unknownFlags.join(', ')}`);
+}
+
+if (positionalArgs.length > 1) {
+  fail('expected at most one index path');
+}
+
+const indexPath = positionalArgs[0] || path.join('docs', 'security', 'evidence', 'p1', 'P1_EVIDENCE_INDEX.json');
 const allowedStatuses = new Set(['Open', 'Complete', 'Exception']);
 const expectedControls = [
   ['P1-01', 'sso-saml-oidc', 'docs/security/evidence/p1/sso-saml-oidc.json'],
@@ -16,11 +34,6 @@ const expectedControls = [
   ['P1-09', 'verifiable-production-audit-chain', 'docs/security/evidence/p1/verifiable-production-audit-chain.json'],
   ['P1-10', 'waf-cdn-ddos', 'docs/security/evidence/p1/waf-cdn-ddos.json'],
 ];
-
-function fail(message) {
-  console.error(`[p1-evidence-index] ${message}`);
-  process.exit(1);
-}
 
 function assertString(value, field) {
   if (typeof value !== 'string' || value.trim().length === 0) {
@@ -81,4 +94,16 @@ if (index.status === 'Complete') {
   if (index.generatedFromRealEvidence !== true) fail('Complete phase requires generatedFromRealEvidence true');
 }
 
-console.log(`[p1-evidence-index] valid: ${indexPath}`);
+if (strict) {
+  if (index.status !== 'Complete') fail('strict mode requires index status Complete');
+  if (index.generatedFromRealEvidence !== true) {
+    fail('strict mode requires generatedFromRealEvidence true');
+  }
+  for (const entry of index.controls) {
+    if (entry.status !== 'Complete') {
+      fail(`strict mode requires ${entry.controlId}.status to be Complete`);
+    }
+  }
+}
+
+console.log(`[p1-evidence-index] valid${strict ? ' in strict mode' : ''}: ${indexPath}`);
