@@ -10,14 +10,9 @@ const DEFAULT_SCAN_TARGETS = [
   'src/messages',
   'src/components/marketing',
   'src/lib/email',
+  'src/lib/i18n/app-dictionary.ts',
   'src/lib/trust-center/content.ts',
-  'src/app/[locale]/page.tsx',
-  'src/app/[locale]/pricing/page.tsx',
-  'src/app/[locale]/enterprise/page.tsx',
-  'src/app/[locale]/trust/page.tsx',
-  'src/app/[locale]/security/page.tsx',
-  'src/app/[locale]/risck-comply-home/page.tsx',
-  'src/app/[locale]/retention-center/page.tsx',
+  'src/app/[locale]',
 ];
 
 const configuredScanTargets = (process.env.PUBLIC_CLAIMS_SCAN_TARGETS ?? '')
@@ -37,7 +32,7 @@ const PROHIBITED_CLAIM_PATTERNS = [
   { label: 'SOC 2 compliance or certification claim', pattern: /SOC\s*2[^\n]{0,80}\b(?:compliant|certified|attested|passed)\b/i },
   { label: 'ISO 27001 compliance or certification claim', pattern: /ISO\s*27001[^\n]{0,80}\b(?:compliant|certified|passed)\b/i },
   { label: 'unsupported certification or pentest claim', pattern: /\b(?:certified|pentested|penetration-tested|externally audited)\b/i },
-  { label: 'enterprise or procurement readiness claim', pattern: /\b(?:enterprise-ready|procurement-ready|pronto para enterprise|listo para enterprise|pr[eê]t pour enterprise|pronto enterprise)\b/i },
+  { label: 'enterprise or procurement readiness claim', pattern: /\b(?:enterprise[- ]ready|procurement[- ]ready|pronto para enterprise|listo para enterprise|pr[eê]t pour enterprise|pronto enterprise)\b/i },
   { label: 'immutable audit log claim', pattern: /\b(?:immutable audit (?:log|trail)|WORM-backed audit)\b/i },
   { label: '24/7 operations claim', pattern: /24\s*\/\s*7[^\n]{0,80}\b(?:monitor(?:ed|ing)?|support|staffed|response)\b/i },
   { label: 'automatic AI Act compliance claim', pattern: /\bautomatic(?:ally)?[^\n]{0,80}\b(?:EU\s*)?AI Act[^\n]{0,80}\b(?:compliance|compliant)\b/i },
