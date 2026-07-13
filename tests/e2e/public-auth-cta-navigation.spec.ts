@@ -7,10 +7,12 @@ test.describe('public controlled-access waitlist', () => {
     await page.goto(`/${LOCALE}`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.locator('h1')).toContainText(/governança de IA|compliance/i);
-    await expect(page.getByLabel(/Nome da empresa/i)).toBeVisible();
-    await expect(page.getByLabel(/Email profissional/i)).toBeVisible();
-    await expect(page.getByLabel(/Cargo da pessoa/i)).toBeVisible();
-    await expect(page.locator('#waitlist-form')).toBeVisible();
+
+    const waitlistForm = page.locator('main #waitlist-form:visible');
+    await expect(waitlistForm).toHaveCount(1);
+    await expect(waitlistForm.getByLabel(/Nome da empresa/i)).toBeVisible();
+    await expect(waitlistForm.getByLabel(/Email profissional/i)).toBeVisible();
+    await expect(waitlistForm.getByLabel(/Cargo da pessoa/i)).toBeVisible();
     await expect(page.locator('.fixed.bottom-5.left-5')).toHaveCount(0);
   });
 });
