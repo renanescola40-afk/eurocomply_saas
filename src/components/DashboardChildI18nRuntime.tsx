@@ -160,7 +160,16 @@ const maps: Record<Locale, Map> = {
   },
 };
 
-const DYNAMIC_SUFFIX_KEYS = ['sistemas de IA registados'] as const;
+const INVENTORY_COUNT_KEY = 'sistemas de IA registados';
+
+const INVENTORY_COUNT_FORMS: Record<Locale, { singular: string; plural: string }> = {
+  pt: { singular: 'sistema de IA registado', plural: 'sistemas de IA registados' },
+  en: { singular: 'AI system registered', plural: 'AI systems registered' },
+  es: { singular: 'sistema de IA registrado', plural: 'sistemas de IA registrados' },
+  fr: { singular: 'système IA enregistré', plural: 'systèmes IA enregistrés' },
+  it: { singular: 'sistema IA registrato', plural: 'sistemi IA registrati' },
+  de: { singular: 'registriertes KI-System', plural: 'registrierte KI-Systeme' },
+};
 
 export function translateDashboardChildText(value: string, locale: Locale): string {
   const map = maps[locale] || maps.en;
@@ -168,11 +177,11 @@ export function translateDashboardChildText(value: string, locale: Locale): stri
   const exact = map[normalized];
   if (exact) return exact;
 
-  for (const key of DYNAMIC_SUFFIX_KEYS) {
-    const translated = map[key];
-    if (!translated) continue;
-    const match = normalized.match(new RegExp(`^(\\d+)\\s+${key}$`, 'u'));
-    if (match) return `${match[1]} ${translated}`;
+  const countMatch = normalized.match(new RegExp(`^(\\d+)\\s+${INVENTORY_COUNT_KEY}$`, 'u'));
+  if (countMatch) {
+    const count = Number(countMatch[1]);
+    const form = count === 1 ? INVENTORY_COUNT_FORMS[locale].singular : INVENTORY_COUNT_FORMS[locale].plural;
+    return `${countMatch[1]} ${form}`;
   }
 
   return normalized;
