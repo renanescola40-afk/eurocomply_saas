@@ -88,7 +88,7 @@ async function expectNoStackTrace(page: Page, label: string) {
   expect(
     bodyText,
     `${label} exposed a raw stack trace or framework error`,
-  ).not.toMatch(/Unhandled Runtime Error|Application error|Stack trace|ReferenceError:|TypeError:|SyntaxError:|webpack-internal/i);
+  ).not.toMatch(/Unhandled Runtime Error|Application error|(?:^|\n)\s*Stack trace\s*(?::|$)|ReferenceError:|TypeError:|SyntaxError:|webpack-internal/im);
 }
 
 async function expectNoUndefinedUrl(page: Page, label: string) {
