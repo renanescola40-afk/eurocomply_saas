@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Regenerate P1 progress dashboard
         run: node scripts/security/generate-p1-progress-dashboard.mjs

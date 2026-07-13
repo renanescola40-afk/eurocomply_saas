@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Run P1 final evidence gate
         run: node scripts/security/run-p1-final-evidence-gate.mjs

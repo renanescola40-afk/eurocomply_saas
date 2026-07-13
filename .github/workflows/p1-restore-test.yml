@@ -28,5 +28,5 @@ jobs:
   p1-restore-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: node scripts/security/check-p1-restore-test-evidence.mjs
