@@ -5,6 +5,7 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { noStoreJson } from '@/server/security/no-store';
+import { hashRateLimitIp } from '@/server/security/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -178,7 +179,7 @@ export async function POST(request: NextRequest) {
     locale: text(body.locale, 12),
     consent_to_contact: consentToContact,
     user_agent: text(request.headers.get('user-agent'), 300),
-    ip_hint: ipHint,
+    ip_hint: ipHint === 'unknown' ? null : hashRateLimitIp(ipHint),
   };
 
   const savedToSupabase = await saveToSupabase(record);
