@@ -1,4 +1,4 @@
-import { execSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 
@@ -89,22 +89,42 @@ const criticalEndpointPatterns = [
 const unsafeCorsPatterns = [
   /Access-Control-Allow-Origin['"]?\s*[:,]\s*['"]\*['"]/,
   /headers\.set\(['"]Access-Control-Allow-Origin['"]\s*,\s*['"]\*['"]\)/,
-  /cors\([^)]*origin\s*:\s*['"]\*['"]/, 
+  /cors\([^)]*origin\s*:\s*['"]\*['"]/,
 ];
+
+function listChangedFiles(baseRef) {
+  return execFileSync('git', ['diff', '--name-only', `${baseRef}...HEAD`], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  })
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
 
 function changedApiRoutes() {
   if (process.env.API_ENDPOINT_HARDENING_FULL_SCAN === '1') return null;
   if (process.env.GITHUB_EVENT_NAME !== 'pull_request') return null;
 
-  try {
-    const changed = execSync('git diff --name-only HEAD^ HEAD', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-    return changed.filter((file) => /^src\/app\/(?:api|next_api)\/.*\/route\.(ts|js)$/.test(file));
-  } catch {
-    return null;
+  const baseCandidates = [
+    process.env.GITHUB_BASE_SHA,
+    process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : null,
+    process.env.GITHUB_BASE_REF,
+  ].filter(Boolean);
+
+  for (const baseRef of baseCandidates) {
+    try {
+      const changed = listChangedFiles(baseRef);
+      return changed.filter((file) => /^src\/app\/(?:api|next_api)\/.*\/route\.(ts|js)$/.test(file));
+    } catch {
+      // Try the next base reference. Shallow checkouts do not always contain every candidate.
+    }
   }
+
+  console.warn(
+    'Unable to resolve the complete pull request diff; falling back to a full API endpoint scan instead of scanning only the last commit.',
+  );
+  return null;
 }
 
 function walk(dir) {
