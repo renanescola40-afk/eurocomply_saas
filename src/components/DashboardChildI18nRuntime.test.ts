@@ -4,17 +4,22 @@ import { translateDashboardChildText } from './DashboardChildI18nRuntime';
 
 describe('translateDashboardChildText', () => {
   it.each([
-    ['en', '5 AI systems registered'],
-    ['es', '5 sistemas de IA registrados'],
-    ['fr', '5 systèmes IA enregistrés'],
-    ['it', '5 sistemi IA registrati'],
-    ['de', '5 registrierte KI-Systeme'],
-  ] as const)('translates dynamic inventory counts for %s', (locale, expected) => {
-    expect(translateDashboardChildText('5 sistemas de IA registados', locale)).toBe(expected);
+    ['en', '1 AI system registered', '5 AI systems registered'],
+    ['es', '1 sistema de IA registrado', '5 sistemas de IA registrados'],
+    ['fr', '1 système IA enregistré', '5 systèmes IA enregistrés'],
+    ['it', '1 sistema IA registrato', '5 sistemi IA registrati'],
+    ['de', '1 registriertes KI-System', '5 registrierte KI-Systeme'],
+  ] as const)('pluralizes dynamic inventory counts for %s', (locale, singular, plural) => {
+    expect(translateDashboardChildText('1 sistemas de IA registados', locale)).toBe(singular);
+    expect(translateDashboardChildText('5 sistemas de IA registados', locale)).toBe(plural);
   });
 
-  it('preserves Portuguese copy and unknown dynamic text', () => {
-    expect(translateDashboardChildText('5 sistemas de IA registados', 'pt')).toBe('5 sistemas de IA registados');
+  it('pluralizes Portuguese inventory counts without starting the runtime observer', () => {
+    expect(translateDashboardChildText('1 sistemas de IA registados', 'pt')).toBe('1 sistema de IA registado');
+    expect(translateDashboardChildText('0 sistemas de IA registados', 'pt')).toBe('0 sistemas de IA registados');
+  });
+
+  it('preserves unknown dynamic text', () => {
     expect(translateDashboardChildText('5 controlos pendentes', 'en')).toBe('5 controlos pendentes');
   });
 
