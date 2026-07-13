@@ -103,7 +103,7 @@ async function enforceRateLimit(request: NextRequest) {
     policy: 'general-api',
     limit: WAITLIST_RATE_LIMIT_MAX,
     windowMs: WAITLIST_RATE_LIMIT_WINDOW_MS,
-    failureMode: 'fail-open',
+    failureMode: 'fail-closed',
   });
 
   if (!result.allowed) {
