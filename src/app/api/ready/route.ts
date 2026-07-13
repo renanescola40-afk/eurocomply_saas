@@ -8,6 +8,7 @@ import {
   MALWARE_SCANNER_URL_ENV,
   REQUIRE_MALWARE_SCAN_FOR_UPLOADS_ENV,
 } from '@/server/security/upload-security';
+import { requireEnterpriseRateLimit } from '@/server/security/api-guards';
 import { validateBearerToken } from '@/server/security/bearer-token';
 import { noStoreJson } from '@/server/security/no-store';
 import { logSecurityEvent, requestIdFromHeaders } from '@/server/observability/logger';
@@ -264,6 +265,13 @@ async function checkStripeConnectivity(stripeConfigured: boolean): Promise<Ready
 
 export async function GET(request: Request) {
   const requestId = requestIdFromHeaders(request.headers);
+  const rateLimitDenied = await requireEnterpriseRateLimit(request, {
+    policy: 'health-internal',
+    action: 'readiness_auth',
+    route: '/api/ready',
+    failureMode: 'fail-closed',
+  });
+  if (rateLimitDenied) return rateLimitDenied;
 
   if (!hasHealthcheckToken(request)) {
     logSecurityEvent('security_denied', {
