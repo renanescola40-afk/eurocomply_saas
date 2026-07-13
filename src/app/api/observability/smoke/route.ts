@@ -1,9 +1,13 @@
 import { reportError } from '@/lib/observability/report-error';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { logSecurityEvent, requestIdFromHeaders } from '@/server/observability/logger';
 import { validateBearerToken } from '@/server/security/bearer-token';
 import { requireTrustedOriginForMutation } from '@/server/security/api-guards';
 import { noStoreJson } from '@/server/security/no-store';
-import { checkDistributedRateLimit, getRateLimitHeaders } from '@/server/security/rate-limit';
+import {
+  buildRateLimitSubjectFromRequest,
+  checkDistributedRateLimit,
+} from '@/server/security/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,6 +23,26 @@ function hasHealthcheckToken(request: Request) {
 
 export async function POST(request: Request) {
   const requestId = requestIdFromHeaders(request.headers);
+  const rateLimit = await checkDistributedRateLimit({
+    ...buildRateLimitSubjectFromRequest(request, {
+      action: 'observability.smoke',
+      route: ROUTE,
+    }),
+    policy: 'health-internal',
+    failureMode: 'fail-closed',
+  });
+
+  if (!rateLimit.allowed) {
+    logSecurityEvent('security_denied', {
+      requestId,
+      route: ROUTE,
+      reason: rateLimit.reason
+        ? 'observability_smoke_rate_limit_unavailable'
+        : 'observability_smoke_rate_limited',
+    });
+
+    return rateLimitResponse(rateLimit);
+  }
 
   if (!hasHealthcheckToken(request)) {
     logSecurityEvent('security_denied', {
@@ -39,28 +63,6 @@ export async function POST(request: Request) {
     });
 
     return originDenied;
-  }
-
-  const rateLimit = await checkDistributedRateLimit({
-    policy: 'health-internal',
-    action: 'observability.smoke',
-    route: ROUTE,
-  });
-
-  if (!rateLimit.allowed) {
-    logSecurityEvent('security_denied', {
-      requestId,
-      route: ROUTE,
-      reason: 'observability_smoke_rate_limited',
-    });
-
-    return noStoreJson(
-      { status: 'rate_limited', requestId },
-      {
-        status: 429,
-        headers: getRateLimitHeaders(rateLimit),
-      },
-    );
   }
 
   reportError(new Error(SMOKE_TEST_ERROR_MESSAGE), {

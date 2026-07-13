@@ -4,6 +4,11 @@ const mocks = vi.hoisted(() => ({
   reportError: vi.fn(),
   logSecurityEvent: vi.fn(),
   validateBearerToken: vi.fn(),
+  buildRateLimitSubjectFromRequest: vi.fn(() => ({
+    action: 'observability.smoke',
+    route: '/api/observability/smoke',
+    subject: 'ip:test',
+  })),
   checkDistributedRateLimit: vi.fn(),
   getRateLimitHeaders: vi.fn(() => ({ 'Retry-After': '60' })),
 }));
@@ -22,6 +27,7 @@ vi.mock('@/server/security/bearer-token', () => ({
 }));
 
 vi.mock('@/server/security/rate-limit', () => ({
+  buildRateLimitSubjectFromRequest: mocks.buildRateLimitSubjectFromRequest,
   checkDistributedRateLimit: mocks.checkDistributedRateLimit,
   getRateLimitHeaders: mocks.getRateLimitHeaders,
 }));
@@ -42,11 +48,13 @@ describe('/api/observability/smoke', () => {
     mocks.reportError.mockReset();
     mocks.logSecurityEvent.mockReset();
     mocks.validateBearerToken.mockReset();
+    mocks.buildRateLimitSubjectFromRequest.mockClear();
     mocks.checkDistributedRateLimit.mockReset();
     mocks.getRateLimitHeaders.mockClear();
   });
 
   it('rejects requests without the healthcheck gate', async () => {
+    mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
     mocks.validateBearerToken.mockReturnValue(false);
 
     const response = await POST(buildRequest('POST', { 'x-request-id': 'req_denied' }));
@@ -63,7 +71,7 @@ describe('/api/observability/smoke', () => {
     expect(mocks.reportError).not.toHaveBeenCalled();
   });
 
-  it('rate limits authorized smoke checks', async () => {
+  it('rate limits requests before credential validation', async () => {
     mocks.validateBearerToken.mockReturnValue(true);
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: false });
 
@@ -73,7 +81,26 @@ describe('/api/observability/smoke', () => {
     expect(response.status).toBe(429);
     expect(response.headers.get('cache-control')).toContain('no-store');
     expect(response.headers.get('retry-after')).toBe('60');
-    expect(body).toEqual({ status: 'rate_limited', requestId: 'req_limited' });
+    expect(body).toEqual({ error: 'Too many requests' });
+    expect(mocks.validateBearerToken).not.toHaveBeenCalled();
+    expect(mocks.reportError).not.toHaveBeenCalled();
+  });
+
+  it('fails closed before credential validation when the limiter is unavailable', async () => {
+    mocks.validateBearerToken.mockReturnValue(true);
+    mocks.checkDistributedRateLimit.mockResolvedValue({
+      allowed: false,
+      failureMode: 'fail-closed',
+      reason: 'backend_unavailable',
+    });
+
+    const response = await POST(buildRequest('POST', { 'x-request-id': 'req_unavailable' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(body).toEqual({ error: 'security_control_unavailable' });
+    expect(mocks.validateBearerToken).not.toHaveBeenCalled();
     expect(mocks.reportError).not.toHaveBeenCalled();
   });
 
