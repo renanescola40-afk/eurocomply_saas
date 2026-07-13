@@ -44,7 +44,9 @@ describe('enterprise readiness workflows', () => {
     const detailPage = read('src/app/[locale]/ai-systems/[id]/page.tsx');
     const form = read('src/app/[locale]/ai-systems/[id]/ai-system-edit-form.tsx');
 
-    expect(detailPage).toContain('Enterprise readiness view');
+    expect(detailPage).toContain('Enterprise governance view');
+    expect(detailPage).not.toContain('procurement-ready export');
+    expect(detailPage).toContain('procurement-review export');
     expect(detailPage).toContain('ai-system-enterprise-view-title');
     expect(detailPage).toContain('locale={locale}');
     expect(form).toContain('Evidence Pack Builder');
