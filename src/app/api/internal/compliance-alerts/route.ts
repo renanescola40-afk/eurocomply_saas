@@ -3,12 +3,21 @@ import { documentExpiringEmail, vendorReviewEmail } from '@/lib/email/templates'
 import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { buildNotificationIdempotencyKey } from '@/server/jobs/notification-idempotency';
 import { noStoreJson } from '@/server/security/no-store';
 import { getUserEmailById } from '@/server/users/email';
 
 export const runtime = 'nodejs';
 
 const DOCUMENT_EXPIRY_LOOKAHEAD_DAYS = 30;
+
+type NotificationDedupe = {
+  organizationId: string;
+  eventType: string;
+  entityType: string;
+  entityId: string;
+  recipientEmail: string;
+};
 
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
@@ -24,13 +33,7 @@ async function getOrganizationOwnerEmail(userId: string) {
   return getUserEmailById(userId, 'compliance_alert_owner_lookup');
 }
 
-async function hasNotificationBeenSent(input: {
-  organizationId: string;
-  eventType: string;
-  entityType: string;
-  entityId: string;
-  recipientEmail: string;
-}) {
+async function hasNotificationBeenSent(input: NotificationDedupe) {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('email_notification_events')
@@ -44,32 +47,32 @@ async function hasNotificationBeenSent(input: {
 
   if (error) {
     reportError(error, { area: 'email_notification_dedupe_lookup', ...input });
-    return false;
+    throw error;
   }
 
   return Boolean(data?.id);
 }
 
-async function recordNotificationSent(input: {
-  organizationId: string;
-  eventType: string;
-  entityType: string;
-  entityId: string;
-  recipientEmail: string;
+async function recordNotificationSent(input: NotificationDedupe & {
+  idempotencyKey: string;
   metadata?: Record<string, unknown>;
 }) {
   const supabase = createAdminClient();
-  const { error } = await supabase.from('email_notification_events').insert({
-    organization_id: input.organizationId,
-    event_type: input.eventType,
-    entity_type: input.entityType,
-    entity_id: input.entityId,
-    recipient_email: input.recipientEmail,
-    metadata: input.metadata ?? {},
-  });
+  const { error } = await supabase.from('email_notification_events').upsert(
+    {
+      organization_id: input.organizationId,
+      event_type: input.eventType,
+      entity_type: input.entityType,
+      entity_id: input.entityId,
+      recipient_email: input.recipientEmail,
+      metadata: { ...(input.metadata ?? {}), idempotencyKey: input.idempotencyKey },
+    },
+    { onConflict: 'organization_id,event_type,entity_type,entity_id,recipient_email' },
+  );
 
   if (error) {
     reportError(error, { area: 'email_notification_dedupe_record', ...input });
+    throw error;
   }
 }
 
@@ -99,17 +102,12 @@ async function sendDocumentExpiryAlerts() {
   for (const document of documents ?? []) {
     const organization = Array.isArray(document.organizations) ? document.organizations[0] : document.organizations;
 
-    if (!organization?.created_by || !document.expires_at) {
-      continue;
-    }
+    if (!organization?.created_by || !document.expires_at) continue;
 
     const emailAddress = await getOrganizationOwnerEmail(organization.created_by);
+    if (!emailAddress) continue;
 
-    if (!emailAddress) {
-      continue;
-    }
-
-    const dedupe = {
+    const dedupe: NotificationDedupe = {
       organizationId: document.organization_id,
       eventType: 'document.expiring',
       entityType: 'document',
@@ -122,6 +120,7 @@ async function sendDocumentExpiryAlerts() {
       continue;
     }
 
+    const idempotencyKey = buildNotificationIdempotencyKey({ ...dedupe, occurrence: document.expires_at });
     const email = documentExpiringEmail({
       organizationName: organization.name,
       documentName: document.name,
@@ -130,13 +129,32 @@ async function sendDocumentExpiryAlerts() {
     });
 
     try {
-      await sendEmail({
+      const delivery = await sendEmail({
         to: emailAddress,
         subject: email.subject,
         html: email.html,
         text: email.text,
+        template: email.template,
+        organizationId: document.organization_id,
+        userId: organization.created_by,
+        idempotencyKey,
+        metadata: {
+          source: 'document_expiry_alert_job',
+          documentId: document.id,
+          expiresAt: document.expires_at,
+        },
       });
-      await recordNotificationSent({ ...dedupe, metadata: { expiresAt: document.expires_at } });
+
+      if (!delivery.sent) {
+        skipped += 1;
+        continue;
+      }
+
+      await recordNotificationSent({
+        ...dedupe,
+        idempotencyKey,
+        metadata: { expiresAt: document.expires_at },
+      });
       sent += 1;
     } catch (emailError) {
       reportError(emailError, { area: 'document_expiry_alert_email', documentId: document.id, organizationId: document.organization_id });
@@ -167,18 +185,12 @@ async function sendVendorReviewAlerts() {
 
   for (const vendor of vendors ?? []) {
     const organization = Array.isArray(vendor.organizations) ? vendor.organizations[0] : vendor.organizations;
-
-    if (!organization?.created_by) {
-      continue;
-    }
+    if (!organization?.created_by) continue;
 
     const emailAddress = await getOrganizationOwnerEmail(organization.created_by);
+    if (!emailAddress) continue;
 
-    if (!emailAddress) {
-      continue;
-    }
-
-    const dedupe = {
+    const dedupe: NotificationDedupe = {
       organizationId: vendor.organization_id,
       eventType: 'vendor.review_pending',
       entityType: 'vendor',
@@ -191,6 +203,7 @@ async function sendVendorReviewAlerts() {
       continue;
     }
 
+    const idempotencyKey = buildNotificationIdempotencyKey({ ...dedupe, occurrence: vendor.next_review_at });
     const email = vendorReviewEmail({
       organizationName: organization.name,
       vendorName: vendor.name,
@@ -199,13 +212,32 @@ async function sendVendorReviewAlerts() {
     });
 
     try {
-      await sendEmail({
+      const delivery = await sendEmail({
         to: emailAddress,
         subject: email.subject,
         html: email.html,
         text: email.text,
+        template: email.template,
+        organizationId: vendor.organization_id,
+        userId: organization.created_by,
+        idempotencyKey,
+        metadata: {
+          source: 'vendor_review_alert_job',
+          vendorId: vendor.id,
+          reviewDueAt: vendor.next_review_at,
+        },
       });
-      await recordNotificationSent({ ...dedupe, metadata: { reviewDueAt: vendor.next_review_at } });
+
+      if (!delivery.sent) {
+        skipped += 1;
+        continue;
+      }
+
+      await recordNotificationSent({
+        ...dedupe,
+        idempotencyKey,
+        metadata: { reviewDueAt: vendor.next_review_at },
+      });
       sent += 1;
     } catch (emailError) {
       reportError(emailError, { area: 'vendor_review_alert_email', vendorId: vendor.id, organizationId: vendor.organization_id });
@@ -226,11 +258,7 @@ export async function POST(request: Request) {
       sendVendorReviewAlerts(),
     ]);
 
-    return noStoreJson({
-      ok: true,
-      documentAlerts,
-      vendorAlerts,
-    });
+    return noStoreJson({ ok: true, documentAlerts, vendorAlerts });
   } catch (error) {
     reportError(error, { area: 'compliance_alert_job' });
     return noStoreJson({ error: 'Unable to send compliance alerts' }, { status: 500 });
