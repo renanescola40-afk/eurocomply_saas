@@ -38,6 +38,12 @@ function assertString(value, field, file) {
   }
 }
 
+function assertProductionEnvironment(value, field, file) {
+  if (value !== 'production') {
+    fail(`${file}: ${field} must be production for final P1 evidence`);
+  }
+}
+
 function assertBooleanTrue(value, field, file) {
   if (value !== true) {
     fail(`${file}: ${field} must be true for final P1 evidence`);
@@ -89,11 +95,12 @@ function validateEvidence(controlId, control, file) {
 
   assertBooleanTrue(evidence.generatedFromRealEvidence, 'generatedFromRealEvidence', file);
   assertBooleanTrue(evidence.productionValidated, 'productionValidated', file);
+  assertProductionEnvironment(evidence.environment, 'environment', file);
+  assertProductionEnvironment(evidence.targetEnvironment, 'targetEnvironment', file);
   assertString(evidence.generatedAt, 'generatedAt', file);
   assertString(evidence.reviewedAt, 'reviewedAt', file);
   assertString(evidence.reviewer, 'reviewer', file);
   assertString(evidence.nextReviewDue, 'nextReviewDue', file);
-  assertString(evidence.environment, 'environment', file);
 
   if (!isObject(evidence.validation)) {
     fail(`${file}: validation must be an object`);
