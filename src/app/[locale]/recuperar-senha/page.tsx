@@ -43,7 +43,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
     <main className="min-h-screen bg-[#050505] text-white">
       <div className="relative mx-auto flex min-h-screen max-w-md items-center px-5">
         <section className="w-full rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-7 text-center shadow-2xl backdrop-blur-xl">
-          <p className="text-xs uppercase tracking-[0.28em] text-white/36">EuroComply</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-white/36">RISCK COMPLY</p>
           <h1 className="mt-3 text-3xl font-semibold">{t.title}</h1>
           <p className="mt-3 text-sm leading-6 text-white/55">{t.subtitle}</p>
           <Link href={`/${locale}/login`} className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-bold text-black hover:bg-white/90">
