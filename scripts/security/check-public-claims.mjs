@@ -27,6 +27,7 @@ const configuredScanTargets = (process.env.PUBLIC_CLAIMS_SCAN_TARGETS ?? '')
 const SCAN_TARGETS = configuredScanTargets.length > 0 ? configuredScanTargets : DEFAULT_SCAN_TARGETS;
 
 const SUPPORTED_EXTENSIONS = new Set(['.json', '.ts', '.tsx']);
+const SOURCE_STRING_PATTERN = /(['"`])((?:\\.|(?!\1).)*)\1/g;
 
 const PROHIBITED_CLAIM_PATTERNS = [
   { label: 'legacy customer-facing brand', pattern: /\bEuroComply\b/i },
@@ -96,6 +97,22 @@ function scanValue(source, value) {
   }
 }
 
+function scanSourceLine(relativePath, line, lineNumber) {
+  let stringIndex = 0;
+  for (const match of line.matchAll(SOURCE_STRING_PATTERN)) {
+    stringIndex += 1;
+    scanValue(`${relativePath}:${lineNumber}:string-${stringIndex}`, match[2]);
+  }
+
+  const visibleText = line
+    .replace(SOURCE_STRING_PATTERN, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[{}()[\],;:=]/g, ' ')
+    .trim();
+
+  if (visibleText) scanValue(`${relativePath}:${lineNumber}:text`, visibleText);
+}
+
 function scanFile(relativePath) {
   const absolutePath = path.join(ROOT_DIR, relativePath);
   const content = fs.readFileSync(absolutePath, 'utf8');
@@ -112,7 +129,7 @@ function scanFile(relativePath) {
 
   stripPolicyDefinitions(relativePath, content)
     .split('\n')
-    .forEach((line, index) => scanValue(`${relativePath}:${index + 1}`, line));
+    .forEach((line, index) => scanSourceLine(relativePath, line, index + 1));
 }
 
 const files = [...new Set(SCAN_TARGETS.flatMap(collectFiles).filter(isCandidate))].sort();
