@@ -92,7 +92,8 @@ function isTechnicalString(value) {
     /^(?:@\/|\.{1,2}\/|\/)/.test(normalized) ||
     /^x-[a-z0-9-]+$/.test(normalized) ||
     /^[A-Z][A-Z0-9_]+$/.test(normalized) ||
-    /^[a-z0-9]+(?:[_./:][a-z0-9-]+)+$/.test(normalized)
+    /^[a-z0-9]+(?:[_./:][a-z0-9-]+)+$/.test(normalized) ||
+    /^[a-z0-9][a-z0-9._-]*\.(?:csv|json|txt|pdf|zip)$/i.test(normalized)
   );
 }
 
