@@ -23,6 +23,8 @@ const SCAN_TARGETS = configuredScanTargets.length > 0 ? configuredScanTargets : 
 
 const SUPPORTED_EXTENSIONS = new Set(['.json', '.ts', '.tsx']);
 const SOURCE_STRING_PATTERN = /(['"`])((?:\\.|(?!\1).)*)\1/g;
+const INLINE_JSX_TEXT_PATTERN = />([^<{]+)</g;
+const PLAIN_JSX_TEXT_PATTERN = /^[\p{L}\p{N}][^{}()[\];:=<>]*$/u;
 
 const PROHIBITED_CLAIM_PATTERNS = [
   { label: 'legacy customer-facing brand', pattern: /\bEuroComply\b/i },
@@ -83,9 +85,20 @@ function flattenJsonStrings(value, keyPath = '$') {
   return Object.entries(value).flatMap(([key, item]) => flattenJsonStrings(item, `${keyPath}.${key}`));
 }
 
-function scanValue(source, value) {
+function isTechnicalString(value) {
   const normalized = value.trim();
-  if (!normalized || SAFE_NEGATION_CONTEXT.test(normalized)) return;
+
+  return (
+    /^(?:@\/|\.{1,2}\/|\/)/.test(normalized) ||
+    /^x-[a-z0-9-]+$/.test(normalized) ||
+    /^[A-Z][A-Z0-9_]+$/.test(normalized) ||
+    /^[a-z0-9]+(?:[_./:][a-z0-9-]+)+$/.test(normalized)
+  );
+}
+
+function scanValue(source, value) {
+  const normalized = value.replace(/\\n/g, ' ').trim();
+  if (!normalized || normalized.endsWith('?') || isTechnicalString(normalized) || SAFE_NEGATION_CONTEXT.test(normalized)) return;
 
   for (const { label, pattern } of PROHIBITED_CLAIM_PATTERNS) {
     if (pattern.test(normalized)) failures.push(`${source}: possible ${label}`);
@@ -99,13 +112,16 @@ function scanSourceLine(relativePath, line, lineNumber) {
     scanValue(`${relativePath}:${lineNumber}:string-${stringIndex}`, match[2]);
   }
 
-  const visibleText = line
-    .replace(SOURCE_STRING_PATTERN, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/[{}()[\],;:=]/g, ' ')
-    .trim();
+  let jsxTextIndex = 0;
+  for (const match of line.matchAll(INLINE_JSX_TEXT_PATTERN)) {
+    jsxTextIndex += 1;
+    scanValue(`${relativePath}:${lineNumber}:jsx-${jsxTextIndex}`, match[1]);
+  }
 
-  if (visibleText) scanValue(`${relativePath}:${lineNumber}:text`, visibleText);
+  const trimmedLine = line.trim();
+  if (PLAIN_JSX_TEXT_PATTERN.test(trimmedLine)) {
+    scanValue(`${relativePath}:${lineNumber}:jsx-line`, trimmedLine);
+  }
 }
 
 function scanFile(relativePath) {
