@@ -164,6 +164,18 @@ async function createEvidencePackWorkflow(input: {
 
   if (itemError) {
     console.warn('[enterprise-readiness] evidence_pack_items_create_failed', { code: itemError.code ?? 'unknown' });
+
+    const { error: cleanupError } = await supabase
+      .from('enterprise_evidence_packs')
+      .delete()
+      .eq('id', pack.id)
+      .eq('organization_id', input.organizationId);
+
+    if (cleanupError) {
+      console.error('[enterprise-readiness] evidence_pack_cleanup_failed', { code: cleanupError.code ?? 'unknown' });
+    }
+
+    throw itemError;
   }
 
   return { pack, items: items ?? [] };
