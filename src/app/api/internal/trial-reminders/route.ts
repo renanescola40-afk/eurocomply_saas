@@ -42,7 +42,7 @@ async function hasReminderBeenSent(organizationId: string, subscriptionId: strin
 
   if (error) {
     reportError(error, { area: 'trial_reminder_dedupe_lookup', organizationId, subscriptionId });
-    return false;
+    throw error;
   }
 
   return Boolean(data?.id);
