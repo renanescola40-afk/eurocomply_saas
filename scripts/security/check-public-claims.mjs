@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-const SCAN_TARGETS = [
+const DEFAULT_SCAN_TARGETS = [
   'src/messages',
   'src/components/marketing',
   'src/lib/email',
@@ -19,6 +19,12 @@ const SCAN_TARGETS = [
   'src/app/[locale]/risck-comply-home/page.tsx',
   'src/app/[locale]/retention-center/page.tsx',
 ];
+
+const configuredScanTargets = (process.env.PUBLIC_CLAIMS_SCAN_TARGETS ?? '')
+  .split(path.delimiter)
+  .map((target) => target.trim())
+  .filter(Boolean);
+const SCAN_TARGETS = configuredScanTargets.length > 0 ? configuredScanTargets : DEFAULT_SCAN_TARGETS;
 
 const SUPPORTED_EXTENSIONS = new Set(['.json', '.ts', '.tsx']);
 
@@ -38,7 +44,7 @@ const PROHIBITED_CLAIM_PATTERNS = [
   { label: 'unsupported unlimited-country scope', pattern: /\b(?:unlimited countries|pa[ií]ses ilimitados|pays illimit[eé]s|paesi illimitati|unbegrenzte l[aä]nder)\b/i },
   {
     label: 'unsupported signed retention export',
-    pattern: /(?=[^\n]*\b(?:signed|assinado|firmado|sign[eé]|signierten?)\b)(?=[^\n]*\b(?:retention|reten[cç][aã]o|retenci[oó]n|r[eé]tention|aufbewahrung)\b)(?=[^\n]*\b(?:export|json|ficheiro|archivo|fichier|datei)\b)[^\n]*/i,
+    pattern: /(?=[^\n]*\b(?:retention|reten[cç][aã]o|retenci[oó]n|r[eé]tention|aufbewahrung)\b)(?:(?:signed|assinado|assinada|firmado|firmada|firmato|firmata|sign[eé]|signierte[nrms]?)[^\n]{0,48}\b(?:export(?:ed|s|ar|er|ieren)?|exporta[cç][aã]o|exportaci[oó]n|esporta(?:re|zione)?)\b|\b(?:export(?:ed|s|ar|er|ieren)?|exporta[cç][aã]o|exportaci[oó]n|esporta(?:re|zione)?)\b[^\n]{0,48}(?:signed|assinado|assinada|firmado|firmada|firmato|firmata|sign[eé]|signierte[nrms]?))/i,
   },
 ];
 
