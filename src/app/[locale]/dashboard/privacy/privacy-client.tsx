@@ -36,7 +36,7 @@ export function PrivacyAdminClient({ locale: _locale }: { locale: string }) {
     const url = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'eurocomply-gdpr-organization-export.json';
+    anchor.download = 'risck-comply-gdpr-organization-export.json';
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
