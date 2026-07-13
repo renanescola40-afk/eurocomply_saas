@@ -160,27 +160,47 @@ const maps: Record<Locale, Map> = {
   },
 };
 
-function replaceText(root: ParentNode, map: Map) {
+const DYNAMIC_SUFFIX_KEYS = ['sistemas de IA registados'] as const;
+
+export function translateDashboardChildText(value: string, locale: Locale): string {
+  const map = maps[locale] || maps.en;
+  const normalized = value.trim();
+  const exact = map[normalized];
+  if (exact) return exact;
+
+  for (const key of DYNAMIC_SUFFIX_KEYS) {
+    const translated = map[key];
+    if (!translated) continue;
+    const match = normalized.match(new RegExp(`^(\\d+)\\s+${key}$`, 'u'));
+    if (match) return `${match[1]} ${translated}`;
+  }
+
+  return normalized;
+}
+
+function replaceText(root: ParentNode, locale: Locale) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const nodes: Text[] = [];
   while (walker.nextNode()) {
     const node = walker.currentNode as Text;
     const value = node.nodeValue?.trim();
-    if (value && map[value]) nodes.push(node);
+    if (value && translateDashboardChildText(value, locale) !== value) nodes.push(node);
   }
   for (const node of nodes) {
     const original = node.nodeValue || '';
     const trimmed = original.trim();
-    node.nodeValue = original.replace(trimmed, map[trimmed]);
+    node.nodeValue = original.replace(trimmed, translateDashboardChildText(trimmed, locale));
   }
 }
 
-function replaceAttributes(root: ParentNode, map: Map) {
+function replaceAttributes(root: ParentNode, locale: Locale) {
   if (!(root instanceof Document || root instanceof Element)) return;
-  const elements = root instanceof Document ? root.querySelectorAll('[placeholder]') : root.querySelectorAll('[placeholder]');
+  const elements = root.querySelectorAll('[placeholder]');
   elements.forEach((el) => {
     const current = el.getAttribute('placeholder');
-    if (current && map[current]) el.setAttribute('placeholder', map[current]);
+    if (!current) return;
+    const translated = translateDashboardChildText(current, locale);
+    if (translated !== current) el.setAttribute('placeholder', translated);
   });
 }
 
@@ -191,12 +211,11 @@ export default function DashboardChildI18nRuntime() {
 
   useEffect(() => {
     if (!pathname.includes('/dashboard/')) return;
-    const map = maps[locale] || maps.en;
-    if (!map || Object.keys(map).length === 0) return;
+    if (locale === 'pt') return;
 
     const apply = () => {
-      replaceText(document.body, map);
-      replaceAttributes(document.body, map);
+      replaceText(document.body, locale);
+      replaceAttributes(document.body, locale);
     };
 
     apply();
