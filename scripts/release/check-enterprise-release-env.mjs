@@ -39,12 +39,14 @@ const scannerTransportReady = ['clamav', 'clamd'].includes(scannerProvider)
   ? clamavScannerReady
   : ['http', 'generic-http', 'webhook'].includes(scannerProvider) && httpScannerReady;
 const sentrySourceMapUploadRequired = releaseTarget === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
+const explicitProductionUrlSources = ['RELEASE_DEPLOYMENT_URL', 'RELEASE_PRODUCTION_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL'];
 
 const checks = [
   group('releaseTarget', true, allowedReleaseTargets.has(releaseTarget), { releaseTarget, acceptedTargets: [...allowedReleaseTargets] }, 'Run the workflow with release_target set to enterprise or production.'),
-  group('deploymentTargetConfigured', true, hasAny(['RELEASE_DEPLOYMENT_URL', 'RELEASE_PRODUCTION_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL', 'VERCEL_URL']), {
-    acceptedSources: ['RELEASE_DEPLOYMENT_URL', 'RELEASE_PRODUCTION_URL', 'NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL', 'VERCEL_URL'],
-  }, 'Set the production deployment URL in GitHub Actions configuration. Prefer a GitHub Variable for non-secret URLs.'),
+  group('deploymentTargetConfigured', true, hasAny(explicitProductionUrlSources), {
+    acceptedSources: explicitProductionUrlSources,
+    rejectedAmbiguousSources: ['VERCEL_URL'],
+  }, 'Set an explicit production deployment URL in GitHub Actions configuration. Do not rely on VERCEL_URL because it may identify a preview deployment.'),
   group('healthcheckTokenConfigured', true, hasAny(['HEALTHCHECK_TOKEN']), { acceptedSources: ['HEALTHCHECK_TOKEN'] }, 'Set HEALTHCHECK_TOKEN as a GitHub Secret matching the protected readiness token.'),
   group('releaseCommitShaConfigured', true, Boolean(commitSha), { sourcePresent: Boolean(commitSha) }, 'Set RELEASE_COMMIT_SHA or allow GitHub Actions to provide GITHUB_SHA.'),
   group('releaseBuildShaConfigured', true, Boolean(buildSha), { sourcePresent: Boolean(buildSha) }, 'Set RELEASE_BUILD_SHA or allow GitHub Actions to provide GITHUB_SHA.'),
