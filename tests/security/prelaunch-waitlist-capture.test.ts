@@ -4,6 +4,17 @@ import { describe, expect, it } from 'vitest';
 const routeSource = () => readFileSync('src/app/api/prelaunch/route.ts', 'utf8');
 
 describe('prelaunch waitlist capture resilience', () => {
+  it('fails closed when distributed rate limiting is unavailable', () => {
+    const source = routeSource();
+    const rateLimitIndex = source.indexOf('const rateLimited = await enforceRateLimit(request);');
+    const bodyReadIndex = source.indexOf('const body = await readBody(request);');
+
+    expect(source).toContain("failureMode: 'fail-closed'");
+    expect(source).not.toContain("failureMode: 'fail-open'");
+    expect(rateLimitIndex).toBeGreaterThan(-1);
+    expect(bodyReadIndex).toBeGreaterThan(rateLimitIndex);
+  });
+
   it('falls back to the existing sales lead table when the dedicated waitlist table is unavailable', () => {
     const source = routeSource();
 

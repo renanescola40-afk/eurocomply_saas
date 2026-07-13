@@ -1,5 +1,6 @@
 import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { requireEnterpriseRateLimit } from '@/server/security/api-guards';
 import { validateBearerToken } from '@/server/security/bearer-token';
 import { noStoreJson } from '@/server/security/no-store';
 
@@ -46,7 +47,9 @@ type DynamicSupabaseClient = SupabaseAdminClient & {
 };
 
 function hasBearerToken(request: Request) {
-  return validateBearerToken(request, process.env.HEALTHCHECK_TOKEN);
+  return validateBearerToken(request, process.env.HEALTHCHECK_TOKEN, {
+    allowMissingTokenOutsideProduction: false,
+  });
 }
 
 function envGroupCheck(groups: Record<string, readonly string[]>) {
@@ -104,6 +107,14 @@ function calculateScore(checks: Array<{ ok: boolean; weight: number }>) {
 }
 
 export async function GET(request: Request) {
+  const rateLimitDenied = await requireEnterpriseRateLimit(request, {
+    policy: 'health-internal',
+    action: 'ops_enterprise_readiness_auth',
+    route: '/api/ops/enterprise-readiness',
+    failureMode: 'fail-closed',
+  });
+  if (rateLimitDenied) return rateLimitDenied;
+
   if (!hasBearerToken(request)) {
     return noStoreJson({ status: 'unauthorized' }, { status: 401 });
   }

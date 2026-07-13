@@ -125,7 +125,7 @@ const providerRows: ProviderRow[] = [
   { name: 'Vercel', purpose: 'Application hosting, deployment and edge delivery', data: 'Application traffic, deployment metadata and logs depending on configuration', region: 'Managed global infrastructure; runtime region depends on project configuration', status: 'Production provider where configured' },
   { name: 'Supabase', purpose: 'Database, authentication, storage and Row Level Security', data: 'Account data, organization records, workflow data and audit events', region: 'Configured project region; disclose exact region in the security pack', status: 'Core production provider where configured' },
   { name: 'Stripe', purpose: 'Subscription billing, checkout, customer portal and webhook processing', data: 'Billing identifiers, subscription status and payment metadata', region: 'Global payments infrastructure', status: 'Used when billing is enabled' },
-  { name: 'Sentry', purpose: 'Monitoring and diagnostics', data: 'Diagnostic events, stack traces and metadata depending on configuration', region: 'Configured account/project region', status: 'Optional monitoring provider' },
+  { name: 'Sentry', purpose: 'Monitoring and diagnostics', data: 'Diagnostic events, error context and metadata depending on configuration', region: 'Configured account/project region', status: 'Optional monitoring provider' },
   { name: 'PostHog', purpose: 'Product analytics and usage insights', data: 'Product analytics events where enabled and appropriate', region: 'Configured account/project region', status: 'Optional analytics provider' },
 ];
 

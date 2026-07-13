@@ -22,34 +22,34 @@ function riskTone(level: string) {
 function getEnterpriseReadinessCopy(locale: string) {
   const copy = {
     en: {
-      title: 'Enterprise readiness view',
-      subtitle: 'Operational view for procurement, risk review, vendor diligence and evidence preparation.',
+      title: 'Enterprise governance view',
+      subtitle: 'Operational view for procurement review, risk assessment, vendor diligence and evidence preparation.',
       evidence: 'Evidence pack coverage',
       vendor: 'Vendor due diligence',
       risk: 'Risk review workflow',
       audit: 'System audit timeline',
-      emptyEvidence: 'No evidence pack item is linked to this AI system yet. Create an evidence pack from the readiness command center.',
+      emptyEvidence: 'No evidence pack item is linked to this AI system yet. Create an evidence pack from the governance command center.',
       emptyVendor: 'No vendor due diligence checklist is linked yet.',
       emptyRisk: 'No risk review workflow is linked yet.',
       emptyAudit: 'System history appears here after create or reassessment events.',
-      openReadiness: 'Open readiness center',
+      openReadiness: 'Open governance center',
       realData: 'Real organization data only',
-      ownerLocked: 'Your role can view this enterprise context, but changes require AI governance management permission.',
+      ownerLocked: 'Your role can view this governance context, but changes require AI governance management permission.',
     },
     pt: {
-      title: 'Visão enterprise de readiness',
-      subtitle: 'Visão operacional para procurement, revisão de risco, due diligence de fornecedor e preparação de evidências.',
-      evidence: 'Cobertura do evidence pack',
+      title: 'Visão de governação enterprise',
+      subtitle: 'Visão operacional para revisão de procurement, avaliação de risco, due diligence de fornecedores e preparação de evidências.',
+      evidence: 'Cobertura do pacote de evidências',
       vendor: 'Due diligence de fornecedor',
       risk: 'Workflow de revisão de risco',
       audit: 'Timeline de auditoria do sistema',
-      emptyEvidence: 'Nenhum item de evidence pack está ligado a este sistema de IA ainda. Crie um pack no centro de readiness.',
-      emptyVendor: 'Nenhum checklist de fornecedor está ligado ainda.',
-      emptyRisk: 'Nenhum workflow de revisão de risco está ligado ainda.',
-      emptyAudit: 'O histórico aparece aqui após criação ou reavaliação do sistema.',
-      openReadiness: 'Abrir centro de readiness',
+      emptyEvidence: 'Ainda não existe um item de evidência ligado a este sistema de IA. Crie um pacote no centro de governação.',
+      emptyVendor: 'Ainda não existe um checklist de fornecedor associado.',
+      emptyRisk: 'Ainda não existe um workflow de revisão de risco associado.',
+      emptyAudit: 'O histórico aparece aqui após a criação ou reavaliação do sistema.',
+      openReadiness: 'Abrir centro de governação',
       realData: 'Apenas dados reais da organização',
-      ownerLocked: 'O seu role pode ver este contexto enterprise, mas alterações exigem permissão de gestão de IA.',
+      ownerLocked: 'O seu perfil pode consultar este contexto de governação, mas as alterações exigem permissão de gestão de IA.',
     },
   } as const;
 
@@ -134,7 +134,7 @@ export default async function AiSystemDetailPage({ params }: AiSystemDetailPageP
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <h3 className="font-semibold">{t.vendor}</h3>
-              <p className="mt-2 text-sm leading-6 text-white/55">{hasVendor ? `${system.vendor_name} requires vendor diligence before procurement-ready export.` : t.emptyVendor}</p>
+              <p className="mt-2 text-sm leading-6 text-white/55">{hasVendor ? `${system.vendor_name} requires vendor diligence before a procurement-review export is prepared.` : t.emptyVendor}</p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <h3 className="font-semibold">{t.risk}</h3>
