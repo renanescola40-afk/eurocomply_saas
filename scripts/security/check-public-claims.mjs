@@ -36,7 +36,10 @@ const PROHIBITED_CLAIM_PATTERNS = [
   { label: 'automatic AI Act compliance claim', pattern: /\bautomatic(?:ally)?[^\n]{0,80}\b(?:EU\s*)?AI Act[^\n]{0,80}\b(?:compliance|compliant)\b/i },
   { label: 'professional replacement claim', pattern: /\b(?:replace(?:s)?|substitui|sustituye|remplace|sostituisce|ersetzt)\b[^\n]{0,80}\b(?:lawyers?|legal counsel|advogados?|abogados?|avocats?|avvocati?|anw[aä]lte|DPOs?|compliance officers?)\b/i },
   { label: 'unsupported unlimited-country scope', pattern: /\b(?:unlimited countries|pa[ií]ses ilimitados|pays illimit[eé]s|paesi illimitati|unbegrenzte l[aä]nder)\b/i },
-  { label: 'unsupported signed retention export', pattern: /(?:\b(?:signed|assinado|firmado|sign[eé]|signierten?)\b[^\n]{0,100}\b(?:retention|reten[cç][aã]o|retenci[oó]n|r[eé]tention|aufbewahrung)\b|\b(?:retention|reten[cç][aã]o|retenci[oó]n|r[eé]tention|aufbewahrung)\b[^\n]{0,100}\b(?:signed|assinado|firmado|sign[eé]|signierten?)\b)/i },
+  {
+    label: 'unsupported signed retention export',
+    pattern: /(?=[^\n]*\b(?:signed|assinado|firmado|sign[eé]|signierten?)\b)(?=[^\n]*\b(?:retention|reten[cç][aã]o|retenci[oó]n|r[eé]tention|aufbewahrung)\b)(?=[^\n]*\b(?:export|json|ficheiro|archivo|fichier|datei)\b)[^\n]*/i,
+  },
 ];
 
 const SAFE_NEGATION_CONTEXT = /(?:\bnot\b|\bdoes not\b|\bdo not\b|\bmust not\b|\bwithout\b|\bunless\b|\bpending\b|\bnot yet\b|\bnot claimed\b|\bno\b|\bn[aã]o\b|\bsem\b|\bno se\b|\bsin\b|\bne\b.{0,40}\bpas\b|\bsans\b|\bnon\b|\bsenza\b|\bnicht\b|\bkein(?:e|en|er|es)?\b|\bohne\b)/i;
