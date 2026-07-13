@@ -10,6 +10,7 @@ const DEFAULT_SCAN_TARGETS = [
   'src/messages',
   'src/components/marketing',
   'src/lib/email',
+  'src/lib/i18n/app-dictionary.ts',
   'src/lib/trust-center/content.ts',
   'src/app/[locale]',
 ];
@@ -95,6 +96,10 @@ function isTechnicalString(value) {
   );
 }
 
+function isTechnicalLiteralContext(line) {
+  return /\b(?:const|let|var)\s+[A-Za-z0-9_]*(?:storage|cache)[A-Za-z0-9_]*key\s*=/i.test(line);
+}
+
 function scanValue(source, value) {
   const normalized = value.replace(/\\n/g, ' ').trim();
   if (!normalized || normalized.endsWith('?') || isTechnicalString(normalized) || SAFE_NEGATION_CONTEXT.test(normalized)) return;
@@ -105,10 +110,11 @@ function scanValue(source, value) {
 }
 
 function scanSourceLine(relativePath, line, lineNumber) {
+  const skipTechnicalLiterals = isTechnicalLiteralContext(line);
   let stringIndex = 0;
   for (const match of line.matchAll(SOURCE_STRING_PATTERN)) {
     stringIndex += 1;
-    scanValue(`${relativePath}:${lineNumber}:string-${stringIndex}`, match[2]);
+    if (!skipTechnicalLiterals) scanValue(`${relativePath}:${lineNumber}:string-${stringIndex}`, match[2]);
   }
 
   let jsxTextIndex = 0;
