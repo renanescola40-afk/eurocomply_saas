@@ -52,7 +52,7 @@ describe('customer-facing claims guard', () => {
     expect(packageJson.scripts['security:ci']).toContain('npm run security:public-claims');
   });
 
-  it('covers every supported locale catalog and high-risk public surface', () => {
+  it('covers every locale catalog and the full localized route tree', () => {
     const checker = fs.readFileSync(checkerPath, 'utf8');
 
     for (const locale of ['en', 'pt', 'es', 'fr', 'it', 'de']) {
@@ -62,24 +62,36 @@ describe('customer-facing claims guard', () => {
     expect(checker).toContain("'src/messages'");
     expect(checker).toContain("'src/components/marketing'");
     expect(checker).toContain("'src/lib/email'");
+    expect(checker).toContain("'src/lib/i18n/app-dictionary.ts'");
     expect(checker).toContain("'src/lib/trust-center/content.ts'");
-    expect(checker).toContain("'src/app/[locale]/pricing/page.tsx'");
-    expect(checker).toContain("'src/app/[locale]/enterprise/page.tsx'");
-    expect(checker).toContain("'src/app/[locale]/retention-center/page.tsx'");
+    expect(checker).toContain("'src/app/[locale]'");
+    expect(checker).not.toContain("'src/app/[locale]/pricing/page.tsx'");
   });
 
-  it('keeps activation and retention copy evidence-safe and on-brand', () => {
+  it('keeps corrected customer surfaces evidence-safe and on-brand', () => {
     const activationEmail = fs.readFileSync(path.join(rootDir, 'src/lib/email/activation-sequence.ts'), 'utf8');
     const retentionCenter = fs.readFileSync(path.join(rootDir, 'src/app/[locale]/retention-center/page.tsx'), 'utf8');
+    const vendorAssurance = fs.readFileSync(path.join(rootDir, 'src/app/[locale]/vendor-assurance/page.tsx'), 'utf8');
+    const enterpriseReadiness = fs.readFileSync(path.join(rootDir, 'src/app/[locale]/enterprise-readiness/page.tsx'), 'utf8');
+    const passwordRecovery = fs.readFileSync(path.join(rootDir, 'src/app/[locale]/atualizar-senha/page.tsx'), 'utf8');
 
     expect(activationEmail).not.toContain('enterprise-ready compliance view');
     expect(activationEmail).toContain('structured compliance operations view for evidence preparation and internal review');
 
-    expect(retentionCenter).not.toContain('EuroComply');
+    for (const source of [retentionCenter, vendorAssurance, enterpriseReadiness, passwordRecovery]) {
+      expect(source).not.toContain('EuroComply');
+      expect(source).toContain('RISCK COMPLY');
+    }
+
     expect(retentionCenter).not.toContain("enterpriseReady: 'Enterprise-ready'");
     expect(retentionCenter).not.toContain('signed retention-policy export');
     expect(retentionCenter).toContain('Ready for evidence review');
-    expect(retentionCenter).toContain('RISCK COMPLY');
+
+    expect(vendorAssurance).not.toContain('signed supplier assurance export');
+    expect(vendorAssurance).toContain('structured supplier-assurance JSON export');
+
+    expect(enterpriseReadiness).not.toContain('signed executive readiness export');
+    expect(enterpriseReadiness).toContain('structured executive-readiness JSON export');
   });
 
   it('allows signed-contract language when an export is mentioned separately', () => {
