@@ -32,6 +32,18 @@ In strict mode, the canonical index must have `status: Complete`, `generatedFrom
 
 The validator never generates evidence or changes control status. A strict failure means the enterprise evidence package is incomplete or internally inconsistent; it must not be bypassed.
 
+## Complete-control coherence rule
+
+Every control marked `Complete` is checked against the final evidence JSON referenced by its `evidencePath` in both normal and strict modes. The evidence must agree exactly with the canonical index on:
+
+- control ID and control name;
+- `status: Complete`;
+- `generatedFromRealEvidence: true`;
+- `productionValidated: true`;
+- reviewer, review timestamp, and next-review date.
+
+A mismatch is always blocking. Updating a completed control therefore requires the index, final evidence file, and generated dashboard to be changed together from the same reviewed evidence package.
+
 ## Dashboard integrity rule
 
 `docs/security/evidence/p1/P1_EVIDENCE_INDEX.json` is the canonical status source. The gate regenerates `docs/security/evidence/p1/P1_PROGRESS.md` and then requires a clean Git diff in both normal and strict modes. Any status change must therefore commit the matching generated dashboard in the same pull request.

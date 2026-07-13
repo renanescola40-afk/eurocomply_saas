@@ -22,6 +22,9 @@ const controls = [
   ['P1-10', 'waf-cdn-ddos', 'docs/security/evidence/p1/waf-cdn-ddos.json'],
 ] as const;
 
+const reviewedAt = '2026-07-13T10:00:00Z';
+const reviewer = 'Security reviewer';
+const nextReviewDue = '2026-10-13';
 const temporaryDirectories: string[] = [];
 
 afterEach(() => {
@@ -30,7 +33,10 @@ afterEach(() => {
   }
 });
 
-function createIndexWorkspace(complete: boolean) {
+function createIndexWorkspace(
+  complete: boolean,
+  options: { evidenceReviewer?: string } = {},
+) {
   const root = mkdtempSync(join(tmpdir(), 'p1-evidence-index-'));
   temporaryDirectories.push(root);
 
@@ -46,19 +52,36 @@ function createIndexWorkspace(complete: boolean) {
       status: complete ? 'Complete' : 'Open',
       ...(complete
         ? {
-            reviewedAt: '2026-07-13T10:00:00Z',
-            reviewer: 'Security reviewer',
-            nextReviewDue: '2026-10-13',
+            reviewedAt,
+            reviewer,
+            nextReviewDue,
           }
         : {}),
     })),
   };
 
   if (complete) {
-    for (const [, , evidencePath] of controls) {
+    for (const [controlId, control, evidencePath] of controls) {
       const absoluteEvidencePath = join(root, evidencePath);
       mkdirSync(dirname(absoluteEvidencePath), { recursive: true });
-      writeFileSync(absoluteEvidencePath, '{}\n');
+      writeFileSync(
+        absoluteEvidencePath,
+        `${JSON.stringify(
+          {
+            schemaVersion: 1,
+            controlId,
+            control,
+            status: 'Complete',
+            generatedFromRealEvidence: true,
+            productionValidated: true,
+            reviewedAt,
+            reviewer: options.evidenceReviewer ?? reviewer,
+            nextReviewDue,
+          },
+          null,
+          2,
+        )}\n`,
+      );
     }
   }
 
@@ -81,7 +104,7 @@ describe('P1 evidence index strict mode', () => {
     expect(result.stderr).not.toContain('index file is missing: --strict');
   });
 
-  it('accepts a complete index with reviewed evidence in strict mode', () => {
+  it('accepts a complete index whose review metadata matches its evidence files', () => {
     const { root, indexPath } = createIndexWorkspace(true);
     const result = spawnSync(
       process.execPath,
@@ -91,5 +114,21 @@ describe('P1 evidence index strict mode', () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('valid in strict mode');
+  });
+
+  it('fails closed when complete evidence metadata disagrees with the canonical index', () => {
+    const { root, indexPath } = createIndexWorkspace(true, {
+      evidenceReviewer: 'Different reviewer',
+    });
+    const result = spawnSync(
+      process.execPath,
+      [scriptPath, indexPath],
+      { cwd: root, encoding: 'utf8' },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'P1-01 evidence reviewer must match the canonical index',
+    );
   });
 });
