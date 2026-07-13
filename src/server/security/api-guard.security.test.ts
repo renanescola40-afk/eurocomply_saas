@@ -66,4 +66,12 @@ describe('central API guard security contract', () => {
     expect(bolaScriptSource).not.toContain('report-only mode');
     expect(bolaScriptSource).toContain('process.exitCode = 1');
   });
+
+  it('keeps the API route inventory synchronized in both directions', () => {
+    expect(bolaScriptSource).toContain("join(root, 'src', 'app', 'next_api')");
+    expect(bolaScriptSource).toContain('duplicate API_ROUTE_INVENTORY.md classification');
+    expect(bolaScriptSource).toContain('stale API_ROUTE_INVENTORY.md classification for missing route');
+    expect(bolaScriptSource).not.toContain('explicitRouteClassFallbacks');
+    expect(inventorySource).not.toContain('src/app/api/clerk/organizations/sync/route.ts');
+  });
 });
