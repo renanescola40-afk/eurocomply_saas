@@ -10,6 +10,7 @@ import { getUserEmailById } from '@/server/users/email';
 export const runtime = 'nodejs';
 
 const TRIAL_REMINDER_DAYS = 3;
+const REMINDER_EVENT_CONFLICT_COLUMNS = 'organization_id,event_type,entity_type,entity_id,recipient_email';
 
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
@@ -57,14 +58,20 @@ async function recordReminderSent(
   idempotencyKey: string,
 ) {
   const supabase = createAdminClient();
-  const { error } = await supabase.from('email_notification_events').insert({
-    organization_id: organizationId,
-    event_type: 'billing.trial_ending',
-    entity_type: 'subscription',
-    entity_id: subscriptionId,
-    recipient_email: recipientEmail,
-    metadata: { currentPeriodEnd, idempotencyKey },
-  });
+  const { error } = await supabase.from('email_notification_events').upsert(
+    {
+      organization_id: organizationId,
+      event_type: 'billing.trial_ending',
+      entity_type: 'subscription',
+      entity_id: subscriptionId,
+      recipient_email: recipientEmail,
+      metadata: { currentPeriodEnd, idempotencyKey },
+    },
+    {
+      onConflict: REMINDER_EVENT_CONFLICT_COLUMNS,
+      ignoreDuplicates: true,
+    },
+  );
 
   if (error) {
     reportError(error, { area: 'trial_reminder_dedupe_record', organizationId, subscriptionId });
