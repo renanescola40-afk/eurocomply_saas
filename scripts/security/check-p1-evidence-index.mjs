@@ -41,16 +41,43 @@ function assertString(value, field) {
   }
 }
 
+function readJson(file, label) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (error) {
+    fail(`${label} is not valid JSON: ${error.message}`);
+  }
+}
+
+function assertCompleteEvidenceCoherence(entry, controlId, controlName) {
+  const evidence = readJson(entry.evidencePath, `${controlId} evidence file`);
+  if (typeof evidence !== 'object' || evidence === null || Array.isArray(evidence)) {
+    fail(`${controlId} evidence file must contain a JSON object`);
+  }
+
+  const expectedFields = [
+    ['controlId', controlId],
+    ['control', controlName],
+    ['status', 'Complete'],
+    ['generatedFromRealEvidence', true],
+    ['productionValidated', true],
+    ['reviewedAt', entry.reviewedAt],
+    ['reviewer', entry.reviewer],
+    ['nextReviewDue', entry.nextReviewDue],
+  ];
+
+  for (const [field, expectedValue] of expectedFields) {
+    if (evidence[field] !== expectedValue) {
+      fail(`${controlId} evidence ${field} must match the canonical index`);
+    }
+  }
+}
+
 if (!fs.existsSync(indexPath)) {
   fail(`index file is missing: ${indexPath}`);
 }
 
-let index;
-try {
-  index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-} catch (error) {
-  fail(`invalid JSON in ${indexPath}: ${error.message}`);
-}
+const index = readJson(indexPath, `index file ${indexPath}`);
 
 if (index.schemaVersion !== 1) fail('schemaVersion must be 1');
 if (index.phase !== 'P1 Enterprise Security') fail('phase must be P1 Enterprise Security');
@@ -77,6 +104,7 @@ for (const [controlId, controlName, evidencePath] of expectedControls) {
     assertString(entry.reviewedAt, `${controlId}.reviewedAt`);
     assertString(entry.reviewer, `${controlId}.reviewer`);
     assertString(entry.nextReviewDue, `${controlId}.nextReviewDue`);
+    assertCompleteEvidenceCoherence(entry, controlId, controlName);
   }
 
   if (entry.status === 'Exception') {
