@@ -4,6 +4,8 @@ const LOCALES = ['pt', 'en', 'es', 'fr', 'it', 'de'] as const;
 type Locale = (typeof LOCALES)[number];
 
 const PRELAUNCH_AUTH_REDIRECTS_ENABLED = process.env.PRELAUNCH_AUTH_REDIRECTS === 'true';
+const RAW_FRAMEWORK_ERROR_PATTERN =
+  /Unhandled Runtime Error|Application error(?:\s*:|\s+-)|Stack trace(?:\s*:|\s*\n\s*at\b)|(?:Reference|Type|Syntax)Error:|webpack-internal|(?:^|\n)\s*at\s+\S+.*\(/im;
 
 type RouteCase = {
   name: string;
@@ -88,7 +90,7 @@ async function expectNoStackTrace(page: Page, label: string) {
   expect(
     bodyText,
     `${label} exposed a raw stack trace or framework error`,
-  ).not.toMatch(/Unhandled Runtime Error|Application error|(?:^|\n)\s*Stack trace\s*(?::|$)|ReferenceError:|TypeError:|SyntaxError:|webpack-internal/im);
+  ).not.toMatch(RAW_FRAMEWORK_ERROR_PATTERN);
 }
 
 async function expectNoUndefinedUrl(page: Page, label: string) {

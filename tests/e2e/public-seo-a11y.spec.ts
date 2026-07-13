@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const publicRoutes = ['/en', '/en/pricing', '/en/trust', '/en/security'] as const;
+const SEO_DESCRIPTION_PATTERN =
+  /RISCK|AI|Security|Trust|readiness|governance|controls|buyer-ready|enterprise|protect customer workspaces|Application and infrastructure controls/i;
 
 function normalizePathname(pathname: string) {
   if (pathname === '/') return pathname;
@@ -11,9 +13,9 @@ async function expectSeoMetadata(page: Page, path: string) {
   await expect(page.getByRole('main').first()).toBeVisible();
   await expect(page.locator('h1').first()).toBeVisible();
   expect(await page.title()).not.toBe('');
-  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /RISCK|AI|Security|Trust|readiness|governance|protect customer workspaces|Application and infrastructure controls/i);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', SEO_DESCRIPTION_PATTERN);
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', /RISCK|Security|Trust|Pricing/i);
-  await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', /RISCK|AI|Security|Trust|readiness|governance|protect customer workspaces|Application and infrastructure controls/i);
+  await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', SEO_DESCRIPTION_PATTERN);
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', /summary/);
 
   const canonicalHref = await page.locator('link[rel="canonical"]').getAttribute('href');

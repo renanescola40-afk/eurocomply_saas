@@ -12,9 +12,13 @@ Each final evidence file must represent one P1 control and include:
 - `evidenceKind: "final-p1-control-evidence"`
 - `generatedFromRealEvidence: true`
 - `productionValidated: true`
-- non-empty `generatedAt`, `reviewedAt`, `reviewer`, `nextReviewDue`, and `environment`
+- `environment: "production"`
+- `targetEnvironment: "production"`
+- non-empty `generatedAt`, `reviewedAt`, `reviewer`, and `nextReviewDue`
 - `validation.result: "pass"` with non-empty validation metadata
 - at least one artifact with type, reference, description, and collection time
+
+The explicit production fields prevent a staging, local, preview, or test result from being represented as final production evidence merely by setting `productionValidated: true`.
 
 Placeholder-like values such as TBD, TODO, sample, fake, mock, dummy, or changeme are rejected.
 
