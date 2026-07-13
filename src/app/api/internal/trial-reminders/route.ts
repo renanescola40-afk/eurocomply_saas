@@ -4,11 +4,13 @@ import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { noStoreJson } from '@/server/security/no-store';
+import { buildTrialReminderIdempotencyKey } from '@/server/jobs/trial-reminder-idempotency';
 import { getUserEmailById } from '@/server/users/email';
 
 export const runtime = 'nodejs';
 
 const TRIAL_REMINDER_DAYS = 3;
+const REMINDER_EVENT_CONFLICT_COLUMNS = 'organization_id,event_type,entity_type,entity_id,recipient_email';
 
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
@@ -48,19 +50,32 @@ async function hasReminderBeenSent(organizationId: string, subscriptionId: strin
   return Boolean(data?.id);
 }
 
-async function recordReminderSent(organizationId: string, subscriptionId: string, recipientEmail: string, currentPeriodEnd: string) {
+async function recordReminderSent(
+  organizationId: string,
+  subscriptionId: string,
+  recipientEmail: string,
+  currentPeriodEnd: string,
+  idempotencyKey: string,
+) {
   const supabase = createAdminClient();
-  const { error } = await supabase.from('email_notification_events').insert({
-    organization_id: organizationId,
-    event_type: 'billing.trial_ending',
-    entity_type: 'subscription',
-    entity_id: subscriptionId,
-    recipient_email: recipientEmail,
-    metadata: { currentPeriodEnd },
-  });
+  const { error } = await supabase.from('email_notification_events').upsert(
+    {
+      organization_id: organizationId,
+      event_type: 'billing.trial_ending',
+      entity_type: 'subscription',
+      entity_id: subscriptionId,
+      recipient_email: recipientEmail,
+      metadata: { currentPeriodEnd, idempotencyKey },
+    },
+    {
+      onConflict: REMINDER_EVENT_CONFLICT_COLUMNS,
+      ignoreDuplicates: true,
+    },
+  );
 
   if (error) {
     reportError(error, { area: 'trial_reminder_dedupe_record', organizationId, subscriptionId });
+    throw error;
   }
 }
 
@@ -102,6 +117,12 @@ async function sendTrialReminders() {
       continue;
     }
 
+    const idempotencyKey = buildTrialReminderIdempotencyKey({
+      organizationId: subscription.organization_id,
+      subscriptionId: subscription.id,
+      currentPeriodEnd: subscription.current_period_end,
+      recipientEmail,
+    });
     const email = trialUpgradeEmail({
       organizationName: organization.name,
       billingUrl,
@@ -109,7 +130,7 @@ async function sendTrialReminders() {
     });
 
     try {
-      await sendEmail({
+      const delivery = await sendEmail({
         to: recipientEmail,
         subject: email.subject,
         html: email.html,
@@ -117,13 +138,26 @@ async function sendTrialReminders() {
         template: email.template,
         organizationId: subscription.organization_id,
         userId: ownerUserId,
+        idempotencyKey,
         metadata: {
           source: 'trial_reminder_job',
           subscriptionId: subscription.id,
           currentPeriodEnd: subscription.current_period_end,
         },
       });
-      await recordReminderSent(subscription.organization_id, subscription.id, recipientEmail, subscription.current_period_end);
+
+      if (!delivery.sent) {
+        skipped += 1;
+        continue;
+      }
+
+      await recordReminderSent(
+        subscription.organization_id,
+        subscription.id,
+        recipientEmail,
+        subscription.current_period_end,
+        idempotencyKey,
+      );
       sent += 1;
     } catch (error) {
       reportError(error, { area: 'trial_reminder_email', subscriptionId: subscription.id, organizationId: subscription.organization_id });
