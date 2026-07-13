@@ -17,7 +17,7 @@ const TRUST_COPY: Record<SupportedLocale, LocalizedTrustCopy> = {
     brand: 'Risck comply',
     eyebrow: 'Trust Center',
     title: 'Security, privacy and operational transparency without compliance washing.',
-    subtitle: 'Current controls, open gaps and buyer-ready documentation are shown clearly so enterprise teams can evaluate the platform honestly.',
+    subtitle: 'Current security controls, open gaps and buyer-ready Trust Center documentation are shown clearly so enterprise teams can evaluate the platform honestly.',
     notice: 'Every claim is tied to implementation status. Certification claims are only shown when evidence is available.',
     cards: [
       { href: '/security', title: 'Security overview', body: 'Workspace access, audit posture and operating safeguards summarized for review.' },
