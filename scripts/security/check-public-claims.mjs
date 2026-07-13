@@ -88,6 +88,7 @@ function flattenJsonStrings(value, keyPath = '$') {
 
 function isTechnicalString(value) {
   const normalized = value.trim();
+  if (/\.(?:csv|json|txt|pdf|zip)$/i.test(normalized)) return false;
 
   return (
     /^(?:@\/|\.{1,2}\/|\/)/.test(normalized) ||
