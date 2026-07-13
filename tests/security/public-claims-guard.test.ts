@@ -16,7 +16,7 @@ afterEach(() => {
 function runCheckerForFixture(content: string) {
   const directory = fs.mkdtempSync(path.join(rootDir, '.public-claims-fixture-'));
   temporaryDirectories.push(directory);
-  const fixturePath = path.join(directory, 'copy.ts');
+  const fixturePath = path.join(directory, 'copy.tsx');
   fs.writeFileSync(fixturePath, `${content}\n`);
 
   return spawnSync(process.execPath, [checkerPath], {
@@ -101,6 +101,29 @@ describe('customer-facing claims guard', () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('Customer-facing claims: ok');
+  });
+
+  it('allows questions about professional involvement without treating them as claims', () => {
+    const result = runCheckerForFixture("const question = 'Do you replace lawyers or DPOs?';");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Customer-facing claims: ok');
+  });
+
+  it('ignores technical headers, routes and legacy property keys', () => {
+    const result = runCheckerForFixture(
+      "const eurocomply = 'RISCK COMPLY'; const header = 'x-eurocomply-step-up-token'; const route = '/api/eurocomply/status';",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Customer-facing claims: ok');
+  });
+
+  it('blocks legacy branding in visible JSX text', () => {
+    const result = runCheckerForFixture('export function Page() { return <p>EuroComply</p>; }');
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('possible legacy customer-facing brand');
   });
 
   it('blocks actual signed retention-export claims', () => {
