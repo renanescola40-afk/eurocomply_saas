@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
@@ -103,6 +103,10 @@ describe('Stripe webhook processing lease recovery', () => {
     };
     mocks.createAdminClient.mockImplementation(buildSupabaseClient);
     mocks.writeAuditLog.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('uses a bounded lease and rejects missing or invalid timestamps', () => {
