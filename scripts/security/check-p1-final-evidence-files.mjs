@@ -45,9 +45,14 @@ function assertProductionEnvironment(value, field, file) {
 }
 
 function assertTargetEnvironment(value, controlId, file) {
-  const expected = controlId === 'P1-07' ? 'recovery-isolated' : 'production';
-  if (value !== expected) {
-    fail(`${file}: targetEnvironment must be ${expected} for ${controlId}`);
+  if (controlId === 'P1-07') {
+    if (value !== 'recovery-isolated') {
+      fail(`${file}: targetEnvironment must be recovery-isolated for P1-07`);
+    }
+    return;
+  }
+  if (value !== 'production') {
+    fail(`${file}: targetEnvironment must be production for final P1 evidence`);
   }
 }
 
