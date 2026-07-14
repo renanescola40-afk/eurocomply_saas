@@ -1,3 +1,5 @@
+import { rowsToCsv } from '@/lib/exports/csv';
+
 export type InventoryCsvLocale = 'en' | 'pt' | 'es' | 'fr' | 'it' | 'de';
 
 export interface InventoryCsvRow {
@@ -55,10 +57,6 @@ const COPY: Record<InventoryCsvLocale, {
   },
 };
 
-function escapeCsv(value: unknown): string {
-  return `"${String(value ?? '').replace(/"/g, '""')}"`;
-}
-
 function formatDate(value: string, locale: InventoryCsvLocale): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -80,7 +78,5 @@ export function buildLocalizedInventoryCsv(rows: InventoryCsvRow[], locale: Inve
     formatDate(row.createdAt, locale),
   ]);
 
-  return [copy.headers, ...values]
-    .map((row) => row.map(escapeCsv).join(','))
-    .join('\n');
+  return rowsToCsv([copy.headers, ...values]);
 }
