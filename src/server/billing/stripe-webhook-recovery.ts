@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { withStripeWebhookEmailContext } from '@/server/billing/stripe-webhook-email-context';
 import { getStripeEventAuditContext, handleStripeWebhookEvent } from '@/server/billing/stripe-webhooks';
 
 export const STRIPE_EVENT_PROCESSING_LEASE_MS = 15 * 60 * 1000;
@@ -12,6 +13,7 @@ const RECOVERABLE_STRIPE_EVENT_TYPES = new Set([
   'customer.subscription.created',
   'customer.subscription.updated',
   'customer.subscription.deleted',
+  'invoice.payment_failed',
 ]);
 
 type StripeEventClaim = {
@@ -98,8 +100,15 @@ export async function recoverAbandonedStripeEventClaim(event: Stripe.Event, nowM
   return true;
 }
 
+function processStripeWebhookEventWithEmailContext(event: Stripe.Event) {
+  return withStripeWebhookEmailContext(
+    { eventId: event.id, eventType: event.type },
+    () => handleStripeWebhookEvent(event),
+  );
+}
+
 export async function handleStripeWebhookEventWithRecovery(event: Stripe.Event) {
-  const result = await handleStripeWebhookEvent(event);
+  const result = await processStripeWebhookEventWithEmailContext(event);
 
   if (!result.duplicate) {
     return result;
@@ -110,5 +119,5 @@ export async function handleStripeWebhookEventWithRecovery(event: Stripe.Event) 
     return result;
   }
 
-  return handleStripeWebhookEvent(event);
+  return processStripeWebhookEventWithEmailContext(event);
 }
