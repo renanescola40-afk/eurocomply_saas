@@ -10,7 +10,7 @@ const baseIdentity = {
 };
 
 describe('buildTrialReminderIdempotencyKey', () => {
-  it('is deterministic and normalizes case and surrounding whitespace', () => {
+  it('is deterministic and preserves the deployed key format and value', () => {
     const first = buildTrialReminderIdempotencyKey(baseIdentity);
     const second = buildTrialReminderIdempotencyKey({
       ...baseIdentity,
@@ -19,7 +19,7 @@ describe('buildTrialReminderIdempotencyKey', () => {
     });
 
     expect(second).toBe(first);
-    expect(first).toMatch(/^trial-reminder:[a-f0-9]{48}$/);
+    expect(first).toBe('trial-reminder:b872c81611432728ecc34ad041421ce0a43f67affd5edf99');
   });
 
   it('changes when the subscription delivery identity changes', () => {
