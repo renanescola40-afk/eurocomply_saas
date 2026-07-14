@@ -349,7 +349,6 @@ export async function GET(request: Request) {
         redisConfigured,
         sentryConfigured,
         sentryObservabilityConfigured: sentryConfigured,
-        sentryReleaseUploadsConfigured,
         enterpriseStorageScannerConfigured,
         healthcheckProtected: Boolean(process.env.HEALTHCHECK_TOKEN),
       },
