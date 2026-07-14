@@ -191,14 +191,20 @@ export async function removeOrganizationMember(input: { organizationId: string; 
     }
   }
 
-  const { error } = await supabase
+  const { data: removedMember, error } = await supabase
     .from('organization_members')
     .delete()
     .eq('id', input.memberId)
-    .eq('organization_id', input.organizationId);
+    .eq('organization_id', input.organizationId)
+    .select('id')
+    .maybeSingle();
 
   if (error) {
     failMemberAction(error, { area: 'team_remove_member', organizationId: input.organizationId, memberId: input.memberId }, 'Unable to remove member.');
+  }
+
+  if (!removedMember) {
+    throw actionError('Member state changed before removal completed');
   }
 
   await logAuditEvent({
