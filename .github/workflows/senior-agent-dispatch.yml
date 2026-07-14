@@ -2,14 +2,144 @@ name: Senior Agent Dispatch
 
 on:
   workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Authorized senior-agent issue number
+        required: true
+        type: string
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: senior-agent-dispatch-${{ inputs.issue_number }}
+  cancel-in-progress: false
 
 jobs:
   dispatch:
-    name: Manual dispatch placeholder
+    name: Create Enterprise GO work packet
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Explain status
-        run: echo "Senior Agent Dispatch is installed as a safe manual placeholder until the coding-agent provider is connected."
+      - name: Build and publish work packet
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const issueNumber = Number('${{ inputs.issue_number }}');
+            if (!Number.isInteger(issueNumber) || issueNumber <= 0) {
+              core.setFailed('A valid issue number is required.');
+              return;
+            }
+
+            const { data: issue } = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: issueNumber,
+            });
+
+            if (issue.pull_request) {
+              core.setFailed('Dispatch accepts issues, not pull requests.');
+              return;
+            }
+
+            const labels = issue.labels.map((label) => typeof label === 'string' ? label : label.name).filter(Boolean);
+            const blockedLabels = labels.filter((label) => ['agent:blocked', 'needs-owner'].includes(label));
+            const ready = labels.includes('senior-agent') && labels.includes('agent:ready');
+
+            if (!ready || blockedLabels.length > 0) {
+              const reason = blockedLabels.length
+                ? `blocked by ${blockedLabels.map((label) => `\`${label}\``).join(', ')}`
+                : 'missing both `senior-agent` and `agent:ready`';
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: `Dispatch stopped: issue #${issueNumber} is ${reason}. The agent may investigate read-only, but implementation is not authorized.`,
+              });
+              core.setFailed(`Issue #${issueNumber} is not dispatchable.`);
+              return;
+            }
+
+            const { data: branch } = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
+            const baseSha = branch.commit.sha;
+            const { data: openPulls } = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+              sort: 'updated',
+              direction: 'desc',
+            });
+
+            const slug = issue.title
+              .toLowerCase()
+              .replace(/\[[^\]]+\]/g, '')
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-|-$/g, '')
+              .slice(0, 48) || 'enterprise-go-work';
+            const branchName = `agent/${issueNumber}-${slug}`;
+            const marker = '<!-- senior-agent-work-packet:v2 -->';
+            const overlap = openPulls.length
+              ? openPulls.slice(0, 20).map((pr) => `- #${pr.number} — ${pr.title} (${pr.draft ? 'draft' : 'ready'}, head \`${pr.head.ref}\`)`).join('\n')
+              : '- No open pull requests found at dispatch time.';
+
+            const body = [
+              marker,
+              '# Enterprise GO work packet',
+              '',
+              `**Issue:** #${issueNumber} — ${issue.title}`,
+              `**Authorized base:** \`main@${baseSha}\``,
+              `**Expected branch:** \`${branchName}\``,
+              `**Agent profile:** \`.github/agents/enterprise-go.agent.md\``,
+              '',
+              '## Required first actions',
+              '',
+              '1. Read `AGENTS.md`, `docs/ENGINEERING_CONSTITUTION.md`, `.github/senior-agent.yml`, and the Enterprise GO agent/runbook files.',
+              '2. Re-fetch the current `main` SHA before editing; the authorized base above is dispatch-time evidence, not permission to ignore newer commits.',
+              '3. Inspect all open PRs for overlap and duplication.',
+              '4. Reproduce or verify the issue from code, checks, logs, or evidence files.',
+              '5. Rank coherent P0/P1/P2 options and select the highest-ROEI safe work package.',
+              '6. Define success, tests, evidence boundaries, and rollback before implementation.',
+              '',
+              '## Open PR overlap snapshot',
+              '',
+              overlap,
+              '',
+              '## Delivery contract',
+              '',
+              '- Create a focused branch from current `main` using the expected naming pattern.',
+              '- Implement a coherent fix; do not create route-by-route duplication when a safe shared primitive is justified.',
+              '- Run targeted checks and every applicable required gate.',
+              '- Open a **draft** PR using `.github/pull_request_template.md`.',
+              '- Include exact commands, outcomes, evidence limitations, risk, compatibility, rollback, and out-of-scope follow-ups.',
+              '- Do not merge, deploy to production, change secrets, or claim real-time production health.',
+              '',
+              '## Stop conditions',
+              '',
+              'Stop and apply `agent:blocked` or `needs-owner` when production credentials, external-provider configuration, destructive migration, legal/product interpretation, material risk acceptance, production deployment, rollback, restore, pentest, SSO tenant setup, or other owner-only evidence is required.',
+              '',
+              '## Completion response',
+              '',
+              'Report the issue, branch, PR, base/head SHAs, improvements, exact checks, evidence, blockers, rollback, and the next highest-priority action.',
+              '',
+              '_This packet authorizes repository work only. It is not an Enterprise GO decision or production-health proof._',
+            ].join('\n');
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => comment.body?.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+              core.notice(`Updated work packet on issue #${issueNumber}.`);
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body });
+              core.notice(`Created work packet on issue #${issueNumber}.`);
+            }
