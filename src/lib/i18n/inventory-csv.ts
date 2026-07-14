@@ -11,6 +11,15 @@ export interface InventoryCsvRow {
   createdAt: string;
 }
 
+export interface InventoryDisplayCsvRow {
+  name: string;
+  vendor: string;
+  department: string;
+  riskLabel: string;
+  statusLabel: string;
+  assessmentDate: string;
+}
+
 const DATE_LOCALES: Record<InventoryCsvLocale, string> = {
   en: 'en-GB',
   pt: 'pt-PT',
@@ -79,4 +88,22 @@ export function buildLocalizedInventoryCsv(rows: InventoryCsvRow[], locale: Inve
   ]);
 
   return rowsToCsv([copy.headers, ...values]);
+}
+
+export function buildLocalizedInventoryDisplayCsv(
+  rows: InventoryDisplayCsvRow[],
+  locale: InventoryCsvLocale,
+): string {
+  const copy = COPY[locale] ?? COPY.en;
+  return rowsToCsv([
+    copy.headers,
+    ...rows.map((row) => [
+      row.name,
+      row.vendor,
+      row.department,
+      row.riskLabel,
+      row.statusLabel,
+      row.assessmentDate,
+    ]),
+  ]);
 }
