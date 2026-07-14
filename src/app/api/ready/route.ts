@@ -160,11 +160,11 @@ export function readyEnvironmentCheck(): ReadyEnvironmentGroup[] {
 }
 
 export function sentryReleaseUploadCheck() {
-  const missingCount = SENTRY_RELEASE_UPLOAD_ENV.filter((variable) => !process.env[variable]).length;
+  const missingCount = SENTRY_RELEASE_UPLOAD_ENV.filter((variable) => !hasConfiguredEnvValue(variable)).length;
   return {
     configured: missingCount === 0,
     missingCount,
-    sourceMapsUploadRequiresAuthToken: Boolean(process.env.SENTRY_AUTH_TOKEN),
+    sourceMapsUploadRequiresAuthToken: Boolean(process.env.SENTRY_AUTH_TOKEN?.trim()),
   };
 }
 
@@ -312,10 +312,12 @@ export async function GET(request: Request) {
   const sentryReleaseUploads = sentryReleaseUploadCheck();
   const enterpriseStorageScanner = enterpriseStorageScannerCheck();
 
+  const enterpriseReadinessRequired = isEnterpriseReadinessRequired();
   const supabaseConfigured = checkConfigured(environment, 'supabase');
   const stripeConfigured = checkConfigured(environment, 'stripe');
   const redisConfigured = checkConfigured(environment, 'redis');
   const sentryConfigured = checkConfigured(environment, 'sentry');
+  const sentryReleaseUploadsConfigured = !enterpriseReadinessRequired || sentryReleaseUploads.configured;
   const stripe = await checkStripeConnectivity(stripeConfigured);
   const databaseReachable = database.adminClient && database.subscriptionsReadable;
   const stripeApiReachable = stripe.apiReachable && stripe.priceLookup;
@@ -324,6 +326,7 @@ export async function GET(request: Request) {
     && stripeConfigured
     && redisConfigured
     && sentryConfigured
+    && sentryReleaseUploadsConfigured
     && databaseReachable
     && stripeApiReachable
     && enterpriseStorageScannerConfigured;
@@ -346,6 +349,7 @@ export async function GET(request: Request) {
         redisConfigured,
         sentryConfigured,
         sentryObservabilityConfigured: sentryConfigured,
+        sentryReleaseUploadsConfigured,
         enterpriseStorageScannerConfigured,
         healthcheckProtected: Boolean(process.env.HEALTHCHECK_TOKEN),
       },
