@@ -26,17 +26,20 @@ describe('readBoundedRequestBody', () => {
     expect(result).toEqual({ buffer: Buffer.from([1, 2, 3, 4]) });
   });
 
-  it('rejects an oversized declared length before consuming the stream', async () => {
-    const pull = vi.fn();
-    const stream = new ReadableStream<Uint8Array>({ pull });
+  it('rejects an oversized declared length before accessing the body', async () => {
+    const bodyAccess = vi.fn();
+    const request = {
+      headers: new Headers({ 'content-length': '5' }),
+      get body() {
+        bodyAccess();
+        throw new Error('body must not be accessed');
+      },
+    } as unknown as Request;
 
-    const result = await readBoundedRequestBody(
-      requestWithStream(stream, { 'content-length': '5' }),
-      4,
-    );
+    const result = await readBoundedRequestBody(request, 4);
 
     expect(result).toEqual({ error: 'body_too_large' });
-    expect(pull).not.toHaveBeenCalled();
+    expect(bodyAccess).not.toHaveBeenCalled();
   });
 
   it('cancels and rejects a chunked body as soon as it crosses the limit', async () => {
