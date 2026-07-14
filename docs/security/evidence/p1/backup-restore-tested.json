@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "controlId": "P1-07",
+  "title": "Backup and isolated restore tested",
+  "status": "Open",
+  "generatedFromRealEvidence": false,
+  "productionValidated": false,
+  "environment": "not_run",
+  "targetEnvironment": "recovery-isolated",
+  "checks": [
+    { "name": "backupExists", "status": "not_run" },
+    { "name": "restoreExecuted", "status": "not_run" },
+    { "name": "dataIntegrity", "status": "not_run" },
+    { "name": "rlsAfterRestore", "status": "not_run" },
+    { "name": "rpoMeasured", "status": "not_run" },
+    { "name": "rtoMeasured", "status": "not_run" }
+  ],
+  "completionRule": "Run an approved restore into an isolated non-production project, capture a signed manifest with distinct source and target project references, validate backup integrity, restored data, tenant isolation, RPO and RTO, then generate this artifact with scripts/recovery/validate-isolated-restore-evidence.mjs.",
+  "evidenceLimitations": [
+    "Repository tests do not prove that a provider backup exists.",
+    "No restore has been executed by this committed artifact.",
+    "No RPO, RTO, restored-data integrity or post-restore RLS result is claimed."
+  ]
+}
