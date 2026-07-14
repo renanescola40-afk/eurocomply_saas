@@ -122,8 +122,8 @@ describe('runtime release SHA binding', () => {
     expect(verifier).toContain("document.outcome = 'failed'");
     expect(verifier).toContain('readJsonIfPresent(path)');
     expect(verifier).not.toContain('existsSync');
+    expect(verifier).toContain('selectPersistedObservedCommitSha({');
     expect(verifier).toContain('observedCommitSha: persistedObservedCommitSha');
-    expect(verifier).not.toContain('observedCommitSha: evaluation.observedCommitSha');
     expect(verifier).toContain("requestFailure: requestFailed ? 'request_failed' : null");
     expect(verifier).not.toContain('error.message : \'request_failed\'');
     expect(verifier).toContain('rawNetworkPayloadStored: false');
