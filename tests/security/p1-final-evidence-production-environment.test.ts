@@ -96,7 +96,7 @@ describe('P1 final evidence production binding', () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
-      'targetEnvironment must be production for final P1 evidence',
+      'targetEnvironment must be production for P1-06',
     );
   });
 });
