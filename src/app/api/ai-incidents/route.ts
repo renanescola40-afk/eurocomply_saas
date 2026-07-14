@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { buildAiIncidentTriagePlan, normalizeAiIncidentCategory, normalizeAiIncidentReportStatus, normalizeAiIncidentSeverity } from '@/lib/ai-governance/incidents';
+import { buildAiIncidentTriagePlan, normalizeAiIncidentCategory, normalizeAiIncidentReportStatus, normalizeAiIncidentSeverity, parseAiIncidentDetectedAt } from '@/lib/ai-governance/incidents';
 import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createAuditEvent } from '@/server/queries/audit-events';
@@ -27,12 +27,6 @@ const aiIncidentBodySchema = z.object({
 
 function asText(value: unknown, fallback = '') {
   return typeof value === 'string' ? value.trim() : fallback;
-}
-
-function normalizeDetectedAt(value: unknown) {
-  const text = asText(value);
-  if (!text || Number.isNaN(Date.parse(text))) return new Date().toISOString();
-  return new Date(text).toISOString();
 }
 
 function rateLimitDeniedResponse(result: RateLimitResult) {
@@ -120,12 +114,24 @@ export async function POST(request: Request) {
       schema: aiIncidentBodySchema,
       maxBytes: AI_INCIDENT_JSON_MAX_BYTES,
     });
+    const detectedAtResult = parseAiIncidentDetectedAt(body.detectedAt);
+
+    if (!detectedAtResult.ok) {
+      return noStoreJson(
+        {
+          error: 'invalid_detected_at',
+          reason: detectedAtResult.reason,
+        },
+        { status: 400 },
+      );
+    }
+
     const systems = await listAiSystems(organization.id);
     const requestedSystemId = asText(body.aiSystemId) || null;
     const aiSystemId = requestedSystemId && systems.some((system) => system.id === requestedSystemId) ? requestedSystemId : null;
     const severity = normalizeAiIncidentSeverity(body.severity);
     const category = normalizeAiIncidentCategory(body.category);
-    const detectedAt = normalizeDetectedAt(body.detectedAt);
+    const detectedAt = detectedAtResult.value;
     const triage = buildAiIncidentTriagePlan({ severity, category, detectedAt });
     const explicitStatus = normalizeAiIncidentReportStatus(body.reportStatus);
     const reportStatus = explicitStatus === 'draft' ? triage.recommendedStatus : explicitStatus;
