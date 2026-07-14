@@ -1,5 +1,6 @@
 import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
+import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
@@ -11,6 +12,8 @@ const MAINTENANCE_JOBS = [
   '/api/intelligence/refresh',
 ] as const;
 
+const DAILY_MAINTENANCE_ROUTE = '/api/internal/daily-maintenance';
+const DAILY_MAINTENANCE_AUTH_ACTION = 'authenticate_daily_maintenance';
 const DEFAULT_JOB_TIMEOUT_MS = 25_000;
 
 export function getConfiguredMaintenanceBaseUrl() {
@@ -96,6 +99,12 @@ async function runMaintenanceJob(baseUrl: string, path: string, credential: stri
 }
 
 export async function POST(request: Request) {
+  const authRateLimited = await enforceInternalAuthenticationRateLimit(request, {
+    route: DAILY_MAINTENANCE_ROUTE,
+    action: DAILY_MAINTENANCE_AUTH_ACTION,
+  });
+  if (authRateLimited) return authRateLimited;
+
   if (!isAuthorizedInternalCronRequest(request)) {
     return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
