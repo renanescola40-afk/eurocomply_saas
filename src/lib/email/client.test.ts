@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  sendServerEmail: vi.fn(async (input) => ({
+  sendServerEmail: vi.fn(async (input: { idempotencyKey?: string }) => ({
     sent: true,
     provider: 'resend' as const,
     status: 'sent' as const,
