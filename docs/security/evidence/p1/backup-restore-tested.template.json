@@ -11,29 +11,39 @@
   "reviewer": "REPLACE_WITH_REVIEWER",
   "nextReviewDue": "REPLACE_WITH_NEXT_REVIEW_DUE",
   "environment": "production",
+  "targetEnvironment": "recovery-isolated",
   "validation": {
     "result": "pass",
     "validatedAt": "REPLACE_WITH_VALIDATED_AT",
     "validator": "REPLACE_WITH_VALIDATOR",
-    "method": "restore-test-review"
+    "method": "isolated-restore-test-review"
   },
   "restoreTests": [
     {
       "testId": "REPLACE_WITH_TEST_ID",
       "system": "REPLACE_WITH_SYSTEM",
+      "sourceProjectRef": "REPLACE_WITH_PRODUCTION_SOURCE_REFERENCE",
+      "targetProjectRef": "REPLACE_WITH_ISOLATED_RECOVERY_REFERENCE",
+      "backupId": "REPLACE_WITH_PROVIDER_BACKUP_ID",
+      "backupEncrypted": true,
+      "backupChecksumSha256": "REPLACE_WITH_64_CHARACTER_SHA256",
       "startedAt": "REPLACE_WITH_STARTED_AT",
       "completedAt": "REPLACE_WITH_COMPLETED_AT",
-      "rtoTarget": "REPLACE_WITH_RTO_TARGET",
-      "rtoActual": "REPLACE_WITH_RTO_ACTUAL",
-      "rpoTarget": "REPLACE_WITH_RPO_TARGET",
-      "rpoActual": "REPLACE_WITH_RPO_ACTUAL",
+      "rtoTargetSeconds": 3600,
+      "rtoActualSeconds": 0,
+      "rpoTargetSeconds": 900,
+      "rpoActualSeconds": 0,
       "status": "passed",
-      "evidenceLocation": "REPLACE_WITH_EVIDENCE_REFERENCE"
+      "evidenceLocation": "REPLACE_WITH_RESTORE_JOB_REFERENCE",
+      "dataIntegrityEvidence": "REPLACE_WITH_DATA_INTEGRITY_REFERENCE",
+      "rlsEvidence": "REPLACE_WITH_POST_RESTORE_RLS_REFERENCE"
     }
   ],
   "controlsVerified": [
     "Critical systems are covered",
     "Restore test completed successfully",
+    "Restored data integrity was validated",
+    "RLS was validated after restore",
     "RTO target was evaluated",
     "RPO target was evaluated"
   ],
@@ -41,7 +51,7 @@
     {
       "type": "restore-report",
       "reference": "REPLACE_WITH_ARTIFACT_REFERENCE",
-      "description": "Reviewed restore test evidence",
+      "description": "Reviewed isolated restore test evidence",
       "collectedAt": "REPLACE_WITH_COLLECTED_AT"
     }
   ]

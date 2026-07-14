@@ -44,6 +44,18 @@ function assertProductionEnvironment(value, field, file) {
   }
 }
 
+function assertTargetEnvironment(value, controlId, file) {
+  if (controlId === 'P1-07') {
+    if (value !== 'recovery-isolated') {
+      fail(`${file}: targetEnvironment must be recovery-isolated for P1-07`);
+    }
+    return;
+  }
+  if (value !== 'production') {
+    fail(`${file}: targetEnvironment must be production for final P1 evidence`);
+  }
+}
+
 function assertBooleanTrue(value, field, file) {
   if (value !== true) {
     fail(`${file}: ${field} must be true for final P1 evidence`);
@@ -96,7 +108,7 @@ function validateEvidence(controlId, control, file) {
   assertBooleanTrue(evidence.generatedFromRealEvidence, 'generatedFromRealEvidence', file);
   assertBooleanTrue(evidence.productionValidated, 'productionValidated', file);
   assertProductionEnvironment(evidence.environment, 'environment', file);
-  assertProductionEnvironment(evidence.targetEnvironment, 'targetEnvironment', file);
+  assertTargetEnvironment(evidence.targetEnvironment, controlId, file);
   assertString(evidence.generatedAt, 'generatedAt', file);
   assertString(evidence.reviewedAt, 'reviewedAt', file);
   assertString(evidence.reviewer, 'reviewer', file);
