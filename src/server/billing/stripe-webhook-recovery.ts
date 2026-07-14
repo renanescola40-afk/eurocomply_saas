@@ -1,8 +1,10 @@
 import Stripe from 'stripe';
 
+import { runWithEmailIdempotencyContext } from '@/lib/email/idempotency-context';
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { buildIdempotencyKey } from '@/server/jobs/idempotency-key';
 import { getStripeEventAuditContext, handleStripeWebhookEvent } from '@/server/billing/stripe-webhooks';
 
 export const STRIPE_EVENT_PROCESSING_LEASE_MS = 15 * 60 * 1000;
@@ -12,6 +14,7 @@ const RECOVERABLE_STRIPE_EVENT_TYPES = new Set([
   'customer.subscription.created',
   'customer.subscription.updated',
   'customer.subscription.deleted',
+  'invoice.payment_failed',
 ]);
 
 type StripeEventClaim = {
@@ -27,6 +30,23 @@ export function isStripeEventProcessingLeaseExpired(updatedAt: string | null | u
   if (!Number.isFinite(updatedAtMs)) return false;
 
   return nowMs - updatedAtMs >= STRIPE_EVENT_PROCESSING_LEASE_MS;
+}
+
+function paymentFailedEmailIdempotencyKey(event: Stripe.Event) {
+  return buildIdempotencyKey({
+    prefix: 'stripe-payment-failed-email',
+    identityParts: [event.id],
+  });
+}
+
+function runStripeWebhookHandler(event: Stripe.Event) {
+  if (event.type !== 'invoice.payment_failed') {
+    return handleStripeWebhookEvent(event);
+  }
+
+  return runWithEmailIdempotencyContext(paymentFailedEmailIdempotencyKey(event), () =>
+    handleStripeWebhookEvent(event),
+  );
 }
 
 async function recordLeaseRecoveryAudit(event: Stripe.Event) {
@@ -99,7 +119,7 @@ export async function recoverAbandonedStripeEventClaim(event: Stripe.Event, nowM
 }
 
 export async function handleStripeWebhookEventWithRecovery(event: Stripe.Event) {
-  const result = await handleStripeWebhookEvent(event);
+  const result = await runStripeWebhookHandler(event);
 
   if (!result.duplicate) {
     return result;
@@ -110,5 +130,5 @@ export async function handleStripeWebhookEventWithRecovery(event: Stripe.Event) 
     return result;
   }
 
-  return handleStripeWebhookEvent(event);
+  return runStripeWebhookHandler(event);
 }

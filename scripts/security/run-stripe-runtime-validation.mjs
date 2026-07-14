@@ -20,6 +20,9 @@ const files = {
   portalRoute: 'src/app/api/billing/portal/route.ts',
   stripeWebhookRoute: 'src/app/api/stripe/webhook/route.ts',
   billingWebhookRoute: 'src/app/api/billing/webhook/route.ts',
+  emailClient: 'src/lib/email/client.ts',
+  emailClientTest: 'src/lib/email/client.test.ts',
+  emailIdempotencyContext: 'src/lib/email/idempotency-context.ts',
   webhookHandler: 'src/server/billing/stripe-webhooks.ts',
   webhookRecovery: 'src/server/billing/stripe-webhook-recovery.ts',
   checkoutTest: 'src/app/api/billing/checkout/route.test.ts',
@@ -109,6 +112,18 @@ assertIncludes('webhook handler', source.webhookHandler, [
   "action: 'subscription_synced'",
   'validateOrganizationStripeBinding',
   'getBillingPlanIdForStripePriceId',
+  "event.type === 'invoice.payment_failed'",
+]);
+
+assertIncludes('email idempotency context', source.emailIdempotencyContext, [
+  'AsyncLocalStorage',
+  'runWithEmailIdempotencyContext',
+  'getEmailIdempotencyContextKey',
+]);
+
+assertIncludes('email client', source.emailClient, [
+  'getEmailIdempotencyContextKey',
+  'input.idempotencyKey ?? contextualKey ?? undefined',
 ]);
 
 assertIncludes('webhook recovery', source.webhookRecovery, [
@@ -120,6 +135,9 @@ assertIncludes('webhook recovery', source.webhookRecovery, [
   'handleStripeWebhookEventWithRecovery',
   "'checkout.session.completed'",
   "'customer.subscription.updated'",
+  "'invoice.payment_failed'",
+  'runWithEmailIdempotencyContext',
+  "prefix: 'stripe-payment-failed-email'",
 ]);
 
 assertIncludes('webhook migration', source.migration, [
@@ -150,7 +168,9 @@ const testCoverage = {
   staleProcessingLease: source.webhookRecoveryTest.includes('atomically expires and replays an abandoned subscription claim'),
   freshProcessingSuppression: source.webhookRecoveryTest.includes('does not replay a fresh processing claim'),
   recoveryRaceSafety: source.webhookRecoveryTest.includes('another request wins the atomic recovery race'),
-  paymentFailedRecoveryExcluded: source.webhookRecoveryTest.includes('without provider idempotency'),
+  paymentFailedRecoveryIdempotent: source.webhookRecoveryTest.includes('same deterministic email key on replay'),
+  contextualEmailKeyApplied: source.emailClientTest.includes('applies the contextual key'),
+  explicitEmailKeyPreserved: source.emailClientTest.includes('preserves an explicit caller idempotency key'),
 };
 
 const failedCoverage = Object.entries(testCoverage).filter(([, passed]) => !passed).map(([name]) => name);
@@ -167,7 +187,8 @@ const repositoryValidation = {
     'Billing mutations require authenticated organization billing authority, step-up and trusted origin',
     'Stripe webhook routes require a bounded signed payload before dispatch',
     'Stripe webhook events use a durable idempotency ledger before subscription mutation',
-    'Stale replay-safe processing claims use a bounded atomic recovery lease',
+    'Stale processing claims use a bounded atomic recovery lease',
+    'Payment-failed email delivery uses an event-derived deterministic provider idempotency key',
     'Subscription sync validates organization, customer and server-side plan binding',
   ],
 };
