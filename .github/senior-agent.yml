@@ -1,7 +1,16 @@
-# EuroComply Senior Agent configuration
-# This file is read by humans, coding-agent providers, and GitHub Actions workflows.
+# Risck Comply Senior Agent configuration
+# Read by humans, GitHub custom agents, coding-agent providers, and workflows.
 
-version: 1
+version: 2
+
+agent_profile:
+  path: .github/agents/enterprise-go.agent.md
+  display_name: Risck Comply Enterprise GO
+  user_invocable: true
+  automatic_model_invocation: false
+  mission: >-
+    Move the repository toward a truthful, evidence-backed Enterprise Production GO
+    without weakening security, privacy, tenancy, release, or operational controls.
 
 queue:
   primary_label: senior-agent
@@ -10,6 +19,8 @@ queue:
   blocked_label: agent:blocked
   owner_required_label: needs-owner
   branch_prefix: agent
+  work_packet_marker: senior-agent-work-packet:v2
+  watchdog_marker: senior-agent-watchdog:v2
 
 commands:
   triage: /agent triage
@@ -18,6 +29,15 @@ commands:
   p0: /agent p0
   explain: /agent explain
 
+orchestration:
+  triage_workflow: .github/workflows/senior-agent-triage.yml
+  dispatch_workflow: .github/workflows/senior-agent-dispatch.yml
+  watchdog_workflow: .github/workflows/senior-agent-watchdog.yml
+  repository_watchdog_cadence_hours: 6
+  code_writing_requires_agent_assignment: true
+  automatic_merge: false
+  automatic_production_deploy: false
+
 branching:
   base_branch: main
   pattern: agent/<issue-number>-<short-slug>
@@ -25,15 +45,20 @@ branching:
   allow_force_push: false
 
 pull_requests:
-  draft_by_default: false
+  draft_by_default: true
   require_owner_merge: true
   link_issue: true
+  require_overlap_review: true
   require_sections:
-    - Summary
-    - Root cause / product reason
-    - Why this change is safe
+    - Objective
+    - Customer or production motivation
+    - Prioritization and ROEI
+    - Open-work overlap review
+    - Root cause and technical approach
+    - Security, privacy, and tenancy impact
     - Verification
-    - Risk notes
+    - Evidence and limitations
+    - Risk, compatibility, and rollback
     - Follow-ups
 
 verification:
@@ -44,6 +69,9 @@ verification:
     - npm run test
     - npm run build
     - npm run security:ci
+  release_candidate_gate:
+    - npm run test:e2e
+    - npm run release:production-final
   low_risk_docs_gate:
     - npm run lint
   ci_fix_gate:
@@ -55,6 +83,50 @@ verification:
     - npm run security:ci
     - npm run security:public-secrets
     - npm run security:supply-chain
+  evidence_states:
+    - PASS
+    - FAIL
+    - PARTIAL
+    - NOT VERIFIED
+    - BLOCKED
+    - NOT APPLICABLE
+  zero_tests_is_failure: true
+  skipped_required_check_is_failure: true
+  require_exact_sha_binding: true
+
+enterprise_go:
+  decision_default: Enterprise No-Go
+  allowed_narrower_decisions:
+    - Controlled Beta GO
+    - Early Access GO
+    - Production GO with Enterprise Limitations
+  required_domains:
+    - build and E2E
+    - deployment and exact SHA binding
+    - health and protected readiness
+    - authentication, sessions, onboarding, RBAC, MFA, step-up, and SSO claims
+    - Supabase RLS and cross-tenant denial
+    - Stripe lifecycle and webhook integrity
+    - Sentry, logs, alerts, redaction, and request IDs
+    - privileged jobs, rate limiting, retries, and truthful partial results
+    - audit chain, exports, evidence integrity, and privacy minimization
+    - rollback, backup restore, RPO/RTO, and incident response
+    - DAST, WAF/CDN/DDoS, SBOM, and external security review
+    - accessibility, localization, behavior acceptance, and truthful positioning
+  stop_conditions:
+    - critical vulnerability
+    - high vulnerability without formal owner risk acceptance
+    - failed required check
+    - skipped critical test or zero-test E2E
+    - validated SHA differs from deployed SHA
+    - tenant isolation or RLS not proven
+    - authentication or authorization bypass
+    - secret exposure
+    - insecure Stripe webhook or entitlement path
+    - rollback not executable
+    - backup restore not tested
+    - manipulated or synthetic evidence represented as production proof
+    - owner-only external configuration unavailable
 
 runtime_guard:
   enabled_when_configured: true
@@ -62,6 +134,7 @@ runtime_guard:
     - PRODUCTION_URL
     - NEXT_PUBLIC_APP_URL
   cadence_minutes: 30
+  evidence_requirement: fresh validation against the explicit production hostname and exact promoted SHA
   failure_policy:
     label_priority: priority:p0
     mark_blocked: true
@@ -70,9 +143,12 @@ runtime_guard:
   recommended_checks:
     - deployment provider status
     - application availability
-    - recent deploys
+    - health and protected readiness
+    - authenticated smoke
     - environment configuration
     - database provider health
+    - payment provider health
+    - observability delivery
 
 external_blockers:
   do_not_autofix:
@@ -82,6 +158,10 @@ external_blockers:
     - missing environment variable
     - billing or plan upgrade required
     - provider outage
+    - production SSO tenant configuration
+    - external penetration test
+    - WAF or CDN console configuration
+    - production rollback or restore approval
   policy:
     mark_blocked: true
     require_owner_review: true
@@ -89,25 +169,28 @@ external_blockers:
     do_not_open_code_pr: true
   owner_actions:
     - review deployment provider limits
-    - configure required environment secrets
-    - configure required environment variables
+    - configure required environment secrets and variables
+    - provide approved runtime or provider-console evidence
+    - authorize controlled production validation
     - re-run failed jobs after configuration is fixed
 
 safe_autonomy:
   allowed:
     - Documentation and runbook updates.
-    - GitHub issue templates and PR templates.
+    - GitHub issue templates, PR templates, and queue automation.
     - CI hardening that preserves or strengthens checks.
     - Small lint, typecheck, test, and build fixes with evidence.
     - Small bug fixes with tests or clear reproduction evidence.
+    - Low-risk systemic refactors that preserve deployed identities and public behavior.
   blocked_without_owner:
-    - Authentication, sessions, cookies, middleware auth, or step-up auth.
+    - Authentication, sessions, cookies, middleware auth, MFA, or step-up auth.
     - Authorization, tenant isolation, object-level access, or Supabase RLS assumptions.
-    - Billing, subscriptions, Stripe webhooks, or pricing behavior.
+    - Billing, subscriptions, Stripe webhooks, pricing, or entitlement behavior.
     - Audit chain, compliance evidence, trust package, or legal records.
     - Upload security, malware scanning, storage buckets, or signed URLs.
-    - Production secrets, environment configuration, or new external integrations.
+    - Production secrets, environment configuration, deployment, or new external integrations.
     - Database migrations that delete data or are not backward-compatible.
+    - Production rollback, restore, pentest, SSO, WAF, or risk acceptance.
 
 security:
   never_commit:
@@ -118,7 +201,8 @@ security:
     - customer data
     - production logs containing PII
   required_pr_checks:
-    - No security/compliance guardrail weakened.
+    - No security or compliance guardrail weakened.
     - No tenant boundary widened.
     - No privileged operation moved client-side.
-    - No scanner disabled to make a build pass.
+    - No scanner, required check, or test disabled to make a build pass.
+    - No repository result represented as proof of production behavior.
