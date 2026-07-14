@@ -35,7 +35,8 @@ const REQUIRED_ENV_GROUPS = {
   sentry: ['NEXT_PUBLIC_SENTRY_DSN'],
 } as const;
 
-const STRIPE_READINESS_TIMEOUT_MS = 1_500;
+const READINESS_DEPENDENCY_TIMEOUT_MS = 1_500;
+const STRIPE_READINESS_TIMEOUT_MS = READINESS_DEPENDENCY_TIMEOUT_MS;
 const TEST_PLACEHOLDER_VALUE = 'configured';
 const SENTRY_RELEASE_UPLOAD_ENV = ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN'] as const;
 const REAL_MALWARE_SCANNER_PROVIDERS = new Set(['clamav', 'clamd', 'http', 'generic-http', 'webhook']);
@@ -43,6 +44,13 @@ const HTTP_MALWARE_SCANNER_PROVIDERS = new Set(['http', 'generic-http', 'webhook
 const CONTROLLED_DOCUMENT_BUCKET = 'controlled-documents';
 const MIN_TCP_PORT = 1;
 const MAX_TCP_PORT = 65_535;
+
+class ReadinessDependencyTimeoutError extends Error {
+  constructor() {
+    super('Readiness dependency probe timed out');
+    this.name = 'ReadinessDependencyTimeoutError';
+  }
+}
 
 type EnvGroupName = keyof typeof REQUIRED_ENV_GROUPS;
 
@@ -119,6 +127,21 @@ function shouldUseMockStripeReadiness(secretKey: string, priceIds: string[]) {
     && priceIds.every((priceId) => priceId === TEST_PLACEHOLDER_VALUE);
 }
 
+export async function withReadinessDependencyTimeout<T>(operation: PromiseLike<T>): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      Promise.resolve(operation),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new ReadinessDependencyTimeoutError()), READINESS_DEPENDENCY_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 export function isEnterpriseReadinessRequired() {
   return process.env.RELEASE_TARGET === 'enterprise'
     || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true'
@@ -186,7 +209,8 @@ async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
     database.adminClient = Boolean(supabase);
 
     if (supabase) {
-      const { error } = await supabase.from('subscriptions').select('id').limit(1);
+      const query = supabase.from('subscriptions').select('id').limit(1);
+      const { error } = await withReadinessDependencyTimeout(query);
       database = {
         adminClient: true,
         subscriptionsReadable: !error,
