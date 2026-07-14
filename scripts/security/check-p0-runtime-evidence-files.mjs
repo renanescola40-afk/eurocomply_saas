@@ -156,6 +156,34 @@ function checkSupabaseOpenPlaceholder(file, evidence) {
   return true;
 }
 
+function checkStripeOpenPlaceholder(file, evidence) {
+  if (evidence.evidenceItem !== 'stripe-billing-validation' || evidence.status !== 'Open') return false;
+
+  if (!checkGenericOpenBlockedEvidence(file, evidence, new Set(['not_run', 'failed']))) return true;
+
+  if (evidence.evidenceIntegrity?.placeholderOnly !== true) {
+    failures.push(`${file} Open Stripe evidence must be marked placeholderOnly`);
+  }
+
+  if (evidence.evidenceIntegrity?.runtimeProofInvented !== false) {
+    failures.push(`${file} Open Stripe evidence must confirm runtime proof was not invented`);
+  }
+
+  if (evidence.evidenceIntegrity?.customerFacingProof !== false) {
+    failures.push(`${file} Open Stripe evidence must not be customer-facing proof`);
+  }
+
+  if (evidence.runtimeProof?.executed !== false) {
+    failures.push(`${file} Open Stripe evidence must record that target runtime proof was not executed`);
+  }
+
+  if (!String(evidence.completionRule ?? '').toLowerCase().includes('target')) {
+    failures.push(`${file} Open Stripe evidence must include a target-runtime completion rule`);
+  }
+
+  return true;
+}
+
 function checkExternalReviewOpenPlaceholder(file, evidence) {
   if (evidence.evidenceItem !== 'external-security-review-or-pentest' || evidence.status !== 'Open') return false;
 
@@ -318,6 +346,7 @@ for (const file of files) {
   if (checkReleaseOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseReleaseEnvOpenPlaceholder(file, evidence)) continue;
   if (checkSupabaseOpenPlaceholder(file, evidence)) continue;
+  if (checkStripeOpenPlaceholder(file, evidence)) continue;
   if (checkExternalReviewOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseAuditOpenEvidence(file, evidence)) continue;

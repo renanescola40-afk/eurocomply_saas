@@ -5,7 +5,8 @@ import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getStripeClient } from '@/server/billing/stripe';
-import { getStripeEventAuditContext, handleStripeWebhookEvent } from '@/server/billing/stripe-webhooks';
+import { handleStripeWebhookEventWithRecovery } from '@/server/billing/stripe-webhook-recovery';
+import { getStripeEventAuditContext } from '@/server/billing/stripe-webhooks';
 import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
   await recordBillingWebhookRouteAudit({ action: 'webhook_received', event });
 
   try {
-    const result = await handleStripeWebhookEvent(event);
+    const result = await handleStripeWebhookEventWithRecovery(event);
 
     return noStoreJson({
       received: true,
