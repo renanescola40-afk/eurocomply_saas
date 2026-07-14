@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import DashboardChildI18nRuntime from '@/components/DashboardChildI18nRuntime';
+
 export const metadata: Metadata = {
   robots: {
     index: false,
@@ -9,5 +11,10 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <DashboardChildI18nRuntime />
+      {children}
+    </>
+  );
 }
