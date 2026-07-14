@@ -4,12 +4,15 @@ import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { buildNotificationIdempotencyKey } from '@/server/jobs/notification-idempotency';
+import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
 import { getUserEmailById } from '@/server/users/email';
 
 export const runtime = 'nodejs';
 
 const DOCUMENT_EXPIRY_LOOKAHEAD_DAYS = 30;
+const COMPLIANCE_ALERTS_ROUTE = '/api/internal/compliance-alerts';
+const COMPLIANCE_ALERTS_AUTH_ACTION = 'authenticate_compliance_alerts';
 
 type NotificationDedupe = {
   organizationId: string;
@@ -252,6 +255,15 @@ async function sendVendorReviewAlerts() {
 }
 
 export async function POST(request: Request) {
+  const rateLimitResponse = await enforceInternalAuthenticationRateLimit(request, {
+    route: COMPLIANCE_ALERTS_ROUTE,
+    action: COMPLIANCE_ALERTS_AUTH_ACTION,
+  });
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   if (!isAuthorizedInternalCronRequest(request)) {
     return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
