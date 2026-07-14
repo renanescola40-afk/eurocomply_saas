@@ -3,6 +3,7 @@ import { trialUpgradeEmail } from '@/lib/email/templates';
 import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
 import { buildTrialReminderIdempotencyKey } from '@/server/jobs/trial-reminder-idempotency';
 import { getUserEmailById } from '@/server/users/email';
@@ -10,6 +11,8 @@ import { getUserEmailById } from '@/server/users/email';
 export const runtime = 'nodejs';
 
 const TRIAL_REMINDER_DAYS = 3;
+const TRIAL_REMINDER_ROUTE = '/api/internal/trial-reminders';
+const TRIAL_REMINDER_AUTH_ACTION = 'authenticate_trial_reminder_job';
 const REMINDER_EVENT_CONFLICT_COLUMNS = 'organization_id,event_type,entity_type,entity_id,recipient_email';
 
 function getAppUrl() {
@@ -170,6 +173,12 @@ async function sendTrialReminders() {
 }
 
 export async function POST(request: Request) {
+  const authRateLimited = await enforceInternalAuthenticationRateLimit(request, {
+    route: TRIAL_REMINDER_ROUTE,
+    action: TRIAL_REMINDER_AUTH_ACTION,
+  });
+  if (authRateLimited) return authRateLimited;
+
   if (!isAuthorizedInternalCronRequest(request)) {
     return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
