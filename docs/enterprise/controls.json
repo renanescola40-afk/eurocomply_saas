@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "title": "RISCK COMPLY Enterprise Readiness Controls",
+  "controlCount": 100,
+  "totalWeight": 100,
+  "statusValues": ["PASS", "PARTIAL", "FAIL", "BLOCKED", "NOT_VERIFIED", "NOT_APPLICABLE"],
+  "scoring": {
+    "PASS": 1,
+    "PARTIAL": 0.5,
+    "FAIL": 0,
+    "BLOCKED": 0,
+    "NOT_VERIFIED": 0,
+    "NOT_APPLICABLE": null
+  },
+  "domains": [
+    {
+      "id": "engineering",
+      "name": "Engineering",
+      "prefix": "ENG",
+      "weight": 10,
+      "controls": [
+        {"title":"Deterministic dependency installation","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"deterministicInstall"}},
+        {"title":"Package lock alignment","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"packageLockAligned"}},
+        {"title":"Lint passes","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"lint"}},
+        {"title":"TypeScript passes","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"typecheck"}},
+        {"title":"Unit tests pass","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"unitTests"}},
+        {"title":"Production build passes","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"build"}},
+        {"title":"Production-like E2E passes","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"e2e"}},
+        {"title":"Route quality passes","critical":false,"evidence":{"path":"docs/security/evidence/runtime/final-validation-runner.json","check":"routeQuality"}},
+        {"title":"Architecture decisions recorded","critical":false,"evidence":{"path":"docs/security/evidence/release/architecture-review.json"}},
+        {"title":"Dependency vulnerability gate passes","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"npmAudit"}}
+      ]
+    },
+    {
+      "id": "security",
+      "name": "Security",
+      "prefix": "SEC",
+      "weight": 10,
+      "controls": [
+        {"title":"CodeQL passes","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"codeql"}},
+        {"title":"Semgrep passes","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"semgrep"}},
+        {"title":"Secret scanning passes","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"secretScanning"}},
+        {"title":"Public secret exposure scan passes","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"publicSecretScan"}},
+        {"title":"Security headers validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/security-headers-validation.json"}},
+        {"title":"Sensitive responses use no-store","critical":true,"evidence":{"path":"docs/security/evidence/runtime/no-store-validation.json"}},
+        {"title":"Origin guards validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/origin-guard-validation.json"}},
+        {"title":"BOLA and IDOR guards validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/authorization-bola-validation.json"}},
+        {"title":"Upload malware scanning validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/upload-malware-scan-validation.json"}},
+        {"title":"External security review complete","critical":true,"evidence":{"path":"docs/security/evidence/p1/external-security-review.json"}}
+      ]
+    },
+    {
+      "id": "identity",
+      "name": "Identity and Access",
+      "prefix": "IAM",
+      "weight": 10,
+      "controls": [
+        {"title":"Signup validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/auth-rbac-validation.json","check":"signup"}},
+        {"title":"Login validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/auth-rbac-validation.json","check":"login"}},
+        {"title":"Logout validated","critical":false,"evidence":{"path":"docs/security/evidence/runtime/auth-rbac-validation.json","check":"logout"}},
+        {"title":"Session refresh validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/auth-rbac-validation.json","check":"sessionRefresh"}},
+        {"title":"OAuth callback validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/auth-rbac-validation.json","check":"oauthCallback"}},
+        {"title":"RBAC roles validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/auth-rbac-validation.json","check":"rbac"}},
+        {"title":"Administrator MFA required","critical":true,"evidence":{"path":"docs/security/evidence/p1/admin-mfa-required.json"}},
+        {"title":"Sensitive-action step-up validated","critical":true,"evidence":{"path":"docs/security/evidence/p1/step-up-sensitive-actions.json"}},
+        {"title":"SSO SAML or OIDC validated","critical":true,"evidence":{"path":"docs/security/evidence/p1/sso-saml-oidc.json"}},
+        {"title":"Account recovery validated","critical":false,"evidence":{"path":"docs/security/evidence/runtime/auth-recovery-validation.json"}}
+      ]
+    },
+    {
+      "id": "tenancy",
+      "name": "Tenant Isolation",
+      "prefix": "TEN",
+      "weight": 10,
+      "controls": [
+        {"title":"Organization onboarding validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/auth-rbac-validation.json","check":"organizationOnboarding"}},
+        {"title":"Organization membership isolation validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/supabase-rls-validation.json","check":"membershipIsolation"}},
+        {"title":"Cross-tenant reads denied","critical":true,"evidence":{"path":"docs/security/evidence/runtime/supabase-rls-validation.json","check":"crossTenantReadDenied"}},
+        {"title":"Cross-tenant inserts denied","critical":true,"evidence":{"path":"docs/security/evidence/runtime/supabase-rls-validation.json","check":"crossTenantInsertDenied"}},
+        {"title":"Cross-tenant updates denied","critical":true,"evidence":{"path":"docs/security/evidence/runtime/supabase-rls-validation.json","check":"crossTenantUpdateDenied"}},
+        {"title":"Cross-tenant deletes denied","critical":true,"evidence":{"path":"docs/security/evidence/runtime/supabase-rls-validation.json","check":"crossTenantDeleteDenied"}},
+        {"title":"Administrative clients remain server-only","critical":true,"evidence":{"path":"docs/security/evidence/runtime/supabase-admin-boundary-validation.json"}},
+        {"title":"Exports enforce tenant boundaries","critical":true,"evidence":{"path":"docs/security/evidence/runtime/export-tenant-isolation-validation.json"}},
+        {"title":"Audit logs enforce tenant boundaries","critical":true,"evidence":{"path":"docs/security/evidence/runtime/audit-chain-validation.json"}},
+        {"title":"Storage enforces tenant boundaries","critical":true,"evidence":{"path":"docs/security/evidence/runtime/storage-tenant-isolation-validation.json"}}
+      ]
+    },
+    {
+      "id": "platform",
+      "name": "Platform Providers",
+      "prefix": "PLT",
+      "weight": 10,
+      "controls": [
+        {"title":"Supabase readiness validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"supabaseReady"}},
+        {"title":"Stripe checkout validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/stripe-billing-validation.json","check":"checkout"}},
+        {"title":"Stripe subscriptions validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/stripe-billing-validation.json","check":"subscriptions"}},
+        {"title":"Stripe webhook signature validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/stripe-billing-validation.json","check":"webhookSignature"}},
+        {"title":"Stripe webhook idempotency validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/stripe-billing-validation.json","check":"webhookIdempotency"}},
+        {"title":"Email delivery validated","critical":false,"evidence":{"path":"docs/security/evidence/runtime/email-delivery-validation.json"}},
+        {"title":"Sentry event ingestion validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/sentry-observability-validation.json","check":"eventIngestion"}},
+        {"title":"Sentry release and source maps validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/sentry-observability-validation.json","check":"releaseAndSourceMaps"}},
+        {"title":"Distributed rate limiting validated","critical":true,"evidence":{"path":"docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json"}},
+        {"title":"Provider failures are distinguishable","critical":false,"evidence":{"path":"docs/security/evidence/runtime/provider-failure-classification.json"}}
+      ]
+    },
+    {
+      "id": "release",
+      "name": "Release Engineering",
+      "prefix": "REL",
+      "weight": 10,
+      "controls": [
+        {"title":"Release SHA frozen","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"releaseShaFrozen"}},
+        {"title":"Deployment SHA matches release SHA","critical":true,"evidence":{"path":"docs/security/evidence/runtime/runtime-release-sha-validation.json"}},
+        {"title":"Production hostname explicit","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"productionHostname"}},
+        {"title":"Health endpoint validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"health"}},
+        {"title":"Protected readiness validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"readiness"}},
+        {"title":"Authenticated deployment smoke passes","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"deploymentSmoke"}},
+        {"title":"Required checks pass on exact SHA","critical":true,"evidence":{"path":"docs/security/evidence/runtime/production-final-validation.json","check":"requiredChecks"}},
+        {"title":"Branch protection validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/branch-protection-validation.json"}},
+        {"title":"Release approval recorded","critical":true,"evidence":{"path":"docs/security/evidence/release/release-approval.json"}},
+        {"title":"Final evidence bundle is coherent","critical":true,"evidence":{"path":"docs/security/evidence/runtime/final-validation-runner.json"}}
+      ]
+    },
+    {
+      "id": "operations",
+      "name": "Operations and Observability",
+      "prefix": "OPS",
+      "weight": 10,
+      "controls": [
+        {"title":"Structured logs validated","critical":false,"evidence":{"path":"docs/security/evidence/runtime/centralized-logging-validation.json","check":"structuredLogs"}},
+        {"title":"Request IDs validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/request-id-validation.json"}},
+        {"title":"Security events validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/audit-chain-validation.json","check":"securityEvents"}},
+        {"title":"Centralized logging validated","critical":true,"evidence":{"path":"docs/security/evidence/p1/centralized-logging-alerts.json","check":"centralizedLogging"}},
+        {"title":"Alert routing validated","critical":true,"evidence":{"path":"docs/security/evidence/p1/centralized-logging-alerts.json","check":"alertRouting"}},
+        {"title":"Observability smoke validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/sentry-observability-validation.json","check":"observabilitySmoke"}},
+        {"title":"Internal jobs fail closed","critical":true,"evidence":{"path":"docs/security/evidence/runtime/internal-jobs-validation.json","check":"failClosed"}},
+        {"title":"Batch partial failures are truthful","critical":true,"evidence":{"path":"docs/security/evidence/runtime/internal-jobs-validation.json","check":"partialFailureTruthful"}},
+        {"title":"Incident severity model documented","critical":false,"evidence":{"path":"docs/security/evidence/release/incident-response-validation.json","check":"severityModel"}},
+        {"title":"On-call ownership recorded","critical":false,"evidence":{"path":"docs/security/evidence/release/operations-ownership.json"}}
+      ]
+    },
+    {
+      "id": "recovery",
+      "name": "Recovery and Resilience",
+      "prefix": "REC",
+      "weight": 10,
+      "controls": [
+        {"title":"Rollback target configured","critical":true,"evidence":{"path":"docs/security/evidence/runtime/rollback-validation.json","check":"rollbackTargetConfigured"}},
+        {"title":"Last known good deployment differs","critical":true,"evidence":{"path":"docs/security/evidence/runtime/rollback-validation.json","check":"distinctDeployment"}},
+        {"title":"Rollback executed","critical":true,"evidence":{"path":"docs/security/evidence/runtime/rollback-validation.json","check":"rollbackExecuted"}},
+        {"title":"Post-rollback health validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/rollback-validation.json","check":"postRollbackHealth"}},
+        {"title":"Backup exists","critical":true,"evidence":{"path":"docs/security/evidence/p1/backup-restore-tested.json","check":"backupExists"}},
+        {"title":"Restore executed in isolation","critical":true,"evidence":{"path":"docs/security/evidence/p1/backup-restore-tested.json","check":"restoreExecuted"}},
+        {"title":"Restored data integrity validated","critical":true,"evidence":{"path":"docs/security/evidence/p1/backup-restore-tested.json","check":"dataIntegrity"}},
+        {"title":"RLS validated after restore","critical":true,"evidence":{"path":"docs/security/evidence/p1/backup-restore-tested.json","check":"rlsAfterRestore"}},
+        {"title":"RPO measured","critical":true,"evidence":{"path":"docs/security/evidence/p1/backup-restore-tested.json","check":"rpoMeasured"}},
+        {"title":"RTO measured","critical":true,"evidence":{"path":"docs/security/evidence/p1/backup-restore-tested.json","check":"rtoMeasured"}}
+      ]
+    },
+    {
+      "id": "product",
+      "name": "Product, UX and Accessibility",
+      "prefix": "PRD",
+      "weight": 10,
+      "controls": [
+        {"title":"Landing acceptance validated","critical":false,"evidence":{"path":"docs/security/evidence/runtime/ux-acceptance-validation.json","check":"landing"}},
+        {"title":"Pricing acceptance validated","critical":false,"evidence":{"path":"docs/security/evidence/runtime/ux-acceptance-validation.json","check":"pricing"}},
+        {"title":"Login UX acceptance validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/ux-acceptance-validation.json","check":"login"}},
+        {"title":"Onboarding UX acceptance validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/ux-acceptance-validation.json","check":"onboarding"}},
+        {"title":"Dashboard UX acceptance validated","critical":false,"evidence":{"path":"docs/security/evidence/runtime/ux-acceptance-validation.json","check":"dashboard"}},
+        {"title":"Mobile acceptance validated","critical":false,"evidence":{"path":"docs/security/evidence/runtime/ux-acceptance-validation.json","check":"mobile"}},
+        {"title":"Keyboard accessibility validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/accessibility-validation.json","check":"keyboard"}},
+        {"title":"Screen-reader accessibility validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/accessibility-validation.json","check":"screenReader"}},
+        {"title":"Supported locales validated","critical":false,"evidence":{"path":"docs/security/evidence/runtime/localization-validation.json"}},
+        {"title":"Analytics consent validated","critical":true,"evidence":{"path":"docs/security/evidence/runtime/analytics-consent-validation.json"}}
+      ]
+    },
+    {
+      "id": "trust",
+      "name": "Trust, Compliance and Positioning",
+      "prefix": "TRU",
+      "weight": 10,
+      "controls": [
+        {"title":"Trust Center claims are evidence-backed","critical":true,"evidence":{"path":"docs/security/evidence/runtime/trust-claims-validation.json","check":"trustCenter"}},
+        {"title":"Security page claims are evidence-backed","critical":true,"evidence":{"path":"docs/security/evidence/runtime/trust-claims-validation.json","check":"securityPage"}},
+        {"title":"Compliance claims are qualified","critical":true,"evidence":{"path":"docs/security/evidence/runtime/trust-claims-validation.json","check":"complianceClaims"}},
+        {"title":"Privacy documentation reviewed","critical":false,"evidence":{"path":"docs/security/evidence/release/legal-documents-review.json","check":"privacy"}},
+        {"title":"Terms reviewed","critical":false,"evidence":{"path":"docs/security/evidence/release/legal-documents-review.json","check":"terms"}},
+        {"title":"DPA reviewed","critical":false,"evidence":{"path":"docs/security/evidence/release/legal-documents-review.json","check":"dpa"}},
+        {"title":"Subprocessor list reviewed","critical":false,"evidence":{"path":"docs/security/evidence/release/legal-documents-review.json","check":"subprocessors"}},
+        {"title":"Vulnerability disclosure published","critical":false,"evidence":{"path":"docs/security/evidence/release/vulnerability-disclosure-validation.json"}},
+        {"title":"WAF CDN and DDoS evidence complete","critical":true,"evidence":{"path":"docs/security/evidence/p1/waf-cdn-ddos.json"}},
+        {"title":"Automated DAST complete","critical":true,"evidence":{"path":"docs/security/evidence/p1/dast-automated.json"}}
+      ]
+    }
+  ]
+}
