@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import DashboardChildI18nRuntime from '@/components/DashboardChildI18nRuntime';
+import InventoryDateI18nRuntime from '@/components/InventoryDateI18nRuntime';
 
 export const metadata: Metadata = {
   robots: {
@@ -14,6 +15,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <>
       <DashboardChildI18nRuntime />
+      <InventoryDateI18nRuntime />
       {children}
     </>
   );
