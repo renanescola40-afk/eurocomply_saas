@@ -46,4 +46,20 @@ describe('trial reminder dedupe safety', () => {
     expect(routeSource).toContain('onConflict: REMINDER_EVENT_CONFLICT_COLUMNS');
     expect(routeSource).toContain('ignoreDuplicates: true');
   });
+
+  it('does not report a partial reminder batch as successful', () => {
+    expect(routeSource).toContain('let failed = 0;');
+    expect(routeSource).toContain('failed += 1;');
+    expect(routeSource).toContain('return { sent, skipped, failed };');
+
+    const partialFailureGuard = routeSource.match(
+      /if \(reminders\.failed > 0\) \{[\s\S]*?status: 500[\s\S]*?\n\s*\}/,
+    )?.[0];
+
+    expect(partialFailureGuard).toBeDefined();
+    expect(partialFailureGuard).toContain("error: 'Unable to send all trial reminders'");
+    expect(routeSource.indexOf('reminders.failed > 0')).toBeLessThan(
+      routeSource.indexOf('return noStoreJson({ ok: true'),
+    );
+  });
 });
