@@ -58,6 +58,13 @@ export function normalizeAiIncidentReportStatus(value: unknown): AiIncidentRepor
   return STATUSES.includes(value as AiIncidentReportStatus) ? (value as AiIncidentReportStatus) : 'draft';
 }
 
+export function serializeAiIncidentLocalDateTime(value: string): string {
+  if (!value) return value;
+
+  const localDate = new Date(value);
+  return Number.isNaN(localDate.getTime()) ? value : localDate.toISOString();
+}
+
 export function parseAiIncidentDetectedAt(
   value: unknown,
   now = new Date(),
