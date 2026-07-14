@@ -3,6 +3,7 @@ import {
   STATUS,
   calculateScorecard,
   evaluateEvidenceDocument,
+  resolveEvidenceDocuments,
   validateConfig,
 } from '../../scripts/enterprise/generate-readiness-scorecard.mjs';
 
@@ -47,13 +48,46 @@ describe('enterprise readiness scorecard', () => {
     expect(evaluateEvidenceDocument({ checks: [] }, 'build')).toBe(STATUS.NOT_VERIFIED);
   });
 
+  it('prefers configured runtime evidence over repository CI evidence', () => {
+    expect(
+      resolveEvidenceDocuments({
+        primaryDocument: { status: 'Complete', outcome: 'passed' },
+        repositoryDocument: { checks: [{ name: 'build', passed: false }] },
+        repositoryCheck: 'build',
+      }),
+    ).toEqual({ status: STATUS.PASS, source: 'configured_evidence' });
+  });
+
+  it('uses repository CI evidence only when configured evidence is not verified', () => {
+    expect(
+      resolveEvidenceDocuments({
+        primaryDocument: null,
+        repositoryDocument: {
+          targetSha: 'a'.repeat(40),
+          checks: [{ name: 'build', passed: true }],
+        },
+        repositoryCheck: 'build',
+      }),
+    ).toEqual({ status: STATUS.PASS, source: 'repository_ci' });
+  });
+
+  it('does not allow repository evidence to hide configured evidence failure', () => {
+    expect(
+      resolveEvidenceDocuments({
+        primaryDocument: { status: 'Failed', outcome: 'failed' },
+        repositoryDocument: { checks: [{ name: 'build', passed: true }] },
+        repositoryCheck: 'build',
+      }),
+    ).toEqual({ status: STATUS.FAIL, source: 'configured_evidence' });
+  });
+
   it('gives PARTIAL half weight and blocks GO when critical evidence is missing', () => {
     let index = 0;
     const scorecard = calculateScorecard(config, () => {
       index += 1;
-      if (index <= 50) return { status: STATUS.PASS, reason: 'test' };
-      if (index <= 70) return { status: STATUS.PARTIAL, reason: 'test' };
-      return { status: STATUS.NOT_VERIFIED, reason: 'test' };
+      if (index <= 50) return { status: STATUS.PASS, reason: 'test', source: 'custom_reader' };
+      if (index <= 70) return { status: STATUS.PARTIAL, reason: 'test', source: 'custom_reader' };
+      return { status: STATUS.NOT_VERIFIED, reason: 'test', source: 'custom_reader' };
     });
 
     expect(scorecard.scorePercent).toBe(60);
@@ -62,10 +96,21 @@ describe('enterprise readiness scorecard', () => {
     expect(scorecard.classification).toBe('CONTROLLED_BETA');
   });
 
+  it('passes stable control IDs to custom evidence readers', () => {
+    const ids: string[] = [];
+    calculateScorecard(config, (_evidence, id) => {
+      ids.push(id);
+      return { status: STATUS.NOT_VERIFIED, reason: 'test', source: 'custom_reader' };
+    });
+    expect(ids[0]).toBe('D1-01');
+    expect(ids.at(-1)).toBe('D10-10');
+  });
+
   it('permits Enterprise GO only at 100 percent with every critical control PASS', () => {
     const scorecard = calculateScorecard(config, () => ({
       status: STATUS.PASS,
       reason: 'test',
+      source: 'custom_reader',
     }));
 
     expect(scorecard.scorePercent).toBe(100);
