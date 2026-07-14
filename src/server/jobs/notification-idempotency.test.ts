@@ -12,13 +12,18 @@ const base = {
 };
 
 describe('buildNotificationIdempotencyKey', () => {
-  it('is deterministic and canonicalizes case and whitespace', () => {
-    expect(buildNotificationIdempotencyKey(base)).toBe(
+  it('is deterministic and preserves the deployed key format and value', () => {
+    const key = buildNotificationIdempotencyKey(base);
+
+    expect(key).toBe(
       buildNotificationIdempotencyKey({
         ...base,
         organizationId: ' org-123 ',
         recipientEmail: ' owner@example.com ',
       }),
+    );
+    expect(key).toBe(
+      'notification:5ee479bbe10dd488b8b86445d07356a34c61dcf7fe55c083ebce462ed2b7ac26',
     );
   });
 
@@ -31,7 +36,6 @@ describe('buildNotificationIdempotencyKey', () => {
   it('does not expose customer identifiers or recipient PII', () => {
     const key = buildNotificationIdempotencyKey(base);
 
-    expect(key).toMatch(/^notification:[a-f0-9]{64}$/);
     expect(key).not.toContain('org-123');
     expect(key).not.toContain('doc-456');
     expect(key).not.toContain('owner@example.com');
