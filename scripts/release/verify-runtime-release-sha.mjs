@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { evaluateRuntimeReleaseSha } from './runtime-release-sha-contract.mjs';
+import {
+  evaluateRuntimeReleaseSha,
+  sanitizeRuntimeReleaseResponse,
+  selectPersistedObservedCommitSha,
+} from './runtime-release-sha-contract.mjs';
 
 const evidencePath = 'docs/security/evidence/runtime/runtime-release-sha-validation.json';
 const finalEvidencePaths = [
@@ -50,11 +54,27 @@ function appendUnique(items, value) {
   return [...new Set([...(Array.isArray(items) ? items : []), value])];
 }
 
-function patchFinalEvidence(path, bindingEvidence) {
-  if (!existsSync(path)) return;
+function isMissingFileError(error) {
+  return Boolean(error)
+    && typeof error === 'object'
+    && 'code' in error
+    && error.code === 'ENOENT';
+}
 
+function readJsonIfPresent(path) {
   try {
-    const document = JSON.parse(readFileSync(path, 'utf8'));
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch (error) {
+    if (isMissingFileError(error)) return null;
+    throw error;
+  }
+}
+
+function patchFinalEvidence(path, bindingEvidence) {
+  try {
+    const document = readJsonIfPresent(path);
+    if (!document) return;
+
     document.runtimeReleaseShaValidation = {
       status: bindingEvidence.status,
       outcome: bindingEvidence.outcome,
@@ -62,6 +82,7 @@ function patchFinalEvidence(path, bindingEvidence) {
       expectedCommitSha: bindingEvidence.expectedCommitSha,
       expectedBuildSha: bindingEvidence.expectedBuildSha,
       observedCommitSha: bindingEvidence.observedCommitSha,
+      observedCommitShaMatchedExpected: bindingEvidence.observedCommitShaMatchedExpected,
       provenance: bindingEvidence.provenance,
       generatedAt: bindingEvidence.generatedAt,
     };
@@ -103,7 +124,7 @@ const expectedBuildSha = firstConfigured([
 let endpointStatus = 0;
 let cacheControl = '';
 let responseBody = null;
-let requestError = null;
+let requestFailed = false;
 
 if (baseUrl && readinessToken) {
   try {
@@ -121,28 +142,33 @@ if (baseUrl && readinessToken) {
     endpointStatus = response.status;
     cacheControl = response.headers.get('cache-control') || '';
     responseBody = await response.json().catch(() => null);
-  } catch (error) {
-    requestError = error instanceof Error ? error.message : 'request_failed';
+  } catch {
+    requestFailed = true;
   }
 }
 
-const observedCommitSha = responseBody?.release?.commitSha ?? null;
+const runtimeResponse = sanitizeRuntimeReleaseResponse(responseBody);
 const evaluation = evaluateRuntimeReleaseSha({
   expectedCommitSha,
   expectedBuildSha,
-  observedCommitSha,
+  observedCommitSha: runtimeResponse.observedCommitSha,
   endpointStatus,
   cacheControl,
 });
+const persistedObservedCommitSha = selectPersistedObservedCommitSha({
+  expectedCommitSha: evaluation.expectedCommitSha,
+  observedCommitSha: evaluation.observedCommitSha,
+});
+const observedCommitShaMatchedExpected = Boolean(persistedObservedCommitSha);
 
 const additionalChecks = [
   { name: 'productionUrlConfigured', passed: Boolean(baseUrl) },
   { name: 'protectedReadinessTokenConfigured', passed: Boolean(readinessToken) },
-  { name: 'runtimeReleaseResponseStatusOk', passed: responseBody?.status === 'ok' },
-  { name: 'runtimeReleaseMetadataAvailable', passed: responseBody?.release?.available === true },
+  { name: 'runtimeReleaseResponseStatusOk', passed: runtimeResponse.statusOk },
+  { name: 'runtimeReleaseMetadataAvailable', passed: runtimeResponse.available },
   {
     name: 'runtimeReleaseProvenanceAccepted',
-    passed: responseBody?.release?.provenance === 'vercel' || responseBody?.release?.provenance === 'build-env',
+    passed: runtimeResponse.provenance === 'vercel' || runtimeResponse.provenance === 'build-env',
   },
 ];
 const checks = [...additionalChecks, ...evaluation.checks];
@@ -161,22 +187,25 @@ const evidence = {
   targetHost: baseUrl ? targetHost(baseUrl) : null,
   expectedCommitSha: evaluation.expectedCommitSha,
   expectedBuildSha: evaluation.expectedBuildSha,
-  observedCommitSha: evaluation.observedCommitSha,
-  provenance: responseBody?.release?.provenance ?? 'unavailable',
-  endpointStatus,
-  requestError,
+  observedCommitSha: persistedObservedCommitSha,
+  observedCommitShaMatchedExpected,
+  provenance: runtimeResponse.provenance,
+  endpointResult: endpointStatus === 200 ? 'ok' : 'not_ok',
+  requestFailure: requestFailed ? 'request_failed' : null,
   timeoutMs,
   checks,
   failures,
   summary: passed
     ? 'The protected runtime metadata endpoint proved that the validated hostname serves the exact expected release/build SHA.'
     : 'The validated hostname is not proven to serve the expected release/build SHA; release remains No-Go.',
-  redactionConfirmation: 'No bearer token, cookie, authorization header, secret value, customer data, or raw response body is stored in this evidence file.',
+  redactionConfirmation: 'No bearer token, cookie, authorization header, secret value, customer data, raw response body, remote error text, or untrusted runtime SHA is stored in this evidence file.',
   evidenceIntegrity: {
     containsSensitiveValues: false,
     valuesRedacted: true,
     authorizationHeaderStored: false,
     cookiesStored: false,
+    rawNetworkPayloadStored: false,
+    mismatchedObservedShaStored: false,
   },
 };
 
