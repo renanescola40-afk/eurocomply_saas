@@ -23,6 +23,10 @@ export type AiIncidentTriagePlan = {
   nextActions: string[];
 };
 
+export type AiIncidentDetectedAtResult =
+  | { ok: true; value: string }
+  | { ok: false; reason: 'invalid_timestamp' | 'future_timestamp' };
+
 const SEVERITIES: AiIncidentSeverity[] = ['monitor', 'serious', 'critical'];
 const CATEGORIES: AiIncidentCategory[] = [
   'malfunction',
@@ -34,6 +38,7 @@ const CATEGORIES: AiIncidentCategory[] = [
   'other',
 ];
 const STATUSES: AiIncidentReportStatus[] = ['draft', 'assessing', 'reportable', 'reported', 'closed'];
+const MAX_DETECTED_AT_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 function addDays(date: Date, days: number) {
   const next = new Date(date);
@@ -51,6 +56,26 @@ export function normalizeAiIncidentCategory(value: unknown): AiIncidentCategory 
 
 export function normalizeAiIncidentReportStatus(value: unknown): AiIncidentReportStatus {
   return STATUSES.includes(value as AiIncidentReportStatus) ? (value as AiIncidentReportStatus) : 'draft';
+}
+
+export function parseAiIncidentDetectedAt(
+  value: unknown,
+  now = new Date(),
+): AiIncidentDetectedAtResult {
+  if (value === null || value === undefined || value === '') {
+    return { ok: true, value: now.toISOString() };
+  }
+
+  if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
+    return { ok: false, reason: 'invalid_timestamp' };
+  }
+
+  const detectedAt = new Date(value);
+  if (detectedAt.getTime() > now.getTime() + MAX_DETECTED_AT_CLOCK_SKEW_MS) {
+    return { ok: false, reason: 'future_timestamp' };
+  }
+
+  return { ok: true, value: detectedAt.toISOString() };
 }
 
 export function buildAiIncidentTriagePlan(input: {
