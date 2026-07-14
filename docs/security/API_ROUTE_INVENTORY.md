@@ -1,6 +1,6 @@
 # API Route Inventory
 
-This inventory is the explicit classification source for `src/app/api/**/route.ts` and `src/app/next_api/**/route.ts`. The security scanner fails when an API route exists without an entry, when the inventory contains a route that no longer exists, when a mutating/private route does not prove the expected central guard coverage.
+This inventory is the explicit classification source for `src/app/api/**/route.ts` and `src/app/next_api/**/route.ts`. The security scanner fails when an API route exists without an entry, when the inventory contains a route that no longer exists, when a route is classified more than once, or when a mutating/private route does not prove the expected central guard coverage.
 
 ## Classification taxonomy
 
