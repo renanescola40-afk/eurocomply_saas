@@ -85,7 +85,6 @@ describe('enterprise Sentry release upload readiness', () => {
       missingCount: 3,
       sourceMapsUploadRequiresAuthToken: false,
     });
-    expect(body.checks.sentryReleaseUploadsConfigured).toBe(true);
   });
 
   it('fails enterprise readiness when release upload credentials are absent or blank', async () => {
@@ -102,7 +101,7 @@ describe('enterprise Sentry release upload readiness', () => {
 
     expect(response.status).toBe(503);
     expect(body.status).toBe('not_ready');
-    expect(body.checks.sentryReleaseUploadsConfigured).toBe(false);
+    expect(body.sentryReleaseUploads.configured).toBe(false);
     expect(JSON.stringify(body)).not.toContain('SENTRY_AUTH_TOKEN');
     expect(JSON.stringify(body)).not.toContain('SENTRY_ORG');
     expect(JSON.stringify(body)).not.toContain('SENTRY_PROJECT');
@@ -120,6 +119,5 @@ describe('enterprise Sentry release upload readiness', () => {
     expect(response.status).toBe(200);
     expect(body.status).toBe('ready');
     expect(body.sentryReleaseUploads.configured).toBe(true);
-    expect(body.checks.sentryReleaseUploadsConfigured).toBe(true);
   });
 });
