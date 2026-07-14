@@ -1,5 +1,6 @@
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
@@ -51,6 +52,13 @@ function buildMaintenanceItem(): IntelligenceRefreshPayload {
 }
 
 export async function POST(request: Request) {
+  const rateLimitResponse = await enforceInternalAuthenticationRateLimit(request, {
+    route: '/api/intelligence/refresh',
+    action: 'intelligence_refresh_auth',
+  });
+
+  if (rateLimitResponse) return rateLimitResponse;
+
   if (!isAuthorizedInternalCronRequest(request)) {
     return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }

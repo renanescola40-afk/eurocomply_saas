@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { reportError } from '@/lib/observability/report-error';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { createAuditEvent, sanitizeAuditMetadata } from '@/server/queries/audit-events';
+import { hashRateLimitIp } from '@/server/security/rate-limit';
 
 export type AuditAction =
   | 'auth.login_attempt'
@@ -74,6 +75,10 @@ function normalizeIpAddress(value: string | null) {
   return ip.length > 0 && ip.length <= 128 ? ip : null;
 }
 
+function pseudonymizeIpAddress(value: string | null) {
+  return value ? `sha256:${hashRateLimitIp(value)}` : null;
+}
+
 function normalizeUserAgent(value: string | null) {
   const userAgent = value?.trim() ?? '';
   return userAgent.length > 0 ? userAgent.slice(0, 512) : null;
@@ -86,20 +91,20 @@ async function getRequestContext() {
     const ip = normalizeIpAddress(forwardedFor || requestHeaders.get('x-real-ip'));
     const userAgent = normalizeUserAgent(requestHeaders.get('user-agent'));
 
-    return { ip, userAgent };
+    return { ipPseudonym: pseudonymizeIpAddress(ip), userAgent };
   } catch {
-    return { ip: null, userAgent: null };
+    return { ipPseudonym: null, userAgent: null };
   }
 }
 
 export async function writeAuditLog(input: AuditLogInput) {
   const supabase = tryCreateAdminClient();
   const actorUserId = input.actorUserId ?? input.userId ?? null;
-  const { ip, userAgent } = await getRequestContext();
+  const { ipPseudonym, userAgent } = await getRequestContext();
   const metadata = sanitizeAuditMetadata({
     ...(input.metadata ?? {}),
     requestContext: {
-      ipAddress: ip,
+      ipAddressPseudonym: ipPseudonym,
       userAgent,
     },
   });
