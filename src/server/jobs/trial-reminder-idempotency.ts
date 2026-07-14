@@ -1,7 +1,8 @@
-import { createHash } from 'node:crypto';
+import { buildIdempotencyKey } from './idempotency-key';
 
 const IDEMPOTENCY_KEY_PREFIX = 'trial-reminder';
 const IDEMPOTENCY_DIGEST_LENGTH = 48;
+const TRIAL_IDENTITY_SEPARATOR = '\u001f';
 
 type TrialReminderIdentity = {
   organizationId: string;
@@ -10,18 +11,16 @@ type TrialReminderIdentity = {
   recipientEmail: string;
 };
 
-function normalizeIdentityPart(value: string) {
-  return value.trim().toLowerCase();
-}
-
 export function buildTrialReminderIdempotencyKey(input: TrialReminderIdentity) {
-  const canonicalIdentity = [
-    normalizeIdentityPart(input.organizationId),
-    normalizeIdentityPart(input.subscriptionId),
-    normalizeIdentityPart(input.currentPeriodEnd),
-    normalizeIdentityPart(input.recipientEmail),
-  ].join('\u001f');
-
-  const digest = createHash('sha256').update(canonicalIdentity).digest('hex').slice(0, IDEMPOTENCY_DIGEST_LENGTH);
-  return `${IDEMPOTENCY_KEY_PREFIX}:${digest}`;
+  return buildIdempotencyKey({
+    prefix: IDEMPOTENCY_KEY_PREFIX,
+    digestLength: IDEMPOTENCY_DIGEST_LENGTH,
+    separator: TRIAL_IDENTITY_SEPARATOR,
+    identityParts: [
+      input.organizationId,
+      input.subscriptionId,
+      input.currentPeriodEnd,
+      input.recipientEmail,
+    ],
+  });
 }
