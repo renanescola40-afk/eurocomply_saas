@@ -29,6 +29,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: public-production-final
+  cancel-in-progress: false
+
 env:
   CI: 'true'
   NEXT_TELEMETRY_DISABLED: '1'
@@ -63,6 +67,7 @@ env:
 jobs:
   production-final:
     runs-on: ubuntu-latest
+    environment: Production
     timeout-minutes: 60
 
     steps:
@@ -97,7 +102,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: public-production-final-validation
+          name: public-production-final-validation-${{ github.sha }}
           path: |
             release-validation/public-production/**
             docs/security/evidence/runtime/public-production-release-env-readiness.json
@@ -109,5 +114,5 @@ jobs:
             docs/security/evidence/runtime/release-go-no-go.json
             docs/security/evidence/runtime/production-final-validation.json
             docs/security/evidence/runtime/final-validation-runner.json
-          retention-days: 30
-          if-no-files-found: warn
+          retention-days: 90
+          if-no-files-found: error
