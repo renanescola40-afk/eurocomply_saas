@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { buildAiIncidentTriagePlan, parseAiIncidentDetectedAt } from './incidents';
+import {
+  buildAiIncidentTriagePlan,
+  parseAiIncidentDetectedAt,
+  serializeAiIncidentLocalDateTime,
+} from './incidents';
+
+describe('serializeAiIncidentLocalDateTime', () => {
+  it('converts a browser datetime-local value into an offset-bearing UTC timestamp', () => {
+    const value = '2026-07-14T22:00';
+    const expected = new Date(value).toISOString();
+
+    expect(serializeAiIncidentLocalDateTime(value)).toBe(expected);
+    expect(serializeAiIncidentLocalDateTime(value)).toMatch(/Z$/);
+  });
+
+  it('preserves empty and invalid values for server-side validation', () => {
+    expect(serializeAiIncidentLocalDateTime('')).toBe('');
+    expect(serializeAiIncidentLocalDateTime('not-a-date')).toBe('not-a-date');
+  });
+});
 
 describe('parseAiIncidentDetectedAt', () => {
   const now = new Date('2026-07-14T19:00:00.000Z');
