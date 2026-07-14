@@ -86,14 +86,31 @@ describe('team invites API security gates', () => {
     mocks.createNotification.mockResolvedValue({ persisted: true });
   });
 
-  it('rejects invalid invite payload before auth, RBAC or write calls', async () => {
+  it('returns the authentication failure before inspecting an invalid invite payload', async () => {
+    mocks.requireApiUser.mockRejectedValue({ code: 'authentication_required', status: 401 });
+
+    const response = await POST(buildRequest({ email: 'not-an-email', role: 'Editor' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body).toEqual({ error: 'authentication_required' });
+    expect(mocks.getCurrentOrganizationForUser).not.toHaveBeenCalled();
+    expect(mocks.requirePermission).not.toHaveBeenCalled();
+    expect(mocks.requireTrustedMutation).not.toHaveBeenCalled();
+    expect(mocks.createOrganizationInvite).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid invite payload after auth, RBAC, trusted mutation, and step-up gates pass', async () => {
     const response = await POST(buildRequest({ email: 'not-an-email', role: 'Editor' }));
     const body = await response.json();
 
     expect(response.status).toBe(400);
     expect(body).toEqual({ error: 'invalid_invite_payload' });
-    expect(mocks.requireApiUser).not.toHaveBeenCalled();
-    expect(mocks.requirePermission).not.toHaveBeenCalled();
+    expect(mocks.requireApiUser).toHaveBeenCalled();
+    expect(mocks.requirePermission).toHaveBeenCalled();
+    expect(mocks.requireTrustedMutation).toHaveBeenCalled();
+    expect(mocks.requireStepUpForRequest).toHaveBeenCalled();
+    expect(mocks.getOrganizationEntitlements).not.toHaveBeenCalled();
     expect(mocks.createOrganizationInvite).not.toHaveBeenCalled();
   });
 

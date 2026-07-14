@@ -36,13 +36,6 @@ function getInviteEntityId(invite: unknown) {
 
 export async function POST(request: Request) {
   try {
-    const payload = await readBoundedJsonRequest(request, { maxBytes: INVITE_JSON_MAX_BYTES }).catch(() => null);
-    const parsed = inviteSchema.safeParse(payload);
-
-    if (!parsed.success) {
-      return noStoreJson({ error: 'invalid_invite_payload' }, { status: 400 });
-    }
-
     const user = await requireApiUser();
     const organization = await getCurrentOrganizationForUser(user.id);
 
@@ -75,6 +68,13 @@ export async function POST(request: Request) {
 
     if (!stepUp.ok) {
       return stepUp.response;
+    }
+
+    const payload = await readBoundedJsonRequest(request, { maxBytes: INVITE_JSON_MAX_BYTES }).catch(() => null);
+    const parsed = inviteSchema.safeParse(payload);
+
+    if (!parsed.success) {
+      return noStoreJson({ error: 'invalid_invite_payload' }, { status: 400 });
     }
 
     const entitlements = await getOrganizationEntitlements(organization.id);
