@@ -131,6 +131,7 @@ describe('Stripe webhook processing lease recovery', () => {
     };
     mocks.handleStripeWebhookEvent.mockResolvedValue({ skipped: true, duplicate: true });
 
+    vi.spyOn(Date, 'now').mockReturnValue(nowMs);
     const result = await handleStripeWebhookEventWithRecovery(makeEvent());
 
     expect(result).toEqual({ skipped: true, duplicate: true });
