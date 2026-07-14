@@ -1,0 +1,90 @@
+name: Enterprise GO work item
+description: Create a scoped Enterprise GO audit, blocker, evidence, or implementation task.
+title: "[Enterprise GO]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue enters the senior-agent triage queue. It does not authorize production access, deployment, merge, rollback, restore, or risk acceptance.
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: State the customer, production, security, or enterprise outcome required.
+      placeholder: Describe the outcome, not only the file you expect to change.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Initial priority
+      description: The agent must verify this classification from evidence.
+      options:
+        - P0 — outage, data, auth, tenant, secret, payment, or revenue blocker
+        - P1 — reliability, release safety, recovery, observability, or enterprise blocker
+        - P2 — architecture, duplication, CI productivity, tests, or documentation
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk surface
+      options:
+        - High — auth, authorization, RLS, tenancy, billing, audit, uploads, secrets, release, or production
+        - Medium — shared backend behavior, provider integration, jobs, exports, or observability
+        - Low — documentation, tests, templates, or isolated non-runtime maintenance
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Current evidence
+      description: Add exact checks, logs, file paths, PRs, SHAs, screenshots, or reproducible behavior. Redact secrets and customer data.
+      placeholder: |
+        - main SHA:
+        - failing check/run:
+        - affected file or route:
+        - reproduction:
+        - known limitation:
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Define observable success and the evidence needed to close this item.
+      placeholder: |
+        - Required behavior:
+        - Required tests:
+        - Required runtime evidence:
+        - Rollback expectation:
+    validations:
+      required: true
+
+  - type: textarea
+    id: external
+    attributes:
+      label: External access or owner action
+      description: Identify any required production secret, provider console, deployment approval, pentest, SSO, WAF, rollback, restore, legal, pricing, or risk decision.
+      placeholder: Use "None known" when no external dependency is currently known.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Guardrails
+      options:
+        - label: No secret, token, customer data, or raw production log is included in this issue.
+          required: true
+        - label: Missing evidence will be reported as NOT VERIFIED or BLOCKED, not PASS.
+          required: true
+        - label: The agent must inspect open PRs for overlap before implementation.
+          required: true
+        - label: The agent must open a draft PR and must not merge or deploy automatically.
+          required: true

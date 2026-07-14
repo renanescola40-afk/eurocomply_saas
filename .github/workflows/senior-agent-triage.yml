@@ -2,14 +2,195 @@ name: Senior Agent Triage
 
 on:
   workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Existing issue number to triage
+        required: false
+        type: string
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
+  issues: write
+  actions: write
+
+concurrency:
+  group: senior-agent-triage-${{ github.event.issue.number || inputs.issue_number || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   triage:
-    name: Manual triage placeholder
+    name: Triage senior-agent command or issue
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Explain status
-        run: echo "Senior Agent Triage is installed as a safe manual placeholder until the coding-agent provider is connected."
+      - name: Apply queue command
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const payloadIssue = context.payload.issue;
+
+            if (payloadIssue?.pull_request) {
+              core.notice('Ignoring pull request conversation; senior-agent commands operate on issues.');
+              return;
+            }
+
+            const inputIssueNumber = '${{ inputs.issue_number }}'.trim();
+            const issueNumber = payloadIssue?.number ?? Number(inputIssueNumber);
+            if (!Number.isInteger(issueNumber) || issueNumber <= 0) {
+              core.setFailed('A valid issue number is required.');
+              return;
+            }
+
+            const labelDefinitions = [
+              ['senior-agent', '1D76DB', 'Work owned by the senior engineering agent queue.'],
+              ['agent:ready', '0E8A16', 'Authorized for coding-agent implementation.'],
+              ['agent:triage', 'FBCA04', 'Needs investigation or scope before implementation.'],
+              ['agent:blocked', 'B60205', 'Agent work must stop until the blocker is removed.'],
+              ['needs-owner', 'D93F0B', 'Requires a repository owner decision or external action.'],
+              ['priority:p0', 'B60205', 'Production, security, data, or revenue blocker.'],
+              ['priority:p1', 'D93F0B', 'Important reliability or enterprise-readiness work.'],
+              ['priority:p2', 'FBCA04', 'Normal engineering improvement.'],
+              ['risk:high', 'B60205', 'Touches a high-risk security, tenancy, billing, or evidence surface.'],
+              ['type:ci', '5319E7', 'Continuous integration or release-gate work.'],
+              ['type:security', 'B60205', 'Security hardening or security regression.'],
+              ['type:bug', 'D73A4A', 'Defect or broken behavior.'],
+              ['type:feature', 'A2EEEF', 'Product capability or enhancement.'],
+            ];
+
+            for (const [name, color, description] of labelDefinitions) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({ owner, repo, name, color, description });
+              }
+            }
+
+            const { data: issue } = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: issueNumber,
+            });
+
+            const actor = context.payload.sender?.login ?? context.actor;
+            const association = context.payload.comment?.author_association
+              ?? context.payload.issue?.author_association
+              ?? '';
+            const authorized = actor === owner || ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(association);
+            const commandText = (context.payload.comment?.body ?? '').trim().toLowerCase();
+            const exactCommand = commandText.split(/\r?\n/).map((line) => line.trim()).find((line) => line.startsWith('/agent '));
+            const supportedCommands = new Set([
+              '/agent triage',
+              '/agent run',
+              '/agent block',
+              '/agent p0',
+              '/agent explain',
+            ]);
+
+            const addLabels = async (labels) => {
+              if (labels.length === 0) return;
+              await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels });
+            };
+
+            const removeLabel = async (name) => {
+              try {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number: issueNumber, name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            };
+
+            const autoTriage = context.eventName === 'issues'
+              && (issue.title.startsWith('[Agent Task]') || issue.title.startsWith('[Enterprise GO]'));
+
+            if (!exactCommand) {
+              if (autoTriage) {
+                await addLabels(['senior-agent', 'agent:triage']);
+                core.notice(`Issue #${issueNumber} added to the senior-agent triage queue.`);
+              } else if (context.eventName === 'workflow_dispatch') {
+                await addLabels(['senior-agent', 'agent:triage']);
+                core.notice(`Issue #${issueNumber} manually added to triage.`);
+              } else {
+                core.notice('No senior-agent command or matching issue template detected.');
+              }
+              return;
+            }
+
+            if (!supportedCommands.has(exactCommand)) {
+              core.notice(`Ignoring unsupported command: ${exactCommand}`);
+              return;
+            }
+
+            if (!authorized) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: `The command \`${exactCommand}\` was not executed because only the repository owner or trusted collaborators may authorize agent actions.`,
+              });
+              return;
+            }
+
+            if (exactCommand === '/agent triage') {
+              await addLabels(['senior-agent', 'agent:triage']);
+              await removeLabel('agent:ready');
+              await removeLabel('agent:blocked');
+            }
+
+            if (exactCommand === '/agent run') {
+              await addLabels(['senior-agent', 'agent:ready']);
+              await removeLabel('agent:triage');
+              await removeLabel('agent:blocked');
+
+              try {
+                await github.rest.actions.createWorkflowDispatch({
+                  owner,
+                  repo,
+                  workflow_id: 'senior-agent-dispatch.yml',
+                  ref: 'main',
+                  inputs: { issue_number: String(issueNumber) },
+                });
+              } catch (error) {
+                core.warning(`Issue was authorized, but dispatch could not be started: ${error.message}`);
+              }
+            }
+
+            if (exactCommand === '/agent block') {
+              await addLabels(['senior-agent', 'agent:blocked']);
+              await removeLabel('agent:ready');
+            }
+
+            if (exactCommand === '/agent p0') {
+              await addLabels(['senior-agent', 'priority:p0', 'risk:high', 'needs-owner']);
+            }
+
+            if (exactCommand === '/agent explain') {
+              const labels = issue.labels.map((label) => typeof label === 'string' ? label : label.name).filter(Boolean);
+              const blocked = labels.includes('agent:blocked') || labels.includes('needs-owner');
+              const ready = labels.includes('agent:ready') && labels.includes('senior-agent') && !blocked;
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: [
+                  '## Senior Agent state',
+                  '',
+                  `- Queue labels: ${labels.length ? labels.map((label) => `\`${label}\``).join(', ') : 'none'}`,
+                  `- Ready for implementation: **${ready ? 'yes' : 'no'}**`,
+                  `- Blocked by owner/control label: **${blocked ? 'yes' : 'no'}**`,
+                  '',
+                  ready
+                    ? 'Next action: dispatch the Enterprise GO agent and create a draft PR after repository and overlap review.'
+                    : 'Next action: finish triage or remove the explicit blocker after the required owner decision/evidence exists.',
+                  '',
+                  'The workflows coordinate the queue; they do not merge code or prove production health.',
+                ].join('\n'),
+              });
+            }
+
+            core.notice(`Applied ${exactCommand} to issue #${issueNumber}.`);
