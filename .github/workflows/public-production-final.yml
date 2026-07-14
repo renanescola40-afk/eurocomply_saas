@@ -35,6 +35,8 @@ env:
   RELEASE_TARGET: public-production
   RELEASE_RUNTIME_TARGET: ${{ inputs.release_target }}
   RELEASE_REQUIRE_RUNTIME_EVIDENCE: ${{ inputs.require_runtime_evidence }}
+  RELEASE_COMMIT_SHA: ${{ github.sha }}
+  RELEASE_BUILD_SHA: ${{ github.sha }}
   RELEASE_DEPLOYMENT_URL: ${{ inputs.production_url }}
   RELEASE_PRODUCTION_URL: ${{ inputs.production_url }}
   NEXT_PUBLIC_APP_URL: ${{ inputs.production_url }}
@@ -57,9 +59,6 @@ env:
   UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
   UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
   NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-  SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-  SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
 jobs:
   production-final:
@@ -83,6 +82,12 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      - name: Validate public release runner syntax
+        run: |
+          node --check scripts/release/run-public-production-release.mjs
+          node --check scripts/release/check-public-production-release-env.mjs
+          node --check scripts/release/run-public-production-release-final.mjs
+
       - name: Run public production final gate
         run: npm run release:production-final
 
@@ -93,9 +98,13 @@ jobs:
           name: public-production-final-validation
           path: |
             release-validation/public-production/**
+            docs/security/evidence/runtime/public-production-release-env-readiness.json
             docs/security/evidence/runtime/deployment-smoke-validation.json
+            docs/security/evidence/runtime/observability-smoke-validation.json
             docs/security/evidence/runtime/rollback-dry-run-validation.json
             docs/security/evidence/runtime/supabase-live-rls-validation.json
+            docs/security/evidence/runtime/release-go-no-go.json
             docs/security/evidence/runtime/production-final-validation.json
+            docs/security/evidence/runtime/final-validation-runner.json
           retention-days: 30
           if-no-files-found: warn

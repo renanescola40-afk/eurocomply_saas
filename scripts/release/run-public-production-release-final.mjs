@@ -1,0 +1,268 @@
+#!/usr/bin/env node
+
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { join } from 'node:path';
+
+const outputDir = process.env.RELEASE_VALIDATION_DIR || 'release-validation/public-production';
+const logDir = join(outputDir, 'logs');
+const evidenceDir = join('docs', 'security', 'evidence', 'runtime');
+const evidencePath = join(evidenceDir, 'production-final-validation.json');
+const finalRunnerEvidencePath = join(evidenceDir, 'final-validation-runner.json');
+const releaseTarget = String(process.env.RELEASE_TARGET || 'public-production').trim().toLowerCase();
+const maxBuffer = 128 * 1024 * 1024;
+const allowedTargets = new Set(['production', 'public-production']);
+
+if (!allowedTargets.has(releaseTarget)) {
+  console.error(`Public production runner received unsupported RELEASE_TARGET: ${releaseTarget || '(empty)'}.`);
+  process.exit(1);
+}
+
+const requiredEvidence = [
+  'docs/security/evidence/runtime/deployment-smoke-validation.json',
+  'docs/security/evidence/runtime/observability-smoke-validation.json',
+  'docs/security/evidence/runtime/rollback-dry-run-validation.json',
+  'docs/security/evidence/runtime/supabase-live-rls-validation.json',
+  'docs/security/evidence/runtime/release-go-no-go.json',
+];
+
+const commands = [
+  ['00-npm-ci', 'npm ci', 'npm', ['ci']],
+  ['01-lint', 'npm run lint', 'npm', ['run', 'lint']],
+  ['02-typecheck', 'npm run typecheck', 'npm', ['run', 'typecheck']],
+  ['03-test', 'npm run test', 'npm', ['run', 'test']],
+  ['04-build-for-production-like-e2e', 'npm run build', 'npm', ['run', 'build']],
+  ['05-playwright-install', 'npx playwright install --with-deps chromium', 'npx', ['playwright', 'install', '--with-deps', 'chromium']],
+  ['06-test-e2e-production-like', 'npm run test:e2e', 'npm', ['run', 'test:e2e']],
+  ['07-security-ci', 'npm run security:ci', 'npm', ['run', 'security:ci']],
+  ['08-security-rls-live', 'npm run security:rls:live', 'npm', ['run', 'security:rls:live']],
+  ['09-release-deployment-smoke', 'npm run release:deployment-smoke', 'npm', ['run', 'release:deployment-smoke']],
+  ['10-release-observability-smoke', 'npm run release:observability-smoke', 'npm', ['run', 'release:observability-smoke']],
+  ['11-release-rollback-dry-run', 'npm run release:rollback:dry-run', 'npm', ['run', 'release:rollback:dry-run']],
+  ['12-security-branch-protection-evidence', 'npm run security:branch-protection-evidence', 'npm', ['run', 'security:branch-protection-evidence']],
+  ['13-release-candidate', 'npm run security:release-candidate', 'npm', ['run', 'security:release-candidate']],
+  ['14-release-evidence', 'npm run security:release-evidence', 'npm', ['run', 'security:release-evidence']],
+  ['15-release-approval', 'npm run security:release-approval', 'npm', ['run', 'security:release-approval']],
+  ['16-release-go-no-go-static', 'npm run security:release-go-no-go', 'npm', ['run', 'security:release-go-no-go']],
+  ['17-release-rollback', 'npm run security:release-rollback', 'npm', ['run', 'security:release-rollback']],
+  ['18-release-incident-response', 'npm run security:release-incident-response', 'npm', ['run', 'security:release-incident-response']],
+  ['19-release-post-incident', 'npm run security:release-post-incident', 'npm', ['run', 'security:release-post-incident']],
+  ['20-release-support-readiness', 'npm run security:release-support-readiness', 'npm', ['run', 'security:release-support-readiness']],
+  ['21-release-operations', 'npm run security:release-operations', 'npm', ['run', 'security:release-operations']],
+  ['22-p0-runtime-gap-strict', 'npm run security:p0-runtime-gap:strict', 'npm', ['run', 'security:p0-runtime-gap:strict']],
+].map(([slug, label, command, args]) => ({ slug, label, command, args, critical: true }));
+
+mkdirSync(logDir, { recursive: true });
+mkdirSync(evidenceDir, { recursive: true });
+
+function now() {
+  return new Date().toISOString();
+}
+
+function runUrl() {
+  return process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
+    ? `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+    : null;
+}
+
+function readEvidence(path) {
+  if (!existsSync(path)) return { path, present: false, status: 'Open', outcome: 'missing' };
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8'));
+    return {
+      path,
+      present: true,
+      status: parsed.status || 'Open',
+      outcome: parsed.outcome || parsed.finalDecision || 'unknown',
+      generatedAt: parsed.generatedAt || parsed.timestamp || null,
+      runner: parsed.runner || parsed.reviewer || null,
+      releaseTarget: parsed.releaseTarget || null,
+    };
+  } catch {
+    return { path, present: true, status: 'Open', outcome: 'invalid_json' };
+  }
+}
+
+function disableLiveSupabaseRuntimeChecks(env) {
+  env.SUPABASE_ACCESS_TOKEN = '';
+  env.SUPABASE_DB_URL = '';
+  env.DATABASE_URL = '';
+  env.POSTGRES_URL = '';
+  env.POSTGRES_PRISMA_URL = '';
+  env.POSTGRES_URL_NON_POOLING = '';
+  env.SUPABASE_POOLER_URL = '';
+  env.SUPABASE_DIRECT_URL = '';
+}
+
+function buildStepEnv(step) {
+  const isE2eStep = step.slug.includes('test-e2e');
+  const isUnitTestStep = step.slug === '03-test';
+  const isStaticSecurityCiStep = step.slug === '07-security-ci';
+  const env = {
+    ...process.env,
+    CI: 'true',
+    NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED || '1',
+    RELEASE_TARGET: releaseTarget,
+    RISCK_COMPLY_ENTERPRISE_RELEASE: '',
+    EUROCOMPLY_ENTERPRISE_RELEASE: '',
+    PUBLIC_PRODUCTION_RELEASE_IN_PROGRESS: 'true',
+    FINAL_VALIDATION_IN_PROGRESS: 'true',
+    ...(isE2eStep && !process.env.E2E_BASE_URL ? { PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true' } : {}),
+  };
+
+  if (isUnitTestStep || isStaticSecurityCiStep) {
+    env.RELEASE_TARGET = isUnitTestStep ? process.env.UNIT_TEST_RELEASE_TARGET || 'test' : 'static-ci';
+    env.PUBLIC_PRODUCTION_RELEASE_IN_PROGRESS = '';
+    env.FINAL_VALIDATION_IN_PROGRESS = '';
+  }
+
+  if (isStaticSecurityCiStep) disableLiveSupabaseRuntimeChecks(env);
+  return env;
+}
+
+function runStep(step) {
+  const startedAt = now();
+  const log = join(logDir, `${step.slug}.log`);
+  const result = spawnSync(step.command, step.args, {
+    env: buildStepEnv(step),
+    encoding: 'utf8',
+    maxBuffer,
+    shell: false,
+  });
+  const finishedAt = now();
+  writeFileSync(log, [
+    `# ${step.label}`,
+    `Command: ${[step.command, ...step.args].join(' ')}`,
+    `Started: ${startedAt}`,
+    `Release target: ${releaseTarget}`,
+    '',
+    result.stdout || '',
+    result.stderr || '',
+    `Finished: ${finishedAt}`,
+    `Exit status: ${result.status ?? 'null'}`,
+  ].join('\n'));
+
+  const passed = result.status === 0;
+  return {
+    command: step.label,
+    critical: step.critical,
+    startedAt,
+    finishedAt,
+    exitStatus: result.status,
+    exitCode: result.status,
+    passed,
+    result: passed ? 'passed' : 'failed',
+    log,
+  };
+}
+
+const startedAt = now();
+const commandResults = [];
+for (const step of commands) {
+  const result = runStep(step);
+  commandResults.push(result);
+  if (!result.passed) break;
+}
+const finishedAt = now();
+const runtimeEvidence = Object.fromEntries(requiredEvidence.map((path) => [path, readEvidence(path)]));
+const commandFailures = commandResults.filter((item) => item.critical && !item.passed);
+const evidenceFailures = Object.values(runtimeEvidence).filter((item) => item.status !== 'Complete' || item.outcome !== 'passed');
+const metadataFailures = [];
+if (!process.env.RELEASE_COMMIT_SHA && !process.env.GITHUB_SHA) metadataFailures.push('Missing release commit SHA.');
+if (!process.env.RELEASE_BUILD_SHA && !process.env.NEXT_PUBLIC_BUILD_SHA && !process.env.GITHUB_SHA) metadataFailures.push('Missing release build SHA.');
+if (!process.env.RELEASE_ROLLBACK_TARGET && !process.env.LAST_KNOWN_GOOD_DEPLOYMENT_URL) metadataFailures.push('Missing rollback target.');
+
+const passed = commandFailures.length === 0 && commandResults.length === commands.length && evidenceFailures.length === 0 && metadataFailures.length === 0;
+const evidence = {
+  schema: 'risck-comply.public-production-final-validation.v1',
+  evidenceItem: 'production-final-validation',
+  status: passed ? 'Complete' : 'Open',
+  outcome: passed ? 'passed' : 'failed',
+  generatedAt: finishedAt,
+  reviewedAt: finishedAt,
+  reviewer: 'RISCK COMPLY public production release automation',
+  runner: 'RISCK COMPLY public production release automation',
+  releaseTarget,
+  commitSha: process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || null,
+  buildSha: process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || process.env.GITHUB_SHA || null,
+  startedAt,
+  finishedAt,
+  summary: passed
+    ? 'Public production release validation passed for the promoted commit and target runtime.'
+    : 'Public production release validation failed; release remains No-Go until every public P0 command, runtime evidence file, rollback target, commit SHA, and build SHA passes.',
+  profile: {
+    name: 'public-production',
+    requiresLiveRlsEvidence: true,
+    requiresDeploymentSmoke: true,
+    requiresObservabilitySmoke: true,
+    requiresRollbackDryRun: true,
+    requiresEnterpriseRuntimeEvidence: false,
+    requiresExternalReviewEvidence: false,
+    requiresEnterpriseSourceMapCredentials: false,
+    requiresEnterpriseMalwareScannerTransport: false,
+  },
+  redactionConfirmation: 'No token, cookie, authorization header, secret value, raw DSN, or secret environment variable value is written to this evidence file.',
+  noSecretsStored: true,
+  commands: commandResults,
+  runtimeEvidence,
+  commandFailures,
+  evidenceFailures,
+  metadataFailures,
+  releaseGate: passed
+    ? 'Go candidate: public production validation passed. Confirm release-go-no-go finalDecision before announcing.'
+    : 'No-Go: public production validation failed.',
+  evidenceIntegrity: {
+    containsSensitiveValues: false,
+    valuesRedacted: true,
+    authorizationHeaderStored: false,
+    cookiesStored: false,
+    rawUrlsStored: false,
+  },
+};
+
+const summary = {
+  generatedAt: finishedAt,
+  repository: process.env.GITHUB_REPOSITORY || null,
+  workflow: process.env.GITHUB_WORKFLOW || null,
+  runId: process.env.GITHUB_RUN_ID || null,
+  runUrl: runUrl(),
+  commitSha: evidence.commitSha,
+  buildSha: evidence.buildSha,
+  refName: process.env.GITHUB_REF_NAME || null,
+  actor: process.env.GITHUB_ACTOR || null,
+  eventName: process.env.GITHUB_EVENT_NAME || null,
+  releaseTarget,
+  overallResult: passed ? 'passed' : 'failed',
+  commandFailures: commandFailures.map((item) => ({ command: item.command, log: item.log, exitStatus: item.exitStatus })),
+  evidenceFailures,
+  metadataFailures,
+  commands: commandResults,
+  runtimeEvidence,
+  publicProductionScope: evidence.profile,
+};
+
+writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+writeFileSync(finalRunnerEvidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+writeFileSync(join(outputDir, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
+writeFileSync(join(outputDir, 'summary.md'), [
+  '# RISCK COMPLY Public Production Final Gate',
+  '',
+  `- Result: ${passed ? 'passed' : 'failed'}`,
+  `- Generated: ${finishedAt}`,
+  `- Commit: ${evidence.commitSha || 'missing'}`,
+  `- Build: ${evidence.buildSha || 'missing'}`,
+  `- Target: ${releaseTarget}`,
+  `- Commands completed: ${commandResults.length}/${commands.length}`,
+  `- Command failures: ${commandFailures.length}`,
+  `- Evidence failures: ${evidenceFailures.length}`,
+  `- Metadata failures: ${metadataFailures.length}`,
+  '',
+  'Enterprise-only runtime evidence, external review evidence, source-map upload credentials, and enterprise malware-scanner transport are intentionally outside this public release profile.',
+  '',
+].join('\n'));
+
+console.log(`Wrote ${evidencePath}`);
+console.log(`Wrote ${finalRunnerEvidencePath}`);
+console.log(`Wrote ${join(outputDir, 'summary.json')}`);
+
+if (!passed) process.exit(1);
