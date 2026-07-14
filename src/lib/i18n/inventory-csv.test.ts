@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildLocalizedInventoryCsv } from './inventory-csv';
+import {
+  buildLocalizedInventoryCsv,
+  buildLocalizedInventoryDisplayCsv,
+} from './inventory-csv';
 
 const row = {
   name: 'Recruiting AI',
@@ -40,5 +43,19 @@ describe('buildLocalizedInventoryCsv', () => {
     const csv = buildLocalizedInventoryCsv([{ ...row, name: '=IMPORTXML("https://example.test")' }], 'en');
     expect(csv).toContain("'=IMPORTXML");
     expect(csv).not.toContain('\n=IMPORTXML');
+  });
+
+  it('exports already-localized visible rows with localized headers', () => {
+    const csv = buildLocalizedInventoryDisplayCsv([{
+      name: 'Recruiting AI',
+      vendor: 'Vendor One',
+      department: 'Personal',
+      riskLabel: 'Hohes Risiko',
+      statusLabel: 'In Prüfung',
+      assessmentDate: '31.12.2026',
+    }], 'de');
+
+    expect(csv).toContain('Name,Anbieter,Abteilung,Risikostufe,Status,Bewertungsdatum');
+    expect(csv).toContain('Hohes Risiko,In Prüfung,31.12.2026');
   });
 });
