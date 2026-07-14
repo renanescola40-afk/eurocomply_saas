@@ -1,40 +1,125 @@
-## Summary
+## Objective
 
-Describe what changed and why.
+Describe the production, customer, security, reliability, performance, architecture, or commercial outcome this PR is intended to improve.
 
-## Security impact
+## Motivation and root cause
+
+Explain the concrete repository evidence, product problem, or operational risk. Distinguish observed facts from assumptions. Do not claim production impact without runtime evidence.
+
+## Prioritization and ROEI
+
+- Priority: `P0` / `P1` / `P2` / `P3`
+- Why this is the highest-value available work:
+- Expected customer or production benefit:
+- Estimated implementation and maintenance cost:
+- Higher-ranked work blocked by dependencies, if any:
+
+## Overlap review
+
+List related open pull requests, issues, merged-but-unreleased changes, or shared abstractions reviewed before implementation.
+
+- [ ] No open PR already solves this problem.
+- [ ] Related work is linked below.
+- Related PRs/issues:
+
+## Technical approach
+
+Describe the architecture, changed boundaries, affected data flows, shared infrastructure, migrations, compatibility, and rejected alternatives.
+
+## Impact and measurement
+
+Document measurable before/after evidence when available.
+
+- Metric(s):
+- Before:
+- After:
+- Measurement method:
+
+When measurement is unavailable, state exactly:
+
+> Measurement unavailable in the current execution environment.
+
+## Security, privacy, and tenancy
 
 Check every item that applies before requesting review:
 
-- [ ] This change does not expose secrets, private keys, service-role credentials, access credentials, cookies or personal data.
-- [ ] Server-only environment variables remain server-only and are not referenced from client components.
-- [ ] New or changed API routes authenticate the user or are explicitly documented as public.
-- [ ] Resource identifiers are checked server-side against the authenticated user and organization context.
-- [ ] Mutating routes use trusted-origin protection.
-- [ ] Sensitive routes return no-store responses.
-- [ ] Inputs from requests, query strings or form data are schema validated before use.
-- [ ] High-risk actions use the current step-up authentication standard where required.
-- [ ] Role, plan and organization authorization checks were reviewed.
-- [ ] Database changes preserve RLS and tenant isolation.
-- [ ] Storage changes keep sensitive buckets private and tenant-scoped.
-- [ ] Logs do not include secrets, raw credentials, full personal data, cookies or authorization headers.
-- [ ] Security headers, CSP and CORS behavior are not weakened.
-- [ ] Dependencies and GitHub Actions changes were reviewed for supply-chain risk.
+- [ ] No secrets, private keys, service-role credentials, cookies, authorization headers, or customer data are exposed.
+- [ ] Server-only variables remain server-only.
+- [ ] New or changed routes are authenticated or explicitly documented as public.
+- [ ] Resource and tenant identifiers are validated server-side.
+- [ ] Role, plan, organization, and object-level authorization were reviewed.
+- [ ] RLS and tenant isolation are preserved.
+- [ ] Mutating routes preserve trusted-origin protection.
+- [ ] Sensitive responses preserve no-store behavior and sanitized errors.
+- [ ] Inputs are bounded and schema validated at trust boundaries.
+- [ ] Logs and telemetry avoid unnecessary PII and sensitive payloads.
+- [ ] Security headers, CSP, CORS, uploads, storage, auditability, and supply-chain controls are not weakened.
+- [ ] Fail-open/fail-closed trade-offs are documented where relevant.
 
-## Required evidence
+## Reliability and operational impact
 
-Paste or link relevant output:
+- Failure modes:
+- Retry/idempotency behavior:
+- Health/readiness/smoke impact:
+- Observability and incident diagnostics:
+- Operational owner:
 
-```txt
-npm run security:ci
-npm run typecheck
-npm run test
-npm run build
+## Backward compatibility and migrations
+
+- [ ] No breaking API, schema, configuration, or customer workflow change.
+- Migration or compatibility plan, when applicable:
+
+## Tests and quality gates
+
+Record exact commands and truthful outcomes. Do not mark an unavailable or failed check as passed.
+
+- [ ] `npm run lint`
+- [ ] `npm run typecheck`
+- [ ] `npm run test`
+- [ ] Relevant E2E tests
+- [ ] `npm run build`
+- [ ] Relevant focused security checks
+- [ ] `npm run security:ci`
+- [ ] Relevant release, RLS, upload, billing, or phase gates
+- [ ] Required GitHub CI is green
+
+Evidence/output:
+
+```text
+Paste concise, sanitized output or link to CI.
 ```
 
-## Release / rollback notes
+## Evidence limitations
 
-- Rollback plan:
-- Operational owner:
-- Customer-impact notes:
-- Accepted risk or exception, with expiry date:
+State what was not validated, including unavailable production credentials, runtime environments, external providers, load tests, audits, pentests, or customer data.
+
+## Risks and trade-offs
+
+- Expected risks:
+- Residual risk:
+- Mitigations:
+- Opportunity cost:
+- Accepted exception and expiry date, if any:
+
+## Rollback
+
+Describe the exact code, configuration, migration, provider, data, and deployment rollback. State when a simple revert is sufficient.
+
+## Documentation and decision records
+
+- [ ] Relevant documentation was updated.
+- [ ] A decision record was added or updated when architecture, security posture, tenancy, data, providers, billing, caching, or release policy changed.
+- Decision record:
+
+## Out of scope / follow-ups
+
+List only intentional exclusions. Do not use follow-ups to defer required safety, correctness, or test work.
+
+## Final acceptance
+
+- [ ] This PR is coherent and reviewable.
+- [ ] It solves one production problem completely.
+- [ ] It does not duplicate open work.
+- [ ] It provides meaningful engineering or business value.
+- [ ] No avoidable regression was introduced.
+- [ ] Automatic merge is not enabled.
