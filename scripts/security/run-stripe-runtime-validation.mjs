@@ -6,9 +6,14 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const args = new Set(process.argv.slice(2));
-const updateRegister = args.has('--update-register');
+const writeOpenEvidence = args.has('--write-open-evidence');
 const evidenceRelativePath = 'docs/security/evidence/runtime/stripe-billing-validation.json';
-const registerRelativePath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
+
+if (args.has('--update-register')) {
+  throw new Error(
+    'Static Stripe contract validation cannot mark runtime evidence Complete. Run a real target-runtime validation and update the register through its reviewed evidence workflow.',
+  );
+}
 
 const files = {
   checkoutRoute: 'src/app/api/billing/checkout/route.ts',
@@ -16,11 +21,13 @@ const files = {
   stripeWebhookRoute: 'src/app/api/stripe/webhook/route.ts',
   billingWebhookRoute: 'src/app/api/billing/webhook/route.ts',
   webhookHandler: 'src/server/billing/stripe-webhooks.ts',
+  webhookRecovery: 'src/server/billing/stripe-webhook-recovery.ts',
   checkoutTest: 'src/app/api/billing/checkout/route.test.ts',
   portalTest: 'src/app/api/billing/portal/route.test.ts',
   stripeWebhookTest: 'src/app/api/stripe/webhook/route.test.ts',
   billingWebhookTest: 'src/app/api/billing/webhook/route.test.ts',
   webhookHandlerTest: 'src/server/billing/stripe-webhooks.test.ts',
+  webhookRecoveryTest: 'src/server/billing/stripe-webhook-recovery.test.ts',
   migration: 'supabase/migrations/20260623090000_stripe_webhook_events_enterprise_runtime.sql',
 };
 
@@ -32,7 +39,7 @@ function read(relativePath) {
 
 function assertIncludes(name, content, fragments) {
   for (const fragment of fragments) {
-    if (!content.includes(fragment)) throw new Error(`${name} is missing required runtime control marker: ${fragment}`);
+    if (!content.includes(fragment)) throw new Error(`${name} is missing required repository control marker: ${fragment}`);
   }
 }
 
@@ -42,19 +49,6 @@ function getCommitSha() {
   } catch {
     return process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || 'unknown';
   }
-}
-
-function updateP0RegisterIfRequested() {
-  if (!updateRegister) return false;
-
-  const registerPath = join(repoRoot, registerRelativePath);
-  const source = read(registerRelativePath);
-  const replacement = `| Stripe billing runtime validation | Complete | \`${evidenceRelativePath}\` records status \`Complete\`, validation status \`passed\`, checkout, portal, webhook signature enforcement, webhook idempotency, subscription sync, server-side plan enforcement and billing audit-event proof for the assessed commit | Billing owner | Re-run if Stripe routes, billing permissions, webhook handling, subscription sync or billing migrations change |`;
-  const updated = source.replace(/^\| Stripe billing runtime validation \|.*$/m, replacement);
-
-  if (updated === source) throw new Error('Could not find Stripe billing runtime validation row in P0 register.');
-  writeFileSync(registerPath, updated, { encoding: 'utf8' });
-  return true;
 }
 
 const source = Object.fromEntries(Object.entries(files).map(([key, path]) => [key, read(path)]));
@@ -93,7 +87,7 @@ assertIncludes('Stripe webhook route', source.stripeWebhookRoute, [
   "reason: 'invalid_signature'",
   "action: 'webhook_received'",
   "action: 'webhook_rejected'",
-  'handleStripeWebhookEvent(event)',
+  'handleStripeWebhookEventWithRecovery(event)',
 ]);
 
 assertIncludes('legacy billing webhook route', source.billingWebhookRoute, [
@@ -103,7 +97,7 @@ assertIncludes('legacy billing webhook route', source.billingWebhookRoute, [
   'BILLING_WEBHOOK_TOLERANCE_SECONDS',
   "action: 'webhook_received'",
   "action: 'webhook_rejected'",
-  'handleStripeWebhookEvent(event)',
+  'handleStripeWebhookEventWithRecovery(event)',
 ]);
 
 assertIncludes('webhook handler', source.webhookHandler, [
@@ -115,6 +109,17 @@ assertIncludes('webhook handler', source.webhookHandler, [
   "action: 'subscription_synced'",
   'validateOrganizationStripeBinding',
   'getBillingPlanIdForStripePriceId',
+]);
+
+assertIncludes('webhook recovery', source.webhookRecovery, [
+  'STRIPE_EVENT_PROCESSING_LEASE_MS',
+  "status: 'failed'",
+  "error: 'processing_lease_expired'",
+  ".eq('status', 'processing')",
+  ".eq('updated_at', existingEvent.updated_at)",
+  'handleStripeWebhookEventWithRecovery',
+  "'checkout.session.completed'",
+  "'customer.subscription.updated'",
 ]);
 
 assertIncludes('webhook migration', source.migration, [
@@ -142,45 +147,83 @@ const testCoverage = {
   subscriptionDeleted: source.webhookHandlerTest.includes('customer.subscription.deleted'),
   customerMismatch: source.webhookHandlerTest.includes('Stripe customer does not match organization billing profile'),
   checkoutSessionHardening: source.checkoutRoute.includes("billing_address_collection: 'required'") && source.checkoutRoute.includes('tax_id_collection'),
+  staleProcessingLease: source.webhookRecoveryTest.includes('atomically expires and replays an abandoned subscription claim'),
+  freshProcessingSuppression: source.webhookRecoveryTest.includes('does not replay a fresh processing claim'),
+  recoveryRaceSafety: source.webhookRecoveryTest.includes('another request wins the atomic recovery race'),
+  paymentFailedRecoveryExcluded: source.webhookRecoveryTest.includes('without provider idempotency'),
 };
 
 const failedCoverage = Object.entries(testCoverage).filter(([, passed]) => !passed).map(([name]) => name);
 if (failedCoverage.length > 0) throw new Error(`Missing Stripe billing test coverage markers: ${failedCoverage.join(', ')}`);
 
 const timestamp = new Date().toISOString();
+const repositoryValidation = {
+  status: 'passed',
+  checkedAt: timestamp,
+  commitSha: getCommitSha(),
+  filesChecked: Object.values(files),
+  testCoverage,
+  controlsObserved: [
+    'Billing mutations require authenticated organization billing authority, step-up and trusted origin',
+    'Stripe webhook routes require a bounded signed payload before dispatch',
+    'Stripe webhook events use a durable idempotency ledger before subscription mutation',
+    'Stale replay-safe processing claims use a bounded atomic recovery lease',
+    'Subscription sync validates organization, customer and server-side plan binding',
+  ],
+};
+
 const evidence = {
   id: 'stripe-billing-validation',
   evidenceItem: 'stripe-billing-validation',
-  status: 'Complete',
-  validationStatus: 'passed',
-  outcome: 'passed',
-  reviewer: process.env.REVIEWER || 'ChatGPT Senior Payments/Security Engineer',
+  status: 'Open',
+  validationStatus: 'repository_contract_passed_runtime_not_run',
+  outcome: 'not_run',
+  reviewer: 'RISCK COMPLY repository validation automation',
   reviewedAt: timestamp,
   timestamp,
   generatedAt: timestamp,
-  commitSha: getCommitSha(),
+  commitSha: repositoryValidation.commitSha,
   repository: process.env.GITHUB_REPOSITORY || 'renanescola40-afk/eurocomply_saas',
-  summary: 'Stripe paid billing validation passed for checkout, billing portal, webhook signature enforcement, webhook idempotency, subscription sync, server-side plan enforcement, hardened checkout session collection, customer/subscription mapping validation and billing audit events.',
+  summary: 'Stripe billing repository controls and focused tests were validated, but checkout, portal, webhook delivery, ledger persistence, subscription mutation and retry recovery were not executed against a configured target runtime.',
   redactionConfirmation: 'Redaction confirmed for runtime evidence.',
-  evidenceLocations: Object.values(files),
-  controlsVerified: [
-    'Checkout requires authenticated user, active organization, manage_billing permission, step-up, trusted origin and rate limiting',
-    'Checkout session keeps plan-aware cancellation, locale, billing address collection, tax ID collection and payment method collection controls',
-    'Billing portal requires authenticated user, active organization, manage_billing permission, step-up and trusted origin',
-    'Stripe webhook routes reject missing and invalid signatures before handler dispatch',
-    'Stripe webhook events are claimed idempotently before subscription mutation',
-    'Stripe subscription sync validates organization metadata, customer binding and server-side plan mapping',
+  evidenceLocations: [
+    evidenceRelativePath,
+    '.github/workflows/stripe-runtime-proof.yml',
+    'scripts/security/run-stripe-runtime-validation.mjs',
+    ...Object.values(files),
   ],
-  checkout: { tested: true, serverSidePlanAllowlist: true, serverSidePriceMapping: true, clientSuppliedPriceAccepted: false, sessionCollectionHardened: true },
-  portal: { tested: true, stripeCustomerLoadedServerSide: true },
-  webhookSignature: { tested: true, missingSignatureRejected: true, invalidSignatureRejected: true },
-  webhookIdempotency: { tested: true, canonicalLedgerTable: 'public.stripe_events_processed', checklistCompatibleTable: 'public.stripe_webhook_events' },
-  subscriptionSync: { tested: true, created: true, updated: true, deleted: true, customerMismatchRejected: true, serverSidePlanNormalization: true },
-  tests: testCoverage,
+  controlsVerified: [],
+  repositoryValidation,
+  runtimeProof: {
+    executed: false,
+    targetEnvironment: null,
+    stripeTestModeConfirmed: false,
+    signedWebhookDelivered: false,
+    subscriptionMutationObserved: false,
+    staleClaimRecoveryObserved: false,
+  },
+  completionRule: 'Run a reviewed test-mode Stripe validation against the target deployment and database for the exact promoted commit, then attach sanitized workflow provenance and observed results before changing status to Complete.',
+  releaseGate: 'Blocked: Stripe billing runtime validation has not been executed for the target environment and exact release commit.',
+  evidenceIntegrity: {
+    placeholderOnly: true,
+    runtimeProofInvented: false,
+    customerFacingProof: false,
+    containsSensitiveValues: false,
+  },
 };
 
-const evidencePath = join(repoRoot, evidenceRelativePath);
-mkdirSync(dirname(evidencePath), { recursive: true });
-writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
-const registerUpdated = updateP0RegisterIfRequested();
-console.log(JSON.stringify({ status: evidence.status, validationStatus: evidence.validationStatus, evidencePath: evidenceRelativePath, commitSha: evidence.commitSha, registerUpdated }, null, 2));
+if (writeOpenEvidence) {
+  const evidencePath = join(repoRoot, evidenceRelativePath);
+  mkdirSync(dirname(evidencePath), { recursive: true });
+  writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+}
+
+console.log(JSON.stringify({
+  status: repositoryValidation.status,
+  validationStatus: evidence.validationStatus,
+  evidenceStatus: evidence.status,
+  evidenceWritten: writeOpenEvidence,
+  evidencePath: evidenceRelativePath,
+  commitSha: evidence.commitSha,
+  runtimeProofExecuted: false,
+}, null, 2));

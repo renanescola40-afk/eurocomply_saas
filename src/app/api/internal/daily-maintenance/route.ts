@@ -1,5 +1,6 @@
 import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
+import { internalBatchResponse } from '@/server/jobs/internal-batch-response';
 import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
 
@@ -122,6 +123,8 @@ export async function POST(request: Request) {
   const results = [];
 
   for (const path of MAINTENANCE_JOBS) {
+    const startedAt = Date.now();
+
     try {
       results.push(await runMaintenanceJob(baseUrl, path, credential));
     } catch (error) {
@@ -130,7 +133,7 @@ export async function POST(request: Request) {
         path,
         ok: false,
         status: 0,
-        durationMs: 0,
+        durationMs: Date.now() - startedAt,
         body: { error: 'job_failed' },
       });
     }
@@ -138,12 +141,16 @@ export async function POST(request: Request) {
 
   const failed = results.filter((result) => !result.ok);
 
-  return noStoreJson({
-    ok: failed.length === 0,
-    jobs: results.length,
-    failed: failed.length,
-    results,
-  }, { status: failed.length === 0 ? 200 : 207 });
+  return internalBatchResponse({
+    failureCount: failed.length,
+    failureMessage: 'One or more maintenance jobs failed',
+    failureStatus: 207,
+    summary: {
+      jobs: results.length,
+      failed: failed.length,
+      results,
+    },
+  });
 }
 
 export async function GET(request: Request) {
