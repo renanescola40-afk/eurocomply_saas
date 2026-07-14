@@ -38,15 +38,12 @@ export async function GET() {
   const supabase = tryCreateAdminClient();
 
   if (!supabase) {
-    await writeAuditLog({
-      action: 'report.export',
+    reportError(new Error('Tasks CSV export backend unavailable'), {
+      area: 'tasks_csv_export_configuration',
       organizationId: organization.id,
       userId: user.id,
-      entityType: 'report',
-      entityId: 'tasks.csv',
-      metadata: { format: 'csv', report: 'tasks', fallback: true },
     });
-    return csvDownloadResponse([TASKS_CSV_HEADER], 'tasks-report.csv');
+    return noStoreJson({ error: 'Tasks export is temporarily unavailable' }, { status: 503 });
   }
 
   const { data, error } = await supabase
