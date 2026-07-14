@@ -5,12 +5,12 @@
   "repository": "renanescola40-afk/eurocomply_saas",
   "branch": "main",
   "evidence_type": "branch-protection-required-checks",
-  "captured_at": "2026-07-07T09:00:00.000+01:00",
+  "captured_at": "2026-07-14T09:25:18.000+01:00",
   "reviewer": "@renansilva2002",
-  "reviewedAt": "2026-07-07T09:00:00.000+01:00",
+  "reviewedAt": "2026-07-14T09:25:18.000+01:00",
   "source": "repo-policy-evidence",
   "policy_document": "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
-  "summary": "Required status checks and branch protection controls are documented for main. Repository-side required-check validation is added separately in docs/security/evidence/runtime/ci-required-checks-validation.json. This evidence remains an Exception because this PR cannot verify or mutate repository ruleset/branch protection UI state through the available connector action. Enterprise release validation fails while this status is Exception or Open.",
+  "summary": "Required status checks and branch protection controls remain documented for main. The operator re-attested the visible protection and required-check configuration during the PR #1017 remediation cycle, but no durable GitHub API export or settings screenshot was committed. This evidence therefore remains an Exception and must not be treated as Complete production evidence.",
   "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
   "evidenceLocations": [
     "docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md",
@@ -82,7 +82,7 @@
   },
   "exception": {
     "riskOwner": "@renansilva2002",
-    "rationale": "Repository policy evidence is committed and repository-side required-check names are validated, but GitHub branch protection/ruleset configuration must be verified by an administrator before this evidence can be marked Complete. The available connector did not expose a branch-protection mutation or verification action for rulesets.",
+    "rationale": "Repository policy evidence is committed and repository-side required-check names are validated, but GitHub branch protection/ruleset configuration still requires durable administrator evidence before this record can be marked Complete.",
     "compensatingControls": [
       "Do not promote an enterprise release unless branch protection evidence is Complete and the enterprise release validation command passes for the exact commit.",
       "Keep docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md aligned with required GitHub status checks.",
@@ -90,8 +90,11 @@
       "Run .github/workflows/p0-branch-protection-evidence.yml after branch protection is configured and review the generated artifact.",
       "For enterprise release validation, scripts/security/check-branch-protection-evidence.mjs fails while this evidence is Exception or Open."
     ],
-    "expiresAt": "2026-07-14",
-    "approvalReference": "P0 branch protection required checks rollout"
+    "renewedAt": "2026-07-14T09:25:18.000+01:00",
+    "renewedBy": "@renansilva2002",
+    "renewalRationale": "Temporary renewal requested during PR #1017 remediation so repository CI can continue enforcing the documented controls without falsely claiming durable branch-protection proof.",
+    "expiresAt": "2026-07-20T23:59:59.000+01:00",
+    "approvalReference": "PR #1017 operator-requested temporary exception renewal"
   },
-  "verification_note": "Settings → Rulesets/Branches → main must be configured to match this evidence before release promotion. Do not mark this evidence Complete without API-generated or screenshot-backed proof that each required check is configured."
+  "verification_note": "Settings → Rulesets/Branches → main must be exported through the GitHub API or captured in a durable redacted screenshot before this record is marked Complete. This renewal is a time-bounded risk exception, not production evidence."
 }
