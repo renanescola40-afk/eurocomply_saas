@@ -2,14 +2,248 @@ name: Senior Agent Watchdog
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
 
 permissions:
   contents: read
+  issues: write
+  actions: read
+
+concurrency:
+  group: senior-agent-watchdog-main
+  cancel-in-progress: true
 
 jobs:
   watchdog:
-    name: Manual watchdog placeholder
+    name: Audit main quality and security gates
     runs-on: ubuntu-latest
+    timeout-minutes: 75
     steps:
-      - name: Explain status
-        run: echo "Senior Agent Watchdog is installed as a safe manual placeholder until the coding-agent provider is connected."
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        id: install
+        continue-on-error: true
+        run: npm ci
+
+      - name: Lint
+        id: lint
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Typecheck
+        id: typecheck
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npm run typecheck
+
+      - name: Unit and integration tests
+        id: test
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npm run test
+
+      - name: Production build
+        id: build
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npm run build
+
+      - name: Repository security gates
+        id: security
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npm run security:ci
+
+      - name: Write watchdog report
+        if: always()
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+          TYPECHECK_OUTCOME: ${{ steps.typecheck.outcome }}
+          TEST_OUTCOME: ${{ steps.test.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          SECURITY_OUTCOME: ${{ steps.security.outcome }}
+        run: |
+          cat > senior-agent-watchdog-report.md <<EOF
+          # Senior Agent Watchdog
+
+          - Repository: ${GITHUB_REPOSITORY}
+          - Branch: main
+          - Commit: ${GITHUB_SHA}
+          - Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          - Trigger: ${GITHUB_EVENT_NAME}
+
+          | Gate | Outcome |
+          | --- | --- |
+          | npm ci | ${INSTALL_OUTCOME} |
+          | lint | ${LINT_OUTCOME} |
+          | typecheck | ${TYPECHECK_OUTCOME} |
+          | test | ${TEST_OUTCOME} |
+          | build | ${BUILD_OUTCOME} |
+          | security:ci | ${SECURITY_OUTCOME} |
+
+          This report covers repository gates only. It does not prove production availability, authenticated flows, provider health, tenant isolation, rollback, or restoration.
+          EOF
+          cat senior-agent-watchdog-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open, update, or close watchdog issue
+        if: always()
+        uses: actions/github-script@v9
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+          TYPECHECK_OUTCOME: ${{ steps.typecheck.outcome }}
+          TEST_OUTCOME: ${{ steps.test.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          SECURITY_OUTCOME: ${{ steps.security.outcome }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const marker = '<!-- senior-agent-watchdog:v2 -->';
+            const title = 'Senior Agent Watchdog: main gate failure';
+            const outcomes = {
+              'npm ci': process.env.INSTALL_OUTCOME,
+              lint: process.env.LINT_OUTCOME,
+              typecheck: process.env.TYPECHECK_OUTCOME,
+              test: process.env.TEST_OUTCOME,
+              build: process.env.BUILD_OUTCOME,
+              'security:ci': process.env.SECURITY_OUTCOME,
+            };
+            const failed = Object.entries(outcomes).filter(([, outcome]) => outcome !== 'success');
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+
+            const labelDefinitions = [
+              ['senior-agent', '1D76DB', 'Work owned by the senior engineering agent queue.'],
+              ['agent:triage', 'FBCA04', 'Needs investigation or scope before implementation.'],
+              ['priority:p1', 'D93F0B', 'Important reliability or enterprise-readiness work.'],
+              ['risk:high', 'B60205', 'Touches a high-risk security, tenancy, billing, or evidence surface.'],
+              ['type:ci', '5319E7', 'Continuous integration or release-gate work.'],
+            ];
+            for (const [name, color, description] of labelDefinitions) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({ owner, repo, name, color, description });
+              }
+            }
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+              labels: 'senior-agent,type:ci',
+              per_page: 100,
+            });
+            const existing = openIssues.find((issue) => !issue.pull_request && issue.body?.includes(marker));
+
+            if (failed.length === 0) {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: existing.number,
+                  body: `Repository watchdog gates recovered on \`${context.sha}\`. Fresh run: ${runUrl}. This recovery does not prove production runtime health.`,
+                });
+                await github.rest.issues.update({
+                  owner,
+                  repo,
+                  issue_number: existing.number,
+                  state: 'closed',
+                  state_reason: 'completed',
+                });
+              }
+              core.notice('All repository watchdog gates passed.');
+              return;
+            }
+
+            const rows = Object.entries(outcomes)
+              .map(([gate, outcome]) => `| ${gate} | ${outcome} |`)
+              .join('\n');
+            const securityFailed = outcomes['security:ci'] !== 'success';
+            const body = [
+              marker,
+              '# Senior Agent Watchdog failure',
+              '',
+              `The scheduled repository gate audit failed on \`main@${context.sha}\`.`,
+              '',
+              `- Workflow run: ${runUrl}`,
+              `- Trigger: \`${context.eventName}\``,
+              `- Failed or skipped gates: ${failed.map(([gate]) => `\`${gate}\``).join(', ')}`,
+              '',
+              '| Gate | Outcome |',
+              '| --- | --- |',
+              rows,
+              '',
+              '## Required action',
+              '',
+              '1. Inspect the exact failed job logs; do not infer root cause from the workflow name.',
+              '2. Review open PRs for overlap before changing code.',
+              '3. Classify the failure as P0/P1/P2 and identify the highest-ROEI coherent fix.',
+              '4. Use `/agent run` only after the issue has enough evidence and no owner-only blocker.',
+              '5. Never weaken, rename, skip, or remove a required gate to make this issue disappear.',
+              '',
+              securityFailed
+                ? '**Security note:** `security:ci` did not pass. Treat the affected surface as high risk until logs prove otherwise.'
+                : '**Security note:** the aggregate security gate passed; another repository gate failed.',
+              '',
+              '_This issue is repository evidence only. It is not proof of production health or an Enterprise GO decision._',
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                title,
+                body,
+                labels: securityFailed
+                  ? ['senior-agent', 'agent:triage', 'priority:p1', 'risk:high', 'type:ci']
+                  : ['senior-agent', 'agent:triage', 'priority:p1', 'type:ci'],
+              });
+              core.notice(`Updated watchdog issue #${existing.number}.`);
+            } else {
+              const created = await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+                labels: securityFailed
+                  ? ['senior-agent', 'agent:triage', 'priority:p1', 'risk:high', 'type:ci']
+                  : ['senior-agent', 'agent:triage', 'priority:p1', 'type:ci'],
+              });
+              core.notice(`Created watchdog issue #${created.data.number}.`);
+            }
+
+      - name: Upload watchdog report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: senior-agent-watchdog-${{ github.run_id }}
+          path: senior-agent-watchdog-report.md
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce watchdog result
+        if: >-
+          always() &&
+          (steps.install.outcome != 'success' ||
+          steps.lint.outcome != 'success' ||
+          steps.typecheck.outcome != 'success' ||
+          steps.test.outcome != 'success' ||
+          steps.build.outcome != 'success' ||
+          steps.security.outcome != 'success')
+        run: exit 1
