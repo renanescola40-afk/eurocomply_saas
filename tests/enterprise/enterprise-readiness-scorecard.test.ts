@@ -1,7 +1,12 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 import {
   STATUS,
   calculateScorecard,
+  createEvidenceReader,
   evaluateEvidenceDocument,
   validateConfig,
 } from '../../scripts/enterprise/generate-readiness-scorecard.mjs';
@@ -45,6 +50,63 @@ describe('enterprise readiness scorecard', () => {
   it('does not treat Open or missing named checks as success', () => {
     expect(evaluateEvidenceDocument({ status: 'Open' })).toBe(STATUS.NOT_VERIFIED);
     expect(evaluateEvidenceDocument({ checks: [] }, 'build')).toBe(STATUS.NOT_VERIFIED);
+  });
+
+  it('uses exact-sha GitHub evidence only when the artifact matches the expected SHA', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'enterprise-scorecard-'));
+    const githubChecksPath = join(directory, 'github-checks.json');
+    const expectedSha = 'a'.repeat(40);
+
+    try {
+      writeFileSync(
+        githubChecksPath,
+        JSON.stringify({
+          targetSha: expectedSha,
+          checks: [{ name: 'build', status: 'PASS' }],
+        }),
+      );
+
+      const reader = createEvidenceReader({ githubChecksPath, expectedSha });
+      expect(reader({ path: 'missing.json', check: 'build' })).toEqual({
+        status: STATUS.PASS,
+        reason: 'derived_from_exact_sha_check:build',
+      });
+
+      const mismatchedReader = createEvidenceReader({
+        githubChecksPath,
+        expectedSha: 'b'.repeat(40),
+      });
+      expect(mismatchedReader({ path: 'missing.json', check: 'build' }).status).toBe(
+        STATUS.NOT_VERIFIED,
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('does not use repository CI evidence for runtime-only controls', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'enterprise-scorecard-runtime-'));
+    const githubChecksPath = join(directory, 'github-checks.json');
+
+    try {
+      writeFileSync(
+        githubChecksPath,
+        JSON.stringify({
+          targetSha: 'a'.repeat(40),
+          checks: [{ name: 'login', status: 'PASS' }],
+        }),
+      );
+
+      const reader = createEvidenceReader({
+        githubChecksPath,
+        expectedSha: 'a'.repeat(40),
+      });
+      expect(reader({ path: join(directory, 'missing-runtime.json'), check: 'login' }).status).toBe(
+        STATUS.NOT_VERIFIED,
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it('gives PARTIAL half weight and blocks GO when critical evidence is missing', () => {

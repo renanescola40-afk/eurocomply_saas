@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import DashboardChildI18nRuntime from '@/components/DashboardChildI18nRuntime';
+import InventoryCsvExportRuntime from '@/components/InventoryCsvExportRuntime';
 import InventoryDateI18nRuntime from '@/components/InventoryDateI18nRuntime';
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <>
       <DashboardChildI18nRuntime />
       <InventoryDateI18nRuntime />
+      <InventoryCsvExportRuntime />
       {children}
     </>
   );
