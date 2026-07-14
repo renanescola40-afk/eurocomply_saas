@@ -3,6 +3,7 @@ import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { internalBatchResponse } from '@/server/jobs/internal-batch-response';
 import { getDashboardSummary, recordDashboardMetricSnapshot } from '@/server/queries/dashboard';
 import { noStoreJson } from '@/server/security/no-store';
 
@@ -96,7 +97,7 @@ export async function POST(request: Request) {
     limit,
     totalOrganizations: total,
     batchStart: start,
-    failures: [] as Array<{ organizationId: string; message: string }>,
+    failures: [] as Array<{ organizationId: string; message: 'internal_error' }>,
   };
 
   for (const organization of organizations ?? []) {
@@ -106,13 +107,16 @@ export async function POST(request: Request) {
       results.processed += 1;
     } catch (snapshotError) {
       results.failed += 1;
-      const message = snapshotError instanceof Error ? snapshotError.message : 'Unknown snapshot error';
-      results.failures.push({ organizationId: organization.id, message });
+      results.failures.push({ organizationId: organization.id, message: 'internal_error' });
       reportError(snapshotError, { area: 'metric_snapshot_job', organizationId: organization.id });
     }
   }
 
-  return noStoreJson({ ok: results.failed === 0, ...results });
+  return internalBatchResponse({
+    failureCount: results.failed,
+    failureMessage: 'Unable to create all metric snapshots',
+    summary: results,
+  });
 }
 
 export async function GET(request: Request) {
