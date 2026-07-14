@@ -1,5 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { buildAiIncidentTriagePlan } from './incidents';
+import { buildAiIncidentTriagePlan, parseAiIncidentDetectedAt } from './incidents';
+
+describe('parseAiIncidentDetectedAt', () => {
+  const now = new Date('2026-07-14T19:00:00.000Z');
+
+  it('uses the current timestamp only when the field is omitted', () => {
+    expect(parseAiIncidentDetectedAt(undefined, now)).toEqual({
+      ok: true,
+      value: now.toISOString(),
+    });
+  });
+
+  it('normalizes a valid timestamp', () => {
+    expect(parseAiIncidentDetectedAt('2026-07-14T18:30:00+00:00', now)).toEqual({
+      ok: true,
+      value: '2026-07-14T18:30:00.000Z',
+    });
+  });
+
+  it('rejects invalid timestamps instead of replacing them with now', () => {
+    expect(parseAiIncidentDetectedAt('not-a-date', now)).toEqual({
+      ok: false,
+      reason: 'invalid_timestamp',
+    });
+  });
+
+  it('allows bounded clock skew but rejects materially future timestamps', () => {
+    expect(parseAiIncidentDetectedAt('2026-07-14T19:04:59.000Z', now).ok).toBe(true);
+    expect(parseAiIncidentDetectedAt('2026-07-14T19:05:01.000Z', now)).toEqual({
+      ok: false,
+      reason: 'future_timestamp',
+    });
+  });
+});
 
 describe('buildAiIncidentTriagePlan', () => {
   it('escalates critical incidents to urgent review with multiple deadlines', () => {
