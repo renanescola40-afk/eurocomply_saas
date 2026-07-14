@@ -2,6 +2,8 @@
 // @ts-nocheck
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getEmailIdempotencyContextKey } from '@/lib/email/idempotency-context';
+
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   getStripeEventAuditContext: vi.fn(() => ({ organizationId: 'org_a', actorUserId: 'user_admin', objectId: 'sub_123' })),
@@ -200,14 +202,34 @@ describe('Stripe webhook processing lease recovery', () => {
     expect(mocks.writeAuditLog).not.toHaveBeenCalled();
   });
 
-  it('does not automatically recover payment-failed email events without provider idempotency', async () => {
-    mocks.handleStripeWebhookEvent.mockResolvedValue({ skipped: true, duplicate: true });
+  it('recovers payment-failed events with the same deterministic email key on replay', async () => {
+    const nowMs = Date.parse('2026-07-14T12:00:00.000Z');
+    const staleUpdatedAt = new Date(nowMs - STRIPE_EVENT_PROCESSING_LEASE_MS - 1).toISOString();
+    state.lookupData = {
+      id: 'evt_lease_recovery',
+      status: 'processing',
+      updated_at: staleUpdatedAt,
+    };
+    state.recoveryData = { id: 'evt_lease_recovery' };
+    const observedKeys: Array<string | null> = [];
+    mocks.handleStripeWebhookEvent
+      .mockImplementationOnce(async () => {
+        observedKeys.push(getEmailIdempotencyContextKey());
+        return { skipped: true, duplicate: true };
+      })
+      .mockImplementationOnce(async () => {
+        observedKeys.push(getEmailIdempotencyContextKey());
+        return { skipped: false };
+      });
 
+    vi.spyOn(Date, 'now').mockReturnValue(nowMs);
     const result = await handleStripeWebhookEventWithRecovery(makeEvent('invoice.payment_failed'));
 
-    expect(result).toEqual({ skipped: true, duplicate: true });
-    expect(mocks.createAdminClient).not.toHaveBeenCalled();
-    expect(mocks.handleStripeWebhookEvent).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ skipped: false });
+    expect(observedKeys).toHaveLength(2);
+    expect(observedKeys[0]).toMatch(/^stripe-payment-failed-email:[a-f0-9]{64}$/);
+    expect(observedKeys[1]).toBe(observedKeys[0]);
+    expect(getEmailIdempotencyContextKey()).toBeNull();
   });
 
   it('fails closed when the claim ledger cannot be read', async () => {
