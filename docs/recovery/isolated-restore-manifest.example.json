@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "executionId": "replace-with-change-ticket-or-test-id",
+  "commitSha": "0000000000000000000000000000000000000000",
+  "executedAt": "2026-01-01T03:45:00.000Z",
+  "sourceEnvironment": "production",
+  "targetEnvironment": "recovery-isolated",
+  "sourceProjectRef": "production-project-reference",
+  "targetProjectRef": "isolated-recovery-project-reference",
+  "backup": {
+    "id": "provider-backup-id",
+    "provider": "supabase",
+    "createdAt": "2026-01-01T03:00:00.000Z",
+    "completedAt": "2026-01-01T03:05:00.000Z",
+    "encrypted": true,
+    "checksumSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "restore": {
+    "startedAt": "2026-01-01T03:10:00.000Z",
+    "completedAt": "2026-01-01T03:35:00.000Z",
+    "status": "completed"
+  },
+  "checks": [
+    { "name": "backupExists", "passed": true, "evidence": "provider export or immutable backup reference" },
+    { "name": "restoreExecuted", "passed": true, "evidence": "isolated restore job reference" },
+    { "name": "dataIntegrity", "passed": true, "evidence": "reviewed row-count and checksum report" },
+    { "name": "rlsAfterRestore", "passed": true, "evidence": "post-restore tenant-isolation run reference" }
+  ],
+  "metrics": {
+    "measured": true,
+    "rpoSeconds": 300,
+    "rtoSeconds": 1500
+  },
+  "approval": {
+    "approvedBy": "named-reviewer",
+    "approvedAt": "2026-01-01T03:50:00.000Z",
+    "outcome": "passed"
+  }
+}
