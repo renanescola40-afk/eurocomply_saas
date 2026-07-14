@@ -6,7 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { AiSystemRecord } from '@/server/queries/ai-systems';
 import type { AiIncidentRecord } from '@/server/queries/ai-incidents';
-import type { AiIncidentSeverity } from '@/lib/ai-governance/incidents';
+import {
+  serializeAiIncidentLocalDateTime,
+  type AiIncidentSeverity,
+} from '@/lib/ai-governance/incidents';
 
 type Props = {
   locale: string;
@@ -129,7 +132,10 @@ export function AiIncidentsClient({ locale, initialIncidents, systems, organizat
     const response = await fetch('/api/ai-incidents', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        ...form,
+        detectedAt: serializeAiIncidentLocalDateTime(form.detectedAt),
+      }),
     });
 
     const payload = await response.json().catch(() => ({}));
