@@ -104,6 +104,7 @@ async function sendTrialReminders() {
 
   let sent = 0;
   let skipped = 0;
+  let failed = 0;
 
   for (const subscription of subscriptions ?? []) {
     const organization = Array.isArray(subscription.organizations) ? subscription.organizations[0] : subscription.organizations;
@@ -163,11 +164,12 @@ async function sendTrialReminders() {
       );
       sent += 1;
     } catch (error) {
+      failed += 1;
       reportError(error, { area: 'trial_reminder_email', subscriptionId: subscription.id, organizationId: subscription.organization_id });
     }
   }
 
-  return { sent, skipped };
+  return { sent, skipped, failed };
 }
 
 export async function POST(request: Request) {
@@ -183,6 +185,14 @@ export async function POST(request: Request) {
 
   try {
     const reminders = await sendTrialReminders();
+
+    if (reminders.failed > 0) {
+      return noStoreJson(
+        { ok: false, error: 'Unable to send all trial reminders', reminders },
+        { status: 500 },
+      );
+    }
+
     return noStoreJson({ ok: true, reminders });
   } catch (error) {
     reportError(error, { area: 'trial_reminder_job' });
