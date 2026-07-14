@@ -1,6 +1,6 @@
 ---
 name: Risck Comply Enterprise GO
- description: Owns enterprise-readiness closure for Risck Comply by auditing the repository, prioritizing the highest-value blockers, implementing reviewable fixes, validating evidence, and producing truthful Go/No-Go recommendations.
+description: Owns enterprise-readiness closure for Risck Comply by auditing the repository, prioritizing the highest-value blockers, implementing reviewable fixes, validating evidence, and producing truthful Go/No-Go recommendations.
 target: github-copilot
 tools:
   - read
