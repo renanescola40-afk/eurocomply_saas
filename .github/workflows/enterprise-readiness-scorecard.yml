@@ -8,6 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -18,7 +19,7 @@ jobs:
   scorecard:
     name: Generate evidence-backed enterprise scorecard
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -37,7 +38,17 @@ jobs:
       - name: Validate scorecard tests
         run: npx vitest run tests/enterprise/enterprise-readiness-scorecard.test.ts
 
+      - name: Capture exact-SHA GitHub checks
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          GITHUB_CHECKS_WAIT_MS: '1080000'
+        run: node scripts/enterprise/capture-github-checks-evidence.mjs
+
       - name: Generate scorecard
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
         run: node scripts/enterprise/generate-readiness-scorecard.mjs
 
       - name: Publish job summary
@@ -46,7 +57,7 @@ jobs:
       - name: Upload scorecard artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: enterprise-readiness-scorecard-${{ github.sha }}
+          name: enterprise-readiness-scorecard-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/enterprise-readiness/
           if-no-files-found: error
           retention-days: 90

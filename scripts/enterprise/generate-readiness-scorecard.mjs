@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -16,6 +16,29 @@ export const STATUS = Object.freeze({
 const DEFAULT_CONFIG = 'docs/enterprise/controls.json';
 const DEFAULT_JSON = 'artifacts/enterprise-readiness/enterprise-readiness-scorecard.json';
 const DEFAULT_MARKDOWN = 'artifacts/enterprise-readiness/enterprise-readiness-scorecard.md';
+const DEFAULT_GITHUB_CHECKS = 'artifacts/enterprise-readiness/github-checks-evidence.json';
+
+const REPOSITORY_CHECKS = new Set([
+  'deterministicInstall',
+  'packageLockAligned',
+  'lint',
+  'typecheck',
+  'unitTests',
+  'build',
+  'e2e',
+  'npmAudit',
+  'routeQuality',
+  'codeql',
+  'semgrep',
+  'secretScanning',
+  'publicSecretScan',
+  'dependencyReview',
+  'actionlint',
+  'fullSecuritySuite',
+  'enterpriseProductionGate',
+  'securityCi',
+  'requiredChecks',
+]);
 
 function normalizeStatus(value) {
   const normalized = String(value ?? '').trim().toUpperCase().replace(/[ -]+/g, '_');
@@ -86,20 +109,58 @@ export function validateConfig(config) {
   return failures;
 }
 
-function readEvidence(evidence) {
-  if (!existsSync(evidence.path)) {
-    return { status: STATUS.NOT_VERIFIED, reason: 'evidence_file_missing' };
-  }
-
+function readJson(path) {
   try {
-    const document = JSON.parse(readFileSync(evidence.path, 'utf8'));
+    return { document: JSON.parse(readFileSync(path, 'utf8')), missing: false, invalid: false };
+  } catch (error) {
+    if (error && typeof error === 'object' && error.code === 'ENOENT') {
+      return { document: null, missing: true, invalid: false };
+    }
+    return { document: null, missing: false, invalid: true };
+  }
+}
+
+export function createEvidenceReader({
+  githubChecksPath = process.env.GITHUB_CHECKS_EVIDENCE_PATH || DEFAULT_GITHUB_CHECKS,
+  expectedSha = process.env.ENTERPRISE_EXPECTED_SHA || '',
+} = {}) {
+  return function readEvidence(evidence) {
+    const useExactShaChecks = Boolean(evidence.check && REPOSITORY_CHECKS.has(evidence.check));
+
+    if (useExactShaChecks) {
+      const githubEvidence = readJson(githubChecksPath);
+      if (!githubEvidence.missing) {
+        if (githubEvidence.invalid) {
+          return { status: STATUS.FAIL, reason: 'github_checks_evidence_invalid_json' };
+        }
+
+        if (
+          expectedSha &&
+          githubEvidence.document?.targetSha !== expectedSha
+        ) {
+          return { status: STATUS.NOT_VERIFIED, reason: 'github_checks_evidence_sha_mismatch' };
+        }
+
+        return {
+          status: evaluateEvidenceDocument(githubEvidence.document, evidence.check),
+          reason: `derived_from_exact_sha_check:${evidence.check}`,
+        };
+      }
+    }
+
+    const repositoryEvidence = readJson(evidence.path);
+    if (repositoryEvidence.missing) {
+      return { status: STATUS.NOT_VERIFIED, reason: 'evidence_file_missing' };
+    }
+    if (repositoryEvidence.invalid) {
+      return { status: STATUS.FAIL, reason: 'evidence_file_invalid_json' };
+    }
+
     return {
-      status: evaluateEvidenceDocument(document, evidence.check),
+      status: evaluateEvidenceDocument(repositoryEvidence.document, evidence.check),
       reason: evidence.check ? `derived_from_check:${evidence.check}` : 'derived_from_document_status',
     };
-  } catch {
-    return { status: STATUS.FAIL, reason: 'evidence_file_invalid_json' };
-  }
+  };
 }
 
 function statusFactor(status) {
@@ -117,7 +178,7 @@ function classification(score, criticalOpen) {
   return 'PROTOTYPE';
 }
 
-export function calculateScorecard(config, evidenceReader = readEvidence) {
+export function calculateScorecard(config, evidenceReader = createEvidenceReader()) {
   const controls = [];
   const domains = [];
   let achievedWeight = 0;
@@ -220,7 +281,7 @@ export function renderMarkdown(scorecard) {
       .slice(0, 10)
       .map((control) => `- **${control.id} — ${control.title}:** ${control.status} (${control.evidencePath})`),
     '',
-    '> This report measures evidence coverage. It does not claim real-time production health.',
+    '> Repository checks are bound to one exact GitHub SHA. Runtime and provider controls still require separate fresh evidence.',
     '',
   ];
   return lines.join('\n');
