@@ -1,28 +1,17 @@
 {
   "id": "stripe-billing-validation",
   "evidenceItem": "stripe-billing-validation",
-  "status": "Complete",
-  "validationStatus": "passed",
-  "reviewer": "EuroComply billing security automation",
-  "reviewedAt": "2026-06-24T09:04:05.744Z",
-  "timestamp": "2026-06-24T09:04:05.744Z",
-  "generatedAt": "2026-06-24T09:04:05.744Z",
-  "commitSha": "9124d875ded50763842d6d4a6f2de286b4318c68",
+  "status": "Open",
+  "validationStatus": "repository_contract_passed_runtime_not_run",
+  "outcome": "not_run",
+  "reviewer": "RISCK COMPLY repository validation automation",
+  "reviewedAt": "2026-07-14T12:26:49.000Z",
+  "timestamp": "2026-07-14T12:26:49.000Z",
+  "generatedAt": "2026-07-14T12:26:49.000Z",
+  "commitSha": null,
   "repository": "renanescola40-afk/eurocomply_saas",
-  "branch": "security/deployment-health-proof-2026-06-24",
-  "summary": "Focused Stripe billing runtime proof passed in GitHub Actions for checkout, billing portal, webhook signature enforcement, webhook idempotency, subscription sync, server-side plan enforcement, customer/subscription mapping validation and billing audit events.",
+  "summary": "Stripe billing repository controls and focused tests are present, but checkout, portal, signed webhook delivery, ledger persistence, subscription mutation and stale-claim recovery have not been executed against the configured target runtime for the final release commit.",
   "redactionConfirmation": "Redaction confirmed for runtime evidence.",
-  "runtimeProof": {
-    "workflow": "Stripe Runtime Proof",
-    "runId": "28087494908",
-    "runUrl": "https://github.com/renanescola40-afk/eurocomply_saas/actions/runs/28087494908",
-    "artifactName": "stripe-billing-validation",
-    "artifactId": "7844905541",
-    "artifactDigest": "sha256:c9279b5e8bb672a313a33e504e0d81780b8e7bb0dc3ee8304ce96e2edb8c9f6e",
-    "artifactCreatedAt": "2026-06-24T09:04:06Z",
-    "headSha": "9124d875ded50763842d6d4a6f2de286b4318c68",
-    "testExecution": "Focused Stripe route and webhook tests completed successfully before this evidence was uploaded."
-  },
   "evidenceLocations": [
     "docs/security/evidence/runtime/stripe-billing-validation.json",
     ".github/workflows/stripe-runtime-proof.yml",
@@ -32,118 +21,41 @@
     "src/app/api/stripe/webhook/route.ts",
     "src/app/api/billing/webhook/route.ts",
     "src/server/billing/stripe-webhooks.ts",
-    "src/app/api/billing/checkout/route.test.ts",
-    "src/app/api/billing/portal/route.test.ts",
-    "src/app/api/stripe/webhook/route.test.ts",
-    "src/app/api/billing/webhook/route.test.ts",
+    "src/server/billing/stripe-webhook-recovery.ts",
     "src/server/billing/stripe-webhooks.test.ts",
+    "src/server/billing/stripe-webhook-recovery.test.ts",
     "supabase/migrations/20260623090000_stripe_webhook_events_enterprise_runtime.sql"
   ],
-  "controlsVerified": [
-    "Focused Stripe Runtime Proof GitHub Actions run completed successfully and uploaded the evidence artifact.",
-    "Checkout requires authenticated user before creating Stripe sessions.",
-    "Checkout requires active organization context before billing mutation.",
-    "Checkout requires manage_billing RBAC permission.",
-    "Checkout requires manage_billing step-up verification.",
-    "Checkout requires trusted mutation origin and rate limiting.",
-    "Checkout uses server-side self-serve plan allowlist and Stripe price mapping.",
-    "Billing portal requires authenticated user before creating Stripe portal sessions.",
-    "Billing portal requires active organization context and manage_billing RBAC permission.",
-    "Billing portal requires manage_billing step-up verification and trusted mutation origin.",
-    "Billing portal loads Stripe customer identifiers server-side only.",
-    "Stripe webhook routes reject missing signatures before handler dispatch.",
-    "Stripe webhook routes reject invalid signatures before handler dispatch.",
-    "Stripe webhook events are claimed idempotently by event id before subscription mutation.",
-    "Duplicate Stripe webhook events are skipped before subscription state mutation.",
-    "Stripe webhook ledger records event id, type, status, processed_at, organization_id and redacted error.",
-    "Stripe subscription sync validates organization metadata and customer/subscription binding.",
-    "Stripe subscription sync normalizes plans server-side and does not trust client-controlled billing fields.",
-    "Billing audit events cover checkout_created, billing_portal_created, webhook_received, webhook_rejected, webhook_replayed and subscription_synced."
-  ],
-  "checkout": {
-    "tested": true,
-    "requiresAuthenticatedUser": true,
-    "requiresActiveOrganization": true,
-    "requiresManageBillingPermission": true,
-    "requiresStepUp": true,
-    "requiresTrustedOrigin": true,
-    "serverSidePlanAllowlist": true,
-    "serverSidePriceMapping": true,
-    "clientSuppliedPriceAccepted": false,
-    "auditEvent": "checkout_created"
-  },
-  "portal": {
-    "tested": true,
-    "requiresAuthenticatedUser": true,
-    "requiresActiveOrganization": true,
-    "requiresManageBillingPermission": true,
-    "requiresStepUp": true,
-    "requiresTrustedOrigin": true,
-    "stripeCustomerLoadedServerSide": true,
-    "auditEvent": "billing_portal_created"
-  },
-  "webhookSignature": {
-    "tested": true,
-    "missingSignatureRejected": true,
-    "invalidSignatureRejected": true,
-    "validSignatureRequiredBeforeDispatch": true,
-    "auditEvents": [
-      "webhook_received",
-      "webhook_rejected"
+  "controlsVerified": [],
+  "repositoryValidation": {
+    "status": "passed",
+    "scope": "source contracts and focused automated tests only",
+    "runtimeEquivalent": false,
+    "controlsObserved": [
+      "Billing mutations require authenticated organization billing authority, step-up and trusted origin",
+      "Stripe webhook routes require a bounded signed payload before dispatch",
+      "Stripe webhook events use a durable idempotency ledger before subscription mutation",
+      "Replay-safe stale processing claims have a bounded atomic recovery design",
+      "Subscription sync validates organization, customer and server-side plan binding"
     ]
   },
-  "webhookIdempotency": {
-    "tested": true,
-    "canonicalLedgerTable": "public.stripe_events_processed",
-    "checklistCompatibleTable": "public.stripe_webhook_events",
-    "claimsEventBeforeMutation": true,
-    "duplicateDoesNotMutateSubscriptionState": true,
-    "processedEventsRecorded": true,
-    "replayAuditEvent": "webhook_replayed"
+  "runtimeProof": {
+    "executed": false,
+    "targetEnvironment": null,
+    "stripeTestModeConfirmed": false,
+    "signedWebhookDelivered": false,
+    "checkoutSessionCreated": false,
+    "portalSessionCreated": false,
+    "subscriptionMutationObserved": false,
+    "duplicateSuppressionObserved": false,
+    "staleClaimRecoveryObserved": false
   },
-  "subscriptionSync": {
-    "tested": true,
-    "created": true,
-    "updated": true,
-    "deleted": true,
-    "customerMismatchRejected": true,
-    "serverSidePlanNormalization": true,
-    "auditEvent": "subscription_synced"
-  },
-  "ledger": {
-    "canonicalTable": "public.stripe_events_processed",
-    "checklistCompatibleTable": "public.stripe_webhook_events",
-    "stores": [
-      "event id",
-      "type",
-      "status",
-      "processed_at",
-      "organization_id",
-      "redacted error"
-    ]
-  },
-  "auditEvents": [
-    "checkout_created",
-    "billing_portal_created",
-    "webhook_received",
-    "webhook_rejected",
-    "webhook_replayed",
-    "subscription_synced"
-  ],
-  "tests": {
-    "checkoutWithoutLogin": true,
-    "checkoutWithoutPermission": true,
-    "checkoutWithoutStepUp": true,
-    "invalidPlan": true,
-    "portalWithoutLogin": true,
-    "portalWithoutPermission": true,
-    "portalWithoutStepUp": true,
-    "webhookMissingSignature": true,
-    "webhookInvalidSignature": true,
-    "webhookDuplicate": true,
-    "subscriptionCreated": true,
-    "subscriptionUpdated": true,
-    "subscriptionDeleted": true,
-    "customerMismatch": true
+  "completionRule": "Run a reviewed test-mode Stripe validation against the target deployment and database for the exact promoted commit, attach sanitized workflow and artifact provenance, and verify checkout, portal, signed webhook delivery, ledger persistence, subscription mutation, duplicate suppression and stale-claim recovery before changing status to Complete.",
+  "releaseGate": "Blocked: Stripe billing runtime validation has not been executed for the target environment and exact release commit.",
+  "evidenceIntegrity": {
+    "placeholderOnly": true,
+    "runtimeProofInvented": false,
+    "customerFacingProof": false,
+    "containsSensitiveValues": false
   }
 }
