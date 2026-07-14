@@ -93,15 +93,21 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'invitation_not_pending' }, { status: 404 });
     }
 
-    const { error } = await supabase
+    const { data: revokedInvitation, error } = await supabase
       .from('organization_invites')
       .update({ status: 'revoked', updated_at: new Date().toISOString() })
       .eq('id', parsed.data.invitationId)
       .eq('organization_id', organization.id)
-      .eq('status', 'pending');
+      .eq('status', 'pending')
+      .select('id')
+      .maybeSingle();
 
     if (error) {
       return noStoreJson({ error: 'invitation_cancel_failed' }, { status: 503 });
+    }
+
+    if (!revokedInvitation) {
+      return noStoreJson({ error: 'invitation_state_changed' }, { status: 409 });
     }
 
     const audit = await createAuditEvent({
