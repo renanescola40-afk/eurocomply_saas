@@ -87,6 +87,8 @@ jobs:
           node --check scripts/release/run-public-production-release.mjs
           node --check scripts/release/check-public-production-release-env.mjs
           node --check scripts/release/run-public-production-release-final.mjs
+          node --check scripts/release/runtime-release-sha-contract.mjs
+          node --check scripts/release/verify-runtime-release-sha.mjs
 
       - name: Run public production final gate
         run: npm run release:production-final
@@ -103,6 +105,7 @@ jobs:
             docs/security/evidence/runtime/observability-smoke-validation.json
             docs/security/evidence/runtime/rollback-dry-run-validation.json
             docs/security/evidence/runtime/supabase-live-rls-validation.json
+            docs/security/evidence/runtime/runtime-release-sha-validation.json
             docs/security/evidence/runtime/release-go-no-go.json
             docs/security/evidence/runtime/production-final-validation.json
             docs/security/evidence/runtime/final-validation-runner.json
