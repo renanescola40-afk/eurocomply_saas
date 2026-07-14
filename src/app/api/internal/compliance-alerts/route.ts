@@ -4,12 +4,15 @@ import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { buildNotificationIdempotencyKey } from '@/server/jobs/notification-idempotency';
+import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
 import { noStoreJson } from '@/server/security/no-store';
 import { getUserEmailById } from '@/server/users/email';
 
 export const runtime = 'nodejs';
 
 const DOCUMENT_EXPIRY_LOOKAHEAD_DAYS = 30;
+const COMPLIANCE_ALERTS_ROUTE = '/api/internal/compliance-alerts';
+const COMPLIANCE_ALERTS_AUTH_ACTION = 'authenticate_compliance_alerts';
 
 type NotificationDedupe = {
   organizationId: string;
@@ -98,6 +101,7 @@ async function sendDocumentExpiryAlerts() {
 
   let sent = 0;
   let skipped = 0;
+  let failed = 0;
 
   for (const document of documents ?? []) {
     const organization = Array.isArray(document.organizations) ? document.organizations[0] : document.organizations;
@@ -157,11 +161,12 @@ async function sendDocumentExpiryAlerts() {
       });
       sent += 1;
     } catch (emailError) {
+      failed += 1;
       reportError(emailError, { area: 'document_expiry_alert_email', documentId: document.id, organizationId: document.organization_id });
     }
   }
 
-  return { sent, skipped };
+  return { sent, skipped, failed };
 }
 
 async function sendVendorReviewAlerts() {
@@ -182,6 +187,7 @@ async function sendVendorReviewAlerts() {
 
   let sent = 0;
   let skipped = 0;
+  let failed = 0;
 
   for (const vendor of vendors ?? []) {
     const organization = Array.isArray(vendor.organizations) ? vendor.organizations[0] : vendor.organizations;
@@ -240,14 +246,24 @@ async function sendVendorReviewAlerts() {
       });
       sent += 1;
     } catch (emailError) {
+      failed += 1;
       reportError(emailError, { area: 'vendor_review_alert_email', vendorId: vendor.id, organizationId: vendor.organization_id });
     }
   }
 
-  return { sent, skipped };
+  return { sent, skipped, failed };
 }
 
 export async function POST(request: Request) {
+  const rateLimitResponse = await enforceInternalAuthenticationRateLimit(request, {
+    route: COMPLIANCE_ALERTS_ROUTE,
+    action: COMPLIANCE_ALERTS_AUTH_ACTION,
+  });
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   if (!isAuthorizedInternalCronRequest(request)) {
     return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -257,6 +273,13 @@ export async function POST(request: Request) {
       sendDocumentExpiryAlerts(),
       sendVendorReviewAlerts(),
     ]);
+
+    if (documentAlerts.failed > 0 || vendorAlerts.failed > 0) {
+      return noStoreJson(
+        { error: 'Unable to send all compliance alerts', documentAlerts, vendorAlerts },
+        { status: 500 },
+      );
+    }
 
     return noStoreJson({ ok: true, documentAlerts, vendorAlerts });
   } catch (error) {

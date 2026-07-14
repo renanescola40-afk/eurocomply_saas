@@ -35,7 +35,7 @@ describe('compliance alert delivery safety', () => {
       expect(recordIndexes[index]).toBeGreaterThan(confirmationIndexes[index]);
     }
 
-    expect(source).toContain(".upsert(");
+    expect(source).toContain('.upsert(');
     expect(source).toContain("onConflict: 'organization_id,event_type,entity_type,entity_id,recipient_email'");
   });
 
@@ -46,5 +46,18 @@ describe('compliance alert delivery safety', () => {
 
     expect(recordErrorBlock).toBeDefined();
     expect(recordErrorBlock).toContain('throw error;');
+  });
+
+  it('does not report partial alert delivery as a successful cron run', () => {
+    expect(source.match(/failed \+= 1;/g)).toHaveLength(2);
+    expect(source.match(/return \{ sent, skipped, failed \};/g)).toHaveLength(2);
+
+    const partialFailureGuard = source.match(
+      /if \(documentAlerts\.failed > 0 \|\| vendorAlerts\.failed > 0\) \{[\s\S]*?status: 500[\s\S]*?\n\s*\}/,
+    )?.[0];
+
+    expect(partialFailureGuard).toBeDefined();
+    expect(partialFailureGuard).toContain("error: 'Unable to send all compliance alerts'");
+    expect(source.indexOf('documentAlerts.failed > 0')).toBeLessThan(source.indexOf('return noStoreJson({ ok: true'));
   });
 });

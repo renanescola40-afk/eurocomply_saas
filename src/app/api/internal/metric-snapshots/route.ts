@@ -1,5 +1,7 @@
 import { reportError } from '@/lib/observability/report-error';
 import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
+import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getDashboardSummary, recordDashboardMetricSnapshot } from '@/server/queries/dashboard';
 import { noStoreJson } from '@/server/security/no-store';
@@ -63,6 +65,18 @@ async function listOrganizationBatch(supabase: ReturnType<typeof createAdminClie
 }
 
 export async function POST(request: Request) {
+  const authRateLimit = await checkDistributedRateLimit({
+    policy: 'auth',
+    ip: getClientIpFromRequest(request),
+    userAgent: getUserAgentFromRequest(request),
+    action: 'metric_snapshot_auth',
+    route: '/api/internal/metric-snapshots',
+  });
+
+  if (!authRateLimit.allowed) {
+    return rateLimitResponse(authRateLimit);
+  }
+
   if (!isAuthorizedInternalCronRequest(request)) {
     return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
   }
