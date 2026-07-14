@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { buildIdempotencyKey } from './idempotency-key';
 
 type NotificationIdentity = {
   organizationId: string;
@@ -9,20 +9,16 @@ type NotificationIdentity = {
   occurrence?: string | null;
 };
 
-function normalize(value: string | null | undefined) {
-  return (value ?? '').trim().toLowerCase();
-}
-
 export function buildNotificationIdempotencyKey(input: NotificationIdentity) {
-  const canonicalIdentity = [
-    normalize(input.organizationId),
-    normalize(input.eventType),
-    normalize(input.entityType),
-    normalize(input.entityId),
-    normalize(input.recipientEmail),
-    normalize(input.occurrence),
-  ].join(':');
-
-  const digest = createHash('sha256').update(canonicalIdentity).digest('hex');
-  return `notification:${digest}`;
+  return buildIdempotencyKey({
+    prefix: 'notification',
+    identityParts: [
+      input.organizationId,
+      input.eventType,
+      input.entityType,
+      input.entityId,
+      input.recipientEmail,
+      input.occurrence,
+    ],
+  });
 }
