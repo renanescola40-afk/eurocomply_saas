@@ -58,10 +58,16 @@ const rules = [
     all: ['read_audit', 'requireStepUpForRequest', 'signed_hmac', 'listAuditEvents', 'verifyAuditChain'],
   },
   {
-    name: 'AI governance endpoint',
-    match: /src\/app\/api\/ai-(systems|incidents)\/route\.ts$/,
+    name: 'AI systems governance endpoint',
+    match: /src\/app\/api\/ai-systems\/route\.ts$/,
     any: [guards.auth, guards.org, guards.rbac, guards.audit, guards.origin, guards.rateLimit, guards.noStore],
     all: [],
+  },
+  {
+    name: 'AI incidents governance endpoint',
+    match: /src\/app\/api\/ai-incidents\/route\.ts$/,
+    any: [guards.auth, guards.org, guards.rbac, guards.origin, guards.rateLimit, guards.noStore],
+    all: ['createAiIncident', 'auditMetadata'],
   },
   {
     name: 'internal cron or ops endpoint',
