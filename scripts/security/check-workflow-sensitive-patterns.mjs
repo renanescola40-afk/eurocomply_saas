@@ -22,7 +22,6 @@ const forbiddenPullRequestTargetPatterns = [
   { name: 'pull request merge API', pattern: /pulls\.merge/i },
   { name: 'auto-merge API', pattern: /enablePullRequestAutoMerge/i },
   { name: 'dedicated push or merge token', pattern: /PR_(?:AUTOPILOT|AUTOFIX)_TOKEN/i },
-  { name: 'administrator bypass language', pattern: /admin(?:istrator)?[-_ ]?bypass/i },
 ];
 
 function workflowFiles() {
@@ -58,6 +57,10 @@ for (const file of workflowFiles()) {
       if (check.pattern.test(source)) {
         failures.push(`${file}: allowlisted pull_request_target workflow has forbidden authority: ${check.name}`);
       }
+    }
+
+    if (!source.includes('policy.automationAuthority?.administratorBypass !== false')) {
+      failures.push(`${file}: allowlisted pull_request_target workflow must fail closed unless administrator bypass is disabled by trusted policy`);
     }
   }
 }
