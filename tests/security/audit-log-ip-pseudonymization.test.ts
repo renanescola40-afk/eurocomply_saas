@@ -18,10 +18,11 @@ describe('audit log request-context privacy', () => {
     expect(metadataIndex).toBeGreaterThan(pseudonymizeIndex);
   });
 
-  it('keeps absent request IPs absent instead of creating an anonymous identifier', () => {
+  it('keeps absent request IPs absent while retaining an explicit correlation fallback', () => {
     const source = auditLogSource();
 
     expect(source).toContain('return value ? `sha256:${hashRateLimitIp(value)}` : null;');
-    expect(source).toContain('return { ipPseudonym: null, userAgent: null };');
+    expect(source).toContain("return { requestId: 'req_unavailable', ipPseudonym: null, userAgent: null };");
+    expect(source).not.toContain("ipPseudonym: 'anonymous'");
   });
 });
