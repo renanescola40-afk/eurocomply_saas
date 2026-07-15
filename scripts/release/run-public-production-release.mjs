@@ -21,14 +21,24 @@ function verifyRuntimeReleaseSha() {
   runNodeScript('scripts/release/verify-runtime-release-sha.mjs');
 }
 
-async function writeSecurityResponseEvidence() {
-  const module = await import('./write-security-response-evidence.mjs');
-  module.writeSecurityResponseEvidence();
-}
-
 async function finalizeSecurityResponseEvidence() {
   verifyRuntimeReleaseSha();
-  await writeSecurityResponseEvidence();
+  const writer = await import('./write-security-response-evidence.mjs');
+  const finalEvidence = await import('./record-security-response-final-evidence.mjs');
+
+  try {
+    writer.writeSecurityResponseEvidence();
+    finalEvidence.recordSecurityResponseFinalEvidence({ passed: true });
+  } catch (error) {
+    try {
+      finalEvidence.recordSecurityResponseFinalEvidence({ passed: false });
+    } catch (patchError) {
+      console.error(
+        `Unable to mark final validation evidence as failed: ${patchError instanceof Error ? patchError.message : 'unknown_error'}`,
+      );
+    }
+    throw error;
+  }
 }
 
 if (enterpriseRequested) {
