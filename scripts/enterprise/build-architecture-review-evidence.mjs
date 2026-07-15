@@ -25,11 +25,28 @@ function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function extractMetadata(content, field) {
+function sectionBody(content, title) {
   const match = content.match(
-    new RegExp(`^-\\s+\\*{0,2}${escapeRegExp(field)}\\s*:\\*{0,2}\\s*(.+)$`, 'mi'),
+    new RegExp(`^##\\s+${escapeRegExp(title)}\\s*$([\\s\\S]*?)(?=^##\\s+|\\z)`, 'mi'),
   );
-  return match?.[1]?.replace(/\*+$/g, '').trim() ?? null;
+  return match?.[1]?.trim() ?? null;
+}
+
+function extractMetadata(content, field) {
+  const inline = content.match(
+    new RegExp(`^(?:-\\s+)?\\*{0,2}${escapeRegExp(field)}\\s*:\\*{0,2}\\s*(.+)$`, 'mi'),
+  );
+  if (inline?.[1]) return inline[1].replace(/\*+$/g, '').trim();
+
+  const body = sectionBody(content, field);
+  if (!body) return null;
+  const firstLine = body.split('\n').map((line) => line.trim()).find(Boolean) ?? '';
+
+  if (field === 'Status') {
+    return [...ALLOWED_STATUSES].find((status) => new RegExp(`^${status}(?:\\.|\\s|$)`, 'i').test(firstLine)) ?? null;
+  }
+  if (field === 'Date') return firstLine.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+  return firstLine || null;
 }
 
 function hasSection(content, title, level = '##') {
@@ -37,17 +54,19 @@ function hasSection(content, title, level = '##') {
 }
 
 function hasRiskTradeoffCoverage(content) {
-  if (
-    hasSection(content, 'Risks and trade-offs')
-    || hasSection(content, 'Risks')
-    || hasSection(content, 'Trade-offs')
-  ) {
-    return true;
-  }
+  const directSections = [
+    'Risks and trade-offs',
+    'Risks',
+    'Trade-offs',
+    'Alternatives considered',
+    'Rejected alternatives',
+    'Candidate options',
+  ];
+  if (directSections.some((title) => hasSection(content, title))) return true;
 
-  return hasSection(content, 'Consequences')
-    && (/^(?:###\s+)?Trade-offs\s*:?\s*$/mi.test(content)
-      || /^(?:###\s+)?Risks\s*:?\s*$/mi.test(content));
+  if (!hasSection(content, 'Consequences')) return false;
+  return /^###\s+.*(?:trade-offs?|risks?).*$/mi.test(content)
+    || /^(?:Trade-offs?|Risks?)\s*:\s*$/mi.test(content);
 }
 
 function classifyDecisionFilename(filename) {
