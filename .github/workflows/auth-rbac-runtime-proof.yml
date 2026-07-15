@@ -71,6 +71,10 @@ jobs:
           AUTH_RBAC_OUTSIDER_PASSWORD: ${{ secrets.AUTH_RBAC_OUTSIDER_PASSWORD }}
         run: node scripts/security/run-auth-rbac-live-validation.mjs
 
+      - name: Validate redacted evidence contract
+        if: always()
+        run: node scripts/security/check-auth-rbac-runtime-evidence.mjs
+
       - name: Upload redacted runtime evidence
         if: always()
         uses: actions/upload-artifact@v4
