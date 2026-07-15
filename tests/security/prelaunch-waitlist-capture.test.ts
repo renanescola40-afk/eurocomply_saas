@@ -25,6 +25,15 @@ describe('prelaunch waitlist capture resilience', () => {
     expect(source).toContain("storage: 'sales_leads'");
   });
 
+  it('stores and forwards only a derived IP hint in fallback records', () => {
+    const source = routeSource();
+
+    expect(source).toContain("import { hashRateLimitIp } from '@/server/security/rate-limit';");
+    expect(source).toContain("return ipHint === 'unknown' ? null : hashRateLimitIp(ipHint);");
+    expect(source).toContain('ip_hint: getPrivacySafeIpHint(request)');
+    expect(source).not.toContain('ip_hint: getClientHint(request)');
+  });
+
   it('deduplicates fallback sales leads by normalized email and source before inserting', () => {
     const source = routeSource();
     const lookupIndex = source.indexOf(".select('id')");
