@@ -107,7 +107,7 @@ describe('runtime release SHA binding', () => {
     expect(result.failures).toContain('expectedCommitAndBuildShaMatch');
   });
 
-  it('keeps the verifier in the shared finalizer used by both release profiles and preserves sanitized evidence', () => {
+  it('keeps the verifier in the shared finalizer and preserves evidence-specific failure states', () => {
     const wrapper = readFileSync('scripts/release/run-public-production-release.mjs', 'utf8');
     const workflow = readFileSync('.github/workflows/public-production-final.yml', 'utf8');
     const verifier = readFileSync('scripts/release/verify-runtime-release-sha.mjs', 'utf8');
@@ -131,8 +131,11 @@ describe('runtime release SHA binding', () => {
     expect(workflow).toContain('runtime-release-sha-validation.json');
     expect(verifier).toContain('production-final-validation.json');
     expect(verifier).toContain('final-validation-runner.json');
-    expect(verifier).toContain("document.status = 'Open'");
-    expect(verifier).toContain("document.outcome = 'failed'");
+    expect(verifier).toContain('applyRuntimeShaBindingStatus(document, bindingEvidence)');
+    expect(verifier).toContain("next.evidenceItem === 'final-validation-runner'");
+    expect(verifier).toContain("next.outcome = 'blocked'");
+    expect(verifier).toContain("next.releaseDecision = 'No-Go'");
+    expect(verifier).toContain("next.outcome = 'failed'");
     expect(verifier).toContain('readJsonIfPresent(path)');
     expect(verifier).not.toContain('existsSync');
     expect(verifier).toContain('selectPersistedObservedCommitSha({');
