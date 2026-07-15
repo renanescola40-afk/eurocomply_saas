@@ -2,7 +2,9 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const workflowDir = '.github/workflows';
-const allowedPullRequestTargetWorkflows = new Set([]);
+const allowedPullRequestTargetWorkflows = new Set([
+  '.github/workflows/pr-autopilot.yml',
+]);
 const checkoutCredentialExceptions = new Set([
   '.github/workflows/p0-commit-lockfile.yml',
 ]);
@@ -10,10 +12,12 @@ const criticalWorkflowFiles = new Set([
   '.github/workflows/actionlint.yml',
   '.github/workflows/ci.yml',
   '.github/workflows/code-review.yml',
+  '.github/workflows/codex-autofix.yml',
   '.github/workflows/codeql.yml',
   '.github/workflows/dependency-review.yml',
   '.github/workflows/full-security-suite.yml',
   '.github/workflows/gitleaks.yml',
+  '.github/workflows/pr-autopilot.yml',
   '.github/workflows/secret-scanning.yml',
   '.github/workflows/security-ci.yml',
   '.github/workflows/semgrep.yml',
@@ -121,8 +125,12 @@ for (const file of workflowFiles()) {
     report(file, 'permissions write-all is forbidden');
   }
 
-  if (usesPullRequestTarget(source) && !allowedPullRequestTargetWorkflows.has(file)) {
-    report(file, 'pull_request_target is forbidden unless explicitly allowlisted');
+  if (usesPullRequestTarget(source)) {
+    if (!allowedPullRequestTargetWorkflows.has(file)) {
+      report(file, 'pull_request_target is forbidden unless explicitly allowlisted');
+    } else if (source.includes('actions/checkout@')) {
+      report(file, 'allowlisted pull_request_target workflows must never checkout pull request code');
+    }
   }
 
   if (!hasCheckoutPersistCredentialsFalse(source)) {
