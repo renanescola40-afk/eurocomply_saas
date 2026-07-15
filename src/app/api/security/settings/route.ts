@@ -76,9 +76,15 @@ export async function POST(request: NextRequest) {
       return stepUp.response;
     }
 
-    const body = await readBoundedJsonRequest<SecuritySettingsInput>(request, {
-      maxBytes: SECURITY_SETTINGS_JSON_MAX_BYTES,
-    }).catch(() => ({}));
+    let body: SecuritySettingsInput;
+    try {
+      body = await readBoundedJsonRequest<SecuritySettingsInput>(request, {
+        maxBytes: SECURITY_SETTINGS_JSON_MAX_BYTES,
+      });
+    } catch {
+      return noStoreJson({ error: 'invalid_security_settings_payload' }, { status: 400 });
+    }
+
     const nextSettings = normalizeSettings(body);
     const changes = ['require_step_up_for_critical_actions', 'step_up_provider_mode'];
 
