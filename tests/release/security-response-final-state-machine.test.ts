@@ -1,6 +1,12 @@
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { applySecurityResponseStatus } from '../../scripts/release/record-security-response-final-evidence.mjs';
+import {
+  applySecurityResponseStatus,
+  recordSecurityResponseFinalEvidence,
+} from '../../scripts/release/record-security-response-final-evidence.mjs';
 
 const generatedAt = '2026-07-15T10:00:00.000Z';
 
@@ -58,5 +64,49 @@ describe('security response final evidence state machine', () => {
     );
     expect(result).not.toHaveProperty('overallResult');
     expect(result).not.toHaveProperty('metadataFailures');
+  });
+
+  it('patches available evidence documents while ignoring only missing paths', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'security-response-evidence-'));
+    const availablePath = join(directory, 'production-final-validation.json');
+    const missingPath = join(directory, 'missing-final-validation.json');
+
+    writeFileSync(
+      availablePath,
+      JSON.stringify({
+        evidenceItem: 'production-final-validation',
+        status: 'Complete',
+        outcome: 'passed',
+        overallResult: 'passed',
+      }),
+    );
+
+    const result = recordSecurityResponseFinalEvidence({
+      passed: true,
+      generatedAt,
+      paths: [missingPath, availablePath],
+    });
+    const patched = JSON.parse(readFileSync(availablePath, 'utf8'));
+
+    expect(result).toEqual({ patched: 1, passed: true });
+    expect(patched.securityResponseEvidence).toMatchObject({
+      status: 'Complete',
+      outcome: 'passed',
+      generatedAt,
+    });
+  });
+
+  it('fails closed when an available evidence document is malformed', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'security-response-evidence-invalid-'));
+    const invalidPath = join(directory, 'invalid.json');
+    writeFileSync(invalidPath, '{not-valid-json');
+
+    expect(() =>
+      recordSecurityResponseFinalEvidence({
+        passed: true,
+        generatedAt,
+        paths: [invalidPath],
+      }),
+    ).toThrow(SyntaxError);
   });
 });
