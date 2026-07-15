@@ -1,127 +1,111 @@
 {
+  "schema": "risck-comply.step-up-mfa-runtime-evidence.v2",
   "evidenceItem": "step-up-mfa-validation",
   "id": "step-up-mfa-validation",
-  "status": "Exception",
-  "statusReason": "ProviderProofRequired",
-  "reviewer": "EuroComply security automation",
-  "reviewedAt": "2026-07-08T15:30:00.000+01:00",
-  "generatedAt": "2026-07-08T15:30:00.000+01:00",
+  "status": "Open",
+  "outcome": "blocked",
+  "generatedAt": "2026-07-15T00:00:00.000Z",
+  "expiresAt": null,
+  "reviewedAt": null,
+  "reviewer": "RISCK COMPLY protected runtime automation",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "branch": "main",
+  "targetSha": null,
+  "checkedOutSha": null,
+  "environment": "production-provider-validation",
   "control": "P0-MFA real step-up validation for critical actions",
-  "summary": "Step-up MFA source controls are present and fail closed for POST /api/security/step-up/challenge and POST /api/security/step-up/verify, but live Supabase MFA or enterprise IdP provider proof is still required before enterprise release can proceed.",
-  "redactionConfirmation": "All secrets, tokens, credentials, connection strings, and access-granting values are redacted.",
-  "exception": {
-    "riskOwner": "EuroComply Security",
-    "rationale": "Live provider proof cannot be honestly attached from this implementation environment because no Supabase MFA or enterprise IdP runtime session, enrolled factor, or reauthentication claim is available here. The application code and gates are wired fail-closed, and enterprise release remains blocked until runtime proof is generated in the target environment.",
-    "compensatingControls": [
-      "Critical actions require scoped step-up HMAC tokens that are minted only after provider verification succeeds.",
-      "Enterprise release gate fails closed without STEP_UP_RUNTIME_PROVIDER_PROOF=true and a runtime evidence file showing providerProof.present=true.",
-      "Provider configuration is mandatory for enterprise mode and missing providers block critical actions."
-    ],
-    "expiresAt": "2026-07-22T00:00:00.000+01:00",
-    "approvalReference": "P0-MFA-provider-proof-required"
+  "summary": "The protected live Supabase MFA workflow has not yet been executed for the final deployed main SHA. Enterprise release remains blocked.",
+  "redactionConfirmation": "No email, password, TOTP secret, access token, refresh token, factor identifier, challenge identifier, cookie or raw provider payload is stored in this placeholder.",
+  "releaseGate": {
+    "enterpriseRelease": true,
+    "blocked": true,
+    "reason": "step_up_live_provider_evidence_incomplete"
   },
-  "evidenceLocations": [
-    "src/server/security/step-up.ts",
-    "src/server/security/step-up-provider.ts",
-    "src/server/security/step-up-settings.ts",
-    "src/app/api/security/step-up/challenge/route.ts",
-    "POST /api/security/step-up/challenge",
-    "src/app/api/security/step-up/verify/route.ts",
-    "POST /api/security/step-up/verify",
-    "src/components/security/step-up-mfa-dialog.tsx",
-    "supabase/migrations/20260619143000_step_up_token_store.sql",
-    "supabase/migrations/20260623120000_step_up_challenge_store.sql",
-    "src/server/security/step-up.test.ts",
-    "scripts/security/check-step-up.mjs",
-    "scripts/security/check-step-up-runtime-preflight.mjs",
-    "scripts/security/run-step-up-mfa-runtime-validation.mjs",
-    "scripts/preflight.mjs",
-    "docs/security/evidence/runtime/step-up-mfa-validation.json"
-  ],
-  "controlsVerified": [
-    "Challenge endpoint never emits signed_hmac tokens.",
-    "Verify endpoint emits signed_hmac tokens only after provider verification succeeds.",
-    "Supabase MFA verification requires supabase.auth.mfa.verify plus getAuthenticatorAssuranceLevel=aal2.",
-    "Enterprise IdP verification requires fresh auth_time or iat plus configured ACR/AMR allowlist match.",
-    "Challenge nonces expire within two minutes and are consumed once.",
-    "HMAC tokens expire within five minutes and are consumed once from the server-side token store.",
-    "Tokens are scoped by userId, organizationId and high-risk action.",
-    "Critical actions reject missing, expired, replayed, cross-organization and cross-action tokens.",
-    "Enterprise release is blocked when signing material, Supabase auth runtime configuration or real provider policy is absent.",
-    "Enterprise release is also blocked when live provider proof is absent."
-  ],
-  "providers": {
-    "supabase_mfa": {
-      "mode": "STEP_UP_PROVIDER_MODE=supabase_mfa",
-      "runtimeChecks": [
-        "supabase.auth.mfa.listFactors returns enrolled verified factors.",
-        "supabase.auth.mfa.challenge issues a provider challenge.",
-        "supabase.auth.mfa.verify validates the submitted one-time code.",
-        "supabase.auth.mfa.getAuthenticatorAssuranceLevel returns aal2 before token issuance."
-      ],
-      "tokenIssuedOnlyAfter": "aal2 session assurance is confirmed by the provider."
-    },
-    "enterprise_idp": {
-      "mode": "STEP_UP_PROVIDER_MODE=enterprise_idp",
-      "runtimeChecks": [
-        "supabase.auth.getClaims returns verified session claims.",
-        "auth_time or iat is fresh within STEP_UP_MAX_AGE_MS.",
-        "acr matches STEP_UP_IDP_ACR_VALUES or amr matches STEP_UP_IDP_AMR_VALUES.",
-        "Blank ACR/AMR policies are treated as missing provider configuration."
-      ],
-      "tokenIssuedOnlyAfter": "fresh strong IdP reauthentication claim is present."
-    }
+  "provenance": {
+    "source": "not_executed",
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "runId": null,
+    "exactShaBound": false,
+    "branchBound": true,
+    "workflowProvenance": false
+  },
+  "sourceValidation": {
+    "status": true,
+    "failures": [],
+    "files": [
+      "src/server/security/step-up.ts",
+      "src/server/security/step-up-provider.ts",
+      "src/server/security/step-up-settings.ts",
+      "src/app/api/security/step-up/challenge/route.ts",
+      "src/app/api/security/step-up/verify/route.ts",
+      "src/components/security/step-up-mfa-dialog.tsx",
+      "supabase/migrations/20260619143000_step_up_token_store.sql",
+      "supabase/migrations/20260623120000_step_up_challenge_store.sql",
+      "scripts/security/check-step-up.mjs",
+      "scripts/security/run-step-up-mfa-runtime-validation.mjs"
+    ]
+  },
+  "runtimeConfiguration": {
+    "providerMode": null,
+    "providerHost": null,
+    "hasDedicatedSigningSecret": false,
+    "hasSupabaseAuth": false,
+    "hasIdpPolicy": false,
+    "providerConfigured": false,
+    "syntheticFixtureConfigured": false,
+    "requiredEnvironmentNames": [
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "STEP_UP_PROVIDER_MODE",
+      "STEP_UP_SIGNING_SECRET",
+      "STEP_UP_LIVE_USER_EMAIL",
+      "STEP_UP_LIVE_USER_PASSWORD",
+      "STEP_UP_LIVE_TOTP_SECRET",
+      "ENTERPRISE_EXPECTED_SHA",
+      "ENTERPRISE_EXPECTED_BRANCH"
+    ]
   },
   "runtimeValidation": {
-    "providerConfigured": false,
-    "providerProof": {
-      "present": false,
-      "requiredEnv": "STEP_UP_RUNTIME_PROVIDER_PROOF=true",
-      "requiredCommand": "node scripts/security/run-step-up-mfa-runtime-validation.mjs",
-      "note": "Enterprise release must remain blocked until the command is executed in the target runtime after a real provider verification."
-    },
-    "failClosedWithoutProvider": true,
-    "enterpriseReleaseBlockedWithoutProvider": true,
-    "enterpriseReleaseBlockedWithoutProviderProof": true
+    "status": "Skipped",
+    "attempted": false,
+    "reason": "protected_workflow_not_run",
+    "providerMode": null,
+    "providerHost": null,
+    "signedIn": false,
+    "verifiedFactorAvailable": false,
+    "challengeCreated": false,
+    "verificationSucceeded": false,
+    "aal2Observed": false,
+    "sessionUserMatched": false,
+    "signedOut": false,
+    "syntheticUserPseudonym": null,
+    "verifiedTotpFactorCount": 0,
+    "providerCode": null
   },
   "acceptanceCriteria": {
-    "criticalActionsRequireStepUp": true,
-    "hmacTokenIssuedOnlyAfterProviderVerification": true,
-    "enterpriseFailsClosedWithoutProvider": true,
-    "runtimeEvidenceRequiresLiveProviderProof": true,
-    "releaseEnterpriseBlockedIfProviderProofAbsent": true
+    "noCriticalActionWithoutStepUp": true,
+    "dedicatedSigningSecretRequired": false,
+    "syntheticFixtureSignedIn": false,
+    "verifiedTotpFactorAvailable": false,
+    "providerChallengeCreated": false,
+    "totpVerificationSucceeded": false,
+    "aal2Observed": false,
+    "sessionUserMatched": false,
+    "fixtureSessionRevoked": false,
+    "exactReleaseSha": false,
+    "protectedMainBranch": true,
+    "protectedWorkflowProvenance": false
   },
-  "criticalActions": {
-    "export_data": [
-      "GET /api/gdpr/export",
-      "GET /api/security-questionnaire/export",
-      "GET /api/vendor-assurance/export",
-      "GET /api/enterprise-readiness/export",
-      "GET /api/retention-center/export",
-      "GET /api/continuity-center/export"
-    ],
-    "manage_billing": [
-      "POST /api/billing/checkout",
-      "POST /api/billing/portal"
-    ],
-    "manage_team": [
-      "POST /api/team/invites",
-      "POST /api/team/members/remove",
-      "POST /api/team/members/role",
-      "POST /api/team/invitations/cancel"
-    ],
-    "gdpr_delete": [
-      "POST /api/gdpr/delete-request"
-    ],
-    "audit_chain_export": [
-      "GET /api/audit/evidence-pack"
-    ],
-    "audit_chain_verify": [
-      "GET /api/audit/chain/verify"
-    ],
-    "change_security_settings": [
-      "POST /api/security/settings"
-    ]
+  "evidenceIntegrity": {
+    "placeholderOnly": true,
+    "generatedFromLiveProvider": false,
+    "manualBooleanProofAccepted": false,
+    "rawSecretsStored": false,
+    "rawTokensStored": false,
+    "rawUserIdentifiersStored": false,
+    "factorIdentifiersStored": false,
+    "challengeIdentifiersStored": false,
+    "rawProviderPayloadStored": false
   },
   "auditEvents": [
     "step_up_challenge_created",
@@ -130,41 +114,23 @@
     "step_up_expired",
     "step_up_scope_mismatch"
   ],
-  "negativeTests": {
-    "actionWithoutStepUpFails": true,
-    "expiredTokenFails": true,
-    "tokenFromOtherOrganizationFails": true,
-    "tokenForOtherActionFails": true,
-    "tamperedTokenFails": true,
-    "singleUseReplayFails": true,
-    "providerMissingFailsClosed": true,
-    "enterpriseReleaseBlockedWithoutProvider": true,
-    "runtimePreflightFailsWithoutProvider": true,
-    "productionPreflightRequiresProviderProof": true,
-    "blankIdpPolicyRejected": true,
-    "enterpriseIdpRequiresSupabaseAuthConfig": true,
-    "securitySettingsRequireStepUp": true
-  },
-  "positiveTests": {
-    "validRealProviderChallengePasses": "Covered by src/server/security/step-up-provider.ts and the runtime validation script; must be completed with STEP_UP_RUNTIME_PROVIDER_PROOF=true in a real provider environment.",
-    "validSignedTokenAfterProviderPasses": true
-  },
-  "releaseGate": {
-    "script": "scripts/security/check-step-up.mjs",
-    "runtimeValidationScript": "scripts/security/run-step-up-mfa-runtime-validation.mjs",
-    "runtimePreflightScript": "scripts/security/check-step-up-runtime-preflight.mjs",
-    "productionPreflightScript": "scripts/preflight.mjs",
-    "enterpriseReleaseEnv": "RISCK_COMPLY_ENTERPRISE_RELEASE=true",
-    "legacyEnterpriseReleaseEnv": "EUROCOMPLY_ENTERPRISE_RELEASE=true",
-    "requires": [
-      "STEP_UP_SIGNING_SECRET or AUDIT_CHAIN_SIGNING_SECRET",
-      "STEP_UP_PROVIDER_MODE",
-      "Supabase auth client configuration for all provider modes",
-      "Non-empty enterprise IdP ACR/AMR policy when STEP_UP_PROVIDER_MODE=enterprise_idp",
-      "STEP_UP_RUNTIME_PROVIDER_PROOF=true after live provider verification"
-    ],
-    "failClosedWithoutProvider": true,
-    "failClosedWithoutProviderProof": true,
-    "redactedRuntimeOutput": true
-  }
+  "criticalActions": [
+    "export_data",
+    "manage_billing",
+    "manage_team",
+    "gdpr_delete",
+    "audit_chain_verify",
+    "audit_chain_export",
+    "change_security_settings"
+  ],
+  "endpointEvidence": [
+    "POST /api/security/step-up/challenge",
+    "POST /api/security/step-up/verify"
+  ],
+  "evidenceGenerator": "scripts/security/run-step-up-mfa-runtime-validation.mjs",
+  "evidenceLocations": [
+    "scripts/security/run-step-up-mfa-runtime-validation.mjs",
+    ".github/workflows/step-up-runtime-proof.yml",
+    "docs/security/evidence/runtime/step-up-mfa-validation.json"
+  ]
 }
