@@ -1,7 +1,7 @@
 # Risck Comply Senior Agent configuration
 # Read by humans, GitHub custom agents, coding-agent providers, and workflows.
 
-version: 2
+version: 3
 
 agent_profile:
   path: .github/agents/enterprise-go.agent.md
@@ -33,9 +33,12 @@ orchestration:
   triage_workflow: .github/workflows/senior-agent-triage.yml
   dispatch_workflow: .github/workflows/senior-agent-dispatch.yml
   watchdog_workflow: .github/workflows/senior-agent-watchdog.yml
+  pr_autopilot_workflow: .github/workflows/pr-autopilot.yml
+  ci_autofix_workflow: .github/workflows/codex-autofix.yml
   repository_watchdog_cadence_hours: 6
   code_writing_requires_agent_assignment: true
-  automatic_merge: false
+  automatic_merge: true
+  automatic_merge_policy: .github/pr-autopilot-policy.json
   automatic_production_deploy: false
 
 branching:
@@ -43,10 +46,13 @@ branching:
   pattern: agent/<issue-number>-<short-slug>
   allow_direct_push_to_main: false
   allow_force_push: false
+  allow_guarded_update_branch: true
 
 pull_requests:
   draft_by_default: true
-  require_owner_merge: true
+  require_owner_approval: true
+  require_owner_merge_click: false
+  require_manual_merge_for_protected_paths: true
   link_issue: true
   require_overlap_review: true
   require_sections:
@@ -60,6 +66,39 @@ pull_requests:
     - Evidence and limitations
     - Risk, compatibility, and rollback
     - Follow-ups
+
+pr_autopilot:
+  policy: .github/pr-autopilot-policy.json
+  controller: .github/workflows/pr-autopilot.yml
+  autofix: .github/workflows/codex-autofix.yml
+  required_secrets:
+    - OPENAI_API_KEY
+    - PR_AUTOPILOT_TOKEN
+  merge_requirements:
+    - exact head SHA
+    - successful status check rollup
+    - approved review decision
+    - resolved review conversations
+    - clean GitHub merge state
+    - trusted same-repository branch and author
+    - no protected path or size-policy violation
+  never_bypass:
+    - required status checks
+    - owner approval
+    - conversation resolution
+    - branch protection
+    - protected path policy
+    - exact SHA binding
+  protected_domains:
+    - authentication and sessions
+    - authorization, RBAC, tenant isolation, and RLS
+    - Supabase authority and migrations
+    - billing, Stripe, webhooks, and entitlements
+    - security and release workflows
+    - secrets and production configuration
+    - audit evidence, legal records, and compliance claims
+    - package manifests and agent governance
+  max_autofix_attempts: 2
 
 verification:
   full_gate:
@@ -76,9 +115,11 @@ verification:
     - npm run lint
   ci_fix_gate:
     - npm ci
+    - npm run security:package-lock
     - npm run lint
     - npm run typecheck
     - npm run test
+    - npm run build
   security_gate:
     - npm run security:ci
     - npm run security:public-secrets
@@ -180,6 +221,8 @@ safe_autonomy:
     - GitHub issue templates, PR templates, and queue automation.
     - CI hardening that preserves or strengthens checks.
     - Small lint, typecheck, test, and build fixes with evidence.
+    - Bounded same-branch Codex CI repair under the default-branch Autopilot policy.
+    - Guarded branch synchronization and merge after approval, exact-head green checks, and clean merge state.
     - Small bug fixes with tests or clear reproduction evidence.
     - Low-risk systemic refactors that preserve deployed identities and public behavior.
   blocked_without_owner:
@@ -206,3 +249,4 @@ security:
     - No privileged operation moved client-side.
     - No scanner, required check, or test disabled to make a build pass.
     - No repository result represented as proof of production behavior.
+    - No automated merge outside the guarded default-branch policy.
