@@ -1,5 +1,6 @@
 import { headers } from 'next/headers';
 
+import { trustedRequestIdFromHeaders } from '@/lib/observability/request-correlation';
 import { reportError } from '@/lib/observability/report-error';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { createAuditEvent, sanitizeAuditMetadata } from '@/server/queries/audit-events';
@@ -90,20 +91,22 @@ async function getRequestContext() {
     const forwardedFor = requestHeaders.get('x-forwarded-for');
     const ip = normalizeIpAddress(forwardedFor || requestHeaders.get('x-real-ip'));
     const userAgent = normalizeUserAgent(requestHeaders.get('user-agent'));
+    const requestId = trustedRequestIdFromHeaders(requestHeaders);
 
-    return { ipPseudonym: pseudonymizeIpAddress(ip), userAgent };
+    return { requestId, ipPseudonym: pseudonymizeIpAddress(ip), userAgent };
   } catch {
-    return { ipPseudonym: null, userAgent: null };
+    return { requestId: 'req_unavailable', ipPseudonym: null, userAgent: null };
   }
 }
 
 export async function writeAuditLog(input: AuditLogInput) {
   const supabase = tryCreateAdminClient();
   const actorUserId = input.actorUserId ?? input.userId ?? null;
-  const { ipPseudonym, userAgent } = await getRequestContext();
+  const { requestId, ipPseudonym, userAgent } = await getRequestContext();
   const metadata = sanitizeAuditMetadata({
     ...(input.metadata ?? {}),
     requestContext: {
+      requestId,
       ipAddressPseudonym: ipPseudonym,
       userAgent,
     },
@@ -121,7 +124,13 @@ export async function writeAuditLog(input: AuditLogInput) {
     });
 
     if (error) {
-      reportError(error, { area: 'audit_log_write', action: input.action, organizationId: input.organizationId ?? undefined, actorUserId: actorUserId ?? undefined });
+      reportError(error, {
+        area: 'audit_log_write',
+        action: input.action,
+        organizationId: input.organizationId ?? undefined,
+        actorUserId: actorUserId ?? undefined,
+        requestId,
+      });
     } else {
       legacyPersisted = true;
     }
@@ -147,6 +156,7 @@ export async function writeAuditLog(input: AuditLogInput) {
       organizationId: input.organizationId,
       actorUserId: actorUserId ?? undefined,
       reason: 'reason' in chainResult ? chainResult.reason : undefined,
+      requestId,
     });
   }
 
