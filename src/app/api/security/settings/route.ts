@@ -19,6 +19,10 @@ type SecuritySettingsInput = {
   allowedIdpAmrValues?: unknown;
 };
 
+function isSecuritySettingsInput(value: unknown): value is SecuritySettingsInput {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 function normalizeStringList(value: unknown) {
   if (!Array.isArray(value)) return [];
 
@@ -76,12 +80,16 @@ export async function POST(request: NextRequest) {
       return stepUp.response;
     }
 
-    let body: SecuritySettingsInput;
+    let body: unknown;
     try {
-      body = await readBoundedJsonRequest<SecuritySettingsInput>(request, {
+      body = await readBoundedJsonRequest<unknown>(request, {
         maxBytes: SECURITY_SETTINGS_JSON_MAX_BYTES,
       });
     } catch {
+      return noStoreJson({ error: 'invalid_security_settings_payload' }, { status: 400 });
+    }
+
+    if (!isSecuritySettingsInput(body)) {
       return noStoreJson({ error: 'invalid_security_settings_payload' }, { status: 400 });
     }
 
