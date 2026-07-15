@@ -179,7 +179,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
       documentId: safeDocumentId,
       userId: user.id,
       reason: 'document_not_found_or_cross_tenant',
-      organizationId: organizationIds[0] ?? null,
+      organizationId: null,
       membershipCount: organizationIds.length,
       accessPurpose,
     });
