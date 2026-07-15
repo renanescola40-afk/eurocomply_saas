@@ -2,11 +2,11 @@
   "schema": "risck-comply.step-up-mfa-runtime-evidence.v2",
   "evidenceItem": "step-up-mfa-validation",
   "id": "step-up-mfa-validation",
-  "status": "Open",
+  "status": "Exception",
   "outcome": "blocked",
   "generatedAt": "2026-07-15T00:00:00.000Z",
   "expiresAt": null,
-  "reviewedAt": null,
+  "reviewedAt": "2026-07-15T00:00:00.000Z",
   "reviewer": "RISCK COMPLY protected runtime automation",
   "repository": "renanescola40-afk/eurocomply_saas",
   "branch": "main",
@@ -14,13 +14,20 @@
   "checkedOutSha": null,
   "environment": "production-provider-validation",
   "control": "P0-MFA real step-up validation for critical actions",
-  "summary": "The protected live Supabase MFA workflow has not yet been executed for the final deployed main SHA. Enterprise release remains blocked.",
-  "redactionConfirmation": "No email, password, TOTP secret, access token, refresh token, factor identifier, challenge identifier, cookie or raw provider payload is stored in this placeholder.",
-  "releaseGate": {
-    "enterpriseRelease": true,
-    "blocked": true,
-    "reason": "step_up_live_provider_evidence_incomplete"
+  "summary": "The Open live Supabase MFA proof has not been executed for the final deployed main SHA. This exception records missing proof and keeps enterprise release blocked.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "exception": {
+    "riskOwner": "Security reviewer",
+    "rationale": "Protected exact-SHA Supabase MFA execution evidence has not yet been generated for the final deployed release commit.",
+    "compensatingControls": [
+      "Enterprise release remains blocked until the protected workflow produces Complete/passed evidence.",
+      "Critical actions continue to fail closed through the existing step-up source controls.",
+      "The manual boolean provider-proof mechanism is not accepted."
+    ],
+    "expiresAt": "2026-07-18T23:59:59.000Z",
+    "approvalReference": "P0-step-up-live-proof-pending"
   },
+  "releaseGate": "Enterprise release blocked until protected exact-SHA live MFA proof passes.",
   "provenance": {
     "source": "not_executed",
     "repository": "renanescola40-afk/eurocomply_saas",
