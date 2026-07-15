@@ -14,7 +14,7 @@ const DATED_ADR_FILE = /^ADR-(\d{4}-\d{2}-\d{2})-[a-z0-9][a-z0-9-]*\.md$/i;
 const NUMBERED_ADR_FILE = /^ADR-(\d{4})-[a-z0-9][a-z0-9-]*\.md$/i;
 const DATED_DECISION_FILE = /^(\d{4}-\d{2}-\d{2})-[a-z0-9][a-z0-9-]*\.md$/i;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const ALLOWED_STATUSES = new Set(['Proposed', 'Accepted', 'Superseded', 'Deprecated']);
+const ALLOWED_STATUSES = new Set(['Proposed', 'Accepted', 'Rejected', 'Superseded', 'Deprecated']);
 const REQUIRED_TOP_LEVEL_SECTIONS = ['Context', 'Decision', 'Rollback'];
 
 function normalizeNewlines(value) {
@@ -53,6 +53,11 @@ function hasSection(content, title, level = '##') {
   return new RegExp(`^${level}\\s+${escapeRegExp(title)}\\s*$`, 'mi').test(content);
 }
 
+function hasNonEmptySection(content, title) {
+  const body = sectionBody(content, title);
+  return typeof body === 'string' && body.length > 0;
+}
+
 function hasRiskTradeoffCoverage(content) {
   const directSections = [
     'Risks and trade-offs',
@@ -62,11 +67,12 @@ function hasRiskTradeoffCoverage(content) {
     'Rejected alternatives',
     'Candidate options',
   ];
-  if (directSections.some((title) => hasSection(content, title))) return true;
+  if (directSections.some((title) => hasNonEmptySection(content, title))) return true;
 
-  if (!hasSection(content, 'Consequences')) return false;
-  return /^###\s+.*(?:trade-offs?|risks?).*$/mi.test(content)
-    || /^(?:Trade-offs?|Risks?)\s*:\s*$/mi.test(content);
+  const consequences = sectionBody(content, 'Consequences');
+  if (!consequences) return false;
+  return /^###\s+.*(?:trade-offs?|risks?).*$/mi.test(consequences)
+    || /^(?:Trade-offs?|Risks?)\s*:\s*$(?:\n|.)+$/mi.test(consequences);
 }
 
 function classifyDecisionFilename(filename) {
@@ -140,7 +146,7 @@ export function scanArchitectureDecisions({ decisionsDir = DEFAULT_DECISIONS_DIR
     const content = normalizeNewlines(readFileSync(filePath, 'utf8'));
     const status = extractMetadata(content, 'Status');
     const date = extractMetadata(content, 'Date') ?? classification.dateHint;
-    const missingSections = REQUIRED_TOP_LEVEL_SECTIONS.filter((section) => !hasSection(content, section));
+    const missingSections = REQUIRED_TOP_LEVEL_SECTIONS.filter((section) => !hasNonEmptySection(content, section));
     if (!hasRiskTradeoffCoverage(content)) missingSections.push('risk or trade-off coverage');
 
     if (content.trim().length < 300) failures.push(`${filename} is too short to be a reviewable decision record`);
@@ -149,7 +155,7 @@ export function scanArchitectureDecisions({ decisionsDir = DEFAULT_DECISIONS_DIR
       failures.push(`${filename} has an invalid or missing Date`);
     }
     if (missingSections.length > 0) {
-      failures.push(`${filename} is missing section(s): ${missingSections.join(', ')}`);
+      failures.push(`${filename} is missing or has empty section(s): ${missingSections.join(', ')}`);
     }
 
     const digest = createHash('sha256').update(content).digest('hex');
@@ -226,7 +232,7 @@ export function buildArchitectureReviewEvidence({
     checks: [
       { name: 'decisionInventoryPresent', passed: (scan?.decisions?.length ?? 0) >= 10 },
       { name: 'decisionMetadataValid', passed: !(scan?.failures ?? []).some((item) => /Status|Date/.test(item)) },
-      { name: 'decisionSectionsValid', passed: !(scan?.failures ?? []).some((item) => /missing section|too short/.test(item)) },
+      { name: 'decisionSectionsValid', passed: !(scan?.failures ?? []).some((item) => /missing or has empty section|too short/.test(item)) },
       { name: 'decisionIdentitiesUnique', passed: !(scan?.failures ?? []).some((item) => /duplicates architecture decision identity/.test(item)) },
       { name: 'supportedHistoricalFormatsOnly', passed: !(scan?.failures ?? []).some((item) => /not a supported/.test(item)) },
       { name: 'exactShaProvenance', passed: provenanceFailures.length === 0 },
