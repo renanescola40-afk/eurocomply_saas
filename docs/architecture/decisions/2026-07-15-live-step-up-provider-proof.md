@@ -48,11 +48,12 @@ The following values remain only in protected GitHub environment secrets and pro
 - fixture password;
 - TOTP seed;
 - access and refresh tokens;
+- authenticated user identifier;
 - factor identifier;
 - challenge identifier;
 - generated TOTP code.
 
-The evidence stores only boolean outcomes, a truncated one-way user pseudonym, normalized provider hostname, timing, stable failure categories and exact release provenance. Raw provider payloads and authentication material are not persisted.
+The evidence stores only boolean outcomes, normalized provider hostname, timing, stable failure categories and exact release provenance. It stores no raw or pseudonymized user identifier, raw provider payload or authentication material.
 
 The workflow has `contents: read`, does not run for pull requests, does not write repository contents, does not merge, and does not use `pull_request_target`.
 
