@@ -9,35 +9,80 @@ import {
   readdirSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const DEFAULT_DECISIONS_DIR = 'docs/decisions';
 const DEFAULT_EVIDENCE_PATH = 'docs/security/evidence/release/architecture-review.json';
 const FULL_SHA = /^[a-f0-9]{40}$/;
-const ADR_FILE = /^ADR-(\d{4})-[a-z0-9][a-z0-9-]*\.md$/i;
+const NUMBERED_ADR_FILE = /^ADR-(\d{4})-[a-z0-9][a-z0-9-]*\.md$/i;
+const DATED_ADR_FILE = /^ADR-(\d{4}-\d{2}-\d{2})-[a-z0-9][a-z0-9-]*\.md$/i;
+const DATED_DECISION_FILE = /^(\d{4}-\d{2}-\d{2})-[a-z0-9][a-z0-9-]*\.md$/i;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ALLOWED_STATUSES = new Set(['Proposed', 'Accepted', 'Superseded', 'Deprecated']);
-const REQUIRED_SECTIONS = [
-  'Context',
-  'Decision',
-  'Risks and trade-offs',
-  'Rollback',
-];
+const REQUIRED_TOP_LEVEL_SECTIONS = ['Context', 'Decision', 'Rollback'];
 
 function normalizeNewlines(value) {
   return String(value).replace(/\r\n/g, '\n');
 }
 
 function extractMetadata(content, field) {
-  const match = content.match(new RegExp(`^- ${field}:\\s*(.+)$`, 'mi'));
-  return match?.[1]?.trim() ?? null;
+  const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = content.match(new RegExp(`^-\\s+\\*{0,2}${escaped}\\s*:\\*{0,2}\\s*(.+)$`, 'mi'));
+  return match?.[1]?.replace(/\*+$/g, '').trim() ?? null;
 }
 
-function hasSection(content, title) {
+function hasSection(content, title, level = '##') {
   const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`^##\\s+${escaped}\\s*$`, 'mi').test(content);
+  return new RegExp(`^${level}\\s+${escaped}\\s*$`, 'mi').test(content);
+}
+
+function hasRiskTradeoffCoverage(content) {
+  if (hasSection(content, 'Risks and trade-offs')) return true;
+  if (hasSection(content, 'Risks')) return true;
+  if (hasSection(content, 'Trade-offs')) return true;
+
+  if (hasSection(content, 'Consequences')) {
+    return /^(?:###\s+)?Trade-offs\s*:?\s*$/mi.test(content)
+      || /^(?:###\s+)?Risks\s*:?\s*$/mi.test(content);
+  }
+
+  return false;
+}
+
+function classifyDecisionFilename(filename) {
+  const numbered = NUMBERED_ADR_FILE.exec(filename);
+  if (numbered) {
+    return {
+      format: 'numbered',
+      identity: `ADR-${numbered[1]}`,
+      number: numbered[1],
+      dateHint: null,
+    };
+  }
+
+  const datedAdr = DATED_ADR_FILE.exec(filename);
+  if (datedAdr) {
+    return {
+      format: 'dated-adr',
+      identity: filename.replace(/\.md$/i, ''),
+      number: null,
+      dateHint: datedAdr[1],
+    };
+  }
+
+  const datedDecision = DATED_DECISION_FILE.exec(filename);
+  if (datedDecision) {
+    return {
+      format: 'dated-decision',
+      identity: filename.replace(/\.md$/i, ''),
+      number: null,
+      dateHint: datedDecision[1],
+    };
+  }
+
+  return null;
 }
 
 export function scanArchitectureDecisions({
@@ -57,34 +102,30 @@ export function scanArchitectureDecisions({
   }
 
   const filenames = readdirSync(decisionsDir)
-    .filter((name) => name.endsWith('.md'))
+    .filter((name) => name.endsWith('.md') && name.toLowerCase() !== 'template.md')
     .sort((left, right) => left.localeCompare(right));
 
-  if (filenames.length < minimumDecisions) {
-    failures.push(`expected at least ${minimumDecisions} architecture decisions, found ${filenames.length}`);
-  }
-
-  const seenNumbers = new Set();
+  const seenIdentities = new Set();
   const aggregate = createHash('sha256');
 
   for (const filename of filenames) {
-    const match = ADR_FILE.exec(filename);
-    if (!match) {
-      failures.push(`${filename} does not follow ADR-NNNN-kebab-case.md`);
+    const classification = classifyDecisionFilename(filename);
+    if (!classification) {
+      failures.push(`${filename} is not a supported numbered or dated architecture decision filename`);
       continue;
     }
 
-    const decisionNumber = match[1];
-    if (seenNumbers.has(decisionNumber)) {
-      failures.push(`${filename} duplicates ADR number ${decisionNumber}`);
+    if (seenIdentities.has(classification.identity)) {
+      failures.push(`${filename} duplicates architecture decision identity ${classification.identity}`);
     }
-    seenNumbers.add(decisionNumber);
+    seenIdentities.add(classification.identity);
 
     const filePath = join(decisionsDir, filename);
     const content = normalizeNewlines(readFileSync(filePath, 'utf8'));
     const status = extractMetadata(content, 'Status');
-    const date = extractMetadata(content, 'Date');
-    const missingSections = REQUIRED_SECTIONS.filter((section) => !hasSection(content, section));
+    const date = extractMetadata(content, 'Date') ?? classification.dateHint;
+    const missingSections = REQUIRED_TOP_LEVEL_SECTIONS.filter((section) => !hasSection(content, section));
+    if (!hasRiskTradeoffCoverage(content)) missingSections.push('risk or trade-off coverage');
 
     if (content.trim().length < 300) failures.push(`${filename} is too short to be a reviewable decision record`);
     if (!status || !ALLOWED_STATUSES.has(status)) failures.push(`${filename} has an invalid or missing Status`);
@@ -99,12 +140,18 @@ export function scanArchitectureDecisions({
     aggregate.update(`${filename}\0${digest}\n`);
     decisions.push({
       path: filePath.replaceAll('\\', '/'),
-      number: decisionNumber,
+      identity: classification.identity,
+      format: classification.format,
+      number: classification.number,
       status,
       date,
       digest,
       requiredSectionsPresent: missingSections.length === 0,
     });
+  }
+
+  if (decisions.length < minimumDecisions) {
+    failures.push(`expected at least ${minimumDecisions} architecture decisions, found ${decisions.length}`);
   }
 
   return {
@@ -136,9 +183,12 @@ export function buildArchitectureReviewEvidence({
   const failures = [...(scan?.failures ?? []), ...provenanceFailures];
   const passed = scan?.passed === true && failures.length === 0;
   const statusCounts = {};
+  const formatCounts = {};
   for (const decision of scan?.decisions ?? []) {
-    const key = decision.status ?? 'Unknown';
-    statusCounts[key] = (statusCounts[key] ?? 0) + 1;
+    const statusKey = decision.status ?? 'Unknown';
+    const formatKey = decision.format ?? 'unknown';
+    statusCounts[statusKey] = (statusCounts[statusKey] ?? 0) + 1;
+    formatCounts[formatKey] = (formatCounts[formatKey] ?? 0) + 1;
   }
 
   return {
@@ -155,18 +205,20 @@ export function buildArchitectureReviewEvidence({
     observedSha,
     githubRunId: String(runId),
     summary: passed
-      ? `Validated ${scan.decisions.length} architecture decision records with required metadata, decision rationale, risks and rollback guidance.`
+      ? `Validated ${scan.decisions.length} architecture decision records with required metadata, decision rationale, risk or trade-off coverage, and rollback guidance.`
       : 'Architecture decision evidence is incomplete or lacks trusted exact-SHA provenance.',
     checks: [
       { name: 'decisionInventoryPresent', passed: (scan?.decisions?.length ?? 0) >= 10 },
       { name: 'decisionMetadataValid', passed: !(scan?.failures ?? []).some((item) => /Status|Date/.test(item)) },
       { name: 'decisionSectionsValid', passed: !(scan?.failures ?? []).some((item) => /missing section|too short/.test(item)) },
-      { name: 'decisionNumbersUnique', passed: !(scan?.failures ?? []).some((item) => /duplicates ADR number/.test(item)) },
+      { name: 'decisionIdentitiesUnique', passed: !(scan?.failures ?? []).some((item) => /duplicates architecture decision identity/.test(item)) },
+      { name: 'supportedHistoricalFormatsOnly', passed: !(scan?.failures ?? []).some((item) => /not a supported/.test(item)) },
       { name: 'exactShaProvenance', passed: provenanceFailures.length === 0 },
     ],
     decisionInventory: {
       count: scan?.decisions?.length ?? 0,
       statusCounts,
+      formatCounts,
       aggregateDigest: scan?.aggregateDigest ?? null,
       paths: (scan?.decisions ?? []).map((decision) => decision.path),
     },
@@ -212,7 +264,7 @@ function runCli() {
       ...scan,
       decisions: scan.decisions.map((decision) => ({
         ...decision,
-        path: relative(repositoryRoot, decision.path).replaceAll('\\', '/'),
+        path: relative(repositoryRoot, resolve(decision.path)).replaceAll('\\', '/'),
       })),
     },
     repository: process.env.GITHUB_REPOSITORY ?? '',
@@ -234,5 +286,5 @@ function runCli() {
   }
 }
 
-const invokedPath = process.argv[1] ? fileURLToPath(new URL(`file://${process.argv[1]}`)) : '';
+const invokedPath = process.argv[1] ? resolve(process.argv[1]) : '';
 if (invokedPath === fileURLToPath(import.meta.url)) runCli();
