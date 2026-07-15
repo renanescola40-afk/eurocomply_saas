@@ -72,6 +72,8 @@ export function applySecurityResponseStatus(document, { passed, generatedAt }) {
       next.failures = appendUnique(next.failures, FAILURE_SUMMARY);
       next.productionGate =
         'No-Go: runtime security headers and no-store evidence did not pass on the exact deployed SHA.';
+      delete next.overallResult;
+      delete next.metadataFailures;
     } else {
       next.outcome = 'failed';
       next.overallResult = 'failed';
