@@ -8,7 +8,7 @@
   "reviewedAt": "2026-07-15T11:30:00.000Z",
   "generatedAt": "2026-07-15T11:30:00.000Z",
   "summary": "Final validation runner placeholder. The release remains blocked until the canonical command set is executed for the exact main-branch release commit and the writer records Complete/passed/Go evidence with trusted GitHub Actions provenance.",
-  "redactionConfirmation": "Redaction confirmed for placeholder runtime evidence. No production values are present.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "evidenceLocations": [
     "scripts/release/run-final-validation.mjs",
     "scripts/release/write-final-validation-runner-evidence.mjs",
