@@ -10,6 +10,8 @@ type ApiRouteContract = {
 };
 
 const apiInventoryPath = 'docs/security/API_ROUTE_INVENTORY.md';
+const atomicAiIncidentMigrationPath =
+  'supabase/migrations/20260715180500_create_ai_incident_with_audit_atomic.sql';
 
 const criticalApiContracts: ApiRouteContract[] = [
   {
@@ -183,5 +185,18 @@ describe('enterprise API security contracts', () => {
     ]) {
       expect(inventory, `API inventory should keep required negative scenario: ${requiredScenario}`).toContain(requiredScenario);
     }
+  });
+
+  it('keeps the atomic AI incident RPC service-role-only and validates audit-chain hash formats', () => {
+    const migration = readRepoFile(atomicAiIncidentMigrationPath);
+
+    expect(migration).toContain('security definer');
+    expect(migration).toContain("p_event_hash !~ '^[0-9a-f]{64}$'");
+    expect(migration).toContain("p_previous_hash is not null and p_previous_hash !~ '^[0-9a-f]{64}$'");
+    expect(migration).toContain("p_hash_signature is not null and p_hash_signature !~ '^[0-9a-f]{64}$'");
+    expect(migration).toContain('from anon;');
+    expect(migration).toContain('from authenticated;');
+    expect(migration).toContain('to service_role;');
+    expect(migration).toContain("errcode = '40001'");
   });
 });
