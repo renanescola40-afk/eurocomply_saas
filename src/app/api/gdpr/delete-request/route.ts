@@ -83,9 +83,31 @@ export async function POST(request: NextRequest) {
     return stepUp.response;
   }
 
-  const body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
-    maxBytes: DELETE_REQUEST_JSON_MAX_BYTES,
-  }).catch((): Record<string, unknown> => ({}));
+  let body: Record<string, unknown>;
+
+  try {
+    body = await readBoundedJsonRequest<Record<string, unknown>>(request, {
+      maxBytes: DELETE_REQUEST_JSON_MAX_BYTES,
+    });
+  } catch {
+    await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'gdpr_delete_denied',
+      entityType: 'organization',
+      entityId: organization.id,
+      metadata: {
+        reason: 'invalid_delete_request_payload',
+        role: permission.role,
+      },
+      requestContext,
+    });
+
+    return noStoreJson({
+      error: 'invalid_gdpr_delete_payload',
+      message: 'Request body must be valid JSON within the allowed size limit.',
+    }, { status: 400 });
+  }
 
   if (!validateDeleteConfirmation(body)) {
     await createAuditEvent({
