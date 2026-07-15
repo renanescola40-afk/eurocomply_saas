@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import { buildSecurityResponseEvidence } from '../../scripts/release/write-security-response-evidence.mjs';
@@ -91,5 +93,17 @@ describe('runtime security response evidence', () => {
 
     expect(result.securityHeaders.status).toBe('Complete');
     expect(result.noStore.status).toBe('Open');
+  });
+
+  it('prepares exact-SHA response evidence before either strict release runner starts', () => {
+    const source = readFileSync('scripts/release/run-public-production-release.mjs', 'utf8');
+    const preparation = source.indexOf('await prepareSecurityResponseEvidence();');
+    const enterpriseRunner = source.indexOf("await import('./run-public-production-release-v2.mjs');");
+    const publicRunner = source.indexOf("await import('./run-public-production-release-final.mjs');");
+
+    expect(preparation).toBeGreaterThan(-1);
+    expect(enterpriseRunner).toBeGreaterThan(preparation);
+    expect(publicRunner).toBeGreaterThan(preparation);
+    expect(source).toContain("await verifyRuntimeReleaseSha();\n  await import('./run-deployment-smoke.mjs');");
   });
 });
