@@ -14,7 +14,12 @@ function completeEvidence(overrides = {}) {
     status: 'Complete',
     outcome: 'passed',
     releaseDecision: 'Go',
+    releaseTarget: 'enterprise',
     generatedAt: '2026-07-15T11:30:00Z',
+    targetCommit: commitSha,
+    commitSha,
+    buildSha: commitSha,
+    noSecretsStored: true,
     runtimeContext: {
       generatedByGithubActions: true,
       repository: 'renanescola40-afk/eurocomply_saas',
@@ -23,6 +28,13 @@ function completeEvidence(overrides = {}) {
       commitSha,
     },
     commands: requiredFinalValidationCommands.map((command) => ({ command, result: 'passed' })),
+    evidenceSources: {
+      productionFinalValidation: { status: 'Complete', outcome: 'passed' },
+      enterpriseRuntimeEvidence: { status: 'Complete', outcome: 'passed' },
+      releaseGoNoGo: { status: 'Complete', finalDecision: 'Go' },
+    },
+    register: { allComplete: true, openItems: [] },
+    blockingReasons: { missingCommands: [], openItems: [], provenance: [] },
     failures: [],
     evidenceIntegrity: {
       placeholderOnly: false,
@@ -55,6 +67,7 @@ function writerInputs(overrides = {}) {
       GITHUB_REF_NAME: 'main',
       GITHUB_RUN_ID: '29400000000',
       GITHUB_SHA: commitSha,
+      RELEASE_BUILD_SHA: commitSha,
       RELEASE_TARGET: 'enterprise',
     },
     generatedAt: '2026-07-15T11:30:00Z',
@@ -63,7 +76,7 @@ function writerInputs(overrides = {}) {
 }
 
 describe('validateFinalValidationRuntimeEvidence', () => {
-  it('accepts fresh commit-bound final validation proof', () => {
+  it('accepts fresh, internally coherent, commit-bound final validation proof', () => {
     expect(validateFinalValidationRuntimeEvidence(completeEvidence(), { now })).toEqual([]);
   });
 
@@ -125,6 +138,18 @@ describe('validateFinalValidationRuntimeEvidence', () => {
       .toContain('runtimeContext.branch must be main');
   });
 
+  it('rejects non-numeric GitHub run provenance', () => {
+    const evidence = completeEvidence();
+    evidence.runtimeContext.githubRunId = 'manual-run';
+    expect(validateFinalValidationRuntimeEvidence(evidence, { now }))
+      .toContain('runtimeContext.githubRunId must be numeric');
+  });
+
+  it('rejects a non-enterprise release target', () => {
+    expect(validateFinalValidationRuntimeEvidence(completeEvidence({ releaseTarget: 'preview' }), { now }))
+      .toContain('releaseTarget must be enterprise');
+  });
+
   it('rejects a missing required command', () => {
     const evidence = completeEvidence();
     evidence.commands = evidence.commands.filter((entry) => entry.command !== 'npm run test:e2e');
@@ -139,9 +164,38 @@ describe('validateFinalValidationRuntimeEvidence', () => {
       .toContain('commands must contain exactly one passing npm ci');
   });
 
-  it('rejects commit mismatch', () => {
+  it('rejects expected commit mismatch', () => {
     expect(validateFinalValidationRuntimeEvidence(completeEvidence(), { now, expectedCommitSha: 'b'.repeat(40) }))
       .toContain(`runtime commit SHA must match ${'b'.repeat(40)}`);
+  });
+
+  it('rejects target, commit, and build SHA divergence', () => {
+    expect(validateFinalValidationRuntimeEvidence(completeEvidence({ targetCommit: 'b'.repeat(40) }), { now }))
+      .toContain('targetCommit must match runtime commit SHA');
+    expect(validateFinalValidationRuntimeEvidence(completeEvidence({ commitSha: 'b'.repeat(40) }), { now }))
+      .toContain('commitSha must match runtime commit SHA');
+    expect(validateFinalValidationRuntimeEvidence(completeEvidence({ buildSha: 'b'.repeat(40) }), { now }))
+      .toContain('buildSha must match runtime commit SHA');
+  });
+
+  it('rejects incomplete source evidence', () => {
+    const evidence = completeEvidence();
+    evidence.evidenceSources.enterpriseRuntimeEvidence.outcome = 'blocked';
+    expect(validateFinalValidationRuntimeEvidence(evidence, { now }))
+      .toContain('evidenceSources.enterpriseRuntimeEvidence must be Complete/passed');
+  });
+
+  it('rejects open register and unresolved blocking reasons', () => {
+    const registerOpen = completeEvidence();
+    registerOpen.register = { allComplete: false, openItems: ['RLS runtime: Open'] };
+    expect(validateFinalValidationRuntimeEvidence(registerOpen, { now })).toEqual(
+      expect.arrayContaining(['register.allComplete must be true', 'register.openItems must be empty']),
+    );
+
+    const blocked = completeEvidence();
+    blocked.blockingReasons.provenance = ['main branch not verified'];
+    expect(validateFinalValidationRuntimeEvidence(blocked, { now }))
+      .toContain('blockingReasons.provenance must be empty');
   });
 
   it('rejects stored raw URLs', () => {
@@ -165,6 +219,14 @@ describe('validateFinalValidationRuntimeEvidence', () => {
       githubRunId: '29400000000',
       commitSha,
     });
+    expect(evidence).toMatchObject({
+      releaseTarget: 'enterprise',
+      targetCommit: commitSha,
+      commitSha,
+      buildSha: commitSha,
+      register: { allComplete: true, openItems: [] },
+      blockingReasons: { missingCommands: [], openItems: [], provenance: [] },
+    });
     expect(validateFinalValidationRuntimeEvidence(evidence, {
       now,
       expectedCommitSha: commitSha,
@@ -184,5 +246,25 @@ describe('validateFinalValidationRuntimeEvidence', () => {
     expect(evidence.releaseDecision).toBe('No-Go');
     expect(evidence.failures).toContain('final evidence must be generated by GitHub Actions');
     expect(evidence.evidenceIntegrity.placeholderOnly).toBe(false);
+  });
+
+  it('writer refuses Complete when build SHA or release target diverges', () => {
+    const mismatchedBuild = buildFinalValidationRunnerEvidence(writerInputs({
+      env: {
+        ...writerInputs().env,
+        RELEASE_BUILD_SHA: 'b'.repeat(40),
+      },
+    }));
+    expect(mismatchedBuild.status).toBe('Open');
+    expect(mismatchedBuild.failures).toContain('build SHA must match target commit');
+
+    const wrongTarget = buildFinalValidationRunnerEvidence(writerInputs({
+      env: {
+        ...writerInputs().env,
+        RELEASE_TARGET: 'preview',
+      },
+    }));
+    expect(wrongTarget.status).toBe('Open');
+    expect(wrongTarget.failures).toContain('release target must be enterprise');
   });
 });
