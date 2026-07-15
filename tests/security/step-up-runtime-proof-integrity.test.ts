@@ -26,6 +26,7 @@ const liveValidation = {
   verificationSucceeded: true,
   aal2Observed: true,
   sessionUserMatched: true,
+  signedOut: true,
 };
 
 describe('step-up runtime proof integrity', () => {
@@ -66,7 +67,7 @@ describe('step-up runtime proof integrity', () => {
     });
   });
 
-  it('fails closed for stale SHA, local execution or missing live provider verification', () => {
+  it('fails closed for stale SHA, local execution, missing proof or failed fixture sign-out', () => {
     const stale = evaluateStepUpRuntimeEvidence({
       sourceFailures: [],
       provider,
@@ -109,6 +110,20 @@ describe('step-up runtime proof integrity', () => {
     });
     expect(notRun.complete).toBe(false);
     expect(notRun.outcome).toBe('blocked');
+
+    const sessionNotRevoked = evaluateStepUpRuntimeEvidence({
+      sourceFailures: [],
+      provider,
+      liveValidation: { ...liveValidation, signedOut: false },
+      expectedSha: SHA_A,
+      checkedOutSha: SHA_A,
+      expectedBranch: 'main',
+      githubActions: true,
+      githubRunId: '123456789',
+      githubRepository: 'renanescola40-afk/eurocomply_saas',
+    });
+    expect(sessionNotRevoked.complete).toBe(false);
+    expect(sessionNotRevoked.checks.liveProviderVerificationPassed).toBe(false);
   });
 
   it('removes manual boolean proof and requires real Supabase MFA operations', () => {
@@ -124,6 +139,7 @@ describe('step-up runtime proof integrity', () => {
     expect(script).toContain('supabase.auth.mfa.verify');
     expect(script).toContain('getAuthenticatorAssuranceLevel');
     expect(script).toContain("currentLevel !== 'aal2'");
+    expect(script).toContain('supabase.auth.signOut');
     expect(script).toContain('manualBooleanProofAccepted: false');
     expect(script).toContain('rawSecretsStored: false');
     expect(script).toContain('factorIdentifiersStored: false');
