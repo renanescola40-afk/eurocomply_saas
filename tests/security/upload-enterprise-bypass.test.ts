@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createDocument } from '@/server/actions/documents';
+import { createDocument, createServerGeneratedDocument } from '@/server/actions/documents';
 
 const mocks = vi.hoisted(() => ({
   assertCurrentUserCan: vi.fn(),
@@ -45,7 +45,27 @@ beforeEach(() => {
 });
 
 describe('enterprise upload scan bypass protection', () => {
-  it('blocks direct document metadata creation when enterprise scan metadata is missing or not clean', async () => {
+  it.each([
+    {
+      name: 'forged clean scan metadata',
+      metadata: {
+        scanStatus: 'clean',
+        scanRequired: true,
+        scanProvider: 'http',
+        scanCheckedAt: '2026-07-15T12:00:00.000Z',
+        fileHash: 'forged-hash',
+        fileSize: 12,
+        mimeDetected: 'application/pdf',
+      },
+    },
+    {
+      name: 'forged server-generated metadata',
+      metadata: {
+        source: 'template',
+        serverGenerated: true,
+      },
+    },
+  ])('blocks direct document creation with $name', async ({ metadata }) => {
     process.env.REQUIRE_MALWARE_SCAN_FOR_UPLOADS = 'true';
     process.env.MALWARE_SCANNER_PROVIDER = 'http';
 
@@ -58,13 +78,9 @@ describe('enterprise upload scan bypass protection', () => {
         mimeType: 'application/pdf',
         sizeBytes: 12,
         expiresAt: null,
-        metadata: {
-          scanStatus: 'not_configured',
-          scanRequired: true,
-          mimeDetected: 'application/pdf',
-        },
+        metadata,
       }),
-    ).rejects.toThrow('enterprise upload scanning metadata is missing or not clean');
+    ).rejects.toThrow('enterprise upload scanning provenance is not trusted');
 
     expect(mocks.createAdminClient).not.toHaveBeenCalled();
     expect(mocks.createAuditEvent).toHaveBeenCalledWith(
@@ -74,16 +90,13 @@ describe('enterprise upload scan bypass protection', () => {
         actorUserId: USER_ID,
         metadata: expect.objectContaining({
           reason: 'enterprise_upload_scan_bypass',
-          scanRequired: true,
-          attemptedScanStatus: 'not_configured',
-          expectedScanStatus: 'clean',
-          mimeDetected: 'application/pdf',
+          provenance: 'untrusted_metadata',
         }),
       }),
     );
   });
 
-  it('allows trusted server-generated template documents without treating them as user uploads', async () => {
+  it('allows the explicit server-generated path used by trusted template code', async () => {
     process.env.REQUIRE_MALWARE_SCAN_FOR_UPLOADS = 'true';
     process.env.MALWARE_SCANNER_PROVIDER = 'http';
 
@@ -94,7 +107,7 @@ describe('enterprise upload scan bypass protection', () => {
     mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => query) });
 
     await expect(
-      createDocument({
+      createServerGeneratedDocument({
         organizationId: ORGANIZATION_ID,
         name: 'Generated template',
         category: 'policy',
@@ -109,7 +122,6 @@ describe('enterprise upload scan bypass protection', () => {
       }),
     ).resolves.toMatchObject({ id: 'template-doc' });
 
-    expect(mocks.createAdminClient).toHaveBeenCalledTimes(1);
     expect(query.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         organization_id: ORGANIZATION_ID,

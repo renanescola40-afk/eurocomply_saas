@@ -30,6 +30,8 @@ const AI_SYSTEM_COLUMNS = [
   'updated_at',
 ].join(',');
 
+const ATOMIC_REASSESSMENT_RPC = 'reassess_ai_system_atomic';
+
 export type AiSystemHistoryRecord = {
   id: string;
   ai_system_id: string;
@@ -96,10 +98,36 @@ export type CreateAiSystemInput = {
 
 export type UpdateAiSystemInput = Omit<CreateAiSystemInput, 'organizationId' | 'createdBy'> & {
   reassessedBy: string;
+  expectedUpdatedAt: string;
+};
+
+export type UpdateAiSystemResult =
+  | { status: 'updated'; system: AiSystemRecord }
+  | { status: 'conflict' };
+
+type AtomicReassessmentRow = {
+  outcome: 'updated' | 'state_changed' | 'not_found' | 'invalid_input';
+  system: AiSystemRecord | null;
 };
 
 function isMissingAiSystemsTable(error: { code?: string; message?: string }) {
   return error.code === '42P01' || error.code === 'PGRST205' || /ai_systems/i.test(error.message ?? '');
+}
+
+function firstAtomicReassessmentRow(value: unknown): AtomicReassessmentRow | null {
+  if (!Array.isArray(value) || value.length !== 1) return null;
+  const candidate = value[0];
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
+
+  const row = candidate as Partial<AtomicReassessmentRow>;
+  if (!['updated', 'state_changed', 'not_found', 'invalid_input'].includes(String(row.outcome))) return null;
+  if (row.outcome === 'updated') {
+    if (!row.system || typeof row.system !== 'object' || Array.isArray(row.system)) return null;
+    const system = row.system as Partial<AiSystemRecord>;
+    if (!system.id || !system.organization_id || !system.updated_at) return null;
+  }
+
+  return row as AtomicReassessmentRow;
 }
 
 async function insertAiSystemHistory(input: {
@@ -239,12 +267,18 @@ export async function createAiSystem(input: CreateAiSystemInput): Promise<AiSyst
   return system;
 }
 
-export async function updateAiSystem(systemId: string, organizationId: string, input: UpdateAiSystemInput): Promise<AiSystemRecord> {
+export async function updateAiSystem(
+  systemId: string,
+  organizationId: string,
+  input: UpdateAiSystemInput,
+): Promise<UpdateAiSystemResult> {
   const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('ai_systems')
-    .update({
+  const { data, error } = await supabase.rpc(ATOMIC_REASSESSMENT_RPC, {
+    p_system_id: systemId,
+    p_organization_id: organizationId,
+    p_expected_updated_at: input.expectedUpdatedAt,
+    p_actor_user_id: input.reassessedBy,
+    p_patch: {
       name: input.name,
       owner_team: input.ownerTeam ?? null,
       category: input.category ?? null,
@@ -265,32 +299,26 @@ export async function updateAiSystem(systemId: string, organizationId: string, i
       classification_summary: input.classificationSummary,
       obligations: input.obligations,
       next_actions: input.nextActions,
-      last_reassessed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', systemId)
-    .eq('organization_id', organizationId)
-    .select(AI_SYSTEM_COLUMNS)
-    .single();
-
-  if (error) {
-    console.warn('[ai-systems] update_failed', { code: error.code ?? 'unknown' });
-    throw error;
-  }
-
-  const system = data as unknown as AiSystemRecord;
-  await insertAiSystemHistory({
-    aiSystemId: system.id,
-    organizationId,
-    actorUserId: input.reassessedBy,
-    action: 'reassessed',
-    snapshot: {
-      name: system.name,
-      riskLevel: system.risk_level,
-      lifecycleStatus: system.lifecycle_status,
-      riskDomain: system.risk_domain,
     },
   });
 
-  return system;
+  if (error) {
+    console.warn('[ai-systems] atomic_reassessment_failed', { code: error.code ?? 'unknown' });
+    throw error;
+  }
+
+  const transition = firstAtomicReassessmentRow(data);
+  if (!transition) {
+    throw new Error('AI system reassessment RPC returned an invalid result');
+  }
+
+  if (transition.outcome === 'state_changed' || transition.outcome === 'not_found') {
+    return { status: 'conflict' };
+  }
+
+  if (transition.outcome !== 'updated' || !transition.system) {
+    throw new Error('AI system reassessment RPC rejected validated input');
+  }
+
+  return { status: 'updated', system: transition.system };
 }

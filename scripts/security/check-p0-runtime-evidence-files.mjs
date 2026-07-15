@@ -105,6 +105,10 @@ function checkReleaseOpenPlaceholder(file, evidence) {
     return checkGenericOpenBlockedEvidence(file, evidence, new Set(['blocked', 'not_verified']));
   }
 
+  if (evidence.evidenceItem === 'audit-chain-live-validation') {
+    return checkGenericOpenBlockedEvidence(file, evidence, new Set(['not_run', 'blocked']));
+  }
+
   if (!new Set(['deployment-smoke-validation', 'rollback-dry-run-validation']).has(evidence.evidenceItem)) return false;
   return checkGenericOpenBlockedEvidence(file, evidence, new Set(['failed']));
 }
