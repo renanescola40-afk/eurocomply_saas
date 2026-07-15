@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-// run-step-up-mfa-runtime-validation: executes a real Supabase MFA challenge with a
-// synthetic fixture account and writes redacted, exact-SHA runtime evidence.
+// Executes a real Supabase MFA challenge with a dedicated synthetic account and
+// writes redacted, exact-SHA evidence for the enterprise step-up release gate.
 
 import { createHash, createHmac } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -114,7 +114,7 @@ export function normalizeSha(value) {
 export function normalizeProviderHost(value) {
   try {
     const parsed = new URL(String(value ?? '').trim());
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.hostname.toLowerCase() : null;
+    return ['https:', 'http:'].includes(parsed.protocol) ? parsed.hostname.toLowerCase() : null;
   } catch {
     return null;
   }
@@ -128,20 +128,17 @@ export function decodeBase32(value) {
   const bytes = [];
   let buffer = 0;
   let bits = 0;
-
   for (const character of normalized) {
     const index = alphabet.indexOf(character);
     if (index < 0) throw new Error('totp_secret_invalid_base32');
     buffer = (buffer << 5) | index;
     bits += 5;
-
     while (bits >= 8) {
       bits -= 8;
       bytes.push((buffer >>> bits) & 0xff);
       buffer &= bits === 0 ? 0 : (1 << bits) - 1;
     }
   }
-
   return Buffer.from(bytes);
 }
 
@@ -184,7 +181,6 @@ function providerConfigured() {
   const hasDedicatedSigningSecret = redactedPresence(stepUpSigningEnv);
   const hasSupabaseAuth = redactedPresence(supabaseUrlEnv) && redactedPresence(supabaseAnonEnv);
   const hasIdpPolicy = configuredList(stepUpAcrEnv).length > 0 || configuredList(stepUpAmrEnv).length > 0;
-
   const configured = providerMode === 'supabase_mfa'
     ? hasSupabaseAuth
     : providerMode === 'enterprise_idp'
@@ -207,15 +203,87 @@ function validateSources() {
   for (const file of criticalFiles) {
     if (!existsSync(file)) failures.push(`${file} missing`);
   }
-
   for (const [file, tokens] of Object.entries(sourceTokens)) {
     const source = existsSync(file) ? readFileSync(file, 'utf8') : '';
     for (const token of tokens) {
       if (!source.includes(token)) failures.push(`${file} missing token: ${token}`);
     }
   }
-
   return failures;
+}
+
+function emptyLiveResult(providerMode, providerHost) {
+  return {
+    status: 'Failed',
+    attempted: true,
+    reason: 'live_validation_not_completed',
+    providerMode,
+    providerHost,
+    signedIn: false,
+    verifiedFactorAvailable: false,
+    challengeCreated: false,
+    verificationSucceeded: false,
+    aal2Observed: false,
+    sessionUserMatched: false,
+    syntheticUserPseudonym: null,
+    verifiedTotpFactorCount: 0,
+    providerCode: null,
+  };
+}
+
+async function executeSupabaseMfaFlow(supabase, { email, password, totpSecret, providerMode, providerHost }) {
+  let result = emptyLiveResult(providerMode, providerHost);
+  const signIn = await supabase.auth.signInWithPassword({ email, password });
+  const signedInUserId = signIn.data?.user?.id ?? null;
+  if (signIn.error || !signedInUserId) {
+    return { ...result, reason: 'fixture_sign_in_failed', providerCode: stableProviderCode(signIn.error) };
+  }
+
+  result = { ...result, signedIn: true, syntheticUserPseudonym: pseudonymize(signedInUserId) };
+  const factors = await supabase.auth.mfa.listFactors();
+  if (factors.error) {
+    return { ...result, reason: 'verified_factor_list_failed', providerCode: stableProviderCode(factors.error) };
+  }
+
+  const verifiedTotpFactors = (factors.data?.totp ?? []).filter((factor) => factor?.id && factor?.status === 'verified');
+  const factor = verifiedTotpFactors[0];
+  result = {
+    ...result,
+    verifiedFactorAvailable: Boolean(factor?.id),
+    verifiedTotpFactorCount: verifiedTotpFactors.length,
+  };
+  if (!factor?.id) return { ...result, reason: 'verified_totp_factor_required' };
+
+  const challenge = await supabase.auth.mfa.challenge({ factorId: factor.id });
+  const challengeId = challenge.data?.id ?? null;
+  if (challenge.error || !challengeId) {
+    return { ...result, reason: 'provider_challenge_failed', providerCode: stableProviderCode(challenge.error) };
+  }
+
+  result = { ...result, challengeCreated: true };
+  const code = generateTotpCode(totpSecret);
+  const verification = await supabase.auth.mfa.verify({ factorId: factor.id, challengeId, code });
+  if (verification.error) {
+    return { ...result, reason: 'totp_verification_failed', providerCode: stableProviderCode(verification.error) };
+  }
+
+  result = { ...result, verificationSucceeded: true };
+  const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  const currentLevel = assurance.data?.currentLevel ?? null;
+  if (assurance.error || currentLevel !== 'aal2') {
+    return { ...result, reason: 'aal2_not_observed', providerCode: stableProviderCode(assurance.error) };
+  }
+
+  const currentUser = await supabase.auth.getUser();
+  const sessionUserMatched = !currentUser.error && currentUser.data?.user?.id === signedInUserId;
+  return {
+    ...result,
+    status: sessionUserMatched ? 'Complete' : 'Failed',
+    reason: sessionUserMatched ? null : 'post_verification_session_user_mismatch',
+    aal2Observed: true,
+    sessionUserMatched,
+    providerCode: stableProviderCode(currentUser.error),
+  };
 }
 
 async function runSupabaseMfaLiveValidation() {
@@ -262,110 +330,30 @@ async function runSupabaseMfaLiveValidation() {
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
-
-  let result = {
-    status: 'Failed',
-    attempted: true,
-    reason: 'live_validation_not_completed',
-    providerMode,
-    providerHost,
-    signedIn: false,
-    verifiedFactorAvailable: false,
-    challengeCreated: false,
-    verificationSucceeded: false,
-    aal2Observed: false,
-    sessionUserMatched: false,
-    syntheticUserPseudonym: null,
-    verifiedTotpFactorCount: 0,
-    providerCode: null,
-  };
-  let signedOut = false;
-
+  let flowResult;
   try {
-    const signIn = await supabase.auth.signInWithPassword({ email, password });
-    const signedInUserId = signIn.data?.user?.id ?? null;
-    if (signIn.error || !signedInUserId) {
-      result = { ...result, reason: 'fixture_sign_in_failed', providerCode: stableProviderCode(signIn.error) };
-      return result;
-    }
-
-    result = {
-      ...result,
-      signedIn: true,
-      syntheticUserPseudonym: pseudonymize(signedInUserId),
-    };
-
-    const factors = await supabase.auth.mfa.listFactors();
-    if (factors.error) {
-      result = { ...result, reason: 'verified_factor_list_failed', providerCode: stableProviderCode(factors.error) };
-      return result;
-    }
-
-    const verifiedTotpFactors = (factors.data?.totp ?? []).filter((factor) => factor?.id && factor?.status === 'verified');
-    const factor = verifiedTotpFactors[0];
-    result = {
-      ...result,
-      verifiedFactorAvailable: Boolean(factor?.id),
-      verifiedTotpFactorCount: verifiedTotpFactors.length,
-    };
-    if (!factor?.id) {
-      result = { ...result, reason: 'verified_totp_factor_required' };
-      return result;
-    }
-
-    const challenge = await supabase.auth.mfa.challenge({ factorId: factor.id });
-    const challengeId = challenge.data?.id ?? null;
-    if (challenge.error || !challengeId) {
-      result = { ...result, reason: 'provider_challenge_failed', providerCode: stableProviderCode(challenge.error) };
-      return result;
-    }
-
-    result = { ...result, challengeCreated: true };
-    const code = generateTotpCode(totpSecret);
-    const verification = await supabase.auth.mfa.verify({ factorId: factor.id, challengeId, code });
-    if (verification.error) {
-      result = { ...result, reason: 'totp_verification_failed', providerCode: stableProviderCode(verification.error) };
-      return result;
-    }
-
-    result = { ...result, verificationSucceeded: true };
-    const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    const currentLevel = assurance.data?.currentLevel ?? null;
-    if (assurance.error || currentLevel !== 'aal2') {
-      result = { ...result, reason: 'aal2_not_observed', providerCode: stableProviderCode(assurance.error) };
-      return result;
-    }
-
-    const currentUser = await supabase.auth.getUser();
-    const sessionUserMatched = !currentUser.error && currentUser.data?.user?.id === signedInUserId;
-    result = {
-      ...result,
-      status: sessionUserMatched ? 'Complete' : 'Failed',
-      reason: sessionUserMatched ? null : 'post_verification_session_user_mismatch',
-      aal2Observed: true,
-      sessionUserMatched,
-      providerCode: stableProviderCode(currentUser.error),
-    };
-    return result;
+    flowResult = await executeSupabaseMfaFlow(supabase, { email, password, totpSecret, providerMode, providerHost });
   } catch (error) {
-    result = {
-      ...result,
-      status: 'Failed',
-      reason: error instanceof Error && error.message.startsWith('totp_') ? error.message : 'unexpected_live_validation_failure',
+    flowResult = {
+      ...emptyLiveResult(providerMode, providerHost),
+      reason: error instanceof Error && error.message.startsWith('totp_')
+        ? error.message
+        : 'unexpected_live_validation_failure',
       providerCode: stableProviderCode(error),
     };
-    return result;
-  } finally {
-    const signOut = await supabase.auth.signOut();
-    signedOut = !signOut.error;
-    result = {
-      ...result,
-      status: result.status === 'Complete' && signedOut ? 'Complete' : 'Failed',
-      reason: result.status === 'Complete' && !signedOut ? 'fixture_sign_out_failed' : result.reason,
-      signedOut,
-      durationMs: Date.now() - startedAt,
-    };
   }
+
+  const signOut = await supabase.auth.signOut();
+  const signedOut = !signOut.error;
+  const complete = flowResult.status === 'Complete' && signedOut;
+  return {
+    ...flowResult,
+    status: complete ? 'Complete' : 'Failed',
+    reason: flowResult.status === 'Complete' && !signedOut ? 'fixture_sign_out_failed' : flowResult.reason,
+    signedOut,
+    signOutProviderCode: stableProviderCode(signOut.error),
+    durationMs: Date.now() - startedAt,
+  };
 }
 
 export function evaluateStepUpRuntimeEvidence({
@@ -387,7 +375,7 @@ export function evaluateStepUpRuntimeEvidence({
     && /^\d+$/.test(String(githubRunId ?? ''))
     && githubRepository === repositoryName;
   const sourcesPassed = sourceFailures.length === 0;
-  const livePassed = liveValidation?.status === 'Complete';
+  const livePassed = liveValidation?.status === 'Complete' && liveValidation?.signedOut === true;
   const complete = sourcesPassed && provider.configured && livePassed && exactShaBound && branchBound && workflowProvenance;
   const attemptedFailure = liveValidation?.attempted === true && liveValidation?.status === 'Failed';
 
@@ -417,7 +405,9 @@ async function main() {
     || readRuntimeSetting(legacyEnterpriseReleaseEnv) === 'true';
   const expectedSha = readRuntimeSetting(expectedShaEnv);
   const checkedOutSha = readGitValue(['rev-parse', 'HEAD']);
-  const expectedBranch = readRuntimeSetting(expectedBranchEnv) || readRuntimeSetting('GITHUB_REF_NAME') || readGitValue(['branch', '--show-current']);
+  const expectedBranch = readRuntimeSetting(expectedBranchEnv)
+    || readRuntimeSetting('GITHUB_REF_NAME')
+    || readGitValue(['branch', '--show-current']);
   const githubActions = readRuntimeSetting('GITHUB_ACTIONS') === 'true';
   const githubRunId = readRuntimeSetting('GITHUB_RUN_ID');
   const githubRepository = readRuntimeSetting('GITHUB_REPOSITORY');
@@ -433,7 +423,6 @@ async function main() {
     githubRunId,
     githubRepository,
   });
-  const expiresAt = new Date(generatedAt.getTime() + evidenceFreshnessMs).toISOString();
 
   const evidence = {
     schema: 'risck-comply.step-up-mfa-runtime-evidence.v2',
@@ -442,7 +431,7 @@ async function main() {
     status: evaluation.status,
     outcome: evaluation.outcome,
     generatedAt: generatedAt.toISOString(),
-    expiresAt,
+    expiresAt: new Date(generatedAt.getTime() + evidenceFreshnessMs).toISOString(),
     reviewedAt: generatedAt.toISOString(),
     reviewer: 'RISCK COMPLY protected runtime automation',
     repository: repositoryName,
@@ -452,7 +441,7 @@ async function main() {
     environment: 'production-provider-validation',
     control: 'P0-MFA real step-up validation for critical actions',
     summary: evaluation.complete
-      ? 'A synthetic Supabase account completed a live verified TOTP challenge, produced aal2 and retained the same authenticated user on the exact protected release SHA.'
+      ? 'A synthetic Supabase account completed a live verified TOTP challenge, produced aal2, retained the same user and revoked its session on the exact protected release SHA.'
       : sourceFailures.length > 0
         ? 'Step-up source controls failed validation; enterprise release remains blocked.'
         : liveValidation.status === 'Failed'
