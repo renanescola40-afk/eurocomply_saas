@@ -21,20 +21,32 @@ function normalizeNewlines(value) {
   return String(value).replace(/\r\n/g, '\n');
 }
 
-function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 function sectionBody(content, title) {
-  const match = content.match(
-    new RegExp(`^##\\s+${escapeRegExp(title)}\\s*$([\\s\\S]*?)(?=^##\\s+|\\z)`, 'mi'),
-  );
-  return match?.[1]?.trim() ?? null;
+  const normalizedTitle = String(title).trim().toLowerCase();
+  const lines = normalizeNewlines(content).split('\n');
+  let start = -1;
+  for (const [index, line] of lines.entries()) {
+    const match = /^##\s+(.+?)\s*$/.exec(line);
+    if (match?.[1]?.trim().toLowerCase() === normalizedTitle) {
+      start = index + 1;
+      break;
+    }
+  }
+  if (start === -1) return null;
+
+  let end = lines.length;
+  for (let index = start; index < lines.length; index += 1) {
+    if (/^##\s+.+?\s*$/.test(lines[index])) {
+      end = index;
+      break;
+    }
+  }
+  return lines.slice(start, end).join('\n').trim() || null;
 }
 
 function extractMetadata(content, field) {
   const inline = content.match(
-    new RegExp(`^(?:-\\s+)?\\*{0,2}${escapeRegExp(field)}\\s*:\\*{0,2}\\s*(.+)$`, 'mi'),
+    new RegExp(`^(?:-\\s+)?\\*{0,2}${String(field).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\*{0,2}\\s*(.+)$`, 'mi'),
   );
   if (inline?.[1]) return inline[1].replace(/\*+$/g, '').trim();
 
@@ -72,8 +84,6 @@ function hasRiskTradeoffCoverage(content) {
 }
 
 function classifyDecisionFilename(filename) {
-  // Dated ADRs must be checked first. Otherwise ADR-2026-07-14-* is
-  // incorrectly interpreted as numbered ADR 2026.
   const datedAdr = DATED_ADR_FILE.exec(filename);
   if (datedAdr) {
     return {
