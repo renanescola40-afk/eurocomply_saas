@@ -1,16 +1,17 @@
 # Risck Comply Senior Agent configuration
 # Read by humans, GitHub custom agents, coding-agent providers, and workflows.
 
-version: 2
+version: 5
 
 agent_profile:
   path: .github/agents/enterprise-go.agent.md
+  pr_creation_prompt: .github/agents/pr-creation-with-vercel-limit.prompt.md
   display_name: Risck Comply Enterprise GO
   user_invocable: true
   automatic_model_invocation: false
   mission: >-
     Move the repository toward a truthful, evidence-backed Enterprise Production GO
-    without weakening security, privacy, tenancy, release, or operational controls.
+    without weakening security, privacy, tenancy, release, review, or operational controls.
 
 queue:
   primary_label: senior-agent
@@ -33,20 +34,30 @@ orchestration:
   triage_workflow: .github/workflows/senior-agent-triage.yml
   dispatch_workflow: .github/workflows/senior-agent-dispatch.yml
   watchdog_workflow: .github/workflows/senior-agent-watchdog.yml
+  pr_classifier_workflow: .github/workflows/pr-autopilot.yml
+  ci_autofix_workflow: .github/workflows/codex-autofix.yml
   repository_watchdog_cadence_hours: 6
   code_writing_requires_agent_assignment: true
   automatic_merge: false
+  automatic_branch_sync: false
   automatic_production_deploy: false
+  final_merge_actor: human-owner
 
 branching:
   base_branch: main
   pattern: agent/<issue-number>-<short-slug>
   allow_direct_push_to_main: false
   allow_force_push: false
+  allow_automatic_update_branch: false
+  conflict_resolution: human-or-explicitly-authorized-agent
 
 pull_requests:
   draft_by_default: true
-  require_owner_merge: true
+  require_owner_approval: true
+  require_owner_merge_click: true
+  require_manual_merge_for_all_paths: true
+  create_when_vercel_rate_limited: true
+  vercel_rate_limit_prompt: .github/agents/pr-creation-with-vercel-limit.prompt.md
   link_issue: true
   require_overlap_review: true
   require_sections:
@@ -57,9 +68,69 @@ pull_requests:
     - Root cause and technical approach
     - Security, privacy, and tenancy impact
     - Verification
+    - External deployment status
     - Evidence and limitations
     - Risk, compatibility, and rollback
     - Follow-ups
+
+pr_classifier:
+  policy: .github/pr-autopilot-policy.json
+  workflow: .github/workflows/pr-autopilot.yml
+  authority:
+    classify_risk: true
+    maintain_classification_labels: true
+    checkout_pr_code: false
+    update_branch: false
+    resolve_conflicts: false
+    approve_pr: false
+    resolve_threads: false
+    enable_auto_merge: false
+    merge_pr: false
+    administrator_bypass: false
+
+ci_autofix:
+  workflow: .github/workflows/codex-autofix.yml
+  required_secrets:
+    - OPENAI_API_KEY
+    - PR_AUTOPILOT_TOKEN
+  token_scope: >-
+    Repository-scoped same-branch repair push only. It has no classifier,
+    approval, branch-sync, merge, administrator, provider, or production authority.
+  max_attempts: 2
+  exact_head_required: true
+  same_branch_only: true
+  verification_required: true
+  merge_authority: false
+  branch_sync_authority: false
+
+manual_merge_requirements:
+  - exact current head SHA
+  - successful required status-check rollup
+  - approval from an eligible reviewer other than the latest pusher
+  - resolved review conversations
+  - clean GitHub merge state
+  - no protected-path or owner-only blocker
+  - explicit human merge action
+
+never_bypass:
+  - required status checks
+  - independent approval
+  - conversation resolution
+  - branch protection
+  - protected path policy
+  - exact SHA binding
+  - owner-only decisions
+  - human final merge
+
+protected_domains:
+  - authentication and sessions
+  - authorization, RBAC, tenant isolation, and RLS
+  - Supabase authority and migrations
+  - billing, Stripe, webhooks, and entitlements
+  - security and release workflows
+  - secrets and production configuration
+  - audit evidence, legal records, and compliance claims
+  - package manifests and agent governance
 
 verification:
   full_gate:
@@ -72,17 +143,13 @@ verification:
   release_candidate_gate:
     - npm run test:e2e
     - npm run release:production-final
-  low_risk_docs_gate:
-    - npm run lint
   ci_fix_gate:
     - npm ci
+    - npm run security:package-lock
     - npm run lint
     - npm run typecheck
     - npm run test
-  security_gate:
-    - npm run security:ci
-    - npm run security:public-secrets
-    - npm run security:supply-chain
+    - npm run build
   evidence_states:
     - PASS
     - FAIL
@@ -100,19 +167,6 @@ enterprise_go:
     - Controlled Beta GO
     - Early Access GO
     - Production GO with Enterprise Limitations
-  required_domains:
-    - build and E2E
-    - deployment and exact SHA binding
-    - health and protected readiness
-    - authentication, sessions, onboarding, RBAC, MFA, step-up, and SSO claims
-    - Supabase RLS and cross-tenant denial
-    - Stripe lifecycle and webhook integrity
-    - Sentry, logs, alerts, redaction, and request IDs
-    - privileged jobs, rate limiting, retries, and truthful partial results
-    - audit chain, exports, evidence integrity, and privacy minimization
-    - rollback, backup restore, RPO/RTO, and incident response
-    - DAST, WAF/CDN/DDoS, SBOM, and external security review
-    - accessibility, localization, behavior acceptance, and truthful positioning
   stop_conditions:
     - critical vulnerability
     - high vulnerability without formal owner risk acceptance
@@ -128,28 +182,6 @@ enterprise_go:
     - manipulated or synthetic evidence represented as production proof
     - owner-only external configuration unavailable
 
-runtime_guard:
-  enabled_when_configured: true
-  target_url_variable_priority:
-    - PRODUCTION_URL
-    - NEXT_PUBLIC_APP_URL
-  cadence_minutes: 30
-  evidence_requirement: fresh validation against the explicit production hostname and exact promoted SHA
-  failure_policy:
-    label_priority: priority:p0
-    mark_blocked: true
-    require_owner_review: true
-    do_not_auto_merge: true
-  recommended_checks:
-    - deployment provider status
-    - application availability
-    - health and protected readiness
-    - authenticated smoke
-    - environment configuration
-    - database provider health
-    - payment provider health
-    - observability delivery
-
 external_blockers:
   do_not_autofix:
     - vercel build rate limit
@@ -162,17 +194,16 @@ external_blockers:
     - external penetration test
     - WAF or CDN console configuration
     - production rollback or restore approval
-  policy:
-    mark_blocked: true
-    require_owner_review: true
-    open_configuration_issue: true
-    do_not_open_code_pr: true
-  owner_actions:
-    - review deployment provider limits
-    - configure required environment secrets and variables
-    - provide approved runtime or provider-console evidence
-    - authorize controlled production validation
-    - re-run failed jobs after configuration is fixed
+  vercel_rate_limit_policy:
+    classify_as: external deployment blocker
+    create_or_update_code_pr: true
+    continue_github_checks: true
+    infer_code_failure: false
+    run_codex_autofix: false
+    require_external_deployment_status_section: true
+    deployment_evidence_state: BLOCKED
+    production_validation_state: NOT VERIFIED
+    merge_policy: human-controlled and branch-protection-authoritative
 
 safe_autonomy:
   allowed:
@@ -180,8 +211,16 @@ safe_autonomy:
     - GitHub issue templates, PR templates, and queue automation.
     - CI hardening that preserves or strengthens checks.
     - Small lint, typecheck, test, and build fixes with evidence.
+    - Bounded same-branch Codex CI repair under trusted default-branch policy.
+    - Pull-request creation during a Vercel-only rate-limit or quota blocker with truthful evidence.
     - Small bug fixes with tests or clear reproduction evidence.
     - Low-risk systemic refactors that preserve deployed identities and public behavior.
+  never_allowed:
+    - Automatic pull-request merge.
+    - Automatic branch synchronization.
+    - Administrator bypass.
+    - Self-approval or fabricated review.
+    - Automatic review-thread resolution.
   blocked_without_owner:
     - Authentication, sessions, cookies, middleware auth, MFA, or step-up auth.
     - Authorization, tenant isolation, object-level access, or Supabase RLS assumptions.
@@ -189,7 +228,7 @@ safe_autonomy:
     - Audit chain, compliance evidence, trust package, or legal records.
     - Upload security, malware scanning, storage buckets, or signed URLs.
     - Production secrets, environment configuration, deployment, or new external integrations.
-    - Database migrations that delete data or are not backward-compatible.
+    - Destructive or backward-incompatible database migrations.
     - Production rollback, restore, pentest, SSO, WAF, or risk acceptance.
 
 security:
@@ -206,3 +245,5 @@ security:
     - No privileged operation moved client-side.
     - No scanner, required check, or test disabled to make a build pass.
     - No repository result represented as proof of production behavior.
+    - No automatic merge or branch synchronization.
+    - No Vercel rate-limit signal represented as deployment success or a code defect without evidence.
