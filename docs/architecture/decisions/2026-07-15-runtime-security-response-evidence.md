@@ -11,13 +11,12 @@ Creating manually authored `Complete` files would introduce stale-evidence risk.
 
 ## Decision
 
-Before either strict release runner starts, the release orchestrator:
+After the public or enterprise release runner completes its final deployment smoke, the release orchestrator:
 
 1. verifies through the protected runtime metadata endpoint that the hostname serves the exact release SHA;
-2. executes a fresh deployment smoke against that hostname;
-3. derives two narrow evidence documents;
-4. starts the broader public or enterprise runner, whose strict evidence gates can now consume those documents;
-5. verifies the runtime SHA again after the broader runner completes.
+2. derives two narrow evidence documents from the final smoke and protected SHA proof;
+3. fails the release command if either document cannot be completed;
+4. lets the protected `Public Production Final` job recalculate the enterprise scorecard in the same workspace.
 
 The derived documents are:
 
@@ -33,15 +32,15 @@ Derivation fails closed unless:
 - the smoke commit SHA exactly matches the release SHA;
 - every required target-level check explicitly passed.
 
-The protected `Public Production Final` job recalculates the enterprise scorecard after the release command, using the generated runtime documents and exact-SHA GitHub checks in the same workspace. The resulting scorecard and runtime evidence are retained together for 90 days.
+The protected job retains the generated runtime documents, exact-SHA GitHub checks, release logs, and resulting scorecard together for 90 days.
 
 ## Consequences
 
 A successful protected production validation can now provide the exact evidence paths required by SEC-05 and SEC-06. The score does not increase merely because this code is merged; the files remain absent until a fresh target-environment run succeeds.
 
-The deployment smoke and runtime SHA verification run once before and once within or after the broader validation path. This deliberate duplication prioritizes fail-closed ordering and final-state confirmation; it may be consolidated later only if the strict runners expose an equivalent ordered hook.
+Security-response evidence is derived from the final smoke artifact rather than from a preliminary duplicate request sequence. This keeps the uploaded evidence bundle internally coherent and avoids unnecessary provider traffic.
 
-A failed, stale, empty, runtime-unbound, or SHA-mismatched smoke prevents both evidence documents from becoming complete and fails the release command.
+A failed, stale, empty, runtime-unbound, or SHA-mismatched smoke prevents both evidence documents from becoming complete and fails the release command even if earlier repository checks passed.
 
 ## Evidence boundary
 
