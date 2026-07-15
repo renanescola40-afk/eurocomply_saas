@@ -12,8 +12,6 @@ import { noStoreJson } from '@/server/security/no-store';
 import { parseJsonBodyWithZod, requireApiUser, secureApiError } from '@/server/security/api-guards';
 
 const AI_SYSTEM_JSON_MAX_BYTES = 64 * 1024;
-const ENTERPRISE_PACK_COLUMNS = 'id,organization_id,title,status,scope,country_scope,summary,readiness_score_snapshot,created_by,created_at,updated_at';
-const ENTERPRISE_PACK_ITEM_COLUMNS = 'id,organization_id,pack_id,item_type,title,source_table,source_id,status,owner,notes,created_at,updated_at';
 const ENTERPRISE_VENDOR_COLUMNS = 'id,organization_id,ai_system_id,vendor_name,status,risk_level,checklist,next_review_at,notes,created_by,created_at,updated_at';
 const ENTERPRISE_RISK_REVIEW_COLUMNS = 'id,organization_id,ai_system_id,risk_level,status,decision,due_at,notes,requested_by,created_at,updated_at';
 
@@ -99,86 +97,25 @@ async function createEvidencePackWorkflow(input: {
       : systems.map((system) => system.country_market ?? 'EU'),
   );
 
-  const { data: pack, error: packError } = await supabase
-    .from('enterprise_evidence_packs')
-    .insert({
-      organization_id: input.organizationId,
-      title: input.title,
-      scope: 'ai_act_readiness',
-      country_scope: countryScope,
-      summary: 'Evidence pack generated from current workspace AI systems and operational readiness signals.',
-      readiness_score_snapshot: input.readinessScoreSnapshot ?? null,
-      created_by: input.actorUserId,
-    })
-    .select(ENTERPRISE_PACK_COLUMNS)
-    .single();
+  const { data, error } = await supabase.rpc('create_enterprise_evidence_pack_atomic', {
+    p_organization_id: input.organizationId,
+    p_actor_user_id: input.actorUserId,
+    p_title: input.title,
+    p_country_scope: countryScope,
+    p_readiness_score_snapshot: input.readinessScoreSnapshot ?? null,
+  });
 
-  if (packError) {
-    console.warn('[enterprise-readiness] evidence_pack_create_failed', { code: packError.code ?? 'unknown' });
-    throw packError;
+  if (error) {
+    console.warn('[enterprise-readiness] evidence_pack_create_failed', { code: error.code ?? 'unknown' });
+    throw error;
   }
 
-  const seedItems = [
-    {
-      organization_id: input.organizationId,
-      pack_id: pack.id,
-      item_type: 'executive_report',
-      title: 'Executive readiness report',
-      source_table: 'enterprise_evidence_packs',
-      source_id: pack.id,
-      status: 'ready',
-      owner: 'Compliance lead',
-      notes: 'Generated from real readiness signals in this organization.',
-    },
-    ...(systems.length > 0
-      ? systems.map((system) => ({
-          organization_id: input.organizationId,
-          pack_id: pack.id,
-          item_type: 'ai_system',
-          title: `AI system registry: ${system.name}`,
-          source_table: 'ai_systems',
-          source_id: system.id,
-          status: 'ready',
-          owner: system.owner_team ?? 'Unassigned',
-          notes: system.classification_summary,
-        }))
-      : [
-          {
-            organization_id: input.organizationId,
-            pack_id: pack.id,
-            item_type: 'ai_system',
-            title: 'AI system registry baseline',
-            source_table: null,
-            source_id: null,
-            status: 'missing',
-            owner: 'Compliance lead',
-            notes: 'Register at least one real AI system before exporting a procurement packet.',
-          },
-        ]),
-  ];
-
-  const { data: items, error: itemError } = await supabase
-    .from('enterprise_evidence_pack_items')
-    .insert(seedItems)
-    .select(ENTERPRISE_PACK_ITEM_COLUMNS);
-
-  if (itemError) {
-    console.warn('[enterprise-readiness] evidence_pack_items_create_failed', { code: itemError.code ?? 'unknown' });
-
-    const { error: cleanupError } = await supabase
-      .from('enterprise_evidence_packs')
-      .delete()
-      .eq('id', pack.id)
-      .eq('organization_id', input.organizationId);
-
-    if (cleanupError) {
-      console.error('[enterprise-readiness] evidence_pack_cleanup_failed', { code: cleanupError.code ?? 'unknown' });
-    }
-
-    throw itemError;
+  const result = data as { pack?: { id?: string }; items?: unknown[] } | null;
+  if (!result?.pack?.id || !Array.isArray(result.items)) {
+    throw new Error('enterprise_evidence_pack_invalid_result');
   }
 
-  return { pack, items: items ?? [] };
+  return result as { pack: { id: string }; items: unknown[] };
 }
 
 async function createVendorDiligenceWorkflow(input: {
