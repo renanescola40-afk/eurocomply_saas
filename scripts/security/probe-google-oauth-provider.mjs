@@ -10,11 +10,11 @@ function parseHttpsUrl(value) {
   }
 }
 
-function isExactProductionCallback(value, siteUrl) {
+function isExactProductionCallback(value, expectedProductionUrl) {
   const callback = parseHttpsUrl(value);
-  if (!callback || !siteUrl) return false;
+  if (!callback || !expectedProductionUrl) return false;
 
-  return callback.origin === siteUrl.origin
+  return callback.origin === expectedProductionUrl.origin
     && callback.pathname === '/auth/callback'
     && callback.search === ''
     && callback.hash === '';
@@ -22,8 +22,9 @@ function isExactProductionCallback(value, siteUrl) {
 
 const accessToken = String(process.env.SUPABASE_ACCESS_TOKEN ?? '').trim();
 const projectRef = String(process.env.SUPABASE_PROJECT_REF ?? '').trim();
+const expectedProductionUrl = parseHttpsUrl(process.env.RELEASE_PRODUCTION_URL);
 
-if (!accessToken || !projectRef) {
+if (!accessToken || !projectRef || !expectedProductionUrl) {
   process.exit(2);
 }
 
@@ -53,7 +54,8 @@ try {
 
   const passed = config.external_google_enabled === true
     && Boolean(siteUrl)
-    && allowlist.some((value) => isExactProductionCallback(value, siteUrl));
+    && siteUrl.origin === expectedProductionUrl.origin
+    && allowlist.some((value) => isExactProductionCallback(value, expectedProductionUrl));
 
   process.exit(passed ? 0 : 4);
 } catch {
