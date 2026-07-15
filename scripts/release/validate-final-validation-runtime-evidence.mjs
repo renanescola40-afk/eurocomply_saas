@@ -19,11 +19,31 @@ export const requiredFinalValidationCommands = [
   'npm run security:p0-runtime-gap:strict',
 ];
 
+const allowedStatuses = new Set(['Open', 'Exception', 'Complete']);
+const allowedBlockedOutcomes = new Set(['blocked', 'not_verified']);
+const fullShaPattern = /^[a-f0-9]{40}$/i;
+const canonicalRedactionConfirmation = 'Redaction confirmed for runtime evidence.';
+
 function commandPassed(evidence, commandName) {
   const matches = (evidence?.commands ?? []).filter((entry) => entry?.command === commandName);
   if (matches.length !== 1) return false;
   const result = matches[0]?.result ?? matches[0]?.passed;
   return ['passed', 'Go', 'GO', true].includes(result);
+}
+
+function requireEmptyArray(failures, value, field) {
+  if (!Array.isArray(value)) failures.push(`${field} must be an array`);
+  else if (value.length > 0) failures.push(`${field} must be empty`);
+}
+
+function requireNonEmptyArray(failures, value, field) {
+  if (!Array.isArray(value) || value.length === 0) failures.push(`${field} must be a non-empty array`);
+}
+
+function requireNonEmptyString(failures, value, field, minLength = 1) {
+  if (typeof value !== 'string' || value.trim().length < minLength) {
+    failures.push(`${field} must be a non-empty string`);
+  }
 }
 
 export function validateFinalValidationRuntimeEvidence(
@@ -52,16 +72,45 @@ export function validateFinalValidationRuntimeEvidence(
     if (ageMs > maxAgeDays * 24 * 60 * 60 * 1000) failures.push(`generatedAt is older than ${maxAgeDays} days`);
   }
 
-  if (evidence?.status === 'Exception') {
+  const status = evidence?.status;
+  if (!allowedStatuses.has(status)) {
+    failures.push('status must be Open, Exception or Complete');
+    return failures;
+  }
+
+  if (status === 'Open') {
+    if (!allowedBlockedOutcomes.has(evidence?.outcome)) {
+      failures.push('Open evidence outcome must be blocked or not_verified');
+    }
+    if (evidence?.releaseDecision === 'Go') {
+      failures.push('Open evidence releaseDecision must not be Go');
+    }
+    return failures;
+  }
+
+  if (status === 'Exception') {
+    if (!allowedBlockedOutcomes.has(evidence?.outcome)) {
+      failures.push('Exception evidence outcome must be blocked or not_verified');
+    }
+    if (evidence?.releaseDecision === 'Go') {
+      failures.push('Exception evidence releaseDecision must not be Go');
+    }
     const expiresAt = parseTimestamp(evidence?.exception?.expiresAt);
     if (expiresAt === null) failures.push('exception.expiresAt must be an ISO-8601 timestamp');
     else if (expiresAt < nowMs) failures.push('final validation exception has expired');
+    return failures;
   }
-
-  if (evidence?.status !== 'Complete') return failures;
 
   if (evidence?.outcome !== 'passed') failures.push('Complete evidence outcome must be passed');
   if (evidence?.releaseDecision !== 'Go') failures.push('releaseDecision must be Go');
+  if (evidence?.releaseTarget !== 'enterprise') failures.push('releaseTarget must be enterprise');
+  if (evidence?.noSecretsStored !== true) failures.push('noSecretsStored must be true');
+  requireNonEmptyString(failures, evidence?.summary, 'summary', 40);
+  requireNonEmptyArray(failures, evidence?.evidenceLocations, 'evidenceLocations');
+  requireNonEmptyArray(failures, evidence?.controlsVerified, 'controlsVerified');
+  if (evidence?.redactionConfirmation !== canonicalRedactionConfirmation) {
+    failures.push('redactionConfirmation must use the canonical runtime-evidence text');
+  }
   if (evidence?.evidenceIntegrity?.placeholderOnly !== false) failures.push('evidenceIntegrity.placeholderOnly must be false');
   if (evidence?.evidenceIntegrity?.containsSensitiveValues !== false) failures.push('evidenceIntegrity.containsSensitiveValues must be false');
   if (evidence?.evidenceIntegrity?.valuesRedacted !== true) failures.push('evidenceIntegrity.valuesRedacted must be true');
@@ -73,17 +122,45 @@ export function validateFinalValidationRuntimeEvidence(
   if (runtime.generatedByGithubActions !== true) failures.push('runtimeContext.generatedByGithubActions must be true');
   if (runtime.repository !== expectedRepository) failures.push(`runtimeContext.repository must be ${expectedRepository}`);
   if (runtime.branch !== expectedBranch) failures.push(`runtimeContext.branch must be ${expectedBranch}`);
-  if (!String(runtime.githubRunId ?? '').trim()) failures.push('runtimeContext.githubRunId is required');
-  const commitSha = String(runtime.commitSha ?? evidence?.commitSha ?? '');
-  if (!/^[a-f0-9]{40}$/i.test(commitSha)) failures.push('runtime commit SHA must be a full commit SHA');
-  if (expectedCommitSha && commitSha !== expectedCommitSha) failures.push(`runtime commit SHA must match ${expectedCommitSha}`);
+  if (!/^\d+$/.test(String(runtime.githubRunId ?? ''))) failures.push('runtimeContext.githubRunId must be numeric');
+
+  const runtimeCommitSha = String(runtime.commitSha ?? '');
+  const targetCommit = String(evidence?.targetCommit ?? '');
+  const commitSha = String(evidence?.commitSha ?? '');
+  const buildSha = String(evidence?.buildSha ?? '');
+
+  if (!fullShaPattern.test(runtimeCommitSha)) failures.push('runtime commit SHA must be a full commit SHA');
+  if (!fullShaPattern.test(targetCommit)) failures.push('targetCommit must be a full commit SHA');
+  if (!fullShaPattern.test(commitSha)) failures.push('commitSha must be a full commit SHA');
+  if (!fullShaPattern.test(buildSha)) failures.push('buildSha must be a full commit SHA');
+
+  if (targetCommit && targetCommit !== runtimeCommitSha) failures.push('targetCommit must match runtime commit SHA');
+  if (commitSha && commitSha !== runtimeCommitSha) failures.push('commitSha must match runtime commit SHA');
+  if (buildSha && buildSha !== runtimeCommitSha) failures.push('buildSha must match runtime commit SHA');
+  if (expectedCommitSha && runtimeCommitSha !== expectedCommitSha) failures.push(`runtime commit SHA must match ${expectedCommitSha}`);
+
+  const sources = evidence?.evidenceSources ?? {};
+  if (sources.productionFinalValidation?.status !== 'Complete' || sources.productionFinalValidation?.outcome !== 'passed') {
+    failures.push('evidenceSources.productionFinalValidation must be Complete/passed');
+  }
+  if (sources.enterpriseRuntimeEvidence?.status !== 'Complete' || sources.enterpriseRuntimeEvidence?.outcome !== 'passed') {
+    failures.push('evidenceSources.enterpriseRuntimeEvidence must be Complete/passed');
+  }
+  if (sources.releaseGoNoGo?.status !== 'Complete' || sources.releaseGoNoGo?.finalDecision !== 'Go') {
+    failures.push('evidenceSources.releaseGoNoGo must be Complete/Go');
+  }
+
+  if (evidence?.register?.allComplete !== true) failures.push('register.allComplete must be true');
+  requireEmptyArray(failures, evidence?.register?.openItems, 'register.openItems');
+  requireEmptyArray(failures, evidence?.blockingReasons?.missingCommands, 'blockingReasons.missingCommands');
+  requireEmptyArray(failures, evidence?.blockingReasons?.openItems, 'blockingReasons.openItems');
+  requireEmptyArray(failures, evidence?.blockingReasons?.provenance, 'blockingReasons.provenance');
 
   for (const command of requiredFinalValidationCommands) {
     if (!commandPassed(evidence, command)) failures.push(`commands must contain exactly one passing ${command}`);
   }
 
-  if (!Array.isArray(evidence?.failures)) failures.push('failures must be an array');
-  else if (evidence.failures.length > 0) failures.push('failures must be empty');
+  requireEmptyArray(failures, evidence?.failures, 'failures');
 
   return failures;
 }
