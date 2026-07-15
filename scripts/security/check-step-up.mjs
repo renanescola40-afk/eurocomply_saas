@@ -122,7 +122,7 @@ const tokenChecks = {
     'Values are never printed', 'process.env.RISCK_COMPLY_ENTERPRISE_RELEASE', 'process.env.EUROCOMPLY_ENTERPRISE_RELEASE',
   ],
   [paths.productionPreflight]: [
-    'readRuntimeSetting', 'hasConfiguredList', enterpriseReleaseEnv, legacyEnterpriseReleaseEnv,
+    'readRuntimeSetting', 'hasConfiguredList', 'isEnterpriseReleaseEnabled',
     'Enterprise step-up runtime provider preflight: running', 'Enterprise step-up runtime provider preflight: skipped',
     'stepUpProviderEnv', 'stepUpSigningEnv', 'auditSigningEnv', 'supabaseUrlEnv', 'supabaseAnonEnv',
     'stepUpAcrEnv', 'stepUpAmrEnv', 'providerConfigured',
