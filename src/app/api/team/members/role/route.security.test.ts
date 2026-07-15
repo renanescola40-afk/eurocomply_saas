@@ -17,6 +17,17 @@ describe('team member role route security contract', () => {
     expect(routeSource).toContain('secureApiError');
   });
 
+  it('rejects malformed member IDs before constructing the Supabase client', () => {
+    const uuidValidation = routeSource.indexOf('memberId: z.string().trim().uuid()');
+    const parseGuard = routeSource.indexOf('if (!parsed.success)');
+    const clientCreation = routeSource.indexOf('const supabase = createAdminClient()');
+
+    expect(uuidValidation).toBeGreaterThan(-1);
+    expect(parseGuard).toBeGreaterThan(uuidValidation);
+    expect(clientCreation).toBeGreaterThan(parseGuard);
+    expect(routeSource).toContain("error: 'invalid_team_role_payload'");
+  });
+
   it('scopes member lookup by organization_id before invoking the transition', () => {
     const lookupStart = routeSource.indexOf(".from('organization_members')");
     const lookupEnd = routeSource.indexOf('.maybeSingle()', lookupStart);
