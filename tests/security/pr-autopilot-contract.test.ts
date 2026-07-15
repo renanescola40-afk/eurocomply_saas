@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
 
 describe('PR Autopilot security contract', () => {
   const classifier = readFileSync('.github/workflows/pr-autopilot.yml', 'utf8');
