@@ -10,11 +10,15 @@ describe('billing webhook hardening invariants', () => {
   it('uses raw bounded bodies and Stripe tolerance-based signature verification', () => {
     expect(stripeWebhookRoute).toContain('STRIPE_WEBHOOK_TOLERANCE_SECONDS');
     expect(stripeWebhookRoute).toContain('constructEvent(body, signature, webhookSecret, STRIPE_WEBHOOK_TOLERANCE_SECONDS)');
+    expect(stripeWebhookRoute).toContain('request.body.getReader()');
+    expect(stripeWebhookRoute).toContain('totalBytes > MAX_STRIPE_WEBHOOK_BYTES');
+    expect(stripeWebhookRoute).not.toContain('await request.text()');
+
     expect(billingWebhookRoute).toContain('BILLING_WEBHOOK_TOLERANCE_SECONDS');
     expect(billingWebhookRoute).toContain('constructEvent(body, providerSignature, providerSigningValue, BILLING_WEBHOOK_TOLERANCE_SECONDS)');
+    expect(billingWebhookRoute).toContain('request.text()');
 
     for (const route of webhookRoutes) {
-      expect(route).toContain('request.text()');
       expect(route).toContain('content-length');
       expect(route).not.toContain('request.json()');
     }
