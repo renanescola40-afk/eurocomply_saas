@@ -86,6 +86,13 @@ export function applySecurityResponseStatus(document, { passed, generatedAt }) {
   return next;
 }
 
+/**
+ * @param {{
+ *   passed?: boolean;
+ *   generatedAt?: string;
+ *   paths?: string[];
+ * }} [options]
+ */
 export function recordSecurityResponseFinalEvidence({
   passed,
   generatedAt = new Date().toISOString(),
