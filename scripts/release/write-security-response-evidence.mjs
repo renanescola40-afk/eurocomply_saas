@@ -5,6 +5,7 @@ import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const DEFAULT_SOURCE_PATH = 'docs/security/evidence/runtime/deployment-smoke-validation.json';
+const DEFAULT_SHA_BINDING_PATH = 'docs/security/evidence/runtime/runtime-release-sha-validation.json';
 const DEFAULT_HEADERS_PATH = 'docs/security/evidence/runtime/security-headers-validation.json';
 const DEFAULT_NO_STORE_PATH = 'docs/security/evidence/runtime/no-store-validation.json';
 const DEFAULT_MAX_SOURCE_AGE_MS = 30 * 60 * 1000;
@@ -43,6 +44,8 @@ function baseEvidence({
   sourcePassed,
   targetCount,
   sourcePath,
+  shaBindingPath,
+  runtimeShaBinding,
   details,
 }) {
   return {
@@ -55,7 +58,7 @@ function baseEvidence({
     targetSha: expectedSha || null,
     summary: passed
       ? `${evidenceItem} passed against the deployed release target.`
-      : `${evidenceItem} is missing, stale, SHA-mismatched, or failed; enterprise release remains blocked.`,
+      : `${evidenceItem} is missing, stale, SHA-mismatched, runtime-unbound, or failed; enterprise release remains blocked.`,
     redactionConfirmation:
       'No token, cookie, authorization header, secret value, response body, or customer data is copied into this derived evidence file.',
     sourceEvidence: {
@@ -68,6 +71,16 @@ function baseEvidence({
       passed: sourcePassed,
       targetCount,
     },
+    runtimeShaBinding: {
+      path: shaBindingPath,
+      status: runtimeShaBinding.status || null,
+      outcome: runtimeShaBinding.outcome || null,
+      expectedCommitSha: runtimeShaBinding.expectedCommitSha || null,
+      observedCommitSha: runtimeShaBinding.observedCommitSha || null,
+      observedCommitShaMatchedExpected:
+        runtimeShaBinding.observedCommitShaMatchedExpected === true,
+      passed: runtimeShaBinding.passed,
+    },
     checks: [
       {
         name: checkName,
@@ -77,22 +90,26 @@ function baseEvidence({
       },
     ],
     evidenceLocations: [
-      'scripts/release/run-deployment-smoke-v2.mjs',
+      'scripts/release/run-deployment-smoke.mjs',
+      'scripts/release/verify-runtime-release-sha.mjs',
       'scripts/release/write-security-response-evidence.mjs',
       sourcePath,
+      shaBindingPath,
     ],
     evidenceBoundary:
-      'This artifact derives from a fresh deployment smoke for one exact SHA. It does not replace external security review, DAST, authenticated tenant-isolation testing, or provider validation.',
+      'This artifact derives from a fresh deployment smoke and protected runtime SHA proof. It does not replace external security review, DAST, authenticated tenant-isolation testing, or provider validation.',
   };
 }
 
 export function buildSecurityResponseEvidence(
   smokeEvidence,
+  runtimeShaEvidence,
   expectedSha,
   {
     generatedAt = new Date().toISOString(),
     maxSourceAgeMs = DEFAULT_MAX_SOURCE_AGE_MS,
     sourcePath = DEFAULT_SOURCE_PATH,
+    shaBindingPath = DEFAULT_SHA_BINDING_PATH,
   } = {},
 ) {
   const normalizedExpectedSha = normalizeSha(expectedSha);
@@ -111,11 +128,26 @@ export function buildSecurityResponseEvidence(
     SHA_PATTERN.test(normalizedExpectedSha) &&
     commitCheck?.passed === true &&
     sourceSha === normalizedExpectedSha;
+  const runtimeShaBinding = {
+    status: runtimeShaEvidence?.status,
+    outcome: runtimeShaEvidence?.outcome,
+    expectedCommitSha: normalizeSha(runtimeShaEvidence?.expectedCommitSha),
+    observedCommitSha: normalizeSha(runtimeShaEvidence?.observedCommitSha),
+    observedCommitShaMatchedExpected:
+      runtimeShaEvidence?.observedCommitShaMatchedExpected === true,
+    passed:
+      runtimeShaEvidence?.status === 'Complete' &&
+      runtimeShaEvidence?.outcome === 'passed' &&
+      normalizeSha(runtimeShaEvidence?.expectedCommitSha) === normalizedExpectedSha &&
+      normalizeSha(runtimeShaEvidence?.observedCommitSha) === normalizedExpectedSha &&
+      runtimeShaEvidence?.observedCommitShaMatchedExpected === true,
+  };
   const sourcePassed =
     smokeEvidence?.status === 'Complete' &&
     smokeEvidence?.outcome === 'passed' &&
     sourceFresh &&
     exactShaMatch &&
+    runtimeShaBinding.passed &&
     targets.length > 0;
 
   const headerTargetResults = targets.map((target) => ({
@@ -149,6 +181,8 @@ export function buildSecurityResponseEvidence(
       sourcePassed,
       targetCount: targets.length,
       sourcePath,
+      shaBindingPath,
+      runtimeShaBinding,
       details: {
         targetResults: headerTargetResults,
         requiredRuntimeCheck: 'securityHeadersPresent',
@@ -166,6 +200,8 @@ export function buildSecurityResponseEvidence(
       sourcePassed,
       targetCount: targets.length,
       sourcePath,
+      shaBindingPath,
+      runtimeShaBinding,
       details: {
         targetResults: noStoreTargetResults,
         requiredRuntimeChecks: [
@@ -182,7 +218,7 @@ function readJson(path) {
     return JSON.parse(readFileSync(path, 'utf8'));
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown_error';
-    throw new Error(`Unable to read deployment smoke evidence at ${path}: ${reason}`);
+    throw new Error(`Unable to read runtime evidence at ${path}: ${reason}`);
   }
 }
 
@@ -193,6 +229,8 @@ function writeJson(path, value) {
 
 export function writeSecurityResponseEvidence({
   sourcePath = process.env.RELEASE_DEPLOYMENT_SMOKE_EVIDENCE_PATH || DEFAULT_SOURCE_PATH,
+  shaBindingPath =
+    process.env.RELEASE_RUNTIME_SHA_EVIDENCE_PATH || DEFAULT_SHA_BINDING_PATH,
   headersPath = process.env.RELEASE_SECURITY_HEADERS_EVIDENCE_PATH || DEFAULT_HEADERS_PATH,
   noStorePath = process.env.RELEASE_NO_STORE_EVIDENCE_PATH || DEFAULT_NO_STORE_PATH,
   expectedSha = process.env.RELEASE_COMMIT_SHA || process.env.GITHUB_SHA || '',
@@ -206,11 +244,18 @@ export function writeSecurityResponseEvidence({
   }
 
   const smokeEvidence = readJson(sourcePath);
-  const result = buildSecurityResponseEvidence(smokeEvidence, expectedSha, {
-    generatedAt,
-    maxSourceAgeMs,
-    sourcePath,
-  });
+  const runtimeShaEvidence = readJson(shaBindingPath);
+  const result = buildSecurityResponseEvidence(
+    smokeEvidence,
+    runtimeShaEvidence,
+    expectedSha,
+    {
+      generatedAt,
+      maxSourceAgeMs,
+      sourcePath,
+      shaBindingPath,
+    },
+  );
 
   writeJson(headersPath, result.securityHeaders);
   writeJson(noStorePath, result.noStore);
