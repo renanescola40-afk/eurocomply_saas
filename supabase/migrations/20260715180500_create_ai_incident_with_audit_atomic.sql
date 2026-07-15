@@ -40,7 +40,9 @@ begin
 
   if length(trim(coalesce(p_title, ''))) = 0
     or length(trim(coalesce(p_summary, ''))) = 0
-    or length(trim(coalesce(p_event_hash, ''))) = 0 then
+    or p_event_hash !~ '^[0-9a-f]{64}$'
+    or (p_previous_hash is not null and p_previous_hash !~ '^[0-9a-f]{64}$')
+    or (p_hash_signature is not null and p_hash_signature !~ '^[0-9a-f]{64}$') then
     return query select 'invalid_input'::text, null::jsonb;
     return;
   end if;
