@@ -81,7 +81,7 @@ Record exact commands and truthful outcomes. Do not mark an unavailable or faile
 - [ ] Relevant focused security checks
 - [ ] `npm run security:ci`
 - [ ] Relevant release, RLS, upload, billing, or phase gates
-- [ ] Required GitHub CI is green
+- [ ] Required GitHub CI is green on the exact current head SHA
 
 Evidence/output:
 
@@ -98,7 +98,7 @@ Complete this section whenever Vercel or another deployment provider is unavaila
 - Exact provider signal:
 - Code implication: `No code defect inferred from provider-only signal` / describe verified code impact
 - PR creation: `PROCEEDED` / `BLOCKED` with reason
-- Merge implication: `Branch protection remains authoritative`
+- Merge implication: `Final merge remains human-controlled and branch protection remains authoritative`
 - Production validation: `PASS` / `NOT VERIFIED for this exact SHA`
 - Owner action, when blocked:
 
@@ -137,4 +137,6 @@ List only intentional exclusions. Do not use follow-ups to defer required safety
 - [ ] It does not duplicate open work.
 - [ ] It provides meaningful engineering or business value.
 - [ ] No avoidable regression was introduced.
-- [ ] Automatic merge is disabled or governed only by the reviewed PR Autopilot policy.
+- [ ] Automatic merge and automatic branch synchronization are disabled.
+- [ ] Independent approval and all conversations apply to the exact current head.
+- [ ] The final merge will be an explicit human-owner action.
