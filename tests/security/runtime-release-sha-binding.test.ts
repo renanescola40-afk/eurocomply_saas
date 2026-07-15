@@ -33,7 +33,7 @@ describe('runtime release SHA binding', () => {
       provenance: 'vercel',
     });
     expect(sanitizeRuntimeReleaseResponse({
-      status: '<script>',
+      status: 'unsafe-status',
       release: {
         available: 'yes',
         commitSha: `${SHA_A}malicious-suffix`,
@@ -102,14 +102,27 @@ describe('runtime release SHA binding', () => {
     expect(result.failures).toContain('expectedCommitAndBuildShaMatch');
   });
 
-  it('keeps the verifier in both final release profiles and preserves sanitized evidence', () => {
+  it('keeps the verifier in the shared finalizer and preserves evidence-specific failure states', () => {
     const wrapper = readFileSync('scripts/release/run-public-production-release.mjs', 'utf8');
     const workflow = readFileSync('.github/workflows/public-production-final.yml', 'utf8');
     const verifier = readFileSync('scripts/release/verify-runtime-release-sha.mjs', 'utf8');
 
-    expect(wrapper.match(/verifyRuntimeReleaseSha\(\)/g)).toHaveLength(3);
-    expect(wrapper).toContain("await import('./run-public-production-release-v2.mjs');\n  await verifyRuntimeReleaseSha();");
-    expect(wrapper).toContain("await import('./run-public-production-release-final.mjs');\n  await verifyRuntimeReleaseSha();");
+    const finalizerStart = wrapper.indexOf('async function finalizeSecurityResponseEvidence()');
+    const finalizerEnd = wrapper.indexOf('\n}\n\nif (enterpriseRequested)', finalizerStart);
+    const finalizer = wrapper.slice(finalizerStart, finalizerEnd);
+    const enterpriseStart = wrapper.indexOf('if (enterpriseRequested)');
+    const publicStart = wrapper.indexOf("} else if (releaseTarget === 'public-production'");
+    const unsupportedStart = wrapper.indexOf('} else {', publicStart);
+    const enterpriseBlock = wrapper.slice(enterpriseStart, publicStart);
+    const publicBlock = wrapper.slice(publicStart, unsupportedStart);
+
+    expect(finalizerStart).toBeGreaterThan(-1);
+    expect(finalizer).toContain('verifyRuntimeReleaseSha();');
+    expect(wrapper).toContain("runNodeScript('scripts/release/verify-runtime-release-sha.mjs');");
+    expect(enterpriseBlock).toContain("await import('./run-public-production-release-v2.mjs');");
+    expect(enterpriseBlock).toContain('await finalizeSecurityResponseEvidence();');
+    expect(publicBlock).toContain("await import('./run-public-production-release-final.mjs');");
+    expect(publicBlock).toContain('await finalizeSecurityResponseEvidence();');
     expect(workflow).toContain('runtime-release-sha-validation.json');
     expect(verifier).toContain('production-final-validation.json');
     expect(verifier).toContain('final-validation-runner.json');
