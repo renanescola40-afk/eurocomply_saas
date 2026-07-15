@@ -55,7 +55,7 @@ Branch protection remains authoritative. PR Autopilot does not dismiss reviews, 
 4. Limit attempts to the policy maximum, currently two per PR.
 5. Checkout the exact head without persisted credentials.
 6. Download failed CI logs and install npm dependencies with lifecycle scripts disabled.
-7. Run Codex with the `:workspace` permission profile and an explicit protected-path prohibition.
+7. Run Codex with `sandbox: workspace-write`, `safety-strategy: drop-sudo`, and an explicit protected-path prohibition. `danger-full-access` and the `unsafe` safety strategy are forbidden.
 8. Reject any Codex edit outside the allowed path boundary or unrelated to the original PR, focused tests, or a decision record.
 9. Run package-lock alignment, lint, typecheck, unit tests, and build.
 10. Verify that the remote head has not moved, then push a single repair commit to the same branch with `PR_AUTOPILOT_TOKEN`.
