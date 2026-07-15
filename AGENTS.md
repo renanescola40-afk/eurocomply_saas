@@ -111,6 +111,24 @@ Never:
 
 Security-sensitive design trade-offs, including fail-open/fail-closed choices, must be documented.
 
+## Vercel rate-limit PR delivery rule
+
+A Vercel-only quota or rate-limit signal is an external deployment blocker, not proof of a code defect and not a reason to hide completed repository work.
+
+When Vercel reports `Deployment rate limited`, `build-rate-limit`, `retry in 24 hours`, `upgradeToPro=build-rate-limit`, deployment quota, plan capacity, or equivalent provider-only status:
+
+- continue authorized implementation, branch creation, commits, push, and PR creation;
+- continue every available GitHub-side quality and security check;
+- use `.github/agents/pr-creation-with-vercel-limit.prompt.md` and complete the PR template's `External deployment status` section;
+- record Vercel deployment as `BLOCKED — external provider quota/rate limit`;
+- record production validation as `NOT VERIFIED` for the exact SHA;
+- do not run code autofix merely to change a provider quota result;
+- do not change code, dependencies, tests, workflows, or protections to obtain a green Vercel status;
+- do not claim deployment success or production health;
+- leave merge behavior to branch protection and the guarded Autopilot policy.
+
+If Vercel is a required failed check, the PR remains open. If it is not required, it still does not prevent PR creation and the normal exact-head GitHub checks, approval, resolved conversations, clean merge state, and protected-path policy remain authoritative.
+
 ## PR Autopilot authority
 
 The coding agent never merges a PR directly and never receives production-deployment authority.
@@ -179,6 +197,7 @@ When metrics cannot be collected truthfully, state:
 - Group related low-risk work. Do not split merely to increase PR count.
 - Do not combine unrelated product, refactor, dependency, and infrastructure changes.
 - The agent may apply the documented Autopilot opt-in label only when the policy classifies the complete PR as non-protected; the controller, not the agent, makes the final merge decision.
+- A Vercel rate-limit or quota condition does not prevent opening or updating the PR; it must be documented truthfully as external blocked deployment evidence.
 
 Every PR must include:
 
@@ -190,6 +209,7 @@ Every PR must include:
 - impact and measurable outcome;
 - risks, trade-offs, and backward compatibility;
 - exact tests and checks;
+- external deployment status when a provider is blocked or unavailable;
 - evidence and limitations;
 - rollback;
 - documentation and decision record;
