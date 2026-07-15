@@ -20,10 +20,14 @@ describe('request correlation wiring', () => {
     expect(source).not.toContain("req.headers.get('x-request-id')");
   });
 
-  it('persists the correlated id in audit metadata and audit failures', () => {
+  it('persists only the trusted application id in audit metadata and audit failures', () => {
     const source = read('src/lib/security/audit-log.ts');
 
-    expect(source).toContain('const requestId = requestIdFromHeaders(requestHeaders);');
+    expect(source).toContain(
+      "import { trustedRequestIdFromHeaders } from '@/lib/observability/request-correlation';",
+    );
+    expect(source).toContain('const requestId = trustedRequestIdFromHeaders(requestHeaders);');
+    expect(source).not.toContain('requestIdFromHeaders(requestHeaders)');
     expect(source).toContain('requestContext: {\n      requestId,');
     expect(source).toContain("area: 'audit_log_write'");
     expect(source).toContain("area: 'audit_chain_write'");
