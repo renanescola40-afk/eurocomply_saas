@@ -12,6 +12,7 @@ describe('Google OAuth provider proof contract', () => {
     expect(workflow).toContain('contents: read');
     expect(workflow).toContain('persist-credentials: false');
     expect(workflow).toContain('ref: ${{ inputs.release_sha }}');
+    expect(workflow).toContain('test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"');
     expect(workflow).not.toContain('pull_request_target');
   });
 
@@ -23,7 +24,21 @@ describe('Google OAuth provider proof contract', () => {
     expect(script).toContain('managementTokenStored: false');
     expect(script).toContain('projectReferenceStored: false');
     expect(script).toContain('rawProviderConfigStored: false');
+    expect(script).toContain('rawRedirectAllowlistStored: false');
+    expect(script).toContain('siteUrlStored: false');
     expect(script).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+  });
+
+  it('requires numeric provenance and an exact same-origin HTTPS callback', () => {
+    const script = read('scripts/security/run-google-oauth-provider-validation.mjs');
+    expect(script).toContain("if (!/^\\d+$/.test(githubRunId)) failures.push('invalid_github_run_id')");
+    expect(script).toContain("url.protocol !== 'https:'");
+    expect(script).toContain('url.username || url.password');
+    expect(script).toContain("callback.pathname === '/auth/callback'");
+    expect(script).toContain('callback.origin === siteUrl.origin');
+    expect(script).toContain("callback.search === ''");
+    expect(script).toContain("callback.hash === ''");
+    expect(script).not.toContain("value.includes('/auth/callback')");
   });
 
   it('keeps committed evidence blocked until protected runtime execution succeeds', () => {
