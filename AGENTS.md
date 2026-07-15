@@ -107,9 +107,29 @@ Never:
 - weaken authentication, authorization, tenant isolation, RLS, validation, security headers, origin checks, upload controls, audit controls, no-store behavior, or CI gates;
 - fabricate production validation, runtime evidence, metrics, audits, pentests, certifications, or compliance status;
 - represent repository checks as proof of production behavior;
-- merge automatically.
+- bypass required checks, review, conversation resolution, exact-head validation, or the protected-path policy to obtain an automated merge.
 
 Security-sensitive design trade-offs, including fail-open/fail-closed choices, must be documented.
+
+## PR Autopilot authority
+
+The coding agent never merges a PR directly and never receives production-deployment authority.
+
+The default-branch PR Autopilot controller may synchronize, repair, or merge only when `.github/pr-autopilot-policy.json` permits the exact current file set and all of these conditions hold:
+
+- the PR is internal, trusted, open, and non-draft;
+- no protected path, excessive change size, conflict, or owner-only domain is present;
+- all required checks are successful on the exact head SHA;
+- the GitHub review decision is approved;
+- all review conversations are resolved;
+- GitHub reports a clean merge state;
+- the merge request is bound to the expected head SHA.
+
+Authentication, authorization, RBAC, RLS, tenancy, Supabase authority, billing, Stripe, webhooks, migrations, security/release automation, secrets, audit evidence, legal material, package manifests, and governance files remain manual. Labels cannot override a protected path.
+
+Codex autofix is limited to the same trusted PR branch, uses at most the configured number of attempts, must pass the local bounded verification gate, and must stop without a push when no safe correction exists.
+
+See `docs/operations/pr-autopilot.md` for the executable operating model.
 
 ## Performance and operational review
 
@@ -158,6 +178,7 @@ When metrics cannot be collected truthfully, state:
 - Prefer approximately 150–600 changed lines; up to approximately 1,000 is acceptable when coherent. Critical fixes may be smaller.
 - Group related low-risk work. Do not split merely to increase PR count.
 - Do not combine unrelated product, refactor, dependency, and infrastructure changes.
+- The agent may apply the documented Autopilot opt-in label only when the policy classifies the complete PR as non-protected; the controller, not the agent, makes the final merge decision.
 
 Every PR must include:
 
@@ -207,6 +228,6 @@ Work is done only when:
 - documentation and decision records are accurate;
 - rollback is explicit;
 - evidence limitations are stated;
-- the draft PR is reviewable and no automatic merge is enabled.
+- the draft PR is reviewable and either remains manual by policy or is eligible for guarded Autopilot processing after approval.
 
 Do not create a pull request merely because code can be changed. Engineering value is more important than code volume or pull request count.
