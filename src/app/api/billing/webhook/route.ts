@@ -30,12 +30,41 @@ export async function readBoundedBillingWebhookBody(request: Request) {
     return null;
   }
 
-  const body = await request.text();
-  if (new TextEncoder().encode(body).byteLength > MAX_BILLING_WEBHOOK_BYTES) {
-    return null;
+  if (!request.body) {
+    return '';
   }
 
-  return body;
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_BILLING_WEBHOOK_BYTES) {
+        await reader.cancel('payload_too_large').catch(() => undefined);
+        return null;
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const payload = new Uint8Array(totalBytes);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    payload.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder().decode(payload);
 }
 
 async function recordBillingWebhookRouteAudit(input: {
