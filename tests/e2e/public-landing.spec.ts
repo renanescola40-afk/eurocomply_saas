@@ -2,6 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 
 const locales = ['en', 'pt', 'es', 'fr'] as const;
 
+function visibleWaitlistForm(page: Page) {
+  return page.getByRole('main').locator('#waitlist-form').first();
+}
+
 async function expectNoHorizontalOverflow(page: Page, label: string) {
   const hasOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   expect(hasOverflow, `${label} has horizontal overflow`).toBe(false);
@@ -17,7 +21,7 @@ async function expectControlledAccessLanding(page: Page, locale: string) {
   await expect(page.locator('body')).toContainText(/Controlled access|early access|Request access|Pedir acesso/i);
   await expect(page.locator('body')).toContainText(/AI Act readiness|risk visibility|governance workflows|evidence preparation|visibilidade de risco/i);
   await expect(page.locator('body')).toContainText(/1 August 2026|1 de agosto de 2026|07:00 Europe\/Lisbon/i);
-  await expect(page.locator('#waitlist-form')).toBeVisible();
+  await expect(visibleWaitlistForm(page)).toBeVisible();
 }
 
 test.describe('public controlled-access landing', () => {
@@ -52,7 +56,7 @@ test.describe('public controlled-access landing', () => {
     await expect(page.getByText('Review-ready evidence').first()).toBeVisible();
     await expect(page.getByText('Legal review support').first()).toBeVisible();
     await expect(page.getByText('Procurement confidence').first()).toBeVisible();
-    await expect(page.locator('#waitlist-form')).toBeVisible();
+    await expect(visibleWaitlistForm(page)).toBeVisible();
     await expectNoHorizontalOverflow(page, 'controlled-access landing mobile');
   });
 });
