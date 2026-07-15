@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  fsyncSync,
+  ftruncateSync,
+  openSync,
+  readFileSync,
+  writeSync,
+} from 'node:fs';
 
 const DEFAULT_FINAL_EVIDENCE_PATHS = [
   'docs/security/evidence/runtime/production-final-validation.json',
@@ -17,15 +24,29 @@ function appendUnique(items, value) {
   return [...new Set([...(Array.isArray(items) ? items : []), value])];
 }
 
-function readEvidenceDocument(path) {
+function mutateEvidenceDocument(path, transform) {
+  let fileDescriptor;
+
   try {
-    return JSON.parse(readFileSync(path, 'utf8'));
+    fileDescriptor = openSync(path, 'r+');
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
-      return null;
+      return false;
     }
 
     throw error;
+  }
+
+  try {
+    const document = JSON.parse(readFileSync(fileDescriptor, 'utf8'));
+    const serialized = `${JSON.stringify(transform(document), null, 2)}\n`;
+
+    ftruncateSync(fileDescriptor, 0);
+    writeSync(fileDescriptor, serialized, 0, 'utf8');
+    fsyncSync(fileDescriptor);
+    return true;
+  } finally {
+    closeSync(fileDescriptor);
   }
 }
 
@@ -71,12 +92,11 @@ export function recordSecurityResponseFinalEvidence({
   let patched = 0;
 
   for (const path of paths) {
-    const document = readEvidenceDocument(path);
-    if (!document) continue;
+    const mutated = mutateEvidenceDocument(path, (document) =>
+      applySecurityResponseStatus(document, { passed: passed === true, generatedAt }),
+    );
 
-    const next = applySecurityResponseStatus(document, { passed: passed === true, generatedAt });
-    writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
-    patched += 1;
+    if (mutated) patched += 1;
   }
 
   if (patched === 0) {
