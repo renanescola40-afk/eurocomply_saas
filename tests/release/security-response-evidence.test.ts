@@ -34,17 +34,33 @@ function smokeEvidence(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function runtimeShaEvidence(overrides: Record<string, unknown> = {}) {
+  return {
+    evidenceItem: 'runtime-release-sha-validation',
+    status: 'Complete',
+    outcome: 'passed',
+    expectedCommitSha: sha,
+    observedCommitSha: sha,
+    observedCommitShaMatchedExpected: true,
+    ...overrides,
+  };
+}
+
 describe('runtime security response evidence', () => {
-  it('derives complete evidence only from a fresh exact-SHA deployment smoke', () => {
-    const result = buildSecurityResponseEvidence(smokeEvidence(), sha, {
-      generatedAt: '2026-07-15T10:05:00.000Z',
-    });
+  it('derives complete evidence only from a fresh exact-SHA deployment smoke and protected runtime proof', () => {
+    const result = buildSecurityResponseEvidence(
+      smokeEvidence(),
+      runtimeShaEvidence(),
+      sha,
+      { generatedAt: '2026-07-15T10:05:00.000Z' },
+    );
 
     expect(result.securityHeaders.status).toBe('Complete');
     expect(result.securityHeaders.checks[0]).toMatchObject({
       name: 'securityHeaders',
       passed: true,
     });
+    expect(result.securityHeaders.runtimeShaBinding.passed).toBe(true);
     expect(result.noStore.status).toBe('Complete');
     expect(result.noStore.checks[0]).toMatchObject({
       name: 'noStore',
@@ -53,20 +69,50 @@ describe('runtime security response evidence', () => {
   });
 
   it('fails closed when the deployment smoke SHA differs from the release SHA', () => {
-    const result = buildSecurityResponseEvidence(smokeEvidence(), 'b'.repeat(40), {
-      generatedAt: '2026-07-15T10:05:00.000Z',
-    });
+    const expectedSha = 'b'.repeat(40);
+    const result = buildSecurityResponseEvidence(
+      smokeEvidence(),
+      runtimeShaEvidence({
+        expectedCommitSha: expectedSha,
+        observedCommitSha: expectedSha,
+      }),
+      expectedSha,
+      { generatedAt: '2026-07-15T10:05:00.000Z' },
+    );
 
     expect(result.securityHeaders.status).toBe('Open');
     expect(result.noStore.status).toBe('Open');
     expect(result.securityHeaders.sourceEvidence.exactShaMatch).toBe(false);
   });
 
+  it('fails closed when protected runtime SHA proof is missing or mismatched', () => {
+    const result = buildSecurityResponseEvidence(
+      smokeEvidence(),
+      runtimeShaEvidence({
+        status: 'Open',
+        outcome: 'failed',
+        observedCommitSha: null,
+        observedCommitShaMatchedExpected: false,
+      }),
+      sha,
+      { generatedAt: '2026-07-15T10:05:00.000Z' },
+    );
+
+    expect(result.securityHeaders.status).toBe('Open');
+    expect(result.noStore.status).toBe('Open');
+    expect(result.securityHeaders.runtimeShaBinding.passed).toBe(false);
+  });
+
   it('fails closed when the source evidence is stale', () => {
-    const result = buildSecurityResponseEvidence(smokeEvidence(), sha, {
-      generatedAt: '2026-07-15T11:00:01.000Z',
-      maxSourceAgeMs: 60 * 60 * 1000,
-    });
+    const result = buildSecurityResponseEvidence(
+      smokeEvidence(),
+      runtimeShaEvidence(),
+      sha,
+      {
+        generatedAt: '2026-07-15T11:00:01.000Z',
+        maxSourceAgeMs: 60 * 60 * 1000,
+      },
+    );
 
     expect(result.securityHeaders.status).toBe('Open');
     expect(result.noStore.status).toBe('Open');
@@ -87,6 +133,7 @@ describe('runtime security response evidence', () => {
           },
         ],
       }),
+      runtimeShaEvidence(),
       sha,
       { generatedAt: '2026-07-15T10:05:00.000Z' },
     );
