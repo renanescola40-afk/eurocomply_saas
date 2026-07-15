@@ -135,6 +135,19 @@ function shouldUseMockStripeReadiness(secretKey: string, priceIds: string[]) {
     && priceIds.every((priceId) => priceId === TEST_PLACEHOLDER_VALUE);
 }
 
+export function isBillableMonthlyStripePrice(price: Stripe.Price) {
+  const product = price.product;
+  const productActive = typeof product === 'object'
+    && product !== null
+    && !('deleted' in product)
+    && product.active;
+
+  return price.active
+    && price.type === 'recurring'
+    && price.recurring?.interval === 'month'
+    && productActive;
+}
+
 export async function withReadinessDependencyTimeout<T>(operation: PromiseLike<T>): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -251,7 +264,7 @@ async function checkSupabaseConnectivity(): Promise<ReadyDatabaseCheck> {
 }
 
 async function retrieveStripePriceForReadiness(stripe: Stripe, priceId: string) {
-  return stripe.prices.retrieve(priceId, undefined, {
+  return stripe.prices.retrieve(priceId, { expand: ['product'] }, {
     timeout: STRIPE_READINESS_TIMEOUT_MS,
   });
 }
@@ -286,11 +299,11 @@ async function checkStripeConnectivity(stripeConfigured: boolean): Promise<Ready
       timeout: STRIPE_READINESS_TIMEOUT_MS,
     });
     const prices = await Promise.all(priceIds.map((priceId) => retrieveStripePriceForReadiness(stripe, priceId)));
-    const priceLookup = prices.length === STRIPE_PRICE_ENV.length && prices.every((price) => Boolean(price?.id));
+    const priceLookup = prices.length === STRIPE_PRICE_ENV.length && prices.every(isBillableMonthlyStripePrice);
 
     return {
       configured: stripeConfigured,
-      apiReachable: priceLookup,
+      apiReachable: true,
       priceLookup,
       pricesChecked: prices.length,
       detail: priceLookup ? 'ok' : 'not_ready',
