@@ -7,6 +7,7 @@ const PROBE = 'scripts/security/probe-google-oauth-provider.mjs';
 const required = [
   'SUPABASE_ACCESS_TOKEN',
   'SUPABASE_PROJECT_REF',
+  'RELEASE_PRODUCTION_URL',
   'ENTERPRISE_EXPECTED_SHA',
   'GITHUB_RUN_ID',
   'GITHUB_REPOSITORY',
@@ -50,7 +51,7 @@ const evidence = {
   reviewedAt: now,
   generatedAt: now,
   summary: passed
-    ? 'A protected isolated probe confirmed that Google OAuth is enabled and the exact same-origin production auth callback is allowlisted for the release SHA.'
+    ? 'A protected isolated probe confirmed that Google OAuth is enabled and the exact production origin auth callback is allowlisted for the release SHA.'
     : 'Google OAuth provider configuration was not proven for the exact release SHA; enterprise release remains blocked.',
   repository: process.env.GITHUB_REPOSITORY ?? null,
   branch: process.env.GITHUB_REF_NAME ?? null,
@@ -61,14 +62,16 @@ const evidence = {
     providerConfigRead: passed,
     googleProviderEnabled: passed,
     httpsSiteUrlConfigured: passed,
-    exactSameOriginCallbackAllowlisted: passed,
+    productionOriginMatched: passed,
+    exactProductionCallbackAllowlisted: passed,
   },
   failures,
   controlsVerified: passed
     ? [
       'google_oauth_provider_enabled',
       'oauth_site_url_configured',
-      'oauth_exact_same_origin_callback_allowlisted',
+      'oauth_production_origin_matched',
+      'oauth_exact_production_callback_allowlisted',
     ]
     : [],
   evidenceLocations: [
@@ -89,6 +92,7 @@ const evidence = {
     rawProviderConfigStored: false,
     rawRedirectAllowlistStored: false,
     siteUrlStored: false,
+    expectedProductionUrlStored: false,
     providerHostnameStored: false,
     remoteErrorStored: false,
     customerDataStored: false,
