@@ -203,7 +203,8 @@ jobs:
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          permission-profile: ':workspace'
+          sandbox: workspace-write
+          safety-strategy: drop-sudo
           allow-users: renanescola40-afk
           prompt: |
             You are repairing CI for PR #${{ steps.guard.outputs.pr_number }} in ${{ github.repository }}.
