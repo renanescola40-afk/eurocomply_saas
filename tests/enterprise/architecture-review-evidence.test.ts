@@ -111,6 +111,16 @@ describe('architecture review evidence', () => {
     expect(second.aggregateDigest).toBe(first.aggregateDigest);
   });
 
+  it('accepts the Rejected status documented by the ADR template', () => {
+    const decisionsDir = temporaryDecisionDirectory();
+    writeFileSync(join(decisionsDir, 'ADR-0001-rejected-option.md'), validDecision(1, 'Rejected'));
+
+    const scan = scanArchitectureDecisions({ decisionsDir, minimumDecisions: 1 });
+
+    expect(scan.passed).toBe(true);
+    expect(scan.decisions[0]?.status).toBe('Rejected');
+  });
+
   it('supports historical dated ADRs, bold metadata and Consequences trade-offs', () => {
     const decisionsDir = temporaryDecisionDirectory();
     writeFileSync(join(decisionsDir, 'ADR-2026-07-14-historical-decision.md'), historicalDatedDecision());
@@ -125,6 +135,23 @@ describe('architecture review evidence', () => {
     expect(scan.decisions.every((decision) => decision.status === 'Proposed')).toBe(true);
   });
 
+  it('fails closed for empty required ADR section bodies', () => {
+    const decisionsDir = temporaryDecisionDirectory();
+    const emptyContext = validDecision(1).replace(
+      /## Context\n\n[\s\S]*?\n\n## Decision/,
+      '## Context\n\n## Decision',
+    );
+    writeFileSync(join(decisionsDir, 'ADR-0001-empty-context.md'), emptyContext);
+
+    const scan = scanArchitectureDecisions({ decisionsDir, minimumDecisions: 1 });
+
+    expect(scan.passed).toBe(false);
+    expect(scan.failures).toEqual(expect.arrayContaining([
+      expect.stringContaining('missing or has empty section(s): Context'),
+    ]));
+    expect(scan.decisions[0]?.requiredSectionsPresent).toBe(false);
+  });
+
   it('fails closed for malformed metadata, missing sections and duplicate decision identities', () => {
     const decisionsDir = temporaryDecisionDirectory();
     writeFileSync(join(decisionsDir, 'ADR-0001-first.md'), validDecision(1).replace('- Status: Accepted', '- Status: Unknown'));
@@ -136,7 +163,7 @@ describe('architecture review evidence', () => {
     expect(scan.failures).toEqual(expect.arrayContaining([
       expect.stringContaining('invalid or missing Status'),
       expect.stringContaining('duplicates architecture decision identity'),
-      expect.stringContaining('missing section(s): Rollback'),
+      expect.stringContaining('missing or has empty section(s): Rollback'),
     ]));
   });
 
