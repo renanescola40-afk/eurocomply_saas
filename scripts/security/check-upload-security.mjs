@@ -17,6 +17,8 @@ const tokenAliases = new Map([
   ['scanProvider', ['scan_provider']],
   ['scanRequired', ['scan_required']],
   ['scanCheckedAt', ['scan_checked_at']],
+  ['hasCleanEnterpriseUploadScanMetadata', ['assertEnterpriseDocumentCreateHasTrustedProvenance']],
+  ['not clean', ['provenance is not trusted']],
 ]);
 
 const requiredUploadSecurityModuleTokens = [
