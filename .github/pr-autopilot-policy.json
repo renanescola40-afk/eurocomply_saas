@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "trustedAuthors": [
     "renanescola40-afk",
     "github-actions[bot]"
@@ -24,9 +24,28 @@
     "autofixAllowed": "autofix:allowed",
     "highRisk": "risk:high"
   },
+  "externalProviderHandling": {
+    "vercel": {
+      "failureSignals": [
+        "build-rate-limit",
+        "deployment rate limited",
+        "upgradeToPro=build-rate-limit",
+        "retry in 24 hours",
+        "deployment quota"
+      ],
+      "allowBranchCreation": true,
+      "allowCommitPush": true,
+      "allowPullRequestCreation": true,
+      "treatAsCodeFailure": false,
+      "allowAutofixForProviderFailure": false,
+      "requireTruthfulBlockedDeploymentEvidence": true,
+      "mergeBehavior": "branch-protection-authoritative"
+    }
+  },
   "blockedPathPrefixes": [
     ".github/workflows/",
     ".github/actions/",
+    ".github/agents/",
     "supabase/",
     "migrations/",
     "scripts/security/",
