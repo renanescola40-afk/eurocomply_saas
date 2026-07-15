@@ -9,7 +9,7 @@ import { requireApiUser, requirePermission, requireTrustedMutation, secureApiErr
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 const roleChangeSchema = z.object({
-  memberId: z.string().trim().min(1).max(128),
+  memberId: z.string().trim().uuid(),
   role: z.enum(['owner', 'admin', 'editor', 'member', 'viewer']),
 });
 
