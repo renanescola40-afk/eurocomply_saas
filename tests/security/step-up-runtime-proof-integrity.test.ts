@@ -126,12 +126,14 @@ describe('step-up runtime proof integrity', () => {
     expect(sessionNotRevoked.checks.liveProviderVerificationPassed).toBe(false);
   });
 
-  it('removes manual boolean proof and requires real Supabase MFA operations', () => {
+  it('removes manual proof and requires a private live Supabase MFA transaction', () => {
     const script = readFileSync('scripts/security/run-step-up-mfa-runtime-validation.mjs', 'utf8');
+    const gate = readFileSync('scripts/security/check-step-up.mjs', 'utf8');
     const workflow = readFileSync('.github/workflows/step-up-runtime-proof.yml', 'utf8');
     const envExample = readFileSync('.env.example', 'utf8');
 
     expect(script).not.toContain('STEP_UP_RUNTIME_PROVIDER_PROOF');
+    expect(gate).not.toContain('STEP_UP_RUNTIME_PROVIDER_PROOF');
     expect(envExample).not.toContain('STEP_UP_RUNTIME_PROVIDER_PROOF');
     expect(script).toContain('signInWithPassword');
     expect(script).toContain('supabase.auth.mfa.listFactors');
@@ -142,8 +144,18 @@ describe('step-up runtime proof integrity', () => {
     expect(script).toContain('supabase.auth.signOut');
     expect(script).toContain('manualBooleanProofAccepted: false');
     expect(script).toContain('rawSecretsStored: false');
+    expect(script).toContain('rawUserIdentifiersStored: false');
     expect(script).toContain('factorIdentifiersStored: false');
     expect(script).toContain('challengeIdentifiersStored: false');
+    expect(script).not.toContain('createHash');
+    expect(script).not.toContain('pseudonymize');
+    expect(script).not.toContain('syntheticUserPseudonym');
+
+    expect(gate).toContain("['Complete', 'Open', 'Exception', 'Failed']");
+    expect(gate).toContain('isEnterpriseReleaseEnabled');
+    expect(gate).toContain('execute the protected Step-Up Runtime Proof workflow');
+    expect(gate).toContain('acceptance.fixtureSessionRevoked === true');
+    expect(gate).toContain('acceptance.protectedWorkflowProvenance === true');
 
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain('environment: production');
