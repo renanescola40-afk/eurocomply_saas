@@ -1,18 +1,28 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const routeSource = readFileSync('src/app/api/stripe/webhook/route.ts', 'utf8');
+const stripeRouteSource = readFileSync('src/app/api/stripe/webhook/route.ts', 'utf8');
+const billingRouteSource = readFileSync('src/app/api/billing/webhook/route.ts', 'utf8');
+const boundedBodyReaderSource = readFileSync('src/server/security/read-bounded-request-body.ts', 'utf8');
 
 describe('Stripe webhook streaming body bound', () => {
-  it('does not buffer the unbounded request body through Request.text()', () => {
-    expect(routeSource).not.toContain('await request.text()');
+  it('does not buffer either webhook through Request.text()', () => {
+    expect(stripeRouteSource).not.toContain('await request.text()');
+    expect(billingRouteSource).not.toContain('await request.text()');
+  });
+
+  it('routes both webhook limits through the shared bounded reader', () => {
+    expect(stripeRouteSource).toContain('readBoundedRequestBody(request, MAX_STRIPE_WEBHOOK_BYTES)');
+    expect(billingRouteSource).toContain('readBoundedRequestBody(request, MAX_BILLING_WEBHOOK_BYTES)');
+    expect(stripeRouteSource).not.toContain('request.body.getReader()');
+    expect(billingRouteSource).not.toContain('request.body.getReader()');
   });
 
   it('counts streamed bytes before retaining each chunk', () => {
-    const readIndex = routeSource.indexOf('await reader.read()');
-    const countIndex = routeSource.indexOf('totalBytes += value.byteLength');
-    const limitIndex = routeSource.indexOf('totalBytes > MAX_STRIPE_WEBHOOK_BYTES');
-    const retainIndex = routeSource.indexOf('chunks.push(value)');
+    const readIndex = boundedBodyReaderSource.indexOf('await reader.read()');
+    const countIndex = boundedBodyReaderSource.indexOf('totalBytes += value.byteLength');
+    const limitIndex = boundedBodyReaderSource.indexOf('totalBytes > maxBytes');
+    const retainIndex = boundedBodyReaderSource.indexOf('chunks.push(Buffer.from(value))');
 
     expect(readIndex).toBeGreaterThan(-1);
     expect(countIndex).toBeGreaterThan(readIndex);
@@ -21,11 +31,12 @@ describe('Stripe webhook streaming body bound', () => {
   });
 
   it('cancels the stream and rejects once the byte limit is exceeded', () => {
-    expect(routeSource).toContain("await reader.cancel('stripe_webhook_payload_too_large')");
-    expect(routeSource).toMatch(/if \(totalBytes > MAX_STRIPE_WEBHOOK_BYTES\)[\s\S]*return null;/);
+    expect(boundedBodyReaderSource).toContain("await reader.cancel('body_too_large').catch(() => undefined)");
+    expect(boundedBodyReaderSource).toMatch(/if \(totalBytes > maxBytes\)[\s\S]*return \{ error: 'body_too_large' \};/);
   });
 
-  it('retains the declared content-length fast rejection', () => {
-    expect(routeSource).toMatch(/contentLength !== null && contentLength > MAX_STRIPE_WEBHOOK_BYTES/);
+  it('retains declared content-length fast rejection at both route boundaries', () => {
+    expect(stripeRouteSource).toMatch(/contentLength !== null && contentLength > MAX_STRIPE_WEBHOOK_BYTES/);
+    expect(billingRouteSource).toMatch(/contentLength !== null && contentLength > MAX_BILLING_WEBHOOK_BYTES/);
   });
 });
