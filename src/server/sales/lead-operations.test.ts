@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   assertTrustedOrigin: vi.fn(),
   insertedActivities: [] as Array<Record<string, unknown>>,
   updatedLeads: [] as Array<Record<string, unknown>>,
+  nextLeadUpdateResult: null as null | { data: { id: string } | null; error: unknown },
 }));
 
 vi.mock('@/lib/security/rate-limit', () => ({
@@ -66,7 +67,13 @@ function createSalesLeadsUpdateChain(payload: Record<string, unknown>) {
   mocks.updatedLeads.push(payload);
   const chain = {
     eq: vi.fn(() => chain),
-    is: vi.fn(async () => ({ error: null })),
+    is: vi.fn(() => chain),
+    select: vi.fn(() => chain),
+    maybeSingle: vi.fn(async () => {
+      const result = mocks.nextLeadUpdateResult ?? { data: { id: leadId }, error: null };
+      mocks.nextLeadUpdateResult = null;
+      return result;
+    }),
   };
   return chain;
 }
@@ -112,6 +119,7 @@ describe('Sales Console lead operations', () => {
     vi.clearAllMocks();
     mocks.insertedActivities.length = 0;
     mocks.updatedLeads.length = 0;
+    mocks.nextLeadUpdateResult = null;
     mocks.assertTrustedOrigin.mockReturnValue(null);
     mocks.requireCurrentUser.mockResolvedValue({ id: actorUserId });
     mocks.requirePlatformAdmin.mockResolvedValue({ userId: actorUserId, role: 'sales_admin', enabled: true });
@@ -167,6 +175,20 @@ describe('Sales Console lead operations', () => {
       body: 'Status changed from new to qualified.',
     });
     expect(mocks.logAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: 'sales_lead.status_changed', entityId: leadId }));
+  });
+
+  it('does not record activity or audit evidence when the loaded status is stale', async () => {
+    mocks.nextLeadUpdateResult = { data: null, error: null };
+
+    await expect(
+      updateLeadStatus(
+        new Request('https://risckcomply.test/admin/sales/leads'),
+        formData({ leadId, status: 'qualified' }),
+      ),
+    ).rejects.toThrow('Lead state changed. Refresh and try again.');
+
+    expect(mocks.insertedActivities).toHaveLength(0);
+    expect(mocks.logAuditEvent).not.toHaveBeenCalled();
   });
 
   it('records a follow_up activity when follow-up is updated', async () => {
