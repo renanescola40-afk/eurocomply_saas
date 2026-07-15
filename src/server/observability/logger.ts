@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/nextjs';
+
 export const REDACTED_VALUE = '[redacted]';
 
 export const STANDARD_SECURITY_EVENTS = [
@@ -16,6 +18,19 @@ export type StandardSecurityEvent = (typeof STANDARD_SECURITY_EVENTS)[number];
 export type LogLevel = 'info' | 'warn' | 'error';
 export type LogContext = Record<string, unknown>;
 export type SanitizedLogValue = string | number | boolean | null | SanitizedLogValue[] | { [key: string]: SanitizedLogValue };
+export type SecurityAlertSeverity = 'none' | 'high' | 'critical';
+
+const SECURITY_ALERT_POLICY: Record<StandardSecurityEvent, SecurityAlertSeverity> = {
+  security_denied: 'none',
+  rbac_denied: 'none',
+  origin_denied: 'none',
+  rate_limit_blocked: 'none',
+  step_up_failed: 'high',
+  webhook_failed: 'high',
+  upload_blocked: 'high',
+  rls_validation_failed: 'critical',
+  audit_chain_invalid: 'critical',
+};
 
 const SENSITIVE_KEY_PATTERN = /(password|passwd|secret|token|access_token|refresh_token|id_token|authorization|bearer|cookie|set-cookie|session|api[_-]?key|x[_-]?api[_-]?key|client[_-]?secret|private[_-]?key|connection[_-]?string|database[_-]?url|dsn|service[_-]?role|supabase|stripe_signature|stripe[_-]?secret|webhook[_-]?secret|card|iban|ssn|email|phone|address|jwt)/i;
 const ORGANIZATION_ID_PATTERN = /^(org_[A-Za-z0-9_-]{3,64}|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
@@ -164,6 +179,45 @@ function writeLog(level: LogLevel, event: string, context: LogContext = {}) {
   return payload;
 }
 
+function isSentryConfigured() {
+  return Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN);
+}
+
+function runtimeEnvironment() {
+  return process.env.VERCEL_ENV?.trim() || process.env.NODE_ENV?.trim() || 'unknown';
+}
+
+function runtimeRelease() {
+  return process.env.SENTRY_RELEASE?.trim()
+    || process.env.VERCEL_GIT_COMMIT_SHA?.trim()
+    || process.env.RELEASE_COMMIT_SHA?.trim()
+    || 'unknown';
+}
+
+export function securityAlertSeverity(event: StandardSecurityEvent): SecurityAlertSeverity {
+  return SECURITY_ALERT_POLICY[event];
+}
+
+function routeSecurityAlert(event: StandardSecurityEvent, context: LogContext) {
+  const severity = securityAlertSeverity(event);
+  if (severity === 'none' || !isSentryConfigured()) return false;
+
+  const sanitized = sanitizeContext(context);
+  Sentry.withScope((scope) => {
+    scope.setLevel(severity === 'critical' ? 'fatal' : 'error');
+    scope.setTag('app', 'risck-comply');
+    scope.setTag('security_event', event);
+    scope.setTag('alert_severity', severity);
+    scope.setTag('environment', runtimeEnvironment());
+    scope.setTag('release', runtimeRelease());
+    scope.setFingerprint(['security-alert', event]);
+    scope.setContext('safe_context', sanitized);
+    Sentry.captureMessage(`security_alert:${event}`);
+  });
+
+  return true;
+}
+
 export const logger = {
   info(event: string, context?: LogContext) {
     return writeLog('info', event, context);
@@ -177,5 +231,12 @@ export const logger = {
 };
 
 export function logSecurityEvent(event: StandardSecurityEvent, context: LogContext = {}, level: LogLevel = 'warn') {
-  return writeLog(level, event, context);
+  const severity = securityAlertSeverity(event);
+  const alertRouted = routeSecurityAlert(event, context);
+  return writeLog(level, event, {
+    ...context,
+    alertSeverity: severity,
+    alertProvider: alertRouted ? 'sentry' : 'local_log',
+    alertRouted,
+  });
 }
