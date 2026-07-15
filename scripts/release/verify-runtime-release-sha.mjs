@@ -89,12 +89,27 @@ function patchFinalEvidence(path, bindingEvidence) {
 
     if (bindingEvidence.outcome !== 'passed') {
       const failureSummary = `Runtime deployment SHA binding failed: ${bindingEvidence.failures.join(', ') || 'unknown_failure'}`;
+      const isFinalValidationRunner =
+        document.evidenceItem === 'final-validation-runner'
+        || path.endsWith('/final-validation-runner.json');
+
       document.status = 'Open';
-      document.outcome = 'failed';
       document.overallResult = 'failed';
-      document.metadataFailures = appendUnique(document.metadataFailures, failureSummary);
-      document.releaseGate = 'No-Go: the validated hostname is not proven to serve the expected release SHA.';
-      document.summary = 'Release validation failed because the deployed runtime SHA was missing, malformed, or different from the expected release/build SHA.';
+      document.summary =
+        'Release validation is blocked because the deployed runtime SHA was missing, malformed, or different from the expected release/build SHA.';
+
+      if (isFinalValidationRunner) {
+        document.outcome = 'blocked';
+        document.releaseDecision = 'No-Go';
+        document.failures = appendUnique(document.failures, failureSummary);
+        document.productionGate =
+          'No-Go: the validated hostname is not proven to serve the expected release SHA.';
+      } else {
+        document.outcome = 'failed';
+        document.metadataFailures = appendUnique(document.metadataFailures, failureSummary);
+        document.releaseGate =
+          'No-Go: the validated hostname is not proven to serve the expected release SHA.';
+      }
     }
 
     writeFileSync(path, `${JSON.stringify(document, null, 2)}\n`);
