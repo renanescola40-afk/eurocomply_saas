@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const USER_ADMIN = '00000000-0000-4000-8000-000000000011';
+const USER_B = '00000000-0000-4000-8000-000000000012';
+const ORGANIZATION_A = '00000000-0000-4000-8000-000000000013';
+const MEMBER_B = '00000000-0000-4000-8000-000000000014';
+
 const mocks = vi.hoisted(() => ({
   requireApiUser: vi.fn(),
   requirePermission: vi.fn(),
@@ -40,7 +45,7 @@ import { POST } from './route';
 
 type Role = 'owner' | 'admin' | 'editor' | 'member' | 'viewer';
 
-function buildRequest(role: Role) {
+function buildRequest(role: Role, memberId = MEMBER_B) {
   return new Request('https://app.risckcomply.test/api/team/members/role', {
     method: 'POST',
     headers: {
@@ -48,12 +53,12 @@ function buildRequest(role: Role) {
       origin: 'https://app.risckcomply.test',
       'x-forwarded-for': '203.0.113.10',
     },
-    body: JSON.stringify({ memberId: 'member_b', role }),
+    body: JSON.stringify({ memberId, role }),
   });
 }
 
 function member(role: string | null = 'member') {
-  return { id: 'member_b', organization_id: 'org_a', user_id: 'user_b', role };
+  return { id: MEMBER_B, organization_id: ORGANIZATION_A, user_id: USER_B, role };
 }
 
 function rpcResult(
@@ -65,8 +70,8 @@ function rpcResult(
     data: [
       {
         outcome,
-        affected_member_id: 'member_b',
-        affected_user_id: 'user_b',
+        affected_member_id: MEMBER_B,
+        affected_user_id: USER_B,
         previous_role: previousRole,
         applied_role: appliedRole,
       },
@@ -78,9 +83,9 @@ function rpcResult(
 describe('atomic team member role transition API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.requireApiUser.mockResolvedValue({ id: 'user_admin' });
+    mocks.requireApiUser.mockResolvedValue({ id: USER_ADMIN });
     mocks.requireTrustedMutation.mockResolvedValue(null);
-    mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a' });
+    mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: ORGANIZATION_A });
     mocks.requirePermission.mockResolvedValue({ role: 'owner' });
     mocks.requireStepUpForRequest.mockResolvedValue({
       ok: true,
@@ -100,6 +105,17 @@ describe('atomic team member role transition API', () => {
     });
   });
 
+  it('rejects malformed member IDs before creating a Supabase client', async () => {
+    const response = await POST(buildRequest('admin', 'not-a-uuid'));
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(await response.json()).toEqual({ error: 'invalid_team_role_payload' });
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
+  });
+
   it('writes success audit evidence only after the atomic RPC changes the role', async () => {
     mocks.rpc.mockResolvedValue(rpcResult('changed', 'member', 'admin'));
 
@@ -108,19 +124,19 @@ describe('atomic team member role transition API', () => {
 
     expect(response.status).toBe(200);
     expect(mocks.rpc).toHaveBeenCalledWith('change_organization_member_role_atomic', {
-      p_organization_id: 'org_a',
-      p_member_id: 'member_b',
+      p_organization_id: ORGANIZATION_A,
+      p_member_id: MEMBER_B,
       p_expected_role: 'member',
       p_next_role: 'admin',
     });
     expect(mocks.createAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        organizationId: 'org_a',
-        actorUserId: 'user_admin',
+        organizationId: ORGANIZATION_A,
+        actorUserId: USER_ADMIN,
         action: 'team_member_role_changed',
-        entityId: 'member_b',
+        entityId: MEMBER_B,
         metadata: expect.objectContaining({
-          changedUserId: 'user_b',
+          changedUserId: USER_B,
           previousRole: 'member',
           nextRole: 'admin',
         }),
