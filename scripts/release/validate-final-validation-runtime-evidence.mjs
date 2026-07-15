@@ -22,6 +22,7 @@ export const requiredFinalValidationCommands = [
 const allowedStatuses = new Set(['Open', 'Exception', 'Complete']);
 const allowedBlockedOutcomes = new Set(['blocked', 'not_verified']);
 const fullShaPattern = /^[a-f0-9]{40}$/i;
+const canonicalRedactionConfirmation = 'Redaction confirmed for runtime evidence.';
 
 function commandPassed(evidence, commandName) {
   const matches = (evidence?.commands ?? []).filter((entry) => entry?.command === commandName);
@@ -33,6 +34,16 @@ function commandPassed(evidence, commandName) {
 function requireEmptyArray(failures, value, field) {
   if (!Array.isArray(value)) failures.push(`${field} must be an array`);
   else if (value.length > 0) failures.push(`${field} must be empty`);
+}
+
+function requireNonEmptyArray(failures, value, field) {
+  if (!Array.isArray(value) || value.length === 0) failures.push(`${field} must be a non-empty array`);
+}
+
+function requireNonEmptyString(failures, value, field, minLength = 1) {
+  if (typeof value !== 'string' || value.trim().length < minLength) {
+    failures.push(`${field} must be a non-empty string`);
+  }
 }
 
 export function validateFinalValidationRuntimeEvidence(
@@ -94,6 +105,12 @@ export function validateFinalValidationRuntimeEvidence(
   if (evidence?.releaseDecision !== 'Go') failures.push('releaseDecision must be Go');
   if (evidence?.releaseTarget !== 'enterprise') failures.push('releaseTarget must be enterprise');
   if (evidence?.noSecretsStored !== true) failures.push('noSecretsStored must be true');
+  requireNonEmptyString(failures, evidence?.summary, 'summary', 40);
+  requireNonEmptyArray(failures, evidence?.evidenceLocations, 'evidenceLocations');
+  requireNonEmptyArray(failures, evidence?.controlsVerified, 'controlsVerified');
+  if (evidence?.redactionConfirmation !== canonicalRedactionConfirmation) {
+    failures.push('redactionConfirmation must use the canonical runtime-evidence text');
+  }
   if (evidence?.evidenceIntegrity?.placeholderOnly !== false) failures.push('evidenceIntegrity.placeholderOnly must be false');
   if (evidence?.evidenceIntegrity?.containsSensitiveValues !== false) failures.push('evidenceIntegrity.containsSensitiveValues must be false');
   if (evidence?.evidenceIntegrity?.valuesRedacted !== true) failures.push('evidenceIntegrity.valuesRedacted must be true');
