@@ -19,6 +19,17 @@ describe('team member removal route security contract', () => {
     expect(routeSource).toContain(".eq('organization_id', organization.id)");
   });
 
+  it('rejects malformed member IDs before constructing the Supabase client', () => {
+    const uuidValidation = routeSource.indexOf('memberId: z.string().trim().uuid()');
+    const parseGuard = routeSource.indexOf('if (!parsed.success)');
+    const clientCreation = routeSource.indexOf('const supabase = createAdminClient()');
+
+    expect(uuidValidation).toBeGreaterThan(-1);
+    expect(parseGuard).toBeGreaterThan(uuidValidation);
+    expect(clientCreation).toBeGreaterThan(parseGuard);
+    expect(routeSource).toContain("error: 'invalid_team_member_payload'");
+  });
+
   it('delegates deletion to the backend-only atomic RPC with expected state', () => {
     expect(routeSource).toContain("const ATOMIC_MEMBER_REMOVAL_RPC = 'remove_organization_member_atomic'");
     expect(routeSource).toContain('supabase.rpc(ATOMIC_MEMBER_REMOVAL_RPC');
