@@ -15,11 +15,8 @@ function smokeEvidence(overrides: Record<string, unknown> = {}) {
     outcome: 'passed',
     generatedAt,
     globalChecks: [
-      {
-        name: 'lastCommitValidated',
-        passed: true,
-        details: { sha },
-      },
+      { name: 'lastCommitValidated', passed: true, details: { sha } },
+      { name: 'buildShaRegistered', passed: true, details: { sha } },
     ],
     targets: [
       {
@@ -31,24 +28,45 @@ function smokeEvidence(overrides: Record<string, unknown> = {}) {
         ],
       },
     ],
+    failures: [],
+    evidenceIntegrity: {
+      containsSensitiveValues: false,
+      valuesRedacted: true,
+      authorizationHeaderStored: false,
+      cookiesStored: false,
+    },
     ...overrides,
   };
 }
 
 function runtimeShaEvidence(overrides: Record<string, unknown> = {}) {
   return {
+    schema: 'risck-comply.runtime-release-sha-validation.v1',
     evidenceItem: 'runtime-release-sha-validation',
     status: 'Complete',
     outcome: 'passed',
+    generatedAt,
+    targetHost: 'example.invalid',
     expectedCommitSha: sha,
+    expectedBuildSha: sha,
     observedCommitSha: sha,
     observedCommitShaMatchedExpected: true,
+    checks: [{ name: 'runtimeCommitShaMatchesExpected', passed: true }],
+    failures: [],
+    evidenceIntegrity: {
+      containsSensitiveValues: false,
+      valuesRedacted: true,
+      authorizationHeaderStored: false,
+      cookiesStored: false,
+      rawNetworkPayloadStored: false,
+      mismatchedObservedShaStored: false,
+    },
     ...overrides,
   };
 }
 
 describe('runtime security response evidence', () => {
-  it('derives complete evidence only from a fresh exact-SHA deployment smoke and protected runtime proof', () => {
+  it('derives complete evidence only from fresh exact-SHA smoke and host-bound runtime proof', () => {
     const result = buildSecurityResponseEvidence(
       smokeEvidence(),
       runtimeShaEvidence(),
@@ -60,33 +78,62 @@ describe('runtime security response evidence', () => {
     expect(result.securityHeaders.checks[0]).toMatchObject({
       name: 'securityHeaders',
       passed: true,
+      details: {
+        targetResults: [
+          {
+            targetHost: 'example.invalid',
+            shaBound: true,
+            runtimeCheckPassed: true,
+            passed: true,
+          },
+        ],
+      },
     });
-    expect(result.securityHeaders.runtimeShaBinding.passed).toBe(true);
-    expect(result.noStore.status).toBe('Complete');
-    expect(result.noStore.checks[0]).toMatchObject({
-      name: 'noStore',
+    expect(result.securityHeaders.runtimeShaBinding).toMatchObject({
+      targetHost: 'example.invalid',
+      fresh: true,
+      checksPassed: true,
+      failuresEmpty: true,
       passed: true,
     });
+    expect(result.noStore.status).toBe('Complete');
+    expect(result.noStore.checks[0]).toMatchObject({ name: 'noStore', passed: true });
   });
 
-  it('fails closed when the deployment smoke SHA differs from the release SHA', () => {
+  it('fails closed when deployment commit or build SHA differs from the release SHA', () => {
     const expectedSha = 'b'.repeat(40);
-    const result = buildSecurityResponseEvidence(
+    const commitMismatch = buildSecurityResponseEvidence(
       smokeEvidence(),
       runtimeShaEvidence({
         expectedCommitSha: expectedSha,
+        expectedBuildSha: expectedSha,
         observedCommitSha: expectedSha,
       }),
       expectedSha,
       { generatedAt: '2026-07-15T10:05:00.000Z' },
     );
 
-    expect(result.securityHeaders.status).toBe('Open');
-    expect(result.noStore.status).toBe('Open');
-    expect(result.securityHeaders.sourceEvidence.exactShaMatch).toBe(false);
+    expect(commitMismatch.securityHeaders.status).toBe('Open');
+    expect(commitMismatch.noStore.status).toBe('Open');
+    expect(commitMismatch.securityHeaders.sourceEvidence.exactCommitShaMatch).toBe(false);
+
+    const buildMismatch = buildSecurityResponseEvidence(
+      smokeEvidence({
+        globalChecks: [
+          { name: 'lastCommitValidated', passed: true, details: { sha } },
+          { name: 'buildShaRegistered', passed: true, details: { sha: 'b'.repeat(40) } },
+        ],
+      }),
+      runtimeShaEvidence(),
+      sha,
+      { generatedAt: '2026-07-15T10:05:00.000Z' },
+    );
+
+    expect(buildMismatch.securityHeaders.status).toBe('Open');
+    expect(buildMismatch.securityHeaders.sourceEvidence.exactBuildShaMatch).toBe(false);
   });
 
-  it('fails closed when protected runtime SHA proof is missing or mismatched', () => {
+  it('fails closed when protected runtime SHA proof is missing, mismatched, or internally failed', () => {
     const result = buildSecurityResponseEvidence(
       smokeEvidence(),
       runtimeShaEvidence({
@@ -94,6 +141,8 @@ describe('runtime security response evidence', () => {
         outcome: 'failed',
         observedCommitSha: null,
         observedCommitShaMatchedExpected: false,
+        checks: [{ name: 'runtimeCommitShaMatchesExpected', passed: false }],
+        failures: ['runtimeCommitShaMatchesExpected'],
       }),
       sha,
       { generatedAt: '2026-07-15T10:05:00.000Z' },
@@ -104,8 +153,8 @@ describe('runtime security response evidence', () => {
     expect(result.securityHeaders.runtimeShaBinding.passed).toBe(false);
   });
 
-  it('fails closed when the source evidence is stale', () => {
-    const result = buildSecurityResponseEvidence(
+  it('fails closed when either source artifact is stale', () => {
+    const staleSmoke = buildSecurityResponseEvidence(
       smokeEvidence(),
       runtimeShaEvidence(),
       sha,
@@ -115,9 +164,76 @@ describe('runtime security response evidence', () => {
       },
     );
 
-    expect(result.securityHeaders.status).toBe('Open');
-    expect(result.noStore.status).toBe('Open');
-    expect(result.securityHeaders.sourceEvidence.fresh).toBe(false);
+    expect(staleSmoke.securityHeaders.status).toBe('Open');
+    expect(staleSmoke.securityHeaders.sourceEvidence.fresh).toBe(false);
+
+    const staleBinding = buildSecurityResponseEvidence(
+      smokeEvidence({ generatedAt: '2026-07-15T10:55:00.000Z' }),
+      runtimeShaEvidence({ generatedAt }),
+      sha,
+      {
+        generatedAt: '2026-07-15T11:00:01.000Z',
+        maxSourceAgeMs: 60 * 60 * 1000,
+      },
+    );
+
+    expect(staleBinding.securityHeaders.status).toBe('Open');
+    expect(staleBinding.securityHeaders.runtimeShaBinding.fresh).toBe(false);
+  });
+
+  it('requires every smoke target to match the protected runtime host', () => {
+    const mismatchedHost = buildSecurityResponseEvidence(
+      smokeEvidence({
+        targets: [
+          {
+            baseUrl: 'https://other.example.invalid/path?token=redacted',
+            detailedChecks: [
+              { name: 'securityHeadersPresent', passed: true },
+              { name: 'sensitiveApisHaveNoStore', passed: true },
+              { name: 'privateRoutesHaveNoStore', passed: true },
+            ],
+          },
+        ],
+      }),
+      runtimeShaEvidence(),
+      sha,
+      { generatedAt: '2026-07-15T10:05:00.000Z' },
+    );
+
+    expect(mismatchedHost.securityHeaders.status).toBe('Open');
+    expect(mismatchedHost.securityHeaders.checks[0].details.targetResults[0]).toMatchObject({
+      targetHost: 'other.example.invalid',
+      shaBound: false,
+      passed: false,
+    });
+
+    const firstTarget = (smokeEvidence().targets as Array<Record<string, unknown>>)[0];
+    const multipleHosts = buildSecurityResponseEvidence(
+      smokeEvidence({
+        targets: [
+          firstTarget,
+          {
+            baseUrl: 'https://preview.example.invalid',
+            detailedChecks: [
+              { name: 'securityHeadersPresent', passed: true },
+              { name: 'sensitiveApisHaveNoStore', passed: true },
+              { name: 'privateRoutesHaveNoStore', passed: true },
+            ],
+          },
+        ],
+      }),
+      runtimeShaEvidence(),
+      sha,
+      { generatedAt: '2026-07-15T10:05:00.000Z' },
+    );
+
+    expect(multipleHosts.securityHeaders.status).toBe('Open');
+    expect(multipleHosts.securityHeaders.checks[0].details.targetResults).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ targetHost: 'example.invalid', shaBound: true }),
+        expect.objectContaining({ targetHost: 'preview.example.invalid', shaBound: false }),
+      ]),
+    );
   });
 
   it('keeps header and no-store outcomes independently fail closed', () => {
@@ -141,6 +257,31 @@ describe('runtime security response evidence', () => {
 
     expect(result.securityHeaders.status).toBe('Complete');
     expect(result.noStore.status).toBe('Open');
+  });
+
+  it('stores only normalized hosts and no raw deployment URLs', () => {
+    const result = buildSecurityResponseEvidence(
+      smokeEvidence({
+        targets: [
+          {
+            baseUrl: 'https://example.invalid/some/path?secret=value#fragment',
+            detailedChecks: [
+              { name: 'securityHeadersPresent', passed: true },
+              { name: 'sensitiveApisHaveNoStore', passed: true },
+              { name: 'privateRoutesHaveNoStore', passed: true },
+            ],
+          },
+        ],
+      }),
+      runtimeShaEvidence(),
+      sha,
+      { generatedAt: '2026-07-15T10:05:00.000Z' },
+    );
+
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain('secret=value');
+    expect(serialized).not.toContain('/some/path');
+    expect(result.securityHeaders.evidenceIntegrity.rawUrlsStored).toBe(false);
   });
 
   it('records successful security response evidence without weakening final validation', () => {
