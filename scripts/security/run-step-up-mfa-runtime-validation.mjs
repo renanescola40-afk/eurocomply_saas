@@ -3,7 +3,7 @@
 // Executes a real Supabase MFA challenge with a dedicated synthetic account and
 // writes redacted, exact-SHA evidence for the enterprise step-up release gate.
 
-import { createHash, createHmac } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -172,10 +172,6 @@ function stableProviderCode(error) {
   return /^[a-z0-9_.-]{1,64}$/i.test(candidate) ? candidate : null;
 }
 
-function pseudonymize(value) {
-  return value ? createHash('sha256').update(String(value)).digest('hex').slice(0, 16) : null;
-}
-
 function providerConfigured() {
   const providerMode = readRuntimeSetting(stepUpProviderEnv);
   const hasDedicatedSigningSecret = redactedPresence(stepUpSigningEnv);
@@ -225,7 +221,6 @@ function emptyLiveResult(providerMode, providerHost) {
     verificationSucceeded: false,
     aal2Observed: false,
     sessionUserMatched: false,
-    syntheticUserPseudonym: null,
     verifiedTotpFactorCount: 0,
     providerCode: null,
   };
@@ -239,7 +234,7 @@ async function executeSupabaseMfaFlow(supabase, { email, password, totpSecret, p
     return { ...result, reason: 'fixture_sign_in_failed', providerCode: stableProviderCode(signIn.error) };
   }
 
-  result = { ...result, signedIn: true, syntheticUserPseudonym: pseudonymize(signedInUserId) };
+  result = { ...result, signedIn: true };
   const factors = await supabase.auth.mfa.listFactors();
   if (factors.error) {
     return { ...result, reason: 'verified_factor_list_failed', providerCode: stableProviderCode(factors.error) };
@@ -447,7 +442,7 @@ async function main() {
         : liveValidation.status === 'Failed'
           ? 'A live provider validation was attempted and failed; enterprise release remains blocked.'
           : 'Real protected provider proof is incomplete; enterprise release remains blocked.',
-    redactionConfirmation: 'No email, password, TOTP secret, access token, refresh token, factor identifier, challenge identifier, cookie or raw provider payload is persisted.',
+    redactionConfirmation: 'No email, password, TOTP secret, access token, refresh token, user identifier, factor identifier, challenge identifier, cookie or raw provider payload is persisted.',
     releaseGate: {
       enterpriseRelease,
       blocked: enterpriseRelease && !evaluation.complete,
