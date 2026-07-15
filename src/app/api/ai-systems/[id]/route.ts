@@ -112,8 +112,9 @@ export async function PATCH(request: Request, { params }: AiSystemRouteParams) {
     });
     const result = classifyParsedAiSystemBody(body);
 
-    const system = await updateAiSystem(id, organization.id, {
+    const updateResult = await updateAiSystem(id, organization.id, {
       reassessedBy: user.id,
+      expectedUpdatedAt: existing.updated_at,
       name: body.name,
       ownerTeam: asText(body.ownerTeam) || null,
       category: asText(body.category) || null,
@@ -135,6 +136,12 @@ export async function PATCH(request: Request, { params }: AiSystemRouteParams) {
       obligations: result.classification.obligations,
       nextActions: result.classification.nextActions,
     });
+
+    if (updateResult.status === 'conflict') {
+      return noStoreJson({ error: 'ai_system_state_changed' }, { status: 409 });
+    }
+
+    const system = updateResult.system;
 
     await createAuditEvent({
       organizationId: organization.id,
