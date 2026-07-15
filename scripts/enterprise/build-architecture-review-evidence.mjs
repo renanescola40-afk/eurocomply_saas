@@ -2,13 +2,7 @@
 
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,8 +10,8 @@ const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const DEFAULT_DECISIONS_DIR = 'docs/decisions';
 const DEFAULT_EVIDENCE_PATH = 'docs/security/evidence/release/architecture-review.json';
 const FULL_SHA = /^[a-f0-9]{40}$/;
-const NUMBERED_ADR_FILE = /^ADR-(\d{4})-[a-z0-9][a-z0-9-]*\.md$/i;
 const DATED_ADR_FILE = /^ADR-(\d{4}-\d{2}-\d{2})-[a-z0-9][a-z0-9-]*\.md$/i;
+const NUMBERED_ADR_FILE = /^ADR-(\d{4})-[a-z0-9][a-z0-9-]*\.md$/i;
 const DATED_DECISION_FILE = /^(\d{4}-\d{2}-\d{2})-[a-z0-9][a-z0-9-]*\.md$/i;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ALLOWED_STATUSES = new Set(['Proposed', 'Accepted', 'Superseded', 'Deprecated']);
@@ -27,41 +21,38 @@ function normalizeNewlines(value) {
   return String(value).replace(/\r\n/g, '\n');
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function extractMetadata(content, field) {
-  const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = content.match(new RegExp(`^-\\s+\\*{0,2}${escaped}\\s*:\\*{0,2}\\s*(.+)$`, 'mi'));
+  const match = content.match(
+    new RegExp(`^-\\s+\\*{0,2}${escapeRegExp(field)}\\s*:\\*{0,2}\\s*(.+)$`, 'mi'),
+  );
   return match?.[1]?.replace(/\*+$/g, '').trim() ?? null;
 }
 
 function hasSection(content, title, level = '##') {
-  const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`^${level}\\s+${escaped}\\s*$`, 'mi').test(content);
+  return new RegExp(`^${level}\\s+${escapeRegExp(title)}\\s*$`, 'mi').test(content);
 }
 
 function hasRiskTradeoffCoverage(content) {
-  if (hasSection(content, 'Risks and trade-offs')) return true;
-  if (hasSection(content, 'Risks')) return true;
-  if (hasSection(content, 'Trade-offs')) return true;
-
-  if (hasSection(content, 'Consequences')) {
-    return /^(?:###\s+)?Trade-offs\s*:?\s*$/mi.test(content)
-      || /^(?:###\s+)?Risks\s*:?\s*$/mi.test(content);
+  if (
+    hasSection(content, 'Risks and trade-offs')
+    || hasSection(content, 'Risks')
+    || hasSection(content, 'Trade-offs')
+  ) {
+    return true;
   }
 
-  return false;
+  return hasSection(content, 'Consequences')
+    && (/^(?:###\s+)?Trade-offs\s*:?\s*$/mi.test(content)
+      || /^(?:###\s+)?Risks\s*:?\s*$/mi.test(content));
 }
 
 function classifyDecisionFilename(filename) {
-  const numbered = NUMBERED_ADR_FILE.exec(filename);
-  if (numbered) {
-    return {
-      format: 'numbered',
-      identity: `ADR-${numbered[1]}`,
-      number: numbered[1],
-      dateHint: null,
-    };
-  }
-
+  // Dated ADRs must be checked first. Otherwise ADR-2026-07-14-* is
+  // incorrectly interpreted as numbered ADR 2026.
   const datedAdr = DATED_ADR_FILE.exec(filename);
   if (datedAdr) {
     return {
@@ -69,6 +60,16 @@ function classifyDecisionFilename(filename) {
       identity: filename.replace(/\.md$/i, ''),
       number: null,
       dateHint: datedAdr[1],
+    };
+  }
+
+  const numbered = NUMBERED_ADR_FILE.exec(filename);
+  if (numbered) {
+    return {
+      format: 'numbered',
+      identity: `ADR-${numbered[1]}`,
+      number: numbered[1],
+      dateHint: null,
     };
   }
 
@@ -85,10 +86,7 @@ function classifyDecisionFilename(filename) {
   return null;
 }
 
-export function scanArchitectureDecisions({
-  decisionsDir = DEFAULT_DECISIONS_DIR,
-  minimumDecisions = 10,
-} = {}) {
+export function scanArchitectureDecisions({ decisionsDir = DEFAULT_DECISIONS_DIR, minimumDecisions = 10 } = {}) {
   const failures = [];
   const decisions = [];
 
@@ -104,7 +102,6 @@ export function scanArchitectureDecisions({
   const filenames = readdirSync(decisionsDir)
     .filter((name) => name.endsWith('.md') && name.toLowerCase() !== 'template.md')
     .sort((left, right) => left.localeCompare(right));
-
   const seenIdentities = new Set();
   const aggregate = createHash('sha256');
 
@@ -163,7 +160,7 @@ export function scanArchitectureDecisions({
 }
 
 export function buildArchitectureReviewEvidence({
-  scan,
+  scan = null,
   generatedAt = new Date().toISOString(),
   repository = process.env.GITHUB_REPOSITORY ?? '',
   branch = process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || '',
@@ -224,11 +221,7 @@ export function buildArchitectureReviewEvidence({
     },
     controlsVerified: passed ? ['Architecture decisions recorded'] : [],
     failures,
-    evidenceLocations: [
-      DEFAULT_DECISIONS_DIR,
-      'scripts/enterprise/build-architecture-review-evidence.mjs',
-      evidencePath,
-    ],
+    evidenceLocations: [DEFAULT_DECISIONS_DIR, 'scripts/enterprise/build-architecture-review-evidence.mjs', evidencePath],
     redactionConfirmation: 'Evidence contains only repository paths, decision metadata, counts and cryptographic content digests. No secrets, customer data, credentials or provider payloads are stored.',
     evidenceIntegrity: {
       containsSensitiveValues: false,
@@ -257,7 +250,6 @@ function runCli() {
   const evidenceRelativePath = process.env.ARCHITECTURE_EVIDENCE_PATH || DEFAULT_EVIDENCE_PATH;
   const evidencePath = join(repositoryRoot, evidenceRelativePath);
   const minimumDecisions = Number.parseInt(process.env.ARCHITECTURE_MINIMUM_DECISIONS || '10', 10);
-
   const scan = scanArchitectureDecisions({ decisionsDir, minimumDecisions });
   const evidence = buildArchitectureReviewEvidence({
     scan: {
@@ -279,12 +271,10 @@ function runCli() {
   mkdirSync(dirname(evidencePath), { recursive: true });
   writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
   console.log(`Wrote ${evidenceRelativePath} with status ${evidence.status}/${evidence.outcome}`);
-
   if (evidence.status !== 'Complete') {
     for (const failure of evidence.failures) console.error(`- ${failure}`);
     process.exit(1);
   }
 }
 
-const invokedPath = process.argv[1] ? resolve(process.argv[1]) : '';
-if (invokedPath === fileURLToPath(import.meta.url)) runCli();
+if (resolve(process.argv[1] || '') === fileURLToPath(import.meta.url)) runCli();
