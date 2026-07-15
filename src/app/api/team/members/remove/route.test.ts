@@ -12,9 +12,9 @@ const mocks = vi.hoisted(() => ({
   requireStepUpForRequest: vi.fn(),
   publicStepUpSummary: vi.fn(),
   select: vi.fn(),
-  delete: vi.fn(),
   eq: vi.fn(),
   maybeSingle: vi.fn(),
+  rpc: vi.fn(),
 }));
 
 vi.mock('@/server/security/api-guards', () => ({
@@ -61,19 +61,30 @@ function buildRequest(body: unknown) {
   });
 }
 
-function installSupabaseMock(memberResult: unknown) {
+function installSupabaseMock(memberResult: unknown, removalResult: unknown = null) {
   const builder = {
     select: mocks.select,
-    delete: mocks.delete,
     eq: mocks.eq,
     maybeSingle: mocks.maybeSingle,
   };
 
   mocks.select.mockReturnValue(builder);
-  mocks.delete.mockReturnValue(builder);
   mocks.eq.mockReturnValue(builder);
   mocks.maybeSingle.mockResolvedValue(memberResult);
-  mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => builder) });
+  mocks.rpc.mockResolvedValue(
+    removalResult ?? {
+      data: [
+        {
+          outcome: 'removed',
+          affected_member_id: 'member_1',
+          affected_user_id: 'user_removed',
+          previous_role: 'viewer',
+        },
+      ],
+      error: null,
+    },
+  );
+  mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => builder), rpc: mocks.rpc });
 
   return builder;
 }
@@ -111,10 +122,10 @@ describe('team member removal API hardening', () => {
     expect(body).toEqual({ error: 'team_member_not_found' });
     expect(mocks.eq).toHaveBeenCalledWith('id', 'member_from_org_b');
     expect(mocks.eq).toHaveBeenCalledWith('organization_id', 'org_a');
-    expect(mocks.delete).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
-  it('scopes both lookup and delete by organization_id before removing a member', async () => {
+  it('invokes the atomic removal RPC with tenant and expected state before auditing success', async () => {
     installSupabaseMock({
       data: {
         id: 'member_1',
@@ -130,9 +141,12 @@ describe('team member removal API hardening', () => {
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ removed: true, auditPersisted: true });
-    expect(mocks.eq).toHaveBeenCalledWith('id', 'member_1');
-    expect(mocks.eq).toHaveBeenCalledWith('organization_id', 'org_a');
-    expect(mocks.delete).toHaveBeenCalled();
+    expect(mocks.rpc).toHaveBeenCalledWith('remove_organization_member_atomic', {
+      p_organization_id: 'org_a',
+      p_member_id: 'member_1',
+      p_expected_user_id: 'user_removed',
+      p_expected_role: 'viewer',
+    });
     expect(mocks.createAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         organizationId: 'org_a',
@@ -141,5 +155,69 @@ describe('team member removal API hardening', () => {
         entityId: 'member_1',
       }),
     );
+  });
+
+  it('rejects stale state without writing success audit evidence', async () => {
+    installSupabaseMock(
+      {
+        data: {
+          id: 'member_1',
+          user_id: 'user_removed',
+          role: 'viewer',
+          organization_id: 'org_a',
+        },
+        error: null,
+      },
+      {
+        data: [
+          {
+            outcome: 'state_changed',
+            affected_member_id: 'member_1',
+            affected_user_id: 'user_removed',
+            previous_role: 'admin',
+          },
+        ],
+        error: null,
+      },
+    );
+
+    const response = await POST(buildRequest({ memberId: 'member_1' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body).toEqual({ error: 'team_member_state_changed' });
+    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it('blocks final-owner removal without writing success audit evidence', async () => {
+    installSupabaseMock(
+      {
+        data: {
+          id: 'member_1',
+          user_id: 'user_removed',
+          role: 'owner',
+          organization_id: 'org_a',
+        },
+        error: null,
+      },
+      {
+        data: [
+          {
+            outcome: 'last_owner',
+            affected_member_id: 'member_1',
+            affected_user_id: 'user_removed',
+            previous_role: 'owner',
+          },
+        ],
+        error: null,
+      },
+    );
+
+    const response = await POST(buildRequest({ memberId: 'member_1' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toMatchObject({ error: 'last_owner_removal_blocked' });
+    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
   });
 });
