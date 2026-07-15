@@ -130,15 +130,21 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
     throw actionError('Invitation is no longer pending');
   }
 
-  const { error } = await supabase
+  const { data: cancelledInvitation, error } = await supabase
     .from('invitations')
     .delete()
     .eq('id', input.invitationId)
     .eq('organization_id', input.organizationId)
-    .is('accepted_at', null);
+    .is('accepted_at', null)
+    .select('id')
+    .maybeSingle();
 
   if (error) {
     failMemberAction(error, { area: 'team_cancel_invitation', organizationId: input.organizationId, invitationId: input.invitationId }, 'Unable to cancel invitation.');
+  }
+
+  if (!cancelledInvitation) {
+    throw actionError('Invitation state changed before cancellation completed');
   }
 
   await logAuditEvent({
