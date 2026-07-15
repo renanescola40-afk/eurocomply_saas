@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { buildAiIncidentTriagePlan, normalizeAiIncidentCategory, normalizeAiIncidentReportStatus, normalizeAiIncidentSeverity, parseAiIncidentDetectedAt } from '@/lib/ai-governance/incidents';
 import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { createAuditEvent } from '@/server/queries/audit-events';
 import { createAiIncident, listAiIncidents } from '@/server/queries/ai-incidents';
 import { listAiSystems } from '@/server/queries/ai-systems';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
@@ -135,6 +134,15 @@ export async function POST(request: Request) {
     const triage = buildAiIncidentTriagePlan({ severity, category, detectedAt });
     const explicitStatus = normalizeAiIncidentReportStatus(body.reportStatus);
     const reportStatus = explicitStatus === 'draft' ? triage.recommendedStatus : explicitStatus;
+    const auditMetadata = {
+      aiSystemId,
+      category,
+      severity,
+      reportStatus,
+      escalationLevel: triage.escalationLevel,
+      deadlineCount: triage.deadlines.length,
+      actorRole: permission.role,
+    };
 
     const incident = await createAiIncident({
       organizationId: organization.id,
@@ -150,23 +158,7 @@ export async function POST(request: Request) {
       internalOwner: asText(body.internalOwner) || null,
       deadlinePlan: triage.deadlines,
       nextActions: triage.nextActions,
-    });
-
-    await createAuditEvent({
-      organizationId: organization.id,
-      actorUserId: user.id,
-      action: 'ai_incident_created',
-      entityType: 'ai_incident',
-      entityId: incident.id,
-      metadata: {
-        aiSystemId,
-        category,
-        severity,
-        reportStatus,
-        escalationLevel: triage.escalationLevel,
-        deadlineCount: triage.deadlines.length,
-        actorRole: permission.role,
-      },
+      auditMetadata,
     });
 
     return noStoreJson({ incident, triage });
