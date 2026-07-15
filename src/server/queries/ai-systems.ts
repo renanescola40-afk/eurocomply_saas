@@ -96,7 +96,12 @@ export type CreateAiSystemInput = {
 
 export type UpdateAiSystemInput = Omit<CreateAiSystemInput, 'organizationId' | 'createdBy'> & {
   reassessedBy: string;
+  expectedUpdatedAt: string;
 };
+
+export type UpdateAiSystemResult =
+  | { status: 'updated'; system: AiSystemRecord }
+  | { status: 'conflict' };
 
 function isMissingAiSystemsTable(error: { code?: string; message?: string }) {
   return error.code === '42P01' || error.code === 'PGRST205' || /ai_systems/i.test(error.message ?? '');
@@ -239,8 +244,13 @@ export async function createAiSystem(input: CreateAiSystemInput): Promise<AiSyst
   return system;
 }
 
-export async function updateAiSystem(systemId: string, organizationId: string, input: UpdateAiSystemInput): Promise<AiSystemRecord> {
+export async function updateAiSystem(
+  systemId: string,
+  organizationId: string,
+  input: UpdateAiSystemInput,
+): Promise<UpdateAiSystemResult> {
   const supabase = createAdminClient();
+  const reassessedAt = new Date().toISOString();
 
   const { data, error } = await supabase
     .from('ai_systems')
@@ -265,17 +275,22 @@ export async function updateAiSystem(systemId: string, organizationId: string, i
       classification_summary: input.classificationSummary,
       obligations: input.obligations,
       next_actions: input.nextActions,
-      last_reassessed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      last_reassessed_at: reassessedAt,
+      updated_at: reassessedAt,
     })
     .eq('id', systemId)
     .eq('organization_id', organizationId)
+    .eq('updated_at', input.expectedUpdatedAt)
     .select(AI_SYSTEM_COLUMNS)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.warn('[ai-systems] update_failed', { code: error.code ?? 'unknown' });
     throw error;
+  }
+
+  if (!data) {
+    return { status: 'conflict' };
   }
 
   const system = data as unknown as AiSystemRecord;
@@ -292,5 +307,5 @@ export async function updateAiSystem(systemId: string, organizationId: string, i
     },
   });
 
-  return system;
+  return { status: 'updated', system };
 }
