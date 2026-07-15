@@ -11,8 +11,9 @@ describe('lead capture IP privacy', () => {
     const hashedPersistenceIndex = source.indexOf("ip_hint: ipHint === 'unknown' ? null : hashRateLimitIp(ipHint)");
     const saveIndex = source.indexOf('const savedToSupabase = await saveToSupabase(record);');
     const webhookIndex = source.indexOf('const sentToWebhook = await sendWebhook(record);');
+    const rateLimitImport = source.match(/import \{([^}]+)\} from ['"]@\/server\/security\/rate-limit['"];/);
 
-    expect(source).toContain("import { hashRateLimitIp } from '@/server/security/rate-limit';");
+    expect(rateLimitImport?.[1]).toContain('hashRateLimitIp');
     expect(rawHintIndex).toBeGreaterThan(-1);
     expect(recordIndex).toBeGreaterThan(rawHintIndex);
     expect(hashedPersistenceIndex).toBeGreaterThan(recordIndex);
