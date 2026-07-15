@@ -3,7 +3,7 @@ export type ArchitectureDecisionFormat = 'numbered' | 'dated-adr' | 'dated-decis
 export interface ArchitectureDecisionRecord {
   path: string;
   identity: string;
-  format: ArchitectureDecisionFormat;
+  format: string;
   number: string | null;
   status: string | null;
   date: string | null;
