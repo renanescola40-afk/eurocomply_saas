@@ -1,8 +1,8 @@
 import { headers } from 'next/headers';
 
+import { trustedRequestIdFromHeaders } from '@/lib/observability/request-correlation';
 import { reportError } from '@/lib/observability/report-error';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
-import { requestIdFromHeaders } from '@/server/observability/logger';
 import { createAuditEvent, sanitizeAuditMetadata } from '@/server/queries/audit-events';
 import { hashRateLimitIp } from '@/server/security/rate-limit';
 
@@ -91,7 +91,7 @@ async function getRequestContext() {
     const forwardedFor = requestHeaders.get('x-forwarded-for');
     const ip = normalizeIpAddress(forwardedFor || requestHeaders.get('x-real-ip'));
     const userAgent = normalizeUserAgent(requestHeaders.get('user-agent'));
-    const requestId = requestIdFromHeaders(requestHeaders);
+    const requestId = trustedRequestIdFromHeaders(requestHeaders);
 
     return { requestId, ipPseudonym: pseudonymizeIpAddress(ip), userAgent };
   } catch {
