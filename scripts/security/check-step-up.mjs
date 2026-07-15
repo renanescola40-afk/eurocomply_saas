@@ -10,7 +10,6 @@ const supabaseUrlEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'URL');
 const supabaseAnonEnv = env('NEXT', 'PUBLIC', 'SUPABASE', 'ANON', 'KEY');
 const enterpriseReleaseEnv = env('RISCK', 'COMPLY', 'ENTERPRISE', 'RELEASE');
 const legacyEnterpriseReleaseEnv = env('EUROCOMPLY', 'ENTERPRISE', 'RELEASE');
-const providerProofEnv = env('STEP', 'UP', 'RUNTIME', 'PROVIDER', 'PROOF');
 const forbiddenSubprocessToken = ['spawn', 'Sync'].join('');
 
 const paths = {
@@ -113,15 +112,17 @@ const tokenChecks = {
     'consumed_at', 'enable row level security', 'grant all on public.step_up_challenges to service_role',
   ],
   [paths.runtimeValidation]: [
-    'run-step-up-mfa-runtime-validation', 'providerProof', providerProofEnv, 'STEP_UP_RUNTIME_PROVIDER_PROOF=true',
-    'step_up_challenge_created', 'step_up_verified', 'releaseEnterpriseBlockedIfProviderProofAbsent',
+    'signInWithPassword', 'supabase.auth.mfa.listFactors', 'supabase.auth.mfa.challenge',
+    'supabase.auth.mfa.verify', 'getAuthenticatorAssuranceLevel', "currentLevel !== 'aal2'",
+    'supabase.auth.signOut', 'manualBooleanProofAccepted: false', 'protectedWorkflowProvenance',
+    'step_up_challenge_created', 'step_up_verified',
   ],
   [paths.runtimePreflight]: [
     'await import', './check-step-up.mjs', enterpriseReleaseEnv, legacyEnterpriseReleaseEnv, 'runtime provider preflight',
     'Values are never printed', 'process.env.RISCK_COMPLY_ENTERPRISE_RELEASE', 'process.env.EUROCOMPLY_ENTERPRISE_RELEASE',
   ],
   [paths.productionPreflight]: [
-    'readRuntimeSetting', 'hasConfiguredList', 'enterpriseReleaseEnv', 'legacyEnterpriseReleaseEnv',
+    'readRuntimeSetting', 'hasConfiguredList', enterpriseReleaseEnv, legacyEnterpriseReleaseEnv,
     'Enterprise step-up runtime provider preflight: running', 'Enterprise step-up runtime provider preflight: skipped',
     'stepUpProviderEnv', 'stepUpSigningEnv', 'auditSigningEnv', 'supabaseUrlEnv', 'supabaseAnonEnv',
     'stepUpAcrEnv', 'stepUpAmrEnv', 'providerConfigured',
@@ -130,8 +131,8 @@ const tokenChecks = {
     'security:step-up', 'security:step-up:runtime', 'RISCK_COMPLY_ENTERPRISE_RELEASE=true npm run security:step-up',
   ],
   [paths.runtimeEvidence]: [
-    'step-up-mfa-validation', 'ProviderProofRequired', 'supabase_mfa', 'enterprise_idp', 'failClosedWithoutProvider',
-    'enterpriseReleaseBlockedWithoutProviderProof', 'releaseEnterpriseBlockedIfProviderProofAbsent',
+    'risck-comply.step-up-mfa-runtime-evidence.v2', 'step-up-mfa-validation', 'Open', 'blocked',
+    'manualBooleanProofAccepted', 'generatedFromLiveProvider', 'protectedWorkflowProvenance',
     'scripts/security/run-step-up-mfa-runtime-validation.mjs', 'POST /api/security/step-up/challenge',
     'POST /api/security/step-up/verify', 'step_up_challenge_created', 'step_up_verified', 'step_up_failed',
     'step_up_expired', 'step_up_scope_mismatch',
@@ -177,14 +178,31 @@ function readStepUpEvidence() {
   try {
     const evidence = JSON.parse(readFileSync(paths.runtimeEvidence, 'utf8'));
     const acceptance = evidence.acceptanceCriteria ?? {};
-    const runtime = evidence.runtimeValidation ?? {};
+    const integrity = evidence.evidenceIntegrity ?? {};
+    const provenance = evidence.provenance ?? {};
     const events = new Set(evidence.auditEvents ?? []);
     const missingEvents = ['step_up_challenge_created', 'step_up_verified', 'step_up_failed', 'step_up_expired', 'step_up_scope_mismatch']
       .filter((event) => !events.has(event));
-    if (!['Complete', 'ProviderProofRequired', 'Exception'].includes(evidence.status)) return { ok: false, reason: 'step_up_runtime_evidence_invalid_status' };
+    if (!['Complete', 'Open', 'Failed'].includes(evidence.status)) return { ok: false, reason: 'step_up_runtime_evidence_invalid_status' };
+    if (!['passed', 'blocked', 'failed', 'failed_source_validation'].includes(evidence.outcome)) return { ok: false, reason: 'step_up_runtime_evidence_invalid_outcome' };
     if (missingEvents.length > 0) return { ok: false, reason: `step_up_audit_events_missing:${missingEvents.join(',')}` };
-    if (acceptance.releaseEnterpriseBlockedIfProviderProofAbsent !== true) return { ok: false, reason: 'step_up_provider_proof_release_gate_missing' };
-    return { ok: true, providerProofPresent: runtime.providerProof?.present === true, evidence };
+    if (integrity.manualBooleanProofAccepted !== false) return { ok: false, reason: 'step_up_manual_boolean_proof_not_rejected' };
+    if (integrity.rawSecretsStored !== false || integrity.rawTokensStored !== false) return { ok: false, reason: 'step_up_evidence_secret_hygiene_missing' };
+
+    const providerProofPresent = evidence.status === 'Complete'
+      && evidence.outcome === 'passed'
+      && integrity.generatedFromLiveProvider === true
+      && acceptance.aal2Observed === true
+      && acceptance.sessionUserMatched === true
+      && acceptance.fixtureSessionRevoked === true
+      && acceptance.exactReleaseSha === true
+      && acceptance.protectedMainBranch === true
+      && acceptance.protectedWorkflowProvenance === true
+      && provenance.exactShaBound === true
+      && provenance.branchBound === true
+      && provenance.workflowProvenance === true;
+
+    return { ok: true, providerProofPresent, evidence };
   } catch {
     return { ok: false, reason: 'step_up_runtime_evidence_invalid_json' };
   }
@@ -194,7 +212,6 @@ console.log('RISCK COMPLY enterprise step-up authentication check');
 console.log('----------------------------------------------------');
 
 const sources = Object.fromEntries(Object.values(paths).map((path) => [path, read(path)]));
-
 for (const [path, tokens] of Object.entries(tokenChecks)) {
   if (sources[path]) requireTokens(path, sources[path], tokens);
 }
@@ -234,7 +251,7 @@ if (!evidence.ok) failures.push(`Step-up runtime evidence invalid: ${evidence.re
 
 if (isEnterpriseReleaseEnabled()) {
   const providerMode = readRuntimeSetting(stepUpProviderEnv);
-  const hasSecret = Boolean(readRuntimeSetting(stepUpSigningEnv) || readRuntimeSetting(auditSigningEnv));
+  const hasDedicatedSecret = Boolean(readRuntimeSetting(stepUpSigningEnv));
   const hasSupabaseAuth = Boolean(readRuntimeSetting(supabaseUrlEnv) && readRuntimeSetting(supabaseAnonEnv));
   const hasIdpPolicy = hasConfiguredList(stepUpAcrEnv) || hasConfiguredList(stepUpAmrEnv);
   const providerConfigured = providerMode === 'supabase_mfa'
@@ -244,14 +261,13 @@ if (isEnterpriseReleaseEnabled()) {
       : providerMode === 'supabase_mfa_or_enterprise_idp'
         ? hasSupabaseAuth
         : false;
-  const providerProofPresent = evidence.ok && evidence.providerProofPresent && readRuntimeSetting(providerProofEnv) === 'true';
+  const providerProofPresent = evidence.ok && evidence.providerProofPresent;
 
-  if (!hasSecret || !providerConfigured) {
-    failures.push('Enterprise release blocked: configure step-up signing material plus Supabase auth configuration and a real Supabase MFA or enterprise IdP ACR/AMR policy before release.');
+  if (!hasDedicatedSecret || !providerConfigured) {
+    failures.push('Enterprise release blocked: configure a dedicated STEP_UP_SIGNING_SECRET plus Supabase auth and a real Supabase MFA or enterprise IdP policy before release.');
   }
-
   if (!providerProofPresent) {
-    failures.push('Enterprise release blocked: attach real step-up provider proof by running scripts/security/run-step-up-mfa-runtime-validation.mjs with STEP_UP_RUNTIME_PROVIDER_PROOF=true after live MFA/IdP verification.');
+    failures.push('Enterprise release blocked: execute the protected Step-Up Runtime Proof workflow for the exact deployed main SHA and attach the resulting Complete/passed evidence.');
   }
 }
 
