@@ -1,0 +1,75 @@
+name: Stripe Provider Proof
+
+run-name: Stripe provider proof for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character main-branch SHA deployed to production
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stripe-provider-proof-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  validate-stripe-provider:
+    name: Validate Stripe test-mode provider configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - name: Validate requested SHA
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+
+      - name: Check out exact release SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Probe Stripe provider configuration
+        id: probe
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PRICE_STARTER: ${{ secrets.STRIPE_PRICE_STARTER }}
+          STRIPE_PRICE_GROWTH: ${{ secrets.STRIPE_PRICE_GROWTH }}
+        run: node scripts/security/probe-stripe-provider-config.mjs
+
+      - name: Write redacted evidence
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
+          ENTERPRISE_EXPECTED_BRANCH: main
+          STRIPE_PROVIDER_PROBE_PASSED: 'true'
+        run: node scripts/security/write-stripe-provider-evidence.mjs
+
+      - name: Upload redacted evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: stripe-provider-proof-${{ inputs.release_sha }}
+          path: docs/security/evidence/runtime/stripe-provider-configuration-validation.json
+          if-no-files-found: error
+          retention-days: 90
