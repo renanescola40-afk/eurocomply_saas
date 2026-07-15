@@ -61,11 +61,25 @@ Branch protection remains authoritative. PR Autopilot does not dismiss reviews, 
 10. Verify that the remote head has not moved, then push a single repair commit to the same branch with `PR_AUTOPILOT_TOKEN`.
 11. Let all required GitHub checks rerun on the new exact head.
 
+## Vercel rate-limit behavior
+
+Vercel quota and rate-limit signals do not block repository delivery. When Vercel reports `Deployment rate limited`, `build-rate-limit`, `retry in 24 hours`, `upgradeToPro=build-rate-limit`, or an equivalent deployment-quota condition:
+
+1. Continue implementation, branch creation, commits, push, and PR creation.
+2. Continue every available GitHub-side quality and security check.
+3. Do not infer a code defect from the Vercel-only provider status.
+4. Do not run Codex autofix merely to change a provider quota result.
+5. Add an `External deployment status` section to the PR using `.github/agents/pr-creation-with-vercel-limit.prompt.md`.
+6. Record Vercel deployment as `BLOCKED` and production validation as `NOT VERIFIED` for the exact SHA.
+7. Leave merge behavior to branch protection. A required failed Vercel check cannot be bypassed; a non-required Vercel status does not prevent PR creation.
+
+This separates three different outcomes truthfully: repository implementation, PR delivery, and production deployment. A blocked Vercel deployment does not erase completed code work, but completed code work does not prove production deployment.
+
 ## Protected domains
 
 The canonical path policy is `.github/pr-autopilot-policy.json`. It blocks autonomous repair and merge for, at minimum:
 
-- GitHub workflows and actions;
+- GitHub workflows, actions, and agent prompts;
 - authentication, authorization, RBAC, RLS, tenancy, middleware, and Supabase authority;
 - billing, Stripe, webhooks, entitlements, and payment state;
 - migrations and SQL;
@@ -82,7 +96,8 @@ The controller may ask GitHub to update an eligible branch with `main` when GitH
 ## Failure handling
 
 - Missing token: classify and comment, but do not sync, push, or merge.
-- External provider failure or quota: do not modify code merely to obtain green status.
+- Vercel rate limit or quota: create/update the PR, record the deployment blocker truthfully, and do not modify code to obtain a green provider status.
+- Other external provider failure: do not modify code merely to obtain green status; continue PR delivery when the code work itself is reviewable and authorized.
 - No safe Codex change: comment and stop without a commit.
 - Boundary violation: fail before verification or push.
 - Stale branch during repair: refuse the push.
