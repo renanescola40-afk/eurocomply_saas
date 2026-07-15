@@ -1,34 +1,54 @@
 {
+  "schemaVersion": 1,
+  "controlId": "P1-08",
   "control": "centralized-logging-alerts",
-  "status": "Open",
-  "reviewedAt": "YYYY-MM-DD",
+  "status": "Complete",
+  "evidenceKind": "final-p1-control-evidence",
+  "generatedFromRealEvidence": true,
+  "productionValidated": true,
+  "reviewedAt": "REPLACE_WITH_REVIEWED_AT",
   "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "nextReviewDue": "REPLACE_WITH_NEXT_REVIEW_DUE",
+  "environment": "production",
   "targetEnvironment": "production",
   "redaction": "All confidential values are redacted.",
   "loggingBackend": {
     "provider": "REPLACE_WITH_LOGGING_PROVIDER",
     "scope": "centralized",
     "retentionPolicy": "REPLACE_WITH_RETENTION_POLICY_REFERENCE",
+    "environmentTag": "environment",
+    "releaseTag": "release",
     "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
   },
   "logSourcesReviewed": [
-    {
-      "source": "application",
-      "status": "planned",
-      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
-    },
-    {
-      "source": "identity",
-      "status": "planned",
-      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
-    }
+    { "source": "application", "status": "connected", "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE" },
+    { "source": "identity", "status": "connected", "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE" },
+    { "source": "database", "status": "connected", "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE" },
+    { "source": "edge", "status": "connected", "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE" }
   ],
   "alertsReviewed": [
     {
-      "alertName": "REPLACE_WITH_ALERT_NAME",
-      "trigger": "REPLACE_WITH_TRIGGER_DESCRIPTION",
+      "alertName": "audit_chain_invalid",
+      "trigger": "A production audit-chain verification reports an invalid chain.",
+      "severity": "critical",
+      "status": "active",
+      "fingerprint": "security-alert/audit_chain_invalid",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
+    },
+    {
+      "alertName": "rls_validation_failed",
+      "trigger": "A production tenant-isolation validation reports an RLS failure.",
+      "severity": "critical",
+      "status": "active",
+      "fingerprint": "security-alert/rls_validation_failed",
+      "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
+    },
+    {
+      "alertName": "webhook_failed",
+      "trigger": "A verified production webhook repeatedly fails processing.",
       "severity": "high",
-      "status": "planned",
+      "status": "active",
+      "fingerprint": "security-alert/webhook_failed",
       "evidenceLocation": "REPLACE_WITH_REDACTED_REFERENCE"
     }
   ],
@@ -39,5 +59,18 @@
     "Retention policy is documented",
     "Evidence is redacted"
   ],
-  "nextReviewDue": "YYYY-MM-DD"
+  "validation": {
+    "result": "pass",
+    "validatedAt": "REPLACE_WITH_VALIDATED_AT",
+    "validator": "REPLACE_WITH_VALIDATOR",
+    "method": "production-alert-routing-smoke"
+  },
+  "artifacts": [
+    {
+      "type": "centralized-log-and-alert-review",
+      "reference": "REPLACE_WITH_REDACTED_REFERENCE",
+      "description": "Reviewed production evidence for centralized sources, correlation tags and active security alerts.",
+      "collectedAt": "REPLACE_WITH_COLLECTED_AT"
+    }
+  ]
 }
