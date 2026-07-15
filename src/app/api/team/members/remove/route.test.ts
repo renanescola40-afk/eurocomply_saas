@@ -2,6 +2,12 @@
 // @ts-nocheck
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const USER_ADMIN = '00000000-0000-4000-8000-000000000001';
+const USER_REMOVED = '00000000-0000-4000-8000-000000000002';
+const ORGANIZATION_A = '00000000-0000-4000-8000-000000000003';
+const MEMBER_1 = '00000000-0000-4000-8000-000000000004';
+const OTHER_TENANT_MEMBER = '00000000-0000-4000-8000-000000000005';
+
 const mocks = vi.hoisted(() => ({
   requireApiUser: vi.fn(),
   requirePermission: vi.fn(),
@@ -76,8 +82,8 @@ function installSupabaseMock(memberResult: unknown, removalResult: unknown = nul
       data: [
         {
           outcome: 'removed',
-          affected_member_id: 'member_1',
-          affected_user_id: 'user_removed',
+          affected_member_id: MEMBER_1,
+          affected_user_id: USER_REMOVED,
           previous_role: 'viewer',
         },
       ],
@@ -92,10 +98,10 @@ function installSupabaseMock(memberResult: unknown, removalResult: unknown = nul
 describe('team member removal API hardening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.requireApiUser.mockResolvedValue({ id: 'user_admin' });
+    mocks.requireApiUser.mockResolvedValue({ id: USER_ADMIN });
     mocks.requirePermission.mockResolvedValue({ role: 'admin' });
     mocks.requireTrustedMutation.mockResolvedValue(null);
-    mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: 'org_a' });
+    mocks.getCurrentOrganizationForUser.mockResolvedValue({ id: ORGANIZATION_A });
     mocks.requireStepUpForRequest.mockResolvedValue({ ok: true, assessment: { required: false } });
     mocks.publicStepUpSummary.mockReturnValue({ required: false });
     mocks.createAuditEvent.mockResolvedValue({ persisted: true });
@@ -104,7 +110,7 @@ describe('team member removal API hardening', () => {
   it('blocks requests without organization context', async () => {
     mocks.getCurrentOrganizationForUser.mockResolvedValue(null);
 
-    const response = await POST(buildRequest({ memberId: 'member_1' }));
+    const response = await POST(buildRequest({ memberId: MEMBER_1 }));
     const body = await response.json();
 
     expect(response.status).toBe(403);
@@ -112,47 +118,59 @@ describe('team member removal API hardening', () => {
     expect(body).toEqual({ error: 'organization_required' });
   });
 
+  it('rejects malformed member IDs before creating a Supabase client', async () => {
+    const response = await POST(buildRequest({ memberId: 'not-a-uuid' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(body).toEqual({ error: 'invalid_team_member_payload' });
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.createAuditEvent).not.toHaveBeenCalled();
+  });
+
   it('does not remove a member when the id is not owned by the current tenant', async () => {
     installSupabaseMock({ data: null, error: null });
 
-    const response = await POST(buildRequest({ memberId: 'member_from_org_b' }));
+    const response = await POST(buildRequest({ memberId: OTHER_TENANT_MEMBER }));
     const body = await response.json();
 
     expect(response.status).toBe(404);
     expect(body).toEqual({ error: 'team_member_not_found' });
-    expect(mocks.eq).toHaveBeenCalledWith('id', 'member_from_org_b');
-    expect(mocks.eq).toHaveBeenCalledWith('organization_id', 'org_a');
+    expect(mocks.eq).toHaveBeenCalledWith('id', OTHER_TENANT_MEMBER);
+    expect(mocks.eq).toHaveBeenCalledWith('organization_id', ORGANIZATION_A);
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
   it('invokes the atomic removal RPC with tenant and expected state before auditing success', async () => {
     installSupabaseMock({
       data: {
-        id: 'member_1',
-        user_id: 'user_removed',
+        id: MEMBER_1,
+        user_id: USER_REMOVED,
         role: 'viewer',
-        organization_id: 'org_a',
+        organization_id: ORGANIZATION_A,
       },
       error: null,
     });
 
-    const response = await POST(buildRequest({ memberId: 'member_1' }));
+    const response = await POST(buildRequest({ memberId: MEMBER_1 }));
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ removed: true, auditPersisted: true });
     expect(mocks.rpc).toHaveBeenCalledWith('remove_organization_member_atomic', {
-      p_organization_id: 'org_a',
-      p_member_id: 'member_1',
-      p_expected_user_id: 'user_removed',
+      p_organization_id: ORGANIZATION_A,
+      p_member_id: MEMBER_1,
+      p_expected_user_id: USER_REMOVED,
       p_expected_role: 'viewer',
     });
     expect(mocks.createAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        organizationId: 'org_a',
-        actorUserId: 'user_admin',
+        organizationId: ORGANIZATION_A,
+        actorUserId: USER_ADMIN,
         action: 'team_member_removed',
-        entityId: 'member_1',
+        entityId: MEMBER_1,
       }),
     );
   });
@@ -161,10 +179,10 @@ describe('team member removal API hardening', () => {
     installSupabaseMock(
       {
         data: {
-          id: 'member_1',
-          user_id: 'user_removed',
+          id: MEMBER_1,
+          user_id: USER_REMOVED,
           role: 'viewer',
-          organization_id: 'org_a',
+          organization_id: ORGANIZATION_A,
         },
         error: null,
       },
@@ -172,8 +190,8 @@ describe('team member removal API hardening', () => {
         data: [
           {
             outcome: 'state_changed',
-            affected_member_id: 'member_1',
-            affected_user_id: 'user_removed',
+            affected_member_id: MEMBER_1,
+            affected_user_id: USER_REMOVED,
             previous_role: 'admin',
           },
         ],
@@ -181,7 +199,7 @@ describe('team member removal API hardening', () => {
       },
     );
 
-    const response = await POST(buildRequest({ memberId: 'member_1' }));
+    const response = await POST(buildRequest({ memberId: MEMBER_1 }));
     const body = await response.json();
 
     expect(response.status).toBe(409);
@@ -193,10 +211,10 @@ describe('team member removal API hardening', () => {
     installSupabaseMock(
       {
         data: {
-          id: 'member_1',
-          user_id: 'user_removed',
+          id: MEMBER_1,
+          user_id: USER_REMOVED,
           role: 'owner',
-          organization_id: 'org_a',
+          organization_id: ORGANIZATION_A,
         },
         error: null,
       },
@@ -204,8 +222,8 @@ describe('team member removal API hardening', () => {
         data: [
           {
             outcome: 'last_owner',
-            affected_member_id: 'member_1',
-            affected_user_id: 'user_removed',
+            affected_member_id: MEMBER_1,
+            affected_user_id: USER_REMOVED,
             previous_role: 'owner',
           },
         ],
@@ -213,7 +231,7 @@ describe('team member removal API hardening', () => {
       },
     );
 
-    const response = await POST(buildRequest({ memberId: 'member_1' }));
+    const response = await POST(buildRequest({ memberId: MEMBER_1 }));
     const body = await response.json();
 
     expect(response.status).toBe(400);
