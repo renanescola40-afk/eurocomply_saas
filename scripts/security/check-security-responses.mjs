@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 
+const DELEGATED_CHECK_TIMEOUT_MS = 2 * 60 * 1000;
+
 const checks = [
   {
     path: 'src/server/security/no-store.ts',
@@ -113,10 +115,22 @@ function runDelegatedCheck(path) {
   const result = spawnSync(process.execPath, [path], {
     cwd: process.cwd(),
     stdio: 'inherit',
+    timeout: DELEGATED_CHECK_TIMEOUT_MS,
+    killSignal: 'SIGTERM',
   });
 
   if (result.error) {
-    failures.push(`${path} failed to execute: ${result.error.message}`);
+    const timedOut = result.error.code === 'ETIMEDOUT';
+    failures.push(
+      timedOut
+        ? `${path} exceeded the ${DELEGATED_CHECK_TIMEOUT_MS}ms delegated-check timeout`
+        : `${path} failed to execute: ${result.error.message}`,
+    );
+    return;
+  }
+
+  if (result.signal) {
+    failures.push(`${path} terminated by signal ${result.signal}`);
     return;
   }
 
