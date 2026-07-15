@@ -19,6 +19,8 @@ function appendUnique(items, value) {
 
 export function applySecurityResponseStatus(document, { passed, generatedAt }) {
   const next = structuredClone(document);
+  const isFinalValidationRunner = next?.evidenceItem === 'final-validation-runner';
+
   next.securityResponseEvidence = {
     status: passed ? 'Complete' : 'Open',
     outcome: passed ? 'passed' : 'failed',
@@ -28,13 +30,22 @@ export function applySecurityResponseStatus(document, { passed, generatedAt }) {
 
   if (!passed) {
     next.status = 'Open';
-    next.outcome = 'failed';
-    next.overallResult = 'failed';
-    next.metadataFailures = appendUnique(next.metadataFailures, FAILURE_SUMMARY);
-    next.releaseGate =
-      'No-Go: runtime security headers and no-store evidence did not pass on the exact deployed SHA.';
     next.summary =
-      'Release validation failed because final runtime security response evidence was not complete and exact-SHA bound.';
+      'Release validation is blocked because final runtime security response evidence was not complete and exact-SHA bound.';
+
+    if (isFinalValidationRunner) {
+      next.outcome = 'blocked';
+      next.releaseDecision = 'No-Go';
+      next.failures = appendUnique(next.failures, FAILURE_SUMMARY);
+      next.productionGate =
+        'No-Go: runtime security headers and no-store evidence did not pass on the exact deployed SHA.';
+    } else {
+      next.outcome = 'failed';
+      next.overallResult = 'failed';
+      next.metadataFailures = appendUnique(next.metadataFailures, FAILURE_SUMMARY);
+      next.releaseGate =
+        'No-Go: runtime security headers and no-store evidence did not pass on the exact deployed SHA.';
+    }
   }
 
   return next;
