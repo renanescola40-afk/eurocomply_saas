@@ -2,7 +2,7 @@ import { DOCUMENT_BUCKET, buildDocumentStoragePath } from '@/lib/documents/uploa
 import { getComplianceTemplate } from '@/lib/compliance/templates';
 import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createDocument } from '@/server/actions/documents';
+import { createServerGeneratedDocument } from '@/server/actions/documents';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { requireCurrentUser } from '@/server/queries/auth';
 
@@ -60,7 +60,7 @@ export async function createDocumentFromTemplate(input: TemplateDocumentInput) {
     throw actionError('Unable to create template document.');
   }
 
-  return createDocument({
+  return createServerGeneratedDocument({
     organizationId: input.organizationId,
     name: title,
     category,
