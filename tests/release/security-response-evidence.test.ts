@@ -142,15 +142,19 @@ describe('runtime security response evidence', () => {
     expect(result.noStore.status).toBe('Open');
   });
 
-  it('prepares exact-SHA response evidence before either strict release runner starts', () => {
+  it('prepares evidence before strict runners and executes SHA checks as independent processes', () => {
     const source = readFileSync('scripts/release/run-public-production-release.mjs', 'utf8');
     const preparation = source.indexOf('await prepareSecurityResponseEvidence();');
     const enterpriseRunner = source.indexOf("await import('./run-public-production-release-v2.mjs');");
     const publicRunner = source.indexOf("await import('./run-public-production-release-final.mjs');");
+    const shaVerificationCalls = source.match(/verifyRuntimeReleaseSha\(\);/g) ?? [];
 
     expect(preparation).toBeGreaterThan(-1);
     expect(enterpriseRunner).toBeGreaterThan(preparation);
     expect(publicRunner).toBeGreaterThan(preparation);
-    expect(source).toContain("await verifyRuntimeReleaseSha();\n  await import('./run-deployment-smoke.mjs');");
+    expect(shaVerificationCalls).toHaveLength(3);
+    expect(source).toContain("runNodeScript('scripts/release/verify-runtime-release-sha.mjs');");
+    expect(source).toContain("runNodeScript('scripts/release/run-deployment-smoke.mjs');");
+    expect(source).not.toContain("import('./verify-runtime-release-sha.mjs')");
   });
 });
