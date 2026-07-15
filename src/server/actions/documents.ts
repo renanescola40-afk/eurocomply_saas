@@ -42,6 +42,8 @@ const uploadDocumentSchema = z.object({
 export type CreateDocumentInput = z.input<typeof createDocumentSchema>;
 export type UploadDocumentInput = z.input<typeof uploadDocumentSchema>;
 
+type DocumentSecurityProvenance = 'untrusted_metadata' | 'validated_upload' | 'server_generated';
+
 function actionError(message: string) {
   return new Error(message);
 }
@@ -82,31 +84,14 @@ function numberMetadataValue(metadata: Record<string, unknown> | undefined, key:
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function isServerGeneratedDocumentMetadata(metadata: Record<string, unknown> | undefined) {
-  return metadata?.source === 'template' && metadata.serverGenerated === true;
-}
-
-function hasCleanEnterpriseUploadScanMetadata(metadata: Record<string, unknown> | undefined) {
-  return (
-    metadata?.scanRequired === true &&
-    metadata.scanStatus === 'clean' &&
-    stringMetadataValue(metadata, 'scanProvider') !== null &&
-    stringMetadataValue(metadata, 'scanProvider') !== 'not_configured' &&
-    stringMetadataValue(metadata, 'scanCheckedAt') !== null &&
-    stringMetadataValue(metadata, 'fileHash') !== null &&
-    numberMetadataValue(metadata, 'fileSize') !== null &&
-    stringMetadataValue(metadata, 'mimeDetected') !== null
-  );
-}
-
-async function assertEnterpriseDocumentCreateHasCleanUploadScan(input: {
+async function assertEnterpriseDocumentCreateHasTrustedProvenance(input: {
   organizationId: string;
   actorUserId: string;
   metadata: Record<string, unknown> | undefined;
+  provenance: DocumentSecurityProvenance;
 }) {
   if (!isUploadMalwareScanRequired()) return;
-  if (isServerGeneratedDocumentMetadata(input.metadata)) return;
-  if (hasCleanEnterpriseUploadScanMetadata(input.metadata)) return;
+  if (input.provenance === 'validated_upload' || input.provenance === 'server_generated') return;
 
   const metadata = {
     ...buildUploadSecurityAuditMetadata({
@@ -119,8 +104,11 @@ async function assertEnterpriseDocumentCreateHasCleanUploadScan(input: {
       mimeDetected: stringMetadataValue(input.metadata, 'mimeDetected'),
     }),
     attemptedScanStatus: stringMetadataValue(input.metadata, 'scanStatus') ?? 'missing',
+    attemptedScanProvider: stringMetadataValue(input.metadata, 'scanProvider'),
+    attemptedServerGenerated: input.metadata?.serverGenerated === true,
     expectedScanStatus: 'clean',
     expectedScanProvider: currentUploadMalwareScannerProvider(),
+    provenance: input.provenance,
   };
 
   await Promise.all([
@@ -150,14 +138,10 @@ async function assertEnterpriseDocumentCreateHasCleanUploadScan(input: {
     }),
   ]);
 
-  throw actionError('Document upload was blocked because enterprise upload scanning metadata is missing or not clean.');
+  throw actionError('Document upload was blocked because enterprise upload scanning provenance is not trusted.');
 }
 
-async function auditUploadRequested(input: {
-  organizationId: string;
-  actorUserId: string;
-  file: File;
-}) {
+async function auditUploadRequested(input: { organizationId: string; actorUserId: string; file: File }) {
   const metadata = buildUploadSecurityAuditMetadata({
     organizationId: input.organizationId,
     actorUserId: input.actorUserId,
@@ -290,21 +274,25 @@ async function auditUploadRejection(input: {
   ]);
 }
 
-async function createDocumentForUser(input: CreateDocumentInput, userId: string) {
+async function createDocumentForUser(
+  input: CreateDocumentInput,
+  userId: string,
+  provenance: DocumentSecurityProvenance,
+) {
   const payload = createDocumentSchema.parse(input);
   const context = { area: 'document_create', organizationId: payload.organizationId, userId };
   await assertCurrentUserCan(payload.organizationId, userId, 'documents:write');
   assertTenantStoragePathInOrganization(payload.storagePath, payload.organizationId);
 
   const uploadSecurityMetadata = withoutRawStoragePath(payload.metadata);
-  await assertEnterpriseDocumentCreateHasCleanUploadScan({
+  await assertEnterpriseDocumentCreateHasTrustedProvenance({
     organizationId: payload.organizationId,
     actorUserId: userId,
     metadata: uploadSecurityMetadata,
+    provenance,
   });
 
   const supabase = createAdminClient();
-
   const { data, error } = await supabase
     .from('documents')
     .insert({
@@ -345,7 +333,12 @@ async function createDocumentForUser(input: CreateDocumentInput, userId: string)
 
 export async function createDocument(input: CreateDocumentInput) {
   const user = await requireCurrentUser();
-  return createDocumentForUser(input, user.id);
+  return createDocumentForUser(input, user.id, 'untrusted_metadata');
+}
+
+export async function createServerGeneratedDocument(input: CreateDocumentInput) {
+  const user = await requireCurrentUser();
+  return createDocumentForUser(input, user.id, 'server_generated');
 }
 
 export async function uploadDocument(input: UploadDocumentInput, file: File) {
@@ -368,7 +361,6 @@ export async function uploadDocument(input: UploadDocumentInput, file: File) {
   }
 
   await auditUploadRequested({ organizationId: payload.organizationId, actorUserId: userId, file });
-
   const uploadValidation = await validateUploadSecurityFile(file, { maxBytes: MAX_UPLOAD_BYTES });
 
   if (!uploadValidation.ok) {
@@ -461,7 +453,7 @@ export async function uploadDocument(input: UploadDocumentInput, file: File) {
       sizeBytes: uploadValidation.fileSize,
       expiresAt: payload.expiresAt ?? null,
       metadata: auditMetadata,
-    }, userId);
+    }, userId, 'validated_upload');
 
     await createAuditEvent({
       organizationId: payload.organizationId,
@@ -506,7 +498,6 @@ export async function deleteDocument(documentId: string, organizationId: string)
 
   if (document.storage_path) {
     assertTenantStoragePathInOrganization(document.storage_path, organizationId);
-
     const { error: storageError } = await supabase.storage.from(DOCUMENT_BUCKET).remove([document.storage_path]);
 
     if (storageError) {
