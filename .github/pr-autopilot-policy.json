@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "trustedAuthors": [
     "renanescola40-afk",
     "github-actions[bot]"
@@ -18,11 +18,16 @@
     "maxAutofixAttempts": 2
   },
   "labels": {
-    "mergeOptIn": "autopilot:merge",
-    "eligible": "autopilot:eligible",
     "blocked": "autopilot:blocked",
     "autofixAllowed": "autofix:allowed",
-    "highRisk": "risk:high"
+    "highRisk": "risk:high",
+    "manualReview": "needs-owner"
+  },
+  "automationAuthority": {
+    "automaticMerge": false,
+    "automaticBranchSync": false,
+    "administratorBypass": false,
+    "finalMergeActor": "human-owner"
   },
   "externalProviderHandling": {
     "vercel": {
@@ -39,7 +44,7 @@
       "treatAsCodeFailure": false,
       "allowAutofixForProviderFailure": false,
       "requireTruthfulBlockedDeploymentEvidence": true,
-      "mergeBehavior": "branch-protection-authoritative"
+      "mergeBehavior": "human-controlled-branch-protection-authoritative"
     }
   },
   "blockedPathPrefixes": [
@@ -79,19 +84,6 @@
     "(^|/)Dockerfile$",
     "(^|/)(vercel|sentry|supabase)\\.json$"
   ],
-  "automaticMergeSafePathPrefixes": [
-    "docs/operations/",
-    "docs/decisions/",
-    ".github/ISSUE_TEMPLATE/"
-  ],
-  "automaticMergeSafeExactPaths": [
-    "README.md",
-    ".github/pull_request_template.md"
-  ],
-  "automaticMergeSafePathRegexes": [
-    "^tests/(?!security/).+\\.(test|spec)\\.[cm]?[jt]sx?$",
-    "^src/.+\\.(test|spec)\\.[cm]?[jt]sx?$"
-  ],
   "autofixAllowedPathPrefixes": [
     "src/app/",
     "src/components/",
@@ -104,10 +96,11 @@
     "README.md"
   ],
   "autofixAllowedPathRegexes": [],
-  "mergeRequirements": {
+  "manualMergeRequirements": {
     "requireApprovedReview": true,
     "requireAllThreadsResolved": true,
     "requireStatusRollupSuccess": true,
+    "requireExactHeadSha": true,
     "mergeMethod": "SQUASH"
   }
 }
