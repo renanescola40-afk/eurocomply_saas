@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
+import { applySecurityResponseStatus } from '../../scripts/release/record-security-response-final-evidence.mjs';
 import { buildSecurityResponseEvidence } from '../../scripts/release/write-security-response-evidence.mjs';
 
 const sha = 'a'.repeat(40);
@@ -142,6 +143,41 @@ describe('runtime security response evidence', () => {
     expect(result.noStore.status).toBe('Open');
   });
 
+  it('records successful security response evidence without weakening final validation', () => {
+    const result = applySecurityResponseStatus(
+      { status: 'Complete', outcome: 'passed', metadataFailures: [] },
+      { passed: true, generatedAt },
+    );
+
+    expect(result.status).toBe('Complete');
+    expect(result.outcome).toBe('passed');
+    expect(result.securityResponseEvidence).toMatchObject({
+      status: 'Complete',
+      outcome: 'passed',
+      generatedAt,
+    });
+  });
+
+  it('downgrades final validation when response evidence fails', () => {
+    const result = applySecurityResponseStatus(
+      { status: 'Complete', outcome: 'passed', overallResult: 'passed' },
+      { passed: false, generatedAt },
+    );
+
+    expect(result).toMatchObject({
+      status: 'Open',
+      outcome: 'failed',
+      overallResult: 'failed',
+      securityResponseEvidence: {
+        status: 'Open',
+        outcome: 'failed',
+        generatedAt,
+      },
+    });
+    expect(result.releaseGate).toContain('No-Go');
+    expect(result.metadataFailures).toHaveLength(1);
+  });
+
   it('derives evidence after each strict runner and before the protected scorecard step', () => {
     const source = readFileSync('scripts/release/run-public-production-release.mjs', 'utf8');
     const enterpriseStart = source.indexOf('if (enterpriseRequested)');
@@ -161,9 +197,9 @@ describe('runtime security response evidence', () => {
       expect(finalization).toBeGreaterThan(strictRunner);
     }
 
-    expect(source.match(/verifyRuntimeReleaseSha\(\);/g)).toHaveLength(1);
-    expect(source.match(/await writeSecurityResponseEvidence\(\);/g)).toHaveLength(1);
     expect(source).toContain("runNodeScript('scripts/release/verify-runtime-release-sha.mjs');");
+    expect(source).toContain('recordSecurityResponseFinalEvidence({ passed: true })');
+    expect(source).toContain('recordSecurityResponseFinalEvidence({ passed: false })');
     expect(source).not.toContain("runNodeScript('scripts/release/run-deployment-smoke.mjs');");
     expect(source).not.toContain("import('./verify-runtime-release-sha.mjs')");
 
