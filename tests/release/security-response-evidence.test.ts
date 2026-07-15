@@ -142,7 +142,7 @@ describe('runtime security response evidence', () => {
     expect(result.noStore.status).toBe('Open');
   });
 
-  it('prepares before strict runners and refreshes evidence after their final smoke', () => {
+  it('derives evidence after each strict runner and before the protected scorecard step', () => {
     const source = readFileSync('scripts/release/run-public-production-release.mjs', 'utf8');
     const enterpriseStart = source.indexOf('if (enterpriseRequested)');
     const publicStart = source.indexOf("} else if (releaseTarget === 'public-production'");
@@ -154,19 +154,22 @@ describe('runtime security response evidence', () => {
       [enterpriseBlock, "await import('./run-public-production-release-v2.mjs');"],
       [publicBlock, "await import('./run-public-production-release-final.mjs');"],
     ] as const) {
-      const preparation = block.indexOf('await prepareSecurityResponseEvidence();');
       const strictRunner = block.indexOf(runner);
       const finalization = block.indexOf('await finalizeSecurityResponseEvidence();');
 
-      expect(preparation).toBeGreaterThan(-1);
-      expect(strictRunner).toBeGreaterThan(preparation);
+      expect(strictRunner).toBeGreaterThan(-1);
       expect(finalization).toBeGreaterThan(strictRunner);
     }
 
-    expect(source.match(/verifyRuntimeReleaseSha\(\);/g)).toHaveLength(2);
-    expect(source.match(/await writeSecurityResponseEvidence\(\);/g)).toHaveLength(2);
+    expect(source.match(/verifyRuntimeReleaseSha\(\);/g)).toHaveLength(1);
+    expect(source.match(/await writeSecurityResponseEvidence\(\);/g)).toHaveLength(1);
     expect(source).toContain("runNodeScript('scripts/release/verify-runtime-release-sha.mjs');");
-    expect(source).toContain("runNodeScript('scripts/release/run-deployment-smoke.mjs');");
+    expect(source).not.toContain("runNodeScript('scripts/release/run-deployment-smoke.mjs');");
     expect(source).not.toContain("import('./verify-runtime-release-sha.mjs')");
+
+    const workflow = readFileSync('.github/workflows/public-production-final.yml', 'utf8');
+    expect(workflow.indexOf('Run public production final gate')).toBeLessThan(
+      workflow.indexOf('Generate scorecard from the same protected runtime run'),
+    );
   });
 });
