@@ -123,14 +123,26 @@ export async function POST(request: Request) {
       }
     }
 
-    const { error } = await supabase
+    let roleUpdate = supabase
       .from('organization_members')
       .update({ role: nextRole })
       .eq('id', parsed.data.memberId)
       .eq('organization_id', organization.id);
 
+    roleUpdate = member.role === null
+      ? roleUpdate.is('role', null)
+      : roleUpdate.eq('role', member.role);
+
+    const { data: updatedMember, error } = await roleUpdate
+      .select('id')
+      .maybeSingle();
+
     if (error) {
       return noStoreJson({ error: 'team_role_change_failed' }, { status: 503 });
+    }
+
+    if (!updatedMember) {
+      return noStoreJson({ error: 'team_member_state_changed' }, { status: 409 });
     }
 
     const audit = await createAuditEvent({
