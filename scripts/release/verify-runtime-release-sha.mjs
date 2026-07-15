@@ -70,49 +70,50 @@ function readJsonIfPresent(path) {
   }
 }
 
+export function applyRuntimeShaBindingStatus(document, bindingEvidence) {
+  const next = structuredClone(document);
+
+  next.runtimeReleaseShaValidation = {
+    status: bindingEvidence.status,
+    outcome: bindingEvidence.outcome,
+    evidencePath,
+    expectedCommitSha: bindingEvidence.expectedCommitSha,
+    expectedBuildSha: bindingEvidence.expectedBuildSha,
+    observedCommitSha: bindingEvidence.observedCommitSha,
+    observedCommitShaMatchedExpected: bindingEvidence.observedCommitShaMatchedExpected,
+    provenance: bindingEvidence.provenance,
+    generatedAt: bindingEvidence.generatedAt,
+  };
+
+  if (bindingEvidence.outcome === 'passed') return next;
+
+  const failureSummary = `Runtime deployment SHA binding failed: ${bindingEvidence.failures.join(', ') || 'unknown_failure'}`;
+  next.status = 'Open';
+  next.summary = 'Release validation failed because the deployed runtime SHA was missing, malformed, or different from the expected release/build SHA.';
+
+  if (next.evidenceItem === 'final-validation-runner') {
+    next.outcome = 'blocked';
+    next.releaseDecision = 'No-Go';
+    next.failures = appendUnique(next.failures, failureSummary);
+    next.productionGate = 'No-Go: the validated hostname is not proven to serve the expected release SHA.';
+    delete next.overallResult;
+    delete next.metadataFailures;
+    return next;
+  }
+
+  next.outcome = 'failed';
+  next.overallResult = 'failed';
+  next.metadataFailures = appendUnique(next.metadataFailures, failureSummary);
+  next.releaseGate = 'No-Go: the validated hostname is not proven to serve the expected release SHA.';
+  return next;
+}
+
 function patchFinalEvidence(path, bindingEvidence) {
   try {
     const document = readJsonIfPresent(path);
     if (!document) return;
-
-    document.runtimeReleaseShaValidation = {
-      status: bindingEvidence.status,
-      outcome: bindingEvidence.outcome,
-      evidencePath,
-      expectedCommitSha: bindingEvidence.expectedCommitSha,
-      expectedBuildSha: bindingEvidence.expectedBuildSha,
-      observedCommitSha: bindingEvidence.observedCommitSha,
-      observedCommitShaMatchedExpected: bindingEvidence.observedCommitShaMatchedExpected,
-      provenance: bindingEvidence.provenance,
-      generatedAt: bindingEvidence.generatedAt,
-    };
-
-    if (bindingEvidence.outcome !== 'passed') {
-      const failureSummary = `Runtime deployment SHA binding failed: ${bindingEvidence.failures.join(', ') || 'unknown_failure'}`;
-      const isFinalValidationRunner =
-        document.evidenceItem === 'final-validation-runner'
-        || path.endsWith('/final-validation-runner.json');
-
-      document.status = 'Open';
-      document.overallResult = 'failed';
-      document.summary =
-        'Release validation is blocked because the deployed runtime SHA was missing, malformed, or different from the expected release/build SHA.';
-
-      if (isFinalValidationRunner) {
-        document.outcome = 'blocked';
-        document.releaseDecision = 'No-Go';
-        document.failures = appendUnique(document.failures, failureSummary);
-        document.productionGate =
-          'No-Go: the validated hostname is not proven to serve the expected release SHA.';
-      } else {
-        document.outcome = 'failed';
-        document.metadataFailures = appendUnique(document.metadataFailures, failureSummary);
-        document.releaseGate =
-          'No-Go: the validated hostname is not proven to serve the expected release SHA.';
-      }
-    }
-
-    writeFileSync(path, `${JSON.stringify(document, null, 2)}\n`);
+    const next = applyRuntimeShaBindingStatus(document, bindingEvidence);
+    writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
   } catch (error) {
     console.error(`Unable to patch ${path}: ${error instanceof Error ? error.message : 'invalid_json'}`);
     process.exitCode = 1;
