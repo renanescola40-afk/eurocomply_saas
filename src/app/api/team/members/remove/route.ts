@@ -9,7 +9,7 @@ import { requireApiUser, requirePermission, requireTrustedMutation, secureApiErr
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 const removeMemberSchema = z.object({
-  memberId: z.string().trim().min(1).max(128),
+  memberId: z.string().trim().uuid(),
 });
 
 type TeamMemberRemovalResult = {
