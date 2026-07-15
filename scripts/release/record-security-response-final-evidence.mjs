@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 const DEFAULT_FINAL_EVIDENCE_PATHS = [
   'docs/security/evidence/runtime/production-final-validation.json',
@@ -15,6 +15,18 @@ const FAILURE_SUMMARY =
 
 function appendUnique(items, value) {
   return [...new Set([...(Array.isArray(items) ? items : []), value])];
+}
+
+function readEvidenceDocument(path) {
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      return null;
+    }
+
+    throw error;
+  }
 }
 
 export function applySecurityResponseStatus(document, { passed, generatedAt }) {
@@ -59,8 +71,9 @@ export function recordSecurityResponseFinalEvidence({
   let patched = 0;
 
   for (const path of paths) {
-    if (!existsSync(path)) continue;
-    const document = JSON.parse(readFileSync(path, 'utf8'));
+    const document = readEvidenceDocument(path);
+    if (!document) continue;
+
     const next = applySecurityResponseStatus(document, { passed: passed === true, generatedAt });
     writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
     patched += 1;
