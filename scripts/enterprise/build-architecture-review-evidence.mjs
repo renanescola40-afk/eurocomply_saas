@@ -49,10 +49,6 @@ function extractMetadata(content, field) {
   return firstLine || null;
 }
 
-function hasSection(content, title, level = '##') {
-  return new RegExp(`^${level}\\s+${escapeRegExp(title)}\\s*$`, 'mi').test(content);
-}
-
 function hasNonEmptySection(content, title) {
   const body = sectionBody(content, title);
   return typeof body === 'string' && body.length > 0;
