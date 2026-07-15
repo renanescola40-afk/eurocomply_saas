@@ -5,12 +5,15 @@ import { describe, expect, it } from 'vitest';
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
 describe('Google OAuth provider proof contract', () => {
-  it('uses a protected read-only exact-SHA workflow', () => {
+  it('uses a protected read-only exact-SHA workflow bound to main ancestry', () => {
     const workflow = read('.github/workflows/google-oauth-provider-proof.yml');
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain('environment: production');
     expect(workflow).toContain('contents: read');
     expect(workflow).toContain('persist-credentials: false');
+    expect(workflow).toContain('ref: main');
+    expect(workflow).toContain('fetch-depth: 0');
+    expect(workflow).toContain('git merge-base --is-ancestor "${RELEASE_SHA}" origin/main');
     expect(workflow).toContain('ref: ${{ inputs.release_sha }}');
     expect(workflow).toContain('test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"');
     expect(workflow).not.toContain('pull_request_target');
@@ -36,20 +39,24 @@ describe('Google OAuth provider proof contract', () => {
     expect(writer).toContain('rawProviderConfigStored: false');
     expect(writer).toContain('rawRedirectAllowlistStored: false');
     expect(writer).toContain('siteUrlStored: false');
+    expect(writer).toContain('expectedProductionUrlStored: false');
     expect(writer).toContain('providerHostnameStored: false');
     expect(writer).toContain('remoteErrorStored: false');
     expect(writer).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
   });
 
-  it('requires numeric provenance and an exact same-origin HTTPS callback', () => {
+  it('requires numeric provenance and an exact production-origin HTTPS callback', () => {
     const writer = read('scripts/security/run-google-oauth-provider-validation.mjs');
     const probe = read('scripts/security/probe-google-oauth-provider.mjs');
 
     expect(writer).toContain("if (!/^\\d+$/.test(githubRunId)) failures.push('invalid_github_run_id')");
+    expect(writer).toContain("'RELEASE_PRODUCTION_URL'");
+    expect(probe).toContain('process.env.RELEASE_PRODUCTION_URL');
     expect(probe).toContain("url.protocol !== 'https:'");
     expect(probe).toContain('url.username || url.password');
+    expect(probe).toContain('siteUrl.origin === expectedProductionUrl.origin');
     expect(probe).toContain("callback.pathname === '/auth/callback'");
-    expect(probe).toContain('callback.origin === siteUrl.origin');
+    expect(probe).toContain('callback.origin === expectedProductionUrl.origin');
     expect(probe).toContain("callback.search === ''");
     expect(probe).toContain("callback.hash === ''");
     expect(probe).not.toContain("value.includes('/auth/callback')");
