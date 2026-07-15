@@ -15,6 +15,16 @@ const forbiddenPatterns = [
   { name: 'latest floating container tag', pattern: /image\s*:\s*[^\n:@]+:latest\s*$/im },
 ];
 
+const forbiddenPullRequestTargetPatterns = [
+  { name: 'repository contents write', pattern: /contents:\s*write/i },
+  { name: 'pull request write', pattern: /pull-requests:\s*write/i },
+  { name: 'branch synchronization API', pattern: /pulls\.updateBranch/i },
+  { name: 'pull request merge API', pattern: /pulls\.merge/i },
+  { name: 'auto-merge API', pattern: /enablePullRequestAutoMerge/i },
+  { name: 'dedicated push or merge token', pattern: /PR_(?:AUTOPILOT|AUTOFIX)_TOKEN/i },
+  { name: 'administrator bypass language', pattern: /admin(?:istrator)?[-_ ]?bypass/i },
+];
+
 function workflowFiles() {
   if (!existsSync(workflowDir)) return [];
   return readdirSync(workflowDir)
@@ -42,6 +52,12 @@ for (const file of workflowFiles()) {
       failures.push(`${file}: allowlisted pull_request_target workflow must not checkout pull request code`);
     } else if (!source.includes("ref: context.payload.repository.default_branch")) {
       failures.push(`${file}: allowlisted pull_request_target workflow must load policy from the trusted default branch`);
+    }
+
+    for (const check of forbiddenPullRequestTargetPatterns) {
+      if (check.pattern.test(source)) {
+        failures.push(`${file}: allowlisted pull_request_target workflow has forbidden authority: ${check.name}`);
+      }
     }
   }
 }
