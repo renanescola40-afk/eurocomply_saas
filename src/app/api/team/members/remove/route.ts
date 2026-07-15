@@ -105,13 +105,6 @@ export async function POST(request: Request) {
       );
     }
 
-    if (member.role === 'owner' && permission.role !== 'owner') {
-      return noStoreJson(
-        { error: 'owner_removal_requires_owner', message: 'Only organization owners can remove another owner.' },
-        { status: 403 },
-      );
-    }
-
     const { data: removalData, error: removalError } = await supabase.rpc(ATOMIC_MEMBER_REMOVAL_RPC, {
       p_organization_id: organization.id,
       p_member_id: parsed.data.memberId,
