@@ -14,10 +14,23 @@ describe('billing webhook hardening invariants', () => {
     expect(billingWebhookRoute).toContain('constructEvent(body, providerSignature, providerSigningValue, BILLING_WEBHOOK_TOLERANCE_SECONDS)');
 
     for (const route of webhookRoutes) {
-      expect(route).toContain('request.text()');
       expect(route).toContain('content-length');
       expect(route).not.toContain('request.json()');
     }
+
+    expect(billingWebhookRoute).not.toContain('request.text()');
+    expect(billingWebhookRoute).toContain('request.body.getReader()');
+    expect(billingWebhookRoute).toContain('totalBytes += value.byteLength');
+    expect(billingWebhookRoute).toContain('totalBytes > MAX_BILLING_WEBHOOK_BYTES');
+    expect(billingWebhookRoute).toContain("reader.cancel('payload_too_large')");
+  });
+
+  it('does not retain the chunk that crosses the byte limit', () => {
+    const limitCheckIndex = billingWebhookRoute.indexOf('totalBytes > MAX_BILLING_WEBHOOK_BYTES');
+    const chunkRetentionIndex = billingWebhookRoute.indexOf('chunks.push(value)');
+
+    expect(limitCheckIndex).toBeGreaterThan(-1);
+    expect(chunkRetentionIndex).toBeGreaterThan(limitCheckIndex);
   });
 
   it('does not log raw signature validation errors', () => {
@@ -26,8 +39,8 @@ describe('billing webhook hardening invariants', () => {
 
     for (const route of webhookRoutes) {
       expect(route).not.toContain('catch (error) {\n    await record');
-      expect(route).not.toContain('reportError(error, { area: \'stripe_webhook_signature\' })');
-      expect(route).not.toContain('reportError(error, { area: \'billing_stripe_webhook_signature\' })');
+      expect(route).not.toContain("reportError(error, { area: 'stripe_webhook_signature' })");
+      expect(route).not.toContain("reportError(error, { area: 'billing_stripe_webhook_signature' })");
     }
   });
 
