@@ -2,7 +2,7 @@
 
 This runbook explains how the EuroComply senior engineering agent should operate once a coding-agent provider or self-hosted runner is connected to GitHub.
 
-The repository already has the agent contract in `AGENTS.md`. This document defines the operational queue, labels, escalation model, and safe autonomy boundaries.
+The repository already has the agent contract in `AGENTS.md`. This document defines the operational queue, labels, escalation model, safe autonomy boundaries, and the guarded PR Autopilot handoff.
 
 ## Operating goal
 
@@ -12,11 +12,12 @@ Keep EuroComply production-ready by continuously:
 - converting actionable reports into scoped engineering issues;
 - implementing small, reviewable fixes in agent branches;
 - opening pull requests with clear evidence;
-- never weakening security, tenant isolation, auditability, or compliance gates to make a build pass.
+- repairing bounded low-risk CI failures on the same PR branch;
+- never weakening security, tenant isolation, auditability, branch protection, or compliance gates to make a build pass.
 
 ## Architecture
 
-The 24/7 system has four layers:
+The 24/7 system has five layers:
 
 1. **GitHub issues as the work queue**
    - Every task is represented as an issue.
@@ -29,11 +30,18 @@ The 24/7 system has four layers:
 3. **Coding agent provider or runner**
    - The external coding agent reads the repo, issues, checks, and `AGENTS.md`.
    - It creates branches named `agent/<issue-number>-<short-slug>`.
-   - It opens PRs; it does not merge them.
+   - It opens PRs and responds to review feedback; it does not merge directly.
 
-4. **Owner-controlled merge gate**
-   - The owner reviews PRs and required checks.
-   - High-risk changes require manual review even if checks pass.
+4. **Codex CI repair loop**
+   - `Codex PR Auto-Fix` reads failed CI logs only for trusted same-repository PRs labeled `autofix:allowed`.
+   - It applies at most two policy-bounded attempts on the existing branch.
+   - It verifies package-lock alignment, lint, typecheck, unit tests, and build before pushing.
+   - It never receives the merge token during analysis or verification.
+
+5. **Owner-approved PR Autopilot merge gate**
+   - The owner reviews risk notes and provides the approval required by branch protection.
+   - The default-branch controller may synchronize and merge only policy-eligible PRs after exact-head checks, approval, resolved conversations, and a clean merge state.
+   - High-risk changes remain manual even when checks pass.
 
 ## Required labels
 
@@ -54,6 +62,10 @@ Create these labels in GitHub when labels are not auto-created by workflow autom
 | `type:security` | Security hardening, security regression, or scanner finding. |
 | `type:feature` | Product capability or enhancement. |
 | `needs-owner` | Owner decision required. |
+| `autofix:allowed` | Current file set is eligible for bounded Codex CI repair. |
+| `autopilot:eligible` | Current file set may enter the guarded merge controller. |
+| `autopilot:merge` | Owner opt-in for a standard-risk, non-protected PR. |
+| `autopilot:blocked` | Autopilot stopped on trust, risk, conflict, size, or configuration. |
 
 ## Issue lifecycle
 
@@ -69,13 +81,14 @@ Create these labels in GitHub when labels are not auto-created by workflow autom
    - Agent opens a PR linked to the issue.
    - Agent keeps the PR narrow and evidence-based.
 
-4. **Review**
+4. **Review and repair**
    - Required checks must pass.
    - Owner reviews risk notes and verification evidence.
-   - Agent must respond to review comments with follow-up commits, not force-push away evidence.
+   - Agent responds to review comments with follow-up commits, not force-pushes that erase evidence.
+   - For eligible low-risk failures, Codex may push a bounded repair to the same branch.
 
 5. **Done**
-   - PR is merged by the owner.
+   - PR is merged by the owner or by the guarded controller after the owner approval and every configured merge requirement are satisfied.
    - Issue is closed with the PR reference and verification summary.
 
 ## ChatOps commands
@@ -90,7 +103,7 @@ These commands are intended for GitHub issue comments:
 | `/agent p0` | Mark as P0; use only for production/security/compliance blockers. |
 | `/agent explain` | Ask the agent to summarize current understanding and next step. |
 
-The triage workflow can label and comment. Actual code implementation requires a connected coding agent provider or runner.
+The triage workflow can label and comment. Actual code implementation requires a connected coding-agent provider or runner.
 
 ## Safe autonomy boundaries
 
@@ -102,7 +115,7 @@ The agent may autonomously open PRs for:
 - low-risk refactors that reduce duplication without changing behavior;
 - CI hardening that preserves or strengthens security.
 
-The agent must stop and request owner review before changing:
+The agent and Autopilot must stop and request owner review before changing or merging:
 
 - authentication, session, cookies, middleware auth, or step-up auth;
 - authorization, tenant isolation, object-level access, or Supabase RLS assumptions;
@@ -110,7 +123,10 @@ The agent must stop and request owner review before changing:
 - audit chain, compliance evidence, trust package, or legal records;
 - upload security, malware scanning, storage buckets, signed URLs;
 - production secrets, environment configuration, or external integrations;
-- database migrations that delete data or are not backward-compatible.
+- database migrations that delete data or are not backward-compatible;
+- GitHub workflow, security gate, release script, package-manifest, or agent-governance changes.
+
+The canonical implementation boundary is `.github/pr-autopilot-policy.json`. Labels cannot override protected paths.
 
 ## Minimum PR evidence
 
@@ -145,6 +161,8 @@ When connecting a real coding-agent provider, use least privilege:
 - allow contents write only for branches, not direct pushes to `main`;
 - keep branch protection on `main`;
 - require PR reviews and required checks;
+- configure `OPENAI_API_KEY` and a repository-scoped `PR_AUTOPILOT_TOKEN` in Actions secrets;
+- do not expose the Autopilot token to Codex, PR code, tests, or build commands;
 - do not give the provider Supabase service role keys unless a specific task requires a temporary secret in a locked environment;
 - do not expose production customer data to the agent.
 
@@ -154,6 +172,7 @@ When connecting a real coding-agent provider, use least privilege:
 | --- | --- | --- |
 | Watchdog | Every 6 hours | Run quality/security gates and open/update issue on failure. |
 | Triage | Every 6 hours | Classify agent issues, mark stale blocked items, and keep queue tidy. |
+| PR Autopilot reconciliation | Hourly plus PR/check/review events | Reclassify, synchronize, and merge eligible exact-head PRs. |
 | Dependency review | On PR | Detect risky dependency/license changes. |
 | Secret scan | On PR and push | Detect accidental secret exposure. |
 | Security suite | On PR and schedule | Validate EuroComply-specific security gates. |
@@ -164,5 +183,8 @@ For P0 security/compliance incidents:
 
 1. Label issue `priority:p0`, `risk:high`, and `needs-owner`.
 2. Agent may investigate and propose a minimal PR.
-3. Agent must not deploy or merge without owner approval.
-4. PR body must include impact, affected surface, verification, rollback plan, and any assumptions.
+3. Agent and PR Autopilot must not deploy or merge without owner approval.
+4. Protected-path policy keeps the PR outside autonomous repair and merge.
+5. PR body must include impact, affected surface, verification, rollback plan, and assumptions.
+
+See `docs/operations/pr-autopilot.md` for token setup, merge requirements, failure handling, and rollback.
