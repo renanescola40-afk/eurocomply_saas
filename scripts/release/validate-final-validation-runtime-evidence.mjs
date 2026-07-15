@@ -19,6 +19,9 @@ export const requiredFinalValidationCommands = [
   'npm run security:p0-runtime-gap:strict',
 ];
 
+const allowedStatuses = new Set(['Open', 'Exception', 'Complete']);
+const allowedBlockedOutcomes = new Set(['blocked', 'not_verified']);
+
 function commandPassed(evidence, commandName) {
   const matches = (evidence?.commands ?? []).filter((entry) => entry?.command === commandName);
   if (matches.length !== 1) return false;
@@ -52,13 +55,34 @@ export function validateFinalValidationRuntimeEvidence(
     if (ageMs > maxAgeDays * 24 * 60 * 60 * 1000) failures.push(`generatedAt is older than ${maxAgeDays} days`);
   }
 
-  if (evidence?.status === 'Exception') {
+  const status = evidence?.status;
+  if (!allowedStatuses.has(status)) {
+    failures.push('status must be Open, Exception or Complete');
+    return failures;
+  }
+
+  if (status === 'Open') {
+    if (!allowedBlockedOutcomes.has(evidence?.outcome)) {
+      failures.push('Open evidence outcome must be blocked or not_verified');
+    }
+    if (evidence?.releaseDecision === 'Go') {
+      failures.push('Open evidence releaseDecision must not be Go');
+    }
+    return failures;
+  }
+
+  if (status === 'Exception') {
+    if (!allowedBlockedOutcomes.has(evidence?.outcome)) {
+      failures.push('Exception evidence outcome must be blocked or not_verified');
+    }
+    if (evidence?.releaseDecision === 'Go') {
+      failures.push('Exception evidence releaseDecision must not be Go');
+    }
     const expiresAt = parseTimestamp(evidence?.exception?.expiresAt);
     if (expiresAt === null) failures.push('exception.expiresAt must be an ISO-8601 timestamp');
     else if (expiresAt < nowMs) failures.push('final validation exception has expired');
+    return failures;
   }
-
-  if (evidence?.status !== 'Complete') return failures;
 
   if (evidence?.outcome !== 'passed') failures.push('Complete evidence outcome must be passed');
   if (evidence?.releaseDecision !== 'Go') failures.push('releaseDecision must be Go');
