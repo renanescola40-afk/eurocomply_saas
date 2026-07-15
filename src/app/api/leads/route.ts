@@ -5,7 +5,7 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { noStoreJson } from '@/server/security/no-store';
-import { hashRateLimitIp } from '@/server/security/rate-limit';
+import { hashRateLimitIp, hashRateLimitUserAgent } from '@/server/security/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,6 +38,11 @@ type LeadRecord = {
 
 function getClientHint(request: NextRequest) {
   return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+}
+
+function getPrivacySafeUserAgent(request: NextRequest) {
+  const userAgent = request.headers.get('user-agent')?.trim();
+  return userAgent ? hashRateLimitUserAgent(userAgent) : null;
 }
 
 async function enforceLeadCaptureRateLimit(request: NextRequest) {
@@ -178,7 +183,7 @@ export async function POST(request: NextRequest) {
     source: text(body.source, 120) || 'book-demo',
     locale: text(body.locale, 12),
     consent_to_contact: consentToContact,
-    user_agent: text(request.headers.get('user-agent'), 300),
+    user_agent: getPrivacySafeUserAgent(request),
     ip_hint: ipHint === 'unknown' ? null : hashRateLimitIp(ipHint),
   };
 
