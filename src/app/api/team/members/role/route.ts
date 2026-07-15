@@ -9,7 +9,7 @@ import { requireApiUser, requirePermission, requireTrustedMutation, secureApiErr
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 const roleChangeSchema = z.object({
-  memberId: z.string().trim().min(1).max(128),
+  memberId: z.string().trim().uuid(),
   role: z.enum(['owner', 'admin', 'editor', 'member', 'viewer']),
 });
 
@@ -20,9 +20,18 @@ type OrganizationMemberRecord = {
   role: string | null;
 };
 
+type TeamRoleTransitionResult = {
+  outcome: 'changed' | 'unchanged' | 'last_owner' | 'state_changed' | 'not_found' | 'invalid_input' | 'invalid_role';
+  affected_member_id: string | null;
+  affected_user_id: string | null;
+  previous_role: string | null;
+  applied_role: string | null;
+};
+
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
 const TEAM_ACTION_JSON_MAX_BYTES = 4 * 1024;
+const ATOMIC_ROLE_TRANSITION_RPC = 'change_organization_member_role_atomic';
 
 function getClientIp(request: Request) {
   return (
@@ -30,6 +39,13 @@ function getClientIp(request: Request) {
     request.headers.get('x-real-ip') ||
     'unknown'
   );
+}
+
+function firstTransitionResult(value: unknown): TeamRoleTransitionResult | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const candidate = value[0];
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
+  return candidate as TeamRoleTransitionResult;
 }
 
 export async function POST(request: Request) {
@@ -93,7 +109,10 @@ export async function POST(request: Request) {
     }
 
     if (member.user_id === user.id) {
-      return noStoreJson({ error: 'self_role_change_blocked', message: 'You cannot change your own organization role from here.' }, { status: 400 });
+      return noStoreJson(
+        { error: 'self_role_change_blocked', message: 'You cannot change your own organization role from here.' },
+        { status: 400 },
+      );
     }
 
     const previousRole = String(member.role ?? 'viewer').toLowerCase();
@@ -104,33 +123,53 @@ export async function POST(request: Request) {
     }
 
     if ((previousRole === 'owner' || nextRole === 'owner') && permission.role !== 'owner') {
-      return noStoreJson({ error: 'owner_role_change_requires_owner', message: 'Only organization owners can grant or remove owner access.' }, { status: 403 });
+      return noStoreJson(
+        { error: 'owner_role_change_requires_owner', message: 'Only organization owners can grant or remove owner access.' },
+        { status: 403 },
+      );
     }
 
-    if (previousRole === 'owner' && nextRole !== 'owner') {
-      const { count, error: ownerCountError } = await supabase
-        .from('organization_members')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', organization.id)
-        .eq('role', 'owner');
+    const { data: transitionData, error: transitionError } = await supabase.rpc(ATOMIC_ROLE_TRANSITION_RPC, {
+      p_organization_id: organization.id,
+      p_member_id: parsed.data.memberId,
+      p_expected_role: member.role,
+      p_next_role: nextRole,
+    });
 
-      if (ownerCountError) {
-        return noStoreJson({ error: 'owner_count_failed' }, { status: 503 });
-      }
-
-      if ((count ?? 0) <= 1) {
-        return noStoreJson({ error: 'last_owner_role_change_blocked', message: 'Cannot demote the last organization owner.' }, { status: 400 });
-      }
-    }
-
-    const { error } = await supabase
-      .from('organization_members')
-      .update({ role: nextRole })
-      .eq('id', parsed.data.memberId)
-      .eq('organization_id', organization.id);
-
-    if (error) {
+    if (transitionError) {
       return noStoreJson({ error: 'team_role_change_failed' }, { status: 503 });
+    }
+
+    const transition = firstTransitionResult(transitionData);
+    if (!transition) {
+      return noStoreJson({ error: 'team_role_transition_unavailable' }, { status: 503 });
+    }
+
+    if (transition.outcome === 'not_found') {
+      return noStoreJson({ error: 'team_member_not_found' }, { status: 404 });
+    }
+
+    if (transition.outcome === 'last_owner') {
+      return noStoreJson(
+        { error: 'last_owner_role_change_blocked', message: 'Cannot demote the last organization owner.' },
+        { status: 400 },
+      );
+    }
+
+    if (transition.outcome === 'state_changed') {
+      return noStoreJson({ error: 'team_member_state_changed' }, { status: 409 });
+    }
+
+    if (transition.outcome === 'unchanged') {
+      return noStoreJson({ changed: false, role: nextRole, stepUp: publicStepUpSummary(stepUp.assessment) });
+    }
+
+    if (transition.outcome === 'invalid_input' || transition.outcome === 'invalid_role') {
+      return noStoreJson({ error: 'invalid_team_role_payload' }, { status: 400 });
+    }
+
+    if (transition.outcome !== 'changed') {
+      return noStoreJson({ error: 'team_role_transition_unavailable' }, { status: 503 });
     }
 
     const audit = await createAuditEvent({
@@ -138,17 +177,22 @@ export async function POST(request: Request) {
       actorUserId: user.id,
       action: 'team_member_role_changed',
       entityType: 'organization_member',
-      entityId: parsed.data.memberId,
+      entityId: transition.affected_member_id ?? parsed.data.memberId,
       metadata: {
-        changedUserId: member.user_id,
-        previousRole,
-        nextRole,
+        changedUserId: transition.affected_user_id ?? member.user_id,
+        previousRole: String(transition.previous_role ?? previousRole).toLowerCase(),
+        nextRole: transition.applied_role ?? nextRole,
         actorRole: permission.role,
         stepUpAction: 'manage_team',
       },
     });
 
-    return noStoreJson({ changed: true, role: nextRole, auditPersisted: audit.persisted, stepUp: publicStepUpSummary(stepUp.assessment) });
+    return noStoreJson({
+      changed: true,
+      role: transition.applied_role ?? nextRole,
+      auditPersisted: audit.persisted,
+      stepUp: publicStepUpSummary(stepUp.assessment),
+    });
   } catch (error) {
     return secureApiError(error);
   }

@@ -8,6 +8,7 @@ import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { handleStripeWebhookEventWithRecovery } from '@/server/billing/stripe-webhook-recovery';
 import { getStripeEventAuditContext } from '@/server/billing/stripe-webhooks';
 import { noStoreJson } from '@/server/security/no-store';
+import { readBoundedRequestBody } from '@/server/security/read-bounded-request-body';
 
 export const runtime = 'nodejs';
 
@@ -28,12 +29,12 @@ export async function readBoundedStripeWebhookBody(request: Request) {
     return null;
   }
 
-  const payload = await request.text();
-  if (new TextEncoder().encode(payload).byteLength > MAX_STRIPE_WEBHOOK_BYTES) {
-    return null;
+  const result = await readBoundedRequestBody(request, MAX_STRIPE_WEBHOOK_BYTES);
+  if ('error' in result) {
+    return result.error === 'body_too_large' ? null : '';
   }
 
-  return payload;
+  return result.buffer.toString('utf8');
 }
 
 async function recordWebhookRouteAudit(input: {

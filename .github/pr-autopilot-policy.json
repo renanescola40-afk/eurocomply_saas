@@ -1,0 +1,106 @@
+{
+  "version": 3,
+  "trustedAuthors": [
+    "renanescola40-afk",
+    "github-actions[bot]"
+  ],
+  "trustedBranchPrefixes": [
+    "agent/",
+    "fix/",
+    "codex/",
+    "chore/",
+    "docs/",
+    "test/"
+  ],
+  "limits": {
+    "maxChangedFiles": 80,
+    "maxAdditions": 1200,
+    "maxAutofixAttempts": 2
+  },
+  "labels": {
+    "blocked": "autopilot:blocked",
+    "autofixAllowed": "autofix:allowed",
+    "highRisk": "risk:high",
+    "manualReview": "needs-owner"
+  },
+  "automationAuthority": {
+    "automaticMerge": false,
+    "automaticBranchSync": false,
+    "administratorBypass": false,
+    "finalMergeActor": "human-owner"
+  },
+  "externalProviderHandling": {
+    "vercel": {
+      "failureSignals": [
+        "build-rate-limit",
+        "deployment rate limited",
+        "upgradeToPro=build-rate-limit",
+        "retry in 24 hours",
+        "deployment quota"
+      ],
+      "allowBranchCreation": true,
+      "allowCommitPush": true,
+      "allowPullRequestCreation": true,
+      "treatAsCodeFailure": false,
+      "allowAutofixForProviderFailure": false,
+      "requireTruthfulBlockedDeploymentEvidence": true,
+      "mergeBehavior": "human-controlled-branch-protection-authoritative"
+    }
+  },
+  "blockedPathPrefixes": [
+    ".github/workflows/",
+    ".github/actions/",
+    ".github/agents/",
+    "supabase/",
+    "migrations/",
+    "scripts/security/",
+    "scripts/release/",
+    "src/app/api/",
+    "src/app/next_api/",
+    "src/middleware",
+    "src/lib/auth",
+    "src/lib/billing",
+    "src/lib/stripe",
+    "src/lib/supabase",
+    "src/server/auth",
+    "src/server/audit",
+    "src/server/billing",
+    "src/server/rbac",
+    "src/server/security",
+    "src/server/stripe",
+    "src/server/supabase",
+    "src/server/tenancy",
+    "docs/legal/",
+    "docs/security/evidence/runtime/",
+    "package.json",
+    "package-lock.json",
+    "AGENTS.md",
+    ".github/senior-agent.yml",
+    ".github/pr-autopilot-policy.json"
+  ],
+  "blockedPathRegexes": [
+    "(^|/)(auth|authorization|rbac|rls|tenant|tenancy|billing|stripe|webhook|secret|security|audit|migration|middleware)(/|\\.|-)",
+    "\\.sql$",
+    "(^|/)Dockerfile$",
+    "(^|/)(vercel|sentry|supabase)\\.json$"
+  ],
+  "autofixAllowedPathPrefixes": [
+    "src/app/",
+    "src/components/",
+    "src/lib/",
+    "tests/",
+    "docs/",
+    "public/"
+  ],
+  "autofixAllowedExactPaths": [
+    "README.md"
+  ],
+  "autofixAllowedPathRegexes": [],
+  "manualMergeRequirements": {
+    "requireApprovedReview": true,
+    "requireAllThreadsResolved": true,
+    "requireStatusRollupSuccess": true,
+    "requireExactHeadSha": true,
+    "mergeMethod": "SQUASH"
+  }
+}

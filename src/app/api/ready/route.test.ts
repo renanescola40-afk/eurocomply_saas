@@ -11,7 +11,13 @@ vi.mock('@/lib/supabase/admin', () => ({
   tryCreateAdminClient: supabaseMock.tryCreateAdminClient,
 }));
 
-import { GET, enterpriseStorageScannerCheck, readyEnvironmentCheck, sentryReleaseUploadCheck } from './route';
+import {
+  GET,
+  enterpriseStepUpReadinessCheck,
+  enterpriseStorageScannerCheck,
+  readyEnvironmentCheck,
+  sentryReleaseUploadCheck,
+} from './route';
 
 function makeRequest(token?: string) {
   return new Request('https://app.eurocomply.example/api/ready', {
@@ -42,6 +48,10 @@ function stubReadyEnvironment() {
   vi.stubEnv('SENTRY_ORG', 'eurocomply');
   vi.stubEnv('SENTRY_PROJECT', 'saas');
   vi.stubEnv('SENTRY_AUTH_TOKEN', 'configured');
+  vi.stubEnv('STEP_UP_PROVIDER_MODE', 'supabase_mfa');
+  vi.stubEnv('STEP_UP_SIGNING_SECRET', 'configured-step-up-secret');
+  vi.stubEnv('STEP_UP_IDP_ACR_VALUES', '');
+  vi.stubEnv('STEP_UP_IDP_AMR_VALUES', '');
 }
 
 function stubNonEnterpriseRuntimeEnvironment() {
@@ -56,6 +66,11 @@ function stubNonEnterpriseRuntimeEnvironment() {
   vi.stubEnv('MALWARE_SCANNER_ALLOWED_HOSTS', '');
   vi.stubEnv('MALWARE_SCANNER_CLAMAV_HOST', '');
   vi.stubEnv('MALWARE_SCANNER_CLAMAV_PORT', '');
+  vi.stubEnv('STEP_UP_PROVIDER_MODE', '');
+  vi.stubEnv('STEP_UP_SIGNING_SECRET', '');
+  vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', '');
+  vi.stubEnv('STEP_UP_IDP_ACR_VALUES', '');
+  vi.stubEnv('STEP_UP_IDP_AMR_VALUES', '');
 }
 
 function stubEnterpriseScannerEnvironment() {
@@ -197,6 +212,7 @@ describe('ready endpoint hardening', () => {
       redisConfigured: true,
       sentryConfigured: true,
       sentryObservabilityConfigured: true,
+      enterpriseStepUpConfigured: true,
       enterpriseStorageScannerConfigured: true,
       healthcheckProtected: true,
     });
@@ -206,6 +222,12 @@ describe('ready endpoint hardening', () => {
       priceLookup: true,
       pricesChecked: 3,
       detail: 'ok',
+    });
+    expect(body.enterpriseStepUp).toEqual({
+      required: false,
+      configured: true,
+      dedicatedSigningSecretConfigured: true,
+      runtimeConfigurationConfigured: true,
     });
     expect(body.enterpriseStorageScanner).toEqual({
       required: false,
@@ -235,6 +257,37 @@ describe('ready endpoint hardening', () => {
       detail: 'not_configured',
     });
     expect(body.checks.stripeApiReachable).toBe(false);
+  });
+
+  it('requires a dedicated step-up signing secret for enterprise readiness', async () => {
+    stubReadyEnvironment();
+    stubEnterpriseScannerEnvironment();
+    vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', 'audit-chain-secret-must-not-satisfy-step-up-readiness');
+    delete process.env.STEP_UP_SIGNING_SECRET;
+
+    expect(enterpriseStepUpReadinessCheck()).toEqual({
+      required: true,
+      configured: false,
+      dedicatedSigningSecretConfigured: false,
+      runtimeConfigurationConfigured: true,
+    });
+
+    const response = await GET(makeRequest('expected-token'));
+    const body = await response.json();
+    const serialized = JSON.stringify(body);
+
+    expect(response.status).toBe(503);
+    expect(body.status).toBe('not_ready');
+    expect(body.enterpriseStepUp).toEqual({
+      required: true,
+      configured: false,
+      dedicatedSigningSecretConfigured: false,
+      runtimeConfigurationConfigured: true,
+    });
+    expect(body.checks.enterpriseStepUpConfigured).toBe(false);
+    expect(serialized).not.toContain('STEP_UP_SIGNING_SECRET');
+    expect(serialized).not.toContain('AUDIT_CHAIN_SIGNING_SECRET');
+    expect(serialized).not.toContain('audit-chain-secret-must-not-satisfy-step-up-readiness');
   });
 
   it('requires storage and scanner readiness for enterprise releases', async () => {
@@ -325,10 +378,16 @@ describe('ready endpoint hardening', () => {
     });
   });
 
-  it('passes enterprise storage and scanner readiness when configured safely', async () => {
+  it('passes enterprise storage, scanner, and step-up readiness when configured safely', async () => {
     stubReadyEnvironment();
     stubEnterpriseScannerEnvironment();
 
+    expect(enterpriseStepUpReadinessCheck()).toEqual({
+      required: true,
+      configured: true,
+      dedicatedSigningSecretConfigured: true,
+      runtimeConfigurationConfigured: true,
+    });
     expect(enterpriseStorageScannerCheck()).toEqual({
       required: true,
       configured: true,
@@ -343,8 +402,11 @@ describe('ready endpoint hardening', () => {
 
     expect(response.status).toBe(200);
     expect(body.status).toBe('ready');
+    expect(body.checks.enterpriseStepUpConfigured).toBe(true);
     expect(body.checks.enterpriseStorageScannerConfigured).toBe(true);
+    expect(body.enterpriseStepUp.configured).toBe(true);
     expect(body.enterpriseStorageScanner.configured).toBe(true);
+    expect(JSON.stringify(body)).not.toContain('configured-step-up-secret');
     expect(JSON.stringify(body)).not.toContain('https://scanner.example/scan');
     expect(JSON.stringify(body)).not.toContain('scanner.example');
   });

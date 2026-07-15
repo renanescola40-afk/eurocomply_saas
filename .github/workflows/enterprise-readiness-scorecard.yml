@@ -35,8 +35,14 @@ jobs:
       - name: Install dependencies deterministically
         run: npm ci --ignore-scripts
 
+      - name: Validate evidence override allowlist
+        run: node scripts/enterprise/check-evidence-overrides.mjs
+
       - name: Validate scorecard tests
-        run: npx vitest run tests/enterprise/enterprise-readiness-scorecard.test.ts
+        run: >-
+          npx vitest run
+          tests/enterprise/enterprise-readiness-scorecard.test.ts
+          tests/enterprise/evidence-overrides-guard.test.ts
 
       - name: Capture exact-SHA GitHub checks
         env:
