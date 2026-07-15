@@ -39,6 +39,22 @@
     "docs/security/P1_RUNTIME_EVIDENCE_REGISTER.md",
     "docs/RELEASE_CANDIDATE_VALIDATION.md"
   ],
+  "criticalEventCoverage": {
+    "loginLogout": ["auth.login_attempt", "auth.login_success", "auth.login_failure", "auth.logout"],
+    "rbacDenied": ["security.failure", "rbac.denied"],
+    "originDenied": ["origin.denied", "security.failure"],
+    "stepUp": ["auth.step_up_requested", "auth.step_up_approved", "auth.step_up_denied", "auth.step_up_expired", "security.event"],
+    "billing": ["billing.checkout_start", "billing.portal_start", "billing.webhook_received", "billing.subscription_updated"],
+    "webhookFailures": ["security.failure", "billing.webhook_failed"],
+    "exports": ["export.created", "report.export", "gdpr.export", "audit_chain.evidence_exported"],
+    "uploadsDownloads": ["document.upload", "document.download"],
+    "documentChanges": ["document.update", "document.delete", "document.approval_changed"],
+    "teamChanges": ["team.invite_created", "team.invite_cancelled", "team.member_removed", "team.member_role_changed", "permission.changed"],
+    "gdprDelete": ["gdpr.delete_requested"],
+    "securitySettings": ["security.settings_changed", "change_security_settings"],
+    "risksVendorsTasks": ["risk.create", "risk.update", "risk.delete", "vendor.create", "vendor.delete", "task.create", "task.update", "task.delete"],
+    "securityFailures": ["security.event", "security.failure"]
+  },
   "runtimeValidation": {
     "appendNormal": {
       "status": "covered_by_test_and_live_script",
