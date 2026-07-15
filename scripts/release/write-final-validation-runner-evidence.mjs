@@ -14,6 +14,23 @@ const expectedRepository = 'renanescola40-afk/eurocomply_saas';
 const expectedBranch = 'main';
 const expectedReleaseTarget = 'enterprise';
 const fullShaPattern = /^[a-f0-9]{40}$/i;
+const canonicalRedactionConfirmation = 'Redaction confirmed for runtime evidence.';
+const evidenceLocations = [
+  productionFinalPath,
+  enterpriseRuntimePath,
+  releaseGoNoGoPath,
+  registerPath,
+  'scripts/release/write-final-validation-runner-evidence.mjs',
+  'scripts/release/validate-final-validation-runtime-evidence.mjs',
+];
+const verifiedControls = [
+  'canonical final-validation command set',
+  'production-final validation bundle',
+  'enterprise runtime evidence bundle',
+  'release Go/No-Go decision',
+  'P0 runtime evidence register closure',
+  'main-branch GitHub Actions provenance',
+];
 
 function readJson(path) {
   if (!existsSync(path)) return null;
@@ -98,6 +115,11 @@ export function buildFinalValidationRunnerEvidence({
     generatedAt,
     reviewedAt: generatedAt,
     reviewer: 'RISCK COMPLY release automation',
+    summary: passed
+      ? 'Canonical final validation completed successfully for the exact enterprise release commit with every required command, source bundle, register item and provenance control verified.'
+      : 'Canonical final validation remains blocked because one or more commands, source bundles, register items or trusted-provenance requirements are incomplete.',
+    evidenceLocations,
+    controlsVerified: passed ? verifiedControls : [],
     releaseTarget,
     targetCommit,
     commitSha: targetCommit,
@@ -109,7 +131,7 @@ export function buildFinalValidationRunnerEvidence({
       githubRunId: env.GITHUB_RUN_ID || 'local-unset',
       commitSha: targetCommit,
     },
-    redactionConfirmation: 'No secret values, tokens, cookies, URLs, DSNs or Authorization headers are captured by this evidence writer.',
+    redactionConfirmation: canonicalRedactionConfirmation,
     noSecretsStored: true,
     commands: requiredFinalValidationCommands.map((command) => ({
       command,
