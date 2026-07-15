@@ -89,6 +89,21 @@ Evidence/output:
 Paste concise, sanitized output or link to CI.
 ```
 
+## External deployment status
+
+Complete this section whenever Vercel or another deployment provider is unavailable, rate-limited, quota-blocked, or otherwise unable to validate the exact PR SHA. A provider-only quota signal must not prevent branch, commit, push, or PR creation.
+
+- Provider: `Vercel` / `Not applicable`
+- Status: `PASS` / `BLOCKED — external provider quota/rate limit` / `NOT VERIFIED`
+- Exact provider signal:
+- Code implication: `No code defect inferred from provider-only signal` / describe verified code impact
+- PR creation: `PROCEEDED` / `BLOCKED` with reason
+- Merge implication: `Branch protection remains authoritative`
+- Production validation: `PASS` / `NOT VERIFIED for this exact SHA`
+- Owner action, when blocked:
+
+Do not change code, dependencies, tests, workflows, or required protections merely to turn a Vercel quota result green. Use `.github/agents/pr-creation-with-vercel-limit.prompt.md` when the signal is a Vercel build rate limit.
+
 ## Evidence limitations
 
 State what was not validated, including unavailable production credentials, runtime environments, external providers, load tests, audits, pentests, or customer data.
@@ -122,4 +137,4 @@ List only intentional exclusions. Do not use follow-ups to defer required safety
 - [ ] It does not duplicate open work.
 - [ ] It provides meaningful engineering or business value.
 - [ ] No avoidable regression was introduced.
-- [ ] Automatic merge is not enabled.
+- [ ] Automatic merge is disabled or governed only by the reviewed PR Autopilot policy.
