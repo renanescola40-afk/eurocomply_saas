@@ -119,7 +119,9 @@ for (const path of forbiddenLegacyFiles) {
 
 const auditLog = read(auditLogPath);
 const serverActionAudit = read(serverActionAuditPath);
-const productionAuditSources = [auditLog, serverActionAudit, ...criticalSourceFiles.map(read)].join('\n');
+// Action coverage must come only from executable callers/emitters. The central audit
+// module contains the AuditAction declaration and cannot prove that any route emits it.
+const productionAuditSources = [serverActionAudit, ...criticalSourceFiles.map(read)].join('\n');
 const auditEvidence = auditEvidenceFiles.map(read).join('\n');
 
 if (auditLog) {
