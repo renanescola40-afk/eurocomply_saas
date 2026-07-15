@@ -6,6 +6,7 @@ describe('PR Autopilot security contract', () => {
   const permissionsGate = readFileSync('scripts/security/check-workflow-permissions.mjs', 'utf8');
   const sensitiveGate = readFileSync('scripts/security/check-workflow-sensitive-patterns.mjs', 'utf8');
   const vercelPrompt = readFileSync('.github/agents/pr-creation-with-vercel-limit.prompt.md', 'utf8');
+  const seniorAgent = readFileSync('.github/senior-agent.yml', 'utf8');
   const prTemplate = readFileSync('.github/pull_request_template.md', 'utf8');
   const runbook = readFileSync('docs/operations/pr-autopilot.md', 'utf8');
   const policy = JSON.parse(readFileSync('.github/pr-autopilot-policy.json', 'utf8')) as {
@@ -66,6 +67,10 @@ describe('PR Autopilot security contract', () => {
     expect(policy.externalProviderHandling.vercel.mergeBehavior).toBe('branch-protection-authoritative');
     expect(vercelPrompt).toContain('Do not stop before creating the PR solely because Vercel is rate-limited.');
     expect(vercelPrompt).toContain('Branch protection remains authoritative');
+    expect(seniorAgent).toContain('pr_creation_prompt: .github/agents/pr-creation-with-vercel-limit.prompt.md');
+    expect(seniorAgent).toContain('create_when_vercel_rate_limited: true');
+    expect(seniorAgent).toContain('create_or_update_code_pr: true');
+    expect(seniorAgent).toContain('infer_code_failure: false');
     expect(prTemplate).toContain('## External deployment status');
     expect(prTemplate).toContain('A provider-only quota signal must not prevent branch, commit, push, or PR creation.');
     expect(runbook).toContain('Vercel quota and rate-limit signals do not block repository delivery.');
