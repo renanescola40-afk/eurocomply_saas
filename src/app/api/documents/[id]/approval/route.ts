@@ -101,6 +101,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .from('documents')
       .select('id,organization_id,name,status')
       .eq('id', id)
+      .eq('organization_id', organization.id)
       .maybeSingle<DocumentApprovalRow>();
 
     if (fetchError) {
@@ -133,6 +134,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const nextStatus = body.action === 'approve' ? 'approved' : 'rejected';
+
+    if (existingDocument.status === nextStatus) {
+      await auditApprovalDenied({
+        organizationId: organization.id,
+        actorUserId: user.id,
+        documentId: id,
+        reason: 'document_state_unchanged',
+        actorRole: permission.role,
+      });
+      return noStoreJson({ error: 'document_state_unchanged' }, { status: 409 });
+    }
+
     const title = documentTitle(existingDocument);
     let approvalUpdate = supabase
       .from('documents')
