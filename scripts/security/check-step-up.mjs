@@ -183,7 +183,7 @@ function readStepUpEvidence() {
     const events = new Set(evidence.auditEvents ?? []);
     const missingEvents = ['step_up_challenge_created', 'step_up_verified', 'step_up_failed', 'step_up_expired', 'step_up_scope_mismatch']
       .filter((event) => !events.has(event));
-    if (!['Complete', 'Open', 'Failed'].includes(evidence.status)) return { ok: false, reason: 'step_up_runtime_evidence_invalid_status' };
+    if (!['Complete', 'Open', 'Exception', 'Failed'].includes(evidence.status)) return { ok: false, reason: 'step_up_runtime_evidence_invalid_status' };
     if (!['passed', 'blocked', 'failed', 'failed_source_validation'].includes(evidence.outcome)) return { ok: false, reason: 'step_up_runtime_evidence_invalid_outcome' };
     if (missingEvents.length > 0) return { ok: false, reason: `step_up_audit_events_missing:${missingEvents.join(',')}` };
     if (integrity.manualBooleanProofAccepted !== false) return { ok: false, reason: 'step_up_manual_boolean_proof_not_rejected' };
