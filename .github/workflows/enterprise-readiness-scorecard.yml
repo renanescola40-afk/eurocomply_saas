@@ -21,9 +21,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - name: Checkout repository
+      - name: Checkout exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Setup Node.js
@@ -38,11 +39,17 @@ jobs:
       - name: Validate evidence override allowlist
         run: node scripts/enterprise/check-evidence-overrides.mjs
 
-      - name: Validate scorecard tests
+      - name: Validate scorecard and architecture evidence tests
         run: >-
           npx vitest run
           tests/enterprise/enterprise-readiness-scorecard.test.ts
           tests/enterprise/evidence-overrides-guard.test.ts
+          tests/enterprise/architecture-review-evidence.test.ts
+
+      - name: Build exact-SHA architecture review evidence
+        env:
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/enterprise/build-architecture-review-evidence.mjs
 
       - name: Capture exact-SHA GitHub checks
         env:
@@ -64,6 +71,8 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: enterprise-readiness-scorecard-${{ github.event.pull_request.head.sha || github.sha }}
-          path: artifacts/enterprise-readiness/
+          path: |
+            artifacts/enterprise-readiness/
+            docs/security/evidence/release/architecture-review.json
           if-no-files-found: error
           retention-days: 90
