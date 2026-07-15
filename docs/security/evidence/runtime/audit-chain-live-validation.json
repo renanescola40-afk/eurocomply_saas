@@ -1,0 +1,171 @@
+{
+  "evidenceItem": "audit-chain-live-validation",
+  "id": "audit-chain-live-validation",
+  "status": "Open",
+  "outcome": "not_run",
+  "reviewer": "EuroComply security automation",
+  "reviewedAt": "2026-07-15T00:00:00.000Z",
+  "generatedAt": "2026-07-15T00:00:00.000Z",
+  "control": "Enterprise audit logging and tamper-evident audit chain live validation",
+  "summary": "Repository implementation wiring for audit-chain hashing, transactional append, verification, RBAC, step-up protection, CLI verification and signed evidence export exists, but target Supabase live validation has not been executed for the current release context. This file is an honest Open No-Go placeholder and is not an approved exception.",
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "redactionScope": "Evidence contains only synthetic ids, file paths, control names, status fields and hash prefixes. Secrets, tokens, cookies, service-role keys, full organization identifiers, connection strings and access-granting values are excluded.",
+  "evidenceLocation": "docs/security/evidence/runtime/audit-chain-live-validation.json",
+  "evidenceLocations": [
+    "src/server/security/audit-chain.ts",
+    "src/server/security/audit-chain.test.ts",
+    "src/server/queries/audit-events.ts",
+    "src/server/queries/audit-events.test.ts",
+    "src/lib/security/audit-log.ts",
+    "src/server/security/rbac.ts",
+    "src/server/security/step-up.ts",
+    "src/app/api/audit/chain/verify/route.ts",
+    "src/app/api/audit/chain/verify/route.test.ts",
+    "src/app/api/audit/evidence-pack/route.ts",
+    "src/app/api/audit/evidence-pack/route.test.ts",
+    "src/server/security/evidence-pack-integrity.ts",
+    "supabase/migrations/20260612_audit_event_hash_chain.sql",
+    "supabase/migrations/20260613_audit_event_chained_rpc.sql",
+    "supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql",
+    "scripts/security/check-audit-chain.mjs",
+    "scripts/security/check-audit-critical-coverage.mjs",
+    "scripts/security/verify-audit-chain.mjs",
+    "scripts/security/run-audit-chain-live-validation.mjs",
+    "scripts/preflight.mjs",
+    "docs/security/AUDIT_CHAIN.md",
+    "docs/security/AUDIT_CHAIN_MODEL.md",
+    "docs/security/AUDIT_CHAIN_CONCURRENCY_RUNBOOK.md",
+    "docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md",
+    "docs/security/P1_RUNTIME_EVIDENCE_REGISTER.md",
+    "docs/RELEASE_CANDIDATE_VALIDATION.md"
+  ],
+  "runtimeValidation": {
+    "appendNormal": {
+      "status": "covered_by_test_and_live_script",
+      "test": "src/server/queries/audit-events.test.ts::persists through the transactional audit-chain RPC when available",
+      "liveScript": "scripts/security/run-audit-chain-live-validation.mjs::appendNormal"
+    },
+    "appendConcurrent": {
+      "status": "covered_by_test_and_live_script",
+      "test": "src/server/queries/audit-events.test.ts::retries the transactional RPC when Supabase reports a previous hash mismatch",
+      "liveScript": "scripts/security/run-audit-chain-live-validation.mjs::appendConcurrent"
+    },
+    "tamperDetection": {
+      "status": "covered_by_test_cli_and_live_script",
+      "tests": [
+        "src/server/security/audit-chain.test.ts::detects previous hash tampering",
+        "src/server/security/audit-chain.test.ts::detects event content tampering",
+        "scripts/security/verify-audit-chain.mjs::event_hash_mismatch",
+        "scripts/security/run-audit-chain-live-validation.mjs::tamperDetection"
+      ]
+    },
+    "missingPreviousHash": {
+      "status": "covered_by_cli_and_live_script",
+      "evidence": "scripts/security/verify-audit-chain.mjs::missing_previous_hash",
+      "liveScript": "scripts/security/run-audit-chain-live-validation.mjs::missingPreviousHash"
+    },
+    "signedExport": {
+      "status": "covered_by_test",
+      "test": "src/app/api/audit/evidence-pack/route.test.ts::returns a signed export only after RBAC and step-up"
+    },
+    "exportWithoutPermission": {
+      "status": "covered_by_test",
+      "test": "src/app/api/audit/evidence-pack/route.test.ts::rejects export when RBAC is missing"
+    },
+    "verifyWithoutPermission": {
+      "status": "covered_by_test",
+      "test": "src/app/api/audit/chain/verify/route.test.ts::rejects verification before step-up when RBAC is missing"
+    },
+    "verifyWithoutStepUp": {
+      "status": "covered_by_test",
+      "test": "src/app/api/audit/chain/verify/route.test.ts::rejects verification without a valid step-up token"
+    },
+    "verifyWithStepUp": {
+      "status": "covered_by_test",
+      "test": "src/app/api/audit/chain/verify/route.test.ts::verifies the chain only after RBAC and signed step-up"
+    },
+    "requestContextSanitization": {
+      "status": "covered_by_test",
+      "test": "src/server/queries/audit-events.test.ts::sanitizes audit request context before hashing and persistence"
+    },
+    "postgresTimestampReadback": {
+      "status": "covered_by_test_and_live_script",
+      "test": "src/server/security/audit-chain.test.ts::verifies records read back with Postgres timestamp formatting",
+      "liveScript": "scripts/security/run-audit-chain-live-validation.mjs::readbackVerification"
+    },
+    "cliVerifier": {
+      "status": "implemented",
+      "command": "node scripts/security/verify-audit-chain.mjs --input <audit-events.json> --expected-previous-hash <hash>",
+      "script": "scripts/security/verify-audit-chain.mjs"
+    },
+    "releaseGate": {
+      "status": "linked",
+      "scripts": ["scripts/security/check-audit-chain.mjs", "scripts/preflight.mjs", "scripts/security/check-release-candidate.mjs"]
+    }
+  },
+  "targetLiveValidation": {
+    "status": "TargetValidationRequired",
+    "script": "scripts/security/run-audit-chain-live-validation.mjs",
+    "requiredEnvironment": [
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "AUDIT_CHAIN_SIGNING_SECRET",
+      "EVIDENCE_PACK_SIGNING_SECRET",
+      "AUDIT_CHAIN_LIVE_ORGANIZATION_ID",
+      "AUDIT_CHAIN_LIVE_PROOF=true"
+    ],
+    "requiredChecks": [
+      "migrations applied and audit_events columns readable",
+      "append_audit_event_chained RPC callable",
+      "normal transactional append succeeds",
+      "concurrent stale previous_hash append is rejected and retry succeeds",
+      "readback verification succeeds",
+      "tamper detection fails closed",
+      "missing previous_hash detection fails closed"
+    ],
+    "currentResult": "Not executed in this repository context because target Supabase credentials and reviewer live proof are intentionally not committed."
+  },
+  "acceptanceCriteria": {
+    "auditChainDetectsTampering": true,
+    "appendIsTransactionalByDefault": true,
+    "concurrencySafeAppend": true,
+    "criticalEventsAudited": true,
+    "verificationRequiresRbacAndStepUp": true,
+    "exportRequiresRbacAndStepUp": true,
+    "exportIsSigned": true,
+    "metadataIsSanitized": true,
+    "requestContextSanitized": true,
+    "serverTimestampUsed": true,
+    "releaseGateLinked": true,
+    "migrationsApplied": false,
+    "rpcExists": false,
+    "createAuditEventUsesTransactionalRpc": true,
+    "appendNormal": false,
+    "appendConcurrent": false,
+    "missingPreviousHashDetected": false,
+    "liveProofAttached": false
+  },
+  "productionGate": "blocked until target Supabase audit-chain live validation is executed and reviewer proof is attached",
+  "releaseGate": "blocked until target Supabase audit-chain live validation is executed and reviewer proof is attached",
+  "completionRule": "Run scripts/security/run-audit-chain-live-validation.mjs against the target Supabase project and attach reviewed live proof before marking this evidence Complete.",
+  "evidenceIntegrity": {
+    "placeholderOnly": true,
+    "runtimeProofInvented": false,
+    "liveProofAttached": false,
+    "customerFacingProof": false,
+    "containsSensitiveValues": false,
+    "approvedException": false,
+    "expiredExceptionRemoved": true
+  },
+  "operationalNotes": [
+    "Run Supabase migration supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql before enabling enterprise audit-chain verification in production.",
+    "Set AUDIT_CHAIN_SIGNING_SECRET for event hash signatures and EVIDENCE_PACK_SIGNING_SECRET for signed evidence exports.",
+    "Do not enable AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK in enterprise production environments.",
+    "Run scripts/security/run-audit-chain-live-validation.mjs against the target Supabase project with AUDIT_CHAIN_LIVE_ORGANIZATION_ID set to a controlled organization id.",
+    "After reviewing the generated JSON and confirming the synthetic audit rows in target Supabase, rerun with AUDIT_CHAIN_LIVE_PROOF=true to mark the evidence Complete."
+  ],
+  "limitations": [
+    "This repository evidence validates implementation wiring and deterministic failure behavior. Enterprise release remains blocked until target Supabase live validation is executed and reviewer proof is attached.",
+    "No exception is currently approved for this runtime evidence item."
+  ]
+}
