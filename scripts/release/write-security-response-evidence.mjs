@@ -28,8 +28,35 @@ function normalizeSha(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function normalizeHost(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+
+  try {
+    return new URL(candidate).host.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function isFresh(sourceGeneratedAt, generatedAt, maxAgeMs) {
+  const generatedAtMs = parseTimestamp(generatedAt);
+  const sourceGeneratedAtMs = parseTimestamp(sourceGeneratedAt);
+  if (generatedAtMs === null || sourceGeneratedAtMs === null) return false;
+  const ageMs = generatedAtMs - sourceGeneratedAtMs;
+  return ageMs >= 0 && ageMs <= maxAgeMs;
+}
+
 function targetCheckPassed(target, name) {
   return findNamedCheck(target?.detailedChecks, name)?.passed === true;
+}
+
+function safeIntegrity(document) {
+  return document?.evidenceIntegrity?.containsSensitiveValues === false
+    && document?.evidenceIntegrity?.valuesRedacted === true
+    && document?.evidenceIntegrity?.authorizationHeaderStored === false
+    && document?.evidenceIntegrity?.cookiesStored === false;
 }
 
 function baseEvidence({
@@ -39,6 +66,7 @@ function baseEvidence({
   generatedAt,
   expectedSha,
   sourceSha,
+  sourceBuildSha,
   sourceGeneratedAt,
   sourceFresh,
   sourcePassed,
@@ -57,16 +85,18 @@ function baseEvidence({
     reviewer: 'RISCK COMPLY release automation',
     targetSha: expectedSha || null,
     summary: passed
-      ? `${evidenceItem} passed against the deployed release target.`
-      : `${evidenceItem} is missing, stale, SHA-mismatched, runtime-unbound, or failed; enterprise release remains blocked.`,
+      ? `${evidenceItem} passed against a fresh, exact-SHA-bound deployed release target.`
+      : `${evidenceItem} is missing, stale, SHA-mismatched, host-unbound, or failed; enterprise release remains blocked.`,
     redactionConfirmation:
-      'No token, cookie, authorization header, secret value, response body, or customer data is copied into this derived evidence file.',
+      'No token, cookie, authorization header, secret value, response body, raw URL, query string, or customer data is copied into this derived evidence file.',
     sourceEvidence: {
       path: sourcePath,
       generatedAt: sourceGeneratedAt || null,
       commitSha: sourceSha || null,
+      buildSha: sourceBuildSha || null,
       expectedSha: expectedSha || null,
-      exactShaMatch: Boolean(expectedSha && sourceSha === expectedSha),
+      exactCommitShaMatch: Boolean(expectedSha && sourceSha === expectedSha),
+      exactBuildShaMatch: Boolean(expectedSha && sourceBuildSha === expectedSha),
       fresh: sourceFresh,
       passed: sourcePassed,
       targetCount,
@@ -75,10 +105,16 @@ function baseEvidence({
       path: shaBindingPath,
       status: runtimeShaBinding.status || null,
       outcome: runtimeShaBinding.outcome || null,
+      generatedAt: runtimeShaBinding.generatedAt || null,
+      fresh: runtimeShaBinding.fresh,
+      targetHost: runtimeShaBinding.targetHost,
       expectedCommitSha: runtimeShaBinding.expectedCommitSha || null,
+      expectedBuildSha: runtimeShaBinding.expectedBuildSha || null,
       observedCommitSha: runtimeShaBinding.observedCommitSha || null,
       observedCommitShaMatchedExpected:
         runtimeShaBinding.observedCommitShaMatchedExpected === true,
+      checksPassed: runtimeShaBinding.checksPassed,
+      failuresEmpty: runtimeShaBinding.failuresEmpty,
       passed: runtimeShaBinding.passed,
     },
     checks: [
@@ -97,7 +133,15 @@ function baseEvidence({
       shaBindingPath,
     ],
     evidenceBoundary:
-      'This artifact derives from a fresh deployment smoke and protected runtime SHA proof. It does not replace external security review, DAST, authenticated tenant-isolation testing, or provider validation.',
+      'This artifact derives from a fresh deployment smoke and a fresh protected runtime SHA proof for the same host. It does not replace external security review, DAST, authenticated tenant-isolation testing, or provider validation.',
+    evidenceIntegrity: {
+      containsSensitiveValues: false,
+      valuesRedacted: true,
+      authorizationHeaderStored: false,
+      cookiesStored: false,
+      rawUrlsStored: false,
+      responseBodiesStored: false,
+    },
   };
 }
 
@@ -114,59 +158,96 @@ export function buildSecurityResponseEvidence(
 ) {
   const normalizedExpectedSha = normalizeSha(expectedSha);
   const commitCheck = findNamedCheck(smokeEvidence?.globalChecks, 'lastCommitValidated');
+  const buildCheck = findNamedCheck(smokeEvidence?.globalChecks, 'buildShaRegistered');
   const sourceSha = normalizeSha(commitCheck?.details?.sha);
+  const sourceBuildSha = normalizeSha(buildCheck?.details?.sha);
   const targets = asArray(smokeEvidence?.targets);
-  const generatedAtMs = parseTimestamp(generatedAt);
-  const sourceGeneratedAtMs = parseTimestamp(smokeEvidence?.generatedAt);
-  const sourceAgeMs =
-    generatedAtMs !== null && sourceGeneratedAtMs !== null
-      ? generatedAtMs - sourceGeneratedAtMs
-      : null;
-  const sourceFresh =
-    sourceAgeMs !== null && sourceAgeMs >= 0 && sourceAgeMs <= maxSourceAgeMs;
+  const sourceFresh = isFresh(smokeEvidence?.generatedAt, generatedAt, maxSourceAgeMs);
   const exactShaMatch =
-    SHA_PATTERN.test(normalizedExpectedSha) &&
-    commitCheck?.passed === true &&
-    sourceSha === normalizedExpectedSha;
+    SHA_PATTERN.test(normalizedExpectedSha)
+    && commitCheck?.passed === true
+    && buildCheck?.passed === true
+    && sourceSha === normalizedExpectedSha
+    && sourceBuildSha === normalizedExpectedSha;
+  const sourcePassed =
+    smokeEvidence?.evidenceItem === 'deployment-smoke-validation'
+    && smokeEvidence?.status === 'Complete'
+    && smokeEvidence?.outcome === 'passed'
+    && sourceFresh
+    && exactShaMatch
+    && asArray(smokeEvidence?.failures).length === 0
+    && safeIntegrity(smokeEvidence)
+    && targets.length > 0;
+
+  const runtimeTargetHost = normalizeHost(runtimeShaEvidence?.targetHost);
+  const runtimeChecks = asArray(runtimeShaEvidence?.checks);
+  const runtimeFailures = asArray(runtimeShaEvidence?.failures);
   const runtimeShaBinding = {
     status: runtimeShaEvidence?.status,
     outcome: runtimeShaEvidence?.outcome,
+    generatedAt: runtimeShaEvidence?.generatedAt,
+    fresh: isFresh(runtimeShaEvidence?.generatedAt, generatedAt, maxSourceAgeMs),
+    targetHost: runtimeTargetHost,
     expectedCommitSha: normalizeSha(runtimeShaEvidence?.expectedCommitSha),
+    expectedBuildSha: normalizeSha(runtimeShaEvidence?.expectedBuildSha),
     observedCommitSha: normalizeSha(runtimeShaEvidence?.observedCommitSha),
     observedCommitShaMatchedExpected:
       runtimeShaEvidence?.observedCommitShaMatchedExpected === true,
-    passed:
-      runtimeShaEvidence?.status === 'Complete' &&
-      runtimeShaEvidence?.outcome === 'passed' &&
-      normalizeSha(runtimeShaEvidence?.expectedCommitSha) === normalizedExpectedSha &&
-      normalizeSha(runtimeShaEvidence?.observedCommitSha) === normalizedExpectedSha &&
-      runtimeShaEvidence?.observedCommitShaMatchedExpected === true,
+    checksPassed:
+      runtimeChecks.length > 0 && runtimeChecks.every((check) => check?.passed === true),
+    failuresEmpty: Array.isArray(runtimeShaEvidence?.failures) && runtimeFailures.length === 0,
+    passed: false,
   };
-  const sourcePassed =
-    smokeEvidence?.status === 'Complete' &&
-    smokeEvidence?.outcome === 'passed' &&
-    sourceFresh &&
-    exactShaMatch &&
-    runtimeShaBinding.passed &&
-    targets.length > 0;
+  runtimeShaBinding.passed =
+    runtimeShaEvidence?.schema === 'risck-comply.runtime-release-sha-validation.v1'
+    && runtimeShaEvidence?.evidenceItem === 'runtime-release-sha-validation'
+    && runtimeShaEvidence?.status === 'Complete'
+    && runtimeShaEvidence?.outcome === 'passed'
+    && runtimeShaBinding.fresh
+    && Boolean(runtimeTargetHost)
+    && runtimeShaBinding.expectedCommitSha === normalizedExpectedSha
+    && runtimeShaBinding.expectedBuildSha === normalizedExpectedSha
+    && runtimeShaBinding.observedCommitSha === normalizedExpectedSha
+    && runtimeShaBinding.observedCommitShaMatchedExpected
+    && runtimeShaBinding.checksPassed
+    && runtimeShaBinding.failuresEmpty
+    && safeIntegrity(runtimeShaEvidence)
+    && runtimeShaEvidence?.evidenceIntegrity?.rawNetworkPayloadStored === false
+    && runtimeShaEvidence?.evidenceIntegrity?.mismatchedObservedShaStored === false;
 
-  const headerTargetResults = targets.map((target) => ({
-    target: target?.baseUrl || null,
-    passed: targetCheckPassed(target, 'securityHeadersPresent'),
-  }));
-  const noStoreTargetResults = targets.map((target) => ({
-    target: target?.baseUrl || null,
-    sensitiveApis: targetCheckPassed(target, 'sensitiveApisHaveNoStore'),
-    privateRoutes: targetCheckPassed(target, 'privateRoutesHaveNoStore'),
-  }));
+  const headerTargetResults = targets.map((target) => {
+    const targetHost = normalizeHost(target?.baseUrl);
+    const shaBound = Boolean(targetHost && runtimeTargetHost && targetHost === runtimeTargetHost);
+    const runtimeCheckPassed = targetCheckPassed(target, 'securityHeadersPresent');
+    return {
+      targetHost,
+      shaBound,
+      runtimeCheckPassed,
+      passed: shaBound && runtimeCheckPassed,
+    };
+  });
+  const noStoreTargetResults = targets.map((target) => {
+    const targetHost = normalizeHost(target?.baseUrl);
+    const shaBound = Boolean(targetHost && runtimeTargetHost && targetHost === runtimeTargetHost);
+    const sensitiveApis = targetCheckPassed(target, 'sensitiveApisHaveNoStore');
+    const privateRoutes = targetCheckPassed(target, 'privateRoutesHaveNoStore');
+    return {
+      targetHost,
+      shaBound,
+      sensitiveApis,
+      privateRoutes,
+      passed: shaBound && sensitiveApis && privateRoutes,
+    };
+  });
 
   const securityHeadersPassed =
-    sourcePassed && headerTargetResults.every((target) => target.passed);
+    sourcePassed
+    && runtimeShaBinding.passed
+    && headerTargetResults.every((target) => target.passed);
   const noStorePassed =
-    sourcePassed &&
-    noStoreTargetResults.every(
-      (target) => target.sensitiveApis && target.privateRoutes,
-    );
+    sourcePassed
+    && runtimeShaBinding.passed
+    && noStoreTargetResults.every((target) => target.passed);
 
   return {
     securityHeaders: baseEvidence({
@@ -176,6 +257,7 @@ export function buildSecurityResponseEvidence(
       generatedAt,
       expectedSha: normalizedExpectedSha,
       sourceSha,
+      sourceBuildSha,
       sourceGeneratedAt: smokeEvidence?.generatedAt,
       sourceFresh,
       sourcePassed,
@@ -195,6 +277,7 @@ export function buildSecurityResponseEvidence(
       generatedAt,
       expectedSha: normalizedExpectedSha,
       sourceSha,
+      sourceBuildSha,
       sourceGeneratedAt: smokeEvidence?.generatedAt,
       sourceFresh,
       sourcePassed,
