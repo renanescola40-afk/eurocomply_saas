@@ -8,6 +8,7 @@ import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { handleStripeWebhookEventWithRecovery } from '@/server/billing/stripe-webhook-recovery';
 import { getStripeEventAuditContext } from '@/server/billing/stripe-webhooks';
 import { noStoreJson } from '@/server/security/no-store';
+import { readBoundedRequestBody } from '@/server/security/read-bounded-request-body';
 
 export const runtime = 'nodejs';
 
@@ -28,40 +29,12 @@ export async function readBoundedStripeWebhookBody(request: Request) {
     return null;
   }
 
-  if (!request.body) {
-    return '';
+  const result = await readBoundedRequestBody(request, MAX_STRIPE_WEBHOOK_BYTES);
+  if ('error' in result) {
+    return result.error === 'body_too_large' ? null : '';
   }
 
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let totalBytes = 0;
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!value) continue;
-
-      totalBytes += value.byteLength;
-      if (totalBytes > MAX_STRIPE_WEBHOOK_BYTES) {
-        await reader.cancel('stripe_webhook_payload_too_large');
-        return null;
-      }
-
-      chunks.push(value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-
-  const payload = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const chunk of chunks) {
-    payload.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-
-  return new TextDecoder().decode(payload);
+  return result.buffer.toString('utf8');
 }
 
 async function recordWebhookRouteAudit(input: {
