@@ -1,10 +1,11 @@
 # Risck Comply Senior Agent configuration
 # Read by humans, GitHub custom agents, coding-agent providers, and workflows.
 
-version: 3
+version: 4
 
 agent_profile:
   path: .github/agents/enterprise-go.agent.md
+  pr_creation_prompt: .github/agents/pr-creation-with-vercel-limit.prompt.md
   display_name: Risck Comply Enterprise GO
   user_invocable: true
   automatic_model_invocation: false
@@ -53,6 +54,8 @@ pull_requests:
   require_owner_approval: true
   require_owner_merge_click: false
   require_manual_merge_for_protected_paths: true
+  create_when_vercel_rate_limited: true
+  vercel_rate_limit_prompt: .github/agents/pr-creation-with-vercel-limit.prompt.md
   link_issue: true
   require_overlap_review: true
   require_sections:
@@ -63,6 +66,7 @@ pull_requests:
     - Root cause and technical approach
     - Security, privacy, and tenancy impact
     - Verification
+    - External deployment status
     - Evidence and limitations
     - Risk, compatibility, and rollback
     - Follow-ups
@@ -203,11 +207,21 @@ external_blockers:
     - external penetration test
     - WAF or CDN console configuration
     - production rollback or restore approval
-  policy:
+  vercel_rate_limit_policy:
+    classify_as: external deployment blocker
+    create_or_update_code_pr: true
+    continue_github_checks: true
+    infer_code_failure: false
+    run_codex_autofix: false
+    require_external_deployment_status_section: true
+    deployment_evidence_state: BLOCKED
+    production_validation_state: NOT VERIFIED
+    merge_policy: branch protection remains authoritative
+  other_external_blocker_policy:
     mark_blocked: true
     require_owner_review: true
     open_configuration_issue: true
-    do_not_open_code_pr: true
+    create_reviewable_code_pr_when_code_work_is_complete: true
   owner_actions:
     - review deployment provider limits
     - configure required environment secrets and variables
@@ -223,6 +237,7 @@ safe_autonomy:
     - Small lint, typecheck, test, and build fixes with evidence.
     - Bounded same-branch Codex CI repair under the default-branch Autopilot policy.
     - Guarded branch synchronization and merge after approval, exact-head green checks, and clean merge state.
+    - Pull-request creation during a Vercel-only rate-limit or quota blocker with truthful blocked deployment evidence.
     - Small bug fixes with tests or clear reproduction evidence.
     - Low-risk systemic refactors that preserve deployed identities and public behavior.
   blocked_without_owner:
@@ -250,3 +265,4 @@ security:
     - No scanner, required check, or test disabled to make a build pass.
     - No repository result represented as proof of production behavior.
     - No automated merge outside the guarded default-branch policy.
+    - No Vercel rate-limit signal represented as a successful deployment or a code defect without evidence.
