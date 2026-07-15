@@ -1,0 +1,44 @@
+name: Public Claims Guard
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-claims-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-claims:
+    name: Validate customer-facing claims
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+
+      - name: Scan customer-facing claims and emit exact-SHA evidence
+        env:
+          PUBLIC_CLAIMS_TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/security/check-public-claims.mjs --report artifacts/trust-claims/trust-claims-validation.json
+
+      - name: Upload public claims evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-claims-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/trust-claims/trust-claims-validation.json
+          if-no-files-found: error
+          retention-days: 90
