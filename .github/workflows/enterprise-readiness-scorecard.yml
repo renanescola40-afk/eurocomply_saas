@@ -51,6 +51,15 @@ jobs:
           TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/enterprise/build-architecture-review-evidence.mjs
 
+      - name: Retain architecture evidence diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: architecture-review-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: docs/security/evidence/release/architecture-review.json
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Capture exact-SHA GitHub checks
         env:
           GITHUB_TOKEN: ${{ github.token }}
