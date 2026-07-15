@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 const locales = ['en', 'pt', 'es', 'fr'] as const;
 
 function visibleWaitlistForm(page: Page) {
-  return page.getByRole('main').locator('#waitlist-form').first();
+  return page.locator('main:visible #waitlist-form').first();
 }
 
 async function expectNoHorizontalOverflow(page: Page, label: string) {
