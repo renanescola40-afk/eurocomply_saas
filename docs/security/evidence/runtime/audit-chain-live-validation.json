@@ -1,12 +1,13 @@
 {
   "evidenceItem": "audit-chain-live-validation",
   "id": "audit-chain-live-validation",
-  "status": "Exception",
+  "status": "Open",
+  "outcome": "not_run",
   "reviewer": "EuroComply security automation",
-  "reviewedAt": "2026-06-24T00:00:00.000Z",
-  "generatedAt": "2026-06-24T00:00:00.000Z",
+  "reviewedAt": "2026-07-15T00:00:00.000Z",
+  "generatedAt": "2026-07-15T00:00:00.000Z",
   "control": "Enterprise audit logging and tamper-evident audit chain live validation",
-  "summary": "EuroComply audit events are appended to an organization-scoped hash chain with deterministic canonical payload hashing, optional HMAC signatures, sanitized metadata, sanitized request context, transactional Supabase RPC append, RBAC plus step-up protected verification, CLI verification, and signed audit evidence export. Enterprise release remains blocked until target Supabase execution through scripts/security/run-audit-chain-live-validation.mjs and reviewer confirmation are attached.",
+  "summary": "Repository implementation wiring for audit-chain hashing, transactional append, verification, RBAC, step-up protection, CLI verification and signed evidence export exists, but target Supabase live validation has not been executed for the current release context. This file is an honest Open No-Go placeholder and is not an approved exception.",
   "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "redactionScope": "Evidence contains only synthetic ids, file paths, control names, status fields and hash prefixes. Secrets, tokens, cookies, service-role keys, full organization identifiers, connection strings and access-granting values are excluded.",
   "evidenceLocation": "docs/security/evidence/runtime/audit-chain-live-validation.json",
@@ -37,20 +38,6 @@
     "docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md",
     "docs/security/P1_RUNTIME_EVIDENCE_REGISTER.md",
     "docs/RELEASE_CANDIDATE_VALIDATION.md"
-  ],
-  "controlsVerified": [
-    "Each chained audit event stores organizationId, actorUserId, action, entityType, entityId, sanitized metadata, sanitized requestContext, previousHash, eventHash, hash algorithm and optional HMAC signature.",
-    "Audit event canonicalization sorts object keys recursively and removes undefined values before hashing.",
-    "Audit event canonicalization normalizes database timestamptz strings before hashing so rows read back from Postgres verify against the originally persisted event_hash.",
-    "eventHash includes the canonicalized payload and previousHash.",
-    "The enterprise append RPC uses pg_advisory_xact_lock per organization and validates p_previous_hash inside the transaction before insert.",
-    "The enterprise append RPC persists p_id and p_created_at so the stored row matches the canonical payload that was hashed.",
-    "Application append fails closed by default when the transactional RPC is unavailable; non-transactional fallback requires AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK=true and is not the enterprise default.",
-    "Verification endpoint requires authenticated user, organization context, read_audit RBAC, business plan entitlement, rate limiting and audit_chain_verify step-up.",
-    "Verification attempts are appended as audit_chain.verified events after verification completes.",
-    "Audit evidence export requires export_data RBAC and audit_chain_export step-up, and fails closed when the evidence cannot be signed.",
-    "Offline CLI verification detects missing_previous_hash, previous_hash_mismatch, event_hash_mismatch and signature_mismatch.",
-    "Target live validation script performs normal append, concurrent stale-previous-hash append, retry append, readback verification, tamper detection and missing previous hash detection against the configured Supabase project."
   ],
   "criticalEventCoverage": {
     "loginLogout": ["auth.login_attempt", "auth.login_success", "auth.login_failure", "auth.logout"],
@@ -174,26 +161,27 @@
     "missingPreviousHashDetected": false,
     "liveProofAttached": false
   },
-  "exception": {
-    "riskOwner": "Security reviewer",
-    "rationale": "Repository evidence proves implementation wiring and fail-closed behavior, but enterprise audit-chain release requires target Supabase live validation before any enterprise claim or procurement use.",
-    "compensatingControls": [
-      "Enterprise release remains No-Go until target live validation evidence is attached.",
-      "External security review gate also remains Open and independently blocks enterprise release.",
-      "Audit evidence export and verification remain RBAC plus step-up protected and fail closed without signing material."
-    ],
-    "expiresAt": "2026-06-25",
-    "approvalReference": "docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md#audit-chain-live-validation"
+  "productionGate": "blocked until target Supabase audit-chain live validation is executed and reviewer proof is attached",
+  "releaseGate": "blocked until target Supabase audit-chain live validation is executed and reviewer proof is attached",
+  "completionRule": "Run scripts/security/run-audit-chain-live-validation.mjs against the target Supabase project and attach reviewed live proof before marking this evidence Complete.",
+  "evidenceIntegrity": {
+    "placeholderOnly": true,
+    "runtimeProofInvented": false,
+    "liveProofAttached": false,
+    "customerFacingProof": false,
+    "containsSensitiveValues": false,
+    "approvedException": false,
+    "expiredExceptionRemoved": true
   },
   "operationalNotes": [
     "Run Supabase migration supabase/migrations/20260621120000_audit_chain_enterprise_hardening.sql before enabling enterprise audit-chain verification in production.",
     "Set AUDIT_CHAIN_SIGNING_SECRET for event hash signatures and EVIDENCE_PACK_SIGNING_SECRET for signed evidence exports.",
     "Do not enable AUDIT_CHAIN_ALLOW_NON_TRANSACTIONAL_FALLBACK in enterprise production environments.",
     "Run scripts/security/run-audit-chain-live-validation.mjs against the target Supabase project with AUDIT_CHAIN_LIVE_ORGANIZATION_ID set to a controlled organization id.",
-    "After reviewing the generated JSON and confirming the synthetic audit rows in target Supabase, rerun with AUDIT_CHAIN_LIVE_PROOF=true to mark the evidence Complete.",
-    "Offline reviewers can run node scripts/security/verify-audit-chain.mjs --input <audit-events.json> against exported evidence."
+    "After reviewing the generated JSON and confirming the synthetic audit rows in target Supabase, rerun with AUDIT_CHAIN_LIVE_PROOF=true to mark the evidence Complete."
   ],
   "limitations": [
-    "This repository evidence validates implementation wiring and deterministic failure behavior. Enterprise release remains blocked until target Supabase live validation is executed and reviewer proof is attached."
+    "This repository evidence validates implementation wiring and deterministic failure behavior. Enterprise release remains blocked until target Supabase live validation is executed and reviewer proof is attached.",
+    "No exception is currently approved for this runtime evidence item."
   ]
 }
