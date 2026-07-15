@@ -1,0 +1,81 @@
+name: Auth RBAC Tenant Proof
+
+run-name: Auth/RBAC tenant proof for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character main-branch SHA deployed to production
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auth-rbac-runtime-proof-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  validate-auth-rbac:
+    name: Validate live Auth RBAC and tenant isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - name: Validate requested SHA
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+
+      - name: Check out exact release SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci
+
+      - name: Execute protected Auth RBAC tenant validation
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
+          ENTERPRISE_EXPECTED_BRANCH: main
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          AUTH_RBAC_ORGANIZATION_A_ID: ${{ secrets.AUTH_RBAC_ORGANIZATION_A_ID }}
+          AUTH_RBAC_ORGANIZATION_B_ID: ${{ secrets.AUTH_RBAC_ORGANIZATION_B_ID }}
+          AUTH_RBAC_OWNER_EMAIL: ${{ secrets.AUTH_RBAC_OWNER_EMAIL }}
+          AUTH_RBAC_OWNER_PASSWORD: ${{ secrets.AUTH_RBAC_OWNER_PASSWORD }}
+          AUTH_RBAC_MEMBER_EMAIL: ${{ secrets.AUTH_RBAC_MEMBER_EMAIL }}
+          AUTH_RBAC_MEMBER_PASSWORD: ${{ secrets.AUTH_RBAC_MEMBER_PASSWORD }}
+          AUTH_RBAC_OUTSIDER_EMAIL: ${{ secrets.AUTH_RBAC_OUTSIDER_EMAIL }}
+          AUTH_RBAC_OUTSIDER_PASSWORD: ${{ secrets.AUTH_RBAC_OUTSIDER_PASSWORD }}
+        run: node scripts/security/run-auth-rbac-live-validation.mjs
+
+      - name: Upload redacted runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-rbac-runtime-proof-${{ inputs.release_sha }}
+          path: docs/security/evidence/runtime/auth-rbac-final-validation.json
+          if-no-files-found: error
+          retention-days: 90
