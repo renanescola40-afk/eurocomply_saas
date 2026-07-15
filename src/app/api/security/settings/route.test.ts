@@ -1,5 +1,4 @@
-/* eslint-disable */
-// @ts-nocheck
+import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -44,7 +43,7 @@ vi.mock('@/server/security/step-up', () => ({
 import { POST } from './route';
 
 function buildRequest(body: string) {
-  return new Request('https://app.eurocomply.test/api/security/settings', {
+  return new NextRequest('https://app.eurocomply.test/api/security/settings', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -69,11 +68,11 @@ describe('security settings payload integrity', () => {
     mocks.createAuditEvent.mockResolvedValue({ persisted: true });
   });
 
-  it('rejects malformed JSON without mutating or auditing default settings', async () => {
+  async function expectInvalidPayload(rawBody: string) {
     const upsert = vi.fn();
     mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => ({ upsert })) });
 
-    const response = await POST(buildRequest('{"stepUpProviderMode":'));
+    const response = await POST(buildRequest(rawBody));
     const body = await response.json();
 
     expect(response.status).toBe(400);
@@ -82,7 +81,18 @@ describe('security settings payload integrity', () => {
     expect(mocks.createAdminClient).not.toHaveBeenCalled();
     expect(upsert).not.toHaveBeenCalled();
     expect(mocks.createAuditEvent).not.toHaveBeenCalled();
+  }
+
+  it('rejects malformed JSON without mutating or auditing default settings', async () => {
+    await expectInvalidPayload('{"stepUpProviderMode":');
   });
+
+  it.each(['null', '[]', '"reset"', '42'])(
+    'rejects valid JSON with a non-object settings shape: %s',
+    async (rawBody) => {
+      await expectInvalidPayload(rawBody);
+    },
+  );
 
   it('persists valid bounded settings only after all access gates pass', async () => {
     const upsert = vi.fn().mockResolvedValue({ error: null });
