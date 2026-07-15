@@ -81,13 +81,28 @@ Record exact commands and truthful outcomes. Do not mark an unavailable or faile
 - [ ] Relevant focused security checks
 - [ ] `npm run security:ci`
 - [ ] Relevant release, RLS, upload, billing, or phase gates
-- [ ] Required GitHub CI is green
+- [ ] Required GitHub CI is green on the exact current head SHA
 
 Evidence/output:
 
 ```text
 Paste concise, sanitized output or link to CI.
 ```
+
+## External deployment status
+
+Complete this section whenever Vercel or another deployment provider is unavailable, rate-limited, quota-blocked, or otherwise unable to validate the exact PR SHA. A provider-only quota signal must not prevent branch, commit, push, or PR creation.
+
+- Provider: `Vercel` / `Not applicable`
+- Status: `PASS` / `BLOCKED — external provider quota/rate limit` / `NOT VERIFIED`
+- Exact provider signal:
+- Code implication: `No code defect inferred from provider-only signal` / describe verified code impact
+- PR creation: `PROCEEDED` / `BLOCKED` with reason
+- Merge implication: `Final merge remains human-controlled and branch protection remains authoritative`
+- Production validation: `PASS` / `NOT VERIFIED for this exact SHA`
+- Owner action, when blocked:
+
+Do not change code, dependencies, tests, workflows, or required protections merely to turn a Vercel quota result green. Use `.github/agents/pr-creation-with-vercel-limit.prompt.md` when the signal is a Vercel build rate limit.
 
 ## Evidence limitations
 
@@ -122,4 +137,6 @@ List only intentional exclusions. Do not use follow-ups to defer required safety
 - [ ] It does not duplicate open work.
 - [ ] It provides meaningful engineering or business value.
 - [ ] No avoidable regression was introduced.
-- [ ] Automatic merge is not enabled.
+- [ ] Automatic merge and automatic branch synchronization are disabled.
+- [ ] Independent approval and all conversations apply to the exact current head.
+- [ ] The final merge will be an explicit human-owner action.
