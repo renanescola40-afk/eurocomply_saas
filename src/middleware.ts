@@ -5,6 +5,11 @@ import { createServerClient } from '@supabase/ssr';
 import createIntlMiddleware from 'next-intl/middleware';
 import { NextRequest, NextResponse } from 'next/server';
 import { routing, locales, defaultLocale, COUNTRY_TO_LOCALE } from '@/lib/i18n/routing';
+import {
+  attachRequestIdHeader,
+  buildCorrelatedRequestHeaders,
+  createTrustedRequestId,
+} from '@/lib/observability/request-correlation';
 
 const intlMiddleware = createIntlMiddleware(routing);
 const LOCALE_COOKIE = 'NEXT_LOCALE';
@@ -102,6 +107,21 @@ function shouldCheckMarketingHomeAuth(pathname: string, locale: string): boolean
 function withPrivateNoStore(response: NextResponse) {
   response.headers.set('Cache-Control', 'private, no-store, max-age=0');
   return response;
+}
+
+function withRequestId(response: NextResponse, requestId: string) {
+  return attachRequestIdHeader(response, requestId);
+}
+
+function nextWithRequestId(req: NextRequest, requestId: string) {
+  const requestHeaders = buildCorrelatedRequestHeaders(req.headers, requestId);
+  return withRequestId(NextResponse.next({ request: { headers: requestHeaders } }), requestId);
+}
+
+function requestWithRequestId(req: NextRequest, requestId: string) {
+  return new NextRequest(req, {
+    headers: buildCorrelatedRequestHeaders(req.headers, requestId),
+  });
 }
 
 function appendSafeAuthQuery(url: URL, req: NextRequest) {
@@ -214,27 +234,32 @@ export default async function middleware(req: NextRequest) {
 
   if (
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/next_api') ||
     pathname.includes('.')
   ) {
     return NextResponse.next();
   }
 
+  const requestId = createTrustedRequestId();
+
+  if (pathname.startsWith('/next_api')) {
+    return nextWithRequestId(req, requestId);
+  }
+
   const legacyDiagnosticsRedirect = getLegacyDiagnosticsRedirect(pathname, req);
   if (legacyDiagnosticsRedirect) {
-    return legacyDiagnosticsRedirect;
+    return withRequestId(legacyDiagnosticsRedirect, requestId);
   }
 
   const checkoutPlanRedirect = getCheckoutPlanRedirect(pathname, req);
   if (checkoutPlanRedirect) {
-    return checkoutPlanRedirect;
+    return withRequestId(checkoutPlanRedirect, requestId);
   }
 
   const normalizedLegacyPath = normalizeLegacyUndefinedPath(pathname);
   if (normalizedLegacyPath && normalizedLegacyPath !== pathname) {
     const redirectUrl = new URL(normalizedLegacyPath, req.url);
     redirectUrl.search = req.nextUrl.search;
-    return NextResponse.redirect(redirectUrl);
+    return withRequestId(NextResponse.redirect(redirectUrl), requestId);
   }
 
   const pathnameHasLocale = locales.some(
@@ -252,16 +277,16 @@ export default async function middleware(req: NextRequest) {
     if (!isAuthenticated && !isPublic) {
       const loginUrl = new URL(`/${locale}/login`, req.url);
       loginUrl.searchParams.set('next', `${pathname}${req.nextUrl.search}`);
-      return withPrivateNoStore(NextResponse.redirect(loginUrl));
+      return withRequestId(withPrivateNoStore(NextResponse.redirect(loginUrl)), requestId);
     }
 
     if (isAuthenticated && (isMarketingHome || isAuthEntry)) {
       const dashboardUrl = new URL(`/${locale}${AUTH_SUCCESS_PATH}`, req.url);
       appendSafeAuthQuery(dashboardUrl, req);
-      return withPrivateNoStore(NextResponse.redirect(dashboardUrl));
+      return withRequestId(withPrivateNoStore(NextResponse.redirect(dashboardUrl)), requestId);
     }
 
-    const response = intlMiddleware(req);
+    const response = intlMiddleware(requestWithRequestId(req, requestId));
 
     response.cookies.set(LOCALE_COOKIE, locale, {
       maxAge: 60 * 60 * 24 * 365,
@@ -269,11 +294,11 @@ export default async function middleware(req: NextRequest) {
       sameSite: 'lax',
     });
 
-    return response;
+    return withRequestId(response, requestId);
   }
 
   if (pathname.startsWith('/api')) {
-    return NextResponse.next();
+    return nextWithRequestId(req, requestId);
   }
 
   const detected = detectLocale(req);
@@ -287,7 +312,7 @@ export default async function middleware(req: NextRequest) {
     sameSite: 'lax',
   });
 
-  return response;
+  return withRequestId(response, requestId);
 }
 
 export const config = {

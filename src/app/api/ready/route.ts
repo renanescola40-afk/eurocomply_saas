@@ -11,6 +11,7 @@ import {
 import { requireEnterpriseRateLimit } from '@/server/security/api-guards';
 import { validateBearerToken } from '@/server/security/bearer-token';
 import { noStoreJson } from '@/server/security/no-store';
+import { isEnterpriseStepUpConfigured } from '@/server/security/step-up';
 import { logSecurityEvent, requestIdFromHeaders } from '@/server/observability/logger';
 
 export const runtime = 'nodejs';
@@ -67,6 +68,13 @@ type EnterpriseStorageScannerCheck = {
   malwareScanningRequired: boolean;
   realScannerProviderConfigured: boolean;
   scannerTransportConfigured: boolean;
+};
+
+type EnterpriseStepUpReadinessCheck = {
+  required: boolean;
+  configured: boolean;
+  dedicatedSigningSecretConfigured: boolean;
+  runtimeConfigurationConfigured: boolean;
 };
 
 type ReadyDatabaseCheck = {
@@ -165,6 +173,19 @@ export function sentryReleaseUploadCheck() {
     configured: missingCount === 0,
     missingCount,
     sourceMapsUploadRequiresAuthToken: Boolean(process.env.SENTRY_AUTH_TOKEN?.trim()),
+  };
+}
+
+export function enterpriseStepUpReadinessCheck(): EnterpriseStepUpReadinessCheck {
+  const required = isEnterpriseReadinessRequired();
+  const dedicatedSigningSecretConfigured = hasConfiguredEnvValue('STEP_UP_SIGNING_SECRET');
+  const runtimeConfigurationConfigured = isEnterpriseStepUpConfigured();
+
+  return {
+    required,
+    configured: !required || (dedicatedSigningSecretConfigured && runtimeConfigurationConfigured),
+    dedicatedSigningSecretConfigured,
+    runtimeConfigurationConfigured,
   };
 }
 
@@ -310,6 +331,7 @@ export async function GET(request: Request) {
   const environment = readyEnvironmentCheck();
   const database = await checkSupabaseConnectivity();
   const sentryReleaseUploads = sentryReleaseUploadCheck();
+  const enterpriseStepUp = enterpriseStepUpReadinessCheck();
   const enterpriseStorageScanner = enterpriseStorageScannerCheck();
 
   const enterpriseReadinessRequired = isEnterpriseReadinessRequired();
@@ -321,6 +343,7 @@ export async function GET(request: Request) {
   const stripe = await checkStripeConnectivity(stripeConfigured);
   const databaseReachable = database.adminClient && database.subscriptionsReadable;
   const stripeApiReachable = stripe.apiReachable && stripe.priceLookup;
+  const enterpriseStepUpConfigured = enterpriseStepUp.configured;
   const enterpriseStorageScannerConfigured = enterpriseStorageScanner.configured;
   const ok = supabaseConfigured
     && stripeConfigured
@@ -329,6 +352,7 @@ export async function GET(request: Request) {
     && sentryReleaseUploadsConfigured
     && databaseReachable
     && stripeApiReachable
+    && enterpriseStepUpConfigured
     && enterpriseStorageScannerConfigured;
 
   return noStoreJson(
@@ -340,6 +364,7 @@ export async function GET(request: Request) {
       database,
       stripe,
       sentryReleaseUploads,
+      enterpriseStepUp,
       enterpriseStorageScanner,
       checks: {
         supabaseConfigured,
@@ -349,6 +374,7 @@ export async function GET(request: Request) {
         redisConfigured,
         sentryConfigured,
         sentryObservabilityConfigured: sentryConfigured,
+        enterpriseStepUpConfigured,
         enterpriseStorageScannerConfigured,
         healthcheckProtected: Boolean(process.env.HEALTHCHECK_TOKEN),
       },

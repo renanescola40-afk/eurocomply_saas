@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const SCRIPT_PATH = fileURLToPath(import.meta.url);
+const ROOT_DIR = path.resolve(path.dirname(SCRIPT_PATH), '../..');
 
 const DEFAULT_SCAN_TARGETS = [
   'src/messages',
@@ -49,7 +51,58 @@ const PROHIBITED_CLAIM_PATTERNS = [
 
 const SAFE_NEGATION_CONTEXT = /(?:\bnot\b|\bdoes not\b|\bdo not\b|\bmust not\b|\bwithout\b|\bunless\b|\bpending\b|\bnot yet\b|\bnot claimed\b|\bno\b|\bn[aã]o\b|\bsem\b|\bno se\b|\bsin\b|\bne\b.{0,40}\bpas\b|\bsans\b|\bnon\b|\bsenza\b|\bnicht\b|\bkein(?:e|en|er|es)?\b|\bohne\b)/i;
 
+const REPORT_SURFACES = [
+  {
+    name: 'trustCenter',
+    patterns: [
+      /^src\/lib\/trust-center\//,
+      /^src\/components\/marketing\/trust-center-page\.tsx$/,
+      /^src\/app\/\[locale\]\/trust\//,
+    ],
+  },
+  {
+    name: 'securityPage',
+    patterns: [
+      /^src\/lib\/trust-center\/content\.ts$/,
+      /^src\/components\/marketing\/trust-center-page\.tsx$/,
+    ],
+  },
+  {
+    name: 'complianceClaims',
+    patterns: [
+      /^src\/messages\//,
+      /^src\/components\/marketing\//,
+      /^src\/app\/\[locale\]\//,
+      /^src\/lib\/email\//,
+    ],
+  },
+];
+
 const failures = [];
+
+function parseArgs(argv) {
+  const options = { reportPath: null };
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index];
+    if (argument === '--report') {
+      const value = argv[index + 1];
+      if (!value || value.startsWith('--')) throw new Error('--report requires a path');
+      options.reportPath = value;
+      index += 1;
+      continue;
+    }
+    throw new Error(`unknown option: ${argument}`);
+  }
+  return options;
+}
+
+let options;
+try {
+  options = parseArgs(process.argv.slice(2));
+} catch (error) {
+  console.error(`Public claims guard configuration failed: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+}
 
 function collectFiles(relativePath) {
   const absolutePath = path.join(ROOT_DIR, relativePath);
@@ -167,6 +220,53 @@ function scanFile(relativePath) {
     .forEach((line, index) => scanSourceLine(relativePath, line, index + 1));
 }
 
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function buildReport(files) {
+  const targetSha = process.env.PUBLIC_CLAIMS_TARGET_SHA?.trim() || null;
+  if (targetSha && !/^[0-9a-f]{40}$/i.test(targetSha)) {
+    throw new Error('PUBLIC_CLAIMS_TARGET_SHA must be a full 40-character commit SHA');
+  }
+
+  const fileEvidence = files.map((relativePath) => {
+    const bytes = fs.readFileSync(path.join(ROOT_DIR, relativePath));
+    return { path: relativePath, sha256: sha256(bytes) };
+  });
+  const surfaces = REPORT_SURFACES.map((surface) => {
+    const matchedFiles = files.filter((relativePath) => surface.patterns.some((pattern) => pattern.test(relativePath)));
+    if (matchedFiles.length === 0) throw new Error(`report surface ${surface.name} has no scanned files`);
+    return {
+      name: surface.name,
+      status: 'PASS',
+      passed: true,
+      fileCount: matchedFiles.length,
+      files: matchedFiles,
+    };
+  });
+
+  return {
+    schema: 'risck-comply.public-claims-report.v1',
+    status: 'Complete',
+    outcome: 'passed',
+    generatedFromRealEvidence: true,
+    source: 'repository-static-analysis',
+    targetSha,
+    generatedAt: new Date().toISOString(),
+    policyDigest: sha256(fs.readFileSync(SCRIPT_PATH)),
+    contentDigest: sha256(fileEvidence.map((entry) => `${entry.path}\0${entry.sha256}`).join('\n')),
+    filesScanned: files.length,
+    scanTargets: SCAN_TARGETS,
+    checks: surfaces,
+    files: fileEvidence,
+    limitations: [
+      'This report proves that the versioned customer-facing source surfaces passed the repository claims policy for one exact commit.',
+      'It does not prove production deployment, legal review, certification, external audit, provider configuration or regulator acceptance.',
+    ],
+  };
+}
+
 const files = [...new Set(SCAN_TARGETS.flatMap(collectFiles).filter(isCandidate))].sort();
 
 if (files.length === 0) failures.push('No customer-facing claim surfaces were found to scan.');
@@ -180,6 +280,19 @@ if (failures.length > 0) {
   console.error('Unsupported public claim failures:');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
+}
+
+if (options.reportPath) {
+  try {
+    const report = buildReport(files);
+    const absoluteReportPath = path.resolve(ROOT_DIR, options.reportPath);
+    fs.mkdirSync(path.dirname(absoluteReportPath), { recursive: true });
+    fs.writeFileSync(absoluteReportPath, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 });
+    console.log(`Claims evidence report: ${path.relative(ROOT_DIR, absoluteReportPath)}`);
+  } catch (error) {
+    console.error(`Claims evidence report failed: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
 }
 
 console.log('Customer-facing claims: ok');

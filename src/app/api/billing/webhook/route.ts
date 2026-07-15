@@ -8,6 +8,7 @@ import { getStripeClient } from '@/server/billing/stripe';
 import { handleStripeWebhookEventWithRecovery } from '@/server/billing/stripe-webhook-recovery';
 import { getStripeEventAuditContext } from '@/server/billing/stripe-webhooks';
 import { noStoreJson } from '@/server/security/no-store';
+import { readBoundedRequestBody } from '@/server/security/read-bounded-request-body';
 
 export const runtime = 'nodejs';
 
@@ -30,12 +31,12 @@ export async function readBoundedBillingWebhookBody(request: Request) {
     return null;
   }
 
-  const body = await request.text();
-  if (new TextEncoder().encode(body).byteLength > MAX_BILLING_WEBHOOK_BYTES) {
-    return null;
+  const result = await readBoundedRequestBody(request, MAX_BILLING_WEBHOOK_BYTES);
+  if ('error' in result) {
+    return result.error === 'body_too_large' ? null : '';
   }
 
-  return body;
+  return result.buffer.toString('utf8');
 }
 
 async function recordBillingWebhookRouteAudit(input: {

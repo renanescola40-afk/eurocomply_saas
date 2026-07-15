@@ -1,63 +1,350 @@
-name: Codex Auto-Fix on Build Failure
+name: Codex PR Auto-Fix
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: [CI]
     types: [completed]
-  push:
-    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open pull request number to repair
+        required: true
+        type: string
 
 permissions:
-  contents: write
-  pull-requests: write
   actions: read
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: codex-autofix-${{ github.event.workflow_run.pull_requests[0].number || inputs.pr_number || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
-  auto-fix:
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+  autofix:
+    name: Diagnose and repair the same PR branch
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure' }}
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 45
     steps:
-      - name: Checkout repository
+      - name: Resolve and authorize the pull request
+        id: guard
+        uses: actions/github-script@v9
+        env:
+          HAS_OPENAI_KEY: ${{ secrets.OPENAI_API_KEY != '' }}
+          HAS_AUTOPILOT_TOKEN: ${{ secrets.PR_AUTOPILOT_TOKEN != '' }}
+          MANUAL_PR_NUMBER: ${{ inputs.pr_number }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const repositoryFullName = `${owner}/${repo}`;
+            let pullNumber = Number(process.env.MANUAL_PR_NUMBER || 0);
+
+            if (!pullNumber && context.payload.workflow_run?.pull_requests?.length) {
+              pullNumber = context.payload.workflow_run.pull_requests[0].number;
+            }
+            if (!pullNumber && context.payload.workflow_run?.head_branch) {
+              const pulls = await github.paginate(github.rest.pulls.list, {
+                owner,
+                repo,
+                state: 'open',
+                head: `${owner}:${context.payload.workflow_run.head_branch}`,
+                per_page: 100,
+              });
+              pullNumber = pulls[0]?.number ?? 0;
+            }
+            if (!Number.isInteger(pullNumber) || pullNumber <= 0) {
+              core.notice('No open pull request could be resolved for this failed CI run.');
+              core.setOutput('authorized', 'false');
+              return;
+            }
+
+            const { data: pull } = await github.rest.pulls.get({ owner, repo, pull_number: pullNumber });
+            const policyFile = await github.rest.repos.getContent({
+              owner,
+              repo,
+              path: '.github/pr-autopilot-policy.json',
+              ref: context.payload.repository.default_branch,
+            });
+            if (Array.isArray(policyFile.data) || !policyFile.data.content) {
+              core.setFailed('Unable to load the trusted PR Autopilot policy from the default branch.');
+              return;
+            }
+            const policyText = Buffer.from(policyFile.data.content, 'base64').toString('utf8');
+            const policy = JSON.parse(policyText);
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: pull.number,
+              per_page: 100,
+            });
+            const paths = files.map((file) => file.filename);
+            const labels = new Set(pull.labels.map((label) => label.name));
+            const regexMatch = (path, patterns = []) => patterns.some((pattern) => new RegExp(pattern, 'i').test(path));
+            const prefixMatch = (path, prefixes = []) => prefixes.some((prefix) => path.startsWith(prefix));
+            const exactMatch = (path, exactPaths = []) => exactPaths.includes(path);
+            const blocked = (path) =>
+              prefixMatch(path, policy.blockedPathPrefixes) || regexMatch(path, policy.blockedPathRegexes);
+            const allowed = (path) =>
+              prefixMatch(path, policy.autofixAllowedPathPrefixes) ||
+              exactMatch(path, policy.autofixAllowedExactPaths) ||
+              regexMatch(path, policy.autofixAllowedPathRegexes);
+
+            const sameRepository = pull.head.repo?.full_name === repositoryFullName;
+            const trustedAuthor = policy.trustedAuthors.includes(pull.user.login);
+            const trustedBranch = policy.trustedBranchPrefixes.some((prefix) => pull.head.ref.startsWith(prefix));
+            const safeFiles = paths.length > 0 && paths.every((path) => !blocked(path) && allowed(path));
+            const eligibleLabel = labels.has(policy.labels.autofixAllowed);
+            const stopLabel =
+              labels.has(policy.labels.highRisk) || labels.has('needs-owner') || labels.has('agent:blocked');
+            const withinLimits =
+              paths.length <= policy.limits.maxChangedFiles && pull.additions <= policy.limits.maxAdditions;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: pull.number,
+              per_page: 100,
+            });
+            const marker = '<!-- pr-autopilot-autofix-attempt -->';
+            const attempts = comments.filter((comment) => comment.body?.includes(marker)).length;
+            const tokensReady =
+              process.env.HAS_OPENAI_KEY === 'true' && process.env.HAS_AUTOPILOT_TOKEN === 'true';
+            const authorized =
+              pull.state === 'open' &&
+              sameRepository &&
+              trustedAuthor &&
+              trustedBranch &&
+              safeFiles &&
+              eligibleLabel &&
+              !stopLabel &&
+              withinLimits &&
+              attempts < policy.limits.maxAutofixAttempts &&
+              tokensReady;
+
+            if (!tokensReady) {
+              const configMarker = '<!-- pr-autopilot-autofix-config -->';
+              if (!comments.some((comment) => comment.body?.includes(configMarker))) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pull.number,
+                  body: `${configMarker}\nCodex Auto-Fix is configured but cannot run until both \`OPENAI_API_KEY\` and \`PR_AUTOPILOT_TOKEN\` exist in repository Actions secrets. No PR code was executed and no branch was modified.`,
+                });
+              }
+            } else if (!authorized) {
+              core.notice(
+                `Auto-fix denied for PR #${pull.number}: sameRepo=${sameRepository}, trustedAuthor=${trustedAuthor}, trustedBranch=${trustedBranch}, safeFiles=${safeFiles}, eligibleLabel=${eligibleLabel}, stopLabel=${stopLabel}, withinLimits=${withinLimits}, attempts=${attempts}.`,
+              );
+            } else {
+              const runUrl = context.payload.workflow_run?.html_url || `${context.serverUrl}/${repositoryFullName}/actions/runs/${context.runId}`;
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pull.number,
+                body: `${marker}\nPR Autopilot started bounded CI repair attempt ${attempts + 1}/${policy.limits.maxAutofixAttempts} for exact head \`${pull.head.sha}\`. Source run: ${runUrl}`,
+              });
+            }
+
+            core.setOutput('authorized', authorized ? 'true' : 'false');
+            core.setOutput('pr_number', String(pull.number));
+            core.setOutput('head_branch', pull.head.ref);
+            core.setOutput('head_sha', pull.head.sha);
+            core.setOutput('base_branch', pull.base.ref);
+            core.setOutput('base_sha', pull.base.sha);
+            core.setOutput('run_id', String(context.payload.workflow_run?.id || ''));
+            core.setOutput('policy_b64', Buffer.from(policyText).toString('base64'));
+            core.setOutput('pr_files_b64', Buffer.from(JSON.stringify(paths)).toString('base64'));
+
+      - name: Checkout the exact PR head without credentials
+        if: steps.guard.outputs.authorized == 'true'
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ steps.guard.outputs.head_sha }}
           fetch-depth: 0
-          
+          persist-credentials: false
+
+      - name: Prepare trusted policy and failed CI diagnostics
+        if: steps.guard.outputs.authorized == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          POLICY_B64: ${{ steps.guard.outputs.policy_b64 }}
+          RUN_ID: ${{ steps.guard.outputs.run_id }}
+          BASE_BRANCH: ${{ steps.guard.outputs.base_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .autopilot
+          printf '%s' "$POLICY_B64" | base64 --decode > .autopilot/policy.json
+          git fetch --no-tags origin "$BASE_BRANCH"
+          if [ -n "$RUN_ID" ]; then
+            gh run view "$RUN_ID" --log-failed > .autopilot/failure.log 2>&1 || \
+              gh run view "$RUN_ID" --log > .autopilot/failure.log 2>&1 || true
+          fi
+          if [ ! -s .autopilot/failure.log ]; then
+            printf '%s\n' 'No failed-job log was available. Reproduce the CI commands and diagnose from the exact PR diff.' > .autopilot/failure.log
+          fi
+
       - name: Setup Node.js
+        if: steps.guard.outputs.authorized == 'true'
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
-          
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies without lifecycle scripts
+        if: steps.guard.outputs.authorized == 'true'
+        run: npm ci --ignore-scripts
+
+      - name: Repair the CI failure with Codex
+        if: steps.guard.outputs.authorized == 'true'
+        id: codex
+        uses: openai/codex-action@v1
         with:
-          version: 8
-          
-      - name: Install dependencies
-        run: pnpm install
-        
-      - name: Try to fix with Codex
-        uses: openai/codex-action@main
-        with:
-          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          sandbox: workspace-write
+          safety-strategy: drop-sudo
+          allow-users: renanescola40-afk
           prompt: |
-            Fix the build error for this Next.js + Supabase project.
-            Look at package.json and add any missing dependencies.
-            The error is about: Module not found: Can't resolve '@supabase/auth-helpers-nextjs'
-            Make minimal changes to make the build pass.
-          
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v8
+            You are repairing CI for PR #${{ steps.guard.outputs.pr_number }} in ${{ github.repository }}.
+
+            Read AGENTS.md, .github/pr-autopilot-policy.json, and .autopilot/failure.log. Inspect only the exact diff between ${{ steps.guard.outputs.base_sha }} and ${{ steps.guard.outputs.head_sha }}.
+
+            Make the smallest coherent correction that fixes the observed lint, typecheck, test, or build failure. Preserve public behavior unless the failing test proves a defect. Do not edit any path protected by the PR Autopilot policy. Do not edit GitHub workflows, package.json, package-lock.json, Supabase/RLS, authentication, authorization, tenant isolation, billing, Stripe, webhooks, middleware, migrations, secrets, security gates, release scripts, audit evidence, or production configuration.
+
+            Do not disable, skip, soften, or rename a required check. Do not fabricate results. You may add or strengthen a focused non-security test when it is directly needed. Stop without changing files if a safe low-risk fix is not possible.
+
+      - name: Enforce the post-Codex change boundary
+        if: steps.guard.outputs.authorized == 'true'
+        id: boundary
+        env:
+          PR_FILES_B64: ${{ steps.guard.outputs.pr_files_b64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { execFileSync } = require('node:child_process');
+          const { readFileSync, appendFileSync, writeFileSync } = require('node:fs');
+          const policy = JSON.parse(readFileSync('.autopilot/policy.json', 'utf8'));
+          const original = new Set(JSON.parse(Buffer.from(process.env.PR_FILES_B64, 'base64').toString('utf8')));
+          const tracked = execFileSync('git', ['diff', '--name-only', '-z', 'HEAD'], { encoding: 'utf8' })
+            .split('\0')
+            .filter(Boolean);
+          const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '-z'], { encoding: 'utf8' })
+            .split('\0')
+            .filter(Boolean)
+            .filter((path) => !path.startsWith('.autopilot/'));
+          const changed = [...new Set([...tracked, ...untracked])];
+          const regexMatch = (path, patterns = []) => patterns.some((pattern) => new RegExp(pattern, 'i').test(path));
+          const prefixMatch = (path, prefixes = []) => prefixes.some((prefix) => path.startsWith(prefix));
+          const exactMatch = (path, exactPaths = []) => exactPaths.includes(path);
+          const blocked = (path) =>
+            prefixMatch(path, policy.blockedPathPrefixes) || regexMatch(path, policy.blockedPathRegexes);
+          const allowed = (path) =>
+            prefixMatch(path, policy.autofixAllowedPathPrefixes) ||
+            exactMatch(path, policy.autofixAllowedExactPaths) ||
+            regexMatch(path, policy.autofixAllowedPathRegexes);
+          const relatedAddition = (path) =>
+            /^tests\/(?!security\/)/.test(path) ||
+            /^src\/.+\.(test|spec)\.[cm]?[jt]sx?$/.test(path) ||
+            /^docs\/decisions\//.test(path);
+          const denied = changed.filter((path) => blocked(path) || !allowed(path));
+          const unrelated = changed.filter((path) => !original.has(path) && !relatedAddition(path));
+          if (denied.length || unrelated.length) {
+            console.error(`Codex crossed the allowed boundary. denied=${denied.join(', ')} unrelated=${unrelated.join(', ')}`);
+            process.exit(1);
+          }
+          writeFileSync('.autopilot/approved-files.txt', `${[...changed].sort().join('\n')}\n`);
+          appendFileSync(process.env.GITHUB_OUTPUT, `changed=${changed.length > 0 ? 'true' : 'false'}\n`);
+          appendFileSync(process.env.GITHUB_OUTPUT, `changed_count=${changed.length}\n`);
+          NODE
+
+      - name: Verify the repair locally
+        if: steps.guard.outputs.authorized == 'true' && steps.boundary.outputs.changed == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run security:package-lock
+          npm run lint
+          npm run typecheck
+          npm run test
+          npm run build
+
+      - name: Commit and push to the same PR branch
+        if: steps.guard.outputs.authorized == 'true' && steps.boundary.outputs.changed == 'true'
+        id: push
+        env:
+          EXPECTED_HEAD_SHA: ${{ steps.guard.outputs.head_sha }}
+          HEAD_BRANCH: ${{ steps.guard.outputs.head_branch }}
+          PR_NUMBER: ${{ steps.guard.outputs.pr_number }}
+          PR_AUTOPILOT_TOKEN: ${{ secrets.PR_AUTOPILOT_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { execFileSync } = require('node:child_process');
+          const { readFileSync } = require('node:fs');
+          const tracked = execFileSync('git', ['diff', '--name-only', '-z', 'HEAD'], { encoding: 'utf8' })
+            .split('\0')
+            .filter(Boolean);
+          const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '-z'], { encoding: 'utf8' })
+            .split('\0')
+            .filter(Boolean)
+            .filter((path) => !path.startsWith('.autopilot/'));
+          const current = [...new Set([...tracked, ...untracked])].sort();
+          const approved = readFileSync('.autopilot/approved-files.txt', 'utf8').split('\n').filter(Boolean).sort();
+          if (JSON.stringify(current) !== JSON.stringify(approved)) {
+            console.error(`Verification produced unapproved repository changes. approved=${approved.join(', ')} current=${current.join(', ')}`);
+            process.exit(1);
+          }
+          NODE
+          remote_head="$(git ls-remote origin "refs/heads/$HEAD_BRANCH" | awk '{print $1}')"
+          if [ "$remote_head" != "$EXPECTED_HEAD_SHA" ]; then
+            echo "The PR head moved during repair; refusing a stale push."
+            exit 1
+          fi
+          rm -rf .autopilot
+          git config user.name 'risck-comply-pr-autopilot[bot]'
+          git config user.email 'pr-autopilot@users.noreply.github.com'
+          git add -A
+          git commit -m "fix(autopilot): repair CI for PR #$PR_NUMBER"
+          commit_sha="$(git rev-parse HEAD)"
+          git push "https://x-access-token:${PR_AUTOPILOT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:"$HEAD_BRANCH"
+          echo "commit_sha=$commit_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Report the repair result
+        if: steps.guard.outputs.authorized == 'true' && steps.boundary.outputs.changed == 'true' && steps.push.outputs.commit_sha != ''
+        uses: actions/github-script@v9
+        env:
+          PR_NUMBER: ${{ steps.guard.outputs.pr_number }}
+          COMMIT_SHA: ${{ steps.push.outputs.commit_sha }}
+          CODEX_MESSAGE: ${{ steps.codex.outputs.final-message }}
         with:
-          commit-message: "fix: auto-resolve build failure"
-          title: "🤖 Auto-fix: Build failure resolved"
-          body: |
-            ## 🤖 Correção automática via Codex
-            
-            Este PR foi criado automaticamente para corrigir o erro de build.
-            
-            **Por favor, revise as alterações antes de fazer merge.**
-          branch: codex/auto-fix
-          base: main
-          delete-branch: true
+          script: |
+            const summary = (process.env.CODEX_MESSAGE || 'Codex applied a bounded CI repair.')
+              .replace(/[`*_>#]/g, '')
+              .slice(0, 1200);
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(process.env.PR_NUMBER),
+              body: `<!-- pr-autopilot-autofix-result -->\nPR Autopilot pushed repair commit \`${process.env.COMMIT_SHA}\` to the same branch after package-lock, lint, typecheck, unit-test, and build verification. GitHub required checks must now rerun on that exact head.\n\nCodex summary: ${summary}`,
+            });
+
+      - name: Report that no safe change was available
+        if: steps.guard.outputs.authorized == 'true' && steps.boundary.outputs.changed == 'false'
+        uses: actions/github-script@v9
+        env:
+          PR_NUMBER: ${{ steps.guard.outputs.pr_number }}
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(process.env.PR_NUMBER),
+              body: '<!-- pr-autopilot-autofix-no-change -->\nCodex inspected the failed CI run but produced no policy-compliant low-risk change. PR Autopilot stopped without modifying the branch.',
+            });

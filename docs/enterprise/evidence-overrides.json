@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "overrides": [
+    {
+      "controlId": "TRU-01",
+      "evidence": {
+        "path": "artifacts/trust-claims/trust-claims-validation.json",
+        "check": "publicClaims"
+      }
+    },
+    {
+      "controlId": "TRU-02",
+      "evidence": {
+        "path": "artifacts/trust-claims/trust-claims-validation.json",
+        "check": "publicClaims"
+      }
+    },
+    {
+      "controlId": "TRU-03",
+      "evidence": {
+        "path": "artifacts/trust-claims/trust-claims-validation.json",
+        "check": "publicClaims"
+      }
+    }
+  ]
+}

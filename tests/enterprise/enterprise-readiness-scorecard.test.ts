@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   STATUS,
+  applyEvidenceOverrides,
   calculateScorecard,
   createEvidenceReader,
   evaluateEvidenceDocument,
@@ -52,6 +53,42 @@ describe('enterprise readiness scorecard', () => {
     expect(evaluateEvidenceDocument({ checks: [] }, 'build')).toBe(STATUS.NOT_VERIFIED);
   });
 
+  it('applies explicit evidence-only overrides without mutating the base controls', () => {
+    const applied = applyEvidenceOverrides(config, {
+      schemaVersion: 1,
+      overrides: [
+        {
+          controlId: 'D10-01',
+          evidence: { path: 'artifacts/trust.json', check: 'publicClaims' },
+        },
+      ],
+    });
+
+    expect(applied.failures).toEqual([]);
+    expect(applied.config.domains[9].controls[0].evidence).toEqual({
+      path: 'artifacts/trust.json',
+      check: 'publicClaims',
+    });
+    expect(config.domains[9].controls[0].evidence).toEqual({
+      path: 'evidence/control-10-1.json',
+    });
+  });
+
+  it('rejects unknown, duplicate or policy-changing evidence overrides', () => {
+    const applied = applyEvidenceOverrides(config, {
+      schemaVersion: 1,
+      overrides: [
+        { controlId: 'UNKNOWN-01', evidence: { path: 'missing.json' } },
+        { controlId: 'D1-01', evidence: { path: 'one.json' } },
+        { controlId: 'D1-01', evidence: { path: 'two.json' }, critical: false },
+      ],
+    });
+
+    expect(applied.failures).toContain('unknown evidence override control: UNKNOWN-01');
+    expect(applied.failures).toContain('duplicate evidence override: D1-01');
+    expect(applied.failures).toContain('evidence override contains unsupported field(s): critical');
+  });
+
   it('uses exact-sha GitHub evidence only when the artifact matches the expected SHA', () => {
     const directory = mkdtempSync(join(tmpdir(), 'enterprise-scorecard-'));
     const githubChecksPath = join(directory, 'github-checks.json');
@@ -62,7 +99,10 @@ describe('enterprise readiness scorecard', () => {
         githubChecksPath,
         JSON.stringify({
           targetSha: expectedSha,
-          checks: [{ name: 'build', status: 'PASS' }],
+          checks: [
+            { name: 'build', status: 'PASS' },
+            { name: 'publicClaims', status: 'PASS' },
+          ],
         }),
       );
 
@@ -71,12 +111,19 @@ describe('enterprise readiness scorecard', () => {
         status: STATUS.PASS,
         reason: 'derived_from_exact_sha_check:build',
       });
+      expect(reader({ path: 'missing-trust.json', check: 'publicClaims' })).toEqual({
+        status: STATUS.PASS,
+        reason: 'derived_from_exact_sha_check:publicClaims',
+      });
 
       const mismatchedReader = createEvidenceReader({
         githubChecksPath,
         expectedSha: 'b'.repeat(40),
       });
       expect(mismatchedReader({ path: 'missing.json', check: 'build' }).status).toBe(
+        STATUS.NOT_VERIFIED,
+      );
+      expect(mismatchedReader({ path: 'missing-trust.json', check: 'publicClaims' }).status).toBe(
         STATUS.NOT_VERIFIED,
       );
     } finally {

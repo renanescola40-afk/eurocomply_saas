@@ -45,6 +45,11 @@ function stubBaseEnvironment() {
   vi.stubEnv('MALWARE_SCANNER_ENDPOINT', '');
   vi.stubEnv('MALWARE_SCANNER_URL', '');
   vi.stubEnv('MALWARE_SCANNER_ALLOWED_HOSTS', '');
+  vi.stubEnv('STEP_UP_PROVIDER_MODE', '');
+  vi.stubEnv('STEP_UP_SIGNING_SECRET', '');
+  vi.stubEnv('AUDIT_CHAIN_SIGNING_SECRET', '');
+  vi.stubEnv('STEP_UP_IDP_ACR_VALUES', '');
+  vi.stubEnv('STEP_UP_IDP_AMR_VALUES', '');
 }
 
 function stubEnterpriseScanner() {
@@ -54,6 +59,8 @@ function stubEnterpriseScanner() {
   vi.stubEnv('MALWARE_SCANNER_PROVIDER', 'http');
   vi.stubEnv('MALWARE_SCANNER_ENDPOINT', 'https://scanner.example/scan');
   vi.stubEnv('MALWARE_SCANNER_ALLOWED_HOSTS', 'scanner.example');
+  vi.stubEnv('STEP_UP_PROVIDER_MODE', 'supabase_mfa');
+  vi.stubEnv('STEP_UP_SIGNING_SECRET', 'configured-step-up-secret');
 }
 
 describe('enterprise Sentry release upload readiness', () => {
@@ -119,5 +126,7 @@ describe('enterprise Sentry release upload readiness', () => {
     expect(response.status).toBe(200);
     expect(body.status).toBe('ready');
     expect(body.sentryReleaseUploads.configured).toBe(true);
+    expect(body.enterpriseStepUp.configured).toBe(true);
+    expect(JSON.stringify(body)).not.toContain('configured-step-up-secret');
   });
 });
