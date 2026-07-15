@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -55,18 +55,22 @@ describe('Google OAuth provider proof contract', () => {
     expect(probe).not.toContain("value.includes('/auth/callback')");
   });
 
-  it('keeps committed evidence blocked until protected runtime execution succeeds', () => {
-    const evidence = JSON.parse(read('docs/security/evidence/runtime/google-oauth-validation.json')) as {
+  it('keeps unexecuted evidence pending and runtime evidence absent', () => {
+    const pendingPath = 'docs/security/evidence/pending/google-oauth-validation.json';
+    const runtimePath = 'docs/security/evidence/runtime/google-oauth-validation.json';
+    const evidence = JSON.parse(read(pendingPath)) as {
       status: string;
       outcome: string;
       controlsVerified?: string[];
       evidenceIntegrity?: { placeholderOnly?: boolean };
       productionGate?: string;
     };
+
     expect(evidence.status).toBe('Open');
     expect(evidence.outcome).toBe('not_run');
     expect(evidence.controlsVerified ?? []).toHaveLength(0);
     expect(evidence.evidenceIntegrity?.placeholderOnly).toBe(true);
     expect(evidence.productionGate?.toLowerCase()).toContain('blocked');
+    expect(existsSync(runtimePath)).toBe(false);
   });
 });
