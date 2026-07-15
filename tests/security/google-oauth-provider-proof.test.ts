@@ -16,29 +16,43 @@ describe('Google OAuth provider proof contract', () => {
     expect(workflow).not.toContain('pull_request_target');
   });
 
-  it('reads provider configuration without persisting credentials or raw configuration', () => {
-    const script = read('scripts/security/run-google-oauth-provider-validation.mjs');
-    expect(script).toContain('/config/auth');
-    expect(script).toContain('external_google_enabled');
-    expect(script).toContain('uri_allow_list');
-    expect(script).toContain('managementTokenStored: false');
-    expect(script).toContain('projectReferenceStored: false');
-    expect(script).toContain('rawProviderConfigStored: false');
-    expect(script).toContain('rawRedirectAllowlistStored: false');
-    expect(script).toContain('siteUrlStored: false');
-    expect(script).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+  it('isolates network configuration from the evidence writer', () => {
+    const probe = read('scripts/security/probe-google-oauth-provider.mjs');
+    const writer = read('scripts/security/run-google-oauth-provider-validation.mjs');
+
+    expect(probe).toContain('/config/auth');
+    expect(probe).toContain('external_google_enabled');
+    expect(probe).toContain('uri_allow_list');
+    expect(probe).not.toContain('writeFile');
+    expect(probe).not.toContain('google-oauth-validation.json');
+
+    expect(writer).toContain("spawnSync(process.execPath, [PROBE]");
+    expect(writer).not.toContain('fetch(');
+    expect(writer).not.toContain('/config/auth');
+    expect(writer).not.toContain('external_google_enabled');
+    expect(writer).not.toContain('uri_allow_list');
+    expect(writer).toContain('managementTokenStored: false');
+    expect(writer).toContain('projectReferenceStored: false');
+    expect(writer).toContain('rawProviderConfigStored: false');
+    expect(writer).toContain('rawRedirectAllowlistStored: false');
+    expect(writer).toContain('siteUrlStored: false');
+    expect(writer).toContain('providerHostnameStored: false');
+    expect(writer).toContain('remoteErrorStored: false');
+    expect(writer).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
   });
 
   it('requires numeric provenance and an exact same-origin HTTPS callback', () => {
-    const script = read('scripts/security/run-google-oauth-provider-validation.mjs');
-    expect(script).toContain("if (!/^\\d+$/.test(githubRunId)) failures.push('invalid_github_run_id')");
-    expect(script).toContain("url.protocol !== 'https:'");
-    expect(script).toContain('url.username || url.password');
-    expect(script).toContain("callback.pathname === '/auth/callback'");
-    expect(script).toContain('callback.origin === siteUrl.origin');
-    expect(script).toContain("callback.search === ''");
-    expect(script).toContain("callback.hash === ''");
-    expect(script).not.toContain("value.includes('/auth/callback')");
+    const writer = read('scripts/security/run-google-oauth-provider-validation.mjs');
+    const probe = read('scripts/security/probe-google-oauth-provider.mjs');
+
+    expect(writer).toContain("if (!/^\\d+$/.test(githubRunId)) failures.push('invalid_github_run_id')");
+    expect(probe).toContain("url.protocol !== 'https:'");
+    expect(probe).toContain('url.username || url.password');
+    expect(probe).toContain("callback.pathname === '/auth/callback'");
+    expect(probe).toContain('callback.origin === siteUrl.origin');
+    expect(probe).toContain("callback.search === ''");
+    expect(probe).toContain("callback.hash === ''");
+    expect(probe).not.toContain("value.includes('/auth/callback')");
   });
 
   it('keeps committed evidence blocked until protected runtime execution succeeds', () => {
