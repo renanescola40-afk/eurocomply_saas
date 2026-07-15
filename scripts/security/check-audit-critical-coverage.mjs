@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const auditLogPath = 'src/lib/security/audit-log.ts';
 const serverActionAuditPath = 'src/server/actions/audit.ts';
 
-const criticalCoverageFiles = [
+const criticalSourceFiles = [
   'src/server/security/auth-audit.ts',
   'src/server/security/rbac.ts',
   'src/server/security/step-up.ts',
@@ -24,6 +24,9 @@ const criticalCoverageFiles = [
   'src/app/api/reports/risks.csv/route.ts',
   'src/app/api/reports/tasks.csv/route.ts',
   'src/app/api/reports/vendors.csv/route.ts',
+];
+
+const auditEvidenceFiles = [
   'docs/security/AUDIT_CHAIN_MODEL.md',
   'docs/security/evidence/runtime/audit-chain-live-validation.json',
 ];
@@ -41,7 +44,7 @@ const requiredCriticalActions = [
   'auth.step_up_approved',
   'auth.step_up_denied',
   'auth.step_up_expired',
-  'securityEvent: \'rbac.denied\'',
+  "securityEvent: 'rbac.denied'",
   'checkout_created',
   'billing_portal_created',
   'webhook_received',
@@ -116,7 +119,8 @@ for (const path of forbiddenLegacyFiles) {
 
 const auditLog = read(auditLogPath);
 const serverActionAudit = read(serverActionAuditPath);
-const combinedCriticalSources = [auditLog, serverActionAudit, ...criticalCoverageFiles.map(read)].join('\n');
+const productionAuditSources = [auditLog, serverActionAudit, ...criticalSourceFiles.map(read)].join('\n');
+const auditEvidence = auditEvidenceFiles.map(read).join('\n');
 
 if (auditLog) {
   requireToken(auditLogPath, auditLog, 'actor_user_id');
@@ -135,11 +139,11 @@ if (serverActionAudit) {
 }
 
 for (const action of requiredCriticalActions) {
-  requireToken('critical audit action sources', combinedCriticalSources, action);
+  requireToken('production audit action sources', productionAuditSources, action);
 }
 
 for (const family of requiredCoverageFamilies) {
-  requireToken('critical audit coverage evidence', combinedCriticalSources, family);
+  requireToken('critical audit coverage evidence', auditEvidence, family);
 }
 
 if (failures.length > 0) {
