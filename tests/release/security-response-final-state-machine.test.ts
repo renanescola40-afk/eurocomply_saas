@@ -44,6 +44,8 @@ describe('security response final evidence state machine', () => {
         status: 'Complete',
         outcome: 'passed',
         releaseDecision: 'Go',
+        overallResult: 'passed',
+        metadataFailures: ['stale execution-only failure'],
         failures: [],
       },
       { passed: false, generatedAt },
