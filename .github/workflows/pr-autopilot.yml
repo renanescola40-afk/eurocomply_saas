@@ -47,9 +47,10 @@ jobs:
             if (
               policy.automationAuthority?.automaticMerge !== false ||
               policy.automationAuthority?.automaticBranchSync !== false ||
+              policy.automationAuthority?.administratorBypass !== false ||
               policy.automationAuthority?.finalMergeActor !== 'human-owner'
             ) {
-              core.setFailed('PR policy must keep branch synchronization and final merge human-controlled.');
+              core.setFailed('PR policy must keep branch synchronization, administrator bypass, and final merge human-controlled.');
               return;
             }
 
