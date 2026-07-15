@@ -27,6 +27,7 @@ on:
         default: 'false'
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -99,6 +100,22 @@ jobs:
       - name: Run public production final gate
         run: npm run release:production-final
 
+      - name: Capture exact-SHA GitHub checks for final scorecard
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.sha }}
+          GITHUB_CHECKS_WAIT_MS: '900000'
+        run: node scripts/enterprise/capture-github-checks-evidence.mjs
+
+      - name: Generate scorecard from the same protected runtime run
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ github.sha }}
+          GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
+        run: node scripts/enterprise/generate-readiness-scorecard.mjs
+
+      - name: Publish enterprise readiness summary
+        run: cat artifacts/enterprise-readiness/enterprise-readiness-scorecard.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload release validation logs
         if: always()
         uses: actions/upload-artifact@v7
@@ -106,6 +123,7 @@ jobs:
           name: public-production-final-validation-${{ github.sha }}
           path: |
             release-validation/public-production/**
+            artifacts/enterprise-readiness/**
             docs/security/evidence/runtime/public-production-release-env-readiness.json
             docs/security/evidence/runtime/deployment-smoke-validation.json
             docs/security/evidence/runtime/security-headers-validation.json
