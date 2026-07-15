@@ -60,7 +60,7 @@ describe('exact-SHA public claims evidence', () => {
     expect(report.files.every((file) => /^[a-f0-9]{64}$/.test(file.sha256))).toBe(true);
   });
 
-  it('binds the workflow artifact and enterprise collector to the exact head SHA', () => {
+  it('binds checkout, workflow artifact, and enterprise collector to the exact head SHA', () => {
     const workflow = readFileSync('.github/workflows/public-claims-guard.yml', 'utf8');
     const collector = readFileSync('scripts/enterprise/capture-github-checks-evidence.mjs', 'utf8');
     const generator = readFileSync('scripts/enterprise/generate-readiness-scorecard.mjs', 'utf8');
@@ -68,9 +68,11 @@ describe('exact-SHA public claims evidence', () => {
       overrides: Array<{ controlId: string; evidence: { path: string; check: string } }>;
     };
 
+    const exactShaExpression = '${{ github.event.pull_request.head.sha || github.sha }}';
     expect(workflow).toContain('name: Public Claims Guard');
-    expect(workflow).toContain('PUBLIC_CLAIMS_TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}');
-    expect(workflow).toContain('public-claims-evidence-${{ github.event.pull_request.head.sha || github.sha }}');
+    expect(workflow).toContain(`ref: ${exactShaExpression}`);
+    expect(workflow).toContain(`PUBLIC_CLAIMS_TARGET_SHA: ${exactShaExpression}`);
+    expect(workflow).toContain(`public-claims-evidence-${exactShaExpression}`);
     expect(workflow).toContain('if-no-files-found: error');
     expect(workflow).toContain('retention-days: 90');
 
