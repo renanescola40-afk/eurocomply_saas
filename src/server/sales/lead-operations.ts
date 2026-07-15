@@ -168,6 +168,11 @@ async function recordLeadActivity(input: {
   return data as { id: string };
 }
 
+function assertConfirmedLeadUpdate(result: { data: { id: string } | null; error: unknown }, failureMessage: string) {
+  if (result.error) throw actionError(failureMessage);
+  if (!result.data) throw actionError('Lead state changed. Refresh and try again.');
+}
+
 export async function updateLeadStatus(request: Request, formData: FormData) {
   const payload = updateLeadStatusSchema.parse({ leadId: readFormText(formData, 'leadId'), status: readFormText(formData, 'status') });
   const user = await requireLeadOperationAccess(request, 'sales_lead.status_changed');
@@ -184,13 +189,16 @@ export async function updateLeadStatus(request: Request, formData: FormData) {
 
   if (contactStatuses.includes(payload.status)) updatePayload.last_contacted_at = now;
 
-  const { error } = await supabase
+  const result = await supabase
     .from('sales_leads')
     .update(updatePayload)
     .eq('id', payload.leadId)
-    .is('gdpr_deleted_at', null);
+    .is('gdpr_deleted_at', null)
+    .eq('status', previous.status)
+    .select('id')
+    .maybeSingle();
 
-  if (error) throw actionError('Unable to update lead status.');
+  assertConfirmedLeadUpdate(result, 'Unable to update lead status.');
 
   await recordLeadActivity({
     leadId: payload.leadId,
@@ -209,13 +217,16 @@ export async function updateLeadPriority(request: Request, formData: FormData) {
   const previous = await getLeadState(payload.leadId);
   const now = new Date().toISOString();
   const supabase = createAdminClient();
-  const { error } = await supabase
+  const result = await supabase
     .from('sales_leads')
     .update({ priority: payload.priority, updated_by: user.id, updated_at: now, last_activity_at: now })
     .eq('id', payload.leadId)
-    .is('gdpr_deleted_at', null);
+    .is('gdpr_deleted_at', null)
+    .eq('priority', previous.priority)
+    .select('id')
+    .maybeSingle();
 
-  if (error) throw actionError('Unable to update lead priority.');
+  assertConfirmedLeadUpdate(result, 'Unable to update lead priority.');
 
   await recordLeadActivity({
     leadId: payload.leadId,
@@ -235,13 +246,18 @@ export async function updateLeadFollowUp(request: Request, formData: FormData) {
   const nextFollowUpAt = normalizeFollowUp(payload.nextFollowUpAt);
   const now = new Date().toISOString();
   const supabase = createAdminClient();
-  const { error } = await supabase
+  let query = supabase
     .from('sales_leads')
     .update({ next_follow_up_at: nextFollowUpAt, updated_by: user.id, updated_at: now, last_activity_at: now })
     .eq('id', payload.leadId)
     .is('gdpr_deleted_at', null);
 
-  if (error) throw actionError('Unable to update lead follow-up.');
+  query = previous.next_follow_up_at === null
+    ? query.is('next_follow_up_at', null)
+    : query.eq('next_follow_up_at', previous.next_follow_up_at);
+
+  const result = await query.select('id').maybeSingle();
+  assertConfirmedLeadUpdate(result, 'Unable to update lead follow-up.');
 
   await recordLeadActivity({
     leadId: payload.leadId,
