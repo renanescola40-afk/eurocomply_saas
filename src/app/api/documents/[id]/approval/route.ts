@@ -101,6 +101,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .from('documents')
       .select('id,organization_id,name,status')
       .eq('id', id)
+      .eq('organization_id', organization.id)
       .maybeSingle<DocumentApprovalRow>();
 
     if (fetchError) {
@@ -133,12 +134,31 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const nextStatus = body.action === 'approve' ? 'approved' : 'rejected';
+
+    if (existingDocument.status === nextStatus) {
+      await auditApprovalDenied({
+        organizationId: organization.id,
+        actorUserId: user.id,
+        documentId: id,
+        reason: 'document_state_unchanged',
+        actorRole: permission.role,
+      });
+      return noStoreJson({ error: 'document_state_unchanged' }, { status: 409 });
+    }
+
     const title = documentTitle(existingDocument);
-    const { data: updatedDocument, error: updateError } = await supabase
+    let approvalUpdate = supabase
       .from('documents')
       .update({ status: nextStatus })
       .eq('id', id)
-      .eq('organization_id', organization.id)
+      .eq('organization_id', organization.id);
+
+    approvalUpdate =
+      existingDocument.status === null
+        ? approvalUpdate.is('status', null)
+        : approvalUpdate.eq('status', existingDocument.status);
+
+    const { data: updatedDocument, error: updateError } = await approvalUpdate
       .select('id,name,status,organization_id')
       .maybeSingle<DocumentApprovalRow>();
 
@@ -152,10 +172,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         organizationId: organization.id,
         actorUserId: user.id,
         documentId: id,
-        reason: 'document_not_found_after_tenant_filter',
+        reason: 'document_state_changed',
         actorRole: permission.role,
       });
-      return noStoreJson({ error: 'document_not_found' }, { status: 404 });
+      return noStoreJson({ error: 'document_state_changed' }, { status: 409 });
     }
 
     const audit = await createAuditEvent({
