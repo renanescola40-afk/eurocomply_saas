@@ -1,45 +1,35 @@
-name: PR Autopilot
+name: PR Autopilot Classifier
 
 on:
   pull_request_target:
     branches: [main]
     types: [opened, reopened, synchronize, ready_for_review, labeled, unlabeled]
-  pull_request_review:
-    types: [submitted, dismissed]
-  check_suite:
-    types: [completed]
-  status:
-  push:
-    branches: [main]
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   issues: write
-  pull-requests: write
+  pull-requests: read
 
 concurrency:
-  group: pr-autopilot-${{ github.run_id }}
+  group: pr-autopilot-classifier-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
-  control:
-    name: Classify, sync and merge eligible PRs
+  classify:
+    name: Classify PR risk for human review
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Run guarded PR autopilot controller
+      - name: Run read-only PR policy classifier
         uses: actions/github-script@v9
-        env:
-          HAS_AUTOPILOT_TOKEN: ${{ secrets.PR_AUTOPILOT_TOKEN != '' }}
         with:
-          github-token: ${{ secrets.PR_AUTOPILOT_TOKEN || github.token }}
+          github-token: ${{ github.token }}
           script: |
             const { owner, repo } = context.repo;
             const repositoryFullName = `${owner}/${repo}`;
-            const hasAutopilotToken = process.env.HAS_AUTOPILOT_TOKEN === 'true';
             const policyPath = '.github/pr-autopilot-policy.json';
 
             const policyFile = await github.rest.repos.getContent({
@@ -54,12 +44,20 @@ jobs:
             }
             const policy = JSON.parse(Buffer.from(policyFile.data.content, 'base64').toString('utf8'));
 
+            if (
+              policy.automationAuthority?.automaticMerge !== false ||
+              policy.automationAuthority?.automaticBranchSync !== false ||
+              policy.automationAuthority?.finalMergeActor !== 'human-owner'
+            ) {
+              core.setFailed('PR policy must keep branch synchronization and final merge human-controlled.');
+              return;
+            }
+
             const labelDefinitions = [
-              [policy.labels.mergeOptIn, '1d76db', 'Owner opt-in for guarded PR Autopilot merge'],
-              [policy.labels.eligible, '0e8a16', 'PR Autopilot policy permits guarded merge processing'],
-              [policy.labels.blocked, 'b60205', 'PR Autopilot stopped on risk, conflict, or policy boundary'],
-              [policy.labels.autofixAllowed, '8250df', 'Codex may attempt a bounded low-risk CI repair'],
-              [policy.labels.highRisk, 'd93f0b', 'Touches a protected high-risk product or operational domain'],
+              [policy.labels.blocked, 'b60205', 'Automation stopped on risk, trust, size, or policy boundary'],
+              [policy.labels.autofixAllowed, '8250df', 'Codex may attempt a bounded same-branch low-risk CI repair'],
+              [policy.labels.highRisk, 'd93f0b', 'Touches a protected product or operational domain'],
+              [policy.labels.manualReview, 'fbca04', 'Human owner decision or review is required'],
             ];
 
             for (const [name, color, description] of labelDefinitions) {
@@ -74,39 +72,25 @@ jobs:
             const prefixMatch = (path, prefixes = []) => prefixes.some((prefix) => path.startsWith(prefix));
             const exactMatch = (path, exactPaths = []) => exactPaths.includes(path);
             const regexMatch = (path, patterns = []) => patterns.some((pattern) => new RegExp(pattern, 'i').test(path));
-            const matchesBlockedPath = (path) =>
+            const blocked = (path) =>
               prefixMatch(path, policy.blockedPathPrefixes) || regexMatch(path, policy.blockedPathRegexes);
-            const matchesAutomaticSafePath = (path) =>
-              prefixMatch(path, policy.automaticMergeSafePathPrefixes) ||
-              exactMatch(path, policy.automaticMergeSafeExactPaths) ||
-              regexMatch(path, policy.automaticMergeSafePathRegexes);
-            const matchesAutofixAllowedPath = (path) =>
+            const autofixAllowed = (path) =>
               prefixMatch(path, policy.autofixAllowedPathPrefixes) ||
               exactMatch(path, policy.autofixAllowedExactPaths) ||
               regexMatch(path, policy.autofixAllowedPathRegexes);
 
             const candidateNumbers = new Set();
             if (context.payload.pull_request?.number) candidateNumbers.add(context.payload.pull_request.number);
-            if (context.payload.check_suite?.pull_requests) {
-              for (const pull of context.payload.check_suite.pull_requests) candidateNumbers.add(pull.number);
-            }
 
-            const listOpenPulls = async () => github.paginate(github.rest.pulls.list, {
-              owner,
-              repo,
-              state: 'open',
-              base: 'main',
-              per_page: 100,
-            });
-
-            if (context.eventName === 'status' && context.payload.sha) {
-              for (const pull of await listOpenPulls()) {
-                if (pull.head.sha === context.payload.sha) candidateNumbers.add(pull.number);
-              }
-            }
-
-            if (['push', 'schedule', 'workflow_dispatch'].includes(context.eventName)) {
-              for (const pull of await listOpenPulls()) candidateNumbers.add(pull.number);
+            if (['schedule', 'workflow_dispatch'].includes(context.eventName)) {
+              const pulls = await github.paginate(github.rest.pulls.list, {
+                owner,
+                repo,
+                state: 'open',
+                base: 'main',
+                per_page: 100,
+              });
+              for (const pull of pulls) candidateNumbers.add(pull.number);
             }
 
             if (candidateNumbers.size === 0) {
@@ -114,25 +98,10 @@ jobs:
               return;
             }
 
-            const upsertMarkerComment = async (issueNumber, marker, body) => {
-              const comments = await github.paginate(github.rest.issues.listComments, {
-                owner,
-                repo,
-                issue_number: issueNumber,
-                per_page: 100,
-              });
-              const existing = comments.find((comment) => comment.body?.includes(marker));
-              const fullBody = `${marker}\n${body}`;
-              if (existing) {
-                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: fullBody });
-              } else {
-                await github.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body: fullBody });
-              }
-            };
-
             const addLabels = async (issueNumber, labels) => {
-              if (labels.length === 0) return;
-              await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels });
+              if (labels.length > 0) {
+                await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels });
+              }
             };
 
             const removeLabel = async (issueNumber, label) => {
@@ -147,17 +116,9 @@ jobs:
               const { data: pull } = await github.rest.pulls.get({ owner, repo, pull_number: pullNumber });
               if (pull.state !== 'open' || pull.base.ref !== 'main') continue;
 
-              const labels = new Set(pull.labels.map((label) => label.name));
               const sameRepository = pull.head.repo?.full_name === repositoryFullName;
               const trustedAuthor = policy.trustedAuthors.includes(pull.user.login);
               const trustedBranch = policy.trustedBranchPrefixes.some((prefix) => pull.head.ref.startsWith(prefix));
-
-              if (!sameRepository || !trustedAuthor || !trustedBranch) {
-                await addLabels(pull.number, [policy.labels.blocked]);
-                await removeLabel(pull.number, policy.labels.eligible);
-                await removeLabel(pull.number, policy.labels.autofixAllowed);
-                continue;
-              }
 
               const files = await github.paginate(github.rest.pulls.listFiles, {
                 owner,
@@ -166,145 +127,25 @@ jobs:
                 per_page: 100,
               });
               const paths = files.map((file) => file.filename);
-              const blockedPaths = paths.filter(matchesBlockedPath);
+              const blockedPaths = paths.filter(blocked);
               const exceedsLimits =
                 paths.length > policy.limits.maxChangedFiles || pull.additions > policy.limits.maxAdditions;
-              const ownerStop =
-                labels.has(policy.labels.highRisk) || labels.has('needs-owner') || labels.has('agent:blocked');
-              const highRisk = blockedPaths.length > 0 || exceedsLimits || ownerStop;
-              const automaticSafe = paths.length > 0 && paths.every(matchesAutomaticSafePath);
-              const autofixAllowed =
-                !highRisk && paths.length > 0 && paths.every(matchesAutofixAllowedPath);
-              const mergeOptIn = labels.has(policy.labels.mergeOptIn);
-              const mergeEligible = !highRisk && (automaticSafe || mergeOptIn);
+              const highRisk = !sameRepository || !trustedAuthor || !trustedBranch || blockedPaths.length > 0 || exceedsLimits;
+              const repairEligible =
+                !highRisk && paths.length > 0 && paths.every(autofixAllowed);
 
-              if (autofixAllowed) {
+              if (repairEligible) {
                 await addLabels(pull.number, [policy.labels.autofixAllowed]);
+                await removeLabel(pull.number, policy.labels.blocked);
+                await removeLabel(pull.number, policy.labels.highRisk);
               } else {
                 await removeLabel(pull.number, policy.labels.autofixAllowed);
               }
 
               if (highRisk) {
-                await addLabels(pull.number, [policy.labels.blocked, policy.labels.highRisk]);
-                await removeLabel(pull.number, policy.labels.eligible);
-                const reasons = [
-                  blockedPaths.length ? `protected paths: ${blockedPaths.slice(0, 12).map((path) => `\`${path}\``).join(', ')}` : null,
-                  exceedsLimits ? `change size exceeds ${policy.limits.maxChangedFiles} files or ${policy.limits.maxAdditions} additions` : null,
-                  ownerStop ? 'an owner or incident-control stop label is present' : null,
-                ].filter(Boolean);
-                await upsertMarkerComment(
-                  pull.number,
-                  '<!-- pr-autopilot-policy-block -->',
-                  `PR Autopilot stopped because this pull request crosses a protected boundary (${reasons.join('; ')}). It will not auto-fix, sync, or merge this PR. Manual owner review remains required.`,
-                );
-                continue;
+                await addLabels(pull.number, [policy.labels.blocked, policy.labels.highRisk, policy.labels.manualReview]);
+                core.notice(`PR #${pull.number} requires human review; no sync or merge action was attempted.`);
+              } else {
+                core.notice(`PR #${pull.number} classified. Final merge remains human-controlled.`);
               }
-
-              if (!mergeEligible) {
-                await removeLabel(pull.number, policy.labels.eligible);
-                await removeLabel(pull.number, policy.labels.blocked);
-                continue;
-              }
-
-              await addLabels(pull.number, [policy.labels.eligible]);
-              await removeLabel(pull.number, policy.labels.blocked);
-
-              if (pull.draft) continue;
-              if (!hasAutopilotToken) {
-                await upsertMarkerComment(
-                  pull.number,
-                  '<!-- pr-autopilot-token-required -->',
-                  'PR Autopilot classified this PR as eligible, but `PR_AUTOPILOT_TOKEN` is not configured. Add a fine-grained repository token in **Settings → Secrets and variables → Actions** with repository Contents, Pull requests, Issues, and Actions permissions. The token is used only for branch synchronization, same-branch autofix pushes, and protected merge attempts.',
-                );
-                continue;
-              }
-
-              const graph = await github.graphql(
-                `query($owner: String!, $repo: String!, $number: Int!) {
-                  repository(owner: $owner, name: $repo) {
-                    pullRequest(number: $number) {
-                      id
-                      isDraft
-                      mergeable
-                      mergeStateStatus
-                      reviewDecision
-                      reviewThreads(first: 100) {
-                        totalCount
-                        pageInfo { hasNextPage }
-                        nodes { isResolved }
-                      }
-                      commits(last: 1) {
-                        nodes {
-                          commit {
-                            oid
-                            statusCheckRollup { state }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }`,
-                { owner, repo, number: pull.number },
-              );
-              const state = graph.repository.pullRequest;
-              const unresolvedThreads = state.reviewThreads.nodes.filter((thread) => !thread.isResolved).length;
-              const statusState = state.commits.nodes[0]?.commit.statusCheckRollup?.state ?? null;
-
-              if (state.mergeable === 'CONFLICTING' || state.mergeStateStatus === 'DIRTY') {
-                await addLabels(pull.number, [policy.labels.blocked]);
-                await upsertMarkerComment(
-                  pull.number,
-                  '<!-- pr-autopilot-conflict -->',
-                  'PR Autopilot detected a real merge conflict. Automatic conflict resolution is intentionally disabled because a textual merge can silently change runtime or security behavior.',
-                );
-                continue;
-              }
-
-              if (state.mergeStateStatus === 'BEHIND') {
-                try {
-                  await github.rest.pulls.updateBranch({
-                    owner,
-                    repo,
-                    pull_number: pull.number,
-                    expected_head_sha: pull.head.sha,
-                  });
-                  core.notice(`Updated PR #${pull.number} with current main.`);
-                } catch (error) {
-                  if (![409, 422].includes(error.status)) throw error;
-                  core.notice(`PR #${pull.number} could not be updated automatically: ${error.message}`);
-                }
-                continue;
-              }
-
-              const reviewReady =
-                !policy.mergeRequirements.requireApprovedReview || state.reviewDecision === 'APPROVED';
-              const threadsReady =
-                !policy.mergeRequirements.requireAllThreadsResolved ||
-                (unresolvedThreads === 0 && !state.reviewThreads.pageInfo.hasNextPage);
-              const checksReady =
-                !policy.mergeRequirements.requireStatusRollupSuccess || statusState === 'SUCCESS';
-              const mergeStateReady = state.mergeable === 'MERGEABLE' && state.mergeStateStatus === 'CLEAN';
-
-              if (!reviewReady || !threadsReady || !checksReady || !mergeStateReady) {
-                core.notice(
-                  `PR #${pull.number} is eligible but waiting: review=${state.reviewDecision}, unresolved=${unresolvedThreads}, checks=${statusState}, mergeState=${state.mergeStateStatus}.`,
-                );
-                continue;
-              }
-
-              const result = await github.rest.pulls.merge({
-                owner,
-                repo,
-                pull_number: pull.number,
-                sha: pull.head.sha,
-                merge_method: policy.mergeRequirements.mergeMethod.toLowerCase(),
-                commit_title: `${pull.title} (#${pull.number})`,
-                commit_message: 'Merged by PR Autopilot after exact-head checks, approval, conversation resolution, risk policy, and clean merge-state verification.',
-              });
-
-              if (!result.data.merged) {
-                core.setFailed(`GitHub refused to merge PR #${pull.number}: ${result.data.message}`);
-                return;
-              }
-              core.notice(`PR #${pull.number} merged by guarded PR Autopilot.`);
             }
