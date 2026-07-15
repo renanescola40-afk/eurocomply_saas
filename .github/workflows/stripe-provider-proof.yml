@@ -24,19 +24,23 @@ jobs:
     timeout-minutes: 10
     environment: production
     steps:
-      - name: Validate requested SHA
+      - name: Check out main history
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate requested main SHA
         shell: bash
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
           [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
-
-      - name: Check out exact release SHA
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.release_sha }}
-          persist-credentials: false
+          git fetch --no-tags --prune origin main
+          git merge-base --is-ancestor "${RELEASE_SHA,,}" origin/main
+          git checkout --detach "${RELEASE_SHA,,}"
 
       - name: Verify exact checkout
         shell: bash
@@ -55,8 +59,12 @@ jobs:
         id: probe
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PRICE_STARTER_MONTHLY: ${{ secrets.STRIPE_PRICE_STARTER_MONTHLY }}
+          STRIPE_PRICE_GROWTH_MONTHLY: ${{ secrets.STRIPE_PRICE_GROWTH_MONTHLY }}
+          STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ secrets.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
           STRIPE_PRICE_STARTER: ${{ secrets.STRIPE_PRICE_STARTER }}
           STRIPE_PRICE_GROWTH: ${{ secrets.STRIPE_PRICE_GROWTH }}
+          STRIPE_PRICE_ENTERPRISE: ${{ secrets.STRIPE_PRICE_ENTERPRISE }}
         run: node scripts/security/probe-stripe-provider-config.mjs
 
       - name: Write redacted evidence
