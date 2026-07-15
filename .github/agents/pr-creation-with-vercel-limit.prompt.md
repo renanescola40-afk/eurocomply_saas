@@ -24,7 +24,7 @@ Mandatory behavior:
 5. In the PR body, add an `External deployment status` section and classify the provider state truthfully as `BLOCKED — external provider quota/rate limit`.
 6. State clearly that PR creation and repository validation can proceed, but Vercel deployment and production runtime validation remain unverified.
 7. Never claim that deployment passed, production is healthy, or the exact SHA is deployed while Vercel is blocked.
-8. Never bypass a required Vercel check, branch protection, approval, conversation resolution, exact-head validation, or any security requirement.
+8. Never bypass a required Vercel check, branch protection, approval, conversation resolution, exact-head validation, or any security requirement. Branch protection remains authoritative.
 9. Never enable auto-merge, synchronize the branch automatically, approve the PR, resolve review threads, or perform the final merge. The final merge belongs to a human owner.
 10. If Vercel is a required failed check, leave the PR open. If it is not required, the human owner may merge only after exact-head required checks, independent approval, resolved conversations, clean merge state, and absence of owner-only blockers.
 11. Distinguish the final statuses:
