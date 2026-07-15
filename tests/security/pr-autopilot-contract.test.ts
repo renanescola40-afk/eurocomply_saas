@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 describe('PR Autopilot security contract', () => {
-  const controller = readFileSync('.github/workflows/pr-autopilot.yml', 'utf8');
+  const classifier = readFileSync('.github/workflows/pr-autopilot.yml', 'utf8');
   const autofix = readFileSync('.github/workflows/codex-autofix.yml', 'utf8');
   const permissionsGate = readFileSync('scripts/security/check-workflow-permissions.mjs', 'utf8');
   const sensitiveGate = readFileSync('scripts/security/check-workflow-sensitive-patterns.mjs', 'utf8');
@@ -14,6 +14,12 @@ describe('PR Autopilot security contract', () => {
   const policy = JSON.parse(readFileSync('.github/pr-autopilot-policy.json', 'utf8')) as {
     limits: { maxAutofixAttempts: number };
     blockedPathPrefixes: string[];
+    automationAuthority: {
+      automaticMerge: boolean;
+      automaticBranchSync: boolean;
+      administratorBypass: boolean;
+      finalMergeActor: string;
+    };
     externalProviderHandling: {
       vercel: {
         allowPullRequestCreation: boolean;
@@ -23,33 +29,46 @@ describe('PR Autopilot security contract', () => {
         mergeBehavior: string;
       };
     };
-    mergeRequirements: {
+    manualMergeRequirements: {
       requireApprovedReview: boolean;
       requireAllThreadsResolved: boolean;
       requireStatusRollupSuccess: boolean;
+      requireExactHeadSha: boolean;
     };
   };
 
-  it('keeps the privileged controller on the trusted default branch without checking out PR code', () => {
-    expect(controller).toContain('pull_request_target:');
-    expect(controller).toContain("ref: context.payload.repository.default_branch");
-    expect(controller).not.toContain('actions/checkout@');
-    expect(controller).toContain("HAS_AUTOPILOT_TOKEN: ${{ secrets.PR_AUTOPILOT_TOKEN != '' }}");
+  it('keeps the classifier on the trusted default branch without checking out PR code', () => {
+    expect(classifier).toContain('pull_request_target:');
+    expect(classifier).toContain("ref: context.payload.repository.default_branch");
+    expect(classifier).not.toContain('actions/checkout@');
+    expect(classifier).toContain('contents: read');
+    expect(classifier).toContain('pull-requests: read');
   });
 
-  it('requires exact-head checks, approval, resolved threads, and a clean merge state', () => {
-    expect(controller).toContain("state.reviewDecision === 'APPROVED'");
-    expect(controller).toContain("statusState === 'SUCCESS'");
-    expect(controller).toContain('unresolvedThreads === 0');
-    expect(controller).toContain("state.mergeStateStatus === 'CLEAN'");
-    expect(controller).toContain('sha: pull.head.sha');
-    expect(controller).toContain('expected_head_sha: pull.head.sha');
-    expect(policy.mergeRequirements.requireApprovedReview).toBe(true);
-    expect(policy.mergeRequirements.requireAllThreadsResolved).toBe(true);
-    expect(policy.mergeRequirements.requireStatusRollupSuccess).toBe(true);
+  it('forbids automated branch synchronization, merge and administrator bypass', () => {
+    expect(policy.automationAuthority.automaticMerge).toBe(false);
+    expect(policy.automationAuthority.automaticBranchSync).toBe(false);
+    expect(policy.automationAuthority.administratorBypass).toBe(false);
+    expect(policy.automationAuthority.finalMergeActor).toBe('human-owner');
+    expect(classifier).not.toContain('pulls.merge');
+    expect(classifier).not.toContain('pulls.updateBranch');
+    expect(classifier).not.toContain('PR_AUTOPILOT_TOKEN');
+    expect(classifier).not.toContain('contents: write');
+    expect(classifier).toContain('Final merge remains human-controlled.');
   });
 
-  it('uses the official bounded Codex action and repairs the same branch', () => {
+  it('documents exact-head human merge requirements without granting merge authority', () => {
+    expect(policy.manualMergeRequirements.requireApprovedReview).toBe(true);
+    expect(policy.manualMergeRequirements.requireAllThreadsResolved).toBe(true);
+    expect(policy.manualMergeRequirements.requireStatusRollupSuccess).toBe(true);
+    expect(policy.manualMergeRequirements.requireExactHeadSha).toBe(true);
+    expect(agentsContract).toContain('Never merge a pull request automatically.');
+    expect(agentsContract).toContain('The final merge action belongs to a human owner');
+    expect(seniorAgent).toContain('automatic_merge: false');
+    expect(seniorAgent).toContain('require_owner_merge_click: true');
+  });
+
+  it('uses the official bounded Codex action and repairs only the same branch', () => {
     expect(autofix).toContain('workflow_run:');
     expect(autofix).toContain('workflows: [CI]');
     expect(autofix).toContain('openai/codex-action@v1');
@@ -57,6 +76,8 @@ describe('PR Autopilot security contract', () => {
     expect(autofix).toContain('safety-strategy: drop-sudo');
     expect(autofix).not.toContain('sandbox: danger-full-access');
     expect(autofix).not.toContain('safety-strategy: unsafe');
+    expect(autofix).not.toContain('pulls.merge');
+    expect(autofix).not.toContain('pulls.updateBranch');
     expect(autofix).toContain('persist-credentials: false');
     expect(autofix).toContain('npm ci --ignore-scripts');
     expect(autofix).toContain('HEAD:"$HEAD_BRANCH"');
@@ -69,7 +90,9 @@ describe('PR Autopilot security contract', () => {
     expect(policy.externalProviderHandling.vercel.treatAsCodeFailure).toBe(false);
     expect(policy.externalProviderHandling.vercel.allowAutofixForProviderFailure).toBe(false);
     expect(policy.externalProviderHandling.vercel.requireTruthfulBlockedDeploymentEvidence).toBe(true);
-    expect(policy.externalProviderHandling.vercel.mergeBehavior).toBe('branch-protection-authoritative');
+    expect(policy.externalProviderHandling.vercel.mergeBehavior).toBe(
+      'human-controlled-branch-protection-authoritative',
+    );
     expect(vercelPrompt).toContain('Do not stop before creating the PR solely because Vercel is rate-limited.');
     expect(vercelPrompt).toContain('Branch protection remains authoritative');
     expect(seniorAgent).toContain('pr_creation_prompt: .github/agents/pr-creation-with-vercel-limit.prompt.md');
@@ -103,7 +126,7 @@ describe('PR Autopilot security contract', () => {
     );
   });
 
-  it('allows only the reviewed controller to use pull_request_target', () => {
+  it('allows only the reviewed read-only classifier to use pull_request_target', () => {
     expect(permissionsGate).toContain("'.github/workflows/pr-autopilot.yml'");
     expect(permissionsGate).toContain('allowlisted pull_request_target workflows must never checkout pull request code');
     expect(sensitiveGate).toContain("'.github/workflows/pr-autopilot.yml'");
