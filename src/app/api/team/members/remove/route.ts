@@ -12,9 +12,17 @@ const removeMemberSchema = z.object({
   memberId: z.string().trim().min(1).max(128),
 });
 
+type TeamMemberRemovalResult = {
+  outcome: 'removed' | 'last_owner' | 'state_changed' | 'not_found' | 'invalid_input';
+  affected_member_id: string | null;
+  affected_user_id: string | null;
+  previous_role: string | null;
+};
+
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
 const TEAM_ACTION_JSON_MAX_BYTES = 4 * 1024;
+const ATOMIC_MEMBER_REMOVAL_RPC = 'remove_organization_member_atomic';
 
 function getClientIp(request: Request) {
   return (
@@ -22,6 +30,13 @@ function getClientIp(request: Request) {
     request.headers.get('x-real-ip') ||
     'unknown'
   );
+}
+
+function firstRemovalResult(value: unknown): TeamMemberRemovalResult | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const candidate = value[0];
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
+  return candidate as TeamMemberRemovalResult;
 }
 
 export async function POST(request: Request) {
@@ -84,33 +99,56 @@ export async function POST(request: Request) {
     }
 
     if (member.user_id === user.id) {
-      return noStoreJson({ error: 'self_removal_blocked', message: 'You cannot remove your own access from here.' }, { status: 400 });
+      return noStoreJson(
+        { error: 'self_removal_blocked', message: 'You cannot remove your own access from here.' },
+        { status: 400 },
+      );
     }
 
-    if (member.role === 'owner') {
-      const { count, error: ownerCountError } = await supabase
-        .from('organization_members')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', organization.id)
-        .eq('role', 'owner');
-
-      if (ownerCountError) {
-        return noStoreJson({ error: 'owner_count_failed' }, { status: 503 });
-      }
-
-      if ((count ?? 0) <= 1) {
-        return noStoreJson({ error: 'last_owner_removal_blocked', message: 'Cannot remove the last organization owner.' }, { status: 400 });
-      }
+    if (member.role === 'owner' && permission.role !== 'owner') {
+      return noStoreJson(
+        { error: 'owner_removal_requires_owner', message: 'Only organization owners can remove another owner.' },
+        { status: 403 },
+      );
     }
 
-    const { error } = await supabase
-      .from('organization_members')
-      .delete()
-      .eq('id', parsed.data.memberId)
-      .eq('organization_id', organization.id);
+    const { data: removalData, error: removalError } = await supabase.rpc(ATOMIC_MEMBER_REMOVAL_RPC, {
+      p_organization_id: organization.id,
+      p_member_id: parsed.data.memberId,
+      p_expected_user_id: member.user_id,
+      p_expected_role: member.role,
+    });
 
-    if (error) {
+    if (removalError) {
       return noStoreJson({ error: 'team_member_remove_failed' }, { status: 503 });
+    }
+
+    const removal = firstRemovalResult(removalData);
+    if (!removal) {
+      return noStoreJson({ error: 'team_member_removal_unavailable' }, { status: 503 });
+    }
+
+    if (removal.outcome === 'not_found') {
+      return noStoreJson({ error: 'team_member_not_found' }, { status: 404 });
+    }
+
+    if (removal.outcome === 'last_owner') {
+      return noStoreJson(
+        { error: 'last_owner_removal_blocked', message: 'Cannot remove the last organization owner.' },
+        { status: 400 },
+      );
+    }
+
+    if (removal.outcome === 'state_changed') {
+      return noStoreJson({ error: 'team_member_state_changed' }, { status: 409 });
+    }
+
+    if (removal.outcome === 'invalid_input') {
+      return noStoreJson({ error: 'invalid_team_member_payload' }, { status: 400 });
+    }
+
+    if (removal.outcome !== 'removed') {
+      return noStoreJson({ error: 'team_member_removal_unavailable' }, { status: 503 });
     }
 
     const audit = await createAuditEvent({
@@ -118,10 +156,10 @@ export async function POST(request: Request) {
       actorUserId: user.id,
       action: 'team_member_removed',
       entityType: 'organization_member',
-      entityId: parsed.data.memberId,
+      entityId: removal.affected_member_id ?? parsed.data.memberId,
       metadata: {
-        removedUserId: member.user_id,
-        role: member.role,
+        removedUserId: removal.affected_user_id ?? member.user_id,
+        role: removal.previous_role ?? member.role,
         actorRole: permission.role,
         stepUpAction: 'manage_team',
       },
