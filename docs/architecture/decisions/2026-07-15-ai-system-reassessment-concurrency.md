@@ -1,4 +1,4 @@
-# Guard AI-system reassessment with optimistic concurrency
+# Serialize AI-system reassessment with atomic history persistence
 
 Date: 2026-07-15  
 Status: Proposed
@@ -9,35 +9,50 @@ Status: Proposed
 
 The update previously matched only the AI-system ID and organization ID. Two authorized reassessments could therefore load the same state, submit different answers, and both update successfully. The last database write would win, while both requests could create history and audit records describing a transition from the same stale previous state.
 
-That behavior weakens the integrity of the AI governance evidence lifecycle. The finding is based on repository control flow only. No production race, incorrect customer classification, regulatory impact, external audit finding, or penetration test is claimed.
+An initial optimistic compare-and-set prevented the stale write, but the system update and history insert were still separate operations. A database or history-table error after the update could leave a changed classification without its required reassessment snapshot.
+
+These behaviors weaken the integrity of the AI-governance evidence lifecycle. The findings are based on repository control flow only. No production race, missing customer history, incorrect classification, regulatory impact, external audit finding, or penetration test is claimed.
 
 ## Decision
 
-Use the `updated_at` value loaded before classification as an optimistic compare-and-set predicate.
+Use a backend-only PostgreSQL RPC, `public.reassess_ai_system_atomic`, as the final transition boundary.
 
-The reassessment query now requires all three values to match:
+The RPC receives:
 
 - AI-system ID;
 - organization ID;
-- the exact `updated_at` value loaded by the request.
+- the exact server-loaded `updated_at` value;
+- authenticated actor user ID;
+- the already validated and classified reassessment payload.
 
-The update returns at most one row through `maybeSingle()`.
+Inside one transaction the function:
 
-When no row is returned, another write has changed the system since it was loaded. The API responds with HTTP 409 and `ai_system_state_changed`. It does not write reassessment history or success audit evidence for the losing request.
+1. validates required identifiers and payload types;
+2. locks the tenant-scoped AI-system row with `FOR UPDATE`;
+3. compares the locked `updated_at` with the expected server-loaded value;
+4. updates the classification and governance fields;
+5. relies on the existing trigger to advance `updated_at`;
+6. inserts one `ai_system_history` reassessment snapshot;
+7. returns the confirmed row only after both writes succeed.
 
-When the compare-and-set succeeds, the query updates `last_reassessed_at` and `updated_at` to one shared timestamp, persists one history snapshot, and returns the confirmed row. Only then does the route append `ai_system_reassessed` audit evidence.
+The possible outcomes are:
 
-## Why `updated_at`
+- `updated`: system and history committed;
+- `state_changed`: the expected version is stale;
+- `not_found`: the tenant-scoped record no longer exists;
+- `invalid_input`: the backend-only payload contract was violated.
 
-The table already exposes `updated_at` in the canonical AI-system record and the update path already changes it. Using the existing value avoids a schema migration while protecting every field involved in classification, ownership, vendor context, role, lifecycle state, obligations, and next actions.
+`state_changed` and `not_found` become HTTP 409 `ai_system_state_changed`. Invalid or malformed RPC responses fail closed through the secure API error path.
 
-A dedicated integer version column would also work, but would require a migration, backfill, generated client updates, and broader rollout risk for a narrowly scoped concurrency defect.
+Only after the RPC returns `updated` does the route append `ai_system_reassessed` chained audit evidence and return success.
 
 ## Security and tenant boundary
 
-The existing organization predicate remains mandatory. The compare-and-set is an additional condition and does not replace tenant isolation, RBAC, trusted-origin validation, authentication, rate limiting, or RLS.
+The function is `SECURITY DEFINER` with a fixed `public, pg_temp` search path. Execute permission is revoked from `public`, `anon`, and `authenticated` and granted only to `service_role`.
 
-No user input is trusted as the expected version. The route obtains `expectedUpdatedAt` from the tenant-scoped record loaded by the server.
+The Next.js route remains responsible for authentication, organization resolution, `manage_ai_governance`, trusted-origin validation, distributed rate limiting, body bounds, schema validation, and classification before invoking the RPC.
+
+The organization predicate and system ID are enforced both in the row lock and final update. The expected version is loaded by the server from the tenant-scoped record and is never accepted from the request body.
 
 The conflict response contains no classification payload, tenant data, timestamps, internal database details, or competing actor information.
 
@@ -45,19 +60,20 @@ The conflict response contains no classification payload, tenant data, timestamp
 
 A losing request cannot create:
 
+- a system update;
 - an `ai_system_history` reassessment snapshot;
 - an `ai_system_reassessed` success audit event;
 - a response claiming the submitted classification became current.
 
-The client must reload the current record, review the new state, and deliberately submit a new reassessment.
+A successful RPC cannot commit the system update without the reassessment history insert. If the history insert fails, PostgreSQL rolls back the entire RPC transaction.
 
-The history write remains best effort after a successful database update, as it was before this change. Making the system update, history insertion, and chained audit append one database transaction would require a broader transactional RPC and is outside this small package.
+The chained audit append remains a separate post-transaction operation because its existing evidence-chain persistence path is broader than the AI inventory tables. It is invoked only after the system and history transaction confirms. Its persistence result remains exposed through the existing API response behavior.
 
 ## Performance
 
-The update adds one indexed row predicate on the already selected record. It adds no network round trip, preflight query, dependency, migration, background job, or provider call.
+The RPC adds a tenant-scoped row lock and one history insert to the same database round trip. It removes the separate application-side history insert from the reassessment path.
 
-Runtime latency and database execution plans were not measured.
+No provider call, dependency, background job, external network request, or customer-data copy is added. Runtime latency, lock wait duration, and database execution plans were not measured.
 
 Measurement unavailable in the current execution environment.
 
@@ -65,44 +81,53 @@ Measurement unavailable in the current execution environment.
 
 ### Last-write-wins
 
-Rejected because the resulting audit trail can describe mutually incompatible successful transitions from stale state.
+Rejected because the evidence trail can describe mutually incompatible successful transitions from stale state.
+
+### Application-side compare-and-set only
+
+Improves stale-write behavior but leaves the system update and history snapshot non-atomic.
 
 ### Compare only the previous risk level
 
 Rejected because ownership, lifecycle, role, use case, risk-domain inputs, obligations, and other classification fields can change without changing the risk level.
 
-### Accept a client-provided version
+### Client-provided version
 
-Rejected as unnecessary. The server already loads the authoritative tenant-scoped record before updating it.
+Rejected. The server already loads the authoritative tenant-scoped version.
 
-### Database transaction or RPC
+### Integer version column
 
-Desirable for fully atomic update, history, and audit persistence, but deferred because it requires schema-level rollout and broader evidence-chain design. Optimistic concurrency closes the stale-success defect without that migration.
+Viable but unnecessary for this rollout. The existing non-null `updated_at` is advanced by a database trigger and can serve as the optimistic version while the row lock serializes concurrent transitions.
 
 ## Verification
 
 Repository contracts require:
 
-- the route to pass `existing.updated_at` to the query;
-- the update to include an `updated_at` equality predicate;
-- affected-row verification through `maybeSingle()`;
-- HTTP 409 for stale state;
-- the conflict guard to precede success audit creation;
-- the conflict result to precede history persistence.
+- the route to pass `existing.updated_at` and authenticated actor ID;
+- the query layer to invoke the atomic RPC instead of a direct update;
+- backend-only execute privileges;
+- tenant-scoped `FOR UPDATE` locking;
+- exact version comparison before mutation;
+- a conditional final update;
+- history insertion before the RPC returns `updated`;
+- no application-side history insert in the reassessment function;
+- HTTP 409 for stale or concurrently removed state;
+- the conflict guard to precede success audit creation.
 
-GitHub Actions is authoritative for lint, typecheck, tests, build, E2E, CodeQL, Semgrep, Gitleaks, dependency review, security suites, and enterprise gates on the exact PR head.
+GitHub Actions is authoritative for migration checks, lint, typecheck, unit tests, build, E2E, CodeQL, Semgrep, Gitleaks, dependency review, security suites, and enterprise gates on the exact PR head.
 
-No production concurrency test, database load test, customer record mutation, external assessment, or runtime evidence is claimed.
+No live Supabase migration, production concurrency test, database load test, customer record mutation, external assessment, or runtime evidence is claimed.
 
 ## Risks and trade-offs
 
-- timestamp equality depends on the database returning and comparing the canonical `updated_at` representation consistently;
-- clients now receive a conflict instead of silent last-write-wins behavior and must reload before retrying;
-- direct database writes that fail to change `updated_at` would not participate correctly in optimistic concurrency and should not be used for application reassessment updates;
-- history and chained audit persistence are not made transactionally atomic with the system update in this change.
+- row locks can make concurrent reassessments wait briefly before one receives a conflict;
+- direct database writers must continue to use the trigger-managed `updated_at` contract;
+- the RPC accepts a JSONB patch from trusted backend code and independently validates required field types, while table constraints remain the final domain validation;
+- the migration must be deployed before the application code that invokes the RPC;
+- audit-chain persistence remains post-transaction and is not claimed to be atomic with the AI-system tables.
 
 ## Rollback
 
-Revert this change. Reassessment returns to last-write-wins behavior and the API no longer returns `ai_system_state_changed` conflicts.
+Revert the application commits and the migration by removing/revoking the RPC after the old application code is restored. Reassessment returns to the previous direct-update behavior.
 
-No migration, backfill, data rewrite, secret rotation, provider configuration, or customer-data rollback is required.
+No backfill, data rewrite, secret rotation, provider configuration, or customer-data rollback is required. Existing atomic history snapshots remain valid.
