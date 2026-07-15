@@ -24,9 +24,7 @@ const allowedItems = new Set([
   'rate-limit-validation',
   'enterprise-final-readiness-validation',
   'enterprise-release-env-readiness',
-  // GDPR privacy evidence added by the enterprise privacy controls package.
   'gdpr-privacy-validation',
-  // Static enterprise audit evidence is allowed only as an honest No-Go/open audit record.
   'enterprise-10-10-audit',
 ]);
 const redactionTexts = new Set([
@@ -40,9 +38,7 @@ const failures = [];
 
 function listJsonFiles(dir) {
   if (!existsSync(dir)) return [];
-
-  const entries = readdirSync(dir);
-  return entries
+  return readdirSync(dir)
     .map((entry) => join(dir, entry))
     .filter((path) => statSync(path).isFile() && path.endsWith('.json'));
 }
@@ -64,7 +60,6 @@ function requireObject(file, object, key) {
     failures.push(`${file} missing valid object field: ${key}`);
     return null;
   }
-
   return object[key];
 }
 
@@ -79,24 +74,15 @@ function hasBlockedGateText(evidence) {
 function checkGenericOpenBlockedEvidence(file, evidence, allowedOpenOutcomes) {
   if (evidence.status !== 'Open') return false;
   if (!allowedOpenOutcomes.has(evidence.outcome)) return false;
-
   requireString(file, evidence, 'reviewer', 3);
   requireString(file, evidence, 'reviewedAt', 10);
   requireString(file, evidence, 'summary', 40);
   requireArray(file, evidence, 'evidenceLocations', 1);
-
-  if (!hasValidRedactionText(evidence)) {
-    failures.push(`${file} missing redaction confirmation`);
-  }
-
-  if (!hasBlockedGateText(evidence)) {
-    failures.push(`${file} Open evidence must keep the release blocked`);
-  }
-
+  if (!hasValidRedactionText(evidence)) failures.push(`${file} missing redaction confirmation`);
+  if (!hasBlockedGateText(evidence)) failures.push(`${file} Open evidence must keep the release blocked`);
   if (Array.isArray(evidence.controlsVerified) && evidence.controlsVerified.length > 0) {
     failures.push(`${file} Open evidence must not list controlsVerified as if passed`);
   }
-
   return true;
 }
 
@@ -104,207 +90,105 @@ function checkReleaseOpenPlaceholder(file, evidence) {
   if (evidence.evidenceItem === 'final-validation-runner') {
     return checkGenericOpenBlockedEvidence(file, evidence, new Set(['blocked', 'not_verified']));
   }
-
   if (evidence.evidenceItem === 'audit-chain-live-validation') {
     return checkGenericOpenBlockedEvidence(file, evidence, new Set(['not_run', 'blocked']));
   }
-
   if (!new Set(['deployment-smoke-validation', 'rollback-dry-run-validation']).has(evidence.evidenceItem)) return false;
   return checkGenericOpenBlockedEvidence(file, evidence, new Set(['failed']));
 }
 
 function checkEnterpriseReleaseEnvOpenPlaceholder(file, evidence) {
   if (evidence.evidenceItem !== 'enterprise-release-env-readiness' || evidence.status !== 'Open') return false;
-
   if (!checkGenericOpenBlockedEvidence(file, evidence, new Set(['not_run', 'failed']))) return true;
-
-  if (evidence.evidenceIntegrity?.placeholderOnly !== true) {
-    failures.push(`${file} Open enterprise release env evidence must be marked placeholderOnly`);
-  }
-
-  if (evidence.evidenceIntegrity?.rawUrlsStored !== false) {
-    failures.push(`${file} enterprise release env evidence must confirm raw URLs are not stored`);
-  }
-
-  if (evidence.evidenceIntegrity?.authorizationHeaderStored !== false) {
-    failures.push(`${file} enterprise release env evidence must confirm Authorization headers are not stored`);
-  }
-
-  if (evidence.evidenceIntegrity?.cookiesStored !== false) {
-    failures.push(`${file} enterprise release env evidence must confirm cookies are not stored`);
-  }
-
+  if (evidence.evidenceIntegrity?.placeholderOnly !== true) failures.push(`${file} Open enterprise release env evidence must be marked placeholderOnly`);
+  if (evidence.evidenceIntegrity?.rawUrlsStored !== false) failures.push(`${file} enterprise release env evidence must confirm raw URLs are not stored`);
+  if (evidence.evidenceIntegrity?.authorizationHeaderStored !== false) failures.push(`${file} enterprise release env evidence must confirm Authorization headers are not stored`);
+  if (evidence.evidenceIntegrity?.cookiesStored !== false) failures.push(`${file} enterprise release env evidence must confirm cookies are not stored`);
   return true;
 }
 
 function checkSupabaseOpenPlaceholder(file, evidence) {
   if (evidence.evidenceItem !== 'supabase-live-rls-validation' || evidence.status !== 'Open') return false;
-
   requireString(file, evidence, 'reviewer', 3);
   requireString(file, evidence, 'summary', 40);
   requireArray(file, evidence, 'evidenceLocations', 1);
+  if (!hasValidRedactionText(evidence)) failures.push(`${file} missing redaction confirmation`);
+  if (evidence.outcome !== 'not_run' && evidence.outcome !== 'failed') failures.push(`${file} Open Supabase evidence must have outcome not_run or failed`);
+  if (!String(evidence.productionGate ?? '').toLowerCase().includes('blocked')) failures.push(`${file} Open Supabase evidence must keep production blocked`);
+  if (!String(evidence.completionRule ?? '').includes('run')) failures.push(`${file} Open Supabase evidence must include completion rule`);
+  return true;
+}
 
-  if (!hasValidRedactionText(evidence)) {
-    failures.push(`${file} missing redaction confirmation`);
+function checkGoogleOAuthOpenPlaceholder(file, evidence) {
+  if (evidence.evidenceItem !== 'google-oauth-validation' || evidence.status !== 'Open') return false;
+  if (!checkGenericOpenBlockedEvidence(file, evidence, new Set(['not_run', 'failed']))) return true;
+  if (!String(evidence.completionRule ?? '').toLowerCase().includes('google oauth provider proof')) {
+    failures.push(`${file} Open Google OAuth evidence must include protected workflow completion rule`);
   }
-
-  if (evidence.outcome !== 'not_run' && evidence.outcome !== 'failed') {
-    failures.push(`${file} Open Supabase evidence must have outcome not_run or failed`);
-  }
-
-  if (!String(evidence.productionGate ?? '').toLowerCase().includes('blocked')) {
-    failures.push(`${file} Open Supabase evidence must keep production blocked`);
-  }
-
-  if (!String(evidence.completionRule ?? '').includes('run')) {
-    failures.push(`${file} Open Supabase evidence must include completion rule`);
-  }
-
+  if (evidence.evidenceIntegrity?.placeholderOnly !== true) failures.push(`${file} Open Google OAuth evidence must be marked placeholderOnly`);
+  if (evidence.evidenceIntegrity?.managementTokenStored !== false) failures.push(`${file} Google OAuth evidence must confirm management token is not stored`);
+  if (evidence.evidenceIntegrity?.projectReferenceStored !== false) failures.push(`${file} Google OAuth evidence must confirm project reference is not stored`);
+  if (evidence.evidenceIntegrity?.rawProviderConfigStored !== false) failures.push(`${file} Google OAuth evidence must confirm raw provider config is not stored`);
+  if (evidence.evidenceIntegrity?.customerDataStored !== false) failures.push(`${file} Google OAuth evidence must confirm customer data is not stored`);
   return true;
 }
 
 function checkStripeOpenPlaceholder(file, evidence) {
   if (evidence.evidenceItem !== 'stripe-billing-validation' || evidence.status !== 'Open') return false;
-
   if (!checkGenericOpenBlockedEvidence(file, evidence, new Set(['not_run', 'failed']))) return true;
-
-  if (evidence.evidenceIntegrity?.placeholderOnly !== true) {
-    failures.push(`${file} Open Stripe evidence must be marked placeholderOnly`);
-  }
-
-  if (evidence.evidenceIntegrity?.runtimeProofInvented !== false) {
-    failures.push(`${file} Open Stripe evidence must confirm runtime proof was not invented`);
-  }
-
-  if (evidence.evidenceIntegrity?.customerFacingProof !== false) {
-    failures.push(`${file} Open Stripe evidence must not be customer-facing proof`);
-  }
-
-  if (evidence.runtimeProof?.executed !== false) {
-    failures.push(`${file} Open Stripe evidence must record that target runtime proof was not executed`);
-  }
-
-  if (!String(evidence.completionRule ?? '').toLowerCase().includes('target')) {
-    failures.push(`${file} Open Stripe evidence must include a target-runtime completion rule`);
-  }
-
+  if (evidence.evidenceIntegrity?.placeholderOnly !== true) failures.push(`${file} Open Stripe evidence must be marked placeholderOnly`);
+  if (evidence.evidenceIntegrity?.runtimeProofInvented !== false) failures.push(`${file} Open Stripe evidence must confirm runtime proof was not invented`);
+  if (evidence.evidenceIntegrity?.customerFacingProof !== false) failures.push(`${file} Open Stripe evidence must not be customer-facing proof`);
+  if (evidence.runtimeProof?.executed !== false) failures.push(`${file} Open Stripe evidence must record that target runtime proof was not executed`);
+  if (!String(evidence.completionRule ?? '').toLowerCase().includes('target')) failures.push(`${file} Open Stripe evidence must include a target-runtime completion rule`);
   return true;
 }
 
 function checkExternalReviewOpenPlaceholder(file, evidence) {
   if (evidence.evidenceItem !== 'external-security-review-or-pentest' || evidence.status !== 'Open') return false;
-
   requireString(file, evidence, 'reviewer', 3);
   requireString(file, evidence, 'summary', 40);
   requireArray(file, evidence, 'evidenceLocations', 1);
-
-  if (!hasValidRedactionText(evidence)) {
-    failures.push(`${file} missing redaction confirmation`);
-  }
-
-  if (evidence.outcome !== 'not_started' && evidence.outcome !== 'not_run') {
-    failures.push(`${file} Open external review evidence must have outcome not_started or not_run`);
-  }
-
-  if (!String(evidence.releaseGate ?? '').toLowerCase().includes('blocked')) {
-    failures.push(`${file} Open external review evidence must keep enterprise release blocked`);
-  }
-
-  if (evidence.evidenceIntegrity?.placeholderOnly !== true) {
-    failures.push(`${file} Open external review evidence must be marked placeholderOnly`);
-  }
-
-  if (evidence.evidenceIntegrity?.realExternalReportAttached !== false) {
-    failures.push(`${file} Open external review evidence must confirm no real external report is attached`);
-  }
-
+  if (!hasValidRedactionText(evidence)) failures.push(`${file} missing redaction confirmation`);
+  if (evidence.outcome !== 'not_started' && evidence.outcome !== 'not_run') failures.push(`${file} Open external review evidence must have outcome not_started or not_run`);
+  if (!String(evidence.releaseGate ?? '').toLowerCase().includes('blocked')) failures.push(`${file} Open external review evidence must keep enterprise release blocked`);
+  if (evidence.evidenceIntegrity?.placeholderOnly !== true) failures.push(`${file} Open external review evidence must be marked placeholderOnly`);
+  if (evidence.evidenceIntegrity?.realExternalReportAttached !== false) failures.push(`${file} Open external review evidence must confirm no real external report is attached`);
   return true;
 }
 
 function checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence) {
   if (evidence.evidenceItem !== 'enterprise-final-readiness-validation' || evidence.status !== 'Open') return false;
-
   requireString(file, evidence, 'reviewer', 3);
   requireString(file, evidence, 'reviewedAt', 10);
   requireString(file, evidence, 'summary', 40);
   requireArray(file, evidence, 'evidenceLocations', 1);
-
-  if (!hasValidRedactionText(evidence)) {
-    failures.push(`${file} missing redaction confirmation`);
-  }
-
-  if (evidence.outcome !== 'no_go') {
-    failures.push(`${file} Open enterprise final readiness evidence must have outcome no_go`);
-  }
-
-  if (evidence.releaseDecision !== 'No-Go') {
-    failures.push(`${file} Open enterprise final readiness evidence must keep releaseDecision No-Go`);
-  }
-
-  if (!String(evidence.productionGate ?? '').toLowerCase().includes('blocked')) {
-    failures.push(`${file} Open enterprise final readiness evidence must keep production blocked`);
-  }
-
-  if (!String(evidence.completionRule ?? '').toLowerCase().includes('complete')) {
-    failures.push(`${file} Open enterprise final readiness evidence must include completion rule`);
-  }
-
-  if (!evidence.blockingEvidence || typeof evidence.blockingEvidence !== 'object' || Array.isArray(evidence.blockingEvidence)) {
-    failures.push(`${file} Open enterprise final readiness evidence must document blockingEvidence`);
-  }
-
-  if (evidence.evidenceIntegrity?.placeholderOnly !== true) {
-    failures.push(`${file} Open enterprise final readiness evidence must be marked placeholderOnly`);
-  }
-
-  if (evidence.evidenceIntegrity?.realRuntimeEvidenceAttached !== false) {
-    failures.push(`${file} Open enterprise final readiness evidence must confirm no real runtime evidence is attached`);
-  }
-
-  if (evidence.evidenceIntegrity?.customerFacingProof !== false) {
-    failures.push(`${file} Open enterprise final readiness evidence must not be customer-facing proof`);
-  }
-
+  if (!hasValidRedactionText(evidence)) failures.push(`${file} missing redaction confirmation`);
+  if (evidence.outcome !== 'no_go') failures.push(`${file} Open enterprise final readiness evidence must have outcome no_go`);
+  if (evidence.releaseDecision !== 'No-Go') failures.push(`${file} Open enterprise final readiness evidence must keep releaseDecision No-Go`);
+  if (!String(evidence.productionGate ?? '').toLowerCase().includes('blocked')) failures.push(`${file} Open enterprise final readiness evidence must keep production blocked`);
+  if (!String(evidence.completionRule ?? '').toLowerCase().includes('complete')) failures.push(`${file} Open enterprise final readiness evidence must include completion rule`);
+  if (!evidence.blockingEvidence || typeof evidence.blockingEvidence !== 'object' || Array.isArray(evidence.blockingEvidence)) failures.push(`${file} Open enterprise final readiness evidence must document blockingEvidence`);
+  if (evidence.evidenceIntegrity?.placeholderOnly !== true) failures.push(`${file} Open enterprise final readiness evidence must be marked placeholderOnly`);
+  if (evidence.evidenceIntegrity?.realRuntimeEvidenceAttached !== false) failures.push(`${file} Open enterprise final readiness evidence must confirm no real runtime evidence is attached`);
+  if (evidence.evidenceIntegrity?.customerFacingProof !== false) failures.push(`${file} Open enterprise final readiness evidence must not be customer-facing proof`);
   return true;
 }
 
 function checkEnterpriseAuditOpenEvidence(file, evidence) {
   if (evidence.evidenceItem !== 'enterprise-10-10-audit' || evidence.status !== 'Open') return false;
-
   requireString(file, evidence, 'reviewer', 3);
   requireString(file, evidence, 'reviewedAt', 10);
   requireString(file, evidence, 'summary', 40);
   requireArray(file, evidence, 'evidenceLocations', 1);
   requireArray(file, evidence, 'decisionReasons', 1);
-
-  if (!hasValidRedactionText(evidence)) {
-    failures.push(`${file} missing redaction confirmation`);
-  }
-
-  if (evidence.outcome !== 'no_go') {
-    failures.push(`${file} Open enterprise audit evidence must have outcome no_go`);
-  }
-
-  if (evidence.decision !== 'No-Go') {
-    failures.push(`${file} Open enterprise audit evidence must keep decision No-Go`);
-  }
-
-  if (!String(evidence.releaseGate ?? '').toLowerCase().includes('blocked')) {
-    failures.push(`${file} Open enterprise audit evidence must keep releaseGate blocked`);
-  }
-
-  if (evidence.evidenceIntegrity?.containsSensitiveValues !== false) {
-    failures.push(`${file} enterprise audit evidence must confirm no sensitive values are stored`);
-  }
-
-  if (evidence.evidenceIntegrity?.runtimeProofInvented !== false) {
-    failures.push(`${file} enterprise audit evidence must confirm runtime proof was not invented`);
-  }
-
-  if (Array.isArray(evidence.controlsVerified) && evidence.controlsVerified.length > 0) {
-    failures.push(`${file} Open enterprise audit evidence must not list controlsVerified as if passed`);
-  }
-
+  if (!hasValidRedactionText(evidence)) failures.push(`${file} missing redaction confirmation`);
+  if (evidence.outcome !== 'no_go') failures.push(`${file} Open enterprise audit evidence must have outcome no_go`);
+  if (evidence.decision !== 'No-Go') failures.push(`${file} Open enterprise audit evidence must keep decision No-Go`);
+  if (!String(evidence.releaseGate ?? '').toLowerCase().includes('blocked')) failures.push(`${file} Open enterprise audit evidence must keep releaseGate blocked`);
+  if (evidence.evidenceIntegrity?.containsSensitiveValues !== false) failures.push(`${file} enterprise audit evidence must confirm no sensitive values are stored`);
+  if (evidence.evidenceIntegrity?.runtimeProofInvented !== false) failures.push(`${file} enterprise audit evidence must confirm runtime proof was not invented`);
+  if (Array.isArray(evidence.controlsVerified) && evidence.controlsVerified.length > 0) failures.push(`${file} Open enterprise audit evidence must not list controlsVerified as if passed`);
   return true;
 }
 
@@ -314,10 +198,7 @@ function checkCompleteEvidence(file, evidence) {
   requireString(file, evidence, 'summary', 40);
   requireArray(file, evidence, 'evidenceLocations', 1);
   requireArray(file, evidence, 'controlsVerified', 1);
-
-  if (!hasValidRedactionText(evidence)) {
-    failures.push(`${file} missing redaction confirmation`);
-  }
+  if (!hasValidRedactionText(evidence)) failures.push(`${file} missing redaction confirmation`);
 }
 
 function checkExceptionEvidence(file, evidence) {
@@ -325,14 +206,9 @@ function checkExceptionEvidence(file, evidence) {
   requireString(file, evidence, 'reviewedAt', 10);
   requireString(file, evidence, 'summary', 40);
   requireArray(file, evidence, 'evidenceLocations', 1);
-
-  if (!hasValidRedactionText(evidence)) {
-    failures.push(`${file} missing redaction confirmation`);
-  }
-
+  if (!hasValidRedactionText(evidence)) failures.push(`${file} missing redaction confirmation`);
   const exception = requireObject(file, evidence, 'exception');
   if (!exception) return;
-
   requireString(file, exception, 'riskOwner', 3);
   requireString(file, exception, 'rationale', 20);
   requireArray(file, exception, 'compensatingControls', 1);
@@ -340,34 +216,28 @@ function checkExceptionEvidence(file, evidence) {
   requireString(file, exception, 'approvalReference', 5);
 }
 
-const files = listJsonFiles(evidenceDir);
-
-for (const file of files) {
+for (const file of listJsonFiles(evidenceDir)) {
   const evidence = JSON.parse(readFileSync(file, 'utf8'));
-
   if (!allowedItems.has(evidence.evidenceItem)) {
     failures.push(`${file} has unexpected evidenceItem: ${evidence.evidenceItem}`);
     continue;
   }
-
   if (checkReleaseOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseReleaseEnvOpenPlaceholder(file, evidence)) continue;
   if (checkSupabaseOpenPlaceholder(file, evidence)) continue;
+  if (checkGoogleOAuthOpenPlaceholder(file, evidence)) continue;
   if (checkStripeOpenPlaceholder(file, evidence)) continue;
   if (checkExternalReviewOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseAuditOpenEvidence(file, evidence)) continue;
-
   if (evidence.status === 'Complete') {
     checkCompleteEvidence(file, evidence);
     continue;
   }
-
   if (evidence.status === 'Exception') {
     checkExceptionEvidence(file, evidence);
     continue;
   }
-
   failures.push(`${file} has unsupported runtime evidence status/outcome combination`);
 }
 
@@ -376,5 +246,4 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-
-console.log(`Validated ${files.length} runtime evidence file(s).`);
+console.log(`Validated ${listJsonFiles(evidenceDir).length} runtime evidence file(s).`);
