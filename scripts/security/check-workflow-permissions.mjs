@@ -110,6 +110,23 @@ function hasJustifiedCheckoutWriteException(file, source) {
   return source.includes('contents: write') && source.includes('git push');
 }
 
+function hasForbiddenTargetAuthority(source) {
+  const patterns = [
+    /contents:\s*write/i,
+    /pull-requests:\s*write/i,
+    /actions:\s*write/i,
+    /checks:\s*write/i,
+    /deployments:\s*write/i,
+    /statuses:\s*write/i,
+    /pulls\.merge/i,
+    /pulls\.updateBranch/i,
+    /enablePullRequestAutoMerge/i,
+    /PR_AUTOPILOT_TOKEN/i,
+    /PR_AUTOFIX_TOKEN/i,
+  ];
+  return patterns.filter((pattern) => pattern.test(source));
+}
+
 for (const file of workflowFiles()) {
   const source = readFileSync(file, 'utf8');
 
@@ -121,15 +138,18 @@ for (const file of workflowFiles()) {
     );
   }
 
-  if (usesWriteAll(source)) {
-    report(file, 'permissions write-all is forbidden');
-  }
+  if (usesWriteAll(source)) report(file, 'permissions write-all is forbidden');
 
   if (usesPullRequestTarget(source)) {
     if (!allowedPullRequestTargetWorkflows.has(file)) {
       report(file, 'pull_request_target is forbidden unless explicitly allowlisted');
     } else if (source.includes('actions/checkout@')) {
       report(file, 'allowlisted pull_request_target workflows must never checkout pull request code');
+    } else {
+      const forbiddenAuthority = hasForbiddenTargetAuthority(source);
+      if (forbiddenAuthority.length > 0) {
+        report(file, 'allowlisted pull_request_target workflow must remain read-only and human-merge only');
+      }
     }
   }
 
