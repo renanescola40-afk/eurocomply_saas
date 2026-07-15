@@ -76,7 +76,7 @@ describe('AI inventory API contracts', () => {
 
     const conflictGuard = routeSource.indexOf("error: 'ai_system_state_changed'");
     const successAudit = routeSource.indexOf("action: 'ai_system_reassessed'");
-    const historyWrite = querySource.indexOf("action: 'reassessed'");
+    const historyWrite = querySource.lastIndexOf("action: 'reassessed'");
     const conflictReturn = querySource.indexOf("return { status: 'conflict' }");
 
     expect(conflictGuard).toBeGreaterThan(-1);
