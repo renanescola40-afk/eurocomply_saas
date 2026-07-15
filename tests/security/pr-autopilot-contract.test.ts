@@ -5,9 +5,21 @@ describe('PR Autopilot security contract', () => {
   const autofix = readFileSync('.github/workflows/codex-autofix.yml', 'utf8');
   const permissionsGate = readFileSync('scripts/security/check-workflow-permissions.mjs', 'utf8');
   const sensitiveGate = readFileSync('scripts/security/check-workflow-sensitive-patterns.mjs', 'utf8');
+  const vercelPrompt = readFileSync('.github/agents/pr-creation-with-vercel-limit.prompt.md', 'utf8');
+  const prTemplate = readFileSync('.github/pull_request_template.md', 'utf8');
+  const runbook = readFileSync('docs/operations/pr-autopilot.md', 'utf8');
   const policy = JSON.parse(readFileSync('.github/pr-autopilot-policy.json', 'utf8')) as {
     limits: { maxAutofixAttempts: number };
     blockedPathPrefixes: string[];
+    externalProviderHandling: {
+      vercel: {
+        allowPullRequestCreation: boolean;
+        treatAsCodeFailure: boolean;
+        allowAutofixForProviderFailure: boolean;
+        requireTruthfulBlockedDeploymentEvidence: boolean;
+        mergeBehavior: string;
+      };
+    };
     mergeRequirements: {
       requireApprovedReview: boolean;
       requireAllThreadsResolved: boolean;
@@ -46,10 +58,24 @@ describe('PR Autopilot security contract', () => {
     expect(policy.limits.maxAutofixAttempts).toBe(2);
   });
 
+  it('continues PR delivery while classifying Vercel quota as an external blocker', () => {
+    expect(policy.externalProviderHandling.vercel.allowPullRequestCreation).toBe(true);
+    expect(policy.externalProviderHandling.vercel.treatAsCodeFailure).toBe(false);
+    expect(policy.externalProviderHandling.vercel.allowAutofixForProviderFailure).toBe(false);
+    expect(policy.externalProviderHandling.vercel.requireTruthfulBlockedDeploymentEvidence).toBe(true);
+    expect(policy.externalProviderHandling.vercel.mergeBehavior).toBe('branch-protection-authoritative');
+    expect(vercelPrompt).toContain('Do not stop before creating the PR solely because Vercel is rate-limited.');
+    expect(vercelPrompt).toContain('Branch protection remains authoritative');
+    expect(prTemplate).toContain('## External deployment status');
+    expect(prTemplate).toContain('A provider-only quota signal must not prevent branch, commit, push, or PR creation.');
+    expect(runbook).toContain('Vercel quota and rate-limit signals do not block repository delivery.');
+  });
+
   it('blocks protected product, security, provider, release, and governance paths', () => {
     expect(policy.blockedPathPrefixes).toEqual(
       expect.arrayContaining([
         '.github/workflows/',
+        '.github/agents/',
         'supabase/',
         'scripts/security/',
         'scripts/release/',
