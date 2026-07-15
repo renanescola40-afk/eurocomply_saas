@@ -53,7 +53,10 @@ describe('PR Autopilot security contract', () => {
     expect(autofix).toContain('workflow_run:');
     expect(autofix).toContain('workflows: [CI]');
     expect(autofix).toContain('openai/codex-action@v1');
-    expect(autofix).toContain("permission-profile: ':workspace'");
+    expect(autofix).toContain('sandbox: workspace-write');
+    expect(autofix).toContain('safety-strategy: drop-sudo');
+    expect(autofix).not.toContain('sandbox: danger-full-access');
+    expect(autofix).not.toContain('safety-strategy: unsafe');
     expect(autofix).toContain('persist-credentials: false');
     expect(autofix).toContain('npm ci --ignore-scripts');
     expect(autofix).toContain('HEAD:"$HEAD_BRANCH"');
