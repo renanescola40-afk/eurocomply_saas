@@ -1,14 +1,17 @@
 {
   "evidenceItem": "final-validation-runner",
+  "id": "final-validation-runner",
   "status": "Open",
-  "outcome": "failed",
+  "outcome": "blocked",
+  "releaseDecision": "No-Go",
   "reviewer": "RISCK COMPLY release automation",
-  "reviewedAt": "2026-07-08T00:00:00.000Z",
-  "generatedAt": "2026-07-08T00:00:00.000Z",
-  "summary": "Final validation runner placeholder. This file intentionally keeps the release blocked until the final validation command set is executed for the exact release commit and records Complete/passed proof.",
+  "reviewedAt": "2026-07-15T11:30:00.000Z",
+  "generatedAt": "2026-07-15T11:30:00.000Z",
+  "summary": "Final validation runner placeholder. The release remains blocked until the canonical command set is executed for the exact main-branch release commit and the writer records Complete/passed/Go evidence with trusted GitHub Actions provenance.",
   "redactionConfirmation": "Redaction confirmed for runtime evidence.",
   "evidenceLocations": [
     "scripts/release/run-final-validation.mjs",
+    "scripts/release/write-final-validation-runner-evidence.mjs",
     "scripts/release/check-enterprise-runtime-evidence.mjs",
     "docs/security/evidence/runtime/final-validation-runner.json"
   ],
@@ -19,14 +22,33 @@
     "npm run typecheck",
     "npm run test",
     "npm run build",
+    "npm run test:e2e",
     "npm run security:ci",
-    "npm run release:enterprise-readiness"
+    "npm run security:rls:live",
+    "npm run release:deployment-smoke",
+    "npm run release:observability-smoke",
+    "npm run release:rollback:dry-run",
+    "npm run release:enterprise-runtime-evidence",
+    "npm run security:p0-runtime-gap:strict"
   ],
-  "productionGate": "Release remains blocked until final validation runner evidence is regenerated as Complete/passed for the exact release commit.",
+  "runtimeContext": {
+    "generatedByGithubActions": false,
+    "repository": "renanescola40-afk/eurocomply_saas",
+    "branch": "main",
+    "githubRunId": "placeholder",
+    "commitSha": "not-yet-validated"
+  },
+  "failures": [
+    "Final validation command set has not been proven for an exact main-branch release commit."
+  ],
+  "productionGate": "Release remains blocked until final validation runner evidence is regenerated as Complete/passed/Go for the exact release commit.",
   "evidenceIntegrity": {
     "placeholderOnly": true,
     "containsSensitiveValues": false,
     "valuesRedacted": true,
+    "authorizationHeaderStored": false,
+    "cookiesStored": false,
+    "rawUrlsStored": false,
     "customerFacingProof": false
   }
 }
