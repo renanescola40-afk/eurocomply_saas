@@ -9,6 +9,7 @@ function readRepoFile(path: string) {
 describe('AI inventory API contracts', () => {
   const collection = 'src/app/api/ai-systems/route.ts';
   const detail = 'src/app/api/ai-systems/[id]/route.ts';
+  const queries = 'src/server/queries/ai-systems.ts';
 
   it('covers create and list contracts', () => {
     const source = readRepoFile(collection);
@@ -52,12 +53,36 @@ describe('AI inventory API contracts', () => {
     expect(source).toContain('classifyParsedAiSystemBody(body)');
     expect(source).toContain('updateAiSystem(id, organization.id, {');
     expect(source).toContain('reassessedBy: user.id');
+    expect(source).toContain('expectedUpdatedAt: existing.updated_at');
     expect(source).toContain('riskLevel: result.classification.riskLevel');
     expect(source).toContain('obligations: result.classification.obligations');
     expect(source).toContain('nextActions: result.classification.nextActions');
     expect(source).toContain("action: 'ai_system_reassessed'");
     expect(source).toContain('previousRiskLevel: existing.risk_level');
     expect(source).toContain('return noStoreJson({ system, history, roleAssessment: result.roleAssessment })');
+  });
+
+  it('rejects stale reassessments before history and success audit evidence', () => {
+    const routeSource = readRepoFile(detail);
+    const querySource = readRepoFile(queries);
+
+    expect(querySource).toContain(".eq('updated_at', input.expectedUpdatedAt)");
+    expect(querySource).toContain('.maybeSingle()');
+    expect(querySource).toContain("return { status: 'conflict' }");
+
+    expect(routeSource).toContain("updateResult.status === 'conflict'");
+    expect(routeSource).toContain("error: 'ai_system_state_changed'");
+    expect(routeSource).toContain('{ status: 409 }');
+
+    const conflictGuard = routeSource.indexOf("error: 'ai_system_state_changed'");
+    const successAudit = routeSource.indexOf("action: 'ai_system_reassessed'");
+    const historyWrite = querySource.indexOf("action: 'reassessed'");
+    const conflictReturn = querySource.indexOf("return { status: 'conflict' }");
+
+    expect(conflictGuard).toBeGreaterThan(-1);
+    expect(successAudit).toBeGreaterThan(conflictGuard);
+    expect(conflictReturn).toBeGreaterThan(-1);
+    expect(historyWrite).toBeGreaterThan(conflictReturn);
   });
 
   it('keeps denial and no-store paths explicit', () => {
