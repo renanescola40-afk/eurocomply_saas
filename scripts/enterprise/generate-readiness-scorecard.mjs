@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -14,6 +14,7 @@ export const STATUS = Object.freeze({
 });
 
 const DEFAULT_CONFIG = 'docs/enterprise/controls.json';
+const DEFAULT_OVERRIDES = 'docs/enterprise/evidence-overrides.json';
 const DEFAULT_JSON = 'artifacts/enterprise-readiness/enterprise-readiness-scorecard.json';
 const DEFAULT_MARKDOWN = 'artifacts/enterprise-readiness/enterprise-readiness-scorecard.md';
 const DEFAULT_GITHUB_CHECKS = 'artifacts/enterprise-readiness/github-checks-evidence.json';
@@ -34,6 +35,7 @@ const REPOSITORY_CHECKS = new Set([
   'publicSecretScan',
   'dependencyReview',
   'actionlint',
+  'publicClaims',
   'fullSecuritySuite',
   'enterpriseProductionGate',
   'securityCi',
@@ -107,6 +109,81 @@ export function validateConfig(config) {
   if (controlCount !== config.controlCount || controlCount !== 100) failures.push(`control count must be 100, received ${controlCount}`);
   if (Math.abs(totalWeight - config.totalWeight) > 0.0001 || config.totalWeight !== 100) failures.push(`total weight must be 100, received ${totalWeight}`);
   return failures;
+}
+
+export function applyEvidenceOverrides(config, overrides) {
+  const result = structuredClone(config);
+  const failures = [];
+
+  if (!overrides) return { config: result, failures };
+  if (overrides.schemaVersion !== 1) failures.push('evidence overrides schemaVersion must be 1');
+  if (!Array.isArray(overrides.overrides)) {
+    failures.push('evidence overrides must be an array');
+    return { config: result, failures };
+  }
+
+  const controlsById = new Map();
+  for (const domain of result.domains ?? []) {
+    for (const [index, control] of (domain.controls ?? []).entries()) {
+      controlsById.set(`${domain.prefix}-${String(index + 1).padStart(2, '0')}`, control);
+    }
+  }
+
+  const seen = new Set();
+  for (const entry of overrides.overrides) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      failures.push('each evidence override must be an object');
+      continue;
+    }
+
+    const allowedEntryKeys = new Set(['controlId', 'evidence']);
+    const unexpectedEntryKeys = Object.keys(entry).filter((key) => !allowedEntryKeys.has(key));
+    if (unexpectedEntryKeys.length > 0) {
+      failures.push(`evidence override contains unsupported field(s): ${unexpectedEntryKeys.join(', ')}`);
+    }
+
+    const controlId = String(entry.controlId ?? '').trim();
+    if (!controlId) {
+      failures.push('evidence override controlId is required');
+      continue;
+    }
+    if (seen.has(controlId)) failures.push(`duplicate evidence override: ${controlId}`);
+    seen.add(controlId);
+
+    const control = controlsById.get(controlId);
+    if (!control) {
+      failures.push(`unknown evidence override control: ${controlId}`);
+      continue;
+    }
+
+    const evidence = entry.evidence;
+    if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) {
+      failures.push(`${controlId} evidence override must be an object`);
+      continue;
+    }
+
+    const allowedEvidenceKeys = new Set(['path', 'check']);
+    const unexpectedEvidenceKeys = Object.keys(evidence).filter((key) => !allowedEvidenceKeys.has(key));
+    if (unexpectedEvidenceKeys.length > 0) {
+      failures.push(`${controlId} evidence override contains unsupported field(s): ${unexpectedEvidenceKeys.join(', ')}`);
+    }
+
+    if (typeof evidence.path !== 'string' || !evidence.path.trim()) {
+      failures.push(`${controlId} evidence.path is required`);
+      continue;
+    }
+    if (evidence.check !== undefined && (typeof evidence.check !== 'string' || !evidence.check.trim())) {
+      failures.push(`${controlId} evidence.check must be a non-empty string when provided`);
+      continue;
+    }
+
+    control.evidence = {
+      path: evidence.path.trim(),
+      ...(evidence.check ? { check: evidence.check.trim() } : {}),
+    };
+  }
+
+  return { config: result, failures };
 }
 
 function readJson(path) {
@@ -289,16 +366,19 @@ export function renderMarkdown(scorecard) {
 
 function main() {
   const configPath = process.env.ENTERPRISE_CONTROLS_PATH || DEFAULT_CONFIG;
+  const overridesPath = process.env.ENTERPRISE_EVIDENCE_OVERRIDES_PATH || DEFAULT_OVERRIDES;
   const jsonPath = process.env.ENTERPRISE_SCORECARD_JSON || DEFAULT_JSON;
   const markdownPath = process.env.ENTERPRISE_SCORECARD_MARKDOWN || DEFAULT_MARKDOWN;
-  const config = JSON.parse(readFileSync(configPath, 'utf8'));
-  const failures = validateConfig(config);
+  const baseConfig = JSON.parse(readFileSync(configPath, 'utf8'));
+  const overrides = existsSync(overridesPath) ? JSON.parse(readFileSync(overridesPath, 'utf8')) : null;
+  const applied = applyEvidenceOverrides(baseConfig, overrides);
+  const failures = [...applied.failures, ...validateConfig(applied.config)];
   if (failures.length > 0) {
     for (const failure of failures) console.error(`- ${failure}`);
     process.exit(1);
   }
 
-  const scorecard = calculateScorecard(config);
+  const scorecard = calculateScorecard(applied.config);
   mkdirSync(dirname(jsonPath), { recursive: true });
   mkdirSync(dirname(markdownPath), { recursive: true });
   writeFileSync(jsonPath, `${JSON.stringify(scorecard, null, 2)}\n`);
