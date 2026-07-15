@@ -61,7 +61,7 @@ const criticalApiContracts: ApiRouteContract[] = [
       'assertTrustedOrigin',
       'checkDistributedRateLimit',
       'parseJsonBodyWithZod',
-      'createAuditEvent',
+      'auditMetadata',
       'secureApiError',
       'noStoreJson',
     ],
