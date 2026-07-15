@@ -52,6 +52,43 @@ Revert the implementation and its decision record together. No customer-data rew
 `;
 }
 
+function historicalDatedDecision() {
+  return `# ADR: Historical dated decision
+
+- **Date:** 2026-07-14
+- **Status:** Proposed
+- **Scope:** compatibility
+
+## Context
+
+A historical architecture record used the dated filename convention and bold metadata labels. It still documents a material choice with sufficient operational and security context to remain reviewable.
+
+## Decision
+
+Retain the historical record and validate it through an explicitly supported compatibility format rather than renaming an already reviewed repository artefact.
+
+## Consequences
+
+Positive:
+
+- historical provenance remains stable;
+- the inventory is complete.
+
+Trade-offs:
+
+- the validator must support two documented filename conventions;
+- future records should prefer the numbered format.
+
+## Validation
+
+Focused tests prove that dated records remain reviewable without being confused with duplicate numbered ADRs.
+
+## Rollback
+
+Remove compatibility only after historical records have been migrated through a separate reviewed change.
+`;
+}
+
 afterEach(() => {
   while (temporaryDirectories.length > 0) {
     rmSync(temporaryDirectories.pop()!, { recursive: true, force: true });
@@ -74,7 +111,21 @@ describe('architecture review evidence', () => {
     expect(second.aggregateDigest).toBe(first.aggregateDigest);
   });
 
-  it('fails closed for malformed metadata, missing sections and duplicate ADR numbers', () => {
+  it('supports historical dated ADRs, bold metadata and Consequences trade-offs', () => {
+    const decisionsDir = temporaryDecisionDirectory();
+    writeFileSync(join(decisionsDir, 'ADR-2026-07-14-historical-decision.md'), historicalDatedDecision());
+    writeFileSync(join(decisionsDir, '2026-07-15-historical-decision.md'), historicalDatedDecision().replace('2026-07-14', '2026-07-15'));
+    writeFileSync(join(decisionsDir, 'TEMPLATE.md'), '# template only');
+
+    const scan = scanArchitectureDecisions({ decisionsDir, minimumDecisions: 2 });
+
+    expect(scan.passed).toBe(true);
+    expect(scan.decisions).toHaveLength(2);
+    expect(scan.decisions.map((decision) => decision.format)).toEqual(['dated-decision', 'dated-adr']);
+    expect(scan.decisions.every((decision) => decision.status === 'Proposed')).toBe(true);
+  });
+
+  it('fails closed for malformed metadata, missing sections and duplicate decision identities', () => {
     const decisionsDir = temporaryDecisionDirectory();
     writeFileSync(join(decisionsDir, 'ADR-0001-first.md'), validDecision(1).replace('- Status: Accepted', '- Status: Unknown'));
     writeFileSync(join(decisionsDir, 'ADR-0001-duplicate.md'), validDecision(1).replace('## Rollback', '## Recovery'));
@@ -84,7 +135,7 @@ describe('architecture review evidence', () => {
     expect(scan.passed).toBe(false);
     expect(scan.failures).toEqual(expect.arrayContaining([
       expect.stringContaining('invalid or missing Status'),
-      expect.stringContaining('duplicates ADR number'),
+      expect.stringContaining('duplicates architecture decision identity'),
       expect.stringContaining('missing section(s): Rollback'),
     ]));
   });
@@ -96,6 +147,8 @@ describe('architecture review evidence', () => {
       aggregateDigest: 'b'.repeat(64),
       decisions: Array.from({ length: 10 }, (_, index) => ({
         path: `docs/decisions/ADR-${String(index + 1).padStart(4, '0')}-example.md`,
+        identity: `ADR-${String(index + 1).padStart(4, '0')}`,
+        format: 'numbered',
         number: String(index + 1).padStart(4, '0'),
         status: 'Accepted',
         date: '2026-07-15',
@@ -129,6 +182,8 @@ describe('architecture review evidence', () => {
         aggregateDigest: 'd'.repeat(64),
         decisions: Array.from({ length: 10 }, (_, index) => ({
           path: `docs/decisions/ADR-${String(index + 1).padStart(4, '0')}-example.md`,
+          identity: `ADR-${String(index + 1).padStart(4, '0')}`,
+          format: 'numbered',
           number: String(index + 1).padStart(4, '0'),
           status: 'Proposed',
           date: '2026-07-15',
