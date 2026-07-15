@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { logger, logSecurityEvent, sanitizeContext, STANDARD_SECURITY_EVENTS } from './logger';
+import { logger, logSecurityEvent, sanitizeContext, securityAlertSeverity, STANDARD_SECURITY_EVENTS } from './logger';
 
 describe('central observability logger', () => {
   afterEach(() => {
@@ -58,18 +58,40 @@ describe('central observability logger', () => {
     ]);
   });
 
-  it('logs standardized security events with request id', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  it('classifies only material security events for centralized alert routing', () => {
+    expect(securityAlertSeverity('rbac_denied')).toBe('none');
+    expect(securityAlertSeverity('step_up_failed')).toBe('high');
+    expect(securityAlertSeverity('webhook_failed')).toBe('high');
+    expect(securityAlertSeverity('rls_validation_failed')).toBe('critical');
+    expect(securityAlertSeverity('audit_chain_invalid')).toBe('critical');
+  });
 
-    logSecurityEvent('rbac_denied', {
-      requestId: 'req_rbac',
-      organizationId: 'org_rbac',
-      reason: 'missing_permission',
-    });
+  it('logs standardized security events with request id and truthful local fallback metadata', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const originalPublicDsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+    const originalServerDsn = process.env.SENTRY_DSN;
+    delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+    delete process.env.SENTRY_DSN;
+
+    try {
+      logSecurityEvent('audit_chain_invalid', {
+        requestId: 'req_audit',
+        organizationId: 'org_audit',
+        reason: 'signature_mismatch',
+      });
+    } finally {
+      if (originalPublicDsn === undefined) delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+      else process.env.NEXT_PUBLIC_SENTRY_DSN = originalPublicDsn;
+      if (originalServerDsn === undefined) delete process.env.SENTRY_DSN;
+      else process.env.SENTRY_DSN = originalServerDsn;
+    }
 
     const payload = JSON.parse(String(spy.mock.calls[0][0]));
-    expect(payload.event).toBe('rbac_denied');
-    expect(payload.requestId).toBe('req_rbac');
-    expect(payload.context.reason).toBe('missing_permission');
+    expect(payload.event).toBe('audit_chain_invalid');
+    expect(payload.requestId).toBe('req_audit');
+    expect(payload.context.reason).toBe('signature_mismatch');
+    expect(payload.context.alertSeverity).toBe('critical');
+    expect(payload.context.alertProvider).toBe('local_log');
+    expect(payload.context.alertRouted).toBe(false);
   });
 });

@@ -12,6 +12,8 @@ const requiredControls = [
   'Evidence is redacted',
 ];
 const requiredCompleteSources = ['application', 'identity', 'database', 'edge'];
+const requiredActiveAlerts = ['audit_chain_invalid', 'rls_validation_failed', 'webhook_failed'];
+const allowedAlertSeverities = new Set(['high', 'critical']);
 
 function fail(message) {
   console.error(`P1 centralized logging evidence check failed: ${message}`);
@@ -38,9 +40,10 @@ if (placeholderPattern.test(JSON.stringify(evidence))) fail('evidence must not c
 if (evidence.control !== 'centralized-logging-alerts') fail('control must be centralized-logging-alerts');
 if (!['Complete', 'Exception'].includes(evidence.status)) fail('status must be Complete or Exception');
 if (evidence.redaction !== 'All confidential values are redacted.') fail('redaction statement is missing or invalid');
-if (!evidence.reviewedAt || !evidence.reviewer || !evidence.targetEnvironment) fail('reviewedAt, reviewer, and targetEnvironment are required');
+if (!evidence.reviewedAt || !evidence.reviewer || evidence.targetEnvironment !== 'production') fail('reviewedAt, reviewer, and production targetEnvironment are required');
 
 if (!evidence.loggingBackend || evidence.loggingBackend.scope !== 'centralized' || !evidence.loggingBackend.provider || !evidence.loggingBackend.retentionPolicy || !evidence.loggingBackend.evidenceLocation) fail('loggingBackend must identify centralized provider, retentionPolicy, and evidenceLocation');
+if (!evidence.loggingBackend.environmentTag || !evidence.loggingBackend.releaseTag) fail('loggingBackend must document environment and release correlation tags');
 
 if (!Array.isArray(evidence.logSourcesReviewed) || evidence.logSourcesReviewed.length === 0) fail('logSourcesReviewed must include at least one source');
 const sources = new Set();
@@ -57,9 +60,18 @@ if (evidence.status === 'Complete') {
 }
 
 if (!Array.isArray(evidence.alertsReviewed) || evidence.alertsReviewed.length === 0) fail('alertsReviewed must include at least one alert');
+const activeAlerts = new Set();
 for (const alert of evidence.alertsReviewed) {
-  if (!alert.alertName || !alert.trigger || !alert.severity || !alert.status || !alert.evidenceLocation) fail('each alert must include alertName, trigger, severity, status, and evidenceLocation');
+  if (!alert.alertName || !alert.trigger || !alert.severity || !alert.status || !alert.evidenceLocation || !alert.fingerprint) fail('each alert must include alertName, trigger, severity, status, fingerprint, and evidenceLocation');
+  if (!allowedAlertSeverities.has(alert.severity)) fail(`${alert.alertName} severity must be high or critical`);
   if (evidence.status === 'Complete' && alert.status !== 'active') fail(`${alert.alertName} must have status active for Complete evidence`);
+  if (alert.status === 'active') activeAlerts.add(String(alert.alertName).trim());
+}
+
+if (evidence.status === 'Complete') {
+  for (const alertName of requiredActiveAlerts) {
+    if (!activeAlerts.has(alertName)) fail(`Complete evidence must include active alert: ${alertName}`);
+  }
 }
 
 if (!Array.isArray(evidence.controlsVerified)) fail('controlsVerified must be an array');
