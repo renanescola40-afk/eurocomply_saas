@@ -21,23 +21,32 @@ function verifyRuntimeReleaseSha() {
   runNodeScript('scripts/release/verify-runtime-release-sha.mjs');
 }
 
+async function writeSecurityResponseEvidence() {
+  const module = await import('./write-security-response-evidence.mjs');
+  module.writeSecurityResponseEvidence();
+}
+
 async function prepareSecurityResponseEvidence() {
   verifyRuntimeReleaseSha();
   runNodeScript('scripts/release/run-deployment-smoke.mjs');
-  const module = await import('./write-security-response-evidence.mjs');
-  module.writeSecurityResponseEvidence();
+  await writeSecurityResponseEvidence();
+}
+
+async function finalizeSecurityResponseEvidence() {
+  verifyRuntimeReleaseSha();
+  await writeSecurityResponseEvidence();
 }
 
 if (enterpriseRequested) {
   await import('./check-enterprise-release-env.mjs');
   await prepareSecurityResponseEvidence();
   await import('./run-public-production-release-v2.mjs');
-  verifyRuntimeReleaseSha();
+  await finalizeSecurityResponseEvidence();
 } else if (releaseTarget === 'public-production' || releaseTarget === 'production') {
   await import('./check-public-production-release-env.mjs');
   await prepareSecurityResponseEvidence();
   await import('./run-public-production-release-final.mjs');
-  verifyRuntimeReleaseSha();
+  await finalizeSecurityResponseEvidence();
 } else {
   console.error(`Unsupported RELEASE_TARGET: ${releaseTarget || '(empty)'}. Expected public-production, production, or enterprise.`);
   process.exitCode = 1;
