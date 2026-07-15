@@ -32,7 +32,6 @@ describe('runtime release SHA binding', () => {
       observedCommitSha: SHA_A,
       provenance: 'vercel',
     });
-
     expect(sanitizeRuntimeReleaseResponse({
       status: '<script>',
       release: {
@@ -53,12 +52,10 @@ describe('runtime release SHA binding', () => {
       expectedCommitSha: SHA_A,
       observedCommitSha: SHA_A,
     })).toBe(SHA_A);
-
     expect(selectPersistedObservedCommitSha({
       expectedCommitSha: SHA_A,
       observedCommitSha: SHA_B,
     })).toBeNull();
-
     expect(selectPersistedObservedCommitSha({
       expectedCommitSha: SHA_A,
       observedCommitSha: `${SHA_A}untrusted`,
@@ -89,7 +86,6 @@ describe('runtime release SHA binding', () => {
       endpointStatus: 200,
       cacheControl: 'no-store',
     });
-
     expect(result.passed).toBe(false);
     expect(result.failures).toContain('observedRuntimeCommitMatchesExpected');
   });
@@ -102,7 +98,6 @@ describe('runtime release SHA binding', () => {
       endpointStatus: 200,
       cacheControl: 'no-store',
     });
-
     expect(result.passed).toBe(false);
     expect(result.failures).toContain('expectedCommitAndBuildShaMatch');
   });
@@ -118,14 +113,19 @@ describe('runtime release SHA binding', () => {
     expect(workflow).toContain('runtime-release-sha-validation.json');
     expect(verifier).toContain('production-final-validation.json');
     expect(verifier).toContain('final-validation-runner.json');
-    expect(verifier).toContain("document.status = 'Open'");
-    expect(verifier).toContain("document.outcome = 'failed'");
+    expect(verifier).toContain('export function applyRuntimeShaBindingStatus');
+    expect(verifier).toContain("next.status = 'Open'");
+    expect(verifier).toContain("next.evidenceItem === 'final-validation-runner'");
+    expect(verifier).toContain("next.outcome = 'blocked'");
+    expect(verifier).toContain("next.releaseDecision = 'No-Go'");
+    expect(verifier).toContain("next.outcome = 'failed'");
+    expect(verifier).toContain("next.overallResult = 'failed'");
     expect(verifier).toContain('readJsonIfPresent(path)');
     expect(verifier).not.toContain('existsSync');
     expect(verifier).toContain('selectPersistedObservedCommitSha({');
     expect(verifier).toContain('observedCommitSha: persistedObservedCommitSha');
     expect(verifier).toContain("requestFailure: requestFailed ? 'request_failed' : null");
-    expect(verifier).not.toContain('error.message : \'request_failed\'');
+    expect(verifier).not.toContain("error.message : 'request_failed'");
     expect(verifier).toContain('rawNetworkPayloadStored: false');
     expect(verifier).toContain('mismatchedObservedShaStored: false');
   });

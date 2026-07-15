@@ -2,12 +2,35 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { requiredFinalValidationCommands } from './validate-final-validation-runtime-evidence.mjs';
 
 const outputPath = 'docs/security/evidence/runtime/final-validation-runner.json';
 const productionFinalPath = 'docs/security/evidence/runtime/production-final-validation.json';
 const enterpriseRuntimePath = 'docs/security/evidence/runtime/enterprise-runtime-evidence.json';
 const releaseGoNoGoPath = 'docs/security/evidence/runtime/release-go-no-go.json';
 const registerPath = 'docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md';
+const expectedRepository = 'renanescola40-afk/eurocomply_saas';
+const expectedBranch = 'main';
+const expectedReleaseTarget = 'enterprise';
+const fullShaPattern = /^[a-f0-9]{40}$/i;
+const canonicalRedactionConfirmation = 'Redaction confirmed for runtime evidence.';
+const evidenceLocations = [
+  productionFinalPath,
+  enterpriseRuntimePath,
+  releaseGoNoGoPath,
+  registerPath,
+  'scripts/release/write-final-validation-runner-evidence.mjs',
+  'scripts/release/validate-final-validation-runtime-evidence.mjs',
+];
+const verifiedControls = [
+  'canonical final-validation command set',
+  'production-final validation bundle',
+  'enterprise runtime evidence bundle',
+  'release Go/No-Go decision',
+  'P0 runtime evidence register closure',
+  'main-branch GitHub Actions provenance',
+];
 
 function readJson(path) {
   if (!existsSync(path)) return null;
@@ -29,105 +52,150 @@ function readRegisterOpenItems() {
     .map(([item, status]) => `${item}: ${status}`);
 }
 
-const generatedAt = new Date().toISOString();
-const productionFinal = readJson(productionFinalPath);
-const enterpriseRuntime = readJson(enterpriseRuntimePath);
-const releaseGoNoGo = readJson(releaseGoNoGoPath);
-const openItems = readRegisterOpenItems();
-const targetCommit = process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || process.env.RELEASE_COMMIT_SHA || productionFinal?.commitSha || 'local-unset';
-const buildSha = process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || productionFinal?.buildSha || targetCommit;
-const requiredCommandLabels = [
-  'npm ci',
-  'npm run lint',
-  'npm run typecheck',
-  'npm run test',
-  'npm run build',
-  'npm run test:e2e',
-  'npm run security:ci',
-  'npm run security:rls:live',
-  'npm run release:deployment-smoke',
-  'npm run release:observability-smoke',
-  'npm run release:rollback:dry-run',
-  'npm run release:enterprise-runtime-evidence',
-  'npm run security:p0-runtime-gap:strict',
-];
-
-function commandPassed(label) {
-  return (productionFinal?.commands ?? []).some((command) => command.command === label && (command.result === 'passed' || command.passed === true));
+function commandPassed(productionFinal, label) {
+  return (productionFinal?.commands ?? []).some(
+    (command) => command.command === label && (command.result === 'passed' || command.passed === true),
+  );
 }
 
-const missingCommands = requiredCommandLabels.filter((label) => !commandPassed(label));
-const passed = productionFinal?.status === 'Complete'
-  && productionFinal?.outcome === 'passed'
-  && enterpriseRuntime?.status === 'Complete'
-  && enterpriseRuntime?.outcome === 'passed'
-  && releaseGoNoGo?.status === 'Complete'
-  && releaseGoNoGo?.finalDecision === 'Go'
-  && openItems.length === 0
-  && missingCommands.length === 0;
-
-const evidence = {
-  evidenceItem: 'final-validation-runner',
-  id: 'final-validation-runner',
-  status: passed ? 'Complete' : 'Open',
-  outcome: passed ? 'passed' : 'blocked',
-  generatedAt,
-  reviewedAt: generatedAt,
-  reviewer: 'RISCK COMPLY release automation',
-  releaseTarget: process.env.RELEASE_TARGET || productionFinal?.releaseTarget || 'enterprise',
-  targetCommit,
-  commitSha: targetCommit,
-  buildSha,
-  redactionConfirmation: 'No secret values, tokens, cookies, URLs, DSNs or Authorization headers are captured by this evidence writer.',
-  noSecretsStored: true,
-  commands: requiredCommandLabels.map((command) => ({
-    command,
-    result: commandPassed(command) ? 'passed' : 'missing_or_not_passed',
-  })),
-  evidenceSources: {
-    productionFinalValidation: {
-      path: productionFinalPath,
-      status: productionFinal?.status ?? 'missing',
-      outcome: productionFinal?.outcome ?? 'missing',
-    },
-    enterpriseRuntimeEvidence: {
-      path: enterpriseRuntimePath,
-      status: enterpriseRuntime?.status ?? 'missing',
-      outcome: enterpriseRuntime?.outcome ?? 'missing',
-    },
-    releaseGoNoGo: {
-      path: releaseGoNoGoPath,
-      status: releaseGoNoGo?.status ?? 'missing',
-      finalDecision: releaseGoNoGo?.finalDecision ?? 'missing',
-    },
-  },
-  register: {
-    path: registerPath,
-    openItems,
-    allComplete: openItems.length === 0,
-  },
-  failures: {
-    missingCommands,
-    openItems,
-  },
-  releaseGate: passed
-    ? 'Final validation runner passed for the assessed commit and enterprise target.'
-    : 'Final validation runner remains blocked until production-final, enterprise-runtime and release-go-no-go evidence are Complete/passed for the same commit and target.',
-  evidenceIntegrity: {
-    containsSensitiveValues: false,
-    valuesRedacted: true,
-    authorizationHeaderStored: false,
-    cookiesStored: false,
-  },
-};
-
-mkdirSync(dirname(outputPath), { recursive: true });
-writeFileSync(outputPath, `${JSON.stringify(evidence, null, 2)}\n`);
-console.log(`Wrote ${outputPath}`);
-
-if (!passed) {
-  console.error('Final validation runner evidence is Open/blocked.');
-  for (const command of missingCommands) console.error(`- Missing or not passed command: ${command}`);
-  for (const item of openItems) console.error(`- Open register item: ${item}`);
-  process.exitCode = 1;
+function sourceStateFailures(productionFinal, enterpriseRuntime, releaseGoNoGo) {
+  const failures = [];
+  if (productionFinal?.status !== 'Complete' || productionFinal?.outcome !== 'passed') {
+    failures.push('production-final evidence must be Complete/passed');
+  }
+  if (enterpriseRuntime?.status !== 'Complete' || enterpriseRuntime?.outcome !== 'passed') {
+    failures.push('enterprise-runtime evidence must be Complete/passed');
+  }
+  if (releaseGoNoGo?.status !== 'Complete' || releaseGoNoGo?.finalDecision !== 'Go') {
+    failures.push('release-go-no-go evidence must be Complete/Go');
+  }
+  return failures;
 }
+
+function provenanceFailures(env, targetCommit, buildSha, releaseTarget) {
+  const failures = [];
+  if (env.GITHUB_ACTIONS !== 'true') failures.push('final evidence must be generated by GitHub Actions');
+  if (env.GITHUB_REPOSITORY !== expectedRepository) failures.push(`GITHUB_REPOSITORY must be ${expectedRepository}`);
+  if (env.GITHUB_REF_NAME !== expectedBranch) failures.push(`GITHUB_REF_NAME must be ${expectedBranch}`);
+  if (!/^\d+$/.test(String(env.GITHUB_RUN_ID ?? ''))) failures.push('GITHUB_RUN_ID must be numeric');
+  if (!fullShaPattern.test(targetCommit)) failures.push('target commit must be a full 40-character SHA');
+  if (!fullShaPattern.test(buildSha)) failures.push('build SHA must be a full 40-character SHA');
+  if (targetCommit !== buildSha) failures.push('build SHA must match target commit');
+  if (releaseTarget !== expectedReleaseTarget) failures.push(`release target must be ${expectedReleaseTarget}`);
+  return failures;
+}
+
+export function buildFinalValidationRunnerEvidence({
+  productionFinal,
+  enterpriseRuntime,
+  releaseGoNoGo,
+  openItems = [],
+  env = process.env,
+  generatedAt = new Date().toISOString(),
+} = {}) {
+  const targetCommit = env.GITHUB_SHA || env.VERCEL_GIT_COMMIT_SHA || env.RELEASE_COMMIT_SHA || productionFinal?.commitSha || 'local-unset';
+  const buildSha = env.RELEASE_BUILD_SHA || env.NEXT_PUBLIC_BUILD_SHA || productionFinal?.buildSha || targetCommit;
+  const releaseTarget = env.RELEASE_TARGET || productionFinal?.releaseTarget || expectedReleaseTarget;
+  const missingCommands = requiredFinalValidationCommands.filter((label) => !commandPassed(productionFinal, label));
+  const provenance = provenanceFailures(env, targetCommit, buildSha, releaseTarget);
+  const failures = [
+    ...sourceStateFailures(productionFinal, enterpriseRuntime, releaseGoNoGo),
+    ...missingCommands.map((command) => `missing or not passed command: ${command}`),
+    ...openItems.map((item) => `open register item: ${item}`),
+    ...provenance,
+  ];
+  const passed = failures.length === 0;
+
+  return {
+    evidenceItem: 'final-validation-runner',
+    id: 'final-validation-runner',
+    status: passed ? 'Complete' : 'Open',
+    outcome: passed ? 'passed' : 'blocked',
+    releaseDecision: passed ? 'Go' : 'No-Go',
+    generatedAt,
+    reviewedAt: generatedAt,
+    reviewer: 'RISCK COMPLY release automation',
+    summary: passed
+      ? 'Canonical final validation completed successfully for the exact enterprise release commit with every required command, source bundle, register item and provenance control verified.'
+      : 'Canonical final validation remains blocked because one or more commands, source bundles, register items or trusted-provenance requirements are incomplete.',
+    evidenceLocations,
+    controlsVerified: passed ? verifiedControls : [],
+    releaseTarget,
+    targetCommit,
+    commitSha: targetCommit,
+    buildSha,
+    runtimeContext: {
+      generatedByGithubActions: env.GITHUB_ACTIONS === 'true',
+      repository: env.GITHUB_REPOSITORY || 'local-unset',
+      branch: env.GITHUB_REF_NAME || 'local-unset',
+      githubRunId: env.GITHUB_RUN_ID || 'local-unset',
+      commitSha: targetCommit,
+    },
+    redactionConfirmation: canonicalRedactionConfirmation,
+    noSecretsStored: true,
+    commands: requiredFinalValidationCommands.map((command) => ({
+      command,
+      result: commandPassed(productionFinal, command) ? 'passed' : 'missing_or_not_passed',
+    })),
+    evidenceSources: {
+      productionFinalValidation: {
+        path: productionFinalPath,
+        status: productionFinal?.status ?? 'missing',
+        outcome: productionFinal?.outcome ?? 'missing',
+      },
+      enterpriseRuntimeEvidence: {
+        path: enterpriseRuntimePath,
+        status: enterpriseRuntime?.status ?? 'missing',
+        outcome: enterpriseRuntime?.outcome ?? 'missing',
+      },
+      releaseGoNoGo: {
+        path: releaseGoNoGoPath,
+        status: releaseGoNoGo?.status ?? 'missing',
+        finalDecision: releaseGoNoGo?.finalDecision ?? 'missing',
+      },
+    },
+    register: {
+      path: registerPath,
+      openItems,
+      allComplete: openItems.length === 0,
+    },
+    blockingReasons: {
+      missingCommands,
+      openItems,
+      provenance,
+    },
+    failures,
+    releaseGate: passed
+      ? 'Final validation runner passed for the assessed commit and enterprise target.'
+      : 'Final validation runner remains blocked until source evidence, commands, register items and GitHub Actions provenance are valid for the same main-branch commit.',
+    evidenceIntegrity: {
+      placeholderOnly: false,
+      containsSensitiveValues: false,
+      valuesRedacted: true,
+      authorizationHeaderStored: false,
+      cookiesStored: false,
+      rawUrlsStored: false,
+    },
+  };
+}
+
+function main() {
+  const evidence = buildFinalValidationRunnerEvidence({
+    productionFinal: readJson(productionFinalPath),
+    enterpriseRuntime: readJson(enterpriseRuntimePath),
+    releaseGoNoGo: readJson(releaseGoNoGoPath),
+    openItems: readRegisterOpenItems(),
+  });
+
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, `${JSON.stringify(evidence, null, 2)}\n`);
+  console.log(`Wrote ${outputPath}`);
+
+  if (evidence.status !== 'Complete') {
+    console.error('Final validation runner evidence is Open/blocked.');
+    for (const failure of evidence.failures) console.error(`- ${failure}`);
+    process.exitCode = 1;
+  }
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) main();

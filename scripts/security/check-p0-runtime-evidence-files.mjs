@@ -101,8 +101,11 @@ function checkGenericOpenBlockedEvidence(file, evidence, allowedOpenOutcomes) {
 }
 
 function checkReleaseOpenPlaceholder(file, evidence) {
-  if (!new Set(['deployment-smoke-validation', 'rollback-dry-run-validation', 'final-validation-runner']).has(evidence.evidenceItem)) return false;
+  if (evidence.evidenceItem === 'final-validation-runner') {
+    return checkGenericOpenBlockedEvidence(file, evidence, new Set(['blocked', 'not_verified']));
+  }
 
+  if (!new Set(['deployment-smoke-validation', 'rollback-dry-run-validation']).has(evidence.evidenceItem)) return false;
   return checkGenericOpenBlockedEvidence(file, evidence, new Set(['failed']));
 }
 
