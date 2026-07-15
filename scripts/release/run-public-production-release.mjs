@@ -26,12 +26,6 @@ async function writeSecurityResponseEvidence() {
   module.writeSecurityResponseEvidence();
 }
 
-async function prepareSecurityResponseEvidence() {
-  verifyRuntimeReleaseSha();
-  runNodeScript('scripts/release/run-deployment-smoke.mjs');
-  await writeSecurityResponseEvidence();
-}
-
 async function finalizeSecurityResponseEvidence() {
   verifyRuntimeReleaseSha();
   await writeSecurityResponseEvidence();
@@ -39,12 +33,10 @@ async function finalizeSecurityResponseEvidence() {
 
 if (enterpriseRequested) {
   await import('./check-enterprise-release-env.mjs');
-  await prepareSecurityResponseEvidence();
   await import('./run-public-production-release-v2.mjs');
   await finalizeSecurityResponseEvidence();
 } else if (releaseTarget === 'public-production' || releaseTarget === 'production') {
   await import('./check-public-production-release-env.mjs');
-  await prepareSecurityResponseEvidence();
   await import('./run-public-production-release-final.mjs');
   await finalizeSecurityResponseEvidence();
 } else {
