@@ -96,6 +96,7 @@ jobs:
           node --check scripts/release/runtime-release-sha-contract.mjs
           node --check scripts/release/verify-runtime-release-sha.mjs
           node --check scripts/release/write-security-response-evidence.mjs
+          node --check scripts/release/record-security-response-final-evidence.mjs
 
       - name: Run public production final gate
         run: npm run release:production-final
