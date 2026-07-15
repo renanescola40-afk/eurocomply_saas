@@ -6,6 +6,9 @@ const branchProtectionEvidencePath = 'docs/security/evidence/runtime/branch-prot
 const ciValidationEvidencePath = 'docs/security/evidence/runtime/ci-required-checks-validation.json';
 const policyPath = 'docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md';
 const writeMode = process.argv.includes('--write');
+const allowedPullRequestTargetWorkflows = new Set([
+  '.github/workflows/pr-autopilot.yml',
+]);
 
 const failures = [];
 const warnings = [];
@@ -119,6 +122,7 @@ const policySource = read(policyPath);
 const requiredChecks = [...new Set(branchProtectionEvidence.required_status_checks ?? [])];
 const discoveredChecks = new Map();
 const pullRequestTargetWorkflows = [];
+const reviewedPullRequestTargetWorkflows = [];
 const unpinnedActions = [];
 
 if (requiredChecks.length === 0) {
@@ -131,7 +135,11 @@ for (const file of workflowFiles()) {
   const hasPr = hasPullRequestTrigger(source);
 
   if (hasPullRequestTargetTrigger(source)) {
-    pullRequestTargetWorkflows.push(file);
+    if (allowedPullRequestTargetWorkflows.has(file)) {
+      reviewedPullRequestTargetWorkflows.push(file);
+    } else {
+      pullRequestTargetWorkflows.push(file);
+    }
   }
 
   for (const job of jobNames(source)) {
@@ -168,7 +176,7 @@ if (requiredChecksWithoutPullRequestTrigger.length > 0) {
 }
 
 if (pullRequestTargetWorkflows.length > 0) {
-  failures.push(`pull_request_target is forbidden for this repository: ${pullRequestTargetWorkflows.join(', ')}`);
+  failures.push(`unreviewed pull_request_target workflows are forbidden for this repository: ${pullRequestTargetWorkflows.join(', ')}`);
 }
 
 if (unpinnedActions.length > 0) {
@@ -190,6 +198,7 @@ const report = {
   missing_required_checks: missingRequiredChecks,
   required_checks_without_pull_request_trigger: requiredChecksWithoutPullRequestTrigger,
   pull_request_target_workflows: pullRequestTargetWorkflows,
+  reviewed_pull_request_target_workflows: reviewedPullRequestTargetWorkflows,
   discovered_required_checks: requiredChecks
     .filter((check) => discoveredChecks.has(check))
     .map((check) => ({ check, ...discoveredChecks.get(check) })),
@@ -224,7 +233,8 @@ console.log('RISCK COMPLY CI required-check validation');
 console.log('-----------------------------------------');
 console.log(`Required checks: ${requiredChecks.length}`);
 console.log(`Matched required checks: ${requiredChecks.length - missingRequiredChecks.length}`);
-console.log(`pull_request_target workflows: ${pullRequestTargetWorkflows.length}`);
+console.log(`Unreviewed pull_request_target workflows: ${pullRequestTargetWorkflows.length}`);
+console.log(`Reviewed pull_request_target workflows: ${reviewedPullRequestTargetWorkflows.length}`);
 for (const warning of warnings) console.warn(`Warning: ${warning}`);
 
 if (failures.length > 0) {

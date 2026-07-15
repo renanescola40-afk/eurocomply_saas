@@ -1,0 +1,152 @@
+name: PR Autopilot Classifier
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review, labeled, unlabeled]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: pr-autopilot-classifier-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  classify:
+    name: Classify PR risk for human review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Run read-only PR policy classifier
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const { owner, repo } = context.repo;
+            const repositoryFullName = `${owner}/${repo}`;
+            const policyPath = '.github/pr-autopilot-policy.json';
+
+            const policyFile = await github.rest.repos.getContent({
+              owner,
+              repo,
+              path: policyPath,
+              ref: context.payload.repository.default_branch,
+            });
+            if (Array.isArray(policyFile.data) || !policyFile.data.content) {
+              core.setFailed(`Unable to load ${policyPath} from the default branch.`);
+              return;
+            }
+            const policy = JSON.parse(Buffer.from(policyFile.data.content, 'base64').toString('utf8'));
+
+            if (
+              policy.automationAuthority?.automaticMerge !== false ||
+              policy.automationAuthority?.automaticBranchSync !== false ||
+              policy.automationAuthority?.administratorBypass !== false ||
+              policy.automationAuthority?.finalMergeActor !== 'human-owner'
+            ) {
+              core.setFailed('PR policy must keep branch synchronization, administrator bypass, and final merge human-controlled.');
+              return;
+            }
+
+            const labelDefinitions = [
+              [policy.labels.blocked, 'b60205', 'Automation stopped on risk, trust, size, or policy boundary'],
+              [policy.labels.autofixAllowed, '8250df', 'Codex may attempt a bounded same-branch low-risk CI repair'],
+              [policy.labels.highRisk, 'd93f0b', 'Touches a protected product or operational domain'],
+              [policy.labels.manualReview, 'fbca04', 'Human owner decision or review is required'],
+            ];
+
+            for (const [name, color, description] of labelDefinitions) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({ owner, repo, name, color, description });
+              }
+            }
+
+            const prefixMatch = (path, prefixes = []) => prefixes.some((prefix) => path.startsWith(prefix));
+            const exactMatch = (path, exactPaths = []) => exactPaths.includes(path);
+            const regexMatch = (path, patterns = []) => patterns.some((pattern) => new RegExp(pattern, 'i').test(path));
+            const blocked = (path) =>
+              prefixMatch(path, policy.blockedPathPrefixes) || regexMatch(path, policy.blockedPathRegexes);
+            const autofixAllowed = (path) =>
+              prefixMatch(path, policy.autofixAllowedPathPrefixes) ||
+              exactMatch(path, policy.autofixAllowedExactPaths) ||
+              regexMatch(path, policy.autofixAllowedPathRegexes);
+
+            const candidateNumbers = new Set();
+            if (context.payload.pull_request?.number) candidateNumbers.add(context.payload.pull_request.number);
+
+            if (['schedule', 'workflow_dispatch'].includes(context.eventName)) {
+              const pulls = await github.paginate(github.rest.pulls.list, {
+                owner,
+                repo,
+                state: 'open',
+                base: 'main',
+                per_page: 100,
+              });
+              for (const pull of pulls) candidateNumbers.add(pull.number);
+            }
+
+            if (candidateNumbers.size === 0) {
+              core.notice('No open pull request is associated with this event.');
+              return;
+            }
+
+            const addLabels = async (issueNumber, labels) => {
+              if (labels.length > 0) {
+                await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels });
+              }
+            };
+
+            const removeLabel = async (issueNumber, label) => {
+              try {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number: issueNumber, name: label });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            };
+
+            for (const pullNumber of candidateNumbers) {
+              const { data: pull } = await github.rest.pulls.get({ owner, repo, pull_number: pullNumber });
+              if (pull.state !== 'open' || pull.base.ref !== 'main') continue;
+
+              const sameRepository = pull.head.repo?.full_name === repositoryFullName;
+              const trustedAuthor = policy.trustedAuthors.includes(pull.user.login);
+              const trustedBranch = policy.trustedBranchPrefixes.some((prefix) => pull.head.ref.startsWith(prefix));
+
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner,
+                repo,
+                pull_number: pull.number,
+                per_page: 100,
+              });
+              const paths = files.map((file) => file.filename);
+              const blockedPaths = paths.filter(blocked);
+              const exceedsLimits =
+                paths.length > policy.limits.maxChangedFiles || pull.additions > policy.limits.maxAdditions;
+              const highRisk = !sameRepository || !trustedAuthor || !trustedBranch || blockedPaths.length > 0 || exceedsLimits;
+              const repairEligible =
+                !highRisk && paths.length > 0 && paths.every(autofixAllowed);
+
+              if (repairEligible) {
+                await addLabels(pull.number, [policy.labels.autofixAllowed]);
+                await removeLabel(pull.number, policy.labels.blocked);
+                await removeLabel(pull.number, policy.labels.highRisk);
+              } else {
+                await removeLabel(pull.number, policy.labels.autofixAllowed);
+              }
+
+              if (highRisk) {
+                await addLabels(pull.number, [policy.labels.blocked, policy.labels.highRisk, policy.labels.manualReview]);
+                core.notice(`PR #${pull.number} requires human review; no sync or merge action was attempted.`);
+              } else {
+                core.notice(`PR #${pull.number} classified. Final merge remains human-controlled.`);
+              }
+            }

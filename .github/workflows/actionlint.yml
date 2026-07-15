@@ -27,5 +27,22 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run actionlint
+      - name: Install actionlint and register problem matcher
+        id: actionlint-setup
         uses: raven-actions/actionlint@v2
+        with:
+          fail-on-error: false
+
+      - name: Run actionlint with durable diagnostics
+        shell: bash
+        run: |
+          set -o pipefail
+          actionlint 2>&1 | tee actionlint.log
+
+      - name: Upload actionlint diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: actionlint-diagnostics
+          path: actionlint.log
+          if-no-files-found: error
