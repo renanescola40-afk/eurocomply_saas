@@ -25,6 +25,7 @@ function trustedSource(overrides: Record<string, unknown> = {}) {
       ownerCannotReadTenantB: true,
       outsiderCanReadOwnTenant: true,
       crossTenantMembershipHidden: true,
+      sessionRefresh: true,
       sessionsRevoked: true,
     },
     provenance: {
@@ -60,15 +61,15 @@ describe('canonical Auth/RBAC scorecard evidence', () => {
 
     expect(evidence.status).toBe('Open');
     expect(evidence.outcome).toBe('partial');
-    expect(evidence.controlsVerified).toEqual(['login', 'logout', 'rbac']);
+    expect(evidence.controlsVerified).toEqual(['login', 'logout', 'sessionRefresh', 'rbac']);
     expect(evidence.remainingControls).toEqual([
       'signup',
-      'sessionRefresh',
       'oauthCallback',
       'organizationOnboarding',
     ]);
     expect(check(evidence, 'login')).toEqual({ name: 'login', passed: true });
     expect(check(evidence, 'logout')).toEqual({ name: 'logout', passed: true });
+    expect(check(evidence, 'sessionRefresh')).toEqual({ name: 'sessionRefresh', passed: true });
     expect(check(evidence, 'rbac')).toEqual({ name: 'rbac', passed: true });
 
     for (const name of evidence.remainingControls) {
@@ -106,11 +107,29 @@ describe('canonical Auth/RBAC scorecard evidence', () => {
 
     expect(check(evidence, 'login')).toEqual({ name: 'login', passed: true });
     expect(check(evidence, 'logout')).toEqual({ name: 'logout', passed: true });
+    expect(check(evidence, 'sessionRefresh')).toEqual({ name: 'sessionRefresh', passed: true });
     expect(check(evidence, 'rbac')).toMatchObject({
       name: 'rbac',
       status: 'NOT_VERIFIED',
     });
-    expect(evidence.controlsVerified).toEqual(['login', 'logout']);
+    expect(evidence.controlsVerified).toEqual(['login', 'logout', 'sessionRefresh']);
+  });
+
+  it('does not promote session refresh when the source check fails', () => {
+    const source = trustedSource({
+      checks: {
+        ...trustedSource().checks,
+        sessionRefresh: false,
+      },
+    });
+    const evidence = buildAuthRbacScorecardEvidence(source);
+
+    expect(check(evidence, 'sessionRefresh')).toMatchObject({
+      name: 'sessionRefresh',
+      status: 'NOT_VERIFIED',
+    });
+    expect(evidence.controlsVerified).toEqual([]);
+    expect(evidence.sourceEvidence.trusted).toBe(false);
   });
 
   it('never stores credentials, tokens, identifiers or raw provider responses', () => {
