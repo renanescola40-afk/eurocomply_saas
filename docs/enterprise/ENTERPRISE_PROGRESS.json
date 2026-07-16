@@ -1,6 +1,6 @@
 {
   "timestamp": "2026-07-16T16:40:00Z",
-  "main_sha": "8c11b08533d96d9711847412669590229546414c",
+  "main_sha": "b57586310bce8c05379e726afa264e5372afbc3d",
   "official_completion_percent": 31,
   "official_remaining_percent": 69,
   "previous_completion_percent": 31,
@@ -14,7 +14,7 @@
   "p0_open": 14,
   "p1_open": 10,
   "current_decision": "NO_GO",
-  "active_prs": [1113, 1114, 1115],
+  "active_prs": [1114, 1115, 1116],
   "blocked_prs": [],
   "next_priority": "Atomic organization invitation acceptance",
   "evidence_freshness": {

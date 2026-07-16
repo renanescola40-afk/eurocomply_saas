@@ -1,6 +1,6 @@
 # Enterprise progress
 
-Assessed main: `8c11b08533d96d9711847412669590229546414c`  
+Assessed main: `b57586310bce8c05379e726afa264e5372afbc3d`
 Decision: **NO_GO**
 
 ## Official score

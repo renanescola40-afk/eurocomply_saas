@@ -3,7 +3,7 @@
 | Scope | Files or area | Branch / PR | Mode | Owner | Status |
 | --- | --- | --- | --- | --- | --- |
 | Atomic invitation acceptance | `src/server/actions/invitations.ts`, new invitation RPC migration | `agent/atomic-invitation-acceptance` | Write | Primary engineering agent | Active |
-| DAST path canonicalization | P1 register, DAST final gate and contract | #1113 | External branch | Concurrent identity | Checks running |
+| DAST path canonicalization | P1 register, DAST final gate and contract | #1113 | Integrated | Concurrent identity | Merged by another identity |
 | Billing entitlement rate-limit gate | API guard scanner and entitlement tests | #1114 | External branch | Primary engineering agent | Checks running |
 | Runtime SHA response bound | Runtime SHA verifier and ADR-0090 | #1115 | External branch | Concurrent identity | Checks running |
 

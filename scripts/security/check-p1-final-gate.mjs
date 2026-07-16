@@ -8,7 +8,7 @@ const expected = [
   ['MFA obrigatório para admins', 'docs/security/evidence/p1/admin-mfa-required.json'],
   ['Step-up real para billing, exports, team management, GDPR delete', 'docs/security/evidence/p1/step-up-sensitive-actions.json'],
   ['Rate limit distribuído em todos endpoints sensíveis', 'docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json'],
-  ['DAST automatizado', 'docs/security/evidence/p1/automated-dast.json'],
+  ['DAST automatizado', 'docs/security/evidence/p1/dast-automated.json'],
   ['SBOM + artifact attestation', 'docs/security/evidence/p1/sbom-artifact-attestation.json'],
   ['Backup/restore testado', 'docs/security/evidence/p1/backup-restore-tested.json'],
   ['Logs centralizados e alertas', 'docs/security/evidence/p1/centralized-logs-alerts.json'],
