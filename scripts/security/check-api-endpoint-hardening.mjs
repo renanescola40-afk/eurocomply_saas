@@ -3,10 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { dirname, join, relative, sep } from 'node:path';
 
 const root = process.cwd();
-const apiRoots = [
-  join(root, 'src', 'app', 'api'),
-  join(root, 'src', 'app', 'next_api'),
-];
+const apiRoots = [join(root, 'src', 'app', 'api'), join(root, 'src', 'app', 'next_api')];
 const reportPath = join(root, 'security-endpoints-inventory.json');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
 const appApiPrefixPattern = 'src\\/app\\/(?:api|next_api)';
@@ -52,13 +49,7 @@ const schemaValidationTokens = [
   'readBoundedBillingWebhookBody',
 ];
 
-const clientInputTokens = [
-  'request.json(',
-  'request.formData(',
-  'request.text(',
-  'request.blob(',
-  'searchParams.get',
-];
+const clientInputTokens = ['request.json(', 'request.formData(', 'request.text(', 'request.blob(', 'searchParams.get'];
 
 const rateLimitTokens = [
   'checkDistributedRateLimit',
@@ -91,6 +82,77 @@ const unsafeCorsPatterns = [
   /headers\.set\(['"]Access-Control-Allow-Origin['"]\s*,\s*['"]\*['"]\)/,
   /cors\([^)]*origin\s*:\s*['"]\*['"]/,
 ];
+
+function stripComments(source) {
+  let output = '';
+  let state = 'code';
+  let escaped = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    const next = source[index + 1];
+
+    if (state === 'line-comment') {
+      if (char === '\n') {
+        output += '\n';
+        state = 'code';
+      } else {
+        output += ' ';
+      }
+      continue;
+    }
+
+    if (state === 'block-comment') {
+      if (char === '*' && next === '/') {
+        output += '  ';
+        index += 1;
+        state = 'code';
+      } else {
+        output += char === '\n' ? '\n' : ' ';
+      }
+      continue;
+    }
+
+    if (state === 'single-quote' || state === 'double-quote' || state === 'template') {
+      output += char;
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (
+        (state === 'single-quote' && char === "'") ||
+        (state === 'double-quote' && char === '"') ||
+        (state === 'template' && char === '`')
+      ) {
+        state = 'code';
+      }
+      continue;
+    }
+
+    if (char === '/' && next === '/') {
+      output += '  ';
+      index += 1;
+      state = 'line-comment';
+      continue;
+    }
+    if (char === '/' && next === '*') {
+      output += '  ';
+      index += 1;
+      state = 'block-comment';
+      continue;
+    }
+    if (char === "'") state = 'single-quote';
+    else if (char === '"') state = 'double-quote';
+    else if (char === '`') state = 'template';
+    output += char;
+  }
+
+  return output;
+}
 
 function listChangedFiles(baseRef) {
   return execFileSync('git', ['diff', '--name-only', `${baseRef}...HEAD`], {
@@ -175,7 +237,7 @@ const inventory = [];
 
 for (const route of routes) {
   const normalized = normalizePath(route);
-  const source = readFileSync(route, 'utf8');
+  const source = stripComments(readFileSync(route, 'utf8'));
   const methods = exportedMethods(source);
   const publicReason = allowlistReason(normalized);
   const authenticated = hasAny(source, authTokens);
@@ -200,22 +262,22 @@ for (const route of routes) {
   if (!publicReason && !authenticated) {
     failures.push(`${normalized}: endpoint is not allowlisted public and does not prove authentication/token verification`);
   }
-
   if (receivesClientInput && !validatesSchema) {
     failures.push(`${normalized}: receives client input but does not prove schema validation; use Zod safeParse/parse before using values`);
   }
-
   if (critical && !rateLimited) {
     failures.push(`${normalized}: critical or mutating endpoint does not prove per-IP/user rate limiting`);
   }
-
   if (hasUnsafeCors) {
     failures.push(`${normalized}: CORS allows wildcard origin; restrict Access-Control-Allow-Origin to SaaS domains in production`);
   }
 }
 
 mkdirSync(dirname(reportPath), { recursive: true });
-writeFileSync(reportPath, `${JSON.stringify({ generatedBy: 'check-api-endpoint-hardening', scannedChangedApiRoutesOnly: Array.isArray(changedRoutes), endpoints: inventory }, null, 2)}\n`);
+writeFileSync(
+  reportPath,
+  `${JSON.stringify({ generatedBy: 'check-api-endpoint-hardening', scannedChangedApiRoutesOnly: Array.isArray(changedRoutes), endpoints: inventory }, null, 2)}\n`,
+);
 
 console.log('EuroComply API endpoint hardening check');
 console.log('---------------------------------------');
@@ -241,8 +303,5 @@ if (Array.isArray(changedRoutes)) {
   const routeHardening = spawnSync(process.execPath, [join(root, 'scripts/security/check-api-route-hardening.mjs')], {
     stdio: 'inherit',
   });
-
-  if (routeHardening.status !== 0) {
-    process.exitCode = 1;
-  }
+  if (routeHardening.status !== 0) process.exitCode = 1;
 }
