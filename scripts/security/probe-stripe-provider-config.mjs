@@ -1,9 +1,52 @@
 #!/usr/bin/env node
 
+const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024;
+
 function requiredEnv(name, fallbackName) {
   const value = String(process.env[name] ?? '').trim() || String(process.env[fallbackName] ?? '').trim();
   if (!value) throw new Error(`Missing required environment: ${name}`);
   return value;
+}
+
+async function readBoundedJsonResponse(response) {
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_PROVIDER_RESPONSE_BYTES) {
+    throw new Error('provider_response_too_large');
+  }
+
+  if (!response.body) throw new Error('provider_response_body_missing');
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_PROVIDER_RESPONSE_BYTES) {
+        await reader.cancel('provider_response_too_large');
+        throw new Error('provider_response_too_large');
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  return JSON.parse(text);
 }
 
 const stripeSecretKey = String(process.env.STRIPE_SECRET_KEY ?? '').trim();
@@ -26,7 +69,7 @@ async function stripe(path) {
     signal: AbortSignal.timeout(15000),
   });
   if (!response.ok) throw new Error(`Stripe API request failed with status ${response.status}`);
-  return response.json();
+  return readBoundedJsonResponse(response);
 }
 
 const [account, starter, growth, enterprise, webhooks] = await Promise.all([
