@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted for review.
+Accepted.
+
+## Date
+
+2026-07-16
 
 ## Context
 
