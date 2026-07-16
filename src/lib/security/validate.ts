@@ -42,8 +42,50 @@ function getContentLength(request: Request) {
   return Number.isFinite(length) && length >= 0 ? length : null;
 }
 
-function byteLength(value: string) {
-  return new TextEncoder().encode(value).byteLength;
+async function readBoundedRequestText(request: Request, maxBytes: number) {
+  if (!request.body) return '';
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        try {
+          await reader.cancel('Request body is too large');
+        } catch {
+          // Cancellation is best-effort; the size violation remains authoritative.
+        }
+        throw new ValidationError(validationIssue('Request body is too large'));
+      }
+
+      chunks.push(value);
+    }
+  } catch (error) {
+    if (error instanceof ValidationError) throw error;
+    throw new ValidationError(validationIssue('Request body could not be read'));
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(body);
+  } catch {
+    throw new ValidationError(validationIssue('Request body must be valid UTF-8'));
+  }
 }
 
 export async function readBoundedJsonRequest<T = unknown>(
@@ -66,17 +108,7 @@ export async function readBoundedJsonRequest<T = unknown>(
     throw new ValidationError(validationIssue('Request body is too large'));
   }
 
-  let text: string;
-
-  try {
-    text = await request.text();
-  } catch {
-    throw new ValidationError(validationIssue('Request body could not be read'));
-  }
-
-  if (byteLength(text) > maxBytes) {
-    throw new ValidationError(validationIssue('Request body is too large'));
-  }
+  const text = await readBoundedRequestText(request, maxBytes);
 
   try {
     return JSON.parse(text) as T;
