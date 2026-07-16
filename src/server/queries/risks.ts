@@ -1,8 +1,7 @@
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function listRisks(organizationId: string) {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('risks')
@@ -12,7 +11,7 @@ export async function listRisks(organizationId: string) {
 
   if (error) {
     console.warn('[risks] list_failed', { code: error.code ?? 'unknown' });
-    return [];
+    throw new Error('Unable to load risk register.');
   }
 
   return data ?? [];
