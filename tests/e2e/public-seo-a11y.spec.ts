@@ -50,8 +50,37 @@ test.describe('public SEO and accessibility smoke', () => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(1);
 
-    await page.keyboard.press('Tab');
-    const focusedTag = await page.evaluate(() => document.activeElement?.tagName);
-    expect(focusedTag).toMatch(/A|BUTTON|INPUT|SELECT/);
+    let focusedControl:
+      | { tagName: string; outlineStyle: string; outlineWidth: string; boxShadow: string }
+      | undefined;
+
+    // Radix dialogs may insert focus guards into the tab order. Walk past those
+    // sentinels, but keep the search bounded so a broken tab order still fails.
+    for (let tabIndex = 0; tabIndex < 8; tabIndex += 1) {
+      await page.keyboard.press('Tab');
+      focusedControl = await page.evaluate(() => {
+        const activeElement = document.activeElement;
+        if (!(activeElement instanceof HTMLElement)) return undefined;
+        if (!activeElement.matches('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])')) {
+          return undefined;
+        }
+
+        const style = window.getComputedStyle(activeElement);
+        return {
+          tagName: activeElement.tagName,
+          outlineStyle: style.outlineStyle,
+          outlineWidth: style.outlineWidth,
+          boxShadow: style.boxShadow,
+        };
+      });
+
+      if (focusedControl) break;
+    }
+
+    expect(focusedControl, 'keyboard navigation should reach an actionable control').toBeDefined();
+    const outlineWidth = Number.parseFloat(focusedControl?.outlineWidth ?? '0');
+    const hasOutline = focusedControl?.outlineStyle !== 'none' && outlineWidth > 0;
+    const hasBoxShadow = focusedControl?.boxShadow !== 'none';
+    expect(hasOutline || hasBoxShadow, 'focused control should expose a visible focus indicator').toBe(true);
   });
 });

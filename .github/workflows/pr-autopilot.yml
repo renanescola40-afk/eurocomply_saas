@@ -60,6 +60,7 @@ jobs:
               [policy.labels.highRisk, 'd93f0b', 'Touches a protected product or operational domain'],
               [policy.labels.manualReview, 'fbca04', 'Human owner decision or review is required'],
             ];
+            const managedLabels = labelDefinitions.map(([name]) => name);
 
             for (const [name, color, description] of labelDefinitions) {
               try {
@@ -99,17 +100,22 @@ jobs:
               return;
             }
 
-            const addLabels = async (issueNumber, labels) => {
-              if (labels.length > 0) {
-                await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels });
+            const replaceManagedLabels = async (issueNumber, existingLabels, desiredManagedLabels) => {
+              const desired = new Set(desiredManagedLabels);
+              for (const label of managedLabels) {
+                const currentlyPresent = existingLabels.has(label);
+                const shouldBePresent = desired.has(label);
+                if (currentlyPresent && !shouldBePresent) {
+                  try {
+                    await github.rest.issues.removeLabel({ owner, repo, issue_number: issueNumber, name: label });
+                  } catch (error) {
+                    if (error.status !== 404) throw error;
+                  }
+                }
               }
-            };
-
-            const removeLabel = async (issueNumber, label) => {
-              try {
-                await github.rest.issues.removeLabel({ owner, repo, issue_number: issueNumber, name: label });
-              } catch (error) {
-                if (error.status !== 404) throw error;
+              const missing = [...desired].filter((label) => !existingLabels.has(label));
+              if (missing.length > 0) {
+                await github.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: missing });
               }
             };
 
@@ -134,19 +140,20 @@ jobs:
               const highRisk = !sameRepository || !trustedAuthor || !trustedBranch || blockedPaths.length > 0 || exceedsLimits;
               const repairEligible =
                 !highRisk && paths.length > 0 && paths.every(autofixAllowed);
+              const desiredManagedLabels = highRisk
+                ? [policy.labels.blocked, policy.labels.highRisk, policy.labels.manualReview]
+                : repairEligible
+                  ? [policy.labels.autofixAllowed]
+                  : [];
+              const existingLabels = new Set((pull.labels ?? []).map((label) => label.name));
 
-              if (repairEligible) {
-                await addLabels(pull.number, [policy.labels.autofixAllowed]);
-                await removeLabel(pull.number, policy.labels.blocked);
-                await removeLabel(pull.number, policy.labels.highRisk);
-              } else {
-                await removeLabel(pull.number, policy.labels.autofixAllowed);
-              }
+              await replaceManagedLabels(pull.number, existingLabels, desiredManagedLabels);
 
               if (highRisk) {
-                await addLabels(pull.number, [policy.labels.blocked, policy.labels.highRisk, policy.labels.manualReview]);
                 core.notice(`PR #${pull.number} requires human review; no sync or merge action was attempted.`);
+              } else if (repairEligible) {
+                core.notice(`PR #${pull.number} is eligible for bounded same-branch autofix. Final merge remains human-controlled.`);
               } else {
-                core.notice(`PR #${pull.number} classified. Final merge remains human-controlled.`);
+                core.notice(`PR #${pull.number} classified without managed risk labels. Final merge remains human-controlled.`);
               }
             }
