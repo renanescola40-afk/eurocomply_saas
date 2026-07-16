@@ -1,5 +1,5 @@
 import { unstable_noStore as noStore } from 'next/cache';
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export type DashboardSummary = Awaited<ReturnType<typeof getDashboardSummary>>;
 
@@ -24,7 +24,6 @@ export type DashboardTrendComparison = {
 
 type QueryError = {
   code?: string;
-  message?: string;
 } | null;
 
 type CountResult = {
@@ -42,33 +41,10 @@ type DashboardSnapshotRow = {
   missing_documents?: number | string | null;
 };
 
-function emptyDashboardSummary() {
-  return {
-    complianceScore: 0,
-    openTasks: 0,
-    highRiskVendors: 0,
-    openRisks: 0,
-    criticalRisks: 0,
-    missingDocuments: 0,
-    totals: {
-      tasks: 0,
-      vendors: 0,
-      risks: 0,
-      documents: 0,
-    },
-  };
-}
-
-function isExpectedSchemaFallback(error: QueryError) {
-  return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST204' || error?.code === 'PGRST205';
-}
-
 function safeCount(result: CountResult, label: string) {
   if (result.error) {
-    if (!isExpectedSchemaFallback(result.error)) {
-      console.warn('[dashboard] count_failed', { label, code: result.error.code ?? 'unknown' });
-    }
-    return 0;
+    console.warn('[dashboard] count_failed', { label, code: result.error.code ?? 'unknown' });
+    throw new Error('Unable to load dashboard summary.');
   }
 
   return result.count ?? 0;
@@ -81,8 +57,7 @@ function areDashboardSnapshotsEnabled() {
 export async function getDashboardSummary(organizationId: string) {
   noStore();
 
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return emptyDashboardSummary();
+  const supabase = createAdminClient();
 
   const [
     taskTotalResult,
@@ -139,8 +114,7 @@ export async function getDashboardSummary(organizationId: string) {
 export async function recordDashboardMetricSnapshot(organizationId: string, summary: DashboardSummary) {
   if (!areDashboardSnapshotsEnabled()) return;
 
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return;
+  const supabase = createAdminClient();
 
   const { error } = await supabase.from('compliance_metric_snapshots').insert({
     organization_id: organizationId,
@@ -156,8 +130,9 @@ export async function recordDashboardMetricSnapshot(organizationId: string, summ
     total_documents: summary.totals.documents,
   });
 
-  if (error && !isExpectedSchemaFallback(error)) {
+  if (error) {
     console.warn('[dashboard] metric_snapshot_write_failed', { code: error.code ?? 'unknown' });
+    throw new Error('Unable to record dashboard metric snapshot.');
   }
 }
 
@@ -166,8 +141,7 @@ export async function getDashboardTrendHistory(organizationId: string, limit = 1
   if (!areDashboardSnapshotsEnabled()) return [];
 
   const safeLimit = Math.max(1, Math.min(limit, 52));
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('compliance_metric_snapshots')
@@ -177,10 +151,8 @@ export async function getDashboardTrendHistory(organizationId: string, limit = 1
     .range(0, safeLimit - 1);
 
   if (error) {
-    if (!isExpectedSchemaFallback(error)) {
-      console.warn('[dashboard] trend_history_failed', { code: error.code ?? 'unknown' });
-    }
-    return [];
+    console.warn('[dashboard] trend_history_failed', { code: error.code ?? 'unknown' });
+    throw new Error('Unable to load dashboard trend history.');
   }
 
   return ((data ?? []) as DashboardSnapshotRow[])
