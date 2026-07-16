@@ -36,6 +36,9 @@ function relativeLuminance(value: string) {
 
 test.describe('premium design system', () => {
   test('keeps the public experience dark, accessible and responsive', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('risckcomply.analytics.consent', 'denied');
+    });
     const response = await page.goto('/pt', { waitUntil: 'domcontentloaded' });
 
     expect(response?.status(), 'public landing should not 404').not.toBe(404);
@@ -68,7 +71,8 @@ test.describe('premium design system', () => {
 
     const firstInteractive = page.locator('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])').first();
     await expect(firstInteractive).toBeVisible();
-    await firstInteractive.focus();
+    await page.keyboard.press('Tab');
+    await expect(firstInteractive).toBeFocused();
 
     const focusOutline = await page.evaluate(() => {
       const activeElement = document.activeElement;
