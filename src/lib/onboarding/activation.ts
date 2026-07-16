@@ -82,6 +82,7 @@ export type OnboardingActionResult = {
   documentsCreated?: number;
   tasksCreated?: number;
   invitationsCreated?: number;
+  invitationsDelivered?: number;
 };
 
 const slugPattern = new RegExp('^[a-z0-9-]+$');
