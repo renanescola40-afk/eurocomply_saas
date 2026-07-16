@@ -26,10 +26,13 @@ Each restore test must record:
 - start/completion timestamps;
 - measured numeric RTO target and actual seconds;
 - measured numeric RPO target and actual seconds;
+- measured RTO and RPO actual values that are less than or equal to their targets;
 - restore job/report reference;
 - restored-data integrity reference;
 - post-restore RLS/tenant-isolation reference;
 - named reviewer, review date and next review due date.
+
+The checker fails closed when a measured RTO or RPO exceeds its target, when evidence is generated before the restore completes, when validation predates evidence generation, or when review chronology is inconsistent. A technically successful restore outside its approved recovery objectives cannot close P1-07.
 
 ## Workflow
 
