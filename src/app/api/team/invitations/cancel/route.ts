@@ -12,12 +12,12 @@ const cancelInvitationSchema = z.object({
   invitationId: z.string().trim().min(1).max(128),
 });
 
-type OrganizationInviteRecord = {
+type InvitationRecord = {
   id: string;
   email: string | null;
   role: string | null;
   organization_id: string;
-  status: string;
+  accepted_at: string | null;
 };
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
@@ -77,13 +77,13 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient();
     const { data: invitationData, error: invitationError } = await supabase
-      .from('organization_invites')
-      .select('id,email,role,organization_id,status')
+      .from('invitations')
+      .select('id,email,role,organization_id,accepted_at')
       .eq('id', parsed.data.invitationId)
       .eq('organization_id', organization.id)
-      .eq('status', 'pending')
+      .is('accepted_at', null)
       .maybeSingle();
-    const invitation = invitationData as OrganizationInviteRecord | null;
+    const invitation = invitationData as InvitationRecord | null;
 
     if (invitationError) {
       return noStoreJson({ error: 'invitation_lookup_failed' }, { status: 503 });
@@ -93,12 +93,12 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'invitation_not_pending' }, { status: 404 });
     }
 
-    const { data: revokedInvitation, error } = await supabase
-      .from('organization_invites')
-      .update({ status: 'revoked', updated_at: new Date().toISOString() })
+    const { data: cancelledInvitation, error } = await supabase
+      .from('invitations')
+      .delete()
       .eq('id', parsed.data.invitationId)
       .eq('organization_id', organization.id)
-      .eq('status', 'pending')
+      .is('accepted_at', null)
       .select('id')
       .maybeSingle();
 
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'invitation_cancel_failed' }, { status: 503 });
     }
 
-    if (!revokedInvitation) {
+    if (!cancelledInvitation) {
       return noStoreJson({ error: 'invitation_state_changed' }, { status: 409 });
     }
 
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
       organizationId: organization.id,
       actorUserId: user.id,
       action: 'team_invitation_cancelled',
-      entityType: 'organization_invite',
+      entityType: 'invitation',
       entityId: parsed.data.invitationId,
       metadata: {
         role: invitation.role ?? 'unknown',

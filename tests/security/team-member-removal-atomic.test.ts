@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const routeSource = readFileSync(join(process.cwd(), 'src/app/api/team/members/remove/route.ts'), 'utf8');
+const actionSource = readFileSync(join(process.cwd(), 'src/server/actions/members.ts'), 'utf8');
 const migrationSource = readFileSync(
   join(process.cwd(), 'supabase/migrations/20260715124500_atomic_team_member_removal.sql'),
   'utf8',
@@ -50,6 +51,28 @@ describe('team member removal route security contract', () => {
     expect(stateChangedGuard).toBeGreaterThan(lastOwnerGuard);
     expect(routeSource).toContain("error: 'last_owner_removal_blocked'");
     expect(routeSource).toContain("error: 'team_member_state_changed'");
+    expect(auditWrite).toBeGreaterThan(stateChangedGuard);
+  });
+});
+
+describe('team member removal action security contract', () => {
+  it('uses the same atomic removal boundary as the API route', () => {
+    expect(actionSource).toContain("const ATOMIC_MEMBER_REMOVAL_RPC = 'remove_organization_member_atomic'");
+    expect(actionSource).toContain('supabase.rpc(ATOMIC_MEMBER_REMOVAL_RPC');
+    expect(actionSource).toContain('p_organization_id: input.organizationId');
+    expect(actionSource).toContain('p_expected_user_id: member.user_id');
+    expect(actionSource).toContain('p_expected_role: member.role');
+    expect(actionSource).not.toContain(".select('id', { count: 'exact', head: true })");
+    expect(actionSource).not.toContain(".from('organization_members')\n    .delete()");
+  });
+
+  it('handles concurrency outcomes before recording successful audit evidence', () => {
+    const lastOwnerGuard = actionSource.indexOf("removal.outcome === 'last_owner'");
+    const stateChangedGuard = actionSource.indexOf("removal.outcome === 'state_changed'");
+    const auditWrite = actionSource.lastIndexOf('await logAuditEvent');
+
+    expect(lastOwnerGuard).toBeGreaterThan(-1);
+    expect(stateChangedGuard).toBeGreaterThan(lastOwnerGuard);
     expect(auditWrite).toBeGreaterThan(stateChangedGuard);
   });
 });

@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 type InviteRole = 'Admin' | 'Editor' | 'Visualizador';
 
@@ -10,58 +10,68 @@ export type CreateOrganizationInviteInput = {
   role: InviteRole;
 };
 
-export async function createOrganizationInvite(input: CreateOrganizationInviteInput) {
-  const supabase = tryCreateAdminClient();
+const DATABASE_INVITE_ROLES: Record<InviteRole, 'admin' | 'editor' | 'viewer'> = {
+  Admin: 'admin',
+  Editor: 'editor',
+  Visualizador: 'viewer',
+};
 
-  if (!supabase) {
-    return {
-      persisted: false,
-      token: null,
-      invite: {
-        email: input.email,
-        role: input.role,
-        organizationId: input.organizationId,
-        status: 'pending',
-      },
-    };
+function getOrganizationName(value: unknown) {
+  if (Array.isArray(value)) {
+    const first = value[0];
+    return first && typeof first === 'object' && 'name' in first && typeof first.name === 'string'
+      ? first.name
+      : 'your organization';
   }
 
+  return value && typeof value === 'object' && 'name' in value && typeof value.name === 'string'
+    ? value.name
+    : 'your organization';
+}
+
+export async function createOrganizationInvite(input: CreateOrganizationInviteInput) {
+  const supabase = createAdminClient();
+
   const rawToken = crypto.randomBytes(32).toString('hex');
-  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const tokenFingerprint = crypto.createHash('sha256').update(rawToken).digest('hex');
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const role = DATABASE_INVITE_ROLES[input.role];
 
   const { data, error } = await supabase
-    .from('organization_invites')
-    .insert({
-      organization_id: input.organizationId,
-      email: input.email,
-      role: input.role,
-      token_hash: tokenHash,
-      invited_by: input.invitedBy,
-      expires_at: expiresAt,
-      status: 'pending',
-    })
-    .select('id,email,role,status,expires_at,created_at')
+    .from('invitations')
+    .upsert(
+      {
+        organization_id: input.organizationId,
+        email: normalizedEmail,
+        role,
+        token: rawToken,
+        invited_by: input.invitedBy,
+        accepted_at: null,
+        expires_at: expiresAt,
+      },
+      { onConflict: 'organization_id,email' },
+    )
+    .select('id,email,role,expires_at,created_at,organizations(name)')
     .single();
 
   if (error) {
     console.warn('[invites] create_failed', { code: error.code ?? 'unknown' });
-
-    return {
-      persisted: false,
-      token: null,
-      invite: {
-        email: input.email,
-        role: input.role,
-        organizationId: input.organizationId,
-        status: 'pending',
-      },
-    };
+    throw new Error('Unable to persist organization invitation.');
   }
 
   return {
     persisted: true,
     token: rawToken,
-    invite: data,
+    tokenFingerprint,
+    organizationName: getOrganizationName(data.organizations),
+    invite: {
+      id: data.id,
+      email: data.email,
+      role: data.role,
+      status: 'pending' as const,
+      expires_at: data.expires_at,
+      created_at: data.created_at,
+    },
   };
 }
