@@ -58,6 +58,8 @@ type EmailLogPayload = {
 };
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
+const RESEND_REQUEST_TIMEOUT_MS = 10_000;
+const RESEND_RESPONSE_MAX_BYTES = 64 * 1024;
 const DEFAULT_MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 350;
 const MAX_BACKOFF_MS = 3_000;
@@ -148,6 +150,52 @@ function buildListUnsubscribeHeaders(input: SendEmailInput) {
   };
 }
 
+async function readBoundedResendResponse(response: Response): Promise<ResendEmailResponse> {
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > RESEND_RESPONSE_MAX_BYTES) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error('Resend email failed: provider_response_too_large');
+  }
+
+  if (!response.body) return {};
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > RESEND_RESPONSE_MAX_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new Error('Resend email failed: provider_response_too_large');
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(body);
+    return text.length > 0 ? (JSON.parse(text) as ResendEmailResponse) : {};
+  } catch {
+    return {};
+  }
+}
+
 function buildEmailLogPayload(input: {
   id?: string;
   email: SendEmailInput;
@@ -226,9 +274,10 @@ async function sendWithResend(input: SendEmailInput, apiKey: string, from: strin
       text: input.text,
       headers: buildListUnsubscribeHeaders(input),
     }),
+    signal: AbortSignal.timeout(RESEND_REQUEST_TIMEOUT_MS),
   });
 
-  const data = (await response.json().catch(() => ({}))) as ResendEmailResponse;
+  const data = await readBoundedResendResponse(response);
 
   if (!response.ok) {
     const providerMessage = data.error?.message ? redactEmailSecrets(data.error.message) : `status_${response.status}`;
