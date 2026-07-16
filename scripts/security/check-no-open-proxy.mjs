@@ -4,6 +4,7 @@ import { join, relative } from 'node:path';
 const ROOT = process.cwd();
 const IGNORED_DIRS = new Set(['.git', '.next', 'node_modules', 'coverage', 'dist', 'out']);
 const ROUTE_FILE = /route\.(ts|tsx|js|mjs)$/;
+const SERVER_FETCH_PATTERN = /(?:\bglobalThis\s*\.\s*)?\bfetch\s*\(/;
 
 const failures = [];
 
@@ -44,6 +45,77 @@ function isRouteFile(path) {
   return ROUTE_FILE.test(path);
 }
 
+function stripComments(source) {
+  let output = '';
+  let state = 'code';
+  let escaped = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    const next = source[index + 1];
+
+    if (state === 'line-comment') {
+      if (char === '\n') {
+        output += '\n';
+        state = 'code';
+      } else {
+        output += ' ';
+      }
+      continue;
+    }
+
+    if (state === 'block-comment') {
+      if (char === '*' && next === '/') {
+        output += '  ';
+        index += 1;
+        state = 'code';
+      } else {
+        output += char === '\n' ? '\n' : ' ';
+      }
+      continue;
+    }
+
+    if (state === 'single-quote' || state === 'double-quote' || state === 'template') {
+      output += char;
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (
+        (state === 'single-quote' && char === "'") ||
+        (state === 'double-quote' && char === '"') ||
+        (state === 'template' && char === '`')
+      ) {
+        state = 'code';
+      }
+      continue;
+    }
+
+    if (char === '/' && next === '/') {
+      output += '  ';
+      index += 1;
+      state = 'line-comment';
+      continue;
+    }
+    if (char === '/' && next === '*') {
+      output += '  ';
+      index += 1;
+      state = 'block-comment';
+      continue;
+    }
+    if (char === "'") state = 'single-quote';
+    else if (char === '"') state = 'double-quote';
+    else if (char === '`') state = 'template';
+    output += char;
+  }
+
+  return output;
+}
+
 const files = walk(ROOT).map((path) => ({
   absolute: path,
   relative: normalizePath(relative(ROOT, path)),
@@ -56,10 +128,10 @@ for (const file of files) {
   if (!file.relative.startsWith('src/')) continue;
   if (!isRouteFile(file.relative)) continue;
 
-  const source = readFileSync(file.absolute, 'utf8');
+  const source = stripComments(readFileSync(file.absolute, 'utf8'));
   const lowerPath = file.relative.toLowerCase();
   const looksLikeProxyRoute = lowerPath.includes('proxy') || lowerPath.includes('/[...');
-  const doesServerFetch = source.includes('fetch(');
+  const doesServerFetch = SERVER_FETCH_PATTERN.test(source);
   const forwardsRequestHeaders =
     source.includes('request.headers.forEach') ||
     source.includes('new Headers(request.headers)') ||
