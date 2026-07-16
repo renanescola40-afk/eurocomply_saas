@@ -49,6 +49,8 @@ const enterpriseCopy = {
     error: 'Could not create workflow.',
     loading: 'Creating...',
     emptyVendor: 'No vendor is set yet. Add a vendor above before starting diligence.',
+    saveSuccess: 'System reassessed and saved.',
+    saveError: 'Could not save reassessment.',
   },
   pt: {
     title: 'Workflows enterprise de readiness',
@@ -73,6 +75,8 @@ const enterpriseCopy = {
     error: 'Não foi possível criar o workflow.',
     loading: 'A criar...',
     emptyVendor: 'Nenhum fornecedor definido. Adicione um fornecedor acima antes da due diligence.',
+    saveSuccess: 'Sistema reavaliado e guardado.',
+    saveError: 'Não foi possível guardar a reavaliação.',
   },
 } as const;
 
@@ -159,22 +163,26 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
     setIsSaving(true);
     setNotice(null);
 
-    const response = await fetch(`/api/ai-systems/${system.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    });
+    try {
+      const response = await fetch(`/api/ai-systems/${system.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
 
-    const payload = await response.json().catch(() => ({}));
-    setIsSaving(false);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setNotice({ type: 'error', message: payload?.message ?? t.saveError });
+        return;
+      }
 
-    if (!response.ok) {
-      setNotice({ type: 'error', message: payload?.message ?? 'Could not save reassessment.' });
-      return;
+      setNotice({ type: 'success', message: t.saveSuccess });
+      router.refresh();
+    } catch {
+      setNotice({ type: 'error', message: t.saveError });
+    } finally {
+      setIsSaving(false);
     }
-
-    setNotice({ type: 'success', message: 'System reassessed and saved.' });
-    router.refresh();
   }
 
   async function submitWorkflow(event: FormEvent<HTMLFormElement>, workflow: 'evidence_pack' | 'vendor_due_diligence' | 'risk_review', body: Record<string, unknown>) {
@@ -182,21 +190,25 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
     setIsWorkflowSaving(true);
     setWorkflowNotice(null);
 
-    const response = await fetch(`/api/ai-systems?workflow=${workflow}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    try {
+      const response = await fetch(`/api/ai-systems?workflow=${workflow}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
 
-    setIsWorkflowSaving(false);
+      if (!response.ok) {
+        setWorkflowNotice({ type: 'error', message: t.error });
+        return;
+      }
 
-    if (!response.ok) {
+      setWorkflowNotice({ type: 'success', message: t.success });
+      router.refresh();
+    } catch {
       setWorkflowNotice({ type: 'error', message: t.error });
-      return;
+    } finally {
+      setIsWorkflowSaving(false);
     }
-
-    setWorkflowNotice({ type: 'success', message: t.success });
-    router.refresh();
   }
 
   return (
@@ -208,7 +220,7 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <input required value={form.name} onChange={(event) => update('name', event.target.value)} placeholder="System name" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+          <input required value={form.name} onChange={(event) => update('name', event.target.value)} placeholder="System name" aria-label="System name" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
           <input value={form.ownerTeam} onChange={(event) => update('ownerTeam', event.target.value)} placeholder="Owner team" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
           <input value={form.category} onChange={(event) => update('category', event.target.value)} placeholder="Category" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
           <input value={form.countryMarket} onChange={(event) => update('countryMarket', event.target.value)} placeholder="Country / market" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
@@ -244,7 +256,7 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
         </fieldset>
 
         {notice ? (
-          <div className={`mt-4 rounded-2xl border p-3 text-sm ${notice.type === 'success' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100' : 'border-amber-500/30 bg-amber-500/10 text-amber-100'}`}>
+          <div role={notice.type === 'error' ? 'alert' : 'status'} aria-live="polite" className={`mt-4 rounded-2xl border p-3 text-sm ${notice.type === 'success' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100' : 'border-amber-500/30 bg-amber-500/10 text-amber-100'}`}>
             {notice.type === 'success' ? <CheckCircle2 className="mr-2 inline h-4 w-4" /> : <AlertTriangle className="mr-2 inline h-4 w-4" />}
             {notice.message}
           </div>
@@ -294,7 +306,7 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
         </div>
 
         {workflowNotice ? (
-          <div className={`mt-4 rounded-2xl border p-3 text-sm ${workflowNotice.type === 'success' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100' : 'border-amber-500/30 bg-amber-500/10 text-amber-100'}`}>
+          <div role={workflowNotice.type === 'error' ? 'alert' : 'status'} aria-live="polite" className={`mt-4 rounded-2xl border p-3 text-sm ${workflowNotice.type === 'success' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100' : 'border-amber-500/30 bg-amber-500/10 text-amber-100'}`}>
             {workflowNotice.type === 'success' ? <CheckCircle2 className="mr-2 inline h-4 w-4" /> : <AlertTriangle className="mr-2 inline h-4 w-4" />}
             {workflowNotice.message}
           </div>
