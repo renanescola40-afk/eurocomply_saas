@@ -1,7 +1,7 @@
 import { PostHogScript } from "@/components/analytics/posthog-script";
 import { defaultLocale, locales, type Locale } from "@/lib/i18n/routing";
 import { Geist, Geist_Mono } from "next/font/google";
-import { getLocale } from "next-intl/server";
+import { headers } from "next/headers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +14,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const NEXT_INTL_LOCALE_HEADER = "x-next-intl-locale";
+const RISCK_LOCALE_HEADER = "x-risck-locale";
+
 function resolveDocumentLocale(value: string | null): Locale {
   return value && locales.includes(value as Locale) ? (value as Locale) : defaultLocale;
+}
+
+async function getDocumentLocale(): Promise<Locale> {
+  const requestHeaders = await headers();
+  const requestLocale =
+    requestHeaders.get(RISCK_LOCALE_HEADER) ??
+    requestHeaders.get(NEXT_INTL_LOCALE_HEADER);
+
+  return resolveDocumentLocale(requestLocale);
 }
 
 export default async function RootLayout({
@@ -23,7 +35,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const locale = resolveDocumentLocale(await getLocale());
+  const locale = await getDocumentLocale();
 
   return (
     <html lang={locale} suppressHydrationWarning>
