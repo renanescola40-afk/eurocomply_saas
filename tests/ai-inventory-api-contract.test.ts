@@ -73,7 +73,8 @@ describe('AI inventory API contracts', () => {
     expect(querySource).toContain('p_organization_id: organizationId');
     expect(querySource).toContain('p_expected_updated_at: input.expectedUpdatedAt');
     expect(querySource).toContain('p_actor_user_id: input.reassessedBy');
-    expect(querySource).toContain('p_patch: {');
+    expect(querySource).toContain("function aiSystemPatch(input: Omit<CreateAiSystemInput, 'organizationId' | 'createdBy'>)");
+    expect(querySource).toContain('p_patch: aiSystemPatch(input)');
     expect(querySource).toContain("transition.outcome === 'state_changed'");
     expect(querySource).toContain("transition.outcome === 'not_found'");
     expect(querySource).toContain("return { status: 'conflict' }");

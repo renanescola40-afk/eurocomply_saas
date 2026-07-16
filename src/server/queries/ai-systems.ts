@@ -30,6 +30,7 @@ const AI_SYSTEM_COLUMNS = [
   'updated_at',
 ].join(',');
 
+const ATOMIC_CREATE_RPC = 'create_ai_system_atomic';
 const ATOMIC_REASSESSMENT_RPC = 'reassess_ai_system_atomic';
 
 export type AiSystemHistoryRecord = {
@@ -105,6 +106,11 @@ export type UpdateAiSystemResult =
   | { status: 'updated'; system: AiSystemRecord }
   | { status: 'conflict' };
 
+type AtomicCreateRow = {
+  outcome: 'created' | 'invalid_input';
+  system: AiSystemRecord | null;
+};
+
 type AtomicReassessmentRow = {
   outcome: 'updated' | 'state_changed' | 'not_found' | 'invalid_input';
   system: AiSystemRecord | null;
@@ -114,6 +120,24 @@ function isMissingAiSystemsTable(error: { code?: string; message?: string }) {
   return error.code === '42P01' || error.code === 'PGRST205' || /ai_systems/i.test(error.message ?? '');
 }
 
+function isAiSystemRecord(value: unknown): value is AiSystemRecord {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const system = value as Partial<AiSystemRecord>;
+  return Boolean(system.id && system.organization_id && system.updated_at);
+}
+
+function firstAtomicCreateRow(value: unknown): AtomicCreateRow | null {
+  if (!Array.isArray(value) || value.length !== 1) return null;
+  const candidate = value[0];
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
+
+  const row = candidate as Partial<AtomicCreateRow>;
+  if (!['created', 'invalid_input'].includes(String(row.outcome))) return null;
+  if (row.outcome === 'created' && !isAiSystemRecord(row.system)) return null;
+
+  return row as AtomicCreateRow;
+}
+
 function firstAtomicReassessmentRow(value: unknown): AtomicReassessmentRow | null {
   if (!Array.isArray(value) || value.length !== 1) return null;
   const candidate = value[0];
@@ -121,36 +145,34 @@ function firstAtomicReassessmentRow(value: unknown): AtomicReassessmentRow | nul
 
   const row = candidate as Partial<AtomicReassessmentRow>;
   if (!['updated', 'state_changed', 'not_found', 'invalid_input'].includes(String(row.outcome))) return null;
-  if (row.outcome === 'updated') {
-    if (!row.system || typeof row.system !== 'object' || Array.isArray(row.system)) return null;
-    const system = row.system as Partial<AiSystemRecord>;
-    if (!system.id || !system.organization_id || !system.updated_at) return null;
-  }
+  if (row.outcome === 'updated' && !isAiSystemRecord(row.system)) return null;
 
   return row as AtomicReassessmentRow;
 }
 
-async function insertAiSystemHistory(input: {
-  aiSystemId: string;
-  organizationId: string;
-  actorUserId: string;
-  action: 'created' | 'reassessed';
-  snapshot: Record<string, unknown>;
-}) {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return;
-
-  const { error } = await supabase.from('ai_system_history').insert({
-    ai_system_id: input.aiSystemId,
-    organization_id: input.organizationId,
-    actor_user_id: input.actorUserId,
-    action: input.action,
-    snapshot: input.snapshot,
-  });
-
-  if (error && !isMissingAiSystemsTable(error)) {
-    console.warn('[ai-systems] history_insert_failed', { code: error.code ?? 'unknown' });
-  }
+function aiSystemPatch(input: Omit<CreateAiSystemInput, 'organizationId' | 'createdBy'>) {
+  return {
+    name: input.name,
+    owner_team: input.ownerTeam ?? null,
+    category: input.category ?? null,
+    country_market: input.countryMarket ?? null,
+    processed_data: input.processedData ?? null,
+    vendor_name: input.vendorName ?? null,
+    model_name: input.modelName ?? null,
+    use_case: input.useCase,
+    role: input.role,
+    lifecycle_status: input.lifecycleStatus,
+    risk_domain: input.riskDomain,
+    uses_personal_data: input.usesPersonalData,
+    interacts_with_people: input.interactsWithPeople,
+    generates_content: input.generatesContent,
+    biometric_identification: input.biometricIdentification,
+    manipulative_or_exploitative: input.manipulativeOrExploitative,
+    risk_level: input.riskLevel,
+    classification_summary: input.classificationSummary,
+    obligations: input.obligations,
+    next_actions: input.nextActions,
+  };
 }
 
 export async function listAiSystems(organizationId: string): Promise<AiSystemRecord[]> {
@@ -214,57 +236,27 @@ export async function listAiSystemHistory(systemId: string, organizationId: stri
 
 export async function createAiSystem(input: CreateAiSystemInput): Promise<AiSystemRecord> {
   const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('ai_systems')
-    .insert({
-      organization_id: input.organizationId,
-      created_by: input.createdBy,
-      name: input.name,
-      owner_team: input.ownerTeam ?? null,
-      category: input.category ?? null,
-      country_market: input.countryMarket ?? null,
-      processed_data: input.processedData ?? null,
-      vendor_name: input.vendorName ?? null,
-      model_name: input.modelName ?? null,
-      use_case: input.useCase,
-      role: input.role,
-      lifecycle_status: input.lifecycleStatus,
-      risk_domain: input.riskDomain,
-      uses_personal_data: input.usesPersonalData,
-      interacts_with_people: input.interactsWithPeople,
-      generates_content: input.generatesContent,
-      biometric_identification: input.biometricIdentification,
-      manipulative_or_exploitative: input.manipulativeOrExploitative,
-      risk_level: input.riskLevel,
-      classification_summary: input.classificationSummary,
-      obligations: input.obligations,
-      next_actions: input.nextActions,
-      last_reassessed_at: new Date().toISOString(),
-    })
-    .select(AI_SYSTEM_COLUMNS)
-    .single();
+  const { data, error } = await supabase.rpc(ATOMIC_CREATE_RPC, {
+    p_organization_id: input.organizationId,
+    p_actor_user_id: input.createdBy,
+    p_system: aiSystemPatch(input),
+  });
 
   if (error) {
-    console.warn('[ai-systems] create_failed', { code: error.code ?? 'unknown' });
+    console.warn('[ai-systems] atomic_create_failed', { code: error.code ?? 'unknown' });
     throw error;
   }
 
-  const system = data as unknown as AiSystemRecord;
-  await insertAiSystemHistory({
-    aiSystemId: system.id,
-    organizationId: input.organizationId,
-    actorUserId: input.createdBy,
-    action: 'created',
-    snapshot: {
-      name: system.name,
-      riskLevel: system.risk_level,
-      lifecycleStatus: system.lifecycle_status,
-      riskDomain: system.risk_domain,
-    },
-  });
+  const transition = firstAtomicCreateRow(data);
+  if (!transition) {
+    throw new Error('AI system creation RPC returned an invalid result');
+  }
 
-  return system;
+  if (transition.outcome !== 'created' || !transition.system) {
+    throw new Error('AI system creation RPC rejected validated input');
+  }
+
+  return transition.system;
 }
 
 export async function updateAiSystem(
@@ -278,28 +270,7 @@ export async function updateAiSystem(
     p_organization_id: organizationId,
     p_expected_updated_at: input.expectedUpdatedAt,
     p_actor_user_id: input.reassessedBy,
-    p_patch: {
-      name: input.name,
-      owner_team: input.ownerTeam ?? null,
-      category: input.category ?? null,
-      country_market: input.countryMarket ?? null,
-      processed_data: input.processedData ?? null,
-      vendor_name: input.vendorName ?? null,
-      model_name: input.modelName ?? null,
-      use_case: input.useCase,
-      role: input.role,
-      lifecycle_status: input.lifecycleStatus,
-      risk_domain: input.riskDomain,
-      uses_personal_data: input.usesPersonalData,
-      interacts_with_people: input.interactsWithPeople,
-      generates_content: input.generatesContent,
-      biometric_identification: input.biometricIdentification,
-      manipulative_or_exploitative: input.manipulativeOrExploitative,
-      risk_level: input.riskLevel,
-      classification_summary: input.classificationSummary,
-      obligations: input.obligations,
-      next_actions: input.nextActions,
-    },
+    p_patch: aiSystemPatch(input),
   });
 
   if (error) {
