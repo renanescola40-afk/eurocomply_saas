@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
-import { Geist, Geist_Mono } from 'next/font/google';
 import { PostHogAnalyticsProvider } from '@/components/analytics/PostHogAnalyticsProvider';
 import { AnalyticsConsentBanner } from '@/components/analytics/AnalyticsConsentBanner';
 import { AuthFloatingControls } from '@/components/auth/AuthFloatingControls';
@@ -11,18 +10,6 @@ import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffectsGate from '@/components/GlobalClientEffectsGate';
 import GapAnalysisShortcut from '@/components/GapAnalysisShortcut';
 import { routing, type Locale } from '@/lib/i18n/routing';
-
-import '../globals.css';
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
 
 type Props = {
   children: React.ReactNode;
@@ -83,24 +70,20 @@ export default async function LocaleLayout({ children, params }: Props) {
   );
 
   return (
-    <html lang={safeLocale} suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
-        <NextIntlClientProvider messages={messages}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem={false}
-            disableTransitionOnChange
-          >
-            <PostHogAnalyticsProvider>
-              <AuthProviderGate>
-                {sharedShell}
-                <AuthFloatingControls locale={safeLocale} />
-              </AuthProviderGate>
-            </PostHogAnalyticsProvider>
-          </ThemeProvider>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+    <NextIntlClientProvider messages={messages}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
+        enableSystem={false}
+        disableTransitionOnChange
+      >
+        <PostHogAnalyticsProvider>
+          <AuthProviderGate>
+            {sharedShell}
+            <AuthFloatingControls locale={safeLocale} />
+          </AuthProviderGate>
+        </PostHogAnalyticsProvider>
+      </ThemeProvider>
+    </NextIntlClientProvider>
   );
 }
