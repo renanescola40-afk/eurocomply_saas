@@ -13,7 +13,6 @@ import {
 
 const intlMiddleware = createIntlMiddleware(routing);
 const LOCALE_COOKIE = 'NEXT_LOCALE';
-const LOCALE_REQUEST_HEADER = 'x-risck-locale';
 const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations';
 const AUTH_SUCCESS_PATH = '/onboarding';
 const SENTRY_TUNNEL_PATH = '/monitoring';
@@ -119,14 +118,9 @@ function nextWithRequestId(req: NextRequest, requestId: string) {
   return withRequestId(NextResponse.next({ request: { headers: requestHeaders } }), requestId);
 }
 
-function requestWithRequestId(req: NextRequest, requestId: string, locale?: string) {
-  const requestHeaders = buildCorrelatedRequestHeaders(req.headers, requestId);
-  if (locale && locales.includes(locale as 'en')) {
-    requestHeaders.set(LOCALE_REQUEST_HEADER, locale);
-  }
-
+function requestWithRequestId(req: NextRequest, requestId: string) {
   return new NextRequest(req, {
-    headers: requestHeaders,
+    headers: buildCorrelatedRequestHeaders(req.headers, requestId),
   });
 }
 
@@ -292,7 +286,7 @@ export default async function middleware(req: NextRequest) {
       return withRequestId(withPrivateNoStore(NextResponse.redirect(dashboardUrl)), requestId);
     }
 
-    const response = intlMiddleware(requestWithRequestId(req, requestId, locale));
+    const response = intlMiddleware(requestWithRequestId(req, requestId));
 
     response.cookies.set(LOCALE_COOKIE, locale, {
       maxAge: 60 * 60 * 24 * 365,
