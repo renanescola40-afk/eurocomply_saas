@@ -27,7 +27,12 @@ vi.mock('@/lib/email/client', () => ({
 }));
 
 vi.mock('@/lib/email/templates', () => ({
-  paymentFailedEmail: () => ({ subject: 'Payment failed', html: '<p>Payment failed</p>', text: 'Payment failed' }),
+  paymentFailedEmail: () => ({
+    subject: 'Payment failed',
+    html: '<p>Payment failed</p>',
+    text: 'Payment failed',
+    template: 'invoice_failed',
+  }),
 }));
 
 vi.mock('@/server/users/email', () => ({
@@ -185,7 +190,7 @@ describe('Stripe webhook billing hardening', () => {
     mocks.createAdminClient.mockImplementation(buildSupabaseClient);
     mocks.writeAuditLog.mockResolvedValue(undefined);
     mocks.getUserEmailById.mockResolvedValue('billing@example.test');
-    mocks.sendEmail.mockResolvedValue(undefined);
+    mocks.sendEmail.mockResolvedValue({ sent: true, provider: 'resend', status: 'sent', attempts: 1 });
   });
 
   it('ignores unsupported Stripe events without claiming idempotency', async () => {
@@ -292,6 +297,14 @@ describe('Stripe webhook billing hardening', () => {
       expect.objectContaining({
         to: 'billing@example.test',
         subject: 'Payment failed',
+        template: 'invoice_failed',
+        organizationId: 'org_a',
+        userId: 'user_admin',
+        metadata: expect.objectContaining({
+          source: 'stripe_payment_failed_webhook',
+          stripeEventType: 'invoice.payment_failed',
+          livemode: false,
+        }),
       }),
     );
     expect(mocks.writeAuditLog).toHaveBeenCalledWith(
@@ -306,6 +319,99 @@ describe('Stripe webhook billing hardening', () => {
           stripeSubscriptionId: 'sub_123',
         }),
       }),
+    );
+  });
+
+  it('marks payment-failed events failed when the email provider skips delivery', async () => {
+    state.subscriptionData = [{ organization_id: 'org_a', stripe_subscription_id: 'sub_123', stripe_customer_id: 'cus_123' }];
+    mocks.sendEmail.mockResolvedValue({ sent: false, provider: 'console', status: 'skipped', attempts: 0 });
+
+    await expect(
+      handleStripeWebhookEvent(makeStripeEvent('invoice.payment_failed', makeInvoicePaymentFailed())),
+    ).rejects.toThrow('Payment failed notification delivery was not confirmed (skipped)');
+
+    expect(state.eventUpdates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ payload: expect.objectContaining({ status: 'failed' }) }),
+      ]),
+    );
+    expect(state.eventUpdates).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ payload: expect.objectContaining({ status: 'processed' }) }),
+      ]),
+    );
+    expect(mocks.writeAuditLog).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'billing.payment_failed' }),
+    );
+  });
+
+  it('marks payment-failed events failed when the email provider throws', async () => {
+    state.subscriptionData = [{ organization_id: 'org_a', stripe_subscription_id: 'sub_123', stripe_customer_id: 'cus_123' }];
+    mocks.sendEmail.mockRejectedValue(new Error('provider unavailable'));
+
+    await expect(
+      handleStripeWebhookEvent(makeStripeEvent('invoice.payment_failed', makeInvoicePaymentFailed())),
+    ).rejects.toThrow('provider unavailable');
+
+    expect(state.eventUpdates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ payload: expect.objectContaining({ status: 'failed' }) }),
+      ]),
+    );
+    expect(mocks.writeAuditLog).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'billing.payment_failed' }),
+    );
+  });
+
+  it('fails the webhook claim when subscription lookup fails before delivery', async () => {
+    state.subscriptionError = { code: '08006', message: 'database unavailable' };
+
+    await expect(
+      handleStripeWebhookEvent(makeStripeEvent('invoice.payment_failed', makeInvoicePaymentFailed())),
+    ).rejects.toThrow('Payment failed notification subscription lookup failed');
+
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(state.eventUpdates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ payload: expect.objectContaining({ status: 'failed' }) }),
+      ]),
+    );
+  });
+
+  it('fails the webhook claim when no billing contact can be resolved', async () => {
+    state.subscriptionData = [{ organization_id: 'org_a', stripe_subscription_id: 'sub_123', stripe_customer_id: 'cus_123' }];
+    mocks.getUserEmailById.mockResolvedValue(null);
+
+    await expect(
+      handleStripeWebhookEvent(makeStripeEvent('invoice.payment_failed', makeInvoicePaymentFailed())),
+    ).rejects.toThrow('Payment failed notification billing contact was not found');
+
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(state.eventUpdates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ payload: expect.objectContaining({ status: 'failed' }) }),
+      ]),
+    );
+  });
+
+  it('keeps the event retryable when the delivery audit cannot be persisted', async () => {
+    state.subscriptionData = [{ organization_id: 'org_a', stripe_subscription_id: 'sub_123', stripe_customer_id: 'cus_123' }];
+    mocks.writeAuditLog.mockRejectedValue(new Error('audit unavailable'));
+
+    await expect(
+      handleStripeWebhookEvent(makeStripeEvent('invoice.payment_failed', makeInvoicePaymentFailed())),
+    ).rejects.toThrow('Stripe billing audit persistence failed');
+
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+    expect(state.eventUpdates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ payload: expect.objectContaining({ status: 'failed' }) }),
+      ]),
+    );
+    expect(state.eventUpdates).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ payload: expect.objectContaining({ status: 'processed' }) }),
+      ]),
     );
   });
 
