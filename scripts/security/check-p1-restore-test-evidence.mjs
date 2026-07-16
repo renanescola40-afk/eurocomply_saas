@@ -61,10 +61,20 @@ if (evidence.environment !== 'production') fail('environment must be production'
 if (evidence.targetEnvironment !== 'recovery-isolated') fail('targetEnvironment must be recovery-isolated');
 
 for (const field of ['generatedAt', 'reviewedAt', 'reviewer', 'nextReviewDue']) required(evidence[field], field);
+for (const field of ['generatedAt', 'reviewedAt', 'nextReviewDue']) requireIsoTimestamp(evidence[field], field);
 
 if (!evidence.validation || typeof evidence.validation !== 'object') fail('validation is required');
 if (evidence.validation.result !== 'pass') fail('validation.result must be pass');
 for (const field of ['validatedAt', 'validator', 'method']) required(evidence.validation[field], `validation.${field}`);
+requireIsoTimestamp(evidence.validation.validatedAt, 'validation.validatedAt');
+
+const generatedAt = Date.parse(evidence.generatedAt);
+const validatedAt = Date.parse(evidence.validation.validatedAt);
+const reviewedAt = Date.parse(evidence.reviewedAt);
+const nextReviewDue = Date.parse(evidence.nextReviewDue);
+if (validatedAt < generatedAt) fail('validation.validatedAt precedes generatedAt');
+if (reviewedAt < validatedAt) fail('reviewedAt precedes validation.validatedAt');
+if (nextReviewDue <= reviewedAt) fail('nextReviewDue must be after reviewedAt');
 
 if (!Array.isArray(evidence.restoreTests) || evidence.restoreTests.length === 0) fail('restoreTests must include at least one test');
 for (const test of evidence.restoreTests) {
@@ -93,6 +103,9 @@ for (const test of evidence.restoreTests) {
   requireNumber(test.rtoActualSeconds, `${test.testId}.rtoActualSeconds`, { positive: true });
   requireNumber(test.rpoTargetSeconds, `${test.testId}.rpoTargetSeconds`);
   requireNumber(test.rpoActualSeconds, `${test.testId}.rpoActualSeconds`);
+  if (test.rtoActualSeconds > test.rtoTargetSeconds) fail(`${test.testId}: measured RTO exceeds target`);
+  if (test.rpoActualSeconds > test.rpoTargetSeconds) fail(`${test.testId}: measured RPO exceeds target`);
+  if (Date.parse(test.completedAt) > generatedAt) fail(`${test.testId}: generatedAt precedes completedAt`);
 }
 
 if (!Array.isArray(evidence.controlsVerified)) fail('controlsVerified must be an array');
@@ -103,6 +116,8 @@ for (const control of requiredControls) {
 if (!Array.isArray(evidence.artifacts) || evidence.artifacts.length === 0) fail('artifacts must include at least one artifact');
 for (const artifact of evidence.artifacts) {
   for (const field of ['type', 'reference', 'description', 'collectedAt']) required(artifact[field], `artifacts[].${field}`);
+  requireIsoTimestamp(artifact.collectedAt, 'artifacts[].collectedAt');
+  if (Date.parse(artifact.collectedAt) > reviewedAt) fail('artifacts[].collectedAt must not be after reviewedAt');
 }
 
 console.log(`P1 restore test evidence is valid: ${evidencePath}`);

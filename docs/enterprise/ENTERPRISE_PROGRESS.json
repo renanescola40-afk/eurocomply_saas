@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-07-16T16:40:00Z",
+  "main_sha": "b57586310bce8c05379e726afa264e5372afbc3d",
+  "official_completion_percent": 31,
+  "official_remaining_percent": 69,
+  "previous_completion_percent": 31,
+  "execution_delta_percent": 0,
+  "technical_repository_percent": null,
+  "runtime_evidence_percent": 12.5,
+  "owner_action_percent": null,
+  "controls_pass": null,
+  "controls_total": 100,
+  "critical_controls_open": null,
+  "p0_open": 14,
+  "p1_open": 10,
+  "current_decision": "NO_GO",
+  "active_prs": [1114, 1115, 1116],
+  "blocked_prs": [],
+  "next_priority": "Atomic organization invitation acceptance",
+  "evidence_freshness": {
+    "status": "stale",
+    "last_verified_sha": "180caf0ec057a7c74a658bbcd0adf623294188ed",
+    "reason": "The exact-main scorecard currently stops on ADR-0088 risk-section validation before generating a new score."
+  },
+  "calculation_method": "Last successfully generated versioned 100-control weighted scorecard. Current-main values must not replace it until exact-SHA generation completes. Null metrics are intentionally not inferred."
+}

@@ -30,7 +30,7 @@ The change affects only repository-side static validation. It does not alter app
 
 The stricter parser can newly flag routes that previously passed because controls appeared only in comments or because fetch syntax used whitespace or `globalThis`. Such failures are intended and require review of the actual route.
 
-## Limitations
+## Risks and trade-offs
 
 This remains a lexical guard rather than an AST or data-flow analysis. It does not detect aliased fetch functions, third-party HTTP clients, dynamically constructed calls, or all possible SSRF data flows. It complements, but does not replace, code review, runtime egress controls, and security testing.
 
