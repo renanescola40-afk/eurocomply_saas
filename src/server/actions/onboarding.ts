@@ -1,5 +1,8 @@
-import { randomUUID } from 'crypto';
+import { createHash } from 'crypto';
 
+import { sendEmail } from '@/lib/email/client';
+import { invitationEmail } from '@/lib/email/templates';
+import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
   calculateInitialReadinessScore,
@@ -24,6 +27,27 @@ type CurrentUserForOnboarding = {
 
 type SupabaseAdminClient = ReturnType<typeof createAdminClient>;
 
+const ATOMIC_ONBOARDING_ACTIVATION_RPC = 'complete_onboarding_activation_atomic';
+const SUPPORTED_LOCALES = new Set(['en', 'pt', 'es', 'fr', 'it', 'de']);
+
+type AtomicOnboardingActivationResult = {
+  outcome: 'completed' | 'replayed' | 'not_found' | 'forbidden' | 'invalid_input' | 'ai_system_not_found';
+  activation_run_id: string | null;
+  first_ai_system_id: string | null;
+  documents_created: number;
+  tasks_created: number;
+  invitations_created: number;
+  organization_name: string;
+  invitation_deliveries: unknown;
+};
+
+type OnboardingInvitationDelivery = {
+  id: string;
+  email: string;
+  role: string;
+  token: string;
+};
+
 function onboardingActionError(message: string) {
   return new Error(message);
 }
@@ -31,6 +55,121 @@ function onboardingActionError(message: string) {
 function getDashboardPath(locale: string, plan?: string | null) {
   const query = plan && plan !== 'trial' ? `?plan=${encodeURIComponent(plan)}` : '?onboarding=completed';
   return `/${locale}/dashboard/organizations${query}`;
+}
+
+function getAppUrl() {
+  return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+}
+
+function getSafeLocale(locale: string) {
+  return SUPPORTED_LOCALES.has(locale) ? locale : 'en';
+}
+
+function normalizeInviteEmails(emails: string[]) {
+  return [...new Set(emails.map((email) => email.trim().toLowerCase()))].sort();
+}
+
+export function createOnboardingActivationIdempotencyKey(input: {
+  organizationId: string;
+  userId: string;
+  payload: OnboardingActivationInput;
+}) {
+  const canonicalPayload = {
+    organizationId: input.organizationId,
+    actorUserId: input.userId,
+    organizationName: input.payload.organizationName,
+    slug: input.payload.slug,
+    country: input.payload.country,
+    companyType: input.payload.companyType,
+    sector: input.payload.sector,
+    aiUsage: input.payload.aiUsage,
+    aiUsageSummary: input.payload.aiUsageSummary,
+    aiSystemId: input.payload.aiSystemId ?? null,
+    aiSystemName: input.payload.aiSystemName,
+    aiSystemUseCase: input.payload.aiSystemUseCase,
+    ownerTeam: input.payload.ownerTeam,
+    vendorName: input.payload.vendorName,
+    role: input.payload.role,
+    lifecycleStatus: input.payload.lifecycleStatus,
+    riskDomain: input.payload.riskDomain,
+    usesPersonalData: input.payload.usesPersonalData,
+    interactsWithPeople: input.payload.interactsWithPeople,
+    generatesContent: input.payload.generatesContent,
+    biometricIdentification: input.payload.biometricIdentification,
+    manipulativeOrExploitative: input.payload.manipulativeOrExploitative,
+    inviteEmails: normalizeInviteEmails(input.payload.inviteEmails),
+    selectedPlan: input.payload.selectedPlan,
+  };
+
+  return createHash('sha256').update(JSON.stringify(canonicalPayload)).digest('hex');
+}
+
+function firstAtomicActivationResult(data: unknown): AtomicOnboardingActivationResult | null {
+  if (!Array.isArray(data) || data.length === 0) return null;
+  const candidate = data[0];
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
+  return candidate as AtomicOnboardingActivationResult;
+}
+
+function parseInvitationDeliveries(value: unknown): OnboardingInvitationDelivery[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.filter((candidate): candidate is OnboardingInvitationDelivery => {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return false;
+    const record = candidate as Record<string, unknown>;
+    return typeof record.id === 'string'
+      && typeof record.email === 'string'
+      && typeof record.role === 'string'
+      && typeof record.token === 'string'
+      && /^[a-f0-9]{64}$/i.test(record.token);
+  });
+}
+
+async function deliverOnboardingInvitations(input: {
+  organizationId: string;
+  organizationName: string;
+  userId: string;
+  locale: string;
+  invitations: OnboardingInvitationDelivery[];
+}) {
+  await Promise.all(input.invitations.map(async (invitation) => {
+    const inviteUrl = `${getAppUrl()}/${getSafeLocale(input.locale)}/invite/${encodeURIComponent(invitation.token)}`;
+    const builtEmail = invitationEmail({
+      organizationName: input.organizationName,
+      role: invitation.role,
+      inviteUrl,
+    });
+
+    try {
+      const delivery = await sendEmail({
+        to: invitation.email,
+        subject: builtEmail.subject,
+        html: builtEmail.html,
+        text: builtEmail.text,
+        template: builtEmail.template,
+        organizationId: input.organizationId,
+        userId: input.userId,
+        idempotencyKey: `onboarding-invite:${invitation.id}:${createHash('sha256').update(invitation.token).digest('hex')}`,
+        metadata: {
+          source: 'onboarding_activation',
+          invitationId: invitation.id,
+          role: invitation.role,
+        },
+      });
+
+      if (!delivery.sent) {
+        throw new Error(`Invitation provider returned ${delivery.status}`);
+      }
+    } catch (error) {
+      reportError(error, {
+        area: 'onboarding_invitation_delivery',
+        organizationId: input.organizationId,
+        invitationId: invitation.id,
+        emailDomain: invitation.email.split('@')[1] ?? 'unknown',
+      });
+      throw onboardingActionError('Onboarding data was saved, but invitation delivery failed. Retry onboarding to resend pending invitations.');
+    }
+  }));
 }
 
 async function resolveOrganizationId(input: { organizationId?: string; organizationName: string; slug: string }, user: CurrentUserForOnboarding) {
@@ -100,202 +239,6 @@ async function updateOrganizationOnboardingProfile(
   if (error) throw onboardingActionError('Unable to update onboarding profile');
 }
 
-async function upsertFirstAiSystem(
-  supabase: SupabaseAdminClient,
-  organizationId: string,
-  userId: string,
-  input: OnboardingActivationInput,
-  classification: ReturnType<typeof classifyAiSystem>,
-) {
-  const payload = {
-    organization_id: organizationId,
-    name: input.aiSystemName,
-    owner_team: input.ownerTeam,
-    vendor_name: input.vendorName || null,
-    use_case: input.aiSystemUseCase,
-    role: normalizeAiSystemRole(input.role),
-    lifecycle_status: normalizeAiSystemStatus(input.lifecycleStatus),
-    risk_domain: normalizeAiRiskDomain(input.riskDomain),
-    uses_personal_data: input.usesPersonalData,
-    interacts_with_people: input.interactsWithPeople,
-    generates_content: input.generatesContent,
-    biometric_identification: input.biometricIdentification,
-    manipulative_or_exploitative: input.manipulativeOrExploitative,
-    risk_level: classification.riskLevel,
-    classification_summary: classification.summary,
-    obligations: classification.obligations,
-    next_actions: classification.nextActions,
-    created_by: userId,
-  };
-
-  if (input.aiSystemId) {
-    const { data, error } = await supabase
-      .from('ai_systems')
-      .update(payload)
-      .eq('id', input.aiSystemId)
-      .eq('organization_id', organizationId)
-      .select('id')
-      .single();
-
-    if (error) throw onboardingActionError('Unable to update first AI system');
-    return data.id as string;
-  }
-
-  const { data, error } = await supabase
-    .from('ai_systems')
-    .insert(payload)
-    .select('id')
-    .single();
-
-  if (error) throw onboardingActionError('Unable to create first AI system');
-  return data.id as string;
-}
-
-async function createRecommendedDocumentRecords(
-  supabase: SupabaseAdminClient,
-  organizationId: string,
-  userId: string,
-  documents: ReturnType<typeof getRecommendedDocuments>,
-) {
-  const { data: existing, error: existingError } = await supabase
-    .from('documents')
-    .select('id,title,name,category')
-    .eq('organization_id', organizationId)
-    .eq('category', 'onboarding_recommended');
-
-  const existingTitles = new Set(
-    existingError ? [] : (existing ?? []).map((document) => String(document.title ?? document.name ?? '').toLowerCase()),
-  );
-  const missingDocuments = documents.filter((document) => !existingTitles.has(document.title.toLowerCase()));
-
-  if (missingDocuments.length === 0) return { inserted: 0 };
-
-  const now = new Date().toISOString();
-  const rows = missingDocuments.map((document) => ({
-    organization_id: organizationId,
-    uploaded_by: userId,
-    title: document.title,
-    name: document.title,
-    category: 'onboarding_recommended',
-    storage_path: `${organizationId}/onboarding/recommended/${document.id}.md`,
-    mime_type: 'text/markdown',
-    size_bytes: 0,
-    status: 'suggested',
-    metadata: {
-      source: 'onboarding_activation',
-      recommendationId: document.id,
-      priority: document.priority,
-      reason: document.reason,
-      generatedAt: now,
-    },
-  }));
-
-  const { error } = await supabase.from('documents').insert(rows);
-  if (error) throw onboardingActionError('Unable to create recommended documents');
-
-  return { inserted: rows.length };
-}
-
-async function createInitialComplianceTasks(
-  supabase: SupabaseAdminClient,
-  organizationId: string,
-  userId: string,
-  tasks: ReturnType<typeof getSuggestedTasks>,
-) {
-  const { data: existing, error: existingError } = await supabase
-    .from('compliance_tasks')
-    .select('id,title,category')
-    .eq('organization_id', organizationId)
-    .eq('category', 'onboarding_activation');
-
-  const existingTitles = new Set(existingError ? [] : (existing ?? []).map((task) => String(task.title ?? '').toLowerCase()));
-  const missingTasks = tasks.filter((task) => !existingTitles.has(task.title.toLowerCase()));
-
-  if (missingTasks.length === 0) return { inserted: 0 };
-
-  const rows = missingTasks.map((task) => {
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + task.dueInDays);
-
-    return {
-      organization_id: organizationId,
-      created_by: userId,
-      user_id: userId,
-      title: task.title,
-      description: task.description,
-      category: 'onboarding_activation',
-      status: 'open',
-      priority: task.priority,
-      due_date: dueDate.toISOString().slice(0, 10),
-      metadata: {
-        source: 'onboarding_activation',
-        suggestionId: task.id,
-      },
-    };
-  });
-
-  const { error } = await supabase.from('compliance_tasks').insert(rows);
-  if (error) throw onboardingActionError('Unable to create initial compliance tasks');
-
-  return { inserted: rows.length };
-}
-
-async function createTeamInvitations(
-  supabase: SupabaseAdminClient,
-  organizationId: string,
-  userId: string,
-  emails: string[],
-) {
-  if (emails.length === 0) return { inserted: 0 };
-
-  const rows = emails.map((email) => ({
-    organization_id: organizationId,
-    email,
-    role: 'member',
-    token: randomUUID(),
-    invited_by: userId,
-  }));
-
-  const { error } = await supabase
-    .from('invitations')
-    .upsert(rows, { onConflict: 'organization_id,email', ignoreDuplicates: true });
-
-  if (error) throw onboardingActionError('Unable to create team invitations');
-  return { inserted: rows.length };
-}
-
-async function recordActivationRun(
-  supabase: SupabaseAdminClient,
-  organizationId: string,
-  userId: string,
-  input: OnboardingActivationInput,
-  firstAiSystemId: string,
-  readinessScore: number,
-  recommendedDocuments: ReturnType<typeof getRecommendedDocuments>,
-  suggestedTasks: ReturnType<typeof getSuggestedTasks>,
-  riskLevel: string,
-) {
-  const { error } = await supabase.from('onboarding_activation_runs').insert({
-    organization_id: organizationId,
-    created_by: userId,
-    country: input.country,
-    company_type: input.companyType,
-    sector: input.sector,
-    ai_usage_level: input.aiUsage,
-    ai_usage_summary: input.aiUsageSummary,
-    first_ai_system_id: firstAiSystemId,
-    initial_risk_level: riskLevel,
-    readiness_score: readinessScore,
-    recommended_documents: recommendedDocuments,
-    suggested_tasks: suggestedTasks,
-    invited_emails: input.inviteEmails,
-    selected_plan: input.selectedPlan,
-    status: 'completed',
-  });
-
-  if (error) throw onboardingActionError('Unable to record onboarding activation');
-}
-
 export async function saveOnboardingDraft(input: OnboardingDraftInput): Promise<OnboardingActionResult> {
   const user = await requireCurrentUser();
   const payload = onboardingDraftSchema.parse(input);
@@ -329,6 +272,9 @@ export async function completeOnboardingActivation(
     await assertCurrentUserCan(organizationId, user.id, 'team:invite');
   }
 
+  const inviteEmails = normalizeInviteEmails(payload.inviteEmails);
+  const activationPayload = { ...payload, inviteEmails };
+
   const classification = classifyAiSystem({
     role: normalizeAiSystemRole(payload.role),
     riskDomain: normalizeAiRiskDomain(payload.riskDomain),
@@ -348,7 +294,7 @@ export async function completeOnboardingActivation(
   const suggestedTasks = getSuggestedTasks({
     riskLevel: classification.riskLevel,
     recommendedDocuments,
-    inviteEmails: payload.inviteEmails,
+    inviteEmails,
   });
   const readinessScore = calculateInitialReadinessScore({
     hasOrganization: true,
@@ -360,34 +306,93 @@ export async function completeOnboardingActivation(
     hasRiskClassification: true,
     recommendedDocuments,
     suggestedTasks,
-    invitedEmails: payload.inviteEmails,
+    invitedEmails: inviteEmails,
     selectedPlan: payload.selectedPlan,
   });
 
-  const firstAiSystemId = await upsertFirstAiSystem(supabase, organizationId, user.id, payload, classification);
-  const [documentResult, taskResult, invitationResult] = await Promise.all([
-    createRecommendedDocumentRecords(supabase, organizationId, user.id, recommendedDocuments),
-    createInitialComplianceTasks(supabase, organizationId, user.id, suggestedTasks),
-    createTeamInvitations(supabase, organizationId, user.id, payload.inviteEmails),
-  ]);
-
-  await recordActivationRun(
-    supabase,
+  const idempotencyKey = createOnboardingActivationIdempotencyKey({
     organizationId,
-    user.id,
-    payload,
-    firstAiSystemId,
-    readinessScore,
-    recommendedDocuments,
-    suggestedTasks,
-    classification.riskLevel,
-  );
+    userId: user.id,
+    payload: activationPayload,
+  });
+  const { data, error } = await supabase.rpc(ATOMIC_ONBOARDING_ACTIVATION_RPC, {
+    p_organization_id: organizationId,
+    p_actor_user_id: user.id,
+    p_idempotency_key: idempotencyKey,
+    p_activation: {
+      organization: {
+        name: payload.organizationName,
+        slug: payload.slug,
+        country: payload.country,
+        companyType: payload.companyType,
+        sector: payload.sector,
+        aiUsage: payload.aiUsage,
+        aiUsageSummary: payload.aiUsageSummary,
+        selectedPlan: payload.selectedPlan,
+      },
+      aiSystem: {
+        id: payload.aiSystemId ?? null,
+        name: payload.aiSystemName,
+        ownerTeam: payload.ownerTeam,
+        vendorName: payload.vendorName,
+        useCase: payload.aiSystemUseCase,
+        role: normalizeAiSystemRole(payload.role),
+        lifecycleStatus: normalizeAiSystemStatus(payload.lifecycleStatus),
+        riskDomain: normalizeAiRiskDomain(payload.riskDomain),
+        usesPersonalData: payload.usesPersonalData,
+        interactsWithPeople: payload.interactsWithPeople,
+        generatesContent: payload.generatesContent,
+        biometricIdentification: payload.biometricIdentification,
+        manipulativeOrExploitative: payload.manipulativeOrExploitative,
+        riskLevel: classification.riskLevel,
+        classificationSummary: classification.summary,
+        obligations: classification.obligations,
+        nextActions: classification.nextActions,
+      },
+      recommendedDocuments,
+      suggestedTasks,
+      inviteEmails,
+      readinessScore,
+    },
+  });
 
-  await updateOrganizationOnboardingProfile(supabase, organizationId, {
-    ...payload,
-    readinessScore,
-    onboardingStep: 'completed',
-    status: 'completed',
+  if (error) {
+    reportError(error, {
+      area: 'onboarding_activation_atomic',
+      organizationId,
+      idempotencyKey,
+    });
+    throw onboardingActionError('Unable to complete onboarding activation.');
+  }
+
+  const activation = firstAtomicActivationResult(data);
+  if (!activation) {
+    throw onboardingActionError('Unable to complete onboarding activation.');
+  }
+
+  if (activation.outcome === 'not_found') {
+    throw onboardingActionError('Organization not found.');
+  }
+  if (activation.outcome === 'forbidden') {
+    throw onboardingActionError('You do not have access to complete this onboarding.');
+  }
+  if (activation.outcome === 'ai_system_not_found') {
+    throw onboardingActionError('The selected AI system does not belong to this organization.');
+  }
+  if (activation.outcome !== 'completed' && activation.outcome !== 'replayed') {
+    throw onboardingActionError('Unable to complete onboarding activation.');
+  }
+
+  const invitationDeliveries = parseInvitationDeliveries(activation.invitation_deliveries);
+  if (invitationDeliveries.length !== inviteEmails.length) {
+    throw onboardingActionError('Onboarding data was saved, but invitation delivery state is incomplete. Retry onboarding.');
+  }
+  await deliverOnboardingInvitations({
+    organizationId,
+    organizationName: activation.organization_name || payload.organizationName,
+    userId: user.id,
+    locale,
+    invitations: invitationDeliveries,
   });
 
   return {
@@ -395,9 +400,10 @@ export async function completeOnboardingActivation(
     status: 'completed',
     readinessScore,
     riskLevel: classification.riskLevel,
-    dashboardPath: getDashboardPath(locale, payload.selectedPlan),
-    documentsCreated: documentResult.inserted,
-    tasksCreated: taskResult.inserted,
-    invitationsCreated: invitationResult.inserted,
+    dashboardPath: getDashboardPath(getSafeLocale(locale), payload.selectedPlan),
+    documentsCreated: activation.documents_created,
+    tasksCreated: activation.tasks_created,
+    invitationsCreated: activation.invitations_created,
+    invitationsDelivered: invitationDeliveries.length,
   };
 }
