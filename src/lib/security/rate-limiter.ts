@@ -52,6 +52,7 @@ class InMemoryRateLimiter {
 }
 
 const inMemoryLimiter = new InMemoryRateLimiter();
+const UPSTASH_RESPONSE_MAX_BYTES = 64 * 1024;
 
 export interface RateLimitOptions {
   /** Identificador único — IP, user ID ou organization ID. */
@@ -90,6 +91,52 @@ function normalizeRedisKey(key: string) {
   return `eurocomply:rate-limit:${key.replace(/[^a-zA-Z0-9:_-]/g, '_')}`;
 }
 
+async function readBoundedUpstashResponse(response: Response): Promise<UpstashPipelineResponse> {
+  const declaredLength = response.headers.get('content-length');
+  if (declaredLength !== null) {
+    const parsedLength = Number.parseInt(declaredLength, 10);
+    if (Number.isFinite(parsedLength) && parsedLength > UPSTASH_RESPONSE_MAX_BYTES) {
+      throw new Error('upstash_response_too_large');
+    }
+  }
+
+  if (!response.body) {
+    throw new Error('upstash_response_body_missing');
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > UPSTASH_RESPONSE_MAX_BYTES) {
+        await reader.cancel('upstash_response_too_large');
+        throw new Error('upstash_response_too_large');
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  const decoded = new TextDecoder('utf-8', { fatal: true }).decode(body);
+  return JSON.parse(decoded) as UpstashPipelineResponse;
+}
+
 async function upstashRateLimit(key: string, limit: number, windowMs: number): Promise<RateLimitResult> {
   const url = process.env.UPSTASH_REDIS_REST_URL?.replace(/\/$/, '');
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -120,7 +167,7 @@ async function upstashRateLimit(key: string, limit: number, windowMs: number): P
     return failClosed(windowMs, 'redis_request_failed');
   }
 
-  const results = (await response.json()) as UpstashPipelineResponse;
+  const results = await readBoundedUpstashResponse(response);
   const count = Number(results[0]?.[1] ?? 1);
   const ttlSeconds = Number(results[2]?.[1] ?? windowSeconds);
   const reset = Date.now() + Math.max(ttlSeconds, 0) * 1000;
