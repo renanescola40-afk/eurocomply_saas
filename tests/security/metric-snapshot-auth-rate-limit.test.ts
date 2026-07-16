@@ -22,4 +22,15 @@ describe('metric snapshot authentication rate limiting', () => {
     expect(rateLimitIndex).toBeLessThan(adminClientIndex);
     expect(rateLimitIndex).toBeLessThan(snapshotLoopIndex);
   });
+
+  it('bounds each organization snapshot and reports timeout separately', () => {
+    expect(routeSource).toContain('const METRIC_SNAPSHOT_ORGANIZATION_TIMEOUT_MS = 5_000');
+    expect(routeSource).toContain('class MetricSnapshotOrganizationTimeoutError extends Error');
+    expect(routeSource).toContain('await Promise.race([operation, timeout])');
+    expect(routeSource).toContain(
+      'await withMetricSnapshotOrganizationTimeout(createMetricSnapshotForOrganization(organization.id))',
+    );
+    expect(routeSource).toContain("message: timedOut ? 'timeout' : 'internal_error'");
+    expect(routeSource).not.toContain('const summary = await getDashboardSummary(organization.id);\n      await recordDashboardMetricSnapshot');
+  });
 });
