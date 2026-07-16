@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
-import { NextIntlClientProvider } from 'next-intl';
-import { getMessages } from 'next-intl/server';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, setRequestLocale } from 'next-intl/server';
 import { PostHogAnalyticsProvider } from '@/components/analytics/PostHogAnalyticsProvider';
 import { AnalyticsConsentBanner } from '@/components/analytics/AnalyticsConsentBanner';
+import { PostHogScript } from '@/components/analytics/posthog-script';
 import { AuthFloatingControls } from '@/components/auth/AuthFloatingControls';
 import { AuthProviderGate } from '@/components/auth/AuthProviderGate';
 import { ThemeProvider } from '@/components/ThemeProvider';
@@ -11,7 +12,6 @@ import { Toaster } from '@/components/ui/sonner';
 import GlobalClientEffectsGate from '@/components/GlobalClientEffectsGate';
 import GapAnalysisShortcut from '@/components/GapAnalysisShortcut';
 import { routing, type Locale } from '@/lib/i18n/routing';
-
 import '../globals.css';
 
 const geistSans = Geist({
@@ -69,7 +69,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
-  const safeLocale = routing.locales.includes(locale as Locale) ? locale : 'en';
+  const safeLocale = (routing.locales.includes(locale as Locale) ? locale : 'en') as Locale;
+
+  setRequestLocale(safeLocale);
   const messages = await getMessages();
 
   const sharedShell = (
@@ -84,7 +86,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <html lang={safeLocale} suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased`}>
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider
             attribute="class"
@@ -100,6 +102,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             </PostHogAnalyticsProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
+        <PostHogScript />
       </body>
     </html>
   );

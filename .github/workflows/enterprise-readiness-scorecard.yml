@@ -47,6 +47,7 @@ jobs:
           tests/enterprise/architecture-review-evidence.test.ts
           tests/enterprise/incident-operations-evidence.test.ts
           tests/enterprise/centralized-logging-alert-evidence.test.ts
+          tests/enterprise/public-ux-evidence.test.ts
 
       - name: Build exact-SHA architecture review evidence
         env:
@@ -83,6 +84,23 @@ jobs:
           GITHUB_CHECKS_WAIT_MS: '1080000'
         run: node scripts/enterprise/capture-github-checks-evidence.mjs
 
+      - name: Build exact-SHA public UX and localization evidence
+        env:
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
+        run: node scripts/enterprise/build-public-ux-evidence.mjs
+
+      - name: Retain public UX evidence diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-ux-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            docs/security/evidence/runtime/ux-acceptance-validation.json
+            docs/security/evidence/runtime/localization-validation.json
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Generate scorecard
         env:
           ENTERPRISE_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -102,5 +120,7 @@ jobs:
             docs/security/evidence/release/incident-response-validation.json
             docs/security/evidence/release/operations-ownership.json
             docs/security/evidence/p1/centralized-logging-alerts.json
+            docs/security/evidence/runtime/ux-acceptance-validation.json
+            docs/security/evidence/runtime/localization-validation.json
           if-no-files-found: error
           retention-days: 90

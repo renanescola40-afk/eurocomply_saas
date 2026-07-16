@@ -24,6 +24,12 @@ The endpoint no longer needs to fully buffer an unbounded chunked body before en
 
 Stream cancellation is best-effort after the runtime has delivered a chunk, so upstream connection and platform request limits remain part of the availability boundary. The implementation retains at most the accepted one-megabyte body in memory before JSON parsing, and invalid UTF-8 now fails closed instead of reaching the JSON parser. Legitimate evidence exports above the existing threshold remain rejected; changing that threshold requires evidence about real export sizes and memory impact.
 
+## Risks and trade-offs
+
+Stream cancellation is best-effort and cannot guarantee that every upstream proxy or hosting layer stops receiving bytes immediately. The application-level boundary therefore complements, but does not replace, connection, request-size, timeout, and concurrency controls at the edge and hosting layers.
+
+The bounded reader still retains up to one megabyte of decoded JSON in application memory before parsing. Fatal UTF-8 decoding intentionally rejects malformed byte sequences, which is safer for integrity verification but may reject payloads that a permissive decoder would otherwise normalize. Legitimate evidence-pack exports above the existing one-megabyte policy remain unsupported and require a separately reviewed limit change rather than bypassing this guard.
+
 ## Validation
 
 Focused regression coverage requires stream-reader use, byte counting, cancellation on overflow, preservation of the declared-length fast rejection, and absence of `Request.text()` in this route. GitHub Actions remains authoritative for lint, typecheck, tests, build, and security gates on the exact PR head.

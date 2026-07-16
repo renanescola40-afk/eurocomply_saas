@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024;
+
 function parseHttpsUrl(value) {
   try {
     const url = new URL(String(value ?? '').trim());
@@ -18,6 +20,47 @@ function isExactProductionCallback(value, expectedProductionUrl) {
     && callback.pathname === '/auth/callback'
     && callback.search === ''
     && callback.hash === '';
+}
+
+async function readBoundedJsonResponse(response) {
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_PROVIDER_RESPONSE_BYTES) {
+    throw new Error('provider_response_too_large');
+  }
+
+  if (!response.body) throw new Error('provider_response_body_missing');
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_PROVIDER_RESPONSE_BYTES) {
+        await reader.cancel('provider_response_too_large');
+        throw new Error('provider_response_too_large');
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  return JSON.parse(text);
 }
 
 const accessToken = String(process.env.SUPABASE_ACCESS_TOKEN ?? '').trim();
@@ -43,7 +86,7 @@ try {
 
   if (!response.ok) process.exit(3);
 
-  const config = await response.json();
+  const config = await readBoundedJsonResponse(response);
   const siteUrl = parseHttpsUrl(config.external_url ?? config.site_url);
   const allowlist = Array.isArray(config.uri_allow_list)
     ? config.uri_allow_list
