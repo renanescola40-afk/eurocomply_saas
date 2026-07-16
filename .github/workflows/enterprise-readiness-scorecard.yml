@@ -46,6 +46,7 @@ jobs:
           tests/enterprise/evidence-overrides-guard.test.ts
           tests/enterprise/architecture-review-evidence.test.ts
           tests/enterprise/incident-operations-evidence.test.ts
+          tests/enterprise/centralized-logging-alert-evidence.test.ts
 
       - name: Build exact-SHA architecture review evidence
         env:
@@ -57,6 +58,11 @@ jobs:
           TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/enterprise/build-incident-operations-evidence.mjs
 
+      - name: Build exact-SHA logging and alert evidence
+        env:
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/enterprise/build-centralized-logging-alert-evidence.mjs
+
       - name: Retain release evidence diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -66,6 +72,7 @@ jobs:
             docs/security/evidence/release/architecture-review.json
             docs/security/evidence/release/incident-response-validation.json
             docs/security/evidence/release/operations-ownership.json
+            docs/security/evidence/p1/centralized-logging-alerts.json
           if-no-files-found: error
           retention-days: 90
 
@@ -94,5 +101,6 @@ jobs:
             docs/security/evidence/release/architecture-review.json
             docs/security/evidence/release/incident-response-validation.json
             docs/security/evidence/release/operations-ownership.json
+            docs/security/evidence/p1/centralized-logging-alerts.json
           if-no-files-found: error
           retention-days: 90
