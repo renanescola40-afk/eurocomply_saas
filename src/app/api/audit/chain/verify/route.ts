@@ -9,6 +9,7 @@ import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequ
 import { verifyAuditChain, type AuditChainRecord } from '@/server/security/audit-chain';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireStepUpForRequest } from '@/server/security/step-up';
+import { z } from 'zod';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +22,13 @@ type AuditChainLimitResult =
   | { ok: true; limit: number }
   | { ok: false; error: 'invalid_limit' };
 
+const auditChainVerifyLimitSchema = z
+  .string()
+  .trim()
+  .regex(/^\d+$/)
+  .transform(Number)
+  .pipe(z.number().int().safe().min(1).max(MAX_AUDIT_CHAIN_VERIFY_LIMIT));
+
 export function parseAuditChainVerifyLimit(requestUrl: string): AuditChainLimitResult {
   const { searchParams } = new URL(requestUrl);
   const rawLimit = searchParams.get('limit');
@@ -29,19 +37,13 @@ export function parseAuditChainVerifyLimit(requestUrl: string): AuditChainLimitR
     return { ok: true, limit: DEFAULT_AUDIT_CHAIN_VERIFY_LIMIT };
   }
 
-  const normalizedLimit = rawLimit.trim();
+  const parsedLimit = auditChainVerifyLimitSchema.safeParse(rawLimit);
 
-  if (!/^\d+$/.test(normalizedLimit)) {
+  if (!parsedLimit.success) {
     return { ok: false, error: 'invalid_limit' };
   }
 
-  const limit = Number(normalizedLimit);
-
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_AUDIT_CHAIN_VERIFY_LIMIT) {
-    return { ok: false, error: 'invalid_limit' };
-  }
-
-  return { ok: true, limit };
+  return { ok: true, limit: parsedLimit.data };
 }
 
 function summarizeFailures(failures: ReturnType<typeof verifyAuditChain>['failures']) {
