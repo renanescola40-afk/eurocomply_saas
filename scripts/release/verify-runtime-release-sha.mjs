@@ -14,6 +14,7 @@ const finalEvidencePaths = [
   'docs/security/evidence/runtime/final-validation-runner.json',
 ];
 const timeoutMs = Number.parseInt(process.env.RELEASE_SHA_TIMEOUT_MS || '10000', 10);
+const MAX_RUNTIME_RESPONSE_BYTES = 64 * 1024;
 
 function now() {
   return new Date().toISOString();
@@ -68,6 +69,49 @@ function readJsonIfPresent(path) {
     if (isMissingFileError(error)) return null;
     throw error;
   }
+}
+
+async function readBoundedJsonResponse(response) {
+  const declaredLength = response.headers.get('content-length');
+  if (declaredLength) {
+    const parsedLength = Number.parseInt(declaredLength, 10);
+    if (Number.isFinite(parsedLength) && parsedLength > MAX_RUNTIME_RESPONSE_BYTES) {
+      throw new Error('runtime_release_response_too_large');
+    }
+  }
+
+  if (!response.body) throw new Error('runtime_release_response_missing_body');
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_RUNTIME_RESPONSE_BYTES) {
+        await reader.cancel('runtime_release_response_too_large').catch(() => undefined);
+        throw new Error('runtime_release_response_too_large');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  return JSON.parse(text);
 }
 
 export function applyRuntimeShaBindingStatus(document, bindingEvidence) {
@@ -157,7 +201,7 @@ if (baseUrl && readinessToken) {
 
     endpointStatus = response.status;
     cacheControl = response.headers.get('cache-control') || '';
-    responseBody = await response.json().catch(() => null);
+    responseBody = await readBoundedJsonResponse(response);
   } catch {
     requestFailed = true;
   }
