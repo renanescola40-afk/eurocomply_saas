@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { reportError } from '@/lib/observability/report-error';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
@@ -60,6 +60,7 @@ type EmailLogPayload = {
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 const RESEND_REQUEST_TIMEOUT_MS = 10_000;
 const RESEND_RESPONSE_MAX_BYTES = 64 * 1024;
+const RESEND_IDEMPOTENCY_KEY_MAX_LENGTH = 256;
 const DEFAULT_MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 350;
 const MAX_BACKOFF_MS = 3_000;
@@ -107,6 +108,19 @@ function getBackoffDelay(attempt: number) {
   const exponentialDelay = Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * 2 ** Math.max(0, attempt - 1));
   const jitter = Math.floor(Math.random() * 125);
   return exponentialDelay + jitter;
+}
+
+function withResendIdempotencyKey(input: SendEmailInput): SendEmailInput & { idempotencyKey: string } {
+  const providedKey = input.idempotencyKey?.trim();
+
+  if (providedKey && providedKey.length > RESEND_IDEMPOTENCY_KEY_MAX_LENGTH) {
+    throw new Error('Email idempotency key exceeds the Resend 256-character limit.');
+  }
+
+  return {
+    ...input,
+    idempotencyKey: providedKey || `email/${randomUUID()}`,
+  };
 }
 
 function normalizeRecipients(to: string) {
@@ -296,8 +310,10 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
   assertNoSensitiveContent(input);
 
+  const deliveryInput = apiKey ? withResendIdempotencyKey(input) : input;
+
   await writeEmailLog({
-    email: input,
+    email: deliveryInput,
     status: apiKey ? 'queued' : 'skipped',
     provider: apiKey ? 'resend' : 'console',
     attempts: 0,
@@ -307,7 +323,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     console.info('[RISCK COMPLY provider skipped]', { event: 'transactional_delivery_provider_missing', template });
 
     await writeEmailLog({
-      email: input,
+      email: deliveryInput,
       status: 'skipped',
       provider: 'console',
       attempts: 0,
@@ -321,10 +337,10 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
   for (let attempt = 1; attempt <= attemptsToRun; attempt += 1) {
     try {
-      const providerId = await sendWithResend(input, apiKey, from);
+      const providerId = await sendWithResend(deliveryInput, apiKey, from);
 
       await writeEmailLog({
-        email: input,
+        email: deliveryInput,
         status: 'sent',
         provider: 'resend',
         providerId,
@@ -350,7 +366,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const errorMessage = safeErrorMessage(lastError);
 
   await writeEmailLog({
-    email: input,
+    email: deliveryInput,
     status: 'failed',
     provider: 'resend',
     attempts: attemptsToRun,
