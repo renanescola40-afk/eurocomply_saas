@@ -25,7 +25,7 @@ test.describe('public product journey', () => {
   test('landing and pricing controlled-access CTAs stay routable and localized', async ({ page }) => {
     await page.goto('/pt', { waitUntil: 'domcontentloaded' });
     await expectHealthyDocument(page, 'landing');
-    await expect(page.locator('#waitlist-form')).toBeVisible();
+    await expect(page.locator('#waitlist-form:visible')).toBeVisible();
 
     await page.goto('/pt/pricing', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/pt\/pricing(?:$|[?#])/);

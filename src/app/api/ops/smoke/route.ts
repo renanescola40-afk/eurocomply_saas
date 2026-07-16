@@ -21,7 +21,16 @@ const LEGACY_STRIPE_PRICE_FALLBACKS = {
   STRIPE_PRICE_ENTERPRISE_MONTHLY: ['STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY'],
 } as const;
 
+const OPS_SMOKE_DEPENDENCY_TIMEOUT_MS = 1_500;
+
 type EnvGroupName = keyof typeof REQUIRED_ENV_GROUPS;
+
+class OpsSmokeDependencyTimeoutError extends Error {
+  constructor() {
+    super('Operations smoke dependency probe timed out');
+    this.name = 'OpsSmokeDependencyTimeoutError';
+  }
+}
 
 function hasBearerToken(request: Request) {
   return validateBearerToken(request, process.env.HEALTHCHECK_TOKEN, {
@@ -46,6 +55,24 @@ export function envGroupCheck() {
   });
 }
 
+export async function withOpsSmokeDependencyTimeout<T>(operation: PromiseLike<T>): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      Promise.resolve(operation),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(
+          () => reject(new OpsSmokeDependencyTimeoutError()),
+          OPS_SMOKE_DEPENDENCY_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 export async function GET(request: Request) {
   const rateLimitDenied = await requireEnterpriseRateLimit(request, {
     policy: 'health-internal',
@@ -65,7 +92,8 @@ export async function GET(request: Request) {
 
   try {
     const admin = createAdminClient();
-    const { error } = await admin.from('subscriptions').select('id').limit(1);
+    const query = admin.from('subscriptions').select('id').limit(1);
+    const { error } = await withOpsSmokeDependencyTimeout(query);
     supabase = error ? { ok: false, detail: error.code ?? 'query_failed' } : { ok: true, detail: 'ok' };
   } catch (error) {
     reportError(error, { area: 'ops_smoke_supabase_check' });
