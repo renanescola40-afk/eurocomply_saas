@@ -28,4 +28,18 @@ describe('transactional email provider boundary contract', () => {
     expect(source).toContain('await response.body?.cancel().catch(() => undefined)');
     expect(source).toContain('await reader.cancel().catch(() => undefined)');
   });
+
+  it('reuses one valid idempotency key across every retry attempt', () => {
+    const deliveryInputIndex = source.indexOf('const deliveryInput = apiKey ? withResendIdempotencyKey(input) : input;');
+    const retryLoopIndex = source.indexOf('for (let attempt = 1; attempt <= attemptsToRun; attempt += 1)');
+
+    expect(source).toContain("import { createHash, randomUUID } from 'node:crypto';");
+    expect(source).toContain('const RESEND_IDEMPOTENCY_KEY_MAX_LENGTH = 256;');
+    expect(source).toContain('function withResendIdempotencyKey(input: SendEmailInput)');
+    expect(source).toContain('idempotencyKey: providedKey || `email/${randomUUID()}`');
+    expect(source).toContain('const providerId = await sendWithResend(deliveryInput, apiKey, from);');
+    expect(source).not.toContain('sendWithResend(input, apiKey, from)');
+    expect(deliveryInputIndex).toBeGreaterThan(-1);
+    expect(retryLoopIndex).toBeGreaterThan(deliveryInputIndex);
+  });
 });
