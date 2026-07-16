@@ -4,6 +4,19 @@ import { describe, expect, it } from 'vitest';
 const routeSource = () => readFileSync('src/app/api/prelaunch/route.ts', 'utf8');
 
 describe('prelaunch waitlist capture resilience', () => {
+  it('rejects untrusted origins before rate limiting, body parsing or side effects', () => {
+    const source = routeSource();
+    const originIndex = source.indexOf('const originDenied = assertTrustedOrigin(request);');
+    const rateLimitIndex = source.indexOf('const rateLimited = await enforceRateLimit(request);');
+    const bodyReadIndex = source.indexOf('const body = await readBody(request);');
+
+    expect(source).toContain("import { assertTrustedOrigin } from '@/server/security/origin-guard';");
+    expect(originIndex).toBeGreaterThan(-1);
+    expect(rateLimitIndex).toBeGreaterThan(originIndex);
+    expect(bodyReadIndex).toBeGreaterThan(rateLimitIndex);
+    expect(source).toContain('if (originDenied) return originDenied;');
+  });
+
   it('fails closed when distributed rate limiting is unavailable', () => {
     const source = routeSource();
     const rateLimitIndex = source.indexOf('const rateLimited = await enforceRateLimit(request);');
