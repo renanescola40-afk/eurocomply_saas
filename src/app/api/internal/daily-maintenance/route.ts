@@ -18,6 +18,20 @@ const DAILY_MAINTENANCE_AUTH_ACTION = 'authenticate_daily_maintenance';
 const DEFAULT_JOB_TIMEOUT_MS = 25_000;
 const MAX_JOB_RESPONSE_BYTES = 64 * 1024;
 
+type MaintenanceJobResponseFailure =
+  | 'job_response_too_large'
+  | 'job_response_invalid_content_length'
+  | 'job_response_body_missing'
+  | 'job_response_read_failed'
+  | 'job_response_invalid_utf8'
+  | 'job_response_invalid_json'
+  | 'job_response_invalid_json_shape';
+
+export type MaintenanceJobResponseReadResult = {
+  body: Record<string, unknown> | null;
+  failure: MaintenanceJobResponseFailure | null;
+};
+
 export function getConfiguredMaintenanceBaseUrl() {
   const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
 
@@ -65,15 +79,38 @@ function getMaintenanceJobTimeoutMs() {
   return DEFAULT_JOB_TIMEOUT_MS;
 }
 
-export async function readBoundedMaintenanceJobResponse(response: Response) {
-  const declaredLength = Number(response.headers.get('content-length'));
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_JOB_RESPONSE_BYTES) {
-    await response.body?.cancel();
-    return { body: { error: 'job_response_too_large' }, tooLarge: true };
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function maintenanceJobResponseFailure(failure: MaintenanceJobResponseFailure): MaintenanceJobResponseReadResult {
+  return { body: { error: failure }, failure };
+}
+
+async function cancelMaintenanceResponseBody(response: Response, reason: MaintenanceJobResponseFailure) {
+  await response.body?.cancel(reason).catch(() => undefined);
+}
+
+export async function readBoundedMaintenanceJobResponse(response: Response): Promise<MaintenanceJobResponseReadResult> {
+  const declaredLengthHeader = response.headers.get('content-length');
+
+  if (declaredLengthHeader !== null) {
+    const normalizedLength = declaredLengthHeader.trim();
+    const declaredLength = Number(normalizedLength);
+
+    if (!normalizedLength || !Number.isSafeInteger(declaredLength) || declaredLength < 0) {
+      await cancelMaintenanceResponseBody(response, 'job_response_invalid_content_length');
+      return maintenanceJobResponseFailure('job_response_invalid_content_length');
+    }
+
+    if (declaredLength > MAX_JOB_RESPONSE_BYTES) {
+      await cancelMaintenanceResponseBody(response, 'job_response_too_large');
+      return maintenanceJobResponseFailure('job_response_too_large');
+    }
   }
 
   if (!response.body) {
-    return { body: null, tooLarge: false };
+    return maintenanceJobResponseFailure('job_response_body_missing');
   }
 
   const reader = response.body.getReader();
@@ -88,12 +125,15 @@ export async function readBoundedMaintenanceJobResponse(response: Response) {
 
       totalBytes += value.byteLength;
       if (totalBytes > MAX_JOB_RESPONSE_BYTES) {
-        await reader.cancel();
-        return { body: { error: 'job_response_too_large' }, tooLarge: true };
+        await reader.cancel('job_response_too_large').catch(() => undefined);
+        return maintenanceJobResponseFailure('job_response_too_large');
       }
 
       chunks.push(value);
     }
+  } catch {
+    await reader.cancel('job_response_read_failed').catch(() => undefined);
+    return maintenanceJobResponseFailure('job_response_read_failed');
   } finally {
     reader.releaseLock();
   }
@@ -105,12 +145,29 @@ export async function readBoundedMaintenanceJobResponse(response: Response) {
     offset += chunk.byteLength;
   }
 
+  let text: string;
   try {
-    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-    return { body: text ? (JSON.parse(text) as unknown) : null, tooLarge: false };
+    text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   } catch {
-    return { body: null, tooLarge: false };
+    return maintenanceJobResponseFailure('job_response_invalid_utf8');
   }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text) as unknown;
+  } catch {
+    return maintenanceJobResponseFailure('job_response_invalid_json');
+  }
+
+  if (!isJsonObject(parsed)) {
+    return maintenanceJobResponseFailure('job_response_invalid_json_shape');
+  }
+
+  return { body: parsed, failure: null };
+}
+
+export function isSuccessfulMaintenanceJobResponse(response: Response, parsedResponse: MaintenanceJobResponseReadResult) {
+  return response.ok && parsedResponse.failure === null;
 }
 
 async function runMaintenanceJob(baseUrl: string, path: string, credential: string) {
@@ -133,7 +190,7 @@ async function runMaintenanceJob(baseUrl: string, path: string, credential: stri
 
     return {
       path,
-      ok: response.ok && !parsedResponse.tooLarge,
+      ok: isSuccessfulMaintenanceJobResponse(response, parsedResponse),
       status: response.status,
       durationMs: Date.now() - startedAt,
       body: parsedResponse.body,
