@@ -1,0 +1,21 @@
+# Default ownership for all repository changes.
+* @renanescola40-afk
+
+# Repository governance and delivery controls.
+/.github/ @renanescola40-afk
+/package.json @renanescola40-afk
+/package-lock.json @renanescola40-afk
+
+# Security-, identity-, billing-, and tenant-sensitive application paths.
+/src/app/api/ @renanescola40-afk
+/src/lib/security/ @renanescola40-afk
+/src/server/security/ @renanescola40-afk
+/src/lib/auth/ @renanescola40-afk
+/src/lib/billing/ @renanescola40-afk
+
+# Database policy, migrations, and operational evidence.
+/supabase/ @renanescola40-afk
+/scripts/security/ @renanescola40-afk
+/scripts/release/ @renanescola40-afk
+/docs/security/ @renanescola40-afk
+/docs/decisions/ @renanescola40-afk

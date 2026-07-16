@@ -20,7 +20,9 @@ Invalid UTF-8, stream failures, missing bodies, oversized bodies, and malformed 
 
 The endpoint no longer needs to fully buffer an unbounded chunked body before enforcing its limit. The public API shape, integrity algorithm, rate limiting, no-store behavior, and verification semantics remain unchanged.
 
-The implementation still relies on the hosting runtime to deliver request chunks and does not claim protection from all upstream resource-exhaustion conditions. The one-megabyte threshold should be changed only with evidence about legitimate export sizes.
+## Risks and trade-offs
+
+Stream cancellation is best-effort after the runtime has delivered a chunk, so upstream connection and platform request limits remain part of the availability boundary. The implementation retains at most the accepted one-megabyte body in memory before JSON parsing, and invalid UTF-8 now fails closed instead of reaching the JSON parser. Legitimate evidence exports above the existing threshold remain rejected; changing that threshold requires evidence about real export sizes and memory impact.
 
 ## Risks and trade-offs
 

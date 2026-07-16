@@ -1,12 +1,19 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const read = (path: string) => readFileSync(path, 'utf8');
 
 describe('Phase 5 dashboard invariants', () => {
-  it('keeps root and localized marketing entrypoints stable', () => {
-    expect(read('src/app/page.tsx')).toContain("'/pt'");
+  it('keeps middleware-owned and localized marketing entrypoints stable', () => {
+    const middleware = read('src/middleware.ts');
+    const localeLayout = read('src/app/[locale]/layout.tsx');
     const home = read('src/app/[locale]/page.tsx');
+
+    expect(existsSync('src/app/page.tsx')).toBe(false);
+    expect(existsSync('src/app/layout.tsx')).toBe(false);
+    expect(middleware).toContain('new URL(`/${detected}${pathname}`, req.url)');
+    expect(localeLayout).toContain('setRequestLocale(safeLocale)');
+    expect(localeLayout).toContain('<html lang={safeLocale}');
     expect(home).toContain('force-static');
     expect(home).toContain('revalidate = 300');
     expect(home).toContain('EnterpriseHome');
