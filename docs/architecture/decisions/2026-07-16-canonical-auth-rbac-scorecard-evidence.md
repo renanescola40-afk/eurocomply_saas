@@ -6,7 +6,7 @@
 
 ## Context
 
-The protected Auth/RBAC workflow already authenticates three synthetic users, observes owner/member roles, verifies same-tenant access, denies cross-tenant organization and membership reads, and revokes the synthetic sessions. It writes `auth-rbac-final-validation.json`.
+The protected Auth/RBAC workflow authenticates three synthetic users, refreshes one authenticated session, observes owner/member roles, verifies same-tenant access, denies cross-tenant organization and membership reads, and revokes the synthetic sessions. It writes `auth-rbac-final-validation.json`.
 
 The enterprise scorecard, however, reads a separate canonical artifact named `auth-rbac-validation.json` and requires seven named checks:
 
@@ -24,16 +24,16 @@ The source proof and scorecard therefore had incompatible schemas. Copying the s
 
 A fail-closed derivation step now converts trusted source runtime evidence into the canonical scorecard schema.
 
-Only controls directly demonstrated by the existing synthetic flow may pass:
+Only controls directly demonstrated by the synthetic flow may pass:
 
 - `login` passes when the fixtures authenticate and expected roles are observed;
 - `logout` passes when every synthetic session is revoked;
+- `sessionRefresh` passes when the authenticated owner session refreshes successfully without storing token values;
 - `rbac` passes only when roles, same-tenant reads, cross-tenant denials, and membership hiding all pass.
 
 The following remain `NOT_VERIFIED` until dedicated disposable-flow validations are implemented and executed:
 
 - `signup`;
-- `sessionRefresh`;
 - `oauthCallback`;
 - `organizationOnboarding`.
 
@@ -57,7 +57,7 @@ Any missing trust condition prevents every derived control from passing.
 
 The protected workflow now:
 
-1. executes the existing live validation;
+1. executes the live login, refresh, role, tenant-isolation, and logout validation;
 2. validates the source evidence contract;
 3. derives `auth-rbac-validation.json`;
 4. validates the canonical scorecard contract;
@@ -65,14 +65,14 @@ The protected workflow now:
 
 ## Consequences
 
-- Existing runtime proof can truthfully close the identity controls it already demonstrates.
+- Existing runtime proof can truthfully close the identity controls it demonstrates.
 - The scorecard no longer depends on an absent or incompatible file.
-- Missing signup, refresh, OAuth, and onboarding proof remains visible instead of being hidden behind a passing parent document.
+- Missing signup, OAuth callback, and onboarding proof remains visible instead of being hidden behind a passing parent document.
 - A later workflow can extend the source proof without changing scorecard semantics.
 
 ## Evidence boundary
 
-This integration does not execute provider configuration, OAuth, signup, refresh, or onboarding by itself. It never converts static inspection into runtime proof and never stores synthetic credentials or identifiers.
+This integration does not execute provider OAuth, disposable signup, or disposable organization onboarding by itself. It never converts static inspection into runtime proof and never stores synthetic credentials, tokens, or identifiers.
 
 ## Rollback
 
