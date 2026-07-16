@@ -1,7 +1,7 @@
 # Make payment-failed webhook recovery email-idempotent
 
 Date: 2026-07-14  
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -16,6 +16,8 @@ Run each `invoice.payment_failed` handler invocation inside an asynchronous emai
 The email client applies the contextual key only when the caller has not supplied an explicit key. Existing explicit keys remain authoritative. The context is scoped with `AsyncLocalStorage`, so concurrent webhook requests do not share identifiers and the key is unavailable after the handler completes.
 
 Add `invoice.payment_failed` to the existing 15-minute stale-processing recovery set. Both the initial delivery and any recovered replay execute with the same deterministic provider key.
+
+The event is marked `processed` only after the email provider returns `sent: true` and the delivery audit is written. A missing subscription, tenant, billing contact, provider rejection, or explicit non-sent provider result fails the event claim so Stripe can retry it through the same idempotent recovery path.
 
 ## Why the event ID is the identity
 
@@ -37,6 +39,8 @@ The change does not weaken Stripe signature verification, tenant binding, billin
 A stale `invoice.payment_failed` claim can now be changed atomically from `processing` to `failed` and reclaimed through the existing handler. If the first attempt already reached the email provider, the repeated request uses the same idempotency key. If the first attempt failed before provider acceptance, the retry can still deliver the email.
 
 The application email log uses the same key as its conflict identity, preserving one logical delivery record for the Stripe event.
+
+The sender receives the canonical `invoice_failed` template key plus tenant and actor identifiers for operational delivery logs. Provider payloads and failure messages do not include invoice content, recipient addresses, payment details or credentials.
 
 ## Alternatives considered
 
@@ -66,6 +70,9 @@ Repository tests verify that:
 - explicit caller keys override contextual keys;
 - calls outside a context remain unchanged;
 - payment-failed claims use the existing atomic stale-lease recovery.
+- lookup and provider failures leave the event `failed`, never `processed`;
+- an explicit `sent: false` result cannot produce a successful billing audit;
+- successful delivery is classified as the `invoice_failed` template.
 
 GitHub Actions remains authoritative for typecheck, lint, unit tests, build and security gates. No real Stripe delivery, Resend request, payment failure, customer email or target-runtime recovery is claimed.
 

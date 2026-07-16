@@ -105,7 +105,7 @@ describe('team invites API security gates', () => {
       text: 'Invite',
       template: 'member_invited',
     });
-    mocks.sendEmail.mockResolvedValue({ ok: true });
+    mocks.sendEmail.mockResolvedValue({ sent: true, provider: 'resend', status: 'sent', attempts: 1 });
     mocks.createAuditEvent.mockResolvedValue({ persisted: true });
     mocks.createNotification.mockResolvedValue({ persisted: true });
   });
@@ -245,6 +245,24 @@ describe('team invites API security gates', () => {
         entityType: 'invitation',
         entityId: 'inv_123',
       }),
+    );
+    expect(mocks.createNotification).not.toHaveBeenCalled();
+  });
+
+  it('does not record delivery when the provider returns a skipped result', async () => {
+    mocks.sendEmail.mockResolvedValue({ sent: false, provider: 'console', status: 'skipped', attempts: 0 });
+
+    const response = await POST(buildRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body).toEqual({ error: 'invitation_delivery_failed', persisted: true, auditPersisted: true });
+    expect(mocks.reportError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Invitation email delivery was not confirmed (skipped)' }),
+      expect.objectContaining({ area: 'team_invitation_delivery', organizationId: 'org_a', invitationId: 'inv_123' }),
+    );
+    expect(mocks.createAuditEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'team_invite_created' }),
     );
     expect(mocks.createNotification).not.toHaveBeenCalled();
   });
