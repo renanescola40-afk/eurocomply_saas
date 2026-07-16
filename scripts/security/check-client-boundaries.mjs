@@ -72,10 +72,27 @@ function isClientNamedFile(path) {
 
 function extractImports(source) {
   const imports = [];
-  const staticImport = /import\s+(?:type\s+)?(?:[^'";]+\s+from\s+)?['"]([^'"]+)['"]/g;
+  const staticImport = /import\s+(type\s+)?(?:[^'";]+\s+from\s+)?['"]([^'"]+)['"]/g;
   const dynamicImport = /import\(['"]([^'"]+)['"]\)/g;
-  for (const match of source.matchAll(staticImport)) imports.push({ module: match[1], index: match.index ?? 0 });
-  for (const match of source.matchAll(dynamicImport)) imports.push({ module: match[1], index: match.index ?? 0 });
+
+  for (const match of source.matchAll(staticImport)) {
+    imports.push({
+      module: match[2],
+      index: match.index ?? 0,
+      typeOnly: Boolean(match[1]),
+      dynamic: false,
+    });
+  }
+
+  for (const match of source.matchAll(dynamicImport)) {
+    imports.push({
+      module: match[1],
+      index: match.index ?? 0,
+      typeOnly: false,
+      dynamic: true,
+    });
+  }
+
   return imports;
 }
 
@@ -98,8 +115,11 @@ for (const file of files) {
   if (!isClientBoundary) continue;
 
   for (const imported of extractImports(source)) {
-    if (isForbiddenImport(imported.module)) {
-      failures.push(`${normalized}:${lineNumberFor(source, imported.index)} client boundary imports server-only module: ${imported.module}`);
+    // TypeScript removes `import type` declarations from emitted client bundles. They do
+    // not execute server modules or move service-role code across the runtime boundary.
+    // Runtime, side-effect and dynamic imports remain forbidden and fail closed.
+    if (!imported.typeOnly && isForbiddenImport(imported.module)) {
+      failures.push(`${normalized}:${lineNumberFor(source, imported.index)} client boundary imports server-only module at runtime: ${imported.module}`);
     }
   }
 
