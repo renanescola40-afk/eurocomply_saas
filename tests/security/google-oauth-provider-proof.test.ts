@@ -45,6 +45,20 @@ describe('Google OAuth provider proof contract', () => {
     expect(writer).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
   });
 
+  it('bounds the provider response before JSON parsing', () => {
+    const probe = read('scripts/security/probe-google-oauth-provider.mjs');
+
+    expect(probe).toContain('const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024');
+    expect(probe).toContain("response.headers.get('content-length')");
+    expect(probe).toContain('response.body.getReader()');
+    expect(probe).toContain('totalBytes > MAX_PROVIDER_RESPONSE_BYTES');
+    expect(probe).toContain("reader.cancel('provider_response_too_large')");
+    expect(probe).toContain("new TextDecoder('utf-8', { fatal: true })");
+    expect(probe).toContain('JSON.parse(text)');
+    expect(probe).not.toContain('await response.json()');
+    expect(probe).toContain('AbortSignal.timeout(15000)');
+  });
+
   it('requires numeric provenance and an exact production-origin HTTPS callback', () => {
     const writer = read('scripts/security/run-google-oauth-provider-validation.mjs');
     const probe = read('scripts/security/probe-google-oauth-provider.mjs');
