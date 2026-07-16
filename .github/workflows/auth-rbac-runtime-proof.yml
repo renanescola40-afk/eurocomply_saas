@@ -71,15 +71,25 @@ jobs:
           AUTH_RBAC_OUTSIDER_PASSWORD: ${{ secrets.AUTH_RBAC_OUTSIDER_PASSWORD }}
         run: node scripts/security/run-auth-rbac-live-validation.mjs
 
-      - name: Validate redacted evidence contract
+      - name: Validate redacted source runtime evidence
         if: always()
         run: node scripts/security/check-auth-rbac-runtime-evidence.mjs
 
-      - name: Upload redacted runtime evidence
+      - name: Derive canonical scorecard evidence
+        if: always()
+        run: node scripts/security/write-auth-rbac-scorecard-evidence.mjs
+
+      - name: Validate canonical scorecard evidence
+        if: always()
+        run: node scripts/security/check-auth-rbac-scorecard-evidence.mjs
+
+      - name: Upload redacted runtime and scorecard evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: auth-rbac-runtime-proof-${{ inputs.release_sha }}
-          path: docs/security/evidence/runtime/auth-rbac-final-validation.json
+          path: |
+            docs/security/evidence/runtime/auth-rbac-final-validation.json
+            docs/security/evidence/runtime/auth-rbac-validation.json
           if-no-files-found: error
           retention-days: 90
