@@ -1,4 +1,3 @@
-/* eslint-disable */
 // @ts-nocheck
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -57,45 +56,51 @@ function buildRequest(body: unknown) {
   });
 }
 
-function buildClient({ revoked = { id: 'invite_1' } }: { revoked?: { id: string } | null } = {}) {
+function buildClient({ cancelled = { id: 'invite_1' } }: { cancelled?: { id: string } | null } = {}) {
   const lookupMaybeSingle = vi.fn().mockResolvedValue({
     data: {
       id: 'invite_1',
       email: 'masked@example.com',
       role: 'viewer',
       organization_id: 'org_a',
-      status: 'pending',
+      accepted_at: null,
     },
     error: null,
   });
   const lookupEq = vi.fn();
+  const lookupIs = vi.fn();
   const lookupBuilder = {
     select: vi.fn(),
     eq: lookupEq,
+    is: lookupIs,
     maybeSingle: lookupMaybeSingle,
   };
   lookupBuilder.select.mockReturnValue(lookupBuilder);
   lookupEq.mockReturnValue(lookupBuilder);
+  lookupIs.mockReturnValue(lookupBuilder);
 
-  const updateMaybeSingle = vi.fn().mockResolvedValue({ data: revoked, error: null });
-  const updateSelect = vi.fn();
-  const updateEq = vi.fn();
-  const updateBuilder = {
-    eq: updateEq,
-    select: updateSelect,
-    maybeSingle: updateMaybeSingle,
+  const deleteMaybeSingle = vi.fn().mockResolvedValue({ data: cancelled, error: null });
+  const deleteSelect = vi.fn();
+  const deleteEq = vi.fn();
+  const deleteIs = vi.fn();
+  const deleteBuilder = {
+    eq: deleteEq,
+    is: deleteIs,
+    select: deleteSelect,
+    maybeSingle: deleteMaybeSingle,
   };
-  updateEq.mockReturnValue(updateBuilder);
-  updateSelect.mockReturnValue(updateBuilder);
+  deleteEq.mockReturnValue(deleteBuilder);
+  deleteIs.mockReturnValue(deleteBuilder);
+  deleteSelect.mockReturnValue(deleteBuilder);
 
   const table = {
     select: lookupBuilder.select,
-    update: vi.fn(() => updateBuilder),
+    delete: vi.fn(() => deleteBuilder),
   };
 
   mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => table) });
 
-  return { lookupEq, updateEq, updateSelect };
+  return { lookupEq, lookupIs, deleteEq, deleteIs, deleteSelect };
 }
 
 describe('team invitation cancel API hardening', () => {
@@ -124,11 +129,13 @@ describe('team invitation cancel API hardening', () => {
   it('does not revoke an invitation from another tenant', async () => {
     const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
     const eq = vi.fn();
-    const builder = { select: vi.fn(), eq, maybeSingle };
+    const is = vi.fn();
+    const builder = { select: vi.fn(), eq, is, maybeSingle };
     builder.select.mockReturnValue(builder);
     eq.mockReturnValue(builder);
-    const update = vi.fn();
-    mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => ({ select: builder.select, update })) });
+    is.mockReturnValue(builder);
+    const deleteInvitation = vi.fn();
+    mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => ({ select: builder.select, delete: deleteInvitation })) });
 
     const response = await POST(buildRequest({ invitationId: 'invite_from_org_b' }));
     const body = await response.json();
@@ -137,11 +144,11 @@ describe('team invitation cancel API hardening', () => {
     expect(body).toEqual({ error: 'invitation_not_pending' });
     expect(eq).toHaveBeenCalledWith('id', 'invite_from_org_b');
     expect(eq).toHaveBeenCalledWith('organization_id', 'org_a');
-    expect(update).not.toHaveBeenCalled();
+    expect(deleteInvitation).not.toHaveBeenCalled();
   });
 
-  it('scopes and verifies the conditional revoke before auditing success', async () => {
-    const { lookupEq, updateEq, updateSelect } = buildClient();
+  it('scopes and verifies the conditional cancellation before auditing success', async () => {
+    const { lookupEq, lookupIs, deleteEq, deleteIs, deleteSelect } = buildClient();
 
     const response = await POST(buildRequest({ invitationId: 'invite_1' }));
     const body = await response.json();
@@ -150,10 +157,11 @@ describe('team invitation cancel API hardening', () => {
     expect(body).toMatchObject({ cancelled: true, auditPersisted: true });
     expect(lookupEq).toHaveBeenCalledWith('id', 'invite_1');
     expect(lookupEq).toHaveBeenCalledWith('organization_id', 'org_a');
-    expect(updateEq).toHaveBeenCalledWith('id', 'invite_1');
-    expect(updateEq).toHaveBeenCalledWith('organization_id', 'org_a');
-    expect(updateEq).toHaveBeenCalledWith('status', 'pending');
-    expect(updateSelect).toHaveBeenCalledWith('id');
+    expect(lookupIs).toHaveBeenCalledWith('accepted_at', null);
+    expect(deleteEq).toHaveBeenCalledWith('id', 'invite_1');
+    expect(deleteEq).toHaveBeenCalledWith('organization_id', 'org_a');
+    expect(deleteIs).toHaveBeenCalledWith('accepted_at', null);
+    expect(deleteSelect).toHaveBeenCalledWith('id');
     expect(mocks.createAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         organizationId: 'org_a',
@@ -165,7 +173,7 @@ describe('team invitation cancel API hardening', () => {
   });
 
   it('returns conflict and does not create a false audit event when another request wins the revoke', async () => {
-    buildClient({ revoked: null });
+    buildClient({ cancelled: null });
 
     const response = await POST(buildRequest({ invitationId: 'invite_1' }));
     const body = await response.json();
