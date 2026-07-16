@@ -81,8 +81,14 @@ async function semanticAudit(page: Page) {
       .filter((image) => !image.hasAttribute('alt'))
       .map((image) => image.outerHTML.slice(0, 180));
 
+    const exposedMainLandmarks = Array.from(
+      document.querySelectorAll<HTMLElement>('main, [role="main"]'),
+    )
+      .filter(isVisible)
+      .filter((element) => !element.closest('[aria-hidden="true"], [inert]'));
+
     return {
-      mainCount: document.querySelectorAll('main').length,
+      mainCount: exposedMainLandmarks.length,
       h1Count: document.querySelectorAll('h1').length,
       duplicateIds: [...new Set(duplicateIds)],
       invalidAriaReferences: [...new Set(invalidAriaReferences)],
