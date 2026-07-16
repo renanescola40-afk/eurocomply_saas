@@ -7,7 +7,7 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { noStoreJson } from '@/server/security/no-store';
-import { hashRateLimitIp } from '@/server/security/rate-limit';
+import { hashRateLimitIp, hashRateLimitUserAgent } from '@/server/security/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -57,6 +57,11 @@ function getClientHint(request: NextRequest) {
 function getPrivacySafeIpHint(request: NextRequest) {
   const ipHint = getClientHint(request);
   return ipHint === 'unknown' ? null : hashRateLimitIp(ipHint);
+}
+
+function getPrivacySafeUserAgent(request: NextRequest) {
+  const userAgent = request.headers.get('user-agent')?.trim();
+  return userAgent ? hashRateLimitUserAgent(userAgent) : null;
 }
 
 function text(value: unknown, maxLength: number) {
@@ -178,7 +183,7 @@ function buildSalesLeadFallbackRecord(request: NextRequest, record: WaitlistLead
     source: 'prelaunch_waitlist',
     locale: record.locale,
     consent_to_contact: true,
-    user_agent: text(request.headers.get('user-agent'), 300),
+    user_agent: getPrivacySafeUserAgent(request),
     ip_hint: getPrivacySafeIpHint(request),
     status: 'new',
     notes: 'Fallback capture: verify public.waitlist_leads migration in production Supabase.',
