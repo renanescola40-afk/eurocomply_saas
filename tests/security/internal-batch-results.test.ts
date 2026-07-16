@@ -19,7 +19,7 @@ describe('truthful internal batch results', () => {
     expect(metricRoute).toContain("message: 'internal_error'");
   });
 
-  it('keeps the maintenance multi-status envelope while using measured failure duration', () => {
+  it('keeps the maintenance partial-failure multi-status envelope while using measured failure duration', () => {
     expect(maintenanceRoute).toContain("import { internalBatchResponse } from '@/server/jobs/internal-batch-response';");
     expect(maintenanceRoute).toContain('failureCount: failed.length');
     expect(maintenanceRoute).toContain('failureStatus: 207');
