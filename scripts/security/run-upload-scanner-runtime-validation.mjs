@@ -192,9 +192,10 @@ async function scanWithHttpProvider(provider) {
 }
 
 function parseClamAvResponse(response, provider) {
-  if (/\bOK\b/i.test(response)) return result('clean', provider, 'clamav_ok_verdict');
-  if (/FOUND/i.test(response)) return result('infected', provider, 'clamav_found_verdict', { providerSignatureDetected: true });
-  if (/ERROR/i.test(response)) return result('error', provider, 'clamav_error_verdict');
+  const sanitized = String(response ?? '').replace(/[\r\n\u0000-\u001f\u007f]+/g, ' ').slice(0, 500);
+  if (/\bFOUND\b/i.test(sanitized)) return result('infected', provider, 'clamav_found_verdict', { providerSignatureDetected: true });
+  if (/\bERROR\b/i.test(sanitized)) return result('error', provider, 'clamav_error_verdict');
+  if (/^[^:\s][^:]*:\s*OK\s*$/i.test(sanitized)) return result('clean', provider, 'clamav_ok_verdict');
   return result('suspicious', provider, 'clamav_unrecognized_response');
 }
 
