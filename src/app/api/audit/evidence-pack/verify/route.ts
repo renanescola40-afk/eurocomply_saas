@@ -38,6 +38,37 @@ export function getEvidencePackContentLength(request: Request) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
+async function readBoundedUtf8Body(request: Request, maxBytes: number) {
+  const reader = request.body?.getReader();
+  if (!reader) return '';
+
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  let totalBytes = 0;
+  let rawBody = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel('evidence_pack_body_too_large');
+        return null;
+      }
+
+      rawBody += decoder.decode(value, { stream: true });
+    }
+
+    rawBody += decoder.decode();
+    return rawBody;
+  } catch {
+    return null;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export async function readBoundedEvidencePackExport(request: Request): Promise<EvidencePackExport | null> {
   if (!isJsonContentType(request)) {
     return null;
@@ -48,8 +79,8 @@ export async function readBoundedEvidencePackExport(request: Request): Promise<E
     return null;
   }
 
-  const rawBody = await request.text();
-  if (new TextEncoder().encode(rawBody).byteLength > MAX_EVIDENCE_PACK_BYTES) {
+  const rawBody = await readBoundedUtf8Body(request, MAX_EVIDENCE_PACK_BYTES);
+  if (rawBody === null) {
     return null;
   }
 
