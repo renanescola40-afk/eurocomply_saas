@@ -1,5 +1,7 @@
 import { PostHogScript } from "@/components/analytics/posthog-script";
+import { defaultLocale, locales, type Locale } from "@/lib/i18n/routing";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,21 +14,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const localeLanguageBootstrap = `(() => {
-  const supportedLocales = new Set(['en', 'pt', 'es', 'fr', 'it', 'de']);
-  const locale = window.location.pathname.split('/').filter(Boolean)[0];
-  if (supportedLocales.has(locale)) document.documentElement.lang = locale;
-})();`;
+function resolveDocumentLocale(value: string | null): Locale {
+  return value && locales.includes(value as Locale) ? (value as Locale) : defaultLocale;
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const requestHeaders = await headers();
+  const locale = resolveDocumentLocale(requestHeaders.get("x-next-intl-locale"));
+
   return (
-    <html lang="pt-BR">
+    <html lang={locale}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <script dangerouslySetInnerHTML={{ __html: localeLanguageBootstrap }} />
         {children}
         <PostHogScript />
       </body>
