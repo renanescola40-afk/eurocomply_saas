@@ -40,9 +40,12 @@ Add a source-contract test so removal of the file or critical ownership rules fa
 - this change does not itself verify the live ruleset, organization membership, reviewer availability, or production deployment controls;
 - GitHub remains authoritative for whether a requested reviewer is eligible to approve a specific pull request.
 
-## Risk
+## Risks and trade-offs
 
-The principal operational risk is reviewer concentration: sensitive changes can be blocked when the sole listed owner is unavailable. A future multi-maintainer or team-based ownership model should replace the individual owner when eligible reviewers exist.
+- Reviewer concentration can block sensitive changes when the sole listed owner is unavailable.
+- A single owner does not provide separation of duties or independent two-person approval.
+- Broader path rules can request reviews for low-risk maintenance changes and increase merge latency.
+- A future multi-maintainer or team-based ownership model should replace the individual owner when eligible reviewers exist.
 
 ## Evidence
 

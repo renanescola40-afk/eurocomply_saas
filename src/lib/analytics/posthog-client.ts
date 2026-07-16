@@ -29,6 +29,7 @@ declare global {
 const POSTHOG_SCRIPT_ID = 'posthog-js-sdk';
 const CONSENT_STORAGE_KEY = 'risckcomply.analytics.consent';
 const DEFAULT_POSTHOG_HOST = 'https://eu.i.posthog.com';
+const DEFAULT_POSTHOG_ASSET_HOST = 'https://eu-assets.i.posthog.com';
 const SENSITIVE_PATH_PATTERNS = [
   /\/documents?(\/|$)/i,
   /\/riscos?(\/|$)/i,
@@ -44,6 +45,10 @@ function getPostHogKey() {
 
 function getPostHogHost() {
   return process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() || DEFAULT_POSTHOG_HOST;
+}
+
+function getPostHogAssetHost() {
+  return process.env.NEXT_PUBLIC_POSTHOG_ASSET_HOST?.trim() || DEFAULT_POSTHOG_ASSET_HOST;
 }
 
 function requiresConsent() {
@@ -65,6 +70,7 @@ export function grantAnalyticsConsent() {
 export function denyAnalyticsConsent() {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(CONSENT_STORAGE_KEY, 'denied');
+  window.posthog?.stopSessionRecording?.();
   window.posthog?.opt_out_capturing?.();
 }
 
@@ -104,7 +110,7 @@ export function initPostHog(pathname?: string) {
   const script = document.createElement('script');
   script.id = POSTHOG_SCRIPT_ID;
   script.async = true;
-  script.src = `${getPostHogHost().replace(/\/$/, '')}/static/array.js`;
+  script.src = `${getPostHogAssetHost().replace(/\/$/, '')}/static/array.js`;
   script.onload = () => {
     window.__posthogLoaded = true;
     window.__posthogLoading = false;
@@ -138,6 +144,11 @@ export function initPostHog(pathname?: string) {
 
 export function updateSessionRecordingForPath(pathname: string) {
   if (typeof window === 'undefined') return;
+  if (!hasAnalyticsConsent()) {
+    window.posthog?.stopSessionRecording?.();
+    return;
+  }
+
   if (isSensitiveAnalyticsPath(pathname)) {
     window.posthog?.stopSessionRecording?.();
     return;
