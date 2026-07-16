@@ -1,0 +1,11 @@
+# Enterprise backlog
+
+| ID | Domain | Priority | Weight | Problem | Risk | Acceptance criteria | Dependencies | Status | Branch / PR | Tests | Evidence | Owner |
+| --- | --- | --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ENT-001 | Auth/RBAC/Tenancy | P0 | 1 | Invitation membership write and invitation consumption are not atomic | Partial access grant, replay, concurrent role inconsistency | One service-role-only transaction locks invitation, validates identity/state, creates membership without overwriting an existing role, consumes invitation, and rolls back on failure | None | In progress | `agent/atomic-invitation-acceptance` | Action unit tests; SQL contract; RLS gate | Exact-SHA CI only; live RLS remains external | Engineering/Security |
+| ENT-002 | Billing/Security | P1 | 1 | API guard scanner did not enforce the entitlements rate-limit helper | Throttling regression can escape CI | Scanner recognizes helper and route fails closed before billing read | PR #1114 | In review | #1114 | Route + scanner contracts | Exact-head CI | Engineering |
+| ENT-003 | Backup/Restore | P1 | 1 | Restore evidence accepts actual RTO/RPO above targets | Out-of-SLA recovery can be marked Complete | Checker rejects actual RTO/RPO above targets and invalid chronology | None | Ready | Unassigned | Negative and boundary evidence tests | Runtime restore remains Open | SRE |
+| ENT-004 | Product/UX | P1 | 1 | AI reassessment is not localized/accessibly labelled and network rejection can leave saving state stuck | Broken multilingual workflow and permanent disabled UI | Six locales, accessible names/live notices, fetch errors reset state in finally | None | Ready | Unassigned | Component + contract tests | Repository evidence only | Product/UX |
+| ENT-005 | DAST | P1 | 1 | Register and final gate disagree on canonical evidence path | Valid DAST evidence cannot close the final gate | Canonical path consistent across register, index, workflow, and gate | PR #1113 | In review | #1113 | Path contract + final gate | Runtime DAST remains Open | Security |
+
+Weights reference the one-point controls in the 100-point scorecard. Status changes do not change the official score until merged and evidenced on the assessed SHA.
