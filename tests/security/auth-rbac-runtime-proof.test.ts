@@ -13,6 +13,7 @@ const passingChecks = {
   ownerCannotReadTenantB: true,
   outsiderCanReadOwnTenant: true,
   crossTenantMembershipHidden: true,
+  sessionRefresh: true,
   sessionsRevoked: true,
 };
 
@@ -34,9 +35,14 @@ describe('Auth RBAC protected runtime proof', () => {
     });
   });
 
-  it('fails closed for cross-tenant visibility, stale SHA or local execution', () => {
+  it('fails closed for cross-tenant visibility, refresh failure, stale SHA or local execution', () => {
     expect(evaluate({
       checks: { ...passingChecks, outsiderCannotReadTenantA: false },
+      provenance,
+    }).complete).toBe(false);
+
+    expect(evaluate({
+      checks: { ...passingChecks, sessionRefresh: false },
       provenance,
     }).complete).toBe(false);
 
@@ -66,6 +72,7 @@ describe('Auth RBAC protected runtime proof', () => {
       'outsiderCannotReadTenantA',
       'ownerCannotReadTenantB',
       'crossTenantMembershipHidden',
+      'supabase.auth.refreshSession',
       'supabase.auth.signOut',
     ]) expect(script).toContain(token);
 
