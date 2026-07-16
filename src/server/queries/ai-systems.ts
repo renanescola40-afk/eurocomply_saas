@@ -1,4 +1,4 @@
-import { createAdminClient, tryCreateAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { AiActRiskLevel, AiRiskDomain, AiSystemRole, AiSystemStatus } from '@/server/ai-governance/classifier';
 
 const AI_SYSTEM_COLUMNS = [
@@ -116,10 +116,6 @@ type AtomicReassessmentRow = {
   system: AiSystemRecord | null;
 };
 
-function isMissingAiSystemsTable(error: { code?: string; message?: string }) {
-  return error.code === '42P01' || error.code === 'PGRST205' || /ai_systems/i.test(error.message ?? '');
-}
-
 function isAiSystemRecord(value: unknown): value is AiSystemRecord {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const system = value as Partial<AiSystemRecord>;
@@ -176,8 +172,7 @@ function aiSystemPatch(input: Omit<CreateAiSystemInput, 'organizationId' | 'crea
 }
 
 export async function listAiSystems(organizationId: string): Promise<AiSystemRecord[]> {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('ai_systems')
@@ -186,10 +181,8 @@ export async function listAiSystems(organizationId: string): Promise<AiSystemRec
     .order('created_at', { ascending: false });
 
   if (error) {
-    if (!isMissingAiSystemsTable(error)) {
-      console.warn('[ai-systems] list_failed', { code: error.code ?? 'unknown' });
-    }
-    return [];
+    console.warn('[ai-systems] list_failed', { code: error.code ?? 'unknown' });
+    throw error;
   }
 
   return (data ?? []) as unknown as AiSystemRecord[];
@@ -214,8 +207,7 @@ export async function getAiSystem(systemId: string, organizationId: string): Pro
 }
 
 export async function listAiSystemHistory(systemId: string, organizationId: string): Promise<AiSystemHistoryRecord[]> {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('ai_system_history')
@@ -225,10 +217,8 @@ export async function listAiSystemHistory(systemId: string, organizationId: stri
     .order('created_at', { ascending: false });
 
   if (error) {
-    if (!isMissingAiSystemsTable(error)) {
-      console.warn('[ai-systems] history_list_failed', { code: error.code ?? 'unknown' });
-    }
-    return [];
+    console.warn('[ai-systems] history_list_failed', { code: error.code ?? 'unknown' });
+    throw error;
   }
 
   return (data ?? []) as unknown as AiSystemHistoryRecord[];
