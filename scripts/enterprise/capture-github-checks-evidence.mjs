@@ -10,9 +10,16 @@ const outputPath = process.env.GITHUB_CHECKS_EVIDENCE_PATH
   || 'artifacts/enterprise-readiness/github-checks-evidence.json';
 const timeoutMs = Number(process.env.GITHUB_CHECKS_WAIT_MS || 18 * 60 * 1000);
 const pollMs = Number(process.env.GITHUB_CHECKS_POLL_MS || 15_000);
+const githubRequestTimeoutMs = Number(process.env.GITHUB_CHECKS_REQUEST_TIMEOUT_MS || 15_000);
+const MAX_GITHUB_API_RESPONSE_BYTES = 1024 * 1024;
 
 if (!token || !repository || !/^[0-9a-f]{40}$/i.test(targetSha || '')) {
   console.error('GITHUB_TOKEN, GITHUB_REPOSITORY and a full 40-character TARGET_SHA are required.');
+  process.exit(1);
+}
+
+if (!Number.isFinite(githubRequestTimeoutMs) || githubRequestTimeoutMs <= 0) {
+  console.error('GITHUB_CHECKS_REQUEST_TIMEOUT_MS must be a positive finite number.');
   process.exit(1);
 }
 
@@ -65,6 +72,51 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function readBoundedJsonResponse(response) {
+  const declaredLength = response.headers.get('content-length');
+  if (declaredLength) {
+    const parsedLength = Number(declaredLength);
+    if (Number.isFinite(parsedLength) && parsedLength > MAX_GITHUB_API_RESPONSE_BYTES) {
+      throw new Error('GitHub API response exceeded the 1 MiB limit.');
+    }
+  }
+
+  if (!response.body) {
+    throw new Error('GitHub API response body was missing.');
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_GITHUB_API_RESPONSE_BYTES) {
+        await reader.cancel('github_checks_evidence_response_too_large');
+        throw new Error('GitHub API response exceeded the 1 MiB limit.');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(body);
+  return JSON.parse(text);
+}
+
 async function github(path) {
   const response = await fetch(`https://api.github.com${path}`, {
     headers: {
@@ -73,13 +125,15 @@ async function github(path) {
       'X-GitHub-Api-Version': '2022-11-28',
       'User-Agent': 'risck-comply-enterprise-scorecard',
     },
+    redirect: 'error',
+    signal: AbortSignal.timeout(githubRequestTimeoutMs),
   });
 
   if (!response.ok) {
     throw new Error(`GitHub API ${response.status} for ${path}`);
   }
 
-  return response.json();
+  return readBoundedJsonResponse(response);
 }
 
 function latestRunsByName(runs) {
