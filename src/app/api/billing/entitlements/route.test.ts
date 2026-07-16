@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   getCurrentOrganizationForUser: vi.fn(),
   getOrganizationEntitlements: vi.fn(),
+  requireEnterpriseRateLimit: vi.fn(),
 }));
 
 vi.mock('@/server/queries/auth', () => ({
@@ -17,6 +18,14 @@ vi.mock('@/server/queries/organizations', () => ({
 vi.mock('@/server/billing/entitlements', () => ({
   getOrganizationEntitlements: mocks.getOrganizationEntitlements,
 }));
+
+vi.mock('@/server/security/api-guards', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/server/security/api-guards')>();
+  return {
+    ...original,
+    requireEnterpriseRateLimit: mocks.requireEnterpriseRateLimit,
+  };
+});
 
 import { GET } from './route';
 
@@ -35,6 +44,7 @@ describe('billing entitlements response hardening', () => {
       maxUsers: 25,
       maxFiscalCountries: Number.NaN,
     });
+    mocks.requireEnterpriseRateLimit.mockResolvedValue(null);
   });
 
   it('returns no-store unauthorized responses', async () => {
@@ -75,5 +85,29 @@ describe('billing entitlements response hardening', () => {
         maxFiscalCountries: null,
       },
     });
+    expect(mocks.requireEnterpriseRateLimit).toHaveBeenCalledWith(
+      expect.any(Request),
+      expect.objectContaining({
+        policy: 'general-api',
+        userId: 'user_123',
+        organizationId: 'org_123',
+        action: 'billing.entitlements.read',
+      }),
+    );
+  });
+
+  it('fails closed before reading entitlements when rate limiting denies the request', async () => {
+    mocks.requireEnterpriseRateLimit.mockResolvedValue(
+      new Response(JSON.stringify({ error: 'security_control_unavailable' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      }),
+    );
+
+    const response = await GET(createRequest());
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(mocks.getOrganizationEntitlements).not.toHaveBeenCalled();
   });
 });

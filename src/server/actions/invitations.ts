@@ -8,6 +8,22 @@ const acceptInvitationSchema = z.object({
   token: z.string().min(24),
 });
 
+const ATOMIC_INVITATION_ACCEPTANCE_RPC = 'accept_organization_invitation_atomic';
+
+type InvitationAcceptanceResult = {
+  outcome: string;
+  invitation_id: string | null;
+  organization_id: string | null;
+  membership_id: string | null;
+  applied_role: string | null;
+};
+
+function firstAcceptanceResult(data: unknown): InvitationAcceptanceResult | null {
+  if (Array.isArray(data)) return (data[0] as InvitationAcceptanceResult | undefined) ?? null;
+  if (data && typeof data === 'object') return data as InvitationAcceptanceResult;
+  return null;
+}
+
 function actionError(message: string) {
   return new Error(message);
 }
@@ -23,61 +39,45 @@ export async function acceptInvitation(input: unknown) {
     throw actionError('Authenticated email is required to accept this invitation.');
   }
 
-  const { data: invitation, error: invitationError } = await supabase
-    .from('invitations')
-    .select('*')
-    .eq('token', payload.token)
-    .is('accepted_at', null)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc(ATOMIC_INVITATION_ACCEPTANCE_RPC, {
+    p_token: payload.token,
+    p_user_id: user.id,
+    p_email: normalizedEmail,
+  });
 
-  if (invitationError) {
-    reportError(invitationError, context);
+  if (error) {
+    reportError(error, context);
     throw actionError('Unable to accept invitation.');
   }
 
-  if (!invitation) throw actionError('Invitation not found or already accepted.');
-
-  if (invitation.email !== normalizedEmail) {
-    throw actionError('This invitation belongs to another email address.');
+  const acceptance = firstAcceptanceResult(data);
+  if (!acceptance) throw actionError('Unable to accept invitation.');
+  if (acceptance.outcome === 'not_found' || acceptance.outcome === 'already_accepted') {
+    throw actionError('Invitation not found or already accepted.');
   }
-
-  if (new Date(invitation.expires_at).getTime() < Date.now()) {
-    throw actionError('Invitation has expired.');
-  }
-
-  const { data: membership, error: membershipError } = await supabase
-    .from('organization_members')
-    .upsert({
-      organization_id: invitation.organization_id,
-      user_id: user.id,
-      role: invitation.role,
-    }, { onConflict: 'organization_id,user_id' })
-    .select('*')
-    .single();
-
-  if (membershipError) {
-    reportError(membershipError, { ...context, organizationId: invitation.organization_id });
-    throw actionError('Unable to accept invitation.');
-  }
-
-  const { error: updateError } = await supabase
-    .from('invitations')
-    .update({ accepted_at: new Date().toISOString() })
-    .eq('id', invitation.id);
-
-  if (updateError) {
-    reportError(updateError, { ...context, organizationId: invitation.organization_id, invitationId: invitation.id });
+  if (acceptance.outcome === 'email_mismatch') throw actionError('This invitation belongs to another email address.');
+  if (acceptance.outcome === 'expired') throw actionError('Invitation has expired.');
+  if (acceptance.outcome !== 'accepted' || !acceptance.organization_id || !acceptance.membership_id) {
     throw actionError('Unable to accept invitation.');
   }
 
   await logAuditEvent({
-    organizationId: invitation.organization_id,
+    organizationId: acceptance.organization_id,
     actorUserId: user.id,
     action: 'member.invitation_accepted',
     entityType: 'organization_member',
-    entityId: membership.id,
-    metadata: { invitationId: invitation.id, email: normalizedEmail, role: invitation.role },
+    entityId: acceptance.membership_id,
+    metadata: {
+      invitationId: acceptance.invitation_id,
+      email: normalizedEmail,
+      role: acceptance.applied_role,
+    },
   });
 
-  return membership;
+  return {
+    id: acceptance.membership_id,
+    organization_id: acceptance.organization_id,
+    user_id: user.id,
+    role: acceptance.applied_role,
+  };
 }
