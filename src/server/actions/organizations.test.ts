@@ -1,4 +1,3 @@
-/* eslint-disable */
 // @ts-nocheck
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -45,37 +44,40 @@ vi.mock('./audit', () => ({
 import { createOrganization } from './organizations';
 
 function installSupabaseMock(options: {
-  organizationError?: Error | null;
-  memberError?: Error | null;
+  rpcError?: Error | null;
+  outcome?: string;
+  data?: unknown;
 } = {}) {
   const organization = {
     id: 'org_a',
     name: 'Acme Corp',
     slug: 'acme-corp',
+    created_by: 'user_auth',
+    created_at: '2026-07-16T00:00:00.000Z',
+    updated_at: '2026-07-16T00:00:00.000Z',
   };
 
-  const organizationBuilder = {
-    insert: vi.fn(() => organizationBuilder),
-    select: vi.fn(() => organizationBuilder),
-    single: vi.fn(async () => ({
-      data: options.organizationError ? null : organization,
-      error: options.organizationError ?? null,
-    })),
-  };
+  const rpc = vi.fn(async () => ({
+    data:
+      options.data === undefined
+        ? [
+            {
+              outcome: options.outcome ?? 'created',
+              organization_id: organization.id,
+              organization_name: organization.name,
+              organization_slug: organization.slug,
+              created_by: organization.created_by,
+              created_at: organization.created_at,
+              updated_at: organization.updated_at,
+            },
+          ]
+        : options.data,
+    error: options.rpcError ?? null,
+  }));
 
-  const memberBuilder = {
-    insert: vi.fn(async () => ({ error: options.memberError ?? null })),
-  };
+  mocks.createAdminClient.mockReturnValue({ rpc });
 
-  const from = vi.fn((table: string) => {
-    if (table === 'organizations') return organizationBuilder;
-    if (table === 'organization_members') return memberBuilder;
-    throw new Error(`Unexpected table ${table}`);
-  });
-
-  mocks.createAdminClient.mockReturnValue({ from });
-
-  return { organization, organizationBuilder, memberBuilder, from };
+  return { organization, rpc };
 }
 
 describe('organization server action hardening', () => {
@@ -106,26 +108,17 @@ describe('organization server action hardening', () => {
     expect(mocks.createAdminClient).not.toHaveBeenCalled();
   });
 
-  it('uses the authenticated Supabase user for owner, email and audit fields', async () => {
-    const { organizationBuilder, memberBuilder } = installSupabaseMock();
+  it('delegates organization and owner creation atomically for the authenticated user', async () => {
+    const { rpc } = installSupabaseMock();
 
     const result = await createOrganization({ name: 'Acme Corp', slug: 'acme-corp' });
 
     expect(result).toMatchObject({ id: 'org_a' });
-    expect(organizationBuilder.insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'Acme Corp',
-        slug: 'acme-corp',
-        created_by: 'user_auth',
-      }),
-    );
-    expect(memberBuilder.insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        organization_id: 'org_a',
-        user_id: 'user_auth',
-        role: 'owner',
-      }),
-    );
+    expect(rpc).toHaveBeenCalledWith('create_organization_with_owner_atomic', {
+      p_name: 'Acme Corp',
+      p_slug: 'acme-corp',
+      p_user_id: 'user_auth',
+    });
     expect(mocks.sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: 'owner@example.test', userId: 'user_auth' }));
     expect(mocks.logAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -164,7 +157,7 @@ describe('organization server action hardening', () => {
   });
 
   it('sanitizes provider errors and does not expose Supabase details to the caller', async () => {
-    installSupabaseMock({ organizationError: new Error('provider detail') });
+    installSupabaseMock({ rpcError: new Error('provider detail') });
 
     await expect(createOrganization({ name: 'Acme Corp', slug: 'acme-corp' })).rejects.toThrow('Unable to create organization');
 
@@ -172,5 +165,15 @@ describe('organization server action hardening', () => {
       expect.objectContaining({ message: 'provider detail' }),
       expect.objectContaining({ area: 'organization_created_action', userId: 'user_auth', organizationSlug: 'acme-corp' }),
     );
+  });
+
+  it('rejects a missing or non-created RPC result without sending side effects', async () => {
+    installSupabaseMock({ data: [{ outcome: 'invalid_input' }] });
+
+    await expect(createOrganization({ name: 'Acme Corp', slug: 'acme-corp' })).rejects.toThrow('Unable to create organization');
+
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(mocks.logAuditEvent).not.toHaveBeenCalled();
+    expect(mocks.reportError).toHaveBeenCalled();
   });
 });
