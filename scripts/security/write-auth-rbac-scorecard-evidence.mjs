@@ -62,6 +62,7 @@ export function buildAuthRbacScorecardEvidence(
     && checks.memberRoleObserved === true
     && checks.outsiderCanReadOwnTenant === true;
   const logout = trusted && checks.sessionsRevoked === true;
+  const sessionRefresh = trusted && checks.sessionRefresh === true;
   const rbac = trusted
     && checks.ownerRoleObserved === true
     && checks.memberRoleObserved === true
@@ -76,7 +77,7 @@ export function buildAuthRbacScorecardEvidence(
     pass('signup', false, 'Dedicated disposable-user signup proof has not been executed.'),
     pass('login', login, 'Trusted synthetic-user login and role observation proof is unavailable.'),
     pass('logout', logout, 'Trusted synthetic sessions were not proven revoked.'),
-    pass('sessionRefresh', false, 'Session refresh is not measured by the current runtime proof.'),
+    pass('sessionRefresh', sessionRefresh, 'Trusted authenticated session refresh proof is unavailable.'),
     pass('oauthCallback', false, 'A successful OAuth provider callback round trip has not been executed.'),
     pass('rbac', rbac, 'Trusted role and tenant-bound authorization proof is unavailable.'),
     pass('organizationOnboarding', false, 'A disposable no-organization user has not completed and rolled back onboarding.'),
@@ -123,7 +124,7 @@ export function buildAuthRbacScorecardEvidence(
       'scripts/security/write-auth-rbac-scorecard-evidence.mjs',
       '.github/workflows/auth-rbac-runtime-proof.yml',
     ],
-    evidenceBoundary: 'This derived artifact promotes only checks explicitly proven by trusted synthetic runtime evidence. Signup, refresh, OAuth and onboarding remain NOT_VERIFIED until dedicated disposable-flow proofs run; static code inspection cannot promote them.',
+    evidenceBoundary: 'This derived artifact promotes only checks explicitly proven by trusted synthetic runtime evidence. Signup, OAuth and onboarding remain NOT_VERIFIED until dedicated disposable-flow proofs run; static code inspection cannot promote them.',
     evidenceIntegrity: {
       containsSensitiveValues: false,
       runtimeProofInvented: false,
