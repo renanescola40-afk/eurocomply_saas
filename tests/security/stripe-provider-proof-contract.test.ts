@@ -17,6 +17,18 @@ describe('Stripe provider proof contract', () => {
     expect(probe).toContain("'invoice.payment_failed'");
   });
 
+  it('bounds every Stripe API response before JSON parsing', () => {
+    expect(probe).toContain('const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024');
+    expect(probe).toContain("response.headers.get('content-length')");
+    expect(probe).toContain('response.body.getReader()');
+    expect(probe).toContain('totalBytes > MAX_PROVIDER_RESPONSE_BYTES');
+    expect(probe).toContain("reader.cancel('provider_response_too_large')");
+    expect(probe).toContain("new TextDecoder('utf-8', { fatal: true })");
+    expect(probe).toContain('JSON.parse(text)');
+    expect(probe).not.toContain('response.json()');
+    expect(probe).toContain('AbortSignal.timeout(15000)');
+  });
+
   it('keeps provider secrets and identifiers out of evidence', () => {
     expect(writer).not.toContain('STRIPE_SECRET_KEY');
     expect(writer).not.toContain('STRIPE_PRICE_STARTER');
