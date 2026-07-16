@@ -122,7 +122,7 @@ export async function listAiIncidents(organizationId: string): Promise<AiInciden
 
   if (error) {
     console.warn('[ai-incidents] list_failed', { code: error.code ?? 'unknown' });
-    throw error;
+    throw new Error('Unable to load AI incidents.');
   }
 
   return (data ?? []) as unknown as AiIncidentRecord[];
