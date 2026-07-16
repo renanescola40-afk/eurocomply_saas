@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 const apiRoot = join(process.cwd(), 'src', 'app', 'api');
-const strict = process.env.ENFORCE_ORIGIN_GUARDS === 'true';
+const strict = process.env.ENFORCE_ORIGIN_GUARDS !== 'false';
 const mutatingExportRegex = /export\s+async\s+function\s+(POST|PUT|PATCH|DELETE)\s*\(/g;
 
 const exemptRoutePatterns = [
@@ -78,5 +78,5 @@ if (findings.length > 0) {
 }
 
 if (!strict) {
-  console.log('Advisory mode: set ENFORCE_ORIGIN_GUARDS=true to make this check blocking.');
+  console.log('Advisory mode was explicitly requested with ENFORCE_ORIGIN_GUARDS=false.');
 }
