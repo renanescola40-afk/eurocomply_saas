@@ -2,9 +2,10 @@
 
 | Scope | Files or area | Branch / PR | Mode | Owner | Status |
 | --- | --- | --- | --- | --- | --- |
-| Atomic invitation acceptance | `src/server/actions/invitations.ts`, new invitation RPC migration | `agent/atomic-invitation-acceptance` | Write | Primary engineering agent | Active |
-| DAST path canonicalization | P1 register, DAST final gate and contract | #1113 | Integrated | Concurrent identity | Merged by another identity |
-| Billing entitlement rate-limit gate | API guard scanner and entitlement tests | #1114 | External branch | Primary engineering agent | Checks running |
-| Runtime SHA response bound | Runtime SHA verifier and ADR-0090 | #1115 | External branch | Concurrent identity | Checks running |
+| Atomic member-removal action | `src/server/actions/members.ts` and removal contracts | #1123 | Review | Primary engineering agent | Exact-SHA gates green; awaiting owner merge |
+| Canonical team-invitation lifecycle | team invite create/cancel routes and `src/server/queries/invites.ts` | #1124 | Review | Primary engineering agent | Exact-SHA gates green; awaiting owner merge |
+| AI reassessment localization | AI system edit form, localized copy and UX contracts | `agent/localize-ai-reassessment` | Write | Primary engineering agent | Active |
+| Atomic organization creation | organization action and atomic creation RPC | #1121 | Integrated | Human owner | Merged |
+| Deterministic sales follow-up | Sales Console timestamp boundary | #1122 | Integrated | Human owner | Merged |
 
-Do not create another migration or action change for invitation acceptance while the first lock is active. Read-only audits may continue across all areas.
+Do not modify the same invite routes, member action or AI reassessment component from another branch while these locks are active. Read-only audits may continue across all areas.
