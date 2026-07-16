@@ -12,6 +12,21 @@ import { requireCurrentUser } from '@/server/queries/auth';
 
 const INVITE_LIMIT = 10;
 const INVITE_WINDOW_MS = 60 * 60 * 1000;
+const ATOMIC_MEMBER_REMOVAL_RPC = 'remove_organization_member_atomic';
+
+type MemberRemovalResult = {
+  outcome: 'removed' | 'last_owner' | 'state_changed' | 'not_found' | 'invalid_input';
+  affected_member_id: string | null;
+  affected_user_id: string | null;
+  previous_role: string | null;
+};
+
+function firstRemovalResult(data: unknown): MemberRemovalResult | null {
+  if (!Array.isArray(data) || data.length === 0) return null;
+  const candidate = data[0];
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
+  return candidate as MemberRemovalResult;
+}
 
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
@@ -181,36 +196,36 @@ export async function removeOrganizationMember(input: { organizationId: string; 
     throw actionError('You cannot remove your own access from here');
   }
 
-  if (member.role === 'owner') {
-    const { count, error: ownerCountError } = await supabase
-      .from('organization_members')
-      .select('id', { count: 'exact', head: true })
-      .eq('organization_id', input.organizationId)
-      .eq('role', 'owner');
-
-    if (ownerCountError) {
-      failMemberAction(ownerCountError, { area: 'team_owner_count', organizationId: input.organizationId }, 'Unable to validate organization owners.');
-    }
-
-    if ((count ?? 0) <= 1) {
-      throw actionError('Cannot remove the last organization owner');
-    }
-  }
-
-  const { data: removedMember, error } = await supabase
-    .from('organization_members')
-    .delete()
-    .eq('id', input.memberId)
-    .eq('organization_id', input.organizationId)
-    .select('id')
-    .maybeSingle();
+  const { data: removalData, error } = await supabase.rpc(ATOMIC_MEMBER_REMOVAL_RPC, {
+    p_organization_id: input.organizationId,
+    p_member_id: input.memberId,
+    p_expected_user_id: member.user_id,
+    p_expected_role: member.role,
+  });
 
   if (error) {
     failMemberAction(error, { area: 'team_remove_member', organizationId: input.organizationId, memberId: input.memberId }, 'Unable to remove member.');
   }
 
-  if (!removedMember) {
+  const removal = firstRemovalResult(removalData);
+  if (!removal) {
+    throw actionError('Unable to remove member.');
+  }
+
+  if (removal.outcome === 'not_found') {
+    throw actionError('Member not found');
+  }
+
+  if (removal.outcome === 'last_owner') {
+    throw actionError('Cannot remove the last organization owner');
+  }
+
+  if (removal.outcome === 'state_changed') {
     throw actionError('Member state changed before removal completed');
+  }
+
+  if (removal.outcome !== 'removed') {
+    throw actionError('Unable to remove member.');
   }
 
   await logAuditEvent({
@@ -218,7 +233,10 @@ export async function removeOrganizationMember(input: { organizationId: string; 
     actorUserId: user.id,
     action: 'team.member_removed',
     entityType: 'organization_member',
-    entityId: input.memberId,
-    metadata: { removedUserId: member.user_id ?? null, role: member.role },
+    entityId: removal.affected_member_id ?? input.memberId,
+    metadata: {
+      removedUserId: removal.affected_user_id ?? member.user_id ?? null,
+      role: removal.previous_role ?? member.role,
+    },
   });
 }

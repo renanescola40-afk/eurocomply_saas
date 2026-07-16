@@ -6,8 +6,8 @@ const mocks = vi.hoisted(() => ({
   logAuditEvent: vi.fn(),
   reportError: vi.fn(),
   requireCurrentUser: vi.fn(),
-  removedMember: { id: 'member-1' } as { id: string } | null,
-  deleteEq: vi.fn(),
+  removalOutcome: 'removed' as 'removed' | 'last_owner' | 'state_changed' | 'not_found' | 'invalid_input',
+  rpcError: null as Error | null,
 }));
 
 vi.mock('@/lib/email/client', () => ({
@@ -60,37 +60,54 @@ function installSupabaseMock() {
     })),
   };
 
-  const deleteChain = {
-    eq: mocks.deleteEq,
-    select: vi.fn(() => deleteChain),
-    maybeSingle: vi.fn(async () => ({ data: mocks.removedMember, error: null })),
-  };
-  mocks.deleteEq.mockImplementation(() => deleteChain);
+  const rpc = vi.fn(async () => ({
+    data: [
+      {
+        outcome: mocks.removalOutcome,
+        affected_member_id: memberId,
+        affected_user_id: removedUserId,
+        previous_role: 'member',
+      },
+    ],
+    error: mocks.rpcError,
+  }));
 
   mocks.createAdminClient.mockReturnValue({
-    from: vi.fn(() => ({
-      select: lookupChain.select,
-      delete: vi.fn(() => deleteChain),
-    })),
+    from: vi.fn((table: string) => {
+      if (table !== 'organization_members') throw new Error(`Unexpected table ${table}`);
+      return {
+        select: lookupChain.select,
+      };
+    }),
+    rpc,
   });
+
+  return { rpc };
 }
 
 describe('member removal state transition', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.removedMember = { id: memberId };
+    mocks.removalOutcome = 'removed';
+    mocks.rpcError = null;
     mocks.requireCurrentUser.mockResolvedValue({ id: actorUserId });
     mocks.assertCurrentUserCan.mockResolvedValue(undefined);
     mocks.logAuditEvent.mockResolvedValue(undefined);
     installSupabaseMock();
   });
 
-  it('records success only after the tenant-scoped delete returns the affected member', async () => {
+  it('delegates removal to the atomic RPC with the expected member state', async () => {
+    const { rpc } = installSupabaseMock();
+
     await removeOrganizationMember({ organizationId, memberId });
 
     expect(mocks.assertCurrentUserCan).toHaveBeenCalledWith(organizationId, actorUserId, 'team:remove');
-    expect(mocks.deleteEq).toHaveBeenNthCalledWith(1, 'id', memberId);
-    expect(mocks.deleteEq).toHaveBeenNthCalledWith(2, 'organization_id', organizationId);
+    expect(rpc).toHaveBeenCalledWith('remove_organization_member_atomic', {
+      p_organization_id: organizationId,
+      p_member_id: memberId,
+      p_expected_user_id: removedUserId,
+      p_expected_role: 'member',
+    });
     expect(mocks.logAuditEvent).toHaveBeenCalledWith({
       organizationId,
       actorUserId,
@@ -102,12 +119,34 @@ describe('member removal state transition', () => {
   });
 
   it('rejects a stale concurrent removal and does not write false success evidence', async () => {
-    mocks.removedMember = null;
+    mocks.removalOutcome = 'state_changed';
 
     await expect(removeOrganizationMember({ organizationId, memberId })).rejects.toThrow(
       'Member state changed before removal completed',
     );
 
+    expect(mocks.logAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it('blocks atomic removal of the final owner without success audit evidence', async () => {
+    mocks.removalOutcome = 'last_owner';
+
+    await expect(removeOrganizationMember({ organizationId, memberId })).rejects.toThrow(
+      'Cannot remove the last organization owner',
+    );
+
+    expect(mocks.logAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it('sanitizes provider errors and reports the internal failure', async () => {
+    mocks.rpcError = new Error('provider detail');
+
+    await expect(removeOrganizationMember({ organizationId, memberId })).rejects.toThrow('Unable to remove member.');
+
+    expect(mocks.reportError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'provider detail' }),
+      expect.objectContaining({ area: 'team_remove_member', organizationId, memberId }),
+    );
     expect(mocks.logAuditEvent).not.toHaveBeenCalled();
   });
 });
