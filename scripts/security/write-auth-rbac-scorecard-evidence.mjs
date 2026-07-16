@@ -31,13 +31,20 @@ function sourceIsTrusted(source) {
     && source?.provenance?.githubActions === true
     && /^\d+$/.test(String(source?.provenance?.runId ?? ''))
     && source?.provenance?.exactShaBound === true
+    && source?.checks
+    && typeof source.checks === 'object'
+    && !Array.isArray(source.checks)
+    && Object.values(source.checks).length > 0
+    && Object.values(source.checks).every((value) => value === true)
     && Array.isArray(source?.failures)
     && source.failures.length === 0
+    && source?.evidenceIntegrity?.placeholderOnly === false
     && source?.evidenceIntegrity?.runtimeProofInvented === false
     && source?.evidenceIntegrity?.rawCredentialsStored === false
     && source?.evidenceIntegrity?.accessTokensStored === false
     && source?.evidenceIntegrity?.userIdentifiersStored === false
-    && source?.evidenceIntegrity?.organizationIdentifiersStored === false;
+    && source?.evidenceIntegrity?.organizationIdentifiersStored === false
+    && source?.evidenceIntegrity?.rawProviderResponsesStored === false;
 }
 
 function pass(name, passed, reason) {
