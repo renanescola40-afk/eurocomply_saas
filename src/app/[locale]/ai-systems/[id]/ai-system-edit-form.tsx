@@ -221,11 +221,11 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
 
         <div className="grid gap-3 md:grid-cols-2">
           <input required value={form.name} onChange={(event) => update('name', event.target.value)} placeholder="System name" aria-label="System name" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
-          <input value={form.ownerTeam} onChange={(event) => update('ownerTeam', event.target.value)} placeholder="Owner team" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
-          <input value={form.category} onChange={(event) => update('category', event.target.value)} placeholder="Category" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
-          <input value={form.countryMarket} onChange={(event) => update('countryMarket', event.target.value)} placeholder="Country / market" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
-          <input value={form.vendorName} onChange={(event) => update('vendorName', event.target.value)} placeholder="Vendor" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
-          <input value={form.modelName} onChange={(event) => update('modelName', event.target.value)} placeholder="Model" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+          <input value={form.ownerTeam} onChange={(event) => update('ownerTeam', event.target.value)} placeholder="Owner team" aria-label="Owner team" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+          <input value={form.category} onChange={(event) => update('category', event.target.value)} placeholder="Category" aria-label="Category" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+          <input value={form.countryMarket} onChange={(event) => update('countryMarket', event.target.value)} placeholder="Country / market" aria-label="Country or market" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+          <input value={form.vendorName} onChange={(event) => update('vendorName', event.target.value)} placeholder="Vendor" aria-label="Vendor" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+          <input value={form.modelName} onChange={(event) => update('modelName', event.target.value)} placeholder="Model" aria-label="Model" className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
           <select value={form.role} onChange={(event) => update('role', event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" aria-label="Organization role">
             {roleOptions.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
@@ -235,8 +235,8 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
           <select value={form.riskDomain} onChange={(event) => update('riskDomain', event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40 md:col-span-2" aria-label="Risk domain">
             {domainOptions.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
-          <textarea value={form.processedData} onChange={(event) => update('processedData', event.target.value)} placeholder="Data processed" className="min-h-24 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40 md:col-span-2" />
-          <textarea required minLength={8} value={form.useCase} onChange={(event) => update('useCase', event.target.value)} placeholder="Use case" className="min-h-32 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40 md:col-span-2" />
+          <textarea value={form.processedData} onChange={(event) => update('processedData', event.target.value)} placeholder="Data processed" aria-label="Data processed" className="min-h-24 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40 md:col-span-2" />
+          <textarea required minLength={8} value={form.useCase} onChange={(event) => update('useCase', event.target.value)} placeholder="Use case" aria-label="Use case" className="min-h-32 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40 md:col-span-2" />
         </div>
 
         <fieldset className="mt-5 grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-2">
@@ -279,7 +279,7 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
             <FileText className="h-5 w-5 text-emerald-100" />
             <h3 className="mt-3 font-semibold">{t.evidenceTitle}</h3>
             <p className="mt-2 text-sm leading-6 text-white/55">{t.evidenceBody}</p>
-            <input required minLength={3} value={packTitle} onChange={(event) => setPackTitle(event.target.value)} placeholder={t.packName} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+            <input required minLength={3} value={packTitle} onChange={(event) => setPackTitle(event.target.value)} placeholder={t.packName} aria-label={t.packName} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
             <Button type="submit" disabled={isWorkflowSaving} className="mt-4 rounded-full">{isWorkflowSaving ? t.loading : t.buildPack}</Button>
           </form>
 
@@ -287,11 +287,11 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
             <ClipboardCheck className="h-5 w-5 text-emerald-100" />
             <h3 className="mt-3 font-semibold">{t.vendorTitle}</h3>
             <p className="mt-2 text-sm leading-6 text-white/55">{form.vendorName ? t.vendorBody : t.emptyVendor}</p>
-            <input required minLength={2} value={form.vendorName} onChange={(event) => update('vendorName', event.target.value)} placeholder={t.vendorName} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+            <input required minLength={2} value={form.vendorName} onChange={(event) => update('vendorName', event.target.value)} placeholder={t.vendorName} aria-label={t.vendorName} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
             <select value={vendorRiskLevel} onChange={(event) => setVendorRiskLevel(event.target.value as typeof vendorRiskLevel)} className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" aria-label="Vendor risk level">
               {['low', 'medium', 'high', 'critical'].map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
-            <textarea value={vendorNotes} onChange={(event) => setVendorNotes(event.target.value)} placeholder={t.vendorNotes} className="mt-3 min-h-20 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+            <textarea value={vendorNotes} onChange={(event) => setVendorNotes(event.target.value)} placeholder={t.vendorNotes} aria-label={t.vendorNotes} className="mt-3 min-h-20 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
             <Button type="submit" disabled={isWorkflowSaving} className="mt-4 rounded-full">{isWorkflowSaving ? t.loading : t.startVendor}</Button>
           </form>
 
@@ -299,8 +299,8 @@ export function AiSystemEditForm({ system, locale }: AiSystemEditFormProps) {
             <ShieldCheck className="h-5 w-5 text-emerald-100" />
             <h3 className="mt-3 font-semibold">{t.riskTitle}</h3>
             <p className="mt-2 text-sm leading-6 text-white/55">{t.riskBody}</p>
-            <input type="date" value={riskDueAt} onChange={(event) => setRiskDueAt(event.target.value)} placeholder={t.dueDate} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
-            <textarea value={riskNotes} onChange={(event) => setRiskNotes(event.target.value)} placeholder={t.riskNotes} className="mt-3 min-h-24 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+            <input type="date" value={riskDueAt} onChange={(event) => setRiskDueAt(event.target.value)} aria-label={t.dueDate} className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
+            <textarea value={riskNotes} onChange={(event) => setRiskNotes(event.target.value)} placeholder={t.riskNotes} aria-label={t.riskNotes} className="mt-3 min-h-24 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-white/40" />
             <Button type="submit" disabled={isWorkflowSaving} className="mt-4 rounded-full">{isWorkflowSaving ? t.loading : t.startRisk}</Button>
           </form>
         </div>
