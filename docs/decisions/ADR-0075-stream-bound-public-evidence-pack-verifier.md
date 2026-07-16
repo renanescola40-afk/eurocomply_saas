@@ -22,6 +22,12 @@ The endpoint no longer needs to fully buffer an unbounded chunked body before en
 
 The implementation still relies on the hosting runtime to deliver request chunks and does not claim protection from all upstream resource-exhaustion conditions. The one-megabyte threshold should be changed only with evidence about legitimate export sizes.
 
+## Risks and trade-offs
+
+Stream cancellation is best-effort and cannot guarantee that every upstream proxy or hosting layer stops receiving bytes immediately. The application-level boundary therefore complements, but does not replace, connection, request-size, timeout, and concurrency controls at the edge and hosting layers.
+
+The bounded reader still retains up to one megabyte of decoded JSON in application memory before parsing. Fatal UTF-8 decoding intentionally rejects malformed byte sequences, which is safer for integrity verification but may reject payloads that a permissive decoder would otherwise normalize. Legitimate evidence-pack exports above the existing one-megabyte policy remain unsupported and require a separately reviewed limit change rather than bypassing this guard.
+
 ## Validation
 
 Focused regression coverage requires stream-reader use, byte counting, cancellation on overflow, preservation of the declared-length fast rejection, and absence of `Request.text()` in this route. GitHub Actions remains authoritative for lint, typecheck, tests, build, and security gates on the exact PR head.
