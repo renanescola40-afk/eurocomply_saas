@@ -16,6 +16,7 @@ const MAINTENANCE_JOBS = [
 const DAILY_MAINTENANCE_ROUTE = '/api/internal/daily-maintenance';
 const DAILY_MAINTENANCE_AUTH_ACTION = 'authenticate_daily_maintenance';
 const DEFAULT_JOB_TIMEOUT_MS = 25_000;
+const MAX_JOB_RESPONSE_BYTES = 64 * 1024;
 
 export function getConfiguredMaintenanceBaseUrl() {
   const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
@@ -64,6 +65,54 @@ function getMaintenanceJobTimeoutMs() {
   return DEFAULT_JOB_TIMEOUT_MS;
 }
 
+export async function readBoundedMaintenanceJobResponse(response: Response) {
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_JOB_RESPONSE_BYTES) {
+    await response.body?.cancel();
+    return { body: { error: 'job_response_too_large' }, tooLarge: true };
+  }
+
+  if (!response.body) {
+    return { body: null, tooLarge: false };
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_JOB_RESPONSE_BYTES) {
+        await reader.cancel();
+        return { body: { error: 'job_response_too_large' }, tooLarge: true };
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return { body: text ? (JSON.parse(text) as unknown) : null, tooLarge: false };
+  } catch {
+    return { body: null, tooLarge: false };
+  }
+}
+
 async function runMaintenanceJob(baseUrl: string, path: string, credential: string) {
   const startedAt = Date.now();
   const controller = new AbortController();
@@ -80,19 +129,14 @@ async function runMaintenanceJob(baseUrl: string, path: string, credential: stri
       signal: controller.signal,
     });
 
-    let body: unknown = null;
-    try {
-      body = await response.json();
-    } catch {
-      body = null;
-    }
+    const parsedResponse = await readBoundedMaintenanceJobResponse(response);
 
     return {
       path,
-      ok: response.ok,
+      ok: response.ok && !parsedResponse.tooLarge,
       status: response.status,
       durationMs: Date.now() - startedAt,
-      body,
+      body: parsedResponse.body,
     };
   } finally {
     clearTimeout(timeout);
