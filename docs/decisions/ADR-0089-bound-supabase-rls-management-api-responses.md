@@ -1,4 +1,4 @@
-# ADR-0084: Bound Supabase RLS Management API responses
+# ADR-0089: Bound Supabase RLS Management API responses
 
 - Status: Accepted
 - Date: 2026-07-16

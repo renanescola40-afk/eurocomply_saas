@@ -58,6 +58,17 @@ describe('PR Autopilot security contract', () => {
     expect(classifier).toContain('Final merge remains human-controlled.');
   });
 
+  it('reconciles every managed classifier label from the current PR state', () => {
+    expect(classifier).toContain('const managedLabels = labelDefinitions.map(([name]) => name);');
+    expect(classifier).toContain('const replaceManagedLabels = async');
+    expect(classifier).toContain('const desiredManagedLabels = highRisk');
+    expect(classifier).toContain("? [policy.labels.blocked, policy.labels.highRisk, policy.labels.manualReview]");
+    expect(classifier).toContain("? [policy.labels.autofixAllowed]");
+    expect(classifier).toContain('await replaceManagedLabels(pull.number, existingLabels, desiredManagedLabels);');
+    expect(classifier).not.toContain('const addLabels = async');
+    expect(classifier).not.toContain('const removeLabel = async');
+  });
+
   it('documents exact-head human merge requirements without granting merge authority', () => {
     expect(policy.manualMergeRequirements.requireApprovedReview).toBe(true);
     expect(policy.manualMergeRequirements.requireAllThreadsResolved).toBe(true);

@@ -32,7 +32,7 @@ Comment-only security tokens can no longer satisfy the API hardening gate. Exist
 
 No application runtime code, database schema, RLS policy, RBAC rule, secret, dependency or production evidence is changed.
 
-## Risks and limitations
+## Risks and trade-offs
 
 - This remains lexical analysis, not an AST or control-flow proof.
 - An imported but unused security helper may still create a false positive.
