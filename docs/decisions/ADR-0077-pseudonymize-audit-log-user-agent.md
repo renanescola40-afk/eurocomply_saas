@@ -32,6 +32,14 @@ The derived identifier remains pseudonymous data, not anonymous data. Changing t
 
 No migration, dependency, RBAC, RLS, entitlement, provider or secret change is introduced.
 
+## Risks and trade-offs
+
+- New audit events no longer expose exact browser, operating-system or device details to operators investigating an event.
+- The derived value is a correlation hint, not an anonymous identifier; access controls and retention limits still apply.
+- Rotating the configured hash salt intentionally breaks correlation with identifiers generated under the previous salt.
+- Historical audit rows may still contain complete user-agent values and require a separately approved retention or cleanup decision.
+- Reusing the existing hashing primitive keeps behavior consistent with rate-limit telemetry but couples future identifier stability to that primitive and its salt configuration.
+
 ## Evidence boundary
 
 Evidence consists of repository source, diff, focused regression coverage and automated CI on the exact pull-request head. No runtime evidence file is created or modified. Production deployment, historical-data cleanup, retention-policy execution and legal compliance remain outside this ADR's evidence boundary.
