@@ -28,10 +28,19 @@ describe('prelaunch waitlist capture resilience', () => {
   it('stores and forwards only a derived IP hint in fallback records', () => {
     const source = routeSource();
 
-    expect(source).toContain("import { hashRateLimitIp } from '@/server/security/rate-limit';");
+    expect(source).toContain("import { hashRateLimitIp, hashRateLimitUserAgent } from '@/server/security/rate-limit';");
     expect(source).toContain("return ipHint === 'unknown' ? null : hashRateLimitIp(ipHint);");
     expect(source).toContain('ip_hint: getPrivacySafeIpHint(request)');
     expect(source).not.toContain('ip_hint: getClientHint(request)');
+  });
+
+  it('stores and forwards only a derived user-agent hint in fallback records', () => {
+    const source = routeSource();
+
+    expect(source).toContain("const userAgent = request.headers.get('user-agent')?.trim();");
+    expect(source).toContain('return userAgent ? hashRateLimitUserAgent(userAgent) : null;');
+    expect(source).toContain('user_agent: getPrivacySafeUserAgent(request)');
+    expect(source).not.toContain("user_agent: text(request.headers.get('user-agent'), 300)");
   });
 
   it('deduplicates fallback sales leads by normalized email and source before inserting', () => {

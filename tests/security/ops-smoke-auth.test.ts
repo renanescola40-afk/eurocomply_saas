@@ -22,4 +22,14 @@ describe('operations smoke endpoint authentication', () => {
     expect(tokenValidationIndex).toBeGreaterThan(rateLimitIndex);
     expect(supabaseCheckIndex).toBeGreaterThan(tokenValidationIndex);
   });
+
+  it('bounds the Supabase dependency probe before returning smoke status', () => {
+    const source = routeSource();
+
+    expect(source).toContain('const OPS_SMOKE_DEPENDENCY_TIMEOUT_MS = 1_500;');
+    expect(source).toContain('export async function withOpsSmokeDependencyTimeout');
+    expect(source).toContain('const query = admin.from(\'subscriptions\').select(\'id\').limit(1);');
+    expect(source).toContain('await withOpsSmokeDependencyTimeout(query)');
+    expect(source).not.toContain("await admin.from('subscriptions').select('id').limit(1)");
+  });
 });
