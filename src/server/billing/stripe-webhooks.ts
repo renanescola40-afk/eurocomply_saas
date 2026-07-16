@@ -328,6 +328,7 @@ async function recordBillingWebhookAudit(input: {
   entityType: string;
   entityId: string;
   event: Stripe.Event;
+  failClosed?: boolean;
   metadata?: Record<string, string | number | boolean | null | undefined>;
 }) {
   try {
@@ -346,6 +347,9 @@ async function recordBillingWebhookAudit(input: {
     });
   } catch (error) {
     reportError(error, { area: 'stripe_billing_audit', stripeEventId: input.event.id, organizationId: input.organizationId });
+    if (input.failClosed) {
+      throw new Error('Stripe billing audit persistence failed');
+    }
   }
 }
 
@@ -495,8 +499,9 @@ export async function sendPaymentFailedEmail(invoice: Stripe.Invoice, event?: St
   const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
 
   if (!subscriptionId && !customerId) {
-    reportError(new Error('Unable to identify subscription or customer for failed payment'), { area: 'payment_failed_email', invoiceId: invoice.id });
-    return;
+    const error = new Error('Payment failed notification is missing a billing reference');
+    reportError(error, { area: 'payment_failed_email', invoiceId: invoice.id });
+    throw error;
   }
 
   const query = supabase
@@ -510,14 +515,15 @@ export async function sendPaymentFailedEmail(invoice: Stripe.Invoice, event?: St
 
   if (subscriptionError) {
     reportError(subscriptionError, { area: 'payment_failed_email', invoiceId: invoice.id, subscriptionId, customerId });
-    return;
+    throw new Error('Payment failed notification subscription lookup failed');
   }
 
   const subscription = subscriptions?.[0];
 
   if (!subscription?.organization_id) {
-    reportError(new Error('Subscription not found for payment failed email'), { area: 'payment_failed_email', invoiceId: invoice.id, subscriptionId, customerId });
-    return;
+    const error = new Error('Payment failed notification subscription was not found');
+    reportError(error, { area: 'payment_failed_email', invoiceId: invoice.id, subscriptionId, customerId });
+    throw error;
   }
 
   const { data: organization, error: organizationError } = await supabase
@@ -528,25 +534,45 @@ export async function sendPaymentFailedEmail(invoice: Stripe.Invoice, event?: St
 
   if (organizationError || !organization?.created_by) {
     reportError(organizationError ?? new Error('Organization billing contact not found'), { area: 'payment_failed_email', organizationId: subscription.organization_id });
-    return;
+    throw new Error('Payment failed notification organization lookup failed');
   }
 
   const emailAddress = await getBillingContactEmail(organization.created_by);
 
   if (!emailAddress) {
-    reportError(new Error('Billing contact email not found'), { area: 'payment_failed_email', organizationId: organization.id, userId: organization.created_by });
-    return;
+    const error = new Error('Payment failed notification billing contact was not found');
+    reportError(error, { area: 'payment_failed_email', organizationId: organization.id, userId: organization.created_by });
+    throw error;
   }
 
   const billingUrl = `${getAppUrl()}/dashboard/organizations/billing`;
   const email = paymentFailedEmail({ organizationName: organization.name, billingUrl });
 
-  await sendEmail({
+  const delivery = await sendEmail({
     to: emailAddress,
     subject: email.subject,
     html: email.html,
     text: email.text,
+    template: email.template,
+    organizationId: organization.id,
+    userId: organization.created_by,
+    metadata: {
+      source: 'stripe_payment_failed_webhook',
+      stripeEventType: event?.type ?? 'invoice.payment_failed',
+      livemode: event?.livemode ?? false,
+    },
   });
+
+  if (!delivery.sent) {
+    const error = new Error(`Payment failed notification delivery was not confirmed (${delivery.status})`);
+    reportError(error, {
+      area: 'payment_failed_email',
+      organizationId: organization.id,
+      invoiceId: invoice.id,
+      stripeEventId: event?.id,
+    });
+    throw error;
+  }
 
   if (event) {
     await recordBillingWebhookAudit({
@@ -556,6 +582,7 @@ export async function sendPaymentFailedEmail(invoice: Stripe.Invoice, event?: St
       entityType: 'stripe_invoice',
       entityId: invoice.id ?? event.id,
       event,
+      failClosed: true,
       metadata: {
         stripeCustomerId: customerId ?? null,
         stripeSubscriptionId: subscriptionId ?? null,
