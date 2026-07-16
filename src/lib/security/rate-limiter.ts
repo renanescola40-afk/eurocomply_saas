@@ -52,6 +52,8 @@ class InMemoryRateLimiter {
 }
 
 const inMemoryLimiter = new InMemoryRateLimiter();
+const UPSTASH_RESPONSE_MAX_BYTES = 64 * 1024;
+const UPSTASH_PIPELINE_RESULT_COUNT = 3;
 
 export interface RateLimitOptions {
   /** Identificador único — IP, user ID ou organization ID. */
@@ -71,7 +73,10 @@ export interface RateLimitResult {
   reason?: 'redis_not_configured' | 'redis_request_failed' | 'redis_unavailable';
 }
 
-type UpstashPipelineResponse = Array<[unknown, unknown]>;
+type UpstashPipelineItem = {
+  result?: unknown;
+  error?: unknown;
+};
 
 function isProductionRuntime() {
   return process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
@@ -88,6 +93,110 @@ function failClosed(windowMs: number, reason: NonNullable<RateLimitResult['reaso
 
 function normalizeRedisKey(key: string) {
   return `eurocomply:rate-limit:${key.replace(/[^a-zA-Z0-9:_-]/g, '_')}`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseUpstashInteger(
+  item: unknown,
+  label: 'count' | 'expire' | 'ttl',
+  minimum: number,
+  maximum?: number,
+): number {
+  if (!isRecord(item)) {
+    throw new Error(`upstash_response_invalid_${label}`);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(item, 'error')) {
+    throw new Error(`upstash_pipeline_${label}_failed`);
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(item, 'result')) {
+    throw new Error(`upstash_response_missing_${label}`);
+  }
+
+  const result = (item as UpstashPipelineItem).result;
+  if (
+    typeof result !== 'number' ||
+    !Number.isSafeInteger(result) ||
+    result < minimum ||
+    (maximum !== undefined && result > maximum)
+  ) {
+    throw new Error(`upstash_response_invalid_${label}`);
+  }
+
+  return result;
+}
+
+function parseUpstashPipelineResponse(value: unknown): { count: number; ttlSeconds: number } {
+  if (!Array.isArray(value) || value.length !== UPSTASH_PIPELINE_RESULT_COUNT) {
+    throw new Error('upstash_response_invalid_pipeline');
+  }
+
+  const count = parseUpstashInteger(value[0], 'count', 1);
+  parseUpstashInteger(value[1], 'expire', 0, 1);
+  const ttlSeconds = parseUpstashInteger(value[2], 'ttl', 0);
+
+  return { count, ttlSeconds };
+}
+
+async function cancelUpstashResponse(response: Response, reason: string) {
+  await response.body?.cancel(reason).catch(() => undefined);
+}
+
+async function readBoundedUpstashResponse(response: Response): Promise<{ count: number; ttlSeconds: number }> {
+  const declaredLength = response.headers.get('content-length');
+  if (declaredLength !== null) {
+    const parsedLength = Number(declaredLength);
+
+    if (!Number.isSafeInteger(parsedLength) || parsedLength < 0) {
+      await cancelUpstashResponse(response, 'upstash_response_invalid_content_length');
+      throw new Error('upstash_response_invalid_content_length');
+    }
+
+    if (parsedLength > UPSTASH_RESPONSE_MAX_BYTES) {
+      await cancelUpstashResponse(response, 'upstash_response_too_large');
+      throw new Error('upstash_response_too_large');
+    }
+  }
+
+  if (!response.body) {
+    throw new Error('upstash_response_body_missing');
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > UPSTASH_RESPONSE_MAX_BYTES) {
+        await reader.cancel('upstash_response_too_large').catch(() => undefined);
+        throw new Error('upstash_response_too_large');
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  const decoded = new TextDecoder('utf-8', { fatal: true }).decode(body);
+  return parseUpstashPipelineResponse(JSON.parse(decoded) as unknown);
 }
 
 async function upstashRateLimit(key: string, limit: number, windowMs: number): Promise<RateLimitResult> {
@@ -120,10 +229,8 @@ async function upstashRateLimit(key: string, limit: number, windowMs: number): P
     return failClosed(windowMs, 'redis_request_failed');
   }
 
-  const results = (await response.json()) as UpstashPipelineResponse;
-  const count = Number(results[0]?.[1] ?? 1);
-  const ttlSeconds = Number(results[2]?.[1] ?? windowSeconds);
-  const reset = Date.now() + Math.max(ttlSeconds, 0) * 1000;
+  const { count, ttlSeconds } = await readBoundedUpstashResponse(response);
+  const reset = Date.now() + ttlSeconds * 1000;
 
   return {
     success: count <= limit,

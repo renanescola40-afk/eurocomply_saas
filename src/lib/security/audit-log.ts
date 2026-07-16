@@ -4,7 +4,7 @@ import { trustedRequestIdFromHeaders } from '@/lib/observability/request-correla
 import { reportError } from '@/lib/observability/report-error';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { createAuditEvent, sanitizeAuditMetadata } from '@/server/queries/audit-events';
-import { hashRateLimitIp } from '@/server/security/rate-limit';
+import { hashRateLimitIp, hashRateLimitUserAgent } from '@/server/security/rate-limit';
 
 export type AuditAction =
   | 'auth.login_attempt'
@@ -85,6 +85,10 @@ function normalizeUserAgent(value: string | null) {
   return userAgent.length > 0 ? userAgent.slice(0, 512) : null;
 }
 
+function pseudonymizeUserAgent(value: string | null) {
+  return value ? `sha256:${hashRateLimitUserAgent(value)}` : null;
+}
+
 async function getRequestContext() {
   try {
     const requestHeaders = await headers();
@@ -93,22 +97,22 @@ async function getRequestContext() {
     const userAgent = normalizeUserAgent(requestHeaders.get('user-agent'));
     const requestId = trustedRequestIdFromHeaders(requestHeaders);
 
-    return { requestId, ipPseudonym: pseudonymizeIpAddress(ip), userAgent };
+    return { requestId, ipPseudonym: pseudonymizeIpAddress(ip), userAgentPseudonym: pseudonymizeUserAgent(userAgent) };
   } catch {
-    return { requestId: 'req_unavailable', ipPseudonym: null, userAgent: null };
+    return { requestId: 'req_unavailable', ipPseudonym: null, userAgentPseudonym: null };
   }
 }
 
 export async function writeAuditLog(input: AuditLogInput) {
   const supabase = tryCreateAdminClient();
   const actorUserId = input.actorUserId ?? input.userId ?? null;
-  const { requestId, ipPseudonym, userAgent } = await getRequestContext();
+  const { requestId, ipPseudonym, userAgentPseudonym } = await getRequestContext();
   const metadata = sanitizeAuditMetadata({
     ...(input.metadata ?? {}),
     requestContext: {
       requestId,
       ipAddressPseudonym: ipPseudonym,
-      userAgent,
+      userAgentPseudonym,
     },
   });
   let legacyPersisted = false;
