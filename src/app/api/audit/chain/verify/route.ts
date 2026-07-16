@@ -43,7 +43,15 @@ export function parseAuditChainVerifyLimit(requestUrl: string): AuditChainLimitR
     return { ok: false, error: 'invalid_limit' };
   }
 
-  return { ok: true, limit: parsedLimit.data };
+  const limit = parsedLimit.data;
+
+  // Defense in depth and explicit compatibility evidence for the audit-chain
+  // verifier contracts, even if the Zod pipeline changes in the future.
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_AUDIT_CHAIN_VERIFY_LIMIT) {
+    return { ok: false, error: 'invalid_limit' };
+  }
+
+  return { ok: true, limit };
 }
 
 function summarizeFailures(failures: ReturnType<typeof verifyAuditChain>['failures']) {
