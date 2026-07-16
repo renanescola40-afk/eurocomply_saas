@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { denyAnalyticsConsent, grantAnalyticsConsent } from '@/lib/analytics/posthog-client';
+import { denyAnalyticsConsent, grantAnalyticsConsent, initPostHog } from '@/lib/analytics/posthog-client';
 
 const CONSENT_STORAGE_KEY = 'risckcomply.analytics.consent';
 const CONSENT_TITLE_ID = 'analytics-consent-title';
@@ -63,8 +63,8 @@ export function AnalyticsConsentBanner() {
             className="rounded-full"
             onClick={() => {
               grantAnalyticsConsent();
+              initPostHog(window.location.pathname);
               setVisible(false);
-              window.location.reload();
             }}
           >
             Allow
