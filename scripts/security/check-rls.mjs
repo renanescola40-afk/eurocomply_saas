@@ -7,6 +7,8 @@ const projectRef = requiredUrl?.match(/^https:\/\/([^.]+)\.supabase\.co/i)?.[1];
 const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
 const rlsRunbookPath = 'docs/security/RLS_LIVE_VALIDATION_RUNBOOK.md';
 const rlsEvidencePath = 'docs/security/evidence/runtime/supabase-live-rls-validation.json';
+const MANAGEMENT_API_TIMEOUT_MS = 15_000;
+const MAX_MANAGEMENT_API_RESPONSE_BYTES = 256 * 1024;
 
 const criticalTables = [
   'organizations',
@@ -126,20 +128,66 @@ function checkRuntimeEvidencePlaceholder() {
   }
 }
 
+async function readBoundedText(response) {
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_MANAGEMENT_API_RESPONSE_BYTES) {
+    throw new Error('Supabase Management API response exceeded the configured byte limit.');
+  }
+
+  if (!response.body) throw new Error('Supabase Management API response body is missing.');
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_MANAGEMENT_API_RESPONSE_BYTES) {
+        await reader.cancel('management_api_response_too_large');
+        throw new Error('Supabase Management API response exceeded the configured byte limit.');
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+}
+
 async function fetchJson(url, token) {
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: 'application/json',
     },
+    redirect: 'error',
+    signal: AbortSignal.timeout(MANAGEMENT_API_TIMEOUT_MS),
   });
 
+  const text = await readBoundedText(response);
   if (!response.ok) {
-    const text = await response.text();
     throw new Error(`Supabase Management API returned ${response.status}: ${text.slice(0, 300)}`);
   }
 
-  return response.json();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('Supabase Management API returned invalid JSON.');
+  }
 }
 
 function normalizeTableRows(payload) {
