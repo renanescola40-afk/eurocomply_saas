@@ -19,7 +19,8 @@ describe('team invitation lifecycle', () => {
 
   it('delivers the raw token only through the invitation email', () => {
     expect(createRoute).toContain('/en/invite/${encodeURIComponent(result.token)}');
-    expect(createRoute).toContain('await sendEmail({');
+    expect(createRoute).toContain('const delivery = await sendEmail({');
+    expect(createRoute).toContain('if (!delivery.sent)');
     expect(createRoute).not.toContain('token: result.token');
     expect(createRoute).not.toContain('tokenFingerprint: result.tokenFingerprint');
     expect(createRoute).toContain("error: 'invitation_delivery_failed'");

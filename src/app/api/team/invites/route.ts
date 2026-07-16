@@ -125,7 +125,7 @@ export async function POST(request: Request) {
     });
 
     try {
-      await sendEmail({
+      const delivery = await sendEmail({
         to: result.invite.email,
         subject: builtEmail.subject,
         html: builtEmail.html,
@@ -140,6 +140,10 @@ export async function POST(request: Request) {
           role: result.invite.role,
         },
       });
+
+      if (!delivery.sent) {
+        throw new Error(`Invitation email delivery was not confirmed (${delivery.status})`);
+      }
     } catch (emailError) {
       reportError(emailError, {
         area: 'team_invitation_delivery',
