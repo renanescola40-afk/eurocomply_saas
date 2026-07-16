@@ -24,11 +24,15 @@ The reader:
 - marks an oversized response as a failed sub-job with `job_response_too_large`;
 - preserves the existing fetch timeout, authentication headers, job ordering, batch status semantics and no-store behavior.
 
+## Risks and trade-offs
+
+A legitimate internal job returning more than 64 KiB is now reported as failed even when its HTTP status is successful. The threshold may need evidence-based adjustment if a maintenance job later gains a larger documented response contract.
+
+Accepted responses are still buffered up to the configured limit so they can be parsed as JSON. Stream cancellation is best-effort and does not replace hosting or proxy connection limits. Invalid JSON remains represented as a null body, matching the previous tolerant parsing behavior.
+
 ## Consequences
 
-A legitimate internal job returning more than 64 KiB is now reported as failed even when its HTTP status is successful. Current maintenance responses are expected to be compact summaries, so this is preferable to allowing an operational orchestrator to buffer arbitrary payloads.
-
-Invalid JSON remains represented as a null body, matching the previous tolerant parsing behavior.
+Current maintenance responses are expected to be compact summaries, so deterministic bounded parsing is preferable to allowing an operational orchestrator to retain arbitrary payloads.
 
 No database migration, dependency, secret, provider configuration, RLS, RBAC or customer-data change is required.
 
