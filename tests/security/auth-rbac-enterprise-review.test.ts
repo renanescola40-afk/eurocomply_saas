@@ -49,7 +49,17 @@ describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
     );
     expect(organizationAction).toContain('p_user_id: user.id');
     expect(organizationCreationMigration).toContain("values (v_organization.id, p_user_id, 'owner')");
-    expect(readRepoFile('src/server/actions/onboarding.ts')).toContain('created_by: userId');
+    const onboardingAction = readRepoFile('src/server/actions/onboarding.ts');
+    const onboardingActivationMigration = readRepoFile(
+      'supabase/migrations/20260716183000_atomic_onboarding_activation.sql',
+    );
+    const activationRunInsert = onboardingActivationMigration.slice(
+      onboardingActivationMigration.indexOf('insert into public.onboarding_activation_runs'),
+      onboardingActivationMigration.indexOf('update public.organizations'),
+    );
+    expect(onboardingAction).toContain('p_actor_user_id: user.id');
+    expect(onboardingActivationMigration).toContain('members.user_id = p_actor_user_id');
+    expect(activationRunInsert).toContain('p_actor_user_id');
   });
 
   it('keeps open redirects rejected in login, signup and OAuth callback', () => {
