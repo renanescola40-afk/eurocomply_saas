@@ -7,6 +7,7 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import { noStoreJson } from '@/server/security/no-store';
+import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import { hashRateLimitIp, hashRateLimitUserAgent } from '@/server/security/rate-limit';
 
 export const runtime = 'nodejs';
@@ -328,6 +329,9 @@ function shouldNotifyInternalTeam(saveResult: SaveWaitlistLeadResult) {
 }
 
 export async function POST(request: NextRequest) {
+  const originDenied = assertTrustedOrigin(request);
+  if (originDenied) return originDenied;
+
   const rateLimited = await enforceRateLimit(request);
   if (rateLimited) return rateLimited;
 
