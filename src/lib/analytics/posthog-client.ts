@@ -29,6 +29,7 @@ declare global {
 const POSTHOG_SCRIPT_ID = 'posthog-js-sdk';
 const CONSENT_STORAGE_KEY = 'risckcomply.analytics.consent';
 const DEFAULT_POSTHOG_HOST = 'https://eu.i.posthog.com';
+const DEFAULT_POSTHOG_ASSET_HOST = 'https://eu-assets.i.posthog.com';
 const SENSITIVE_PATH_PATTERNS = [
   /\/documents?(\/|$)/i,
   /\/riscos?(\/|$)/i,
@@ -44,6 +45,10 @@ function getPostHogKey() {
 
 function getPostHogHost() {
   return process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() || DEFAULT_POSTHOG_HOST;
+}
+
+function getPostHogAssetHost() {
+  return process.env.NEXT_PUBLIC_POSTHOG_ASSET_HOST?.trim() || DEFAULT_POSTHOG_ASSET_HOST;
 }
 
 function requiresConsent() {
@@ -105,7 +110,7 @@ export function initPostHog(pathname?: string) {
   const script = document.createElement('script');
   script.id = POSTHOG_SCRIPT_ID;
   script.async = true;
-  script.src = `${getPostHogHost().replace(/\/$/, '')}/static/array.js`;
+  script.src = `${getPostHogAssetHost().replace(/\/$/, '')}/static/array.js`;
   script.onload = () => {
     window.__posthogLoaded = true;
     window.__posthogLoading = false;
