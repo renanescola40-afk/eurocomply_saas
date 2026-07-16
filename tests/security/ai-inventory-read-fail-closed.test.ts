@@ -12,7 +12,7 @@ describe('AI inventory read failure contract', () => {
     expect(source.match(/const supabase = createAdminClient\(\);/g)?.length).toBeGreaterThanOrEqual(5);
   });
 
-  it('does not convert database read failures into empty governance records', async () => {
+  it('does not convert database read failures into empty governance records or expose provider errors', async () => {
     const source = await readFile(QUERY_FILE, 'utf8');
 
     const inventoryRead = source.slice(
@@ -25,11 +25,13 @@ describe('AI inventory read failure contract', () => {
     );
 
     expect(inventoryRead).toContain("console.warn('[ai-systems] list_failed'");
-    expect(inventoryRead).toContain('throw error;');
+    expect(inventoryRead).toContain("throw new Error('Unable to load AI systems.');");
+    expect(inventoryRead).not.toContain('throw error;');
     expect(inventoryRead).not.toContain('return [];');
 
     expect(historyRead).toContain("console.warn('[ai-systems] history_list_failed'");
-    expect(historyRead).toContain('throw error;');
+    expect(historyRead).toContain("throw new Error('Unable to load AI system history.');");
+    expect(historyRead).not.toContain('throw error;');
     expect(historyRead).not.toContain('return [];');
   });
 });
