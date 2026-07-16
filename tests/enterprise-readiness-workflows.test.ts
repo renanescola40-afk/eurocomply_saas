@@ -43,16 +43,17 @@ describe('enterprise readiness workflows', () => {
   it('renders real enterprise workflow UI from the AI system detail page', () => {
     const detailPage = read('src/app/[locale]/ai-systems/[id]/page.tsx');
     const form = read('src/app/[locale]/ai-systems/[id]/ai-system-edit-form.tsx');
+    const copy = read('src/app/[locale]/ai-systems/[id]/ai-system-edit-copy.ts');
 
     expect(detailPage).toContain('Enterprise governance view');
     expect(detailPage).not.toContain('procurement-ready export');
     expect(detailPage).toContain('procurement-review export');
     expect(detailPage).toContain('ai-system-enterprise-view-title');
     expect(detailPage).toContain('locale={locale}');
-    expect(form).toContain('Evidence Pack Builder');
-    expect(form).toContain('Vendor Due Diligence Checklist');
-    expect(form).toContain('Risk Review Workflow');
-    expect(form).toContain('Executive Readiness Report signals');
+    expect(copy).toContain('Evidence Pack Builder');
+    expect(copy).toContain('Vendor Due Diligence Checklist');
+    expect(copy).toContain('Risk Review Workflow');
+    expect(copy).toContain('Executive Readiness Report signals');
     expect(form).toContain('/api/ai-systems?workflow=');
     expect(form).toContain('isWorkflowSaving');
     expect(form).toContain('workflowNotice');

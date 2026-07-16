@@ -8,22 +8,22 @@ const source = fs.readFileSync(
 
 describe('AI reassessment accessible names', () => {
   it('does not rely on placeholders alone for editable text fields', () => {
-    for (const label of [
-      'System name',
-      'Owner team',
-      'Category',
-      'Country or market',
-      'Vendor',
-      'Model',
-      'Data processed',
-      'Use case',
+    for (const labelKey of [
+      't.systemName',
+      't.ownerTeam',
+      't.category',
+      't.countryMarket',
+      't.vendor',
+      't.model',
+      't.processedData',
+      't.useCase',
     ]) {
-      expect(source).toContain(`aria-label="${label}"`);
+      expect(source).toContain(`aria-label={${labelKey}}`);
     }
   });
 
   it('names workflow fields from their localized copy', () => {
-    for (const label of ['t.packName', 't.vendorName', 't.vendorNotes', 't.dueDate', 't.riskNotes']) {
+    for (const label of ['t.packName', 't.vendorName', 't.vendorRiskLevel', 't.vendorNotes', 't.dueDate', 't.riskNotes']) {
       expect(source).toContain(`aria-label={${label}}`);
     }
   });
