@@ -46,6 +46,14 @@ async function signIn(label, credentials, url, anonKey) {
   return { supabase, userId: data.user.id };
 }
 
+async function refreshSession(identity) {
+  const { data, error } = await identity.supabase.auth.refreshSession();
+  return !error
+    && Boolean(data.session?.access_token)
+    && Boolean(data.session?.refresh_token)
+    && data.user?.id === identity.userId;
+}
+
 async function visibleOrganization(supabase, organizationId) {
   const { data, error } = await supabase
     .from('organizations')
@@ -117,6 +125,7 @@ async function main() {
     ownerCannotReadTenantB: false,
     outsiderCanReadOwnTenant: false,
     crossTenantMembershipHidden: false,
+    sessionRefresh: false,
     sessionsRevoked: false,
   };
   const failures = [];
@@ -129,6 +138,7 @@ async function main() {
     const outsider = await signIn('outsider', { email: env('AUTH_RBAC_OUTSIDER_EMAIL'), password: env('AUTH_RBAC_OUTSIDER_PASSWORD') }, url, anonKey);
     sessions = [owner, member, outsider];
 
+    checks.sessionRefresh = await refreshSession(owner);
     const ownerMembership = await visibleMembership(owner.supabase, organizationA, owner.userId);
     const memberMembership = await visibleMembership(member.supabase, organizationA, member.userId);
     checks.ownerRoleObserved = ownerMembership?.role === 'owner';
@@ -161,7 +171,7 @@ async function main() {
     environment: 'production-auth-rbac-validation',
     providerHost: safeHost(url),
     summary: decision.complete
-      ? 'Protected live validation proved Supabase authentication, expected RBAC roles, same-tenant access and cross-tenant denial for synthetic fixtures.'
+      ? 'Protected live validation proved Supabase authentication, session refresh, expected RBAC roles, same-tenant access, cross-tenant denial and session revocation for synthetic fixtures.'
       : 'Protected Auth/RBAC runtime proof is incomplete or failed; enterprise release remains blocked until every live check passes for the exact deployed main SHA.',
     productionGate: decision.complete ? 'eligible for downstream enterprise gates' : 'blocked',
     completionRule: 'Run the protected Auth RBAC Tenant Proof workflow for the exact deployed main SHA with three dedicated synthetic users and two isolated organizations.',
@@ -175,6 +185,7 @@ async function main() {
     ],
     controlsVerified: decision.complete ? [
       'Supabase password authentication works for dedicated synthetic fixtures.',
+      'A synthetic authenticated session refresh succeeds without persisting token values.',
       'Owner and member roles are observed through tenant-scoped organization_members reads.',
       'Authorized users can read their own organization.',
       'Cross-tenant organization and membership reads are denied by runtime policy.',
