@@ -11,6 +11,32 @@ import { requirePlatformAdmin } from '@/server/security/platform-admin';
 const MAX_SALES_CONSOLE_FORM_BYTES = 8 * 1024;
 const MAX_ACTIVITY_METADATA_BYTES = 4 * 1024;
 const leadIdSchema = z.string().uuid();
+const UTC_DATE_TIME_LOCAL_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+
+function parseUtcDateTimeLocal(value: string) {
+  const match = UTC_DATE_TIME_LOCAL_PATTERN.exec(value);
+  if (!match) return null;
+
+  const [, yearText, monthText, dayText, hourText, minuteText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const date = new Date(Date.UTC(year, month - 1, day, hour, minute));
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date.getUTCHours() !== hour ||
+    date.getUTCMinutes() !== minute
+  ) {
+    return null;
+  }
+
+  return date.toISOString();
+}
 
 export const updateLeadStatusSchema = z.object({
   leadId: leadIdSchema,
@@ -32,7 +58,7 @@ export const updateLeadFollowUpSchema = z.object({
     .nullable()
     .refine((value) => {
       if (!value) return true;
-      return Number.isFinite(new Date(value).getTime());
+      return parseUtcDateTimeLocal(value) !== null;
     }, 'Invalid follow-up date.'),
 });
 
@@ -91,9 +117,9 @@ export async function requireLeadOperationAccess(request: Request, action: LeadA
 function normalizeFollowUp(value: string | null | undefined) {
   const normalized = value?.trim();
   if (!normalized) return null;
-  const date = new Date(normalized);
-  if (!Number.isFinite(date.getTime())) throw actionError('Invalid follow-up date.');
-  return date.toISOString();
+  const isoDate = parseUtcDateTimeLocal(normalized);
+  if (!isoDate) throw actionError('Invalid follow-up date.');
+  return isoDate;
 }
 
 function boundedActivityMetadata(metadata: Record<string, unknown>) {

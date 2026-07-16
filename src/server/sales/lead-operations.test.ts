@@ -116,6 +116,7 @@ function formData(values: Record<string, string>) {
 
 describe('Sales Console lead operations', () => {
   beforeEach(() => {
+    vi.unstubAllEnvs();
     vi.clearAllMocks();
     mocks.insertedActivities.length = 0;
     mocks.updatedLeads.length = 0;
@@ -201,6 +202,22 @@ describe('Sales Console lead operations', () => {
     expect(mocks.insertedActivities[0]).toMatchObject({ lead_id: leadId, type: 'follow_up' });
   });
 
+  it('normalizes datetime-local input as UTC independently of the server timezone', async () => {
+    vi.stubEnv('TZ', 'Pacific/Auckland');
+
+    await updateLeadFollowUp(
+      new Request('https://risckcomply.test/admin/sales/leads'),
+      formData({ leadId, nextFollowUpAt: '2026-12-15T23:45' }),
+    );
+
+    expect(mocks.updatedLeads[0]).toMatchObject({ next_follow_up_at: '2026-12-15T23:45:00.000Z' });
+    expect(mocks.insertedActivities[0]).toMatchObject({
+      metadata: expect.objectContaining({
+        nextValue: { nextFollowUpAt: '2026-12-15T23:45:00.000Z' },
+      }),
+    });
+  });
+
   it('creates bounded internal notes as sales lead activity', async () => {
     await createLeadNote(
       new Request('https://risckcomply.test/admin/sales/leads'),
@@ -222,6 +239,9 @@ describe('Sales Console lead operations', () => {
 
   it('rejects invalid follow-up dates', () => {
     expect(updateLeadFollowUpSchema.safeParse({ leadId, nextFollowUpAt: 'not-a-date' }).success).toBe(false);
+    expect(updateLeadFollowUpSchema.safeParse({ leadId, nextFollowUpAt: '2026-02-30T10:30' }).success).toBe(false);
+    expect(updateLeadFollowUpSchema.safeParse({ leadId, nextFollowUpAt: '2026-07-02T24:00' }).success).toBe(false);
+    expect(updateLeadFollowUpSchema.safeParse({ leadId, nextFollowUpAt: '2026-07-02T10:30Z' }).success).toBe(false);
     expect(updateLeadFollowUpSchema.safeParse({ leadId, nextFollowUpAt: null }).success).toBe(true);
   });
 
