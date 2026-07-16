@@ -188,4 +188,16 @@ Work is done only when:
 - the PR is reviewable and no automatic merge is enabled;
 - the final merge remains an explicit human action governed by branch protection.
 
+## Persistent enterprise execution state
+
+Long-running enterprise work must keep these versioned files synchronized with real evidence:
+
+- `docs/enterprise/ENTERPRISE_PROGRESS.md` and `.json` for the last verified score and its freshness;
+- `docs/enterprise/ENTERPRISE_BACKLOG.md` for prioritized P0/P1 work;
+- `docs/enterprise/AUTONOMOUS_EXECUTION_STATE.md` for the active execution and next priority;
+- `docs/enterprise/OWNER_ACTION_REQUIRED.md` for only the next unavoidable external action;
+- `docs/enterprise/ACTIVE_WORK_LOCKS.md` for overlapping branches and protected files.
+
+Unknown or stale measurements must be recorded as such. A pull request, local test, or repository-only implementation must never increase the official exact-SHA score before its required evidence is accepted.
+
 Engineering value is more important than code volume or pull request count.
