@@ -9,7 +9,7 @@ const guards = {
   org: ['getCurrentOrganizationForUser', 'requireOrganizationAccess', 'requireOrganizationContext', 'requireOrganizationMembership', 'requireEnterpriseApiAccess'],
   rbac: ['assertOrganizationPermission', 'requirePermission', 'requireEnterpriseApiAccess'],
   plan: ['assertPlanAtLeast', 'assertGdprSelfServiceEnabled'],
-  rateLimit: ['checkDistributedRateLimit', 'checkRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireRateLimit', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
+  rateLimit: ['checkDistributedRateLimit', 'checkRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'requireRateLimit', 'requireEnterpriseRateLimit', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   audit: ['createAuditEvent', 'writeAuditLog'],
   integrity: ['buildEvidencePackIntegrity'],
   noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'Cache-Control', 'no-store', 'secureApiError', 'secureApiJson'],
@@ -20,6 +20,12 @@ const guards = {
 };
 
 const rules = [
+  {
+    name: 'billing entitlements',
+    match: /src\/app\/api\/billing\/entitlements\/route\.ts$/,
+    any: [guards.auth, guards.org, guards.rateLimit, guards.noStore],
+    all: ['billing.entitlements.read'],
+  },
   {
     name: 'billing checkout',
     match: /src\/app\/api\/billing\/checkout\/route\.ts$/,
