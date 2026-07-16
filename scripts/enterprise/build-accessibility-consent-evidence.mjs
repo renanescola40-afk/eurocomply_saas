@@ -21,7 +21,13 @@ function checkStatus(document, name) {
   return check?.status === 'PASS';
 }
 
-export function evaluateAccessibilityConsentCoverage({ specSource, bannerSource, analyticsSource, workflowSource }) {
+export function evaluateAccessibilityConsentCoverage({
+  specSource,
+  bannerSource,
+  analyticsSource,
+  layoutSource,
+  workflowSource,
+}) {
   const checks = {
     dedicatedSuite: specSource.includes("test.describe('enterprise accessibility and analytics consent acceptance'"),
     keyboardNavigation: specSource.includes('keyboard-only navigation reaches critical controls')
@@ -46,6 +52,9 @@ export function evaluateAccessibilityConsentCoverage({ specSource, bannerSource,
       && analyticsSource.includes('window.posthog?.opt_out_capturing?.()'),
     replayConsentGuard: analyticsSource.includes('export function updateSessionRecordingForPath')
       && analyticsSource.includes('if (!hasAnalyticsConsent())'),
+    singleConsentGatedLoader: layoutSource.includes('<PostHogAnalyticsProvider>')
+      && !layoutSource.includes('PostHogScript')
+      && analyticsSource.includes('getPostHogAssetHost()'),
     protectedRuntimeConfiguration: workflowSource.includes("NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: 'true'")
       && workflowSource.includes('NEXT_PUBLIC_POSTHOG_KEY: phc_ci_synthetic_public_key')
       && workflowSource.includes('NEXT_PUBLIC_POSTHOG_HOST: https://analytics-ci.invalid'),
@@ -60,6 +69,7 @@ export function evaluateAccessibilityConsentCoverage({ specSource, bannerSource,
       && checks.explicitGrantRequired
       && checks.denialStopsRecording
       && checks.replayConsentGuard
+      && checks.singleConsentGatedLoader
       && checks.protectedRuntimeConfiguration,
   };
 }
@@ -168,6 +178,7 @@ export function buildAccessibilityConsentEvidence({
         explicitGrantRequired: coverage.checks.explicitGrantRequired,
         denialStopsRecording: coverage.checks.denialStopsRecording,
         replayConsentGuard: coverage.checks.replayConsentGuard,
+        singleConsentGatedLoader: coverage.checks.singleConsentGatedLoader,
         protectedRuntimeConfiguration: coverage.checks.protectedRuntimeConfiguration,
         exactShaProvenance,
         executionProven,
@@ -177,6 +188,7 @@ export function buildAccessibilityConsentEvidence({
         'tests/e2e/enterprise-accessibility-consent.spec.ts',
         'src/components/analytics/AnalyticsConsentBanner.tsx',
         'src/lib/analytics/posthog-client.ts',
+        'src/app/[locale]/layout.tsx',
         '.github/workflows/full-security-suite.yml',
         DEFAULT_GITHUB_CHECKS,
       ],
@@ -198,12 +210,19 @@ function run() {
   const specSource = readFileSync(join(root, 'tests/e2e/enterprise-accessibility-consent.spec.ts'), 'utf8');
   const bannerSource = readFileSync(join(root, 'src/components/analytics/AnalyticsConsentBanner.tsx'), 'utf8');
   const analyticsSource = readFileSync(join(root, 'src/lib/analytics/posthog-client.ts'), 'utf8');
+  const layoutSource = readFileSync(join(root, 'src/app/[locale]/layout.tsx'), 'utf8');
   const workflowSource = readFileSync(join(root, '.github/workflows/full-security-suite.yml'), 'utf8');
   const githubChecksPath = process.env.GITHUB_CHECKS_EVIDENCE_PATH || DEFAULT_GITHUB_CHECKS;
   const githubChecksRaw = readFileSync(join(root, githubChecksPath), 'utf8');
   const githubChecks = JSON.parse(githubChecksRaw);
   const targetSha = process.env.TARGET_SHA || process.env.GITHUB_SHA || '';
-  const coverage = evaluateAccessibilityConsentCoverage({ specSource, bannerSource, analyticsSource, workflowSource });
+  const coverage = evaluateAccessibilityConsentCoverage({
+    specSource,
+    bannerSource,
+    analyticsSource,
+    layoutSource,
+    workflowSource,
+  });
   const exactChecks = evaluateExactShaChecks(githubChecks, targetSha);
   const evidence = buildAccessibilityConsentEvidence({
     coverage,
@@ -218,6 +237,7 @@ function run() {
       acceptanceSpec: digest(specSource),
       consentBanner: digest(bannerSource),
       analyticsClient: digest(analyticsSource),
+      localeLayout: digest(layoutSource),
       fullSecurityWorkflow: digest(workflowSource),
       githubChecks: digest(githubChecksRaw),
     },
