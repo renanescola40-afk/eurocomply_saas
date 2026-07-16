@@ -11,7 +11,15 @@ export const runtime = 'nodejs';
 
 const DEFAULT_METRIC_SNAPSHOT_ORGANIZATION_LIMIT = 50;
 const MAX_METRIC_SNAPSHOT_ORGANIZATION_LIMIT = 200;
+const METRIC_SNAPSHOT_ORGANIZATION_TIMEOUT_MS = 5_000;
 const ONE_DAY_MS = 86_400_000;
+
+class MetricSnapshotOrganizationTimeoutError extends Error {
+  constructor() {
+    super('Metric snapshot organization work timed out');
+    this.name = 'MetricSnapshotOrganizationTimeoutError';
+  }
+}
 
 type OrganizationBatchRow = {
   id: string;
@@ -35,6 +43,23 @@ function getRotatingBatchStart(totalOrganizations: number, limit: number) {
   const daySeed = Math.floor(Date.now() / ONE_DAY_MS);
 
   return (daySeed % batchCount) * limit;
+}
+
+async function withMetricSnapshotOrganizationTimeout<T>(operation: Promise<T>) {
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(
+      () => reject(new MetricSnapshotOrganizationTimeoutError()),
+      METRIC_SNAPSHOT_ORGANIZATION_TIMEOUT_MS,
+    );
+  });
+
+  try {
+    return await Promise.race([operation, timeout]);
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }
 }
 
 async function listOrganizationBatch(supabase: ReturnType<typeof createAdminClient>, limit: number) {
@@ -63,6 +88,11 @@ async function listOrganizationBatch(supabase: ReturnType<typeof createAdminClie
   }
 
   return { organizations: (batchResult.data ?? []) as OrganizationBatchRow[], total, start, error: null };
+}
+
+async function createMetricSnapshotForOrganization(organizationId: string) {
+  const summary = await getDashboardSummary(organizationId);
+  await recordDashboardMetricSnapshot(organizationId, summary);
 }
 
 export async function POST(request: Request) {
@@ -97,18 +127,25 @@ export async function POST(request: Request) {
     limit,
     totalOrganizations: total,
     batchStart: start,
-    failures: [] as Array<{ organizationId: string; message: 'internal_error' }>,
+    failures: [] as Array<{ organizationId: string; message: 'internal_error' | 'timeout' }>,
   };
 
   for (const organization of organizations ?? []) {
     try {
-      const summary = await getDashboardSummary(organization.id);
-      await recordDashboardMetricSnapshot(organization.id, summary);
+      await withMetricSnapshotOrganizationTimeout(createMetricSnapshotForOrganization(organization.id));
       results.processed += 1;
     } catch (snapshotError) {
       results.failed += 1;
-      results.failures.push({ organizationId: organization.id, message: 'internal_error' });
-      reportError(snapshotError, { area: 'metric_snapshot_job', organizationId: organization.id });
+      const timedOut = snapshotError instanceof MetricSnapshotOrganizationTimeoutError;
+      results.failures.push({
+        organizationId: organization.id,
+        message: timedOut ? 'timeout' : 'internal_error',
+      });
+      reportError(snapshotError, {
+        area: 'metric_snapshot_job',
+        organizationId: organization.id,
+        timedOut,
+      });
     }
   }
 
