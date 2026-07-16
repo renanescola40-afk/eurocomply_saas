@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import {
@@ -56,6 +56,36 @@ describe('bounded JSON request validation', () => {
     const request = jsonRequest(JSON.stringify({ value: 'x'.repeat(256) }), { 'content-length': '1' });
 
     await expect(readBoundedJsonRequest(request, { maxBytes: 32 })).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it('cancels a streamed body as soon as the byte limit is exceeded', async () => {
+    const cancel = vi.fn();
+    const encoder = new TextEncoder();
+    const request = new Request('https://app.example.test/api/example', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('{"value":"'));
+          controller.enqueue(encoder.encode('x'.repeat(64)));
+        },
+        cancel,
+      }),
+      duplex: 'half',
+    } as RequestInit & { duplex: 'half' });
+
+    await expect(readBoundedJsonRequest(request, { maxBytes: 16 })).rejects.toBeInstanceOf(ValidationError);
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it('rejects invalid UTF-8 before JSON parsing', async () => {
+    const request = new Request('https://app.example.test/api/example', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: new Uint8Array([0xc3, 0x28]),
+    });
+
+    await expect(readBoundedJsonRequest(request, { maxBytes: 16 })).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('validates parsed payloads with zod', async () => {

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { reportError } from '@/lib/observability/report-error';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
@@ -58,6 +58,9 @@ type EmailLogPayload = {
 };
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
+const RESEND_REQUEST_TIMEOUT_MS = 10_000;
+const RESEND_RESPONSE_MAX_BYTES = 64 * 1024;
+const RESEND_IDEMPOTENCY_KEY_MAX_LENGTH = 256;
 const DEFAULT_MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 350;
 const MAX_BACKOFF_MS = 3_000;
@@ -107,6 +110,19 @@ function getBackoffDelay(attempt: number) {
   return exponentialDelay + jitter;
 }
 
+function withResendIdempotencyKey(input: SendEmailInput): SendEmailInput & { idempotencyKey: string } {
+  const providedKey = input.idempotencyKey?.trim();
+
+  if (providedKey && providedKey.length > RESEND_IDEMPOTENCY_KEY_MAX_LENGTH) {
+    throw new Error('Email idempotency key exceeds the Resend 256-character limit.');
+  }
+
+  return {
+    ...input,
+    idempotencyKey: providedKey || `email/${randomUUID()}`,
+  };
+}
+
 function normalizeRecipients(to: string) {
   return to
     .split(',')
@@ -146,6 +162,52 @@ function buildListUnsubscribeHeaders(input: SendEmailInput) {
     'List-Unsubscribe': `<${input.unsubscribeUrl}>`,
     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
   };
+}
+
+async function readBoundedResendResponse(response: Response): Promise<ResendEmailResponse> {
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > RESEND_RESPONSE_MAX_BYTES) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error('Resend email failed: provider_response_too_large');
+  }
+
+  if (!response.body) return {};
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > RESEND_RESPONSE_MAX_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new Error('Resend email failed: provider_response_too_large');
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(body);
+    return text.length > 0 ? (JSON.parse(text) as ResendEmailResponse) : {};
+  } catch {
+    return {};
+  }
 }
 
 function buildEmailLogPayload(input: {
@@ -226,9 +288,10 @@ async function sendWithResend(input: SendEmailInput, apiKey: string, from: strin
       text: input.text,
       headers: buildListUnsubscribeHeaders(input),
     }),
+    signal: AbortSignal.timeout(RESEND_REQUEST_TIMEOUT_MS),
   });
 
-  const data = (await response.json().catch(() => ({}))) as ResendEmailResponse;
+  const data = await readBoundedResendResponse(response);
 
   if (!response.ok) {
     const providerMessage = data.error?.message ? redactEmailSecrets(data.error.message) : `status_${response.status}`;
@@ -247,8 +310,10 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
   assertNoSensitiveContent(input);
 
+  const deliveryInput = apiKey ? withResendIdempotencyKey(input) : input;
+
   await writeEmailLog({
-    email: input,
+    email: deliveryInput,
     status: apiKey ? 'queued' : 'skipped',
     provider: apiKey ? 'resend' : 'console',
     attempts: 0,
@@ -258,7 +323,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     console.info('[RISCK COMPLY provider skipped]', { event: 'transactional_delivery_provider_missing', template });
 
     await writeEmailLog({
-      email: input,
+      email: deliveryInput,
       status: 'skipped',
       provider: 'console',
       attempts: 0,
@@ -272,10 +337,10 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
   for (let attempt = 1; attempt <= attemptsToRun; attempt += 1) {
     try {
-      const providerId = await sendWithResend(input, apiKey, from);
+      const providerId = await sendWithResend(deliveryInput, apiKey, from);
 
       await writeEmailLog({
-        email: input,
+        email: deliveryInput,
         status: 'sent',
         provider: 'resend',
         providerId,
@@ -301,7 +366,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const errorMessage = safeErrorMessage(lastError);
 
   await writeEmailLog({
-    email: input,
+    email: deliveryInput,
     status: 'failed',
     provider: 'resend',
     attempts: attemptsToRun,
