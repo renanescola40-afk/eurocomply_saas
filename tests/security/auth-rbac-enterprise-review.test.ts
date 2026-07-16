@@ -43,7 +43,12 @@ describe('enterprise auth, RBAC and tenant-isolation invariants', () => {
 
     expect(readRepoFile('src/server/security/rbac.ts')).toContain(".eq('user_id', userId)");
     expect(readRepoFile('src/server/queries/organizations.ts')).toContain(".eq('user_id', userId)");
-    expect(readRepoFile('src/server/actions/organizations.ts')).toContain("role: 'owner'");
+    const organizationAction = readRepoFile('src/server/actions/organizations.ts');
+    const organizationCreationMigration = readRepoFile(
+      'supabase/migrations/20260716180000_atomic_organization_creation.sql',
+    );
+    expect(organizationAction).toContain('p_user_id: user.id');
+    expect(organizationCreationMigration).toContain("values (v_organization.id, p_user_id, 'owner')");
     expect(readRepoFile('src/server/actions/onboarding.ts')).toContain('created_by: userId');
   });
 

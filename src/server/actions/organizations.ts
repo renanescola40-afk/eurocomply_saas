@@ -14,6 +14,24 @@ const ORGANIZATION_CREATE_RATE_LIMIT = {
   windowMs: 10 * 60 * 1000,
 } as const;
 
+const ATOMIC_ORGANIZATION_CREATION_RPC = 'create_organization_with_owner_atomic';
+
+type OrganizationCreationResult = {
+  outcome: string;
+  organization_id: string | null;
+  organization_name: string | null;
+  organization_slug: string | null;
+  created_by: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+function firstCreationResult(data: unknown): OrganizationCreationResult | null {
+  if (Array.isArray(data)) return (data[0] as OrganizationCreationResult | undefined) ?? null;
+  if (data && typeof data === 'object') return data as OrganizationCreationResult;
+  return null;
+}
+
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 }
@@ -53,29 +71,35 @@ export async function createOrganization(input: CreateOrganizationInput) {
   try {
     const supabase = createAdminClient();
 
-    const { data: organization, error } = await supabase
-      .from('organizations')
-      .insert({ name: payload.name, slug: payload.slug, created_by: user.id })
-      .select('*')
-      .single();
+    const { data, error } = await supabase.rpc(ATOMIC_ORGANIZATION_CREATION_RPC, {
+      p_name: payload.name,
+      p_slug: payload.slug,
+      p_user_id: user.id,
+    });
 
     if (error) {
-      reportError(error, context);
+      throw error;
+    }
+
+    const creation = firstCreationResult(data);
+    if (
+      !creation ||
+      creation.outcome !== 'created' ||
+      !creation.organization_id ||
+      !creation.organization_name ||
+      !creation.organization_slug
+    ) {
       throw organizationActionError('Unable to create organization');
     }
 
-    const { error: memberError } = await supabase
-      .from('organization_members')
-      .insert({
-        organization_id: organization.id,
-        user_id: user.id,
-        role: 'owner',
-      } as never);
-
-    if (memberError) {
-      reportError(memberError, { ...context, organizationId: organization.id });
-      throw organizationActionError('Unable to create organization');
-    }
+    const organization = {
+      id: creation.organization_id,
+      name: creation.organization_name,
+      slug: creation.organization_slug,
+      created_by: creation.created_by,
+      created_at: creation.created_at,
+      updated_at: creation.updated_at,
+    };
 
     if (user.email) {
       const dashboardUrl = `${getAppUrl()}/dashboard/organizations`;
