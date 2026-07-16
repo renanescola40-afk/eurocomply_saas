@@ -65,6 +65,7 @@ export function grantAnalyticsConsent() {
 export function denyAnalyticsConsent() {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(CONSENT_STORAGE_KEY, 'denied');
+  window.posthog?.stopSessionRecording?.();
   window.posthog?.opt_out_capturing?.();
 }
 
@@ -138,6 +139,11 @@ export function initPostHog(pathname?: string) {
 
 export function updateSessionRecordingForPath(pathname: string) {
   if (typeof window === 'undefined') return;
+  if (!hasAnalyticsConsent()) {
+    window.posthog?.stopSessionRecording?.();
+    return;
+  }
+
   if (isSensitiveAnalyticsPath(pathname)) {
     window.posthog?.stopSessionRecording?.();
     return;
