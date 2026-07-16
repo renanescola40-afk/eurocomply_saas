@@ -1,7 +1,7 @@
 import { unstable_noStore as noStore } from 'next/cache';
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { normalizeOrganization } from '@/lib/dashboard/organization-adapter';
-import { getOrganizationEntitlements, getPlanEntitlements } from '@/server/billing/entitlements';
+import { getOrganizationEntitlements } from '@/server/billing/entitlements';
 import { getCurrentOrganizationForUser } from './current-organization';
 import {
   getDashboardSummary,
@@ -9,7 +9,6 @@ import {
   getDashboardTrendHistory,
   recordDashboardMetricSnapshot,
   type DashboardSummary,
-  type DashboardTrendSnapshot,
 } from './dashboard';
 
 const DASHBOARD_PREVIEW_PAGE_SIZE = 5;
@@ -18,7 +17,6 @@ const DASHBOARD_AI_SYSTEM_PREVIEW_SIZE = 25;
 
 type QueryError = {
   code?: string;
-  message?: string;
 } | null;
 
 type CountResult = {
@@ -57,12 +55,8 @@ export type DashboardAuditEventPreview = {
   created_at?: string | null;
 };
 
-function isExpectedSchemaFallback(error: QueryError) {
-  return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST204' || error?.code === 'PGRST205';
-}
-
 function logDashboardPreviewError(label: string, error: QueryError) {
-  if (error && !isExpectedSchemaFallback(error)) {
+  if (error) {
     console.warn('[dashboard] preview_query_failed', { label, code: error.code ?? 'unknown' });
   }
 }
@@ -71,38 +65,10 @@ function getErrorCode(error: unknown) {
   return error instanceof Error ? error.name : 'unknown';
 }
 
-function getEmptyDashboardSummary(): DashboardSummary {
-  return {
-    complianceScore: 0,
-    openTasks: 0,
-    highRiskVendors: 0,
-    openRisks: 0,
-    criticalRisks: 0,
-    missingDocuments: 0,
-    totals: {
-      tasks: 0,
-      vendors: 0,
-      risks: 0,
-      documents: 0,
-    },
-  };
-}
-
-function getEmptyAiSystemSummary(): DashboardAiSystemSummary {
-  return {
-    total: 0,
-    high: 0,
-    unacceptable: 0,
-    limited: 0,
-    minimal: 0,
-    previews: [],
-  };
-}
-
 function safeCount(result: CountResult, label: string) {
   if (result.error) {
     logDashboardPreviewError(label, result.error);
-    return 0;
+    throw new Error('Unable to load dashboard data.');
   }
 
   return result.count ?? 0;
@@ -132,7 +98,7 @@ function getOrganizationWorkflowReadiness(
   topRisks: unknown[],
   vendorsRequiringReview: unknown[],
   documentsExpiringSoon: unknown[],
-  aiSystemSummary: DashboardAiSystemSummary = getEmptyAiSystemSummary(),
+  aiSystemSummary: DashboardAiSystemSummary,
 ): OrganizationWorkflowReadiness {
   const reasons: string[] = [];
 
@@ -167,21 +133,21 @@ function getOrganizationWorkflowReadiness(
   return { status: 'ready', reasons: ['ready-for-executive-review'] };
 }
 
-async function withDashboardTimeout<T>(label: string, promise: Promise<T>, fallback: T, timeoutMs = 3_500) {
+async function withDashboardTimeout<T>(label: string, promise: Promise<T>, timeoutMs = 3_500): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-  const timeout = new Promise<T>((resolve) => {
+  const timeout = new Promise<never>((_resolve, reject) => {
     timeoutId = setTimeout(() => {
-      console.warn('[dashboard] query_timeout', { label, code: 'timeout', timeoutMs });
-      resolve(fallback);
+      reject(new Error('Dashboard query timed out.'));
     }, timeoutMs);
   });
 
   try {
     return await Promise.race([promise, timeout]);
   } catch (error) {
-    console.warn('[dashboard] query_failed', { label, code: getErrorCode(error) });
-    return fallback;
+    const code = error instanceof Error && error.message === 'Dashboard query timed out.' ? 'timeout' : getErrorCode(error);
+    console.warn('[dashboard] query_failed', { label, code, timeoutMs });
+    throw new Error('Unable to load dashboard data.');
   } finally {
     if (timeoutId) {
       clearTimeout(timeoutId);
@@ -190,8 +156,7 @@ async function withDashboardTimeout<T>(label: string, promise: Promise<T>, fallb
 }
 
 async function listDashboardTasks(organizationId: string) {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('compliance_tasks')
@@ -203,7 +168,7 @@ async function listDashboardTasks(organizationId: string) {
 
   if (error) {
     logDashboardPreviewError('tasks', error);
-    return [];
+    throw new Error('Unable to load dashboard tasks.');
   }
 
   return (data ?? []).map((task) => ({
@@ -213,8 +178,7 @@ async function listDashboardTasks(organizationId: string) {
 }
 
 async function listDashboardTopRisks(organizationId: string) {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('risks')
@@ -226,15 +190,14 @@ async function listDashboardTopRisks(organizationId: string) {
 
   if (error) {
     logDashboardPreviewError('risks', error);
-    return [];
+    throw new Error('Unable to load dashboard risks.');
   }
 
   return data ?? [];
 }
 
 async function listDashboardVendorsRequiringReview(organizationId: string) {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('vendors')
@@ -246,15 +209,14 @@ async function listDashboardVendorsRequiringReview(organizationId: string) {
 
   if (error) {
     logDashboardPreviewError('vendors', error);
-    return [];
+    throw new Error('Unable to load dashboard vendors.');
   }
 
   return data ?? [];
 }
 
 async function listDashboardDocumentsExpiringSoon(organizationId: string) {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('documents')
@@ -267,15 +229,14 @@ async function listDashboardDocumentsExpiringSoon(organizationId: string) {
 
   if (error) {
     logDashboardPreviewError('documents', error);
-    return [];
+    throw new Error('Unable to load dashboard documents.');
   }
 
   return data ?? [];
 }
 
 async function getDashboardAiSystemSummary(organizationId: string): Promise<DashboardAiSystemSummary> {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return getEmptyAiSystemSummary();
+  const supabase = createAdminClient();
 
   const [previewResult, totalResult, highResult, unacceptableResult, limitedResult, minimalResult] = await Promise.all([
     supabase
@@ -293,6 +254,7 @@ async function getDashboardAiSystemSummary(organizationId: string): Promise<Dash
 
   if (previewResult.error) {
     logDashboardPreviewError('ai_systems_preview', previewResult.error);
+    throw new Error('Unable to load dashboard AI systems.');
   }
 
   return {
@@ -301,13 +263,12 @@ async function getDashboardAiSystemSummary(organizationId: string): Promise<Dash
     unacceptable: safeCount(unacceptableResult, 'ai_systems_unacceptable'),
     limited: safeCount(limitedResult, 'ai_systems_limited'),
     minimal: safeCount(minimalResult, 'ai_systems_minimal'),
-    previews: previewResult.error ? [] : previewResult.data ?? [],
+    previews: previewResult.data ?? [],
   };
 }
 
 async function listDashboardAuditEvents(organizationId: string): Promise<DashboardAuditEventPreview[]> {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('audit_logs')
@@ -318,7 +279,7 @@ async function listDashboardAuditEvents(organizationId: string): Promise<Dashboa
 
   if (error) {
     logDashboardPreviewError('audit_events', error);
-    return [];
+    throw new Error('Unable to load dashboard audit events.');
   }
 
   return data ?? [];
@@ -333,10 +294,6 @@ export async function getOrganizationDashboardData(userId: string, organizationS
     return null;
   }
 
-  const emptySummary = getEmptyDashboardSummary();
-  const emptyAiSystemSummary = getEmptyAiSystemSummary();
-  const fallbackEntitlements = getPlanEntitlements('essential');
-
   const [
     summary,
     tasks,
@@ -348,15 +305,15 @@ export async function getOrganizationDashboardData(userId: string, organizationS
     entitlements,
     trendHistory,
   ] = await Promise.all([
-    withDashboardTimeout('summary', getDashboardSummary(organization.id), emptySummary),
-    withDashboardTimeout('tasks', listDashboardTasks(organization.id), []),
-    withDashboardTimeout('risks', listDashboardTopRisks(organization.id), []),
-    withDashboardTimeout('vendors', listDashboardVendorsRequiringReview(organization.id), []),
-    withDashboardTimeout('documents', listDashboardDocumentsExpiringSoon(organization.id), []),
-    withDashboardTimeout('ai_systems', getDashboardAiSystemSummary(organization.id), emptyAiSystemSummary),
-    withDashboardTimeout('audit_events', listDashboardAuditEvents(organization.id), []),
-    withDashboardTimeout('entitlements', getOrganizationEntitlements(organization.id), fallbackEntitlements, 2_500),
-    withDashboardTimeout<DashboardTrendSnapshot[]>('trend_history', getDashboardTrendHistory(organization.id), [], 2_500),
+    withDashboardTimeout('summary', getDashboardSummary(organization.id)),
+    withDashboardTimeout('tasks', listDashboardTasks(organization.id)),
+    withDashboardTimeout('risks', listDashboardTopRisks(organization.id)),
+    withDashboardTimeout('vendors', listDashboardVendorsRequiringReview(organization.id)),
+    withDashboardTimeout('documents', listDashboardDocumentsExpiringSoon(organization.id)),
+    withDashboardTimeout('ai_systems', getDashboardAiSystemSummary(organization.id)),
+    withDashboardTimeout('audit_events', listDashboardAuditEvents(organization.id)),
+    withDashboardTimeout('entitlements', getOrganizationEntitlements(organization.id), 2_500),
+    withDashboardTimeout('trend_history', getDashboardTrendHistory(organization.id), 2_500),
   ]);
 
   void recordDashboardMetricSnapshot(organization.id, summary).catch((error) => {
