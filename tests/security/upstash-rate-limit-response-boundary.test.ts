@@ -103,10 +103,6 @@ describe('Upstash rate-limit provider boundary contract', () => {
   it('cancels an oversized declared response before reading it and fails closed', async () => {
     let cancelledReason: unknown;
     const body = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.enqueue(new TextEncoder().encode('[]'));
-        controller.close();
-      },
       cancel(reason) {
         cancelledReason = reason;
       },
