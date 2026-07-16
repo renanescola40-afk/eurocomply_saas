@@ -1,4 +1,3 @@
-/* eslint-disable */
 // @ts-nocheck
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,6 +12,21 @@ const mocks = vi.hoisted(() => ({
   getOrganizationEntitlements: vi.fn(),
   isPlanAtLeast: vi.fn(),
   requireStepUpForRequest: vi.fn(),
+  sendEmail: vi.fn(),
+  invitationEmail: vi.fn(),
+  reportError: vi.fn(),
+}));
+
+vi.mock('@/lib/email/client', () => ({
+  sendEmail: mocks.sendEmail,
+}));
+
+vi.mock('@/lib/email/templates', () => ({
+  invitationEmail: mocks.invitationEmail,
+}));
+
+vi.mock('@/lib/observability/report-error', () => ({
+  reportError: mocks.reportError,
 }));
 
 vi.mock('@/server/queries/organizations', () => ({
@@ -79,9 +93,19 @@ describe('team invites API security gates', () => {
     mocks.getOrganizationEntitlements.mockResolvedValue({ employeeInvites: true, plan: 'business' });
     mocks.isPlanAtLeast.mockReturnValue(false);
     mocks.createOrganizationInvite.mockResolvedValue({
-      invite: { id: 'inv_123', email: 'new.user@example.test', role: 'Editor' },
+      invite: { id: 'inv_123', email: 'new.user@example.test', role: 'editor' },
       persisted: true,
+      token: 'secure_invitation_token_value_1234567890',
+      tokenFingerprint: 'token_fingerprint',
+      organizationName: 'Acme Corp',
     });
+    mocks.invitationEmail.mockReturnValue({
+      subject: 'Join Acme Corp',
+      html: '<p>Invite</p>',
+      text: 'Invite',
+      template: 'member_invited',
+    });
+    mocks.sendEmail.mockResolvedValue({ ok: true });
     mocks.createAuditEvent.mockResolvedValue({ persisted: true });
     mocks.createNotification.mockResolvedValue({ persisted: true });
   });
@@ -150,7 +174,7 @@ describe('team invites API security gates', () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({
-      invite: { id: 'inv_123', email: 'new.user@example.test', role: 'Editor' },
+      invite: { id: 'inv_123', email: 'new.user@example.test', role: 'editor' },
       persisted: true,
       auditPersisted: true,
       notificationPersisted: true,
@@ -179,13 +203,49 @@ describe('team invites API security gates', () => {
       email: 'new.user@example.test',
       role: 'Editor',
     });
+    expect(mocks.invitationEmail).toHaveBeenCalledWith({
+      organizationName: 'Acme Corp',
+      role: 'editor',
+      inviteUrl: 'http://localhost:3000/en/invite/secure_invitation_token_value_1234567890',
+    });
+    expect(mocks.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'new.user@example.test',
+        organizationId: 'org_a',
+        userId: 'user_admin',
+        idempotencyKey: 'team-invite:inv_123:token_fingerprint',
+      }),
+    );
+    expect(JSON.stringify(body)).not.toContain('secure_invitation_token_value');
     expect(mocks.createAuditEvent).toHaveBeenCalledWith(expect.objectContaining({
       organizationId: 'org_a',
       actorUserId: 'user_admin',
       action: 'team_invite_created',
-      entityType: 'team_invite',
+      entityType: 'invitation',
       entityId: 'inv_123',
       metadata: expect.objectContaining({ emailDomain: 'example.test', role: 'Editor', actorRole: 'admin' }),
     }));
+  });
+
+  it('fails explicitly and audits when the invitation email cannot be delivered', async () => {
+    mocks.sendEmail.mockRejectedValue(new Error('provider unavailable'));
+
+    const response = await POST(buildRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body).toEqual({ error: 'invitation_delivery_failed', persisted: true, auditPersisted: true });
+    expect(mocks.reportError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'provider unavailable' }),
+      expect.objectContaining({ area: 'team_invitation_delivery', organizationId: 'org_a', invitationId: 'inv_123' }),
+    );
+    expect(mocks.createAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'team_invite_delivery_failed',
+        entityType: 'invitation',
+        entityId: 'inv_123',
+      }),
+    );
+    expect(mocks.createNotification).not.toHaveBeenCalled();
   });
 });

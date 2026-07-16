@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+import { sendEmail } from '@/lib/email/client';
+import { invitationEmail } from '@/lib/email/templates';
+import { reportError } from '@/lib/observability/report-error';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { createOrganizationInvite } from '@/server/queries/invites';
@@ -24,6 +27,10 @@ const inviteSchema = z.object({
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
 const INVITE_JSON_MAX_BYTES = 4 * 1024;
+
+function getAppUrl() {
+  return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+}
 
 function getInviteEntityId(invite: unknown) {
   if (!invite || typeof invite !== 'object' || !('id' in invite)) {
@@ -110,11 +117,57 @@ export async function POST(request: Request) {
       role,
     });
 
+    const inviteUrl = `${getAppUrl()}/en/invite/${encodeURIComponent(result.token)}`;
+    const builtEmail = invitationEmail({
+      organizationName: result.organizationName,
+      role: result.invite.role,
+      inviteUrl,
+    });
+
+    try {
+      await sendEmail({
+        to: result.invite.email,
+        subject: builtEmail.subject,
+        html: builtEmail.html,
+        text: builtEmail.text,
+        template: builtEmail.template,
+        organizationId: organization.id,
+        userId: user.id,
+        idempotencyKey: `team-invite:${result.invite.id}:${result.tokenFingerprint}`,
+        metadata: {
+          source: 'team_invites_api',
+          invitationId: result.invite.id,
+          role: result.invite.role,
+        },
+      });
+    } catch (emailError) {
+      reportError(emailError, {
+        area: 'team_invitation_delivery',
+        organizationId: organization.id,
+        invitationId: result.invite.id,
+        emailDomain: email.split('@')[1] ?? 'unknown',
+      });
+
+      const failedAudit = await createAuditEvent({
+        organizationId: organization.id,
+        actorUserId: user.id,
+        action: 'team_invite_delivery_failed',
+        entityType: 'invitation',
+        entityId: result.invite.id,
+        metadata: { emailDomain: email.split('@')[1] ?? 'unknown', role: result.invite.role, actorRole: permission.role },
+      });
+
+      return noStoreJson(
+        { error: 'invitation_delivery_failed', persisted: true, auditPersisted: failedAudit.persisted },
+        { status: 503 },
+      );
+    }
+
     const audit = await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
       action: 'team_invite_created',
-      entityType: 'team_invite',
+      entityType: 'invitation',
       entityId: getInviteEntityId(result.invite),
       metadata: {
         emailDomain: email.split('@')[1] ?? 'unknown',
@@ -122,6 +175,7 @@ export async function POST(request: Request) {
         actorRole: permission.role,
         plan: entitlements.plan,
         persisted: result.persisted,
+        emailDelivered: true,
       },
     });
 
