@@ -39,11 +39,13 @@ function trustedSource(overrides: Record<string, unknown> = {}) {
     },
     failures: [],
     evidenceIntegrity: {
+      placeholderOnly: false,
       runtimeProofInvented: false,
       rawCredentialsStored: false,
       accessTokensStored: false,
       userIdentifiersStored: false,
       organizationIdentifiersStored: false,
+      rawProviderResponsesStored: false,
     },
     ...overrides,
   };
@@ -105,14 +107,12 @@ describe('canonical Auth/RBAC scorecard evidence', () => {
     });
     const evidence = buildAuthRbacScorecardEvidence(source);
 
-    expect(check(evidence, 'login')).toEqual({ name: 'login', passed: true });
-    expect(check(evidence, 'logout')).toEqual({ name: 'logout', passed: true });
-    expect(check(evidence, 'sessionRefresh')).toEqual({ name: 'sessionRefresh', passed: true });
+    expect(evidence.controlsVerified).toEqual([]);
+    expect(evidence.sourceEvidence.trusted).toBe(false);
     expect(check(evidence, 'rbac')).toMatchObject({
       name: 'rbac',
       status: 'NOT_VERIFIED',
     });
-    expect(evidence.controlsVerified).toEqual(['login', 'logout', 'sessionRefresh']);
   });
 
   it('does not promote session refresh when the source check fails', () => {
@@ -130,6 +130,23 @@ describe('canonical Auth/RBAC scorecard evidence', () => {
     });
     expect(evidence.controlsVerified).toEqual([]);
     expect(evidence.sourceEvidence.trusted).toBe(false);
+  });
+
+  it('rejects a source that claims complete while omitting redaction integrity', () => {
+    const source = trustedSource({
+      evidenceIntegrity: {
+        placeholderOnly: false,
+        runtimeProofInvented: false,
+        rawCredentialsStored: false,
+        accessTokensStored: false,
+        userIdentifiersStored: false,
+        organizationIdentifiersStored: false,
+      },
+    });
+    const evidence = buildAuthRbacScorecardEvidence(source);
+
+    expect(evidence.sourceEvidence.trusted).toBe(false);
+    expect(evidence.controlsVerified).toEqual([]);
   });
 
   it('never stores credentials, tokens, identifiers or raw provider responses', () => {
