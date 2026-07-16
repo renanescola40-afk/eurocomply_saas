@@ -37,6 +37,7 @@ dialogRef.current?.focus();
 `;
 
 const completeAnalytics = `
+function getPostHogAssetHost() { return 'https://eu-assets.i.posthog.com'; }
 function hasAnalyticsConsent() { return true; }
 export function denyAnalyticsConsent() {
   window.posthog?.stopSessionRecording?.();
@@ -47,6 +48,10 @@ export function updateSessionRecordingForPath() {
     window.posthog?.stopSessionRecording?.();
   }
 }
+`;
+
+const completeLayout = `
+<PostHogAnalyticsProvider>{children}</PostHogAnalyticsProvider>
 `;
 
 const completeWorkflow = `
@@ -70,6 +75,7 @@ function coverage() {
     specSource: completeSpec,
     bannerSource: completeBanner,
     analyticsSource: completeAnalytics,
+    layoutSource: completeLayout,
     workflowSource: completeWorkflow,
   });
 }
@@ -89,6 +95,7 @@ function build(overrides: Record<string, unknown> = {}) {
       acceptanceSpec: 'spec-digest',
       consentBanner: 'banner-digest',
       analyticsClient: 'analytics-digest',
+      localeLayout: 'layout-digest',
       fullSecurityWorkflow: 'workflow-digest',
       githubChecks: 'checks-digest',
     },
@@ -111,6 +118,7 @@ describe('accessibility and analytics consent evidence', () => {
       explicitGrantRequired: true,
       denialStopsRecording: true,
       replayConsentGuard: true,
+      singleConsentGatedLoader: true,
       protectedRuntimeConfiguration: true,
     });
   });
@@ -160,9 +168,20 @@ describe('accessibility and analytics consent evidence', () => {
       specSource: completeSpec,
       bannerSource: completeBanner,
       analyticsSource: completeAnalytics.replace('if (!hasAnalyticsConsent())', 'if (false)'),
+      layoutSource: completeLayout,
       workflowSource: completeWorkflow,
     });
     expect(missingConsentGuard.analyticsConsentCoverage).toBe(false);
+
+    const duplicateLoader = evaluateAccessibilityConsentCoverage({
+      specSource: completeSpec,
+      bannerSource: completeBanner,
+      analyticsSource: completeAnalytics,
+      layoutSource: `${completeLayout}<PostHogScript />`,
+      workflowSource: completeWorkflow,
+    });
+    expect(duplicateLoader.analyticsConsentCoverage).toBe(false);
+    expect(duplicateLoader.checks.singleConsentGatedLoader).toBe(false);
   });
 
   it('fails closed on SHA mismatch', () => {
