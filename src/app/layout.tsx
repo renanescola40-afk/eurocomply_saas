@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 
+const LOCALE_REQUEST_HEADER = "x-risck-locale";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -24,10 +26,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const requestHeaders = await headers();
-  const locale = resolveDocumentLocale(requestHeaders.get("x-next-intl-locale"));
+  const locale = resolveDocumentLocale(requestHeaders.get(LOCALE_REQUEST_HEADER));
 
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
         <PostHogScript />
