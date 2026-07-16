@@ -7,23 +7,6 @@ import { rateLimit } from '@/lib/security/rate-limiter';
 const rateLimiterPath = join(process.cwd(), 'src/lib/security/rate-limiter.ts');
 const source = readFileSync(rateLimiterPath, 'utf8');
 
-const originalEnvironment = {
-  NODE_ENV: process.env.NODE_ENV,
-  VERCEL_ENV: process.env.VERCEL_ENV,
-  UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
-  UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
-};
-
-function restoreEnvironment() {
-  for (const [key, value] of Object.entries(originalEnvironment)) {
-    if (value === undefined) {
-      delete process.env[key];
-    } else {
-      process.env[key] = value;
-    }
-  }
-}
-
 function mockJsonResponse(payload: unknown) {
   vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
     new Response(JSON.stringify(payload), {
@@ -35,16 +18,16 @@ function mockJsonResponse(payload: unknown) {
 
 describe('Upstash rate-limit provider boundary contract', () => {
   beforeEach(() => {
-    process.env.NODE_ENV = 'production';
-    process.env.VERCEL_ENV = 'production';
-    process.env.UPSTASH_REDIS_REST_URL = 'https://rate-limit-test.upstash.io';
-    process.env.UPSTASH_REDIS_REST_TOKEN = 'test-upstash-token';
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('VERCEL_ENV', 'production');
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://rate-limit-test.upstash.io');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'test-upstash-token');
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    restoreEnvironment();
+    vi.unstubAllEnvs();
   });
 
   it('keeps the existing application-level request timeout', () => {
