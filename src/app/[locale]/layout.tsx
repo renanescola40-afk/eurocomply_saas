@@ -4,7 +4,6 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { PostHogAnalyticsProvider } from '@/components/analytics/PostHogAnalyticsProvider';
 import { AnalyticsConsentBanner } from '@/components/analytics/AnalyticsConsentBanner';
-import { PostHogScript } from '@/components/analytics/posthog-script';
 import { AuthFloatingControls } from '@/components/auth/AuthFloatingControls';
 import { AuthProviderGate } from '@/components/auth/AuthProviderGate';
 import { ThemeProvider } from '@/components/ThemeProvider';
@@ -102,7 +101,6 @@ export default async function LocaleLayout({ children, params }: Props) {
             </PostHogAnalyticsProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
-        <PostHogScript />
       </body>
     </html>
   );
