@@ -2,11 +2,16 @@ import { expect, test, type Page } from '@playwright/test';
 
 const CONSENT_STORAGE_KEY = 'risckcomply.analytics.consent';
 const POSTHOG_SCRIPT_ID = 'posthog-js-sdk';
+const LEGACY_POSTHOG_SCRIPT_ID = 'posthog-init';
 const PUBLIC_ROUTES = ['/en', '/en/pricing', '/en/login'] as const;
+const POSTHOG_REQUEST_HOSTS = new Set([
+  'analytics-ci.invalid',
+  'eu.i.posthog.com',
+  'eu-assets.i.posthog.com',
+]);
 
-function isSyntheticPostHogScriptRequest(rawUrl: string) {
-  const url = new URL(rawUrl);
-  return url.origin === 'https://analytics-ci.invalid' && url.pathname === '/static/array.js';
+function isPostHogRequest(rawUrl: string) {
+  return POSTHOG_REQUEST_HOSTS.has(new URL(rawUrl).hostname);
 }
 
 async function startWithAnalyticsDenied(page: Page) {
@@ -145,7 +150,7 @@ test.describe('enterprise accessibility and analytics consent acceptance', () =>
     test('analytics stays blocked before consent and decline persists', async ({ page }) => {
       let analyticsRequests = 0;
       page.on('request', (request) => {
-        if (isSyntheticPostHogScriptRequest(request.url())) analyticsRequests += 1;
+        if (isPostHogRequest(request.url())) analyticsRequests += 1;
       });
 
       await page.goto('/en', { waitUntil: 'domcontentloaded' });
@@ -153,6 +158,7 @@ test.describe('enterprise accessibility and analytics consent acceptance', () =>
       await expect(dialog).toBeVisible();
       await expect(dialog).toBeFocused();
       await expect(page.locator(`#${POSTHOG_SCRIPT_ID}`)).toHaveCount(0);
+      await expect(page.locator(`#${LEGACY_POSTHOG_SCRIPT_ID}`)).toHaveCount(0);
       expect(analyticsRequests).toBe(0);
 
       await page.keyboard.press('Tab');
@@ -168,7 +174,7 @@ test.describe('enterprise accessibility and analytics consent acceptance', () =>
 
     test('analytics loads only after explicit consent', async ({ page }) => {
       let analyticsRequests = 0;
-      await page.route(/^https:\/\/analytics-ci\.invalid\/static\/array\.js(?:\?.*)?$/, async (route) => {
+      await page.route(/^https:\/\/eu-assets\.i\.posthog\.com\/static\/array\.js(?:\?.*)?$/, async (route) => {
         analyticsRequests += 1;
         await route.fulfill({
           status: 200,
@@ -181,6 +187,7 @@ test.describe('enterprise accessibility and analytics consent acceptance', () =>
       const dialog = page.getByRole('dialog', { name: /privacy-first product analytics/i });
       await expect(dialog).toBeFocused();
       await expect(page.locator(`#${POSTHOG_SCRIPT_ID}`)).toHaveCount(0);
+      await expect(page.locator(`#${LEGACY_POSTHOG_SCRIPT_ID}`)).toHaveCount(0);
 
       await page.keyboard.press('Tab');
       await page.keyboard.press('Tab');
