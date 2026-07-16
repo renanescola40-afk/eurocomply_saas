@@ -182,7 +182,7 @@ export async function listAiSystems(organizationId: string): Promise<AiSystemRec
 
   if (error) {
     console.warn('[ai-systems] list_failed', { code: error.code ?? 'unknown' });
-    throw error;
+    throw new Error('Unable to load AI systems.');
   }
 
   return (data ?? []) as unknown as AiSystemRecord[];
@@ -200,7 +200,7 @@ export async function getAiSystem(systemId: string, organizationId: string): Pro
 
   if (error) {
     console.warn('[ai-systems] get_failed', { code: error.code ?? 'unknown' });
-    throw error;
+    throw new Error('Unable to load AI system.');
   }
 
   return data as unknown as AiSystemRecord | null;
@@ -218,7 +218,7 @@ export async function listAiSystemHistory(systemId: string, organizationId: stri
 
   if (error) {
     console.warn('[ai-systems] history_list_failed', { code: error.code ?? 'unknown' });
-    throw error;
+    throw new Error('Unable to load AI system history.');
   }
 
   return (data ?? []) as unknown as AiSystemHistoryRecord[];
@@ -234,7 +234,7 @@ export async function createAiSystem(input: CreateAiSystemInput): Promise<AiSyst
 
   if (error) {
     console.warn('[ai-systems] atomic_create_failed', { code: error.code ?? 'unknown' });
-    throw error;
+    throw new Error('Unable to create AI system.');
   }
 
   const transition = firstAtomicCreateRow(data);
@@ -265,7 +265,7 @@ export async function updateAiSystem(
 
   if (error) {
     console.warn('[ai-systems] atomic_reassessment_failed', { code: error.code ?? 'unknown' });
-    throw error;
+    throw new Error('Unable to reassess AI system.');
   }
 
   const transition = firstAtomicReassessmentRow(data);

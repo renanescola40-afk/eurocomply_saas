@@ -1,8 +1,7 @@
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function listComplianceTasks(organizationId: string) {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('compliance_tasks')
@@ -12,7 +11,7 @@ export async function listComplianceTasks(organizationId: string) {
 
   if (error) {
     console.warn('[tasks] list_failed', { code: error.code ?? 'unknown' });
-    return [];
+    throw new Error('Unable to load compliance tasks.');
   }
 
   return data ?? [];
