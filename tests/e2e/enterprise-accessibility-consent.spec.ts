@@ -4,6 +4,11 @@ const CONSENT_STORAGE_KEY = 'risckcomply.analytics.consent';
 const POSTHOG_SCRIPT_ID = 'posthog-js-sdk';
 const PUBLIC_ROUTES = ['/en', '/en/pricing', '/en/login'] as const;
 
+function isSyntheticPostHogScriptRequest(rawUrl: string) {
+  const url = new URL(rawUrl);
+  return url.origin === 'https://analytics-ci.invalid' && url.pathname === '/static/array.js';
+}
+
 async function startWithAnalyticsDenied(page: Page) {
   await page.addInitScript((key) => window.localStorage.setItem(key, 'denied'), CONSENT_STORAGE_KEY);
 }
@@ -140,7 +145,7 @@ test.describe('enterprise accessibility and analytics consent acceptance', () =>
     test('analytics stays blocked before consent and decline persists', async ({ page }) => {
       let analyticsRequests = 0;
       page.on('request', (request) => {
-        if (request.url().includes('/static/array.js')) analyticsRequests += 1;
+        if (isSyntheticPostHogScriptRequest(request.url())) analyticsRequests += 1;
       });
 
       await page.goto('/en', { waitUntil: 'domcontentloaded' });
@@ -163,7 +168,7 @@ test.describe('enterprise accessibility and analytics consent acceptance', () =>
 
     test('analytics loads only after explicit consent', async ({ page }) => {
       let analyticsRequests = 0;
-      await page.route('https://analytics-ci.invalid/static/array.js', async (route) => {
+      await page.route(/^https:\/\/analytics-ci\.invalid\/static\/array\.js(?:\?.*)?$/, async (route) => {
         analyticsRequests += 1;
         await route.fulfill({
           status: 200,
@@ -182,7 +187,6 @@ test.describe('enterprise accessibility and analytics consent acceptance', () =>
       const allow = page.getByRole('button', { name: 'Allow' });
       await expect(allow).toBeFocused();
       await page.keyboard.press('Enter');
-      await page.waitForLoadState('domcontentloaded');
 
       await expect.poll(() => analyticsRequests).toBeGreaterThan(0);
       await expect.poll(() => page.evaluate((key) => window.localStorage.getItem(key), CONSENT_STORAGE_KEY)).toBe('granted');
