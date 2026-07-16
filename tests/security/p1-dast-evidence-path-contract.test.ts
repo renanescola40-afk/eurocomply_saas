@@ -11,7 +11,7 @@ describe('P1 DAST evidence path contract', () => {
     };
     const finalGate = fs.readFileSync('scripts/security/check-p1-final-gate.mjs', 'utf8');
 
-    expect(register).toContain(`| DAST automatizado | Open | \\`${canonicalPath}\\``);
+    expect(register).toContain('| DAST automatizado | Open | `' + canonicalPath + '`');
     expect(index.controls.find((control) => control.controlId === 'P1-05')?.evidencePath).toBe(canonicalPath);
     expect(finalGate).toContain(`['DAST automatizado', '${canonicalPath}']`);
     expect(register).not.toContain('docs/security/evidence/p1/automated-dast.json');
