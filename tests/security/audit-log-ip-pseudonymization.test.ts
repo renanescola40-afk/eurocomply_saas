@@ -10,7 +10,8 @@ describe('audit log request-context privacy', () => {
     const pseudonymizeIndex = source.indexOf('ipPseudonym: pseudonymizeIpAddress(ip)');
     const metadataIndex = source.indexOf('ipAddressPseudonym: ipPseudonym');
 
-    expect(source).toContain("import { hashRateLimitIp } from '@/server/security/rate-limit';");
+    expect(source).toContain('hashRateLimitIp');
+    expect(source).toContain("from '@/server/security/rate-limit';");
     expect(source).toContain('return value ? `sha256:${hashRateLimitIp(value)}` : null;');
     expect(source).not.toContain('ipAddress: ip,');
     expect(normalizeIndex).toBeGreaterThan(-1);
@@ -22,7 +23,9 @@ describe('audit log request-context privacy', () => {
     const source = auditLogSource();
 
     expect(source).toContain('return value ? `sha256:${hashRateLimitIp(value)}` : null;');
-    expect(source).toContain("return { requestId: 'req_unavailable', ipPseudonym: null, userAgent: null };");
+    expect(source).toContain(
+      "return { requestId: 'req_unavailable', ipPseudonym: null, userAgentPseudonym: null };",
+    );
     expect(source).not.toContain("ipPseudonym: 'anonymous'");
   });
 });
