@@ -15,7 +15,7 @@ function evidence() {
     evidenceKind: 'final-p1-control-evidence',
     generatedFromRealEvidence: true,
     productionValidated: true,
-    generatedAt: '2026-07-14T18:00:00.000Z',
+    generatedAt: '2026-07-14T18:45:00.000Z',
     reviewedAt: '2026-07-14T19:00:00.000Z',
     reviewer: 'recovery reviewer',
     nextReviewDue: '2026-10-14',
@@ -100,5 +100,36 @@ describe('P1 restore isolation evidence', () => {
     const value = evidence();
     value.restoreTests[0].rtoActualSeconds = Number.NaN;
     expect(run(value).stderr).toContain('rtoActualSeconds must be a measured number');
+  });
+
+  it('rejects a measured RTO that exceeds its target', () => {
+    const value = evidence();
+    value.restoreTests[0].rtoActualSeconds = value.restoreTests[0].rtoTargetSeconds + 1;
+    expect(run(value).stderr).toContain('measured RTO exceeds target');
+  });
+
+  it('rejects a measured RPO that exceeds its target', () => {
+    const value = evidence();
+    value.restoreTests[0].rpoActualSeconds = value.restoreTests[0].rpoTargetSeconds + 1;
+    expect(run(value).stderr).toContain('measured RPO exceeds target');
+  });
+
+  it('accepts RTO and RPO measurements exactly at their targets', () => {
+    const value = evidence();
+    value.restoreTests[0].rtoActualSeconds = value.restoreTests[0].rtoTargetSeconds;
+    value.restoreTests[0].rpoActualSeconds = value.restoreTests[0].rpoTargetSeconds;
+    expect(run(value).status).toBe(0);
+  });
+
+  it('rejects evidence generated before the restore completed', () => {
+    const value = evidence();
+    value.generatedAt = '2026-07-14T18:20:00.000Z';
+    expect(run(value).stderr).toContain('generatedAt precedes completedAt');
+  });
+
+  it('rejects review chronology that predates validation', () => {
+    const value = evidence();
+    value.reviewedAt = '2026-07-14T18:40:00.000Z';
+    expect(run(value).stderr).toContain('reviewedAt precedes validation.validatedAt');
   });
 });
