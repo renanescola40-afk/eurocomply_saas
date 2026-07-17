@@ -23,7 +23,13 @@ export const AI_ACT_RULE_CATEGORIES = [
 ] as const;
 
 export type AiActRuleCategory = (typeof AI_ACT_RULE_CATEGORIES)[number];
-export type AiActRuleStatus = 'active' | 'transitional' | 'superseded' | 'draft_guidance';
+export type AiActRuleStatus =
+  | 'active'
+  | 'transitional'
+  | 'adopted_pending_effect'
+  | 'superseded'
+  | 'draft_guidance';
+export type AiActApplicationDateStatus = 'confirmed' | 'pending_official_publication';
 export type AiActSourceAuthority = 'eur_lex' | 'european_commission' | 'council_of_eu';
 
 export type AiActOfficialSource = {
@@ -44,7 +50,8 @@ export type AiActLegalRule = {
   title: string;
   obligation: string;
   applicableRoles: AiActLegalRole[];
-  appliesFrom: string;
+  appliesFrom: string | null;
+  applicationDateStatus: AiActApplicationDateStatus;
   transitionEndsAt?: string;
   exceptions: string[];
   jurisdiction: 'EU';
@@ -71,6 +78,7 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
     obligation: 'Take measures, to the best extent, to ensure a sufficient level of AI literacy for staff and other persons operating or using AI systems on the organisation’s behalf.',
     applicableRoles: ['provider', 'deployer'],
     appliesFrom: '2025-02-02',
+    applicationDateStatus: 'confirmed',
     exceptions: [],
     jurisdiction: 'EU',
     source: {
@@ -94,6 +102,7 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
     obligation: 'Do not place on the market, put into service or use AI systems that fall within a prohibited practice, subject to the precise conditions and exceptions in Article 5 and later amendments.',
     applicableRoles: ['provider', 'deployer', 'importer', 'distributor', 'product_manufacturer'],
     appliesFrom: '2025-02-02',
+    applicationDateStatus: 'confirmed',
     exceptions: ['Article-specific exceptions must be assessed and documented before a system is treated as permitted.'],
     jurisdiction: 'EU',
     source: {
@@ -113,11 +122,12 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
     regulation: 'Regulation (EU) 2024/1689',
     article: 'Article 5 amendment',
     category: 'prohibited_practice',
-    title: 'Prohibition covering non-consensual intimate content and child sexual abuse material',
-    obligation: 'Treat AI practices involving generation of non-consensual sexual or intimate content or child sexual abuse material as prohibited under the 2026 Digital Omnibus amendment.',
+    title: 'Adopted prohibition covering non-consensual intimate content and child sexual abuse material',
+    obligation: 'Prepare to block AI practices involving generation of non-consensual sexual or intimate content or child sexual abuse material under the adopted 2026 Digital Omnibus amendment.',
     applicableRoles: ['provider', 'deployer', 'importer', 'distributor', 'product_manufacturer'],
-    appliesFrom: '2026-06-29',
-    exceptions: ['Confirm the final published amending regulation and any transitional wording before enforcement decisions.'],
+    appliesFrom: null,
+    applicationDateStatus: 'pending_official_publication',
+    exceptions: ['Do not treat this rule as legally effective until the final amending regulation and its entry-into-force provisions are verified in the Official Journal.'],
     jurisdiction: 'EU',
     source: {
       authority: 'council_of_eu',
@@ -127,7 +137,7 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
       verifiedAt: '2026-07-17',
     },
     version: '2026-07-17.1',
-    status: 'active',
+    status: 'adopted_pending_effect',
     reviewBy: '2026-08-17',
     legalReviewRequired: true,
   },
@@ -140,6 +150,7 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
     obligation: 'Apply the applicable documentation, downstream information, copyright, training-content-summary and systemic-risk controls to providers of general-purpose AI models.',
     applicableRoles: ['gpai_provider'],
     appliesFrom: '2025-08-02',
+    applicationDateStatus: 'confirmed',
     exceptions: ['Open-source exceptions and systemic-risk thresholds must be assessed against the applicable article and guidance.'],
     jurisdiction: 'EU',
     source: {
@@ -163,6 +174,7 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
     obligation: 'Implement the applicable disclosure, information, labelling and machine-readable marking controls for interactive, emotion-recognition, biometric-categorisation and generative AI systems.',
     applicableRoles: ['provider', 'deployer'],
     appliesFrom: '2026-08-02',
+    applicationDateStatus: 'confirmed',
     exceptions: ['Article 50 contains role-specific scope and exceptions that must be evaluated for each system and content type.'],
     jurisdiction: 'EU',
     source: {
@@ -186,6 +198,7 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
     obligation: 'For qualifying systems placed on the market before 2 August 2026, track the transitional deadline for Article 50 synthetic-content transparency controls.',
     applicableRoles: ['provider', 'deployer'],
     appliesFrom: '2026-08-02',
+    applicationDateStatus: 'confirmed',
     transitionEndsAt: '2026-12-02',
     exceptions: ['Only systems that meet the official pre-existing-system transition conditions qualify.'],
     jurisdiction: 'EU',
@@ -211,6 +224,7 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
     obligation: 'Prepare the applicable high-risk provider and deployer controls for standalone systems in listed high-risk areas.',
     applicableRoles: ['provider', 'deployer', 'importer', 'distributor', 'authorised_representative'],
     appliesFrom: '2027-12-02',
+    applicationDateStatus: 'confirmed',
     exceptions: ['High-risk classification exceptions and role-specific duties must be evaluated per system.'],
     jurisdiction: 'EU',
     source: {
@@ -235,6 +249,7 @@ export const AI_ACT_LEGAL_RULES: AiActLegalRule[] = [
     obligation: 'Prepare the applicable high-risk controls and product-law coordination for AI systems embedded in regulated products.',
     applicableRoles: ['provider', 'deployer', 'importer', 'distributor', 'authorised_representative', 'product_manufacturer'],
     appliesFrom: '2028-08-02',
+    applicationDateStatus: 'confirmed',
     exceptions: ['Product-sector legislation and conformity-assessment routes must be evaluated together with the AI Act.'],
     jurisdiction: 'EU',
     source: {
@@ -257,8 +272,8 @@ const OFFICIAL_SOURCE_HOSTS = new Set([
   'www.consilium.europa.eu',
 ]);
 
-function isIsoDate(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00.000Z`));
+function isIsoDate(value: string | null | undefined): value is string {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00.000Z`)));
 }
 
 export type AiActLegalRuleValidationIssue = {
@@ -283,7 +298,6 @@ export function validateAiActLegalRules(rules: AiActLegalRule[] = AI_ACT_LEGAL_R
     }
 
     for (const [field, value] of [
-      ['appliesFrom', rule.appliesFrom],
       ['reviewBy', rule.reviewBy],
       ['publishedAt', rule.source.publishedAt],
       ['verifiedAt', rule.source.verifiedAt],
@@ -291,6 +305,18 @@ export function validateAiActLegalRules(rules: AiActLegalRule[] = AI_ACT_LEGAL_R
       if (!isIsoDate(value)) {
         issues.push({ ruleId: rule.id, field, message: 'Expected a valid ISO date (YYYY-MM-DD).' });
       }
+    }
+
+    if (rule.applicationDateStatus === 'confirmed' && !isIsoDate(rule.appliesFrom)) {
+      issues.push({ ruleId: rule.id, field: 'appliesFrom', message: 'Confirmed rules require a valid application date.' });
+    }
+
+    if (rule.applicationDateStatus === 'pending_official_publication' && rule.appliesFrom !== null) {
+      issues.push({ ruleId: rule.id, field: 'appliesFrom', message: 'Pending rules must not claim an application date.' });
+    }
+
+    if (rule.status === 'adopted_pending_effect' && rule.applicationDateStatus !== 'pending_official_publication') {
+      issues.push({ ruleId: rule.id, field: 'applicationDateStatus', message: 'Pending-effect rules must await official publication.' });
     }
 
     if (rule.transitionEndsAt && !isIsoDate(rule.transitionEndsAt)) {
@@ -335,6 +361,7 @@ export function listApplicableAiActRules(input: {
   categories?: AiActRuleCategory[];
   onDate?: string;
   includeFuture?: boolean;
+  includePending?: boolean;
   rules?: AiActLegalRule[];
 }) {
   const rules = input.rules ?? AI_ACT_LEGAL_RULES;
@@ -344,8 +371,10 @@ export function listApplicableAiActRules(input: {
 
   return rules.filter((rule) => {
     if (rule.status === 'superseded' || rule.status === 'draft_guidance') return false;
+    if (rule.status === 'adopted_pending_effect' && !input.includePending) return false;
     if (!rule.applicableRoles.some((role) => roleSet.has(role))) return false;
     if (categorySet && !categorySet.has(rule.category)) return false;
+    if (rule.appliesFrom === null) return Boolean(input.includePending);
     if (!input.includeFuture && rule.appliesFrom > onDate) return false;
     return true;
   });
