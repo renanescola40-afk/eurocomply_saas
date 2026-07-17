@@ -2,38 +2,68 @@ name: P0 Branch Protection Evidence
 
 on:
   workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character current main SHA to assess
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: p0-branch-protection-evidence-${{ github.ref }}
-  cancel-in-progress: true
+  group: p0-branch-protection-evidence-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_SHA: ${{ inputs.release_sha }}
 
 jobs:
   branch-protection-evidence:
-    name: Generate branch protection evidence draft
+    name: Generate exact-SHA branch protection evidence
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout repository
+      - name: Validate requested release SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+
+      - name: Checkout exact release SHA
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
           persist-credentials: false
+
+      - name: Verify exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"
 
       - name: Validate committed branch protection evidence policy
         run: node scripts/security/check-branch-protection-evidence.mjs
 
-      - name: Generate branch protection evidence JSON
+      - name: Generate exact-SHA branch protection evidence JSON
+        id: generate
         uses: actions/github-script@v9
+        env:
+          TARGET_SHA: ${{ inputs.release_sha }}
         with:
           github-token: ${{ secrets.BRANCH_PROTECTION_READ_TOKEN != '' && secrets.BRANCH_PROTECTION_READ_TOKEN || github.token }}
           script: |
             const fs = require('fs');
+            const { execFileSync } = require('child_process');
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const branch = 'main';
+            const repository = `${owner}/${repo}`;
             const artifactPath = 'p0-evidence/branch-protection-main.generated.json';
+            const targetSha = String(process.env.TARGET_SHA || '').trim().toLowerCase();
+            const checkedOutSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().toLowerCase();
+            const generatedAt = new Date().toISOString();
             const requiredChecks = [
               'Full Security Suite / Core CI, build and npm audit',
               'Full Security Suite / Actionlint',
@@ -62,44 +92,106 @@ jobs:
               'Gitleaks / Scan repository for accidental secret exposure': ['Scan repository for accidental secret exposure', 'Gitleaks'],
               'Secret Scanning / Production secret readiness gate': ['Production secret readiness gate'],
             };
-            const evidenceBase = (status, summary) => ({
-              schema_version: 4,
+
+            const writeEvidence = (evidence) => {
+              fs.mkdirSync('p0-evidence', { recursive: true });
+              fs.writeFileSync(artifactPath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
+            };
+
+            const baseEvidence = ({ status, outcome, summary, currentMainSha = null, failures = [] }) => ({
+              schema: 'risck-comply.branch-protection-runtime-evidence.v1',
+              schema_version: 5,
               evidenceItem: 'required-status-checks',
-              status,
-              repository: `${owner}/${repo}`,
-              branch,
               evidence_type: 'branch-protection-required-checks',
-              captured_at: new Date().toISOString(),
-              reviewer: '@renansilva2002',
-              reviewedAt: new Date().toISOString(),
+              status,
+              outcome,
+              repository,
+              branch,
+              targetSha,
+              checkedOutSha,
+              currentMainSha,
+              generatedAt,
+              reviewedAt: generatedAt,
+              reviewer: 'RISCK COMPLY protected release automation',
               source: 'github-api-branch-protection-workflow',
               policy_document: 'docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md',
               summary,
+              failures,
+              required_status_checks: requiredChecks,
+              accepted_status_check_aliases: aliases,
+              controlsVerified: [],
+              branch_protection: {},
+              sourceDetails: {
+                repository,
+                branch,
+                runId: String(context.runId),
+                missingRequiredChecks: requiredChecks,
+                missingProtectionFlags: 10,
+                configuredRequiredChecks: [],
+                matchedRequiredChecks: {},
+              },
+              provenance: {
+                githubActions: true,
+                runId: String(context.runId),
+                exactShaBound: targetSha === checkedOutSha,
+                mainHeadMatched: Boolean(currentMainSha) && targetSha === currentMainSha,
+              },
+              redactionConfirmation: 'Redaction confirmed for branch protection runtime evidence.',
               evidenceLocations: [
                 `GitHub Actions run: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
                 'Artifact: p0-branch-protection-evidence/branch-protection-main.generated.json',
-                'Reference: docs/security/branch-protection-check-name-aliases.json',
+                'Reference: docs/security/BRANCH_PROTECTION_REQUIRED_RULES.md',
               ],
-              redactionConfirmation: 'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
-              required_status_checks: requiredChecks,
-              accepted_status_check_aliases: aliases,
+              evidenceIntegrity: {
+                containsSensitiveValues: false,
+                rawApiPayloadStored: false,
+                accessTokensStored: false,
+                exactShaBound: targetSha === checkedOutSha && Boolean(currentMainSha) && targetSha === currentMainSha,
+              },
             });
-            const writeEvidence = (evidence) => {
-              fs.mkdirSync('p0-evidence', { recursive: true });
-              fs.writeFileSync(artifactPath, `${JSON.stringify(evidence, null, 2)}\n`);
-            };
+
+            let currentMainSha;
+            try {
+              const mainBranch = await github.rest.repos.getBranch({ owner, repo, branch });
+              currentMainSha = String(mainBranch.data.commit.sha || '').toLowerCase();
+            } catch (error) {
+              const evidence = baseEvidence({
+                status: 'Open',
+                outcome: 'blocked',
+                summary: 'The current main head could not be read through the GitHub API.',
+                failures: [`main_head_read_failed:${error.status || 'unknown'}`],
+              });
+              writeEvidence(evidence);
+              core.setFailed(evidence.summary);
+              return;
+            }
+
+            if (targetSha !== checkedOutSha || targetSha !== currentMainSha) {
+              const evidence = baseEvidence({
+                status: 'Open',
+                outcome: 'blocked',
+                summary: 'The requested SHA is not the exact current main head.',
+                currentMainSha,
+                failures: ['exact_main_sha_mismatch'],
+              });
+              writeEvidence(evidence);
+              core.setFailed(evidence.summary);
+              return;
+            }
 
             let protection;
             try {
               protection = (await github.rest.repos.getBranchProtection({ owner, repo, branch })).data;
             } catch (error) {
-              const evidence = evidenceBase('Exception', `GitHub branch protection for main could not be read through the GitHub API: ${error.message}.`);
-              evidence.controlsVerified = [];
-              evidence.branch_protection = {};
-              evidence.sourceDetails = { repository: `${owner}/${repo}`, branch, runId: String(context.runId), apiError: error.message, apiStatus: error.status ?? null };
-              evidence.exception = { riskOwner: '@renansilva2002', rationale: 'Branch protection settings were not readable through the GitHub API.', expiresAt: '2026-07-14', approvalReference: 'P0 branch protection required checks rollout' };
+              const evidence = baseEvidence({
+                status: 'Open',
+                outcome: 'blocked',
+                summary: 'GitHub branch protection for main could not be read through the GitHub API.',
+                currentMainSha,
+                failures: [`branch_protection_read_failed:${error.status || 'unknown'}`],
+              });
               writeEvidence(evidence);
-              core.warning(evidence.summary);
+              core.setFailed(evidence.summary);
               return;
             }
 
@@ -113,7 +205,6 @@ jobs:
             }));
             const missingChecks = requiredChecks.filter((check) => matchedRequiredChecks[check].length === 0);
             const requirePullRequest = Boolean(protection.required_pull_request_reviews);
-            const directPushBlockedByPrRequirement = requirePullRequest;
             const branchProtection = {
               protect_branch: true,
               require_pull_request: requirePullRequest,
@@ -125,46 +216,74 @@ jobs:
               require_up_to_date_branch: Boolean(protection.required_status_checks?.strict),
               block_force_pushes: protection.allow_force_pushes?.enabled === false,
               block_deletions: protection.allow_deletions?.enabled === false,
-              restrict_direct_pushes: Boolean(protection.restrictions) || directPushBlockedByPrRequirement,
+              restrict_direct_pushes: Boolean(protection.restrictions) || requirePullRequest,
             };
-            const flags = [
-              branchProtection.require_pull_request,
-              branchProtection.required_approving_reviews >= 1,
-              branchProtection.require_code_owner_review,
-              branchProtection.dismiss_stale_reviews,
-              branchProtection.require_conversation_resolution,
-              branchProtection.require_status_checks,
-              branchProtection.require_up_to_date_branch,
-              branchProtection.block_force_pushes,
-              branchProtection.block_deletions,
-              branchProtection.restrict_direct_pushes,
+            const requiredFlags = [
+              'protect_branch',
+              'require_pull_request',
+              'require_code_owner_review',
+              'dismiss_stale_reviews',
+              'require_conversation_resolution',
+              'require_status_checks',
+              'require_up_to_date_branch',
+              'block_force_pushes',
+              'block_deletions',
+              'restrict_direct_pushes',
             ];
-            const missingProtectionFlags = flags.filter((flag) => !flag).length;
+            const missingProtectionFlags = requiredFlags.filter((flag) => branchProtection[flag] !== true).length
+              + (branchProtection.required_approving_reviews >= 1 ? 0 : 1);
             const controlsVerified = [
               branchProtection.require_pull_request ? 'Pull requests are required before merging' : null,
               branchProtection.required_approving_reviews >= 1 ? 'At least one approving review is required' : null,
               branchProtection.require_code_owner_review ? 'CODEOWNERS review is required' : null,
               branchProtection.dismiss_stale_reviews ? 'Stale approvals are dismissed' : null,
-              branchProtection.require_status_checks ? 'Required status checks are enforced' : null,
               branchProtection.require_conversation_resolution ? 'Conversations must be resolved before merge' : null,
+              branchProtection.require_status_checks ? 'Required status checks are enforced' : null,
+              branchProtection.require_up_to_date_branch ? 'Branches must be up to date before merge' : null,
               branchProtection.block_force_pushes ? 'Force pushes are blocked' : null,
               branchProtection.block_deletions ? 'Branch deletion is blocked' : null,
-              branchProtection.restrict_direct_pushes ? 'Direct pushes are restricted by pull request requirements or explicit push restrictions' : null,
-              missingChecks.length === 0 ? 'All documented required checks are configured by policy name or accepted GitHub UI alias' : null,
+              branchProtection.restrict_direct_pushes ? 'Direct pushes are restricted' : null,
+              missingChecks.length === 0 ? 'All documented required checks are configured' : null,
             ].filter(Boolean);
             const complete = missingChecks.length === 0 && missingProtectionFlags === 0;
-            const evidence = evidenceBase(complete ? 'Complete' : 'Exception', complete ? 'GitHub branch protection for main matched the enterprise protection requirements.' : `GitHub branch protection for main was read, but ${missingChecks.length} required check(s) and ${missingProtectionFlags} protection flag(s) are missing.`);
+            const evidence = baseEvidence({
+              status: complete ? 'Complete' : 'Open',
+              outcome: complete ? 'passed' : 'failed',
+              summary: complete
+                ? 'GitHub branch protection for the exact current main SHA matches the enterprise requirements.'
+                : `GitHub branch protection is incomplete: ${missingChecks.length} required check(s) and ${missingProtectionFlags} protection requirement(s) are missing.`,
+              currentMainSha,
+              failures: complete ? [] : ['branch_protection_incomplete'],
+            });
             evidence.controlsVerified = controlsVerified;
             evidence.branch_protection = branchProtection;
-            evidence.sourceDetails = { repository: `${owner}/${repo}`, branch, runId: String(context.runId), missingRequiredChecks: missingChecks, missingProtectionFlags, configuredRequiredChecks: configuredChecks, matchedRequiredChecks, directPushRestrictionsConfigured: Boolean(protection.restrictions), directPushBlockedByPrRequirement };
-            if (!complete) {
-              evidence.exception = { riskOwner: '@renansilva2002', rationale: 'Generated evidence detected an incomplete branch protection configuration.', expiresAt: '2026-07-14', approvalReference: 'P0 branch protection required checks rollout' };
-            }
+            evidence.sourceDetails = {
+              repository,
+              branch,
+              runId: String(context.runId),
+              missingRequiredChecks: missingChecks,
+              missingProtectionFlags,
+              configuredRequiredChecks: configuredChecks,
+              matchedRequiredChecks,
+            };
+            evidence.provenance.mainHeadMatched = targetSha === currentMainSha;
+            evidence.evidenceIntegrity.exactShaBound = targetSha === checkedOutSha && targetSha === currentMainSha;
             writeEvidence(evidence);
 
-      - name: Upload branch protection evidence draft
-        uses: actions/upload-artifact@v4
+            if (!complete) core.setFailed(evidence.summary);
+
+      - name: Validate exact-SHA branch protection evidence contract
+        if: always()
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
+          BRANCH_PROTECTION_EVIDENCE_PATH: p0-evidence/branch-protection-main.generated.json
+        run: node scripts/security/check-generated-branch-protection-evidence.mjs
+
+      - name: Upload exact-SHA branch protection evidence
+        if: always()
+        uses: actions/upload-artifact@v7
         with:
-          name: p0-branch-protection-evidence
+          name: p0-branch-protection-evidence-${{ inputs.release_sha }}
           path: p0-evidence/branch-protection-main.generated.json
+          retention-days: 90
           if-no-files-found: error
