@@ -67,7 +67,23 @@ jobs:
           tests/enterprise/account-recovery-evidence.test.ts
           tests/enterprise/provider-failure-evidence.test.ts
           tests/enterprise/step-up-evidence.test.ts
-          tests/security/distributed-rate-limit-runtime-proof.test.ts
+
+      - name: Validate distributed rate-limit proof contracts
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/enterprise-readiness
+          npx vitest run tests/security/distributed-rate-limit-runtime-proof.test.ts \
+            2>&1 | tee artifacts/enterprise-readiness/distributed-rate-limit-proof-tests.log
+
+      - name: Retain distributed rate-limit proof test diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: distributed-rate-limit-proof-test-diagnostics-${{ env.ASSESSED_SHA }}
+          path: artifacts/enterprise-readiness/distributed-rate-limit-proof-tests.log
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Build exact-SHA architecture review evidence
         env:
