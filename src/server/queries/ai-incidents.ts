@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 
-import { createAdminClient, tryCreateAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { AiIncidentCategory, AiIncidentDeadline, AiIncidentReportStatus, AiIncidentSeverity } from '@/lib/ai-governance/incidents';
 import { buildAuditChainRecord } from '@/server/security/audit-chain';
 
@@ -112,8 +112,7 @@ async function getPreviousAuditHash(organizationId: string) {
 }
 
 export async function listAiIncidents(organizationId: string): Promise<AiIncidentRecord[]> {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('ai_incidents')
@@ -122,10 +121,8 @@ export async function listAiIncidents(organizationId: string): Promise<AiInciden
     .order('detected_at', { ascending: false });
 
   if (error) {
-    if (!isMissingAiIncidentsTable(error)) {
-      console.warn('[ai-incidents] list_failed', { code: error.code ?? 'unknown' });
-    }
-    return [];
+    console.warn('[ai-incidents] list_failed', { code: error.code ?? 'unknown' });
+    throw new Error('Unable to load AI incidents.');
   }
 
   return (data ?? []) as unknown as AiIncidentRecord[];
