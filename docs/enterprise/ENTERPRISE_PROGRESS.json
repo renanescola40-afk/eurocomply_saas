@@ -1,18 +1,18 @@
 {
   "timestamp": "2026-07-17",
-  "main_sha": "adede9e42e06ce2010cfc32e0a2b25d996b81a15",
-  "official_completion_percent": 42,
-  "official_remaining_percent": 58,
+  "main_sha": "fd36550d5ffb6e258f77308e9e41b733bdd87743",
+  "official_completion_percent": 44,
+  "official_remaining_percent": 56,
   "previous_completion_percent": 31,
-  "execution_delta_percent": 11,
+  "execution_delta_percent": 13,
   "technical_repository_percent": null,
   "runtime_evidence_percent": null,
   "owner_action_percent": null,
-  "controls_pass": 42,
+  "controls_pass": 44,
   "controls_total": 100,
   "controls_blocked": 1,
-  "controls_not_verified": 57,
-  "critical_controls_open": 50,
+  "controls_not_verified": 55,
+  "critical_controls_open": 49,
   "p0_open": null,
   "p1_open": null,
   "current_decision": "NO_GO",
@@ -20,11 +20,11 @@
   "publish_recommendation": "DO_NOT_PUBLISH",
   "active_prs": [],
   "blocked_prs": [],
-  "next_priority": "Validate protected onboarding and dashboard UX on the exact SHA without an authentication bypass",
+  "next_priority": "Generate fail-closed exact-SHA IAM-08 evidence for the implemented sensitive-action step-up boundary without claiming production MFA or SSO",
   "evidence_freshness": {
     "status": "fresh-for-exact-pr-head-contained-in-main",
-    "last_verified_sha": "331fe698d89e463eb32acbb8867257dfe900a453",
-    "reason": "Enterprise Readiness Scorecard run 683 completed successfully for the exact PR #1164 head at 42 percent. Current main contains that assessed tree through merge commit adede9e42e06ce2010cfc32e0a2b25d996b81a15; no extra point is inferred from the merge commit or unmerged protected-product UX work."
+    "last_verified_sha": "911cc8458c99bf535f44e2aac77d396034d7b0c5",
+    "reason": "Enterprise Readiness Scorecard run 688 completed successfully for the exact PR #1166 head at 44 percent. Current main contains that assessed tree through merge commit fd36550d5ffb6e258f77308e9e41b733bdd87743; no extra point is inferred from the merge commit or unmerged step-up evidence work."
   },
   "domain_scores_percent": {
     "engineering": 100,
@@ -35,7 +35,7 @@
     "release": 10,
     "operations": 80,
     "recovery": 0,
-    "product": 80,
+    "product": 100,
     "trust": 40
   },
   "calculation_method": "Versioned 100-control weighted scorecard generated from exact-SHA GitHub Actions evidence. Null lane metrics are intentionally not inferred."
