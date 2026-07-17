@@ -113,6 +113,26 @@ export async function GET(request: Request) {
     },
   });
 
+  if (exportBody.unavailableTables.length > 0) {
+    await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'gdpr_export_failed',
+      entityType: 'organization',
+      entityId: organization.id,
+      metadata: buildGdprExportAuditMetadata({
+        plan: entitlementCheck.entitlements.plan,
+        role: permission.role,
+        tableKeys: Object.keys(exportBody.tables),
+        unavailableTables: exportBody.unavailableTables,
+        stepUp: stepUp.assessment,
+      }),
+      requestContext,
+    });
+
+    return noStoreJson({ error: 'gdpr_export_incomplete' }, { status: 503 });
+  }
+
   await createAuditEvent({
     organizationId: organization.id,
     actorUserId: user.id,
