@@ -81,6 +81,7 @@ export async function GET() {
     return noStoreJson({ error: 'Unable to export documents report' }, { status: 500 });
   }
 
+  const exportedRowCount = data?.length ?? 0;
   const rows = [
     DOCUMENTS_CSV_HEADER,
     ...((data ?? []).map((document) => [
@@ -93,14 +94,23 @@ export async function GET() {
     ])),
   ];
 
-  await writeAuditLog({
+  const auditResult = await writeAuditLog({
     action: 'report.export',
     organizationId: organization.id,
     userId: user.id,
     entityType: 'report',
     entityId: 'documents.csv',
-    metadata: { format: 'csv', report: 'documents', rows: rows.length },
+    metadata: { format: 'csv', report: 'documents', rows: exportedRowCount },
   });
+
+  if (!auditResult.persisted) {
+    reportError(new Error('Documents CSV export audit persistence failed'), {
+      area: 'documents_csv_export_audit',
+      organizationId: organization.id,
+      userId: user.id,
+    });
+    return noStoreJson({ error: 'Documents export is temporarily unavailable' }, { status: 503 });
+  }
 
   return csvDownloadResponse(rows, 'documents-report.csv');
 }
