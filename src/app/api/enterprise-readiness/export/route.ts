@@ -35,8 +35,8 @@ type EnterpriseReadinessExportPayload = {
   };
   integrity: ReturnType<typeof buildEvidencePackIntegrity>;
   audit: {
-    attempted: boolean;
-    persisted: boolean;
+    attempted: true;
+    persisted: true;
   };
 };
 
@@ -138,6 +138,35 @@ export async function GET(request: Request) {
       stepUp: publicStepUpSummary(stepUp.assessment),
     };
     const integrity = buildEvidencePackIntegrity(payload);
+
+    const auditResult = await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'enterprise_readiness.exported',
+      entityType: 'enterprise_readiness',
+      entityId: organization.id,
+      metadata: {
+        score: readiness.score,
+        status: readiness.status,
+        weakestAreas: readiness.weakestAreas,
+        strongestAreas: readiness.strongestAreas,
+        actorRole: permission.role,
+        payloadHash: integrity.payloadHash,
+        signed: integrity.signed,
+        stepUpAction: stepUp.assessment.action,
+        stepUpVerifiedAt: stepUp.assessment.verifiedAt,
+      },
+    });
+
+    if (!auditResult.persisted) {
+      reportError(new Error('Enterprise readiness export audit persistence failed'), {
+        area: 'enterprise_readiness_export_audit',
+        organizationId: organization.id,
+        userId: user.id,
+      });
+      return noStoreJson({ error: 'enterprise_readiness_export_audit_unavailable' }, { status: 503 });
+    }
+
     const exportPayload: EnterpriseReadinessExportPayload = {
       schemaVersion: '2026-06-10',
       exportType: 'eurocomply.enterprise_readiness_export',
@@ -145,39 +174,9 @@ export async function GET(request: Request) {
       integrity,
       audit: {
         attempted: true,
-        persisted: false,
+        persisted: true,
       },
     };
-
-    try {
-      const auditResult = await createAuditEvent({
-        organizationId: organization.id,
-        actorUserId: user.id,
-        action: 'enterprise_readiness.exported',
-        entityType: 'enterprise_readiness',
-        entityId: organization.id,
-        metadata: {
-          score: readiness.score,
-          status: readiness.status,
-          weakestAreas: readiness.weakestAreas,
-          strongestAreas: readiness.strongestAreas,
-          actorRole: permission.role,
-          payloadHash: integrity.payloadHash,
-          signed: integrity.signed,
-          stepUpAction: stepUp.assessment.action,
-          stepUpVerifiedAt: stepUp.assessment.verifiedAt,
-        },
-      });
-
-      exportPayload.audit.persisted = Boolean(auditResult.persisted);
-    } catch (auditError) {
-      reportError(auditError, {
-        area: 'enterprise_readiness_export_audit_non_blocking',
-        organizationId: organization.id,
-        userId: user.id,
-      });
-    }
-
     const date = new Date().toISOString().slice(0, 10);
     const filename = `eurocomply-enterprise-readiness-${safeFilenamePart(organization.slug ?? organization.name)}-${date}.json`;
 
