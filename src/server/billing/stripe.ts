@@ -1,12 +1,14 @@
 import Stripe from 'stripe';
 
+import { providerConfigurationFailure } from '@/server/providers/failure';
+
 let stripeClient: Stripe | null = null;
 
 export function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
 
   if (!secretKey) {
-    throw new Error('missing_stripe_secret_key');
+    throw providerConfigurationFailure('stripe', 'client_initialization', 'missing_secret_key');
   }
 
   if (!stripeClient) {
