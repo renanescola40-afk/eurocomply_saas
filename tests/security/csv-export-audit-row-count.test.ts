@@ -14,7 +14,7 @@ describe('CSV export audit row-count integrity', () => {
 
       expect(source).toContain('const exportedRowCount = data?.length ?? 0;');
       expect(source).toContain('rows: exportedRowCount');
-      expect(source).not.toMatch(/metadata:\s*\{[^}]*rows:\s*rows\.length/s);
+      expect(source).not.toMatch(/metadata:\s*\{[\s\S]*?rows:\s*rows\.length/);
     });
   }
 });
