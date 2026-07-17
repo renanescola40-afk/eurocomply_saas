@@ -59,10 +59,14 @@ export const supabase = (() => {
     return makeStubClient() as any;
   }
 
-  if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  const isLocalBrowser =
+    typeof window !== 'undefined' &&
+    ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+
+  if (isLocalBrowser) {
     console.info(`[supabase] resolved public URL from ${resolvedSupabaseUrlName}: ${SUPABASE_URL}`);
     console.info(`[supabase] resolved public key from ${resolvedSupabaseKeyName}`);
-    if (SUPABASE_URL && !isLikelySupabaseUrl(SUPABASE_URL)) {
+    if (!isLikelySupabaseUrl(SUPABASE_URL)) {
       console.warn('[supabase] resolved public URL does not look like a Supabase URL. Verify the environment variables and project.');
     }
   }
