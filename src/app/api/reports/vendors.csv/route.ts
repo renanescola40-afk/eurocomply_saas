@@ -90,7 +90,7 @@ export async function GET() {
     ])),
   ];
 
-  await writeAuditLog({
+  const auditResult = await writeAuditLog({
     action: 'report.export',
     organizationId: organization.id,
     userId: user.id,
@@ -98,6 +98,15 @@ export async function GET() {
     entityId: 'vendors.csv',
     metadata: { format: 'csv', report: 'vendors', rows: exportedRowCount },
   });
+
+  if (!auditResult.persisted) {
+    reportError(new Error('Vendors CSV export audit persistence failed'), {
+      area: 'vendors_csv_export_audit',
+      organizationId: organization.id,
+      userId: user.id,
+    });
+    return noStoreJson({ error: 'Vendors export is temporarily unavailable' }, { status: 503 });
+  }
 
   return csvDownloadResponse(rows, 'vendors-report.csv');
 }
