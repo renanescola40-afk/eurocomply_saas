@@ -144,7 +144,7 @@ describe('distributed rate-limit runtime proof', () => {
     const runner = readFileSync('scripts/security/run-distributed-rate-limit-runtime-validation.mjs', 'utf8');
 
     expect(worker).toContain("import('../../src/server/security/rate-limit.ts')");
-    expect(worker).toContain('module.checkDistributedRateLimit(input)');
+    expect(worker).toContain('rateLimitModule.checkDistributedRateLimit(input)');
     expect(worker).toContain("operation === 'cleanup'");
     expect(runner).toContain("execFileSync(process.execPath, ['--no-warnings', '--experimental-strip-types', worker]");
     expect(runner).toContain('first = runWorker(root, sharedInput)');
