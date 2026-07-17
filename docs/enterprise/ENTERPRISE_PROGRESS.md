@@ -1,29 +1,49 @@
 # Enterprise progress
 
-Assessed main: `49fb1393cf2fa50b32ea553fc0d7c9c00f7cf7c9`
+Current main: `6a1f6bfc14eead30308a6767f8d9468d33d229d3`
 Decision: **NO_GO**
 
-## Official score
+## Official evidence-backed score
 
-- Last verified completion: **31%**
-- Remaining: **69%**
-- Last verified score SHA: `39d9a003fbedbd2ed79248fcb69aafd7f247664d`
-- All 19 exact-head checks passed before the merge commit was created.
+- Last verified completion: **40%**
+- Remaining: **60%**
+- Score: **4.0 / 10**
+- Classification: **MVP**
+- Publish recommendation: **DO_NOT_PUBLISH**
+- Last verified score SHA: `0e51bbbae79fa70b015d42d2ffc2de4371d19b4a`
+- Control counts: **40 PASS**, **1 BLOCKED**, **59 NOT_VERIFIED**
+- Critical controls not PASS: **51**
 
-The validated head from PR #1125 is fully contained in the assessed main. Its exact-SHA scorecard reported **31% (NO_GO)** and all 19 repository workflows passed before merge. Runtime/provider evidence remains the limiting factor, so the repository hardenings did not change the weighted score.
+The successful Enterprise Readiness Scorecard run assessed the exact PR #1160 head and all required repository/security workflows completed successfully for that head. Current `main` contains the assessed tree through merge commit `6a1f6bfc14eead30308a6767f8d9468d33d229d3`. No additional point is inferred from the merge commit or from unmerged work.
+
+## Domain scores
+
+| Domain | Score |
+| --- | ---: |
+| Engineering | 100% |
+| Security | 70% |
+| Identity | 0% |
+| Tenancy | 20% |
+| Platform | 0% |
+| Release | 10% |
+| Operations | 80% |
+| Recovery | 0% |
+| Product | 80% |
+| Trust | 40% |
 
 ## Active repository work
 
-- PR #1125: six-locale AI reassessment UX integrated with all exact-head workflows green.
-- Current branch: commit onboarding activation atomically and make database retries idempotent.
+- Billing checkout and portal side effects now fail closed when durable audit persistence is unavailable.
+- Exact-SHA branch-protection evidence tooling is merged, but the protected manual runtime proof still must be executed for the current final `main` SHA.
+- Current branch `agent/account-recovery-enterprise-proof` implements enumeration-safe localized account recovery and exact-SHA IAM-10 evidence.
 
 ## Evidence lanes
 
 | Lane | Completion | Basis |
 | --- | ---: | --- |
-| Official enterprise score | 31% | Successful 100-control weighted scorecard on the integrated head |
-| Technical repository completion | Not measured | A versioned control-to-lane classification is still required |
-| Runtime/provider evidence | 12.5% | 2 of 16 P0 runtime evidence items Complete |
-| Owner actions | Not measured | Actions are recorded only when they become the next unavoidable blocker |
+| Official enterprise score | 40% | Successful 100-control weighted scorecard on exact head `0e51bbbae79fa70b015d42d2ffc2de4371d19b4a` |
+| Technical repository completion | Not measured | No separate versioned technical-lane score is inferred |
+| Runtime/provider evidence | Not recalculated | Live Vercel, Supabase, Stripe, Sentry, rollback, DAST and external-review evidence remains independent |
+| Owner actions | Not measured | Only unavoidable external actions are tracked |
 
-No pull request, unmerged implementation, local-only test, or placeholder evidence increases these values.
+No pull request, unmerged implementation, local-only test, placeholder, draft artifact, provider workflow that did not execute runtime checks, or merge commit without a regenerated scorecard increases these values.
