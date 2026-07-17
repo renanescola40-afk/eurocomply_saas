@@ -195,12 +195,12 @@ describe('distributed rate-limit runtime proof', () => {
     expect(workflow).toContain('distributed-rate-limit-runtime-proof-${{ env.TARGET_SHA }}');
   });
 
-  it('reruns the scorecard after a successful exact-SHA runtime proof', () => {
+  it('reruns the scorecard after successful exact-SHA runtime proofs', () => {
     const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
 
-    expect(workflow).toContain('workflow_run:\n    workflows: [Distributed Rate Limit Runtime Proof]');
+    expect(workflow).toContain('workflow_run:\n    workflows: [Distributed Rate Limit Runtime Proof, Auth RBAC Tenant Proof]');
     expect(workflow).toContain("if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'");
-    expect(workflow).toContain('RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.id ||');
+    expect(workflow).toContain("RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Distributed Rate Limit Runtime Proof'");
     expect(workflow).toContain('node scripts/enterprise/fetch-distributed-rate-limit-evidence.mjs');
     expect(workflow).toContain('node scripts/security/check-p1-rate-limit-evidence.mjs');
   });
