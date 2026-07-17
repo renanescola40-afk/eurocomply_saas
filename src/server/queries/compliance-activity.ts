@@ -17,12 +17,6 @@ export type NotificationItem = {
   createdAt: string;
 };
 
-const demoAuditRows: AuditLogItem[] = [
-  { id: 'demo-audit-1', actor: 'Admin', action: 'Atualizou documento controlado', type: 'Documento', createdAt: '2025-04-02 09:20' },
-  { id: 'demo-audit-2', actor: 'Compliance', action: 'Aprovou matriz de riscos', type: 'Aprovação', createdAt: '2025-04-08 14:10' },
-  { id: 'demo-audit-3', actor: 'Sistema', action: 'Gerou relatório mensal', type: 'Sistema', createdAt: '2025-05-01 08:00' },
-];
-
 const demoNotifications: NotificationItem[] = [
   { id: 'demo-note-1', type: 'invite', message: 'Você convidou joao@empresa.com para colaborar.', read: false, createdAt: 'há 5 minutos' },
   { id: 'demo-note-2', type: 'document', message: 'Maria editou a matriz de riscos.', read: false, createdAt: 'há 22 minutos' },
@@ -34,11 +28,10 @@ export async function listAuditEventsForUser(userId: string): Promise<AuditLogIt
   const organization = await getCurrentOrganizationForUser(userId);
 
   if (!organization) {
-    return demoAuditRows;
+    return [];
   }
 
   const supabase = createAdminClient();
-
   const { data, error } = await supabase
     .from('audit_events')
     .select('id,actor_user_id,action,entity_type,created_at')
@@ -55,7 +48,7 @@ export async function listAuditEventsForUser(userId: string): Promise<AuditLogIt
     return [];
   }
 
-  return data.map((item) => ({
+  return (data ?? []).map((item) => ({
     id: item.id,
     actor: item.actor_user_id ? 'Usuário autenticado' : 'Sistema',
     action: item.action,
