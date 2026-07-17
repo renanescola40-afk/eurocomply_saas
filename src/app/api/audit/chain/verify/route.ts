@@ -1,8 +1,9 @@
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertPlanAtLeast } from '@/server/billing/entitlements';
 import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
+import { listAuditChainEventsForVerification } from '@/server/queries/audit-chain-events';
 import { getCurrentUser } from '@/server/queries/auth';
-import { buildAuditRequestContextFromRequest, createAuditEvent, listAuditEvents } from '@/server/queries/audit-events';
+import { buildAuditRequestContextFromRequest, createAuditEvent } from '@/server/queries/audit-events';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
 import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/server/security/rate-limit';
@@ -128,7 +129,7 @@ export async function GET(request: Request) {
   }
 
   const requestContext = buildAuditRequestContextFromRequest(request);
-  const events = await listAuditEvents(organization.id, parsedLimit.limit + 1);
+  const events = await listAuditChainEventsForVerification(organization.id, parsedLimit.limit + 1);
   const chronologicalWindow = [...events].reverse();
   const anchorEvent = chronologicalWindow.length > parsedLimit.limit ? chronologicalWindow.shift() : null;
   const expectedPreviousHash = anchorEvent?.event_hash ?? null;
