@@ -61,7 +61,7 @@ const rules = [
     name: 'audit chain verifier',
     match: /src\/app\/api\/audit\/chain\/verify\/route\.ts$/,
     any: [guards.auth, guards.org, guards.rbac, guards.plan, guards.rateLimit, guards.stepUp, guards.noStore],
-    all: ['read_audit', 'requireStepUpForRequest', 'signed_hmac', 'listAuditEvents', 'verifyAuditChain'],
+    all: ['read_audit', 'requireStepUpForRequest', 'signed_hmac', 'listAuditChainEventsForVerification', 'verifyAuditChain'],
   },
   {
     name: 'AI systems governance endpoint',

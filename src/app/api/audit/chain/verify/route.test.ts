@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   buildAuditRequestContextFromRequest: vi.fn(() => ({ ipAddress: '203.0.113.10', userAgent: 'Vitest' })),
   createAuditEvent: vi.fn(),
-  listAuditEvents: vi.fn(),
+  listAuditChainEventsForVerification: vi.fn(),
   getCurrentOrganizationForUser: vi.fn(),
   assertOrganizationPermission: vi.fn(),
   permissionDeniedResponse: vi.fn(),
@@ -29,10 +29,13 @@ vi.mock('@/server/queries/auth', () => ({
   getCurrentUser: mocks.getCurrentUser,
 }));
 
+vi.mock('@/server/queries/audit-chain-events', () => ({
+  listAuditChainEventsForVerification: mocks.listAuditChainEventsForVerification,
+}));
+
 vi.mock('@/server/queries/audit-events', () => ({
   buildAuditRequestContextFromRequest: mocks.buildAuditRequestContextFromRequest,
   createAuditEvent: mocks.createAuditEvent,
-  listAuditEvents: mocks.listAuditEvents,
 }));
 
 vi.mock('@/server/queries/organizations', () => ({
@@ -82,7 +85,7 @@ describe('audit chain verification request contract', () => {
         verifiedAt: '2026-06-21T10:00:00.000Z',
       },
     });
-    mocks.listAuditEvents.mockResolvedValue([
+    mocks.listAuditChainEventsForVerification.mockResolvedValue([
       {
         id: 'evt_001',
         organization_id: 'org_123',
@@ -167,6 +170,14 @@ describe('audit chain verification request contract', () => {
     expect(mocks.createAuditEvent).not.toHaveBeenCalledWith(expect.objectContaining({ action: 'audit_chain.verified' }));
   });
 
+  it('fails closed when audit chain events cannot be loaded', async () => {
+    mocks.listAuditChainEventsForVerification.mockRejectedValue(new Error('audit_chain_events_unavailable'));
+
+    await expect(GET(new Request(`${baseUrl}?limit=10`))).rejects.toThrow('audit_chain_events_unavailable');
+    expect(mocks.verifyAuditChain).not.toHaveBeenCalled();
+    expect(mocks.createAuditEvent).not.toHaveBeenCalledWith(expect.objectContaining({ action: 'audit_chain.verified' }));
+  });
+
   it('verifies the chain only after RBAC and signed step-up', async () => {
     const request = new Request(`${baseUrl}?limit=10`, { headers: { 'x-eurocomply-step-up-token': 'token' } });
     const response = await GET(request);
@@ -181,6 +192,7 @@ describe('audit chain verification request contract', () => {
         organizationId: 'org_123',
       }),
     );
+    expect(mocks.listAuditChainEventsForVerification).toHaveBeenCalledWith('org_123', 11);
     expect(mocks.verifyAuditChain).toHaveBeenCalledWith(
       [expect.objectContaining({ id: 'evt_001', organizationId: 'org_123', eventHash: 'hash-1' })],
       { expectedPreviousHash: null },
