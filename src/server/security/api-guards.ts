@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 
+import { reportError } from '@/lib/observability/report-error';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import {
   buildRateLimitSubjectFromRequest,
@@ -14,6 +15,10 @@ import {
   type JsonRequestOptions,
 } from '@/lib/security/validate';
 import { getCurrentUser } from '@/server/queries/auth';
+import {
+  isProviderFailureError,
+  providerFailureContext,
+} from '@/server/providers/failure';
 import { noStoreJson, noStoreDownload, applyNoStoreHeaders } from '@/server/security/no-store';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 import {
@@ -259,6 +264,23 @@ export function secureApiError(error: unknown, request?: Request) {
       status: error.status,
     });
     return noStoreJson({ error: error.code, requestId }, { status: error.status });
+  }
+
+  if (isProviderFailureError(error)) {
+    const context = providerFailureContext(error);
+    reportError(error, {
+      area: 'provider_failure',
+      requestId,
+      ...context,
+    });
+    return noStoreJson(
+      {
+        error: error.publicCode,
+        retryable: error.retryable,
+        requestId,
+      },
+      { status: error.httpStatus },
+    );
   }
 
   if (error instanceof ValidationError) {
