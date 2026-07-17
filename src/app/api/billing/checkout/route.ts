@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { z } from 'zod';
 
+import { reportError } from '@/lib/observability/report-error';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
