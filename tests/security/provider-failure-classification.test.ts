@@ -5,6 +5,7 @@ import {
   classifyProviderFailure,
   providerConfigurationFailure,
   providerFailureContext,
+  type ProviderFailureSummary,
 } from '@/server/providers/failure';
 
 const apiGuards = readFileSync('src/server/security/api-guards.ts', 'utf8');
@@ -15,7 +16,7 @@ const emailSender = readFileSync('src/lib/email/server-sender.ts', 'utf8');
 
 function expectSummary(
   error: ReturnType<typeof classifyProviderFailure>,
-  expected: Partial<ReturnType<typeof error.toSafeSummary>>,
+  expected: Partial<ProviderFailureSummary>,
 ) {
   expect(error.toSafeSummary()).toEqual(expect.objectContaining(expected));
 }
