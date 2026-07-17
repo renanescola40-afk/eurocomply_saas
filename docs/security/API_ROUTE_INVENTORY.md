@@ -7,7 +7,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | Class | Required controls |
 | --- | --- |
 | public safe | No private tenant data; no-store where applicable; rate limit for public verifiers. |
-| public mutation | Public POST without tenant session; bounded input parsing, no-store responses, rate limiting, consent validation and sanitized logging required. |
+| public mutation | Public POST without tenant session; bounded input parsing, no-store responses, rate limiting, consent or enumeration-resistance validation, and sanitized logging required. |
 | authenticated | User auth required; sanitized error responses; no-store responses. |
 | tenant-scoped | Auth, organization membership, tenant ownership validation before resource use, RBAC/read permission, no-store. |
 | admin-only | Auth, membership, admin/RBAC permission, tenant validation, no-store, audit for sensitive changes. |
@@ -37,6 +37,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/audit/evidence-pack/verify/route.ts` | public safe | Public verifier; must stay rate-limited and no-store. |
 | `src/app/api/leads/route.ts` | public mutation | Public lead capture stores lead PII; requires consent, bounded JSON, rate limit, input normalization, sanitized logging and no-store responses. |
 | `src/app/api/prelaunch/route.ts` | public mutation | Public prelaunch waitlist capture stores lead PII; requires bounded JSON, honeypot handling, rate limit, input normalization, sanitized logging and no-store responses. |
+| `src/app/api/auth/recovery/route.ts` | public mutation | Public password recovery request; requires trusted Origin, bounded JSON, fail-closed password-reset rate limiting, privacy-safe keying, generic enumeration-resistant responses, same-origin redirect construction, sanitized provider errors and no-store responses. |
 | `src/app/api/billing/entitlements/route.ts` | tenant-scoped | Private subscription/entitlement data; membership and tenant context required. |
 | `src/app/api/billing/checkout/route.ts` | high-risk | Billing mutation; manage_billing, trusted origin, rate limit, tenant validation required. |
 | `src/app/api/billing/checkout-intent/route.ts` | high-risk | Billing mutation intent; manage_billing, trusted origin, rate limit required. |
@@ -78,4 +79,4 @@ Every tenant-scoped resource must be loaded from the server and checked against 
 
 ## Required negative tests
 
-Security tests must assert that unauthenticated requests return 401, missing membership returns 403, viewer attempting admin mutation returns 403, tenant A attempting tenant B resource access returns 403/404, invalid origin returns 403, invalid body returns 400, internal errors return sanitized responses without stack traces, and legitimate signed webhooks continue to pass.
+Security tests must assert that unauthenticated requests return 401, missing membership returns 403, viewer attempting admin mutation returns 403, tenant A attempting tenant B resource access returns 403/404, invalid origin returns 403, invalid body returns 400, internal errors return sanitized responses without stack traces, and legitimate signed webhooks continue to pass. Public account recovery must additionally prove generic account-existence responses, fail-closed abuse controls, same-origin redirect construction, and sanitized provider failures.
