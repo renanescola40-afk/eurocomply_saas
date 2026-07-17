@@ -1,5 +1,5 @@
 import { unstable_noStore as noStore } from 'next/cache';
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { normalizePlan } from '@/server/queries/subscription';
 
 export type BillingUsage = {
@@ -15,24 +15,12 @@ export type OrganizationBillingContext = {
   usage: BillingUsage;
 };
 
-type SupabaseAdminClient = NonNullable<ReturnType<typeof tryCreateAdminClient>>;
+type SupabaseAdminClient = ReturnType<typeof createAdminClient>;
 type BillingCountTable = 'organization_members' | 'documents' | 'vendors' | 'risks';
 
 const ACTIVE_BILLING_STATUSES = ['active', 'trialing'] as const;
 const SAFE_DEFAULT_PLAN = 'starter';
-
-function emptyBillingContext(): OrganizationBillingContext {
-  return {
-    plan: SAFE_DEFAULT_PLAN,
-    status: null,
-    usage: {
-      users: 0,
-      documents: 0,
-      vendors: 0,
-      risks: 0,
-    },
-  };
-}
+const BILLING_CONTEXT_UNAVAILABLE = 'billing_context_unavailable';
 
 function hasPaidEntitlementStatus(status: string | null | undefined) {
   return ACTIVE_BILLING_STATUSES.includes(status as (typeof ACTIVE_BILLING_STATUSES)[number]);
@@ -46,7 +34,7 @@ async function countRows(supabase: SupabaseAdminClient, table: BillingCountTable
 
   if (error) {
     console.warn('[billing] count_failed', { table, code: error.code ?? 'unknown' });
-    return 0;
+    throw new Error(BILLING_CONTEXT_UNAVAILABLE);
   }
 
   return count ?? 0;
@@ -63,7 +51,7 @@ async function getSubscription(supabase: SupabaseAdminClient, organizationId: st
 
   if (error) {
     console.warn('[billing] subscription_lookup_failed', { code: error.code ?? 'unknown' });
-    return null;
+    throw new Error(BILLING_CONTEXT_UNAVAILABLE);
   }
 
   return data;
@@ -74,9 +62,7 @@ export async function getOrganizationBillingContext(
 ): Promise<OrganizationBillingContext> {
   noStore();
 
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return emptyBillingContext();
-
+  const supabase = createAdminClient();
   const [subscription, users, documents, vendors, risks] = await Promise.all([
     getSubscription(supabase, organizationId),
     countRows(supabase, 'organization_members', organizationId),
