@@ -78,10 +78,10 @@ describe('public account recovery contract', () => {
     ]);
     expect(enterpriseScanner).toContain('...publicAccountRecoveryRoutes');
 
-    expectAll(endpointScanner, [
-      'auth\\/recovery\\/route\\.ts$',
+    expect(endpointScanner).toMatch(/appApiPrefixPattern[^\n]+auth[^\n]+recovery[^\n]+route/);
+    expect(endpointScanner).toContain(
       'enumeration-resistant, bounded, same-origin, no-store and fail-closed rate-limited',
-    ]);
+    );
 
     expectAll(routeScanner, [
       'const PUBLIC_ACCOUNT_RECOVERY_PATTERN',
