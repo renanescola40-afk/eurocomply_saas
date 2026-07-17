@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 
+import { locales, type Locale } from '@/lib/i18n/routing';
 import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
-import { locales, type Locale } from '@/lib/i18n/routing';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { noStoreJson } from '@/server/security/no-store';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
@@ -14,8 +14,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const RECOVERY_BODY_MAX_BYTES = 4 * 1024;
-const RECOVERY_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-const RECOVERY_RATE_LIMIT_MAX = 5;
+const RECOVERY_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const RECOVERY_RATE_LIMIT_MAX = 3;
 const RECOVERY_ROUTE = '/api/auth/recovery';
 const RECOVERY_ACTION = 'account_recovery_request';
 const GENERIC_RECOVERY_MESSAGE =
@@ -48,11 +48,11 @@ async function enforceRecoveryRateLimit(request: NextRequest, email: string) {
     userId: null,
     organizationId: null,
     ip: forwardedIp,
-    userAgent: null,
+    userAgent: request.headers.get('user-agent'),
     action: RECOVERY_ACTION,
     route: RECOVERY_ROUTE,
     key: `account_recovery:${privacySafeRecoveryKey(email)}:${forwardedIp}`,
-    policy: 'auth',
+    policy: 'password-reset',
     limit: RECOVERY_RATE_LIMIT_MAX,
     windowMs: RECOVERY_RATE_LIMIT_WINDOW_MS,
     failureMode: 'fail-closed',
