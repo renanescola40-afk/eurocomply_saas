@@ -5,6 +5,13 @@ import { createHash, randomUUID } from 'node:crypto';
 import { reportError } from '@/lib/observability/report-error';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
 import type { EmailTemplateKey } from '@/lib/email/templates';
+import {
+  classifyProviderFailure,
+  providerConfigurationFailure,
+  providerFailureContext,
+  type ProviderFailureError,
+  type ProviderFailureSummary,
+} from '@/server/providers/failure';
 
 export type SendEmailInput = {
   to: string;
@@ -26,6 +33,7 @@ export type SendEmailResult = {
   id?: string;
   status: 'sent' | 'skipped' | 'failed';
   attempts: number;
+  failure?: ProviderFailureSummary;
 };
 
 type EmailLogStatus = 'queued' | 'sent' | 'failed' | 'skipped';
@@ -150,11 +158,6 @@ function assertNoSensitiveContent(input: SendEmailInput) {
   }
 }
 
-function safeErrorMessage(error: unknown) {
-  const raw = error instanceof Error ? error.message : 'unknown_error';
-  return redactEmailSecrets(raw).slice(0, 500);
-}
-
 function buildListUnsubscribeHeaders(input: SendEmailInput) {
   if (!input.unsubscribeUrl) return undefined;
 
@@ -168,7 +171,7 @@ async function readBoundedResendResponse(response: Response): Promise<ResendEmai
   const declaredLength = Number(response.headers.get('content-length'));
   if (Number.isFinite(declaredLength) && declaredLength > RESEND_RESPONSE_MAX_BYTES) {
     await response.body?.cancel().catch(() => undefined);
-    throw new Error('Resend email failed: provider_response_too_large');
+    throw new Error('provider_response_too_large');
   }
 
   if (!response.body) return {};
@@ -186,7 +189,7 @@ async function readBoundedResendResponse(response: Response): Promise<ResendEmai
       totalBytes += value.byteLength;
       if (totalBytes > RESEND_RESPONSE_MAX_BYTES) {
         await reader.cancel().catch(() => undefined);
-        throw new Error('Resend email failed: provider_response_too_large');
+        throw new Error('provider_response_too_large');
       }
 
       chunks.push(value);
@@ -294,8 +297,11 @@ async function sendWithResend(input: SendEmailInput, apiKey: string, from: strin
   const data = await readBoundedResendResponse(response);
 
   if (!response.ok) {
-    const providerMessage = data.error?.message ? redactEmailSecrets(data.error.message) : `status_${response.status}`;
-    throw new Error(`Resend email failed: ${providerMessage}`);
+    throw classifyProviderFailure('resend', 'send_email', {
+      name: data.error?.name ?? 'resend_error',
+      code: data.error?.name ?? `status_${response.status}`,
+      status: response.status,
+    });
   }
 
   return data.id;
@@ -320,22 +326,35 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   });
 
   if (!apiKey) {
-    console.info('[RISCK COMPLY provider skipped]', { event: 'transactional_delivery_provider_missing', template });
+    const configurationFailure = providerConfigurationFailure('resend', 'send_email', 'missing_api_key');
+    console.info('[RISCK COMPLY provider skipped]', {
+      event: 'transactional_delivery_provider_missing',
+      template,
+      ...providerFailureContext(configurationFailure),
+    });
 
     await writeEmailLog({
       email: deliveryInput,
       status: 'skipped',
       provider: 'console',
       attempts: 0,
-      error: 'RESEND_API_KEY is not configured',
+      error: `${configurationFailure.kind}:${configurationFailure.providerCode}`,
     });
 
-    return { sent: false, provider: 'console', status: 'skipped', attempts: 0 };
+    return {
+      sent: false,
+      provider: 'console',
+      status: 'skipped',
+      attempts: 0,
+      failure: configurationFailure.toSafeSummary(),
+    };
   }
 
-  let lastError: unknown = null;
+  let lastFailure: ProviderFailureError | null = null;
+  let attemptsUsed = 0;
 
   for (let attempt = 1; attempt <= attemptsToRun; attempt += 1) {
+    attemptsUsed = attempt;
     try {
       const providerId = await sendWithResend(deliveryInput, apiKey, from);
 
@@ -348,30 +367,31 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
       });
       return { sent: true, provider: 'resend', id: providerId, status: 'sent', attempts: attempt };
     } catch (error) {
-      lastError = error;
+      const providerFailure = classifyProviderFailure('resend', 'send_email', error);
+      lastFailure = providerFailure;
 
-      reportError(error, {
+      reportError(providerFailure, {
         area: 'email_send',
         template,
         attempt,
         attemptsToRun,
+        ...providerFailureContext(providerFailure),
       });
 
-      if (attempt < attemptsToRun) {
-        await sleep(getBackoffDelay(attempt));
-      }
+      if (!providerFailure.retryable || attempt >= attemptsToRun) break;
+      await sleep(getBackoffDelay(attempt));
     }
   }
 
-  const errorMessage = safeErrorMessage(lastError);
+  const providerFailure = lastFailure ?? classifyProviderFailure('resend', 'send_email', new Error('unknown_provider_failure'));
 
   await writeEmailLog({
     email: deliveryInput,
     status: 'failed',
     provider: 'resend',
-    attempts: attemptsToRun,
-    error: errorMessage,
+    attempts: attemptsUsed,
+    error: `${providerFailure.kind}:${providerFailure.providerCode}`,
   });
 
-  throw new Error(`Transactional email failed after retries: ${errorMessage}`);
+  throw providerFailure;
 }
