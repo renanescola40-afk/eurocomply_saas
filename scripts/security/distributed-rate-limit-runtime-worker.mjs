@@ -56,7 +56,7 @@ async function deleteProbeKey(key) {
 async function main() {
   const input = readInput();
   const operation = process.env.RATE_LIMIT_PROBE_OPERATION || 'check';
-  const module = await import('../../src/server/security/rate-limit.ts');
+  const rateLimitModule = await import('../../src/server/security/rate-limit.ts');
 
   if (operation === 'cleanup') {
     const subject = {
@@ -67,13 +67,13 @@ async function main() {
       action: input.action ?? 'unknown',
       route: input.route ?? 'unknown',
     };
-    const key = module.buildRateLimitKey(input.policy, subject);
+    const key = rateLimitModule.buildRateLimitKey(input.policy, subject);
     const deleted = await deleteProbeKey(key);
     process.stdout.write(`${JSON.stringify({ ok: true, operation: 'cleanup', deleted })}\n`);
     return;
   }
 
-  const result = await module.checkDistributedRateLimit(input);
+  const result = await rateLimitModule.checkDistributedRateLimit(input);
   process.stdout.write(`${JSON.stringify({
     ok: true,
     operation: 'check',
