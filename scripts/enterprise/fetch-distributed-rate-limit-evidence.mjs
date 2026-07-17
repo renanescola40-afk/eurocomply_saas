@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +10,7 @@ const WORKFLOW_FILE = 'distributed-rate-limit-runtime-proof.yml';
 const WORKFLOW_NAME = 'Distributed Rate Limit Runtime Proof';
 const EVIDENCE_PATH = 'docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json';
 const FULL_SHA = /^[a-f0-9]{40}$/;
+const NUMERIC_ID = /^\d+$/;
 
 function apiHeaders(token) {
   return {
@@ -61,18 +62,43 @@ export function validateDownloadedEvidence(evidence, { targetSha, repository, ru
   return { passed: failures.length === 0, failures };
 }
 
-async function downloadArtifact(repository, token, artifact, targetPath) {
-  const response = await fetch(
-    `https://api.github.com/repos/${repository}/actions/artifacts/${artifact.id}/zip`,
-    {
-      headers: apiHeaders(token),
-      redirect: 'follow',
-      cache: 'no-store',
-      signal: AbortSignal.timeout(30_000),
-    },
-  );
-  if (!response.ok) throw new Error(`artifact_download_${response.status}`);
-  writeFileSync(targetPath, Buffer.from(await response.arrayBuffer()));
+function escapeCurlConfigValue(value) {
+  return String(value)
+    .replace(/[\r\n]/g, '')
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"');
+}
+
+function downloadArtifact(repository, token, artifactId, targetPath) {
+  const normalizedArtifactId = String(artifactId || '').trim();
+  if (repository !== CANONICAL_REPOSITORY) throw new Error('repository_not_canonical');
+  if (!NUMERIC_ID.test(normalizedArtifactId)) throw new Error('artifact_id_invalid');
+
+  const url = `https://api.github.com/repos/${repository}/actions/artifacts/${normalizedArtifactId}/zip`;
+  const curlConfig = [
+    'fail',
+    'location',
+    'silent',
+    'show-error',
+    'connect-timeout = 10',
+    'max-time = 30',
+    `header = "Authorization: Bearer ${escapeCurlConfigValue(token)}"`,
+    'header = "Accept: application/vnd.github+json"',
+    'header = "X-GitHub-Api-Version: 2022-11-28"',
+    'header = "User-Agent: risck-comply-enterprise-evidence-fetcher"',
+    `output = "${escapeCurlConfigValue(targetPath)}"`,
+    `url = "${escapeCurlConfigValue(url)}"`,
+  ].join('\n');
+
+  const result = spawnSync('curl', ['--config', '-'], {
+    input: `${curlConfig}\n`,
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+
+  if (result.error || result.status !== 0) {
+    throw new Error('artifact_download_failed');
+  }
 }
 
 function extractEvidence(zipPath) {
@@ -127,30 +153,39 @@ export async function fetchDistributedRateLimitEvidence({
   }
 
   if (run.name !== WORKFLOW_NAME) throw new Error('runtime_workflow_name_invalid');
-  const artifactsResponse = await githubJson(run.artifacts_url, token);
+  const normalizedRunId = String(run.id || '').trim();
+  if (!NUMERIC_ID.test(normalizedRunId)) throw new Error('runtime_workflow_run_id_invalid');
+
+  const artifactsResponse = await githubJson(
+    `https://api.github.com/repos/${repository}/actions/runs/${normalizedRunId}/artifacts`,
+    token,
+  );
   const expectedName = `distributed-rate-limit-runtime-proof-${targetSha}`;
   const artifact = (artifactsResponse.artifacts ?? [])
     .filter((candidate) => candidate?.name === expectedName && candidate?.expired !== true)
     .sort((left, right) => Date.parse(right?.updated_at || 0) - Date.parse(left?.updated_at || 0))[0];
   if (!artifact) throw new Error('exact_sha_runtime_artifact_missing');
 
-  const zipPath = join(root, 'artifacts', 'enterprise-readiness', `rate-limit-runtime-${run.id}.zip`);
+  const normalizedArtifactId = String(artifact.id || '').trim();
+  if (!NUMERIC_ID.test(normalizedArtifactId)) throw new Error('artifact_id_invalid');
+
+  const zipPath = join(root, 'artifacts', 'enterprise-readiness', `rate-limit-runtime-${normalizedRunId}.zip`);
   mkdirSync(dirname(zipPath), { recursive: true });
   try {
-    await downloadArtifact(repository, token, artifact, zipPath);
+    downloadArtifact(repository, token, normalizedArtifactId, zipPath);
     const evidence = extractEvidence(zipPath);
     const validation = validateDownloadedEvidence(evidence, {
       targetSha,
       repository,
-      runId: run.id,
+      runId: normalizedRunId,
     });
     if (!validation.passed) throw new Error(`runtime_evidence_invalid:${validation.failures.join(',')}`);
 
     const output = join(root, EVIDENCE_PATH);
     mkdirSync(dirname(output), { recursive: true });
     writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`);
-    console.log(`Retrieved exact-SHA distributed rate-limit evidence from workflow run ${run.id}.`);
-    return { found: true, targetSha, runId: String(run.id), artifactId: String(artifact.id) };
+    console.log(`Retrieved exact-SHA distributed rate-limit evidence from workflow run ${normalizedRunId}.`);
+    return { found: true, targetSha, runId: normalizedRunId, artifactId: normalizedArtifactId };
   } finally {
     rmSync(zipPath, { force: true });
   }
