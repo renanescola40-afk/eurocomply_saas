@@ -179,6 +179,7 @@ function inferKind(error: ProviderErrorLike): ProviderFailureKind {
   if (
     (status !== null && status >= 500) ||
     containsAny(tokens, [
+      'provider_unavailable',
       'api_connection_error',
       'connection error',
       'connection reset',
