@@ -28,7 +28,7 @@ describe('audit trail reads fail closed', () => {
   });
 
   it('requires the privileged database client for organization-scoped audit reads', () => {
-    expect(source).toContain("import { createAdminClient, tryCreateAdminClient } from '@/lib/supabase/admin';");
+    expect(source).toContain("import { createAdminClient } from '@/lib/supabase/admin';");
     expect(auditLoader).toContain('const supabase = createAdminClient();');
     expect(auditLoader).not.toContain('tryCreateAdminClient');
   });
