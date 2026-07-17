@@ -194,7 +194,7 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'checkout_session_unavailable' }, { status: 502 });
     }
 
-    await writeAuditLog({
+    const auditResult = await writeAuditLog({
       action: 'checkout_created',
       organizationId: organization.id,
       userId: user.id,
@@ -212,6 +212,25 @@ export async function POST(request: Request) {
         stripeCheckoutHost: STRIPE_CHECKOUT_URL_HOST,
       },
     });
+
+    if (!auditResult.persisted) {
+      try {
+        await stripe.checkout.sessions.expire(session.id);
+      } catch (expirationError) {
+        reportError(expirationError, {
+          area: 'billing_checkout_audit_compensation',
+          organizationId: organization.id,
+          userId: user.id,
+        });
+      }
+
+      reportError(new Error('Billing checkout audit persistence failed'), {
+        area: 'billing_checkout_audit',
+        organizationId: organization.id,
+        userId: user.id,
+      });
+      return noStoreJson({ error: 'checkout_audit_unavailable' }, { status: 503 });
+    }
 
     return noStoreJson({
       url: session.url,
