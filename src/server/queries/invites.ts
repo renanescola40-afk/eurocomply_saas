@@ -75,3 +75,18 @@ export async function createOrganizationInvite(input: CreateOrganizationInviteIn
     },
   };
 }
+
+export async function deleteOrganizationInvite(input: { organizationId: string; invitationId: string }) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from('invitations')
+    .delete()
+    .eq('organization_id', input.organizationId)
+    .eq('id', input.invitationId)
+    .is('accepted_at', null);
+
+  if (error) {
+    console.warn('[invites] compensation_delete_failed', { code: error.code ?? 'unknown' });
+    throw new Error('Unable to compensate organization invitation creation.');
+  }
+}

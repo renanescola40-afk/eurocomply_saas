@@ -267,8 +267,11 @@ describe('team invites API security gates', () => {
       expect.objectContaining({ message: 'Invitation email delivery was not confirmed (skipped)' }),
       expect.objectContaining({ area: 'team_invitation_delivery', organizationId: 'org_a', invitationId: 'inv_123' }),
     );
-    expect(mocks.createAuditEvent).not.toHaveBeenCalledWith(
+    expect(mocks.createAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'team_invite_created' }),
+    );
+    expect(mocks.createAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'team_invite_delivery_failed' }),
     );
     expect(mocks.createNotification).not.toHaveBeenCalled();
   });
