@@ -49,6 +49,7 @@ function buildGroups(summary: DashboardSummary, basePath: string): NavigationGro
       label: 'Operations',
       items: [
         { label: 'Operations View', description: 'Live execution layer', href: '#operations-view', icon: '▥', signal: 'Live', accent: 'slate' },
+        { label: 'AI Literacy', description: 'Article 4 training evidence', href: `${basePath}/ai-literacy`, icon: '◎', signal: 'Art. 4', accent: 'violet' },
         { label: 'Tasks', description: 'Execution backlog', href: `${basePath}/tasks`, icon: '✓', signal: summary.openTasks, accent: summary.openTasks > 10 ? 'amber' : 'sky' },
         { label: 'Risks', description: 'Risk register', href: `${basePath}/risks`, icon: '△', signal: summary.openRisks, accent: summary.criticalRisks > 0 ? 'rose' : 'amber' },
         { label: 'Vendors', description: 'Third-party exposure', href: `${basePath}/vendors`, icon: '◇', signal: summary.highRiskVendors, accent: summary.highRiskVendors > 0 ? 'amber' : 'emerald' },

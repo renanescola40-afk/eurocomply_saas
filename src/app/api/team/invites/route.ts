@@ -5,7 +5,7 @@ import { invitationEmail } from '@/lib/email/templates';
 import { reportError } from '@/lib/observability/report-error';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { createOrganizationInvite } from '@/server/queries/invites';
+import { createOrganizationInvite, deleteOrganizationInvite } from '@/server/queries/invites';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
@@ -123,6 +123,39 @@ export async function POST(request: Request) {
       role,
     });
 
+    const audit = await createAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'team_invite_created',
+      entityType: 'invitation',
+      entityId: getInviteEntityId(result.invite),
+      metadata: {
+        emailDomain: email.split('@')[1] ?? 'unknown',
+        role,
+        actorRole: permission.role,
+        plan: entitlements.plan,
+        persisted: result.persisted,
+        emailDeliveryPending: true,
+      },
+    });
+
+    if (!audit.persisted) {
+      try {
+        await deleteOrganizationInvite({
+          organizationId: organization.id,
+          invitationId: result.invite.id,
+        });
+      } catch (compensationError) {
+        reportError(compensationError, {
+          area: 'team_invitation_audit_compensation',
+          organizationId: organization.id,
+          invitationId: result.invite.id,
+        });
+      }
+
+      return noStoreJson({ error: 'team_invite_audit_unavailable' }, { status: 503 });
+    }
+
     const inviteUrl = `${getAppUrl()}/en/invite/${encodeURIComponent(result.token)}`;
     const builtEmail = invitationEmail({
       organizationName: result.organizationName,
@@ -173,22 +206,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const audit = await createAuditEvent({
-      organizationId: organization.id,
-      actorUserId: user.id,
-      action: 'team_invite_created',
-      entityType: 'invitation',
-      entityId: getInviteEntityId(result.invite),
-      metadata: {
-        emailDomain: email.split('@')[1] ?? 'unknown',
-        role,
-        actorRole: permission.role,
-        plan: entitlements.plan,
-        persisted: result.persisted,
-        emailDelivered: true,
-      },
-    });
-
     const notification = await createNotification({
       organizationId: organization.id,
       userId: user.id,
@@ -199,7 +216,7 @@ export async function POST(request: Request) {
     return noStoreJson({
       invite: result.invite,
       persisted: result.persisted,
-      auditPersisted: audit.persisted,
+      auditPersisted: true,
       notificationPersisted: notification.persisted,
       plan: entitlements.plan,
     });
