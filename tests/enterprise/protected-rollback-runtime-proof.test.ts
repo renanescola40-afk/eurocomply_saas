@@ -44,8 +44,8 @@ describe('protected rollback runtime proof', () => {
       "console.error('Rollback runtime validation failed closed.')",
     ]) expect(runner).toContain(token);
 
-    expect(runner).not.toContain('token,');
-    expect(runner).not.toContain('targetDeployment.href,');
-    expect(runner).not.toContain('currentDeployment.href,');
+    expect(runner).not.toContain('stdout: result.stdout');
+    expect(runner).not.toContain('stderr: result.stderr');
+    expect(runner).not.toContain('Authorization: `Bearer ${token}`');
   });
 });
