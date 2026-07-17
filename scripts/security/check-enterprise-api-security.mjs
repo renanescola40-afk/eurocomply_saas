@@ -68,10 +68,15 @@ const publicLeadCaptureRoutes = [
   /src\/app\/api\/leads\/route\.ts$/,
 ];
 
+const publicAccountRecoveryRoutes = [
+  /src\/app\/api\/auth\/recovery\/route\.ts$/,
+];
+
 const publicMutationExemptions = [
   ...webhookRoutes,
   ...publicVerifierRoutes,
   ...publicLeadCaptureRoutes,
+  ...publicAccountRecoveryRoutes,
 ];
 
 const routeSpecificPermissions = [
@@ -164,7 +169,7 @@ function evaluateClerkOrganizationSyncContract(failures, source, path) {
     "return noStoreJson({ error: 'unauthorized' }, { status: 401 })",
     'requireTrustedMutation',
     "policy: 'general-api'",
-    'action: \'clerk.organization.sync\'',
+    "action: 'clerk.organization.sync'",
     "route: '/api/clerk/organizations/sync'",
     'readBoundedJsonRequest',
     'maxBytes: 2048',
@@ -200,6 +205,35 @@ function evaluatePublicLeadCaptureContract(failures, source, path) {
     'isRateLimited(ipHint)',
     "return noStoreJson({ ok: true }, { status: 201 })",
   ]);
+
+  return true;
+}
+
+function evaluatePublicAccountRecoveryContract(failures, source, path) {
+  if (!isAnyMatch(path, publicAccountRecoveryRoutes)) return false;
+
+  assertGuard(failures, source, path, 'origin', 'trusted Origin validation for public recovery mutation');
+  assertGuard(failures, source, path, 'noStore', 'no-store response protection');
+  assertGuard(failures, source, path, 'rateLimit', 'rate limiting');
+  assertRequiredTokens(failures, source, path, 'public account recovery', [
+    'readBoundedJsonRequest<unknown>',
+    'RECOVERY_BODY_MAX_BYTES',
+    'requireJsonContentType: true',
+    "policy: 'password-reset'",
+    "failureMode: 'fail-closed'",
+    'privacySafeRecoveryKey(email)',
+    'GENERIC_RECOVERY_MESSAGE',
+    'If an account exists for that email, a secure recovery link will be sent.',
+    'resetPasswordForEmail(email, { redirectTo })',
+    'new URL(`/${locale}/reset-password`, request.nextUrl.origin)',
+    "noStoreJson({ error: 'account_recovery_unavailable' }, { status: 503 })",
+  ]);
+
+  for (const forbidden of ['userExists', 'account_not_found', 'email_not_found', 'error.message']) {
+    if (source.includes(forbidden)) {
+      failures.push(`${path}: public account recovery must not expose account existence or raw provider errors (${forbidden})`);
+    }
+  }
 
   return true;
 }
@@ -244,6 +278,10 @@ function evaluateRoute(filePath) {
   }
 
   if (evaluatePublicLeadCaptureContract(failures, source, path)) {
+    return failures;
+  }
+
+  if (evaluatePublicAccountRecoveryContract(failures, source, path)) {
     return failures;
   }
 

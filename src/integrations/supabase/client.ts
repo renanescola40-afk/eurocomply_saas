@@ -42,6 +42,7 @@ function makeStubClient() {
     signInWithPassword: async () => ({ error: new Error('Supabase client not configured') }),
     signUp: async () => ({ error: new Error('Supabase client not configured') }),
     signOut: async () => ({ error: new Error('Supabase client not configured') }),
+    updateUser: async () => ({ data: { user: null }, error: new Error('Supabase client not configured') }),
     resetPasswordForEmail: async () => ({ error: new Error('Supabase client not configured') }),
     signInWithOAuth: async () => ({ error: new Error('Supabase client not configured') }),
   };
@@ -71,9 +72,9 @@ export const supabase = (() => {
     }
   }
 
-  // Important for OAuth PKCE in Next.js SSR:
-  // createBrowserClient stores the code verifier/session in cookies, so the
-  // /auth/callback route can exchange the OAuth code server-side.
+  // Important for OAuth PKCE and password-recovery links in Next.js SSR:
+  // createBrowserClient stores the verifier/session in cookies so the localized
+  // callback and reset-password routes can complete the exchange safely.
   return createBrowserClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: {
       persistSession: true,

@@ -45,6 +45,7 @@ function copy(locale: Locale) {
         divider: 'ou entre com email',
         email: 'Email profissional',
         password: 'Senha',
+        forgot: 'Esqueceu a senha?',
         submit: 'Entrar com segurança',
         loading: 'A entrar...',
         createPrompt: 'Ainda não tem conta?',
@@ -59,6 +60,7 @@ function copy(locale: Locale) {
         divider: 'or sign in with email',
         email: 'Work email',
         password: 'Password',
+        forgot: 'Forgot your password?',
         submit: 'Sign in securely',
         loading: 'Signing in...',
         createPrompt: 'No account yet?',
@@ -151,6 +153,11 @@ function LoginContent() {
                 {text.password}
                 <input value={secret} onChange={(event) => setSecret(event.target.value)} type="password" autoComplete="current-password" required className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-200/50" />
               </label>
+              <div className="flex justify-end">
+                <Link href={`/${locale}/recuperar-senha`} className="text-sm font-semibold text-cyan-200 hover:text-cyan-100">
+                  {text.forgot}
+                </Link>
+              </div>
               <button type="submit" disabled={busy || loading} className="w-full rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60">
                 {busy ? text.loading : text.submit}
               </button>
