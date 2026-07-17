@@ -7,7 +7,7 @@ on:
     branches: [main]
   workflow_dispatch:
   workflow_run:
-    workflows: [Distributed Rate Limit Runtime Proof]
+    workflows: [Distributed Rate Limit Runtime Proof, Auth RBAC Tenant Proof]
     types: [completed]
 
 permissions:
@@ -26,7 +26,8 @@ jobs:
     timeout-minutes: 25
     env:
       ASSESSED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
-      RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.id || '' }}
+      RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Distributed Rate Limit Runtime Proof' && github.event.workflow_run.id || '' }}
+      AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Auth RBAC Tenant Proof' && github.event.workflow_run.id || '' }}
     steps:
       - name: Checkout exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -67,6 +68,7 @@ jobs:
           tests/enterprise/account-recovery-evidence.test.ts
           tests/enterprise/provider-failure-evidence.test.ts
           tests/enterprise/step-up-evidence.test.ts
+          tests/enterprise/auth-rbac-runtime-evidence-fetch.test.ts
 
       - name: Validate distributed rate-limit proof contracts
         shell: bash
@@ -203,6 +205,25 @@ jobs:
           ENTERPRISE_EXPECTED_SHA: ${{ env.ASSESSED_SHA }}
         run: node scripts/security/check-p1-rate-limit-evidence.mjs
 
+      - name: Retrieve exact-SHA Auth RBAC runtime evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ env.AUTH_RBAC_RUNTIME_SOURCE_RUN_ID }}
+        run: node scripts/enterprise/fetch-auth-rbac-evidence.mjs
+
+      - name: Derive and validate Auth RBAC scorecard evidence when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f docs/security/evidence/runtime/auth-rbac-final-validation.json; then
+            node scripts/security/write-auth-rbac-scorecard-evidence.mjs
+            node scripts/security/check-auth-rbac-scorecard-evidence.mjs
+          else
+            rm -f docs/security/evidence/runtime/auth-rbac-validation.json
+            echo "Auth/RBAC runtime evidence remains NOT_VERIFIED for $ASSESSED_SHA."
+          fi
+
       - name: Retain product provider and identity acceptance evidence diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -214,6 +235,8 @@ jobs:
             docs/security/evidence/runtime/accessibility-validation.json
             docs/security/evidence/runtime/analytics-consent-validation.json
             docs/security/evidence/runtime/auth-recovery-validation.json
+            docs/security/evidence/runtime/auth-rbac-final-validation.json
+            docs/security/evidence/runtime/auth-rbac-validation.json
             docs/security/evidence/runtime/provider-failure-classification.json
             docs/security/evidence/p1/step-up-sensitive-actions.json
             docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json
@@ -254,6 +277,8 @@ jobs:
             docs/security/evidence/runtime/accessibility-validation.json
             docs/security/evidence/runtime/analytics-consent-validation.json
             docs/security/evidence/runtime/auth-recovery-validation.json
+            docs/security/evidence/runtime/auth-rbac-final-validation.json
+            docs/security/evidence/runtime/auth-rbac-validation.json
             docs/security/evidence/runtime/provider-failure-classification.json
           if-no-files-found: warn
           retention-days: 90
