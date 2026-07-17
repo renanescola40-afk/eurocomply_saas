@@ -35,7 +35,7 @@ describe('audit trail reads fail closed', () => {
 
   it('surfaces database failures instead of presenting an empty audit trail', () => {
     expect(auditLoader).toContain("console.warn('[audit] list_failed', { code: error.code ?? 'unknown' });");
-    expect(auditLoader).toContain("throw new Error('Unable to load audit trail.');");
+    expect(auditLoader).toContain("throw new Error('Unable to load audit activity.');");
     expect(auditLoader).not.toContain('isExpectedSchemaFallback(error)');
   });
 
