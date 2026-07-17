@@ -57,6 +57,7 @@ export async function GET() {
     return noStoreJson({ error: 'Unable to export risks report' }, { status: 500 });
   }
 
+  const exportedRowCount = data?.length ?? 0;
   const rows = [
     RISKS_CSV_HEADER,
     ...((data ?? []).map((risk) => [risk.title, risk.status, risk.risk_score, risk.likelihood, risk.impact, risk.created_at, risk.updated_at])),
@@ -68,7 +69,7 @@ export async function GET() {
     userId: user.id,
     entityType: 'report',
     entityId: 'risks.csv',
-    metadata: { format: 'csv', report: 'risks', rows: rows.length },
+    metadata: { format: 'csv', report: 'risks', rows: exportedRowCount },
   });
 
   return csvDownloadResponse(rows, 'risks-report.csv');
