@@ -50,6 +50,7 @@ jobs:
           tests/enterprise/public-ux-evidence.test.ts
           tests/enterprise/accessibility-consent-evidence.test.ts
           tests/enterprise/repository-control-evidence.test.ts
+          tests/enterprise/admin-boundary-diagnostics.test.ts
 
       - name: Build exact-SHA architecture review evidence
         env:
@@ -85,6 +86,9 @@ jobs:
           TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           GITHUB_CHECKS_WAIT_MS: '1080000'
         run: node scripts/enterprise/capture-github-checks-evidence.mjs
+
+      - name: Run administrative-client boundary diagnostics
+        run: node scripts/enterprise/check-admin-boundary-evidence.mjs
 
       - name: Build exact-SHA repository control evidence
         env:
