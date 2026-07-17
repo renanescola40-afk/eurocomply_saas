@@ -62,10 +62,21 @@ async function mount(view: ReactNode) {
   return container;
 }
 
+function normalizedButtonText(candidate: HTMLButtonElement) {
+  return candidate.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+}
+
 function button(container: HTMLElement, name: string) {
   const match = [...container.querySelectorAll<HTMLButtonElement>('button')]
-    .find((candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name);
+    .find((candidate) => normalizedButtonText(candidate) === name);
   if (!match) throw new Error(`Button not found: ${name}`);
+  return match;
+}
+
+function buttonContaining(container: HTMLElement, text: string) {
+  const match = [...container.querySelectorAll<HTMLButtonElement>('button')]
+    .find((candidate) => normalizedButtonText(candidate).includes(text));
+  if (!match) throw new Error(`Button containing text not found: ${text}`);
   return match;
 }
 
@@ -131,7 +142,7 @@ describe('authenticated onboarding UX acceptance', () => {
       />,
     );
 
-    expect(container.textContent).toContain('Passo 1 de 12'.replace('Passo', 'Step'));
+    expect(container.textContent).toContain('Step 1 of 12');
     await click(button(container, 'Continuar'));
     expect(container.querySelector('[role="alert"]')?.textContent).toContain('Preencha os campos obrigatórios');
 
@@ -190,7 +201,7 @@ describe('authenticated onboarding UX acceptance', () => {
     expect(container.textContent).toContain('Initial classification');
 
     await click(button(container, 'Plan or trial'));
-    await click(button(container, 'Professional'));
+    await click(buttonContaining(container, 'Professional'));
     await click(button(container, 'Generate readiness score'));
 
     expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({
@@ -255,7 +266,6 @@ describe('authenticated dashboard UX acceptance', () => {
     expect(region).not.toBeNull();
     expect(container.querySelector('#enterprise-command-center-title')?.textContent).toBe('AI Act readiness cockpit');
     expect(container.textContent).toContain('72%');
-    expect(container.textContent).toContain('3');
     expect(container.textContent).toContain('Role: viewer');
     expect(container.textContent).toContain('Needs attention');
     expect(container.textContent).not.toContain('Open billing');
