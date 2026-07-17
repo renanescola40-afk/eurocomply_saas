@@ -52,6 +52,7 @@ jobs:
           tests/enterprise/repository-control-evidence.test.ts
           tests/enterprise/admin-boundary-diagnostics.test.ts
           tests/enterprise/account-recovery-evidence.test.ts
+          tests/enterprise/provider-failure-evidence.test.ts
 
       - name: Build exact-SHA architecture review evidence
         env:
@@ -144,17 +145,24 @@ jobs:
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
         run: node scripts/enterprise/build-account-recovery-evidence.mjs
 
-      - name: Retain product acceptance evidence diagnostics
+      - name: Build exact-SHA provider failure evidence
+        env:
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
+        run: node scripts/enterprise/build-provider-failure-evidence.mjs
+
+      - name: Retain product and provider acceptance evidence diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: product-acceptance-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          name: product-provider-acceptance-evidence-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             docs/security/evidence/runtime/ux-acceptance-validation.json
             docs/security/evidence/runtime/localization-validation.json
             docs/security/evidence/runtime/accessibility-validation.json
             docs/security/evidence/runtime/analytics-consent-validation.json
             docs/security/evidence/runtime/auth-recovery-validation.json
+            docs/security/evidence/runtime/provider-failure-classification.json
           if-no-files-found: error
           retention-days: 90
 
@@ -190,5 +198,6 @@ jobs:
             docs/security/evidence/runtime/accessibility-validation.json
             docs/security/evidence/runtime/analytics-consent-validation.json
             docs/security/evidence/runtime/auth-recovery-validation.json
+            docs/security/evidence/runtime/provider-failure-classification.json
           if-no-files-found: error
           retention-days: 90
