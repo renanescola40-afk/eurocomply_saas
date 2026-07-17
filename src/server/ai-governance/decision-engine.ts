@@ -272,7 +272,10 @@ export function evaluateAiSystemRole(input: RoleWizardInput): RoleWizardAssessme
   if (selectedRole === 'deployer') signals.push('selected_deployer');
   if (selectedRole === 'importer') signals.push('selected_importer');
   if (selectedRole === 'distributor') signals.push('selected_distributor');
-  if (hasVendor) signals.push('third_party_vendor');
+  if (hasVendor) {
+    signals.push('third_party_vendor');
+    nextSteps.push('collect_vendor_evidence');
+  }
   if (customerFacing) signals.push('customer_facing_use');
   if (internalUse) signals.push('internal_use');
   if (highRiskDomain) signals.push('high_risk_domain');
