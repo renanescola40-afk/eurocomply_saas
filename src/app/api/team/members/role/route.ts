@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { reportError } from '@/lib/observability/report-error';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createAuditEvent } from '@/server/queries/audit-events';
@@ -172,6 +173,7 @@ export async function POST(request: Request) {
       return noStoreJson({ error: 'team_role_transition_unavailable' }, { status: 503 });
     }
 
+    const appliedRole = transition.applied_role ?? nextRole;
     const audit = await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
@@ -181,16 +183,37 @@ export async function POST(request: Request) {
       metadata: {
         changedUserId: transition.affected_user_id ?? member.user_id,
         previousRole: String(transition.previous_role ?? previousRole).toLowerCase(),
-        nextRole: transition.applied_role ?? nextRole,
+        nextRole: appliedRole,
         actorRole: permission.role,
         stepUpAction: 'manage_team',
       },
     });
 
+    if (!audit.persisted) {
+      const { data: rollbackData, error: rollbackError } = await supabase.rpc(ATOMIC_ROLE_TRANSITION_RPC, {
+        p_organization_id: organization.id,
+        p_member_id: parsed.data.memberId,
+        p_expected_role: appliedRole,
+        p_next_role: member.role,
+      });
+      const rollback = firstTransitionResult(rollbackData);
+
+      if (rollbackError || rollback?.outcome !== 'changed') {
+        reportError(new Error('Team role audit rollback failed'), {
+          area: 'team_role_change_audit_rollback',
+          organizationId: organization.id,
+          userId: user.id,
+          code: rollbackError?.code ?? rollback?.outcome ?? 'unknown',
+        });
+      }
+
+      return noStoreJson({ error: 'team_role_change_audit_unavailable' }, { status: 503 });
+    }
+
     return noStoreJson({
       changed: true,
-      role: transition.applied_role ?? nextRole,
-      auditPersisted: audit.persisted,
+      role: appliedRole,
+      auditPersisted: true,
       stepUp: publicStepUpSummary(stepUp.assessment),
     });
   } catch (error) {
