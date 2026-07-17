@@ -1,6 +1,6 @@
 # Enterprise progress
 
-Current main: `69c980acb4f2ecbf3c5c0018773439ef6a1a7969`
+Current main: `62980cfa35f38200549cda56424549517e82a3e1`
 Decision: **NO_GO**
 
 ## Official evidence-backed score
@@ -14,7 +14,7 @@ Decision: **NO_GO**
 - Control counts: **41 PASS**, **1 BLOCKED**, **58 NOT_VERIFIED**
 - Critical controls not PASS: **51**
 
-Enterprise Readiness Scorecard run 678 assessed the exact PR #1162 head and all required repository/security workflows completed successfully for that SHA. Current `main` contains the assessed tree through merge commit `69c980acb4f2ecbf3c5c0018773439ef6a1a7969`. No additional point is inferred from the merge commit or from unmerged provider-taxonomy work.
+Enterprise Readiness Scorecard run 678 assessed the exact PR #1162 head and all required repository/security workflows completed successfully for that SHA. Current `main` contains that assessed tree and the later fail-closed document-approval audit hardening through merge commit `62980cfa35f38200549cda56424549517e82a3e1`. No additional point is inferred from later merge commits or from unmerged provider-taxonomy work.
 
 ## Domain scores
 
@@ -34,6 +34,7 @@ Enterprise Readiness Scorecard run 678 assessed the exact PR #1162 head and all 
 ## Active repository work
 
 - Enumeration-safe localized account recovery and IAM-10 evidence are merged and exact-head verified.
+- Document approval now fails closed when durable audit persistence fails; no score increase is inferred without mapped exact-SHA evidence.
 - Exact-SHA branch-protection evidence tooling is merged, but protected runtime proof still must be executed for the final production `main` SHA.
 - Current branch `agent/provider-failure-taxonomy-proof` implements PLT-10 provider failure classification and exact-SHA evidence without claiming a production outage occurred.
 
