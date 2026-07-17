@@ -38,8 +38,6 @@ export async function listAuditEventsForUser(userId: string): Promise<AuditLogIt
   }
 
   const supabase = createAdminClient();
-
-  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('audit_events')
     .select('id,actor_user_id,action,entity_type,created_at')
