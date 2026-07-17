@@ -7,6 +7,8 @@ const resetPage = readFileSync('src/app/[locale]/reset-password/page.tsx', 'utf8
 const login = readFileSync('src/app/[locale]/login/page.tsx', 'utf8');
 const middleware = readFileSync('src/middleware.ts', 'utf8');
 const enterpriseScanner = readFileSync('scripts/security/check-enterprise-api-security.mjs', 'utf8');
+const endpointScanner = readFileSync('scripts/security/check-api-endpoint-hardening.mjs', 'utf8');
+const routeScanner = readFileSync('scripts/security/check-api-route-hardening.mjs', 'utf8');
 
 function expectAll(source: string, tokens: string[]) {
   for (const token of tokens) expect(source).toContain(token);
@@ -63,7 +65,7 @@ describe('public account recovery contract', () => {
     }
   });
 
-  it('uses a narrow scanner exception backed by a dedicated stronger contract', () => {
+  it('uses narrow scanner exceptions backed by dedicated stronger contracts', () => {
     expectAll(enterpriseScanner, [
       'const publicAccountRecoveryRoutes',
       '/src\\/app\\/api\\/auth\\/recovery\\/route\\.ts$/',
@@ -75,5 +77,21 @@ describe('public account recovery contract', () => {
       'resetPasswordForEmail(email, { redirectTo })',
     ]);
     expect(enterpriseScanner).toContain('...publicAccountRecoveryRoutes');
+
+    expectAll(endpointScanner, [
+      `${'${appApiPrefixPattern}'}\\/auth\\/recovery\\/route\\.ts$`,
+      'enumeration-resistant, bounded, same-origin, no-store and fail-closed rate-limited',
+    ]);
+
+    expectAll(routeScanner, [
+      'const PUBLIC_ACCOUNT_RECOVERY_PATTERN',
+      'function checkAccountRecoveryMutation',
+      "policy: 'password-reset'",
+      "failureMode: 'fail-closed'",
+      'privacySafeRecoveryKey(email)',
+      'account recovery is missing trusted Origin validation',
+    ]);
+    expect(routeScanner).toContain('checkLeadMutation(source, failures)');
+    expect(routeScanner).toContain('checkAccountRecoveryMutation(source, failures)');
   });
 });
