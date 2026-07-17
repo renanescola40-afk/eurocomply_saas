@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { reportError } from '@/lib/observability/report-error';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createAuditEvent } from '@/server/queries/audit-events';
@@ -18,6 +19,10 @@ type InvitationRecord = {
   role: string | null;
   organization_id: string;
   accepted_at: string | null;
+  token: string;
+  invited_by: string | null;
+  expires_at: string | null;
+  created_at: string | null;
 };
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
@@ -83,7 +88,7 @@ export async function POST(request: Request) {
     const supabase = createAdminClient();
     const { data: invitationData, error: invitationError } = await supabase
       .from('invitations')
-      .select('id,email,role,organization_id,accepted_at')
+      .select('id,email,role,organization_id,accepted_at,token,invited_by,expires_at,created_at')
       .eq('id', parsed.data.invitationId)
       .eq('organization_id', organization.id)
       .is('accepted_at', null)
@@ -128,7 +133,32 @@ export async function POST(request: Request) {
       },
     });
 
-    return noStoreJson({ cancelled: true, auditPersisted: audit.persisted, stepUp: publicStepUpSummary(stepUp.assessment) });
+    if (!audit.persisted) {
+      const { error: rollbackError } = await supabase.from('invitations').insert({
+        id: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+        organization_id: invitation.organization_id,
+        accepted_at: invitation.accepted_at,
+        token: invitation.token,
+        invited_by: invitation.invited_by,
+        expires_at: invitation.expires_at,
+        created_at: invitation.created_at,
+      });
+
+      if (rollbackError) {
+        reportError(new Error('Invitation cancellation audit rollback failed.'), {
+          area: 'team_invitation_cancel_audit_rollback',
+          organizationId: organization.id,
+          invitationId: invitation.id,
+          providerCode: rollbackError.code ?? 'unknown',
+        });
+      }
+
+      return noStoreJson({ error: 'team_invitation_cancel_audit_unavailable' }, { status: 503 });
+    }
+
+    return noStoreJson({ cancelled: true, auditPersisted: true, stepUp: publicStepUpSummary(stepUp.assessment) });
   } catch (error) {
     return secureApiError(error);
   }
