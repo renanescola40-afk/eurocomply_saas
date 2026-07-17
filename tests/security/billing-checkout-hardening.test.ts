@@ -126,7 +126,7 @@ describe('billing checkout API security gates', () => {
       id: 'cs_test_fixture',
       url: 'https://checkout.stripe.com/session-fixture',
     });
-    mocks.writeAuditLog.mockResolvedValue(undefined);
+    mocks.writeAuditLog.mockResolvedValue({ persisted: true });
   });
 
   it('blocks unauthenticated checkout before parsing attacker-controlled body', async () => {
