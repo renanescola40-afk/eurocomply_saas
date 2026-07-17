@@ -7,6 +7,10 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest, ValidationError } from '@/lib/security/validate';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import {
+  classifyProviderFailure,
+  providerFailureContext,
+} from '@/server/providers/failure';
 import { noStoreJson } from '@/server/security/no-store';
 import { assertTrustedOrigin } from '@/server/security/origin-guard';
 
@@ -103,15 +107,13 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
     if (error) {
-      reportError(new Error('Account recovery provider rejected the request'), {
-        area: 'account_recovery_provider',
-        providerCode: typeof error.code === 'string' ? error.code : 'unknown',
-      });
-      return noStoreJson({ error: 'account_recovery_unavailable' }, { status: 503 });
+      throw classifyProviderFailure('supabase', 'password_recovery_request', error);
     }
-  } catch {
-    reportError(new Error('Account recovery provider is unavailable'), {
+  } catch (error) {
+    const providerFailure = classifyProviderFailure('supabase', 'password_recovery_request', error);
+    reportError(providerFailure, {
       area: 'account_recovery_provider',
+      ...providerFailureContext(providerFailure),
     });
     return noStoreJson({ error: 'account_recovery_unavailable' }, { status: 503 });
   }
