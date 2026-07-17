@@ -1,5 +1,5 @@
 import { getPersonaByCategory, type IntelligencePersona } from '@/lib/news/intelligence-personas';
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export type IntelligenceImpact = 'Monitorar' | 'Médio' | 'Alto' | 'Crítico';
 export type IntelligenceReliability = 'Alta' | 'Média';
@@ -212,10 +212,13 @@ function mapDatabaseItem(item: IntelligenceDatabaseRow): IntelligenceItem {
 
 const intelligenceSelect = 'id,external_id,title,category,jurisdiction,published_at,source_name,source_type,author,reliability,impact,executive_summary,internal_analysis,affected_companies,recommended_actions,premium';
 
-export async function listPublishedIntelligenceItems(): Promise<IntelligenceItem[]> {
-  const supabase = tryCreateAdminClient();
+function intelligenceReadError(operation: string, code?: string | null): Error {
+  console.error('Intelligence read failed', { operation, code: code ?? 'unknown' });
+  return new Error('intelligence_content_unavailable');
+}
 
-  if (!supabase) return fallbackIntelligenceItems;
+export async function listPublishedIntelligenceItems(): Promise<IntelligenceItem[]> {
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from('intelligence_items')
@@ -224,15 +227,14 @@ export async function listPublishedIntelligenceItems(): Promise<IntelligenceItem
     .order('published_at', { ascending: false })
     .limit(50);
 
-  if (error || !data?.length) return fallbackIntelligenceItems;
+  if (error) throw intelligenceReadError('list_published', error.code);
+  if (!data?.length) return fallbackIntelligenceItems;
   return (data as IntelligenceDatabaseRow[]).map((item) => mapDatabaseItem(item));
 }
 
 export async function getPublishedIntelligenceItem(id: string): Promise<IntelligenceItem | null> {
   const fallback = fallbackIntelligenceItems.find((item) => item.id === id);
-  const supabase = tryCreateAdminClient();
-
-  if (!supabase) return fallback ?? null;
+  const supabase = createAdminClient();
 
   const { data: externalMatch, error: externalError } = await supabase
     .from('intelligence_items')
@@ -241,7 +243,8 @@ export async function getPublishedIntelligenceItem(id: string): Promise<Intellig
     .eq('external_id', id)
     .maybeSingle();
 
-  if (!externalError && externalMatch) return mapDatabaseItem(externalMatch as IntelligenceDatabaseRow);
+  if (externalError) throw intelligenceReadError('get_published_external_id', externalError.code);
+  if (externalMatch) return mapDatabaseItem(externalMatch as IntelligenceDatabaseRow);
   if (!isUuid(id)) return fallback ?? null;
 
   const { data: uuidMatch, error: uuidError } = await supabase
@@ -251,7 +254,8 @@ export async function getPublishedIntelligenceItem(id: string): Promise<Intellig
     .eq('id', id)
     .maybeSingle();
 
-  if (uuidError || !uuidMatch) return null;
+  if (uuidError) throw intelligenceReadError('get_published_uuid', uuidError.code);
+  if (!uuidMatch) return null;
 
   return mapDatabaseItem(uuidMatch as IntelligenceDatabaseRow);
 }
