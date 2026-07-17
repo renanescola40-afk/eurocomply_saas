@@ -63,7 +63,7 @@ export async function createComplianceTask(input: CreateComplianceTaskInput) {
       throw actionError('Unable to create task');
     }
 
-    await logAuditEvent({
+    const audit = await logAuditEvent({
       organizationId: payload.organizationId,
       actorUserId: user.id,
       action: 'task.create',
@@ -71,6 +71,24 @@ export async function createComplianceTask(input: CreateComplianceTaskInput) {
       entityId: task.id,
       metadata: { title: payload.title },
     });
+
+    if (!audit.persisted) {
+      const { error: rollbackError } = await supabase
+        .from('compliance_tasks')
+        .delete()
+        .eq('id', task.id)
+        .eq('organization_id', payload.organizationId);
+
+      if (rollbackError) {
+        reportError(rollbackError, {
+          ...context,
+          area: 'compliance_task_create_audit_rollback',
+          taskId: task.id,
+        });
+      }
+
+      throw actionError('Unable to create task');
+    }
 
     return task;
   } catch (error) {
