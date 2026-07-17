@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { normalizeLocale } from '@/lib/i18n/locales';
+import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/server/billing/stripe';
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
       return_url: returnUrl,
     });
 
-    await writeAuditLog({
+    const auditResult = await writeAuditLog({
       action: 'billing_portal_created',
       organizationId: organization.id,
       userId: user.id,
@@ -119,6 +120,15 @@ export async function POST(request: Request) {
         rbacPermission: 'manage_billing',
       },
     });
+
+    if (!auditResult.persisted) {
+      reportError(new Error('Billing portal audit persistence failed'), {
+        area: 'billing_portal_audit',
+        organizationId: organization.id,
+        userId: user.id,
+      });
+      return noStoreJson({ error: 'billing_portal_audit_unavailable' }, { status: 503 });
+    }
 
     return noStoreJson({
       url: portalSession.url,

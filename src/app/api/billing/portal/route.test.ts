@@ -12,10 +12,15 @@ const mocks = vi.hoisted(() => ({
   requireStepUpForRequest: vi.fn(),
   publicStepUpSummary: vi.fn(),
   writeAuditLog: vi.fn(),
+  reportError: vi.fn(),
 }));
 
 vi.mock('@/lib/i18n/locales', () => ({
   normalizeLocale: (locale: string | null | undefined) => locale || 'en',
+}));
+
+vi.mock('@/lib/observability/report-error', () => ({
+  reportError: mocks.reportError,
 }));
 
 vi.mock('@/lib/security/audit-log', () => ({
@@ -99,7 +104,7 @@ describe('billing portal API security gates', () => {
     mocks.publicStepUpSummary.mockReturnValue({ verified: true });
     mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => makeSubscriptionLookup()) });
     mocks.stripePortalCreate.mockResolvedValue({ id: 'portal_session_fixture', url: 'https://billing.stripe.test/session-fixture' });
-    mocks.writeAuditLog.mockResolvedValue(undefined);
+    mocks.writeAuditLog.mockResolvedValue({ persisted: true, legacyPersisted: true, chained: true });
   });
 
   it('blocks billing portal access without an authenticated user', async () => {
@@ -153,7 +158,28 @@ describe('billing portal API security gates', () => {
     expect(mocks.stripePortalCreate).not.toHaveBeenCalled();
   });
 
-  it('creates a billing portal session only after RBAC, trusted mutation, and step-up', async () => {
+  it('withholds the portal URL when audit persistence fails', async () => {
+    mocks.writeAuditLog.mockResolvedValueOnce({ persisted: false, legacyPersisted: false, chained: true });
+
+    const response = await POST(buildRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body).toEqual({ error: 'billing_portal_audit_unavailable' });
+    expect(body).not.toHaveProperty('url');
+    expect(mocks.stripePortalCreate).toHaveBeenCalledTimes(1);
+    expect(mocks.writeAuditLog).toHaveBeenCalledTimes(1);
+    expect(mocks.reportError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        area: 'billing_portal_audit',
+        organizationId: 'org_a',
+        userId: 'user_admin',
+      }),
+    );
+  });
+
+  it('creates a billing portal session only after RBAC, trusted mutation, step-up, and durable audit persistence', async () => {
     const response = await POST(buildRequest());
     const body = await response.json();
 
@@ -185,5 +211,6 @@ describe('billing portal API security gates', () => {
         }),
       }),
     );
+    expect(mocks.reportError).not.toHaveBeenCalled();
   });
 });
