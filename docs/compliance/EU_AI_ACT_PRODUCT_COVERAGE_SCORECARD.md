@@ -6,19 +6,19 @@ This score measures product workflow and evidence coverage. It is not a legal-co
 
 ## Current score
 
-- Previous assessment: 46%
-- Current branch assessment: 47%
-- Change: +1 percentage point
-- Remaining: 53 percentage points
+- Previous assessment: 47%
+- Current branch assessment: 50%
+- Change: +3 percentage points
+- Remaining: 50 percentage points
 
-The current branch adds a versioned legal-rules registry with official-source checks, application-date states and fail-closed validation.
+The current branch routes role inference, risk classification, application dates and legal-rule provenance through one versioned decision engine. Existing compatibility entrypoints no longer maintain independent decision logic.
 
 ## Weighted coverage
 
 | Workstream | Weight | Earned | Status |
 |---|---:|---:|---|
 | Versioned legal rules registry | 4 | 3 | IN_PROGRESS |
-| Scope, role and classification engine | 10 | 5 | IN_PROGRESS |
+| Scope, role and classification engine | 10 | 8 | IN_PROGRESS |
 | Prohibited practices | 7 | 2.5 | IN_PROGRESS |
 | AI literacy | 6 | 0.5 | NOT_STARTED |
 | Article 50 transparency | 8 | 6 | IN_PROGRESS |
@@ -33,15 +33,24 @@ The current branch adds a versioned legal-rules registry with official-source ch
 | GPAI compliance | 5 | 1 | NOT_STARTED |
 | Customer AI vendor assurance | 4 | 2.5 | IN_PROGRESS |
 | Approvals, reports and platform controls | 4 | 4 | VERIFIED |
-| **Total** | **100** | **47** | **IN_PROGRESS** |
+| **Total** | **100** | **50** | **IN_PROGRESS** |
+
+## Evidence added in this branch
+
+1. One canonical engine owns role, scope, risk and legal-rule applicability decisions.
+2. Every result carries engine version, ruleset version, assessment date, registry freshness and matched rule identifiers.
+3. Active, future and adopted-pending-effect rules are separated instead of being presented as equally applicable.
+4. Ambiguous roles and stale registry review dates fail closed into legal review.
+5. Legacy classifier and role-wizard entrypoints are compatibility adapters with regression contracts against duplicated logic.
+6. AI inventory payloads receive one shared decision and expose qualified, non-certification evidence metadata.
 
 ## Next P0 work
 
-1. Persist the legal registry and add automated stale-rule checks.
-2. Unify the role and risk classifiers behind the registry.
-3. Implement complete prohibited-practice decision workflows.
-4. Build AI literacy assignments and evidence.
-5. Replace Article 50 local-only state with organisation-scoped persistence.
-6. Replace existence-based readiness with evidence-backed obligation scoring.
+1. Persist legal-rule versions and decision provenance with organisation-scoped history.
+2. Implement complete prohibited-practice decision workflows and exception evidence.
+3. Build AI literacy assignments, training records and evidence.
+4. Replace Article 50 local-only state with organisation-scoped persistence.
+5. Replace existence-based readiness with evidence-backed obligation scoring.
+6. Add complete GPAI, Annex IV, QMS, conformity and registration workflows.
 
 Only verified implementation, tests and evidence count toward 100%.
