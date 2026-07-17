@@ -31,10 +31,12 @@ const PUBLIC_SAFE_PATTERNS = [
   new RegExp(`${APP_API_PREFIX_PATTERN}\\/og\\/`),
   new RegExp(`${APP_API_PREFIX_PATTERN}\\/audit\\/evidence-pack\\/verify\\/route\\.ts$`),
 ];
-const PUBLIC_MUTATION_PATTERNS = [new RegExp(`${APP_API_PREFIX_PATTERN}\\/leads\\/route\\.ts$`)];
+const PUBLIC_LEAD_MUTATION_PATTERN = new RegExp(`${APP_API_PREFIX_PATTERN}\\/(?:leads|prelaunch)\\/route\\.ts$`);
+const PUBLIC_ACCOUNT_RECOVERY_PATTERN = new RegExp(`${APP_API_PREFIX_PATTERN}\\/auth\\/recovery\\/route\\.ts$`);
+const PUBLIC_MUTATION_PATTERNS = [PUBLIC_LEAD_MUTATION_PATTERN, PUBLIC_ACCOUNT_RECOVERY_PATTERN];
 
 const WEBHOOK_PATTERNS = [/\/webhook\//, /\/webhooks\//, /stripe\/webhook/, /billing\/webhook/];
-const INTERNAL_PATTERNS = [new RegExp(`${APP_API_PREFIX_PATTERN}\\/(cron|internal|maintenance|ops|intelligence\\/refresh)\\/`)];
+const INTERNAL_PATTERNS = [new RegExp(`${APP_API_PREFIX_PATTERN}\/(cron|internal|maintenance|ops|intelligence\/refresh)\/`)];
 const TENANT_TERMS = [
   'organization',
   'organizationId',
@@ -107,6 +109,33 @@ function classify(relativePath, source) {
   return 'unclassified';
 }
 
+function checkLeadMutation(source, failures) {
+  if (!source.includes('consentToContact')) failures.push('missing explicit consent validation');
+  if (!source.includes('validateEmail')) failures.push('missing email validation');
+}
+
+function checkAccountRecoveryMutation(source, failures) {
+  const requiredTokens = [
+    'assertTrustedOrigin',
+    'readBoundedJsonRequest',
+    "policy: 'password-reset'",
+    "failureMode: 'fail-closed'",
+    'privacySafeRecoveryKey(email)',
+    'GENERIC_RECOVERY_MESSAGE',
+    'resetPasswordForEmail(email, { redirectTo })',
+    'request.nextUrl.origin',
+    'account_recovery_unavailable',
+  ];
+
+  for (const token of requiredTokens) {
+    if (!source.includes(token)) failures.push(`missing account-recovery contract token: ${token}`);
+  }
+
+  for (const forbidden of ['userExists', 'account_not_found', 'email_not_found', 'error.message']) {
+    if (source.includes(forbidden)) failures.push(`account recovery must not expose account existence or raw provider errors: ${forbidden}`);
+  }
+}
+
 function checkRoute(file, inventory) {
   const relativePath = rel(file);
   const source = readFileSync(file, 'utf8');
@@ -167,9 +196,14 @@ function checkRoute(file, inventory) {
     if (!hasSanitizedErrors) failures.push('missing sanitized error response');
     if (!hasRateLimit) failures.push('missing rate limit');
     if (!hasValidation) failures.push('missing bounded input validation');
-    if (!source.includes('consentToContact')) failures.push('missing explicit consent validation');
-    if (!source.includes('validateEmail')) failures.push('missing email validation');
     if (source.includes('request.json()')) failures.push('must use bounded JSON parsing instead of request.json()');
+
+    if (PUBLIC_ACCOUNT_RECOVERY_PATTERN.test(relativePath)) {
+      if (!hasTrustedMutation) failures.push('account recovery is missing trusted Origin validation');
+      checkAccountRecoveryMutation(source, failures);
+    } else {
+      checkLeadMutation(source, failures);
+    }
   }
 
   if (sensitive && !publicOrWebhook && !hasCentralGuard) failures.push('missing central API guard import/entrypoint');
