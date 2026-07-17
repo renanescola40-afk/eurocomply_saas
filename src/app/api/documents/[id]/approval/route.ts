@@ -193,6 +193,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       },
     });
 
+    if (!audit.persisted) {
+      let rollbackUpdate = supabase
+        .from('documents')
+        .update({ status: existingDocument.status })
+        .eq('id', updatedDocument.id)
+        .eq('organization_id', organization.id)
+        .eq('status', nextStatus);
+
+      const { data: rolledBackDocument, error: rollbackError } = await rollbackUpdate
+        .select('id')
+        .maybeSingle<{ id: string }>();
+
+      if (rollbackError || !rolledBackDocument) {
+        console.warn('[documents] approval_audit_rollback_failed', { code: rollbackError?.code ?? 'state_changed' });
+      } else {
+        console.warn('[documents] approval_audit_persistence_failed', { reason: audit.reason ?? 'unknown' });
+      }
+
+      return noStoreJson({ error: 'document_approval_audit_unavailable' }, { status: 503 });
+    }
+
     const notification = await createNotification({
       organizationId: organization.id,
       userId: user.id,
@@ -207,7 +228,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       documentId: updatedDocument.id,
       status: nextStatus,
       persisted: true,
-      auditPersisted: audit.persisted,
+      auditPersisted: true,
       notificationPersisted: notification.persisted,
     });
   } catch (error) {
