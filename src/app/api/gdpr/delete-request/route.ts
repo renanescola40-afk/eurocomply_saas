@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
   const reason = normalizeDeleteReason(body.reason);
   const deletePlan = buildGdprDeletePlan();
 
-  await createAuditEvent({
+  const audit = await createAuditEvent({
     organizationId: organization.id,
     actorUserId: user.id,
     action: 'gdpr_delete_requested',
@@ -149,6 +150,20 @@ export async function POST(request: NextRequest) {
     }),
     requestContext,
   });
+
+  if (!audit.persisted) {
+    reportError(new Error('GDPR deletion request audit persistence failed'), {
+      area: 'gdpr_delete_request_audit',
+      organizationId: organization.id,
+      userId: user.id,
+      reason: audit.reason,
+    });
+
+    return noStoreJson({
+      error: 'gdpr_delete_request_audit_unavailable',
+      message: 'The deletion request could not be recorded safely. Please try again later.',
+    }, { status: 503 });
+  }
 
   await createNotification({
     organizationId: organization.id,
