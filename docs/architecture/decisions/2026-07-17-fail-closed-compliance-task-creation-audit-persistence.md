@@ -18,8 +18,14 @@ After inserting the task, the action checks `audit.persisted`. When persistence 
 
 - Governance task creation fails closed when durable audit storage is unavailable.
 - A short audit outage can reduce task-creation availability.
-- The compensating delete is best effort rather than a cross-system transaction. Operators must investigate the sanitized rollback error if compensation fails.
 - Update and deletion audit semantics are outside this narrowly scoped change and require separate review before any modification.
+
+## Risks and trade-offs
+
+- The compensating delete is best effort rather than an atomic transaction with audit persistence.
+- If compensation also fails, the task may remain stored without its durable creation event and operators must investigate the sanitized rollback error.
+- A concurrent change after insertion could complicate manual remediation; runtime evidence is required before claiming compensation safety under concurrency.
+- Requiring durable audit persistence intentionally favors accountability over task-creation availability during an audit-store outage.
 
 ## Evidence boundary
 
