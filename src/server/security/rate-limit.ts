@@ -6,6 +6,7 @@ export type RateLimitPolicyId =
   | 'step-up-challenge'
   | 'billing-checkout'
   | 'billing-portal'
+  | 'team-management'
   | 'upload'
   | 'export'
   | 'gdpr-delete'
@@ -17,6 +18,7 @@ export type RateLimitPolicyId =
 export type RateLimitCategory =
   | RateLimitPolicyId
   | 'billing'
+  | 'team'
   | 'step-up'
   | 'gdpr'
   | 'audit-chain'
@@ -87,6 +89,7 @@ const POLICIES: Record<RateLimitPolicyId, RateLimitPolicy> = {
   'step-up-challenge': policy('step-up-challenge', 'step-up', 5, 5 * 60_000, 'fail-closed', true, true, true, 'Step-up challenge abuse protection.'),
   'billing-checkout': policy('billing-checkout', 'billing', 10, 60_000, 'fail-closed', true, true, true, 'Checkout session abuse protection.'),
   'billing-portal': policy('billing-portal', 'billing', 10, 60_000, 'fail-closed', true, true, true, 'Customer portal session abuse protection.'),
+  'team-management': policy('team-management', 'team', 10, 10 * 60_000, 'fail-closed', true, true, true, 'Team invitation, role and membership mutation abuse protection.'),
   upload: policy('upload', 'upload', 20, 10 * 60_000, 'fail-closed', true, true, true, 'Upload and scan entrypoint abuse protection.'),
   export: policy('export', 'export', 5, 10 * 60_000, 'fail-closed', true, true, true, 'Export and scraping abuse protection.'),
   'gdpr-delete': policy('gdpr-delete', 'gdpr', 3, 60 * 60_000, 'fail-closed', true, true, true, 'GDPR delete workflow abuse protection.'),
@@ -100,6 +103,7 @@ export const RATE_LIMIT_POLICY_IDS = Object.keys(POLICIES) as RateLimitPolicyId[
 export const RATE_LIMIT_POLICIES: Record<string, RateLimitPolicy> = {
   ...POLICIES,
   billing: POLICIES['billing-checkout'],
+  team: POLICIES['team-management'],
   'step-up': POLICIES['step-up-challenge'],
   gdpr: POLICIES['gdpr-delete'],
   'audit-chain': POLICIES['audit-chain-verify'],
@@ -188,6 +192,7 @@ function inferPolicyId(value?: string | null): RateLimitPolicyId | null {
   if (normalized.includes('password') || normalized.includes('reset')) return 'password-reset';
   if (normalized.includes('billing') && normalized.includes('portal')) return 'billing-portal';
   if (normalized.includes('billing') || normalized.includes('checkout')) return 'billing-checkout';
+  if (normalized.includes('team') || normalized.includes('invite') || normalized.includes('member-role') || normalized.includes('member-remove')) return 'team-management';
   if (normalized.includes('upload') || normalized.includes('document')) return 'upload';
   if (normalized.includes('gdpr') && normalized.includes('delete')) return 'gdpr-delete';
   if (normalized.includes('audit-chain') || normalized.includes('audit_chain')) return 'audit-chain-verify';
@@ -202,6 +207,7 @@ function inferPolicyId(value?: string | null): RateLimitPolicyId | null {
 function resolvePolicyId(policyOrCategory?: RateLimitPolicyId | RateLimitCategory, legacyKey?: string): RateLimitPolicyId {
   if (policyOrCategory && policyOrCategory in POLICIES) return policyOrCategory as RateLimitPolicyId;
   if (policyOrCategory === 'billing') return 'billing-checkout';
+  if (policyOrCategory === 'team') return 'team-management';
   if (policyOrCategory === 'step-up') return 'step-up-challenge';
   if (policyOrCategory === 'gdpr') return 'gdpr-delete';
   if (policyOrCategory === 'audit-chain') return 'audit-chain-verify';
@@ -321,14 +327,25 @@ async function incrementUpstash(key: string, windowSeconds: number) {
   const count = Number(readPipelineResult(payload[0]));
   const ttl = Number(readPipelineResult(payload[2]));
   if (!Number.isFinite(count) || count < 0) return { configured: true as const, ok: false as const };
-  return { configured: true as const, ok: true as const, count, resetAt: Date.now() + Math.max(1, Number.isFinite(ttl) && ttl > 0 ? ttl : windowSeconds) * 1000 };
+  return {
+    configured: true as const,
+    ok: true as const,
+    count,
+    resetAt: Date.now() + Math.max(1, Number.isFinite(ttl) && ttl > 0 ? ttl : windowSeconds) * 1000,
+  };
 }
 
 export async function checkDistributedRateLimit(options: RateLimitOptions): Promise<RateLimitResult> {
   const policy = resolvePolicy(options);
   const limit = Math.max(1, Math.ceil(options.limit ?? policy.limit));
-  const windowMs = typeof options.windowMs === 'number' ? Math.max(1, Math.ceil(options.windowMs)) : typeof options.windowSeconds === 'number' ? Math.max(1, Math.ceil(options.windowSeconds)) * 1000 : policy.windowMs;
-  const failureMode = isProductionRuntime() && policy.highRisk ? 'fail-closed' : options.failureMode ?? policy.failureMode;
+  const windowMs = typeof options.windowMs === 'number'
+    ? Math.max(1, Math.ceil(options.windowMs))
+    : typeof options.windowSeconds === 'number'
+      ? Math.max(1, Math.ceil(options.windowSeconds)) * 1000
+      : policy.windowMs;
+  const failureMode = isProductionRuntime() && policy.highRisk
+    ? 'fail-closed'
+    : options.failureMode ?? policy.failureMode;
   const key = resolveKey(options, policy);
   const subject = subjectFromOptions(options);
   const now = options.now ?? Date.now();
@@ -339,28 +356,59 @@ export async function checkDistributedRateLimit(options: RateLimitOptions): Prom
     if (!upstash.configured) {
       if (isProductionRuntime()) {
         console.error('[security:rate-limit] Upstash Redis is not configured.', { policy: policy.id, failureMode });
-        return createResult({ ...base, allowed: failureMode === 'fail-open', audit: failureMode === 'fail-closed' && policy.auditOnBlock, reason: 'redis_not_configured' });
+        return createResult({
+          ...base,
+          allowed: failureMode === 'fail-open',
+          audit: failureMode === 'fail-closed' && policy.auditOnBlock,
+          reason: 'redis_not_configured',
+        });
       }
     } else if (upstash.ok) {
       const allowed = upstash.count <= limit;
-      return createResult({ ...base, allowed, count: upstash.count, resetAt: upstash.resetAt, audit: !allowed && policy.auditOnBlock });
+      return createResult({
+        ...base,
+        allowed,
+        count: upstash.count,
+        resetAt: upstash.resetAt,
+        audit: !allowed && policy.auditOnBlock,
+      });
     } else if (isProductionRuntime()) {
       console.error('[security:rate-limit] Upstash Redis request failed.', { policy: policy.id, failureMode });
-      return createResult({ ...base, allowed: failureMode === 'fail-open', audit: failureMode === 'fail-closed' && policy.auditOnBlock, reason: 'redis_request_failed' });
+      return createResult({
+        ...base,
+        allowed: failureMode === 'fail-open',
+        audit: failureMode === 'fail-closed' && policy.auditOnBlock,
+        reason: 'redis_request_failed',
+      });
     }
   } catch {
     if (isProductionRuntime()) {
       console.error('[security:rate-limit] Upstash Redis unavailable.', { policy: policy.id, failureMode });
-      return createResult({ ...base, allowed: failureMode === 'fail-open', audit: failureMode === 'fail-closed' && policy.auditOnBlock, reason: 'redis_unavailable' });
+      return createResult({
+        ...base,
+        allowed: failureMode === 'fail-open',
+        audit: failureMode === 'fail-closed' && policy.auditOnBlock,
+        reason: 'redis_unavailable',
+      });
     }
   }
 
   const local = localIncrement(key, windowMs, now);
   const allowed = local.count <= limit;
-  return createResult({ ...base, allowed, count: local.count, resetAt: local.resetAt, audit: !allowed && policy.auditOnBlock });
+  return createResult({
+    ...base,
+    allowed,
+    count: local.count,
+    resetAt: local.resetAt,
+    audit: !allowed && policy.auditOnBlock,
+  });
 }
 
-export async function checkRateLimitPolicy(policyOrCategory: RateLimitPolicyId | RateLimitCategory, subject: RateLimitSubject, overrides: Omit<RateLimitOptions, keyof RateLimitSubject | 'category' | 'key' | 'policy'> = {}) {
+export async function checkRateLimitPolicy(
+  policyOrCategory: RateLimitPolicyId | RateLimitCategory,
+  subject: RateLimitSubject,
+  overrides: Omit<RateLimitOptions, keyof RateLimitSubject | 'category' | 'key' | 'policy'> = {},
+) {
   return checkDistributedRateLimit({ ...overrides, policy: resolvePolicyId(policyOrCategory), ...subject });
 }
 

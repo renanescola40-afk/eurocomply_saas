@@ -68,6 +68,19 @@ describe('enterprise rate limiting', () => {
     expect(blocked.highRisk).toBe(true);
   });
 
+  it('uses an explicit high-risk fail-closed team-management policy', async () => {
+    await hit('team-management');
+    await hit('team-management');
+    const blocked = await hit('team-management');
+
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.policy).toBe('team-management');
+    expect(blocked.category).toBe('team');
+    expect(blocked.failureMode).toBe('fail-closed');
+    expect(blocked.highRisk).toBe(true);
+    expect(blocked.audit).toBe(true);
+  });
+
   it('fails closed for high-risk production routes when Redis is not configured', async () => {
     Object.assign(process.env, { NODE_ENV: 'production' });
     vi.spyOn(console, 'error').mockImplementation(() => undefined);

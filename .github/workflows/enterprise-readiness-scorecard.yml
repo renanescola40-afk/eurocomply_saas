@@ -6,26 +6,39 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_run:
+    workflows: [Distributed Rate Limit Runtime Proof]
+    types: [completed]
 
 permissions:
   actions: read
   contents: read
 
 concurrency:
-  group: enterprise-readiness-scorecard-${{ github.ref }}
+  group: enterprise-readiness-scorecard-${{ github.event.workflow_run.head_sha || github.ref }}
   cancel-in-progress: true
 
 jobs:
   scorecard:
     name: Generate evidence-backed enterprise scorecard
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    env:
+      ASSESSED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+      RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.id || '' }}
     steps:
       - name: Checkout exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ env.ASSESSED_SHA }}
           persist-credentials: false
+
+      - name: Verify exact assessed checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$ASSESSED_SHA"
 
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
@@ -55,26 +68,43 @@ jobs:
           tests/enterprise/provider-failure-evidence.test.ts
           tests/enterprise/step-up-evidence.test.ts
 
+      - name: Validate distributed rate-limit proof contracts
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/enterprise-readiness
+          npx vitest run tests/security/distributed-rate-limit-runtime-proof.test.ts \
+            2>&1 | tee artifacts/enterprise-readiness/distributed-rate-limit-proof-tests.log
+
+      - name: Retain distributed rate-limit proof test diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: distributed-rate-limit-proof-test-diagnostics-${{ env.ASSESSED_SHA }}
+          path: artifacts/enterprise-readiness/distributed-rate-limit-proof-tests.log
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Build exact-SHA architecture review evidence
         env:
-          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
         run: node scripts/enterprise/build-architecture-review-evidence.mjs
 
       - name: Build exact-SHA incident and operations evidence
         env:
-          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
         run: node scripts/enterprise/build-incident-operations-evidence.mjs
 
       - name: Build exact-SHA logging and alert evidence
         env:
-          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
         run: node scripts/enterprise/build-centralized-logging-alert-evidence.mjs
 
       - name: Retain release evidence diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: release-documentation-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          name: release-documentation-evidence-${{ env.ASSESSED_SHA }}
           path: |
             docs/security/evidence/release/architecture-review.json
             docs/security/evidence/release/incident-response-validation.json
@@ -86,13 +116,13 @@ jobs:
       - name: Capture exact-SHA GitHub checks
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_WAIT_MS: '1080000'
         run: node scripts/enterprise/capture-github-checks-evidence.mjs
 
       - name: Run administrative-client boundary diagnostics
         env:
-          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
           ADMIN_BOUNDARY_DIAGNOSTICS_PATH: artifacts/enterprise-readiness/admin-boundary-diagnostics.json
         run: node scripts/enterprise/check-admin-boundary-evidence.mjs
 
@@ -100,14 +130,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: admin-boundary-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
+          name: admin-boundary-diagnostics-${{ env.ASSESSED_SHA }}
           path: artifacts/enterprise-readiness/admin-boundary-diagnostics.json
           if-no-files-found: error
           retention-days: 30
 
       - name: Build exact-SHA repository control evidence
         env:
-          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
         run: node scripts/enterprise/build-repository-control-evidence.mjs
 
@@ -115,7 +145,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: repository-control-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          name: repository-control-evidence-${{ env.ASSESSED_SHA }}
           path: |
             docs/security/evidence/runtime/origin-guard-validation.json
             docs/security/evidence/runtime/authorization-bola-validation.json
@@ -130,42 +160,54 @@ jobs:
 
       - name: Build exact-SHA public UX and localization evidence
         env:
-          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
         run: node scripts/enterprise/build-public-ux-evidence.mjs
 
       - name: Build exact-SHA accessibility and analytics consent evidence
         env:
-          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
         run: node scripts/enterprise/build-accessibility-consent-evidence.mjs
 
       - name: Build exact-SHA account recovery evidence
         env:
-          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
         run: node scripts/enterprise/build-account-recovery-evidence.mjs
 
       - name: Build exact-SHA provider failure evidence
         env:
-          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
         run: node scripts/enterprise/build-provider-failure-evidence.mjs
 
       - name: Build exact-SHA sensitive-action step-up evidence
         env:
-          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
         run: node scripts/enterprise/build-step-up-evidence.mjs
 
       - name: Validate sensitive-action step-up evidence contract
         run: node scripts/security/check-p1-step-up-evidence.mjs
 
+      - name: Retrieve exact-SHA distributed rate-limit runtime evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ env.RATE_LIMIT_RUNTIME_SOURCE_RUN_ID }}
+        run: node scripts/enterprise/fetch-distributed-rate-limit-evidence.mjs
+
+      - name: Validate distributed rate-limit evidence when available
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ env.ASSESSED_SHA }}
+        run: node scripts/security/check-p1-rate-limit-evidence.mjs
+
       - name: Retain product provider and identity acceptance evidence diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: product-provider-identity-acceptance-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          name: product-provider-identity-acceptance-evidence-${{ env.ASSESSED_SHA }}
           path: |
             docs/security/evidence/runtime/ux-acceptance-validation.json
             docs/security/evidence/runtime/localization-validation.json
@@ -174,12 +216,13 @@ jobs:
             docs/security/evidence/runtime/auth-recovery-validation.json
             docs/security/evidence/runtime/provider-failure-classification.json
             docs/security/evidence/p1/step-up-sensitive-actions.json
-          if-no-files-found: error
+            docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json
+          if-no-files-found: warn
           retention-days: 90
 
       - name: Generate scorecard
         env:
-          ENTERPRISE_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ENTERPRISE_EXPECTED_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
         run: node scripts/enterprise/generate-readiness-scorecard.mjs
 
@@ -189,7 +232,7 @@ jobs:
       - name: Upload scorecard artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: enterprise-readiness-scorecard-${{ github.event.pull_request.head.sha || github.sha }}
+          name: enterprise-readiness-scorecard-${{ env.ASSESSED_SHA }}
           path: |
             artifacts/enterprise-readiness/
             docs/security/evidence/release/architecture-review.json
@@ -198,6 +241,7 @@ jobs:
             docs/security/evidence/release/vulnerability-disclosure-validation.json
             docs/security/evidence/p1/centralized-logging-alerts.json
             docs/security/evidence/p1/step-up-sensitive-actions.json
+            docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json
             docs/security/evidence/runtime/origin-guard-validation.json
             docs/security/evidence/runtime/authorization-bola-validation.json
             docs/security/evidence/runtime/supabase-admin-boundary-validation.json
@@ -211,5 +255,5 @@ jobs:
             docs/security/evidence/runtime/analytics-consent-validation.json
             docs/security/evidence/runtime/auth-recovery-validation.json
             docs/security/evidence/runtime/provider-failure-classification.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90

@@ -188,8 +188,14 @@ describe('team invites API security gates', () => {
     expect(mocks.requireTrustedMutation).toHaveBeenCalledWith(expect.any(Request), {
       rateLimit: {
         key: 'team-invite:org_a:user_admin',
+        policy: 'team-management',
+        userId: 'user_admin',
+        organizationId: 'org_a',
+        action: 'team_invite_create',
+        route: '/api/team/invites',
         limit: 5,
         windowMs: 60_000,
+        failureMode: 'fail-closed',
       },
     });
     expect(mocks.requireStepUpForRequest).toHaveBeenCalledWith(expect.objectContaining({

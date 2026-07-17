@@ -1,0 +1,109 @@
+name: Distributed Rate Limit Runtime Proof
+
+run-name: Distributed rate-limit proof for ${{ inputs.release_sha || github.sha }}
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Optional full 40-character current main SHA; defaults to the triggering SHA
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: distributed-rate-limit-runtime-proof-${{ inputs.release_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  validate-distributed-rate-limit:
+    name: Validate live shared Redis rate limiting
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    env:
+      TARGET_SHA: ${{ inputs.release_sha || github.sha }}
+
+    steps:
+      - name: Validate requested release SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "release_sha must be a full 40-character Git SHA" >&2
+            exit 1
+          fi
+          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+
+      - name: Check out exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact current main checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          OBSERVED_SHA="$(git rev-parse HEAD)"
+          test "$OBSERVED_SHA" = "$TARGET_SHA"
+          MAIN_SHA="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$MAIN_SHA" = "$TARGET_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate repository rate-limit contracts
+        run: >-
+          npx vitest run
+          src/server/security/rate-limit.enterprise.test.ts
+          src/lib/security/rate-limit.test.ts
+          tests/unit/rate-limit.test.ts
+          tests/security/centralized-security-alert-routing.test.ts
+          tests/security/distributed-rate-limit-runtime-proof.test.ts
+
+      - name: Generate ephemeral probe salt
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROBE_SALT="$(openssl rand -hex 32)"
+          echo "::add-mask::$PROBE_SALT"
+          echo "RATE_LIMIT_RUNTIME_PROBE_SALT=$PROBE_SALT" >> "$GITHUB_ENV"
+
+      - name: Execute live shared-backend validation
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ env.TARGET_SHA }}
+          RATE_LIMIT_RUNTIME_TARGET_ENVIRONMENT: production
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+        run: node scripts/security/run-distributed-rate-limit-runtime-validation.mjs
+
+      - name: Validate final P1 evidence contract
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ env.TARGET_SHA }}
+        run: node scripts/security/check-p1-rate-limit-evidence.mjs
+
+      - name: Upload redacted runtime evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: distributed-rate-limit-runtime-proof-${{ env.TARGET_SHA }}
+          path: docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json
+          if-no-files-found: error
+          retention-days: 90
