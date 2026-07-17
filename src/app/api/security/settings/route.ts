@@ -19,6 +19,14 @@ type SecuritySettingsInput = {
   allowedIdpAmrValues?: unknown;
 };
 
+type StoredSecuritySettings = {
+  organization_id: string;
+  require_step_up_for_critical_actions: boolean;
+  step_up_provider_mode: string;
+  allowed_idp_acr_values: string[] | null;
+  allowed_idp_amr_values: string[] | null;
+};
+
 function isSecuritySettingsInput(value: unknown): value is SecuritySettingsInput {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -100,6 +108,16 @@ export async function POST(request: NextRequest) {
     if (nextSettings.allowedIdpAmrValues.length > 0) changes.push('allowed_idp_amr_values');
 
     const supabase = createAdminClient();
+    const { data: previousSettings, error: previousSettingsError } = await supabase
+      .from('organization_security_settings')
+      .select('organization_id, require_step_up_for_critical_actions, step_up_provider_mode, allowed_idp_acr_values, allowed_idp_amr_values')
+      .eq('organization_id', organization.id)
+      .maybeSingle<StoredSecuritySettings>();
+
+    if (previousSettingsError) {
+      return noStoreJson({ error: 'security_settings_read_failed' }, { status: 503 });
+    }
+
     const { error } = await supabase
       .from('organization_security_settings')
       .upsert(
@@ -132,10 +150,27 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    if (!audit.persisted) {
+      const compensation = previousSettings
+        ? await supabase
+            .from('organization_security_settings')
+            .upsert(previousSettings, { onConflict: 'organization_id' })
+        : await supabase
+            .from('organization_security_settings')
+            .delete()
+            .eq('organization_id', organization.id);
+
+      if (compensation.error) {
+        console.error('security_settings_audit_compensation_failed');
+      }
+
+      return noStoreJson({ error: 'security_settings_audit_unavailable' }, { status: 503 });
+    }
+
     return noStoreJson({
       changed: changes.length > 0,
       changedKeys: changes,
-      auditPersisted: audit.persisted,
+      auditPersisted: true,
       settings: {
         requireStepUpForCriticalActions: true,
         stepUpProviderMode: nextSettings.stepUpProviderMode,
