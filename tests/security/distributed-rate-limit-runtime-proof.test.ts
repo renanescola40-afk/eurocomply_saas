@@ -4,6 +4,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import {
+  selectExactShaRun,
+  validateDownloadedEvidence,
+} from '../../scripts/enterprise/fetch-distributed-rate-limit-evidence.mjs';
+
 const SHA = 'a'.repeat(40);
 const temporaryDirectories: string[] = [];
 
@@ -188,6 +193,37 @@ describe('distributed rate-limit runtime proof', () => {
     expect(workflow).toContain('UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}');
     expect(workflow).toContain('if: always()');
     expect(workflow).toContain('distributed-rate-limit-runtime-proof-${{ env.TARGET_SHA }}');
+  });
+
+  it('reruns the scorecard after a successful exact-SHA runtime proof', () => {
+    const workflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+
+    expect(workflow).toContain('workflow_run:\n    workflows: [Distributed Rate Limit Runtime Proof]');
+    expect(workflow).toContain("if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'");
+    expect(workflow).toContain('RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.id ||');
+    expect(workflow).toContain('node scripts/enterprise/fetch-distributed-rate-limit-evidence.mjs');
+    expect(workflow).toContain('node scripts/security/check-p1-rate-limit-evidence.mjs');
+  });
+
+  it('selects only a successful exact-SHA runtime run and validates artifact provenance', () => {
+    const selected = selectExactShaRun([
+      { id: 1, head_sha: SHA, status: 'completed', conclusion: 'failure', updated_at: '2026-07-17T00:00:00Z' },
+      { id: 2, head_sha: 'b'.repeat(40), status: 'completed', conclusion: 'success', updated_at: '2026-07-17T01:00:00Z' },
+      { id: 12345, head_sha: SHA, status: 'completed', conclusion: 'success', updated_at: '2026-07-17T02:00:00Z' },
+    ], SHA);
+
+    expect(selected?.id).toBe(12345);
+    expect(selectExactShaRun([selected], SHA, '999')).toBeNull();
+    expect(validateDownloadedEvidence(validEvidence(), {
+      targetSha: SHA,
+      repository: 'renanescola40-afk/eurocomply_saas',
+      runId: 12345,
+    })).toEqual({ passed: true, failures: [] });
+    expect(validateDownloadedEvidence({ ...validEvidence(), targetSha: 'b'.repeat(40) }, {
+      targetSha: SHA,
+      repository: 'renanescola40-afk/eurocomply_saas',
+      runId: 12345,
+    }).passed).toBe(false);
   });
 
   it('accepts only complete exact-SHA runtime evidence', () => {
