@@ -41,7 +41,7 @@ export async function listAuditEventsForUser(userId: string): Promise<AuditLogIt
 
   if (error) {
     console.warn('[audit] list_failed', { code: error.code ?? 'unknown' });
-    throw new Error('Unable to load audit trail.');
+    throw new Error('Unable to load audit activity.');
   }
 
   if (!data?.length) {
