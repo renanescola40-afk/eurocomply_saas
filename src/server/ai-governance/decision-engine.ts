@@ -283,7 +283,7 @@ export function evaluateAiSystemRole(input: RoleWizardInput): RoleWizardAssessme
   if (severeReview) signals.push('biometric_or_prohibited_review');
 
   let recommendedRole: AiSystemRole = selectedRole;
-  let confidence: RoleConfidence = selectedRole === 'other' ? 'low' : 'medium';
+  let confidence!: RoleConfidence;
 
   if (selectedRole === 'importer' || selectedRole === 'distributor') {
     confidence = 'high';
