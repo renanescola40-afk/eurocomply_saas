@@ -1,5 +1,5 @@
 import { unstable_noStore as noStore } from 'next/cache';
-import { createAdminClient, tryCreateAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 const DOCUMENT_COLUMNS = 'id,organization_id,name,category,status,expires_at,created_at,updated_at';
 const DEFAULT_DOCUMENTS_PAGE_SIZE = 50;
@@ -60,9 +60,7 @@ function getDocumentsPaginationRange(options: ListDocumentsOptions = {}) {
 export async function listDocuments(organizationId: string, options: ListDocumentsOptions = {}) {
   noStore();
 
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
-
+  const supabase = createAdminClient();
   const { from, to } = getDocumentsPaginationRange(options);
   const { data, error } = await supabase
     .from('documents')
@@ -72,8 +70,8 @@ export async function listDocuments(organizationId: string, options: ListDocumen
     .range(from, to);
 
   if (error) {
-    console.warn('[documents] list_failed', { code: error.code });
-    return [];
+    console.warn('[documents] list_failed', { code: error.code ?? 'unknown' });
+    throw new Error('documents_register_unavailable');
   }
 
   return (data ?? []).map((document) => normalizeDocumentRow(document as DocumentRow));
