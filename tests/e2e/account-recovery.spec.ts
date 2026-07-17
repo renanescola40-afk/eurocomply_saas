@@ -26,7 +26,7 @@ test.describe('enterprise account recovery', () => {
     await page.getByLabel('Work email').fill('synthetic-recovery@example.test');
     await page.getByRole('button', { name: 'Send recovery link' }).click();
 
-    await expect(page.getByRole('status')).toContainText(
+    await expect(page.locator('main').getByRole('status')).toContainText(
       'If an account exists for that email, a secure recovery link will be sent.',
     );
     await expect(page.getByLabel('Work email')).toHaveValue('');
@@ -47,14 +47,14 @@ test.describe('enterprise account recovery', () => {
     await page.getByLabel('Email profissional').fill('synthetic-recovery@example.test');
     await page.getByRole('button', { name: 'Enviar link de recuperação' }).click();
 
-    await expect(page.getByRole('alert')).toContainText(/temporariamente indisponível/i);
+    await expect(page.locator('main').getByRole('alert')).toContainText(/temporariamente indisponível/i);
     await expect(page.locator('body')).not.toContainText('account_recovery_unavailable');
   });
 
   test('reset completion rejects a missing or expired recovery session', async ({ page }) => {
     await page.goto('/en/reset-password', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('alert')).toContainText(/invalid or expired/i);
+    await expect(page.locator('main').getByRole('alert')).toContainText(/invalid or expired/i);
     await expect(page.getByRole('link', { name: 'Request a new link' })).toHaveAttribute(
       'href',
       '/en/recuperar-senha',
