@@ -63,7 +63,7 @@ export async function GET() {
     ...((data ?? []).map((risk) => [risk.title, risk.status, risk.risk_score, risk.likelihood, risk.impact, risk.created_at, risk.updated_at])),
   ];
 
-  await writeAuditLog({
+  const auditResult = await writeAuditLog({
     action: 'report.export',
     organizationId: organization.id,
     userId: user.id,
@@ -71,6 +71,15 @@ export async function GET() {
     entityId: 'risks.csv',
     metadata: { format: 'csv', report: 'risks', rows: exportedRowCount },
   });
+
+  if (!auditResult.persisted) {
+    reportError(new Error('Risks CSV export audit persistence failed'), {
+      area: 'risks_csv_export_audit',
+      organizationId: organization.id,
+      userId: user.id,
+    });
+    return noStoreJson({ error: 'Risks export is temporarily unavailable' }, { status: 503 });
+  }
 
   return csvDownloadResponse(rows, 'risks-report.csv');
 }

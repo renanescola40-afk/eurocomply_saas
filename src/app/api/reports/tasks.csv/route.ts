@@ -63,7 +63,7 @@ export async function GET() {
     ...((data ?? []).map((task) => [task.title, task.category, task.priority, task.status, task.due_date, task.created_at, task.updated_at])),
   ];
 
-  await writeAuditLog({
+  const auditResult = await writeAuditLog({
     action: 'report.export',
     organizationId: organization.id,
     userId: user.id,
@@ -71,6 +71,15 @@ export async function GET() {
     entityId: 'tasks.csv',
     metadata: { format: 'csv', report: 'tasks', rows: exportedRowCount },
   });
+
+  if (!auditResult.persisted) {
+    reportError(new Error('Tasks CSV export audit persistence failed'), {
+      area: 'tasks_csv_export_audit',
+      organizationId: organization.id,
+      userId: user.id,
+    });
+    return noStoreJson({ error: 'Tasks export is temporarily unavailable' }, { status: 503 });
+  }
 
   return csvDownloadResponse(rows, 'tasks-report.csv');
 }
