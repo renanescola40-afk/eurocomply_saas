@@ -150,7 +150,7 @@ describe('account recovery request security', () => {
     expect(mocks.resetPasswordForEmail).not.toHaveBeenCalled();
   });
 
-  it('uses one sanitized response while recording a distinguishable unavailable provider failure', async () => {
+  it('uses one sanitized provider-unavailable response while recording a distinguishable unavailable provider failure', async () => {
     mocks.resetPasswordForEmail.mockResolvedValueOnce({
       error: { code: 'provider_unavailable', message: 'raw provider diagnostic' },
     });
