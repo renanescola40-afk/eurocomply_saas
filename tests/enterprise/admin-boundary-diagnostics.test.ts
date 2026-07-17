@@ -125,7 +125,7 @@ describe('enterprise admin boundary diagnostics', () => {
     expect(uploadIndex).toBeGreaterThan(diagnosticIndex);
     expect(evidenceIndex).toBeGreaterThan(uploadIndex);
     expect(workflow).toContain('ADMIN_BOUNDARY_DIAGNOSTICS_PATH: artifacts/enterprise-readiness/admin-boundary-diagnostics.json');
-    expect(workflow).toContain('admin-boundary-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}');
+    expect(workflow).toContain('admin-boundary-diagnostics-${{ env.ASSESSED_SHA }}');
     expect(workflow).toContain('path: artifacts/enterprise-readiness/admin-boundary-diagnostics.json');
     expect(workflow).toContain('if: always()');
     expect(workflow).toContain('node scripts/enterprise/check-admin-boundary-evidence.mjs');

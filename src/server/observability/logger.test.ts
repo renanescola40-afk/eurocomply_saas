@@ -50,6 +50,8 @@ describe('central observability logger', () => {
       'rbac_denied',
       'origin_denied',
       'rate_limit_blocked',
+      'rate_limit_abuse_detected',
+      'rate_limit_backend_unavailable',
       'step_up_failed',
       'webhook_failed',
       'upload_blocked',
@@ -60,6 +62,9 @@ describe('central observability logger', () => {
 
   it('classifies only material security events for centralized alert routing', () => {
     expect(securityAlertSeverity('rbac_denied')).toBe('none');
+    expect(securityAlertSeverity('rate_limit_blocked')).toBe('none');
+    expect(securityAlertSeverity('rate_limit_abuse_detected')).toBe('high');
+    expect(securityAlertSeverity('rate_limit_backend_unavailable')).toBe('high');
     expect(securityAlertSeverity('step_up_failed')).toBe('high');
     expect(securityAlertSeverity('webhook_failed')).toBe('high');
     expect(securityAlertSeverity('rls_validation_failed')).toBe('critical');

@@ -1,0 +1,76 @@
+name: Enterprise Evidence Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enterprise-evidence-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence-tests:
+    name: Validate enterprise evidence contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact tested SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run enterprise evidence tests with retained diagnostics
+        id: evidence_tests
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/enterprise-readiness
+          set +e
+          npx vitest run \
+            tests/enterprise/enterprise-readiness-scorecard.test.ts \
+            tests/enterprise/evidence-overrides-guard.test.ts \
+            tests/enterprise/architecture-review-evidence.test.ts \
+            tests/enterprise/incident-operations-evidence.test.ts \
+            tests/enterprise/centralized-logging-alert-evidence.test.ts \
+            tests/enterprise/public-ux-evidence.test.ts \
+            tests/enterprise/accessibility-consent-evidence.test.ts \
+            tests/enterprise/repository-control-evidence.test.ts \
+            tests/enterprise/admin-boundary-diagnostics.test.ts \
+            tests/enterprise/account-recovery-evidence.test.ts \
+            tests/enterprise/provider-failure-evidence.test.ts \
+            tests/enterprise/step-up-evidence.test.ts \
+            2>&1 | tee artifacts/enterprise-readiness/enterprise-evidence-tests.log
+          TEST_STATUS=${PIPESTATUS[0]}
+          set -e
+          echo "status=$TEST_STATUS" >> "$GITHUB_OUTPUT"
+
+      - name: Upload enterprise evidence test diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-evidence-test-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/enterprise-readiness/enterprise-evidence-tests.log
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce enterprise evidence tests passed
+        if: steps.evidence_tests.outputs.status != '0'
+        run: |
+          echo "Enterprise evidence contract tests failed. Review the retained diagnostic artifact." >&2
+          exit 1

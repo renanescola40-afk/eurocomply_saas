@@ -121,8 +121,14 @@ export async function POST(request: Request) {
     const mutationDenied = await requireTrustedMutation(request, {
       rateLimit: {
         key: `billing:checkout:${organization.id}:${user.id}`,
+        policy: 'billing-checkout',
+        userId: user.id,
+        organizationId: organization.id,
+        action: 'billing_checkout_create',
+        route: '/api/billing/checkout',
         limit: 10,
         windowMs: 60 * 1000,
+        failureMode: 'fail-closed',
       },
     });
 

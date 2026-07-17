@@ -46,8 +46,13 @@ export async function POST(request: Request) {
     const mutationDenied = await requireTrustedMutation(request, {
       rateLimit: {
         key: `team-member-remove:${user.id}:${getClientIp(request)}`,
+        policy: 'team-management',
+        userId: user.id,
+        action: 'team_member_remove',
+        route: '/api/team/members/remove',
         limit: RATE_LIMIT_MAX_ATTEMPTS,
         windowMs: RATE_LIMIT_WINDOW_MS,
+        failureMode: 'fail-closed',
       },
     });
 

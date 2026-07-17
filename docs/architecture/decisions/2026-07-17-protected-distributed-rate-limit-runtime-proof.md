@@ -1,0 +1,81 @@
+# Protected exact-SHA distributed rate-limit runtime proof
+
+- **Date:** 2026-07-17
+- **Status:** Proposed
+- **Control:** PLT-09 — Distributed rate limiting validated
+- **Scope:** Production-mode Upstash Redis behavior and exact-SHA evidence promotion
+
+## Context
+
+RISCK COMPLY already uses a central rate-limit helper with high-risk policies, privacy-safe subject keys, Upstash Redis support, standard response headers and production fail-closed behavior. The existing P1 evidence path, however, could be generated from a manually completed checklist. That does not prove that two independent application processes observe the same counter, that the production secrets exist, or that the real helper blocks after the configured threshold.
+
+A static source review is useful for regression prevention but cannot honestly satisfy a control whose acceptance criterion is a shared distributed backend.
+
+## Decision
+
+Add a protected GitHub Actions workflow that runs only for the exact current `main` SHA or an explicitly requested SHA that still equals current `main`.
+
+The workflow:
+
+1. checks out and verifies the exact current `main` SHA;
+2. runs repository rate-limit and alert-routing contracts;
+3. creates an ephemeral, masked probe salt;
+4. invokes the actual production-mode rate-limit helper from independent Node.js processes;
+5. uses a synthetic high-risk `team-management` subject with a threshold of two;
+6. verifies that the first and second processes share the same counter and that the third is blocked;
+7. verifies that a distinct subject receives an isolated bucket;
+8. removes Redis configuration in a separate production-mode process and requires fail-closed behavior;
+9. deletes both synthetic Redis keys in a `finally` cleanup path; and
+10. uploads only a redacted exact-SHA evidence document.
+
+The Enterprise Readiness Scorecard never trusts a committed or manually prepared PLT-09 document. It removes stale evidence and retrieves only an artifact from a successful `Distributed Rate Limit Runtime Proof` run whose repository, workflow name, run ID, target SHA and observed SHA all match the assessed SHA. A successful runtime workflow triggers a second scorecard run through `workflow_run` so the accepted artifact can promote PLT-09.
+
+## Policy hardening
+
+Team invitation, member removal, member role change and invitation cancellation now use the explicit high-risk `team-management` policy instead of relying on legacy key inference.
+
+Billing checkout also declares its `billing-checkout` policy, organization, user, action, route and fail-closed mode explicitly.
+
+High-risk threshold blocks emit the sanitized `rate_limit_abuse_detected` security event. Distributed-backend outages that deny a high-risk operation emit `rate_limit_backend_unavailable`. Ordinary low-value 429 responses remain local to avoid alert fatigue. Raw rate-limit keys are never logged; only a SHA-256 digest is included in the safe context.
+
+## Promotion criteria
+
+PLT-09 can become `PASS` only when all of the following are true:
+
+- canonical repository and protected GitHub Actions provenance;
+- full target SHA equal to the checked-out SHA and current `main`;
+- production environment selected;
+- protected Upstash URL/token secrets present;
+- actual helper executed in at least four independent processes;
+- shared counter observed for the same subject;
+- threshold block, audit flag and retry interval observed;
+- distinct subject isolation observed;
+- production missing-backend path observed to fail closed;
+- synthetic shared and isolated keys deleted;
+- source contracts cover auth, billing, documents, team and audit endpoints;
+- high-risk abuse and backend-failure alert routes remain sanitized;
+- exact workflow run and artifact provenance accepted by the scorecard;
+- no secrets, raw keys, raw provider responses or customer data stored.
+
+## Evidence boundary
+
+This proof validates the real application helper and one protected Upstash namespace from independent processes. It does **not** prove:
+
+- CDN, WAF or edge rate limiting;
+- successful Sentry alert delivery;
+- every production endpoint invocation;
+- Upstash availability or SLA over time;
+- immunity from all distributed abuse techniques;
+- production traffic behavior beyond the synthetic probe.
+
+Those remain separate runtime, observability and operational controls.
+
+## Failure behavior
+
+Missing secrets, environment approval, invalid SHA, provider failure, inconsistent counters, missing block, failed isolation or incomplete cleanup produces `Open/failed` evidence and a failed workflow. A skipped or unavailable provider is never counted as success.
+
+The scorecard remains at the previous official value when no accepted exact-SHA artifact exists.
+
+## Rollback
+
+Revert the workflow, worker, validator, artifact fetcher, checker hardening, explicit route policies, alert events, tests and this decision record. Remove any PLT-09 PASS generated by this mechanism and return the control to `NOT_VERIFIED`. Do not retain an artifact from a reverted SHA as current evidence.

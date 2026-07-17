@@ -59,8 +59,14 @@ export async function POST(request: Request) {
     const mutationDenied = await requireTrustedMutation(request, {
       rateLimit: {
         key: `team-invite:${organization.id}:${user.id}`,
+        policy: 'team-management',
+        userId: user.id,
+        organizationId: organization.id,
+        action: 'team_invite_create',
+        route: '/api/team/invites',
         limit: RATE_LIMIT_MAX_ATTEMPTS,
         windowMs: RATE_LIMIT_WINDOW_MS,
+        failureMode: 'fail-closed',
       },
     });
 
