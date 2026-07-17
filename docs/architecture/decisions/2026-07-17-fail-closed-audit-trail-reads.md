@@ -16,7 +16,7 @@ Audit-trail reads must preserve three distinct states:
 
 1. A user without a current organization has no organization-scoped audit trail, so the loader returns an empty collection without inventing records.
 2. A successful query with zero rows returns an empty collection.
-3. Privileged-client creation or database-query failures propagate to the existing application error boundary. Query failures are logged only with the provider error code and are exposed to callers through the stable error `Unable to load audit trail.`.
+3. Privileged-client creation or database-query failures propagate to the existing application error boundary. Query failures are logged only with the provider error code and are exposed to callers through the existing stable error `Unable to load audit activity.`.
 
 The audit loader therefore uses `createAdminClient()` and no longer contains demonstration audit entries or schema-fallback handling.
 
