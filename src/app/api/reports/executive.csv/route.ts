@@ -50,15 +50,25 @@ export async function GET() {
       ['Total documents', summary.totals.documents],
       ['Generated at', new Date().toISOString()],
     ];
+    const exportedRowCount = rows.length - 1;
 
-    await writeAuditLog({
+    const auditResult = await writeAuditLog({
       action: 'report.export',
       organizationId: organization.id,
       userId: user.id,
       entityType: 'report',
       entityId: 'executive.csv',
-      metadata: { format: 'csv', report: 'executive', rows: rows.length },
+      metadata: { format: 'csv', report: 'executive', rows: exportedRowCount },
     });
+
+    if (!auditResult.persisted) {
+      reportError(new Error('Executive CSV export audit persistence failed'), {
+        area: 'executive_csv_export_audit',
+        organizationId: organization.id,
+        userId: user.id,
+      });
+      return noStoreJson({ error: 'Executive export is temporarily unavailable' }, { status: 503 });
+    }
 
     return csvDownloadResponse(rows, 'executive-report.csv');
   } catch (error) {
