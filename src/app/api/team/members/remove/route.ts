@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { reportError } from '@/lib/observability/report-error';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createAuditEvent } from '@/server/queries/audit-events';
@@ -158,7 +159,31 @@ export async function POST(request: Request) {
       },
     });
 
-    return noStoreJson({ removed: true, auditPersisted: audit.persisted, stepUp: publicStepUpSummary(stepUp.assessment) });
+    if (!audit.persisted) {
+      const { error: rollbackError } = await supabase.from('organization_members').insert({
+        id: removal.affected_member_id ?? member.id,
+        organization_id: organization.id,
+        user_id: removal.affected_user_id ?? member.user_id,
+        role: removal.previous_role ?? member.role,
+      });
+
+      if (rollbackError) {
+        reportError(new Error('Team member removal audit rollback failed'), {
+          area: 'team_member_removal_audit_rollback',
+          organizationId: organization.id,
+          userId: user.id,
+          code: rollbackError.code ?? 'unknown',
+        });
+      }
+
+      return noStoreJson({ error: 'team_member_removal_audit_unavailable' }, { status: 503 });
+    }
+
+    return noStoreJson({
+      removed: true,
+      auditPersisted: true,
+      stepUp: publicStepUpSummary(stepUp.assessment),
+    });
   } catch (error) {
     return secureApiError(error);
   }
