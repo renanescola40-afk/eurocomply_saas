@@ -4,6 +4,31 @@ import { describe, expect, it } from 'vitest';
 import { validateGeneratedBranchProtectionEvidence } from '../../scripts/security/check-generated-branch-protection-evidence.mjs';
 
 const SHA = 'a'.repeat(40);
+const completeProtection = {
+  protect_branch: true,
+  require_pull_request: true,
+  required_approving_reviews: 1,
+  require_code_owner_review: true,
+  dismiss_stale_reviews: true,
+  require_conversation_resolution: true,
+  require_status_checks: true,
+  require_up_to_date_branch: true,
+  block_force_pushes: true,
+  block_deletions: true,
+  restrict_direct_pushes: true,
+};
+const trustedProvenance = {
+  githubActions: true,
+  runId: '123456',
+  exactShaBound: true,
+  mainHeadMatched: true,
+};
+const safeIntegrity = {
+  containsSensitiveValues: false,
+  rawApiPayloadStored: false,
+  accessTokensStored: false,
+  exactShaBound: true,
+};
 
 function passingEvidence(overrides: Record<string, unknown> = {}) {
   return {
@@ -21,37 +46,15 @@ function passingEvidence(overrides: Record<string, unknown> = {}) {
     source: 'github-api-branch-protection-workflow',
     redactionConfirmation: 'Redaction confirmed for branch protection runtime evidence.',
     required_status_checks: ['CI / quality'],
-    branch_protection: {
-      protect_branch: true,
-      require_pull_request: true,
-      required_approving_reviews: 1,
-      require_code_owner_review: true,
-      dismiss_stale_reviews: true,
-      require_conversation_resolution: true,
-      require_status_checks: true,
-      require_up_to_date_branch: true,
-      block_force_pushes: true,
-      block_deletions: true,
-      restrict_direct_pushes: true,
-    },
+    branch_protection: completeProtection,
     controlsVerified: Array.from({ length: 11 }, (_, index) => `control-${index + 1}`),
     sourceDetails: {
       missingRequiredChecks: [],
       missingProtectionFlags: 0,
     },
-    provenance: {
-      githubActions: true,
-      runId: '123456',
-      exactShaBound: true,
-      mainHeadMatched: true,
-    },
+    provenance: trustedProvenance,
     failures: [],
-    evidenceIntegrity: {
-      containsSensitiveValues: false,
-      rawApiPayloadStored: false,
-      accessTokensStored: false,
-      exactShaBound: true,
-    },
+    evidenceIntegrity: safeIntegrity,
     ...overrides,
   };
 }
@@ -69,14 +72,14 @@ describe('exact-SHA branch protection runtime proof', () => {
 
     expect(validateGeneratedBranchProtectionEvidence(passingEvidence({
       branch_protection: {
-        ...passingEvidence().branch_protection,
+        ...completeProtection,
         require_code_owner_review: false,
       },
     }), { expectedSha: SHA })).toContain('branch_protection.require_code_owner_review must be true');
 
     expect(validateGeneratedBranchProtectionEvidence(passingEvidence({
       provenance: {
-        ...passingEvidence().provenance,
+        ...trustedProvenance,
         githubActions: false,
       },
     }), { expectedSha: SHA })).toContain('GitHub Actions provenance is required');
@@ -85,7 +88,7 @@ describe('exact-SHA branch protection runtime proof', () => {
   it('rejects evidence that stores sensitive or raw API material', () => {
     const failures = validateGeneratedBranchProtectionEvidence(passingEvidence({
       evidenceIntegrity: {
-        ...passingEvidence().evidenceIntegrity,
+        ...safeIntegrity,
         containsSensitiveValues: true,
         rawApiPayloadStored: true,
         accessTokensStored: true,
@@ -104,7 +107,7 @@ describe('exact-SHA branch protection runtime proof', () => {
     expect(workflow).toContain('release_sha:');
     expect(workflow).toContain('ref: ${{ inputs.release_sha }}');
     expect(workflow).toContain('persist-credentials: false');
-    expect(workflow).toContain("targetSha !== checkedOutSha || targetSha !== currentMainSha");
+    expect(workflow).toContain('targetSha !== checkedOutSha || targetSha !== currentMainSha');
     expect(workflow).toContain('github.rest.repos.getBranchProtection');
     expect(workflow).toContain('core.setFailed(evidence.summary)');
     expect(workflow).toContain('check-generated-branch-protection-evidence.mjs');
