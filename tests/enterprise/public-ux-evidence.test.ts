@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -8,31 +9,23 @@ import {
 
 const SHA = 'a'.repeat(40);
 
-const completeSpec = `
-const SUPPORTED_LOCALES = ['en', 'pt', 'es', 'fr', 'it', 'de'];
-test.describe('enterprise public UX acceptance', () => {
-  test('landing is localized, healthy and conversion-ready', async ({ page }) => {
-    await page.locator('#waitlist-form');
-    await page.locator('h1');
-  });
-  test('pricing is localized, healthy and actionable', async () => {
-    const path = '/pricing';
-    const label = 'actionable controls';
-  });
-  test('login is localized, healthy and usable', async ({ page }) => {
-    await page.locator('input[type="email"]');
-    await page.locator('input[type="password"]');
-    await page.getByRole('button', { name: /google/i });
-  });
-  test('mobile public conversion surfaces', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await expectNoHorizontalOverflow(page, 'mobile');
-  });
-  await expect(page.locator('html')).toHaveAttribute('lang', locale);
-  const message = 'retain the locale prefix';
-  const errors = 'Unhandled Runtime Error /undefined visible placeholder links';
-});
-`;
+function repositorySources() {
+  return {
+    publicSpec: readFileSync('tests/e2e/enterprise-public-ux-acceptance.spec.ts', 'utf8'),
+    authenticatedProductTest: readFileSync('tests/product/authenticated-product-ux.test.tsx', 'utf8'),
+    criticalFlowSpec: readFileSync('tests/e2e/enterprise-critical-flows.spec.ts', 'utf8'),
+    productJourneySpec: readFileSync('tests/e2e/product-critical-journeys.spec.ts', 'utf8'),
+    onboardingPage: readFileSync('src/app/[locale]/onboarding/page.tsx', 'utf8'),
+    onboardingComponent: readFileSync('src/components/onboarding/b2b-onboarding-flow.tsx', 'utf8'),
+    dashboardPage: readFileSync('src/app/[locale]/dashboard/organizations/page.tsx', 'utf8'),
+    dashboardComponent: readFileSync('src/components/dashboard/enterprise-compliance-command-center.tsx', 'utf8'),
+  };
+}
+
+function repositoryCoverage(overrides: Record<string, string> = {}) {
+  const sources = { ...repositorySources(), ...overrides };
+  return evaluatePublicUxCoverage(sources.publicSpec, sources);
+}
 
 const githubChecks = {
   status: 'Complete',
@@ -45,20 +38,21 @@ const githubChecks = {
 };
 
 function build(overrides: Record<string, unknown> = {}) {
-  const coverage = evaluatePublicUxCoverage(completeSpec);
+  const coverage = repositoryCoverage();
   const exactChecks = evaluateExactShaChecks(githubChecks, SHA);
   return buildPublicUxEvidence({
     coverage,
     exactChecks,
     repository: 'renanescola40-afk/eurocomply_saas',
-    branch: 'agent/public-ux-acceptance-evidence',
+    branch: 'agent/authenticated-product-ux-proof',
     targetSha: SHA,
     observedSha: SHA,
     runId: '12345',
     githubActions: true,
-    generatedAt: '2026-07-16T00:00:00.000Z',
+    generatedAt: '2026-07-17T00:00:00.000Z',
     sourceDigests: {
-      acceptanceSpec: 'spec-digest',
+      publicAcceptanceSpec: 'public-spec-digest',
+      authenticatedProductTest: 'authenticated-test-digest',
       routing: 'routing-digest',
       playwrightConfig: 'playwright-digest',
       githubChecks: 'checks-digest',
@@ -67,10 +61,13 @@ function build(overrides: Record<string, unknown> = {}) {
   });
 }
 
-describe('public UX evidence', () => {
-  it('recognizes the dedicated public UX and locale coverage', () => {
-    const coverage = evaluatePublicUxCoverage(completeSpec);
+describe('product UX evidence', () => {
+  it('recognizes public, onboarding, dashboard and locale coverage from real sources', () => {
+    const coverage = repositoryCoverage();
+
     expect(coverage.publicUxCoverage).toBe(true);
+    expect(coverage.onboardingCoverage).toBe(true);
+    expect(coverage.dashboardCoverage).toBe(true);
     expect(coverage.localizationCoverage).toBe(true);
     expect(coverage.checks).toMatchObject({
       landing: true,
@@ -79,6 +76,12 @@ describe('public UX evidence', () => {
       mobile: true,
       supportedLocales: true,
       controlledErrors: true,
+      onboardingComponentAcceptance: true,
+      onboardingSourceContract: true,
+      onboardingRouteBoundary: true,
+      dashboardComponentAcceptance: true,
+      dashboardSourceContract: true,
+      dashboardRouteBoundary: true,
     });
   });
 
@@ -99,8 +102,9 @@ describe('public UX evidence', () => {
     ).toBe(false);
   });
 
-  it('produces complete scorecard-readable UX and localization evidence', () => {
+  it('produces complete scorecard-readable product UX and localization evidence', () => {
     const evidence = build();
+
     expect(evidence.ux.status).toBe('Complete');
     expect(evidence.localization.status).toBe('Complete');
     expect(evidence.ux.checks).toEqual([
@@ -108,18 +112,28 @@ describe('public UX evidence', () => {
       { name: 'pricing', passed: true },
       { name: 'login', passed: true },
       { name: 'mobile', passed: true },
+      { name: 'onboarding', passed: true },
+      { name: 'dashboard', passed: true },
     ]);
+    expect(evidence.ux.controlsVerified).toContain('Onboarding UX acceptance validated');
+    expect(evidence.ux.controlsVerified).toContain('Dashboard UX acceptance validated');
     expect(evidence.localization.controlsVerified).toEqual(['Supported locales validated']);
-    expect(JSON.stringify(evidence)).not.toContain(completeSpec);
+    expect(evidence.ux.evidenceIntegrity).toMatchObject({
+      containsSensitiveValues: false,
+      customerDataStored: false,
+      productionSessionStored: false,
+      exactShaBound: true,
+    });
+    expect(evidence.ux.evidenceBoundary).toContain('does not create an authentication bypass');
+    expect(evidence.ux.evidenceBoundary).toContain('does not');
   });
 
   it('fails closed when required execution evidence is incomplete', () => {
-    const coverage = evaluatePublicUxCoverage(completeSpec);
     const evidence = buildPublicUxEvidence({
-      coverage,
+      coverage: repositoryCoverage(),
       exactChecks: evaluateExactShaChecks({ ...githubChecks, status: 'Open' }, SHA),
       repository: 'renanescola40-afk/eurocomply_saas',
-      branch: 'agent/public-ux-acceptance-evidence',
+      branch: 'agent/authenticated-product-ux-proof',
       targetSha: SHA,
       observedSha: SHA,
       runId: '12345',
@@ -132,8 +146,34 @@ describe('public UX evidence', () => {
     expect(evidence.ux.checks.every((check) => check.passed === false)).toBe(true);
   });
 
+  it('fails closed when onboarding or dashboard acceptance coverage regresses', () => {
+    const withoutOnboarding = repositoryCoverage({
+      authenticatedProductTest: repositorySources().authenticatedProductTest.replace(
+        "describe('authenticated onboarding UX acceptance'",
+        "describe('removed onboarding UX acceptance'",
+      ),
+    });
+    const withoutDashboard = repositoryCoverage({
+      dashboardComponent: repositorySources().dashboardComponent.replace(
+        'aria-labelledby="enterprise-command-center-title"',
+        'aria-label="command center"',
+      ),
+    });
+
+    expect(withoutOnboarding.onboardingCoverage).toBe(false);
+    expect(withoutDashboard.dashboardCoverage).toBe(false);
+
+    const onboardingEvidence = build({ coverage: withoutOnboarding });
+    const dashboardEvidence = build({ coverage: withoutDashboard });
+    expect(onboardingEvidence.ux.status).toBe('Open');
+    expect(dashboardEvidence.ux.status).toBe('Open');
+  });
+
   it('fails closed when a supported locale or exact-SHA provenance is missing', () => {
-    const incompleteCoverage = evaluatePublicUxCoverage(completeSpec.replace("'de'", "'nl'"));
+    const sources = repositorySources();
+    const incompleteCoverage = repositoryCoverage({
+      publicSpec: sources.publicSpec.replace("'de'", "'nl'"),
+    });
     expect(incompleteCoverage.localizationCoverage).toBe(false);
 
     const evidence = build({ observedSha: 'b'.repeat(40) });
