@@ -17,15 +17,25 @@ type MembershipRow = {
   role: string | null;
 };
 
-export type PermissionCheckResult = {
-  ok: boolean;
-  status: 200 | 403 | 503;
-  error?: string;
-  message?: string;
+export type PermissionCheckAllowed = {
+  ok: true;
+  status: 200;
+  role: OrganizationRole;
+  rawRole: string | null;
+  permission: OrganizationPermission;
+};
+
+export type PermissionCheckDenied = {
+  ok: false;
+  status: 403 | 503;
+  error: string;
+  message: string;
   role?: OrganizationRole;
   rawRole?: string | null;
   permission: OrganizationPermission;
 };
+
+export type PermissionCheckResult = PermissionCheckAllowed | PermissionCheckDenied;
 
 function isSupabaseUserId(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -38,7 +48,7 @@ async function recordRbacDeniedAuditEvent({
 }: {
   userId: string;
   organizationId: string;
-  result: PermissionCheckResult;
+  result: PermissionCheckDenied;
 }) {
   try {
     const { writeAuditLog } = await import('@/lib/security/audit-log');
@@ -51,7 +61,7 @@ async function recordRbacDeniedAuditEvent({
       metadata: {
         securityEvent: 'rbac.denied',
         permission: result.permission,
-        reason: result.error ?? 'permission_denied',
+        reason: result.error,
         status: result.status,
         role: result.role ?? null,
         rawRole: result.rawRole ?? null,
@@ -96,7 +106,7 @@ export async function assertOrganizationPermission({
   const { membership, error } = await getOrganizationMembership(userId, organizationId);
 
   if (error) {
-    const result: PermissionCheckResult = {
+    const result: PermissionCheckDenied = {
       ok: false,
       status: 503,
       error: 'rbac_check_failed',
@@ -108,7 +118,7 @@ export async function assertOrganizationPermission({
   }
 
   if (!membership) {
-    const result: PermissionCheckResult = {
+    const result: PermissionCheckDenied = {
       ok: false,
       status: 403,
       error: 'organization_membership_required',
@@ -122,7 +132,7 @@ export async function assertOrganizationPermission({
   const role = normalizeOrganizationRole(membership.role);
 
   if (!roleHasPermission(role, permission)) {
-    const result: PermissionCheckResult = {
+    const result: PermissionCheckDenied = {
       ok: false,
       status: 403,
       error: 'insufficient_role_permission',
@@ -147,11 +157,11 @@ export async function assertOrganizationPermission({
 export function permissionDeniedResponse(result: PermissionCheckResult) {
   return noStoreJson(
     {
-      error: result.error ?? 'permission_denied',
-      message: result.message ?? 'Permission denied.',
+      error: result.ok ? 'permission_denied' : result.error,
+      message: result.ok ? 'Permission denied.' : result.message,
       requiredPermission: result.permission,
       role: result.role,
     },
-    { status: result.status === 200 ? 403 : result.status },
+    { status: result.ok ? 403 : result.status },
   );
 }
