@@ -22,7 +22,22 @@ function checkStatus(document, name) {
   return check?.status === 'PASS';
 }
 
-export function evaluatePublicUxCoverage(specSource) {
+function containsEvery(source, values) {
+  return values.every((value) => source.includes(value));
+}
+
+export function evaluatePublicUxCoverage(
+  specSource,
+  {
+    authenticatedProductTest = '',
+    criticalFlowSpec = '',
+    productJourneySpec = '',
+    onboardingPage = '',
+    onboardingComponent = '',
+    dashboardPage = '',
+    dashboardComponent = '',
+  } = {},
+) {
   const localeCoverage = REQUIRED_LOCALES.every((locale) => specSource.includes(`'${locale}'`));
   const checks = {
     dedicatedSuite: specSource.includes("test.describe('enterprise public UX acceptance'"),
@@ -33,9 +48,9 @@ export function evaluatePublicUxCoverage(specSource) {
       && specSource.includes('/pricing')
       && specSource.includes('actionable controls'),
     login: specSource.includes('login is localized, healthy and usable')
-      && specSource.includes('input[type=\"email\"]')
-      && specSource.includes('input[type=\"password\"]')
-      && specSource.includes("name: /google/i"),
+      && specSource.includes('input[type="email"]')
+      && specSource.includes('input[type="password"]')
+      && specSource.includes('name: /google/i'),
     mobile: specSource.includes('width: 390')
       && specSource.includes('expectNoHorizontalOverflow')
       && specSource.includes('mobile public conversion surfaces'),
@@ -45,7 +60,73 @@ export function evaluatePublicUxCoverage(specSource) {
     controlledErrors: specSource.includes('Unhandled Runtime Error')
       && specSource.includes('/undefined')
       && specSource.includes('visible placeholder links'),
+    onboardingComponentAcceptance: containsEvery(authenticatedProductTest, [
+      "describe('authenticated onboarding UX acceptance'",
+      'validates required fields, derives a safe slug, saves a draft and resumes progress',
+      'keeps invalid AI-system input on the active step and completes through an explicit dashboard destination',
+      '<B2BOnboardingFlow',
+      "expect(navigation.push).toHaveBeenCalledWith('/en/dashboard/organizations?onboarding=completed')",
+    ]),
+    onboardingSourceContract: containsEvery(onboardingComponent, [
+      'const stepDefinitions = [',
+      "id: 'create-organization'",
+      "id: 'first-ai-system'",
+      "id: 'readiness-score'",
+      "id: 'documents'",
+      "id: 'tasks'",
+      "id: 'team'",
+      "id: 'plan'",
+      'role="alert"',
+      'onSaveDraft',
+      'onComplete',
+      'router.push',
+    ]) && containsEvery(onboardingPage, [
+      "export const dynamic = 'force-dynamic'",
+      "export const fetchCache = 'force-no-store'",
+      'getOnboardingActivationState(user.id)',
+      '<B2BOnboardingFlow',
+    ]),
+    onboardingRouteBoundary: criticalFlowSpec.includes("{ area: 'onboarding', path: '/onboarding' }")
+      && criticalFlowSpec.includes('redirects anonymous visitors to localized login')
+      && productJourneySpec.includes("'/pt/onboarding?plan=professional'")
+      && productJourneySpec.includes('preserves next'),
+    dashboardComponentAcceptance: containsEvery(authenticatedProductTest, [
+      "describe('authenticated dashboard UX acceptance'",
+      'renders an accessible command center with actionable, localized, tenant-safe destinations',
+      'exposes workspace and billing actions only to an authorized management state',
+      '<EnterpriseComplianceCommandCenter',
+      "a[href=\"/en/dashboard/organizations/billing\"]",
+    ]),
+    dashboardSourceContract: containsEvery(dashboardComponent, [
+      'aria-labelledby="enterprise-command-center-title"',
+      "title: 'Readiness score'",
+      "title: 'AI systems'",
+      "title: 'Risk signals'",
+      "title: 'Open tasks'",
+      "title: 'Evidence'",
+      'canManageWorkspace ? (',
+      'canManageBilling ? (',
+      'Data shown here is scoped to this workspace',
+    ]) && containsEvery(dashboardPage, [
+      "export const dynamic = 'force-dynamic'",
+      "export const fetchCache = 'force-no-store'",
+      'getOrganizationDashboardData(user.id)',
+      '<EnterpriseComplianceCommandCenter',
+      '<DashboardHomeOverview',
+      '<OnboardingProgressCard',
+    ]),
+    dashboardRouteBoundary: criticalFlowSpec.includes("{ area: 'dashboard organization', path: '/dashboard/organizations' }")
+      && criticalFlowSpec.includes('redirects anonymous visitors to localized login')
+      && productJourneySpec.includes("'/pt/dashboard/organizations'")
+      && productJourneySpec.includes('anonymous private redirect response is no-store'),
   };
+
+  const onboardingCoverage = checks.onboardingComponentAcceptance
+    && checks.onboardingSourceContract
+    && checks.onboardingRouteBoundary;
+  const dashboardCoverage = checks.dashboardComponentAcceptance
+    && checks.dashboardSourceContract
+    && checks.dashboardRouteBoundary;
 
   return {
     checks,
@@ -55,6 +136,8 @@ export function evaluatePublicUxCoverage(specSource) {
       && checks.login
       && checks.mobile
       && checks.controlledErrors,
+    onboardingCoverage,
+    dashboardCoverage,
     localizationCoverage: checks.supportedLocales,
   };
 }
@@ -93,7 +176,10 @@ export function buildPublicUxEvidence({
     && exactChecks.exactSha
     && exactChecks.fullSecuritySuite
     && exactChecks.requiredChecks;
-  const uxPassed = coverage.publicUxCoverage && executionProven && exactShaProvenance;
+  const completeUxCoverage = coverage.publicUxCoverage
+    && coverage.onboardingCoverage
+    && coverage.dashboardCoverage;
+  const uxPassed = completeUxCoverage && executionProven && exactShaProvenance;
   const localizationPassed = coverage.localizationCoverage && executionProven && exactShaProvenance;
 
   const common = {
@@ -116,13 +202,14 @@ export function buildPublicUxEvidence({
       rawBrowserTracesStored: false,
       screenshotsStoredInEvidence: false,
       customerDataStored: false,
+      productionSessionStored: false,
       exactShaBound: exactShaProvenance && exactChecks.exactSha,
     },
   };
 
   return {
     ux: {
-      schema: 'risck-comply.public-ux-acceptance-evidence.v1',
+      schema: 'risck-comply.product-ux-acceptance-evidence.v2',
       evidenceItem: 'ux-acceptance-validation',
       status: uxPassed ? 'Complete' : 'Open',
       outcome: uxPassed ? 'passed' : 'not_verified',
@@ -132,9 +219,14 @@ export function buildPublicUxEvidence({
         { name: 'pricing', passed: coverage.checks.pricing && executionProven && exactShaProvenance },
         { name: 'login', passed: coverage.checks.login && executionProven && exactShaProvenance },
         { name: 'mobile', passed: coverage.checks.mobile && executionProven && exactShaProvenance },
+        { name: 'onboarding', passed: coverage.onboardingCoverage && executionProven && exactShaProvenance },
+        { name: 'dashboard', passed: coverage.dashboardCoverage && executionProven && exactShaProvenance },
       ],
       checkResults: {
         ...coverage.checks,
+        publicUxCoverage: coverage.publicUxCoverage,
+        onboardingCoverage: coverage.onboardingCoverage,
+        dashboardCoverage: coverage.dashboardCoverage,
         exactShaProvenance,
         executionProven,
       },
@@ -144,14 +236,23 @@ export function buildPublicUxEvidence({
             'Pricing acceptance validated',
             'Login UX acceptance validated',
             'Mobile acceptance validated',
+            'Onboarding UX acceptance validated',
+            'Dashboard UX acceptance validated',
           ]
         : [],
       evidenceLocations: [
         'tests/e2e/enterprise-public-ux-acceptance.spec.ts',
+        'tests/e2e/enterprise-critical-flows.spec.ts',
+        'tests/e2e/product-critical-journeys.spec.ts',
+        'tests/product/authenticated-product-ux.test.tsx',
+        'src/components/onboarding/b2b-onboarding-flow.tsx',
+        'src/components/dashboard/enterprise-compliance-command-center.tsx',
+        'src/app/[locale]/onboarding/page.tsx',
+        'src/app/[locale]/dashboard/organizations/page.tsx',
         'playwright.config.ts',
         DEFAULT_GITHUB_CHECKS,
       ],
-      evidenceBoundary: 'Validates public landing, pricing, login and mobile acceptance through a dedicated Playwright suite that ran inside the required Full Security Suite for the exact SHA. It does not validate authenticated onboarding, dashboard UX, keyboard navigation, screen readers or production provider behavior.',
+      evidenceBoundary: 'Validates public landing, pricing, login and mobile UX in Playwright; validates the real onboarding wizard and dashboard command-center components with synthetic data and interaction tests; and validates protected-route redirects through production-like Playwright on the exact SHA. It does not create an authentication bypass, store a production session, exercise live Supabase data, validate screen-reader software, prove provider behavior or replace authenticated production smoke.',
     },
     localization: {
       schema: 'risck-comply.localization-validation.v1',
@@ -189,14 +290,23 @@ function head(root) {
 
 function run() {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-  const specSource = readFileSync(join(root, 'tests/e2e/enterprise-public-ux-acceptance.spec.ts'), 'utf8');
-  const routingSource = readFileSync(join(root, 'src/lib/i18n/routing.ts'), 'utf8');
-  const playwrightConfig = readFileSync(join(root, 'playwright.config.ts'), 'utf8');
+  const sources = {
+    publicSpec: readFileSync(join(root, 'tests/e2e/enterprise-public-ux-acceptance.spec.ts'), 'utf8'),
+    authenticatedProductTest: readFileSync(join(root, 'tests/product/authenticated-product-ux.test.tsx'), 'utf8'),
+    criticalFlowSpec: readFileSync(join(root, 'tests/e2e/enterprise-critical-flows.spec.ts'), 'utf8'),
+    productJourneySpec: readFileSync(join(root, 'tests/e2e/product-critical-journeys.spec.ts'), 'utf8'),
+    onboardingPage: readFileSync(join(root, 'src/app/[locale]/onboarding/page.tsx'), 'utf8'),
+    onboardingComponent: readFileSync(join(root, 'src/components/onboarding/b2b-onboarding-flow.tsx'), 'utf8'),
+    dashboardPage: readFileSync(join(root, 'src/app/[locale]/dashboard/organizations/page.tsx'), 'utf8'),
+    dashboardComponent: readFileSync(join(root, 'src/components/dashboard/enterprise-compliance-command-center.tsx'), 'utf8'),
+    routing: readFileSync(join(root, 'src/lib/i18n/routing.ts'), 'utf8'),
+    playwrightConfig: readFileSync(join(root, 'playwright.config.ts'), 'utf8'),
+  };
   const githubChecksPath = process.env.GITHUB_CHECKS_EVIDENCE_PATH || DEFAULT_GITHUB_CHECKS;
   const githubChecksRaw = readFileSync(join(root, githubChecksPath), 'utf8');
   const githubChecks = JSON.parse(githubChecksRaw);
   const targetSha = process.env.TARGET_SHA || process.env.GITHUB_SHA || '';
-  const coverage = evaluatePublicUxCoverage(specSource);
+  const coverage = evaluatePublicUxCoverage(sources.publicSpec, sources);
   const exactChecks = evaluateExactShaChecks(githubChecks, targetSha);
   const evidence = buildPublicUxEvidence({
     coverage,
@@ -208,9 +318,16 @@ function run() {
     runId: process.env.GITHUB_RUN_ID ?? '',
     githubActions: process.env.GITHUB_ACTIONS === 'true',
     sourceDigests: {
-      acceptanceSpec: digest(specSource),
-      routing: digest(routingSource),
-      playwrightConfig: digest(playwrightConfig),
+      publicAcceptanceSpec: digest(sources.publicSpec),
+      authenticatedProductTest: digest(sources.authenticatedProductTest),
+      criticalFlowSpec: digest(sources.criticalFlowSpec),
+      productJourneySpec: digest(sources.productJourneySpec),
+      onboardingPage: digest(sources.onboardingPage),
+      onboardingComponent: digest(sources.onboardingComponent),
+      dashboardPage: digest(sources.dashboardPage),
+      dashboardComponent: digest(sources.dashboardComponent),
+      routing: digest(sources.routing),
+      playwrightConfig: digest(sources.playwrightConfig),
       githubChecks: digest(githubChecksRaw),
     },
   });
