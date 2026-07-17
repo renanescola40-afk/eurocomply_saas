@@ -96,7 +96,12 @@ describe('security settings payload integrity', () => {
 
   it('persists valid bounded settings only after all access gates pass', async () => {
     const upsert = vi.fn().mockResolvedValue({ error: null });
-    mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => ({ upsert })) });
+    const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    const eq = vi.fn(() => ({ maybeSingle }));
+    const select = vi.fn(() => ({ eq }));
+    const from = vi.fn(() => ({ select, upsert }));
+
+    mocks.createAdminClient.mockReturnValue({ from });
 
     const response = await POST(
       buildRequest(JSON.stringify({ stepUpProviderMode: 'enterprise_idp', allowedIdpAcrValues: ['urn:example:loa:2'] })),
@@ -104,6 +109,11 @@ describe('security settings payload integrity', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(select).toHaveBeenCalledWith(
+      'organization_id, require_step_up_for_critical_actions, step_up_provider_mode, allowed_idp_acr_values, allowed_idp_amr_values',
+    );
+    expect(eq).toHaveBeenCalledWith('organization_id', 'org_a');
+    expect(maybeSingle).toHaveBeenCalled();
     expect(upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         organization_id: 'org_a',
