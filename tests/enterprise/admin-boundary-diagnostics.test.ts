@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -15,16 +16,30 @@ const providerKeyFixture = ['sk', '_live_', 'fixture-value-with-sufficient-lengt
 
 function runnerWithStatuses(statuses: number[]) {
   let index = 0;
-  return () => {
+  const runner = () => {
     const status = statuses[index] ?? 1;
     index += 1;
+    const stdout = status === 0
+      ? 'boundary check ok'
+      : 'Client boundary findings:\n- src/example.ts:1 unsafe import';
+    const stderr = status === 0 ? '' : tokenFixture;
+
     return {
+      pid: 123,
+      output: [null, stdout, stderr],
+      stdout,
+      stderr,
       status,
-      stdout: status === 0 ? 'boundary check ok' : 'Client boundary findings:\n- src/example.ts:1 unsafe import',
-      stderr: status === 0 ? '' : tokenFixture,
+      signal: null,
       error: undefined,
     };
   };
+
+  return runner as unknown as typeof spawnSync;
+}
+
+function diagnosticEnvironment(values: Record<string, string>) {
+  return { ...process.env, ...values };
 }
 
 describe('enterprise admin boundary diagnostics', () => {
@@ -38,11 +53,11 @@ describe('enterprise admin boundary diagnostics', () => {
   it('writes a complete exact-SHA document only when both gates pass', () => {
     const document = runAdminBoundaryDiagnostics({
       runner: runnerWithStatuses([0, 0]),
-      environment: {
+      environment: diagnosticEnvironment({
         TARGET_SHA: SHA,
         GITHUB_REPOSITORY: 'renanescola40-afk/eurocomply_saas',
         GITHUB_HEAD_REF: 'feature/example',
-      },
+      }),
       observedSha: SHA,
       generatedAt: '2026-07-17T00:00:00.000Z',
     });
@@ -58,10 +73,10 @@ describe('enterprise admin boundary diagnostics', () => {
   it('fails closed and retains redacted per-control diagnostics', () => {
     const document = runAdminBoundaryDiagnostics({
       runner: runnerWithStatuses([1, 0]),
-      environment: {
+      environment: diagnosticEnvironment({
         TARGET_SHA: SHA,
         GITHUB_REPOSITORY: 'renanescola40-afk/eurocomply_saas',
-      },
+      }),
       observedSha: SHA,
     });
 
@@ -83,7 +98,7 @@ describe('enterprise admin boundary diagnostics', () => {
   it('does not promote results when exact SHA binding is absent', () => {
     const document = runAdminBoundaryDiagnostics({
       runner: runnerWithStatuses([0, 0]),
-      environment: { TARGET_SHA: SHA },
+      environment: diagnosticEnvironment({ TARGET_SHA: SHA }),
       observedSha: 'b'.repeat(40),
     });
 
