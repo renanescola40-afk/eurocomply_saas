@@ -1,4 +1,4 @@
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export type NormalizedOnboardingStatus = 'not_started' | 'in_progress' | 'completed';
 
@@ -72,9 +72,7 @@ function normalizeMembership(membership: RawOrganizationMembership): CurrentOrga
 }
 
 export async function getUserOrganizationMemberships(userId: string, options: { limit?: number } = {}) {
-  const supabase = tryCreateAdminClient();
-  if (!supabase) return [];
-
+  const supabase = createAdminClient();
   const safeLimit = Math.max(1, Math.min(options.limit ?? 25, 100));
 
   const { data, error } = await supabase
@@ -86,7 +84,7 @@ export async function getUserOrganizationMemberships(userId: string, options: { 
 
   if (error) {
     console.warn('[organization] memberships_lookup_failed', { code: error.code ?? 'unknown' });
-    return [];
+    throw new Error('organization_memberships_unavailable');
   }
 
   return ((data ?? []) as RawOrganizationMembership[])
