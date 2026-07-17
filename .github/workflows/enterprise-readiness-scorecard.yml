@@ -53,6 +53,7 @@ jobs:
           tests/enterprise/admin-boundary-diagnostics.test.ts
           tests/enterprise/account-recovery-evidence.test.ts
           tests/enterprise/provider-failure-evidence.test.ts
+          tests/enterprise/step-up-evidence.test.ts
 
       - name: Build exact-SHA architecture review evidence
         env:
@@ -151,11 +152,20 @@ jobs:
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
         run: node scripts/enterprise/build-provider-failure-evidence.mjs
 
-      - name: Retain product and provider acceptance evidence diagnostics
+      - name: Build exact-SHA sensitive-action step-up evidence
+        env:
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
+        run: node scripts/enterprise/build-step-up-evidence.mjs
+
+      - name: Validate sensitive-action step-up evidence contract
+        run: node scripts/security/check-p1-step-up-evidence.mjs
+
+      - name: Retain product provider and identity acceptance evidence diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: product-provider-acceptance-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          name: product-provider-identity-acceptance-evidence-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             docs/security/evidence/runtime/ux-acceptance-validation.json
             docs/security/evidence/runtime/localization-validation.json
@@ -163,6 +173,7 @@ jobs:
             docs/security/evidence/runtime/analytics-consent-validation.json
             docs/security/evidence/runtime/auth-recovery-validation.json
             docs/security/evidence/runtime/provider-failure-classification.json
+            docs/security/evidence/p1/step-up-sensitive-actions.json
           if-no-files-found: error
           retention-days: 90
 
@@ -186,6 +197,7 @@ jobs:
             docs/security/evidence/release/operations-ownership.json
             docs/security/evidence/release/vulnerability-disclosure-validation.json
             docs/security/evidence/p1/centralized-logging-alerts.json
+            docs/security/evidence/p1/step-up-sensitive-actions.json
             docs/security/evidence/runtime/origin-guard-validation.json
             docs/security/evidence/runtime/authorization-bola-validation.json
             docs/security/evidence/runtime/supabase-admin-boundary-validation.json
