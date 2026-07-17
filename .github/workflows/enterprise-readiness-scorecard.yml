@@ -88,7 +88,19 @@ jobs:
         run: node scripts/enterprise/capture-github-checks-evidence.mjs
 
       - name: Run administrative-client boundary diagnostics
+        env:
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          ADMIN_BOUNDARY_DIAGNOSTICS_PATH: artifacts/enterprise-readiness/admin-boundary-diagnostics.json
         run: node scripts/enterprise/check-admin-boundary-evidence.mjs
+
+      - name: Retain administrative-client boundary diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: admin-boundary-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/enterprise-readiness/admin-boundary-diagnostics.json
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Build exact-SHA repository control evidence
         env:
