@@ -4,6 +4,8 @@ export type CanonicalSubscriptionPlan = 'starter' | 'growth' | 'enterprise';
 export type LegacySubscriptionPlan = 'essential' | 'professional' | 'business';
 export type SubscriptionPlan = CanonicalSubscriptionPlan | LegacySubscriptionPlan;
 
+const SUBSCRIPTION_PLAN_UNAVAILABLE = 'subscription_plan_unavailable';
+
 const PLAN_RANK: Record<SubscriptionPlan, number> = {
   essential: 1,
   starter: 1,
@@ -45,9 +47,12 @@ async function getLatestSubscriptionRow(organizationId: string, select: string):
     .maybeSingle<OrganizationSubscriptionRow>();
 
   if (error) {
+    // PostgreSQL undefined_column is the expected signal while supporting the
+    // legacy `tier` schema alongside the canonical `plan` schema.
     if (error.code === '42703') return null;
+
     console.warn('[subscription] plan_lookup_failed', { code: error.code ?? 'unknown' });
-    return null;
+    throw new Error(SUBSCRIPTION_PLAN_UNAVAILABLE);
   }
 
   return data;
