@@ -1,6 +1,6 @@
 {
   "timestamp": "2026-07-17",
-  "main_sha": "69c980acb4f2ecbf3c5c0018773439ef6a1a7969",
+  "main_sha": "62980cfa35f38200549cda56424549517e82a3e1",
   "official_completion_percent": 41,
   "official_remaining_percent": 59,
   "previous_completion_percent": 31,
@@ -24,7 +24,7 @@
   "evidence_freshness": {
     "status": "fresh-for-exact-pr-head-contained-in-main",
     "last_verified_sha": "4e6437cff8c5419c8ef1e36f8238041b5f74e54e",
-    "reason": "Enterprise Readiness Scorecard run 678 completed successfully for the exact PR #1162 head at 41 percent. Current main contains that assessed tree through merge commit 69c980acb4f2ecbf3c5c0018773439ef6a1a7969; no extra point is inferred from the merge commit or unmerged provider-taxonomy work."
+    "reason": "Enterprise Readiness Scorecard run 678 completed successfully for the exact PR #1162 head at 41 percent. Current main contains that assessed tree plus later fail-closed document-approval audit hardening through merge commit 62980cfa35f38200549cda56424549517e82a3e1; no extra point is inferred from later merges or unmerged provider-taxonomy work."
   },
   "domain_scores_percent": {
     "engineering": 100,
