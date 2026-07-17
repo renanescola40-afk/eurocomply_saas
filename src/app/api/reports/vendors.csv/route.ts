@@ -77,6 +77,7 @@ export async function GET() {
     return noStoreJson({ error: 'Unable to export vendors report' }, { status: 500 });
   }
 
+  const exportedRowCount = data?.length ?? 0;
   const rows = [
     VENDORS_CSV_HEADER,
     ...((data ?? []).map((vendor) => [
@@ -95,7 +96,7 @@ export async function GET() {
     userId: user.id,
     entityType: 'report',
     entityId: 'vendors.csv',
-    metadata: { format: 'csv', report: 'vendors', rows: rows.length },
+    metadata: { format: 'csv', report: 'vendors', rows: exportedRowCount },
   });
 
   return csvDownloadResponse(rows, 'vendors-report.csv');

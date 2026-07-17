@@ -5,6 +5,8 @@ import { noStoreJson } from '@/server/security/no-store';
 
 export const runtime = 'nodejs';
 
+const METHOD_NOT_ALLOWED_HEADERS = { Allow: 'POST' };
+
 type IntelligenceRefreshPayload = {
   external_id: string;
   title: string;
@@ -82,6 +84,9 @@ export async function POST(request: Request) {
   return noStoreJson({ ok: true, processed: data?.length ?? 0, items: data ?? [] });
 }
 
-export async function GET(request: Request) {
-  return POST(request);
+export async function GET() {
+  return noStoreJson(
+    { error: 'method_not_allowed' },
+    { status: 405, headers: METHOD_NOT_ALLOWED_HEADERS },
+  );
 }
