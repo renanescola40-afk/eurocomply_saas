@@ -1,12 +1,11 @@
 import { z } from 'zod';
 
 import {
-  classifyAiSystem,
+  evaluateAiActSystem,
   normalizeAiRiskDomain,
   normalizeAiSystemRole,
   normalizeAiSystemStatus,
-} from '@/server/ai-governance/classifier';
-import { evaluateAiGovernanceRole } from '@/lib/ai-governance/role-wizard';
+} from '@/server/ai-governance/decision-engine';
 
 export const aiSystemBodySchema = z.object({
   name: z.string().trim().min(2).max(160),
@@ -48,7 +47,7 @@ export function classifyParsedAiSystemBody(body: ParsedAiSystemBody) {
   const manipulativeOrExploitative = asBoolean(body.manipulativeOrExploitative);
   const vendorName = asText(body.vendorName) || null;
 
-  const classification = classifyAiSystem({
+  const decision = evaluateAiActSystem({
     role,
     riskDomain,
     usesPersonalData,
@@ -56,18 +55,8 @@ export function classifyParsedAiSystemBody(body: ParsedAiSystemBody) {
     generatesContent,
     biometricIdentification,
     manipulativeOrExploitative,
-  });
-
-  const roleAssessment = evaluateAiGovernanceRole({
-    role,
     vendorName,
     useCase: body.useCase,
-    riskDomain,
-    usesPersonalData,
-    interactsWithPeople,
-    generatesContent,
-    biometricIdentification,
-    manipulativeOrExploitative,
   });
 
   return {
@@ -80,7 +69,27 @@ export function classifyParsedAiSystemBody(body: ParsedAiSystemBody) {
     biometricIdentification,
     manipulativeOrExploitative,
     vendorName,
-    classification,
-    roleAssessment,
+    classification: {
+      riskLevel: decision.riskLevel,
+      summary: decision.summary,
+      obligations: decision.obligations,
+      nextActions: decision.nextActions,
+    },
+    roleAssessment: decision.roleAssessment,
+    decisionMetadata: {
+      engineVersion: decision.engineVersion,
+      rulesetVersion: decision.rulesetVersion,
+      assessedOn: decision.assessedOn,
+      registryVerifiedAt: decision.registryVerifiedAt,
+      registryReviewState: decision.registryReviewState,
+      decision: decision.decision,
+      relevantRuleCategories: decision.relevantRuleCategories,
+      appliedRuleIds: decision.appliedRuleIds,
+      futureRuleIds: decision.futureRuleIds,
+      pendingRuleIds: decision.pendingRuleIds,
+      legalReviewRequired: decision.legalReviewRequired,
+      reasons: decision.reasons,
+      evidenceBoundary: decision.evidenceBoundary,
+    },
   };
 }
