@@ -111,7 +111,19 @@ export async function updateComplianceTask(taskId: string, organizationId: strin
 
   try {
     const supabase = createAdminClient();
+    const { data: previousTask, error: previousTaskError } = await supabase
+      .from('compliance_tasks')
+      .select('*')
+      .eq('id', taskId)
+      .eq('organization_id', organizationId)
+      .single();
 
+    if (previousTaskError) {
+      reportError(previousTaskError, context);
+      throw actionError('Unable to update task');
+    }
+
+    const updatedAt = new Date().toISOString();
     const { data: task, error } = await supabase
       .from('compliance_tasks')
       .update({
@@ -122,7 +134,7 @@ export async function updateComplianceTask(taskId: string, organizationId: strin
         status: payload.status,
         due_date: payload.dueDate,
         assignee_id: payload.assigneeId,
-        updated_at: new Date().toISOString(),
+        updated_at: updatedAt,
       })
       .eq('id', taskId)
       .eq('organization_id', organizationId)
@@ -134,7 +146,7 @@ export async function updateComplianceTask(taskId: string, organizationId: strin
       throw actionError('Unable to update task');
     }
 
-    await logAuditEvent({
+    const audit = await logAuditEvent({
       organizationId,
       actorUserId: user.id,
       action: 'task.update',
@@ -142,6 +154,33 @@ export async function updateComplianceTask(taskId: string, organizationId: strin
       entityId: taskId,
       metadata: payload,
     });
+
+    if (!audit.persisted) {
+      const { error: rollbackError } = await supabase
+        .from('compliance_tasks')
+        .update({
+          title: previousTask.title,
+          description: previousTask.description,
+          category: previousTask.category,
+          priority: previousTask.priority,
+          status: previousTask.status,
+          due_date: previousTask.due_date,
+          assignee_id: previousTask.assignee_id,
+          updated_at: previousTask.updated_at,
+        })
+        .eq('id', taskId)
+        .eq('organization_id', organizationId)
+        .eq('updated_at', task.updated_at);
+
+      if (rollbackError) {
+        reportError(rollbackError, {
+          ...context,
+          area: 'compliance_task_update_audit_rollback',
+        });
+      }
+
+      throw actionError('Unable to update task');
+    }
 
     return task;
   } catch (error) {
