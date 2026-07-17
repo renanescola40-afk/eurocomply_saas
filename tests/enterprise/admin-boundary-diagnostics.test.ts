@@ -15,7 +15,7 @@ describe('enterprise admin boundary diagnostics', () => {
   it('fails closed while identifying the exact failed gate', () => {
     expect(script).toContain('Admin boundary validation failed');
     expect(script).toContain('process.exitCode = 1');
-    expect(script).toContain('exit_unknown');
+    expect(script).toContain("`exit_${exitCode ?? 'unknown'}`");
     expect(script).not.toContain('process.exitCode = 0');
   });
 
