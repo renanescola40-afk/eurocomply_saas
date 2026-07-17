@@ -57,6 +57,7 @@ export async function GET() {
     return noStoreJson({ error: 'Unable to export tasks report' }, { status: 500 });
   }
 
+  const exportedRowCount = data?.length ?? 0;
   const rows = [
     TASKS_CSV_HEADER,
     ...((data ?? []).map((task) => [task.title, task.category, task.priority, task.status, task.due_date, task.created_at, task.updated_at])),
@@ -68,7 +69,7 @@ export async function GET() {
     userId: user.id,
     entityType: 'report',
     entityId: 'tasks.csv',
-    metadata: { format: 'csv', report: 'tasks', rows: rows.length },
+    metadata: { format: 'csv', report: 'tasks', rows: exportedRowCount },
   });
 
   return csvDownloadResponse(rows, 'tasks-report.csv');
