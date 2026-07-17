@@ -1,5 +1,7 @@
 import Stripe from 'stripe';
 
+import { providerConfigurationFailure } from '@/server/providers/failure';
+
 let stripe: Stripe | null = null;
 
 export function getStripeClient() {
@@ -10,7 +12,7 @@ export function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
 
   if (!secretKey) {
-    throw new Error('STRIPE_SECRET_KEY is required');
+    throw providerConfigurationFailure('stripe', 'client_initialization', 'missing_secret_key');
   }
 
   stripe = new Stripe(secretKey, {

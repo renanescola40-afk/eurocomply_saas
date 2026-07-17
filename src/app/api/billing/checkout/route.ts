@@ -8,6 +8,10 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
 import { getStripeClient } from '@/server/billing/stripe';
 import { getStripePriceId, isSelfServePlan, normalizeBillingPlanId } from '@/server/billing/plans';
+import {
+  classifyProviderFailure,
+  providerFailureContext,
+} from '@/server/providers/failure';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
 import {
@@ -79,17 +83,24 @@ async function ensureOrganizationStripeCustomer({
   const existingCustomerId = await getOrganizationStripeCustomerId(organizationId);
 
   if (existingCustomerId) {
-    await stripe.customers.update(existingCustomerId, { metadata });
-    return existingCustomerId;
+    try {
+      await stripe.customers.update(existingCustomerId, { metadata });
+      return existingCustomerId;
+    } catch (error) {
+      throw classifyProviderFailure('stripe', 'customer_update', error);
+    }
   }
 
-  const customer = await stripe.customers.create({
-    ...(userEmail ? { email: userEmail } : {}),
-    ...(organizationName ? { name: organizationName } : {}),
-    metadata,
-  });
-
-  return customer.id;
+  try {
+    const customer = await stripe.customers.create({
+      ...(userEmail ? { email: userEmail } : {}),
+      ...(organizationName ? { name: organizationName } : {}),
+      metadata,
+    });
+    return customer.id;
+  } catch (error) {
+    throw classifyProviderFailure('stripe', 'customer_create', error);
+  }
 }
 
 export async function POST(request: Request) {
@@ -167,29 +178,34 @@ export async function POST(request: Request) {
       metadata,
     });
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      customer: stripeCustomerId,
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
-      cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`,
-      client_reference_id: organization.id,
-      locale,
-      metadata,
-      subscription_data: {
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        customer: stripeCustomerId,
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${returnBaseUrl.appUrl}/${locale}/dashboard/organizations?checkout=success`,
+        cancel_url: `${returnBaseUrl.appUrl}/${locale}/checkout?plan=${plan}&checkout=cancelled`,
+        client_reference_id: organization.id,
+        locale,
         metadata,
-      },
-      billing_address_collection: 'required',
-      customer_update: {
-        address: 'auto',
-        name: 'auto',
-      },
-      tax_id_collection: {
-        enabled: true,
-      },
-      payment_method_collection: 'always',
-      allow_promotion_codes: true,
-    });
+        subscription_data: {
+          metadata,
+        },
+        billing_address_collection: 'required',
+        customer_update: {
+          address: 'auto',
+          name: 'auto',
+        },
+        tax_id_collection: {
+          enabled: true,
+        },
+        payment_method_collection: 'always',
+        allow_promotion_codes: true,
+      });
+    } catch (error) {
+      throw classifyProviderFailure('stripe', 'checkout_session_create', error);
+    }
 
     if (!isSafeStripeCheckoutUrl(session.url)) {
       return noStoreJson({ error: 'checkout_session_unavailable' }, { status: 502 });
@@ -218,10 +234,12 @@ export async function POST(request: Request) {
       try {
         await stripe.checkout.sessions.expire(session.id);
       } catch (expirationError) {
-        reportError(expirationError, {
+        const providerFailure = classifyProviderFailure('stripe', 'checkout_session_expire', expirationError);
+        reportError(providerFailure, {
           area: 'billing_checkout_audit_compensation',
           organizationId: organization.id,
           userId: user.id,
+          ...providerFailureContext(providerFailure),
         });
       }
 
@@ -238,6 +256,6 @@ export async function POST(request: Request) {
       stepUp: publicStepUpSummary(stepUp.assessment),
     });
   } catch (error) {
-    return secureApiError(error);
+    return secureApiError(error, request);
   }
 }

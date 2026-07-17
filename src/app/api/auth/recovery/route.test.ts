@@ -150,7 +150,7 @@ describe('account recovery request security', () => {
     expect(mocks.resetPasswordForEmail).not.toHaveBeenCalled();
   });
 
-  it('uses one sanitized provider-unavailable response without exposing email or provider messages', async () => {
+  it('uses one sanitized provider-unavailable response while recording a distinguishable unavailable provider failure', async () => {
     mocks.resetPasswordForEmail.mockResolvedValueOnce({
       error: { code: 'provider_unavailable', message: 'raw provider diagnostic' },
     });
@@ -165,14 +165,21 @@ describe('account recovery request security', () => {
     expect(JSON.stringify(body)).not.toContain('raw provider diagnostic');
     expect(mocks.reportError).toHaveBeenCalledWith(
       expect.any(Error),
-      {
+      expect.objectContaining({
         area: 'account_recovery_provider',
-        providerCode: 'provider_unavailable',
-      },
+        provider: 'supabase',
+        providerFailureKind: 'unavailable',
+        providerFailureCode: 'provider_unavailable',
+        providerOperation: 'password_recovery_request',
+        retryable: true,
+        providerHttpStatus: 503,
+      }),
     );
+    expect(JSON.stringify(mocks.reportError.mock.calls)).not.toContain('owner@example.test');
+    expect(JSON.stringify(mocks.reportError.mock.calls)).not.toContain('raw provider diagnostic');
   });
 
-  it('fails safely when the Supabase client cannot be created', async () => {
+  it('classifies provider client configuration failure without exposing its detail', async () => {
     mocks.createServerSupabaseClient.mockRejectedValueOnce(new Error('configuration detail'));
 
     const response = await POST(buildRequest({ email: 'owner@example.test', locale: 'fr' }));
@@ -181,7 +188,16 @@ describe('account recovery request security', () => {
     expect(await response.json()).toEqual({ error: 'account_recovery_unavailable' });
     expect(mocks.reportError).toHaveBeenCalledWith(
       expect.any(Error),
-      { area: 'account_recovery_provider' },
+      expect.objectContaining({
+        area: 'account_recovery_provider',
+        provider: 'supabase',
+        providerFailureKind: 'configuration',
+        providerFailureCode: 'error',
+        providerOperation: 'password_recovery_request',
+        retryable: false,
+        providerHttpStatus: 503,
+      }),
     );
+    expect(JSON.stringify(mocks.reportError.mock.calls)).not.toContain('configuration detail');
   });
 });

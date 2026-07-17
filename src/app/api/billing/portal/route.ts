@@ -6,6 +6,7 @@ import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/server/billing/stripe';
 import { resolveBillingReturnBaseUrl } from '@/server/billing/app-url';
+import { classifyProviderFailure } from '@/server/providers/failure';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireApiUser, requirePermission, requireTrustedMutation, secureApiError } from '@/server/security/api-guards';
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (error) {
-      return noStoreJson({ error: 'billing_profile_unavailable' }, { status: 500 });
+      throw classifyProviderFailure('supabase', 'billing_profile_lookup', error);
     }
 
     if (!subscription?.stripe_customer_id) {
@@ -97,12 +98,17 @@ export async function POST(request: Request) {
     const locale = normalizeLocale(parsedQuery.data.locale);
     const returnPath = parsedQuery.data.returnPath ?? DEFAULT_BILLING_RETURN_PATH;
     const returnUrl = `${returnBaseUrl.appUrl}/${locale}${returnPath}`;
-
     const stripe = getStripeClient();
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripe_customer_id,
-      return_url: returnUrl,
-    });
+
+    let portalSession;
+    try {
+      portalSession = await stripe.billingPortal.sessions.create({
+        customer: subscription.stripe_customer_id,
+        return_url: returnUrl,
+      });
+    } catch (providerError) {
+      throw classifyProviderFailure('stripe', 'billing_portal_session_create', providerError);
+    }
 
     const auditResult = await writeAuditLog({
       action: 'billing_portal_created',
@@ -135,6 +141,6 @@ export async function POST(request: Request) {
       stepUp: publicStepUpSummary(stepUp.assessment),
     });
   } catch (error) {
-    return secureApiError(error);
+    return secureApiError(error, request);
   }
 }
