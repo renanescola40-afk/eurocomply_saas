@@ -3,7 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  tryCreateAdminClient: vi.fn(),
+  createAdminClient: vi.fn(),
   noStore: vi.fn(),
 }));
 
@@ -12,7 +12,7 @@ vi.mock('next/cache', () => ({
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
-  tryCreateAdminClient: mocks.tryCreateAdminClient,
+  createAdminClient: mocks.createAdminClient,
 }));
 
 import { getOrganizationBillingContext } from './billing';
@@ -67,7 +67,7 @@ describe('organization billing context', () => {
       risks: 3,
     };
     subscriptionStatusFilters = [];
-    mocks.tryCreateAdminClient.mockReturnValue(makeSupabaseClient());
+    mocks.createAdminClient.mockReturnValue(makeSupabaseClient());
   });
 
   it('uses the active subscription plan when Stripe has a valid subscription', async () => {

@@ -1,6 +1,6 @@
 import { unstable_noStore as noStore } from 'next/cache';
 
-import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { AiActRiskLevel, OnboardingActivationInitialState, OnboardingRecommendation, OnboardingTaskSuggestion } from '@/lib/onboarding/activation';
 import { getCurrentOrganizationForUser, isOrganizationOnboardingCompleted, normalizeOnboardingStatus } from '@/server/queries/current-organization';
 
@@ -48,29 +48,7 @@ export async function getOnboardingActivationState(userId: string): Promise<Onbo
     };
   }
 
-  const supabase = tryCreateAdminClient();
-
-  if (!supabase) {
-    return {
-      organization: {
-        id: membership.organization_id,
-        name: membership.name,
-        slug: membership.slug,
-        country: null,
-        companyType: null,
-        sector: null,
-        aiUsageSummary: null,
-        onboardingStatus: membership.onboarding_status,
-        onboardingCompletedAt: membership.onboarding_completed_at,
-        isOnboardingCompleted: membership.is_onboarding_completed,
-        onboardingStep: null,
-        readinessScore: null,
-        selectedPlan: null,
-      },
-      firstAiSystem: null,
-      latestRun: null,
-    };
-  }
+  const supabase = createAdminClient();
 
   const { data: organization, error: organizationError } = await supabase
     .from('organizations')
@@ -131,6 +109,7 @@ export async function getOnboardingActivationState(userId: string): Promise<Onbo
 
   if (organizationError && !isExpectedSchemaFallback(organizationError)) {
     console.warn('[onboarding] organization_state_lookup_failed', { code: organizationError.code ?? 'unknown' });
+    throw new Error('onboarding_state_unavailable');
   }
 
   const { data: firstAiSystem, error: aiSystemError } = await supabase
@@ -143,6 +122,7 @@ export async function getOnboardingActivationState(userId: string): Promise<Onbo
 
   if (aiSystemError && !isExpectedSchemaFallback(aiSystemError)) {
     console.warn('[onboarding] first_ai_system_lookup_failed', { code: aiSystemError.code ?? 'unknown' });
+    throw new Error('onboarding_state_unavailable');
   }
 
   const { data: latestRun, error: latestRunError } = await supabase
@@ -155,6 +135,7 @@ export async function getOnboardingActivationState(userId: string): Promise<Onbo
 
   if (latestRunError && !isExpectedSchemaFallback(latestRunError)) {
     console.warn('[onboarding] activation_run_lookup_failed', { code: latestRunError.code ?? 'unknown' });
+    throw new Error('onboarding_state_unavailable');
   }
 
   return {
