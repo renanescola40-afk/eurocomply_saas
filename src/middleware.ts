@@ -35,6 +35,7 @@ const PUBLIC_ROUTES = [
   '/contact',
   '/book-demo',
   '/recuperar-senha',
+  '/reset-password',
   '/atualizar-senha',
   '/trust',
   '/security',
