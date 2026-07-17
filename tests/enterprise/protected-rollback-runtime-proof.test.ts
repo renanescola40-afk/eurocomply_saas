@@ -40,12 +40,23 @@ describe('protected rollback runtime proof', () => {
       'rawTokenStored: false',
       'rawDeploymentUrlStored: false',
       'rawProviderResponseStored: false',
-      "process.exitCode = 1",
+      'process.exitCode = 1',
       "console.error('Rollback runtime validation failed closed.')",
     ]) expect(runner).toContain(token);
 
     expect(runner).not.toContain('stdout: result.stdout');
     expect(runner).not.toContain('stderr: result.stderr');
-    expect(runner).not.toContain('Authorization: `Bearer ${token}`');
+    expect(runner).toContain('writeFileSync(OUTPUT, `${JSON.stringify(evidence, null, 2)}\\n`');
+
+    const evidenceStart = runner.indexOf('function evidenceBase');
+    const evidenceEnd = runner.indexOf('async function main');
+    expect(evidenceStart).toBeGreaterThan(-1);
+    expect(evidenceEnd).toBeGreaterThan(evidenceStart);
+
+    const persistedEvidenceShape = runner.slice(evidenceStart, evidenceEnd);
+    expect(persistedEvidenceShape).not.toContain('VERCEL_TOKEN');
+    expect(persistedEvidenceShape).not.toContain('HEALTHCHECK_TOKEN');
+    expect(persistedEvidenceShape).not.toContain('Authorization');
+    expect(persistedEvidenceShape).not.toContain('deploymentUrl');
   });
 });
