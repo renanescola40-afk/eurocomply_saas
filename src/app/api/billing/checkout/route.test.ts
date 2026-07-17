@@ -165,7 +165,7 @@ describe('billing checkout API security gates', () => {
     mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_created_for_org_a' });
     mocks.stripeCustomerUpdate.mockResolvedValue({ id: 'cus_existing_for_org_a' });
     mocks.stripeCheckoutCreate.mockResolvedValue({ id: 'checkout_session_fixture', url: 'https://checkout.stripe.com/session-fixture' });
-    mocks.writeAuditLog.mockResolvedValue(undefined);
+    mocks.writeAuditLog.mockResolvedValue({ persisted: true });
     mocks.supabaseMaybeSingle.mockResolvedValue({ data: null, error: null });
   });
 
