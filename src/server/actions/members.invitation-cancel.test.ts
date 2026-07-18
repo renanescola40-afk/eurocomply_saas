@@ -70,7 +70,7 @@ describe('server-action invitation cancellation state transition', () => {
     mocks.requireCurrentUser.mockResolvedValue({ id: actorUserId });
     mocks.assertCurrentUserCan.mockResolvedValue(undefined);
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
-    mocks.logAuditEvent.mockResolvedValue(undefined);
+    mocks.logAuditEvent.mockResolvedValue({ persisted: true });
     installSupabaseMock();
   });
 
