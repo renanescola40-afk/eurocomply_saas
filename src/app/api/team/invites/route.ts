@@ -100,7 +100,6 @@ export async function POST(request: Request) {
         entityType: 'team_invite',
         metadata: { reason: 'business_required', plan: entitlements.plan, role: permission.role },
       });
-
       return noStoreJson(
         { error: 'business_plan_required', message: 'Team invites require the Business plan or higher.' },
         { status: 402 },
@@ -122,7 +121,6 @@ export async function POST(request: Request) {
       email,
       role,
     });
-
     const audit = await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
@@ -191,17 +189,42 @@ export async function POST(request: Request) {
         emailDomain: email.split('@')[1] ?? 'unknown',
       });
 
+      let inviteRevoked = false;
+      try {
+        await deleteOrganizationInvite({
+          organizationId: organization.id,
+          invitationId: result.invite.id,
+        });
+        inviteRevoked = true;
+      } catch (compensationError) {
+        reportError(compensationError, {
+          area: 'team_invitation_delivery_compensation',
+          organizationId: organization.id,
+          invitationId: result.invite.id,
+        });
+      }
+
       const failedAudit = await createAuditEvent({
         organizationId: organization.id,
         actorUserId: user.id,
         action: 'team_invite_delivery_failed',
         entityType: 'invitation',
         entityId: result.invite.id,
-        metadata: { emailDomain: email.split('@')[1] ?? 'unknown', role: result.invite.role, actorRole: permission.role },
+        metadata: {
+          emailDomain: email.split('@')[1] ?? 'unknown',
+          role: result.invite.role,
+          actorRole: permission.role,
+          inviteRevoked,
+        },
       });
 
       return noStoreJson(
-        { error: 'invitation_delivery_failed', persisted: true, auditPersisted: failedAudit.persisted },
+        {
+          error: 'invitation_delivery_failed',
+          persisted: !inviteRevoked,
+          inviteRevoked,
+          auditPersisted: failedAudit.persisted,
+        },
         { status: 503 },
       );
     }
