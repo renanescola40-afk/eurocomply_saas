@@ -142,7 +142,7 @@ export async function createVendor(input: unknown) {
 
   if (error) failVendorAction(error, context, 'criar');
 
-  await logAuditEvent({
+  const audit = await logAuditEvent({
     organizationId: payload.organizationId,
     actorUserId: user.id,
     action: 'vendor.create',
@@ -150,6 +150,24 @@ export async function createVendor(input: unknown) {
     entityId: data.id,
     metadata: { name: payload.name, riskLevel: payload.riskLevel },
   });
+
+  if (!audit.persisted) {
+    const { error: rollbackError } = await supabase
+      .from('vendors')
+      .delete()
+      .eq('id', data.id)
+      .eq('organization_id', payload.organizationId);
+
+    if (rollbackError) {
+      reportError(new Error('vendor_create_audit_compensation_failed'), {
+        ...context,
+        vendorId: data.id,
+        providerCode: rollbackError.code ?? 'unknown',
+      });
+    }
+
+    throw providerActionError('Não foi possível criar o fornecedor agora.');
+  }
 
   return data;
 }
