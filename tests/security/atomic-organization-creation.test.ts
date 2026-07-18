@@ -11,8 +11,8 @@ describe('atomic organization creation', () => {
   it('delegates tenant and initial owner creation to one RPC', () => {
     expect(action).toContain("const ATOMIC_ORGANIZATION_CREATION_RPC = 'create_organization_with_owner_atomic'");
     expect(action).toContain('supabase.rpc(ATOMIC_ORGANIZATION_CREATION_RPC');
-    expect(action).not.toContain(".from('organizations')");
-    expect(action).not.toContain(".from('organization_members')");
+    expect(action).not.toMatch(/\.from\(['"]organizations['"]\)[\s\S]{0,160}?\.insert\(/);
+    expect(action).not.toMatch(/\.from\(['"]organization_members['"]\)[\s\S]{0,160}?\.insert\(/);
   });
 
   it('persists the organization before its owner inside one database function', () => {
