@@ -28,9 +28,15 @@ The cancellation action will:
 
 Normal successful cancellations are unchanged. During audit-subsystem unavailability, cancellation fails closed and attempts to restore the invitation instead of silently completing without durable accountability evidence.
 
-The restoration is best effort and is not a single transaction spanning the invitation table and audit subsystem. A restore can fail because of provider errors, schema drift, constraints, or concurrent state. Such failure is reported through sanitized observability and is not presented as successful compensation.
-
 Loading the complete row broadens the internal query result solely so the exact record can be restored. No invitation token or row content is added to logs or caller-facing errors.
+
+## Risks and trade-offs
+
+- Audit-subsystem unavailability temporarily reduces invitation-cancellation availability.
+- Restoration is best effort and is not a single transaction spanning the invitation table and audit subsystem.
+- Restoration can fail because of provider errors, schema drift, constraints, or concurrent state; such failure is reported through sanitized observability and is not represented as successful compensation.
+- A concurrent actor can change invitation state between deletion and restoration, so operational reconciliation remains necessary when compensation fails.
+- Source-level tests establish control ordering and implementation intent only; they do not prove production database behavior, provider availability, or audit-chain durability.
 
 ## Preserved controls
 
