@@ -139,7 +139,7 @@ export async function GET(request: Request) {
       stepUp: publicStepUpSummary(stepUp.assessment),
     };
 
-    await createAuditEvent({
+    const auditResult = await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
       action: 'audit_chain.evidence_exported',
@@ -162,6 +162,16 @@ export async function GET(request: Request) {
       },
       requestContext,
     });
+
+    if (!auditResult.persisted) {
+      reportError(new Error('Audit evidence pack export audit persistence unavailable'), {
+        area: 'audit_evidence_pack_export_audit_persistence',
+        organizationId: organization.id,
+        userId: user.id,
+      });
+
+      return noStoreJson({ error: 'audit_evidence_pack_export_audit_unavailable' }, { status: 503 });
+    }
 
     const date = new Date().toISOString().slice(0, 10);
     const filename = `eurocomply-audit-evidence-pack-${safeFilenamePart(organization.slug ?? organization.name)}-${date}.json`;
