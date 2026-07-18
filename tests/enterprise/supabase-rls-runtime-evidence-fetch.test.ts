@@ -21,12 +21,65 @@ import {
 const SHA = 'a'.repeat(40);
 const RUN_ID = 12345;
 
-function passingCase(table: string, operation: string) {
+type EvidenceCase = {
+  table: string;
+  operation: string;
+  passed: boolean;
+};
+
+type ServiceRolePath = {
+  path: string;
+  purpose: string;
+};
+
+type EvidencePayloadInput = {
+  status: string;
+  outcome: string;
+  supabaseUrl: string;
+  command: string;
+  commitSha: string;
+  testCases: EvidenceCase[];
+  failures: string[];
+  serviceRolePaths: ServiceRolePath[];
+};
+
+type GithubActionsProvenance = {
+  generatedInGitHubActions: boolean;
+  workflow: string;
+  runId: string;
+  runAttempt: string;
+  runUrl: string;
+  repository: string;
+  commitSha: string;
+  refName: string;
+  actor: string;
+  eventName: string;
+  stampedAt: string;
+};
+
+type RuntimeEvidence = Record<string, unknown> & {
+  commitSha: string;
+  testCases: EvidenceCase[];
+  githubActions: GithubActionsProvenance;
+  supabaseProjectReference: string;
+  supabaseProjectReferenceRedacted: boolean;
+};
+
+const buildTypedEvidencePayload = buildEvidencePayload as unknown as (
+  input: EvidencePayloadInput,
+) => Record<string, unknown> & {
+  commitSha: string;
+  testCases: EvidenceCase[];
+  supabaseProjectReference: string;
+  supabaseProjectReferenceRedacted: boolean;
+};
+
+function passingCase(table: string, operation: string): EvidenceCase {
   return { table, operation, passed: true };
 }
 
-function validSourceEvidence() {
-  const testCases: Array<{ table: string; operation: string; passed: boolean }> = [];
+function validSourceEvidence(): RuntimeEvidence {
+  const testCases: EvidenceCase[] = [];
 
   for (const table of customerTenantTables) {
     testCases.push(passingCase(table, 'rls_enabled'));
@@ -52,22 +105,24 @@ function validSourceEvidence() {
     }
   }
 
+  const base = buildTypedEvidencePayload({
+    status: 'Complete',
+    outcome: 'passed',
+    supabaseUrl: 'https://synthetic-project.supabase.co',
+    command: 'node scripts/security/run-supabase-live-tenant-isolation.mjs',
+    commitSha: SHA,
+    testCases,
+    failures: [],
+    serviceRolePaths: [
+      { path: 'fixture_setup', purpose: 'synthetic fixture setup' },
+      { path: 'rls_inventory', purpose: 'live inventory' },
+      { path: 'post_assertion_integrity_checks', purpose: 'integrity checks' },
+      { path: 'fixture_cleanup', purpose: 'synthetic fixture cleanup' },
+    ],
+  });
+
   return {
-    ...buildEvidencePayload({
-      status: 'Complete',
-      outcome: 'passed',
-      supabaseUrl: 'https://synthetic-project.supabase.co',
-      command: 'node scripts/security/run-supabase-live-tenant-isolation.mjs',
-      commitSha: SHA,
-      testCases,
-      failures: [],
-      serviceRolePaths: [
-        { path: 'fixture_setup', purpose: 'synthetic fixture setup' },
-        { path: 'rls_inventory', purpose: 'live inventory' },
-        { path: 'post_assertion_integrity_checks', purpose: 'integrity checks' },
-        { path: 'fixture_cleanup', purpose: 'synthetic fixture cleanup' },
-      ],
-    }),
+    ...base,
     githubActions: {
       generatedInGitHubActions: true,
       workflow: 'Supabase Live RLS Validation',
