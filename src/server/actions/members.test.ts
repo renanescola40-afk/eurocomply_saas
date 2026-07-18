@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   assertCurrentUserCan: vi.fn(),
+  checkDistributedRateLimit: vi.fn(),
   createAdminClient: vi.fn(),
   logAuditEvent: vi.fn(),
   reportError: vi.fn(),
@@ -19,7 +20,7 @@ vi.mock('@/lib/observability/report-error', () => ({
 }));
 
 vi.mock('@/lib/security/rate-limit', () => ({
-  checkDistributedRateLimit: vi.fn(),
+  checkDistributedRateLimit: mocks.checkDistributedRateLimit,
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -92,6 +93,7 @@ describe('member removal state transition', () => {
     mocks.rpcError = null;
     mocks.requireCurrentUser.mockResolvedValue({ id: actorUserId });
     mocks.assertCurrentUserCan.mockResolvedValue(undefined);
+    mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
     mocks.logAuditEvent.mockResolvedValue(undefined);
     installSupabaseMock();
   });
@@ -102,6 +104,14 @@ describe('member removal state transition', () => {
     await removeOrganizationMember({ organizationId, memberId });
 
     expect(mocks.assertCurrentUserCan).toHaveBeenCalledWith(organizationId, actorUserId, 'team:remove');
+    expect(mocks.checkDistributedRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId,
+        userId: actorUserId,
+        policy: 'team-management',
+        failureMode: 'fail-closed',
+      }),
+    );
     expect(rpc).toHaveBeenCalledWith('remove_organization_member_atomic', {
       p_organization_id: organizationId,
       p_member_id: memberId,

@@ -12,6 +12,11 @@ const INVITATION_CANCELLATION_RATE_LIMIT = {
   windowMs: 60 * 1000,
 } as const;
 
+const MEMBER_REMOVAL_RATE_LIMIT = {
+  limit: 10,
+  windowMs: 60 * 1000,
+} as const;
+
 type MemberRemovalResult = {
   outcome: 'removed' | 'last_owner' | 'state_changed' | 'not_found' | 'invalid_input';
   affected_member_id: string | null;
@@ -50,6 +55,24 @@ async function enforceInvitationCancellationRateLimit(input: { organizationId: s
 
   if (!rateLimit.allowed) {
     throw actionError('Too many invitation cancellation attempts. Please try again later.');
+  }
+}
+
+async function enforceMemberRemovalRateLimit(input: { organizationId: string; userId: string }) {
+  const rateLimit = await checkDistributedRateLimit({
+    key: `team.member_remove:${input.organizationId}:${input.userId}`,
+    policy: 'team-management',
+    userId: input.userId,
+    organizationId: input.organizationId,
+    route: 'server-action:team.member_remove',
+    action: 'team_member_remove',
+    limit: MEMBER_REMOVAL_RATE_LIMIT.limit,
+    windowMs: MEMBER_REMOVAL_RATE_LIMIT.windowMs,
+    failureMode: 'fail-closed',
+  });
+
+  if (!rateLimit.allowed) {
+    throw actionError('Too many member removal attempts. Please try again later.');
   }
 }
 
@@ -104,6 +127,7 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
 export async function removeOrganizationMember(input: { organizationId: string; memberId: string }) {
   const user = await requireCurrentUser();
   await assertCurrentUserCan(input.organizationId, user.id, 'team:remove');
+  await enforceMemberRemovalRateLimit({ organizationId: input.organizationId, userId: user.id });
 
   const supabase = createAdminClient();
   const { data: member, error: memberError } = await supabase
