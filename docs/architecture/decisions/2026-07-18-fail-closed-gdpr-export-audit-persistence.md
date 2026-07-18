@@ -28,6 +28,14 @@ This intentionally trades export availability for privacy accountability. Users 
 
 The denied-scope and incomplete-export audit paths remain best-effort because they describe rejected or failed disclosures rather than a successful release of sensitive data.
 
+## Risks and trade-offs
+
+- Audit-store outages intentionally make otherwise valid GDPR exports unavailable until durable accountability can be restored.
+- Export data is assembled before the audit write, so failed requests may consume server time and memory even though no payload is disclosed.
+- The fail-closed response can increase support and retry traffic during an audit dependency incident.
+- Keeping rejected and incomplete export paths best-effort preserves availability for denial handling, but those paths still require operational monitoring for repeated persistence failures.
+- Repository tests prove control placement only; production audit-chain health, alert delivery, and end-to-end failure behavior still require environment-backed evidence.
+
 ## Evidence boundaries
 
 The repository change and source-level regression test prove the fail-closed control is present in code. They do not prove production database availability, runtime audit-chain health, deployment success, or end-to-end behavior. Those claims require exact-head CI and environment-backed runtime evidence.
