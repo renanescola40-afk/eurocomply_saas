@@ -111,7 +111,7 @@ export async function GET(request: Request) {
       integrity,
     };
 
-    await createAuditEvent({
+    const auditResult = await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
       action: 'security_questionnaire.exported',
@@ -129,6 +129,15 @@ export async function GET(request: Request) {
         stepUpVerifiedAt: stepUp.assessment.verifiedAt,
       },
     });
+
+    if (!auditResult.persisted) {
+      reportError(new Error('Security questionnaire export audit persistence unavailable'), {
+        area: 'security_questionnaire_export_audit',
+        organizationId: organization.id,
+        userId: user.id,
+      });
+      return noStoreJson({ error: 'security_questionnaire_export_audit_unavailable' }, { status: 503 });
+    }
 
     const date = new Date().toISOString().slice(0, 10);
     const filename = sanitizeDocumentDownloadFileName(

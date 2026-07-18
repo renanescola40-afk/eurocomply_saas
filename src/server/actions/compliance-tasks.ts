@@ -207,7 +207,7 @@ export async function deleteComplianceTask(taskId: string, organizationId: strin
       .delete()
       .eq('id', taskId)
       .eq('organization_id', organizationId)
-      .select('id,title')
+      .select('*')
       .single();
 
     if (error) {
@@ -215,7 +215,7 @@ export async function deleteComplianceTask(taskId: string, organizationId: strin
       throw actionError('Unable to delete task');
     }
 
-    await logAuditEvent({
+    const audit = await logAuditEvent({
       organizationId,
       actorUserId: user.id,
       action: 'task.delete',
@@ -223,6 +223,19 @@ export async function deleteComplianceTask(taskId: string, organizationId: strin
       entityId: taskId,
       metadata: { title: task.title },
     });
+
+    if (!audit.persisted) {
+      const { error: rollbackError } = await supabase.from('compliance_tasks').insert(task);
+
+      if (rollbackError) {
+        reportError(rollbackError, {
+          ...context,
+          area: 'compliance_task_delete_audit_rollback',
+        });
+      }
+
+      throw actionError('Unable to delete task');
+    }
 
     return task;
   } catch (error) {

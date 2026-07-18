@@ -106,7 +106,7 @@ export async function GET(request: Request) {
     integrity,
   };
 
-  await createAuditEvent({
+  const auditResult = await createAuditEvent({
     organizationId: organization.id,
     actorUserId: user.id,
     action: 'continuity_center_exported',
@@ -123,6 +123,11 @@ export async function GET(request: Request) {
       stepUpVerifiedAt: stepUp.assessment.verifiedAt,
     },
   });
+
+  if (!auditResult.persisted) {
+    console.error('[continuity-center] export_audit_unavailable');
+    return noStoreJson({ error: 'continuity_center_export_audit_unavailable' }, { status: 503 });
+  }
 
   const fileName = sanitizeDocumentDownloadFileName(`eurocomply-continuity-center-${organization.slug ?? organization.id}.json`);
 
