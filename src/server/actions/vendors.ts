@@ -181,6 +181,15 @@ export async function updateVendor(input: unknown) {
   await enforceVendorActionRateLimit({ action: 'vendor.update', organizationId: payload.organizationId, userId: user.id });
 
   const supabase = createAdminClient();
+  const { data: previous, error: previousError } = await supabase
+    .from('vendors')
+    .select('*')
+    .eq('id', payload.vendorId)
+    .eq('organization_id', payload.organizationId)
+    .single();
+
+  if (previousError) failVendorAction(previousError, context, 'atualizar');
+
   const baseRecord = toBaseVendorRecord(payload);
   const fullRecord = {
     ...baseRecord,
@@ -202,7 +211,7 @@ export async function updateVendor(input: unknown) {
 
   if (error) failVendorAction(error, context, 'atualizar');
 
-  await logAuditEvent({
+  const audit = await logAuditEvent({
     organizationId: payload.organizationId,
     actorUserId: user.id,
     action: 'vendor.update',
@@ -214,6 +223,26 @@ export async function updateVendor(input: unknown) {
       reviewStatus: payload.reviewStatus,
     },
   });
+
+  if (!audit.persisted) {
+    const { error: rollbackError } = await supabase
+      .from('vendors')
+      .update(previous)
+      .eq('id', payload.vendorId)
+      .eq('organization_id', payload.organizationId)
+      .eq('name', data.name)
+      .eq('risk_level', data.risk_level)
+      .eq('review_status', data.review_status);
+
+    if (rollbackError) {
+      reportError(new Error('vendor_update_audit_compensation_failed'), {
+        ...context,
+        providerCode: rollbackError.code ?? 'unknown',
+      });
+    }
+
+    throw providerActionError('Não foi possível atualizar o fornecedor agora.');
+  }
 
   return data;
 }
