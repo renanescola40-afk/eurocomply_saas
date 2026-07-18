@@ -113,7 +113,7 @@ async function auditUploadSecurityEvent(input: {
   entityId?: string | null;
   metadata: Record<string, unknown>;
 }) {
-  await createAuditEvent({
+  return createAuditEvent({
     organizationId: input.organizationId,
     actorUserId: input.actorUserId,
     action: input.action,
@@ -436,18 +436,7 @@ export async function POST(request: NextRequest) {
     return noStoreJson({ error: 'Unable to register document securely.' }, { status: 500 });
   }
 
-  await createNotification({
-    organizationId: organization.id,
-    type: 'document_uploaded',
-    title: 'Controlled document uploaded',
-    message: `${title} was uploaded and is pending review.`,
-    metadata: {
-      documentId: persistedDocument.id,
-      status: persistedDocument.status,
-    },
-  });
-
-  await auditUploadSecurityEvent({
+  const auditResult = await auditUploadSecurityEvent({
     action: UPLOAD_SECURITY_AUDIT_EVENTS.uploadAccepted,
     organizationId: organization.id,
     actorUserId: user.id,
@@ -458,6 +447,38 @@ export async function POST(request: NextRequest) {
       storagePathRecorded: true,
       name: title,
       uploadedBy,
+    },
+  });
+
+  if (!auditResult.persisted) {
+    const [documentCleanup, storageCleanup] = await Promise.all([
+      supabase
+        .from('documents')
+        .delete()
+        .eq('id', persistedDocument.id)
+        .eq('organization_id', organization.id)
+        .eq('storage_path', storagePath),
+      storage.remove([storagePath]),
+    ]);
+
+    if (documentCleanup.error || storageCleanup.error) {
+      console.warn('[documents] upload_audit_compensation_failed', {
+        documentCleanupCode: documentCleanup.error?.code ?? null,
+        storageCleanupFailed: Boolean(storageCleanup.error),
+      });
+    }
+
+    return noStoreJson({ error: 'document_upload_audit_unavailable' }, { status: 503 });
+  }
+
+  await createNotification({
+    organizationId: organization.id,
+    type: 'document_uploaded',
+    title: 'Controlled document uploaded',
+    message: `${title} was uploaded and is pending review.`,
+    metadata: {
+      documentId: persistedDocument.id,
+      status: persistedDocument.status,
     },
   });
 
