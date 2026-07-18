@@ -1,6 +1,7 @@
 import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
 import { aiSystemBodySchema, asText, classifyParsedAiSystemBody } from '@/server/ai-governance/system-payload';
 import { createAuditEvent } from '@/server/queries/audit-events';
+import { compensateAiSystemReassessmentAuditFailure } from '@/server/queries/ai-system-compensation';
 import { getAiSystem, listAiSystemHistory, updateAiSystem } from '@/server/queries/ai-systems';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { parseJsonBodyWithZod, requireApiUser, secureApiError } from '@/server/security/api-guards';
@@ -143,7 +144,7 @@ export async function PATCH(request: Request, { params }: AiSystemRouteParams) {
 
     const system = updateResult.system;
 
-    await createAuditEvent({
+    const audit = await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
       action: 'ai_system_reassessed',
@@ -157,6 +158,25 @@ export async function PATCH(request: Request, { params }: AiSystemRouteParams) {
         actorRole: permission.role,
       },
     });
+
+    if (!audit.persisted) {
+      const compensation = await compensateAiSystemReassessmentAuditFailure({
+        systemId: system.id,
+        organizationId: organization.id,
+        actorUserId: user.id,
+        failedUpdatedAt: system.updated_at,
+        previous: existing,
+      });
+
+      if (!compensation.restored) {
+        console.warn('[ai-systems] reassessment_audit_compensation_failed', {
+          outcome: compensation.outcome,
+          errorCode: compensation.errorCode ?? 'none',
+        });
+      }
+
+      return noStoreJson({ error: 'ai_system_reassessment_audit_unavailable' }, { status: 503 });
+    }
 
     const history = await listAiSystemHistory(system.id, organization.id);
 
