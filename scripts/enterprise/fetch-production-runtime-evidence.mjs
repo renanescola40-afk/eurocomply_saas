@@ -18,13 +18,34 @@ const FULL_SHA = /^[a-f0-9]{40}$/;
 const NUMERIC = /^\d+$/;
 
 function headers(token) {
-  return { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'risck-comply-production-runtime-fetcher' };
+  return {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'risck-comply-production-runtime-fetcher',
+  };
 }
 
 async function githubJson(url, token) {
-  const response = await fetch(url, { headers: headers(token), cache: 'no-store', signal: AbortSignal.timeout(15_000) });
-  if (!response.ok) throw new Error(`github_api_${response.status}`);
+  const response = await fetch(url, {
+    headers: headers(token),
+    cache: 'no-store',
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) {
+    const error = new Error(`github_api_${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
   return response.json();
+}
+
+export function isOptionalWorkflowUnavailable(error, { required = false, sourceRunId = '' } = {}) {
+  const status = Number(error?.status);
+  const message = String(error?.message || '');
+  return required !== true
+    && String(sourceRunId || '').trim() === ''
+    && (status === 404 || message === 'github_api_404');
 }
 
 export function selectExactShaRun(runs, targetSha, sourceRunId = '') {
@@ -53,16 +74,28 @@ export function validateDownloadedEvidence(evidence, { targetSha }) {
 }
 
 function download(repository, token, artifactId, path) {
-  const result = spawnSync('curl', ['-fL', '-H', `Authorization: Bearer ${token}`, '-H', 'Accept: application/vnd.github+json', '-o', path, `https://api.github.com/repos/${repository}/actions/artifacts/${artifactId}/zip`], { encoding: 'utf8' });
+  const result = spawnSync('curl', [
+    '-fL',
+    '-H', `Authorization: Bearer ${token}`,
+    '-H', 'Accept: application/vnd.github+json',
+    '-o', path,
+    `https://api.github.com/repos/${repository}/actions/artifacts/${artifactId}/zip`,
+  ], { encoding: 'utf8' });
   if (result.error || result.status !== 0) throw new Error('artifact_download_failed');
 }
 
 function extractBundle(zipPath) {
-  const entries = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' }).split('\n').map((value) => value.trim()).filter(Boolean);
+  const entries = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' })
+    .split('\n')
+    .map((value) => value.trim())
+    .filter(Boolean);
   return Object.fromEntries(BUNDLE_PATHS.map((path) => {
     const entry = entries.find((candidate) => candidate.endsWith(path));
     if (!entry) throw new Error(`bundle_evidence_missing:${path}`);
-    return [path, JSON.parse(execFileSync('unzip', ['-p', zipPath, entry], { encoding: 'utf8', maxBuffer: 2 * 1024 * 1024 }))];
+    return [path, JSON.parse(execFileSync('unzip', ['-p', zipPath, entry], {
+      encoding: 'utf8',
+      maxBuffer: 2 * 1024 * 1024,
+    }))];
   }));
 }
 
@@ -70,26 +103,46 @@ function removeStale(root) {
   for (const path of BUNDLE_PATHS) rmSync(join(root, path), { force: true });
 }
 
-export async function fetchProductionRuntimeEvidence({ root, repository, token, targetSha, sourceRunId = '', required = false }) {
+export async function fetchProductionRuntimeEvidence({
+  root,
+  repository,
+  token,
+  targetSha,
+  sourceRunId = '',
+  required = false,
+}) {
   removeStale(root);
   if (repository !== REPOSITORY) throw new Error('repository_not_canonical');
   if (!token) throw new Error('github_token_missing');
   if (!FULL_SHA.test(targetSha)) throw new Error('target_sha_invalid');
 
-  const runs = sourceRunId
-    ? [await githubJson(`https://api.github.com/repos/${repository}/actions/runs/${sourceRunId}`, token)]
-    : (await githubJson(`https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?status=success&branch=main&per_page=100`, token)).workflow_runs;
+  let runs;
+  try {
+    runs = sourceRunId
+      ? [await githubJson(`https://api.github.com/repos/${repository}/actions/runs/${sourceRunId}`, token)]
+      : (await githubJson(`https://api.github.com/repos/${repository}/actions/workflows/${WORKFLOW_FILE}/runs?status=success&branch=main&per_page=100`, token)).workflow_runs;
+  } catch (error) {
+    if (isOptionalWorkflowUnavailable(error, { required, sourceRunId })) {
+      console.log(`Production runtime workflow is not registered on main yet; evidence remains NOT_VERIFIED for ${targetSha}.`);
+      return { found: false, targetSha, reason: 'workflow_not_registered' };
+    }
+    throw error;
+  }
+
   const run = selectExactShaRun(runs, targetSha, sourceRunId);
   if (!run) {
     if (required) throw new Error('exact_sha_runtime_run_missing');
     console.log(`Production runtime evidence remains NOT_VERIFIED for ${targetSha}.`);
     return { found: false, targetSha };
   }
+
   const runId = String(run.id || '');
   if (!NUMERIC.test(runId)) throw new Error('run_id_invalid');
   const artifacts = await githubJson(`https://api.github.com/repos/${repository}/actions/runs/${runId}/artifacts`, token);
   const expectedName = `production-runtime-proof-${targetSha}`;
-  const artifact = (artifacts.artifacts || []).find((item) => item?.name === expectedName && item?.expired !== true);
+  const artifact = (artifacts.artifacts || []).find(
+    (item) => item?.name === expectedName && item?.expired !== true,
+  );
   if (!artifact || !NUMERIC.test(String(artifact.id || ''))) throw new Error('artifact_missing');
 
   const zipPath = join(root, 'artifacts', 'enterprise-readiness', `production-runtime-${runId}.zip`);
@@ -113,7 +166,19 @@ export async function fetchProductionRuntimeEvidence({ root, repository, token, 
 
 async function run() {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-  await fetchProductionRuntimeEvidence({ root, repository: process.env.GITHUB_REPOSITORY || '', token: process.env.GITHUB_TOKEN || '', targetSha: String(process.env.TARGET_SHA || process.env.GITHUB_SHA || '').toLowerCase(), sourceRunId: process.env.PRODUCTION_RUNTIME_SOURCE_RUN_ID || '', required: process.env.PRODUCTION_RUNTIME_EVIDENCE_REQUIRED === 'true' });
+  await fetchProductionRuntimeEvidence({
+    root,
+    repository: process.env.GITHUB_REPOSITORY || '',
+    token: process.env.GITHUB_TOKEN || '',
+    targetSha: String(process.env.TARGET_SHA || process.env.GITHUB_SHA || '').toLowerCase(),
+    sourceRunId: process.env.PRODUCTION_RUNTIME_SOURCE_RUN_ID || '',
+    required: process.env.PRODUCTION_RUNTIME_EVIDENCE_REQUIRED === 'true',
+  });
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) run().catch((error) => { console.error(error instanceof Error ? error.message.split(':')[0] : 'unknown_error'); process.exit(1); });
+if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+  run().catch((error) => {
+    console.error(error instanceof Error ? error.message.split(':')[0] : 'unknown_error');
+    process.exit(1);
+  });
+}
