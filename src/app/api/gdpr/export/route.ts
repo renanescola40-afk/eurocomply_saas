@@ -1,4 +1,5 @@
 import { sanitizeDocumentDownloadFileName } from '@/lib/documents/upload';
+import { reportError } from '@/lib/observability/report-error';
 import { checkDistributedRateLimit, getClientIpFromRequest, getUserAgentFromRequest } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { assertGdprSelfServiceEnabled } from '@/server/billing/entitlements';
@@ -133,7 +134,7 @@ export async function GET(request: Request) {
     return noStoreJson({ error: 'gdpr_export_incomplete' }, { status: 503 });
   }
 
-  await createAuditEvent({
+  const auditResult = await createAuditEvent({
     organizationId: organization.id,
     actorUserId: user.id,
     action: 'gdpr_export_requested',
@@ -148,6 +149,15 @@ export async function GET(request: Request) {
     }),
     requestContext,
   });
+
+  if (!auditResult.persisted) {
+    reportError(new Error('GDPR export audit persistence failed'), {
+      area: 'gdpr_export_audit',
+      organizationId: organization.id,
+      userId: user.id,
+    });
+    return noStoreJson({ error: 'gdpr_export_audit_unavailable' }, { status: 503 });
+  }
 
   await createNotification({
     organizationId: organization.id,
