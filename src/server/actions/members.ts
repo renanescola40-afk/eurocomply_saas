@@ -1,10 +1,16 @@
 import { reportError } from '@/lib/observability/report-error';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { requireCurrentUser } from '@/server/queries/auth';
 
 const ATOMIC_MEMBER_REMOVAL_RPC = 'remove_organization_member_atomic';
+
+const INVITATION_CANCELLATION_RATE_LIMIT = {
+  limit: 20,
+  windowMs: 60 * 1000,
+} as const;
 
 type MemberRemovalResult = {
   outcome: 'removed' | 'last_owner' | 'state_changed' | 'not_found' | 'invalid_input';
@@ -29,9 +35,28 @@ function failMemberAction(error: unknown, context: Record<string, unknown>, mess
   throw actionError(message);
 }
 
+async function enforceInvitationCancellationRateLimit(input: { organizationId: string; userId: string }) {
+  const rateLimit = await checkDistributedRateLimit({
+    key: `team.invite_cancel:${input.organizationId}:${input.userId}`,
+    policy: 'team-management',
+    userId: input.userId,
+    organizationId: input.organizationId,
+    route: 'server-action:team.invite_cancel',
+    action: 'team_invite_cancel',
+    limit: INVITATION_CANCELLATION_RATE_LIMIT.limit,
+    windowMs: INVITATION_CANCELLATION_RATE_LIMIT.windowMs,
+    failureMode: 'fail-closed',
+  });
+
+  if (!rateLimit.allowed) {
+    throw actionError('Too many invitation cancellation attempts. Please try again later.');
+  }
+}
+
 export async function cancelOrganizationInvitation(input: { organizationId: string; invitationId: string }) {
   const user = await requireCurrentUser();
   await assertCurrentUserCan(input.organizationId, user.id, 'team:remove');
+  await enforceInvitationCancellationRateLimit({ organizationId: input.organizationId, userId: user.id });
 
   const supabase = createAdminClient();
   const { data: invitation, error: invitationError } = await supabase
