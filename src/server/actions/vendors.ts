@@ -261,12 +261,12 @@ export async function deleteVendor(vendorId: string, organizationId: string) {
     .delete()
     .eq('id', payload.vendorId)
     .eq('organization_id', payload.organizationId)
-    .select('id,name,risk_level')
+    .select('*')
     .single();
 
   if (error) failVendorAction(error, context, 'remover');
 
-  await logAuditEvent({
+  const audit = await logAuditEvent({
     organizationId: payload.organizationId,
     actorUserId: user.id,
     action: 'vendor.delete',
@@ -274,6 +274,19 @@ export async function deleteVendor(vendorId: string, organizationId: string) {
     entityId: payload.vendorId,
     metadata: { name: data.name, riskLevel: data.risk_level },
   });
+
+  if (!audit.persisted) {
+    const { error: rollbackError } = await supabase.from('vendors').insert(data);
+
+    if (rollbackError) {
+      reportError(new Error('vendor_delete_audit_compensation_failed'), {
+        ...context,
+        providerCode: rollbackError.code ?? 'unknown',
+      });
+    }
+
+    throw providerActionError('Não foi possível remover o fornecedor agora.');
+  }
 
   return data;
 }
