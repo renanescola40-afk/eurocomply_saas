@@ -34,7 +34,7 @@ The action will:
 - Audit-subsystem outages fail closed instead of silently producing unaudited deletions.
 - Compensation is small, reviewable, and uses the exact row returned by the tenant-scoped delete.
 
-### Trade-offs and residual risk
+## Risks and trade-offs
 
 - Audit unavailability temporarily reduces risk-deletion availability.
 - Compensation is best effort rather than a single database transaction spanning the domain row and audit subsystem.
