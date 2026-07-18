@@ -46,9 +46,11 @@ jobs:
             exit 1
           fi
           TARGET_SHA="${TARGET_SHA,,}"
-          echo "TARGET_SHA=$TARGET_SHA" >> "$GITHUB_ENV"
-          echo "RELEASE_COMMIT_SHA=$TARGET_SHA" >> "$GITHUB_ENV"
-          echo "RELEASE_BUILD_SHA=$TARGET_SHA" >> "$GITHUB_ENV"
+          {
+            echo "TARGET_SHA=$TARGET_SHA"
+            echo "RELEASE_COMMIT_SHA=$TARGET_SHA"
+            echo "RELEASE_BUILD_SHA=$TARGET_SHA"
+          } >> "$GITHUB_ENV"
           MAIN_SHA="$(curl --fail --silent --show-error \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
