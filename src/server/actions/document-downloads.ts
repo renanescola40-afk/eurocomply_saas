@@ -242,7 +242,7 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
     throw actionError('Unable to create signed download URL');
   }
 
-  await logAuditEvent({
+  const auditResult = await logAuditEvent({
     organizationId: document.organization_id,
     actorUserId: user.id,
     action: 'document.download_url_created',
@@ -256,6 +256,14 @@ async function createDocumentSignedUrl(documentId: string, accessPurpose: Docume
       expiresInSeconds: SIGNED_URL_EXPIRES_IN_SECONDS,
     }),
   });
+
+  if (!auditResult.persisted) {
+    reportError(new Error('Document signed URL audit persistence failed'), {
+      ...context,
+      organizationId: document.organization_id,
+    });
+    throw actionError('Document access is temporarily unavailable');
+  }
 
   return {
     signedUrl: data.signedUrl,
