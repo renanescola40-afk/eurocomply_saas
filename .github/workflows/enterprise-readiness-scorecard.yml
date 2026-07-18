@@ -7,7 +7,7 @@ on:
     branches: [main]
   workflow_dispatch:
   workflow_run:
-    workflows: [Distributed Rate Limit Runtime Proof, Auth RBAC Tenant Proof]
+    workflows: [Distributed Rate Limit Runtime Proof, Auth RBAC Tenant Proof, Supabase Live RLS Validation]
     types: [completed]
 
 permissions:
@@ -28,6 +28,7 @@ jobs:
       ASSESSED_SHA: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
       RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Distributed Rate Limit Runtime Proof' && github.event.workflow_run.id || '' }}
       AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Auth RBAC Tenant Proof' && github.event.workflow_run.id || '' }}
+      SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Supabase Live RLS Validation' && github.event.workflow_run.id || '' }}
     steps:
       - name: Checkout exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -69,6 +70,8 @@ jobs:
           tests/enterprise/provider-failure-evidence.test.ts
           tests/enterprise/step-up-evidence.test.ts
           tests/enterprise/auth-rbac-runtime-evidence-fetch.test.ts
+          tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts
+          tests/security/supabase-rls-scorecard-evidence.test.ts
 
       - name: Validate distributed rate-limit proof contracts
         shell: bash
@@ -224,11 +227,30 @@ jobs:
             echo "Auth/RBAC runtime evidence remains NOT_VERIFIED for $ASSESSED_SHA."
           fi
 
-      - name: Retain product provider and identity acceptance evidence diagnostics
+      - name: Retrieve exact-SHA Supabase RLS runtime evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ env.SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID }}
+        run: node scripts/enterprise/fetch-supabase-rls-evidence.mjs
+
+      - name: Derive and validate Supabase RLS scorecard evidence when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f docs/security/evidence/runtime/supabase-live-rls-validation.json; then
+            ENTERPRISE_EXPECTED_SHA="$ASSESSED_SHA" node scripts/security/write-supabase-rls-scorecard-evidence.mjs
+            ENTERPRISE_EXPECTED_SHA="$ASSESSED_SHA" node scripts/security/check-supabase-rls-scorecard-evidence.mjs
+          else
+            rm -f docs/security/evidence/runtime/supabase-rls-validation.json
+            echo "Supabase RLS runtime evidence remains NOT_VERIFIED for $ASSESSED_SHA."
+          fi
+
+      - name: Retain product provider identity and tenancy evidence diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: product-provider-identity-acceptance-evidence-${{ env.ASSESSED_SHA }}
+          name: product-provider-identity-tenancy-acceptance-evidence-${{ env.ASSESSED_SHA }}
           path: |
             docs/security/evidence/runtime/ux-acceptance-validation.json
             docs/security/evidence/runtime/localization-validation.json
@@ -237,6 +259,8 @@ jobs:
             docs/security/evidence/runtime/auth-recovery-validation.json
             docs/security/evidence/runtime/auth-rbac-final-validation.json
             docs/security/evidence/runtime/auth-rbac-validation.json
+            docs/security/evidence/runtime/supabase-live-rls-validation.json
+            docs/security/evidence/runtime/supabase-rls-validation.json
             docs/security/evidence/runtime/provider-failure-classification.json
             docs/security/evidence/p1/step-up-sensitive-actions.json
             docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json
@@ -279,6 +303,8 @@ jobs:
             docs/security/evidence/runtime/auth-recovery-validation.json
             docs/security/evidence/runtime/auth-rbac-final-validation.json
             docs/security/evidence/runtime/auth-rbac-validation.json
+            docs/security/evidence/runtime/supabase-live-rls-validation.json
+            docs/security/evidence/runtime/supabase-rls-validation.json
             docs/security/evidence/runtime/provider-failure-classification.json
           if-no-files-found: warn
           retention-days: 90
