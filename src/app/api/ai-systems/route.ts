@@ -356,7 +356,7 @@ export async function POST(request: Request) {
       nextActions: result.classification.nextActions,
     });
 
-    await createAuditEvent({
+    const audit = await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
       action: 'ai_system_created',
@@ -373,6 +373,24 @@ export async function POST(request: Request) {
         actorRole: permission.role,
       },
     });
+
+    if (!audit.persisted) {
+      const { error: rollbackError } = await createAdminClient()
+        .from('ai_systems')
+        .delete()
+        .eq('id', system.id)
+        .eq('organization_id', organization.id)
+        .eq('created_by', user.id)
+        .eq('created_at', system.created_at);
+
+      if (rollbackError) {
+        console.warn('[ai-systems] creation_audit_compensation_failed', {
+          code: rollbackError.code ?? 'unknown',
+        });
+      }
+
+      return noStoreJson({ error: 'ai_system_creation_audit_unavailable' }, { status: 503 });
+    }
 
     return noStoreJson({ system, roleAssessment: result.roleAssessment });
   } catch (error) {
