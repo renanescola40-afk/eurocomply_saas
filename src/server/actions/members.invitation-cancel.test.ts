@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   assertCurrentUserCan: vi.fn(),
+  checkDistributedRateLimit: vi.fn(),
   createAdminClient: vi.fn(),
   logAuditEvent: vi.fn(),
   reportError: vi.fn(),
@@ -14,7 +15,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/email/client', () => ({ sendEmail: vi.fn() }));
 vi.mock('@/lib/observability/report-error', () => ({ reportError: mocks.reportError }));
-vi.mock('@/lib/security/rate-limit', () => ({ checkDistributedRateLimit: vi.fn() }));
+vi.mock('@/lib/security/rate-limit', () => ({
+  checkDistributedRateLimit: mocks.checkDistributedRateLimit,
+}));
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: mocks.createAdminClient }));
 vi.mock('@/server/actions/audit', () => ({ logAuditEvent: mocks.logAuditEvent }));
 vi.mock('@/server/auth/permissions', () => ({ assertCurrentUserCan: mocks.assertCurrentUserCan }));
@@ -66,6 +69,7 @@ describe('server-action invitation cancellation state transition', () => {
     mocks.cancelledInvitation = { id: invitationId };
     mocks.requireCurrentUser.mockResolvedValue({ id: actorUserId });
     mocks.assertCurrentUserCan.mockResolvedValue(undefined);
+    mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
     mocks.logAuditEvent.mockResolvedValue(undefined);
     installSupabaseMock();
   });
@@ -74,6 +78,14 @@ describe('server-action invitation cancellation state transition', () => {
     await cancelOrganizationInvitation({ organizationId, invitationId });
 
     expect(mocks.assertCurrentUserCan).toHaveBeenCalledWith(organizationId, actorUserId, 'team:remove');
+    expect(mocks.checkDistributedRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId,
+        userId: actorUserId,
+        policy: 'team-management',
+        failureMode: 'fail-closed',
+      }),
+    );
     expect(mocks.deleteEq).toHaveBeenNthCalledWith(1, 'id', invitationId);
     expect(mocks.deleteEq).toHaveBeenNthCalledWith(2, 'organization_id', organizationId);
     expect(mocks.deleteIs).toHaveBeenCalledWith('accepted_at', null);
