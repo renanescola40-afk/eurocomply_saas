@@ -84,7 +84,7 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
   const supabase = createAdminClient();
   const { data: invitation, error: invitationError } = await supabase
     .from('invitations')
-    .select('id,email,role,organization_id,accepted_at')
+    .select('*')
     .eq('id', input.invitationId)
     .eq('organization_id', input.organizationId)
     .maybeSingle();
@@ -114,7 +114,7 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
     throw actionError('Invitation state changed before cancellation completed');
   }
 
-  await logAuditEvent({
+  const audit = await logAuditEvent({
     organizationId: input.organizationId,
     actorUserId: user.id,
     action: 'team.invite_cancelled',
@@ -122,6 +122,23 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
     entityId: input.invitationId,
     metadata: { email: invitation.email, role: invitation.role },
   });
+
+  if (!audit.persisted) {
+    const { error: restoreError } = await supabase
+      .from('invitations')
+      .insert(invitation);
+
+    if (restoreError) {
+      reportError(restoreError, {
+        area: 'team_cancel_invitation_audit_compensation',
+        organizationId: input.organizationId,
+        invitationId: input.invitationId,
+        providerCode: restoreError.code ?? null,
+      });
+    }
+
+    throw actionError('Unable to cancel invitation.');
+  }
 }
 
 export async function removeOrganizationMember(input: { organizationId: string; memberId: string }) {
