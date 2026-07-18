@@ -178,6 +178,11 @@ export async function GET(request: Request) {
     requestContext,
   });
 
+  if (!verificationAuditEvent.persisted) {
+    console.warn('[audit-chain] verification_audit_unavailable');
+    return noStoreJson({ error: 'audit_chain_verification_audit_unavailable' }, { status: 503 });
+  }
+
   return noStoreJson({
     organizationId: organization.id,
     checkedAt,
@@ -191,7 +196,7 @@ export async function GET(request: Request) {
     lastHash: verification.lastHash,
     failures: verification.failures,
     verificationAuditEvent: {
-      persisted: verificationAuditEvent.persisted,
+      persisted: true,
       transactional: 'transactional' in verificationAuditEvent ? verificationAuditEvent.transactional : undefined,
       eventHash: 'eventHash' in verificationAuditEvent ? verificationAuditEvent.eventHash : undefined,
     },
