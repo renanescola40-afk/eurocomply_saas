@@ -28,9 +28,11 @@ Existing authorization, tenant scoping, self-removal protection, atomic last-own
 
 This bounds repeated destructive team-management attempts and reduces avoidable database and audit pressure. Normal administrative use should remain well below the selected threshold.
 
-## Risks
+## Risks and trade-offs
 
 A legitimate administrator performing more than 10 removals in one minute will receive a temporary generic error. A distributed rate-limit provider outage also blocks removal by design. This availability trade-off is intentional for a privileged destructive action.
+
+The per-actor and per-organization key limits repeated attempts from one privileged identity, but it does not eliminate coordinated abuse across multiple authorized identities. Production confidence still depends on provider availability, alerting, and environment-backed abuse testing.
 
 ## Evidence boundaries
 
