@@ -31,6 +31,13 @@ The existing authentication, authorization, entitlement, step-up, rate-limit, in
 - Clients should treat the stable 503 response as retryable.
 - An audit record can exist even when transmission is interrupted after persistence. This is preferable to an untracked export and does not claim that the client received every byte.
 
+## Risks and trade-offs
+
+- The route deliberately favors accountability over availability: legitimate exports return a retryable 503 while durable audit persistence is unavailable.
+- Payload assembly and integrity hashing occur before the audit write, so a rejected request can still consume server work and memory even though no artifact is disclosed.
+- Persisting the event before response transmission means an audit record can exist when the client disconnects or receives only part of the response; the event proves authorization and attempted disclosure, not complete client receipt.
+- Operational safety still depends on production monitoring and alert delivery for audit-store failures. This ADR and its source-level test do not prove those runtime controls.
+
 ## Evidence boundaries
 
 This decision and its regression test provide source-level evidence only. They do not prove production audit availability, deployment, runtime database health, disaster-recovery effectiveness, external audit completion, penetration testing, or compliance certification.
