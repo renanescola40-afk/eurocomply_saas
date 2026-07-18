@@ -1,0 +1,100 @@
+name: Protected Rollback Runtime Proof
+
+run-name: Protected rollback proof for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full current main SHA to restore after the rollback exercise
+        required: true
+        type: string
+      rollback_target_sha:
+        description: Full SHA of the previously healthy production deployment
+        required: true
+        type: string
+      confirmation:
+        description: Type ROLLBACK <release_sha> TO <rollback_target_sha>
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: protected-rollback-runtime-proof
+  cancel-in-progress: false
+
+jobs:
+  validate-rollback:
+    name: Execute and restore production rollback
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+    steps:
+      - name: Validate explicit request
+        shell: bash
+        env:
+          ROLLBACK_TARGET_SHA: ${{ inputs.rollback_target_sha }}
+          ROLLBACK_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$ROLLBACK_TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          test "${TARGET_SHA,,}" != "${ROLLBACK_TARGET_SHA,,}"
+          test "$ROLLBACK_CONFIRMATION" = "ROLLBACK ${TARGET_SHA,,} TO ${ROLLBACK_TARGET_SHA,,}"
+          {
+            echo "TARGET_SHA=${TARGET_SHA,,}"
+            echo "ROLLBACK_TARGET_SHA=${ROLLBACK_TARGET_SHA,,}"
+            echo "ROLLBACK_CONFIRMATION=$ROLLBACK_CONFIRMATION"
+          } >> "$GITHUB_ENV"
+
+      - name: Check out exact current release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify requested SHA is current main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          MAIN_SHA="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$MAIN_SHA" = "$TARGET_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Execute protected rollback and restoration
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_CLI_VERSION: ${{ vars.VERCEL_CLI_VERSION }}
+          ROLLBACK_TARGET_DEPLOYMENT_URL: ${{ secrets.ROLLBACK_TARGET_DEPLOYMENT_URL }}
+          CURRENT_PRODUCTION_DEPLOYMENT_URL: ${{ secrets.CURRENT_PRODUCTION_DEPLOYMENT_URL }}
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+          HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
+        run: node scripts/release/run-protected-rollback-validation.mjs
+
+      - name: Upload redacted rollback evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: protected-rollback-runtime-proof-${{ env.TARGET_SHA }}
+          path: docs/security/evidence/runtime/rollback-validation.json
+          if-no-files-found: error
+          retention-days: 90
