@@ -20,8 +20,14 @@ When persistence is unavailable, the action performs a best-effort compensating 
 
 - Successful organization creation now has durable audit evidence.
 - Audit-store outages intentionally reduce tenant-creation availability.
-- Compensation is best effort rather than a cross-system transaction; operators must investigate the sanitized compensation alert if deletion fails.
 - No onboarding email is sent for an unaudited tenant.
+
+## Risks and trade-offs
+
+- Compensation is best effort rather than a cross-system transaction. If the compensating delete fails, the organization and first-owner membership can remain active without the required durable creation event and operators must investigate the sanitized alert.
+- Fail-closed behavior deliberately reduces organization-creation availability while the audit store is unavailable.
+- The compensating delete relies on the existing cascading foreign key for the first-owner membership; production behavior and alert delivery still require runtime evidence.
+- Scoping deletion by organization ID, creator ID, and slug minimizes accidental deletion risk, but does not make the audit write and compensation atomic.
 
 ## Evidence boundary
 
