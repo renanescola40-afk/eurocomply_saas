@@ -1,5 +1,7 @@
 'use server';
 
+import { headers } from 'next/headers';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { getCurrentUser } from '@/server/queries/auth';
 import { recordAuthAuditEvent, type AuthAuditMethod } from '@/server/security/auth-audit';
 
@@ -34,6 +36,26 @@ function outcomeForAction(action: ClientAuthAuditAction) {
   return 'completed' as const;
 }
 
+async function enforceClientAuthAuditRateLimit(action: ClientAuthAuditAction, userId: string | null) {
+  const requestHeaders = await headers();
+  const ip = requestHeaders.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || requestHeaders.get('x-real-ip')?.trim()
+    || requestHeaders.get('x-vercel-forwarded-for')?.split(',')[0]?.trim()
+    || requestHeaders.get('cf-connecting-ip')?.trim()
+    || null;
+  const userAgent = requestHeaders.get('user-agent');
+
+  return checkDistributedRateLimit({
+    policy: 'auth',
+    userId,
+    ip,
+    userAgent,
+    route: 'server-action:auditClientAuthEvent',
+    action,
+    failureMode: 'fail-closed',
+  });
+}
+
 export async function auditClientAuthEvent(input: ClientAuthAuditInput) {
   if (!isAuthAction(input.action)) {
     return { persisted: false as const, reason: 'unsupported_auth_audit_action' as const };
@@ -43,6 +65,12 @@ export async function auditClientAuthEvent(input: ClientAuthAuditInput) {
 
   if (input.action !== 'auth.login_failure' && !user) {
     return { persisted: false as const, reason: 'authentication_required' as const };
+  }
+
+  const rateLimit = await enforceClientAuthAuditRateLimit(input.action, user?.id ?? null);
+
+  if (!rateLimit.allowed) {
+    return { persisted: false as const, reason: 'rate_limited' as const };
   }
 
   const result = await recordAuthAuditEvent({
