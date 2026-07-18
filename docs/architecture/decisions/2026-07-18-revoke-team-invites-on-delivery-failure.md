@@ -30,6 +30,14 @@ A provider may have accepted an email immediately before returning an uncertain 
 
 Compensation is best effort because invitation persistence and email delivery do not share a transaction. If deletion fails, the response truthfully reports that the invitation remains persisted, observability receives sanitized context, and the request still returns failure.
 
+## Risks and trade-offs
+
+- Invitation persistence, email delivery, and compensating deletion are not one transaction, so the invitation may remain active when compensation fails.
+- A provider may deliver an email after returning an uncertain result; in that case the link is intentionally invalidated, favoring access safety over delivery availability.
+- Repeated provider uncertainty can create retries and support load even though each failed attempt returns a truthful state.
+- The source-level test does not prove production provider behavior, Supabase deletion success, concurrency handling, alert delivery, or operator reconciliation.
+- Production acceptance requires evidence that compensation failures are observable and that active invitations can be identified and reconciled safely.
+
 ## Validation
 
 A focused source-level regression test asserts that tenant-scoped deletion occurs before the failure response and that the response and audit metadata reflect compensation state. Required exact-head lint, typecheck, unit, build, security, dependency, secret-scanning, enterprise-readiness, and release checks remain authoritative.
