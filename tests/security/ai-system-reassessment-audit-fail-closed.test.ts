@@ -28,7 +28,8 @@ describe('AI-system reassessment audit persistence', () => {
     expect(migration).toContain('and s.organization_id = p_organization_id');
     expect(migration).toContain('and s.updated_at is not distinct from p_failed_updated_at');
     expect(migration).toContain("and h.action = 'reassessed'");
-    expect(migration).toContain("and h.snapshot ->> 'updatedAt' = p_failed_updated_at::text");
+    expect(migration).toContain("and (h.snapshot ->> 'updatedAt')::timestamptz is not distinct from p_failed_updated_at");
+    expect(migration).not.toContain("h.snapshot ->> 'updatedAt' = p_failed_updated_at::text");
     expect(migration).toContain('grant execute on function public.compensate_ai_system_reassessment_audit_failure');
     expect(migration).not.toContain('grant execute on function public.compensate_ai_system_reassessment_audit_failure(uuid, uuid, uuid, timestamptz, jsonb) to authenticated');
   });
