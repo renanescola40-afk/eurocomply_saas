@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { buildProductionRuntimeScorecardEvidence } from '../../scripts/security/write-production-runtime-scorecard-evidence.mjs';
-import { selectExactShaRun, validateDownloadedEvidence } from '../../scripts/enterprise/fetch-production-runtime-evidence.mjs';
+import {
+  isOptionalWorkflowUnavailable,
+  selectExactShaRun,
+  validateDownloadedEvidence,
+} from '../../scripts/enterprise/fetch-production-runtime-evidence.mjs';
 
 const SHA = 'a'.repeat(40);
 
@@ -90,6 +94,16 @@ describe('production runtime scorecard evidence', () => {
     const run = { id: 123, name: 'Production Runtime Proof', head_sha: SHA, head_branch: 'main', status: 'completed', conclusion: 'success', updated_at: '2026-07-18T22:00:00Z' };
     expect(selectExactShaRun([{ ...run, id: 1, conclusion: 'failure' }, { ...run, id: 2, head_branch: 'feature' }, run], SHA)).toEqual(run);
     expect(selectExactShaRun([run], SHA, '999')).toBeNull();
+  });
+
+  it('treats only an optional unregistered workflow as absent before merge', () => {
+    const missing = Object.assign(new Error('github_api_404'), { status: 404 });
+    const unauthorized = Object.assign(new Error('github_api_401'), { status: 401 });
+
+    expect(isOptionalWorkflowUnavailable(missing)).toBe(true);
+    expect(isOptionalWorkflowUnavailable(missing, { required: true })).toBe(false);
+    expect(isOptionalWorkflowUnavailable(missing, { sourceRunId: '123' })).toBe(false);
+    expect(isOptionalWorkflowUnavailable(unauthorized)).toBe(false);
   });
 
   it('uses a protected read-only runtime workflow and maps only the intended controls', () => {
