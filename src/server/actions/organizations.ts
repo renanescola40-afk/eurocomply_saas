@@ -101,6 +101,34 @@ export async function createOrganization(input: CreateOrganizationInput) {
       updated_at: creation.updated_at,
     };
 
+    const audit = await logAuditEvent({
+      organizationId: organization.id,
+      actorUserId: user.id,
+      action: 'organization.created',
+      entityType: 'organization',
+      entityId: organization.id,
+      metadata: { slug: payload.slug, onboardingEmailAttempted: Boolean(user.email) },
+    });
+
+    if (!audit.persisted) {
+      const { error: rollbackError } = await supabase
+        .from('organizations')
+        .delete()
+        .eq('id', organization.id)
+        .eq('created_by', user.id)
+        .eq('slug', organization.slug);
+
+      if (rollbackError) {
+        reportError(rollbackError, {
+          area: 'organization_creation_audit_compensation',
+          organizationId: organization.id,
+          userId: user.id,
+        });
+      }
+
+      throw organizationActionError('Organization creation is temporarily unavailable');
+    }
+
     if (user.email) {
       const dashboardUrl = `${getAppUrl()}/dashboard/organizations`;
       const email = onboardingEmail({ organizationName: organization.name, dashboardUrl });
@@ -123,15 +151,6 @@ export async function createOrganization(input: CreateOrganizationInput) {
         reportError(emailError, { area: 'organization_onboarding_email', organizationId: organization.id, userId: user.id });
       }
     }
-
-    await logAuditEvent({
-      organizationId: organization.id,
-      actorUserId: user.id,
-      action: 'organization.created',
-      entityType: 'organization',
-      entityId: organization.id,
-      metadata: { slug: payload.slug, onboardingEmailAttempted: Boolean(user.email) },
-    });
 
     return organization;
   } catch (error) {
