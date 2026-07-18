@@ -115,7 +115,7 @@ export async function GET(request: Request) {
       integrity,
     };
 
-    await createAuditEvent({
+    const auditResult = await createAuditEvent({
       organizationId: organization.id,
       actorUserId: user.id,
       action: 'retention_policy.exported',
@@ -133,6 +133,11 @@ export async function GET(request: Request) {
         stepUpVerifiedAt: stepUp.assessment.verifiedAt,
       },
     });
+
+    if (!auditResult.persisted) {
+      console.error('[retention-center] export_audit_unavailable');
+      return noStoreJson({ error: 'retention_policy_export_audit_unavailable' }, { status: 503 });
+    }
 
     const date = new Date().toISOString().slice(0, 10);
     const filename = sanitizeDocumentDownloadFileName(
