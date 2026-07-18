@@ -88,7 +88,7 @@ begin
     and h.organization_id = p_organization_id
     and h.actor_user_id = p_actor_user_id
     and h.action = 'reassessed'
-    and h.snapshot ->> 'updatedAt' = p_failed_updated_at::text;
+    and (h.snapshot ->> 'updatedAt')::timestamptz is not distinct from p_failed_updated_at;
 
   return query select 'restored'::text;
 end;
