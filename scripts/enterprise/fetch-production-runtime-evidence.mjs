@@ -9,6 +9,11 @@ const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const WORKFLOW_FILE = 'production-runtime-proof.yml';
 const WORKFLOW_NAME = 'Production Runtime Proof';
 const SOURCE_PATH = 'docs/security/evidence/runtime/production-runtime-validation.json';
+const BUNDLE_PATHS = [
+  SOURCE_PATH,
+  'docs/security/evidence/runtime/security-headers-validation.json',
+  'docs/security/evidence/runtime/no-store-validation.json',
+];
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const NUMERIC = /^\d+$/;
 
@@ -52,16 +57,21 @@ function download(repository, token, artifactId, path) {
   if (result.error || result.status !== 0) throw new Error('artifact_download_failed');
 }
 
-function extract(zipPath) {
-  const entries = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' }).split('\n').map((v) => v.trim()).filter(Boolean);
-  const entry = entries.find((candidate) => candidate.endsWith(SOURCE_PATH));
-  if (!entry) throw new Error('source_evidence_missing');
-  return JSON.parse(execFileSync('unzip', ['-p', zipPath, entry], { encoding: 'utf8', maxBuffer: 2 * 1024 * 1024 }));
+function extractBundle(zipPath) {
+  const entries = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' }).split('\n').map((value) => value.trim()).filter(Boolean);
+  return Object.fromEntries(BUNDLE_PATHS.map((path) => {
+    const entry = entries.find((candidate) => candidate.endsWith(path));
+    if (!entry) throw new Error(`bundle_evidence_missing:${path}`);
+    return [path, JSON.parse(execFileSync('unzip', ['-p', zipPath, entry], { encoding: 'utf8', maxBuffer: 2 * 1024 * 1024 }))];
+  }));
+}
+
+function removeStale(root) {
+  for (const path of BUNDLE_PATHS) rmSync(join(root, path), { force: true });
 }
 
 export async function fetchProductionRuntimeEvidence({ root, repository, token, targetSha, sourceRunId = '', required = false }) {
-  const output = join(root, SOURCE_PATH);
-  rmSync(output, { force: true });
+  removeStale(root);
   if (repository !== REPOSITORY) throw new Error('repository_not_canonical');
   if (!token) throw new Error('github_token_missing');
   if (!FULL_SHA.test(targetSha)) throw new Error('target_sha_invalid');
@@ -86,12 +96,15 @@ export async function fetchProductionRuntimeEvidence({ root, repository, token, 
   mkdirSync(dirname(zipPath), { recursive: true });
   try {
     download(repository, token, String(artifact.id), zipPath);
-    const evidence = extract(zipPath);
-    const validation = validateDownloadedEvidence(evidence, { targetSha });
+    const bundle = extractBundle(zipPath);
+    const validation = validateDownloadedEvidence(bundle[SOURCE_PATH], { targetSha });
     if (!validation.passed) throw new Error(`runtime_evidence_invalid:${validation.failures.join(',')}`);
-    mkdirSync(dirname(output), { recursive: true });
-    writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
-    console.log(`Retrieved exact-SHA production runtime evidence from workflow run ${runId}.`);
+    for (const [path, evidence] of Object.entries(bundle)) {
+      const output = join(root, path);
+      mkdirSync(dirname(output), { recursive: true });
+      writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
+    }
+    console.log(`Retrieved exact-SHA production runtime evidence bundle from workflow run ${runId}.`);
     return { found: true, runId, targetSha };
   } finally {
     rmSync(zipPath, { force: true });
