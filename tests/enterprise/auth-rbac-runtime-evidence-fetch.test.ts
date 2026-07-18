@@ -106,6 +106,9 @@ describe('Auth RBAC exact-SHA evidence retrieval', () => {
     const runtimeWorkflow = readFileSync('.github/workflows/auth-rbac-runtime-proof.yml', 'utf8');
     const scorecardWorkflow = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
     const fetcher = readFileSync('scripts/enterprise/fetch-auth-rbac-evidence.mjs', 'utf8');
+    const workflowRunSources = scorecardWorkflow
+      .split('\n')
+      .find((line) => line.trim().startsWith('workflows:'));
 
     expect(runtimeWorkflow).toContain('push:\n    branches: [main]');
     expect(runtimeWorkflow).toContain('Verify exact current main checkout');
@@ -115,7 +118,9 @@ describe('Auth RBAC exact-SHA evidence retrieval', () => {
     expect(runtimeWorkflow).not.toContain('pull_request_target');
     expect(runtimeWorkflow).not.toContain('contents: write');
 
-    expect(scorecardWorkflow).toContain('workflows: [Distributed Rate Limit Runtime Proof, Auth RBAC Tenant Proof]');
+    expect(workflowRunSources).toBeDefined();
+    expect(workflowRunSources).toContain('Distributed Rate Limit Runtime Proof');
+    expect(workflowRunSources).toContain('Auth RBAC Tenant Proof');
     expect(scorecardWorkflow).toContain('AUTH_RBAC_RUNTIME_SOURCE_RUN_ID');
     expect(scorecardWorkflow).toContain('node scripts/enterprise/fetch-auth-rbac-evidence.mjs');
     expect(scorecardWorkflow).toContain('node scripts/security/write-auth-rbac-scorecard-evidence.mjs');
