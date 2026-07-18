@@ -1,72 +1,101 @@
 name: Supabase Live RLS Validation
 
+run-name: Supabase live RLS proof for ${{ inputs.release_sha || github.sha }}
+
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
-      evidence_branch:
-        description: Branch to receive generated live RLS evidence
-        required: true
-        default: security/supabase-live-rls-evidence
-      update_register:
-        description: Update the P0 runtime evidence register when validation passes
-        required: true
-        type: boolean
-        default: true
+      release_sha:
+        description: Optional full 40-character current main SHA; defaults to the triggering SHA
+        required: false
+        type: string
       apply_migrations:
-        description: Apply the committed live RLS policy and inventory helper migrations before running the live validator
+        description: Apply the committed RLS validation migrations before the proof
         required: true
         type: boolean
-        default: true
+        default: false
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+
+concurrency:
+  group: supabase-live-rls-validation-${{ inputs.release_sha || github.sha }}
+  cancel-in-progress: false
 
 jobs:
   live-rls-validation:
     name: Run live tenant isolation proof
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     environment: supabase-live-rls-validation
+    env:
+      TARGET_SHA: ${{ inputs.release_sha || github.sha }}
+
     steps:
-      - name: Checkout trusted main
-        uses: actions/checkout@v7
+      - name: Validate requested release SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "release_sha must be a full 40-character Git SHA" >&2
+            exit 1
+          fi
+          echo "TARGET_SHA=${TARGET_SHA,,}" >> "$GITHUB_ENV"
+
+      - name: Check out exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: main
-          persist-credentials: true
-          fetch-depth: 0
+          ref: ${{ inputs.release_sha || github.sha }}
+          persist-credentials: false
 
-      - name: Verify trusted workflow ref
+      - name: Verify exact current main checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          test "${GITHUB_REF}" = "refs/heads/main"
-          test "$(git rev-parse --abbrev-ref HEAD)" = "main"
+          set -euo pipefail
+          OBSERVED_SHA="$(git rev-parse HEAD)"
+          test "$OBSERVED_SHA" = "$TARGET_SHA"
+          test "$GITHUB_SHA" = "$TARGET_SHA"
+          MAIN_SHA="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$MAIN_SHA" = "$TARGET_SHA"
 
-      - name: Configure Git author
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies deterministically
         run: npm ci --ignore-scripts --no-audit --no-fund
 
+      - name: Validate Supabase RLS proof contracts
+        run: >-
+          npx vitest run
+          tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts
+          tests/security/supabase-rls-scorecard-evidence.test.ts
+
       - name: Apply live RLS policy and inventory helper migrations
-        if: ${{ inputs.apply_migrations }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations }}
         env:
-          SUPABASE_DB_URL: ${{ secrets['SUPABASE_DB_URL'] }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        shell: bash
         run: |
-          if [ -z "${SUPABASE_DB_URL}" ]; then
-            echo "SUPABASE_DB_URL is required when apply_migrations=true."
-            echo "Add the Supabase Postgres transaction pooler connection string as an environment/repository secret, or apply the live RLS policy and inventory helper migrations manually and rerun with apply_migrations=false."
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "SUPABASE_DB_URL is required when apply_migrations=true." >&2
             exit 1
           fi
-
-          if printf '%s' "${SUPABASE_DB_URL}" | grep -Eq '@db\.[^.]+\.supabase\.co:5432/'; then
-            echo "SUPABASE_DB_URL appears to use the direct IPv6-only Supabase database endpoint."
-            echo "GitHub-hosted runners cannot reliably reach that endpoint. Use the Supabase IPv4 transaction pooler URI from Connect > Transaction pooler, typically on port 6543, then rerun with apply_migrations=true."
+          if printf '%s' "$SUPABASE_DB_URL" | grep -Eq '@db\.[^.]+\.supabase\.co:5432/'; then
+            echo "Use the Supabase IPv4 transaction pooler URI rather than the direct IPv6-only endpoint." >&2
             exit 1
           fi
-
           sudo apt-get update
           sudo apt-get install -y postgresql-client
           for migration in \
@@ -81,58 +110,43 @@ jobs:
             supabase/migrations/20260701150000_supabase_production_rls_proof_hardening.sql \
             supabase/migrations/20260702112000_apply_invitations_live_rls_validation.sql
           do
-            psql "${SUPABASE_DB_URL}" \
-              --set=ON_ERROR_STOP=1 \
-              --file="$migration"
+            psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --file="$migration"
           done
 
       - name: Run strict Supabase tenant isolation validator
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets['NEXT_PUBLIC_SUPABASE_URL'] }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets['NEXT_PUBLIC_SUPABASE_ANON_KEY'] }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets['SUPABASE_SERVICE_ROLE_KEY'] }}
-          RLS_LIVE_UPDATE_REGISTER: ${{ inputs.update_register && '1' || '0' }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RLS_LIVE_UPDATE_REGISTER: '0'
         run: node scripts/security/run-supabase-live-tenant-isolation.mjs
 
       - name: Stamp GitHub Actions provenance
         run: node scripts/security/stamp-supabase-live-rls-provenance.mjs
 
-      - name: Validate generated evidence before commit
-        run: |
-          node scripts/security/check-p0-runtime-evidence-register.mjs
-          node scripts/security/enforce-supabase-rls-live-complete.mjs
-
-      - name: Commit evidence to dedicated branch
+      - name: Validate redacted source runtime evidence
         env:
-          EVIDENCE_BRANCH: ${{ inputs.evidence_branch }}
-        run: |
-          git checkout -B "$EVIDENCE_BRANCH"
-          git add docs/security/evidence/runtime/supabase-live-rls-validation.json docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md
-          git commit -m "Add passing Supabase live RLS evidence"
-          git push --force-with-lease origin "$EVIDENCE_BRANCH"
+          ENTERPRISE_EXPECTED_SHA: ${{ env.TARGET_SHA }}
+          SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ github.run_id }}
+        run: node scripts/security/check-supabase-rls-runtime-evidence.mjs
 
-      - name: Upload generated evidence artifact
-        uses: actions/upload-artifact@v4
+      - name: Derive canonical scorecard evidence
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ env.TARGET_SHA }}
+        run: node scripts/security/write-supabase-rls-scorecard-evidence.mjs
+
+      - name: Validate canonical scorecard evidence
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ env.TARGET_SHA }}
+        run: node scripts/security/check-supabase-rls-scorecard-evidence.mjs
+
+      - name: Upload redacted runtime and scorecard evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: supabase-live-rls-validation-evidence
+          name: supabase-live-rls-runtime-proof-${{ env.TARGET_SHA }}
           path: |
             docs/security/evidence/runtime/supabase-live-rls-validation.json
-            docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md
+            docs/security/evidence/runtime/supabase-rls-validation.json
           if-no-files-found: error
-          retention-days: 30
-
-      - name: Open evidence pull request
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EVIDENCE_BRANCH: ${{ inputs.evidence_branch }}
-        run: |
-          existing_pr=$(gh pr list --head "$EVIDENCE_BRANCH" --base main --json number --jq '.[0].number // empty')
-          if [ -n "$existing_pr" ]; then
-            gh pr comment "$existing_pr" --body "Supabase live RLS validation passed again; evidence branch updated."
-          else
-            gh pr create \
-              --base main \
-              --head "$EVIDENCE_BRANCH" \
-              --title "Add passing Supabase live RLS evidence" \
-              --body "This PR was generated by the manual Supabase Live RLS Validation workflow after the strict tenant-isolation proof passed against the configured Supabase project."
-          fi
+          retention-days: 90
