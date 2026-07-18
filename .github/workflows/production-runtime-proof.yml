@@ -32,8 +32,6 @@ jobs:
       RELEASE_DEPLOYMENT_URL: https://risckcomply.com
       RELEASE_PRODUCTION_URL: https://risckcomply.com
       RELEASE_TARGET: production-runtime-proof
-      RELEASE_SMOKE_LOCALE: pt
-      RELEASE_RUN_OBSERVABILITY_SMOKE: 'false'
       HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
 
     steps:
@@ -77,21 +75,12 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Validate runtime proof contracts
-        run: >-
-          npx vitest run
-          tests/release/production-runtime-scorecard-evidence.test.ts
+        run: npx vitest run tests/release/production-runtime-scorecard-evidence.test.ts
 
       - name: Wait for canonical deployment and execute proof
         shell: bash
         run: |
           set -euo pipefail
-          rm -f \
-            docs/security/evidence/runtime/deployment-smoke-validation.json \
-            docs/security/evidence/runtime/runtime-release-sha-validation.json \
-            docs/security/evidence/runtime/security-headers-validation.json \
-            docs/security/evidence/runtime/no-store-validation.json \
-            docs/security/evidence/runtime/production-runtime-validation.json
-
           for attempt in $(seq 1 15); do
             echo "Production runtime proof attempt $attempt/15"
             rm -f \
@@ -101,7 +90,7 @@ jobs:
               docs/security/evidence/runtime/no-store-validation.json \
               docs/security/evidence/runtime/production-runtime-validation.json
 
-            if node scripts/release/run-deployment-smoke.mjs \
+            if node scripts/release/run-production-runtime-response-proof.mjs \
               && node scripts/release/verify-runtime-release-sha.mjs \
               && node scripts/release/write-security-response-evidence.mjs \
               && ENTERPRISE_EXPECTED_SHA="$TARGET_SHA" node scripts/security/write-production-runtime-scorecard-evidence.mjs; then
