@@ -7,8 +7,8 @@ import { requireCurrentUser } from '@/server/queries/auth';
 
 const ATOMIC_MEMBER_REMOVAL_RPC = 'remove_organization_member_atomic';
 
-const MEMBER_REMOVAL_RATE_LIMIT = {
-  limit: 10,
+const INVITATION_CANCELLATION_RATE_LIMIT = {
+  limit: 20,
   windowMs: 60 * 1000,
 } as const;
 
@@ -35,27 +35,28 @@ function failMemberAction(error: unknown, context: Record<string, unknown>, mess
   throw actionError(message);
 }
 
-async function enforceMemberRemovalRateLimit(input: { organizationId: string; userId: string }) {
+async function enforceInvitationCancellationRateLimit(input: { organizationId: string; userId: string }) {
   const rateLimit = await checkDistributedRateLimit({
-    key: `team.member_remove:${input.organizationId}:${input.userId}`,
+    key: `team.invite_cancel:${input.organizationId}:${input.userId}`,
     policy: 'team-management',
     userId: input.userId,
     organizationId: input.organizationId,
-    route: 'server-action:team.member_remove',
-    action: 'team_member_remove',
-    limit: MEMBER_REMOVAL_RATE_LIMIT.limit,
-    windowMs: MEMBER_REMOVAL_RATE_LIMIT.windowMs,
+    route: 'server-action:team.invite_cancel',
+    action: 'team_invite_cancel',
+    limit: INVITATION_CANCELLATION_RATE_LIMIT.limit,
+    windowMs: INVITATION_CANCELLATION_RATE_LIMIT.windowMs,
     failureMode: 'fail-closed',
   });
 
   if (!rateLimit.allowed) {
-    throw actionError('Too many member removal attempts. Please try again later.');
+    throw actionError('Too many invitation cancellation attempts. Please try again later.');
   }
 }
 
 export async function cancelOrganizationInvitation(input: { organizationId: string; invitationId: string }) {
   const user = await requireCurrentUser();
   await assertCurrentUserCan(input.organizationId, user.id, 'team:remove');
+  await enforceInvitationCancellationRateLimit({ organizationId: input.organizationId, userId: user.id });
 
   const supabase = createAdminClient();
   const { data: invitation, error: invitationError } = await supabase

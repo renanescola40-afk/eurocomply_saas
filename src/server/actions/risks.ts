@@ -81,7 +81,7 @@ export async function createRisk(input: unknown) {
       throw actionError('Unable to create risk');
     }
 
-    await logAuditEvent({
+    const audit = await logAuditEvent({
       organizationId: payload.organizationId,
       actorUserId: user.id,
       action: 'risk.create',
@@ -89,6 +89,25 @@ export async function createRisk(input: unknown) {
       entityId: data.id,
       metadata: { title: payload.title, likelihood: payload.likelihood, impact: payload.impact },
     });
+
+    if (!audit.persisted) {
+      const { error: rollbackError } = await supabase
+        .from('risks')
+        .delete()
+        .eq('id', data.id)
+        .eq('organization_id', payload.organizationId)
+        .eq('created_by', user.id);
+
+      if (rollbackError) {
+        reportError(rollbackError, {
+          ...context,
+          area: 'risk_create_audit_rollback',
+          riskId: data.id,
+        });
+      }
+
+      throw actionError('Unable to create risk');
+    }
 
     return data;
   } catch (error) {
@@ -131,7 +150,7 @@ export async function deleteRisk(riskId: string, organizationId: string) {
       .delete()
       .eq('id', payload.riskId)
       .eq('organization_id', payload.organizationId)
-      .select('id,title,likelihood,impact')
+      .select('*')
       .single();
 
     if (error) {
@@ -139,7 +158,7 @@ export async function deleteRisk(riskId: string, organizationId: string) {
       throw actionError('Unable to delete risk');
     }
 
-    await logAuditEvent({
+    const audit = await logAuditEvent({
       organizationId: payload.organizationId,
       actorUserId: user.id,
       action: 'risk.delete',
@@ -147,6 +166,19 @@ export async function deleteRisk(riskId: string, organizationId: string) {
       entityId: payload.riskId,
       metadata: { title: data.title, likelihood: data.likelihood, impact: data.impact },
     });
+
+    if (!audit.persisted) {
+      const { error: rollbackError } = await supabase.from('risks').insert(data);
+
+      if (rollbackError) {
+        reportError(rollbackError, {
+          ...context,
+          area: 'risk_delete_audit_rollback',
+        });
+      }
+
+      throw actionError('Unable to delete risk');
+    }
 
     return data;
   } catch (error) {
