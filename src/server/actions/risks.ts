@@ -81,7 +81,7 @@ export async function createRisk(input: unknown) {
       throw actionError('Unable to create risk');
     }
 
-    await logAuditEvent({
+    const audit = await logAuditEvent({
       organizationId: payload.organizationId,
       actorUserId: user.id,
       action: 'risk.create',
@@ -89,6 +89,25 @@ export async function createRisk(input: unknown) {
       entityId: data.id,
       metadata: { title: payload.title, likelihood: payload.likelihood, impact: payload.impact },
     });
+
+    if (!audit.persisted) {
+      const { error: rollbackError } = await supabase
+        .from('risks')
+        .delete()
+        .eq('id', data.id)
+        .eq('organization_id', payload.organizationId)
+        .eq('created_by', user.id);
+
+      if (rollbackError) {
+        reportError(rollbackError, {
+          ...context,
+          area: 'risk_create_audit_rollback',
+          riskId: data.id,
+        });
+      }
+
+      throw actionError('Unable to create risk');
+    }
 
     return data;
   } catch (error) {
