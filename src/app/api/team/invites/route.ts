@@ -222,7 +222,6 @@ export async function POST(request: Request) {
         {
           error: 'invitation_delivery_failed',
           persisted: !inviteRevoked,
-          inviteRevoked,
           auditPersisted: failedAudit.persisted,
         },
         { status: 503 },
