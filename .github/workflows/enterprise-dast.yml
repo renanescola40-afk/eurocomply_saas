@@ -77,6 +77,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dast-report
+          chmod 0777 dast-report
           docker pull ghcr.io/zaproxy/zaproxy:2.16.1
           set +e
           docker run --rm --network host \
