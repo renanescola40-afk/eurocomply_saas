@@ -2,15 +2,22 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const actionPath = 'src/server/actions/members.ts';
+const invitationPersistencePath = 'src/server/queries/invites.ts';
+
+function readCancellationAction() {
+  const source = readFileSync(actionPath, 'utf8');
+  const actionStart = source.indexOf('export async function cancelOrganizationInvitation');
+  const nextActionStart = source.indexOf('export async function removeOrganizationMember');
+  return source.slice(actionStart, nextActionStart);
+}
 
 describe('organization invitation cancellation audit persistence', () => {
-  it('captures the complete invitation before deletion and checks audit persistence before success', () => {
-    const source = readFileSync(actionPath, 'utf8');
-    const actionStart = source.indexOf('export async function cancelOrganizationInvitation');
-    const nextActionStart = source.indexOf('export async function removeOrganizationMember');
-    const actionSource = source.slice(actionStart, nextActionStart);
+  it('captures the exact restorable invitation fields before deletion and checks audit persistence before success', () => {
+    const actionSource = readCancellationAction();
 
-    expect(actionSource).toContain(".select('*')");
+    expect(actionSource).toContain(
+      ".select('id,organization_id,email,role,token,invited_by,accepted_at,expires_at,created_at')",
+    );
     expect(actionSource).toContain('const audit = await logAuditEvent');
     expect(actionSource).toContain('if (!audit.persisted)');
     expect(actionSource.indexOf('const audit = await logAuditEvent')).toBeGreaterThan(
@@ -18,25 +25,29 @@ describe('organization invitation cancellation audit persistence', () => {
     );
   });
 
-  it('restores the exact invitation and reports only sanitized compensation context when auditing fails', () => {
-    const source = readFileSync(actionPath, 'utf8');
-    const actionStart = source.indexOf('export async function cancelOrganizationInvitation');
-    const nextActionStart = source.indexOf('export async function removeOrganizationMember');
-    const actionSource = source.slice(actionStart, nextActionStart);
+  it('delegates exact restoration to the canonical invitation persistence service and sanitizes failures', () => {
+    const actionSource = readCancellationAction();
+    const persistenceSource = readFileSync(invitationPersistencePath, 'utf8');
 
-    expect(actionSource).toContain(".from('invitations')");
-    expect(actionSource).toContain('.insert(invitation)');
+    expect(actionSource).toContain('const restoration = await restoreOrganizationInvite({');
+    expect(actionSource).not.toMatch(/\.from\('invitations'\)\s*\.insert\(/);
     expect(actionSource).toContain("area: 'team_cancel_invitation_audit_compensation'");
-    expect(actionSource).toContain('providerCode: restoreError.code ?? null');
+    expect(actionSource).toContain('providerCode: restoration.providerCode');
     expect(actionSource).toContain("throw actionError('Unable to cancel invitation.')");
-    expect(actionSource).not.toContain('reportError(restoreError, invitation');
+    expect(actionSource).not.toContain('invitation.email,');
+    expect(actionSource).not.toContain('invitation.token,');
+
+    expect(persistenceSource).toContain('export async function restoreOrganizationInvite');
+    expect(persistenceSource).toContain('invitation.id !== input.invitationId');
+    expect(persistenceSource).toContain('invitation.organization_id !== input.organizationId');
+    expect(persistenceSource).toContain('invitation.accepted_at !== null');
+    expect(persistenceSource).toContain('id: invitation.id');
+    expect(persistenceSource).toContain('token: invitation.token');
+    expect(persistenceSource).toContain('created_at: invitation.created_at');
   });
 
   it('preserves authorization, tenant scoping, pending-state checks, and fail-closed rate limiting', () => {
-    const source = readFileSync(actionPath, 'utf8');
-    const actionStart = source.indexOf('export async function cancelOrganizationInvitation');
-    const nextActionStart = source.indexOf('export async function removeOrganizationMember');
-    const actionSource = source.slice(actionStart, nextActionStart);
+    const actionSource = readCancellationAction();
 
     expect(actionSource).toContain("await assertCurrentUserCan(input.organizationId, user.id, 'team:remove')");
     expect(actionSource).toContain('await enforceInvitationCancellationRateLimit');
