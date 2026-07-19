@@ -68,7 +68,8 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/ai-systems/route.ts` | tenant-scoped | AI governance data; auth, tenant membership, RBAC read/manage permission. |
 | `src/app/api/ai-literacy/route.ts` | high-risk | Article 4 training and evidence operations; GET is tenant-scoped, while mutations require trusted origin, bounded Zod input, distributed rate limiting, manage_ai_governance, tenant ownership validation and durable audit compensation. |
 | `src/app/api/ai-systems/[id]/route.ts` | high-risk | AI governance detail/reassessment endpoint; GET requires tenant-scoped read_ai_governance, PATCH requires trusted origin, rate limit, Zod body validation, manage_ai_governance, tenant ownership validation, no-store and audit. |
-| `src/app/api/ai-incidents/route.ts` | tenant-scoped | AI incident data; auth, tenant membership, RBAC read/manage permission. |
+| `src/app/api/ai-incidents/route.ts` | tenant-scoped | AI incident collection; auth, tenant membership, RBAC read/manage permission, bounded mutation input, origin and rate-limit controls. |
+| `src/app/api/ai-incidents/[id]/route.ts` | high-risk | AI incident detail and lifecycle mutation; GET is tenant-scoped, while PATCH requires trusted origin, manage_ai_incidents, bounded Zod input, distributed rate limiting, optimistic concurrency, tenant-bound AI-system references, atomic history and durable chained audit persistence. |
 
 ## Legacy route namespace
 
