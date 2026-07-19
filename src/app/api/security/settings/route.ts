@@ -13,10 +13,10 @@ export const runtime = 'nodejs';
 const SECURITY_SETTINGS_JSON_MAX_BYTES = 8 * 1024;
 const PROVIDER_MODES = new Set(['supabase_mfa', 'enterprise_idp', 'supabase_mfa_or_enterprise_idp']);
 
-type SecuritySettingsInput = {
-  stepUpProviderMode?: unknown;
-  allowedIdpAcrValues?: unknown;
-  allowedIdpAmrValues?: unknown;
+ type SecuritySettingsInput = {
+  stepUpProviderMode: string;
+  allowedIdpAcrValues?: string[];
+  allowedIdpAmrValues?: string[];
 };
 
 type StoredSecuritySettings = {
@@ -27,28 +27,24 @@ type StoredSecuritySettings = {
   allowed_idp_amr_values: string[] | null;
 };
 
-function isSecuritySettingsInput(value: unknown): value is SecuritySettingsInput {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+function isBoundedStringList(value: unknown): value is string[] {
+  return Array.isArray(value)
+    && value.length <= 20
+    && value.every((entry) => typeof entry === 'string' && entry.trim().length > 0 && entry.trim().length <= 256);
 }
 
-function normalizeStringList(value: unknown) {
-  if (!Array.isArray(value)) return [];
+function parseSecuritySettingsInput(value: unknown): SecuritySettingsInput | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
 
-  return value
-    .map((entry) => String(entry ?? '').trim())
-    .filter(Boolean)
-    .slice(0, 20);
-}
-
-function normalizeSettings(input: SecuritySettingsInput) {
-  const stepUpProviderMode = typeof input.stepUpProviderMode === 'string' && PROVIDER_MODES.has(input.stepUpProviderMode)
-    ? input.stepUpProviderMode
-    : 'supabase_mfa';
+  const input = value as Record<string, unknown>;
+  if (typeof input.stepUpProviderMode !== 'string' || !PROVIDER_MODES.has(input.stepUpProviderMode)) return null;
+  if (input.allowedIdpAcrValues !== undefined && !isBoundedStringList(input.allowedIdpAcrValues)) return null;
+  if (input.allowedIdpAmrValues !== undefined && !isBoundedStringList(input.allowedIdpAmrValues)) return null;
 
   return {
-    stepUpProviderMode,
-    allowedIdpAcrValues: normalizeStringList(input.allowedIdpAcrValues),
-    allowedIdpAmrValues: normalizeStringList(input.allowedIdpAmrValues),
+    stepUpProviderMode: input.stepUpProviderMode,
+    allowedIdpAcrValues: input.allowedIdpAcrValues?.map((entry) => entry.trim()) ?? [],
+    allowedIdpAmrValues: input.allowedIdpAmrValues?.map((entry) => entry.trim()) ?? [],
   };
 }
 
@@ -97,11 +93,11 @@ export async function POST(request: NextRequest) {
       return noStoreJson({ error: 'invalid_security_settings_payload' }, { status: 400 });
     }
 
-    if (!isSecuritySettingsInput(body)) {
+    const nextSettings = parseSecuritySettingsInput(body);
+    if (!nextSettings) {
       return noStoreJson({ error: 'invalid_security_settings_payload' }, { status: 400 });
     }
 
-    const nextSettings = normalizeSettings(body);
     const changes = ['require_step_up_for_critical_actions', 'step_up_provider_mode'];
 
     if (nextSettings.allowedIdpAcrValues.length > 0) changes.push('allowed_idp_acr_values');
