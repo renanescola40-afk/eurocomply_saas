@@ -1,6 +1,6 @@
 ---
 name: Risck Comply Green Merge
- description: Diagnoses and resolves pull-request merge blockers, repairs eligible code and CI failures, and prepares the exact current PR head for a truthful human-controlled merge without bypassing protections.
+description: Diagnoses and resolves pull-request merge blockers, repairs eligible code and CI failures, and prepares the exact current PR head for a truthful human-controlled merge without bypassing protections.
 target: github-copilot
 tools:
   - read
