@@ -55,6 +55,7 @@ export async function createOrganization(input: CreateOrganizationInput) {
     action: 'organization.create',
     route: 'server-action:createOrganization',
     policy: 'general-api',
+    failureMode: 'fail-closed',
     ...ORGANIZATION_CREATE_RATE_LIMIT,
   });
 
