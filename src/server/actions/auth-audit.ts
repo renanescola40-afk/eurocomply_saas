@@ -85,5 +85,8 @@ export async function auditClientAuthEvent(input: ClientAuthAuditInput) {
     },
   });
 
-  return { persisted: result.some((entry) => entry.persisted), chained: result.some((entry) => entry.chained) };
+  const persisted = result.length > 0 && result.every((entry) => entry.persisted);
+  const chained = persisted && result.every((entry) => entry.chained);
+
+  return { persisted, chained };
 }

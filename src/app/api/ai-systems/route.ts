@@ -289,7 +289,7 @@ export async function POST(request: Request) {
         nextReviewAt: body.nextReviewAt,
         notes: body.notes,
       });
-      await createAuditEvent({
+      const audit = await createAuditEvent({
         organizationId: organization.id,
         actorUserId: user.id,
         action: 'vendor_due_diligence_started',
@@ -297,6 +297,25 @@ export async function POST(request: Request) {
         entityId: vendorReview.id,
         metadata: { riskLevel: vendorReview.risk_level, actorRole: permission.role },
       });
+
+      if (!audit.persisted) {
+        const { error: rollbackError } = await createAdminClient()
+          .from('enterprise_vendor_due_diligence')
+          .delete()
+          .eq('id', vendorReview.id)
+          .eq('organization_id', organization.id)
+          .eq('created_by', user.id)
+          .eq('created_at', vendorReview.created_at);
+
+        if (rollbackError) {
+          console.warn('[enterprise-readiness] vendor_diligence_audit_compensation_failed', {
+            code: rollbackError.code ?? 'unknown',
+          });
+        }
+
+        return noStoreJson({ error: 'vendor_diligence_audit_unavailable' }, { status: 503 });
+      }
+
       return noStoreJson({ vendorReview }, { status: 201 });
     }
 
@@ -314,7 +333,7 @@ export async function POST(request: Request) {
         dueAt: body.dueAt,
         notes: body.notes,
       });
-      await createAuditEvent({
+      const audit = await createAuditEvent({
         organizationId: organization.id,
         actorUserId: user.id,
         action: 'risk_review_started',
@@ -322,6 +341,25 @@ export async function POST(request: Request) {
         entityId: riskReview.id,
         metadata: { riskLevel: riskReview.risk_level, actorRole: permission.role },
       });
+
+      if (!audit.persisted) {
+        const { error: rollbackError } = await createAdminClient()
+          .from('enterprise_risk_reviews')
+          .delete()
+          .eq('id', riskReview.id)
+          .eq('organization_id', organization.id)
+          .eq('requested_by', user.id)
+          .eq('created_at', riskReview.created_at);
+
+        if (rollbackError) {
+          console.warn('[enterprise-readiness] risk_review_audit_compensation_failed', {
+            code: rollbackError.code ?? 'unknown',
+          });
+        }
+
+        return noStoreJson({ error: 'risk_review_audit_unavailable' }, { status: 503 });
+      }
+
       return noStoreJson({ riskReview }, { status: 201 });
     }
 
