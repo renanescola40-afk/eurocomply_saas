@@ -201,7 +201,7 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
       sections: [
         { label: aiNav.inventory, href: '/ai-systems', description: aiNav.inventoryDescription },
         { label: aiNav.incidents, href: '/ai-incidents', description: aiNav.incidentsDescription },
-        { label: nav.riskMatrix, href: '/riscos', description: nav.riskMatrixDescription },
+        { label: nav.riskMatrix, href: `${dashboardRoot}/risks`, description: nav.riskMatrixDescription },
         { label: nav.raciMatrix, href: '/raci', description: nav.raciMatrixDescription },
       ],
     },
@@ -209,8 +209,8 @@ export function getLocalizedDashboardNavigation(locale: string): LocalizedMenuIt
       label: nav.evidenceRisk,
       href: `${dashboardRoot}/evidence-risk`,
       sections: [
-        { label: nav.controlledDocuments, href: '/documentos', description: nav.controlledDocumentsDescription },
-        { label: nav.riskMatrix, href: '/riscos', description: nav.riskMatrixDescription },
+        { label: nav.controlledDocuments, href: `${dashboardRoot}/documents`, description: nav.controlledDocumentsDescription },
+        { label: nav.riskMatrix, href: `${dashboardRoot}/risks`, description: nav.riskMatrixDescription },
         { label: nav.raciMatrix, href: '/raci', description: nav.raciMatrixDescription },
       ],
     },
