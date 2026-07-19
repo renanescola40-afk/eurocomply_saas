@@ -124,7 +124,7 @@ export default function ApprovalsClient({ locale, initialDocuments = [] }: { loc
               Aprove ou rejeite documentos controlados antes de entrarem no pacote de auditoria.
             </p>
           </div>
-          <Link href={`/${locale}/documentos`} className="rounded-full border border-white/15 px-4 py-2 text-sm text-slate-200 transition hover:border-emerald-300/50 hover:bg-emerald-300/10">
+          <Link href={`/${locale}/dashboard/organizations/documents`} className="rounded-full border border-white/15 px-4 py-2 text-sm text-slate-200 transition hover:border-emerald-300/50 hover:bg-emerald-300/10">
             Ver documentos
           </Link>
         </div>

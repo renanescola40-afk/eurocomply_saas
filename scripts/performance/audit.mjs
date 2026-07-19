@@ -8,7 +8,7 @@ const NEXT_CONFIG = 'next.config.ts';
 const SENSITIVE_ROUTE_FILES = [
   'src/app/[locale]/dashboard/organizations/page.tsx',
   'src/app/[locale]/dashboard/organizations/billing/page.tsx',
-  'src/app/[locale]/documentos/page.tsx',
+  'src/app/[locale]/dashboard/organizations/documents/page.tsx',
 ];
 
 function walk(dir, predicate = () => true) {

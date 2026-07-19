@@ -8,7 +8,7 @@ vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: mocks.createAdminClient,
 }));
 
-import { createOrganizationInvite } from './invites';
+import { createOrganizationInvite, restoreOrganizationInvite } from './invites';
 
 function installClient(error: { code: string } | null = null) {
   const upsert = vi.fn();
@@ -35,6 +35,25 @@ function installClient(error: { code: string } | null = null) {
   mocks.createAdminClient.mockReturnValue({ from });
   return { from, upsert };
 }
+
+function installRestoreClient(error: { code?: string | null } | null = null) {
+  const insert = vi.fn(async () => ({ error }));
+  const from = vi.fn(() => ({ insert }));
+  mocks.createAdminClient.mockReturnValue({ from });
+  return { from, insert };
+}
+
+const invitationSnapshot = {
+  id: 'invite_1',
+  organization_id: 'org_a',
+  email: 'new.user@example.test',
+  role: 'editor',
+  token: 'original-token',
+  invited_by: 'user_admin',
+  accepted_at: null,
+  expires_at: '2026-07-23T18:00:00.000Z',
+  created_at: '2026-07-16T18:00:00.000Z',
+};
 
 describe('organization invitation persistence', () => {
   beforeEach(() => {
@@ -84,5 +103,51 @@ describe('organization invitation persistence', () => {
         role: 'Visualizador',
       }),
     ).rejects.toThrow('Unable to persist organization invitation.');
+  });
+
+  it('restores every original field for the exact tenant-scoped pending invitation', async () => {
+    const { from, insert } = installRestoreClient();
+
+    const result = await restoreOrganizationInvite({
+      organizationId: 'org_a',
+      invitationId: 'invite_1',
+      invitation: invitationSnapshot,
+    });
+
+    expect(from).toHaveBeenCalledWith('invitations');
+    expect(insert).toHaveBeenCalledWith(invitationSnapshot);
+    expect(result).toEqual({ restored: true, providerCode: null });
+  });
+
+  it('refuses a mismatched or accepted compensation snapshot before using the privileged client', async () => {
+    await expect(
+      restoreOrganizationInvite({
+        organizationId: 'org_b',
+        invitationId: 'invite_1',
+        invitation: invitationSnapshot,
+      }),
+    ).resolves.toEqual({ restored: false, providerCode: 'invalid_snapshot' });
+
+    await expect(
+      restoreOrganizationInvite({
+        organizationId: 'org_a',
+        invitationId: 'invite_1',
+        invitation: { ...invitationSnapshot, accepted_at: '2026-07-19T13:00:00.000Z' },
+      }),
+    ).resolves.toEqual({ restored: false, providerCode: 'invalid_snapshot' });
+
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
+  });
+
+  it('returns only a sanitized provider code when exact restoration fails', async () => {
+    installRestoreClient({ code: '23505' });
+
+    await expect(
+      restoreOrganizationInvite({
+        organizationId: 'org_a',
+        invitationId: 'invite_1',
+        invitation: invitationSnapshot,
+      }),
+    ).resolves.toEqual({ restored: false, providerCode: '23505' });
   });
 });
