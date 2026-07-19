@@ -10,50 +10,38 @@ const migrationPath = join(
 const migration = readFileSync(migrationPath, 'utf8');
 
 describe('AI incident system tenant-scope migration', () => {
-  it('enforces that linked AI systems belong to the incident organization', () => {
-    expect(migration).toContain('create or replace function public.enforce_ai_incident_system_scope()');
-    expect(migration).toContain('security definer');
-    expect(migration).toContain("set search_path = ''");
-    expect(migration).toContain('where system.id = new.ai_system_id');
-    expect(migration).toContain(
-      'locked_system_organization_id is distinct from new.organization_id',
+  it('creates the composite parent key idempotently', () => {
+    expect(migration).toContain("conname = 'ai_systems_id_organization_id_key'");
+    expect(migration).toContain("conrelid = 'public.ai_systems'::regclass");
+    expect(migration).toContain('unique (id, organization_id)');
+  });
+
+  it('constrains the incident system and organization as one relationship', () => {
+    expect(migration).toContain("conname = 'ai_incidents_system_organization_fkey'");
+    expect(migration).toContain("conrelid = 'public.ai_incidents'::regclass");
+    expect(migration).toContain('foreign key (ai_system_id, organization_id)');
+    expect(migration).toContain('references public.ai_systems (id, organization_id)');
+  });
+
+  it('validates existing rows instead of accepting an unverified constraint', () => {
+    expect(migration).not.toMatch(/\bnot\s+valid\b/i);
+    expect(migration).not.toMatch(/\bvalidate\s+constraint\b/i);
+  });
+
+  it('preserves the original single-column SET NULL relationship', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'supabase/migrations/20260610_ai_incident_register.sql'),
+      'utf8',
     );
-    expect(migration).toContain("using errcode = 'check_violation'");
+
+    expect(source).toContain(
+      'ai_system_id uuid references public.ai_systems(id) on delete set null',
+    );
+    expect(migration).not.toMatch(/drop\s+constraint/i);
   });
 
-  it('serializes incident validation with concurrent AI system moves', () => {
-    expect(migration).toContain('select system.organization_id');
-    expect(migration).toContain('into locked_system_organization_id');
-    expect(migration).toContain('for share;');
-    expect(migration).toContain('if not found');
-  });
-
-  it('covers incident inserts and relevant scope-changing updates', () => {
-    expect(migration).toContain('before insert or update of organization_id, ai_system_id');
-    expect(migration).toContain('on public.ai_incidents');
-    expect(migration).toContain('for each row');
-  });
-
-  it('prevents organization moves for referenced AI systems', () => {
-    expect(migration).toContain('create or replace function public.prevent_referenced_ai_system_scope_move()');
-    expect(migration).toContain('before update of organization_id');
-    expect(migration).toContain('on public.ai_systems');
-    expect(migration).toContain('incident.ai_system_id = old.id');
-    expect(migration).toContain('incident.organization_id is distinct from new.organization_id');
-    expect(migration).toContain("raise exception 'referenced_ai_system_organization_change_forbidden'");
-  });
-
-  it('preserves incidents that do not reference an AI system', () => {
-    expect(migration).toContain('if new.ai_system_id is null then');
-    expect(migration).toContain('return new;');
-  });
-
-  it('does not expose either trigger function for direct execution', () => {
-    expect(migration).toContain('revoke all on function public.enforce_ai_incident_system_scope() from public;');
-    expect(migration).toContain('revoke all on function public.enforce_ai_incident_system_scope() from anon;');
-    expect(migration).toContain('revoke all on function public.enforce_ai_incident_system_scope() from authenticated;');
-    expect(migration).toContain('revoke all on function public.prevent_referenced_ai_system_scope_move() from public;');
-    expect(migration).toContain('revoke all on function public.prevent_referenced_ai_system_scope_move() from anon;');
-    expect(migration).toContain('revoke all on function public.prevent_referenced_ai_system_scope_move() from authenticated;');
+  it('does not rely on trigger snapshots for tenant integrity', () => {
+    expect(migration).not.toMatch(/create\s+(?:or\s+replace\s+)?function/i);
+    expect(migration).not.toMatch(/create\s+trigger/i);
   });
 });
