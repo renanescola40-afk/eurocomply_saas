@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { requireCurrentUser } from '@/server/queries/auth';
+import { restoreOrganizationInvite } from '@/server/queries/invites';
 
 const ATOMIC_MEMBER_REMOVAL_RPC = 'remove_organization_member_atomic';
 
@@ -84,7 +85,7 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
   const supabase = createAdminClient();
   const { data: invitation, error: invitationError } = await supabase
     .from('invitations')
-    .select('id,email,role,organization_id,accepted_at')
+    .select('id,organization_id,email,role,token,invited_by,accepted_at,expires_at,created_at')
     .eq('id', input.invitationId)
     .eq('organization_id', input.organizationId)
     .maybeSingle();
@@ -114,7 +115,7 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
     throw actionError('Invitation state changed before cancellation completed');
   }
 
-  await logAuditEvent({
+  const audit = await logAuditEvent({
     organizationId: input.organizationId,
     actorUserId: user.id,
     action: 'team.invite_cancelled',
@@ -122,6 +123,25 @@ export async function cancelOrganizationInvitation(input: { organizationId: stri
     entityId: input.invitationId,
     metadata: { email: invitation.email, role: invitation.role },
   });
+
+  if (!audit.persisted) {
+    const restoration = await restoreOrganizationInvite({
+      organizationId: input.organizationId,
+      invitationId: input.invitationId,
+      invitation,
+    });
+
+    if (!restoration.restored) {
+      reportError(new Error('Invitation cancellation audit compensation failed'), {
+        area: 'team_cancel_invitation_audit_compensation',
+        organizationId: input.organizationId,
+        invitationId: input.invitationId,
+        providerCode: restoration.providerCode,
+      });
+    }
+
+    throw actionError('Unable to cancel invitation.');
+  }
 }
 
 export async function removeOrganizationMember(input: { organizationId: string; memberId: string }) {
