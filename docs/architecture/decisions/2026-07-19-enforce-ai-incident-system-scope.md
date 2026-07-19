@@ -10,13 +10,15 @@
 
 A caller able to supply a known AI-system UUID could therefore create or update an incident in one tenant while linking it to an AI system in another tenant. A one-sided incident trigger would still be insufficient: an already-linked AI system could later be moved to another organization, recreating the mismatch without updating the incident.
 
+The incident-side check must also serialize with concurrent AI-system organization moves. A plain non-locking lookup can observe the old organization while another transaction is moving the same system, allowing both transactions to commit a mismatch.
+
 This is a source-review finding. It does not establish exploitation, production impact, a penetration-test result, or regulatory non-compliance.
 
 ## Decision
 
 Enforce the invariant from both mutation directions.
 
-A trigger on `ai_incidents` runs before inserts and before updates to `organization_id` or `ai_system_id`. When `ai_system_id` is present, it requires a matching `ai_systems` row with both the supplied system ID and the incident organization ID.
+A trigger on `ai_incidents` runs before inserts and before updates to `organization_id` or `ai_system_id`. When `ai_system_id` is present, it locks the referenced `ai_systems` row with `FOR SHARE`, then requires the locked row's organization to match the incident organization. The row lock conflicts with concurrent updates to the system row and prevents the validation and a tenant move from passing against different snapshots.
 
 A complementary trigger on `ai_systems` runs before updates to `organization_id`. It rejects an organization move when any referencing incident would remain in a different organization.
 
@@ -28,22 +30,24 @@ Both trigger functions use `SECURITY DEFINER`, an empty `search_path`, fully qua
 
 - Cross-tenant AI-system references are rejected at the database boundary.
 - Later AI-system organization moves cannot silently invalidate existing incident links.
+- Concurrent incident linking and AI-system tenant moves are serialized.
 - Service-role and future application paths receive the same invariant.
 - Existing RLS and application authorization remain unchanged.
 - No dependency, secret, environment, or API response change is introduced.
 
-### Trade-offs
+## Risks and trade-offs
 
 - This is prospective enforcement. It does not scan, repair, or claim absence of historical mismatches.
 - Deployments containing invalid historical rows are not blocked because the triggers validate new writes and relevant updates only.
 - Moving a referenced AI system between organizations now requires first removing or reassigning its incident references.
+- Incident writes that reference an AI system hold a share row lock until transaction end, which can briefly wait behind or block concurrent updates to that system.
 - Removing or transferring actor membership does not affect this invariant; it concerns system ownership, not actor membership.
 
 ## Validation
 
-A source-level migration contract test verifies the tenant join, both trigger directions, nullable-reference behavior, hardened function configuration, and revoked direct execution.
+A source-level migration contract test verifies the tenant comparison, both trigger directions, nullable-reference behavior, row-lock serialization, hardened function configuration, and revoked direct execution.
 
-Required exact-head CI, migration validation, lint, typecheck, tests, build, security, and release gates remain authoritative before merge.
+Required exact-head CI, migration validation, lint, typecheck, tests, build, security, and release gates remain authoritative before merge. A representative Supabase concurrency test is still required before claiming runtime proof.
 
 ## Rollback
 
