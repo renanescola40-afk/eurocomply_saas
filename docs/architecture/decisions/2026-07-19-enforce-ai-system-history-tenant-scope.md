@@ -25,7 +25,7 @@ The foreign key is validated when the migration runs. It is not introduced as `N
 - An AI system with referenced history cannot be moved to another organization without first reconciling its history.
 - RLS no longer has to carry an invariant it was not designed to prove.
 
-### Risks and trade-offs
+## Risks and trade-offs
 
 - Migration deployment will fail if cross-tenant history rows already exist. That is intentional fail-safe behavior, but operators must inspect and reconcile such rows before retrying.
 - The additional unique constraint consumes index storage and adds a small write-maintenance cost on `ai_systems`.
