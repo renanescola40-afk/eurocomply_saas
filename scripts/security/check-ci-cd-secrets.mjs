@@ -65,7 +65,7 @@ for (const { path, source } of workflowSources) {
     }
   });
 
-  if (source.includes('vercel deploy') || source.includes('vercel pull') || source.includes('vercel build')) {
+  if (source.includes('deploy --prebuilt --prod') || source.includes('pull --yes --environment=production') || source.includes('build --prod')) {
     if (!source.includes('environment: production')) {
       failures.push(`${path}: Vercel deploy workflow must use a protected GitHub Environment such as production`);
     }

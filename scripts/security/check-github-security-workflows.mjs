@@ -17,9 +17,10 @@ const required = [
       'npm run release:readiness',
       'npm run release:enterprise-readiness',
       "if: env.RELEASE_TARGET == 'enterprise'",
-      'vercel pull',
-      'vercel build --prod',
-      'vercel deploy --prebuilt --prod',
+      "VERCEL_CLI_VERSION: '56.3.2'",
+      '"vercel@${VERCEL_CLI_VERSION}" pull',
+      '"vercel@${VERCEL_CLI_VERSION}" build --prod',
+      '"vercel@${VERCEL_CLI_VERSION}" deploy --prebuilt --prod',
     ],
   },
   {
