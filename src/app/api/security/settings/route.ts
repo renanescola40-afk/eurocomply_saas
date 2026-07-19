@@ -13,10 +13,10 @@ export const runtime = 'nodejs';
 const SECURITY_SETTINGS_JSON_MAX_BYTES = 8 * 1024;
 const PROVIDER_MODES = new Set(['supabase_mfa', 'enterprise_idp', 'supabase_mfa_or_enterprise_idp']);
 
- type SecuritySettingsInput = {
+type SecuritySettingsInput = {
   stepUpProviderMode: string;
-  allowedIdpAcrValues?: string[];
-  allowedIdpAmrValues?: string[];
+  allowedIdpAcrValues: string[];
+  allowedIdpAmrValues: string[];
 };
 
 type StoredSecuritySettings = {
