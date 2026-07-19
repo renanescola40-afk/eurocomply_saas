@@ -149,7 +149,7 @@ export async function removeOrganizationMember(input: { organizationId: string; 
   const supabase = createAdminClient();
   const { data: member, error: memberError } = await supabase
     .from('organization_members')
-    .select('id,user_id,role,organization_id')
+    .select('*')
     .eq('id', input.memberId)
     .eq('organization_id', input.organizationId)
     .maybeSingle();
@@ -198,7 +198,7 @@ export async function removeOrganizationMember(input: { organizationId: string; 
     throw actionError('Unable to remove member.');
   }
 
-  await logAuditEvent({
+  const audit = await logAuditEvent({
     organizationId: input.organizationId,
     actorUserId: user.id,
     action: 'team.member_removed',
@@ -209,4 +209,18 @@ export async function removeOrganizationMember(input: { organizationId: string; 
       role: removal.previous_role ?? member.role,
     },
   });
+
+  if (!audit.persisted) {
+    const { error: rollbackError } = await supabase.from('organization_members').insert(member);
+
+    if (rollbackError) {
+      reportError(rollbackError, {
+        area: 'team_remove_member_audit_rollback',
+        organizationId: input.organizationId,
+        memberId: input.memberId,
+      });
+    }
+
+    throw actionError('Unable to remove member.');
+  }
 }
