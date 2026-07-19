@@ -110,12 +110,12 @@ async function createEvidencePackWorkflow(input: {
     throw error;
   }
 
-  const result = data as { pack?: { id?: string }; items?: unknown[] } | null;
-  if (!result?.pack?.id || !Array.isArray(result.items)) {
+  const result = data as { pack?: { id?: string; created_at?: string }; items?: unknown[] } | null;
+  if (!result?.pack?.id || !result.pack.created_at || !Array.isArray(result.items)) {
     throw new Error('enterprise_evidence_pack_invalid_result');
   }
 
-  return result as { pack: { id: string }; items: unknown[] };
+  return result as { pack: { id: string; created_at: string }; items: unknown[] };
 }
 
 async function createVendorDiligenceWorkflow(input: {
@@ -263,7 +263,7 @@ export async function POST(request: Request) {
         countryScope: body.countryScope,
         readinessScoreSnapshot: body.readinessScoreSnapshot,
       });
-      await createAuditEvent({
+      const audit = await createAuditEvent({
         organizationId: organization.id,
         actorUserId: user.id,
         action: 'enterprise_evidence_pack_created',
@@ -271,6 +271,25 @@ export async function POST(request: Request) {
         entityId: result.pack.id,
         metadata: { itemCount: result.items.length, actorRole: permission.role },
       });
+
+      if (!audit.persisted) {
+        const { error: rollbackError } = await createAdminClient()
+          .from('enterprise_evidence_packs')
+          .delete()
+          .eq('id', result.pack.id)
+          .eq('organization_id', organization.id)
+          .eq('created_by', user.id)
+          .eq('created_at', result.pack.created_at);
+
+        if (rollbackError) {
+          console.warn('[enterprise-readiness] evidence_pack_audit_compensation_failed', {
+            code: rollbackError.code ?? 'unknown',
+          });
+        }
+
+        return noStoreJson({ error: 'evidence_pack_audit_unavailable' }, { status: 503 });
+      }
+
       return noStoreJson(result, { status: 201 });
     }
 
