@@ -35,7 +35,7 @@ Compensation failures are reported only through a fixed event name and a sanitiz
 - Compensation is narrowly scoped and does not require a migration, dependency, secret, or infrastructure change.
 - Existing authorization, trusted-origin validation, bounded input parsing, tenant scoping, and rate limiting remain unchanged.
 
-### Trade-offs
+## Risks and trade-offs
 
 - Audit-subsystem unavailability temporarily makes evidence-pack creation unavailable.
 - Pack creation and audit persistence are not one database transaction, so compensation is best effort.
