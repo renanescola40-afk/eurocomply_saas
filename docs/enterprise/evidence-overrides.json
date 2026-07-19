@@ -3,24 +3,43 @@
   "overrides": [
     {
       "controlId": "TRU-01",
-      "evidence": {
-        "path": "artifacts/trust-claims/trust-claims-validation.json",
-        "check": "publicClaims"
-      }
+      "evidence": { "path": "artifacts/trust-claims/trust-claims-validation.json", "check": "publicClaims" }
     },
     {
       "controlId": "TRU-02",
-      "evidence": {
-        "path": "artifacts/trust-claims/trust-claims-validation.json",
-        "check": "publicClaims"
-      }
+      "evidence": { "path": "artifacts/trust-claims/trust-claims-validation.json", "check": "publicClaims" }
     },
     {
       "controlId": "TRU-03",
-      "evidence": {
-        "path": "artifacts/trust-claims/trust-claims-validation.json",
-        "check": "publicClaims"
-      }
+      "evidence": { "path": "artifacts/trust-claims/trust-claims-validation.json", "check": "publicClaims" }
+    },
+    {
+      "controlId": "SEC-05",
+      "evidence": { "path": "docs/security/evidence/runtime/security-headers-validation.json", "check": "securityHeaders" }
+    },
+    {
+      "controlId": "SEC-06",
+      "evidence": { "path": "docs/security/evidence/runtime/no-store-validation.json", "check": "noStore" }
+    },
+    {
+      "controlId": "REL-02",
+      "evidence": { "path": "docs/security/evidence/runtime/production-runtime-validation.json", "check": "deploymentShaMatch" }
+    },
+    {
+      "controlId": "REL-03",
+      "evidence": { "path": "docs/security/evidence/runtime/production-runtime-validation.json", "check": "productionHostname" }
+    },
+    {
+      "controlId": "REL-04",
+      "evidence": { "path": "docs/security/evidence/runtime/production-runtime-validation.json", "check": "health" }
+    },
+    {
+      "controlId": "REL-05",
+      "evidence": { "path": "docs/security/evidence/runtime/production-runtime-validation.json", "check": "readiness" }
+    },
+    {
+      "controlId": "REL-06",
+      "evidence": { "path": "docs/security/evidence/runtime/production-runtime-validation.json", "check": "deploymentSmoke" }
     }
   ]
 }

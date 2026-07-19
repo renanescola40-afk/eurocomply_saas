@@ -80,7 +80,11 @@ describe('exact-SHA public claims evidence', () => {
     expect(collector).toContain("publicClaims: 'Public Claims Guard'");
     expect(generator).toContain("'publicClaims'");
 
-    expect(overrides.overrides).toEqual([
+    const publicClaimsOverrides = overrides.overrides.filter((override) =>
+      ['TRU-01', 'TRU-02', 'TRU-03'].includes(override.controlId),
+    );
+
+    expect(publicClaimsOverrides).toEqual([
       {
         controlId: 'TRU-01',
         evidence: {
