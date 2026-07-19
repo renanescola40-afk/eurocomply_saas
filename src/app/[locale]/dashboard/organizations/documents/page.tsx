@@ -1,4 +1,4 @@
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PlanGate } from '@/components/billing/plan-gate';
 import { CreateDocumentForm, type UploadDocumentFormInput } from '@/components/documents/create-document-form';
@@ -11,6 +11,9 @@ import { getOrganizationBillingContext } from '@/server/queries/billing';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { listDocuments } from '@/server/queries/documents';
 
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 function formatDocumentStatus(status: string | null | undefined) {
   const normalized = String(status ?? 'pending').toLowerCase();
   if (normalized.includes('approved') || normalized.includes('aprovado')) return 'Approved';
@@ -20,6 +23,8 @@ function formatDocumentStatus(status: string | null | undefined) {
 }
 
 export default async function OrganizationDocumentsPage({ params }: { params: { locale: string } }) {
+  noStore();
+
   const user = await getCurrentUser();
   if (!user) redirect(`/${params.locale}/login`);
 
