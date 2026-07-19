@@ -21,7 +21,14 @@ Before removal, it captures the complete tenant-scoped membership row. If `logAu
 
 This change strengthens accountability for privileged access revocation and aligns member removal with fail-closed governance controls already used for other destructive records.
 
-The availability trade-off is intentional: temporary audit unavailability can cause the removal request to fail. Compensation is best effort. A concurrent membership recreation or schema constraint can prevent restoration; that condition is observable and must be investigated rather than represented as successful completion.
+## Risks and trade-offs
+
+- Temporary audit unavailability can reduce member-removal availability because the action now fails closed instead of reporting an unaudited access-governance change as successful.
+- Compensation is best effort and is not a single transaction spanning membership removal and audit persistence.
+- Concurrent membership recreation, provider errors, schema drift, or database constraints can prevent restoration of the deleted row.
+- Capturing the complete tenant-scoped row intentionally couples compensation to the current membership schema so the exact record can be restored.
+- A compensation failure requires operational investigation and reconciliation; it must not be represented as successful completion.
+- The source and regression-test evidence in this change does not prove compensation, alert delivery, or outage behavior in production.
 
 ## Alternatives considered
 
