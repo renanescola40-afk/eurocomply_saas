@@ -14,9 +14,18 @@ describe('AI incident system tenant-scope migration', () => {
     expect(migration).toContain('create or replace function public.enforce_ai_incident_system_scope()');
     expect(migration).toContain('security definer');
     expect(migration).toContain("set search_path = ''");
-    expect(migration).toContain('system.id = new.ai_system_id');
-    expect(migration).toContain('system.organization_id = new.organization_id');
+    expect(migration).toContain('where system.id = new.ai_system_id');
+    expect(migration).toContain(
+      'locked_system_organization_id is distinct from new.organization_id',
+    );
     expect(migration).toContain("using errcode = 'check_violation'");
+  });
+
+  it('serializes incident validation with concurrent AI system moves', () => {
+    expect(migration).toContain('select system.organization_id');
+    expect(migration).toContain('into locked_system_organization_id');
+    expect(migration).toContain('for share;');
+    expect(migration).toContain('if not found');
   });
 
   it('covers incident inserts and relevant scope-changing updates', () => {
