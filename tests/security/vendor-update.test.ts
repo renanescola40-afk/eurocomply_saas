@@ -44,7 +44,7 @@ beforeEach(() => {
   mocks.requireCurrentUser.mockResolvedValue({ id: USER_ID });
   mocks.assertCurrentUserCan.mockResolvedValue('owner');
   mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
-  mocks.logAuditEvent.mockResolvedValue(undefined);
+  mocks.logAuditEvent.mockResolvedValue({ persisted: true });
   mocks.reportError.mockReturnValue(undefined);
 });
 
