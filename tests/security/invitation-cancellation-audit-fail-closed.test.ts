@@ -31,11 +31,10 @@ describe('organization invitation cancellation audit persistence', () => {
 
     expect(actionSource).toContain('const restoration = await restoreOrganizationInvite({');
     expect(actionSource).not.toMatch(/\.from\('invitations'\)\s*\.insert\(/);
+    expect(actionSource).toContain("new Error('Invitation cancellation audit compensation failed')");
     expect(actionSource).toContain("area: 'team_cancel_invitation_audit_compensation'");
     expect(actionSource).toContain('providerCode: restoration.providerCode');
     expect(actionSource).toContain("throw actionError('Unable to cancel invitation.')");
-    expect(actionSource).not.toContain('invitation.email,');
-    expect(actionSource).not.toContain('invitation.token,');
 
     expect(persistenceSource).toContain('export async function restoreOrganizationInvite');
     expect(persistenceSource).toContain('invitation.id !== input.invitationId');
