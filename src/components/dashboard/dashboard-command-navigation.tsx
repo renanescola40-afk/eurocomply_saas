@@ -43,8 +43,8 @@ export const dashboardNavigation: MenuItem[] = [
     label: 'Evidence & Risk',
     href: `${dashboardRoot}/evidence-risk`,
     sections: [
-      { label: 'Documentos Controlados', href: '/documentos', description: 'Políticas, atas, certificados e versões' },
-      { label: 'Matriz de Riscos', href: '/riscos', description: 'Risk register com plano de ação' },
+      { label: 'Documentos Controlados', href: `${dashboardRoot}/documents`, description: 'Políticas, atas, certificados e versões' },
+      { label: 'Matriz de Riscos', href: `${dashboardRoot}/risks`, description: 'Risk register com plano de ação' },
       { label: 'Matriz RACI', href: '/raci', description: 'Responsável, aprovador, consultado e informado' },
     ],
   },

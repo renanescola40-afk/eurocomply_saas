@@ -48,8 +48,10 @@ Scope: public landing, authenticated dashboard, billing, controlled documents, c
 
 ### Documents
 
-- `src/app/[locale]/documentos/page.tsx` is `force-dynamic`, `force-no-store`, and calls `noStore()`.
-- `DocumentsClient` is lazy-loaded behind a route-local skeleton so the interactive upload/document workspace is split from the initial server page.
+- `src/app/[locale]/dashboard/organizations/documents/page.tsx` is `force-dynamic`, `force-no-store`, and calls `noStore()`.
+- The canonical document register is server-rendered from tenant-scoped data; upload,
+  download and delete controls hydrate as bounded client components rather than
+  creating a second browser-owned record authority.
 - `listDocuments()` selects explicit columns, filters by `organization_id`, orders by `created_at desc`, and uses explicit pagination with default page size 50 and maximum page size 100.
 - Document detail reads include both `id` and `organization_id` filters.
 - Documents route has dedicated loading and error boundaries.
@@ -86,7 +88,8 @@ Additional indexes support documents pagination and billing usage counts:
 - Landing: `/pt`
 - Dashboard: `/pt/dashboard/organizations`
 - Billing: `/pt/dashboard/organizations/billing`
-- Documents: `/pt/documentos`
+- Documents: `/pt/dashboard/organizations/documents`
+- Risks: `/pt/dashboard/organizations/risks`
 - Critical health API: `/api/health`
 - Protected readiness API: `/api/ready`
 
@@ -137,7 +140,7 @@ Minimum launch gate:
 
 ## Follow-up monitoring
 
-- Track Vercel Web Vitals p75 and p95 for `/[locale]`, `/[locale]/dashboard/organizations`, `/[locale]/dashboard/organizations/billing`, and `/[locale]/documentos`.
+- Track Vercel Web Vitals p75 and p95 for `/[locale]`, `/[locale]/dashboard/organizations`, `/[locale]/dashboard/organizations/billing`, `/[locale]/dashboard/organizations/documents`, and `/[locale]/dashboard/organizations/risks`.
 - Monitor Supabase slow query logs for the indexed dashboard, billing and documents tables after migrations.
 - Watch 401/503 rates for `/api/ready`; readiness failures should be actionable and protected from public cache.
 - Re-run `node scripts/performance/audit.mjs` after any new dashboard/API query or new client component added under `src/app`.
