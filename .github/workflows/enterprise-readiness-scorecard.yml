@@ -7,7 +7,7 @@ on:
     branches: [main]
   workflow_dispatch:
   workflow_run:
-    workflows: [Distributed Rate Limit Runtime Proof, Auth RBAC Tenant Proof, Supabase Live RLS Validation]
+    workflows: [Distributed Rate Limit Runtime Proof, Auth RBAC Tenant Proof, Supabase Live RLS Validation, Production Runtime Proof]
     types: [completed]
 
 permissions:
@@ -29,6 +29,7 @@ jobs:
       RATE_LIMIT_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Distributed Rate Limit Runtime Proof' && github.event.workflow_run.id || '' }}
       AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Auth RBAC Tenant Proof' && github.event.workflow_run.id || '' }}
       SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Supabase Live RLS Validation' && github.event.workflow_run.id || '' }}
+      PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Production Runtime Proof' && github.event.workflow_run.id || '' }}
     steps:
       - name: Checkout exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -37,10 +38,7 @@ jobs:
           persist-credentials: false
 
       - name: Verify exact assessed checkout
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$ASSESSED_SHA"
+        run: test "$(git rev-parse HEAD)" = "$ASSESSED_SHA"
 
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
@@ -72,14 +70,14 @@ jobs:
           tests/enterprise/auth-rbac-runtime-evidence-fetch.test.ts
           tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts
           tests/security/supabase-rls-scorecard-evidence.test.ts
+          tests/release/production-runtime-scorecard-evidence.test.ts
 
       - name: Validate distributed rate-limit proof contracts
         shell: bash
         run: |
           set -o pipefail
           mkdir -p artifacts/enterprise-readiness
-          npx vitest run tests/security/distributed-rate-limit-runtime-proof.test.ts \
-            2>&1 | tee artifacts/enterprise-readiness/distributed-rate-limit-proof-tests.log
+          npx vitest run tests/security/distributed-rate-limit-runtime-proof.test.ts 2>&1 | tee artifacts/enterprise-readiness/distributed-rate-limit-proof-tests.log
 
       - name: Retain distributed rate-limit proof test diagnostics
         if: always()
@@ -246,11 +244,28 @@ jobs:
             echo "Supabase RLS runtime evidence remains NOT_VERIFIED for $ASSESSED_SHA."
           fi
 
-      - name: Retain product provider identity and tenancy evidence diagnostics
+      - name: Retrieve exact-SHA production runtime evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ env.PRODUCTION_RUNTIME_SOURCE_RUN_ID }}
+        run: node scripts/enterprise/fetch-production-runtime-evidence.mjs
+
+      - name: Remove stale production runtime evidence when unavailable
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! test -f docs/security/evidence/runtime/production-runtime-validation.json; then
+            rm -f docs/security/evidence/runtime/security-headers-validation.json
+            rm -f docs/security/evidence/runtime/no-store-validation.json
+            echo "Production runtime evidence remains NOT_VERIFIED for $ASSESSED_SHA."
+          fi
+
+      - name: Retain product provider identity tenancy and runtime evidence diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: product-provider-identity-tenancy-acceptance-evidence-${{ env.ASSESSED_SHA }}
+          name: product-provider-identity-tenancy-runtime-evidence-${{ env.ASSESSED_SHA }}
           path: |
             docs/security/evidence/runtime/ux-acceptance-validation.json
             docs/security/evidence/runtime/localization-validation.json
@@ -262,6 +277,9 @@ jobs:
             docs/security/evidence/runtime/supabase-live-rls-validation.json
             docs/security/evidence/runtime/supabase-rls-validation.json
             docs/security/evidence/runtime/provider-failure-classification.json
+            docs/security/evidence/runtime/security-headers-validation.json
+            docs/security/evidence/runtime/no-store-validation.json
+            docs/security/evidence/runtime/production-runtime-validation.json
             docs/security/evidence/p1/step-up-sensitive-actions.json
             docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json
           if-no-files-found: warn
@@ -306,5 +324,8 @@ jobs:
             docs/security/evidence/runtime/supabase-live-rls-validation.json
             docs/security/evidence/runtime/supabase-rls-validation.json
             docs/security/evidence/runtime/provider-failure-classification.json
+            docs/security/evidence/runtime/security-headers-validation.json
+            docs/security/evidence/runtime/no-store-validation.json
+            docs/security/evidence/runtime/production-runtime-validation.json
           if-no-files-found: warn
           retention-days: 90
