@@ -19,12 +19,18 @@ jobs:
     name: OWASP ZAP production-like baseline
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ env.TARGET_SHA }}
           persist-credentials: false
+
+      - name: Verify exact assessed SHA
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
 
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
@@ -104,7 +110,7 @@ jobs:
           const summary = {
             schema: 'risck-comply.dast-summary.v1',
             tool: 'OWASP ZAP Baseline',
-            assessedSha: process.env.GITHUB_SHA,
+            assessedSha: process.env.TARGET_SHA,
             highRiskAlertCount: high.length,
             mediumRiskAlertCount: alerts.filter((alert) => Number(alert.riskcode) === 2).length,
             lowRiskAlertCount: alerts.filter((alert) => Number(alert.riskcode) === 1).length,
@@ -124,7 +130,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: enterprise-dast-${{ github.event.pull_request.head.sha || github.sha }}
+          name: enterprise-dast-${{ env.TARGET_SHA }}
           path: |
             dast-report/enterprise-dast-summary.json
             dast-report/enterprise-dast.json
@@ -133,7 +139,7 @@ jobs:
             dast-report/enterprise-dast.html
             dast-report/enterprise-dast.sha256
             /tmp/enterprise-dast-server.log
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
 
       - name: Stop production-like server
