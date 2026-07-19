@@ -22,7 +22,7 @@ const enterpriseDemoModules = [
   ['Vendor Assurance', '/vendor-assurance'],
   ['Compliance Calendar', '/calendario-compliance'],
   ['Security Questionnaire', '/security-questionnaire'],
-  ['Documentos', '/documentos'],
+  ['Documentos', '/dashboard/organizations/documents'],
 ] as const;
 
 const enterpriseDemoEnabled = process.env.NEXT_PUBLIC_ENABLE_ENTERPRISE_DEMO === 'true';
