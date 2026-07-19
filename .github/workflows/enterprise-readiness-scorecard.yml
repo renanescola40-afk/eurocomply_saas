@@ -7,7 +7,7 @@ on:
     branches: [main]
   workflow_dispatch:
   workflow_run:
-    workflows: [Distributed Rate Limit Runtime Proof, Auth RBAC Tenant Proof, Supabase Live RLS Validation, Production Runtime Proof]
+    workflows: [Distributed Rate Limit Runtime Proof, Auth RBAC Tenant Proof, Supabase Live RLS Validation, Production Runtime Proof, Branch Protection Runtime Proof]
     types: [completed]
 
 permissions:
@@ -30,6 +30,7 @@ jobs:
       AUTH_RBAC_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Auth RBAC Tenant Proof' && github.event.workflow_run.id || '' }}
       SUPABASE_RLS_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Supabase Live RLS Validation' && github.event.workflow_run.id || '' }}
       PRODUCTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Production Runtime Proof' && github.event.workflow_run.id || '' }}
+      BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ github.event.workflow_run.name == 'Branch Protection Runtime Proof' && github.event.workflow_run.id || '' }}
     steps:
       - name: Checkout exact assessed SHA
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -69,6 +70,7 @@ jobs:
           tests/enterprise/step-up-evidence.test.ts
           tests/enterprise/auth-rbac-runtime-evidence-fetch.test.ts
           tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts
+          tests/enterprise/branch-protection-runtime-evidence-fetch.test.ts
           tests/security/supabase-rls-scorecard-evidence.test.ts
           tests/release/production-runtime-scorecard-evidence.test.ts
 
@@ -261,6 +263,22 @@ jobs:
             echo "Production runtime evidence remains NOT_VERIFIED for $ASSESSED_SHA."
           fi
 
+      - name: Retrieve exact-SHA branch protection runtime evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.ASSESSED_SHA }}
+          BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID: ${{ env.BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID }}
+        run: node scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs
+
+      - name: Remove stale branch protection evidence when unavailable
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! test -f docs/security/evidence/runtime/branch-protection-validation.json; then
+            rm -f docs/security/evidence/runtime/branch-protection-validation.json
+            echo "Branch protection runtime evidence remains NOT_VERIFIED for $ASSESSED_SHA."
+          fi
+
       - name: Retain product provider identity tenancy and runtime evidence diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -280,6 +298,7 @@ jobs:
             docs/security/evidence/runtime/security-headers-validation.json
             docs/security/evidence/runtime/no-store-validation.json
             docs/security/evidence/runtime/production-runtime-validation.json
+            docs/security/evidence/runtime/branch-protection-validation.json
             docs/security/evidence/p1/step-up-sensitive-actions.json
             docs/security/evidence/p1/distributed-rate-limit-sensitive-endpoints.json
           if-no-files-found: warn
@@ -327,5 +346,6 @@ jobs:
             docs/security/evidence/runtime/security-headers-validation.json
             docs/security/evidence/runtime/no-store-validation.json
             docs/security/evidence/runtime/production-runtime-validation.json
+            docs/security/evidence/runtime/branch-protection-validation.json
           if-no-files-found: warn
           retention-days: 90

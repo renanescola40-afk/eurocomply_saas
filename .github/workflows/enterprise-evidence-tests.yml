@@ -57,6 +57,7 @@ jobs:
             tests/enterprise/step-up-evidence.test.ts \
             tests/enterprise/auth-rbac-runtime-evidence-fetch.test.ts \
             tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts \
+            tests/enterprise/branch-protection-runtime-evidence-fetch.test.ts \
             tests/security/supabase-rls-scorecard-evidence.test.ts \
             tests/release/production-runtime-scorecard-evidence.test.ts \
             2>&1 | tee artifacts/enterprise-readiness/enterprise-evidence-tests.log
