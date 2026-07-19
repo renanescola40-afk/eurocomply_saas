@@ -32,6 +32,7 @@ const DEFAULT_POSTHOG_HOST = 'https://eu.i.posthog.com';
 const DEFAULT_POSTHOG_ASSET_HOST = 'https://eu-assets.i.posthog.com';
 const SENSITIVE_PATH_PATTERNS = [
   /\/documents?(\/|$)/i,
+  /\/risks?(\/|$)/i,
   /\/riscos?(\/|$)/i,
   /\/vendor-assurance(\/|$)/i,
   /\/uploads?(\/|$)/i,

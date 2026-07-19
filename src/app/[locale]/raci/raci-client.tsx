@@ -49,7 +49,7 @@ export default function RaciClient({ locale }: { locale: string }) {
               Defina quem é responsável, aprovador, consultado e informado por documento controlado.
             </p>
           </div>
-          <Link href={`/${locale}/documentos`} className="rounded-full border border-white/15 px-4 py-2 text-sm text-slate-200 transition hover:border-sky-300/50 hover:bg-sky-300/10">
+          <Link href={`/${locale}/dashboard/organizations/documents`} className="rounded-full border border-white/15 px-4 py-2 text-sm text-slate-200 transition hover:border-sky-300/50 hover:bg-sky-300/10">
             Abrir documentos
           </Link>
         </div>
