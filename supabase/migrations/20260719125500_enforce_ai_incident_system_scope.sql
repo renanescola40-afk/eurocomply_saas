@@ -7,17 +7,22 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  locked_system_organization_id uuid;
 begin
   if new.ai_system_id is null then
     return new;
   end if;
 
-  if not exists (
-    select 1
-    from public.ai_systems system
-    where system.id = new.ai_system_id
-      and system.organization_id = new.organization_id
-  ) then
+  select system.organization_id
+  into locked_system_organization_id
+  from public.ai_systems system
+  where system.id = new.ai_system_id
+  for share;
+
+  if not found
+    or locked_system_organization_id is distinct from new.organization_id
+  then
     raise exception 'ai_incident_system_not_in_organization'
       using errcode = 'check_violation';
   end if;
