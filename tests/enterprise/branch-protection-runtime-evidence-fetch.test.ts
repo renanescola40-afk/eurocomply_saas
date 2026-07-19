@@ -156,6 +156,7 @@ describe('branch protection exact-SHA runtime evidence', () => {
   it('uses a protected read-only producer and exact-SHA scorecard consumption', () => {
     const producer = readFileSync('.github/workflows/branch-protection-runtime-proof.yml', 'utf8');
     const scorecard = readFileSync('.github/workflows/enterprise-readiness-scorecard.yml', 'utf8');
+    const builder = readFileSync('scripts/enterprise/build-branch-protection-runtime-evidence.mjs', 'utf8');
     const fetcher = readFileSync('scripts/enterprise/fetch-branch-protection-runtime-evidence.mjs', 'utf8');
 
     expect(producer).toContain('push:\n    branches: [main]');
@@ -170,6 +171,10 @@ describe('branch protection exact-SHA runtime evidence', () => {
     expect(scorecard).toContain('BRANCH_PROTECTION_RUNTIME_SOURCE_RUN_ID');
     expect(scorecard).toContain('fetch-branch-protection-runtime-evidence.mjs');
     expect(scorecard).toContain('branch-protection-validation.json');
+
+    expect(builder).toContain("const absolutePath = join(root, 'p0-evidence', 'branch-protection-main.generated.json')");
+    expect(builder).toContain('configuredOutputPath !== DEFAULT_OUTPUT_PATH');
+    expect(builder).not.toContain('join(root, outputPath)');
 
     expect(fetcher).toContain("const WORKFLOW_NAME = 'Branch Protection Runtime Proof'");
     expect(fetcher).toContain("run?.head_branch === 'main'");
