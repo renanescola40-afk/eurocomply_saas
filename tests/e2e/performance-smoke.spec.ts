@@ -5,6 +5,7 @@ const LANDING_DOM_CONTENT_LOADED_BUDGET_MS = Number(process.env.LANDING_DCL_BUDG
 const DASHBOARD_DOM_CONTENT_LOADED_BUDGET_MS = Number(process.env.DASHBOARD_DCL_BUDGET_MS ?? 10_000);
 const BILLING_DOM_CONTENT_LOADED_BUDGET_MS = Number(process.env.BILLING_DCL_BUDGET_MS ?? 10_000);
 const DOCUMENTS_DOM_CONTENT_LOADED_BUDGET_MS = Number(process.env.DOCUMENTS_DCL_BUDGET_MS ?? 10_000);
+const RISKS_DOM_CONTENT_LOADED_BUDGET_MS = Number(process.env.RISKS_DCL_BUDGET_MS ?? 10_000);
 
 type NavigationTiming = {
   domContentLoadedEventEnd?: number;
@@ -74,7 +75,11 @@ test.describe('RISCK COMPLY performance smoke', () => {
   });
 
   test('documents route is stable and protected for anonymous users', async ({ page }) => {
-    await expectProtectedRouteStable(page, '/pt/documentos', 'documents-redirect', DOCUMENTS_DOM_CONTENT_LOADED_BUDGET_MS);
+    await expectProtectedRouteStable(page, '/pt/dashboard/organizations/documents', 'documents', DOCUMENTS_DOM_CONTENT_LOADED_BUDGET_MS);
+  });
+
+  test('risks route is stable and protected for anonymous users', async ({ page }) => {
+    await expectProtectedRouteStable(page, '/pt/dashboard/organizations/risks', 'risks', RISKS_DOM_CONTENT_LOADED_BUDGET_MS);
   });
 
   test('critical health API responds without sensitive caching', async ({ page }) => {
