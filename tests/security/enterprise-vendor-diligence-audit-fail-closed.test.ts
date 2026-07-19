@@ -3,12 +3,20 @@ import { describe, expect, it } from 'vitest';
 
 const routePath = 'src/app/api/ai-systems/route.ts';
 
+function readVendorDiligenceWorkflow() {
+  const source = readFileSync(routePath, 'utf8');
+  const workflowStart = source.indexOf("if (workflow === 'vendor_due_diligence') {", source.indexOf('export async function POST'));
+  const workflowEnd = source.indexOf("if (workflow === 'risk_review') {", workflowStart);
+
+  expect(workflowStart).toBeGreaterThanOrEqual(0);
+  expect(workflowEnd).toBeGreaterThan(workflowStart);
+
+  return { source, workflow: source.slice(workflowStart, workflowEnd) };
+}
+
 describe('enterprise vendor diligence audit persistence', () => {
   it('requires durable audit persistence before returning a created vendor review', () => {
-    const source = readFileSync(routePath, 'utf8');
-    const workflowStart = source.indexOf("if (workflow === 'vendor_due_diligence')");
-    const workflowEnd = source.indexOf("if (workflow === 'risk_review')", workflowStart);
-    const workflow = source.slice(workflowStart, workflowEnd);
+    const { workflow } = readVendorDiligenceWorkflow();
 
     expect(workflow).toContain('const audit = await createAuditEvent({');
     expect(workflow).toContain('if (!audit.persisted)');
@@ -18,12 +26,13 @@ describe('enterprise vendor diligence audit persistence', () => {
   });
 
   it('attempts an exact tenant- and actor-scoped compensation delete', () => {
-    const source = readFileSync(routePath, 'utf8');
-    const workflowStart = source.indexOf("if (workflow === 'vendor_due_diligence')");
-    const guardStart = source.indexOf('if (!audit.persisted)', workflowStart);
-    const successReturn = source.indexOf('return noStoreJson({ vendorReview }, { status: 201 });', guardStart);
-    const compensation = source.slice(guardStart, successReturn);
+    const { workflow } = readVendorDiligenceWorkflow();
+    const guardStart = workflow.indexOf('if (!audit.persisted)');
+    const successReturn = workflow.indexOf('return noStoreJson({ vendorReview }, { status: 201 });', guardStart);
+    const compensation = workflow.slice(guardStart, successReturn);
 
+    expect(guardStart).toBeGreaterThanOrEqual(0);
+    expect(successReturn).toBeGreaterThan(guardStart);
     expect(compensation).toContain(".from('enterprise_vendor_due_diligence')");
     expect(compensation).toContain('.delete()');
     expect(compensation).toContain(".eq('id', vendorReview.id)");
@@ -35,7 +44,7 @@ describe('enterprise vendor diligence audit persistence', () => {
   });
 
   it('preserves origin, authentication, authorization, validation, tenant scoping, and rate limiting', () => {
-    const source = readFileSync(routePath, 'utf8');
+    const { source } = readVendorDiligenceWorkflow();
 
     expect(source).toContain('const originDenied = assertTrustedOrigin(request);');
     expect(source).toContain('const user = await requireApiUser();');
