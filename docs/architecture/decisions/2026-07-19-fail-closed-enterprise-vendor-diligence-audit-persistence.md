@@ -27,7 +27,7 @@ The route then returns a no-store HTTP 503 response with the stable error code `
 
 The change preserves trusted-origin validation, authenticated-user enforcement, tenant-scoped `manage_vendors` authorization, bounded Zod parsing, organization-scoped AI-system validation, distributed rate limiting, no-store responses, and sanitized API error handling.
 
-## Consequences and risks
+## Risks and trade-offs
 
 Vendor due-diligence creation becomes temporarily unavailable when durable audit persistence is unavailable. Compensation is best effort because the insert and audit write are not one database transaction. If compensation fails, operators receive a sanitized warning and the request still fails closed; reconciliation may then be required.
 
