@@ -263,8 +263,8 @@ async function githubJson(url, token) {
   return response.json();
 }
 
-function writeEvidence(root, outputPath, evidence) {
-  const absolutePath = join(root, outputPath);
+function writeEvidence(root, evidence) {
+  const absolutePath = join(root, 'p0-evidence', 'branch-protection-main.generated.json');
   mkdirSync(dirname(absolutePath), { recursive: true });
   writeFileSync(absolutePath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
 }
@@ -277,10 +277,11 @@ async function main() {
   const checkedOutSha = normalizeSha(execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }));
   const runId = process.env.GITHUB_RUN_ID || '';
   const generatedAt = new Date().toISOString();
-  const outputPath = process.env.BRANCH_PROTECTION_EVIDENCE_PATH || DEFAULT_OUTPUT_PATH;
+  const configuredOutputPath = process.env.BRANCH_PROTECTION_EVIDENCE_PATH || DEFAULT_OUTPUT_PATH;
 
   if (repository !== CANONICAL_REPOSITORY) throw new Error('repository_not_canonical');
   if (!token) throw new Error('branch_protection_read_token_missing');
+  if (configuredOutputPath !== DEFAULT_OUTPUT_PATH) throw new Error('branch_protection_evidence_path_not_canonical');
 
   let currentMainSha = '';
   let protection = null;
@@ -305,8 +306,8 @@ async function main() {
     })
     : evaluateBranchProtection({ protection, targetSha, checkedOutSha, currentMainSha, runId, generatedAt });
 
-  writeEvidence(root, outputPath, evidence);
-  console.log(`Wrote ${outputPath}`);
+  writeEvidence(root, evidence);
+  console.log(`Wrote ${DEFAULT_OUTPUT_PATH}`);
   if (evidence.outcome !== 'passed') {
     console.error(evidence.summary);
     process.exit(1);
