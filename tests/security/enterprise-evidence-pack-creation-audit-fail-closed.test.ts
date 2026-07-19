@@ -5,10 +5,18 @@ import { describe, expect, it } from 'vitest';
 
 const routePath = path.join(process.cwd(), 'src/app/api/ai-systems/route.ts');
 const source = fs.readFileSync(routePath, 'utf8');
-const evidencePackBranch = source.slice(
-  source.indexOf("if (workflow === 'evidence_pack')"),
-  source.indexOf("if (workflow === 'vendor_due_diligence')"),
+const postStart = source.indexOf('export async function POST');
+const evidencePackStart = source.indexOf("if (workflow === 'evidence_pack')", postStart);
+const vendorDiligenceStart = source.indexOf(
+  "if (workflow === 'vendor_due_diligence')",
+  evidencePackStart + 1,
 );
+
+if (postStart < 0 || evidencePackStart < 0 || vendorDiligenceStart < 0) {
+  throw new Error('enterprise_evidence_pack_workflow_boundary_not_found');
+}
+
+const evidencePackBranch = source.slice(evidencePackStart, vendorDiligenceStart);
 
 describe('enterprise evidence pack creation audit boundary', () => {
   it('requires durable audit persistence before returning HTTP 201', () => {
