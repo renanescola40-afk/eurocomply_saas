@@ -25,7 +25,14 @@ Keep the existing authentication, tenant-scoped `manage_settings` authorization,
 
 Security configuration changes become explicit and deterministic. Malformed or partial clients fail safely instead of mutating the organization to fallback values.
 
-Clients that previously relied on omitted `stepUpProviderMode` or coercion of invalid claim lists must send a complete valid payload. This is an intentional compatibility trade-off for a privileged security-control mutation.
+## Risks and trade-offs
+
+- Clients that previously relied on omitted `stepUpProviderMode` or coercion of invalid claim lists must send a complete valid payload.
+- The stricter contract can surface stale or partially updated clients as HTTP 400 failures until they send the complete security-settings payload.
+- Optional ACR and AMR lists still become empty arrays when omitted, so callers must include the current values when they intend to preserve non-empty lists.
+- This change validates payload shape and bounds only; it does not prove that configured claim values correspond to a live identity provider.
+
+These compatibility and availability trade-offs are intentional for a privileged security-control mutation.
 
 ## Evidence boundary
 
