@@ -10,6 +10,18 @@ export type CreateOrganizationInviteInput = {
   role: InviteRole;
 };
 
+export type OrganizationInvitationSnapshot = {
+  id: string;
+  organization_id: string;
+  email: string;
+  role: string;
+  token: string;
+  invited_by: string | null;
+  accepted_at: string | null;
+  expires_at: string;
+  created_at: string;
+};
+
 const DATABASE_INVITE_ROLES: Record<InviteRole, 'admin' | 'editor' | 'viewer'> = {
   Admin: 'admin',
   Editor: 'editor',
@@ -89,4 +101,39 @@ export async function deleteOrganizationInvite(input: { organizationId: string; 
     console.warn('[invites] compensation_delete_failed', { code: error.code ?? 'unknown' });
     throw new Error('Unable to compensate organization invitation creation.');
   }
+}
+
+export async function restoreOrganizationInvite(input: {
+  organizationId: string;
+  invitationId: string;
+  invitation: OrganizationInvitationSnapshot;
+}) {
+  const { invitation } = input;
+
+  if (
+    invitation.id !== input.invitationId ||
+    invitation.organization_id !== input.organizationId ||
+    invitation.accepted_at !== null
+  ) {
+    return { restored: false as const, providerCode: 'invalid_snapshot' };
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.from('invitations').insert({
+    id: invitation.id,
+    organization_id: invitation.organization_id,
+    email: invitation.email,
+    role: invitation.role,
+    token: invitation.token,
+    invited_by: invitation.invited_by,
+    accepted_at: invitation.accepted_at,
+    expires_at: invitation.expires_at,
+    created_at: invitation.created_at,
+  });
+
+  if (error) {
+    return { restored: false as const, providerCode: error.code ?? null };
+  }
+
+  return { restored: true as const, providerCode: null };
 }
