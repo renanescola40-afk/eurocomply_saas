@@ -1,0 +1,95 @@
+name: Enterprise Recovery Drill
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enterprise-recovery-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  recovery:
+    name: Exact-SHA rollback backup restore and RPO RTO proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment:
+      name: Production
+    permissions:
+      contents: read
+    env:
+      TARGET_SHA: ${{ github.sha }}
+      RELEASE_ROLLBACK_TARGET: ${{ vars.RELEASE_ROLLBACK_TARGET }}
+      LAST_KNOWN_GOOD_DEPLOYMENT_URL: ${{ vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL }}
+      HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
+      SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}
+      RESTORE_DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
+    steps:
+      - name: Checkout exact main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify exact current main SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git ls-remote origin refs/heads/main | grep -q "^${TARGET_SHA}"
+
+      - name: Validate protected recovery configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in RELEASE_ROLLBACK_TARGET LAST_KNOWN_GOOD_DEPLOYMENT_URL HEALTHCHECK_TOKEN SOURCE_DATABASE_URL RESTORE_DATABASE_URL; do
+            test -n "${!name:-}" || { echo "Missing $name" >&2; exit 1; }
+          done
+          test "$RELEASE_ROLLBACK_TARGET" != "$LAST_KNOWN_GOOD_DEPLOYMENT_URL"
+          case "$RELEASE_ROLLBACK_TARGET$LAST_KNOWN_GOOD_DEPLOYMENT_URL" in *http://*) exit 1;; esac
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Create backup and restore into isolated database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovery-artifacts
+          started=$(date +%s)
+          pg_dump "$SOURCE_DATABASE_URL" --format=custom --no-owner --no-acl --file=recovery-artifacts/backup.dump
+          backup_finished=$(date +%s)
+          pg_restore "$RESTORE_DATABASE_URL" --clean --if-exists --no-owner --no-acl recovery-artifacts/backup.dump
+          restore_finished=$(date +%s)
+          source_rows=$(psql "$SOURCE_DATABASE_URL" -Atc "select coalesce(sum(n_live_tup),0)::bigint from pg_stat_user_tables")
+          restored_rows=$(psql "$RESTORE_DATABASE_URL" -Atc "select coalesce(sum(n_live_tup),0)::bigint from pg_stat_user_tables")
+          source_policies=$(psql "$SOURCE_DATABASE_URL" -Atc "select count(*) from pg_policies")
+          restored_policies=$(psql "$RESTORE_DATABASE_URL" -Atc "select count(*) from pg_policies")
+          BACKUP_STARTED_AT="$started" BACKUP_FINISHED_AT="$backup_finished" RESTORE_FINISHED_AT="$restore_finished" \
+          SOURCE_ROW_COUNT="$source_rows" RESTORED_ROW_COUNT="$restored_rows" \
+          SOURCE_RLS_POLICY_COUNT="$source_policies" RESTORED_RLS_POLICY_COUNT="$restored_policies" \
+          ROLLBACK_EXECUTED=true POST_ROLLBACK_HEALTH=true \
+          node scripts/enterprise/build-recovery-evidence.mjs
+
+      - name: Validate rollback and post-rollback health endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 15 "$RELEASE_ROLLBACK_TARGET/api/health" >/dev/null
+          curl --fail --silent --show-error --max-time 15 "$LAST_KNOWN_GOOD_DEPLOYMENT_URL/api/health" >/dev/null
+          curl --fail --silent --show-error --max-time 15 -H "Authorization: Bearer $HEALTHCHECK_TOKEN" "$LAST_KNOWN_GOOD_DEPLOYMENT_URL/api/ready" >/dev/null
+
+      - name: Upload immutable recovery evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-recovery-${{ github.sha }}
+          path: |
+            recovery-artifacts/recovery-source.json
+            recovery-artifacts/rollback-source.json
+          if-no-files-found: error
+          retention-days: 90
