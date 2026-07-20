@@ -89,7 +89,7 @@ function LoginContent() {
   const createAccountUrl = signUpHref(locale, planId, afterSignInUrl);
   const publicErrorCode = searchParams.get('error') ? normalizePublicAuthErrorCode(searchParams.get('error')) : null;
   const text = copy(locale);
-  const { loading, signInWithEmail, signInWithGoogle } = useAuth();
+  const { loading, signInWithEmail } = useAuth();
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
   const [busy, setBusy] = useState(false);
@@ -97,7 +97,6 @@ function LoginContent() {
   const [noticeOpen, setNoticeOpen] = useState(false);
 
   function handleProvider() {
-    void signInWithGoogle;
     setError(null);
     setNoticeOpen(true);
   }
