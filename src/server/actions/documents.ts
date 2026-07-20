@@ -4,6 +4,7 @@ import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAuditEvent } from '@/server/actions/audit';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
+import { assertDocumentQuota } from '@/server/billing/entitlements';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { requireCurrentUser } from '@/server/queries/auth';
 import {
@@ -43,9 +44,43 @@ export type CreateDocumentInput = z.input<typeof createDocumentSchema>;
 export type UploadDocumentInput = z.input<typeof uploadDocumentSchema>;
 
 type DocumentSecurityProvenance = 'untrusted_metadata' | 'validated_upload' | 'server_generated';
+type DocumentMutationAction = 'create' | 'template' | 'upload';
+
+const DOCUMENT_MUTATION_COLUMNS =
+  'id,organization_id,uploaded_by,name,category,status,storage_path,mime_type,size_bytes,expires_at,created_at,updated_at,scan_status,scan_provider,scan_required,scan_checked_at,file_hash,file_size,mime_detected' as const;
 
 function actionError(message: string) {
   return new Error(message);
+}
+
+export async function enforceDocumentMutationRateLimit(input: {
+  action: DocumentMutationAction;
+  organizationId: string;
+  userId: string;
+}) {
+  const rateLimit = await checkDistributedRateLimit({
+    key: `documents:${input.action}:${input.organizationId}:${input.userId}`,
+    policy: 'upload',
+    userId: input.userId,
+    organizationId: input.organizationId,
+    route: `server-action:${input.action}Document`,
+    action: `document.${input.action}`,
+    limit: input.action === 'create' ? 20 : 10,
+    windowMs: 60 * 1000,
+    failureMode: 'fail-closed',
+  });
+
+  if (!rateLimit.allowed) {
+    throw actionError('Too many document requests. Please try again later.');
+  }
+}
+
+export async function enforceDocumentQuota(organizationId: string) {
+  const quota = await assertDocumentQuota(organizationId);
+
+  if (!quota.ok) {
+    throw actionError(quota.message);
+  }
 }
 
 function blockedScanError(scan: MalwareScanResult) {
@@ -278,10 +313,21 @@ async function createDocumentForUser(
   input: CreateDocumentInput,
   userId: string,
   provenance: DocumentSecurityProvenance,
+  verified: { quota: boolean; rateLimit: boolean } = { quota: false, rateLimit: false },
 ) {
   const payload = createDocumentSchema.parse(input);
   const context = { area: 'document_create', organizationId: payload.organizationId, userId };
   await assertCurrentUserCan(payload.organizationId, userId, 'documents:write');
+  if (!verified.rateLimit) {
+    await enforceDocumentMutationRateLimit({
+      action: 'create',
+      organizationId: payload.organizationId,
+      userId,
+    });
+  }
+  if (!verified.quota) {
+    await enforceDocumentQuota(payload.organizationId);
+  }
   assertTenantStoragePathInOrganization(payload.storagePath, payload.organizationId);
 
   const uploadSecurityMetadata = withoutRawStoragePath(payload.metadata);
@@ -306,7 +352,7 @@ async function createDocumentForUser(
       expires_at: payload.expiresAt ?? null,
       ...uploadSecurityColumns(uploadSecurityMetadata, payload.mimeType ?? null, payload.sizeBytes ?? null),
     })
-    .select('*')
+    .select(DOCUMENT_MUTATION_COLUMNS)
     .single();
 
   if (error) {
@@ -314,19 +360,46 @@ async function createDocumentForUser(
     throw actionError('Unable to create document.');
   }
 
-  await logAuditEvent({
-    organizationId: payload.organizationId,
-    actorUserId: userId,
-    action: 'document.created',
-    entityType: 'document',
-    entityId: data.id,
-    metadata: {
-      name: payload.name,
-      category: payload.category,
-      ...uploadSecurityMetadata,
-      hasStoragePath: Boolean(payload.storagePath),
-    },
-  });
+  let auditPersisted = false;
+
+  try {
+    const audit = await logAuditEvent({
+      organizationId: payload.organizationId,
+      actorUserId: userId,
+      action: 'document.created',
+      entityType: 'document',
+      entityId: data.id,
+      metadata: {
+        name: payload.name,
+        category: payload.category,
+        ...uploadSecurityMetadata,
+        hasStoragePath: Boolean(payload.storagePath),
+      },
+    });
+    auditPersisted = audit.persisted;
+  } catch (auditError) {
+    reportError(auditError, { ...context, area: 'document_create_audit' });
+  }
+
+  if (!auditPersisted) {
+    const { error: rollbackError } = await supabase
+      .from('documents')
+      .delete()
+      .eq('id', data.id)
+      .eq('organization_id', payload.organizationId)
+      .eq('uploaded_by', userId)
+      .eq('storage_path', payload.storagePath);
+
+    if (rollbackError) {
+      reportError(rollbackError, {
+        ...context,
+        area: 'document_create_audit_rollback',
+        documentId: data.id,
+      });
+    }
+
+    throw actionError('Unable to create document.');
+  }
 
   return data;
 }
@@ -348,17 +421,12 @@ export async function uploadDocument(input: UploadDocumentInput, file: File) {
   await assertCurrentUserCan(payload.organizationId, userId, 'documents:write');
 
   const context = { area: 'document_upload', organizationId: payload.organizationId, userId };
-  const rateLimit = await checkDistributedRateLimit({
-    key: `document_upload:${payload.organizationId}:${userId}`,
-    limit: 20,
-    windowMs: 60 * 60 * 1000,
+  await enforceDocumentMutationRateLimit({
+    action: 'upload',
+    organizationId: payload.organizationId,
+    userId,
   });
-
-  if (!rateLimit.allowed) {
-    const error = actionError('Too many document uploads. Please try again later.');
-    reportError(error, context);
-    throw error;
-  }
+  await enforceDocumentQuota(payload.organizationId);
 
   await auditUploadRequested({ organizationId: payload.organizationId, actorUserId: userId, file });
   const uploadValidation = await validateUploadSecurityFile(file, { maxBytes: MAX_UPLOAD_BYTES });
@@ -453,7 +521,7 @@ export async function uploadDocument(input: UploadDocumentInput, file: File) {
       sizeBytes: uploadValidation.fileSize,
       expiresAt: payload.expiresAt ?? null,
       metadata: auditMetadata,
-    }, userId, 'validated_upload');
+    }, userId, 'validated_upload', { quota: true, rateLimit: true });
 
     await createAuditEvent({
       organizationId: payload.organizationId,

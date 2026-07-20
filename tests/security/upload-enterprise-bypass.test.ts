@@ -4,6 +4,8 @@ import { createDocument, createServerGeneratedDocument } from '@/server/actions/
 
 const mocks = vi.hoisted(() => ({
   assertCurrentUserCan: vi.fn(),
+  assertDocumentQuota: vi.fn(),
+  checkDistributedRateLimit: vi.fn(),
   createAdminClient: vi.fn(),
   createAuditEvent: vi.fn(),
   logAuditEvent: vi.fn(),
@@ -16,6 +18,14 @@ vi.mock('@/server/queries/auth', () => ({
 
 vi.mock('@/server/auth/permissions', () => ({
   assertCurrentUserCan: mocks.assertCurrentUserCan,
+}));
+
+vi.mock('@/server/billing/entitlements', () => ({
+  assertDocumentQuota: mocks.assertDocumentQuota,
+}));
+
+vi.mock('@/lib/security/rate-limit', () => ({
+  checkDistributedRateLimit: mocks.checkDistributedRateLimit,
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -40,8 +50,14 @@ beforeEach(() => {
 
   mocks.requireCurrentUser.mockResolvedValue({ id: USER_ID });
   mocks.assertCurrentUserCan.mockResolvedValue('owner');
+  mocks.assertDocumentQuota.mockResolvedValue({
+    ok: true,
+    entitlements: { plan: 'enterprise', maxDocuments: Number.POSITIVE_INFINITY },
+    currentCount: 0,
+  });
+  mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
   mocks.createAuditEvent.mockResolvedValue(undefined);
-  mocks.logAuditEvent.mockResolvedValue(undefined);
+  mocks.logAuditEvent.mockResolvedValue({ persisted: true });
 });
 
 describe('enterprise upload scan bypass protection', () => {

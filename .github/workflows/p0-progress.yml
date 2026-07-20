@@ -36,7 +36,7 @@ jobs:
         run: node scripts/security/write-p0-enterprise-progress.mjs
 
       - name: Upload P0 progress report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: p0-enterprise-progress
           path: p0-enterprise-progress.json
