@@ -1,0 +1,51 @@
+{
+  "schema": "risck-comply.auth-tenancy-megapack-plan.v1",
+  "status": "implementation_complete_pending_exact_sha_runtime",
+  "scope": [
+    "disposable signup",
+    "same-run identity cleanup",
+    "password login",
+    "logout",
+    "session refresh",
+    "owner and member role observation",
+    "same-tenant organization access",
+    "cross-tenant organization read denial",
+    "cross-tenant membership read denial",
+    "cross-tenant membership insert denial",
+    "cross-tenant membership update denial",
+    "cross-tenant membership delete denial",
+    "cross-tenant organization update denial",
+    "cross-tenant organization delete denial",
+    "exact-SHA provenance",
+    "redacted canonical evidence"
+  ],
+  "notVerified": [
+    "OAuth callback round trip",
+    "full disposable organization onboarding",
+    "MFA",
+    "SSO",
+    "all tenant-scoped tables"
+  ],
+  "requiredSecrets": [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "AUTH_RBAC_DISPOSABLE_EMAIL_DOMAIN",
+    "AUTH_RBAC_ORGANIZATION_A_ID",
+    "AUTH_RBAC_ORGANIZATION_B_ID",
+    "AUTH_RBAC_OWNER_EMAIL",
+    "AUTH_RBAC_OWNER_PASSWORD",
+    "AUTH_RBAC_MEMBER_EMAIL",
+    "AUTH_RBAC_MEMBER_PASSWORD",
+    "AUTH_RBAC_OUTSIDER_EMAIL",
+    "AUTH_RBAC_OUTSIDER_PASSWORD"
+  ],
+  "evidenceIntegrity": {
+    "credentialsStored": false,
+    "tokensStored": false,
+    "identifiersStored": false,
+    "serviceRoleKeyStored": false,
+    "cleanupRequired": true,
+    "runtimeProofInvented": false
+  }
+}
