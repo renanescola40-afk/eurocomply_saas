@@ -51,3 +51,4 @@ URLs, provider payloads and mismatched observed SHAs are not written to evidence
 Revert the workflow, runner, contract, tests, runbook and this decision record
 together before any production exercise. Do not weaken individual preflight checks
 to obtain a passing proof; an unavailable check is a blocked rollback exercise.
+
