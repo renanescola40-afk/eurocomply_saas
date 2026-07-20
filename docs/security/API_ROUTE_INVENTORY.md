@@ -60,12 +60,12 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/enterprise-readiness/export/route.ts` | high-risk | Export; export_data permission, tenant validation, integrity and audit required. |
 | `src/app/api/retention-center/export/route.ts` | high-risk | Export; export_data permission, tenant validation, integrity and audit required. |
 | `src/app/api/continuity-center/export/route.ts` | high-risk | Export; export_data permission, tenant validation, integrity and audit required. |
-| `src/app/api/reports/executive.csv/route.ts` | tenant-scoped | CSV export of private report data; auth, tenant context, no-store/download hardening. |
-| `src/app/api/reports/tasks.csv/route.ts` | tenant-scoped | CSV export of private task data; auth, tenant context, no-store/download hardening. |
-| `src/app/api/reports/risks.csv/route.ts` | tenant-scoped | CSV export of private risk data; auth, tenant context, no-store/download hardening. |
-| `src/app/api/reports/vendors.csv/route.ts` | tenant-scoped | CSV export of private vendor data; auth, tenant context, no-store/download hardening. |
-| `src/app/api/reports/documents.csv/route.ts` | tenant-scoped | CSV export of private document data; auth, tenant context, no-store/download hardening. |
-| `src/app/api/ai-systems/route.ts` | tenant-scoped | AI governance data; auth, tenant membership, RBAC read/manage permission. |
+| `src/app/api/reports/executive.csv/route.ts` | tenant-scoped | Private CSV; export RBAC, paid entitlement, single-use step-up, tenant filter, audit, rate limit and no-store hardening. |
+| `src/app/api/reports/tasks.csv/route.ts` | tenant-scoped | Private CSV; export RBAC, paid entitlement, single-use step-up, tenant filter, audit, rate limit and no-store hardening. |
+| `src/app/api/reports/risks.csv/route.ts` | tenant-scoped | Private CSV; export RBAC, paid entitlement, single-use step-up, tenant filter, audit, rate limit and no-store hardening. |
+| `src/app/api/reports/vendors.csv/route.ts` | tenant-scoped | Private CSV; export RBAC, paid entitlement, single-use step-up, tenant filter, audit, rate limit and no-store hardening. |
+| `src/app/api/reports/documents.csv/route.ts` | tenant-scoped | Private CSV; export RBAC, paid entitlement, single-use step-up, tenant filter, audit, rate limit and no-store hardening. |
+| `src/app/api/ai-systems/route.ts` | high-risk | AI governance inventory; GET is tenant-scoped, while mutations require trusted origin, bounded validation, distributed rate limiting, workflow-specific RBAC, tenant ownership checks and durable audit persistence. |
 | `src/app/api/ai-literacy/route.ts` | high-risk | Article 4 training and evidence operations; GET is tenant-scoped, while mutations require trusted origin, bounded Zod input, distributed rate limiting, manage_ai_governance, tenant ownership validation and durable audit compensation. |
 | `src/app/api/ai-systems/[id]/route.ts` | high-risk | AI governance detail/reassessment endpoint; GET requires tenant-scoped read_ai_governance, PATCH requires trusted origin, rate limit, Zod body validation, manage_ai_governance, tenant ownership validation, no-store and audit. |
 | `src/app/api/ai-incidents/route.ts` | tenant-scoped | AI incident data; auth, tenant membership, RBAC read/manage permission. |

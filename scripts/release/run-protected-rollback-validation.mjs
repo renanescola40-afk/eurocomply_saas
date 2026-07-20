@@ -3,27 +3,48 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import {
+  evaluateRuntimeReleaseSha,
+  sanitizeRuntimeReleaseResponse,
+} from './runtime-release-sha-contract.mjs';
+import { evaluateVercelDeploymentMetadata } from './protected-rollback-contract.mjs';
 
 const OUTPUT = 'docs/security/evidence/runtime/rollback-validation.json';
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
+const CANONICAL_PRODUCTION_HOST = 'risckcomply.com';
+const VERCEL_CLI_VERSION = '56.3.2';
 const FULL_SHA = /^[a-f0-9]{40}$/;
-const VERSION = /^\d+\.\d+\.\d+$/;
+const MAX_RUNTIME_RESPONSE_BYTES = 64 * 1024;
+const MAX_PROVIDER_RESPONSE_BYTES = 2 * 1024 * 1024;
 
 function env(name) {
   return String(process.env[name] ?? '').trim();
 }
 
-function safeUrl(value) {
+function safeUrl(value, { vercelDeployment = false, allowedHostname = null } = {}) {
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' ? url : null;
+    const isOriginOnly = url.pathname === '/'
+      && !url.username
+      && !url.password
+      && !url.port
+      && !url.search
+      && !url.hash;
+    const isVercelDeployment = url.hostname.endsWith('.vercel.app')
+      && url.hostname !== 'vercel.app';
+    return url.protocol === 'https:'
+      && isOriginOnly
+      && (!vercelDeployment || isVercelDeployment)
+      && (!allowedHostname || url.hostname === allowedHostname)
+      ? url
+      : null;
   } catch {
     return null;
   }
 }
 
-function runVercel(args, token, version) {
-  const result = spawnSync('npx', ['--yes', `vercel@${version}`, ...args, '--token', token, '--yes'], {
+function runVercel(args, token) {
+  const result = spawnSync('npx', ['--yes', `vercel@${VERCEL_CLI_VERSION}`, ...args, '--token', token, '--yes'], {
     encoding: 'utf8',
     env: { ...process.env, VERCEL_TOKEN: token },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -35,26 +56,151 @@ function runVercel(args, token, version) {
   };
 }
 
-async function health(baseUrl, expectedSha, token) {
+async function health(baseUrl) {
   try {
     const response = await fetch(new URL('/api/health', baseUrl), {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
       cache: 'no-store',
+      redirect: 'error',
       signal: AbortSignal.timeout(15_000),
     });
     const body = await response.json().catch(() => null);
-    const observedSha = String(body?.commitSha ?? body?.buildSha ?? response.headers.get('x-build-sha') ?? '').trim().toLowerCase();
     return {
       passed: response.status === 200
         && body?.status === 'ok'
-        && /\bno-store\b/i.test(response.headers.get('cache-control') ?? '')
-        && (!expectedSha || observedSha === expectedSha),
+        && /\bno-store\b/i.test(response.headers.get('cache-control') ?? ''),
       status: response.status,
       noStore: /\bno-store\b/i.test(response.headers.get('cache-control') ?? ''),
-      observedShaMatches: expectedSha ? observedSha === expectedSha : false,
     };
   } catch {
-    return { passed: false, status: 0, noStore: false, observedShaMatches: false };
+    return { passed: false, status: 0, noStore: false };
+  }
+}
+
+async function readBoundedJsonResponse(response, maxBytes = MAX_RUNTIME_RESPONSE_BYTES) {
+  const declaredLength = response.headers.get('content-length');
+  if (declaredLength) {
+    const parsedLength = Number.parseInt(declaredLength, 10);
+    if (Number.isFinite(parsedLength) && parsedLength > maxBytes) {
+      throw new Error('runtime_release_response_too_large');
+    }
+  }
+
+  if (!response.body) throw new Error('runtime_release_response_missing_body');
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel('runtime_release_response_too_large').catch(() => undefined);
+        throw new Error('runtime_release_response_too_large');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+}
+
+async function releaseIdentity(baseUrl, expectedSha, token) {
+  try {
+    const response = await fetch(new URL('/api/ready/release', baseUrl), {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+        'User-Agent': 'risck-comply-protected-rollback/2.0',
+      },
+      cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(15_000),
+    });
+    const runtime = sanitizeRuntimeReleaseResponse(await readBoundedJsonResponse(response));
+    const evaluation = evaluateRuntimeReleaseSha({
+      expectedCommitSha: expectedSha,
+      expectedBuildSha: expectedSha,
+      observedCommitSha: runtime.observedCommitSha,
+      endpointStatus: response.status,
+      cacheControl: response.headers.get('cache-control') ?? '',
+    });
+    return {
+      passed: evaluation.passed
+        && runtime.statusOk
+        && runtime.available
+        && ['vercel', 'build-env'].includes(runtime.provenance),
+      endpointStatus: response.status,
+    };
+  } catch {
+    return { passed: false, endpointStatus: 0 };
+  }
+}
+
+async function deploymentProof(baseUrl, expectedSha, token) {
+  const [healthResult, identityResult] = await Promise.all([
+    health(baseUrl),
+    releaseIdentity(baseUrl, expectedSha, token),
+  ]);
+  return { passed: healthResult.passed && identityResult.passed };
+}
+
+async function inspectVercelDeployment(deploymentUrl, expectedSha, token, ownerId, projectId) {
+  try {
+    const deployment = new URL(deploymentUrl);
+    const endpoint = new URL(`/v13/deployments/${encodeURIComponent(deployment.hostname)}`, 'https://api.vercel.com');
+    endpoint.searchParams.set('withGitRepoInfo', 'true');
+    endpoint.searchParams.set('teamId', ownerId);
+    const response = await fetch(endpoint, {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+        'User-Agent': 'risck-comply-protected-rollback/2.0',
+      },
+      cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (response.status !== 200) return { passed: false };
+    return evaluateVercelDeploymentMetadata({
+      metadata: await readBoundedJsonResponse(response, MAX_PROVIDER_RESPONSE_BYTES),
+      expectedHostname: deployment.hostname,
+      expectedProjectId: projectId,
+      expectedOwnerId: ownerId,
+      expectedSha,
+    });
+  } catch {
+    return { passed: false };
+  }
+}
+
+async function verifyCurrentMain(currentSha, githubToken) {
+  try {
+    const response = await fetch(`https://api.github.com/repos/${REPOSITORY}/commits/main`, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${githubToken}`,
+        'User-Agent': 'risck-comply-protected-rollback/2.0',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(15_000),
+    });
+    const body = response.status === 200 ? await readBoundedJsonResponse(response) : null;
+    return response.status === 200 && String(body?.sha ?? '').trim().toLowerCase() === currentSha;
+  } catch {
+    return false;
   }
 }
 
@@ -75,13 +221,23 @@ function evidenceBase({ targetSha, currentSha, runId, generatedAt }) {
     provenance: {
       githubActions: env('GITHUB_ACTIONS') === 'true',
       runId,
-      exactShaBound: FULL_SHA.test(currentSha) && currentSha === env('GITHUB_SHA').toLowerCase(),
+      exactShaBound: FULL_SHA.test(currentSha)
+        && currentSha === env('GITHUB_SHA').toLowerCase()
+        && currentSha === env('TARGET_SHA').toLowerCase(),
+      currentMainVerified: env('CURRENT_MAIN_VERIFIED') === 'true',
+      rollbackTargetCommitVerified: env('ROLLBACK_TARGET_COMMIT_VERIFIED') === 'true',
       manualApprovalRequired: true,
     },
     checks: {
       rollbackTargetConfigured: false,
       distinctDeployment: false,
       explicitConfirmation: false,
+      rollbackTargetVerified: false,
+      rollbackTargetProviderVerified: false,
+      currentDeploymentVerified: false,
+      currentDeploymentProviderVerified: false,
+      currentProductionVerified: false,
+      currentMainFresh: false,
       rollbackExecuted: false,
       postRollbackHealth: false,
       currentDeploymentRestored: false,
@@ -102,11 +258,13 @@ async function main() {
   const generatedAt = new Date().toISOString();
   const currentSha = env('GITHUB_SHA').toLowerCase();
   const targetSha = env('ROLLBACK_TARGET_SHA').toLowerCase();
-  const targetDeployment = safeUrl(env('ROLLBACK_TARGET_DEPLOYMENT_URL'));
-  const currentDeployment = safeUrl(env('CURRENT_PRODUCTION_DEPLOYMENT_URL'));
-  const productionUrl = safeUrl(env('PRODUCTION_URL'));
+  const targetDeployment = safeUrl(env('ROLLBACK_TARGET_DEPLOYMENT_URL'), { vercelDeployment: true });
+  const currentDeployment = safeUrl(env('CURRENT_PRODUCTION_DEPLOYMENT_URL'), { vercelDeployment: true });
+  const productionUrl = safeUrl(env('PRODUCTION_URL'), { allowedHostname: CANONICAL_PRODUCTION_HOST });
   const token = env('VERCEL_TOKEN');
-  const cliVersion = env('VERCEL_CLI_VERSION');
+  const ownerId = env('VERCEL_ORG_ID');
+  const projectId = env('VERCEL_PROJECT_ID');
+  const githubToken = env('GITHUB_TOKEN') || env('GH_TOKEN');
   const confirmation = env('ROLLBACK_CONFIRMATION');
   const healthToken = env('HEALTHCHECK_TOKEN');
   const runId = /^\d+$/.test(env('GITHUB_RUN_ID')) ? env('GITHUB_RUN_ID') : null;
@@ -119,10 +277,16 @@ async function main() {
     currentDeployment: Boolean(currentDeployment),
     productionUrl: Boolean(productionUrl),
     token: Boolean(token),
-    cliVersion: VERSION.test(cliVersion),
+    ownerId: Boolean(ownerId),
+    projectId: Boolean(projectId),
+    githubToken: Boolean(githubToken),
+    healthToken: Boolean(healthToken),
+    requestedShaMatchesCheckout: env('TARGET_SHA').toLowerCase() === currentSha,
     githubActions: env('GITHUB_ACTIONS') === 'true',
     repository: env('GITHUB_REPOSITORY') === REPOSITORY,
     branch: env('GITHUB_REF_NAME') === 'main',
+    currentMainVerified: env('CURRENT_MAIN_VERIFIED') === 'true',
+    rollbackTargetCommitVerified: env('ROLLBACK_TARGET_COMMIT_VERIFIED') === 'true',
   };
 
   evidence.checks.rollbackTargetConfigured = Object.values(required).every(Boolean);
@@ -134,30 +298,65 @@ async function main() {
   if (!evidence.checks.distinctDeployment) evidence.failures.push('rollback_target_not_distinct');
   if (!evidence.checks.explicitConfirmation) evidence.failures.push('rollback_confirmation_invalid');
 
+  if (evidence.failures.length === 0) {
+    const [
+      rollbackTargetHealth,
+      rollbackTargetProvider,
+      currentDeploymentHealth,
+      currentDeploymentProvider,
+      currentProductionHealth,
+    ] = await Promise.all([
+      deploymentProof(targetDeployment.href, targetSha, healthToken),
+      inspectVercelDeployment(targetDeployment.href, targetSha, token, ownerId, projectId),
+      deploymentProof(currentDeployment.href, currentSha, healthToken),
+      inspectVercelDeployment(currentDeployment.href, currentSha, token, ownerId, projectId),
+      deploymentProof(productionUrl.href, currentSha, healthToken),
+    ]);
+
+    evidence.checks.rollbackTargetVerified = rollbackTargetHealth.passed;
+    evidence.checks.rollbackTargetProviderVerified = rollbackTargetProvider.passed;
+    evidence.checks.currentDeploymentVerified = currentDeploymentHealth.passed;
+    evidence.checks.currentDeploymentProviderVerified = currentDeploymentProvider.passed;
+    evidence.checks.currentProductionVerified = currentProductionHealth.passed;
+
+    if (!rollbackTargetHealth.passed) evidence.failures.push('rollback_target_preflight_failed');
+    if (!rollbackTargetProvider.passed) evidence.failures.push('rollback_target_provider_preflight_failed');
+    if (!currentDeploymentHealth.passed) evidence.failures.push('current_deployment_preflight_failed');
+    if (!currentDeploymentProvider.passed) evidence.failures.push('current_deployment_provider_preflight_failed');
+    if (!currentProductionHealth.passed) evidence.failures.push('current_production_preflight_failed');
+  }
+
+  if (evidence.failures.length === 0) {
+    evidence.checks.currentMainFresh = await verifyCurrentMain(currentSha, githubToken);
+    if (!evidence.checks.currentMainFresh) evidence.failures.push('current_main_changed_before_rollback');
+  }
+
+  let rollbackAttempted = false;
   let rolledBack = false;
   try {
     if (evidence.failures.length === 0) {
-      const rollback = runVercel(['rollback', targetDeployment.href], token, cliVersion);
+      rollbackAttempted = true;
+      const rollback = runVercel(['rollback', targetDeployment.href], token);
       evidence.checks.rollbackExecuted = rollback.ok;
       if (!rollback.ok) evidence.failures.push('vercel_rollback_failed');
       rolledBack = rollback.ok;
 
       if (rolledBack) {
         await new Promise((resolve) => setTimeout(resolve, 5_000));
-        const rollbackHealth = await health(productionUrl.href, targetSha, healthToken);
+        const rollbackHealth = await deploymentProof(productionUrl.href, targetSha, healthToken);
         evidence.checks.postRollbackHealth = rollbackHealth.passed;
         if (!rollbackHealth.passed) evidence.failures.push('post_rollback_health_failed');
       }
     }
   } finally {
-    if (rolledBack && currentDeployment) {
-      const restore = runVercel(['promote', currentDeployment.href], token, cliVersion);
+    if (rollbackAttempted && currentDeployment) {
+      const restore = runVercel(['promote', currentDeployment.href], token);
       evidence.checks.currentDeploymentRestored = restore.ok;
       if (!restore.ok) evidence.failures.push('current_deployment_restore_failed');
 
       if (restore.ok && productionUrl) {
         await new Promise((resolve) => setTimeout(resolve, 5_000));
-        const restoreHealth = await health(productionUrl.href, currentSha, healthToken);
+        const restoreHealth = await deploymentProof(productionUrl.href, currentSha, healthToken);
         evidence.checks.postRestoreHealth = restoreHealth.passed;
         if (!restoreHealth.passed) evidence.failures.push('post_restore_health_failed');
       }
