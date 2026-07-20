@@ -7,10 +7,11 @@ const deleteStart = source.indexOf('export async function deleteVendor');
 const updateSource = source.slice(updateStart, deleteStart);
 
 describe('vendor update audit persistence', () => {
-  it('captures the prior tenant-scoped row before mutation', () => {
+  it('captures the prior tenant-scoped row before mutation using the explicit allowlist', () => {
     expect(updateSource).toContain('const { data: previous, error: previousError }');
     expect(updateSource).toContain(".from('vendors')");
-    expect(updateSource).toContain(".select('*')");
+    expect(updateSource).toContain('.select(vendorColumns)');
+    expect(updateSource).not.toContain(".select('*')");
     expect(updateSource).toContain(".eq('id', payload.vendorId)");
     expect(updateSource).toContain(".eq('organization_id', payload.organizationId)");
   });

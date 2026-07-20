@@ -9,10 +9,11 @@ import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
 import { noStoreJson } from '@/server/security/no-store';
 import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { requireStepUpForRequest } from '@/server/security/step-up';
 
 const DOCUMENTS_CSV_HEADER = ['Title', 'Status', 'Version', 'Expires at', 'Created at', 'Updated at'];
 
-export async function GET() {
+export async function GET(request: Request) {
   let context: Awaited<ReturnType<typeof requireOrganizationContext>>;
 
   try {
@@ -43,6 +44,14 @@ export async function GET() {
       entitlements: entitlementCheck.entitlements,
     }, entitlementCheck.status);
   }
+
+  const stepUp = await requireStepUpForRequest({
+    request,
+    action: 'export_data',
+    userId: user.id,
+    organizationId: organization.id,
+  });
+  if (!stepUp.ok) return stepUp.response;
 
   const rateLimit = await checkDistributedRateLimit({
     key: `export:documents:${organization.id}:${user.id}`,
@@ -100,7 +109,12 @@ export async function GET() {
     userId: user.id,
     entityType: 'report',
     entityId: 'documents.csv',
-    metadata: { format: 'csv', report: 'documents', rows: exportedRowCount },
+    metadata: {
+      format: 'csv', report: 'documents', rows: exportedRowCount,
+      stepUpAction: stepUp.assessment.action,
+      stepUpVerifiedAt: stepUp.assessment.verifiedAt,
+      stepUpTokenType: 'signed_hmac',
+    },
   });
 
   if (!auditResult.persisted) {

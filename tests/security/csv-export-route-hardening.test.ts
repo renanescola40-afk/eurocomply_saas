@@ -52,4 +52,43 @@ describe('CSV report route hardening invariants', () => {
       }
     }
   });
+
+  it('enforces RBAC, paid entitlement and request-bound step-up before every CSV export', () => {
+    for (const route of csvRoutes) {
+      const source = readFileSync(route, 'utf8');
+      expect(source).toContain('export async function GET(request: Request)');
+      expect(source).toContain('await assertOrganizationPermission({');
+      expect(source).toContain("permission: 'export_data'");
+      expect(source).toContain('await assertCsvExportsEnabled(');
+      expect(source).toContain('await requireStepUpForRequest({');
+      expect(source).toContain("action: 'export_data'");
+      expect(source).toContain("stepUpTokenType: 'signed_hmac'");
+      const permissionIndex = source.indexOf('await assertOrganizationPermission({');
+      const entitlementIndex = source.indexOf('await assertCsvExportsEnabled(');
+      const stepUpIndex = source.indexOf('await requireStepUpForRequest({');
+      const rateLimitIndex = source.indexOf('await checkDistributedRateLimit({');
+      expect(permissionIndex).toBeLessThan(entitlementIndex);
+      expect(entitlementIndex).toBeLessThan(stepUpIndex);
+      expect(stepUpIndex).toBeLessThan(rateLimitIndex);
+    }
+  });
+
+  it('uses a token-bearing step-up client instead of direct CSV links', () => {
+    const button = readFileSync(join(process.cwd(), 'src/components/reports/step-up-csv-export-button.tsx'), 'utf8');
+    expect(button).toContain('StepUpMfaDialog');
+    expect(button).toContain('action="export_data"');
+    expect(button).toContain('STEP_UP_TOKEN_HEADER');
+    expect(button).toContain("credentials: 'same-origin'");
+    expect(button).toContain('response.blob()');
+    for (const page of [
+      'src/app/[locale]/dashboard/organizations/reports/page.tsx',
+      'src/app/[locale]/dashboard/organizations/tasks/page.tsx',
+      'src/app/[locale]/dashboard/organizations/risks/page.tsx',
+      'src/app/[locale]/dashboard/organizations/vendors/page.tsx',
+    ]) {
+      const source = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(source).toContain('StepUpCsvExportButton');
+      expect(source).not.toMatch(/href=["'{`]\/api\/reports\/[^\s"'`}]+\.csv/);
+    }
+  });
 });
