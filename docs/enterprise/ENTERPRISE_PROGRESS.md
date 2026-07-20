@@ -1,6 +1,6 @@
 # Enterprise progress
 
-Current main: `c7ba4ce2f932e00b3a77b4353ba39ab9bacfd9f9`
+Current main: `9cc24fee092189cfbbced8fc975647092236fa35`
 Decision: **NO_GO**
 
 ## Official evidence-backed score
@@ -10,11 +10,19 @@ Decision: **NO_GO**
 - Score: **4.5 / 10**
 - Classification: **MVP**
 - Publish recommendation: **DO_NOT_PUBLISH**
-- Last verified score SHA: `d20775c00812dc5ba08a3bcf0d987a54f2cb638f`
+- Last verified score SHA: `c413288eb8453b55c4d049c758dc0cd063aa70b9`
+- Scorecard run: `29703295579`
 - Control counts: **45 PASS**, **1 BLOCKED**, **54 NOT_VERIFIED**
 - Critical controls not PASS: **48**
+- P0 runtime evidence register: **2/16 complete**, **14 open**
+- P1 validation register: **0/10 complete**, **10 open**
 
-Enterprise Readiness Scorecard validated IAM-08 on exact PR #1167 head `d20775c00812dc5ba08a3bcf0d987a54f2cb638f`. Current `main` contains that assessed tree and the later fail-closed team-role audit compensation through merge commit `c7ba4ce2f932e00b3a77b4353ba39ab9bacfd9f9`. No additional point is inferred from the later merge or from unmerged distributed-rate-limit work.
+The successful Enterprise Readiness Scorecard assessed exact PR #1216 head
+`c413288eb8453b55c4d049c758dc0cd063aa70b9` and reported
+`Enterprise readiness: 45% (NO_GO)`. Current `main` contains that assessed commit.
+PR #1207's branch-protection evidence producer is now integrated, but no point is
+inferred until an accepted exact-main runtime artifact and scorecard consume it.
+No point is inferred from any open pull request.
 
 ## Domain scores
 
@@ -33,18 +41,32 @@ Enterprise Readiness Scorecard validated IAM-08 on exact PR #1167 head `d20775c0
 
 ## Active repository work
 
-- Sensitive-action step-up has exact-SHA IAM-08 evidence for billing, exports, team administration, GDPR, audit and security settings without claiming production AAL2, administrator MFA or SSO.
-- Team-role changes now attempt atomic compensation and return 503 when durable audit persistence is unavailable; no score increase is inferred without a mapped control.
-- SEC-05 and SEC-06 remain dependent on fresh deployed-host evidence and protected runtime SHA binding; their requirements are not weakened for CI.
-- Current branch `agent/distributed-rate-limit-runtime-proof` adds a protected exact-main-SHA Upstash proof for PLT-09. It executes the real helper in independent processes, validates shared state, threshold blocking, subject isolation, production fail-closed behavior and synthetic-key cleanup. PLT-09 remains `NOT_VERIFIED` until that protected runtime workflow succeeds and the scorecard consumes its exact-SHA artifact.
+- PR #1221 removes implicit deploy-on-push authority, requires a manual exact-main
+  SHA and confirmation, removes retired Clerk release inputs, pins tooling, and
+  rechecks `main` immediately before the deploy command. It is being rebased onto
+  current `main`; exact-head validation is pending.
+- PR #1227 enforces RBAC, entitlement and request-bound step-up across all five CSV
+  exports. Every configured exact-head workflow passed on `9501d399a96c0b2da8b298b16e919e4286f8420f`;
+  it remains draft for human review and synchronization with current `main`.
+- PR #1228 closes direct authenticated-write bypasses across eight AI Literacy and
+  enterprise governance tables. Exact-head CI is executing.
+- PR #1230 makes protected rollback preflight immutable, binds deployments to the
+  Vercel project and restores after ambiguous attempts. Exact-head CI is executing;
+  no rollback was run.
+- PR #1229 independently hardens invitation creator scope and does not overlap the
+  four blocks above.
+- The next independent internal block is removal of global local-storage/demo risk
+  and document routes in favor of canonical tenant-backed flows.
 
 ## Evidence lanes
 
 | Lane | Completion | Basis |
 | --- | ---: | --- |
-| Official enterprise score | 45% | Successful 100-control weighted scorecard on exact head `d20775c00812dc5ba08a3bcf0d987a54f2cb638f`, contained in current main |
-| Technical repository completion | Not measured | No separate versioned technical-lane score is inferred |
-| Runtime/provider evidence | Not recalculated | Live Vercel, Supabase, Stripe, Redis, Sentry, rollback, DAST and external-review evidence remains independent |
-| Owner actions | Not measured | Only unavoidable external actions are tracked |
+| Official enterprise score | 45% | Successful 100-control weighted scorecard on exact head `c413288eb8453b55c4d049c758dc0cd063aa70b9`, contained in current `main` |
+| Technical repository completion | Not measured | The versioned scorecard does not expose a separate repository-only denominator |
+| Runtime/provider evidence | Not measured | The P0 runtime register is 2/16 complete, but that subset is not the full runtime/provider denominator |
+| Owner actions | Not measured | No complete, versioned owner-action denominator exists; no percentage is inferred |
 
-No pull request, unmerged implementation, local-only test, placeholder, draft artifact, provider workflow that did not execute runtime checks, or merge commit without an accepted exact-head scorecard increases these values.
+No unmerged implementation, local-only test, placeholder, workflow that did not
+execute runtime checks or merge commit without accepted exact-head evidence can
+increase these values.
