@@ -25,7 +25,7 @@ const baseUrl = required('PRODUCTION_URL').replace(/\/$/, '');
 const internalToken = required('PLATFORM_PROOF_TOKEN');
 const stripeSecret = required('STRIPE_SECRET_KEY');
 const webhookSecret = required('STRIPE_WEBHOOK_SECRET');
-const sentryDsn = required('SENTRY_DSN');
+required('SENTRY_DSN');
 const sha = required('GITHUB_SHA');
 checks.protectedMainExecution = env('GITHUB_ACTIONS') === 'true' && env('GITHUB_REF_NAME') === 'main';
 checks.exactShaBound = /^[a-f0-9]{40}$/i.test(sha);
