@@ -18,6 +18,7 @@ create index if not exists ai_incident_history_incident_idx
   on public.ai_incident_history(organization_id, incident_id, created_at desc);
 
 alter table public.ai_incident_history enable row level security;
+alter table public.ai_incident_history force row level security;
 
 create policy "Organization members can read ai incident history"
   on public.ai_incident_history for select
@@ -28,6 +29,28 @@ create policy "Organization members can read ai incident history"
         and om.user_id = auth.uid()
     )
   );
+
+-- History is append-only and server-owned. Explicit deny policies make every
+-- client mutation operation fail closed and keep static RLS coverage complete.
+create policy "Authenticated users cannot insert ai incident history"
+  on public.ai_incident_history for insert
+  to authenticated
+  with check (false);
+
+create policy "Authenticated users cannot update ai incident history"
+  on public.ai_incident_history for update
+  to authenticated
+  using (false)
+  with check (false);
+
+create policy "Authenticated users cannot delete ai incident history"
+  on public.ai_incident_history for delete
+  to authenticated
+  using (false);
+
+revoke insert, update, delete on table public.ai_incident_history from anon, authenticated;
+grant select on table public.ai_incident_history to authenticated;
+grant select, insert, update, delete on table public.ai_incident_history to service_role;
 
 create or replace function public.transition_ai_incident_atomic(
   p_incident_id uuid,
