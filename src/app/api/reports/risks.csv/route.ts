@@ -4,12 +4,16 @@ import { writeAuditLog } from '@/lib/security/audit-log';
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { tryCreateAdminClient } from '@/lib/supabase/admin';
+import { assertCsvExportsEnabled } from '@/server/billing/entitlements';
+import { upgradeRequiredResponse } from '@/server/billing/upgrade-response';
 import { guardErrorResponse, requireOrganizationContext } from '@/server/security/guards';
 import { noStoreJson } from '@/server/security/no-store';
+import { assertOrganizationPermission, permissionDeniedResponse } from '@/server/security/rbac';
+import { requireStepUpForRequest } from '@/server/security/step-up';
 
 const RISKS_CSV_HEADER = ['Title', 'Status', 'Risk score', 'Likelihood', 'Impact', 'Created at', 'Updated at'];
 
-export async function GET() {
+export async function GET(request: Request) {
   let context: Awaited<ReturnType<typeof requireOrganizationContext>>;
 
   try {
@@ -19,6 +23,32 @@ export async function GET() {
   }
 
   const { user, organization } = context;
+  const permission = await assertOrganizationPermission({
+    userId: user.id,
+    organizationId: organization.id,
+    permission: 'export_data',
+  });
+  if (!permission.ok) return permissionDeniedResponse(permission);
+
+  const entitlementCheck = await assertCsvExportsEnabled(organization.id);
+  if (!entitlementCheck.ok) {
+    return upgradeRequiredResponse({
+      error: entitlementCheck.error,
+      message: entitlementCheck.message,
+      plan: entitlementCheck.entitlements.plan,
+      requiredPlan: 'professional',
+      entitlements: entitlementCheck.entitlements,
+    }, entitlementCheck.status);
+  }
+
+  const stepUp = await requireStepUpForRequest({
+    request,
+    action: 'export_data',
+    userId: user.id,
+    organizationId: organization.id,
+  });
+  if (!stepUp.ok) return stepUp.response;
+
   const rateLimit = await checkDistributedRateLimit({
     key: `export:risks:${organization.id}:${user.id}`,
     policy: 'export',
@@ -69,7 +99,12 @@ export async function GET() {
     userId: user.id,
     entityType: 'report',
     entityId: 'risks.csv',
-    metadata: { format: 'csv', report: 'risks', rows: exportedRowCount },
+    metadata: {
+      format: 'csv', report: 'risks', rows: exportedRowCount,
+      stepUpAction: stepUp.assessment.action,
+      stepUpVerifiedAt: stepUp.assessment.verifiedAt,
+      stepUpTokenType: 'signed_hmac',
+    },
   });
 
   if (!auditResult.persisted) {
