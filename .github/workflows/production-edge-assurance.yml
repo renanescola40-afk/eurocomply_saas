@@ -1,0 +1,54 @@
+name: Production Edge Assurance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-edge-assurance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate production edge and trust surface
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment:
+      name: production-edge-assurance
+    env:
+      TARGET_SHA: ${{ github.sha }}
+      PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+    steps:
+      - name: Checkout exact main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: main
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Verify exact current main execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git ls-remote origin refs/heads/main | grep -q "^${GITHUB_SHA}"
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+      - name: Run production edge assurance
+        run: node scripts/enterprise/run-production-edge-assurance.mjs
+      - name: Validate exact-SHA redacted evidence
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/enterprise/check-production-edge-assurance.mjs
+      - name: Upload redacted edge evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: production-edge-assurance-${{ github.sha }}
+          path: docs/security/evidence/runtime/production-edge-assurance.json
+          if-no-files-found: error
+          retention-days: 90
