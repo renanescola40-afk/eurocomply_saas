@@ -1,16 +1,34 @@
 # Autonomous execution state
 
-- Updated: 2026-07-17 12:00 UTC
-- Main: `6a1f6bfc14eead30308a6767f8d9468d33d229d3`
-- Latest verified score: `40%` / `NO_GO` on exact assessed head `0e51bbbae79fa70b015d42d2ffc2de4371d19b4a`
-- Current-main score: not independently regenerated after the merge commit; the merged tree contains the assessed head
-- Active implementation: enumeration-safe localized account recovery and password reset completion
-- Active branch: `agent/account-recovery-enterprise-proof`
-- Active review PRs: none until the current branch is opened as a draft
-- Next internal block: validate the account-recovery API, UX, security contract and exact-SHA scorecard evidence
-- Following internal block: close another code-evidentiary identity/product control without claiming provider runtime
-- External release blockers: production provider evidence, live Supabase/RLS, deployment smoke, rollback proof, DAST and external security review
+- Updated: 2026-07-19 22:08 UTC
+- Main: `9cc24fee092189cfbbced8fc975647092236fa35`
+- Latest verified score: `45%` / `NO_GO` on exact assessed head
+  `c413288eb8453b55c4d049c758dc0cd063aa70b9`
+- Scorecard run: `29703295579`
+- Current-main score: not independently regenerated on the merge commit; current
+  `main` contains the assessed commit and no additional point is inferred
+- Branch-protection producer: PR #1207 is merged; runtime production of a fresh
+  exact-main artifact and scorecard consumption remain separate evidence
+- Active implementation A: manual exact-main-SHA production deployment, PR #1221,
+  rebased onto current `main` with final pre-deploy freshness check
+- Active implementation B: CSV export RBAC/entitlement/step-up, PR #1227, exact-head
+  workflows green and draft for review
+- Active implementation C: backend-only governance writes, PR #1228, exact-head CI
+  running
+- Active implementation D: immutable protected rollback preflight, PR #1230,
+  exact-head CI running without any provider mutation
+- Next internal block: replace legacy local-storage/demo risk and document routes
+  with canonical tenant-backed routes and regression contracts
+- Following internal blocks: server-action quotas; obsolete approvals UX; invitation
+  cancellation atomic audit; composite tenant foreign-key redesign for #1218/#1219
+- External evidence remains separate: live Supabase RLS, Stripe test mode, deployed
+  exact-SHA smoke, Upstash, observability delivery, backup/restore, rollback, DAST,
+  legal review and independent security review
 
 ## Evidence boundary
 
-The latest evidence-backed score is 40% on exact PR head `0e51bbbae79fa70b015d42d2ffc2de4371d19b4a`. Current `main` contains that tree through merge commit `6a1f6bfc14eead30308a6767f8d9468d33d229d3`, but no score increase is inferred from the merge commit. The account-recovery branch may promote only IAM-10 after its exact head passes the required evidence workflow. Production email delivery and Supabase provider behavior remain independent and unverified.
+The official 45% comes only from the successful exact-SHA scorecard. Open PRs,
+local tests and green repository CI do not increase it before integration and
+accepted scorecard evidence. No production deployment, migration application,
+provider configuration, secret change, billing transaction, rollback or external
+review is claimed.
