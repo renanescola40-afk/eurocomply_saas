@@ -56,7 +56,7 @@ jobs:
         run: sha256sum package-lock.json package.pinned.json dependency-pin-plan.json dependency-pin-change-report.json floating-dependencies.txt npm-audit.json > p0-lockfile-artifacts.sha256
 
       - name: Upload P0 lockfile planning artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: p0-lockfile-plan
           path: |
