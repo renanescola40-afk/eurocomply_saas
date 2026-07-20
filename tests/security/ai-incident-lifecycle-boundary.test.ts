@@ -50,6 +50,19 @@ describe('AI incident lifecycle enterprise boundary', () => {
     expect(migration).toContain("raise exception 'audit chain previous hash mismatch'");
   });
 
+  it('makes incident history server-owned, append-only and complete for RLS scanners', () => {
+    expect(migration).toContain('alter table public.ai_incident_history force row level security');
+    expect(migration).toContain('Authenticated users cannot insert ai incident history');
+    expect(migration).toContain('Authenticated users cannot update ai incident history');
+    expect(migration).toContain('Authenticated users cannot delete ai incident history');
+    expect(migration).toContain(
+      'revoke insert, update, delete on table public.ai_incident_history from anon, authenticated',
+    );
+    expect(migration).toContain(
+      'grant select, insert, update, delete on table public.ai_incident_history to service_role',
+    );
+  });
+
   it('restricts transitions, tenant-crossing AI-system references and direct RPC execution', () => {
     expect(migration).toContain("return query select 'invalid_transition'::text");
     expect(migration).toContain('s.organization_id = p_organization_id');
