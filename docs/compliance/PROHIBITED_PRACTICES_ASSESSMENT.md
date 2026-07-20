@@ -46,3 +46,4 @@ The result contains:
 The implementation includes unit coverage for all dispositions, tri-state normalisation, Article references and required actions, plus an inventory integration contract proving that detailed positive signals reach the canonical decision metadata.
 
 Runtime deployment, production data migration and external legal validation are not claimed by this repository change. Required CI checks on the exact PR head remain authoritative.
+
