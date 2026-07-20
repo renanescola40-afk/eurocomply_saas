@@ -8,6 +8,7 @@ const repository = process.env.GITHUB_REPOSITORY;
 const targetSha = process.env.TARGET_SHA;
 const outputPath = process.env.GITHUB_CHECKS_EVIDENCE_PATH
   || 'artifacts/enterprise-readiness/github-checks-evidence.json';
+const dastEvidencePath = 'docs/security/evidence/p1/dast-automated.json';
 const timeoutMs = Number(process.env.GITHUB_CHECKS_WAIT_MS || 18 * 60 * 1000);
 const pollMs = Number(process.env.GITHUB_CHECKS_POLL_MS || 15_000);
 const githubRequestTimeoutMs = Number(process.env.GITHUB_CHECKS_REQUEST_TIMEOUT_MS || 15_000);
@@ -35,6 +36,7 @@ const requiredWorkflows = [
   'Full Security Suite',
   'Enterprise Production Gate',
   'RISCK COMPLY Security CI',
+  'Enterprise DAST',
 ];
 
 const directWorkflowChecks = {
@@ -48,6 +50,7 @@ const directWorkflowChecks = {
   fullSecuritySuite: 'Full Security Suite',
   enterpriseProductionGate: 'Enterprise Production Gate',
   securityCi: 'RISCK COMPLY Security CI',
+  dast: 'Enterprise DAST',
 };
 
 const ciStepChecks = {
@@ -251,5 +254,38 @@ const evidence = {
 mkdirSync(dirname(outputPath), { recursive: true });
 writeFileSync(outputPath, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
 
+const dastRun = runs.get('Enterprise DAST');
+const dastPassed = dastRun?.status === 'completed'
+  && dastRun?.conclusion === 'success'
+  && dastRun?.head_sha === targetSha;
+const dastEvidence = {
+  schema: 'risck-comply.dast-automated-evidence.v1',
+  evidenceItem: 'dast-automated',
+  status: dastPassed ? 'Complete' : 'Open',
+  outcome: dastPassed ? 'passed' : 'not_verified',
+  repository,
+  targetSha,
+  generatedAt: new Date().toISOString(),
+  source: 'github-actions-api',
+  workflow: 'Enterprise DAST',
+  workflowRunId: dastRun?.id ?? null,
+  checks: [
+    { name: 'exactSha', passed: dastRun?.head_sha === targetSha },
+    { name: 'workflowCompleted', passed: dastRun?.status === 'completed' },
+    { name: 'highRiskAlertsAbsent', passed: dastRun?.conclusion === 'success' },
+  ],
+  evidenceIntegrity: {
+    exactShaBound: dastRun?.head_sha === targetSha,
+    rawHttpTrafficStored: false,
+    responseBodiesStored: false,
+    credentialsStored: false,
+    customerDataStored: false,
+  },
+  evidenceBoundary: 'OWASP ZAP Baseline scanned the production-like application built from the exact assessed SHA. The gate fails on High-risk alerts. It does not prove authenticated coverage, production infrastructure behavior, business-logic abuse resistance, penetration testing or absence of every vulnerability.',
+};
+mkdirSync(dirname(dastEvidencePath), { recursive: true });
+writeFileSync(dastEvidencePath, `${JSON.stringify(dastEvidence, null, 2)}\n`, { mode: 0o600 });
+
 console.log(`Captured ${checks.filter((item) => item.status === 'PASS').length}/${checks.length} exact-SHA checks.`);
 console.log(`Evidence: ${outputPath}`);
+console.log(`DAST evidence: ${dastEvidencePath} (${dastEvidence.status})`);
