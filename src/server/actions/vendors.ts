@@ -136,7 +136,19 @@ export async function updateVendor(input: unknown) {
   const { data, error } = await query.select(vendorColumns).single();
   if (error) failVendorAction(error, context, 'atualizar');
 
-  const audit = await logAuditEvent({ organizationId: payload.organizationId, actorUserId: user.id, action: 'vendor.update', entityType: 'vendor', entityId: payload.vendorId, metadata: { riskLevel: payload.riskLevel, reviewStatus: payload.reviewStatus, reviewVersion: data.review_version } });
+  const audit = await logAuditEvent({
+    organizationId: payload.organizationId,
+    actorUserId: user.id,
+    action: 'vendor.update',
+    entityType: 'vendor',
+    entityId: payload.vendorId,
+    metadata: {
+      name: payload.name,
+      riskLevel: payload.riskLevel,
+      reviewStatus: payload.reviewStatus,
+      ...(typeof data.review_version === 'number' ? { reviewVersion: data.review_version } : {}),
+    },
+  });
   if (!audit.persisted) {
     const { error: rollbackError } = await supabase
       .from('vendors')
