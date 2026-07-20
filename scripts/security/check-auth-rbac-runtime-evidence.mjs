@@ -9,7 +9,7 @@ function require(condition, message) {
   if (!condition) failures.push(message);
 }
 
-require(evidence.schema === 'risck-comply.auth-rbac-runtime-evidence.v1', 'unexpected schema');
+require(['risck-comply.auth-rbac-runtime-evidence.v1', 'risck-comply.auth-rbac-runtime-evidence.v2'].includes(evidence.schema), 'unexpected schema');
 require(evidence.evidenceItem === 'auth-rbac-final-validation', 'unexpected evidenceItem');
 require(['Open', 'Complete'].includes(evidence.status), 'unsupported status');
 require(['blocked', 'failed', 'passed'].includes(evidence.outcome), 'unsupported outcome');
@@ -21,6 +21,12 @@ require(evidence.evidenceIntegrity?.rawCredentialsStored === false, 'credentials
 require(evidence.evidenceIntegrity?.accessTokensStored === false, 'tokens must not be stored');
 require(evidence.evidenceIntegrity?.userIdentifiersStored === false, 'user identifiers must not be stored');
 require(evidence.evidenceIntegrity?.organizationIdentifiersStored === false, 'organization identifiers must not be stored');
+
+if (evidence.schema === 'risck-comply.auth-rbac-runtime-evidence.v2') {
+  require(evidence.evidenceIntegrity?.serviceRoleKeyStored === false, 'service role key must not be stored');
+  require(evidence.evidenceIntegrity?.disposablePasswordStored === false, 'disposable password must not be stored');
+  require(evidence.evidenceIntegrity?.cleanupRequired === true, 'disposable cleanup must be mandatory');
+}
 
 if (evidence.status === 'Complete') {
   require(evidence.outcome === 'passed', 'Complete evidence must pass');
@@ -34,6 +40,9 @@ if (evidence.status === 'Complete') {
   require(Object.values(evidence.checks ?? {}).every(Boolean), 'all runtime checks must pass');
   require(Array.isArray(evidence.controlsVerified) && evidence.controlsVerified.length >= 5, 'verified controls are missing');
   require(Array.isArray(evidence.failures) && evidence.failures.length === 0, 'Complete evidence cannot contain failures');
+  if (evidence.schema === 'risck-comply.auth-rbac-runtime-evidence.v2') {
+    require(evidence.evidenceIntegrity?.cleanupVerified === true, 'disposable signup cleanup must be verified');
+  }
 } else {
   require(String(evidence.productionGate ?? '').toLowerCase().includes('blocked'), 'Open evidence must block production');
   require(Array.isArray(evidence.controlsVerified) && evidence.controlsVerified.length === 0, 'Open evidence cannot claim verified controls');
