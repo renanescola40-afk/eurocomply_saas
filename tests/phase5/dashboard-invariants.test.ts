@@ -42,7 +42,9 @@ describe('Phase 5 dashboard invariants', () => {
     expect(login).toContain('signUpHref');
     expect(login).toContain('safeNext');
     expect(login).toContain('signInWithEmail');
-    expect(login).toContain('signInWithGoogle');
+    expect(login).not.toContain('signInWithGoogle');
+    expect(login).toContain('prelaunchMessage');
+    expect(login).toContain('setNoticeOpen(true)');
     expect(signup).toContain('getOnboardingHref');
     expect(signup).toContain('isAllowedLocalizedContinuation');
     expect(signup).toContain('getSignInHref');
