@@ -43,3 +43,4 @@ Repository-required CI must be green on the exact PR head before merge. Producti
 Before deployment, revert the migration, test, and this decision record together.
 
 After the migration has been applied, use a reviewed forward migration rather than rewriting migration history. Restoring authenticated DML or client mutation policies deliberately reopens the backend-control bypass and requires documented security acceptance plus evidence that every direct client enforces equivalent authorization, validation, tenant scoping, upload security, throttling, and audit controls.
+
