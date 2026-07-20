@@ -75,7 +75,7 @@ jobs:
         run: node scripts/security/write-stripe-provider-evidence.mjs
 
       - name: Upload redacted evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: stripe-provider-proof-${{ inputs.release_sha }}
           path: docs/security/evidence/runtime/stripe-provider-configuration-validation.json
