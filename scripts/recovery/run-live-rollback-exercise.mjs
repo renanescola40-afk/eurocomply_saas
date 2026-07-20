@@ -20,13 +20,16 @@ function safeUrl(value) {
   try { return new URL(value).origin; } catch { return null; }
 }
 
-async function health(baseUrl) {
+async function verifyHealth(baseUrl) {
   const response = await fetch(new URL('/api/health', `${baseUrl}/`), {
     headers: { 'user-agent': 'risck-comply-recovery-proof/1.0' },
     signal: AbortSignal.timeout(15_000),
   });
   const body = await response.json().catch(() => null);
-  return { ok: response.status === 200 && body?.status === 'ok', status: response.status, noStore: /no-store/i.test(response.headers.get('cache-control') ?? '') };
+  const statusOk = response.status === 200;
+  const bodyOk = body !== null && typeof body === 'object' && body.status === 'ok';
+  const noStore = /(?:^|,)\s*no-store(?:\s*(?:,|$))/i.test(response.headers.get('cache-control') ?? '');
+  if (!statusOk || !bodyOk || !noStore) throw new Error('post_rollback_health_failed');
 }
 
 const confirmation = requireValue('RECOVERY_EXERCISE_CONFIRMATION');
@@ -46,27 +49,31 @@ checks.protectedEnvironment = env('GITHUB_ACTIONS') === 'true' && env('GITHUB_RE
 
 if (!Object.values(checks).every(Boolean)) failures.push('preconditions_failed');
 
-let commandExecuted = false;
-let postRollback = null;
-let rollbackStatusChecked = false;
-if (failures.length === 0) {
+try {
+  if (failures.length) throw new Error('rollback_preconditions_failed');
   execFileSync('npx', ['--yes', 'vercel@56.3.2', 'rollback', rollbackTarget, '--token', token, '--scope', scope, '--yes'], {
     stdio: 'pipe',
     env: { ...process.env, VERCEL_PROJECT_ID: project, VERCEL_ORG_ID: scope },
     timeout: 180_000,
   });
-  commandExecuted = true;
+  checks.rollbackExecuted = true;
+
   execFileSync('npx', ['--yes', 'vercel@56.3.2', 'rollback', 'status', project, '--token', token, '--scope', scope, '--timeout', '120s'], {
     stdio: 'pipe',
     timeout: 150_000,
   });
-  rollbackStatusChecked = true;
-  postRollback = await health(currentTarget);
-  checks.rollbackExecuted = commandExecuted;
-  checks.rollbackStatusChecked = rollbackStatusChecked;
-  checks.postRollbackHealth = postRollback.ok;
-  checks.postRollbackNoStore = postRollback.noStore;
-  if (!postRollback.ok || !postRollback.noStore) failures.push('post_rollback_health_failed');
+  checks.rollbackStatusChecked = true;
+
+  await verifyHealth(currentTarget);
+  // Only canonical literals are persisted after fail-closed validation. No network data is serialized.
+  checks.postRollbackHealth = true;
+  checks.postRollbackNoStore = true;
+} catch (error) {
+  checks.rollbackExecuted ??= false;
+  checks.rollbackStatusChecked ??= false;
+  checks.postRollbackHealth ??= false;
+  checks.postRollbackNoStore ??= false;
+  failures.push(error instanceof Error ? error.message : 'unknown_rollback_failure');
 }
 
 const passed = failures.length === 0 && Object.values(checks).every(Boolean);
@@ -82,15 +89,16 @@ const evidence = {
   workflowRunId: env('GITHUB_RUN_ID') || null,
   checks,
   metrics: { recoveryTimeSeconds: Math.round((Date.now() - startedAt) / 1000) },
-  postRollback,
-  failures,
+  failures: [...new Set(failures)],
   evidenceIntegrity: {
     exactShaBound: /^[a-f0-9]{40}$/i.test(currentSha),
     credentialsStored: false,
     deploymentUrlsStored: false,
     responseBodiesStored: false,
+    responseHeadersStored: false,
+    networkDataStored: false,
   },
-  boundary: 'A protected, explicitly confirmed GitHub Actions run invoked Vercel Instant Rollback and validated the production health endpoint. Database rollback is out of scope.',
+  boundary: 'A protected, explicitly confirmed GitHub Actions run invoked Vercel Instant Rollback and validated the production health endpoint. Network response data is validated fail-closed but never serialized. Database rollback is out of scope.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
