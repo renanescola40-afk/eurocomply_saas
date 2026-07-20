@@ -1,0 +1,92 @@
+name: Recovery Resilience Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      exercise:
+        description: Exercise to execute
+        required: true
+        type: choice
+        options:
+          - backup-restore
+          - production-rollback
+      confirmation:
+        description: Type EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK for rollback
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recovery-resilience-${{ inputs.exercise }}
+  cancel-in-progress: false
+
+jobs:
+  backup-restore:
+    if: inputs.exercise == 'backup-restore'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production-recovery
+    env:
+      RECOVERY_SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}
+      RECOVERY_ISOLATED_DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
+    steps:
+      - name: Checkout exact main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Verify exact main execution
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_REF_NAME" = "main"
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Execute isolated backup and restore
+        run: node scripts/recovery/run-backup-restore-exercise.mjs
+      - name: Upload redacted recovery evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: backup-restore-evidence-${{ github.sha }}
+          path: docs/security/evidence/p1/backup-restore-tested.json
+          if-no-files-found: error
+          retention-days: 30
+
+  production-rollback:
+    if: inputs.exercise == 'production-rollback'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production-recovery
+    env:
+      RECOVERY_EXERCISE_CONFIRMATION: ${{ inputs.confirmation }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      LAST_KNOWN_GOOD_DEPLOYMENT_URL: ${{ secrets.LAST_KNOWN_GOOD_DEPLOYMENT_URL }}
+      LAST_KNOWN_GOOD_COMMIT_SHA: ${{ secrets.LAST_KNOWN_GOOD_COMMIT_SHA }}
+      PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+    steps:
+      - name: Checkout exact main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Verify explicit rollback confirmation
+        shell: bash
+        run: test "$RECOVERY_EXERCISE_CONFIRMATION" = "EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK"
+      - name: Execute controlled Vercel rollback
+        run: node scripts/recovery/run-live-rollback-exercise.mjs
+      - name: Upload redacted rollback evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: rollback-evidence-${{ github.sha }}
+          path: docs/security/evidence/runtime/rollback-validation.json
+          if-no-files-found: error
+          retention-days: 30
