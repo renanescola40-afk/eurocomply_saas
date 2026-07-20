@@ -24,6 +24,11 @@ export const STEP_UP_ROUTE_POLICIES = [
   ['enterpriseReadinessExport', 'src/app/api/enterprise-readiness/export/route.ts', 'export_data'],
   ['retentionExport', 'src/app/api/retention-center/export/route.ts', 'export_data'],
   ['continuityExport', 'src/app/api/continuity-center/export/route.ts', 'export_data'],
+  ['documentsCsvExport', 'src/app/api/reports/documents.csv/route.ts', 'export_data'],
+  ['executiveCsvExport', 'src/app/api/reports/executive.csv/route.ts', 'export_data'],
+  ['risksCsvExport', 'src/app/api/reports/risks.csv/route.ts', 'export_data'],
+  ['tasksCsvExport', 'src/app/api/reports/tasks.csv/route.ts', 'export_data'],
+  ['vendorsCsvExport', 'src/app/api/reports/vendors.csv/route.ts', 'export_data'],
   ['teamInvites', 'src/app/api/team/invites/route.ts', 'manage_team'],
   ['teamMemberRemove', 'src/app/api/team/members/remove/route.ts', 'manage_team'],
   ['teamMemberRole', 'src/app/api/team/members/role/route.ts', 'manage_team'],
@@ -226,7 +231,7 @@ export function buildStepUpEvidence({
     actionReview(
       coverage,
       'exports',
-      ['gdprExport', 'auditEvidencePack', 'questionnaireExport', 'vendorExport', 'enterpriseReadinessExport', 'retentionExport', 'continuityExport'],
+      ['gdprExport', 'auditEvidencePack', 'questionnaireExport', 'vendorExport', 'enterpriseReadinessExport', 'retentionExport', 'continuityExport', 'documentsCsvExport', 'executiveCsvExport', 'risksCsvExport', 'tasksCsvExport', 'vendorsCsvExport'],
       'Sensitive governance, privacy, audit, vendor, continuity and retention exports',
     ),
     actionReview(
