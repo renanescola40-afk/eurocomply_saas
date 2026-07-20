@@ -80,7 +80,7 @@ jobs:
           if-no-files-found: error
 
       - name: Attest SBOM artifact provenance
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: sbom.cdx.json
 
@@ -96,5 +96,5 @@ jobs:
             echo "- Generated artifact: sbom.cdx.json"
             echo "- Uploaded artifact: p1-sbom-cyclonedx"
             echo "- Generated SHA-256: ${digest}"
-            echo "- Attestation: actions/attest-build-provenance@v3 subject-path sbom.cdx.json"
+            echo "- Attestation: actions/attest-build-provenance@v4 subject-path sbom.cdx.json"
           } >> "$GITHUB_STEP_SUMMARY"

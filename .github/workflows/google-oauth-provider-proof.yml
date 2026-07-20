@@ -68,7 +68,7 @@ jobs:
         run: node scripts/security/run-google-oauth-provider-validation.mjs
       - name: Upload redacted evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: google-oauth-provider-proof-${{ inputs.release_sha }}
           path: docs/security/evidence/runtime/google-oauth-validation.json

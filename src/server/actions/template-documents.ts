@@ -2,7 +2,11 @@ import { DOCUMENT_BUCKET, buildDocumentStoragePath } from '@/lib/documents/uploa
 import { getComplianceTemplate } from '@/lib/compliance/templates';
 import { reportError } from '@/lib/observability/report-error';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createServerGeneratedDocument } from '@/server/actions/documents';
+import {
+  createServerGeneratedDocument,
+  enforceDocumentMutationRateLimit,
+  enforceDocumentQuota,
+} from '@/server/actions/documents';
 import { assertCurrentUserCan } from '@/server/auth/permissions';
 import { requireCurrentUser } from '@/server/queries/auth';
 
@@ -40,6 +44,12 @@ export async function createDocumentFromTemplate(input: TemplateDocumentInput) {
   }
 
   await assertCurrentUserCan(input.organizationId, user.id, 'documents:write');
+  await enforceDocumentMutationRateLimit({
+    action: 'template',
+    organizationId: input.organizationId,
+    userId: user.id,
+  });
+  await enforceDocumentQuota(input.organizationId);
 
   const title = safeText(input.title) ?? template.title;
   const category = safeText(input.category) ?? template.category;
@@ -50,7 +60,8 @@ export async function createDocumentFromTemplate(input: TemplateDocumentInput) {
     fileName: `${safeFileName(title || template.id)}.md`,
   });
 
-  const { error: uploadError } = await createAdminClient().storage.from(DOCUMENT_BUCKET).upload(storagePath, content, {
+  const supabase = createAdminClient();
+  const { error: uploadError } = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, content, {
     contentType: 'text/markdown',
     upsert: false,
   });
@@ -60,21 +71,36 @@ export async function createDocumentFromTemplate(input: TemplateDocumentInput) {
     throw actionError('Unable to create template document.');
   }
 
-  return createServerGeneratedDocument({
-    organizationId: input.organizationId,
-    name: title,
-    category,
-    storagePath,
-    mimeType: 'text/markdown',
-    sizeBytes: Buffer.byteLength(content, 'utf8'),
-    expiresAt: input.expiresAt ?? null,
-    metadata: {
-      source: 'template',
-      serverGenerated: true,
-      sourceTemplateId: template.id,
-      sourceTemplateTitle: template.title,
-      recommendedOwner: template.recommendedOwner,
-      selectedOwner: safeText(input.owner) ?? null,
-    },
-  });
+  try {
+    return await createServerGeneratedDocument({
+      organizationId: input.organizationId,
+      name: title,
+      category,
+      storagePath,
+      mimeType: 'text/markdown',
+      sizeBytes: Buffer.byteLength(content, 'utf8'),
+      expiresAt: input.expiresAt ?? null,
+      metadata: {
+        source: 'template',
+        serverGenerated: true,
+        sourceTemplateId: template.id,
+        sourceTemplateTitle: template.title,
+        recommendedOwner: template.recommendedOwner,
+        selectedOwner: safeText(input.owner) ?? null,
+      },
+    });
+  } catch (error) {
+    const { error: cleanupError } = await supabase.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
+
+    if (cleanupError) {
+      reportError(cleanupError, {
+        ...context,
+        area: 'template_document_storage_compensation',
+        hasStoragePath: true,
+      });
+    }
+
+    reportError(error, { ...context, area: 'template_document_metadata_create' });
+    throw actionError('Unable to create template document.');
+  }
 }
