@@ -1,0 +1,56 @@
+name: Data Governance Privacy Audit Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type EXECUTE_DATA_GOVERNANCE_PROOF
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: data-governance-runtime-proof
+  cancel-in-progress: false
+
+jobs:
+  governance-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: production-data-governance-proof
+    env:
+      DATA_GOVERNANCE_CONFIRMATION: ${{ inputs.confirmation }}
+      RECOVERY_ISOLATED_DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
+      DATA_RESIDENCY_REGION: ${{ vars.DATA_RESIDENCY_REGION }}
+      DATA_RETENTION_DEFAULT_DAYS: ${{ vars.DATA_RETENTION_DEFAULT_DAYS }}
+      DATA_EXPORT_ENCRYPTION_REQUIRED: ${{ vars.DATA_EXPORT_ENCRYPTION_REQUIRED }}
+    steps:
+      - name: Checkout exact main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Verify protected exact-main execution
+        shell: bash
+        run: |
+          test "$DATA_GOVERNANCE_CONFIRMATION" = "EXECUTE_DATA_GOVERNANCE_PROOF"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_REF_NAME" = "main"
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Execute governance proof
+        run: node scripts/data-governance/run-data-governance-runtime-proof.mjs
+      - name: Validate evidence
+        run: node scripts/data-governance/check-data-governance-evidence.mjs
+      - name: Upload redacted evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: data-governance-proof-${{ github.sha }}
+          path: docs/security/evidence/runtime/data-governance-validation.json
+          if-no-files-found: error
+          retention-days: 30
