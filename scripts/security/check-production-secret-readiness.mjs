@@ -82,7 +82,7 @@ if (existsSync(join(root, 'docs/security/evidence/runtime/production-secrets-pro
 
 try {
   const output = readFileSync(join(root, '.github/workflows/vercel-production.yml'), 'utf8');
-  const requiredTokens = ['npm run lint', 'npm run typecheck', 'npm run test', 'npm run build', 'npm run security:ci', 'npm run quality:routes', 'npm run ops:vercel-readiness', 'npm run release:readiness', 'vercel deploy --prebuilt --prod'];
+  const requiredTokens = ['npm run lint', 'npm run typecheck', 'npm run test', 'npm run build', 'npm run security:ci', 'npm run quality:routes', 'npm run ops:vercel-readiness', 'npm run release:readiness', '"vercel@${VERCEL_CLI_VERSION}" deploy --prebuilt --prod'];
   if (!output.includes('npm ci')) failures.push('production workflow missing install gate: npm ci');
   for (const token of requiredTokens) {
     if (!output.includes(token)) failures.push(`production workflow missing gate: ${token}`);
