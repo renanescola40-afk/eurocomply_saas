@@ -33,7 +33,7 @@ create index if not exists vendors_org_review_due_idx
 create index if not exists vendors_org_risk_status_idx
   on public.vendors (organization_id, risk_level, review_status);
 
-create or replace function public.enforce_vendor_actor_scope()
+create or replace function public.enforce_vendor_governance_integrity()
 returns trigger
 language plpgsql
 security definer
@@ -66,10 +66,10 @@ end;
 $$;
 
 drop trigger if exists enforce_vendor_actor_scope on public.vendors;
-create trigger enforce_vendor_actor_scope
-before insert or update of organization_id, created_by, approved_by, review_status, last_reviewed_at, next_review_at
-on public.vendors
-for each row execute function public.enforce_vendor_actor_scope();
+drop trigger if exists enforce_vendor_governance_integrity on public.vendors;
+create trigger enforce_vendor_governance_integrity
+before insert or update on public.vendors
+for each row execute function public.enforce_vendor_governance_integrity();
 
 create table if not exists public.vendor_review_history (
   id uuid primary key default gen_random_uuid(),
@@ -130,7 +130,6 @@ for each row execute function public.record_vendor_review_history();
 
 -- Supported writes must pass through reviewed backend code using service_role.
 revoke insert, update, delete on public.vendors from anon, authenticated;
-
 drop policy if exists "Managers can manage vendors" on public.vendors;
 
 comment on table public.vendor_review_history is
