@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-07-17",
-  "main_sha": "c7ba4ce2f932e00b3a77b4353ba39ab9bacfd9f9",
+  "timestamp": "2026-07-19T22:08:49Z",
+  "main_sha": "9cc24fee092189cfbbced8fc975647092236fa35",
   "official_completion_percent": 45,
   "official_remaining_percent": 55,
-  "previous_completion_percent": 31,
-  "execution_delta_percent": 14,
+  "previous_completion_percent": 45,
+  "execution_delta_percent": 0,
   "technical_repository_percent": null,
   "runtime_evidence_percent": null,
   "owner_action_percent": null,
@@ -13,18 +13,19 @@
   "controls_blocked": 1,
   "controls_not_verified": 54,
   "critical_controls_open": 48,
-  "p0_open": null,
-  "p1_open": null,
+  "p0_open": 14,
+  "p1_open": 10,
   "current_decision": "NO_GO",
   "classification": "MVP",
   "publish_recommendation": "DO_NOT_PUBLISH",
-  "active_prs": [],
-  "blocked_prs": [],
-  "next_priority": "Execute a protected exact-main-SHA distributed Upstash rate-limit proof and promote PLT-09 only from its accepted artifact",
+  "active_prs": [1218, 1219, 1221, 1222, 1223, 1224, 1226, 1227, 1228, 1229, 1230],
+  "blocked_prs": [1218, 1219],
+  "next_priority": "Complete exact-head validation of PRs #1221, #1228 and #1230, then replace legacy local-storage risk and document routes with canonical tenant-backed flows",
   "evidence_freshness": {
-    "status": "fresh-for-exact-pr-head-contained-in-main",
-    "last_verified_sha": "d20775c00812dc5ba08a3bcf0d987a54f2cb638f",
-    "reason": "Enterprise Readiness Scorecard validated IAM-08 on exact PR #1167 head d20775c00812dc5ba08a3bcf0d987a54f2cb638f. Current main contains that assessed tree and the later fail-closed team-role audit compensation through merge commit c7ba4ce2f932e00b3a77b4353ba39ab9bacfd9f9; no extra point is inferred from the later merge or unmerged distributed-rate-limit work."
+    "status": "fresh-exact-score-contained-in-main",
+    "last_verified_sha": "c413288eb8453b55c4d049c758dc0cd063aa70b9",
+    "scorecard_run_id": 29703295579,
+    "reason": "The successful Enterprise Readiness Scorecard assessed exact PR #1216 head c413288eb8453b55c4d049c758dc0cd063aa70b9 and reported 45% NO_GO. Current main 9cc24fee092189cfbbced8fc975647092236fa35 contains that commit and merged branch-protection producer code, but no later accepted scorecard is credited. No open PR is counted."
   },
   "domain_scores_percent": {
     "engineering": 100,
@@ -38,5 +39,5 @@
     "product": 100,
     "trust": 40
   },
-  "calculation_method": "Versioned 100-control weighted scorecard generated from exact-SHA GitHub Actions evidence. Null lane metrics are intentionally not inferred."
+  "calculation_method": "Versioned 100-control weighted scorecard generated from exact-SHA GitHub Actions evidence. The official percentage is the sum of PASS weights divided by total control weight. Null lane metrics are intentionally not inferred."
 }

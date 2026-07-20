@@ -45,6 +45,8 @@ describe('Supabase auth runtime boundary', () => {
     const lockText = readRepoFile('package-lock.json');
     const envExample = readRepoFile('.env.example');
     const readme = readRepoFile('README.md');
+    const productionWorkflow = readRepoFile('.github/workflows/vercel-production.yml');
+    const ciPreflight = readRepoFile('scripts/preflight-ci.mjs');
 
     expect(packageJson.dependencies?.['@clerk/nextjs']).toBeUndefined();
     expect(packageJson.devDependencies?.['@clerk/nextjs']).toBeUndefined();
@@ -56,5 +58,10 @@ describe('Supabase auth runtime boundary', () => {
     expect(envExample).not.toMatch(/CLERK_/);
     expect(readme).toContain('Supabase Auth is the single primary authentication stack');
     expect(readme).not.toMatch(/active client authentication hook uses Clerk|Clerk production|Clerk authentication keys/);
+    expect(productionWorkflow).not.toMatch(/CLERK_/);
+    expect(ciPreflight).not.toMatch(/CLERK_/);
+    expect(
+      existsSync(join(process.cwd(), '.github/workflows/supabase-clerk-org-migration-validation.yml')),
+    ).toBe(false);
   });
 });
