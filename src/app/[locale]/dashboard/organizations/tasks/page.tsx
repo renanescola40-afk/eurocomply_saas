@@ -1,9 +1,9 @@
-import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { CreateComplianceTaskForm, type CreateComplianceTaskFormInput } from '@/components/compliance/create-compliance-task-form';
 import { ComplianceTaskList } from '@/components/dashboard/compliance-task-list';
+import { StepUpCsvExportButton } from '@/components/reports/step-up-csv-export-button';
 import { createComplianceTask, deleteComplianceTask, updateComplianceTask } from '@/server/actions/compliance-tasks';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -101,9 +101,7 @@ export default async function OrganizationComplianceTasksPage({ params }: { para
             <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Compliance tasks</h1>
             <p className="max-w-2xl text-white/55">Track requirements, owners, priorities and deadlines for your compliance program.</p>
           </div>
-          <Link href="/api/reports/tasks.csv" className="inline-flex h-10 items-center justify-center rounded-md border border-white/15 px-4 text-sm font-medium hover:bg-white/10">
-            Export CSV
-          </Link>
+          <StepUpCsvExportButton endpoint="/api/reports/tasks.csv" filename="tasks-report.csv" className="inline-flex h-10 items-center justify-center rounded-md border border-white/15 px-4 text-sm font-medium hover:bg-white/10 disabled:opacity-60" />
         </div>
 
         <CreateComplianceTaskForm onSubmit={handleCreateTask} />
