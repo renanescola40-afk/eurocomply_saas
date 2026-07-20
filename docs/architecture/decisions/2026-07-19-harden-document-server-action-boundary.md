@@ -36,3 +36,4 @@ Repository tests prove call order, denial behavior and compensation contracts. T
 ## Rollback
 
 Revert the action, tests and ADR together through a reviewed PR. Weakening quota, audit or fail-closed behavior requires explicit security and billing risk acceptance.
+
