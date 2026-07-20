@@ -8,8 +8,6 @@ on:
 permissions:
   contents: read
 
-environment: Production
-
 concurrency:
   group: enterprise-recovery-${{ github.ref }}
   cancel-in-progress: false
@@ -19,6 +17,10 @@ jobs:
     name: Exact-SHA rollback backup restore and RPO RTO proof
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    environment:
+      name: Production
+    permissions:
+      contents: read
     env:
       TARGET_SHA: ${{ github.sha }}
       RELEASE_ROLLBACK_TARGET: ${{ vars.RELEASE_ROLLBACK_TARGET }}
