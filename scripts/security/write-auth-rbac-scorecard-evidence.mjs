@@ -20,7 +20,7 @@ const SCORECARD_CHECKS = [
 ];
 
 function sourceIsTrusted(source) {
-  return source?.schema === 'risck-comply.auth-rbac-runtime-evidence.v1'
+  return ['risck-comply.auth-rbac-runtime-evidence.v1', 'risck-comply.auth-rbac-runtime-evidence.v2'].includes(source?.schema)
     && source?.evidenceItem === 'auth-rbac-final-validation'
     && source?.status === 'Complete'
     && source?.outcome === 'passed'
@@ -63,6 +63,10 @@ export function buildAuthRbacScorecardEvidence(
   const trusted = sourceIsTrusted(source);
   const checks = source?.checks && typeof source.checks === 'object' ? source.checks : {};
 
+  const signup = trusted
+    && checks.disposableSignup === true
+    && checks.disposableSignupCleanup === true
+    && source?.evidenceIntegrity?.cleanupVerified === true;
   const login = trusted
     && checks.fixtureConfigurationPresent === true
     && checks.ownerRoleObserved === true
@@ -78,26 +82,29 @@ export function buildAuthRbacScorecardEvidence(
     && checks.outsiderCannotReadTenantA === true
     && checks.ownerCannotReadTenantB === true
     && checks.outsiderCanReadOwnTenant === true
-    && checks.crossTenantMembershipHidden === true;
+    && checks.crossTenantMembershipHidden === true
+    && checks.crossTenantMembershipInsertDenied === true
+    && checks.crossTenantMembershipUpdateDenied === true
+    && checks.crossTenantMembershipDeleteDenied === true
+    && checks.crossTenantOrganizationUpdateDenied === true
+    && checks.crossTenantOrganizationDeleteDenied === true;
 
   const canonicalChecks = [
-    pass('signup', false, 'Dedicated disposable-user signup proof has not been executed.'),
+    pass('signup', signup, 'Trusted disposable-user signup and same-run cleanup proof is unavailable.'),
     pass('login', login, 'Trusted synthetic-user login and role observation proof is unavailable.'),
     pass('logout', logout, 'Trusted synthetic sessions were not proven revoked.'),
     pass('sessionRefresh', sessionRefresh, 'Trusted authenticated session refresh proof is unavailable.'),
     pass('oauthCallback', false, 'A successful OAuth provider callback round trip has not been executed.'),
-    pass('rbac', rbac, 'Trusted role and tenant-bound authorization proof is unavailable.'),
+    pass('rbac', rbac, 'Trusted role, tenant-read and tenant-mutation denial proof is unavailable.'),
     pass('organizationOnboarding', false, 'A disposable no-organization user has not completed and rolled back onboarding.'),
   ];
 
-  const verified = canonicalChecks
-    .filter((check) => check.passed === true)
-    .map((check) => check.name);
+  const verified = canonicalChecks.filter((check) => check.passed === true).map((check) => check.name);
   const allPassed = verified.length === SCORECARD_CHECKS.length;
   const anyPassed = verified.length > 0;
 
   return {
-    schema: 'risck-comply.auth-rbac-scorecard-evidence.v1',
+    schema: 'risck-comply.auth-rbac-scorecard-evidence.v2',
     evidenceItem: 'auth-rbac-validation',
     status: allPassed ? 'Complete' : 'Open',
     outcome: allPassed ? 'passed' : anyPassed ? 'partial' : 'not_verified',
@@ -131,7 +138,7 @@ export function buildAuthRbacScorecardEvidence(
       'scripts/security/write-auth-rbac-scorecard-evidence.mjs',
       '.github/workflows/auth-rbac-runtime-proof.yml',
     ],
-    evidenceBoundary: 'This derived artifact promotes only checks explicitly proven by trusted synthetic runtime evidence. Signup, OAuth and onboarding remain NOT_VERIFIED until dedicated disposable-flow proofs run; static code inspection cannot promote them.',
+    evidenceBoundary: 'This artifact promotes only checks explicitly proven by trusted synthetic runtime evidence. OAuth and onboarding remain NOT_VERIFIED until dedicated disposable-flow proofs run; static code inspection cannot promote them.',
     evidenceIntegrity: {
       containsSensitiveValues: false,
       runtimeProofInvented: false,
