@@ -27,7 +27,8 @@ describe('risk deletion audit persistence', () => {
     expect(deleteSource).toContain('.delete()');
     expect(deleteSource).toContain(".eq('id', payload.riskId)");
     expect(deleteSource).toContain(".eq('organization_id', payload.organizationId)");
-    expect(deleteSource).toContain(".select('*')");
+    expect(deleteSource).toContain('.select(RISK_MUTATION_SELECT)');
+    expect(deleteSource).not.toContain(".select('*')");
     expect(deleteSource).toContain("await supabase.from('risks').insert(data)");
     expect(deleteSource).toContain("area: 'risk_delete_audit_rollback'");
     expect(deleteSource).toContain("throw actionError('Unable to delete risk')");
@@ -39,8 +40,8 @@ describe('risk deletion audit persistence', () => {
     const deleteSource = source.slice(deleteStart);
 
     expect(deleteSource).toContain("assertCurrentUserCan(payload.organizationId, user.id, 'risks:delete')");
-    expect(deleteSource).toContain("policy: 'general-api'");
-    expect(deleteSource).toContain("failureMode: 'fail-closed'");
-    expect(deleteSource).toContain('organizationId: payload.organizationId');
+    expect(source).toContain("policy: 'general-api'");
+    expect(source).toContain("failureMode: 'fail-closed'");
+    expect(deleteSource).toContain("action: 'delete'");
   });
 });

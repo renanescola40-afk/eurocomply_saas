@@ -22,6 +22,8 @@ const featureRlsContracts: FeatureRlsContract[] = [
   { area: 'tasks and approvals', tables: ['tasks', 'compliance_tasks'], mode: 'org-scoped-writer' },
   { area: 'billing subscription data', tables: ['subscriptions'], mode: 'backend-only' },
   { area: 'audit evidence', tables: ['audit_events', 'audit_logs'], mode: 'backend-only' },
+  { area: 'AI literacy governed writes', tables: ['ai_literacy_programs', 'ai_literacy_courses', 'ai_literacy_assignments', 'ai_literacy_evidence'], mode: 'backend-only' },
+  { area: 'enterprise evidence workflows', tables: ['enterprise_evidence_packs', 'enterprise_evidence_pack_items', 'enterprise_vendor_due_diligence', 'enterprise_risk_reviews'], mode: 'backend-only' },
 ];
 
 function readMigrations() {
@@ -37,8 +39,15 @@ function readFinalLockMigration() {
 }
 
 function helperLoopIncludes(sql: string, helperName: string, table: string) {
-  return new RegExp(String.raw`foreach\s+table_name\s+in\s+array\s+array\[[\s\S]*'${table}'[\s\S]*\][\s\S]*perform\s+public\.${helperName}\(table_name\)`, 'i').test(sql)
+  const helperCall = new RegExp(String.raw`foreach\s+table_name\s+in\s+array\s+array\[[\s\S]*'${table}'[\s\S]*\][\s\S]*perform\s+public\.${helperName}\(table_name\)`, 'i').test(sql)
     || new RegExp(String.raw`${helperName}\('${table}'\)`, 'i').test(sql);
+  if (helperCall) return true;
+  if (helperName !== 'app_rls_backend_only_enterprise') return false;
+
+  return ['insert', 'update', 'delete'].every((operation) => new RegExp(
+    String.raw`create\s+policy\s+"rls_${table}_${operation}_backend_only"\s+on\s+public\.${table}[\s\S]{0,180}for\s+${operation}\s+to\s+authenticated[\s\S]{0,120}(using\s*\(false\)|with\s+check\s*\(false\))`,
+    'i',
+  ).test(sql));
 }
 
 describe('enterprise feature RLS coverage', () => {
