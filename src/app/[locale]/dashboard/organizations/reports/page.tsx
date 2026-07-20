@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { StepUpCsvExportButton } from '@/components/reports/step-up-csv-export-button';
 import { buildBoardCommentary, buildNextBestActions, buildRecommendations, buildScorecards, getComplianceMaturity } from '@/lib/reports/recommendations';
 import { getCurrentUser } from '@/server/queries/auth';
 import { getDashboardSummary } from '@/server/queries/dashboard';
@@ -54,13 +55,12 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
     { label: 'Missing documents', value: summary.missingDocuments, detail: `${summary.totals.documents} total documents` },
   ];
 
-  const exportLinks = [
-    { href: `/${params.locale}/dashboard/organizations/reports/print`, label: 'Save PDF / print', primary: true },
-    { href: '/api/reports/executive.csv', label: 'Executive CSV' },
-    { href: '/api/reports/tasks.csv', label: 'Tasks CSV' },
-    { href: '/api/reports/risks.csv', label: 'Risks CSV' },
-    { href: '/api/reports/vendors.csv', label: 'Vendors CSV' },
-    { href: '/api/reports/documents.csv', label: 'Documents CSV' },
+  const csvExports = [
+    { endpoint: '/api/reports/executive.csv', filename: 'executive-report.csv', label: 'Executive CSV' },
+    { endpoint: '/api/reports/tasks.csv', filename: 'tasks-report.csv', label: 'Tasks CSV' },
+    { endpoint: '/api/reports/risks.csv', filename: 'risks-report.csv', label: 'Risks CSV' },
+    { endpoint: '/api/reports/vendors.csv', filename: 'vendors-report.csv', label: 'Vendors CSV' },
+    { endpoint: '/api/reports/documents.csv', filename: 'documents-report.csv', label: 'Documents CSV' },
   ];
 
   return (
@@ -78,16 +78,9 @@ export default async function ExecutiveReportsPage({ params }: { params: { local
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              {exportLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={link.primary
-                    ? 'inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100'
-                    : 'inline-flex h-11 items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold text-white transition hover:bg-white/10'}
-                >
-                  {link.label}
-                </Link>
+              <Link href={`/${params.locale}/dashboard/organizations/reports/print`} className="inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100">Save PDF / print</Link>
+              {csvExports.map((item) => (
+                <StepUpCsvExportButton key={item.endpoint} endpoint={item.endpoint} filename={item.filename} label={item.label} className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-60" />
               ))}
             </div>
           </div>
