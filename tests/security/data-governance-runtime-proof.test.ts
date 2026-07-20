@@ -24,6 +24,19 @@ describe('data governance privacy audit megapack', () => {
     ]) expect(migration).toContain(token);
   });
 
+  it('provides complete CRUD policy coverage required by the RLS gate', () => {
+    for (const policy of [
+      'retention policies organization admins delete',
+      'data subject requesters cancel own pending requests',
+      'audit checkpoints admins update',
+      'audit checkpoints admins delete',
+    ]) expect(migration).toContain(policy);
+
+    expect(migration).toContain('for delete to authenticated');
+    expect(migration).toContain('for update to authenticated');
+    expect(migration).toContain("m.role in ('owner','admin')");
+  });
+
   it('validates governance controls without storing customer data', () => {
     for (const token of [
       'governanceTablesPresent','rlsEnabled','tenantPoliciesPresent','dsrDeadlineEnforced',
