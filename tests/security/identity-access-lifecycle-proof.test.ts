@@ -23,16 +23,29 @@ describe('identity access lifecycle megapack', () => {
     ]) expect(runtime).toContain(token);
   });
 
+  it('discards network responses before canonical evidence assembly', () => {
+    expect(runtime).toContain('requireNetwork');
+    expect(runtime).toContain('const canonicalChecks =');
+    expect(runtime).toContain('checks.signupValidated = true');
+    expect(runtime).toContain('checks.oauthCallbackFailsClosed = true');
+    expect(runtime).toContain('networkStatusStored: false');
+    expect(runtime).toContain('networkHeadersStored: false');
+    expect(runtime).not.toContain('checks.signupValidated = signup.response.ok');
+    expect(runtime).not.toContain('postRollback');
+  });
+
   it('keeps canonical evidence free of identity secrets', () => {
-    for (const token of ['credentialsStored: false','emailStored: false','tokensStored: false','providerResponsesStored: false']) {
-      expect(runtime).toContain(token);
-    }
+    for (const token of [
+      'credentialsStored: false','emailStored: false','tokensStored: false','providerResponsesStored: false',
+      'networkStatusStored: false','networkHeadersStored: false',
+    ]) expect(runtime).toContain(token);
     expect(runtime).not.toContain('email,\n  password');
   });
 
   it('fails closed unless every identity control is proven', () => {
-    for (const token of ['signupValidated','accountRecoveryAccepted','sessionRevocationValidated','adminMfaPolicyPresent','disposableAccountRemoved']) {
-      expect(validator).toContain(token);
-    }
+    for (const token of [
+      'signupValidated','accountRecoveryAccepted','sessionRevocationValidated','adminMfaPolicyPresent',
+      'disposableAccountRemoved','networkStatusStored','networkHeadersStored',
+    ]) expect(validator).toContain(token);
   });
 });
