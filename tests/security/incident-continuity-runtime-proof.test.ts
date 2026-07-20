@@ -5,6 +5,9 @@ const workflow = readFileSync('.github/workflows/incident-continuity-runtime-pro
 const migration = readFileSync('supabase/migrations/20260720223000_incident_response_continuity.sql', 'utf8');
 const runtime = readFileSync('scripts/incident/run-incident-continuity-runtime-proof.mjs', 'utf8');
 const validator = readFileSync('scripts/incident/check-incident-continuity-evidence.mjs', 'utf8');
+const packageLock = JSON.parse(readFileSync('package-lock.json', 'utf8')) as {
+  packages?: Record<string, { version?: string }>;
+};
 
 describe('incident response and continuity megapack', () => {
   it('uses protected exact-main manual execution', () => {
@@ -41,6 +44,10 @@ describe('incident response and continuity megapack', () => {
     ];
 
     for (const policy of expectedPolicies) expect(migration).toContain(policy);
+  });
+
+  it('pins the remediated brace-expansion release in the lockfile', () => {
+    expect(packageLock.packages?.['node_modules/brace-expansion']?.version).toBe('1.1.16');
   });
 
   it('produces redacted fail-closed evidence', () => {
