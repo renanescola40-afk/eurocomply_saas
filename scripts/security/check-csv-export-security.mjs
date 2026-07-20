@@ -39,10 +39,12 @@ console.log('--------------------------------------');
 
 const csvHelperPath = 'src/lib/exports/csv.ts';
 const csvTestPath = 'tests/unit/csv.test.ts';
+const csvButtonPath = 'src/components/reports/step-up-csv-export-button.tsx';
 const packagePath = 'package.json';
 
 const csvSource = readRequiredFile(csvHelperPath);
 const testSource = readRequiredFile(csvTestPath);
+const csvButtonSource = readRequiredFile(csvButtonPath);
 const packageSource = readRequiredFile(packagePath);
 
 if (!containsAll(csvSource, [
@@ -97,6 +99,37 @@ for (const path of reportRoutes) {
   if (!source.includes("policy: 'export'")) {
     failures.push(`${path} must use the export rate-limit policy`);
   }
+
+  if (!containsAll(source, [
+    'assertOrganizationPermission', "permission: 'export_data'", 'permissionDeniedResponse',
+    'assertCsvExportsEnabled', 'upgradeRequiredResponse', 'await requireStepUpForRequest({',
+    "action: 'export_data'", 'request,', 'stepUpAction', 'stepUpVerifiedAt',
+    "stepUpTokenType: 'signed_hmac'",
+  ])) failures.push(`${path} must enforce export RBAC, CSV entitlement, request-bound step-up and step-up audit metadata`);
+
+  const permissionIndex = source.indexOf('await assertOrganizationPermission({');
+  const entitlementIndex = source.indexOf('await assertCsvExportsEnabled(');
+  const stepUpIndex = source.indexOf('await requireStepUpForRequest({');
+  const rateLimitIndex = source.indexOf('await checkDistributedRateLimit({');
+  if (!(permissionIndex >= 0 && permissionIndex < entitlementIndex && entitlementIndex < stepUpIndex && stepUpIndex < rateLimitIndex)) {
+    failures.push(`${path} must order RBAC, entitlement, step-up and rate limiting before export reads`);
+  }
+}
+
+if (!containsAll(csvButtonSource, [
+  "'use client'", 'StepUpMfaDialog', 'action="export_data"', 'STEP_UP_TOKEN_HEADER',
+  "credentials: 'same-origin'", 'fetch(endpoint', 'response.blob()', 'URL.createObjectURL', 'Content-Disposition',
+])) failures.push(`${csvButtonPath} must challenge with step-up and download CSV through an authenticated token-bearing request`);
+
+for (const pagePath of [
+  'src/app/[locale]/dashboard/organizations/reports/page.tsx',
+  'src/app/[locale]/dashboard/organizations/tasks/page.tsx',
+  'src/app/[locale]/dashboard/organizations/risks/page.tsx',
+  'src/app/[locale]/dashboard/organizations/vendors/page.tsx',
+]) {
+  const pageSource = readRequiredFile(pagePath);
+  if (!pageSource.includes('StepUpCsvExportButton')) failures.push(`${pagePath} must use the step-up CSV export client boundary`);
+  if (/href=["'{`]\/api\/reports\/[^\s"'`}]+\.csv/.test(pageSource)) failures.push(`${pagePath} must not use a direct CSV link that cannot transmit the step-up token`);
 }
 
 for (const path of walk('src')) {
