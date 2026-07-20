@@ -40,7 +40,7 @@ function copy(locale: Locale) {
   return locale === 'pt'
     ? {
         title: 'Entrar na RISCK COMPLY',
-        subtitle: 'Acesse o seu workspace de compliance de IA.',
+        subtitle: 'Acesso privado de validação antes do lançamento público.',
         google: 'Continuar com Google',
         divider: 'ou entre com email',
         email: 'Email profissional',
@@ -52,10 +52,12 @@ function copy(locale: Locale) {
         create: 'Criar conta',
         authLoading: 'A autenticação ainda está a carregar. Tente novamente dentro de alguns segundos.',
         failed: 'Não foi possível entrar. Verifique os dados e tente novamente.',
+        prelaunchTitle: 'Acesso antecipado reservado',
+        prelaunchMessage: 'A criação de contas e o login com Google serão liberados em 1 de agosto. Neste momento, apenas o acesso privado de validação está disponível.',
       }
     : {
         title: 'Sign in to RISCK COMPLY',
-        subtitle: 'Access your AI compliance workspace.',
+        subtitle: 'Private validation access before the public launch.',
         google: 'Continue with Google',
         divider: 'or sign in with email',
         email: 'Work email',
@@ -67,6 +69,8 @@ function copy(locale: Locale) {
         create: 'Create account',
         authLoading: 'Authentication is still loading. Please try again in a moment.',
         failed: 'Could not sign in. Check your details and try again.',
+        prelaunchTitle: 'Early access reserved',
+        prelaunchMessage: 'Account creation and Google sign-in will open on August 1. For now, only private validation access is available.',
       };
 }
 
@@ -81,24 +85,16 @@ function LoginContent() {
   const createAccountUrl = signUpHref(locale, planId, afterSignInUrl);
   const publicErrorCode = searchParams.get('error') ? normalizePublicAuthErrorCode(searchParams.get('error')) : null;
   const text = copy(locale);
-  const { loading, signInWithEmail, signInWithGoogle } = useAuth();
+  const { loading, signInWithEmail } = useAuth();
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(publicErrorCode ? publicErrors[publicErrorCode] : null);
+  const [noticeOpen, setNoticeOpen] = useState(false);
 
-  async function handleProvider() {
-    if (loading) {
-      setError(text.authLoading);
-      return;
-    }
-    setBusy(true);
+  function handleProvider() {
     setError(null);
-    const result = await signInWithGoogle({ next: afterSignInUrl });
-    if (result.error) {
-      setError(publicErrors.auth_exchange_failed);
-      setBusy(false);
-    }
+    setNoticeOpen(true);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -111,7 +107,7 @@ function LoginContent() {
     setError(null);
     const result = await signInWithEmail(email, secret);
     if (result.error) {
-      setError(publicErrors.email_sign_in_failed);
+      setError(text.failed);
       setBusy(false);
       return;
     }
@@ -125,20 +121,32 @@ function LoginContent() {
         <section className="grid w-full gap-8 rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 shadow-2xl shadow-black/40 backdrop-blur md:grid-cols-[1fr_0.9fr] md:p-8">
           <div className="flex flex-col justify-between rounded-[1.5rem] border border-white/10 bg-black/35 p-6">
             <div>
-              <Link href={`/${locale}`} className="text-sm font-semibold uppercase tracking-[0.28em] text-cyan-200/70">
-                RISCK COMPLY
-              </Link>
-              <h1 className="mt-10 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">{text.title}</h1>
+              <Link href={`/${locale}`} className="text-sm font-semibold uppercase tracking-[0.28em] text-cyan-200/70">RISCK COMPLY</Link>
+              <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">
+                Private preview
+              </div>
+              <h1 className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">{text.title}</h1>
               <p className="mt-4 max-w-md text-base leading-7 text-white/65">{text.subtitle}</p>
             </div>
             <div className="mt-10 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.07] p-4 text-sm leading-6 text-cyan-50/75">
-              Protected workspaces use organization-scoped access, onboarding checks and no-store dashboard responses.
+              Public account access opens on August 1. The private email and password form remains available for authorized validation.
             </div>
           </div>
 
           <div className="rounded-[1.5rem] border border-white/10 bg-[#080b12] p-6">
             {error ? <div className="mb-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">{error}</div> : null}
-            <button type="button" onClick={handleProvider} disabled={busy || loading} className="w-full rounded-full border border-white/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60">
+            {noticeOpen ? (
+              <div className="mb-5 rounded-2xl border border-cyan-300/25 bg-cyan-400/10 p-5" role="status">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-cyan-100">{text.prelaunchTitle}</p>
+                    <p className="mt-2 text-sm leading-6 text-cyan-50/70">{text.prelaunchMessage}</p>
+                  </div>
+                  <button type="button" onClick={() => setNoticeOpen(false)} className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/60 hover:text-white">×</button>
+                </div>
+              </div>
+            ) : null}
+            <button type="button" onClick={handleProvider} className="w-full rounded-full border border-white/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90">
               {text.google}
             </button>
             <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-white/35">
@@ -154,9 +162,7 @@ function LoginContent() {
                 <input value={secret} onChange={(event) => setSecret(event.target.value)} type="password" autoComplete="current-password" required className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-200/50" />
               </label>
               <div className="flex justify-end">
-                <Link href={`/${locale}/recuperar-senha`} className="text-sm font-semibold text-cyan-200 hover:text-cyan-100">
-                  {text.forgot}
-                </Link>
+                <Link href={`/${locale}/recuperar-senha`} className="text-sm font-semibold text-cyan-200 hover:text-cyan-100">{text.forgot}</Link>
               </div>
               <button type="submit" disabled={busy || loading} className="w-full rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60">
                 {busy ? text.loading : text.submit}
@@ -164,9 +170,7 @@ function LoginContent() {
             </form>
             <p className="mt-6 text-center text-sm text-white/55">
               {text.createPrompt}{' '}
-              <Link href={createAccountUrl} className="font-semibold text-cyan-200 hover:text-cyan-100">
-                {text.create}
-              </Link>
+              <Link href={createAccountUrl} className="font-semibold text-cyan-200 hover:text-cyan-100">{text.create}</Link>
             </p>
           </div>
         </section>
