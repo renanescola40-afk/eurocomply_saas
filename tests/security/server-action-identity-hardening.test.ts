@@ -37,11 +37,17 @@ describe('server action identity hardening invariants', () => {
     expect(risksAction).toContain('requireCurrentUser');
     expect(risksAction).not.toContain('createRisk(input: unknown, userId: string)');
     expect(risksAction).not.toContain('deleteRisk(riskId: string, organizationId: string, userId: string)');
+    expect(risksAction).toContain('enforceRiskRateLimit');
+    expect(risksAction).toContain("action: 'create' | 'update' | 'delete'");
+    expect(risksAction).toContain('route: `server-action:${params.action}Risk`');
+    expect(risksAction).toContain('action: `risk.${params.action}`');
     expect(risksAction).toContain("failureMode: 'fail-closed'");
-    expect(risksAction).toContain("route: 'server-action:createRisk'");
-    expect(risksAction).toContain("route: 'server-action:deleteRisk'");
+    expect(risksAction).toContain("enforceRiskRateLimit({ action: 'create'");
+    expect(risksAction).toContain("enforceRiskRateLimit({ action: 'update'");
+    expect(risksAction).toContain("enforceRiskRateLimit({ action: 'delete'");
     expect(risksAction).toContain('reportError(error, context)');
     expect(risksAction).toContain("throw actionError('Unable to create risk')");
+    expect(risksAction).toContain("throw actionError('Unable to update risk')");
     expect(risksAction).toContain("throw actionError('Unable to delete risk')");
   });
 
