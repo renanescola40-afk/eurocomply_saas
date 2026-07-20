@@ -68,6 +68,36 @@ The command must:
 
 Do **not** mark rollback ready if the dry-run evidence is `Open` or `failed`.
 
+## Protected production rollback exercise
+
+The manual `Protected Rollback Runtime Proof` workflow is the only versioned path
+that intentionally moves production traffic to prove rollback and restoration. It
+requires approval through the protected GitHub `production` environment.
+
+Before the Vercel CLI is allowed to mutate an alias, the workflow and runner must
+complete the immutable preflight in this order:
+
+1. verify the requested release SHA is the exact current `main` SHA;
+2. verify the rollback target commit exists in this repository and is an ancestor
+   of the current release;
+3. validate the literal `ROLLBACK <current> TO <target>` confirmation;
+4. accept only origin-only HTTPS `*.vercel.app` deployment URLs for the immutable
+   target and current deployments;
+5. verify public `/api/health`, protected `/api/ready/release`, `no-store` and the
+   exact build SHA directly on the target deployment, current deployment and the
+   canonical `risckcomply.com` production alias;
+6. query the read-only Vercel deployment API and bind both immutable deployments
+   to `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, production target, `READY` state and
+   their exact GitHub SHAs;
+7. re-read the GitHub `main` SHA immediately before the first Vercel mutation.
+
+Any preflight failure must occur before `vercel rollback` or `vercel promote` is
+invoked. The exercise then verifies the target SHA through the production alias,
+restores the preflight-verified current deployment in a `finally` path after every
+rollback attempt, including an ambiguous non-zero CLI result, and verifies the
+current SHA again. The workflow pins the Vercel CLI version literally. Repository
+tests prove this ordering only; they are not runtime rollback evidence.
+
 ## Rollback triggers
 
 Rollback is mandatory unless the incident commander explicitly approves a safer mitigation when:
