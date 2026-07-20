@@ -58,7 +58,7 @@ function validateDocumentation(envNames, workflow) {
     'npm run ops:vercel-readiness',
     'npm run release:readiness',
     'npm run release:enterprise-readiness',
-    'vercel deploy --prebuilt --prod',
+    '"vercel@${VERCEL_CLI_VERSION}" deploy --prebuilt --prod',
   ]) {
     requireWorkflowToken(workflow, token);
   }
