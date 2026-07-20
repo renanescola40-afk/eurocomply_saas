@@ -1,0 +1,46 @@
+name: Platform Providers Runtime Proof
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-providers-runtime-proof
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production-platform-proof
+    env:
+      PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+      PLATFORM_PROOF_TOKEN: ${{ secrets.PLATFORM_PROOF_TOKEN }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+    steps:
+      - name: Checkout exact main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Verify exact main execution
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_REF_NAME" = "main"
+      - name: Run platform provider proof
+        run: node scripts/platform/run-platform-providers-runtime-validation.mjs
+      - name: Validate canonical evidence
+        run: node scripts/platform/check-platform-providers-evidence.mjs
+      - name: Upload redacted evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: platform-providers-evidence-${{ github.sha }}
+          path: docs/security/evidence/runtime/platform-providers-validation.json
+          if-no-files-found: error
+          retention-days: 30
