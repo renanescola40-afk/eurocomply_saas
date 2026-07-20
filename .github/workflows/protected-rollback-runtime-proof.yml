@@ -70,6 +70,16 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
           test "$MAIN_SHA" = "$TARGET_SHA"
+          TARGET_STATUS="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/compare/${ROLLBACK_TARGET_SHA}...${TARGET_SHA}" | jq -r '.status')"
+          test "$TARGET_STATUS" = "ahead"
+          {
+            echo "CURRENT_MAIN_VERIFIED=true"
+            echo "ROLLBACK_TARGET_COMMIT_VERIFIED=true"
+          } >> "$GITHUB_ENV"
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
@@ -82,8 +92,10 @@ jobs:
 
       - name: Execute protected rollback and restoration
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_CLI_VERSION: ${{ vars.VERCEL_CLI_VERSION }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           ROLLBACK_TARGET_DEPLOYMENT_URL: ${{ secrets.ROLLBACK_TARGET_DEPLOYMENT_URL }}
           CURRENT_PRODUCTION_DEPLOYMENT_URL: ${{ secrets.CURRENT_PRODUCTION_DEPLOYMENT_URL }}
           PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}

@@ -230,7 +230,7 @@ jobs:
 
       - name: Upload watchdog report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: senior-agent-watchdog-${{ github.run_id }}
           path: senior-agent-watchdog-report.md
