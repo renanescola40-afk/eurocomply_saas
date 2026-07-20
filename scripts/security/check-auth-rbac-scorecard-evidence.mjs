@@ -19,7 +19,7 @@ function require(condition, message) {
   if (!condition) failures.push(message);
 }
 
-require(evidence.schema === 'risck-comply.auth-rbac-scorecard-evidence.v1', 'unexpected schema');
+require(['risck-comply.auth-rbac-scorecard-evidence.v1', 'risck-comply.auth-rbac-scorecard-evidence.v2'].includes(evidence.schema), 'unexpected schema');
 require(evidence.evidenceItem === 'auth-rbac-validation', 'unexpected evidenceItem');
 require(['Open', 'Complete'].includes(evidence.status), 'unsupported status');
 require(['not_verified', 'partial', 'passed'].includes(evidence.outcome), 'unsupported outcome');
