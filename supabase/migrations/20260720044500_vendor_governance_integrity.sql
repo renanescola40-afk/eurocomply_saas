@@ -74,7 +74,9 @@ for each row execute function public.enforce_vendor_governance_integrity();
 create table if not exists public.vendor_review_history (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
-  vendor_id uuid not null references public.vendors(id) on delete cascade,
+  -- Deliberately no foreign key to vendors: deletion evidence must survive
+  -- after the source vendor row is removed.
+  vendor_id uuid not null,
   actor_user_id uuid references auth.users(id) on delete set null,
   operation text not null check (operation in ('created', 'updated', 'deleted')),
   previous_record jsonb,
@@ -105,7 +107,9 @@ declare
   v_org uuid := coalesce(new.organization_id, old.organization_id);
   v_vendor uuid := coalesce(new.id, old.id);
   v_version integer := coalesce(new.review_version, old.review_version);
-  v_actor uuid := coalesce(auth.uid(), new.approved_by, new.created_by, old.approved_by, old.created_by);
+  -- Do not infer a mutation actor from creator/approver fields. Under service-role
+  -- writes auth.uid() is null, and false attribution is worse than an explicit null.
+  v_actor uuid := auth.uid();
 begin
   insert into public.vendor_review_history (
     organization_id, vendor_id, actor_user_id, operation,
@@ -133,4 +137,4 @@ revoke insert, update, delete on public.vendors from anon, authenticated;
 drop policy if exists "Managers can manage vendors" on public.vendors;
 
 comment on table public.vendor_review_history is
-  'Immutable database-maintained history for vendor governance changes; repository migration presence is not production deployment evidence.';
+  'Immutable database-maintained history for vendor governance changes, including retained deletion evidence; repository migration presence is not production deployment evidence.';
