@@ -1,0 +1,68 @@
+name: Incident Response and Continuity Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type EXECUTE_INCIDENT_CONTINUITY_PROOF
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: incident-continuity-proof
+  cancel-in-progress: false
+
+jobs:
+  prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production-incident-proof
+    env:
+      INCIDENT_PROOF_CONFIRMATION: ${{ inputs.confirmation }}
+      RECOVERY_ISOLATED_DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
+      INCIDENT_SEV1_ACK_TARGET_MINUTES: ${{ vars.INCIDENT_SEV1_ACK_TARGET_MINUTES }}
+      INCIDENT_SEV1_CONTAINMENT_TARGET_MINUTES: ${{ vars.INCIDENT_SEV1_CONTAINMENT_TARGET_MINUTES }}
+      INCIDENT_TABLETOP_MAX_AGE_DAYS: ${{ vars.INCIDENT_TABLETOP_MAX_AGE_DAYS }}
+      INCIDENT_ONCALL_ROTATION_CONFIGURED: ${{ vars.INCIDENT_ONCALL_ROTATION_CONFIGURED }}
+      INCIDENT_NOTIFICATION_MATRIX_REVIEWED: ${{ vars.INCIDENT_NOTIFICATION_MATRIX_REVIEWED }}
+    steps:
+      - name: Verify exact current main SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = "main"
+          remote_sha="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/main | cut -f1)"
+          test -n "${remote_sha}"
+          test "${remote_sha}" = "${GITHUB_SHA}"
+
+      - name: Checkout exact main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Run incident continuity proof
+        shell: bash
+        run: node scripts/incident/run-incident-continuity-runtime-proof.mjs
+
+      - name: Validate canonical evidence
+        shell: bash
+        run: node scripts/incident/check-incident-continuity-evidence.mjs
+
+      - name: Upload redacted evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: incident-continuity-evidence-${{ github.sha }}
+          path: docs/security/evidence/runtime/incident-continuity-validation.json
+          retention-days: 90
+          if-no-files-found: error
