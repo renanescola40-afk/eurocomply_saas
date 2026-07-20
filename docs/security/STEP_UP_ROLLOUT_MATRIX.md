@@ -14,6 +14,11 @@ This matrix tracks high-risk actions that require signed, real-verification step
 | Enterprise readiness | `GET /api/enterprise-readiness/export` | `export_data` | Enforced | export payload and audit metadata include step-up evidence |
 | Retention center | `GET /api/retention-center/export` | `export_data` | Enforced | export payload and audit metadata include step-up evidence |
 | Continuity center | `GET /api/continuity-center/export` | `export_data` | Enforced | export payload and audit metadata include step-up evidence |
+| Documents CSV | `GET /api/reports/documents.csv` | `export_data` | Enforced | RBAC and entitlement precede request-bound single-use step-up; audit records verification metadata |
+| Executive CSV | `GET /api/reports/executive.csv` | `export_data` | Enforced | RBAC and entitlement precede request-bound single-use step-up; audit records verification metadata |
+| Risks CSV | `GET /api/reports/risks.csv` | `export_data` | Enforced | RBAC and entitlement precede request-bound single-use step-up; audit records verification metadata |
+| Tasks CSV | `GET /api/reports/tasks.csv` | `export_data` | Enforced | RBAC and entitlement precede request-bound single-use step-up; audit records verification metadata |
+| Vendors CSV | `GET /api/reports/vendors.csv` | `export_data` | Enforced | RBAC and entitlement precede request-bound single-use step-up; audit records verification metadata |
 | Billing checkout | `POST /api/billing/checkout` | `manage_billing` | Enforced | Stripe metadata and response include step-up evidence |
 | Billing portal | `POST /api/billing/portal` | `manage_billing` | Enforced | response includes step-up evidence |
 | Team invite management | `POST /api/team/invites` | `manage_team` | Enforced | `await requireStepUpForRequest` runs after RBAC and before invite creation |
@@ -25,6 +30,7 @@ This matrix tracks high-risk actions that require signed, real-verification step
 | Step-up challenge | `POST /api/security/step-up/challenge` | requested action | Real provider required | Supabase MFA or enterprise IdP, token issued only after verification |
 | Step-up UI | `src/components/security/step-up-mfa-dialog.tsx` | requested action | Available | reusable challenge UI for MFA factor, challenge and one-time code |
 | Team settings UI | `src/components/team/team-settings-section.tsx` | `manage_team` | Enforced | calls fixed protected APIs with `x-eurocomply-step-up-token`, not direct server actions |
+| CSV export UI | `src/components/reports/step-up-csv-export-button.tsx` | `export_data` | Enforced | challenges first, then performs a same-origin fetch with `x-eurocomply-step-up-token` and downloads the returned Blob |
 | Runtime provider preflight | `scripts/security/check-step-up-runtime-preflight.mjs` | release validation | Available | redacted deploy-time check for provider mode, signing key and Supabase MFA / enterprise IdP policy |
 
 ## Remaining High-Risk Rollout
