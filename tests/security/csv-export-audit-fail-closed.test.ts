@@ -62,10 +62,12 @@ describe('CSV export audit persistence', () => {
     const executive = readFileSync('src/app/api/reports/executive.csv/route.ts', 'utf8');
 
     expect(documents).toContain('const exportedRowCount = data?.length ?? 0;');
-    expect(documents).toContain("metadata: { format: 'csv', report: 'documents', rows: exportedRowCount }");
+    expect(documents).toMatch(/metadata:\s*{[\s\S]*?format: 'csv',[\s\S]*?report: 'documents',[\s\S]*?rows: exportedRowCount,/);
+    expect(documents).toContain('stepUpVerifiedAt: stepUp.assessment.verifiedAt');
     expect(documents).not.toContain("metadata: { format: 'csv', report: 'documents', rows: rows.length }");
 
     expect(executive).toContain('const exportedRowCount = rows.length - 1;');
-    expect(executive).toContain("metadata: { format: 'csv', report: 'executive', rows: exportedRowCount }");
+    expect(executive).toMatch(/metadata:\s*{[\s\S]*?format: 'csv',[\s\S]*?report: 'executive',[\s\S]*?rows: exportedRowCount,/);
+    expect(executive).toContain('stepUpVerifiedAt: stepUp.assessment.verifiedAt');
   });
 });
