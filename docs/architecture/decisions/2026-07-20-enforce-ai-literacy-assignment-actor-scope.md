@@ -50,3 +50,4 @@ Runtime migration execution against production or a production clone is intentio
 Drop `enforce_ai_literacy_assignment_actor_scope` from `public.ai_literacy_assignments`, then drop `public.enforce_ai_literacy_assignment_actor_scope()`.
 
 Rollback removes only prospective enforcement. It does not alter assignment data.
+
