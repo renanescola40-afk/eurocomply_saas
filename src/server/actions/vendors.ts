@@ -102,7 +102,14 @@ export async function createVendor(input: unknown) {
 
   const audit = await logAuditEvent({ organizationId: payload.organizationId, actorUserId: user.id, action: 'vendor.create', entityType: 'vendor', entityId: data.id, metadata: { riskLevel: payload.riskLevel, reviewStatus: payload.reviewStatus } });
   if (!audit.persisted) {
-    await supabase.from('vendors').delete().eq('id', data.id).eq('organization_id', payload.organizationId);
+    const { error: rollbackError } = await supabase.from('vendors').delete().eq('id', data.id).eq('organization_id', payload.organizationId);
+    if (rollbackError) {
+      reportError(new Error('vendor_create_audit_compensation_failed'), {
+        ...context,
+        vendorId: data.id,
+        providerCode: rollbackError.code ?? 'unknown',
+      });
+    }
     throw providerActionError('Não foi possível criar o fornecedor agora.');
   }
   return data;
@@ -116,13 +123,38 @@ export async function updateVendor(input: unknown) {
   await enforceVendorActionRateLimit({ action: 'vendor.update', organizationId: payload.organizationId, userId: user.id });
 
   const supabase = createAdminClient();
+  const { data: previous, error: previousError } = await supabase
+    .from('vendors')
+    .select(vendorColumns)
+    .eq('id', payload.vendorId)
+    .eq('organization_id', payload.organizationId)
+    .single();
+  if (previousError) failVendorAction(previousError, context, 'atualizar');
+
   let query = supabase.from('vendors').update(vendorRecord(payload, user.id, false)).eq('id', payload.vendorId).eq('organization_id', payload.organizationId);
   if (payload.expectedReviewVersion) query = query.eq('review_version', payload.expectedReviewVersion);
   const { data, error } = await query.select(vendorColumns).single();
   if (error) failVendorAction(error, context, 'atualizar');
 
   const audit = await logAuditEvent({ organizationId: payload.organizationId, actorUserId: user.id, action: 'vendor.update', entityType: 'vendor', entityId: payload.vendorId, metadata: { riskLevel: payload.riskLevel, reviewStatus: payload.reviewStatus, reviewVersion: data.review_version } });
-  if (!audit.persisted) throw providerActionError('A atualização foi registada, mas a evidência de auditoria não pôde ser confirmada.');
+  if (!audit.persisted) {
+    const { error: rollbackError } = await supabase
+      .from('vendors')
+      .update(previous)
+      .eq('id', data.id)
+      .eq('organization_id', payload.organizationId)
+      .eq('name', data.name)
+      .eq('risk_level', data.risk_level)
+      .eq('review_status', data.review_status)
+      .eq('review_version', data.review_version);
+    if (rollbackError) {
+      reportError(new Error('vendor_update_audit_compensation_failed'), {
+        ...context,
+        providerCode: rollbackError.code ?? 'unknown',
+      });
+    }
+    throw providerActionError('Não foi possível atualizar o fornecedor agora.');
+  }
   return data;
 }
 
@@ -140,6 +172,15 @@ export async function deleteVendor(vendorId: string, organizationId: string, exp
   if (error) failVendorAction(error, context, 'remover');
 
   const audit = await logAuditEvent({ organizationId: payload.organizationId, actorUserId: user.id, action: 'vendor.delete', entityType: 'vendor', entityId: payload.vendorId, metadata: { riskLevel: data.risk_level, reviewVersion: data.review_version } });
-  if (!audit.persisted) throw providerActionError('A remoção foi registada, mas a evidência de auditoria não pôde ser confirmada.');
+  if (!audit.persisted) {
+    const { error: rollbackError } = await supabase.from('vendors').insert(data);
+    if (rollbackError) {
+      reportError(new Error('vendor_delete_audit_compensation_failed'), {
+        ...context,
+        providerCode: rollbackError.code ?? 'unknown',
+      });
+    }
+    throw providerActionError('Não foi possível remover o fornecedor agora.');
+  }
   return data;
 }
