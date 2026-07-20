@@ -25,9 +25,22 @@ describe('incident response and continuity megapack', () => {
   });
 
   it('requires complete CRUD policy coverage', () => {
-    for (const table of ['incident','timeline','continuity']) {
-      for (const operation of ['read','insert','update','delete']) expect(migration).toContain(`${table} ${operation}`);
-    }
+    const expectedPolicies = [
+      'incident members read',
+      'incident admins insert',
+      'incident admins update',
+      'incident owners delete',
+      'timeline members read',
+      'timeline admins insert',
+      'timeline admins update',
+      'timeline owners delete',
+      'continuity members read',
+      'continuity admins insert',
+      'continuity admins update',
+      'continuity owners delete',
+    ];
+
+    for (const policy of expectedPolicies) expect(migration).toContain(policy);
   });
 
   it('produces redacted fail-closed evidence', () => {
