@@ -50,3 +50,4 @@ Repository-mandated checks on the exact pull-request head are authoritative. Thi
 Before deployment, revert the migration, contract test, and this decision record together.
 
 After deployment, use a reviewed forward migration rather than editing applied migration history. Restoring authenticated DML or manager write policies deliberately reopens the backend-control bypass and requires documented security acceptance plus confirmation that every direct client enforces equivalent controls.
+
