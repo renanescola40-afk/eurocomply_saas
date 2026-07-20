@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PlanGate } from '@/components/billing/plan-gate';
 import { CreateRiskForm, type CreateRiskFormInput } from '@/components/risks/create-risk-form';
+import { StepUpCsvExportButton } from '@/components/reports/step-up-csv-export-button';
 import { DeleteRecordButton } from '@/components/shared/delete-record-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createRisk, deleteRisk } from '@/server/actions/risks';
@@ -94,9 +94,7 @@ export default async function OrganizationRisksPage({ params }: { params: { loca
           <h1 className="text-3xl font-semibold tracking-tight">Risk register</h1>
           <p className="mt-2 text-muted-foreground">Prioritize compliance and operational risk by likelihood and impact.</p>
         </div>
-        <Link href="/api/reports/risks.csv" className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted">
-          Export CSV
-        </Link>
+        <StepUpCsvExportButton endpoint="/api/reports/risks.csv" filename="risks-report.csv" className="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted disabled:opacity-60" />
       </div>
 
       <PlanGate planId={billing.plan} metric="risks" currentUsage={billing.usage.risks} onUpgradeHref={`${dashboardBasePath}/billing`}>
