@@ -8,64 +8,38 @@ import { logAuditEvent } from './audit';
 
 const vendorSchema = z.object({
   organizationId: z.string().uuid(),
-  name: z.string().min(2).max(160),
-  website: z.string().url().optional().nullable(),
-  country: z.string().min(2).max(80).optional().nullable(),
-  category: z.string().max(80).optional().nullable(),
+  name: z.string().trim().min(2).max(160),
+  website: z.string().url().max(500).optional().nullable(),
+  country: z.string().trim().min(2).max(80).optional().nullable(),
+  category: z.string().trim().min(1).max(80).optional().nullable(),
   dataAccessLevel: z.enum(['none', 'low', 'medium', 'high']).default('low'),
   riskLevel: z.enum(['low', 'medium', 'high']).default('medium'),
   reviewStatus: z.enum(['pending', 'in_review', 'approved', 'rejected']).default('pending'),
   dpaSigned: z.boolean().default(false),
+  lastReviewedAt: z.string().date().optional().nullable(),
+  nextReviewAt: z.string().date().optional().nullable(),
 });
 
 const updateVendorSchema = vendorSchema.extend({
   vendorId: z.string().uuid(),
+  expectedReviewVersion: z.number().int().positive().optional(),
 });
 
 const deleteVendorSchema = z.object({
   vendorId: z.string().uuid(),
   organizationId: z.string().uuid(),
+  expectedReviewVersion: z.number().int().positive().optional(),
 });
-
-type SupabaseLikeError = {
-  message?: string;
-  code?: string;
-  details?: string;
-  hint?: string;
-};
 
 function providerActionError(message: string) {
   return new Error(message);
 }
 
-function isMissingOptionalVendorColumn(error: SupabaseLikeError | null | undefined) {
-  const text = [error?.message, error?.details, error?.hint].filter(Boolean).join(' ').toLowerCase();
-
-  return (
-    error?.code === '42703' ||
-    text.includes('data_access_level') ||
-    text.includes('dpa_signed') ||
-    text.includes('created_by') ||
-    text.includes('schema cache')
-  );
-}
-
-function toVendorErrorMessage(error: SupabaseLikeError | Error | unknown, action: 'criar' | 'atualizar' | 'remover') {
-  const message = error instanceof Error ? error.message : typeof error === 'object' && error !== null && 'message' in error ? String((error as SupabaseLikeError).message ?? '') : '';
-  const lowerMessage = message.toLowerCase();
-
-  if (lowerMessage.includes('vendors') && (lowerMessage.includes('does not exist') || lowerMessage.includes('schema cache'))) {
-    return 'A tabela de vendors ainda não está atualizada no Supabase. Aplique a migration de vendors antes de guardar fornecedores.';
-  }
-
-  if (lowerMessage.includes('invalid input syntax') || lowerMessage.includes('check constraint')) {
-    return 'Os dados do fornecedor não passaram na validação do banco. Verifique país, categoria, risco e acesso a dados.';
-  }
-
-  if (lowerMessage.includes('permission') || lowerMessage.includes('not authorized')) {
-    return `Sem permissão para ${action} fornecedores nesta organização.`;
-  }
-
+function toVendorErrorMessage(error: unknown, action: 'criar' | 'atualizar' | 'remover') {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  if (message.includes('review_version') || message.includes('0 rows')) return 'O fornecedor foi alterado por outra pessoa. Atualize a página e tente novamente.';
+  if (message.includes('check constraint') || message.includes('23514')) return 'Os dados do fornecedor não cumprem as regras de revisão e aprovação.';
+  if (message.includes('permission') || message.includes('not authorized')) return `Sem permissão para ${action} fornecedores nesta organização.`;
   return `Não foi possível ${action} o fornecedor agora.`;
 }
 
@@ -74,33 +48,12 @@ function failVendorAction(error: unknown, context: Record<string, unknown>, acti
   throw providerActionError(toVendorErrorMessage(error, action));
 }
 
-function toBaseVendorRecord(payload: z.infer<typeof vendorSchema>) {
-  return {
-    organization_id: payload.organizationId,
-    name: payload.name,
-    website: payload.website,
-    country: payload.country,
-    category: payload.category,
-    risk_level: payload.riskLevel,
-    review_status: payload.reviewStatus,
-  };
-}
-
-function toFullVendorRecord(payload: z.infer<typeof vendorSchema>, userId: string) {
-  return {
-    ...toBaseVendorRecord(payload),
-    data_access_level: payload.dataAccessLevel,
-    dpa_signed: payload.dpaSigned,
-    created_by: userId,
-  };
-}
-
 async function enforceVendorActionRateLimit(input: {
   action: 'vendor.create' | 'vendor.update' | 'vendor.delete';
   organizationId: string;
   userId: string;
 }) {
-  const rateLimit = await checkDistributedRateLimit({
+  const result = await checkDistributedRateLimit({
     key: `${input.action}:${input.organizationId}:${input.userId}`,
     policy: 'general-api',
     userId: input.userId,
@@ -111,53 +64,45 @@ async function enforceVendorActionRateLimit(input: {
     windowMs: 60_000,
     failureMode: 'fail-closed',
   });
-
-  if (!rateLimit.allowed) {
-    throw providerActionError('Too many vendor changes. Please try again later.');
-  }
+  if (!result.allowed) throw providerActionError('Too many vendor changes. Please try again later.');
 }
+
+function vendorRecord(payload: z.infer<typeof vendorSchema>, actorUserId: string, includeCreator: boolean) {
+  const approved = payload.reviewStatus === 'approved';
+  return {
+    organization_id: payload.organizationId,
+    name: payload.name,
+    website: payload.website,
+    country: payload.country,
+    category: payload.category ?? 'general',
+    data_access_level: payload.dataAccessLevel,
+    risk_level: payload.riskLevel,
+    review_status: payload.reviewStatus,
+    dpa_signed: payload.dpaSigned,
+    last_reviewed_at: payload.lastReviewedAt,
+    next_review_at: payload.nextReviewAt,
+    approved_at: approved ? new Date().toISOString() : null,
+    approved_by: approved ? actorUserId : null,
+    ...(includeCreator ? { created_by: actorUserId } : {}),
+  };
+}
+
+const vendorColumns = 'id, organization_id, created_by, name, website, country, category, data_access_level, risk_level, review_status, dpa_signed, last_reviewed_at, next_review_at, approved_at, approved_by, review_version, created_at, updated_at';
 
 export async function createVendor(input: unknown) {
   const user = await requireCurrentUser();
   const payload = vendorSchema.parse(input);
   const context = { area: 'vendor_create_action', organizationId: payload.organizationId, userId: user.id };
-
   await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:write');
   await enforceVendorActionRateLimit({ action: 'vendor.create', organizationId: payload.organizationId, userId: user.id });
 
   const supabase = createAdminClient();
-  const baseRecord = toBaseVendorRecord(payload);
-  const fullRecord = toFullVendorRecord(payload, user.id);
-  const insertVendor = async (record: typeof baseRecord | typeof fullRecord) =>
-    supabase.from('vendors').insert(record).select('*').single();
-
-  let { data, error } = await insertVendor(fullRecord);
-
-  if (error && isMissingOptionalVendorColumn(error)) {
-    console.warn('[vendors] legacy_schema_fallback', { code: error.code ?? 'unknown' });
-    const fallbackResult = await insertVendor(baseRecord);
-    data = fallbackResult.data;
-    error = fallbackResult.error;
-  }
-
+  const { data, error } = await supabase.from('vendors').insert(vendorRecord(payload, user.id, true)).select(vendorColumns).single();
   if (error) failVendorAction(error, context, 'criar');
 
-  const audit = await logAuditEvent({
-    organizationId: payload.organizationId,
-    actorUserId: user.id,
-    action: 'vendor.create',
-    entityType: 'vendor',
-    entityId: data.id,
-    metadata: { name: payload.name, riskLevel: payload.riskLevel },
-  });
-
+  const audit = await logAuditEvent({ organizationId: payload.organizationId, actorUserId: user.id, action: 'vendor.create', entityType: 'vendor', entityId: data.id, metadata: { riskLevel: payload.riskLevel, reviewStatus: payload.reviewStatus } });
   if (!audit.persisted) {
-    const { error: rollbackError } = await supabase
-      .from('vendors')
-      .delete()
-      .eq('id', data.id)
-      .eq('organization_id', payload.organizationId);
-
+    const { error: rollbackError } = await supabase.from('vendors').delete().eq('id', data.id).eq('organization_id', payload.organizationId);
     if (rollbackError) {
       reportError(new Error('vendor_create_audit_compensation_failed'), {
         ...context,
@@ -165,10 +110,8 @@ export async function createVendor(input: unknown) {
         providerCode: rollbackError.code ?? 'unknown',
       });
     }
-
     throw providerActionError('Não foi possível criar o fornecedor agora.');
   }
-
   return data;
 }
 
@@ -176,39 +119,21 @@ export async function updateVendor(input: unknown) {
   const user = await requireCurrentUser();
   const payload = updateVendorSchema.parse(input);
   const context = { area: 'vendor_update_action', organizationId: payload.organizationId, vendorId: payload.vendorId, userId: user.id };
-
   await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:write');
   await enforceVendorActionRateLimit({ action: 'vendor.update', organizationId: payload.organizationId, userId: user.id });
 
   const supabase = createAdminClient();
   const { data: previous, error: previousError } = await supabase
     .from('vendors')
-    .select('*')
+    .select(vendorColumns)
     .eq('id', payload.vendorId)
     .eq('organization_id', payload.organizationId)
     .single();
-
   if (previousError) failVendorAction(previousError, context, 'atualizar');
 
-  const baseRecord = toBaseVendorRecord(payload);
-  const fullRecord = {
-    ...baseRecord,
-    data_access_level: payload.dataAccessLevel,
-    dpa_signed: payload.dpaSigned,
-  };
-
-  const updateVendorRecord = async (record: typeof baseRecord | typeof fullRecord) =>
-    supabase.from('vendors').update(record).eq('id', payload.vendorId).eq('organization_id', payload.organizationId).select('*').single();
-
-  let { data, error } = await updateVendorRecord(fullRecord);
-
-  if (error && isMissingOptionalVendorColumn(error)) {
-    console.warn('[vendors] legacy_schema_fallback', { code: error.code ?? 'unknown' });
-    const fallbackResult = await updateVendorRecord(baseRecord);
-    data = fallbackResult.data;
-    error = fallbackResult.error;
-  }
-
+  let query = supabase.from('vendors').update(vendorRecord(payload, user.id, false)).eq('id', payload.vendorId).eq('organization_id', payload.organizationId);
+  if (payload.expectedReviewVersion) query = query.eq('review_version', payload.expectedReviewVersion);
+  const { data, error } = await query.select(vendorColumns).single();
   if (error) failVendorAction(error, context, 'atualizar');
 
   const audit = await logAuditEvent({
@@ -221,72 +146,53 @@ export async function updateVendor(input: unknown) {
       name: payload.name,
       riskLevel: payload.riskLevel,
       reviewStatus: payload.reviewStatus,
+      ...(typeof data.review_version === 'number' ? { reviewVersion: data.review_version } : {}),
     },
   });
-
   if (!audit.persisted) {
     const { error: rollbackError } = await supabase
       .from('vendors')
       .update(previous)
-      .eq('id', payload.vendorId)
+      .eq('id', data.id)
       .eq('organization_id', payload.organizationId)
       .eq('name', data.name)
       .eq('risk_level', data.risk_level)
-      .eq('review_status', data.review_status);
-
+      .eq('review_status', data.review_status)
+      .eq('review_version', data.review_version);
     if (rollbackError) {
       reportError(new Error('vendor_update_audit_compensation_failed'), {
         ...context,
         providerCode: rollbackError.code ?? 'unknown',
       });
     }
-
     throw providerActionError('Não foi possível atualizar o fornecedor agora.');
   }
-
   return data;
 }
 
-export async function deleteVendor(vendorId: string, organizationId: string) {
+export async function deleteVendor(vendorId: string, organizationId: string, expectedReviewVersion?: number) {
   const user = await requireCurrentUser();
-  const payload = deleteVendorSchema.parse({ vendorId, organizationId });
+  const payload = deleteVendorSchema.parse({ vendorId, organizationId, expectedReviewVersion });
   const context = { area: 'vendor_delete_action', organizationId: payload.organizationId, vendorId: payload.vendorId, userId: user.id };
-
   await assertCurrentUserCan(payload.organizationId, user.id, 'vendors:delete');
   await enforceVendorActionRateLimit({ action: 'vendor.delete', organizationId: payload.organizationId, userId: user.id });
 
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('vendors')
-    .delete()
-    .eq('id', payload.vendorId)
-    .eq('organization_id', payload.organizationId)
-    .select('*')
-    .single();
-
+  let query = supabase.from('vendors').delete().eq('id', payload.vendorId).eq('organization_id', payload.organizationId);
+  if (payload.expectedReviewVersion) query = query.eq('review_version', payload.expectedReviewVersion);
+  const { data, error } = await query.select(vendorColumns).single();
   if (error) failVendorAction(error, context, 'remover');
 
-  const audit = await logAuditEvent({
-    organizationId: payload.organizationId,
-    actorUserId: user.id,
-    action: 'vendor.delete',
-    entityType: 'vendor',
-    entityId: payload.vendorId,
-    metadata: { name: data.name, riskLevel: data.risk_level },
-  });
-
+  const audit = await logAuditEvent({ organizationId: payload.organizationId, actorUserId: user.id, action: 'vendor.delete', entityType: 'vendor', entityId: payload.vendorId, metadata: { riskLevel: data.risk_level, reviewVersion: data.review_version } });
   if (!audit.persisted) {
     const { error: rollbackError } = await supabase.from('vendors').insert(data);
-
     if (rollbackError) {
       reportError(new Error('vendor_delete_audit_compensation_failed'), {
         ...context,
         providerCode: rollbackError.code ?? 'unknown',
       });
     }
-
     throw providerActionError('Não foi possível remover o fornecedor agora.');
   }
-
   return data;
 }

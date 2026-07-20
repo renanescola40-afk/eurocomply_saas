@@ -6,6 +6,12 @@ import {
   normalizeAiSystemRole,
   normalizeAiSystemStatus,
 } from '@/server/ai-governance/decision-engine';
+import {
+  assessProhibitedPractices,
+  type ProhibitedPracticeAnswers,
+} from '@/server/ai-governance/prohibited-practices';
+
+const triStateAnswerSchema = z.union([z.boolean(), z.enum(['yes', 'no', 'unknown']), z.null()]).optional();
 
 export const aiSystemBodySchema = z.object({
   name: z.string().trim().min(2).max(160),
@@ -24,6 +30,16 @@ export const aiSystemBodySchema = z.object({
   generatesContent: z.unknown().optional(),
   biometricIdentification: z.unknown().optional(),
   manipulativeOrExploitative: z.unknown().optional(),
+  prohibitedPractices: z.object({
+    subliminal_manipulation: triStateAnswerSchema,
+    vulnerability_exploitation: triStateAnswerSchema,
+    social_scoring: triStateAnswerSchema,
+    criminal_risk_prediction: triStateAnswerSchema,
+    untargeted_facial_scraping: triStateAnswerSchema,
+    emotion_inference_workplace_education: triStateAnswerSchema,
+    biometric_categorisation_sensitive_traits: triStateAnswerSchema,
+    real_time_remote_biometric_public_space: triStateAnswerSchema,
+  }).strict().optional(),
 });
 
 export type ParsedAiSystemBody = z.infer<typeof aiSystemBodySchema>;
@@ -46,6 +62,10 @@ export function classifyParsedAiSystemBody(body: ParsedAiSystemBody) {
   const biometricIdentification = asBoolean(body.biometricIdentification);
   const manipulativeOrExploitative = asBoolean(body.manipulativeOrExploitative);
   const vendorName = asText(body.vendorName) || null;
+  const prohibitedPracticeAssessment = assessProhibitedPractices(
+    (body.prohibitedPractices ?? {}) as ProhibitedPracticeAnswers,
+  );
+  const hasDetailedProhibitedSignal = prohibitedPracticeAssessment.positiveSignals.length > 0;
 
   const decision = evaluateAiActSystem({
     role,
@@ -54,7 +74,7 @@ export function classifyParsedAiSystemBody(body: ParsedAiSystemBody) {
     interactsWithPeople,
     generatesContent,
     biometricIdentification,
-    manipulativeOrExploitative,
+    manipulativeOrExploitative: manipulativeOrExploitative || hasDetailedProhibitedSignal,
     vendorName,
     useCase: body.useCase,
   });
@@ -67,14 +87,15 @@ export function classifyParsedAiSystemBody(body: ParsedAiSystemBody) {
     interactsWithPeople,
     generatesContent,
     biometricIdentification,
-    manipulativeOrExploitative,
+    manipulativeOrExploitative: manipulativeOrExploitative || hasDetailedProhibitedSignal,
     vendorName,
     classification: {
       riskLevel: decision.riskLevel,
       summary: decision.summary,
       obligations: decision.obligations,
-      nextActions: decision.nextActions,
+      nextActions: Array.from(new Set([...decision.nextActions, ...prohibitedPracticeAssessment.requiredActions])),
     },
+    prohibitedPracticeAssessment,
     roleAssessment: decision.roleAssessment,
     decisionMetadata: {
       engineVersion: decision.engineVersion,
@@ -87,8 +108,12 @@ export function classifyParsedAiSystemBody(body: ParsedAiSystemBody) {
       appliedRuleIds: decision.appliedRuleIds,
       futureRuleIds: decision.futureRuleIds,
       pendingRuleIds: decision.pendingRuleIds,
-      legalReviewRequired: decision.legalReviewRequired,
-      reasons: decision.reasons,
+      legalReviewRequired: decision.legalReviewRequired || prohibitedPracticeAssessment.legalReviewRequired,
+      reasons: Array.from(new Set([
+        ...decision.reasons,
+        ...prohibitedPracticeAssessment.positiveSignals.map((signal) => `article_5_positive:${signal}`),
+        ...prohibitedPracticeAssessment.unknownSignals.map((signal) => `article_5_unknown:${signal}`),
+      ])),
       evidenceBoundary: decision.evidenceBoundary,
     },
   };

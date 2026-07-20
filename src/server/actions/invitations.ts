@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { reportError } from '@/lib/observability/report-error';
 import { requireCurrentUser } from '@/server/queries/auth';
+import { enforceServerActionRateLimit } from '@/server/security/server-action-rate-limit';
 import { logAuditEvent } from './audit';
 
 const acceptInvitationSchema = z.object({
@@ -38,6 +39,19 @@ export async function acceptInvitation(input: unknown) {
   if (!normalizedEmail) {
     throw actionError('Authenticated email is required to accept this invitation.');
   }
+
+  await enforceServerActionRateLimit({
+    key: `team.invitation_accept:${user.id}`,
+    policy: 'team-management',
+    userId: user.id,
+    route: 'server-action:acceptInvitation',
+    action: 'team.invitation_accept',
+    limit: 5,
+    windowMs: 10 * 60 * 1000,
+    failureMode: 'fail-closed',
+    rateLimitedMessage: 'Too many invitation acceptance attempts. Please try again later.',
+    unavailableMessage: 'Invitation security is temporarily unavailable. Please try again later.',
+  });
 
   const { data, error } = await supabase.rpc(ATOMIC_INVITATION_ACCEPTANCE_RPC, {
     p_token: payload.token,
