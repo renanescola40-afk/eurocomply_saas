@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { PlanGate } from '@/components/billing/plan-gate';
 import { DeleteRecordButton } from '@/components/shared/delete-record-button';
+import { StepUpCsvExportButton } from '@/components/reports/step-up-csv-export-button';
 import { CreateVendorForm, type CreateVendorFormInput } from '@/components/vendors/create-vendor-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCurrentOrganizationForUser } from '@/server/queries/current-organization';
@@ -76,9 +76,7 @@ export default async function OrganizationVendorsPage({ params }: { params: { lo
             <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-5xl">Vendors</h1>
             <p className="mt-3 max-w-2xl text-white/55">Manage suppliers, subprocessors and third parties that touch compliance-sensitive data.</p>
           </div>
-          <Link href="/api/reports/vendors.csv" className="inline-flex h-10 items-center justify-center rounded-md border border-white/15 px-4 text-sm font-medium hover:bg-white/10">
-            Export CSV
-          </Link>
+          <StepUpCsvExportButton endpoint="/api/reports/vendors.csv" filename="vendors-report.csv" className="inline-flex h-10 items-center justify-center rounded-md border border-white/15 px-4 text-sm font-medium hover:bg-white/10 disabled:opacity-60" />
         </div>
 
         <PlanGate planId={billing.plan} metric="vendors" currentUsage={billing.usage.vendors} onUpgradeHref={`${dashboardBasePath}/billing`}>
