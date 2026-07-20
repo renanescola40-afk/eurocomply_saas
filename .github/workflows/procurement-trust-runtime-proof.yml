@@ -1,0 +1,56 @@
+name: Procurement Trust Operations Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type EXECUTE_PROCUREMENT_TRUST_PROOF
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: procurement-trust-operations-proof
+  cancel-in-progress: false
+
+jobs:
+  trust-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production-procurement-trust-proof
+    env:
+      PROCUREMENT_TRUST_CONFIRMATION: ${{ inputs.confirmation }}
+      RECOVERY_ISOLATED_DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
+      TRUST_CENTER_PUBLIC_URL: ${{ secrets.TRUST_CENTER_PUBLIC_URL }}
+      TRUST_PACKAGE_ENCRYPTION_REQUIRED: ${{ vars.TRUST_PACKAGE_ENCRYPTION_REQUIRED }}
+      PROCUREMENT_SLA_DAYS: ${{ vars.PROCUREMENT_SLA_DAYS }}
+      SUBPROCESSOR_REGISTER_REVIEWED: ${{ vars.SUBPROCESSOR_REGISTER_REVIEWED }}
+    steps:
+      - name: Checkout exact main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Verify protected exact-main execution
+        shell: bash
+        run: |
+          test "$PROCUREMENT_TRUST_CONFIRMATION" = "EXECUTE_PROCUREMENT_TRUST_PROOF"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_REF_NAME" = "main"
+      - name: Install PostgreSQL client
+        shell: bash
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Execute procurement trust proof
+        run: node scripts/procurement/run-procurement-trust-runtime-proof.mjs
+      - name: Validate redacted evidence
+        run: node scripts/procurement/check-procurement-trust-evidence.mjs
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: procurement-trust-${{ github.sha }}
+          path: docs/security/evidence/runtime/procurement-trust-validation.json
+          if-no-files-found: error
+          retention-days: 30
