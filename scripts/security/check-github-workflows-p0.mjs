@@ -4,8 +4,20 @@ const required = [
   {
     path: '.github/workflows/vercel-production.yml',
     tokens: [
+      'workflow_dispatch:',
+      'release_sha:',
+      'confirmation:',
+      'DEPLOY_PRODUCTION',
       'environment: production',
+      'ref: main',
+      'ref: ${{ inputs.release_sha }}',
+      'fetch-depth: 0',
       'persist-credentials: false',
+      'test "$(git rev-parse origin/main)" = "${RELEASE_SHA,,}"',
+      'test "$(git rev-parse HEAD)" = "${RELEASE_SHA,,}"',
+      'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0',
+      'actions/setup-node@249970729cb0ef3589644e2896645e5dcba9c38',
+      "VERCEL_CLI_VERSION: '56.3.2'",
       'npm ci',
       'npm run lint',
       'npm run typecheck',
@@ -14,9 +26,16 @@ const required = [
       'npm run security:ci',
       'npm run quality:routes',
       'npm run ops:vercel-readiness',
-      'vercel pull',
-      'vercel build --prod',
-      'vercel deploy --prebuilt --prod',
+      '"vercel@${VERCEL_CLI_VERSION}" pull',
+      '"vercel@${VERCEL_CLI_VERSION}" build --prod',
+      '"vercel@${VERCEL_CLI_VERSION}" deploy --prebuilt --prod',
+    ],
+    forbiddenTokens: [
+      '\n  push:',
+      'CLERK_',
+      'actions/checkout@v',
+      'actions/setup-node@v',
+      'npx vercel ',
     ],
     anyOf: [
       ['npm run release:production-final'],
@@ -100,6 +119,12 @@ for (const check of required) {
   if (Array.isArray(check.anyOf)) {
     const satisfied = check.anyOf.some((tokens) => tokens.every((token) => source.includes(token)));
     if (!satisfied) failures.push(`${check.path} must include one accepted canonical final gate path: ${check.anyOf.map((tokens) => tokens.join(' + ')).join(' OR ')}`);
+  }
+
+  if (Array.isArray(check.forbiddenTokens)) {
+    for (const token of check.forbiddenTokens) {
+      if (source.includes(token)) failures.push(`${check.path} contains forbidden workflow/governance token: ${token.trim()}`);
+    }
   }
 }
 
