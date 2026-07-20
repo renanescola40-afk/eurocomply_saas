@@ -53,6 +53,10 @@ on public.data_retention_policies for all to authenticated
 using (exists (select 1 from public.organization_members m where m.organization_id = data_retention_policies.organization_id and m.user_id = auth.uid() and m.role in ('owner','admin')))
 with check (exists (select 1 from public.organization_members m where m.organization_id = data_retention_policies.organization_id and m.user_id = auth.uid() and m.role in ('owner','admin')));
 
+create policy "retention policies organization admins delete"
+on public.data_retention_policies for delete to authenticated
+using (exists (select 1 from public.organization_members m where m.organization_id = data_retention_policies.organization_id and m.user_id = auth.uid() and m.role in ('owner','admin')));
+
 create policy "data subjects read own requests"
 on public.data_subject_requests for select to authenticated
 using (requester_user_id = auth.uid() or exists (select 1 from public.organization_members m where m.organization_id = data_subject_requests.organization_id and m.user_id = auth.uid() and m.role in ('owner','admin')));
@@ -66,6 +70,19 @@ on public.data_subject_requests for update to authenticated
 using (exists (select 1 from public.organization_members m where m.organization_id = data_subject_requests.organization_id and m.user_id = auth.uid() and m.role in ('owner','admin')))
 with check (exists (select 1 from public.organization_members m where m.organization_id = data_subject_requests.organization_id and m.user_id = auth.uid() and m.role in ('owner','admin')));
 
+create policy "data subject requesters cancel own pending requests"
+on public.data_subject_requests for delete to authenticated
+using (
+  requester_user_id = auth.uid()
+  and status in ('received','verified')
+  or exists (
+    select 1 from public.organization_members m
+    where m.organization_id = data_subject_requests.organization_id
+      and m.user_id = auth.uid()
+      and m.role in ('owner','admin')
+  )
+);
+
 create policy "audit checkpoints organization members read"
 on public.audit_integrity_checkpoints for select to authenticated
 using (exists (select 1 from public.organization_members m where m.organization_id = audit_integrity_checkpoints.organization_id and m.user_id = auth.uid()));
@@ -73,6 +90,15 @@ using (exists (select 1 from public.organization_members m where m.organization_
 create policy "audit checkpoints admins create"
 on public.audit_integrity_checkpoints for insert to authenticated
 with check (exists (select 1 from public.organization_members m where m.organization_id = audit_integrity_checkpoints.organization_id and m.user_id = auth.uid() and m.role in ('owner','admin')));
+
+create policy "audit checkpoints admins update"
+on public.audit_integrity_checkpoints for update to authenticated
+using (exists (select 1 from public.organization_members m where m.organization_id = audit_integrity_checkpoints.organization_id and m.user_id = auth.uid() and m.role in ('owner','admin')))
+with check (exists (select 1 from public.organization_members m where m.organization_id = audit_integrity_checkpoints.organization_id and m.user_id = auth.uid() and m.role in ('owner','admin')));
+
+create policy "audit checkpoints admins delete"
+on public.audit_integrity_checkpoints for delete to authenticated
+using (exists (select 1 from public.organization_members m where m.organization_id = audit_integrity_checkpoints.organization_id and m.user_id = auth.uid() and m.role in ('owner','admin')));
 
 create index if not exists data_subject_requests_org_status_due_idx on public.data_subject_requests (organization_id, status, due_at);
 create index if not exists audit_integrity_checkpoints_org_generated_idx on public.audit_integrity_checkpoints (organization_id, generated_at desc);
