@@ -23,7 +23,7 @@ jobs:
   validate-auth-rbac:
     name: Validate live Auth RBAC and tenant isolation
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     environment: production
     env:
       TARGET_SHA: ${{ inputs.release_sha || github.sha }}
@@ -81,6 +81,8 @@ jobs:
           ENTERPRISE_EXPECTED_BRANCH: main
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          AUTH_RBAC_DISPOSABLE_EMAIL_DOMAIN: ${{ secrets.AUTH_RBAC_DISPOSABLE_EMAIL_DOMAIN }}
           AUTH_RBAC_ORGANIZATION_A_ID: ${{ secrets.AUTH_RBAC_ORGANIZATION_A_ID }}
           AUTH_RBAC_ORGANIZATION_B_ID: ${{ secrets.AUTH_RBAC_ORGANIZATION_B_ID }}
           AUTH_RBAC_OWNER_EMAIL: ${{ secrets.AUTH_RBAC_OWNER_EMAIL }}
