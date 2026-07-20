@@ -16,15 +16,19 @@ const requiredChecks = [
 ];
 
 if (evidence) {
-  if (evidence.schema !== 'risck-comply.identity-access-lifecycle-evidence.v1') failures.push('identity schema is invalid');
+  if (evidence.schema !== 'risck-comply.identity-access-lifecycle-evidence.v2') failures.push('identity schema is invalid');
   if (evidence.status !== 'Complete' || evidence.outcome !== 'passed') failures.push('identity evidence must be Complete/passed');
   if (!/^[a-f0-9]{40}$/i.test(String(evidence.targetSha ?? ''))) failures.push('identity evidence is not exact-SHA bound');
   for (const check of requiredChecks) if (evidence.checks?.[check] !== true) failures.push(`identity check ${check} must pass`);
   if (!Array.isArray(evidence.failures) || evidence.failures.length) failures.push('identity evidence contains failures');
-  for (const field of ['credentialsStored','emailStored','tokensStored','providerResponsesStored']) {
+  for (const field of ['credentialsStored','emailStored','tokensStored','providerResponsesStored','networkStatusStored','networkHeadersStored']) {
     if (evidence.evidenceIntegrity?.[field] !== false) failures.push(`identity evidence integrity ${field} is unsafe`);
   }
   if (evidence.evidenceIntegrity?.disposableAccountRemoved !== true) failures.push('disposable identity was not removed');
+  const serialized = JSON.stringify(evidence);
+  for (const forbidden of ['access_token','refresh_token','authorization_endpoint','set-cookie','authorization']) {
+    if (serialized.toLowerCase().includes(forbidden)) failures.push(`identity evidence contains forbidden network or token field: ${forbidden}`);
+  }
 }
 
 if (failures.length) {
