@@ -63,7 +63,7 @@ jobs:
           set -euo pipefail
           npm start > /tmp/enterprise-dast-server.log 2>&1 &
           echo $! > /tmp/enterprise-dast-server.pid
-          for attempt in $(seq 1 60); do
+          for _attempt in $(seq 1 60); do
             if curl --fail --silent --show-error --max-time 2 http://127.0.0.1:3000/en >/dev/null; then
               exit 0
             fi
