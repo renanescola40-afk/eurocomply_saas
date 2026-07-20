@@ -21,7 +21,7 @@ describe('enterprise recovery control plane', () => {
   it('runs only from protected main or manual dispatch with read-only repository permissions', () => {
     expect(workflow).toContain('branches: [main]');
     expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).toContain('environment: Production');
+    expect(workflow).toMatch(/jobs:\s*\n\s+recovery:[\s\S]*?environment:\s*\n\s+name: Production/);
     expect(workflow).toContain('contents: read');
     expect(workflow).toContain('persist-credentials: false');
   });
