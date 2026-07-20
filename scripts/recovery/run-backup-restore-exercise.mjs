@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const output = 'docs/security/evidence/p1/backup-restore-tested.json';
@@ -22,6 +22,20 @@ function run(command, args, extraEnv = {}) {
 }
 function sql(connection, statement) {
   return run('psql', [connection, '--no-psqlrc', '--tuples-only', '--no-align', '--set', 'ON_ERROR_STOP=1', '--command', statement]).trim();
+}
+function inspectDump(path) {
+  const descriptor = openSync(path, 'r');
+  try {
+    const metadata = fstatSync(descriptor);
+    if (!metadata.isFile() || metadata.size <= 0) return { exists: false, digest: null };
+    const bytes = readFileSync(descriptor);
+    return {
+      exists: bytes.length === metadata.size && bytes.length > 0,
+      digest: createHash('sha256').update(bytes).digest('hex'),
+    };
+  } finally {
+    closeSync(descriptor);
+  }
 }
 
 const source = required('RECOVERY_SOURCE_DATABASE_URL');
@@ -44,8 +58,10 @@ try {
   if (failures.length) throw new Error('recovery_preconditions_failed');
   run('pg_dump', [source, '--format=custom', '--no-owner', '--no-privileges', '--file', dumpPath]);
   backupCompletedAt = new Date().toISOString();
-  checks.backupExists = statSync(dumpPath).size > 0;
-  digest = createHash('sha256').update(readFileSync(dumpPath)).digest('hex');
+  const inspectedDump = inspectDump(dumpPath);
+  checks.backupExists = inspectedDump.exists;
+  digest = inspectedDump.digest;
+  if (!checks.backupExists || !digest) throw new Error('backup_dump_invalid');
 
   run('pg_restore', ['--dbname', restore, '--clean', '--if-exists', '--no-owner', '--no-privileges', '--exit-on-error', dumpPath]);
   restoreCompletedAt = new Date().toISOString();
@@ -98,8 +114,9 @@ const evidence = {
     dumpStored: false,
     rowDataStored: false,
     credentialsStored: false,
+    singleDescriptorInspection: true,
   },
-  boundary: 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts and a truncated digest; the dump is deleted before completion.',
+  boundary: 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts and a truncated digest; one descriptor is used for dump metadata and hashing, and the dump is deleted before completion.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
