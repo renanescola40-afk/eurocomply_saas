@@ -29,7 +29,10 @@ describe('recovery resilience megapack', () => {
       'postRollbackNoStore',
       'credentialsStored: false',
       'deploymentUrlsStored: false',
+      'networkDataStored: false',
     ]) expect(rollback).toContain(token);
+    expect(rollback).not.toContain('postRollback,');
+    expect(rollback).not.toContain('response.body');
   });
 
   it('creates a logical backup, restores it in isolation and validates RLS', () => {
@@ -47,7 +50,14 @@ describe('recovery resilience megapack', () => {
       'rmSync(dumpPath',
       'dumpStored: false',
       'rowDataStored: false',
+      "openSync(path, 'r')",
+      'fstatSync(descriptor)',
+      'readFileSync(descriptor)',
+      'closeSync(descriptor)',
+      'singleDescriptorInspection: true',
     ]) expect(restore).toContain(token);
+    expect(restore).not.toContain('statSync(dumpPath)');
+    expect(restore).not.toContain('readFileSync(dumpPath)');
   });
 
   it('fails closed unless every canonical recovery control is proven', () => {
