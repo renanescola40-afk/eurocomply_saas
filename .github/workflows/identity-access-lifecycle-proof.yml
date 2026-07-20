@@ -1,0 +1,57 @@
+name: Identity Access Lifecycle Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type EXECUTE_IDENTITY_LIFECYCLE_PROOF
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: identity-access-lifecycle-proof
+  cancel-in-progress: false
+
+jobs:
+  identity-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: production-identity-proof
+    env:
+      IDENTITY_PROOF_CONFIRMATION: ${{ inputs.confirmation }}
+      PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      IDENTITY_PROOF_EMAIL_DOMAIN: ${{ secrets.IDENTITY_PROOF_EMAIL_DOMAIN }}
+      IDENTITY_PROOF_OIDC_DISCOVERY_URL: ${{ secrets.IDENTITY_PROOF_OIDC_DISCOVERY_URL }}
+      IDENTITY_ADMIN_MFA_REQUIRED: ${{ vars.IDENTITY_ADMIN_MFA_REQUIRED }}
+      IDENTITY_SENSITIVE_STEP_UP_REQUIRED: ${{ vars.IDENTITY_SENSITIVE_STEP_UP_REQUIRED }}
+      IDENTITY_ORGANIZATION_ONBOARDING_VALIDATED: ${{ vars.IDENTITY_ORGANIZATION_ONBOARDING_VALIDATED }}
+    steps:
+      - name: Checkout exact main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Verify protected exact-main execution
+        shell: bash
+        run: |
+          test "$IDENTITY_PROOF_CONFIRMATION" = "EXECUTE_IDENTITY_LIFECYCLE_PROOF"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_REF_NAME" = "main"
+      - name: Execute identity lifecycle proof
+        run: node scripts/identity/run-identity-access-lifecycle-proof.mjs
+      - name: Validate redacted evidence
+        run: node scripts/identity/check-identity-access-lifecycle-evidence.mjs
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: identity-access-lifecycle-${{ github.sha }}
+          path: docs/security/evidence/runtime/identity-access-lifecycle-validation.json
+          if-no-files-found: error
+          retention-days: 30
