@@ -25,6 +25,19 @@ describe('vendor governance integrity', () => {
     expect(migration).toContain('using (public.is_org_member(organization_id))');
   });
 
+  it('retains deletion evidence without false actor attribution', () => {
+    const historyDefinition = migration.slice(
+      migration.indexOf('create table if not exists public.vendor_review_history'),
+      migration.indexOf('create index if not exists vendor_review_history_vendor_idx'),
+    );
+
+    expect(historyDefinition).toContain('vendor_id uuid not null');
+    expect(historyDefinition).not.toMatch(/vendor_id uuid[^\n]*references public\.vendors/i);
+    expect(migration).not.toContain('vendor_id uuid not null references public.vendors(id) on delete cascade');
+    expect(migration).toContain('v_actor uuid := auth.uid();');
+    expect(migration).not.toContain('coalesce(auth.uid(), new.approved_by');
+  });
+
   it('removes the legacy schema fallback and broad selects', () => {
     expect(actions).not.toContain('legacy_schema_fallback');
     expect(actions).not.toContain("select('*')");
