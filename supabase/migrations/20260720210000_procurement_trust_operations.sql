@@ -16,7 +16,8 @@ create table if not exists public.vendor_due_diligence (
   approved_by uuid references auth.users(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (organization_id, vendor_name)
+  unique (organization_id, vendor_name),
+  check ((security_review_status = 'approved' and privacy_review_status = 'approved') = (approved_at is not null and approved_by is not null))
 );
 
 create table if not exists public.enterprise_procurement_requests (
@@ -27,7 +28,7 @@ create table if not exists public.enterprise_procurement_requests (
   request_type text not null check (request_type in ('security_questionnaire','dpa','sla','subprocessor_list','architecture_review','penetration_test','other')),
   status text not null default 'received' check (status in ('received','triaged','in_progress','waiting_customer','completed','rejected','cancelled')),
   priority text not null default 'normal' check (priority in ('low','normal','high','urgent')),
-  due_at timestamptz not null default (now() + interval '10 business days'),
+  due_at timestamptz not null default (now() + interval '10 days'),
   completed_at timestamptz,
   assigned_to uuid references auth.users(id),
   resolution_summary text,
@@ -53,8 +54,11 @@ create table if not exists public.trust_evidence_packages (
 );
 
 alter table public.vendor_due_diligence enable row level security;
+alter table public.vendor_due_diligence force row level security;
 alter table public.enterprise_procurement_requests enable row level security;
+alter table public.enterprise_procurement_requests force row level security;
 alter table public.trust_evidence_packages enable row level security;
+alter table public.trust_evidence_packages force row level security;
 
 create policy "vendor diligence members read" on public.vendor_due_diligence for select to authenticated
 using (exists (select 1 from public.organization_members m where m.organization_id = vendor_due_diligence.organization_id and m.user_id = auth.uid()));
