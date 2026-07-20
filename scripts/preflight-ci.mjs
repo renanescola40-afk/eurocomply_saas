@@ -1,12 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
 const ciPlaceholders = {
-  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: 'ci_clerk_publishable_key_placeholder',
-  CLERK_SECRET_KEY: 'ci_clerk_backend_key_placeholder',
-  NEXT_PUBLIC_CLERK_SIGN_IN_URL: '/pt/login',
-  NEXT_PUBLIC_CLERK_SIGN_UP_URL: '/pt/signup',
-  NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: '/pt/dashboard/organizations',
-  NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: '/pt/dashboard/organizations',
   NEXT_PUBLIC_SUPABASE_URL: 'https://ci-placeholder.supabase.co',
   NEXT_PUBLIC_SUPABASE_ANON_KEY: 'ci_supabase_anon_key_placeholder',
   SUPABASE_SERVICE_ROLE_KEY: 'ci_supabase_service_role_key_placeholder',

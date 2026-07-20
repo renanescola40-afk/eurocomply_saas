@@ -4,7 +4,9 @@ This runbook covers Vercel production deploys, rollback, incidents, environment 
 
 ## Deploy
 
-Production deploys must go through `.github/workflows/vercel-production.yml`. The deploy job must not reach `vercel deploy --prebuilt --prod` until every P0 gate has passed: `npm ci`, lint, typecheck, tests, build, `security:ci`, route quality, Vercel readiness, release readiness, and enterprise readiness when `RELEASE_TARGET=enterprise`.
+Production deploys must go through a manual dispatch of `.github/workflows/vercel-production.yml` from `main`. Supply the full SHA currently at the tip of `main` and type `DEPLOY_PRODUCTION`; the workflow verifies that exact SHA before protected-environment approval, after checkout, and again immediately before the production deploy command. A merge or push never deploys production automatically.
+
+The deploy job must not reach the pinned Vercel CLI's `deploy --prebuilt --prod` command until every P0 gate has passed: `npm ci`, lint, typecheck, tests, build, `security:ci`, route quality, Vercel readiness, release readiness, and enterprise readiness when `RELEASE_TARGET=enterprise`.
 
 ## Vercel Project Settings variables
 
