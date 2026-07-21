@@ -64,10 +64,14 @@ jobs:
             'tests/enterprise/enterprise-tenant-licensing-core.test.ts': [
               ("expect(invitationLockMigration).toContain('pg_advisory_xact_lock');",
                "expect(invitationLockMigration).toContain('from public.organization_usage as usage');\n    expect(invitationLockMigration).toContain('for update;');"),
+              ("expect(invitationAction).toContain('reserveOrganizationSeat');",
+               "expect(invitationAction).toContain(\"const ATOMIC_INVITATION_ACCEPTANCE_RPC = 'accept_organization_invitation_atomic'\");"),
             ],
             'src/server/queries/invites.test.ts': [
               ("expect(from).toHaveBeenCalledWith('organization_invitations');",
                "expect(from).toHaveBeenCalledWith('invitations');"),
+              ("expect(result).toEqual({ restored: true });",
+               "expect(result).toEqual({ restored: true, providerCode: null });"),
             ],
           }
 
