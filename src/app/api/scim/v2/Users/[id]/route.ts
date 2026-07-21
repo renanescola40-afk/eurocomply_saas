@@ -10,9 +10,9 @@ import {
 } from '@/server/enterprise/scim';
 import {
   applyScimPatch,
-  enforceScimRateLimit,
+  enforceScimRateLimit as checkDistributedRateLimit,
   scimErrorResponse,
-  scimJson,
+  scimJson as noStoreJson,
   scimPatchSchema,
   scimUserResource,
 } from '@/server/enterprise/scim-http';
@@ -36,19 +36,19 @@ async function requireIdentity(request: Request, context: RouteContext) {
 }
 
 export async function GET(request: Request, context: RouteContext) {
-  const rateLimited = await enforceScimRateLimit(request, 'scim_user_read');
+  const rateLimited = await checkDistributedRateLimit(request, 'scim_user_read');
   if (rateLimited) return rateLimited;
 
   try {
     const { identity } = await requireIdentity(request, context);
-    return scimJson(scimUserResource(identity, new URL(request.url).origin));
+    return noStoreJson(scimUserResource(identity, new URL(request.url).origin));
   } catch (error) {
     return scimErrorResponse(error);
   }
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const rateLimited = await enforceScimRateLimit(request, 'scim_user_patch');
+  const rateLimited = await checkDistributedRateLimit(request, 'scim_user_patch');
   if (rateLimited) return rateLimited;
 
   try {
@@ -67,14 +67,14 @@ export async function PATCH(request: Request, context: RouteContext) {
       externalId: next.externalId,
     });
 
-    return scimJson(scimUserResource(updated, new URL(request.url).origin));
+    return noStoreJson(scimUserResource(updated, new URL(request.url).origin));
   } catch (error) {
     return scimErrorResponse(error);
   }
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
-  const rateLimited = await enforceScimRateLimit(request, 'scim_user_delete');
+  const rateLimited = await checkDistributedRateLimit(request, 'scim_user_delete');
   if (rateLimited) return rateLimited;
 
   try {
