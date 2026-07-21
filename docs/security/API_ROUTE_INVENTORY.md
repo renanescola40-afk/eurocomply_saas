@@ -29,6 +29,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/internal/daily-maintenance/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
 | `src/app/api/internal/compliance-alerts/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
 | `src/app/api/internal/metric-snapshots/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
+| `src/app/api/internal/enterprise-provisioning/route.ts` | health/internal | Internal bulk-provisioning worker; requires cron/internal authorization, fail-closed authentication rate limiting, bounded leased batches, sanitized errors and no-store responses. |
 | `src/app/api/internal/email/test/route.ts` | health/internal | Internal route guarded by shared internal authorization and no-store responses. |
 | `src/app/api/internal/malware/cloudmersive/route.ts` | health/internal | Internal Cloudmersive malware scan adapter; requires scanner/internal authorization, bounded raw body, no-store responses and sanitized provider errors. |
 | `src/app/api/intelligence/refresh/route.ts` | health/internal | Internal refresh endpoint; guarded by internal authorization. |
@@ -45,6 +46,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/platform/contracts/route.ts` | admin-only | Global contract provisioning; authenticated platform capability, AAL2 MFA, trusted origin, bounded JSON, fail-closed rate limiting, organization validation, database role recheck and audit required. |
 | `src/app/api/platform/contracts/status/route.ts` | admin-only | Global contract lifecycle mutation; authenticated platform capability, AAL2 MFA, trusted origin, bounded JSON, fail-closed rate limiting, expected-state transition, reason and audit required. |
 | `src/app/api/platform/organizations/[organizationId]/usage/route.ts` | admin-only | Global read-only tenant licensing usage; authenticated platform capability, AAL2 MFA, organization UUID validation and no-store response required. |
+| `src/app/api/platform/organizations/[organizationId]/provisioning-jobs/route.ts` | admin-only | Global CSV provisioning creation/status; authenticated platform capability, AAL2 MFA, trusted origin and fail-closed rate limit for mutations, bounded CSV JSON, tenant UUID validation, database operator recheck and no-store responses required. |
 | `src/app/api/team/invites/route.ts` | admin-only | Team invite mutation; manage_team and tenant membership required. |
 | `src/app/api/team/invitations/cancel/route.ts` | admin-only | Team invitation cancellation; manage_team and tenant validation required. |
 | `src/app/api/team/members/role/route.ts` | admin-only | Role mutation; manage_team, step-up/audit and tenant member lookup required. |
