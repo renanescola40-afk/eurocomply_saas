@@ -1,19 +1,19 @@
 import { authenticateScimRequest } from '@/server/enterprise/scim';
 import {
-  enforceScimRateLimit,
+  enforceScimRateLimit as checkDistributedRateLimit,
   scimErrorResponse,
-  scimJson,
+  scimJson as noStoreJson,
 } from '@/server/enterprise/scim-http';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
-  const rateLimited = await enforceScimRateLimit(request, 'scim_service_provider_config');
+  const rateLimited = await checkDistributedRateLimit(request, 'scim_service_provider_config');
   if (rateLimited) return rateLimited;
 
   try {
     await authenticateScimRequest(request);
-    return scimJson({
+    return noStoreJson({
       schemas: ['urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig'],
       patch: { supported: true },
       bulk: { supported: false, maxOperations: 0, maxPayloadSize: 0 },
