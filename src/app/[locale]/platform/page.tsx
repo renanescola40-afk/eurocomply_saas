@@ -62,10 +62,7 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
           </p>
         </header>
 
-        <EnterpriseControlCenter
-          canManageContracts={platformRoleHasCapability(membership.role, 'contracts')}
-          platformRole={membership.role}
-        />
+        <EnterpriseControlCenter platformRole={membership.role} />
         {canManageBilling ? <EnterpriseContractBilling /> : null}
         <EnterpriseBulkImport />
         {canManageSecurity ? <EnterpriseSsoConnection /> : null}
