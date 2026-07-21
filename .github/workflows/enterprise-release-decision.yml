@@ -1,0 +1,87 @@
+name: Enterprise Release Decision
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character main commit SHA to assess
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+environment: production-release-decision
+
+concurrency:
+  group: enterprise-release-decision-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  decide:
+    name: Build exact-SHA Go No-Go decision
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate requested SHA format
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]] || {
+            echo "release_sha must be a lowercase full 40-character commit SHA" >&2
+            exit 1
+          }
+
+      - name: Check out exact release SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify exact current main SHA
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate decision builder contracts
+        run: node --test tests/security/enterprise-release-decision-contract.test.mjs
+
+      - name: Build fail-closed enterprise decision
+        id: decision
+        continue-on-error: true
+        env:
+          RELEASE_COMMIT_SHA: ${{ inputs.release_sha }}
+          RELEASE_BRANCH: main
+        run: |
+          node scripts/security/build-enterprise-release-decision.mjs \
+            --output artifacts/enterprise-release-decision.json \
+            --report artifacts/enterprise-release-decision.md
+
+      - name: Upload canonical decision evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-release-decision-${{ inputs.release_sha }}
+          path: |
+            artifacts/enterprise-release-decision.json
+            artifacts/enterprise-release-decision.md
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce No-Go failure
+        if: steps.decision.outcome != 'success'
+        run: |
+          echo "Enterprise release remains No-Go. Inspect the uploaded decision artifact for blocking controls." >&2
+          exit 1
