@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { EnterpriseBulkImport } from '@/components/platform/enterprise-bulk-import';
 import { EnterpriseControlCenter } from '@/components/platform/enterprise-control-center';
 import { EnterpriseScimToken } from '@/components/platform/enterprise-scim-token';
+import { EnterpriseSsoConnection } from '@/components/platform/enterprise-sso-connection';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getCurrentUser } from '@/server/queries/auth';
 import {
@@ -55,7 +56,7 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
             Platform Control Center
           </h1>
           <p className="max-w-4xl text-sm leading-7 text-white/60 md:text-base">
-            Create negotiated contracts, inspect tenant usage, queue bulk provisioning, issue SCIM credentials and apply audited lifecycle transitions without creating a separate application for each customer.
+            Create negotiated contracts, inspect tenant usage, configure SAML SSO, queue bulk provisioning, issue SCIM credentials and apply audited lifecycle transitions without creating a separate application for each customer.
           </p>
         </header>
 
@@ -64,6 +65,7 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
           platformRole={membership.role}
         />
         <EnterpriseBulkImport />
+        {canManageSecurity ? <EnterpriseSsoConnection /> : null}
         {canManageSecurity ? <EnterpriseScimToken /> : null}
       </div>
     </main>
