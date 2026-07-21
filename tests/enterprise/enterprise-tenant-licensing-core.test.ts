@@ -23,6 +23,14 @@ const invitationMigration = fs.readFileSync(
   'supabase/migrations/20260721195000_transactional_enterprise_invitations.sql',
   'utf8',
 );
+const invitationLockMigration = fs.readFileSync(
+  'supabase/migrations/20260721200500_invitation_lock_order_hardening.sql',
+  'utf8',
+);
+const idempotencyMigration = fs.readFileSync(
+  'supabase/migrations/20260721201000_seat_idempotency_hardening.sql',
+  'utf8',
+);
 const invitationAction = fs.readFileSync('src/server/actions/invitations.ts', 'utf8');
 const licensingService = fs.readFileSync('src/server/enterprise/licensing.ts', 'utf8');
 
@@ -123,12 +131,28 @@ describe('enterprise tenant licensing core', () => {
     }
   });
 
-  it('makes invite acceptance consume the pending-aware transactional reservation', () => {
-    expect(invitationMigration).toContain('create or replace function public.accept_organization_invitation_atomic');
-    expect(invitationMigration).toContain('from public.reserve_organization_seat_with_pending_atomic(');
-    expect(invitationMigration).toContain("'invitation:' || v_invitation.id::text");
-    expect(invitationMigration.indexOf('from public.reserve_organization_seat_with_pending_atomic(')).toBeLessThan(
-      invitationMigration.indexOf('set accepted_at = now()'),
+  it('uses one lock order for invitation creation, resend and acceptance', () => {
+    expect(invitationLockMigration).toContain('organization_usage -> invitation -> contract/entitlements');
+    expect(invitationLockMigration).toContain('from public.organization_usage as usage');
+    expect(invitationLockMigration).toContain('for update;');
+    expect(invitationLockMigration).toContain('from public.invitations as invitation');
+    expect(invitationLockMigration.indexOf('from public.organization_usage as usage')).toBeLessThan(
+      invitationLockMigration.lastIndexOf('from public.invitations as invitation'),
+    );
+    expect(invitationLockMigration).toContain('from public.reserve_organization_seat_with_pending_atomic(');
+    expect(invitationLockMigration).toContain("'invitation:' || v_invitation.id::text");
+    expect(invitationLockMigration.indexOf('from public.reserve_organization_seat_with_pending_atomic(')).toBeLessThan(
+      invitationLockMigration.indexOf('set accepted_at = now()'),
+    );
+  });
+
+  it('serializes repeated idempotency keys before quota evaluation', () => {
+    expect(idempotencyMigration).toContain('create or replace function public.reserve_organization_seat_idempotent_atomic');
+    expect(idempotencyMigration).toContain('pg_advisory_xact_lock(');
+    expect(idempotencyMigration).toContain('p_organization_id::text || \':\' || p_idempotency_key');
+    expect(idempotencyMigration).toContain("'duplicate'::text");
+    expect(idempotencyMigration.indexOf('pg_advisory_xact_lock(')).toBeLessThan(
+      idempotencyMigration.indexOf('from public.reserve_organization_seat_with_pending_atomic('),
     );
   });
 
@@ -142,11 +166,14 @@ describe('enterprise tenant licensing core', () => {
       expect(migration).toContain(`grant execute on function ${signature} to service_role`);
     }
 
-    expect(invitationMigration).toContain(
-      'revoke all on function public.reserve_organization_seat_with_pending_atomic(uuid, uuid, text, text, uuid, text, text) from public, anon, authenticated',
+    expect(idempotencyMigration).toContain(
+      'revoke all on function public.reserve_organization_seat_idempotent_atomic(uuid, uuid, text, text, uuid, text, text) from public, anon, authenticated',
     );
-    expect(invitationMigration).toContain(
-      'grant execute on function public.reserve_organization_seat_with_pending_atomic(uuid, uuid, text, text, uuid, text, text) to service_role',
+    expect(idempotencyMigration).toContain(
+      'grant execute on function public.reserve_organization_seat_idempotent_atomic(uuid, uuid, text, text, uuid, text, text) to service_role',
+    );
+    expect(idempotencyMigration).toContain(
+      'revoke all on function public.reserve_organization_seat_with_pending_atomic(uuid, uuid, text, text, uuid, text, text) from service_role',
     );
     expect(invitationMigration).toContain(
       'revoke all on function public.reserve_organization_seat_atomic(uuid, uuid, text, text, uuid, text, text) from service_role',
@@ -164,9 +191,9 @@ describe('enterprise tenant licensing core', () => {
     expect(platformMigration).toContain('for update;');
   });
 
-  it('uses a central pending-aware backend resolver instead of plan-name checks', () => {
+  it('uses the idempotency-hardened central backend resolver instead of plan-name checks', () => {
     expect(licensingService).toContain("const RESOLVE_ENTITLEMENTS_RPC = 'resolve_organization_entitlements'");
-    expect(licensingService).toContain("const RESERVE_SEAT_RPC = 'reserve_organization_seat_with_pending_atomic'");
+    expect(licensingService).toContain("const RESERVE_SEAT_RPC = 'reserve_organization_seat_idempotent_atomic'");
     expect(licensingService).not.toContain("if (plan === 'enterprise')");
     expect(licensingService).toContain('throw new Error(LICENSING_UNAVAILABLE)');
   });
