@@ -1,0 +1,63 @@
+name: External Security Assurance Acceptance
+
+run-name: External assurance acceptance for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character current main SHA reviewed by the independent assessor
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: external-security-assurance-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate independent security assurance evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: external-security-assurance
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+
+    steps:
+      - name: Validate exact SHA format
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+
+      - name: Checkout exact reviewed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+
+      - name: Validate contract tests
+        run: node --test tests/security/external-security-assurance-contract.test.mjs
+
+      - name: Validate supplied independent evidence
+        run: node scripts/security/validate-external-security-assurance.mjs
+
+      - name: Upload bounded acceptance decision
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: external-security-assurance-${{ inputs.release_sha }}
+          path: artifacts/external-security-assurance-decision.json
+          if-no-files-found: error
+          retention-days: 365
