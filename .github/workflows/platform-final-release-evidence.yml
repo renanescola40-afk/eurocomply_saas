@@ -1,0 +1,103 @@
+name: Platform Final Release Evidence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/platform/build-final-release-evidence-pack.mjs'
+      - 'tests/security/platform-final-release-evidence-pack.test.mjs'
+      - '.github/workflows/platform-final-release-evidence.yml'
+      - 'evidence/platform/final-release.example.json'
+      - 'docs/runbooks/platform-final-release-evidence.md'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character production release SHA
+        required: true
+        type: string
+      strict_runtime:
+        description: Validate protected final evidence input
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-final-release-evidence-${{ github.event.pull_request.number || inputs.release_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Final release evidence contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Run contract tests
+        run: node --test tests/security/platform-final-release-evidence-pack.test.mjs
+
+  protected-final-proof:
+    name: Exact-SHA platform release closeout
+    if: github.event_name == 'workflow_dispatch' && inputs.strict_runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production-platform-closeout
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      PLATFORM_EVIDENCE_MAX_AGE_HOURS: ${{ vars.PLATFORM_EVIDENCE_MAX_AGE_HOURS }}
+      PLATFORM_FINAL_RELEASE_EVIDENCE_JSON: ${{ secrets.PLATFORM_FINAL_RELEASE_EVIDENCE_JSON }}
+    steps:
+      - name: Validate requested SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+
+      - name: Materialize protected input
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PLATFORM_FINAL_RELEASE_EVIDENCE_JSON"
+          mkdir -p artifacts
+          printf '%s' "$PLATFORM_FINAL_RELEASE_EVIDENCE_JSON" > artifacts/platform-final-release-input.json
+          chmod 600 artifacts/platform-final-release-input.json
+
+      - name: Build final release evidence pack
+        run: node scripts/platform/build-final-release-evidence-pack.mjs --strict --input=artifacts/platform-final-release-input.json --output=artifacts/platform-final-release-evidence-pack.json
+
+      - name: Remove protected source
+        if: always()
+        shell: bash
+        run: rm -f artifacts/platform-final-release-input.json
+
+      - name: Upload redacted closeout artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: platform-final-release-evidence-${{ inputs.release_sha }}
+          path: artifacts/platform-final-release-evidence-pack.json
+          if-no-files-found: error
+          retention-days: 180
