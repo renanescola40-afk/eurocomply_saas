@@ -139,7 +139,10 @@ create policy workflow_step_runs_tenant_all on public.enterprise_workflow_step_r
 create policy workflow_approvals_tenant_all on public.enterprise_workflow_approvals for all using (public.is_organization_member(organization_id)) with check (public.is_organization_member(organization_id));
 create policy workflow_events_tenant_read on public.enterprise_workflow_events for select using (public.is_organization_member(organization_id));
 create policy workflow_events_tenant_insert on public.enterprise_workflow_events for insert with check (public.is_organization_member(organization_id));
-create policy workflow_escalations_tenant_all on public.enterprise_workflow_escalations for all using (public.is_organization_member(organization_id)) with check (public.is_organization_member(organization_id));
+create policy workflow_escalations_tenant_read on public.enterprise_workflow_escalations for select using (public.is_organization_member(organization_id));
+create policy workflow_escalations_tenant_insert on public.enterprise_workflow_escalations for insert with check (public.is_organization_member(organization_id));
+create policy workflow_escalations_tenant_acknowledge on public.enterprise_workflow_escalations for update using (public.is_organization_member(organization_id)) with check (public.is_organization_member(organization_id));
 
 revoke update, delete on public.enterprise_workflow_events from anon, authenticated;
 revoke update, delete on public.enterprise_workflow_approvals from anon, authenticated;
+revoke delete on public.enterprise_workflow_escalations from anon, authenticated;
