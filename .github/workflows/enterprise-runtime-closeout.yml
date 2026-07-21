@@ -71,7 +71,6 @@ jobs:
 
       - name: Execute enterprise runtime campaign
         id: campaign
-        continue-on-error: true
         run: node scripts/release/run-enterprise-runtime-campaign.mjs
 
       - name: Upload campaign and collected evidence
@@ -85,8 +84,8 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-      - name: Enforce fail-closed closeout
-        if: steps.campaign.outcome != 'success'
+      - name: Report fail-closed closeout
+        if: always() && steps.campaign.outcome != 'success'
         run: |
           echo "Enterprise runtime closeout remains NO_GO. Inspect the uploaded campaign artifact." >&2
-          exit 1
+          test "${{ steps.campaign.outcome }}" = "success"
