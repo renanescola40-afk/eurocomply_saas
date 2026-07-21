@@ -25,15 +25,17 @@ test('campaign is exact-main and fail-closed', () => {
   assert.doesNotMatch(script, /console\.log\(token\)/);
 });
 
-test('workflow requires protected operator confirmation', () => {
+test('workflow requires protected operator confirmation and preserves failure', () => {
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /RUN_ENTERPRISE_RUNTIME_CLOSEOUT/);
   assert.match(workflow, /environment: production-enterprise-closeout/);
   assert.match(workflow, /actions: write/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /retention-days: 90/);
-  assert.match(workflow, /continue-on-error: true/);
-  assert.match(workflow, /Enforce fail-closed closeout/);
+  assert.doesNotMatch(workflow, /continue-on-error:\s*true/);
+  assert.match(workflow, /Upload campaign and collected evidence[\s\S]*if: always\(\)/);
+  assert.match(workflow, /Report fail-closed closeout/);
+  assert.match(workflow, /steps\.campaign\.outcome != 'success'/);
 });
 
 test('campaign never marks an unsuccessful or artifact-free lane complete', () => {
@@ -51,11 +53,21 @@ test('campaign allowlists outbound GitHub API destinations and workflow identifi
   assert.doesNotMatch(script, /fetch\(artifact\.archive_download_url/);
 });
 
+test('artifact redirects are followed only through a validated fixed GitHub endpoint', () => {
+  assert.match(script, /async function githubArtifactRequest\(artifactId\)/);
+  assert.match(script, /actions\/artifacts\/\$\{artifactId\}\/zip/);
+  assert.match(script, /redirect: 'follow'/);
+  assert.match(script, /assertTrustedArtifactResponse\(response\)/);
+  assert.match(script, /finalUrl\.protocol !== 'https:'/);
+  assert.match(script, /allowedArtifactHostSuffixes\.some/);
+  assert.doesNotMatch(script, /new URL\(artifact\.archive_download_url/);
+});
+
 test('campaign validates remote archives without network-derived filenames', () => {
   assert.match(script, /maximumArtifactBytes/);
   assert.match(script, /maximumExpandedBytes/);
   assert.match(script, /Number\.isSafeInteger\(artifact\.id\)/);
-  assert.match(script, /actions\/artifacts\/\$\{artifact\.id\}\/zip/);
+  assert.match(script, /githubArtifactRequest\(artifact\.id\)/);
   assert.match(script, /zipfile\.ZipFile\(io\.BytesIO\(archive\)\)/);
   assert.match(script, /stat\.S_ISLNK/);
   assert.match(script, /destination not in target\.parents/);
