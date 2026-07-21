@@ -33,19 +33,38 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Regenerate audited lockfile
+      - name: Generate sanitized audit diagnosis
         run: |
           set -euo pipefail
-          npm audit fix --package-lock-only --ignore-scripts --no-fund
-          npm audit --audit-level=moderate
+          npm audit fix --package-lock-only --ignore-scripts --no-fund || true
+          npm audit --json > .tmp-pr1299-audit.json || true
+          node - <<'NODE'
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('.tmp-pr1299-audit.json', 'utf8'));
+          const vulnerabilities = Object.entries(report.vulnerabilities || {}).map(([name, item]) => ({
+            name,
+            severity: item.severity,
+            direct: item.isDirect === true,
+            range: item.range,
+            fixAvailable: item.fixAvailable === true
+              ? true
+              : item.fixAvailable && typeof item.fixAvailable === 'object'
+                ? { name: item.fixAvailable.name, version: item.fixAvailable.version, major: item.fixAvailable.isSemVerMajor === true }
+                : false,
+            via: Array.isArray(item.via)
+              ? item.via.map((entry) => typeof entry === 'string' ? entry : ({ source: entry.source, name: entry.name, severity: entry.severity, range: entry.range }))
+              : [],
+          }));
+          fs.writeFileSync('.tmp-pr1299-audit-summary.json', JSON.stringify({ metadata: report.metadata, vulnerabilities }, null, 2) + '\n');
+          NODE
 
-      - name: Commit lockfile and remove temporary workflow
+      - name: Commit diagnosis and remove temporary workflow
         run: |
           set -euo pipefail
-          rm .github/workflows/temporary-fix-pr1299-lockfile.yml
+          rm .github/workflows/temporary-fix-pr1299-lockfile.yml .tmp-pr1299-audit.json
           git config user.name "pr1299-lockfile-fix[bot]"
           git config user.email "pr1299-lockfile-fix@users.noreply.github.com"
-          git add package-lock.json .github/workflows/temporary-fix-pr1299-lockfile.yml
+          git add package-lock.json .tmp-pr1299-audit-summary.json .github/workflows/temporary-fix-pr1299-lockfile.yml
           git diff --cached --check
-          git commit -m "fix(deps): refresh audited lockfile for runtime promotion"
+          git commit -m "chore(ci): capture sanitized dependency audit for PR1299"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
