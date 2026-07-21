@@ -11,8 +11,6 @@ on:
 permissions:
   contents: read
 
-environment: production-release-decision
-
 concurrency:
   group: enterprise-release-decision-${{ inputs.release_sha }}
   cancel-in-progress: false
@@ -22,6 +20,7 @@ jobs:
     name: Build exact-SHA Go No-Go decision
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment: production-release-decision
     steps:
       - name: Validate requested SHA format
         shell: bash
