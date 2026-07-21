@@ -34,18 +34,30 @@ export async function GET(
       organizationId: entitlement.organizationId,
       contractId: entitlement.contractId,
       contractStatus: entitlement.contractStatus,
+      contractVersion: entitlement.contractVersion,
       canAddMembers: entitlement.canAddMembers,
       limits: entitlement.limits,
       usage: entitlement.usage,
+      pending: entitlement.pending,
       available: {
         members: entitlement.canAddMembers
-          ? Math.max(entitlement.limits.members - entitlement.usage.activeMembers, 0)
+          ? Math.max(
+              entitlement.limits.members
+                - entitlement.usage.activeMembers
+                - entitlement.pending.invitations,
+              0,
+            )
           : 0,
         fullUsers: getSeatAvailability(entitlement, 'full'),
         participants: getSeatAvailability(entitlement, 'participant'),
         viewers: getSeatAvailability(entitlement, 'viewer'),
         admins: entitlement.canAddMembers
-          ? Math.max(entitlement.limits.admins - entitlement.usage.activeAdmins, 0)
+          ? Math.max(
+              entitlement.limits.admins
+                - entitlement.usage.activeAdmins
+                - entitlement.pending.admins,
+              0,
+            )
           : 0,
       },
       features: entitlement.features,
