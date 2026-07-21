@@ -123,7 +123,7 @@ type SeatReservationRow = {
 };
 
 const RESOLVE_ENTITLEMENTS_RPC = 'resolve_organization_entitlements';
-const RESERVE_SEAT_RPC = 'reserve_organization_seat_atomic';
+const RESERVE_SEAT_RPC = 'reserve_organization_seat_with_pending_atomic';
 const LICENSING_UNAVAILABLE = 'enterprise_licensing_unavailable';
 
 function firstRow<T>(data: unknown): T | null {
