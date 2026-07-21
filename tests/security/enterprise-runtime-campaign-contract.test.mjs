@@ -41,3 +41,24 @@ test('campaign never marks an unsuccessful or artifact-free lane complete', () =
   assert.match(script, /artifacts\.length === 0/);
   assert.match(script, /required\.every\(\(result\) => result\.status === 'complete'\)/);
 });
+
+test('campaign allowlists outbound GitHub API destinations and workflow identifiers', () => {
+  assert.match(script, /const allowedWorkflows = new Set/);
+  assert.match(script, /allowedWorkflows\.has\(workflow\)/);
+  assert.match(script, /new URL\(pathname, githubApiOrigin\)/);
+  assert.match(script, /url\.origin !== githubApiOrigin/);
+  assert.match(script, /redirect: 'error'/);
+  assert.doesNotMatch(script, /fetch\(artifact\.archive_download_url/);
+});
+
+test('campaign validates remote archives without network-derived filenames', () => {
+  assert.match(script, /maximumArtifactBytes/);
+  assert.match(script, /Number\.isSafeInteger\(artifact\.id\)/);
+  assert.match(script, /actions\/artifacts\/\$\{artifact\.id\}\/zip/);
+  assert.match(script, /assertSafeArchiveEntries/);
+  assert.match(script, /path\.posix\.isAbsolute/);
+  assert.match(script, /normalized\.startsWith\('\.\.\/'\)/);
+  assert.match(script, /spawnSync\('unzip', \['-Z1', '-'\]/);
+  assert.doesNotMatch(script, /writeFile\(zipPath/);
+  assert.doesNotMatch(script, /artifact\.name\}\.zip/);
+});
