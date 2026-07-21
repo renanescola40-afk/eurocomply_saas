@@ -1,0 +1,101 @@
+name: Platform Provider Transaction Evidence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/platform/validate-provider-transaction-evidence.mjs'
+      - 'tests/security/platform-provider-transaction-evidence-contract.test.mjs'
+      - '.github/workflows/platform-provider-transaction-evidence.yml'
+      - 'docs/runbooks/platform-provider-transaction-evidence.md'
+      - 'evidence/platform/provider-transactions.example.json'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full lowercase 40-character SHA represented by the evidence
+        required: true
+        type: string
+      strict_runtime:
+        description: Validate the protected transaction evidence file fail-closed
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-provider-transaction-evidence-${{ github.event.pull_request.number || inputs.release_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Provider transaction evidence contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Run contract tests
+        run: node --test tests/security/platform-provider-transaction-evidence-contract.test.mjs
+
+  protected-evidence:
+    name: Exact-SHA provider transaction evidence proof
+    if: github.event_name == 'workflow_dispatch' && inputs.strict_runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: production-provider-transaction-proof
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      PROVIDER_EVIDENCE_MAX_AGE_HOURS: ${{ vars.PROVIDER_EVIDENCE_MAX_AGE_HOURS || '168' }}
+    steps:
+      - name: Validate requested SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Materialize protected evidence
+        shell: bash
+        env:
+          PROVIDER_TRANSACTION_EVIDENCE_JSON: ${{ secrets.PROVIDER_TRANSACTION_EVIDENCE_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "$PROVIDER_TRANSACTION_EVIDENCE_JSON"
+          mkdir -p evidence/platform
+          printf '%s' "$PROVIDER_TRANSACTION_EVIDENCE_JSON" > evidence/platform/provider-transactions.json
+          chmod 600 evidence/platform/provider-transactions.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - name: Validate protected evidence
+        run: node scripts/platform/validate-provider-transaction-evidence.mjs --strict --input=evidence/platform/provider-transactions.json --output=artifacts/platform-provider-transaction-evidence.json
+
+      - name: Remove protected source
+        if: always()
+        shell: bash
+        run: rm -f evidence/platform/provider-transactions.json
+
+      - name: Upload redacted validation artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: platform-provider-transaction-evidence-${{ inputs.release_sha }}
+          path: artifacts/platform-provider-transaction-evidence.json
+          if-no-files-found: error
+          retention-days: 90
