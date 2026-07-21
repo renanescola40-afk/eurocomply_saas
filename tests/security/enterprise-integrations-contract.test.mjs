@@ -40,7 +40,7 @@ test('webhook delivery contract includes replay, idempotency, retries and dead l
   assert.match(migration, /dead_letter/);
   assert.match(migration, /lease_expires_at/);
   assert.match(migration, /next_attempt_at/);
-  assert.match(security, /timestamp\.\$\{body\}/);
+  assert.match(security, /update\(`\$\{timestamp\}\.\$\{body\}`/);
   assert.match(security, /timingSafeEqual/);
   assert.match(security, /maximumAgeSeconds/);
 });
