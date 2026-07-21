@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve, relative } from 'node:path';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
@@ -73,10 +73,12 @@ export function buildManifest({ root, targetSha, repository, generatedAt = new D
   const rejected = [];
   for (const path of walk(absoluteRoot)) {
     const sourcePath = relative(process.cwd(), path).replaceAll('\\', '/');
-    const size = statSync(path).size;
-    if (size > MAX_FILE_BYTES) { rejected.push({ sourcePath, failures: [`file exceeds ${MAX_FILE_BYTES} bytes`] }); continue; }
+    let raw;
+    try { raw = readFileSync(path); }
+    catch { rejected.push({ sourcePath, failures: ['file could not be read'] }); continue; }
+    if (raw.byteLength > MAX_FILE_BYTES) { rejected.push({ sourcePath, failures: [`file exceeds ${MAX_FILE_BYTES} bytes`] }); continue; }
     let parsed;
-    try { parsed = JSON.parse(readFileSync(path, 'utf8')); }
+    try { parsed = JSON.parse(raw.toString('utf8')); }
     catch { rejected.push({ sourcePath, failures: ['invalid JSON'] }); continue; }
     const documents = Array.isArray(parsed) ? parsed : [parsed];
     for (const document of documents) {
