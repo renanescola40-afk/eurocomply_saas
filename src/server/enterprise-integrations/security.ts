@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
 
 const API_KEY_PREFIX = 'rc_live_';
 const SCIM_PREFIX = 'scim_';
@@ -18,7 +18,7 @@ export type IntegrationScope =
 export interface IssuedSecret {
   plaintext: string;
   prefix: string;
-  sha256: string;
+  verifier: string;
 }
 
 export interface WebhookVerificationInput {
@@ -30,8 +30,33 @@ export interface WebhookVerificationInput {
   maximumAgeSeconds?: number;
 }
 
+const SECRET_KDF_ALGORITHM = 'sha256';
+const SECRET_KDF_ITERATIONS = 210000;
+const SECRET_KDF_KEYLEN = 32;
+
 function sha256(value: string): string {
   return createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
+function createSecretVerifier(secret: string): string {
+  const salt = randomBytes(16).toString('hex');
+  const derived = pbkdf2Sync(secret, salt, SECRET_KDF_ITERATIONS, SECRET_KDF_KEYLEN, SECRET_KDF_ALGORITHM).toString('hex');
+  return `pbkdf2$${SECRET_KDF_ITERATIONS}$${salt}$${derived}`;
+}
+
+function verifySecretVerifier(candidate: string, verifier: string): boolean {
+  const parts = verifier.split('$');
+  if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
+
+  const iterations = Number.parseInt(parts[1], 10);
+  const salt = parts[2];
+  const expected = parts[3];
+
+  if (!Number.isFinite(iterations) || iterations <= 0) return false;
+  if (!/^[a-f0-9]+$/i.test(salt) || !/^[a-f0-9]+$/i.test(expected)) return false;
+
+  const derived = pbkdf2Sync(candidate, salt, iterations, expected.length / 2, SECRET_KDF_ALGORITHM).toString('hex');
+  return safeHexEqual(derived, expected.toLowerCase());
 }
 
 function safeHexEqual(left: string, right: string): boolean {
@@ -44,7 +69,7 @@ function issueSecret(namespace: typeof API_KEY_PREFIX | typeof SCIM_PREFIX): Iss
   const privatePart = randomBytes(32).toString('base64url');
   const prefix = `${namespace}${publicPart}`;
   const plaintext = `${prefix}.${privatePart}`;
-  return { plaintext, prefix, sha256: sha256(plaintext) };
+  return { plaintext, prefix, verifier: createSecretVerifier(plaintext) };
 }
 
 export function issueEnterpriseApiKey(): IssuedSecret {
@@ -55,9 +80,9 @@ export function issueScimToken(): IssuedSecret {
   return issueSecret(SCIM_PREFIX);
 }
 
-export function verifyStoredSecret(candidate: string, expectedSha256: string): boolean {
-  if (!candidate || !/^[a-f0-9]{64}$/i.test(expectedSha256)) return false;
-  return safeHexEqual(sha256(candidate), expectedSha256.toLowerCase());
+export function verifyStoredSecret(candidate: string, expectedVerifier: string): boolean {
+  if (!candidate || !expectedVerifier) return false;
+  return verifySecretVerifier(candidate, expectedVerifier);
 }
 
 export function hashNetworkIdentifier(value: string, pepper: string): string {
