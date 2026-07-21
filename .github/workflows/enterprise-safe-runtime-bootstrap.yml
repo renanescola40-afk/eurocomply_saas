@@ -1,0 +1,161 @@
+name: Enterprise Safe Runtime Bootstrap
+
+run-name: Safe runtime bootstrap for ${{ inputs.release_sha || github.event.workflow_run.head_sha }}
+
+on:
+  workflow_run:
+    workflows: [Full Security Suite]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Optional full current main SHA; defaults to current main
+        required: false
+        type: string
+      confirmation:
+        description: Type RUN_SAFE_RUNTIME_BOOTSTRAP for a manual run
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: enterprise-safe-runtime-bootstrap-${{ inputs.release_sha || github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    name: Reuse, dispatch and promote non-destructive runtime proof
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 480
+    environment: production-enterprise-safe-runtime
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha || github.event.workflow_run.head_sha }}
+      RELEASE_BRANCH: main
+      RUNTIME_CAMPAIGN_PROFILE: safe
+      RUNTIME_CAMPAIGN_OUTPUT: artifacts/enterprise-safe-runtime-campaign.json
+      RUNTIME_CAMPAIGN_ARTIFACTS_DIR: artifacts/safe-runtime-evidence
+      GITHUB_TOKEN: ${{ github.token }}
+      TARGET_SHA: ${{ inputs.release_sha || github.event.workflow_run.head_sha }}
+      GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
+      ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha || github.event.workflow_run.head_sha }}
+      ENTERPRISE_SCORECARD_JSON: artifacts/enterprise-readiness/canonical-scorecard.json
+      ENTERPRISE_SCORECARD_MARKDOWN: artifacts/enterprise-readiness/canonical-scorecard.md
+
+    steps:
+      - name: Resolve and validate exact current main SHA
+        shell: bash
+        env:
+          MANUAL_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$MANUAL_CONFIRMATION" = "RUN_SAFE_RUNTIME_BOOTSTRAP"
+            if [ -z "$RELEASE_SHA" ]; then
+              RELEASE_SHA="$(curl --fail --silent --show-error -H 'Authorization: Bearer $GITHUB_TOKEN' -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main | jq -r .sha)"
+            fi
+          fi
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          echo "RELEASE_SHA=${RELEASE_SHA,,}" >> "$GITHUB_ENV"
+          echo "TARGET_SHA=${RELEASE_SHA,,}" >> "$GITHUB_ENV"
+          echo "ENTERPRISE_EXPECTED_SHA=${RELEASE_SHA,,}" >> "$GITHUB_ENV"
+
+      - name: Check out exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Verify exact current main checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate safe campaign and promotion contracts
+        run: |
+          node --test tests/enterprise/runtime-campaign-profiles.test.mjs
+          node --test tests/enterprise/runtime-campaign-run-selection.test.mjs
+          node --test tests/security/enterprise-runtime-campaign-contract.test.mjs
+          node --test tests/enterprise/enterprise-promotion-closeout.test.mjs
+
+      - name: Reuse or dispatch safe exact-SHA runtime lanes
+        id: campaign
+        run: node scripts/release/run-enterprise-runtime-campaign.mjs
+
+      - name: Capture exact-SHA repository checks
+        if: steps.campaign.outcome == 'success'
+        run: node scripts/enterprise/capture-github-checks-evidence.mjs
+
+      - name: Generate canonical exact-SHA baseline scorecard
+        if: steps.campaign.outcome == 'success'
+        run: node scripts/enterprise/generate-readiness-scorecard.mjs
+
+      - name: Promote safe exact-SHA evidence without final release claims
+        if: steps.campaign.outcome == 'success'
+        id: promotion
+        run: |
+          node scripts/enterprise/run-enterprise-promotion-closeout.mjs \
+            --profile safe \
+            --campaign artifacts/enterprise-safe-runtime-campaign.json \
+            --scorecard artifacts/enterprise-readiness/canonical-scorecard.json \
+            --runtime-root artifacts/safe-runtime-evidence \
+            --staging-root artifacts/enterprise-readiness/safe-evidence-input \
+            --sha "$RELEASE_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --run "$GITHUB_RUN_ID" \
+            --manifest-output artifacts/enterprise-readiness/safe-evidence-manifest.json \
+            --promotion-output artifacts/enterprise-readiness/safe-scorecard-promotion-report.json \
+            --closeout-output artifacts/enterprise-readiness/safe-promotion-closeout.json
+
+      - name: Upload safe evidence-backed progress bundle
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-safe-runtime-bootstrap-${{ env.RELEASE_SHA }}
+          path: |
+            artifacts/enterprise-safe-runtime-campaign.json
+            artifacts/safe-runtime-evidence/
+            artifacts/enterprise-readiness/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce truthful safe promotion
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.campaign.outcome }}" = "success"
+          test "${{ steps.promotion.outcome }}" = "success"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('artifacts/enterprise-readiness/safe-promotion-closeout.json', 'utf8'));
+          console.log(`Baseline completion: ${report.baseline?.completedPercent ?? 'unknown'}%`);
+          console.log(`Safe promoted completion: ${report.promoted?.completePercent ?? 'unknown'}%`);
+          console.log(`Safe promoted delta: ${report.promotedDeltaPercent ?? 'unknown'}%`);
+          console.log(`Remaining controls: ${report.promoted?.remainingPercent ?? 'unknown'}%`);
+          if (report.profile !== 'safe') process.exit(1);
+          if (report.runtimeCampaignDecision !== 'READY_FOR_SAFE_PROMOTION') process.exit(1);
+          if (report.evidenceManifestDecision !== 'READY_FOR_PROMOTION') process.exit(1);
+          if (report.closeoutDecision !== 'SAFE_EVIDENCE_PROMOTED') process.exit(1);
+          if (report.coherencePromoted !== false) process.exit(1);
+          if (report.rejectedEvidence !== 0) process.exit(1);
+          if (report.promoted.completePercent < report.baseline.completedPercent) process.exit(1);
+          NODE
