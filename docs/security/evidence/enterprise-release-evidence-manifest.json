@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "maximum_evidence_age_days": 30,
+  "release_branch": "main",
+  "required_controls": [
+    { "id": "REL-01", "name": "Branch protection", "path": "docs/security/evidence/runtime/branch-protection-required-checks.json" },
+    { "id": "REL-02", "name": "Production provider configuration", "path": "docs/security/evidence/runtime/production-provider-configuration.json" },
+    { "id": "IAM-01", "name": "Auth and RBAC runtime", "path": "docs/security/evidence/runtime/auth-rbac-final-validation.json" },
+    { "id": "TEN-01", "name": "Supabase live RLS", "path": "docs/security/evidence/runtime/supabase-live-rls-validation.json" },
+    { "id": "SEC-EXT-01", "name": "Independent security review", "path": "docs/security/evidence/runtime/external-security-review.json", "acceptance": "independent_review" },
+    { "id": "OPS-01", "name": "Deployment smoke", "path": "docs/security/evidence/runtime/deployment-smoke-validation.json" },
+    { "id": "REL-03", "name": "Final validation runner", "path": "docs/security/evidence/runtime/production-final-validation.json" },
+    { "id": "AUD-01", "name": "Audit chain live validation", "path": "docs/security/evidence/runtime/audit-chain-live-validation.json" },
+    { "id": "UPL-01", "name": "Upload malware and content scanning", "path": "docs/security/evidence/runtime/upload-malware-scan-validation.json" },
+    { "id": "IAM-02", "name": "Step-up MFA or IdP", "path": "docs/security/evidence/runtime/step-up-mfa-validation.json" },
+    { "id": "BIL-01", "name": "Stripe billing runtime", "path": "docs/security/evidence/runtime/stripe-billing-validation.json" },
+    { "id": "OBS-01", "name": "Observability readiness", "path": "docs/security/evidence/runtime/observability-smoke-validation.json" },
+    { "id": "REC-01", "name": "Rollback and recovery", "path": "docs/security/evidence/runtime/rollback-dry-run-validation.json" },
+    { "id": "DAT-01", "name": "Data governance runtime", "path": "docs/security/evidence/runtime/data-governance-validation.json" },
+    { "id": "INC-01", "name": "Incident and continuity exercise", "path": "docs/security/evidence/runtime/incident-continuity-validation.json" },
+    { "id": "TRU-01", "name": "Procurement and trust operations", "path": "docs/security/evidence/runtime/procurement-trust-validation.json" },
+    { "id": "GOV-01", "name": "EU AI Act governance lifecycle", "path": "docs/security/evidence/runtime/ai-governance-lifecycle-validation.json" },
+    { "id": "DOC-01", "name": "Documents and reporting lifecycle", "path": "docs/security/evidence/runtime/documents-reporting-validation.json" },
+    { "id": "WFL-01", "name": "Workflow automation lifecycle", "path": "docs/security/evidence/runtime/workflow-automation-validation.json" }
+  ]
+}
