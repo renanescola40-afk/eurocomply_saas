@@ -221,8 +221,7 @@ export async function restoreOrganizationInvite(input: {
     return { restored: false as const, providerCode: 'invalid_snapshot' };
   }
 
-  const supabase = createAdminClient();
-  const { error } = await supabase.from('invitations').insert({
+  const invitationInsert = {
     id: invitation.id,
     organization_id: invitation.organization_id,
     email: invitation.email,
@@ -234,7 +233,13 @@ export async function restoreOrganizationInvite(input: {
     revoked_at: invitation.revoked_at ?? null,
     expires_at: invitation.expires_at,
     created_at: invitation.created_at,
-  });
+  };
+
+  const supabase = createAdminClient();
+  // The migration adds seat_type/revoked_at before generated Supabase types are
+  // refreshed. The explicit boundary cast keeps compensation deployable without
+  // weakening types elsewhere in the application.
+  const { error } = await supabase.from('invitations').insert(invitationInsert as never);
 
   if (error) {
     return { restored: false as const, providerCode: error.code ?? null };
