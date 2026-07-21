@@ -15,6 +15,11 @@ const githubApiOrigin = 'https://api.github.com';
 const maximumArtifactBytes = 100 * 1024 * 1024;
 const maximumArchiveEntries = 2_000;
 const maximumExpandedBytes = 250 * 1024 * 1024;
+const allowedArtifactHostSuffixes = [
+  '.blob.core.windows.net',
+  '.githubusercontent.com',
+  '.amazonaws.com',
+];
 
 const allowedWorkflows = new Set([
   'auth-rbac-runtime-proof.yml',
@@ -59,19 +64,45 @@ function githubApiUrl(pathname) {
   return url;
 }
 
+function githubHeaders(accept = 'application/vnd.github+json') {
+  return {
+    Accept: accept,
+    Authorization: `Bearer ${token}`,
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+}
+
 async function githubRequest(pathname, init = {}) {
   const url = githubApiUrl(pathname);
   const response = await fetch(url, {
     ...init,
     redirect: 'error',
     headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${token}`,
-      'X-GitHub-Api-Version': '2022-11-28',
+      ...githubHeaders(),
       ...(init.headers || {}),
     },
   });
   if (!response.ok) throw new Error(`GitHub API ${response.status}`);
+  return response;
+}
+
+function assertTrustedArtifactResponse(response) {
+  const finalUrl = new URL(response.url);
+  if (finalUrl.protocol !== 'https:') throw new Error('Artifact download did not use HTTPS');
+  const trustedHost = finalUrl.origin === githubApiOrigin
+    || allowedArtifactHostSuffixes.some((suffix) => finalUrl.hostname.endsWith(suffix));
+  if (!trustedHost) throw new Error('Artifact download redirected to an untrusted host');
+}
+
+async function githubArtifactRequest(artifactId) {
+  if (!Number.isSafeInteger(artifactId) || artifactId <= 0) throw new Error('Invalid artifact ID');
+  const url = githubApiUrl(`/repos/${repository}/actions/artifacts/${artifactId}/zip`);
+  const response = await fetch(url, {
+    redirect: 'follow',
+    headers: githubHeaders('application/octet-stream'),
+  });
+  assertTrustedArtifactResponse(response);
+  if (!response.ok) throw new Error(`Artifact download failed with ${response.status}`);
   return response;
 }
 
@@ -121,7 +152,6 @@ async function waitForRun(workflow, notBefore) {
 
 const safeZipExtractor = String.raw`
 import io
-import os
 import pathlib
 import shutil
 import stat
@@ -184,9 +214,7 @@ async function downloadArtifacts(runId, destination) {
     if (!Number.isSafeInteger(artifact.size_in_bytes) || artifact.size_in_bytes <= 0 || artifact.size_in_bytes > maximumArtifactBytes) {
       throw new Error('Artifact size is outside the accepted boundary');
     }
-    const response = await githubRequest(`/repos/${repository}/actions/artifacts/${artifact.id}/zip`, {
-      headers: { Accept: 'application/octet-stream' },
-    });
+    const response = await githubArtifactRequest(artifact.id);
     const contentLength = Number(response.headers.get('content-length') || artifact.size_in_bytes);
     if (!Number.isFinite(contentLength) || contentLength <= 0 || contentLength > maximumArtifactBytes) {
       throw new Error('Artifact response size is outside the accepted boundary');
