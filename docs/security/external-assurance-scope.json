@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "product": "RISCK COMPLY",
+  "release_branch": "main",
+  "required_assurance_types": ["web_application_pentest", "api_authorization_review", "tenant_isolation_review", "cloud_configuration_review"],
+  "in_scope": [
+    "Next.js public and authenticated routes",
+    "Supabase Auth session lifecycle",
+    "organization RBAC and tenant isolation",
+    "Supabase Postgres RLS policies",
+    "server actions and API authorization",
+    "Stripe checkout and webhook processing",
+    "uploads, MIME validation and malware scanning",
+    "internal endpoints and operational controls",
+    "security headers, caching and origin controls",
+    "CI/CD and production configuration evidence"
+  ],
+  "minimum_test_classes": [
+    "authentication_bypass",
+    "broken_object_level_authorization",
+    "broken_function_level_authorization",
+    "cross_tenant_access",
+    "session_fixation_and_revocation",
+    "csrf_and_trusted_origin",
+    "xss_and_injection",
+    "ssrf_and_open_redirect",
+    "rate_limit_bypass",
+    "webhook_replay_and_idempotency",
+    "upload_content_validation",
+    "secrets_and_information_disclosure"
+  ],
+  "required_deliverables": [
+    "executive_report",
+    "technical_report",
+    "finding_register",
+    "retest_report",
+    "reviewer_independence_attestation"
+  ],
+  "severity_model": ["critical", "high", "medium", "low", "informational"],
+  "release_blockers": ["open_critical", "open_high", "missing_retest", "missing_independence_attestation", "sha_mismatch", "expired_report"]
+}
