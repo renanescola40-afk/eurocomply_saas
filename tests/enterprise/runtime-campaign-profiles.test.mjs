@@ -3,21 +3,34 @@ import test from 'node:test';
 
 import { EXPECTED_RUNTIME_LANES } from '../../scripts/enterprise/runtime-lane-contracts.mjs';
 import {
+  FULL_PROMOTION_DECISION,
   FULL_RUNTIME_PROFILE,
+  PARTIAL_SAFE_PROMOTION_DECISION,
+  SAFE_PROMOTION_DECISION,
   SAFE_RUNTIME_EXCLUDED_LANES,
   SAFE_RUNTIME_LANES,
   SAFE_RUNTIME_PROFILE,
+  allowedPromotionDecisionsForProfile,
+  decisionForCampaignResults,
   expectedDecisionForProfile,
   expectedLanesForProfile,
+  profileAllowsIncrementalPromotion,
   profileMayReuseExactShaRuns,
   profileRequiresRecoveryConfirmation,
   resolveRuntimeCampaignProfile,
 } from '../../scripts/enterprise/runtime-campaign-profiles.mjs';
 
-test('full profile preserves every registered runtime lane', () => {
+const complete = (id) => ({ id, status: 'complete' });
+const blocked = (id) => ({ id, status: 'blocked' });
+
+test('full profile preserves every registered runtime lane and remains all-or-nothing', () => {
   assert.equal(resolveRuntimeCampaignProfile('FULL'), FULL_RUNTIME_PROFILE);
   assert.deepEqual(expectedLanesForProfile(FULL_RUNTIME_PROFILE), EXPECTED_RUNTIME_LANES);
-  assert.equal(expectedDecisionForProfile(FULL_RUNTIME_PROFILE), 'READY_FOR_EVIDENCE_PROMOTION');
+  assert.equal(expectedDecisionForProfile(FULL_RUNTIME_PROFILE), FULL_PROMOTION_DECISION);
+  assert.deepEqual(allowedPromotionDecisionsForProfile(FULL_RUNTIME_PROFILE), [FULL_PROMOTION_DECISION]);
+  assert.equal(decisionForCampaignResults(FULL_RUNTIME_PROFILE, EXPECTED_RUNTIME_LANES.map(complete)), FULL_PROMOTION_DECISION);
+  assert.equal(decisionForCampaignResults(FULL_RUNTIME_PROFILE, [complete('IAM-RBAC'), blocked('RECOVERY')]), 'NO_GO');
+  assert.equal(profileAllowsIncrementalPromotion(FULL_RUNTIME_PROFILE), false);
   assert.equal(profileRequiresRecoveryConfirmation(FULL_RUNTIME_PROFILE), true);
   assert.equal(profileMayReuseExactShaRuns(FULL_RUNTIME_PROFILE), false);
 });
@@ -29,9 +42,18 @@ test('safe profile excludes only recovery and external assurance', () => {
   assert.equal(SAFE_RUNTIME_LANES.length, EXPECTED_RUNTIME_LANES.length - 2);
   assert.equal(SAFE_RUNTIME_LANES.includes('RECOVERY'), false);
   assert.equal(SAFE_RUNTIME_LANES.includes('ASSURANCE'), false);
-  assert.equal(expectedDecisionForProfile(SAFE_RUNTIME_PROFILE), 'READY_FOR_SAFE_PROMOTION');
+  assert.equal(expectedDecisionForProfile(SAFE_RUNTIME_PROFILE), SAFE_PROMOTION_DECISION);
+  assert.deepEqual(allowedPromotionDecisionsForProfile(SAFE_RUNTIME_PROFILE), [SAFE_PROMOTION_DECISION, PARTIAL_SAFE_PROMOTION_DECISION]);
+  assert.equal(profileAllowsIncrementalPromotion(SAFE_RUNTIME_PROFILE), true);
   assert.equal(profileRequiresRecoveryConfirmation(SAFE_RUNTIME_PROFILE), false);
   assert.equal(profileMayReuseExactShaRuns(SAFE_RUNTIME_PROFILE), true);
+});
+
+test('safe campaign permits incremental promotion only when at least one lane completed', () => {
+  assert.equal(decisionForCampaignResults(SAFE_RUNTIME_PROFILE, SAFE_RUNTIME_LANES.map(complete)), SAFE_PROMOTION_DECISION);
+  assert.equal(decisionForCampaignResults(SAFE_RUNTIME_PROFILE, [complete('IAM-RBAC'), blocked('TEN-RLS')]), PARTIAL_SAFE_PROMOTION_DECISION);
+  assert.equal(decisionForCampaignResults(SAFE_RUNTIME_PROFILE, [blocked('IAM-RBAC'), blocked('TEN-RLS')]), 'NO_GO');
+  assert.equal(decisionForCampaignResults(SAFE_RUNTIME_PROFILE, []), 'NO_GO');
 });
 
 test('unknown campaign profile fails closed', () => {

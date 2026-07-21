@@ -98,7 +98,7 @@ jobs:
           node --test tests/security/enterprise-runtime-campaign-contract.test.mjs
           node --test tests/enterprise/enterprise-promotion-closeout.test.mjs
 
-      - name: Reuse or dispatch safe exact-SHA runtime lanes
+      - name: Reuse or dispatch safe exact-SHA runtime lanes concurrently
         id: campaign
         run: node scripts/release/run-enterprise-runtime-campaign.mjs
 
@@ -110,7 +110,7 @@ jobs:
         if: steps.campaign.outcome == 'success'
         run: node scripts/enterprise/generate-readiness-scorecard.mjs
 
-      - name: Promote safe exact-SHA evidence without final release claims
+      - name: Promote completed safe exact-SHA evidence without final release claims
         if: steps.campaign.outcome == 'success'
         id: promotion
         run: |
@@ -139,7 +139,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-      - name: Enforce truthful safe promotion
+      - name: Enforce truthful safe or incremental promotion
         if: always()
         shell: bash
         run: |
@@ -147,17 +147,30 @@ jobs:
           test "${{ steps.campaign.outcome }}" = "success"
           test "${{ steps.promotion.outcome }}" = "success"
           node - <<'NODE'
-          const fs = require('node:fs');
+          const fs = require('fs');
           const report = JSON.parse(fs.readFileSync('artifacts/enterprise-readiness/safe-promotion-closeout.json', 'utf8'));
           console.log(`Baseline completion: ${report.baseline?.completedPercent ?? 'unknown'}%`);
           console.log(`Safe promoted completion: ${report.promoted?.completePercent ?? 'unknown'}%`);
           console.log(`Safe promoted delta: ${report.promotedDeltaPercent ?? 'unknown'}%`);
+          console.log(`Promoted lanes: ${report.promotedLaneCount ?? 'unknown'}/${report.profileLaneCount ?? 'unknown'}`);
+          console.log(`Blocked lanes: ${(report.blockedLanes || []).join(', ') || 'none'}`);
           console.log(`Remaining controls: ${report.promoted?.remainingPercent ?? 'unknown'}%`);
+          const campaignDecisions = new Set(['READY_FOR_SAFE_PROMOTION', 'READY_FOR_PARTIAL_SAFE_PROMOTION']);
+          const closeoutDecisions = new Set(['SAFE_EVIDENCE_PROMOTED', 'PARTIAL_SAFE_EVIDENCE_PROMOTED']);
           if (report.profile !== 'safe') process.exit(1);
-          if (report.runtimeCampaignDecision !== 'READY_FOR_SAFE_PROMOTION') process.exit(1);
+          if (!campaignDecisions.has(report.runtimeCampaignDecision)) process.exit(1);
           if (report.evidenceManifestDecision !== 'READY_FOR_PROMOTION') process.exit(1);
-          if (report.closeoutDecision !== 'SAFE_EVIDENCE_PROMOTED') process.exit(1);
+          if (!closeoutDecisions.has(report.closeoutDecision)) process.exit(1);
           if (report.coherencePromoted !== false) process.exit(1);
           if (report.rejectedEvidence !== 0) process.exit(1);
+          if (!Number.isInteger(report.promotedLaneCount) || report.promotedLaneCount <= 0) process.exit(1);
+          if (!Number.isInteger(report.profileLaneCount) || report.profileLaneCount !== 11) process.exit(1);
+          if (!Array.isArray(report.promotedLanes) || report.promotedLanes.length !== report.promotedLaneCount) process.exit(1);
+          if (!Array.isArray(report.blockedLanes) || report.blockedLanes.length !== report.blockedLaneCount) process.exit(1);
+          if (report.promotedLanes.includes('RECOVERY') || report.promotedLanes.includes('ASSURANCE')) process.exit(1);
+          if (report.blockedLanes.includes('RECOVERY') || report.blockedLanes.includes('ASSURANCE')) process.exit(1);
+          if (report.runtimeCampaignDecision === 'READY_FOR_SAFE_PROMOTION' && report.blockedLaneCount !== 0) process.exit(1);
+          if (report.runtimeCampaignDecision === 'READY_FOR_PARTIAL_SAFE_PROMOTION'
+            && (report.blockedLaneCount <= 0 || report.promotedLaneCount >= report.profileLaneCount)) process.exit(1);
           if (report.promoted.completePercent < report.baseline.completedPercent) process.exit(1);
           NODE

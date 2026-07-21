@@ -12,14 +12,18 @@ import { RUNTIME_LANE_CONTRACTS } from './runtime-lane-contracts.mjs';
 import { normalizeLaneEvidence } from './runtime-lane-evidence-normalizer.mjs';
 import {
   FULL_RUNTIME_PROFILE,
-  expectedDecisionForProfile,
+  PARTIAL_SAFE_PROMOTION_DECISION,
+  SAFE_PROMOTION_DECISION,
+  allowedPromotionDecisionsForProfile,
   expectedLanesForProfile,
+  profileAllowsIncrementalPromotion,
   resolveRuntimeCampaignProfile,
 } from './runtime-campaign-profiles.mjs';
 
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const FINAL_COHERENCE_CONTROL = 'REL-10';
+const SAFE_CLOSEOUT_DECISIONS = Object.freeze(['SAFE_EVIDENCE_PROMOTED', 'PARTIAL_SAFE_EVIDENCE_PROMOTED']);
 
 function fail(message) { throw new Error(message); }
 function stable(value) {
@@ -29,31 +33,60 @@ function stable(value) {
 }
 function digest(value) { return createHash('sha256').update(value).digest('hex'); }
 
+function validateCompleteLane(result, contract) {
+  if (result.conclusion !== 'success') fail(`runtime lane ${result.id} is complete without success`);
+  if (!Number.isSafeInteger(result.run_id) || result.run_id <= 0) fail(`runtime lane ${result.id} has an invalid run_id`);
+  if (!Number.isSafeInteger(result.artifact_count) || result.artifact_count <= 0) fail(`runtime lane ${result.id} has no retained artifact`);
+  if (!Array.isArray(result.artifact_names) || result.artifact_names.length !== result.artifact_count) fail(`runtime lane ${result.id} artifact inventory mismatch`);
+  if (!result.artifact_names.every((name) => String(name).startsWith(contract.artifactPrefix))) fail(`runtime lane ${result.id} artifact prefix mismatch`);
+}
+
+function validateBlockedLane(result, contract) {
+  if (result.status !== 'blocked') fail(`runtime lane ${result.id} has an unsupported non-complete status`);
+  if (result.run_id !== null && (!Number.isSafeInteger(result.run_id) || result.run_id <= 0)) fail(`runtime lane ${result.id} has an invalid blocked run_id`);
+  if (!Number.isSafeInteger(result.artifact_count) || result.artifact_count < 0) fail(`runtime lane ${result.id} has an invalid blocked artifact count`);
+  if (!Array.isArray(result.artifact_names) || result.artifact_names.length !== result.artifact_count) fail(`runtime lane ${result.id} blocked artifact inventory mismatch`);
+  if (!result.artifact_names.every((name) => String(name).startsWith(contract.artifactPrefix))) fail(`runtime lane ${result.id} blocked artifact prefix mismatch`);
+  if (typeof result.reason !== 'string' || result.reason.length === 0 || result.reason.length > 240) fail(`runtime lane ${result.id} blocked reason is invalid`);
+}
+
 function validateCampaign(campaign, targetSha, profile) {
   const expectedLanes = expectedLanesForProfile(profile);
-  const expectedDecision = expectedDecisionForProfile(profile);
+  const allowedDecisions = allowedPromotionDecisionsForProfile(profile);
+  const incremental = profileAllowsIncrementalPromotion(profile);
   if (campaign?.schema_version !== 2) fail('unsupported runtime campaign schema');
   if (campaign.profile !== profile) fail('runtime campaign profile mismatch');
   if (campaign.release_sha !== targetSha || campaign.release_branch !== 'main') fail('runtime campaign exact-SHA provenance mismatch');
-  if (campaign.decision !== expectedDecision) fail(`runtime campaign is not ready for ${profile} evidence promotion`);
+  if (!allowedDecisions.includes(campaign.decision)) fail(`runtime campaign is not ready for ${profile} evidence promotion`);
   if (!Array.isArray(campaign.results) || campaign.results.length !== expectedLanes.length) {
     fail(`runtime campaign must contain all ${expectedLanes.length} ${profile} lanes`);
   }
   const byId = new Map();
+  const promotableLanes = [];
+  const blockedLanes = [];
   for (const result of campaign.results) {
     const contract = RUNTIME_LANE_CONTRACTS[result?.id];
     if (!contract || byId.has(result.id)) fail(`invalid or duplicate runtime lane: ${result?.id ?? 'missing'}`);
     if (!expectedLanes.includes(result.id)) fail(`runtime lane ${result.id} is outside the ${profile} profile`);
     if (result.workflow !== contract.workflow) fail(`runtime lane ${result.id} workflow mismatch`);
-    if (result.status !== 'complete' || result.conclusion !== 'success') fail(`runtime lane ${result.id} is not complete/success`);
-    if (!Number.isSafeInteger(result.run_id) || result.run_id <= 0) fail(`runtime lane ${result.id} has an invalid run_id`);
-    if (!Number.isSafeInteger(result.artifact_count) || result.artifact_count <= 0) fail(`runtime lane ${result.id} has no retained artifact`);
-    if (!Array.isArray(result.artifact_names) || result.artifact_names.length !== result.artifact_count) fail(`runtime lane ${result.id} artifact inventory mismatch`);
-    if (!result.artifact_names.every((name) => String(name).startsWith(contract.artifactPrefix))) fail(`runtime lane ${result.id} artifact prefix mismatch`);
+    if (result.status === 'complete') {
+      validateCompleteLane(result, contract);
+      promotableLanes.push(result.id);
+    } else {
+      if (!incremental) fail(`runtime lane ${result.id} is not complete/success`);
+      validateBlockedLane(result, contract);
+      blockedLanes.push(result.id);
+    }
     byId.set(result.id, result);
   }
   for (const lane of expectedLanes) if (!byId.has(lane)) fail(`runtime lane ${lane} is missing`);
-  return { byId, expectedLanes };
+  if (promotableLanes.length === 0) fail('runtime campaign contains no promotable lane');
+  if (campaign.decision === SAFE_PROMOTION_DECISION && blockedLanes.length !== 0) fail('complete safe decision cannot contain blocked lanes');
+  if (campaign.decision === PARTIAL_SAFE_PROMOTION_DECISION
+    && (blockedLanes.length === 0 || promotableLanes.length === expectedLanes.length)) {
+    fail('partial safe decision must contain both complete and blocked lanes');
+  }
+  return { byId, expectedLanes, promotableLanes, blockedLanes };
 }
 
 async function stageLaneEvidence({ runtimeRoot, stagingRoot, lane, campaignResult, targetSha, repository, generatedAt }) {
@@ -107,13 +140,18 @@ export async function runPromotionCloseout({ campaign, scorecard, runtimeRoot, s
   if (!FULL_SHA.test(String(targetSha ?? ''))) fail('targetSha must be a full lowercase Git SHA');
   if (repository !== CANONICAL_REPOSITORY) fail('repository must be canonical');
   if (!/^\d+$/.test(String(workflowRunId ?? ''))) fail('workflowRunId must be numeric');
-  const { byId: campaignsById, expectedLanes } = validateCampaign(campaign, targetSha, resolvedProfile);
+  const {
+    byId: campaignsById,
+    expectedLanes,
+    promotableLanes,
+    blockedLanes,
+  } = validateCampaign(campaign, targetSha, resolvedProfile);
   await rm(stagingRoot, { recursive: true, force: true });
   await mkdir(path.join(stagingRoot, 'baseline'), { recursive: true });
   const baselineEvidence = buildScorecardBaselineEvidence({ scorecard, targetSha, repository, runId: workflowRunId, generatedAt });
   await writeFile(path.join(stagingRoot, 'baseline', 'canonical-scorecard-baseline.json'), `${JSON.stringify(baselineEvidence, null, 2)}\n`, { mode: 0o600 });
-  const laneEvidenceCounts = {};
-  for (const lane of expectedLanes) {
+  const laneEvidenceCounts = Object.fromEntries(expectedLanes.map((lane) => [lane, 0]));
+  for (const lane of promotableLanes) {
     laneEvidenceCounts[lane] = await stageLaneEvidence({ runtimeRoot, stagingRoot, lane, campaignResult: campaignsById.get(lane), targetSha, repository, generatedAt });
   }
 
@@ -133,9 +171,11 @@ export async function runPromotionCloseout({ campaign, scorecard, runtimeRoot, s
   if (resolvedProfile !== FULL_RUNTIME_PROFILE && coherenceEvidence) fail('safe promotion must never generate final coherence evidence');
   const closeoutDecision = resolvedProfile === FULL_RUNTIME_PROFILE
     ? promotion.releaseDecision
-    : (promotion.rejectedEvidence.length === 0 ? 'SAFE_EVIDENCE_PROMOTED' : 'NO_GO');
+    : (promotion.rejectedEvidence.length === 0
+      ? (blockedLanes.length === 0 ? 'SAFE_EVIDENCE_PROMOTED' : 'PARTIAL_SAFE_EVIDENCE_PROMOTED')
+      : 'NO_GO');
   const closeout = {
-    schema: 'risck-comply.enterprise-promotion-closeout.v4',
+    schema: 'risck-comply.enterprise-promotion-closeout.v5',
     generatedAt,
     repository,
     targetSha,
@@ -152,6 +192,11 @@ export async function runPromotionCloseout({ campaign, scorecard, runtimeRoot, s
     releaseDecision: promotion.releaseDecision,
     criticalOpen: promotion.criticalOpen,
     rejectedEvidence: promotion.rejectedEvidence.length,
+    profileLaneCount: expectedLanes.length,
+    promotedLaneCount: promotableLanes.length,
+    promotedLanes: promotableLanes,
+    blockedLaneCount: blockedLanes.length,
+    blockedLanes,
     laneEvidenceCounts,
     integrity: {
       campaignSha256: digest(JSON.stringify(stable(campaign))),
@@ -162,7 +207,7 @@ export async function runPromotionCloseout({ campaign, scorecard, runtimeRoot, s
     },
     evidenceBoundary: resolvedProfile === FULL_RUNTIME_PROFILE
       ? 'This closeout promotes exact-SHA repository, provider, storage, security-event, recovery and independently reviewed assurance evidence. REL-10 is generated only when all other 99 controls pass with zero rejected evidence.'
-      : 'This safe closeout promotes only exact-SHA non-destructive runtime lanes. Recovery, external assurance and REL-10 remain excluded and cannot be inferred or self-promoted.',
+      : 'This safe closeout promotes only accepted exact-SHA evidence from completed non-destructive runtime lanes. Blocked lanes remain open. Recovery, external assurance and REL-10 remain excluded and cannot be inferred or self-promoted.',
   };
   return { manifest, preliminaryPromotion, promotion, coherenceEvidence, closeout };
 }
@@ -181,13 +226,13 @@ async function main() {
     for (const [outputPath, document] of [[options['manifest-output'], result.manifest], [options['promotion-output'], result.promotion], [options['closeout-output'], result.closeout]]) {
       const absolute = path.resolve(outputPath); await mkdir(path.dirname(absolute), { recursive: true }); await writeFile(absolute, `${JSON.stringify(document, null, 2)}\n`, { mode: 0o600 });
     }
-    console.log(JSON.stringify({ profile, baseline: result.closeout.baseline, preliminary: result.closeout.preliminary, promoted: result.closeout.promoted, coherencePromoted: result.closeout.coherencePromoted, closeoutDecision: result.closeout.closeoutDecision, releaseDecision: result.closeout.releaseDecision }));
+    console.log(JSON.stringify({ profile, baseline: result.closeout.baseline, preliminary: result.closeout.preliminary, promoted: result.closeout.promoted, promotedLanes: result.closeout.promotedLanes, blockedLanes: result.closeout.blockedLanes, coherencePromoted: result.closeout.coherencePromoted, closeoutDecision: result.closeout.closeoutDecision, releaseDecision: result.closeout.releaseDecision }));
     if (profile === FULL_RUNTIME_PROFILE && result.closeout.releaseDecision !== 'GO') process.exitCode = 2;
-    if (profile !== FULL_RUNTIME_PROFILE && result.closeout.closeoutDecision !== 'SAFE_EVIDENCE_PROMOTED') process.exitCode = 2;
+    if (profile !== FULL_RUNTIME_PROFILE && !SAFE_CLOSEOUT_DECISIONS.includes(result.closeout.closeoutDecision)) process.exitCode = 2;
   } catch (error) {
     const failure = error instanceof Error ? error.message.slice(0, 300) : 'unknown_error';
     await mkdir(path.dirname(closeoutOutput), { recursive: true });
-    await writeFile(closeoutOutput, `${JSON.stringify({ schema: 'risck-comply.enterprise-promotion-closeout.v4', generatedAt: new Date().toISOString(), repository: options.repository ?? null, targetSha: options.sha ?? null, profile, closeoutDecision: 'NO_GO', releaseDecision: 'NO_GO', failures: [failure], evidenceIntegrity: { containsSensitiveValues: false } }, null, 2)}\n`, { mode: 0o600 });
+    await writeFile(closeoutOutput, `${JSON.stringify({ schema: 'risck-comply.enterprise-promotion-closeout.v5', generatedAt: new Date().toISOString(), repository: options.repository ?? null, targetSha: options.sha ?? null, profile, closeoutDecision: 'NO_GO', releaseDecision: 'NO_GO', failures: [failure], evidenceIntegrity: { containsSensitiveValues: false } }, null, 2)}\n`, { mode: 0o600 });
     console.error(failure); process.exitCode = 1;
   }
 }
