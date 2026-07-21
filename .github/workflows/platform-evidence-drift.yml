@@ -1,0 +1,66 @@
+name: Platform Evidence Drift
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/platform/check-final-evidence-drift.mjs'
+      - 'tests/security/platform-evidence-drift-contract.test.mjs'
+      - '.github/workflows/platform-evidence-drift.yml'
+      - 'docs/runbooks/platform-evidence-drift.md'
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Platform evidence drift contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - run: node --test tests/security/platform-evidence-drift-contract.test.mjs
+
+  protected-drift-check:
+    name: Protected platform evidence freshness
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: production-platform-closeout
+    env:
+      PLATFORM_FINAL_RELEASE_EVIDENCE_JSON: ${{ secrets.PLATFORM_FINAL_RELEASE_EVIDENCE_JSON }}
+      PLATFORM_EVIDENCE_WARN_HOURS: ${{ vars.PLATFORM_EVIDENCE_WARN_HOURS }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Materialize protected evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          printf '%s' "$PLATFORM_FINAL_RELEASE_EVIDENCE_JSON" > artifacts/platform-final-release-evidence.json
+      - name: Check drift and expiry
+        run: node scripts/platform/check-final-evidence-drift.mjs
+      - name: Delete protected source
+        if: always()
+        run: rm -f artifacts/platform-final-release-evidence.json
+      - name: Upload redacted drift report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: platform-evidence-drift-${{ github.run_id }}
+          path: artifacts/platform-evidence-drift.json
+          if-no-files-found: error
+          retention-days: 90
