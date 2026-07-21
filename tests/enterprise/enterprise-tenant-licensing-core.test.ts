@@ -6,9 +6,17 @@ import {
   normalizeEnterpriseSeatType,
   type EnterpriseEntitlementContext,
 } from '../../src/server/enterprise/licensing';
+import {
+  normalizePlatformAdminRole,
+  platformRoleHasCapability,
+} from '../../src/server/security/platform-admin';
 
 const migration = fs.readFileSync(
   'supabase/migrations/20260721193000_enterprise_tenant_licensing_core.sql',
+  'utf8',
+);
+const platformMigration = fs.readFileSync(
+  'supabase/migrations/20260721193500_enterprise_platform_roles_and_contract_transitions.sql',
   'utf8',
 );
 const invitationAction = fs.readFileSync('src/server/actions/invitations.ts', 'utf8');
@@ -52,20 +60,30 @@ describe('enterprise tenant licensing core', () => {
     expect(migration).toContain('p_seat_type text');
   });
 
-  it('creates contract, entitlement, usage and global platform-role stores', () => {
+  it('creates contract, entitlement, usage and operation stores with forced RLS', () => {
     for (const table of [
       'public.enterprise_contracts',
       'public.organization_entitlements',
       'public.organization_usage',
       'public.enterprise_seat_operations',
-      'public.platform_admins',
     ]) {
       expect(migration).toContain(`create table if not exists ${table}`);
       expect(migration).toContain(`alter table ${table} force row level security`);
     }
+  });
 
-    expect(migration).toContain("'platform_owner', 'platform_admin', 'platform_billing'");
-    expect(migration).not.toContain('platform_owner\'::text, organization_members');
+  it('consolidates global roles in the existing MFA-protected admin authority', () => {
+    expect(platformMigration).toContain('drop table if exists public.platform_admins');
+    expect(platformMigration).toContain('alter table public.platform_admin_users');
+    expect(platformMigration).toContain("'platform_owner'");
+    expect(platformMigration).toContain("'platform_billing'");
+    expect(platformMigration).toContain("'platform_security'");
+    expect(platformMigration).toContain("'platform_auditor'");
+    expect(normalizePlatformAdminRole(' PLATFORM_SECURITY ')).toBe('platform_security');
+    expect(platformRoleHasCapability('platform_billing', 'billing')).toBe(true);
+    expect(platformRoleHasCapability('platform_billing', 'security')).toBe(false);
+    expect(platformRoleHasCapability('platform_auditor', 'audit')).toBe(true);
+    expect(platformRoleHasCapability('platform_auditor', 'contracts')).toBe(false);
   });
 
   it('serializes every seat consumer on the organization usage row', () => {
@@ -113,11 +131,22 @@ describe('enterprise tenant licensing core', () => {
     }
   });
 
+  it('enforces explicit contract transitions, expected state and operator roles', () => {
+    expect(platformMigration).toContain('create or replace function public.is_valid_enterprise_contract_transition');
+    expect(platformMigration).toContain('create or replace function public.transition_enterprise_contract_status_atomic');
+    expect(platformMigration).toContain("when 'terminated' then false");
+    expect(platformMigration).toContain("'invalid_transition'::text");
+    expect(platformMigration).toContain("'state_changed'::text");
+    expect(platformMigration).toContain("'platform_role_required'::text");
+    expect(platformMigration).toContain('length(v_reason) < 5');
+    expect(platformMigration).toContain('for update;');
+  });
+
   it('uses a central backend resolver instead of plan-name checks', () => {
     expect(licensingService).toContain("const RESOLVE_ENTITLEMENTS_RPC = 'resolve_organization_entitlements'");
     expect(licensingService).toContain("const RESERVE_SEAT_RPC = 'reserve_organization_seat_atomic'");
     expect(licensingService).not.toContain("if (plan === 'enterprise')");
-    expect(licensingService).toContain("throw new Error(LICENSING_UNAVAILABLE)");
+    expect(licensingService).toContain('throw new Error(LICENSING_UNAVAILABLE)');
   });
 
   it('normalizes seat types and calculates the strictest remaining capacity', () => {
@@ -133,7 +162,16 @@ describe('enterprise tenant licensing core', () => {
 
   it('allows new seats only for active contracts', () => {
     expect(contractAllowsNewSeats('active')).toBe(true);
-    for (const status of ['draft', 'pending_activation', 'past_due', 'grace_period', 'read_only', 'suspended', 'expired', 'terminated'] as const) {
+    for (const status of [
+      'draft',
+      'pending_activation',
+      'past_due',
+      'grace_period',
+      'read_only',
+      'suspended',
+      'expired',
+      'terminated',
+    ] as const) {
       expect(contractAllowsNewSeats(status)).toBe(false);
     }
   });
