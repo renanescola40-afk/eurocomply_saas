@@ -1,0 +1,87 @@
+name: Enterprise scorecard promotion
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact integrated main SHA to promote
+        required: true
+        type: string
+      scorecard_path:
+        description: Canonical 100-control scorecard JSON path
+        required: true
+        default: artifacts/enterprise-readiness/canonical-scorecard.json
+        type: string
+      evidence_manifest_path:
+        description: Exact-SHA evidence manifest JSON path
+        required: true
+        default: artifacts/enterprise-readiness/evidence-manifest.json
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  promote:
+    name: Promote exact-SHA enterprise controls
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate immutable target
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${{ inputs.target_sha }}" =~ ^[a-f0-9]{40}$ ]] || { echo 'target_sha must be a full lowercase SHA'; exit 1; }
+
+      - name: Check out exact target
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha }}
+          persist-credentials: false
+
+      - name: Verify checkout provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ inputs.target_sha }}"
+          test "$(git branch --show-current)" = "" || true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run promotion contract tests
+        run: node --test tests/enterprise/promote-enterprise-scorecard.test.mjs
+
+      - name: Promote only accepted evidence
+        id: promotion
+        continue-on-error: true
+        run: |
+          node scripts/enterprise/promote-enterprise-scorecard.mjs \
+            --scorecard "${{ inputs.scorecard_path }}" \
+            --evidence "${{ inputs.evidence_manifest_path }}" \
+            --sha "${{ inputs.target_sha }}" \
+            --output artifacts/enterprise-readiness/scorecard-promotion-report.json
+
+      - name: Upload sanitized promotion report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-scorecard-promotion-${{ inputs.target_sha }}
+          path: artifacts/enterprise-readiness/scorecard-promotion-report.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce fail-closed decision
+        if: steps.promotion.outcome != 'success'
+        run: |
+          echo 'Enterprise scorecard remains NO_GO. Inspect the sanitized report artifact.'
+          exit 1

@@ -16,6 +16,18 @@ describe('verifyTrustedOrigin', () => {
     expect(verifyTrustedOrigin(request, new Set(['https://app.example.com']))).toEqual({ ok: true, reason: 'trusted_origin' });
   });
 
+  it('allows the request canonical origin even when deployment env origins are stale', () => {
+    const request = new Request('https://risckcomply.com/api/prelaunch', {
+      method: 'POST',
+      headers: { origin: 'https://risckcomply.com' },
+    });
+
+    expect(verifyTrustedOrigin(request, new Set(['https://old-deployment.example']))).toEqual({
+      ok: true,
+      reason: 'trusted_origin',
+    });
+  });
+
   it('rejects untrusted origins for mutating methods', () => {
     const request = new Request('https://app.example.com/api/test', {
       method: 'DELETE',
