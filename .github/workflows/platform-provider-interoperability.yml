@@ -1,0 +1,76 @@
+name: Platform Provider Interoperability
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/platform/probe-provider-interoperability.mjs'
+      - 'tests/security/platform-provider-interoperability-contract.test.mjs'
+      - '.github/workflows/platform-provider-interoperability.yml'
+      - 'docs/runbooks/platform-provider-interoperability.md'
+  workflow_dispatch:
+    inputs:
+      strict_runtime:
+        description: Run protected read-only provider probes
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-provider-interoperability-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Provider interoperability contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Run contract tests
+        run: node --test tests/security/platform-provider-interoperability-contract.test.mjs
+
+  protected-runtime:
+    name: Read-only provider interoperability proof
+    if: github.event_name == 'workflow_dispatch' && inputs.strict_runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production-provider-proof
+    env:
+      NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+    steps:
+      - name: Checkout exact ref
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Probe provider interoperability
+        run: node scripts/platform/probe-provider-interoperability.mjs --strict --output=artifacts/platform-provider-interoperability.json
+      - name: Upload redacted evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: platform-provider-interoperability-${{ github.sha }}
+          path: artifacts/platform-provider-interoperability.json
+          if-no-files-found: error
+          retention-days: 90
