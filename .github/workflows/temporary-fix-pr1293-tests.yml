@@ -81,21 +81,40 @@ jobs:
             path.write_text(source)
           PY
 
-      - name: Install and validate
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run focused tests
+        id: focused
+        shell: bash
         run: |
-          set -euo pipefail
-          npm ci --ignore-scripts --no-audit --no-fund
+          set -o pipefail
           npx vitest run \
             tests/security/team-invites-hardening.test.ts \
             tests/enterprise/enterprise-control-center-contract.test.ts \
             tests/enterprise/enterprise-sso-contract.test.ts \
             tests/enterprise/enterprise-stripe-binding-boundary.test.ts \
             tests/enterprise/enterprise-tenant-licensing-core.test.ts \
-            src/server/queries/invites.test.ts
+            src/server/queries/invites.test.ts 2>&1 | tee pr1293-focused-tests.log
+
+      - name: Upload focused diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr1293-focused-tests
+          path: pr1293-focused-tests.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Validate full suite and typecheck
+        if: steps.focused.outcome == 'success'
+        run: |
+          set -euo pipefail
           npm test
           npm run typecheck
 
       - name: Commit repair and remove temporary workflow
+        if: steps.focused.outcome == 'success'
         run: |
           set -euo pipefail
           rm .github/workflows/temporary-fix-pr1293-tests.yml
