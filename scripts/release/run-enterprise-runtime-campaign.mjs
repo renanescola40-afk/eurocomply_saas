@@ -6,15 +6,23 @@ import path from 'node:path';
 
 import {
   ALLOWED_RUNTIME_WORKFLOWS,
-  EXPECTED_RUNTIME_LANES,
   resolveLaneInputs,
   validateRuntimeCampaignManifest,
 } from '../enterprise/runtime-lane-contracts.mjs';
+import { selectExactShaRun } from '../enterprise/runtime-campaign-run-selection.mjs';
+import {
+  expectedDecisionForProfile,
+  expectedLanesForProfile,
+  profileMayReuseExactShaRuns,
+  profileRequiresRecoveryConfirmation,
+  resolveRuntimeCampaignProfile,
+} from '../enterprise/runtime-campaign-profiles.mjs';
 
 const token = process.env.GITHUB_TOKEN;
 const repository = process.env.GITHUB_REPOSITORY;
 const releaseSha = (process.env.RELEASE_SHA || '').toLowerCase();
 const branch = process.env.RELEASE_BRANCH || 'main';
+const profile = resolveRuntimeCampaignProfile(process.env.RUNTIME_CAMPAIGN_PROFILE || 'full');
 const recoveryRollbackConfirmation = String(process.env.RECOVERY_ROLLBACK_CONFIRMATION || '').trim();
 const manifestPath = process.env.RUNTIME_CAMPAIGN_MANIFEST || 'docs/security/evidence/enterprise-runtime-campaign-manifest.json';
 const outputPath = process.env.RUNTIME_CAMPAIGN_OUTPUT || 'artifacts/enterprise-runtime-campaign.json';
@@ -34,18 +42,28 @@ if (!token || !repository) throw new Error('GITHUB_TOKEN and GITHUB_REPOSITORY a
 if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error('GITHUB_REPOSITORY has an invalid format');
 if (!/^[a-f0-9]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be a lowercase full 40-character SHA');
 if (branch !== 'main') throw new Error('Enterprise runtime campaigns are restricted to main');
-if (recoveryRollbackConfirmation !== 'EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK') {
+if (profileRequiresRecoveryConfirmation(profile)
+  && recoveryRollbackConfirmation !== 'EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK') {
   throw new Error('RECOVERY_ROLLBACK_CONFIRMATION must explicitly authorize the controlled rollback exercise');
 }
 
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 validateRuntimeCampaignManifest(manifest);
+const expectedLanes = expectedLanesForProfile(profile);
+const expectedLaneSet = new Set(expectedLanes);
+const selectedWorkflows = manifest.workflows.filter((lane) => expectedLaneSet.has(lane.id));
+if (selectedWorkflows.length !== expectedLanes.length
+  || selectedWorkflows.some((lane, index) => lane.id !== expectedLanes[index])) {
+  throw new Error(`Runtime campaign manifest does not preserve the ${profile} profile lane order`);
+}
 
 const pollMs = Number(manifest.poll_interval_seconds || 20) * 1000;
 const timeoutMs = Number(manifest.timeout_minutes_per_workflow || 60) * 60 * 1000;
 if (!Number.isFinite(pollMs) || pollMs < 5_000 || pollMs > 300_000) throw new Error('Invalid campaign polling interval');
 if (!Number.isFinite(timeoutMs) || timeoutMs < 60_000 || timeoutMs > 4 * 60 * 60 * 1000) throw new Error('Invalid per-workflow timeout');
 const startedAt = new Date();
+const mayReuseExactShaRuns = profileMayReuseExactShaRuns(profile);
+const expectedDecision = expectedDecisionForProfile(profile);
 
 function githubApiUrl(pathname) {
   if (typeof pathname !== 'string' || !pathname.startsWith('/') || pathname.includes('\\') || pathname.includes('..')) {
@@ -122,22 +140,29 @@ async function dispatchWorkflow(lane) {
   });
 }
 
-async function findRun(workflow, notBefore) {
+async function findRun(workflow, notBefore, { allowExisting = false } = {}) {
   if (!ALLOWED_RUNTIME_WORKFLOWS.has(workflow)) throw new Error('Workflow is not allowlisted');
-  const data = await apiJson(`/repos/${repository}/actions/workflows/${workflow}/runs?event=workflow_dispatch&branch=main&per_page=20`);
-  return data.workflow_runs.find((run) =>
-    Number.isSafeInteger(run.id)
-    && run.head_sha?.toLowerCase() === releaseSha
-    && new Date(run.created_at).getTime() >= notBefore - 5000,
-  );
+  const eventQuery = allowExisting ? '' : 'event=workflow_dispatch&';
+  const data = await apiJson(`/repos/${repository}/actions/workflows/${workflow}/runs?${eventQuery}branch=main&per_page=50`);
+  return selectExactShaRun(data.workflow_runs, { releaseSha, notBefore, allowExisting });
 }
 
-async function waitForRun(workflow, notBefore) {
+async function readRun(runId) {
+  if (!Number.isSafeInteger(runId) || runId <= 0) throw new Error('Invalid workflow run ID');
+  return apiJson(`/repos/${repository}/actions/runs/${runId}`);
+}
+
+async function waitForRun(workflow, notBefore, { existingRun = null, allowExisting = false } = {}) {
   const deadline = Date.now() + timeoutMs;
-  let run;
+  let run = existingRun;
   while (Date.now() < deadline) {
-    run = await findRun(workflow, notBefore);
+    run = run?.id ? await readRun(run.id) : await findRun(workflow, notBefore, { allowExisting });
     if (run?.status === 'completed') return run;
+    if (run?.id && run.status !== 'completed') {
+      await sleep(pollMs);
+      continue;
+    }
+    run = null;
     await sleep(pollMs);
   }
   throw new Error(`Timed out waiting for allowlisted workflow ${workflow}`);
@@ -201,7 +226,7 @@ async function downloadArtifacts(runId, destination, artifactPrefix) {
   if (!Number.isSafeInteger(runId) || runId <= 0) throw new Error('Invalid workflow run ID');
   if (!/^[A-Za-z0-9_.-]{6,100}$/.test(artifactPrefix)) throw new Error('Invalid artifact prefix');
   const data = await apiJson(`/repos/${repository}/actions/runs/${runId}/artifacts?per_page=100`);
-  const matching = data.artifacts.filter((entry) => !entry.expired && String(entry.name || '').startsWith(artifactPrefix));
+  const matching = (data.artifacts || []).filter((entry) => !entry.expired && String(entry.name || '').startsWith(artifactPrefix));
   if (matching.length === 0 || matching.length > maximumArtifactCount) throw new Error('Required prefixed artifact inventory is invalid');
   await mkdir(destination, { recursive: true });
   const downloaded = [];
@@ -227,7 +252,7 @@ await verifyExactMain();
 await mkdir(path.dirname(outputPath), { recursive: true });
 
 const results = [];
-for (const lane of manifest.workflows) {
+for (const lane of selectedWorkflows) {
   const dispatchedAt = Date.now();
   const result = {
     id: lane.id,
@@ -238,11 +263,19 @@ for (const lane of manifest.workflows) {
     run_id: null,
     artifact_count: 0,
     artifact_names: [],
+    source: null,
     reason: null,
   };
   try {
-    await dispatchWorkflow(lane);
-    const run = await waitForRun(lane.workflow, dispatchedAt);
+    let run = mayReuseExactShaRuns ? await findRun(lane.workflow, 0, { allowExisting: true }) : null;
+    if (run?.status === 'completed' && run?.conclusion !== 'success') run = null;
+    if (!run) {
+      await dispatchWorkflow(lane);
+      result.source = 'dispatched';
+    } else {
+      result.source = 'reused_exact_sha';
+    }
+    run = await waitForRun(lane.workflow, dispatchedAt, { existingRun: run, allowExisting: result.source === 'reused_exact_sha' });
     result.run_id = run.id;
     result.conclusion = run.conclusion;
     result.status = run.conclusion === 'success' ? 'complete' : 'blocked';
@@ -263,19 +296,22 @@ for (const lane of manifest.workflows) {
   results.push(result);
   await writeFile(outputPath, JSON.stringify({
     schema_version: 2,
+    profile,
     release_sha: releaseSha,
     release_branch: branch,
     started_at: startedAt.toISOString(),
     updated_at: new Date().toISOString(),
     decision: 'NO_GO',
+    expected_lanes: expectedLanes,
     results,
   }, null, 2));
 }
 
 const required = results.filter((result) => result.required);
-const decision = required.every((result) => result.status === 'complete') ? 'READY_FOR_EVIDENCE_PROMOTION' : 'NO_GO';
+const decision = required.every((result) => result.status === 'complete') ? expectedDecision : 'NO_GO';
 const summary = {
   schema_version: 2,
+  profile,
   release_sha: releaseSha,
   release_branch: branch,
   started_at: startedAt.toISOString(),
@@ -285,10 +321,12 @@ const summary = {
     total: results.length,
     complete: results.filter((result) => result.status === 'complete').length,
     blocked: results.filter((result) => result.status !== 'complete').length,
+    reused: results.filter((result) => result.source === 'reused_exact_sha').length,
+    dispatched: results.filter((result) => result.source === 'dispatched').length,
   },
-  expected_lanes: EXPECTED_RUNTIME_LANES,
+  expected_lanes: expectedLanes,
   results,
 };
 await writeFile(outputPath, `${JSON.stringify(summary, null, 2)}\n`);
-console.log(JSON.stringify(summary.counts));
-if (decision !== 'READY_FOR_EVIDENCE_PROMOTION') process.exitCode = 1;
+console.log(JSON.stringify({ profile, decision, counts: summary.counts }));
+if (decision !== expectedDecision) process.exitCode = 1;
