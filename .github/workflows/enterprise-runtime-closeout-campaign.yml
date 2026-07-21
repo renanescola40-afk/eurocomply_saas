@@ -1,0 +1,76 @@
+name: Enterprise Runtime Closeout Campaign
+
+run-name: Runtime closeout campaign for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character current main SHA
+        required: true
+        type: string
+      apply_rls_migrations:
+        description: Apply committed Supabase validation migrations before live RLS proof
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: enterprise-runtime-closeout-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch-runtime-proofs:
+    name: Dispatch exact-SHA protected runtime proofs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: enterprise-release-approval
+    env:
+      TARGET_SHA: ${{ inputs.release_sha }}
+      APPLY_MIGRATIONS: ${{ inputs.apply_rls_migrations }}
+
+    steps:
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          TARGET_SHA="${TARGET_SHA,,}"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          echo "TARGET_SHA=$TARGET_SHA" >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+
+      - name: Validate campaign contracts
+        run: npx --yes vitest run tests/enterprise/runtime-closeout-campaign.test.ts
+
+      - name: Dispatch protected proof workflows
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/enterprise/dispatch-runtime-closeout-campaign.mjs > enterprise-runtime-closeout-receipt.json
+
+      - name: Publish campaign receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-runtime-closeout-campaign-${{ env.TARGET_SHA }}
+          path: enterprise-runtime-closeout-receipt.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Record truthful campaign boundary
+        run: |
+          echo 'Runtime proofs were dispatched for the exact current main SHA.'
+          echo 'This workflow does not promote controls by itself; the canonical scorecard remains authoritative.'
