@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
 import {
-  getSeatAvailability,
-  resolveEnterpriseEntitlements,
-} from '@/server/enterprise/licensing';
+  getCommittedAdminCount,
+  getCommittedMemberCount,
+  getSnapshotSeatAvailability,
+  resolveEnterpriseEntitlementSnapshot,
+} from '@/server/enterprise/entitlement-snapshot';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireApiUser, secureApiError } from '@/server/security/api-guards';
 import {
@@ -28,7 +30,7 @@ export async function GET(
       return noStoreJson({ error: 'invalid_organization_id' }, { status: 400 });
     }
 
-    const entitlement = await resolveEnterpriseEntitlements(parsedOrganizationId.data);
+    const entitlement = await resolveEnterpriseEntitlementSnapshot(parsedOrganizationId.data);
 
     return noStoreJson({
       organizationId: entitlement.organizationId,
@@ -39,25 +41,19 @@ export async function GET(
       limits: entitlement.limits,
       usage: entitlement.usage,
       pending: entitlement.pending,
+      committed: {
+        members: getCommittedMemberCount(entitlement),
+        admins: getCommittedAdminCount(entitlement),
+      },
       available: {
         members: entitlement.canAddMembers
-          ? Math.max(
-              entitlement.limits.members
-                - entitlement.usage.activeMembers
-                - entitlement.pending.invitations,
-              0,
-            )
+          ? Math.max(entitlement.limits.members - getCommittedMemberCount(entitlement), 0)
           : 0,
-        fullUsers: getSeatAvailability(entitlement, 'full'),
-        participants: getSeatAvailability(entitlement, 'participant'),
-        viewers: getSeatAvailability(entitlement, 'viewer'),
+        fullUsers: getSnapshotSeatAvailability(entitlement, 'full'),
+        participants: getSnapshotSeatAvailability(entitlement, 'participant'),
+        viewers: getSnapshotSeatAvailability(entitlement, 'viewer'),
         admins: entitlement.canAddMembers
-          ? Math.max(
-              entitlement.limits.admins
-                - entitlement.usage.activeAdmins
-                - entitlement.pending.admins,
-              0,
-            )
+          ? Math.max(entitlement.limits.admins - getCommittedAdminCount(entitlement), 0)
           : 0,
       },
       features: entitlement.features,
