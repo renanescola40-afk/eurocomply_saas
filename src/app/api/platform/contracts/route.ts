@@ -2,6 +2,8 @@ import { readBoundedJsonRequest } from '@/lib/security/validate';
 import {
   createEnterpriseContractSchema,
   provisionEnterpriseContract,
+  updateEnterpriseEntitlements,
+  updateEnterpriseEntitlementsSchema,
 } from '@/server/enterprise/contracts';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireApiUser, requireTrustedMutation, secureApiError } from '@/server/security/api-guards';
@@ -18,6 +20,12 @@ function getClientIp(request: Request) {
     || request.headers.get('x-real-ip')
     || 'unknown'
   );
+}
+
+function platformError(error: unknown) {
+  return error instanceof PlatformAdminError
+    ? noStoreJson({ error: error.code }, { status: error.status })
+    : null;
 }
 
 export async function POST(request: Request) {
@@ -92,9 +100,106 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    if (error instanceof PlatformAdminError) {
-      return noStoreJson({ error: error.code }, { status: error.status });
+    const response = platformError(error);
+    if (response) return response;
+    return secureApiError(error, request);
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const user = await requireApiUser();
+    const mutationDenied = await requireTrustedMutation(request, {
+      rateLimit: {
+        key: `platform-contract-entitlements:${user.id}:${getClientIp(request)}`,
+        policy: 'general-api',
+        userId: user.id,
+        action: 'enterprise_contract_entitlements_update',
+        route: '/api/platform/contracts',
+        limit: 20,
+        windowMs: 60_000,
+        failureMode: 'fail-closed',
+      },
+    });
+
+    if (mutationDenied) return mutationDenied;
+
+    await requirePlatformCapability(user.id, 'contracts');
+
+    const payload = await readBoundedJsonRequest(request, {
+      maxBytes: MAX_CONTRACT_JSON_BYTES,
+    }).catch(() => null);
+    const parsed = updateEnterpriseEntitlementsSchema.safeParse(payload);
+
+    if (!parsed.success) {
+      return noStoreJson({ error: 'invalid_enterprise_entitlement_payload' }, { status: 400 });
     }
+
+    const result = await updateEnterpriseEntitlements(parsed.data, user.id);
+
+    if (result.outcome === 'not_found') {
+      return noStoreJson({ error: 'enterprise_contract_not_found' }, { status: 404 });
+    }
+
+    if (result.outcome === 'version_changed') {
+      return noStoreJson(
+        {
+          error: 'enterprise_contract_version_changed',
+          status: result.contractStatus,
+          version: result.version,
+          limits: result.limits,
+        },
+        { status: 409 },
+      );
+    }
+
+    if (result.outcome === 'limits_below_committed_usage') {
+      return noStoreJson(
+        {
+          error: 'contract_limits_below_committed_usage',
+          message: 'Limits cannot be lower than active seats plus valid pending invitations.',
+          version: result.version,
+          currentLimits: result.limits,
+        },
+        { status: 409 },
+      );
+    }
+
+    if (result.outcome === 'contract_terminated') {
+      return noStoreJson({ error: 'enterprise_contract_terminated' }, { status: 409 });
+    }
+
+    if (result.outcome === 'platform_role_required') {
+      return noStoreJson({ error: 'platform_contract_role_required' }, { status: 403 });
+    }
+
+    if (result.outcome === 'entitlements_missing') {
+      return noStoreJson({ error: 'organization_entitlements_unavailable' }, { status: 503 });
+    }
+
+    if (
+      result.outcome === 'invalid_input'
+      || result.outcome === 'reason_required'
+      || result.outcome === 'invalid_limits'
+    ) {
+      return noStoreJson({ error: 'invalid_enterprise_entitlement_payload' }, { status: 400 });
+    }
+
+    if (result.outcome !== 'changed' || !result.contractId || !result.organizationId) {
+      return noStoreJson({ error: 'enterprise_entitlement_update_unavailable' }, { status: 503 });
+    }
+
+    return noStoreJson({
+      changed: true,
+      contractId: result.contractId,
+      organizationId: result.organizationId,
+      status: result.contractStatus,
+      version: result.version,
+      limits: result.limits,
+    });
+  } catch (error) {
+    const response = platformError(error);
+    if (response) return response;
     return secureApiError(error, request);
   }
 }
