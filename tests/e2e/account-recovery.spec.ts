@@ -22,15 +22,16 @@ test.describe('enterprise account recovery', () => {
       });
     });
 
+    const syntheticEmail = 'synthetic-recovery@acme.com';
     await page.goto('/en/recuperar-senha', { waitUntil: 'domcontentloaded' });
-    await page.getByLabel('Work email').fill('synthetic-recovery@example.test');
+    await page.getByLabel('Work email').fill(syntheticEmail);
     await page.getByRole('button', { name: 'Send recovery link' }).click();
 
     await expect(page.locator('main').getByRole('status')).toContainText(
       'If an account exists for that email, a secure recovery link will be sent.',
     );
     await expect(page.getByLabel('Work email')).toHaveValue('');
-    await expect(page.locator('body')).not.toContainText('synthetic-recovery@example.test');
+    await expect(page.locator('body')).not.toContainText(syntheticEmail);
   });
 
   test('recovery request exposes a controlled provider failure', async ({ page }) => {
@@ -44,7 +45,7 @@ test.describe('enterprise account recovery', () => {
     });
 
     await page.goto('/pt/recuperar-senha', { waitUntil: 'domcontentloaded' });
-    await page.getByLabel('Email profissional').fill('synthetic-recovery@example.test');
+    await page.getByLabel('Email profissional').fill('synthetic-recovery@acme.com');
     await page.getByRole('button', { name: 'Enviar link de recuperação' }).click();
 
     await expect(page.locator('main').getByRole('alert')).toContainText(/temporariamente indisponível/i);
