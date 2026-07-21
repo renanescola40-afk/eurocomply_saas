@@ -53,12 +53,15 @@ test('campaign allowlists outbound GitHub API destinations and workflow identifi
 
 test('campaign validates remote archives without network-derived filenames', () => {
   assert.match(script, /maximumArtifactBytes/);
+  assert.match(script, /maximumExpandedBytes/);
   assert.match(script, /Number\.isSafeInteger\(artifact\.id\)/);
   assert.match(script, /actions\/artifacts\/\$\{artifact\.id\}\/zip/);
-  assert.match(script, /assertSafeArchiveEntries/);
-  assert.match(script, /path\.posix\.isAbsolute/);
-  assert.match(script, /normalized\.startsWith\('\.\.\/'\)/);
-  assert.match(script, /spawnSync\('unzip', \['-Z1', '-'\]/);
+  assert.match(script, /zipfile\.ZipFile\(io\.BytesIO\(archive\)\)/);
+  assert.match(script, /stat\.S_ISLNK/);
+  assert.match(script, /destination not in target\.parents/);
+  assert.match(script, /open\(target, 'xb'\)/);
+  assert.match(script, /spawnSync\(\s*'python3'/);
   assert.doesNotMatch(script, /writeFile\(zipPath/);
   assert.doesNotMatch(script, /artifact\.name\}\.zip/);
+  assert.doesNotMatch(script, /spawnSync\('unzip'/);
 });
