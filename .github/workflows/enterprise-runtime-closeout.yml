@@ -1,0 +1,92 @@
+name: Enterprise Runtime Closeout
+
+run-name: Enterprise runtime closeout for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character current main SHA
+        required: true
+        type: string
+      confirmation:
+        description: Type RUN_ENTERPRISE_RUNTIME_CLOSEOUT
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: enterprise-runtime-closeout-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  closeout:
+    name: Dispatch and collect protected runtime evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 480
+    environment: production-enterprise-closeout
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      RELEASE_BRANCH: main
+      GITHUB_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Validate operator confirmation and SHA
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$CONFIRMATION" = "RUN_ENTERPRISE_RUNTIME_CLOSEOUT"
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+
+      - name: Check out exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify exact current main checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate campaign contracts
+        run: node --test tests/security/enterprise-runtime-campaign-contract.test.mjs
+
+      - name: Execute enterprise runtime campaign
+        id: campaign
+        continue-on-error: true
+        run: node scripts/release/run-enterprise-runtime-campaign.mjs
+
+      - name: Upload campaign and collected evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-runtime-closeout-${{ inputs.release_sha }}
+          path: |
+            artifacts/enterprise-runtime-campaign.json
+            artifacts/runtime-evidence/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce fail-closed closeout
+        if: steps.campaign.outcome != 'success'
+        run: |
+          echo "Enterprise runtime closeout remains NO_GO. Inspect the uploaded campaign artifact." >&2
+          exit 1
