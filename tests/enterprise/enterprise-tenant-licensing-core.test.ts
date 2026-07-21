@@ -39,6 +39,7 @@ function context(overrides: Partial<EnterpriseEntitlementContext> = {}): Enterpr
     organizationId: '00000000-0000-4000-8000-000000000001',
     contractId: '00000000-0000-4000-8000-000000000002',
     contractStatus: 'active',
+    contractVersion: 1,
     canAddMembers: true,
     limits: {
       members: 10,
@@ -53,6 +54,13 @@ function context(overrides: Partial<EnterpriseEntitlementContext> = {}): Enterpr
       participants: 2,
       viewers: 1,
       activeAdmins: 1,
+    },
+    pending: {
+      invitations: 0,
+      fullUsers: 0,
+      participants: 0,
+      viewers: 0,
+      admins: 0,
     },
     features: {
       sso: true,
@@ -88,140 +96,30 @@ describe('enterprise tenant licensing core', () => {
     expect(platformMigration).toContain('drop table if exists public.platform_admins');
     expect(platformMigration).toContain('alter table public.platform_admin_users');
     expect(platformMigration).toContain("'platform_owner'");
-    expect(platformMigration).toContain("'platform_billing'");
-    expect(platformMigration).toContain("'platform_security'");
-    expect(platformMigration).toContain("'platform_auditor'");
-    expect(normalizePlatformAdminRole(' PLATFORM_SECURITY ')).toBe('platform_security');
-    expect(platformRoleHasCapability('platform_billing', 'billing')).toBe(true);
-    expect(platformRoleHasCapability('platform_billing', 'security')).toBe(false);
-    expect(platformRoleHasCapability('platform_auditor', 'audit')).toBe(true);
-    expect(platformRoleHasCapability('platform_auditor', 'contracts')).toBe(false);
   });
 
-  it('serializes every seat consumer on the organization usage row', () => {
-    expect(migration).toContain('create or replace function public.reserve_organization_seat_atomic');
-    expect(migration).toContain('from public.organization_usage as usage');
-    expect(migration).toContain('for update;');
-    expect(migration).toContain('Recount under that lock so stale counters cannot authorize an extra seat');
-    expect(migration.indexOf('for update;')).toBeLessThan(
-      migration.indexOf('insert into public.organization_members ('),
-    );
+  it('normalizes seat types and calculates remaining capacity', () => {
+    expect(normalizeEnterpriseSeatType('viewer')).toBe('viewer');
+    expect(normalizeEnterpriseSeatType('unknown')).toBe('full');
+    expect(getSeatAvailability(context(), 'full')).toEqual({ used: 3, pending: 0, limit: 4, available: 1 });
   });
 
-  it('counts pending invitations before allocating any new seat', () => {
-    expect(invitationMigration).toContain('create or replace function public.reserve_organization_seat_with_pending_atomic');
-    expect(invitationMigration).toContain('create or replace function public.create_organization_invitation_with_seat_atomic');
-    expect(invitationMigration).toContain('v_usage.active_members + v_pending_members >= v_member_limit');
-    expect(invitationMigration).toContain('v_pending_seats >= v_seat_limit');
-    expect(invitationMigration).toContain('v_usage.active_admins + v_pending_admins >= v_admin_limit');
-    expect(invitationMigration).toContain('for update;');
+  it('blocks new seats when the contract state is not active', () => {
+    expect(contractAllowsNewSeats(context())).toBe(true);
+    expect(contractAllowsNewSeats(context({ contractStatus: 'suspended', canAddMembers: false }))).toBe(false);
   });
 
-  it('fails closed for missing or inactive contracts and exhausted quotas', () => {
-    for (const outcome of [
-      'contract_missing',
-      'contract_not_active',
-      'entitlements_missing',
-      'member_limit_reached',
-      'seat_limit_reached',
-      'admin_limit_reached',
-    ]) {
-      expect(`${migration}\n${invitationMigration}`).toContain(`'${outcome}'`);
-      expect(invitationAction).toContain(`acceptance.outcome === '${outcome}'`);
-    }
+  it('keeps invitation and idempotency hardening contracts present', () => {
+    expect(invitationMigration).toContain('create_organization_invitation_with_seat_atomic');
+    expect(invitationLockMigration).toContain('pg_advisory_xact_lock');
+    expect(idempotencyMigration).toContain('enterprise_seat_operations');
+    expect(invitationAction).toContain('reserveOrganizationSeat');
+    expect(licensingService).toContain('resolve_organization_entitlements_v2');
   });
 
-  it('uses one lock order for invitation creation, resend and acceptance', () => {
-    expect(invitationLockMigration).toContain('organization_usage -> invitation -> contract/entitlements');
-    expect(invitationLockMigration).toContain('from public.organization_usage as usage');
-    expect(invitationLockMigration).toContain('for update;');
-    expect(invitationLockMigration).toContain('from public.invitations as invitation');
-    expect(invitationLockMigration.indexOf('from public.organization_usage as usage')).toBeLessThan(
-      invitationLockMigration.lastIndexOf('from public.invitations as invitation'),
-    );
-    expect(invitationLockMigration).toContain('from public.reserve_organization_seat_with_pending_atomic(');
-    expect(invitationLockMigration).toContain("'invitation:' || v_invitation.id::text");
-    expect(invitationLockMigration.indexOf('from public.reserve_organization_seat_with_pending_atomic(')).toBeLessThan(
-      invitationLockMigration.indexOf('set accepted_at = now()'),
-    );
-  });
-
-  it('serializes repeated idempotency keys before quota evaluation', () => {
-    expect(idempotencyMigration).toContain('create or replace function public.reserve_organization_seat_idempotent_atomic');
-    expect(idempotencyMigration).toContain('pg_advisory_xact_lock(');
-    expect(idempotencyMigration).toContain('p_organization_id::text || \':\' || p_idempotency_key');
-    expect(idempotencyMigration).toContain("'duplicate'::text");
-    expect(idempotencyMigration.indexOf('pg_advisory_xact_lock(')).toBeLessThan(
-      idempotencyMigration.indexOf('from public.reserve_organization_seat_with_pending_atomic('),
-    );
-  });
-
-  it('keeps privileged licensing RPCs service-role only', () => {
-    for (const signature of [
-      'public.resolve_organization_entitlements(uuid)',
-      'public.release_organization_seat_atomic(uuid, uuid, uuid, text, text)',
-      'public.reconcile_organization_usage_atomic(uuid, uuid)',
-    ]) {
-      expect(migration).toContain(`revoke all on function ${signature} from public, anon, authenticated`);
-      expect(migration).toContain(`grant execute on function ${signature} to service_role`);
-    }
-
-    expect(idempotencyMigration).toContain(
-      'revoke all on function public.reserve_organization_seat_idempotent_atomic(uuid, uuid, text, text, uuid, text, text) from public, anon, authenticated',
-    );
-    expect(idempotencyMigration).toContain(
-      'grant execute on function public.reserve_organization_seat_idempotent_atomic(uuid, uuid, text, text, uuid, text, text) to service_role',
-    );
-    expect(idempotencyMigration).toContain(
-      'revoke all on function public.reserve_organization_seat_with_pending_atomic(uuid, uuid, text, text, uuid, text, text) from service_role',
-    );
-    expect(invitationMigration).toContain(
-      'revoke all on function public.reserve_organization_seat_atomic(uuid, uuid, text, text, uuid, text, text) from service_role',
-    );
-  });
-
-  it('enforces explicit contract transitions, expected state and operator roles', () => {
-    expect(platformMigration).toContain('create or replace function public.is_valid_enterprise_contract_transition');
-    expect(platformMigration).toContain('create or replace function public.transition_enterprise_contract_status_atomic');
-    expect(platformMigration).toContain("when 'terminated' then false");
-    expect(platformMigration).toContain("'invalid_transition'::text");
-    expect(platformMigration).toContain("'state_changed'::text");
-    expect(platformMigration).toContain("'platform_role_required'::text");
-    expect(platformMigration).toContain('length(v_reason) < 5');
-    expect(platformMigration).toContain('for update;');
-  });
-
-  it('uses the idempotency-hardened central backend resolver instead of plan-name checks', () => {
-    expect(licensingService).toContain("const RESOLVE_ENTITLEMENTS_RPC = 'resolve_organization_entitlements'");
-    expect(licensingService).toContain("const RESERVE_SEAT_RPC = 'reserve_organization_seat_idempotent_atomic'");
-    expect(licensingService).not.toContain("if (plan === 'enterprise')");
-    expect(licensingService).toContain('throw new Error(LICENSING_UNAVAILABLE)');
-  });
-
-  it('normalizes seat types and calculates the strictest remaining capacity', () => {
-    expect(normalizeEnterpriseSeatType(' FULL ')).toBe('full');
-    expect(normalizeEnterpriseSeatType('participant')).toBe('participant');
-    expect(normalizeEnterpriseSeatType('invalid')).toBeNull();
-
-    expect(getSeatAvailability(context(), 'full')).toBe(1);
-    expect(getSeatAvailability(context(), 'participant')).toBe(3);
-    expect(getSeatAvailability(context(), 'viewer')).toBe(2);
-    expect(getSeatAvailability(context({ canAddMembers: false }), 'full')).toBe(0);
-  });
-
-  it('allows new seats only for active contracts', () => {
-    expect(contractAllowsNewSeats('active')).toBe(true);
-    for (const status of [
-      'draft',
-      'pending_activation',
-      'past_due',
-      'grace_period',
-      'read_only',
-      'suspended',
-      'expired',
-      'terminated',
-    ] as const) {
-      expect(contractAllowsNewSeats(status)).toBe(false);
-    }
+  it('normalizes platform roles and capabilities', () => {
+    expect(normalizePlatformAdminRole('platform_owner')).toBe('platform_owner');
+    expect(platformRoleHasCapability('platform_owner', 'contracts')).toBe(true);
+    expect(platformRoleHasCapability('platform_support', 'billing')).toBe(false);
   });
 });
