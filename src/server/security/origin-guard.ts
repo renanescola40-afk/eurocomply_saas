@@ -55,12 +55,41 @@ function readOrigin(request: Request) {
   }
 }
 
-function getRequestOrigin(request: Request) {
+function firstHeaderValue(value: string | null) {
+  return value?.split(',')[0]?.trim() || null;
+}
+
+function getCanonicalRequestOrigins(request: Request) {
+  const origins = new Set<string>();
+
   try {
-    return new URL(request.url).origin;
+    origins.add(new URL(request.url).origin);
   } catch {
-    return null;
+    // The forwarded host below can still provide the canonical public origin.
   }
+
+  const forwardedHost = firstHeaderValue(request.headers.get('x-forwarded-host'));
+  const host = forwardedHost ?? firstHeaderValue(request.headers.get('host'));
+  if (!host) return origins;
+
+  const forwardedProto = firstHeaderValue(request.headers.get('x-forwarded-proto'));
+  let protocol = forwardedProto;
+
+  if (!protocol) {
+    try {
+      protocol = new URL(request.url).protocol.replace(':', '');
+    } catch {
+      protocol = 'https';
+    }
+  }
+
+  try {
+    origins.add(new URL(`${protocol}://${host}`).origin);
+  } catch {
+    // Invalid forwarding headers must not become trusted origins.
+  }
+
+  return origins;
 }
 
 export function verifyTrustedOrigin(request: Request, trustedOrigins = getTrustedOrigins()): OriginGuardResult {
@@ -82,8 +111,8 @@ export function verifyTrustedOrigin(request: Request, trustedOrigins = getTruste
     return { ok: false, reason: 'invalid_origin', origin };
   }
 
-  const requestOrigin = getRequestOrigin(request);
-  if (origin === requestOrigin || trustedOrigins.has(origin)) {
+  const canonicalRequestOrigins = getCanonicalRequestOrigins(request);
+  if (canonicalRequestOrigins.has(origin) || trustedOrigins.has(origin)) {
     return { ok: true, reason: 'trusted_origin' };
   }
 

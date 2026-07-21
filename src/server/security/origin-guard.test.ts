@@ -28,6 +28,36 @@ describe('verifyTrustedOrigin', () => {
     });
   });
 
+  it('allows the public forwarded origin when the runtime request URL uses an internal deployment host', () => {
+    const request = new Request('https://internal-deployment.vercel.app/api/prelaunch', {
+      method: 'POST',
+      headers: {
+        origin: 'https://risckcomply.com',
+        host: 'internal-deployment.vercel.app',
+        'x-forwarded-host': 'risckcomply.com',
+        'x-forwarded-proto': 'https',
+      },
+    });
+
+    expect(verifyTrustedOrigin(request, new Set(['https://old-deployment.example']))).toEqual({
+      ok: true,
+      reason: 'trusted_origin',
+    });
+  });
+
+  it('uses only the first forwarded host and protocol values', () => {
+    const request = new Request('https://internal-deployment.vercel.app/api/prelaunch', {
+      method: 'POST',
+      headers: {
+        origin: 'https://risckcomply.com',
+        'x-forwarded-host': 'risckcomply.com, attacker.example',
+        'x-forwarded-proto': 'https, http',
+      },
+    });
+
+    expect(verifyTrustedOrigin(request, new Set())).toEqual({ ok: true, reason: 'trusted_origin' });
+  });
+
   it('rejects untrusted origins for mutating methods', () => {
     const request = new Request('https://app.example.com/api/test', {
       method: 'DELETE',
@@ -35,6 +65,23 @@ describe('verifyTrustedOrigin', () => {
     });
 
     expect(verifyTrustedOrigin(request, new Set(['https://app.example.com']))).toEqual({
+      ok: false,
+      reason: 'untrusted_origin',
+      origin: 'https://evil.example',
+    });
+  });
+
+  it('does not trust a different origin merely because forwarding headers exist', () => {
+    const request = new Request('https://internal-deployment.vercel.app/api/prelaunch', {
+      method: 'POST',
+      headers: {
+        origin: 'https://evil.example',
+        'x-forwarded-host': 'risckcomply.com',
+        'x-forwarded-proto': 'https',
+      },
+    });
+
+    expect(verifyTrustedOrigin(request, new Set(['https://risckcomply.com']))).toEqual({
       ok: false,
       reason: 'untrusted_origin',
       origin: 'https://evil.example',
