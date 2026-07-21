@@ -6,12 +6,18 @@ import path from 'node:path';
 
 import { runPromotionCloseout } from '../../scripts/enterprise/run-enterprise-promotion-closeout.mjs';
 import { EXPECTED_RUNTIME_LANES, RUNTIME_LANE_CONTRACTS } from '../../scripts/enterprise/runtime-lane-contracts.mjs';
-import { SAFE_RUNTIME_LANES } from '../../scripts/enterprise/runtime-campaign-profiles.mjs';
+import {
+  PARTIAL_SAFE_PROMOTION_DECISION,
+  SAFE_PROMOTION_DECISION,
+  SAFE_RUNTIME_LANES,
+} from '../../scripts/enterprise/runtime-campaign-profiles.mjs';
 
 const SHA = 'a'.repeat(40);
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const LANE_CONTROLS = [...new Set(EXPECTED_RUNTIME_LANES.flatMap((lane) => RUNTIME_LANE_CONTRACTS[lane].controlsVerified))];
 const SAFE_CONTROLS = [...new Set(SAFE_RUNTIME_LANES.flatMap((lane) => RUNTIME_LANE_CONTRACTS[lane].controlsVerified))];
+const PARTIAL_SAFE_LANES = Object.freeze(['IAM-RBAC', 'STEP-UP']);
+const PARTIAL_SAFE_CONTROLS = [...new Set(PARTIAL_SAFE_LANES.flatMap((lane) => RUNTIME_LANE_CONTRACTS[lane].controlsVerified))];
 const COHERENCE_CONTROL = 'REL-10';
 
 function scorecard() {
@@ -69,27 +75,32 @@ function scorecard() {
   };
 }
 
-function campaign(profile, lanes) {
+function campaign(profile, lanes, completeLanes = lanes) {
+  const completeSet = new Set(completeLanes);
+  const allComplete = completeSet.size === lanes.length;
   return {
     schema_version: 2,
     profile,
     release_sha: SHA,
     release_branch: 'main',
-    decision: profile === 'safe' ? 'READY_FOR_SAFE_PROMOTION' : 'READY_FOR_EVIDENCE_PROMOTION',
+    decision: profile === 'safe'
+      ? (allComplete ? SAFE_PROMOTION_DECISION : (completeSet.size > 0 ? PARTIAL_SAFE_PROMOTION_DECISION : 'NO_GO'))
+      : (allComplete ? 'READY_FOR_EVIDENCE_PROMOTION' : 'NO_GO'),
     expected_lanes: lanes,
     results: lanes.map((id, index) => {
       const contract = RUNTIME_LANE_CONTRACTS[id];
+      const complete = completeSet.has(id);
       return {
         id,
         workflow: contract.workflow,
         required: true,
-        status: 'complete',
-        conclusion: 'success',
-        run_id: 1000 + index,
-        artifact_count: 1,
-        artifact_names: [`${contract.artifactPrefix}${SHA}`],
-        source: profile === 'safe' ? 'reused_exact_sha' : 'dispatched',
-        reason: null,
+        status: complete ? 'complete' : 'blocked',
+        conclusion: complete ? 'success' : null,
+        run_id: complete ? 1000 + index : null,
+        artifact_count: complete ? 1 : 0,
+        artifact_names: complete ? [`${contract.artifactPrefix}${SHA}`] : [],
+        source: complete ? (profile === 'safe' ? 'reused_exact_sha' : 'dispatched') : null,
+        reason: complete ? null : 'environment_approval_required',
       };
     }),
   };
@@ -103,6 +114,7 @@ async function fixture(lanes) {
     const contract = RUNTIME_LANE_CONTRACTS[lane];
     const laneRoot = path.join(runtimeRoot, lane.toLowerCase());
     await mkdir(laneRoot, { recursive: true });
+    const canonicalIndex = EXPECTED_RUNTIME_LANES.indexOf(lane);
     for (const fileName of contract.requiredEvidenceFiles) {
       await writeFile(path.join(laneRoot, fileName), JSON.stringify({
         schema: `legacy.${lane}`,
@@ -111,7 +123,7 @@ async function fixture(lanes) {
         generatedAt: '2026-07-21T15:00:00Z',
         repository: REPOSITORY,
         targetSha: SHA,
-        workflowRunId: String(1000 + index),
+        workflowRunId: String(1000 + (canonicalIndex >= 0 ? canonicalIndex : index)),
         evidenceIntegrity: { credentialsStored: false },
       }));
     }
@@ -139,12 +151,14 @@ test('full closeout promotes all lanes and restricts self-promotion to REL-10', 
     assert.equal(result.closeout.releaseDecision, 'GO');
     assert.equal(result.closeout.closeoutDecision, 'GO');
     assert.equal(result.closeout.promotedDeltaPercent, LANE_CONTROLS.length + 1);
+    assert.equal(result.closeout.promotedLaneCount, EXPECTED_RUNTIME_LANES.length);
+    assert.deepEqual(result.closeout.blockedLanes, []);
   } finally {
     await rm(f.root, { recursive: true, force: true });
   }
 });
 
-test('safe closeout promotes only non-destructive lanes and remains NO_GO', async () => {
+test('safe closeout promotes every completed non-destructive lane and remains NO_GO', async () => {
   const f = await fixture(SAFE_RUNTIME_LANES);
   try {
     const baseline = scorecard();
@@ -165,10 +179,62 @@ test('safe closeout promotes only non-destructive lanes and remains NO_GO', asyn
     assert.equal(result.closeout.releaseDecision, 'NO_GO');
     assert.equal(result.closeout.promotedDeltaPercent, SAFE_CONTROLS.length);
     assert.equal(result.promotion.score.completePercent, baseline.scorePercent + SAFE_CONTROLS.length);
+    assert.equal(result.closeout.promotedLaneCount, SAFE_RUNTIME_LANES.length);
+    assert.deepEqual(result.closeout.blockedLanes, []);
     assert.ok(result.closeout.criticalOpen.includes('REC-01'));
     assert.ok(result.closeout.criticalOpen.includes('SEC-10'));
     assert.ok(result.closeout.criticalOpen.includes(COHERENCE_CONTROL));
     assert.equal(result.promotion.controls.find((control) => control.id === COHERENCE_CONTROL).status, 'BLOCKED');
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('safe closeout incrementally promotes completed lanes while preserving blocked lanes', async () => {
+  const f = await fixture(PARTIAL_SAFE_LANES);
+  try {
+    const baseline = scorecard();
+    const result = await runPromotionCloseout({
+      campaign: campaign('safe', SAFE_RUNTIME_LANES, PARTIAL_SAFE_LANES),
+      scorecard: baseline,
+      runtimeRoot: f.runtimeRoot,
+      stagingRoot: f.stagingRoot,
+      targetSha: SHA,
+      repository: REPOSITORY,
+      workflowRunId: '996',
+      profile: 'safe',
+      generatedAt: '2026-07-21T16:00:00Z',
+    });
+    assert.equal(result.closeout.closeoutDecision, 'PARTIAL_SAFE_EVIDENCE_PROMOTED');
+    assert.equal(result.closeout.runtimeCampaignDecision, PARTIAL_SAFE_PROMOTION_DECISION);
+    assert.equal(result.closeout.releaseDecision, 'NO_GO');
+    assert.equal(result.closeout.coherencePromoted, false);
+    assert.equal(result.closeout.promotedLaneCount, PARTIAL_SAFE_LANES.length);
+    assert.deepEqual(result.closeout.promotedLanes, PARTIAL_SAFE_LANES);
+    assert.equal(result.closeout.blockedLaneCount, SAFE_RUNTIME_LANES.length - PARTIAL_SAFE_LANES.length);
+    assert.equal(result.closeout.blockedLanes.includes('RECOVERY'), false);
+    assert.equal(result.closeout.blockedLanes.includes('ASSURANCE'), false);
+    assert.equal(result.closeout.promotedDeltaPercent, PARTIAL_SAFE_CONTROLS.length);
+    assert.equal(result.promotion.score.completePercent, baseline.scorePercent + PARTIAL_SAFE_CONTROLS.length);
+    for (const lane of result.closeout.blockedLanes) assert.equal(result.closeout.laneEvidenceCounts[lane], 0);
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('safe closeout fails closed when no lane has promotable evidence', async () => {
+  const f = await fixture([]);
+  try {
+    await assert.rejects(runPromotionCloseout({
+      campaign: campaign('safe', SAFE_RUNTIME_LANES, []),
+      scorecard: scorecard(),
+      runtimeRoot: f.runtimeRoot,
+      stagingRoot: f.stagingRoot,
+      targetSha: SHA,
+      repository: REPOSITORY,
+      workflowRunId: '995',
+      profile: 'safe',
+    }), /not ready for safe evidence promotion|no promotable lane/);
   } finally {
     await rm(f.root, { recursive: true, force: true });
   }
@@ -188,6 +254,24 @@ test('full closeout fails closed when recovery evidence is incomplete', async ()
       workflowRunId: '999',
       profile: 'full',
     }), /required evidence file is missing/);
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('full closeout remains all-or-nothing when any lane is blocked', async () => {
+  const f = await fixture(EXPECTED_RUNTIME_LANES.filter((lane) => lane !== 'RECOVERY'));
+  try {
+    await assert.rejects(runPromotionCloseout({
+      campaign: campaign('full', EXPECTED_RUNTIME_LANES, EXPECTED_RUNTIME_LANES.filter((lane) => lane !== 'RECOVERY')),
+      scorecard: scorecard(),
+      runtimeRoot: f.runtimeRoot,
+      stagingRoot: f.stagingRoot,
+      targetSha: SHA,
+      repository: REPOSITORY,
+      workflowRunId: '994',
+      profile: 'full',
+    }), /not ready for full evidence promotion|not complete\/success/);
   } finally {
     await rm(f.root, { recursive: true, force: true });
   }
