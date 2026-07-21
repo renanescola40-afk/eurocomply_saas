@@ -10,7 +10,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | public mutation | Public POST without tenant session; bounded input parsing, no-store responses, rate limiting, consent or enumeration-resistance validation, and sanitized logging required. |
 | authenticated | User auth required; sanitized error responses; no-store responses. |
 | tenant-scoped | Auth, organization membership, tenant ownership validation before resource use, RBAC/read permission, no-store. |
-| admin-only | Auth, membership, admin/RBAC permission, tenant validation, no-store, audit for sensitive changes. |
+| admin-only | Auth, membership or global platform authority, admin/RBAC capability, tenant validation where applicable, no-store, audit for sensitive changes. |
 | high-risk | Auth, trusted origin for mutations, Zod/body validation, rate limit, RBAC, tenant validation, audit/step-up where sensitive. |
 | webhook | Provider signature verification instead of user session; raw body preserved; no-store; no CSRF origin requirement. |
 | health/internal | Health/ops/internal authorization; no tenant data exposure; no-store. |
@@ -42,9 +42,13 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/billing/checkout/route.ts` | high-risk | Billing mutation; manage_billing, trusted origin, rate limit, tenant validation required. |
 | `src/app/api/billing/checkout-intent/route.ts` | high-risk | Billing mutation intent; manage_billing, trusted origin, rate limit required. |
 | `src/app/api/billing/portal/route.ts` | high-risk | Billing portal session; manage_billing, origin/rate limits required. |
+| `src/app/api/platform/contracts/route.ts` | admin-only | Global contract provisioning; authenticated platform capability, AAL2 MFA, trusted origin, bounded JSON, fail-closed rate limiting, organization validation, database role recheck and audit required. |
+| `src/app/api/platform/contracts/status/route.ts` | admin-only | Global contract lifecycle mutation; authenticated platform capability, AAL2 MFA, trusted origin, bounded JSON, fail-closed rate limiting, expected-state transition, reason and audit required. |
+| `src/app/api/platform/organizations/[organizationId]/usage/route.ts` | admin-only | Global read-only tenant licensing usage; authenticated platform capability, AAL2 MFA, organization UUID validation and no-store response required. |
 | `src/app/api/team/invites/route.ts` | admin-only | Team invite mutation; manage_team and tenant membership required. |
 | `src/app/api/team/invitations/cancel/route.ts` | admin-only | Team invitation cancellation; manage_team and tenant validation required. |
 | `src/app/api/team/members/role/route.ts` | admin-only | Role mutation; manage_team, step-up/audit and tenant member lookup required. |
+| `src/app/api/team/members/seat/route.ts` | admin-only | Seat change, suspension and reactivation; manage_team, tenant member lookup, trusted origin, fail-closed rate limit, step-up, contract quota enforcement and database audit required. |
 | `src/app/api/team/members/remove/route.ts` | admin-only | Member removal; manage_team, rate limit, origin, audit required. |
 | `src/app/api/security/settings/route.ts` | admin-only | Security settings mutation; manage_settings, step-up and audit required. |
 | `src/app/api/security/step-up/challenge/route.ts` | high-risk | Step-up challenge; auth, tenant context, origin and rate limit required. |
@@ -79,6 +83,8 @@ There are currently no registered `src/app/next_api/**/route.ts` endpoints. If a
 
 Every tenant-scoped resource must be loaded from the server and checked against the active organization before returning or mutating it. Client-supplied IDs are selectors only; they never establish authorization.
 
+Global platform routes must validate an enabled platform role, required capability and AAL2 MFA, then revalidate organization/contract ownership and operator role in the database. Organization membership alone never authorizes a platform route.
+
 ## Required negative tests
 
-Security tests must assert that unauthenticated requests return 401, missing membership returns 403, viewer attempting admin mutation returns 403, tenant A attempting tenant B resource access returns 403/404, invalid origin returns 403, invalid body returns 400, internal errors return sanitized responses without stack traces, and legitimate signed webhooks continue to pass. Public account recovery must additionally prove generic account-existence responses, fail-closed abuse controls, same-origin redirect construction, and sanitized provider failures.
+Security tests must assert that unauthenticated requests return 401, missing membership returns 403, viewer attempting admin mutation returns 403, tenant A attempting tenant B resource access returns 403/404, invalid origin returns 403, invalid body returns 400, internal errors return sanitized responses without stack traces, and legitimate signed webhooks continue to pass. Public account recovery must additionally prove generic account-existence responses, fail-closed abuse controls, same-origin redirect construction, and sanitized provider failures. Platform routes must additionally prove that organization administrators without a global platform role are denied, AAL1 sessions are denied, and capability-specific platform roles cannot perform unrelated operations.
