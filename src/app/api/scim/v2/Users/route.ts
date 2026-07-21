@@ -9,13 +9,13 @@ import {
 } from '@/server/enterprise/scim';
 import {
   EUROCOMPLY_ENTERPRISE_USER_SCHEMA,
-  enforceScimRateLimit,
+  enforceScimRateLimit as checkDistributedRateLimit,
   parseScimFilter,
   roleFromScimPayload,
   SCIM_LIST_SCHEMA,
   scimCreateUserSchema,
   scimErrorResponse,
-  scimJson,
+  scimJson as noStoreJson,
   scimUserResource,
 } from '@/server/enterprise/scim-http';
 
@@ -28,7 +28,7 @@ const paginationSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const rateLimited = await enforceScimRateLimit(request, 'scim_user_create');
+  const rateLimited = await checkDistributedRateLimit(request, 'scim_user_create');
   if (rateLimited) return rateLimited;
 
   try {
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     }
 
     const resource = scimUserResource(identity, new URL(request.url).origin);
-    return scimJson(resource, {
+    return noStoreJson(resource, {
       status: 201,
       headers: { location: resource.meta.location },
     });
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const rateLimited = await enforceScimRateLimit(request, 'scim_user_list');
+  const rateLimited = await checkDistributedRateLimit(request, 'scim_user_list');
   if (rateLimited) return rateLimited;
 
   try {
@@ -92,7 +92,7 @@ export async function GET(request: Request) {
       emailFilter,
     });
 
-    return scimJson({
+    return noStoreJson({
       schemas: [SCIM_LIST_SCHEMA],
       totalResults: directory.totalResults,
       startIndex: pagination.startIndex,
