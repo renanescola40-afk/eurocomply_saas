@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { EnterpriseBulkImport } from '@/components/platform/enterprise-bulk-import';
 import { EnterpriseControlCenter } from '@/components/platform/enterprise-control-center';
+import { EnterpriseScimToken } from '@/components/platform/enterprise-scim-token';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getCurrentUser } from '@/server/queries/auth';
 import {
@@ -41,6 +42,7 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
   const { locale } = await params;
   const safeLocale = getSafeLocale(locale);
   const membership = await requireControlCenterAccess(safeLocale);
+  const canManageSecurity = platformRoleHasCapability(membership.role, 'security');
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_34rem),linear-gradient(180deg,#050505_0%,#080b12_48%,#050505_100%)] text-white">
@@ -53,7 +55,7 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
             Platform Control Center
           </h1>
           <p className="max-w-4xl text-sm leading-7 text-white/60 md:text-base">
-            Create negotiated contracts, inspect tenant usage, queue bulk provisioning and apply audited lifecycle transitions without creating a separate application for each customer.
+            Create negotiated contracts, inspect tenant usage, queue bulk provisioning, issue SCIM credentials and apply audited lifecycle transitions without creating a separate application for each customer.
           </p>
         </header>
 
@@ -62,6 +64,7 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
           platformRole={membership.role}
         />
         <EnterpriseBulkImport />
+        {canManageSecurity ? <EnterpriseScimToken /> : null}
       </div>
     </main>
   );
