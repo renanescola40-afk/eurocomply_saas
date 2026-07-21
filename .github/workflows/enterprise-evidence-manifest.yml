@@ -1,0 +1,80 @@
+name: Enterprise evidence manifest
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact integrated main SHA
+        required: true
+        type: string
+      artifact_root:
+        description: Directory containing downloaded sanitized JSON evidence
+        required: true
+        default: artifacts/enterprise-readiness/evidence-input
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  NODE_VERSION: '22'
+  CANONICAL_REPOSITORY: renanescola40-afk/eurocomply_saas
+
+jobs:
+  assemble:
+    name: Assemble exact-SHA evidence manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate target SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${{ inputs.target_sha }}" =~ ^[a-f0-9]{40}$ ]] || { echo 'target_sha must be a full lowercase SHA'; exit 1; }
+
+      - name: Check out immutable target
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha }}
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "${{ inputs.target_sha }}"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run manifest contract tests
+        run: node --test tests/enterprise/build-enterprise-evidence-manifest.test.mjs
+
+      - name: Build sanitized manifest
+        id: manifest
+        continue-on-error: true
+        run: |
+          node scripts/enterprise/build-enterprise-evidence-manifest.mjs \
+            --root "${{ inputs.artifact_root }}" \
+            --sha "${{ inputs.target_sha }}" \
+            --repository "${{ env.CANONICAL_REPOSITORY }}" \
+            --output artifacts/enterprise-readiness/evidence-manifest.json
+
+      - name: Upload manifest report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-evidence-manifest-${{ inputs.target_sha }}
+          path: artifacts/enterprise-readiness/evidence-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce fail-closed assembly
+        if: steps.manifest.outcome != 'success'
+        run: |
+          echo 'Evidence manifest remains NO_GO. Inspect rejected entries in the sanitized artifact.'
+          exit 1
