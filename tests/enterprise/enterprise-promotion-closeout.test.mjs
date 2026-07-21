@@ -75,6 +75,12 @@ function scorecard() {
   };
 }
 
+function canonicalRunId(id) {
+  const index = EXPECTED_RUNTIME_LANES.indexOf(id);
+  if (index < 0) throw new Error(`Unknown runtime lane: ${id}`);
+  return 1000 + index;
+}
+
 function campaign(profile, lanes, completeLanes = lanes) {
   const completeSet = new Set(completeLanes);
   const allComplete = completeSet.size === lanes.length;
@@ -87,7 +93,7 @@ function campaign(profile, lanes, completeLanes = lanes) {
       ? (allComplete ? SAFE_PROMOTION_DECISION : (completeSet.size > 0 ? PARTIAL_SAFE_PROMOTION_DECISION : 'NO_GO'))
       : (allComplete ? 'READY_FOR_EVIDENCE_PROMOTION' : 'NO_GO'),
     expected_lanes: lanes,
-    results: lanes.map((id, index) => {
+    results: lanes.map((id) => {
       const contract = RUNTIME_LANE_CONTRACTS[id];
       const complete = completeSet.has(id);
       return {
@@ -96,7 +102,7 @@ function campaign(profile, lanes, completeLanes = lanes) {
         required: true,
         status: complete ? 'complete' : 'blocked',
         conclusion: complete ? 'success' : null,
-        run_id: complete ? 1000 + index : null,
+        run_id: complete ? canonicalRunId(id) : null,
         artifact_count: complete ? 1 : 0,
         artifact_names: complete ? [`${contract.artifactPrefix}${SHA}`] : [],
         source: complete ? (profile === 'safe' ? 'reused_exact_sha' : 'dispatched') : null,
@@ -110,11 +116,10 @@ async function fixture(lanes) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'promotion-contract-'));
   const runtimeRoot = path.join(root, 'runtime');
   const stagingRoot = path.join(root, 'staging');
-  for (const [index, lane] of lanes.entries()) {
+  for (const lane of lanes) {
     const contract = RUNTIME_LANE_CONTRACTS[lane];
     const laneRoot = path.join(runtimeRoot, lane.toLowerCase());
     await mkdir(laneRoot, { recursive: true });
-    const canonicalIndex = EXPECTED_RUNTIME_LANES.indexOf(lane);
     for (const fileName of contract.requiredEvidenceFiles) {
       await writeFile(path.join(laneRoot, fileName), JSON.stringify({
         schema: `legacy.${lane}`,
@@ -123,7 +128,7 @@ async function fixture(lanes) {
         generatedAt: '2026-07-21T15:00:00Z',
         repository: REPOSITORY,
         targetSha: SHA,
-        workflowRunId: String(1000 + (canonicalIndex >= 0 ? canonicalIndex : index)),
+        workflowRunId: String(canonicalRunId(lane)),
         evidenceIntegrity: { credentialsStored: false },
       }));
     }
