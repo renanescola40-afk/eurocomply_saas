@@ -104,7 +104,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, {
   },
 };
 
-const READY_STATES = new Set(['active', 'approved', 'ready', 'complete', 'completed', 'operating']);
+const READY_STATES = new Set(['active', 'approved', 'ready', 'complete', 'completed']);
 const BLOCKED_STATES = new Set(['blocked', 'rejected', 'failed']);
 const NOT_APPLICABLE_STATES = new Set(['not_applicable', 'not_required']);
 const RETIRED_STATES = new Set(['retired', 'archived']);
