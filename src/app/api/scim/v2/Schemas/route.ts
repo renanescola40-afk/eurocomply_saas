@@ -1,23 +1,23 @@
 import { authenticateScimRequest } from '@/server/enterprise/scim';
 import {
   EUROCOMPLY_ENTERPRISE_USER_SCHEMA,
-  enforceScimRateLimit,
+  enforceScimRateLimit as checkDistributedRateLimit,
   SCIM_LIST_SCHEMA,
   SCIM_USER_SCHEMA,
   scimErrorResponse,
-  scimJson,
+  scimJson as noStoreJson,
 } from '@/server/enterprise/scim-http';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
-  const rateLimited = await enforceScimRateLimit(request, 'scim_schemas');
+  const rateLimited = await checkDistributedRateLimit(request, 'scim_schemas');
   if (rateLimited) return rateLimited;
 
   try {
     await authenticateScimRequest(request);
     const origin = new URL(request.url).origin;
-    return scimJson({
+    return noStoreJson({
       schemas: [SCIM_LIST_SCHEMA],
       totalResults: 2,
       startIndex: 1,
