@@ -22,6 +22,27 @@ const outputPath = String(process.env.CLOSEOUT_WATCHDOG_OUTPUT || 'artifacts/ent
 const strict = String(process.env.CLOSEOUT_WATCHDOG_STRICT || 'false').toLowerCase() === 'true';
 const githubApiOrigin = 'https://api.github.com';
 
+const CANONICAL_LANE_WORKFLOWS = Object.freeze({
+  'IAM-RBAC': 'auth-rbac-runtime-proof.yml',
+  'IAM-LIFECYCLE': 'identity-access-lifecycle-proof.yml',
+  'TEN-RLS': 'supabase-live-rls-validation.yml',
+  'FINAL-TECHNICAL': 'final-technical-controls-proof.yml',
+  PLATFORM: 'platform-providers-runtime-proof.yml',
+  DATA: 'data-governance-runtime-proof.yml',
+  INCIDENT: 'incident-continuity-runtime-proof.yml',
+  TRUST: 'procurement-trust-runtime-proof.yml',
+  RECOVERY: 'recovery-resilience-proof.yml',
+  PRODUCTION: 'production-runtime-proof.yml',
+  REPOSITORY: 'branch-protection-runtime-proof.yml',
+  'STEP-UP': 'step-up-runtime-proof.yml',
+  ASSURANCE: 'enterprise-final-assurance-proof.yml',
+});
+
+const ORCHESTRATOR_WORKFLOWS = Object.freeze({
+  'SAFE-BOOTSTRAP': 'enterprise-safe-runtime-bootstrap.yml',
+  'FULL-CLOSEOUT': 'enterprise-runtime-closeout.yml',
+});
+
 if (!token) throw new Error('GITHUB_TOKEN is required');
 if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error('GITHUB_REPOSITORY has an invalid format');
 if (!/^[a-f0-9]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be a lowercase full 40-character SHA');
@@ -83,25 +104,39 @@ if (manifest?.schema_version !== 2 || !Array.isArray(manifest?.workflows) || man
   throw new Error('Runtime campaign manifest must contain the canonical 13 lanes');
 }
 
-const lanes = await Promise.all(manifest.workflows.map((lane) => readWorkflowEvidence({
-  id: lane.id,
-  workflow: lane.workflow,
-  artifactPrefix: lane.artifact_prefix,
-  required: lane.required === true,
-  allowedEvents: LANE_EVENTS,
-})));
+const manifestById = new Map(manifest.workflows.map((lane) => [lane?.id, lane]));
+for (const [id, workflow] of Object.entries(CANONICAL_LANE_WORKFLOWS)) {
+  const lane = manifestById.get(id);
+  if (!lane || lane.workflow !== workflow) {
+    throw new Error(`Runtime campaign manifest drift detected for ${id}`);
+  }
+}
+if (manifestById.size !== Object.keys(CANONICAL_LANE_WORKFLOWS).length) {
+  throw new Error('Runtime campaign manifest contains unknown or duplicate lanes');
+}
+
+const lanes = await Promise.all(Object.entries(CANONICAL_LANE_WORKFLOWS).map(([id, workflow]) => {
+  const lane = manifestById.get(id);
+  return readWorkflowEvidence({
+    id,
+    workflow,
+    artifactPrefix: lane.artifact_prefix,
+    required: lane.required === true,
+    allowedEvents: LANE_EVENTS,
+  });
+}));
 
 const orchestrators = await Promise.all([
   readWorkflowEvidence({
     id: 'SAFE-BOOTSTRAP',
-    workflow: 'enterprise-safe-runtime-bootstrap.yml',
+    workflow: ORCHESTRATOR_WORKFLOWS['SAFE-BOOTSTRAP'],
     artifactPrefix: `enterprise-safe-runtime-bootstrap-${releaseSha}`,
     required: true,
     allowedEvents: SAFE_ORCHESTRATOR_EVENTS,
   }),
   readWorkflowEvidence({
     id: 'FULL-CLOSEOUT',
-    workflow: 'enterprise-runtime-closeout.yml',
+    workflow: ORCHESTRATOR_WORKFLOWS['FULL-CLOSEOUT'],
     artifactPrefix: `enterprise-runtime-closeout-${releaseSha}`,
     required: true,
     allowedEvents: FULL_ORCHESTRATOR_EVENTS,
