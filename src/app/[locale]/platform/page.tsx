@@ -2,6 +2,7 @@ import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { EnterpriseBulkImport } from '@/components/platform/enterprise-bulk-import';
+import { EnterpriseContractBilling } from '@/components/platform/enterprise-contract-billing';
 import { EnterpriseControlCenter } from '@/components/platform/enterprise-control-center';
 import { EnterpriseScimToken } from '@/components/platform/enterprise-scim-token';
 import { EnterpriseSsoConnection } from '@/components/platform/enterprise-sso-connection';
@@ -43,6 +44,7 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
   const { locale } = await params;
   const safeLocale = getSafeLocale(locale);
   const membership = await requireControlCenterAccess(safeLocale);
+  const canManageBilling = platformRoleHasCapability(membership.role, 'billing');
   const canManageSecurity = platformRoleHasCapability(membership.role, 'security');
 
   return (
@@ -56,7 +58,7 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
             Platform Control Center
           </h1>
           <p className="max-w-4xl text-sm leading-7 text-white/60 md:text-base">
-            Create negotiated contracts, inspect tenant usage, configure SAML SSO, queue bulk provisioning, issue SCIM credentials and apply audited lifecycle transitions without creating a separate application for each customer.
+            Create negotiated contracts, configure annual billing, inspect tenant usage, configure SAML SSO, queue bulk provisioning, issue SCIM credentials and apply audited lifecycle transitions without creating a separate application for each customer.
           </p>
         </header>
 
@@ -64,6 +66,7 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
           canManageContracts={platformRoleHasCapability(membership.role, 'contracts')}
           platformRole={membership.role}
         />
+        {canManageBilling ? <EnterpriseContractBilling /> : null}
         <EnterpriseBulkImport />
         {canManageSecurity ? <EnterpriseSsoConnection /> : null}
         {canManageSecurity ? <EnterpriseScimToken /> : null}
