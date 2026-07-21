@@ -1,0 +1,111 @@
+name: Enterprise Closeout Watchdog
+
+run-name: Enterprise closeout watchdog for ${{ inputs.release_sha || github.event.workflow_run.head_sha || github.sha }}
+
+on:
+  workflow_run:
+    workflows:
+      - Enterprise Safe Runtime Bootstrap
+      - Enterprise Runtime Closeout
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Optional full current main SHA; defaults to current main
+        required: false
+        type: string
+      strict:
+        description: Fail unless safe or full retained evidence exists
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: '17 * * * *'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: enterprise-closeout-watchdog
+  cancel-in-progress: true
+
+jobs:
+  watchdog:
+    name: Inventory exact-SHA closeout evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      RELEASE_BRANCH: main
+      GITHUB_TOKEN: ${{ github.token }}
+      CLOSEOUT_WATCHDOG_OUTPUT: artifacts/enterprise-readiness/closeout-watchdog.json
+      CLOSEOUT_WATCHDOG_STRICT: ${{ inputs.strict || false }}
+
+    steps:
+      - name: Resolve exact current main SHA
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          current_sha="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          [[ "$current_sha" =~ ^[a-f0-9]{40}$ ]]
+          if [ -n "$REQUESTED_SHA" ]; then
+            [[ "$REQUESTED_SHA" =~ ^[a-f0-9]{40}$ ]]
+            test "$REQUESTED_SHA" = "$current_sha"
+          fi
+          echo "RELEASE_SHA=$current_sha" >> "$GITHUB_ENV"
+
+      - name: Check out exact current main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+
+      - name: Validate watchdog contracts
+        run: node --test tests/enterprise/enterprise-closeout-watchdog.test.mjs
+
+      - name: Build exact-SHA closeout inventory
+        run: node scripts/enterprise/report-enterprise-closeout-watchdog.mjs
+
+      - name: Publish closeout summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('artifacts/enterprise-readiness/closeout-watchdog.json', 'utf8'));
+          const lines = [
+            '## Enterprise closeout watchdog',
+            '',
+            `- SHA: ${report.release_sha}`,
+            `- Decision: ${report.decision}`,
+            `- Safe lanes: ${report.counts.safe_lanes_complete}/${report.counts.safe_lanes_total}`,
+            `- All lanes: ${report.counts.lanes_complete}/${report.counts.lanes_total}`,
+            `- Safe evidence retained: ${report.safe_evidence_retained}`,
+            `- Full evidence retained: ${report.full_evidence_retained}`,
+            `- Blockers: ${report.blockers.length}`,
+            '',
+            'This watchdog does not compute or promote the canonical percentage.',
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE
+
+      - name: Upload exact-SHA watchdog artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-closeout-watchdog-${{ env.RELEASE_SHA }}
+          path: artifacts/enterprise-readiness/closeout-watchdog.json
+          if-no-files-found: error
+          retention-days: 90
