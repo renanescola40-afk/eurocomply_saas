@@ -25,10 +25,10 @@ describe('Enterprise Stripe binding boundary', () => {
     expect(selection).not.toContain('contract.stripe_customer_id is null');
   });
 
-  it('accepts only UUID metadata before invoking the negotiated RPC', () => {
-    expect(billing).toContain("metadataUuid(metadata, 'enterprise_contract_id'");
-    expect(billing).toContain("metadataUuid(metadata, 'organization_id'");
-    expect(billing).toContain("'sync_enterprise_contract_billing_v3_atomic'");
+  it('passes explicit contract and organization metadata to the negotiated RPC', () => {
+    expect(billing).toContain("metadataValue(metadata, 'enterprise_contract_id'");
+    expect(billing).toContain("metadataValue(metadata, 'organization_id'");
+    expect(billing).toContain("'sync_enterprise_contract_billing_v2_atomic'");
   });
 
   it('keeps duplicate Enterprise events idempotent even after lifecycle changes', () => {

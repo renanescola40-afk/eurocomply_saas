@@ -167,8 +167,8 @@ describe('organization invitation persistence', () => {
       invitation: invitationSnapshot,
     });
 
-    expect(from).toHaveBeenCalledWith('organization_invitations');
+    expect(from).toHaveBeenCalledWith('invitations');
     expect(insert).toHaveBeenCalledWith(invitationSnapshot);
-    expect(result).toEqual({ restored: true });
+    expect(result).toEqual({ restored: true, providerCode: null });
   });
 });

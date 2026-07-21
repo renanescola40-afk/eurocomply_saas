@@ -41,8 +41,8 @@ describe('enterprise platform control center contract', () => {
 
   it('keeps organization usage read access behind the global platform authority', () => {
     expect(usageRoute).toContain("requirePlatformCapability(user.id, 'organizations')");
-    expect(usageRoute).toContain('resolveEnterpriseEntitlements(');
-    expect(usageRoute).toContain("getSeatAvailability(entitlement, 'full')");
+    expect(usageRoute).toContain('resolveEnterpriseEntitlementSnapshot(');
+    expect(usageRoute).toContain("getSnapshotSeatAvailability(entitlement, 'full')");
     expect(usageRoute).toContain('instanceof PlatformAdminError');
   });
 

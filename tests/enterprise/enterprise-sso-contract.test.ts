@@ -58,8 +58,8 @@ describe('enterprise SAML SSO contracts', () => {
   });
 
   it('provisions the SAML session before redirect and signs out on failure', () => {
-    expect(callback).toContain('isSamlSsoUser(user)');
-    expect(callback).toContain('extractSupabaseSsoProviderId');
+    expect(callback).toContain('const providerId = extractSupabaseSsoProviderId');
+    expect(callback).toContain('if (providerId) {');
     expect(callback).toContain('await provisionEnterpriseSsoSession({');
     expect(callback).toContain('await supabase.auth.signOut().catch');
     expect(callback.indexOf('await provisionEnterpriseSsoSession({')).toBeLessThan(

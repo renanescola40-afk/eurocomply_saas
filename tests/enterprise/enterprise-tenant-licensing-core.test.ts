@@ -111,9 +111,10 @@ describe('enterprise tenant licensing core', () => {
 
   it('keeps invitation and idempotency hardening contracts present', () => {
     expect(invitationMigration).toContain('create_organization_invitation_with_seat_atomic');
-    expect(invitationLockMigration).toContain('pg_advisory_xact_lock');
+    expect(invitationLockMigration).toContain('from public.organization_usage as usage');
+    expect(invitationLockMigration).toContain('for update;');
     expect(idempotencyMigration).toContain('enterprise_seat_operations');
-    expect(invitationAction).toContain('reserveOrganizationSeat');
+    expect(invitationAction).toContain("const ATOMIC_INVITATION_ACCEPTANCE_RPC = 'accept_organization_invitation_atomic'");
     expect(licensingService).toContain('resolve_organization_entitlements_v2');
   });
 
