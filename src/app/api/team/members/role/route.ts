@@ -22,7 +22,17 @@ type OrganizationMemberRecord = {
 };
 
 type TeamRoleTransitionResult = {
-  outcome: 'changed' | 'unchanged' | 'last_owner' | 'state_changed' | 'not_found' | 'invalid_input' | 'invalid_role';
+  outcome:
+    | 'changed'
+    | 'unchanged'
+    | 'last_owner'
+    | 'state_changed'
+    | 'not_found'
+    | 'invalid_input'
+    | 'invalid_role'
+    | 'admin_limit_reached'
+    | 'contract_not_active'
+    | 'entitlements_missing';
   affected_member_id: string | null;
   affected_user_id: string | null;
   previous_role: string | null;
@@ -36,9 +46,9 @@ const ATOMIC_ROLE_TRANSITION_RPC = 'change_organization_member_role_atomic';
 
 function getClientIp(request: Request) {
   return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')
+    || 'unknown'
   );
 }
 
@@ -160,6 +170,30 @@ export async function POST(request: Request) {
         { error: 'last_owner_role_change_blocked', message: 'Cannot demote the last organization owner.' },
         { status: 400 },
       );
+    }
+
+    if (transition.outcome === 'admin_limit_reached') {
+      return noStoreJson(
+        {
+          error: 'organization_admin_limit_reached',
+          message: 'The organization has reached its contracted administrator limit.',
+        },
+        { status: 409 },
+      );
+    }
+
+    if (transition.outcome === 'contract_not_active') {
+      return noStoreJson(
+        {
+          error: 'organization_contract_not_active',
+          message: 'Administrator access cannot be granted while the organization contract is inactive.',
+        },
+        { status: 403 },
+      );
+    }
+
+    if (transition.outcome === 'entitlements_missing') {
+      return noStoreJson({ error: 'organization_entitlements_unavailable' }, { status: 503 });
     }
 
     if (transition.outcome === 'state_changed') {
