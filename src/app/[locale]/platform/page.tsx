@@ -6,6 +6,7 @@ import { locales, type Locale } from '@/lib/i18n/routing';
 import { getCurrentUser } from '@/server/queries/auth';
 import {
   PlatformAdminError,
+  platformRoleHasCapability,
   requirePlatformCapability,
 } from '@/server/security/platform-admin';
 
@@ -55,7 +56,10 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
           </p>
         </header>
 
-        <EnterpriseControlCenter platformRole={membership.role} />
+        <EnterpriseControlCenter
+          canManageContracts={platformRoleHasCapability(membership.role, 'contracts')}
+          platformRole={membership.role}
+        />
       </div>
     </main>
   );
