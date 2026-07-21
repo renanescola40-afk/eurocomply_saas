@@ -70,6 +70,16 @@ function formatMetric(metric: string) {
   return metric.replaceAll('_', ' ');
 }
 
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  })[character] ?? character);
+}
+
 function messageForOrganization(organizationName: string, alerts: EnterpriseUsageAlert[]) {
   const ordered = [...alerts].sort((left, right) => (
     right.thresholdPercent - left.thresholdPercent || left.metric.localeCompare(right.metric)
@@ -77,20 +87,7 @@ function messageForOrganization(organizationName: string, alerts: EnterpriseUsag
   const lines = ordered.map((alert) => (
     `${formatMetric(alert.metric)}: ${alert.currentValue}/${alert.limitValue} (${alert.thresholdPercent}% threshold)`
   ));
-  const escapedName = organizationName.replace(/[&<>"']/g, (character) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  })[character] ?? character);
-  const htmlItems = lines.map((line) => `<li>${line.replace(/[&<>"']/g, (character) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  })[character] ?? character)}</li>`).join('');
+  const htmlItems = lines.map((line) => `<li>${escapeHtml(line)}</li>`).join('');
 
   return {
     subject: `Enterprise usage alert — ${organizationName}`,
@@ -101,7 +98,7 @@ function messageForOrganization(organizationName: string, alerts: EnterpriseUsag
       '',
       'Review pending invitations, queued imports and active seats in the Platform Control Center.',
     ].join('\n'),
-    html: `<h2>Enterprise usage alert for ${escapedName}</h2><ul>${htmlItems}</ul><p>Review pending invitations, queued imports and active seats in the Platform Control Center.</p>`,
+    html: `<h2>Enterprise usage alert for ${escapeHtml(organizationName)}</h2><ul>${htmlItems}</ul><p>Review pending invitations, queued imports and active seats in the Platform Control Center.</p>`,
   };
 }
 
@@ -177,24 +174,26 @@ export async function evaluateAndNotifyEnterpriseUsageAlerts(batchSize = 100) {
       }
 
       const message = messageForOrganization(recipients.organizationName, group);
-      const digest = createHash('sha256')
+      const alertDigest = createHash('sha256')
         .update(group.map((alert) => alert.alertId).sort().join(','), 'utf8')
         .digest('hex')
         .slice(0, 24);
       let sent = false;
 
       for (const email of recipients.emails) {
+        const recipientDigest = createHash('sha256').update(email, 'utf8').digest('hex').slice(0, 20);
         const delivery = await sendEmail({
           to: email,
           subject: message.subject,
           text: message.text,
           html: message.html,
-          template: 'enterprise_usage_threshold',
+          template: 'security_alert',
           organizationId,
-          idempotencyKey: `enterprise-usage-alert:${organizationId}:${digest}:${email}`,
+          idempotencyKey: `enterprise-usage-alert:${organizationId}:${alertDigest}:${recipientDigest}`,
           metadata: {
-            alertIds: group.map((alert) => alert.alertId),
-            thresholds: group.map((alert) => alert.thresholdPercent),
+            alertIds: group.map((alert) => alert.alertId).join(','),
+            thresholds: group.map((alert) => alert.thresholdPercent).join(','),
+            metricCount: group.length,
           },
         });
         if (delivery.sent) {
