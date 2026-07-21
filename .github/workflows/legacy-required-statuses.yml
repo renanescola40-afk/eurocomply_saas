@@ -9,7 +9,6 @@ on:
       - main
       - fix/observability-smoke-anonymous-401
       - fix/step-up-runtime-evidence-contract
-      - agent/scorecard-terminal-check-orchestration-megapack
 
 permissions:
   contents: write
@@ -90,7 +89,7 @@ jobs:
 
   one-time-scorecard-trigger-migration:
     name: One-time scorecard trigger migration
-    if: github.ref == 'refs/heads/agent/scorecard-terminal-check-orchestration-megapack' && github.event.head_commit.message == 'chore(ci): bootstrap scorecard trigger migration'
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/scorecard-terminal-check-orchestration-megapack'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
