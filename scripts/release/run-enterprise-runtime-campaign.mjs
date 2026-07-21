@@ -11,8 +11,9 @@ import {
 } from '../enterprise/runtime-lane-contracts.mjs';
 import { selectExactShaRun } from '../enterprise/runtime-campaign-run-selection.mjs';
 import {
-  expectedDecisionForProfile,
+  decisionForCampaignResults,
   expectedLanesForProfile,
+  profileAllowsIncrementalPromotion,
   profileMayReuseExactShaRuns,
   profileRequiresRecoveryConfirmation,
   resolveRuntimeCampaignProfile,
@@ -63,7 +64,7 @@ if (!Number.isFinite(pollMs) || pollMs < 5_000 || pollMs > 300_000) throw new Er
 if (!Number.isFinite(timeoutMs) || timeoutMs < 60_000 || timeoutMs > 4 * 60 * 60 * 1000) throw new Error('Invalid per-workflow timeout');
 const startedAt = new Date();
 const mayReuseExactShaRuns = profileMayReuseExactShaRuns(profile);
-const expectedDecision = expectedDecisionForProfile(profile);
+const incrementalSafeCampaign = profileAllowsIncrementalPromotion(profile);
 
 function githubApiUrl(pathname) {
   if (typeof pathname !== 'string' || !pathname.startsWith('/') || pathname.includes('\\') || pathname.includes('..')) {
@@ -248,13 +249,8 @@ async function downloadArtifacts(runId, destination, artifactPrefix) {
   return downloaded;
 }
 
-await verifyExactMain();
-await mkdir(path.dirname(outputPath), { recursive: true });
-
-const results = [];
-for (const lane of selectedWorkflows) {
-  const dispatchedAt = Date.now();
-  const result = {
+function createLaneResult(lane) {
+  return {
     id: lane.id,
     workflow: lane.workflow,
     required: lane.required === true,
@@ -266,49 +262,98 @@ for (const lane of selectedWorkflows) {
     source: null,
     reason: null,
   };
+}
+
+function sanitizeFailure(error) {
+  const message = error instanceof Error ? error.message : 'unknown_error';
+  return message.replaceAll(token, '[REDACTED]').slice(0, 240);
+}
+
+async function prepareLane(lane) {
+  const prepared = {
+    lane,
+    result: createLaneResult(lane),
+    dispatchedAt: Date.now(),
+    run: null,
+    preparationFailed: false,
+  };
   try {
     let run = mayReuseExactShaRuns ? await findRun(lane.workflow, 0, { allowExisting: true }) : null;
     if (run?.status === 'completed' && run?.conclusion !== 'success') run = null;
     if (!run) {
       await dispatchWorkflow(lane);
-      result.source = 'dispatched';
+      prepared.result.source = 'dispatched';
     } else {
-      result.source = 'reused_exact_sha';
+      prepared.result.source = 'reused_exact_sha';
     }
-    run = await waitForRun(lane.workflow, dispatchedAt, { existingRun: run, allowExisting: result.source === 'reused_exact_sha' });
+    prepared.run = run;
+  } catch (error) {
+    prepared.preparationFailed = true;
+    prepared.result.reason = sanitizeFailure(error);
+  }
+  return prepared;
+}
+
+async function completeLane(prepared) {
+  const { lane, result, dispatchedAt } = prepared;
+  if (prepared.preparationFailed) return result;
+  try {
+    const run = await waitForRun(lane.workflow, dispatchedAt, {
+      existingRun: prepared.run,
+      allowExisting: result.source === 'reused_exact_sha',
+    });
     result.run_id = run.id;
     result.conclusion = run.conclusion;
-    result.status = run.conclusion === 'success' ? 'complete' : 'blocked';
-    if (run.conclusion !== 'success') result.reason = `workflow_${run.conclusion || 'unknown'}`;
+    if (run.conclusion !== 'success') {
+      result.reason = `workflow_${run.conclusion || 'unknown'}`;
+      return result;
+    }
     const laneDir = path.join(artifactsDir, lane.id.toLowerCase());
     const artifacts = await downloadArtifacts(run.id, laneDir, lane.artifact_prefix);
     result.artifact_count = artifacts.length;
     result.artifact_names = artifacts.map((artifact) => artifact.artifact_name).sort();
-    if (result.status === 'complete' && artifacts.length === 0) {
-      result.status = 'blocked';
-      result.reason = 'missing_artifact';
-    }
+    result.status = artifacts.length > 0 ? 'complete' : 'blocked';
+    if (artifacts.length === 0) result.reason = 'missing_artifact';
   } catch (error) {
     result.status = 'blocked';
-    const message = error instanceof Error ? error.message : 'unknown_error';
-    result.reason = message.replaceAll(token, '[REDACTED]').slice(0, 240);
+    result.reason = sanitizeFailure(error);
   }
-  results.push(result);
-  await writeFile(outputPath, JSON.stringify({
+  return result;
+}
+
+async function writeProgress(results, decision = 'NO_GO') {
+  await writeFile(outputPath, `${JSON.stringify({
     schema_version: 2,
     profile,
     release_sha: releaseSha,
     release_branch: branch,
     started_at: startedAt.toISOString(),
     updated_at: new Date().toISOString(),
-    decision: 'NO_GO',
+    decision,
     expected_lanes: expectedLanes,
     results,
-  }, null, 2));
+  }, null, 2)}\n`);
+}
+
+await verifyExactMain();
+await mkdir(path.dirname(outputPath), { recursive: true });
+
+let results = [];
+if (incrementalSafeCampaign) {
+  const prepared = [];
+  for (const lane of selectedWorkflows) prepared.push(await prepareLane(lane));
+  await writeProgress(prepared.map((entry) => entry.result));
+  results = await Promise.all(prepared.map((entry) => completeLane(entry)));
+} else {
+  for (const lane of selectedWorkflows) {
+    const result = await completeLane(await prepareLane(lane));
+    results.push(result);
+    await writeProgress(results);
+  }
 }
 
 const required = results.filter((result) => result.required);
-const decision = required.every((result) => result.status === 'complete') ? expectedDecision : 'NO_GO';
+const decision = decisionForCampaignResults(profile, required);
 const summary = {
   schema_version: 2,
   profile,
@@ -329,4 +374,4 @@ const summary = {
 };
 await writeFile(outputPath, `${JSON.stringify(summary, null, 2)}\n`);
 console.log(JSON.stringify({ profile, decision, counts: summary.counts }));
-if (decision !== expectedDecision) process.exitCode = 1;
+if (decision === 'NO_GO') process.exitCode = 1;
