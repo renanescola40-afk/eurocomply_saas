@@ -1,9 +1,8 @@
 name: One-time fast-uri lock repair
 
 on:
-  push:
-    branches:
-      - agent/safe-runtime-autopromotion-megapack
+  pull_request:
+    types: [synchronize]
     paths:
       - .github/workflows/one-time-fix-fast-uri-lock.yml
 
@@ -11,11 +10,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: one-time-fast-uri-lock-repair
+  group: one-time-fast-uri-lock-repair-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
   repair-lock:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/safe-runtime-autopromotion-megapack'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
