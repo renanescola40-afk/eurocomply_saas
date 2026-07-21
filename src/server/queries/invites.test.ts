@@ -8,32 +8,42 @@ vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: mocks.createAdminClient,
 }));
 
-import { createOrganizationInvite, restoreOrganizationInvite } from './invites';
+import {
+  createOrganizationInvite,
+  OrganizationInviteError,
+  restoreOrganizationInvite,
+} from './invites';
 
-function installClient(error: { code: string } | null = null) {
-  const upsert = vi.fn();
-  const builder = {
-    upsert,
-    select: vi.fn(),
-    single: vi.fn(async () => ({
-      data: error
-        ? null
-        : {
-            id: 'invite_1',
+function installClient(input: { outcome?: string; error?: { code: string } | null } = {}) {
+  const outcome = input.outcome ?? 'created';
+  const rpc = vi.fn(async () => ({
+    data: input.error
+      ? null
+      : [
+          {
+            outcome,
+            invitation_id: outcome === 'created' ? 'invite_1' : null,
+            organization_id: 'org_a',
             email: 'new.user@example.test',
-            role: 'editor',
+            applied_role: 'editor',
+            applied_seat_type: 'participant',
             expires_at: '2026-07-23T18:00:00.000Z',
             created_at: '2026-07-16T18:00:00.000Z',
-            organizations: { name: 'Acme Corp' },
           },
-      error,
-    })),
+        ],
+    error: input.error ?? null,
+  }));
+  const maybeSingle = vi.fn(async () => ({ data: { name: 'Acme Corp' }, error: null }));
+  const builder = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    maybeSingle,
   };
-  upsert.mockReturnValue(builder);
   builder.select.mockReturnValue(builder);
+  builder.eq.mockReturnValue(builder);
   const from = vi.fn(() => builder);
-  mocks.createAdminClient.mockReturnValue({ from });
-  return { from, upsert };
+  mocks.createAdminClient.mockReturnValue({ rpc, from });
+  return { rpc, from };
 }
 
 function installRestoreClient(error: { code?: string | null } | null = null) {
@@ -48,9 +58,11 @@ const invitationSnapshot = {
   organization_id: 'org_a',
   email: 'new.user@example.test',
   role: 'editor',
+  seat_type: 'participant',
   token: 'original-token',
   invited_by: 'user_admin',
   accepted_at: null,
+  revoked_at: null,
   expires_at: '2026-07-23T18:00:00.000Z',
   created_at: '2026-07-16T18:00:00.000Z',
 };
@@ -60,40 +72,79 @@ describe('organization invitation persistence', () => {
     vi.clearAllMocks();
   });
 
-  it('creates a refreshable invitation in the same table consumed by acceptance', async () => {
-    const { from, upsert } = installClient();
+  it('creates the invitation and reserves its seat through one tenant-serialized RPC', async () => {
+    const { rpc, from } = installClient();
 
     const result = await createOrganizationInvite({
       organizationId: 'org_a',
       invitedBy: 'user_admin',
       email: ' NEW.USER@EXAMPLE.TEST ',
       role: 'Editor',
+      seatType: 'participant',
     });
 
-    expect(from).toHaveBeenCalledWith('invitations');
-    expect(upsert).toHaveBeenCalledWith(
+    expect(rpc).toHaveBeenCalledWith(
+      'create_organization_invitation_with_seat_atomic',
       expect.objectContaining({
-        organization_id: 'org_a',
-        invited_by: 'user_admin',
-        email: 'new.user@example.test',
-        role: 'editor',
-        accepted_at: null,
-        token: expect.stringMatching(/^[a-f0-9]{64}$/),
+        p_organization_id: 'org_a',
+        p_invited_by: 'user_admin',
+        p_email: 'new.user@example.test',
+        p_role: 'editor',
+        p_seat_type: 'participant',
+        p_token: expect.stringMatching(/^[a-f0-9]{64}$/),
       }),
-      { onConflict: 'organization_id,email' },
     );
+    expect(from).toHaveBeenCalledWith('organizations');
     expect(result).toMatchObject({
       persisted: true,
       organizationName: 'Acme Corp',
-      invite: { id: 'invite_1', email: 'new.user@example.test', role: 'editor', status: 'pending' },
+      invite: {
+        id: 'invite_1',
+        email: 'new.user@example.test',
+        role: 'editor',
+        seat_type: 'participant',
+        status: 'pending',
+      },
     });
     expect(result.token).toMatch(/^[a-f0-9]{64}$/);
     expect(result.tokenFingerprint).toMatch(/^[a-f0-9]{64}$/);
     expect(result.tokenFingerprint).not.toBe(result.token);
   });
 
+  it('keeps a compatible safe default seat type for older callers', async () => {
+    const { rpc } = installClient();
+
+    await createOrganizationInvite({
+      organizationId: 'org_a',
+      invitedBy: 'user_admin',
+      email: 'new.user@example.test',
+      role: 'Visualizador',
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      'create_organization_invitation_with_seat_atomic',
+      expect.objectContaining({ p_seat_type: 'viewer' }),
+    );
+  });
+
+  it('surfaces quota outcomes without exposing provider details', async () => {
+    installClient({ outcome: 'seat_limit_reached' });
+
+    await expect(
+      createOrganizationInvite({
+        organizationId: 'org_a',
+        invitedBy: 'user_admin',
+        email: 'new.user@example.test',
+        role: 'Editor',
+      }),
+    ).rejects.toMatchObject<OrganizationInviteError>({
+      name: 'OrganizationInviteError',
+      code: 'seat_limit_reached',
+    });
+  });
+
   it('fails closed when the canonical invitation cannot be persisted', async () => {
-    installClient({ code: 'provider_failure' });
+    installClient({ error: { code: 'provider_failure' } });
 
     await expect(
       createOrganizationInvite({
@@ -102,7 +153,10 @@ describe('organization invitation persistence', () => {
         email: 'new.user@example.test',
         role: 'Visualizador',
       }),
-    ).rejects.toThrow('Unable to persist organization invitation.');
+    ).rejects.toMatchObject({
+      name: 'OrganizationInviteError',
+      code: 'invitation_persistence_unavailable',
+    });
   });
 
   it('restores every original field for the exact tenant-scoped pending invitation', async () => {
