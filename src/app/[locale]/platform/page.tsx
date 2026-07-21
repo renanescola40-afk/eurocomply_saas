@@ -1,6 +1,7 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 
+import { EnterpriseBulkImport } from '@/components/platform/enterprise-bulk-import';
 import { EnterpriseControlCenter } from '@/components/platform/enterprise-control-center';
 import { locales, type Locale } from '@/lib/i18n/routing';
 import { getCurrentUser } from '@/server/queries/auth';
@@ -52,7 +53,7 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
             Platform Control Center
           </h1>
           <p className="max-w-4xl text-sm leading-7 text-white/60 md:text-base">
-            Create negotiated contracts, inspect tenant usage and apply audited lifecycle transitions without creating a separate application for each customer.
+            Create negotiated contracts, inspect tenant usage, queue bulk provisioning and apply audited lifecycle transitions without creating a separate application for each customer.
           </p>
         </header>
 
@@ -60,6 +61,7 @@ export default async function PlatformControlCenterPage({ params }: PageProps) {
           canManageContracts={platformRoleHasCapability(membership.role, 'contracts')}
           platformRole={membership.role}
         />
+        <EnterpriseBulkImport />
       </div>
     </main>
   );
