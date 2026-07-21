@@ -55,6 +55,10 @@ Valid technical evidence can increase the exact-SHA readiness score even when an
 
 The official score still changes only when the integrated bootstrap produces and retains an accepted exact-SHA promotion artifact. Merging this implementation alone promotes zero controls.
 
+## Dependency validation
+
+The exact-head release gates also require a moderate-level npm audit with no findings. The implementation keeps Next.js 15 intact while pinning patched transitive image processing and sanitization dependencies through the deterministic manifest and lockfile.
+
 ## Rollback
 
-Revert the campaign profile, runner, promotion closeout, safe workflow, tests and runbook changes. This restores sequential, all-or-nothing safe promotion while preserving the protected full closeout.
+Revert the campaign profile, runner, promotion closeout, safe workflow, tests, dependency pins and runbook changes. This restores sequential, all-or-nothing safe promotion while preserving the protected full closeout.
