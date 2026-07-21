@@ -11,7 +11,8 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | authenticated | User auth required; sanitized error responses; no-store responses. |
 | tenant-scoped | Auth, organization membership, tenant ownership validation before resource use, RBAC/read permission, no-store. |
 | admin-only | Auth, membership or global platform authority, admin/RBAC capability, tenant validation where applicable, no-store, audit for sensitive changes. |
-| high-risk | Auth, trusted origin for mutations, Zod/body validation, rate limit, RBAC, tenant validation, audit/step-up where sensitive. |
+| high-risk | Auth, trusted origin for browser mutations, Zod/body validation, rate limit, RBAC, tenant validation, audit/step-up where sensitive. |
+| integration | Bearer/service credential authentication, tenant binding from the credential, bounded mutation payloads, distributed fail-closed rate limiting, entitlement enforcement, no-store and sanitized protocol errors. Browser Origin is not an authorization source. |
 | webhook | Provider signature verification instead of user session; raw body preserved; no-store; no CSRF origin requirement. |
 | health/internal | Health/ops/internal authorization; no tenant data exposure; no-store. |
 
@@ -47,11 +48,19 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/platform/contracts/status/route.ts` | admin-only | Global contract lifecycle mutation; authenticated platform capability, AAL2 MFA, trusted origin, bounded JSON, fail-closed rate limiting, expected-state transition, reason and audit required. |
 | `src/app/api/platform/organizations/[organizationId]/usage/route.ts` | admin-only | Global read-only tenant licensing usage; authenticated platform capability, AAL2 MFA, organization UUID validation and no-store response required. |
 | `src/app/api/platform/organizations/[organizationId]/provisioning-jobs/route.ts` | admin-only | Global CSV provisioning creation/status; authenticated platform capability, AAL2 MFA, trusted origin and fail-closed rate limit for mutations, bounded CSV JSON, tenant UUID validation, database operator recheck and no-store responses required. |
+| `src/app/api/platform/provisioning-jobs/actions/route.ts` | admin-only | Manual job process/cancel controls; authenticated platform capability, AAL2 MFA, trusted origin, bounded JSON, fail-closed rate limiting and database operator recheck required. |
+| `src/app/api/platform/organizations/[organizationId]/scim-tokens/route.ts` | admin-only | Show-once SCIM token issuance; platform security capability, AAL2 MFA, trusted origin, bounded JSON, fail-closed rate limit, organization/connection validation, SCIM entitlement and digest-only persistence required. |
 | `src/app/api/team/invites/route.ts` | admin-only | Team invite mutation; manage_team and tenant membership required. |
+| `src/app/api/team/imports/csv/route.ts` | admin-only | Tenant CSV import creation/status; current organization from the authenticated session, manage_team, Enterprise entitlement, trusted origin, fail-closed rate limit, step-up MFA, bounded CSV JSON and job-level quota reservation required. |
 | `src/app/api/team/invitations/cancel/route.ts` | admin-only | Team invitation cancellation; manage_team and tenant validation required. |
 | `src/app/api/team/members/role/route.ts` | admin-only | Role mutation; manage_team, step-up/audit and tenant member lookup required. |
 | `src/app/api/team/members/seat/route.ts` | admin-only | Seat change, suspension and reactivation; manage_team, tenant member lookup, trusted origin, fail-closed rate limit, step-up, contract quota enforcement and database audit required. |
 | `src/app/api/team/members/remove/route.ts` | admin-only | Member removal; manage_team, rate limit, origin, audit required. |
+| `src/app/api/scim/v2/ServiceProviderConfig/route.ts` | integration | SCIM bearer authentication, tenant entitlement, distributed fail-closed rate limit, no-store and protocol-formatted errors. |
+| `src/app/api/scim/v2/ResourceTypes/route.ts` | integration | Authenticated SCIM discovery with tenant-bound token, distributed rate limit and no-store response. |
+| `src/app/api/scim/v2/Schemas/route.ts` | integration | Authenticated SCIM schema discovery with tenant-bound token, distributed rate limit and no-store response. |
+| `src/app/api/scim/v2/Users/route.ts` | integration | SCIM user create/list; bearer token supplies tenant, mutation body is bounded, seats are reserved transactionally and list/filter responses remain tenant-scoped. |
+| `src/app/api/scim/v2/Users/[id]/route.ts` | integration | SCIM user read/PATCH/DELETE; bearer tenant binding, bounded PatchOp, transactional seat change/reactivation and seat release on deactivation. |
 | `src/app/api/security/settings/route.ts` | admin-only | Security settings mutation; manage_settings, step-up and audit required. |
 | `src/app/api/security/step-up/challenge/route.ts` | high-risk | Step-up challenge; auth, tenant context, origin and rate limit required. |
 | `src/app/api/security/step-up/verify/route.ts` | high-risk | Step-up verification; auth, tenant context, origin, rate limit, provider verification and audit required. |
@@ -87,6 +96,8 @@ Every tenant-scoped resource must be loaded from the server and checked against 
 
 Global platform routes must validate an enabled platform role, required capability and AAL2 MFA, then revalidate organization/contract ownership and operator role in the database. Organization membership alone never authorizes a platform route.
 
+SCIM and other integration routes derive `organization_id` from a verified credential. A request body, URL parameter or external identity identifier never chooses or expands the tenant boundary.
+
 ## Required negative tests
 
-Security tests must assert that unauthenticated requests return 401, missing membership returns 403, viewer attempting admin mutation returns 403, tenant A attempting tenant B resource access returns 403/404, invalid origin returns 403, invalid body returns 400, internal errors return sanitized responses without stack traces, and legitimate signed webhooks continue to pass. Public account recovery must additionally prove generic account-existence responses, fail-closed abuse controls, same-origin redirect construction, and sanitized provider failures. Platform routes must additionally prove that organization administrators without a global platform role are denied, AAL1 sessions are denied, and capability-specific platform roles cannot perform unrelated operations.
+Security tests must assert that unauthenticated requests return 401, missing membership returns 403, viewer attempting admin mutation returns 403, tenant A attempting tenant B resource access returns 403/404, invalid origin returns 403, invalid body returns 400, internal errors return sanitized responses without stack traces, and legitimate signed webhooks continue to pass. Public account recovery must additionally prove generic account-existence responses, fail-closed abuse controls, same-origin redirect construction, and sanitized provider failures. Platform routes must additionally prove that organization administrators without a global platform role are denied, AAL1 sessions are denied, and capability-specific platform roles cannot perform unrelated operations. Integration routes must prove invalid credentials are rejected, tenant selection cannot come from the payload, distributed rate limiting fails closed, mutations use bounded parsers and protocol errors do not expose provider details.
