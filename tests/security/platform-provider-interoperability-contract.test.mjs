@@ -35,6 +35,6 @@ test('stripe account and enabled webhook endpoint are checked', () => {
 });
 
 test('sentry project access is checked', () => {
-  assert.match(script, /sentry\.io\/api\/0\/projects/);
+  assert.match(script, /https?:\/\/[^/\s]*sentry\.io\/api\/0\/projects/);
   assert.match(script, /Configured Sentry project resolved/);
 });
