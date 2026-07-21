@@ -55,11 +55,11 @@ const PLATFORM_CAPABILITIES: Record<PlatformAdminRole, ReadonlySet<PlatformCapab
   platform_owner: new Set<PlatformCapability>(['organizations', 'contracts', 'billing', 'support', 'security', 'audit']),
   platform_admin: new Set<PlatformCapability>(['organizations', 'contracts', 'billing', 'support', 'security', 'audit']),
   sales_admin: new Set<PlatformCapability>(['organizations', 'contracts', 'billing', 'support']),
-  sales_rep: new Set<PlatformCapability>(['organizations', 'support']),
-  support_admin: new Set<PlatformCapability>(['support', 'audit']),
-  platform_billing: new Set<PlatformCapability>(['contracts', 'billing', 'audit']),
-  platform_support: new Set<PlatformCapability>(['support', 'audit']),
-  platform_security: new Set<PlatformCapability>(['security', 'audit']),
+  sales_rep: new Set<PlatformCapability>(['support']),
+  support_admin: new Set<PlatformCapability>(['organizations', 'support', 'audit']),
+  platform_billing: new Set<PlatformCapability>(['organizations', 'contracts', 'billing', 'audit']),
+  platform_support: new Set<PlatformCapability>(['organizations', 'support', 'audit']),
+  platform_security: new Set<PlatformCapability>(['organizations', 'security', 'audit']),
   platform_auditor: new Set<PlatformCapability>(['audit']),
 };
 
