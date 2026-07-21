@@ -14,6 +14,7 @@ const artifactsDir = process.env.RUNTIME_CAMPAIGN_ARTIFACTS_DIR || 'artifacts/ru
 const githubApiOrigin = 'https://api.github.com';
 const maximumArtifactBytes = 100 * 1024 * 1024;
 const maximumArchiveEntries = 2_000;
+const maximumExpandedBytes = 250 * 1024 * 1024;
 
 const allowedWorkflows = new Set([
   'auth-rbac-runtime-proof.yml',
@@ -118,13 +119,59 @@ async function waitForRun(workflow, notBefore) {
   throw new Error(`Timed out waiting for allowlisted workflow ${workflow}`);
 }
 
-function assertSafeArchiveEntries(entries) {
-  if (entries.length === 0 || entries.length > maximumArchiveEntries) throw new Error('Artifact archive entry count is invalid');
-  for (const entry of entries) {
-    if (!entry || entry.includes('\0') || entry.includes('\\') || path.posix.isAbsolute(entry)) throw new Error('Artifact archive contains an unsafe path');
-    const normalized = path.posix.normalize(entry);
-    if (normalized === '..' || normalized.startsWith('../') || normalized.includes('/../')) throw new Error('Artifact archive contains path traversal');
+const safeZipExtractor = String.raw`
+import io
+import os
+import pathlib
+import shutil
+import stat
+import sys
+import zipfile
+
+destination = pathlib.Path(sys.argv[1]).resolve()
+maximum_entries = int(sys.argv[2])
+maximum_expanded = int(sys.argv[3])
+archive = sys.stdin.buffer.read()
+
+with zipfile.ZipFile(io.BytesIO(archive)) as package:
+    entries = package.infolist()
+    if not entries or len(entries) > maximum_entries:
+        raise SystemExit('invalid archive entry count')
+    expanded = sum(entry.file_size for entry in entries)
+    if expanded <= 0 or expanded > maximum_expanded:
+        raise SystemExit('invalid expanded archive size')
+    destination.mkdir(parents=True, exist_ok=True)
+    for entry in entries:
+        name = entry.filename
+        if not name or '\x00' in name or '\\' in name:
+            raise SystemExit('unsafe archive path')
+        mode = entry.external_attr >> 16
+        if stat.S_ISLNK(mode):
+            raise SystemExit('symlink entries are forbidden')
+        target = (destination / name).resolve()
+        if target != destination and destination not in target.parents:
+            raise SystemExit('archive path traversal')
+        if entry.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with package.open(entry) as source, open(target, 'xb') as output:
+            shutil.copyfileobj(source, output, length=1024 * 1024)
+print(len(entries))
+`;
+
+function extractValidatedArchive(archive, destination) {
+  const extraction = spawnSync(
+    'python3',
+    ['-c', safeZipExtractor, destination, String(maximumArchiveEntries), String(maximumExpandedBytes)],
+    { input: archive, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 },
+  );
+  if (extraction.status !== 0) throw new Error('Unable to validate and extract artifact archive');
+  const entryCount = Number(extraction.stdout.trim());
+  if (!Number.isSafeInteger(entryCount) || entryCount <= 0 || entryCount > maximumArchiveEntries) {
+    throw new Error('Artifact extractor returned an invalid entry count');
   }
+  return entryCount;
 }
 
 async function downloadArtifacts(runId, destination) {
@@ -146,15 +193,8 @@ async function downloadArtifacts(runId, destination) {
     }
     const archive = Buffer.from(await response.arrayBuffer());
     if (archive.length === 0 || archive.length > maximumArtifactBytes) throw new Error('Artifact archive size is invalid');
-
-    const listing = spawnSync('unzip', ['-Z1', '-'], { input: archive, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
-    if (listing.status !== 0) throw new Error('Unable to inspect artifact archive');
-    const entries = listing.stdout.split(/\r?\n/).filter(Boolean);
-    assertSafeArchiveEntries(entries);
-
-    const unzip = spawnSync('unzip', ['-q', '-o', '-', '-d', destination], { input: archive, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
-    if (unzip.status !== 0) throw new Error('Unable to extract validated artifact archive');
-    downloaded.push({ artifact_id: artifact.id, size_in_bytes: artifact.size_in_bytes, entry_count: entries.length });
+    const entryCount = extractValidatedArchive(archive, destination);
+    downloaded.push({ artifact_id: artifact.id, size_in_bytes: artifact.size_in_bytes, entry_count: entryCount });
   }
   return downloaded;
 }
