@@ -1,0 +1,105 @@
+name: Platform Provider Readiness
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.env.example'
+      - 'scripts/platform/**'
+      - 'tests/platform/**'
+      - '.github/workflows/platform-provider-readiness.yml'
+  workflow_dispatch:
+    inputs:
+      strict_runtime:
+        description: 'Validate protected environment variable presence and shape'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-provider-readiness-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Provider configuration contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run provider readiness contract
+        run: node scripts/platform/check-provider-readiness.mjs --contract --output=artifacts/platform/provider-readiness.json
+
+      - name: Run platform contract tests
+        run: node --test tests/platform/provider-readiness-contract.test.mjs
+
+      - name: Upload redacted readiness evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: platform-provider-readiness-${{ github.sha }}
+          path: artifacts/platform/provider-readiness.json
+          if-no-files-found: error
+          retention-days: 30
+
+  protected-runtime:
+    name: Protected provider runtime configuration
+    if: github.event_name == 'workflow_dispatch' && inputs.strict_runtime == true
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+      TRUSTED_ORIGINS: ${{ vars.TRUSTED_ORIGINS }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_AUTH_SITE_URL: ${{ vars.SUPABASE_AUTH_SITE_URL }}
+      SUPABASE_AUTH_REDIRECT_URLS: ${{ vars.SUPABASE_AUTH_REDIRECT_URLS }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Validate protected provider configuration
+        run: node scripts/platform/check-provider-readiness.mjs --strict --output=artifacts/platform/provider-readiness.json
+
+      - name: Upload redacted protected evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: protected-platform-provider-readiness-${{ github.sha }}
+          path: artifacts/platform/provider-readiness.json
+          if-no-files-found: error
+          retention-days: 30
