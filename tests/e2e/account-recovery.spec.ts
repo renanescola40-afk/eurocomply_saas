@@ -22,7 +22,7 @@ test.describe('enterprise account recovery', () => {
       });
     });
 
-    const syntheticEmail = 'synthetic-recovery@acme.com';
+    const syntheticEmail = 'user@company.com';
     await page.goto('/en/recuperar-senha', { waitUntil: 'domcontentloaded' });
     await page.getByLabel('Work email').fill(syntheticEmail);
     await page.getByRole('button', { name: 'Send recovery link' }).click();
@@ -45,7 +45,7 @@ test.describe('enterprise account recovery', () => {
     });
 
     await page.goto('/pt/recuperar-senha', { waitUntil: 'domcontentloaded' });
-    await page.getByLabel('Email profissional').fill('synthetic-recovery@acme.com');
+    await page.getByLabel('Email profissional').fill('user@company.com');
     await page.getByRole('button', { name: 'Enviar link de recuperação' }).click();
 
     await expect(page.locator('main').getByRole('alert')).toContainText(/temporariamente indisponível/i);
