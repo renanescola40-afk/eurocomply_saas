@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     const mutationDenied = await requireTrustedMutation(request, {
       rateLimit: {
         key: `platform-contract-billing:${user.id}:${getClientIp(request)}`,
-        policy: 'billing',
+        policy: 'billing-checkout',
         userId: user.id,
         action: 'enterprise_contract_billing_configure',
         route: '/api/platform/contracts/billing',
