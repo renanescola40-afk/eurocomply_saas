@@ -7,7 +7,24 @@ on:
     branches: [main]
   workflow_dispatch:
   workflow_run:
-    workflows: [Distributed Rate Limit Runtime Proof, Auth RBAC Tenant Proof, Supabase Live RLS Validation, Production Runtime Proof, Branch Protection Runtime Proof]
+    workflows:
+      - CI
+      - CodeQL
+      - Semgrep
+      - Secret Scanning
+      - Scan repository for accidental secret exposure
+      - Dependency Review
+      - Actionlint
+      - Public Claims Guard
+      - Full Security Suite
+      - Enterprise Production Gate
+      - RISCK COMPLY Security CI
+      - Enterprise DAST
+      - Distributed Rate Limit Runtime Proof
+      - Auth RBAC Tenant Proof
+      - Supabase Live RLS Validation
+      - Production Runtime Proof
+      - Branch Protection Runtime Proof
     types: [completed]
 
 permissions:
