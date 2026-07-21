@@ -1,0 +1,63 @@
+name: One-time Scorecard Trigger Migration
+
+on:
+  push:
+    branches:
+      - agent/scorecard-terminal-check-orchestration-megapack
+    paths:
+      - .github/workflows/one-time-scorecard-trigger-migration.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-scorecard-trigger-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: github.repository == 'renanescola40-afk/eurocomply_saas'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out constrained branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: agent/scorecard-terminal-check-orchestration-megapack
+          fetch-depth: 1
+
+      - name: Replace scorecard completion trigger allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/enterprise-readiness-scorecard.yml')
+          source = path.read_text(encoding='utf-8')
+          old = "    workflows: [Distributed Rate Limit Runtime Proof, Auth RBAC Tenant Proof, Supabase Live RLS Validation, Production Runtime Proof, Branch Protection Runtime Proof]\n"
+          new = """    workflows:\n      - CI\n      - CodeQL\n      - Semgrep\n      - Secret Scanning\n      - Scan repository for accidental secret exposure\n      - Dependency Review\n      - Actionlint\n      - Public Claims Guard\n      - Full Security Suite\n      - Enterprise Production Gate\n      - RISCK COMPLY Security CI\n      - Enterprise DAST\n      - Distributed Rate Limit Runtime Proof\n      - Auth RBAC Tenant Proof\n      - Supabase Live RLS Validation\n      - Production Runtime Proof\n      - Branch Protection Runtime Proof\n"""
+          if source.count(old) != 1:
+              raise SystemExit('Expected exactly one legacy workflow_run allowlist')
+          path.write_text(source.replace(old, new), encoding='utf-8')
+          PY
+
+      - name: Validate constrained diff and trigger contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff --name-only | tr -d '\r')" = '.github/workflows/enterprise-readiness-scorecard.yml'
+          git diff --check
+          node --test tests/enterprise/scorecard-workflow-completion-trigger.test.mjs
+
+      - name: Commit generated workflow change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'risck-comply-release-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add .github/workflows/enterprise-readiness-scorecard.yml
+          test "$(git diff --cached --name-only | tr -d '\r')" = '.github/workflows/enterprise-readiness-scorecard.yml'
+          git commit -m 'fix(ci): rerun scorecard after required checks complete'
+          git push origin HEAD:agent/scorecard-terminal-check-orchestration-megapack
