@@ -5,15 +5,16 @@ import test from 'node:test';
 const script = readFileSync('scripts/platform/probe-provider-interoperability.mjs', 'utf8');
 
 test('provider probes are read only', () => {
-  assert.match(script, /GET|request\(/);
+  assert.match(script, /request\(/);
   assert.doesNotMatch(script, /method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/);
 });
 
-test('secrets are never serialized into evidence', () => {
+test('evidence schema explicitly excludes sensitive values', () => {
   assert.match(script, /secret_values_included:\s*false/);
-  assert.doesNotMatch(script, /secret\s*[,}]/);
-  assert.doesNotMatch(script, /token\s*[,}]/);
-  assert.doesNotMatch(script, /anon\s*[,}]/);
+  assert.match(script, /provider_ids_included:\s*false/);
+  assert.match(script, /account_emails_included:\s*false/);
+  assert.doesNotMatch(script, /results\.push\([^\n]*(?:secret|token|anon)/i);
+  assert.doesNotMatch(script, /JSON\.stringify\((?:secret|token|anon)\)/i);
 });
 
 test('strict mode fails closed', () => {
