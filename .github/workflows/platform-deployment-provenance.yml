@@ -1,0 +1,94 @@
+name: Platform Deployment Provenance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/platform/validate-deployment-provenance.mjs'
+      - 'tests/security/platform-deployment-provenance-contract.test.mjs'
+      - '.github/workflows/platform-deployment-provenance.yml'
+      - 'docs/runbooks/platform-deployment-provenance.md'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full lowercase 40-character current main SHA
+        required: true
+        type: string
+      strict_runtime:
+        description: Probe production and rollback deployments using protected configuration
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-deployment-provenance-${{ github.event.pull_request.number || inputs.release_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Deployment provenance contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Validate contract
+        run: node --test tests/security/platform-deployment-provenance-contract.test.mjs
+
+  protected-runtime:
+    name: Exact-SHA production and rollback proof
+    if: github.event_name == 'workflow_dispatch' && inputs.strict_runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production-deployment-proof
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      PRODUCTION_DEPLOYMENT_URL: ${{ vars.PRODUCTION_DEPLOYMENT_URL }}
+      LAST_KNOWN_GOOD_DEPLOYMENT_URL: ${{ vars.LAST_KNOWN_GOOD_DEPLOYMENT_URL }}
+      HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
+    steps:
+      - name: Validate requested SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - name: Validate deployment provenance
+        run: node scripts/platform/validate-deployment-provenance.mjs --strict --output=artifacts/platform-deployment-provenance.json
+
+      - name: Upload redacted exact-SHA evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: platform-deployment-provenance-${{ inputs.release_sha }}
+          path: artifacts/platform-deployment-provenance.json
+          if-no-files-found: error
+          retention-days: 90
