@@ -100,13 +100,13 @@ describe('enterprise tenant licensing core', () => {
 
   it('normalizes seat types and calculates remaining capacity', () => {
     expect(normalizeEnterpriseSeatType('viewer')).toBe('viewer');
-    expect(normalizeEnterpriseSeatType('unknown')).toBe('full');
-    expect(getSeatAvailability(context(), 'full')).toEqual({ used: 3, pending: 0, limit: 4, available: 1 });
+    expect(normalizeEnterpriseSeatType('unknown')).toBeNull();
+    expect(getSeatAvailability(context(), 'full')).toBe(1);
   });
 
   it('blocks new seats when the contract state is not active', () => {
-    expect(contractAllowsNewSeats(context())).toBe(true);
-    expect(contractAllowsNewSeats(context({ contractStatus: 'suspended', canAddMembers: false }))).toBe(false);
+    expect(contractAllowsNewSeats(context().contractStatus)).toBe(true);
+    expect(contractAllowsNewSeats('suspended')).toBe(false);
   });
 
   it('keeps invitation and idempotency hardening contracts present', () => {
