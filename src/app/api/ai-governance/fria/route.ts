@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { checkDistributedRateLimit, type RateLimitResult } from '@/lib/security/rate-limit';
 import { decideFria } from '@/server/ai-governance/fria-fundamental-rights';
+import { getAiSystem } from '@/server/queries/ai-systems';
 import { buildAuditRequestContextFromRequest, createAuditEvent } from '@/server/queries/audit-events';
 import { createFriaAssessment, createFriaEvidence, getFriaAssessment, listFriaSnapshot, restoreFriaAssessment, rollbackFriaCreate, updateFriaAssessment } from '@/server/queries/fria';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
@@ -46,6 +47,8 @@ export async function POST(request: Request) {
 
     if (workflow === 'assessment_create') {
       const body = await parseJsonBodyWithZod(request, { schema: createSchema, maxBytes: MAX_BYTES });
+      const aiSystem = await getAiSystem(body.aiSystemId, organization.id);
+      if (!aiSystem) return noStoreJson({ error: 'ai_system_not_found' }, { status: 404 });
       const assessment = await createFriaAssessment({ organizationId: organization.id, actorUserId: user.id, ...body });
       const event = await audit(request, { organizationId: organization.id, userId: user.id, role: permission.role, action: 'fria_assessment_created', entityType: 'ai_fria_assessment', entityId: assessment.id, metadata: { aiSystemId: assessment.ai_system_id, version: assessment.version } });
       if (!event.persisted) { await rollbackFriaCreate('ai_fria_assessments', organization.id, assessment.id); return noStoreJson({ error: 'fria_audit_unavailable' }, { status: 503 }); }
@@ -66,9 +69,11 @@ export async function POST(request: Request) {
     const before = await getFriaAssessment(organization.id, body.assessmentId); if (!before) return noStoreJson({ error: 'fria_assessment_not_found' }, { status: 404 });
 
     if (workflow === 'assessment_approve') {
-      const approved = decideFria({ applicability: before.applicability, publicAuthorityOrPublicService: Boolean(before.context?.publicAuthorityOrPublicService), highRiskSystem: Boolean(before.context?.highRiskSystem), intendedPurposeRecorded: Boolean(before.context?.intendedPurpose), affectedGroupsIdentified: Array.isArray(before.affected_groups) && before.affected_groups.length > 0, vulnerableGroupsConsidered: Boolean(before.context?.vulnerableGroupsConsidered), rightsMapped: Array.isArray(before.rights_map) && before.rights_map.length > 0, impactAssessmentComplete: Object.keys(before.impact_analysis ?? {}).length > 0, mitigationPlanComplete: Object.keys(before.mitigation_plan ?? {}).length > 0, humanOversightComplete: Object.keys(before.oversight_plan ?? {}).length > 0, complaintsAndRedressComplete: Object.keys(before.complaints_redress ?? {}).length > 0, monitoringPlanComplete: Boolean(before.monitoring_plan_id || before.context?.monitoringPlanComplete), dataProtectionCoordinationComplete: Boolean(before.context?.dataProtectionCoordinationComplete), highestResidualImpact: before.highest_residual_impact, accountableOwnerAssigned: Boolean(before.owner_id), independentReviewerAssigned: Boolean(before.reviewer_id), approverAssigned: Boolean(before.approver_id), legalReviewComplete: Boolean(before.legal_review_completed_at) });
+      if (before.approver_id !== user.id) return noStoreJson({ error: 'fria_approver_required' }, { status: 403 });
+      const approvedAt = new Date().toISOString();
+      const approved = decideFria({ applicability: before.applicability, publicAuthorityOrPublicService: Boolean(before.context?.publicAuthorityOrPublicService), highRiskSystem: Boolean(before.context?.highRiskSystem), intendedPurposeRecorded: Boolean(before.context?.intendedPurpose), affectedGroupsIdentified: Array.isArray(before.affected_groups) && before.affected_groups.length > 0, vulnerableGroupsConsidered: Boolean(before.context?.vulnerableGroupsConsidered), rightsMapped: Array.isArray(before.rights_map) && before.rights_map.length > 0, impactAssessmentComplete: Object.keys(before.impact_analysis ?? {}).length > 0, mitigationPlanComplete: Object.keys(before.mitigation_plan ?? {}).length > 0, humanOversightComplete: Object.keys(before.oversight_plan ?? {}).length > 0, complaintsAndRedressComplete: Object.keys(before.complaints_redress ?? {}).length > 0, monitoringPlanComplete: Boolean(before.monitoring_plan_id || before.context?.monitoringPlanComplete), dataProtectionCoordinationComplete: Boolean(before.context?.dataProtectionCoordinationComplete), highestResidualImpact: before.highest_residual_impact, accountableOwnerAssigned: Boolean(before.owner_id), independentReviewerAssigned: Boolean(before.reviewer_id), approverAssigned: Boolean(before.approver_id), legalReviewComplete: Boolean(before.legal_review_completed_at), approvedAt });
       if (!approved.productionUseAllowed) return noStoreJson({ error: 'fria_approval_requirements_not_met', missingControlIds: approved.missingControlIds }, { status: 409 });
-      const assessment = await updateFriaAssessment(organization.id, before.id, { stage: 'approved', approved_at: new Date().toISOString() });
+      const assessment = await updateFriaAssessment(organization.id, before.id, { stage: 'approved', approved_at: approvedAt });
       const event = await audit(request, { organizationId: organization.id, userId: user.id, role: permission.role, action: 'fria_assessment_approved', entityType: 'ai_fria_assessment', entityId: before.id, metadata: { rationale: body.rationale } });
       if (!event.persisted) { await restoreFriaAssessment(before); return noStoreJson({ error: 'fria_audit_unavailable' }, { status: 503 }); }
       return noStoreJson({ assessment });
