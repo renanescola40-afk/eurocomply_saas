@@ -141,3 +141,270 @@ export function assessProhibitedPractices(answers: ProhibitedPracticeAnswers): P
     evidenceBoundary: 'Decision support only. A clear result means no prohibited-practice signal was identified from the supplied answers; it is not a legal determination or compliance guarantee.',
   };
 }
+
+export const PROHIBITED_PRACTICE_REVIEW_STAGES = [
+  'draft',
+  'applicability_review',
+  'evidence_review',
+  'legal_review',
+  'approval_pending',
+  'approved',
+  'blocked',
+  'not_applicable',
+  'retired',
+] as const;
+
+export type ProhibitedPracticeReviewStage = (typeof PROHIBITED_PRACTICE_REVIEW_STAGES)[number];
+export type ProhibitedPracticeApplicability = 'required' | 'not_required' | 'uncertain';
+export type ProhibitedPracticeLegalConclusion =
+  | 'not_prohibited'
+  | 'prohibited'
+  | 'exception_supported'
+  | 'uncertain';
+
+export type ProhibitedPracticeSignalReviewInput = {
+  answer?: ProhibitedPracticeAnswer | boolean | null;
+  rationaleComplete?: boolean;
+  contextDocumented?: boolean;
+  evidenceComplete?: boolean;
+  reviewerAssigned?: boolean;
+  legalConclusion?: ProhibitedPracticeLegalConclusion;
+  exceptionClaimed?: boolean;
+  exceptionBasisComplete?: boolean;
+  authorizationComplete?: boolean;
+  necessityAndProportionalityComplete?: boolean;
+};
+
+export type ProhibitedPracticeGovernanceInput = {
+  applicability: ProhibitedPracticeApplicability;
+  intendedPurposeRecorded: boolean;
+  deploymentContextsRecorded: boolean;
+  affectedPersonsAndGroupsRecorded: boolean;
+  systemCapabilitiesRecorded: boolean;
+  dataSourcesRecorded: boolean;
+  outputsAndConsequencesRecorded: boolean;
+  signalReviews: Partial<Record<ProhibitedPracticeSignal, ProhibitedPracticeSignalReviewInput>>;
+  openHighFindings: number;
+  openCriticalFindings: number;
+  accountableOwnerAssigned: boolean;
+  independentReviewerAssigned: boolean;
+  legalReviewerAssigned: boolean;
+  approverAssigned: boolean;
+  reviewDigestValid: boolean;
+  reviewedAt?: string | null;
+  legalReviewedAt?: string | null;
+  approvedAt?: string | null;
+  lastMaterialChangeAt?: string | null;
+  retiredAt?: string | null;
+};
+
+export type ProhibitedPracticeGovernanceControl = {
+  id: string;
+  title: string;
+  articleReference: string;
+  required: boolean;
+  satisfied: boolean;
+  blocking: boolean;
+};
+
+export type ProhibitedPracticeSignalReviewResult = {
+  signal: ProhibitedPracticeSignal;
+  answer: ProhibitedPracticeAnswer;
+  legalConclusion: ProhibitedPracticeLegalConclusion;
+  resolved: boolean;
+  prohibited: boolean;
+  exceptionSupported: boolean;
+  missing: string[];
+};
+
+export type ProhibitedPracticeGovernanceDecision = {
+  version: string;
+  stage: ProhibitedPracticeReviewStage;
+  productionUseAllowed: boolean;
+  legalReviewRequired: boolean;
+  controls: ProhibitedPracticeGovernanceControl[];
+  signalResults: ProhibitedPracticeSignalReviewResult[];
+  positiveSignals: ProhibitedPracticeSignal[];
+  unknownSignals: ProhibitedPracticeSignal[];
+  prohibitedSignals: ProhibitedPracticeSignal[];
+  exceptionSupportedSignals: ProhibitedPracticeSignal[];
+  missingControlIds: string[];
+  blockingControlIds: string[];
+  requiredActions: string[];
+  evidenceBoundary: string;
+};
+
+const GOVERNED_VERSION = '2026-07-21.1';
+
+function governedControl(
+  id: string,
+  title: string,
+  articleReference: string,
+  required: boolean,
+  satisfied: boolean,
+  blocking = true,
+): ProhibitedPracticeGovernanceControl {
+  return { id, title, articleReference, required, satisfied, blocking };
+}
+
+function isReviewFresh(reviewedAt?: string | null, lastMaterialChangeAt?: string | null) {
+  if (!reviewedAt) return false;
+  if (!lastMaterialChangeAt) return true;
+  const reviewed = Date.parse(reviewedAt);
+  const changed = Date.parse(lastMaterialChangeAt);
+  return Number.isFinite(reviewed) && Number.isFinite(changed) && reviewed >= changed;
+}
+
+function assessSignalReview(
+  signal: ProhibitedPracticeSignal,
+  input: ProhibitedPracticeSignalReviewInput | undefined,
+): ProhibitedPracticeSignalReviewResult {
+  const answer = normalizeAnswer(input?.answer);
+  const legalConclusion = input?.legalConclusion ?? 'uncertain';
+  const missing: string[] = [];
+
+  if (answer === 'unknown') missing.push('answer');
+  if (!input?.rationaleComplete) missing.push('rationale');
+  if (!input?.contextDocumented) missing.push('context');
+  if (!input?.evidenceComplete) missing.push('evidence');
+  if (!input?.reviewerAssigned) missing.push('independent_reviewer');
+
+  if (answer === 'yes') {
+    if (legalConclusion === 'uncertain') missing.push('legal_conclusion');
+    if (input?.exceptionClaimed) {
+      if (!input.exceptionBasisComplete) missing.push('exception_basis');
+      if (!input.authorizationComplete) missing.push('authorization');
+      if (!input.necessityAndProportionalityComplete) missing.push('necessity_and_proportionality');
+      if (legalConclusion !== 'exception_supported') missing.push('exception_legal_conclusion');
+    }
+  }
+
+  if (answer === 'no' && legalConclusion === 'prohibited') missing.push('inconsistent_legal_conclusion');
+  if (legalConclusion === 'exception_supported' && !input?.exceptionClaimed) missing.push('exception_claim');
+
+  const resolved = missing.length === 0
+    && answer !== 'unknown'
+    && (answer === 'no' || legalConclusion !== 'uncertain');
+
+  return {
+    signal,
+    answer,
+    legalConclusion,
+    resolved,
+    prohibited: answer === 'yes' && legalConclusion === 'prohibited',
+    exceptionSupported: answer === 'yes'
+      && Boolean(input?.exceptionClaimed)
+      && legalConclusion === 'exception_supported'
+      && missing.length === 0,
+    missing,
+  };
+}
+
+export function decideProhibitedPracticesGovernance(
+  input: ProhibitedPracticeGovernanceInput,
+): ProhibitedPracticeGovernanceDecision {
+  const signalResults = PROHIBITED_PRACTICE_SIGNALS.map((signal) =>
+    assessSignalReview(signal, input.signalReviews[signal]));
+  const positiveSignals = signalResults.filter((item) => item.answer === 'yes').map((item) => item.signal);
+  const unknownSignals = signalResults.filter((item) => item.answer === 'unknown').map((item) => item.signal);
+  const prohibitedSignals = signalResults.filter((item) => item.prohibited).map((item) => item.signal);
+  const exceptionSupportedSignals = signalResults.filter((item) => item.exceptionSupported).map((item) => item.signal);
+  const allSignalsResolved = signalResults.every((item) => item.resolved);
+  const allPositiveSignalsLegallyResolved = signalResults
+    .filter((item) => item.answer === 'yes')
+    .every((item) => item.legalConclusion === 'not_prohibited' || item.exceptionSupported);
+  const severeFindingsClosed = input.openHighFindings === 0 && input.openCriticalFindings === 0;
+  const legalReviewRequired = input.applicability !== 'required'
+    || positiveSignals.length > 0
+    || unknownSignals.length > 0
+    || signalResults.some((item) => item.legalConclusion === 'uncertain');
+  const legalReviewComplete = !legalReviewRequired
+    || (input.legalReviewerAssigned && Boolean(input.legalReviewedAt));
+  const reviewFresh = isReviewFresh(input.reviewedAt, input.lastMaterialChangeAt);
+  const approvalRecorded = Boolean(input.approvedAt);
+
+  const controls: ProhibitedPracticeGovernanceControl[] = [
+    governedControl('PPG-01', 'Applicability is resolved', 'Article 5', true, input.applicability !== 'uncertain'),
+    governedControl('PPG-02', 'Intended purpose is recorded', 'Article 5', true, input.intendedPurposeRecorded),
+    governedControl('PPG-03', 'Deployment contexts are recorded', 'Article 5', true, input.deploymentContextsRecorded),
+    governedControl('PPG-04', 'Affected persons and groups are recorded', 'Article 5', true, input.affectedPersonsAndGroupsRecorded),
+    governedControl('PPG-05', 'System capabilities are recorded', 'Article 5', true, input.systemCapabilitiesRecorded),
+    governedControl('PPG-06', 'Data sources are recorded', 'Article 5', true, input.dataSourcesRecorded),
+    governedControl('PPG-07', 'Outputs and consequences are recorded', 'Article 5', true, input.outputsAndConsequencesRecorded),
+    governedControl('PPG-08', 'Every prohibited-practice signal is resolved', 'Article 5(1)(a)-(h)', input.applicability === 'required', allSignalsResolved),
+    governedControl('PPG-09', 'Every positive signal has an accepted legal conclusion', 'Article 5', input.applicability === 'required' && positiveSignals.length > 0, allPositiveSignalsLegallyResolved),
+    governedControl('PPG-10', 'No signal has a prohibited legal conclusion', 'Article 5', input.applicability === 'required', prohibitedSignals.length === 0),
+    governedControl('PPG-11', 'High and critical findings are closed', 'Article 5 governance', true, severeFindingsClosed),
+    governedControl('PPG-12', 'Accountable owner is assigned', 'Governance accountability', true, input.accountableOwnerAssigned),
+    governedControl('PPG-13', 'Independent reviewer is assigned', 'Governance review', true, input.independentReviewerAssigned),
+    governedControl('PPG-14', 'Required legal review is recorded', 'Article 5 legal review', legalReviewRequired, legalReviewComplete),
+    governedControl('PPG-15', 'Independent approver is assigned', 'Governance approval', true, input.approverAssigned),
+    governedControl('PPG-16', 'Review is newer than the last material change', 'Change governance', true, reviewFresh),
+    governedControl('PPG-17', 'Review integrity digest validates', 'Evidence integrity', true, input.reviewDigestValid),
+    governedControl('PPG-18', 'Approval decision is recorded', 'Governance approval', input.applicability !== 'uncertain', approvalRecorded),
+    ...signalResults.map((result, index) => governedControl(
+      `PPG-S${String(index + 1).padStart(2, '0')}`,
+      `${DEFINITIONS[result.signal].title} review is complete`,
+      DEFINITIONS[result.signal].articleReference,
+      input.applicability === 'required',
+      result.resolved,
+    )),
+  ];
+
+  const requiredControls = controls.filter((item) => item.required);
+  const missingControlIds = requiredControls.filter((item) => !item.satisfied).map((item) => item.id);
+  const hardBlocked = prohibitedSignals.length > 0
+    || !severeFindingsClosed
+    || positiveSignals.some((signal) => !signalResults.find((item) => item.signal === signal)?.resolved);
+
+  let stage: ProhibitedPracticeReviewStage;
+  if (input.retiredAt) stage = 'retired';
+  else if (hardBlocked) stage = 'blocked';
+  else if (input.applicability === 'uncertain') stage = 'applicability_review';
+  else if (input.applicability === 'not_required') {
+    stage = legalReviewComplete && approvalRecorded && reviewFresh && input.reviewDigestValid
+      ? 'not_applicable'
+      : 'legal_review';
+  } else if (!allSignalsResolved || !input.reviewDigestValid || !reviewFresh) stage = 'evidence_review';
+  else if (!legalReviewComplete) stage = 'legal_review';
+  else if (!approvalRecorded || !input.approverAssigned) stage = 'approval_pending';
+  else stage = 'approved';
+
+  const productionUseAllowed = stage === 'approved'
+    && prohibitedSignals.length === 0
+    && allPositiveSignalsLegallyResolved;
+
+  const requiredActions = unique([
+    ...(input.applicability === 'uncertain' ? ['Resolve Article 5 applicability before rollout.'] : []),
+    ...(unknownSignals.length > 0 ? ['Resolve every unknown prohibited-practice signal.'] : []),
+    ...(prohibitedSignals.length > 0 ? ['Keep production use blocked and record the prohibited-practice decision.'] : []),
+    ...signalResults
+      .filter((result) => !result.resolved)
+      .map((result) => `Complete ${DEFINITIONS[result.signal].articleReference} review: ${result.missing.join(', ')}.`),
+    ...(!severeFindingsClosed ? ['Close or formally reject every open high and critical finding.'] : []),
+    ...(legalReviewRequired && !legalReviewComplete ? ['Record accountable legal review and its timestamp.'] : []),
+    ...(!reviewFresh ? ['Re-review the assessment after the latest material system change.'] : []),
+    ...(!input.reviewDigestValid ? ['Generate and validate the immutable review digest.'] : []),
+    ...(!input.accountableOwnerAssigned ? ['Assign an accountable owner.'] : []),
+    ...(!input.independentReviewerAssigned ? ['Assign an independent reviewer.'] : []),
+    ...(!input.approverAssigned ? ['Assign an approver distinct from owner and reviewer.'] : []),
+    ...(!approvalRecorded && input.applicability !== 'uncertain' ? ['Record an approval or non-applicability decision.'] : []),
+  ]);
+
+  return {
+    version: GOVERNED_VERSION,
+    stage,
+    productionUseAllowed,
+    legalReviewRequired,
+    controls,
+    signalResults,
+    positiveSignals,
+    unknownSignals,
+    prohibitedSignals,
+    exceptionSupportedSignals,
+    missingControlIds,
+    blockingControlIds: requiredControls.filter((item) => !item.satisfied && item.blocking).map((item) => item.id),
+    requiredActions,
+    evidenceBoundary: 'Governed Article 5 decision support only. A recorded approval organizes evidence and accountable review; it is not a regulator decision, legal opinion, certification or guarantee that a practice is lawful.',
+  };
+}
