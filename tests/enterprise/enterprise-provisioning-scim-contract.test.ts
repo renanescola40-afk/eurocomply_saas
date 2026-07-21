@@ -63,9 +63,9 @@ describe('enterprise provisioning and SCIM contracts', () => {
   });
 
   it('uses bounded payloads, rate limits and deprovisioning for SCIM mutations', () => {
-    expect(scimUsers).toContain('enforceScimRateLimit(request');
+    expect(scimUsers).toContain('checkDistributedRateLimit(request');
     expect(scimUsers).toContain('readBoundedJsonRequest(request');
-    expect(scimUser).toContain('enforceScimRateLimit(request');
+    expect(scimUser).toContain('checkDistributedRateLimit(request');
     expect(scimUser).toContain('readBoundedJsonRequest(request');
     expect(scimUser).toContain('deactivateScimUser(authentication, identity)');
     expect(scimUser).not.toContain('request.json()');
