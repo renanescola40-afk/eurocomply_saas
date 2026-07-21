@@ -23,7 +23,7 @@ test('campaign defines the complete exact manifest-driven lane registry', async 
     assert.equal(lane.workflow, contract.workflow);
     assert.equal(lane.artifact_prefix, contract.artifactPrefix);
     const source = await readFile(`.github/workflows/${lane.workflow}`, 'utf8');
-    for (const inputName of Object.keys(lane.inputs)) assert.match(source, new RegExp(`\n\s{6}${inputName}:`));
+    for (const inputName of Object.keys(lane.inputs)) assert.match(source, new RegExp(`\n\\s{6}${inputName}:`));
     assert.ok(source.includes(lane.artifact_prefix));
     assert.match(source, /persist-credentials: false/);
   }
