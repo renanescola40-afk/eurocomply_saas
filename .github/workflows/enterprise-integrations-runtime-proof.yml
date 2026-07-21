@@ -1,0 +1,79 @@
+name: Enterprise Integrations Runtime Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character current main SHA
+        required: true
+        type: string
+      apply_migrations:
+        description: Apply the integrations migrations to the isolated validation database
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enterprise-integrations-runtime-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production-integrations-proof
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
+
+    steps:
+      - name: Validate release SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DATABASE_URL"
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+
+      - name: Apply integrations migrations to isolated database
+        if: inputs.apply_migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260721113000_enterprise_integrations_platform.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20260721114500_enterprise_integrations_tenant_relations.sql
+
+      - name: Execute fail-closed runtime validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/security/validate-enterprise-integrations-runtime.sql > artifacts/enterprise-integrations-runtime.txt
+          node -e 'const fs=require("fs"); const sha=process.env.RELEASE_SHA; fs.writeFileSync("artifacts/enterprise-integrations-runtime.json", JSON.stringify({schema_version:1,release_sha:sha,release_branch:"main",status:"PASS",validated_at:new Date().toISOString(),controls:["INT-SCHEMA","INT-RLS","INT-TENANT-FK","INT-AUDIT-IMMUTABLE","INT-CREDENTIAL-DIGEST"],limitations:["Provider interoperability, webhook delivery SLA, live OIDC/SAML login and SCIM conformance require separate provider testing."]},null,2)+"\n");'
+
+      - name: Upload redacted runtime evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-integrations-runtime-proof-${{ inputs.release_sha }}
+          path: |
+            artifacts/enterprise-integrations-runtime.json
+            artifacts/enterprise-integrations-runtime.txt
+          if-no-files-found: error
+          retention-days: 90
