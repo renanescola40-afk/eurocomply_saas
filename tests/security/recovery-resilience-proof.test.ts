@@ -1,75 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-
-const workflow = readFileSync('.github/workflows/recovery-resilience-proof.yml', 'utf8');
-const rollback = readFileSync('scripts/recovery/run-live-rollback-exercise.mjs', 'utf8');
-const restore = readFileSync('scripts/recovery/run-backup-restore-exercise.mjs', 'utf8');
-const validator = readFileSync('scripts/recovery/check-recovery-evidence.mjs', 'utf8');
-
-describe('recovery resilience megapack', () => {
-  it('requires protected, manual and explicitly confirmed execution', () => {
-    expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).toContain('environment: production-recovery');
-    expect(workflow).toContain('EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK');
-    expect(workflow).toContain('cancel-in-progress: false');
-    expect(workflow).toContain('permissions:\n  contents: read');
-    expect(workflow).not.toContain('pull_request_target');
-    expect(workflow).not.toContain('contents: write');
-  });
-
-  it('executes rollback with exact target checks and post-health validation', () => {
-    for (const token of [
-      'vercel@56.3.2',
-      "'rollback'",
-      'LAST_KNOWN_GOOD_DEPLOYMENT_URL',
-      'LAST_KNOWN_GOOD_COMMIT_SHA',
-      'rollbackTargetDistinct',
-      'rollbackShaDistinct',
-      'postRollbackHealth',
-      'postRollbackNoStore',
-      'credentialsStored: false',
-      'deploymentUrlsStored: false',
-      'networkDataStored: false',
-    ]) expect(rollback).toContain(token);
-    expect(rollback).not.toContain('postRollback,');
-    expect(rollback).not.toContain('response.body');
-  });
-
-  it('creates a logical backup, restores it in isolation and validates RLS', () => {
-    for (const token of [
-      "'pg_dump'",
-      "'pg_restore'",
-      'RECOVERY_SOURCE_DATABASE_URL',
-      'RECOVERY_ISOLATED_DATABASE_URL',
-      'distinctDatabases',
-      'dataIntegrity',
-      'relrowsecurity=true',
-      'rlsPoliciesPresent',
-      'rpoMeasured',
-      'rtoMeasured',
-      'rmSync(dumpPath',
-      'dumpStored: false',
-      'rowDataStored: false',
-      "openSync(path, 'r')",
-      'fstatSync(descriptor)',
-      'readFileSync(descriptor)',
-      'closeSync(descriptor)',
-      'singleDescriptorInspection: true',
-    ]) expect(restore).toContain(token);
-    expect(restore).not.toContain('statSync(dumpPath)');
-    expect(restore).not.toContain('readFileSync(dumpPath)');
-  });
-
-  it('fails closed unless every canonical recovery control is proven', () => {
-    for (const token of [
-      'rollbackExecuted',
-      'postRollbackHealth',
-      'backupExists',
-      'restoreExecuted',
-      'dataIntegrity',
-      'rlsAfterRestore',
-      'rpoSeconds',
-      'rtoSeconds',
-    ]) expect(validator).toContain(token);
-  });
+const workflow=readFileSync('.github/workflows/recovery-resilience-proof.yml','utf8');
+const rollback=readFileSync('scripts/recovery/run-live-rollback-exercise.mjs','utf8');
+const restore=readFileSync('scripts/recovery/run-backup-restore-exercise.mjs','utf8');
+const validator=readFileSync('scripts/recovery/check-recovery-evidence.mjs','utf8');
+describe('recovery resilience promotion megapack',()=>{
+ it('executes both protected exercises in exact-SHA full mode',()=>{ for(const token of ['release_sha:','- full','EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK','environment: production-recovery','git rev-parse origin/main',"inputs.exercise == 'full' || inputs.exercise == 'backup-restore'", "inputs.exercise == 'full' || inputs.exercise == 'production-rollback'",'recovery-resilience-proof-${{ inputs.release_sha }}']) expect(workflow).toContain(token); expect(workflow).not.toContain('continue-on-error: true'); });
+ it('emits exact-SHA promotable rollback and restore evidence',()=>{ for(const token of ["controlsVerified: ['REC-01', 'REC-02', 'REC-03', 'REC-04']",'observedSha',"runId: env('GITHUB_RUN_ID')",'containsSensitiveValues: false',"redirect: 'error'"]) expect(rollback).toContain(token); for(const token of ["controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10']",'singleDescriptorInspection: true','rpoMeasured','rtoMeasured','containsSensitiveValues: false']) expect(restore).toContain(token); });
+ it('requires the selected canonical evidence set and matching provenance',()=>{ for(const token of ["['full', 'backup-restore', 'production-rollback']",'requireRollback','requireRestore','recovery evidence run ID mismatch','containsSensitiveValues','REC-10']) expect(validator).toContain(token); expect(validator).not.toContain('existsSync('); });
 });

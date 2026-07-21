@@ -29,10 +29,7 @@ function inspectDump(path) {
     const metadata = fstatSync(descriptor);
     if (!metadata.isFile() || metadata.size <= 0) return { exists: false, digest: null };
     const bytes = readFileSync(descriptor);
-    return {
-      exists: bytes.length === metadata.size && bytes.length > 0,
-      digest: createHash('sha256').update(bytes).digest('hex'),
-    };
+    return { exists: bytes.length === metadata.size && bytes.length > 0, digest: createHash('sha256').update(bytes).digest('hex') };
   } finally {
     closeSync(descriptor);
   }
@@ -40,18 +37,19 @@ function inspectDump(path) {
 
 const source = required('RECOVERY_SOURCE_DATABASE_URL');
 const restore = required('RECOVERY_ISOLATED_DATABASE_URL');
-const expectedSha = required('GITHUB_SHA');
+const targetSha = required('RELEASE_SHA');
+const observedSha = required('GITHUB_SHA');
 checks.protectedMainExecution = env('GITHUB_ACTIONS') === 'true' && env('GITHUB_REF_NAME') === 'main';
 checks.distinctDatabases = Boolean(source && restore && source !== restore);
-checks.exactShaBound = /^[a-f0-9]{40}$/i.test(expectedSha);
+checks.exactShaBound = /^[a-f0-9]{40}$/.test(targetSha) && observedSha === targetSha;
 if (!Object.values(checks).every(Boolean)) failures.push('preconditions_failed');
 
 mkdirSync(workDir, { recursive: true });
 let backupCompletedAt = null;
 let restoreCompletedAt = null;
 let digest = null;
-let sourceCounts = {};
-let restoredCounts = {};
+const sourceCounts = {};
+const restoredCounts = {};
 const criticalTables = ['organizations', 'organization_members', 'audit_logs'];
 
 try {
@@ -62,22 +60,18 @@ try {
   checks.backupExists = inspectedDump.exists;
   digest = inspectedDump.digest;
   if (!checks.backupExists || !digest) throw new Error('backup_dump_invalid');
-
   run('pg_restore', ['--dbname', restore, '--clean', '--if-exists', '--no-owner', '--no-privileges', '--exit-on-error', dumpPath]);
   restoreCompletedAt = new Date().toISOString();
   checks.restoreExecuted = true;
-
   for (const table of criticalTables) {
     sourceCounts[table] = Number(sql(source, `select count(*) from public.${table};`));
     restoredCounts[table] = Number(sql(restore, `select count(*) from public.${table};`));
   }
   checks.dataIntegrity = criticalTables.every((table) => sourceCounts[table] === restoredCounts[table]);
-
   const rlsRows = Number(sql(restore, "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('organizations','organization_members','audit_logs') and c.relrowsecurity=true;"));
   checks.rlsAfterRestore = rlsRows === criticalTables.length;
   const policyCount = Number(sql(restore, "select count(*) from pg_policies where schemaname='public' and tablename in ('organizations','organization_members','audit_logs');"));
   checks.rlsPoliciesPresent = policyCount >= criticalTables.length;
-
   checks.backupExists = checks.backupExists === true;
   checks.rpoMeasured = Boolean(backupCompletedAt);
   checks.rtoMeasured = Boolean(restoreCompletedAt);
@@ -91,32 +85,13 @@ try {
 const finishedAt = Date.now();
 const passed = failures.length === 0 && Object.values(checks).every(Boolean);
 const evidence = {
-  schema: 'risck-comply.backup-restore-evidence.v1',
-  evidenceItem: 'backup-restore-tested',
-  status: passed ? 'Complete' : 'Open',
-  outcome: passed ? 'passed' : 'failed',
-  generatedAt: new Date().toISOString(),
-  repository: env('GITHUB_REPOSITORY'),
-  branch: env('GITHUB_REF_NAME'),
-  targetSha: expectedSha || null,
-  workflowRunId: env('GITHUB_RUN_ID') || null,
-  checks,
-  metrics: {
-    rpoSeconds: backupCompletedAt ? Math.max(0, Math.round((Date.now() - Date.parse(backupCompletedAt)) / 1000)) : null,
-    rtoSeconds: restoreCompletedAt ? Math.round((Date.parse(restoreCompletedAt) - startedAt) / 1000) : null,
-    totalExerciseSeconds: Math.round((finishedAt - startedAt) / 1000),
-  },
-  integrity: { criticalTables, sourceCounts, restoredCounts, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null },
-  failures: [...new Set(failures)],
-  evidenceIntegrity: {
-    exactShaBound: checks.exactShaBound === true,
-    databaseUrlsStored: false,
-    dumpStored: false,
-    rowDataStored: false,
-    credentialsStored: false,
-    singleDescriptorInspection: true,
-  },
-  boundary: 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts and a truncated digest; one descriptor is used for dump metadata and hashing, and the dump is deleted before completion.',
+  schema: 'risck-comply.backup-restore-evidence.v2', evidenceItem: 'backup-restore-tested', status: passed ? 'Complete' : 'Open', outcome: passed ? 'passed' : 'failed',
+  generatedAt: new Date().toISOString(), repository: env('GITHUB_REPOSITORY'), branch: env('GITHUB_REF_NAME'), targetSha: targetSha || null, observedSha: observedSha || null,
+  runId: env('GITHUB_RUN_ID') || null, controlsVerified: ['REC-05', 'REC-06', 'REC-07', 'REC-08', 'REC-09', 'REC-10'], checks,
+  metrics: { rpoSeconds: backupCompletedAt ? Math.max(0, Math.round((Date.now() - Date.parse(backupCompletedAt)) / 1000)) : null, rtoSeconds: restoreCompletedAt ? Math.round((Date.parse(restoreCompletedAt) - startedAt) / 1000) : null, totalExerciseSeconds: Math.round((finishedAt - startedAt) / 1000) },
+  integrity: { criticalTables, sourceCounts, restoredCounts, backupSha256Prefix: digest ? `${digest.slice(0, 16)}…` : null }, failures: [...new Set(failures)],
+  evidenceIntegrity: { containsSensitiveValues: false, exactShaBound: checks.exactShaBound === true, databaseUrlsStored: false, dumpStored: false, rowDataStored: false, credentialsStored: false, singleDescriptorInspection: true },
+  evidenceBoundary: 'Logical backup and restore were executed against a dedicated isolated recovery database. Evidence stores only aggregate counts and a truncated digest; one descriptor is used for dump metadata and hashing, and the dump is deleted before completion.',
 };
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });

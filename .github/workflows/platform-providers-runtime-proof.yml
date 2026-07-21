@@ -1,13 +1,20 @@
 name: Platform Providers Runtime Proof
 
+run-name: Platform provider proof for ${{ inputs.release_sha }}
+
 on:
   workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character current main SHA
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: platform-providers-runtime-proof
+  group: platform-providers-runtime-proof-${{ inputs.release_sha }}
   cancel-in-progress: false
 
 jobs:
@@ -16,31 +23,46 @@ jobs:
     timeout-minutes: 20
     environment: production-platform-proof
     env:
+      TARGET_SHA: ${{ inputs.release_sha }}
       PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
       PLATFORM_PROOF_TOKEN: ${{ secrets.PLATFORM_PROOF_TOKEN }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     steps:
-      - name: Checkout exact main SHA
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-        with:
-          ref: main
-          persist-credentials: false
-      - name: Verify exact main execution
+      - name: Validate requested release SHA
         shell: bash
         run: |
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+
+      - name: Verify exact current main execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
+          test "$GITHUB_SHA" = "$TARGET_SHA"
           test "$GITHUB_REF_NAME" = "main"
+
       - name: Run platform provider proof
         run: node scripts/platform/run-platform-providers-runtime-validation.mjs
+
       - name: Validate canonical evidence
         run: node scripts/platform/check-platform-providers-evidence.mjs
+
       - name: Upload redacted evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: platform-providers-evidence-${{ github.sha }}
+          name: platform-providers-runtime-proof-${{ inputs.release_sha }}
           path: docs/security/evidence/runtime/platform-providers-validation.json
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90

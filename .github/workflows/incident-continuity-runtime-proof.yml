@@ -1,8 +1,14 @@
 name: Incident Response and Continuity Proof
 
+run-name: Incident continuity proof for ${{ inputs.release_sha }}
+
 on:
   workflow_dispatch:
     inputs:
+      release_sha:
+        description: Full 40-character current main SHA
+        required: true
+        type: string
       confirmation:
         description: Type EXECUTE_INCIDENT_CONTINUITY_PROOF
         required: true
@@ -12,15 +18,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: incident-continuity-proof
+  group: incident-continuity-proof-${{ inputs.release_sha }}
   cancel-in-progress: false
 
 jobs:
   prove:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     environment: production-incident-proof
     env:
+      TARGET_SHA: ${{ inputs.release_sha }}
       INCIDENT_PROOF_CONFIRMATION: ${{ inputs.confirmation }}
       RECOVERY_ISOLATED_DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
       INCIDENT_SEV1_ACK_TARGET_MINUTES: ${{ vars.INCIDENT_SEV1_ACK_TARGET_MINUTES }}
@@ -29,20 +36,28 @@ jobs:
       INCIDENT_ONCALL_ROTATION_CONFIGURED: ${{ vars.INCIDENT_ONCALL_ROTATION_CONFIGURED }}
       INCIDENT_NOTIFICATION_MATRIX_REVIEWED: ${{ vars.INCIDENT_NOTIFICATION_MATRIX_REVIEWED }}
     steps:
-      - name: Verify exact current main SHA
+      - name: Validate requested release SHA and confirmation
         shell: bash
         run: |
           set -euo pipefail
-          test "${GITHUB_REF_NAME}" = "main"
-          remote_sha="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/main | cut -f1)"
-          test -n "${remote_sha}"
-          test "${remote_sha}" = "${GITHUB_SHA}"
+          [[ "$TARGET_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$INCIDENT_PROOF_CONFIRMATION" = "EXECUTE_INCIDENT_CONTINUITY_PROOF"
 
-      - name: Checkout exact main
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Checkout exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.release_sha }}
           persist-credentials: false
+
+      - name: Verify exact current main execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
+          test "$GITHUB_SHA" = "$TARGET_SHA"
+          test "$GITHUB_REF_NAME" = "main"
 
       - name: Install PostgreSQL client
         shell: bash
@@ -52,17 +67,16 @@ jobs:
           sudo apt-get install -y postgresql-client
 
       - name: Run incident continuity proof
-        shell: bash
         run: node scripts/incident/run-incident-continuity-runtime-proof.mjs
 
       - name: Validate canonical evidence
-        shell: bash
         run: node scripts/incident/check-incident-continuity-evidence.mjs
 
       - name: Upload redacted evidence
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: incident-continuity-evidence-${{ github.sha }}
+          name: incident-continuity-runtime-proof-${{ inputs.release_sha }}
           path: docs/security/evidence/runtime/incident-continuity-validation.json
           retention-days: 90
           if-no-files-found: error

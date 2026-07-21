@@ -4,15 +4,24 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
+import {
+  ALLOWED_RUNTIME_WORKFLOWS,
+  EXPECTED_RUNTIME_LANES,
+  resolveLaneInputs,
+  validateRuntimeCampaignManifest,
+} from '../enterprise/runtime-lane-contracts.mjs';
+
 const token = process.env.GITHUB_TOKEN;
 const repository = process.env.GITHUB_REPOSITORY;
 const releaseSha = (process.env.RELEASE_SHA || '').toLowerCase();
 const branch = process.env.RELEASE_BRANCH || 'main';
+const recoveryRollbackConfirmation = String(process.env.RECOVERY_ROLLBACK_CONFIRMATION || '').trim();
 const manifestPath = process.env.RUNTIME_CAMPAIGN_MANIFEST || 'docs/security/evidence/enterprise-runtime-campaign-manifest.json';
 const outputPath = process.env.RUNTIME_CAMPAIGN_OUTPUT || 'artifacts/enterprise-runtime-campaign.json';
 const artifactsDir = process.env.RUNTIME_CAMPAIGN_ARTIFACTS_DIR || 'artifacts/runtime-evidence';
 const githubApiOrigin = 'https://api.github.com';
 const maximumArtifactBytes = 100 * 1024 * 1024;
+const maximumArtifactCount = 10;
 const maximumArchiveEntries = 2_000;
 const maximumExpandedBytes = 250 * 1024 * 1024;
 const allowedArtifactHostSuffixes = [
@@ -21,36 +30,19 @@ const allowedArtifactHostSuffixes = [
   '.amazonaws.com',
 ];
 
-const allowedWorkflows = new Set([
-  'auth-rbac-runtime-proof.yml',
-  'identity-access-lifecycle-proof.yml',
-  'supabase-live-rls-validation.yml',
-  'platform-providers-runtime-proof.yml',
-  'data-governance-runtime-proof.yml',
-  'incident-continuity-runtime-proof.yml',
-  'procurement-trust-runtime-proof.yml',
-  'recovery-resilience-proof.yml',
-  'production-runtime-proof.yml',
-  'step-up-runtime-proof.yml',
-]);
-
 if (!token || !repository) throw new Error('GITHUB_TOKEN and GITHUB_REPOSITORY are required');
 if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error('GITHUB_REPOSITORY has an invalid format');
 if (!/^[a-f0-9]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be a lowercase full 40-character SHA');
 if (branch !== 'main') throw new Error('Enterprise runtime campaigns are restricted to main');
+if (recoveryRollbackConfirmation !== 'EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK') {
+  throw new Error('RECOVERY_ROLLBACK_CONFIRMATION must explicitly authorize the controlled rollback exercise');
+}
 
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-if (!Array.isArray(manifest.workflows) || manifest.workflows.length !== allowedWorkflows.size) {
-  throw new Error('Runtime campaign manifest must contain the complete workflow allowlist');
-}
-for (const lane of manifest.workflows) {
-  if (!/^[A-Z0-9-]{2,40}$/.test(lane.id || '')) throw new Error('Runtime campaign lane ID is invalid');
-  if (!allowedWorkflows.has(lane.workflow)) throw new Error(`Runtime campaign workflow is not allowlisted: ${lane.workflow}`);
-  if (!/^[A-Za-z0-9_.-]{6,100}$/.test(lane.artifact_prefix || '')) throw new Error('Runtime campaign artifact prefix is invalid');
-}
+validateRuntimeCampaignManifest(manifest);
 
 const pollMs = Number(manifest.poll_interval_seconds || 20) * 1000;
-const timeoutMs = Number(manifest.timeout_minutes_per_workflow || 45) * 60 * 1000;
+const timeoutMs = Number(manifest.timeout_minutes_per_workflow || 60) * 60 * 1000;
 if (!Number.isFinite(pollMs) || pollMs < 5_000 || pollMs > 300_000) throw new Error('Invalid campaign polling interval');
 if (!Number.isFinite(timeoutMs) || timeoutMs < 60_000 || timeoutMs > 4 * 60 * 60 * 1000) throw new Error('Invalid per-workflow timeout');
 const startedAt = new Date();
@@ -121,16 +113,17 @@ async function verifyExactMain() {
   }
 }
 
-async function dispatchWorkflow(workflow) {
-  if (!allowedWorkflows.has(workflow)) throw new Error('Workflow is not allowlisted');
-  await apiJson(`/repos/${repository}/actions/workflows/${workflow}/dispatches`, {
+async function dispatchWorkflow(lane) {
+  if (!ALLOWED_RUNTIME_WORKFLOWS.has(lane.workflow)) throw new Error('Workflow is not allowlisted');
+  const inputs = resolveLaneInputs(lane.inputs, { releaseSha, recoveryRollbackConfirmation });
+  await apiJson(`/repos/${repository}/actions/workflows/${lane.workflow}/dispatches`, {
     method: 'POST',
-    body: JSON.stringify({ ref: 'main', inputs: { release_sha: releaseSha } }),
+    body: JSON.stringify({ ref: 'main', inputs }),
   });
 }
 
 async function findRun(workflow, notBefore) {
-  if (!allowedWorkflows.has(workflow)) throw new Error('Workflow is not allowlisted');
+  if (!ALLOWED_RUNTIME_WORKFLOWS.has(workflow)) throw new Error('Workflow is not allowlisted');
   const data = await apiJson(`/repos/${repository}/actions/workflows/${workflow}/runs?event=workflow_dispatch&branch=main&per_page=20`);
   return data.workflow_runs.find((run) =>
     Number.isSafeInteger(run.id)
@@ -204,12 +197,15 @@ function extractValidatedArchive(archive, destination) {
   return entryCount;
 }
 
-async function downloadArtifacts(runId, destination) {
+async function downloadArtifacts(runId, destination, artifactPrefix) {
   if (!Number.isSafeInteger(runId) || runId <= 0) throw new Error('Invalid workflow run ID');
+  if (!/^[A-Za-z0-9_.-]{6,100}$/.test(artifactPrefix)) throw new Error('Invalid artifact prefix');
   const data = await apiJson(`/repos/${repository}/actions/runs/${runId}/artifacts?per_page=100`);
+  const matching = data.artifacts.filter((entry) => !entry.expired && String(entry.name || '').startsWith(artifactPrefix));
+  if (matching.length === 0 || matching.length > maximumArtifactCount) throw new Error('Required prefixed artifact inventory is invalid');
   await mkdir(destination, { recursive: true });
   const downloaded = [];
-  for (const artifact of data.artifacts.filter((entry) => !entry.expired)) {
+  for (const artifact of matching) {
     if (!Number.isSafeInteger(artifact.id) || artifact.id <= 0) throw new Error('Invalid artifact ID');
     if (!Number.isSafeInteger(artifact.size_in_bytes) || artifact.size_in_bytes <= 0 || artifact.size_in_bytes > maximumArtifactBytes) {
       throw new Error('Artifact size is outside the accepted boundary');
@@ -222,7 +218,7 @@ async function downloadArtifacts(runId, destination) {
     const archive = Buffer.from(await response.arrayBuffer());
     if (archive.length === 0 || archive.length > maximumArtifactBytes) throw new Error('Artifact archive size is invalid');
     const entryCount = extractValidatedArchive(archive, destination);
-    downloaded.push({ artifact_id: artifact.id, size_in_bytes: artifact.size_in_bytes, entry_count: entryCount });
+    downloaded.push({ artifact_id: artifact.id, artifact_name: artifact.name, size_in_bytes: artifact.size_in_bytes, entry_count: entryCount });
   }
   return downloaded;
 }
@@ -236,34 +232,37 @@ for (const lane of manifest.workflows) {
   const result = {
     id: lane.id,
     workflow: lane.workflow,
-    required: lane.required !== false,
+    required: lane.required === true,
     status: 'blocked',
     conclusion: null,
     run_id: null,
     artifact_count: 0,
+    artifact_names: [],
     reason: null,
   };
   try {
-    await dispatchWorkflow(lane.workflow);
+    await dispatchWorkflow(lane);
     const run = await waitForRun(lane.workflow, dispatchedAt);
     result.run_id = run.id;
     result.conclusion = run.conclusion;
     result.status = run.conclusion === 'success' ? 'complete' : 'blocked';
     if (run.conclusion !== 'success') result.reason = `workflow_${run.conclusion || 'unknown'}`;
     const laneDir = path.join(artifactsDir, lane.id.toLowerCase());
-    const artifacts = await downloadArtifacts(run.id, laneDir);
+    const artifacts = await downloadArtifacts(run.id, laneDir, lane.artifact_prefix);
     result.artifact_count = artifacts.length;
+    result.artifact_names = artifacts.map((artifact) => artifact.artifact_name).sort();
     if (result.status === 'complete' && artifacts.length === 0) {
       result.status = 'blocked';
       result.reason = 'missing_artifact';
     }
   } catch (error) {
     result.status = 'blocked';
-    result.reason = error instanceof Error ? error.message.replaceAll(token, '[REDACTED]').slice(0, 240) : 'unknown_error';
+    const message = error instanceof Error ? error.message : 'unknown_error';
+    result.reason = message.replaceAll(token, '[REDACTED]').slice(0, 240);
   }
   results.push(result);
   await writeFile(outputPath, JSON.stringify({
-    schema_version: 1,
+    schema_version: 2,
     release_sha: releaseSha,
     release_branch: branch,
     started_at: startedAt.toISOString(),
@@ -276,7 +275,7 @@ for (const lane of manifest.workflows) {
 const required = results.filter((result) => result.required);
 const decision = required.every((result) => result.status === 'complete') ? 'READY_FOR_EVIDENCE_PROMOTION' : 'NO_GO';
 const summary = {
-  schema_version: 1,
+  schema_version: 2,
   release_sha: releaseSha,
   release_branch: branch,
   started_at: startedAt.toISOString(),
@@ -287,6 +286,7 @@ const summary = {
     complete: results.filter((result) => result.status === 'complete').length,
     blocked: results.filter((result) => result.status !== 'complete').length,
   },
+  expected_lanes: EXPECTED_RUNTIME_LANES,
   results,
 };
 await writeFile(outputPath, `${JSON.stringify(summary, null, 2)}\n`);
