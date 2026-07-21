@@ -59,14 +59,18 @@ jobs:
 
       - name: Build fail-closed enterprise decision
         id: decision
-        continue-on-error: true
+        shell: bash
         env:
           RELEASE_COMMIT_SHA: ${{ inputs.release_sha }}
           RELEASE_BRANCH: main
         run: |
+          set +e
           node scripts/security/build-enterprise-release-decision.mjs \
             --output artifacts/enterprise-release-decision.json \
             --report artifacts/enterprise-release-decision.md
+          decision_status=$?
+          echo "status=$decision_status" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: Upload canonical decision evidence
         if: always()
@@ -80,7 +84,7 @@ jobs:
           retention-days: 90
 
       - name: Enforce No-Go failure
-        if: steps.decision.outcome != 'success'
+        if: steps.decision.outputs.status != '0'
         run: |
           echo "Enterprise release remains No-Go. Inspect the uploaded decision artifact for blocking controls." >&2
           exit 1
