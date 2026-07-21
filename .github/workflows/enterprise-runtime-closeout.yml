@@ -93,7 +93,6 @@ jobs:
       - name: Assemble manifest and promote scorecard
         if: steps.campaign.outcome == 'success'
         id: promotion
-        continue-on-error: true
         run: |
           node scripts/enterprise/run-enterprise-promotion-closeout.mjs \
             --campaign artifacts/enterprise-runtime-campaign.json \
