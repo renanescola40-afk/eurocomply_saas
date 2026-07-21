@@ -29,7 +29,7 @@ test('supabase auth and Google provider are checked', () => {
 });
 
 test('stripe account and enabled webhook endpoint are checked', () => {
-  assert.match(script, /api\.stripe\.com\/v1\/account/);
+  assert.match(script, /(^|[^A-Za-z0-9.])api\.stripe\.com\/v1\/account(?:[/?'"\\\s]|$)/);
   assert.match(script, /webhook_endpoints\?limit=100/);
   assert.match(script, /status === 'enabled'/);
 });
