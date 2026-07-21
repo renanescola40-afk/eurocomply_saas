@@ -1,9 +1,9 @@
 name: Temporary fix PR1293 stale contracts
 
 on:
-  push:
-    branches:
-      - agent/enterprise-tenant-licensing-seat-enforcement
+  pull_request:
+    types: [synchronize]
+    branches: [main]
     paths:
       - .github/workflows/temporary-fix-pr1293-tests.yml
 
@@ -16,13 +16,14 @@ concurrency:
 
 jobs:
   repair:
+    if: github.event.pull_request.number == 1293 && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v7
         with:
-          ref: agent/enterprise-tenant-licensing-seat-enforcement
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
           persist-credentials: true
 
@@ -110,4 +111,4 @@ jobs:
             .github/workflows/temporary-fix-pr1293-tests.yml
           git diff --cached --check
           git commit -m "test(enterprise): align licensing hardening contracts"
-          git push origin HEAD:agent/enterprise-tenant-licensing-seat-enforcement
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
