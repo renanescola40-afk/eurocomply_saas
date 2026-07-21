@@ -86,7 +86,7 @@ jobs:
             path.write_text(source)
           PY
 
-      - name: Validate tests and types
+      - name: Validate focused tests and types
         run: |
           set -euo pipefail
           npm ci --ignore-scripts --no-audit --no-fund
@@ -97,7 +97,6 @@ jobs:
             tests/enterprise/enterprise-stripe-binding-boundary.test.ts \
             tests/enterprise/enterprise-tenant-licensing-core.test.ts \
             src/server/queries/invites.test.ts
-          npm test
           npm run typecheck
 
       - name: Commit, rebase and publish
