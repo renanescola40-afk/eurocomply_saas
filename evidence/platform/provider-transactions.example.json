@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "release_sha": "0123456789abcdef0123456789abcdef01234567",
+  "generated_at": "2026-07-21T00:00:00.000Z",
+  "transactions": [
+    {
+      "provider": "supabase_oauth",
+      "status": "PASS",
+      "observed_at": "2026-07-21T00:00:00.000Z",
+      "receipt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "correlation_id_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "summary": "Google OAuth completed through the production callback and returned an authenticated session."
+    },
+    {
+      "provider": "stripe_webhook",
+      "status": "PASS",
+      "observed_at": "2026-07-21T00:00:00.000Z",
+      "receipt_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "correlation_id_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "summary": "A controlled Stripe test event reached the production webhook and was acknowledged successfully."
+    },
+    {
+      "provider": "sentry_ingestion",
+      "status": "PASS",
+      "observed_at": "2026-07-21T00:00:00.000Z",
+      "receipt_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "correlation_id_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "summary": "A controlled synthetic error was ingested by the expected Sentry project and release."
+    }
+  ]
+}
