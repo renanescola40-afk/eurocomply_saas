@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 import { readBoundedJsonRequest } from '@/lib/security/validate';
-import { createScimBearerToken, ScimError } from '@/server/enterprise/scim';
+import { ScimError } from '@/server/enterprise/scim';
+import { createConstraintSafeScimToken } from '@/server/enterprise/scim-token';
 import { noStoreJson } from '@/server/security/no-store';
 import {
   requireApiUser,
@@ -60,7 +61,7 @@ export async function POST(
       return noStoreJson({ error: 'invalid_scim_token_payload' }, { status: 400 });
     }
 
-    const credential = await createScimBearerToken({
+    const credential = await createConstraintSafeScimToken({
       organizationId: organizationId.data,
       identityConnectionId: parsed.data.identityConnectionId,
       actorUserId: user.id,
