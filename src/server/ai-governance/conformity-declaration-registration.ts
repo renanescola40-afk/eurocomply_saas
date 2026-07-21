@@ -155,7 +155,7 @@ export function decideConformityReadiness(
   const declarationControlsMissing = missing.filter((item) => ['CONF-18', 'CONF-19', 'CONF-20'].includes(item.id));
   const registrationControlsMissing = missing.filter((item) => ['CONF-23', 'CONF-24', 'CONF-25'].includes(item.id));
 
-  let stage: ConformityStage = 'draft';
+  let stage: ConformityStage;
   if (input.retiredAt) {
     stage = 'retired';
   } else if (input.applicability === 'not_required' && !input.highRiskSystem && !legalReviewRequired) {
