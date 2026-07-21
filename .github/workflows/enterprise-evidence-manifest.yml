@@ -56,7 +56,6 @@ jobs:
 
       - name: Build sanitized manifest
         id: manifest
-        continue-on-error: true
         run: |
           node scripts/enterprise/build-enterprise-evidence-manifest.mjs \
             --root "${{ inputs.artifact_root }}" \
@@ -74,7 +73,7 @@ jobs:
           retention-days: 30
 
       - name: Enforce fail-closed assembly
-        if: steps.manifest.outcome != 'success'
+        if: always() && steps.manifest.outcome != 'success'
         run: |
           echo 'Evidence manifest remains NO_GO. Inspect rejected entries in the sanitized artifact.'
           exit 1

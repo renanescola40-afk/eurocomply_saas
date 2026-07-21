@@ -24,14 +24,19 @@ concurrency:
 
 jobs:
   closeout:
-    name: Dispatch and collect protected runtime evidence
+    name: Dispatch, collect and promote protected runtime evidence
     runs-on: ubuntu-24.04
-    timeout-minutes: 480
+    timeout-minutes: 540
     environment: production-enterprise-closeout
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
       RELEASE_BRANCH: main
+      TARGET_SHA: ${{ inputs.release_sha }}
       GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
+      ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
+      ENTERPRISE_SCORECARD_JSON: artifacts/enterprise-readiness/canonical-scorecard.json
+      ENTERPRISE_SCORECARD_MARKDOWN: artifacts/enterprise-readiness/canonical-scorecard.md
 
     steps:
       - name: Validate operator confirmation and SHA
@@ -66,14 +71,42 @@ jobs:
       - name: Install deterministic dependencies
         run: npm ci --ignore-scripts
 
-      - name: Validate campaign contracts
-        run: node --test tests/security/enterprise-runtime-campaign-contract.test.mjs
+      - name: Validate campaign and promotion contracts
+        run: |
+          node --test tests/security/enterprise-runtime-campaign-contract.test.mjs
+          node --test tests/enterprise/build-enterprise-evidence-manifest.test.mjs
+          node --test tests/enterprise/promote-enterprise-scorecard.test.mjs
+          node --test tests/enterprise/enterprise-promotion-closeout.test.mjs
 
       - name: Execute enterprise runtime campaign
         id: campaign
         run: node scripts/release/run-enterprise-runtime-campaign.mjs
 
-      - name: Upload campaign and collected evidence
+      - name: Capture exact-SHA repository checks
+        if: steps.campaign.outcome == 'success'
+        run: node scripts/enterprise/capture-github-checks-evidence.mjs
+
+      - name: Generate canonical exact-SHA baseline scorecard
+        if: steps.campaign.outcome == 'success'
+        run: node scripts/enterprise/generate-readiness-scorecard.mjs
+
+      - name: Assemble manifest and promote scorecard
+        if: steps.campaign.outcome == 'success'
+        id: promotion
+        run: |
+          node scripts/enterprise/run-enterprise-promotion-closeout.mjs \
+            --campaign artifacts/enterprise-runtime-campaign.json \
+            --scorecard artifacts/enterprise-readiness/canonical-scorecard.json \
+            --runtime-root artifacts/runtime-evidence \
+            --staging-root artifacts/enterprise-readiness/evidence-input \
+            --sha "$RELEASE_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --run "$GITHUB_RUN_ID" \
+            --manifest-output artifacts/enterprise-readiness/evidence-manifest.json \
+            --promotion-output artifacts/enterprise-readiness/scorecard-promotion-report.json \
+            --closeout-output artifacts/enterprise-readiness/enterprise-promotion-closeout.json
+
+      - name: Upload campaign and evidence-backed progress bundle
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -81,11 +114,23 @@ jobs:
           path: |
             artifacts/enterprise-runtime-campaign.json
             artifacts/runtime-evidence/
+            artifacts/enterprise-readiness/
           if-no-files-found: error
           retention-days: 90
 
-      - name: Report fail-closed closeout
-        if: always() && steps.campaign.outcome != 'success'
+      - name: Enforce fail-closed enterprise closeout
+        if: always()
+        shell: bash
         run: |
-          echo "Enterprise runtime closeout remains NO_GO. Inspect the uploaded campaign artifact." >&2
+          set -euo pipefail
           test "${{ steps.campaign.outcome }}" = "success"
+          test "${{ steps.promotion.outcome }}" = "success"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = 'artifacts/enterprise-readiness/enterprise-promotion-closeout.json';
+          const report = JSON.parse(fs.readFileSync(path, 'utf8'));
+          console.log(`Enterprise completion: ${report.promoted?.completePercent ?? 'unknown'}%`);
+          console.log(`Enterprise remaining: ${report.promoted?.remainingPercent ?? 'unknown'}%`);
+          console.log(`Release decision: ${report.releaseDecision}`);
+          if (report.releaseDecision !== 'GO') process.exit(1);
+          NODE

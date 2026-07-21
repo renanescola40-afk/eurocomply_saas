@@ -63,7 +63,6 @@ jobs:
 
       - name: Promote only accepted evidence
         id: promotion
-        continue-on-error: true
         run: |
           node scripts/enterprise/promote-enterprise-scorecard.mjs \
             --scorecard "${{ inputs.scorecard_path }}" \
@@ -81,7 +80,7 @@ jobs:
           retention-days: 30
 
       - name: Enforce fail-closed decision
-        if: steps.promotion.outcome != 'success'
+        if: always() && steps.promotion.outcome != 'success'
         run: |
           echo 'Enterprise scorecard remains NO_GO. Inspect the sanitized report artifact.'
           exit 1
