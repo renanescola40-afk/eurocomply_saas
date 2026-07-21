@@ -1,0 +1,83 @@
+name: Final Technical Controls Proof
+
+run-name: Final technical controls proof for ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full current main SHA
+        required: true
+        type: string
+      confirmation:
+        description: Type EXECUTE_FINAL_TECHNICAL_PROOF
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: final-technical-controls-proof-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  prove-final-technical-controls:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production-final-technical-proof
+    env:
+      ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
+      FINAL_TECHNICAL_CONFIRMATION: ${{ inputs.confirmation }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      AUTH_RBAC_ORGANIZATION_A_ID: ${{ secrets.AUTH_RBAC_ORGANIZATION_A_ID }}
+      AUTH_RBAC_OWNER_EMAIL: ${{ secrets.AUTH_RBAC_OWNER_EMAIL }}
+      AUTH_RBAC_OWNER_PASSWORD: ${{ secrets.AUTH_RBAC_OWNER_PASSWORD }}
+      AUTH_RBAC_OUTSIDER_EMAIL: ${{ secrets.AUTH_RBAC_OUTSIDER_EMAIL }}
+      AUTH_RBAC_OUTSIDER_PASSWORD: ${{ secrets.AUTH_RBAC_OUTSIDER_PASSWORD }}
+      RECOVERY_ISOLATED_DATABASE_URL: ${{ secrets.RECOVERY_ISOLATED_DATABASE_URL }}
+    steps:
+      - name: Validate requested SHA and confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$ENTERPRISE_EXPECTED_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          test "$FINAL_TECHNICAL_CONFIRMATION" = "EXECUTE_FINAL_TECHNICAL_PROOF"
+          echo "ENTERPRISE_EXPECTED_SHA=${ENTERPRISE_EXPECTED_SHA,,}" >> "$GITHUB_ENV"
+      - name: Checkout exact current main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+      - name: Verify exact current main checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$ENTERPRISE_EXPECTED_SHA"
+          test "$(git rev-parse origin/main)" = "$ENTERPRISE_EXPECTED_SHA"
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Execute protected final technical proof
+        run: node scripts/security/run-final-technical-controls-proof.mjs
+      - name: Upload redacted proof evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: final-technical-controls-proof-${{ env.ENTERPRISE_EXPECTED_SHA }}
+          path: docs/security/evidence/runtime/final-technical-controls-validation.json
+          if-no-files-found: error
+          retention-days: 90
