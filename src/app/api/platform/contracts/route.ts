@@ -5,7 +5,10 @@ import {
 } from '@/server/enterprise/contracts';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireApiUser, requireTrustedMutation, secureApiError } from '@/server/security/api-guards';
-import { requirePlatformCapability } from '@/server/security/platform-admin';
+import {
+  PlatformAdminError,
+  requirePlatformCapability,
+} from '@/server/security/platform-admin';
 
 const MAX_CONTRACT_JSON_BYTES = 16 * 1024;
 
@@ -89,6 +92,9 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    return secureApiError(error);
+    if (error instanceof PlatformAdminError) {
+      return noStoreJson({ error: error.code }, { status: error.status });
+    }
+    return secureApiError(error, request);
   }
 }
