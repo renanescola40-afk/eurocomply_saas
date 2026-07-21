@@ -6,12 +6,15 @@ import {
 } from '@/server/enterprise/licensing';
 import { noStoreJson } from '@/server/security/no-store';
 import { requireApiUser, secureApiError } from '@/server/security/api-guards';
-import { requirePlatformCapability } from '@/server/security/platform-admin';
+import {
+  PlatformAdminError,
+  requirePlatformCapability,
+} from '@/server/security/platform-admin';
 
 const organizationIdSchema = z.string().uuid();
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ organizationId: string }> },
 ) {
   try {
@@ -48,6 +51,9 @@ export async function GET(
       features: entitlement.features,
     });
   } catch (error) {
-    return secureApiError(error);
+    if (error instanceof PlatformAdminError) {
+      return noStoreJson({ error: error.code }, { status: error.status });
+    }
+    return secureApiError(error, request);
   }
 }
