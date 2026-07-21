@@ -1,7 +1,17 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export type PlatformAdminRole = 'owner' | 'sales_admin' | 'sales_rep' | 'support_admin';
+export type PlatformAdminRole =
+  | 'owner'
+  | 'sales_admin'
+  | 'sales_rep'
+  | 'support_admin'
+  | 'platform_owner'
+  | 'platform_admin'
+  | 'platform_billing'
+  | 'platform_support'
+  | 'platform_security'
+  | 'platform_auditor';
 
 export type PlatformAdminMembership = {
   userId: string;
@@ -57,11 +67,42 @@ async function requirePlatformAdminAal2() {
 
 export function normalizePlatformAdminRole(role: string | null | undefined): PlatformAdminRole | null {
   const normalized = String(role ?? '').trim().toLowerCase();
-  if (normalized === 'owner') return 'owner';
-  if (normalized === 'sales_admin') return 'sales_admin';
-  if (normalized === 'sales_rep') return 'sales_rep';
-  if (normalized === 'support_admin') return 'support_admin';
-  return null;
+
+  switch (normalized) {
+    case 'owner':
+    case 'sales_admin':
+    case 'sales_rep':
+    case 'support_admin':
+    case 'platform_owner':
+    case 'platform_admin':
+    case 'platform_billing':
+    case 'platform_support':
+    case 'platform_security':
+    case 'platform_auditor':
+      return normalized;
+    default:
+      return null;
+  }
+}
+
+export function platformRoleHasCapability(
+  role: PlatformAdminRole,
+  capability: 'organizations' | 'contracts' | 'billing' | 'support' | 'security' | 'audit',
+): boolean {
+  const matrix: Record<PlatformAdminRole, ReadonlySet<typeof capability>> = {
+    owner: new Set(['organizations', 'contracts', 'billing', 'support', 'security', 'audit']),
+    platform_owner: new Set(['organizations', 'contracts', 'billing', 'support', 'security', 'audit']),
+    platform_admin: new Set(['organizations', 'contracts', 'billing', 'support', 'security', 'audit']),
+    sales_admin: new Set(['organizations', 'contracts', 'billing', 'support']),
+    sales_rep: new Set(['organizations', 'support']),
+    support_admin: new Set(['support', 'audit']),
+    platform_billing: new Set(['contracts', 'billing', 'audit']),
+    platform_support: new Set(['support', 'audit']),
+    platform_security: new Set(['security', 'audit']),
+    platform_auditor: new Set(['audit']),
+  };
+
+  return matrix[role].has(capability);
 }
 
 export async function getPlatformAdminMembership(userId: string): Promise<PlatformAdminMembership | null> {
@@ -83,7 +124,7 @@ export async function getPlatformAdminMembership(userId: string): Promise<Platfo
 
 export async function requirePlatformAdmin(
   userId: string,
-  allowedRoles: PlatformAdminRole[] = ['owner', 'sales_admin'],
+  allowedRoles: PlatformAdminRole[] = ['owner', 'sales_admin', 'platform_owner', 'platform_admin'],
 ): Promise<PlatformAdminMembership> {
   const membership = await getPlatformAdminMembership(userId);
 
@@ -93,5 +134,19 @@ export async function requirePlatformAdmin(
 
   await requirePlatformAdminAal2();
 
+  return membership;
+}
+
+export async function requirePlatformCapability(
+  userId: string,
+  capability: 'organizations' | 'contracts' | 'billing' | 'support' | 'security' | 'audit',
+): Promise<PlatformAdminMembership> {
+  const membership = await getPlatformAdminMembership(userId);
+
+  if (!membership || !platformRoleHasCapability(membership.role, capability)) {
+    throw new PlatformAdminError('platform_admin_required', 403);
+  }
+
+  await requirePlatformAdminAal2();
   return membership;
 }
