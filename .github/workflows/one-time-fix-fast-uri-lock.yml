@@ -36,7 +36,14 @@ jobs:
 
       - name: Verify patched version
         run: |
-          node -e "const lock=require('./package-lock.json'); const v=lock.packages?.['node_modules/fast-uri']?.version; if(v!=='3.1.3') throw new Error('Expected fast-uri 3.1.3, got '+v)"
+          node - <<'NODE'
+          const lock = require('./package-lock.json');
+          const version = lock.packages?.['node_modules/fast-uri']?.version;
+          const [major, minor, patch] = String(version || '').split('.').map(Number);
+          const patched = major > 3 || (major === 3 && (minor > 1 || (minor === 1 && patch >= 3)));
+          if (!patched) throw new Error(`Expected patched fast-uri >=3.1.3, got ${version}`);
+          console.log(`Using patched fast-uri ${version}`);
+          NODE
           npm audit --audit-level=moderate
 
       - name: Commit generated lockfile
@@ -48,5 +55,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add package-lock.json
-          git commit -m 'fix(security): update fast-uri to patched 3.1.3'
+          git commit -m 'fix(security): update fast-uri to patched release'
           git push origin HEAD:agent/safe-runtime-autopromotion-megapack
