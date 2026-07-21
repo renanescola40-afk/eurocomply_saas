@@ -21,27 +21,52 @@ describe('FRIA operational API contract', () => {
     expect(route).toContain('parseJsonBodyWithZod(request');
     expect(route).toContain('checkDistributedRateLimit({');
     expect(route).toContain('security_control_unavailable');
+    expect(route).toContain('/^FRIA-(0[1-9]|1[0-5])$/');
   });
 
-  it('re-evaluates approval server-side and compensates audit failure', () => {
+  it('validates AI-system ownership and uses atomic version creation', () => {
+    expect(route).toContain('getAiSystem(body.aiSystemId, organization.id)');
+    expect(queries).toContain("db.rpc('create_fria_assessment_atomic'");
+    expect(route).toContain("created.outcome === 'system_not_found'");
+    expect(route).toContain('organization_membership_required');
+  });
+
+  it('uses optimistic concurrency and immutable terminal states', () => {
+    expect(route).toContain('expectedUpdatedAt');
+    expect(route).toContain('fria_state_changed');
+    expect(route).toContain("before.stage === 'approved' || before.stage === 'retired'");
+    expect(queries).toContain(".eq('updated_at', expectedUpdatedAt)");
+  });
+
+  it('re-evaluates and approves atomically with durable compensation', () => {
     expect(route).toContain('decideFria({');
+    expect(route).toContain('approveFriaAssessmentAtomic({');
+    expect(route).toContain('compensateFriaApprovalAuditFailure({');
     expect(route).toContain('fria_approval_requirements_not_met');
-    expect(route).toContain('restoreFriaAssessment(before)');
-    expect(route).toContain("rollbackFriaCreate('ai_fria_assessments'");
-    expect(route).toContain("rollbackFriaCreate('ai_fria_evidence'");
-    expect(route).toContain('fria_audit_unavailable');
+    expect(route).toContain('rationaleLength: body.rationale.length');
+    expect(route).not.toContain('metadata: { rationale: body.rationale }');
   });
 
-  it('scopes every database operation by organization', () => {
+  it('requires an identified legal reviewer instead of inferring legal completion', () => {
+    expect(route).toContain('legalReviewerId');
+    expect(route).toContain('Legal reviewer is required.');
+    expect(route).toContain('legal_reviewer_id');
+    expect(page).toContain('legalReviewComplete');
+    expect(page).toContain('legalReviewerId');
+    expect(page).not.toContain("legalReviewComplete: ['none', 'low', 'medium'].includes(residual)");
+  });
+
+  it('scopes database operations and evidence paths by organization', () => {
     expect(queries.match(/\.eq\('organization_id'/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
     expect(route).toContain("body.storageReference.startsWith(`${organization.id}/`)");
     expect(route).not.toContain('error.message');
   });
 
-  it('exposes the localized workspace from the control tower', () => {
+  it('exposes the localized workspace from the control tower and inventory', () => {
     expect(page).toContain("fetch('/api/ai-governance/fria'");
-    expect(page).toContain("workflow=${workflow}");
+    expect(page).toContain("fetch('/api/ai-systems'");
+    expect(page).toContain('expectedUpdatedAt: assessment.updated_at');
     expect(page).toContain('FRIA Workspace');
-    expect(controlTower).toContain("route:'/dashboard/fria'");
+    expect(controlTower).toContain("route: '/dashboard/fria'");
   });
 });
