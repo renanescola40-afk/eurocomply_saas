@@ -5,7 +5,6 @@ import { resolveAuthAppBaseUrl } from '@/server/security/auth-callback';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import {
   extractSupabaseSsoProviderId,
-  isSamlSsoUser,
   provisionEnterpriseSsoSession,
 } from '@/server/enterprise/sso';
 
@@ -54,11 +53,7 @@ function getSafeNextPath(rawNext: string | null, locale: Locale) {
   return isAllowedCallbackContinuation(normalizedNext, locale) ? normalizedNext : fallback;
 }
 
-function redirectToLogin(input: {
-  loginUrl: URL;
-  error: string;
-  next: string;
-}) {
+function redirectToLogin(input: { loginUrl: URL; error: string; next: string }) {
   input.loginUrl.searchParams.set('error', input.error);
   input.loginUrl.searchParams.set('next', input.next);
   return applyNoStoreHeaders(NextResponse.redirect(input.loginUrl));
@@ -78,7 +73,7 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code');
   const loginUrl = new URL(`/${locale}/login`, appBaseUrl);
 
-  if (!code) {
+  if (!code || code.length > 2048 || !/^[A-Za-z0-9._~-]+$/.test(code)) {
     return redirectToLogin({ loginUrl, error: 'missing_oauth_code', next });
   }
 
@@ -97,15 +92,15 @@ export async function GET(request: NextRequest) {
     return redirectToLogin({ loginUrl, error: 'auth_exchange_failed', next });
   }
 
-  if (isSamlSsoUser(user)) {
-    const claimsApi = supabase.auth as unknown as SupabaseClaimsApi;
-    const claimsResult = claimsApi.getClaims
-      ? await claimsApi.getClaims().catch(() => null)
-      : null;
-    const providerId = extractSupabaseSsoProviderId(claimsResult?.data?.claims);
-    const email = user.email?.trim().toLowerCase() ?? '';
+  const claimsApi = supabase.auth as unknown as SupabaseClaimsApi;
+  const claimsResult = claimsApi.getClaims
+    ? await claimsApi.getClaims().catch(() => null)
+    : null;
+  const providerId = extractSupabaseSsoProviderId(claimsResult?.data?.claims);
 
-    if (!providerId || !email || claimsResult?.error) {
+  if (providerId) {
+    const email = user.email?.trim().toLowerCase() ?? '';
+    if (!email || claimsResult?.error) {
       await supabase.auth.signOut().catch(() => undefined);
       return redirectToLogin({ loginUrl, error: 'enterprise_sso_unavailable', next });
     }
