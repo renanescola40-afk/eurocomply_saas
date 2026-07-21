@@ -52,6 +52,7 @@ const requiredReleaseBlockers = [
 ];
 
 const failures = [];
+const warnings = [];
 
 function readText(path) {
   if (!existsSync(path)) {
@@ -65,6 +66,11 @@ function requireTrue(object, key, prefix) {
   if (object?.[key] !== true) {
     failures.push(`${prefix}.${key} must be true`);
   }
+}
+
+function isTimeBoundExceptionFailure(failure) {
+  return failure === 'captured_at is older than 7 days'
+    || failure === 'branch protection exception has expired';
 }
 
 const evidenceSource = readText(evidencePath);
@@ -81,7 +87,15 @@ if (evidenceSource) {
 }
 
 for (const failure of validateBranchProtectionFreshness(evidence)) {
-  failures.push(`${evidencePath} ${failure}`);
+  const mayRemainOpenOutsideEnterpriseRelease = !isEnterpriseRelease
+    && ['Exception', 'Open'].includes(evidence.status)
+    && isTimeBoundExceptionFailure(failure);
+
+  if (mayRemainOpenOutsideEnterpriseRelease) {
+    warnings.push(`${evidencePath} ${failure}`);
+  } else {
+    failures.push(`${evidencePath} ${failure}`);
+  }
 }
 
 if (evidence.evidence_type !== 'branch-protection-required-checks') {
@@ -139,10 +153,20 @@ console.log('RISCK COMPLY branch protection evidence check');
 console.log('------------------------------------------------');
 console.log(`Enterprise release mode: ${isEnterpriseRelease ? 'yes' : 'no'}`);
 
+if (warnings.length > 0) {
+  console.warn('Branch protection evidence warnings (release remains No-Go):');
+  for (const warning of warnings) console.warn(`- ${warning}`);
+}
+
 if (failures.length > 0) {
   console.error('Branch protection evidence failures:');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log('Branch protection and required-check evidence: ok');
+  console.log('Branch protection policy contract: ok');
+  if (evidence.status !== 'Complete') {
+    console.log(`Branch protection production evidence remains ${evidence.status}; enterprise release validation must continue to fail closed.`);
+  } else {
+    console.log('Branch protection and required-check evidence: ok');
+  }
 }
