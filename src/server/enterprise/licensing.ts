@@ -30,6 +30,7 @@ export type EnterpriseEntitlementContext = {
   organizationId: string;
   contractId: string;
   contractStatus: EnterpriseContractStatus;
+  contractVersion: number;
   canAddMembers: boolean;
   limits: {
     members: number;
@@ -44,6 +45,13 @@ export type EnterpriseEntitlementContext = {
     participants: number;
     viewers: number;
     activeAdmins: number;
+  };
+  pending: {
+    invitations: number;
+    fullUsers: number;
+    participants: number;
+    viewers: number;
+    admins: number;
   };
   features: {
     sso: boolean;
@@ -96,6 +104,7 @@ type EntitlementRow = {
   outcome?: unknown;
   contract_id?: unknown;
   contract_status?: unknown;
+  contract_version?: unknown;
   member_limit?: unknown;
   full_user_limit?: unknown;
   participant_limit?: unknown;
@@ -106,6 +115,11 @@ type EntitlementRow = {
   participants?: unknown;
   viewers?: unknown;
   active_admins?: unknown;
+  pending_invitations?: unknown;
+  pending_full_users?: unknown;
+  pending_participants?: unknown;
+  pending_viewers?: unknown;
+  pending_admins?: unknown;
   sso_enabled?: unknown;
   scim_enabled?: unknown;
   api_enabled?: unknown;
@@ -122,7 +136,7 @@ type SeatReservationRow = {
   seat_limit?: unknown;
 };
 
-const RESOLVE_ENTITLEMENTS_RPC = 'resolve_organization_entitlements';
+const RESOLVE_ENTITLEMENTS_RPC = 'resolve_organization_entitlements_v2';
 const RESERVE_SEAT_RPC = 'reserve_organization_seat_idempotent_atomic';
 const LICENSING_UNAVAILABLE = 'enterprise_licensing_unavailable';
 
@@ -166,13 +180,21 @@ export function getSeatAvailability(
 ): number {
   if (!context.canAddMembers) return 0;
 
-  const memberAvailability = Math.max(context.limits.members - context.usage.activeMembers, 0);
+  const memberAvailability = Math.max(
+    context.limits.members - context.usage.activeMembers - context.pending.invitations,
+    0,
+  );
   const seatAvailability =
     seatType === 'full'
-      ? Math.max(context.limits.fullUsers - context.usage.fullUsers, 0)
+      ? Math.max(context.limits.fullUsers - context.usage.fullUsers - context.pending.fullUsers, 0)
       : seatType === 'participant'
-        ? Math.max(context.limits.participants - context.usage.participants, 0)
-        : Math.max(context.limits.viewers - context.usage.viewers, 0);
+        ? Math.max(
+            context.limits.participants
+              - context.usage.participants
+              - context.pending.participants,
+            0,
+          )
+        : Math.max(context.limits.viewers - context.usage.viewers - context.pending.viewers, 0);
 
   return Math.min(memberAvailability, seatAvailability);
 }
@@ -199,12 +221,13 @@ export async function resolveEnterpriseEntitlements(
   const row = firstRow<EntitlementRow>(data);
   const contractId = stringOrNull(row?.contract_id);
   const contractStatus = row?.contract_status;
+  const contractVersion = integer(row?.contract_version);
 
   if (!row || row.outcome === 'contract_missing' || row.outcome === 'entitlements_missing' || row.outcome === 'usage_missing') {
     throw new Error(LICENSING_UNAVAILABLE);
   }
 
-  if (!contractId || !isContractStatus(contractStatus)) {
+  if (!contractId || !isContractStatus(contractStatus) || contractVersion < 1) {
     throw new Error(LICENSING_UNAVAILABLE);
   }
 
@@ -212,6 +235,7 @@ export async function resolveEnterpriseEntitlements(
     organizationId,
     contractId,
     contractStatus,
+    contractVersion,
     canAddMembers: row.outcome === 'resolved' && contractAllowsNewSeats(contractStatus),
     limits: {
       members: integer(row.member_limit),
@@ -226,6 +250,13 @@ export async function resolveEnterpriseEntitlements(
       participants: integer(row.participants),
       viewers: integer(row.viewers),
       activeAdmins: integer(row.active_admins),
+    },
+    pending: {
+      invitations: integer(row.pending_invitations),
+      fullUsers: integer(row.pending_full_users),
+      participants: integer(row.pending_participants),
+      viewers: integer(row.pending_viewers),
+      admins: integer(row.pending_admins),
     },
     features: {
       sso: boolean(row.sso_enabled),
