@@ -13,6 +13,14 @@ export type PlatformAdminRole =
   | 'platform_security'
   | 'platform_auditor';
 
+export type PlatformCapability =
+  | 'organizations'
+  | 'contracts'
+  | 'billing'
+  | 'support'
+  | 'security'
+  | 'audit';
+
 export type PlatformAdminMembership = {
   userId: string;
   role: PlatformAdminRole;
@@ -40,6 +48,19 @@ type PlatformAdminMfaApi = {
     data?: { currentLevel?: string | null } | null;
     error?: { message?: string } | null;
   }>;
+};
+
+const PLATFORM_CAPABILITIES: Record<PlatformAdminRole, ReadonlySet<PlatformCapability>> = {
+  owner: new Set<PlatformCapability>(['organizations', 'contracts', 'billing', 'support', 'security', 'audit']),
+  platform_owner: new Set<PlatformCapability>(['organizations', 'contracts', 'billing', 'support', 'security', 'audit']),
+  platform_admin: new Set<PlatformCapability>(['organizations', 'contracts', 'billing', 'support', 'security', 'audit']),
+  sales_admin: new Set<PlatformCapability>(['organizations', 'contracts', 'billing', 'support']),
+  sales_rep: new Set<PlatformCapability>(['organizations', 'support']),
+  support_admin: new Set<PlatformCapability>(['support', 'audit']),
+  platform_billing: new Set<PlatformCapability>(['contracts', 'billing', 'audit']),
+  platform_support: new Set<PlatformCapability>(['support', 'audit']),
+  platform_security: new Set<PlatformCapability>(['security', 'audit']),
+  platform_auditor: new Set<PlatformCapability>(['audit']),
 };
 
 async function requirePlatformAdminAal2() {
@@ -87,22 +108,9 @@ export function normalizePlatformAdminRole(role: string | null | undefined): Pla
 
 export function platformRoleHasCapability(
   role: PlatformAdminRole,
-  capability: 'organizations' | 'contracts' | 'billing' | 'support' | 'security' | 'audit',
+  capability: PlatformCapability,
 ): boolean {
-  const matrix: Record<PlatformAdminRole, ReadonlySet<typeof capability>> = {
-    owner: new Set(['organizations', 'contracts', 'billing', 'support', 'security', 'audit']),
-    platform_owner: new Set(['organizations', 'contracts', 'billing', 'support', 'security', 'audit']),
-    platform_admin: new Set(['organizations', 'contracts', 'billing', 'support', 'security', 'audit']),
-    sales_admin: new Set(['organizations', 'contracts', 'billing', 'support']),
-    sales_rep: new Set(['organizations', 'support']),
-    support_admin: new Set(['support', 'audit']),
-    platform_billing: new Set(['contracts', 'billing', 'audit']),
-    platform_support: new Set(['support', 'audit']),
-    platform_security: new Set(['security', 'audit']),
-    platform_auditor: new Set(['audit']),
-  };
-
-  return matrix[role].has(capability);
+  return PLATFORM_CAPABILITIES[role].has(capability);
 }
 
 export async function getPlatformAdminMembership(userId: string): Promise<PlatformAdminMembership | null> {
@@ -139,7 +147,7 @@ export async function requirePlatformAdmin(
 
 export async function requirePlatformCapability(
   userId: string,
-  capability: 'organizations' | 'contracts' | 'billing' | 'support' | 'security' | 'audit',
+  capability: PlatformCapability,
 ): Promise<PlatformAdminMembership> {
   const membership = await getPlatformAdminMembership(userId);
 
