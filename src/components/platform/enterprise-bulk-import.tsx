@@ -5,6 +5,7 @@ import { FormEvent, useState } from 'react';
 const inputClass = 'h-11 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-sm text-white outline-none placeholder:text-white/25 focus:border-blue-200/45';
 const labelClass = 'space-y-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/50';
 const buttonClass = 'inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50';
+const secondaryButtonClass = 'inline-flex h-11 items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold text-white/75 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-50';
 
 async function readJson(response: Response) {
   const body = await response.json().catch(() => ({}));
@@ -72,6 +73,26 @@ export function EnterpriseBulkImport() {
     }
   }
 
+  async function runAction(action: 'process' | 'cancel') {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/platform/provisioning-jobs/actions', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(action === 'process'
+          ? { action, batchSize: 50 }
+          : { action, jobId: jobId.trim() }),
+      });
+      setResult(await readJson(response));
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'enterprise_import_action_failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <section className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6 shadow-2xl">
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-200/70">Bulk provisioning</p>
@@ -128,7 +149,7 @@ export function EnterpriseBulkImport() {
         </div>
       </form>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto]">
+      <div className="mt-6 grid gap-4 md:grid-cols-[1fr_auto_auto_auto]">
         <input
           aria-label="Provisioning job ID"
           className={inputClass}
@@ -137,12 +158,28 @@ export function EnterpriseBulkImport() {
           value={jobId}
         />
         <button
-          className={buttonClass}
+          className={secondaryButtonClass}
           disabled={loading || !organizationId.trim() || !jobId.trim()}
           onClick={refreshStatus}
           type="button"
         >
           Refresh job
+        </button>
+        <button
+          className={buttonClass}
+          disabled={loading}
+          onClick={() => runAction('process')}
+          type="button"
+        >
+          Run 50 rows
+        </button>
+        <button
+          className={secondaryButtonClass}
+          disabled={loading || !jobId.trim()}
+          onClick={() => runAction('cancel')}
+          type="button"
+        >
+          Cancel job
         </button>
       </div>
 
