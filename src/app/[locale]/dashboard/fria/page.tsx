@@ -30,6 +30,9 @@ type Assessment = {
   highest_residual_impact: string;
   reviewer_id: string | null;
   approver_id: string | null;
+  legal_reviewer_id: string | null;
+  legal_review_completed_at: string | null;
+  updated_at: string;
 };
 type Evidence = { id: string; assessment_id: string; control_id: string; evidence_type: string; status: string };
 type AiSystem = { id: string; name: string; risk_level: string; lifecycle_status: string };
@@ -42,6 +45,7 @@ const english = {
   newAssessment: 'Create assessment', save: 'Save assessment', approve: 'Approve', evidence: 'Submit evidence',
   refresh: 'Refresh', empty: 'No FRIA assessment exists yet.', saved: 'Workflow saved and audit evidence persisted.',
   error: 'The FRIA workflow could not be completed.', invalidJson: 'One or more structured JSON fields are invalid.',
+  legalReview: 'Legal review completed',
 };
 const portuguese = {
   ...english,
@@ -51,6 +55,7 @@ const portuguese = {
   newAssessment: 'Criar avaliação', save: 'Guardar avaliação', approve: 'Aprovar', evidence: 'Submeter evidência',
   refresh: 'Atualizar', empty: 'Ainda não existe avaliação FRIA.', saved: 'Workflow guardado e evidência de auditoria persistida.',
   error: 'Não foi possível concluir o workflow FRIA.', invalidJson: 'Um ou mais campos JSON estruturados são inválidos.',
+  legalReview: 'Revisão jurídica concluída',
 };
 
 function lines(value: string) {
@@ -89,6 +94,8 @@ export default function FriaPage() {
   const [residual, setResidual] = useState('unknown');
   const [reviewerId, setReviewerId] = useState('');
   const [approverId, setApproverId] = useState('');
+  const [legalReviewerId, setLegalReviewerId] = useState('');
+  const [legalReviewComplete, setLegalReviewComplete] = useState(false);
   const [controlId, setControlId] = useState('FRIA-01');
   const [evidenceRef, setEvidenceRef] = useState('');
 
@@ -131,6 +138,8 @@ export default function FriaPage() {
     setResidual(item.highest_residual_impact);
     setReviewerId(item.reviewer_id ?? '');
     setApproverId(item.approver_id ?? '');
+    setLegalReviewerId(item.legal_reviewer_id ?? '');
+    setLegalReviewComplete(Boolean(item.legal_reviewer_id && item.legal_review_completed_at));
   }, [selected, snapshot]);
 
   async function run(workflow: string, body: Record<string, unknown>) {
@@ -162,12 +171,14 @@ export default function FriaPage() {
       return;
     }
     await run('assessment_update', {
-      assessmentId: assessment.id, applicability,
+      assessmentId: assessment.id,
+      expectedUpdatedAt: assessment.updated_at,
+      applicability,
       context: { intendedPurpose, publicAuthorityOrPublicService: true, highRiskSystem: true, vulnerableGroupsConsidered: true },
       affectedGroups: lines(affectedGroups), rightsMap: lines(rights), impactAnalysis, mitigationPlan, oversightPlan, complaintsRedress,
       highestResidualImpact: residual, reviewerId: reviewerId || null, approverId: approverId || null,
-      legalReviewComplete: ['none', 'low', 'medium'].includes(residual), monitoringPlanComplete: true,
-      dataProtectionCoordinationComplete: true,
+      legalReviewerId: legalReviewerId || null, legalReviewComplete,
+      monitoringPlanComplete: true, dataProtectionCoordinationComplete: true,
     });
   }
 
@@ -210,7 +221,9 @@ export default function FriaPage() {
                   <div><Label>Complaints and redress (JSON)</Label><Textarea value={redress} onChange={(event) => setRedress(event.target.value)} className="font-mono text-xs" /></div>
                   <div><Label>Reviewer UUID</Label><Input value={reviewerId} onChange={(event) => setReviewerId(event.target.value)} /></div>
                   <div><Label>Approver UUID</Label><Input value={approverId} onChange={(event) => setApproverId(event.target.value)} /></div>
-                  <div className="md:col-span-2 flex flex-wrap gap-3"><Button disabled={busy} onClick={() => void saveCurrent(current)}><Save className="mr-2 h-4 w-4" />{text.save}</Button><Button variant="outline" disabled={busy} onClick={() => void run('assessment_approve', { assessmentId: current.id, rationale: 'Independent approval after evidence and control review.' })}>{text.approve}</Button><Button variant="ghost" onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />{text.refresh}</Button></div>
+                  <div><Label>Legal reviewer UUID</Label><Input value={legalReviewerId} onChange={(event) => setLegalReviewerId(event.target.value)} /></div>
+                  <label className="flex items-center gap-3 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm"><input type="checkbox" checked={legalReviewComplete} onChange={(event) => setLegalReviewComplete(event.target.checked)} />{text.legalReview}</label>
+                  <div className="md:col-span-2 flex flex-wrap gap-3"><Button disabled={busy || current.stage === 'approved' || current.stage === 'retired'} onClick={() => void saveCurrent(current)}><Save className="mr-2 h-4 w-4" />{text.save}</Button><Button variant="outline" disabled={busy || current.stage === 'approved' || current.stage === 'retired'} onClick={() => void run('assessment_approve', { assessmentId: current.id, expectedUpdatedAt: current.updated_at, rationale: 'Independent approval after evidence and control review.' })}>{text.approve}</Button><Button variant="ghost" onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />{text.refresh}</Button></div>
                 </CardContent>
               </Card>
               <Card className="border-white/10 bg-white/[0.035]"><CardHeader><CardTitle>Evidence</CardTitle></CardHeader><CardContent className="flex flex-col gap-3 md:flex-row"><Input value={controlId} onChange={(event) => setControlId(event.target.value)} placeholder="FRIA-01" /><Input value={evidenceRef} onChange={(event) => setEvidenceRef(event.target.value)} placeholder="organization-id/path or evidence reference" /><Button disabled={busy || !evidenceRef} onClick={() => void run('evidence_submit', { assessmentId: current.id, controlId, evidenceType: 'supporting_document', storageReference: evidenceRef })}>{text.evidence}</Button></CardContent></Card>
