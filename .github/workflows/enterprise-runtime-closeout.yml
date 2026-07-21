@@ -13,6 +13,10 @@ on:
         description: Type RUN_ENTERPRISE_RUNTIME_CLOSEOUT
         required: true
         type: string
+      recovery_rollback_confirmation:
+        description: Type EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK to authorize the protected recovery exercise
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -26,12 +30,13 @@ jobs:
   closeout:
     name: Dispatch, collect and promote protected runtime evidence
     runs-on: ubuntu-24.04
-    timeout-minutes: 540
+    timeout-minutes: 600
     environment: production-enterprise-closeout
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
       RELEASE_BRANCH: main
       TARGET_SHA: ${{ inputs.release_sha }}
+      RECOVERY_ROLLBACK_CONFIRMATION: ${{ inputs.recovery_rollback_confirmation }}
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
       ENTERPRISE_EXPECTED_SHA: ${{ inputs.release_sha }}
@@ -39,13 +44,14 @@ jobs:
       ENTERPRISE_SCORECARD_MARKDOWN: artifacts/enterprise-readiness/canonical-scorecard.md
 
     steps:
-      - name: Validate operator confirmation and SHA
+      - name: Validate operator confirmations and SHA
         shell: bash
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
           test "$CONFIRMATION" = "RUN_ENTERPRISE_RUNTIME_CLOSEOUT"
+          test "$RECOVERY_ROLLBACK_CONFIRMATION" = "EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK"
           [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
 
       - name: Check out exact release SHA
@@ -74,9 +80,11 @@ jobs:
       - name: Validate campaign and promotion contracts
         run: |
           node --test tests/security/enterprise-runtime-campaign-contract.test.mjs
+          node --test tests/enterprise/runtime-lane-normalization.test.mjs
           node --test tests/enterprise/build-enterprise-evidence-manifest.test.mjs
           node --test tests/enterprise/promote-enterprise-scorecard.test.mjs
           node --test tests/enterprise/enterprise-promotion-closeout.test.mjs
+          npx vitest run tests/security/recovery-resilience-proof.test.ts
 
       - name: Execute enterprise runtime campaign
         id: campaign

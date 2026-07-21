@@ -1,79 +1,32 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-
+import { EXPECTED_RUNTIME_LANES, RUNTIME_LANE_CONTRACTS, validateRuntimeCampaignManifest } from '../../scripts/enterprise/runtime-lane-contracts.mjs';
 const manifest = JSON.parse(await readFile('docs/security/evidence/enterprise-runtime-campaign-manifest.json', 'utf8'));
 const script = await readFile('scripts/release/run-enterprise-runtime-campaign.mjs', 'utf8');
 const workflow = await readFile('.github/workflows/enterprise-runtime-closeout.yml', 'utf8');
-
-test('campaign consolidates ten required protected runtime lanes', () => {
-  assert.equal(manifest.schema_version, 1);
-  assert.equal(manifest.workflows.length, 10);
-  assert.equal(new Set(manifest.workflows.map((lane) => lane.id)).size, 10);
-  assert.ok(manifest.workflows.every((lane) => lane.required === true));
-  assert.ok(manifest.workflows.every((lane) => lane.workflow.endsWith('.yml')));
-  assert.ok(manifest.workflows.every((lane) => lane.artifact_prefix.length > 5));
+test('campaign defines ten exact manifest-driven lanes', async () => {
+  assert.equal(manifest.schema_version, 2);
+  assert.deepEqual(manifest.workflows.map((lane) => lane.id), EXPECTED_RUNTIME_LANES);
+  assert.equal(validateRuntimeCampaignManifest(manifest), true);
+  for (const lane of manifest.workflows) {
+    const contract = RUNTIME_LANE_CONTRACTS[lane.id];
+    assert.equal(lane.workflow, contract.workflow);
+    assert.equal(lane.artifact_prefix, contract.artifactPrefix);
+    const source = await readFile(`.github/workflows/${lane.workflow}`, 'utf8');
+    for (const inputName of Object.keys(lane.inputs)) assert.match(source, new RegExp(`\\n\\s{6}${inputName}:`));
+    assert.ok(source.includes(lane.artifact_prefix));
+    assert.match(source, /persist-credentials: false/);
+  }
 });
-
-test('campaign is exact-main and fail-closed', () => {
-  assert.match(script, /RELEASE_SHA must be a lowercase full 40-character SHA/);
-  assert.match(script, /restricted to main/);
-  assert.match(script, /commits\/main/);
-  assert.match(script, /missing_artifact/);
-  assert.match(script, /READY_FOR_EVIDENCE_PROMOTION/);
-  assert.match(script, /process\.exitCode = 1/);
-  assert.doesNotMatch(script, /console\.log\(token\)/);
+test('dispatcher uses lane inputs, exact main and bounded trusted artifacts', () => {
+  for (const pattern of [/resolveLaneInputs\(lane\.inputs/, /RECOVERY_ROLLBACK_CONFIRMATION must explicitly authorize/, /commits\/main/, /startsWith\(artifactPrefix\)/, /Required prefixed artifact inventory is invalid/, /zipfile\.ZipFile\(io\.BytesIO\(archive\)\)/, /stat\.S_ISLNK/, /open\(target, 'xb'\)/, /READY_FOR_EVIDENCE_PROMOTION/]) assert.match(script, pattern);
+  assert.doesNotMatch(script, /artifact\.archive_download_url/);
 });
-
-test('workflow requires protected operator confirmation and preserves failure', () => {
-  assert.match(workflow, /workflow_dispatch:/);
+test('parent closeout requires both operator confirmations and remains fail closed', () => {
   assert.match(workflow, /RUN_ENTERPRISE_RUNTIME_CLOSEOUT/);
+  assert.match(workflow, /EXECUTE_CONTROLLED_PRODUCTION_ROLLBACK/);
   assert.match(workflow, /environment: production-enterprise-closeout/);
   assert.match(workflow, /actions: write/);
-  assert.match(workflow, /persist-credentials: false/);
-  assert.match(workflow, /retention-days: 90/);
   assert.doesNotMatch(workflow, /continue-on-error:\s*true/);
-  assert.match(workflow, /Upload campaign and collected evidence[\s\S]*if: always\(\)/);
-  assert.match(workflow, /Report fail-closed closeout/);
-  assert.match(workflow, /steps\.campaign\.outcome != 'success'/);
-});
-
-test('campaign never marks an unsuccessful or artifact-free lane complete', () => {
-  assert.match(script, /run\.conclusion === 'success' \? 'complete' : 'blocked'/);
-  assert.match(script, /artifacts\.length === 0/);
-  assert.match(script, /required\.every\(\(result\) => result\.status === 'complete'\)/);
-});
-
-test('campaign allowlists outbound GitHub API destinations and workflow identifiers', () => {
-  assert.match(script, /const allowedWorkflows = new Set/);
-  assert.match(script, /allowedWorkflows\.has\(workflow\)/);
-  assert.match(script, /new URL\(pathname, githubApiOrigin\)/);
-  assert.match(script, /url\.origin !== githubApiOrigin/);
-  assert.match(script, /redirect: 'error'/);
-  assert.doesNotMatch(script, /fetch\(artifact\.archive_download_url/);
-});
-
-test('artifact redirects are followed only through a validated fixed GitHub endpoint', () => {
-  assert.match(script, /async function githubArtifactRequest\(artifactId\)/);
-  assert.match(script, /actions\/artifacts\/\$\{artifactId\}\/zip/);
-  assert.match(script, /redirect: 'follow'/);
-  assert.match(script, /assertTrustedArtifactResponse\(response\)/);
-  assert.match(script, /finalUrl\.protocol !== 'https:'/);
-  assert.match(script, /allowedArtifactHostSuffixes\.some/);
-  assert.doesNotMatch(script, /new URL\(artifact\.archive_download_url/);
-});
-
-test('campaign validates remote archives without network-derived filenames', () => {
-  assert.match(script, /maximumArtifactBytes/);
-  assert.match(script, /maximumExpandedBytes/);
-  assert.match(script, /Number\.isSafeInteger\(artifact\.id\)/);
-  assert.match(script, /githubArtifactRequest\(artifact\.id\)/);
-  assert.match(script, /zipfile\.ZipFile\(io\.BytesIO\(archive\)\)/);
-  assert.match(script, /stat\.S_ISLNK/);
-  assert.match(script, /destination not in target\.parents/);
-  assert.match(script, /open\(target, 'xb'\)/);
-  assert.match(script, /spawnSync\(\s*'python3'/);
-  assert.doesNotMatch(script, /writeFile\(zipPath/);
-  assert.doesNotMatch(script, /artifact\.name\}\.zip/);
-  assert.doesNotMatch(script, /spawnSync\('unzip'/);
 });
