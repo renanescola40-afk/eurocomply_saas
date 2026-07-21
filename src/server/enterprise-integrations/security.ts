@@ -1,4 +1,4 @@
-import { createHash, createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
 
 const API_KEY_PREFIX = 'rc_live_';
 const SCIM_PREFIX = 'scim_';
@@ -33,10 +33,6 @@ export interface WebhookVerificationInput {
 const SECRET_KDF_ALGORITHM = 'sha256';
 const SECRET_KDF_ITERATIONS = 210000;
 const SECRET_KDF_KEYLEN = 32;
-
-function sha256(value: string): string {
-  return createHash('sha256').update(value, 'utf8').digest('hex');
-}
 
 function createSecretVerifier(secret: string): string {
   const salt = randomBytes(16).toString('hex');
