@@ -3,15 +3,28 @@ import { defaultLocale, locales, type Locale } from '@/lib/i18n/routing';
 import { applyNoStoreHeaders, noStoreJson } from '@/server/security/no-store';
 import { resolveAuthAppBaseUrl } from '@/server/security/auth-callback';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import {
+  extractSupabaseSsoProviderId,
+  isSamlSsoUser,
+  provisionEnterpriseSsoSession,
+} from '@/server/enterprise/sso';
 
 const ONBOARDING_PATH = '/onboarding';
+const ORGANIZATION_DASHBOARD_PATH = '/dashboard/organizations';
 const LOCALE_COOKIE = 'NEXT_LOCALE';
 const CALLBACK_CONTINUATION_PATHS = [
   ONBOARDING_PATH,
   '/checkout',
-  '/dashboard/organizations',
+  ORGANIZATION_DASHBOARD_PATH,
   '/dashboard/observability',
 ] as const;
+
+type SupabaseClaimsApi = {
+  getClaims?: () => Promise<{
+    data?: { claims?: Record<string, unknown> | null } | null;
+    error?: { message?: string } | null;
+  }>;
+};
 
 function getLocaleFromRequest(request: NextRequest): Locale {
   const requestUrl = new URL(request.url);
@@ -41,6 +54,16 @@ function getSafeNextPath(rawNext: string | null, locale: Locale) {
   return isAllowedCallbackContinuation(normalizedNext, locale) ? normalizedNext : fallback;
 }
 
+function redirectToLogin(input: {
+  loginUrl: URL;
+  error: string;
+  next: string;
+}) {
+  input.loginUrl.searchParams.set('error', input.error);
+  input.loginUrl.searchParams.set('next', input.next);
+  return applyNoStoreHeaders(NextResponse.redirect(input.loginUrl));
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const appBaseUrl = resolveAuthAppBaseUrl(request.url);
@@ -56,9 +79,7 @@ export async function GET(request: NextRequest) {
   const loginUrl = new URL(`/${locale}/login`, appBaseUrl);
 
   if (!code) {
-    loginUrl.searchParams.set('error', 'missing_oauth_code');
-    loginUrl.searchParams.set('next', next);
-    return applyNoStoreHeaders(NextResponse.redirect(loginUrl));
+    return redirectToLogin({ loginUrl, error: 'missing_oauth_code', next });
   }
 
   const supabase = await createServerSupabaseClient();
@@ -66,9 +87,44 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.warn('auth_exchange_failed');
-    loginUrl.searchParams.set('error', 'auth_exchange_failed');
-    loginUrl.searchParams.set('next', next);
-    return applyNoStoreHeaders(NextResponse.redirect(loginUrl));
+    return redirectToLogin({ loginUrl, error: 'auth_exchange_failed', next });
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  const user = userData.user;
+  if (userError || !user) {
+    await supabase.auth.signOut().catch(() => undefined);
+    return redirectToLogin({ loginUrl, error: 'auth_exchange_failed', next });
+  }
+
+  if (isSamlSsoUser(user)) {
+    const claimsApi = supabase.auth as unknown as SupabaseClaimsApi;
+    const claimsResult = claimsApi.getClaims
+      ? await claimsApi.getClaims().catch(() => null)
+      : null;
+    const providerId = extractSupabaseSsoProviderId(claimsResult?.data?.claims);
+    const email = user.email?.trim().toLowerCase() ?? '';
+
+    if (!providerId || !email || claimsResult?.error) {
+      await supabase.auth.signOut().catch(() => undefined);
+      return redirectToLogin({ loginUrl, error: 'enterprise_sso_unavailable', next });
+    }
+
+    const provisioning = await provisionEnterpriseSsoSession({
+      userId: user.id,
+      email,
+      providerId,
+    });
+
+    if (!provisioning.ok) {
+      await supabase.auth.signOut().catch(() => undefined);
+      return redirectToLogin({ loginUrl, error: provisioning.code, next });
+    }
+
+    const ssoNext = requestUrl.searchParams.has('next')
+      ? next
+      : `/${locale}${ORGANIZATION_DASHBOARD_PATH}`;
+    return applyNoStoreHeaders(NextResponse.redirect(new URL(ssoNext, appBaseUrl)));
   }
 
   return applyNoStoreHeaders(NextResponse.redirect(new URL(next, appBaseUrl)));
