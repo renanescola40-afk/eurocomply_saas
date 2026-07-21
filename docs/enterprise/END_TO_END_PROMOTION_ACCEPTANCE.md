@@ -1,0 +1,22 @@
+# End-to-End Promotion Acceptance Checklist
+
+- [x] Branch starts from current integrated `main` SHA.
+- [x] Runtime campaign remains protected by explicit confirmation and environment approval.
+- [x] Ten required runtime lanes remain fail-closed.
+- [x] Exact-SHA repository checks are captured before baseline generation.
+- [x] Canonical baseline contains exactly 100 controls.
+- [x] Existing PASS controls require eligible evidence reasons.
+- [x] Runtime evidence is bound to child run ID, repository, target SHA and observed SHA.
+- [x] Secret-shaped evidence metadata is rejected.
+- [x] Every lane must expose scorecard-readable evidence.
+- [x] Evidence manifest and promotion reports are retained.
+- [x] Completion, remaining percentage and delta are written to the closeout report.
+- [x] Final workflow remains red unless the promoted score is 100% with zero critical controls open.
+- [ ] Exact-head CI passes.
+- [ ] CodeQL and security workflows pass on the final head SHA.
+- [ ] Protected runtime campaign executes on integrated `main`.
+- [ ] All required environments and provider secrets are configured.
+- [ ] Manifest reports `READY_FOR_PROMOTION`.
+- [ ] Final promotion report is independently reviewed.
+- [ ] Human, external and legal evidence is accepted where required.
+- [ ] Release decision is `GO`.
