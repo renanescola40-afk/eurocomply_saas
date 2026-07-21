@@ -30,7 +30,7 @@ jobs:
   closeout:
     name: Dispatch, collect and promote protected runtime evidence
     runs-on: ubuntu-24.04
-    timeout-minutes: 600
+    timeout-minutes: 720
     environment: production-enterprise-closeout
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
@@ -80,10 +80,13 @@ jobs:
       - name: Validate campaign and promotion contracts
         run: |
           node --test tests/security/enterprise-runtime-campaign-contract.test.mjs
+          node --test tests/security/final-eleven-runtime-proofs.test.mjs
           node --test tests/enterprise/runtime-lane-normalization.test.mjs
           node --test tests/enterprise/build-enterprise-evidence-manifest.test.mjs
           node --test tests/enterprise/promote-enterprise-scorecard.test.mjs
           node --test tests/enterprise/enterprise-promotion-closeout.test.mjs
+          node --test tests/enterprise/final-assurance-proof.test.mjs
+          node --test tests/enterprise/final-eleven-closeout.test.mjs
           npx vitest run tests/security/recovery-resilience-proof.test.ts
 
       - name: Execute enterprise runtime campaign
@@ -137,6 +140,8 @@ jobs:
           const fs = require('node:fs');
           const path = 'artifacts/enterprise-readiness/enterprise-promotion-closeout.json';
           const report = JSON.parse(fs.readFileSync(path, 'utf8'));
+          console.log(`Enterprise preliminary completion: ${report.preliminary?.completePercent ?? 'unknown'}%`);
+          console.log(`Final coherence promoted: ${report.coherencePromoted === true}`);
           console.log(`Enterprise completion: ${report.promoted?.completePercent ?? 'unknown'}%`);
           console.log(`Enterprise remaining: ${report.promoted?.remainingPercent ?? 'unknown'}%`);
           console.log(`Release decision: ${report.releaseDecision}`);
