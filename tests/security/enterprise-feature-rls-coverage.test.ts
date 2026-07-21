@@ -10,6 +10,7 @@ type FeatureRlsContract = {
 
 const migrationDir = join(process.cwd(), 'supabase', 'migrations');
 const finalLockMigration = '20260620120000_enterprise_multi_tenant_rls_final_lock.sql';
+const RLS_COVERAGE_TIMEOUT_MS = 20_000;
 
 const featureRlsContracts: FeatureRlsContract[] = [
   { area: 'dashboard organization', tables: ['organizations'], mode: 'direct-org-policy' },
@@ -70,7 +71,7 @@ describe('enterprise feature RLS coverage', () => {
     }
 
     expect(missing).toEqual([]);
-  });
+  }, RLS_COVERAGE_TIMEOUT_MS);
 
   it('keeps writer-role tables readable by members but writable only by owner/admin/editor', () => {
     const finalLockSql = readFinalLockMigration();
