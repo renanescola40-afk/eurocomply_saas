@@ -48,6 +48,7 @@ if (forbiddenCredentialContext.test(workflow)) {
   fail('workflow must not reference credential contexts');
 }
 
+// Reject tag-based action references even when an older merge-base validator expected them.
 const floatingAction = /^\s*uses:\s+[^\s#]+@v\d+(?:\.\d+){0,2}\s*(?:#.*)?$/m;
 if (floatingAction.test(workflow)) {
   fail('workflow actions must be pinned to immutable commit SHAs');
