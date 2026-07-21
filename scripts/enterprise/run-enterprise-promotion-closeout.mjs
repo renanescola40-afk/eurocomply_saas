@@ -8,13 +8,18 @@ import { pathToFileURL } from 'node:url';
 import { buildManifest } from './build-enterprise-evidence-manifest.mjs';
 import { buildScorecardBaselineEvidence } from './build-scorecard-baseline-evidence.mjs';
 import { promote } from './promote-enterprise-scorecard.mjs';
-import { EXPECTED_RUNTIME_LANES, RUNTIME_LANE_CONTRACTS } from './runtime-lane-contracts.mjs';
+import { RUNTIME_LANE_CONTRACTS } from './runtime-lane-contracts.mjs';
 import { normalizeLaneEvidence } from './runtime-lane-evidence-normalizer.mjs';
+import {
+  FULL_RUNTIME_PROFILE,
+  expectedDecisionForProfile,
+  expectedLanesForProfile,
+  resolveRuntimeCampaignProfile,
+} from './runtime-campaign-profiles.mjs';
 
 const CANONICAL_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const FINAL_COHERENCE_CONTROL = 'REL-10';
-const EXPECTED_LANES = EXPECTED_RUNTIME_LANES;
 
 function fail(message) { throw new Error(message); }
 function stable(value) {
@@ -24,15 +29,21 @@ function stable(value) {
 }
 function digest(value) { return createHash('sha256').update(value).digest('hex'); }
 
-function validateCampaign(campaign, targetSha) {
+function validateCampaign(campaign, targetSha, profile) {
+  const expectedLanes = expectedLanesForProfile(profile);
+  const expectedDecision = expectedDecisionForProfile(profile);
   if (campaign?.schema_version !== 2) fail('unsupported runtime campaign schema');
+  if (campaign.profile !== profile) fail('runtime campaign profile mismatch');
   if (campaign.release_sha !== targetSha || campaign.release_branch !== 'main') fail('runtime campaign exact-SHA provenance mismatch');
-  if (campaign.decision !== 'READY_FOR_EVIDENCE_PROMOTION') fail('runtime campaign is not ready for evidence promotion');
-  if (!Array.isArray(campaign.results) || campaign.results.length !== EXPECTED_LANES.length) fail(`runtime campaign must contain all ${EXPECTED_LANES.length} lanes`);
+  if (campaign.decision !== expectedDecision) fail(`runtime campaign is not ready for ${profile} evidence promotion`);
+  if (!Array.isArray(campaign.results) || campaign.results.length !== expectedLanes.length) {
+    fail(`runtime campaign must contain all ${expectedLanes.length} ${profile} lanes`);
+  }
   const byId = new Map();
   for (const result of campaign.results) {
     const contract = RUNTIME_LANE_CONTRACTS[result?.id];
     if (!contract || byId.has(result.id)) fail(`invalid or duplicate runtime lane: ${result?.id ?? 'missing'}`);
+    if (!expectedLanes.includes(result.id)) fail(`runtime lane ${result.id} is outside the ${profile} profile`);
     if (result.workflow !== contract.workflow) fail(`runtime lane ${result.id} workflow mismatch`);
     if (result.status !== 'complete' || result.conclusion !== 'success') fail(`runtime lane ${result.id} is not complete/success`);
     if (!Number.isSafeInteger(result.run_id) || result.run_id <= 0) fail(`runtime lane ${result.id} has an invalid run_id`);
@@ -41,8 +52,8 @@ function validateCampaign(campaign, targetSha) {
     if (!result.artifact_names.every((name) => String(name).startsWith(contract.artifactPrefix))) fail(`runtime lane ${result.id} artifact prefix mismatch`);
     byId.set(result.id, result);
   }
-  for (const lane of EXPECTED_LANES) if (!byId.has(lane)) fail(`runtime lane ${lane} is missing`);
-  return byId;
+  for (const lane of expectedLanes) if (!byId.has(lane)) fail(`runtime lane ${lane} is missing`);
+  return { byId, expectedLanes };
 }
 
 async function stageLaneEvidence({ runtimeRoot, stagingRoot, lane, campaignResult, targetSha, repository, generatedAt }) {
@@ -91,24 +102,27 @@ export function buildFinalCoherenceEvidence({ preliminaryPromotion, targetSha, r
   };
 }
 
-export async function runPromotionCloseout({ campaign, scorecard, runtimeRoot, stagingRoot, targetSha, repository, workflowRunId, generatedAt = new Date().toISOString() }) {
+export async function runPromotionCloseout({ campaign, scorecard, runtimeRoot, stagingRoot, targetSha, repository, workflowRunId, profile = FULL_RUNTIME_PROFILE, generatedAt = new Date().toISOString() }) {
+  const resolvedProfile = resolveRuntimeCampaignProfile(profile);
   if (!FULL_SHA.test(String(targetSha ?? ''))) fail('targetSha must be a full lowercase Git SHA');
   if (repository !== CANONICAL_REPOSITORY) fail('repository must be canonical');
   if (!/^\d+$/.test(String(workflowRunId ?? ''))) fail('workflowRunId must be numeric');
-  const campaignsById = validateCampaign(campaign, targetSha);
+  const { byId: campaignsById, expectedLanes } = validateCampaign(campaign, targetSha, resolvedProfile);
   await rm(stagingRoot, { recursive: true, force: true });
   await mkdir(path.join(stagingRoot, 'baseline'), { recursive: true });
   const baselineEvidence = buildScorecardBaselineEvidence({ scorecard, targetSha, repository, runId: workflowRunId, generatedAt });
   await writeFile(path.join(stagingRoot, 'baseline', 'canonical-scorecard-baseline.json'), `${JSON.stringify(baselineEvidence, null, 2)}\n`, { mode: 0o600 });
   const laneEvidenceCounts = {};
-  for (const lane of EXPECTED_LANES) {
+  for (const lane of expectedLanes) {
     laneEvidenceCounts[lane] = await stageLaneEvidence({ runtimeRoot, stagingRoot, lane, campaignResult: campaignsById.get(lane), targetSha, repository, generatedAt });
   }
 
   let manifest = buildManifest({ root: stagingRoot, targetSha, repository, generatedAt });
   if (manifest.summary.decision !== 'READY_FOR_PROMOTION') fail('assembled evidence manifest is not ready for promotion');
   const preliminaryPromotion = promote({ scorecard, evidenceManifest: manifest, targetSha, generatedAt });
-  const coherenceEvidence = buildFinalCoherenceEvidence({ preliminaryPromotion, targetSha, repository, workflowRunId, generatedAt });
+  const coherenceEvidence = resolvedProfile === FULL_RUNTIME_PROFILE
+    ? buildFinalCoherenceEvidence({ preliminaryPromotion, targetSha, repository, workflowRunId, generatedAt })
+    : null;
   if (coherenceEvidence) {
     const finalization = path.join(stagingRoot, 'finalization');
     await mkdir(finalization, { recursive: true });
@@ -116,12 +130,17 @@ export async function runPromotionCloseout({ campaign, scorecard, runtimeRoot, s
     manifest = buildManifest({ root: stagingRoot, targetSha, repository, generatedAt });
   }
   const promotion = promote({ scorecard, evidenceManifest: manifest, targetSha, generatedAt });
+  if (resolvedProfile !== FULL_RUNTIME_PROFILE && coherenceEvidence) fail('safe promotion must never generate final coherence evidence');
+  const closeoutDecision = resolvedProfile === FULL_RUNTIME_PROFILE
+    ? promotion.releaseDecision
+    : (promotion.rejectedEvidence.length === 0 ? 'SAFE_EVIDENCE_PROMOTED' : 'NO_GO');
   const closeout = {
-    schema: 'risck-comply.enterprise-promotion-closeout.v3',
+    schema: 'risck-comply.enterprise-promotion-closeout.v4',
     generatedAt,
     repository,
     targetSha,
     workflowRunId: String(workflowRunId),
+    profile: resolvedProfile,
     runtimeCampaignDecision: campaign.decision,
     evidenceManifestDecision: manifest.summary.decision,
     baseline: baselineEvidence.baseline,
@@ -129,6 +148,7 @@ export async function runPromotionCloseout({ campaign, scorecard, runtimeRoot, s
     coherencePromoted: Boolean(coherenceEvidence),
     promoted: promotion.score,
     promotedDeltaPercent: Number((promotion.score.completePercent - baselineEvidence.baseline.completedPercent).toFixed(1)),
+    closeoutDecision,
     releaseDecision: promotion.releaseDecision,
     criticalOpen: promotion.criticalOpen,
     rejectedEvidence: promotion.rejectedEvidence.length,
@@ -140,7 +160,9 @@ export async function runPromotionCloseout({ campaign, scorecard, runtimeRoot, s
       manifestSha256: manifest.integrity.sha256,
       promotionSha256: promotion.integrity.sha256,
     },
-    evidenceBoundary: 'This closeout promotes exact-SHA repository, provider, storage, security-event, recovery and independently reviewed assurance evidence. REL-10 is generated only when all other 99 controls pass with zero rejected evidence.',
+    evidenceBoundary: resolvedProfile === FULL_RUNTIME_PROFILE
+      ? 'This closeout promotes exact-SHA repository, provider, storage, security-event, recovery and independently reviewed assurance evidence. REL-10 is generated only when all other 99 controls pass with zero rejected evidence.'
+      : 'This safe closeout promotes only exact-SHA non-destructive runtime lanes. Recovery, external assurance and REL-10 remain excluded and cannot be inferred or self-promoted.',
   };
   return { manifest, preliminaryPromotion, promotion, coherenceEvidence, closeout };
 }
@@ -150,20 +172,22 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const required = ['campaign', 'scorecard', 'runtime-root', 'staging-root', 'sha', 'repository', 'run', 'manifest-output', 'promotion-output', 'closeout-output'];
   for (const key of required) if (!options[key]) fail(`missing --${key}`);
+  const profile = resolveRuntimeCampaignProfile(options.profile || FULL_RUNTIME_PROFILE);
   const closeoutOutput = path.resolve(options['closeout-output']);
   try {
     const campaign = JSON.parse(await readFile(path.resolve(options.campaign), 'utf8'));
     const scorecard = JSON.parse(await readFile(path.resolve(options.scorecard), 'utf8'));
-    const result = await runPromotionCloseout({ campaign, scorecard, runtimeRoot: path.resolve(options['runtime-root']), stagingRoot: path.resolve(options['staging-root']), targetSha: options.sha, repository: options.repository, workflowRunId: options.run });
+    const result = await runPromotionCloseout({ campaign, scorecard, runtimeRoot: path.resolve(options['runtime-root']), stagingRoot: path.resolve(options['staging-root']), targetSha: options.sha, repository: options.repository, workflowRunId: options.run, profile });
     for (const [outputPath, document] of [[options['manifest-output'], result.manifest], [options['promotion-output'], result.promotion], [options['closeout-output'], result.closeout]]) {
       const absolute = path.resolve(outputPath); await mkdir(path.dirname(absolute), { recursive: true }); await writeFile(absolute, `${JSON.stringify(document, null, 2)}\n`, { mode: 0o600 });
     }
-    console.log(JSON.stringify({ baseline: result.closeout.baseline, preliminary: result.closeout.preliminary, promoted: result.closeout.promoted, coherencePromoted: result.closeout.coherencePromoted, releaseDecision: result.closeout.releaseDecision }));
-    if (result.closeout.releaseDecision !== 'GO') process.exitCode = 2;
+    console.log(JSON.stringify({ profile, baseline: result.closeout.baseline, preliminary: result.closeout.preliminary, promoted: result.closeout.promoted, coherencePromoted: result.closeout.coherencePromoted, closeoutDecision: result.closeout.closeoutDecision, releaseDecision: result.closeout.releaseDecision }));
+    if (profile === FULL_RUNTIME_PROFILE && result.closeout.releaseDecision !== 'GO') process.exitCode = 2;
+    if (profile !== FULL_RUNTIME_PROFILE && result.closeout.closeoutDecision !== 'SAFE_EVIDENCE_PROMOTED') process.exitCode = 2;
   } catch (error) {
     const failure = error instanceof Error ? error.message.slice(0, 300) : 'unknown_error';
     await mkdir(path.dirname(closeoutOutput), { recursive: true });
-    await writeFile(closeoutOutput, `${JSON.stringify({ schema: 'risck-comply.enterprise-promotion-closeout.v3', generatedAt: new Date().toISOString(), repository: options.repository ?? null, targetSha: options.sha ?? null, releaseDecision: 'NO_GO', failures: [failure], evidenceIntegrity: { containsSensitiveValues: false } }, null, 2)}\n`, { mode: 0o600 });
+    await writeFile(closeoutOutput, `${JSON.stringify({ schema: 'risck-comply.enterprise-promotion-closeout.v4', generatedAt: new Date().toISOString(), repository: options.repository ?? null, targetSha: options.sha ?? null, profile, closeoutDecision: 'NO_GO', releaseDecision: 'NO_GO', failures: [failure], evidenceIntegrity: { containsSensitiveValues: false } }, null, 2)}\n`, { mode: 0o600 });
     console.error(failure); process.exitCode = 1;
   }
 }
