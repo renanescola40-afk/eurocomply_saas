@@ -3,6 +3,12 @@ export const PUBLIC_AUTH_ERROR_CODES = [
   'auth_configuration_unavailable',
   'auth_exchange_failed',
   'email_sign_in_failed',
+  'enterprise_sso_connection_not_found',
+  'enterprise_sso_not_entitled',
+  'enterprise_sso_preprovisioning_required',
+  'enterprise_sso_capacity_reached',
+  'enterprise_sso_access_denied',
+  'enterprise_sso_unavailable',
 ] as const;
 
 export type PublicAuthErrorCode = (typeof PUBLIC_AUTH_ERROR_CODES)[number];

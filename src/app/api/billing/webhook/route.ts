@@ -7,6 +7,7 @@ import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { getStripeClient } from '@/server/billing/stripe';
 import { handleStripeWebhookEventWithRecovery } from '@/server/billing/stripe-webhook-recovery';
 import { getStripeEventAuditContext } from '@/server/billing/stripe-webhooks';
+import { syncEnterpriseContractBillingEvent } from '@/server/enterprise/billing';
 import { noStoreJson } from '@/server/security/no-store';
 import { readBoundedRequestBody } from '@/server/security/read-bounded-request-body';
 
@@ -116,10 +117,25 @@ export async function POST(request: Request) {
   await recordBillingWebhookRouteAudit({ action: 'webhook_received', event });
 
   try {
+    const enterprise = await syncEnterpriseContractBillingEvent(event);
+    if (enterprise.matched) {
+      return noStoreJson({
+        received: true,
+        enterprise: true,
+        skipped: enterprise.outcome === 'duplicate',
+        duplicate: enterprise.outcome === 'duplicate',
+        unsupported: false,
+        contractId: enterprise.contractId,
+        contractStatus: enterprise.appliedStatus,
+        billingStatus: enterprise.billingStatus,
+      });
+    }
+
     const result = await handleStripeWebhookEventWithRecovery(event);
 
     return noStoreJson({
       received: true,
+      enterprise: false,
       skipped: result.skipped,
       duplicate: result.duplicate ?? false,
       unsupported: result.unsupported ?? false,

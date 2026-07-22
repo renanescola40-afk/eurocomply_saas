@@ -16,6 +16,7 @@ const allowedClasses = new Set([
   'tenant-scoped',
   'admin-only',
   'high-risk',
+  'integration',
   'webhook',
   'health/internal',
 ]);
