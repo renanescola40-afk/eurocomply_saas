@@ -7,6 +7,9 @@ const page = readFileSync('src/app/[locale]/dashboard/provider-data/page.tsx', '
 const tower = readFileSync('src/server/ai-governance/regulatory-control-tower.ts', 'utf8');
 const migration = readFileSync('supabase/migrations/20260722170000_provider_data_operational_workflow.sql', 'utf8');
 
+const directOrganizationFilters = queries.match(/\.eq\('organization_id'/g)?.length ?? 0;
+const tenantBoundRpcArguments = queries.match(/p_organization_id: input\.organizationId/g)?.length ?? 0;
+
 describe('high-risk provider data operational workflow', () => {
   it('enforces authentication, tenant context, RBAC, origin, Zod and fail-closed rate limiting', () => {
     expect(route).toContain('requireApiUser()');
@@ -19,9 +22,10 @@ describe('high-risk provider data operational workflow', () => {
     expect(route).toContain('security_control_unavailable');
   });
 
-  it('keeps all reads and direct writes tenant-scoped', () => {
-    expect(queries.match(/\.eq\('organization_id'/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
-    expect(queries).toContain('p_organization_id: input.organizationId');
+  it('keeps all reads, direct writes and RPC transitions tenant-scoped', () => {
+    expect(directOrganizationFilters).toBeGreaterThanOrEqual(7);
+    expect(tenantBoundRpcArguments).toBeGreaterThanOrEqual(2);
+    expect(route).toContain('listProviderDataSnapshot(organization.id)');
     expect(route).not.toContain('error.message');
   });
 
