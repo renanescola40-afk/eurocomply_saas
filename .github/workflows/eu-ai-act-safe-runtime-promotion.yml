@@ -1,0 +1,101 @@
+name: EU AI Act Safe Runtime Promotion
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/compliance/**'
+      - 'docs/compliance/**'
+      - '.github/workflows/eu-ai-act-safe-runtime-promotion.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eu-ai-act-safe-runtime-promotion-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  safe-runtime-promotion:
+    name: Generate exact-SHA safe runtime promotion
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      TARGET_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+      RUNTIME_EVIDENCE_ROOT: artifacts/eu-ai-act-safe-runtime-evidence
+      EU_AI_ACT_RUNTIME_EVIDENCE_ROOTS: artifacts/eu-ai-act-safe-runtime-evidence
+      EU_AI_ACT_COVERAGE_JSON: artifacts/eu-ai-act-safe-runtime-promotion/eu-ai-act-product-coverage.json
+      EU_AI_ACT_COVERAGE_MARKDOWN: artifacts/eu-ai-act-safe-runtime-promotion/eu-ai-act-product-coverage.md
+    steps:
+      - name: Checkout exact assessed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact assessed checkout
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Execute safe runtime contract suite
+        run: >-
+          npx vitest run
+          src/server/ai-governance/decision-engine.test.ts
+          src/server/ai-governance/deployer-obligations.test.ts
+          src/server/ai-governance/high-risk-provider-data-governance.test.ts
+          src/server/ai-governance/annex-iv-technical-documentation.test.ts
+          src/server/ai-governance/quality-management-system.test.ts
+          src/server/ai-governance/conformity-assessment.test.ts
+          src/server/ai-governance/gpai-compliance.test.ts
+          tests/prohibited-practices-operational-api-contract.test.ts
+          tests/prohibited-practices-operational-migration-contract.test.ts
+          tests/ai-literacy-api-contract.test.ts
+          tests/ai-literacy-ui-contract.test.ts
+          tests/fria-operational-api-contract.test.ts
+          tests/fria-operational-migration-contract.test.ts
+          tests/security/incident-operations-evidence.test.ts
+          tests/enterprise/public-ux-evidence.test.ts
+
+      - name: Generate exact-SHA evidence bundle
+        run: node scripts/compliance/generate-eu-ai-act-safe-runtime-bundle.mjs
+
+      - name: Generate promoted product coverage
+        run: node scripts/compliance/generate-eu-ai-act-product-coverage.mjs
+
+      - name: Enforce safe promotion ceiling and floor
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const report = JSON.parse(readFileSync(process.env.EU_AI_ACT_COVERAGE_JSON, 'utf8'));
+          if (report.targetSha !== process.env.TARGET_SHA) throw new Error('promoted report SHA mismatch');
+          if (report.scores.implementationCoverage !== 100) throw new Error('implementation coverage regressed');
+          if (report.scores.ciVerifiedCoverage !== 100) throw new Error('CI coverage regressed');
+          if (report.scores.runtimeEvidenceCoverage < 80 || report.scores.runtimeEvidenceCoverage >= 100) {
+            throw new Error(`unexpected safe runtime coverage: ${report.scores.runtimeEvidenceCoverage}`);
+          }
+          if (report.releaseDecision !== 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO') throw new Error('safe promotion must remain NO_GO');
+          NODE
+
+      - name: Upload sanitized safe runtime promotion
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: eu-ai-act-safe-runtime-promotion-${{ env.TARGET_SHA }}
+          path: |
+            artifacts/eu-ai-act-safe-runtime-evidence
+            artifacts/eu-ai-act-safe-runtime-promotion
+          retention-days: 90
+          if-no-files-found: error
