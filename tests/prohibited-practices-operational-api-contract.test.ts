@@ -6,6 +6,7 @@ const queries = readFileSync('src/server/queries/prohibited-practices.ts', 'utf8
 const page = readFileSync('src/app/[locale]/dashboard/prohibited-practices/page.tsx', 'utf8');
 const tower = readFileSync('src/server/ai-governance/regulatory-control-tower.ts', 'utf8');
 const migration = readFileSync('supabase/migrations/20260722130000_prohibited_practices_operational_workflow.sql', 'utf8');
+const counters = readFileSync('supabase/migrations/20260722130500_prohibited_practices_operational_counters.sql', 'utf8');
 
 describe('prohibited practices operational workflow', () => {
   it('enforces auth, tenant context, RBAC, origin, Zod and fail-closed rate limiting', () => {
@@ -34,13 +35,22 @@ describe('prohibited practices operational workflow', () => {
     expect(migration).toContain('from public, anon, authenticated');
   });
 
+  it('synchronizes evidence and parent review counters transactionally', () => {
+    expect(counters).toContain('sync_prohibited_practice_signal_evidence');
+    expect(counters).toContain('refresh_prohibited_practice_review');
+    expect(counters).toContain('evidence_count = v_count');
+    expect(counters).toContain("then 'approved'");
+    expect(counters).toContain('positive_signal_count = coalesce(v_positive, 0)');
+    expect(counters).toContain('unresolved_signal_count = coalesce(v_unresolved, 0)');
+  });
+
   it('approves atomically only after eight evidence-complete signal reviews', () => {
     expect(migration).toContain('approve_prohibited_practices_review_atomic');
     expect(migration).toContain('v_signal_count <> 8');
     expect(migration).toContain('v_ready_count <> 8');
     expect(migration).toContain('s.evidence_count > 0');
     expect(migration).toContain("s.status = 'approved'");
-    expect(migration).toContain("decision_type, outcome");
+    expect(migration).toContain('decision_type, outcome');
     expect(migration).toContain("'review_approved', 'approved'");
   });
 
