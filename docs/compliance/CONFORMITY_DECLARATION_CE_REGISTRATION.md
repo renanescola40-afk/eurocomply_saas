@@ -1,24 +1,7 @@
 # Conformity, EU Declaration, CE Marking and Registration
 
-## Purpose
+This lifecycle coordinates high-risk applicability, assessment route, notified-body evidence when required, risk-management approval, QMS approval, Annex IV approval, EU declaration, CE-marking evidence, EU registration and post-market handoff.
 
-Coordinate evidence preparation for conformity assessment, EU declaration of conformity, CE marking and EU database registration. The workspace is a governance system of record, not a notified body and not a legal authorization to place a system on the market.
+The engine blocks market-placement readiness when applicability is unresolved, prerequisites are incomplete, critical findings remain open or a material change requires reassessment. It advances sequentially through assessment, declaration, CE marking, registration and post-market monitoring.
 
-## Release gates
-
-Release remains blocked until applicability, assessment route, QMS linkage, Annex IV package, risk management, testing, notified-body involvement where required, declaration, CE marking, registration and change control are resolved.
-
-Each required step must have:
-
-- approved status;
-- accountable reviewer;
-- organisation-scoped evidence digest;
-- non-expired validity where a date applies.
-
-## Segregation of duties
-
-The preparer, independent reviewer and final approver must be recorded. Material changes create a new assessment version and invalidate stale release evidence.
-
-## Truth boundary
-
-The workflow does not issue certificates, declarations, CE marks or registrations and does not represent regulator or notified-body approval.
+A ready workflow is an internal evidence state. It is not certification, notified-body approval, regulator acceptance or legal authorisation to place a system on the market.

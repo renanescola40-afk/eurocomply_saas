@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { ANNEX_IV_SECTIONS, evaluateAnnexIvPackage } from './annex-iv-technical-documentation';
+import { buildAnnexIvExportManifest, decideAnnexIvDocumentation } from './annex-iv-technical-documentation';
 
-describe('Annex IV technical documentation', () => {
-  it('fails closed when sections are missing', () => {
-    expect(evaluateAnnexIvPackage([]).complete).toBe(false);
+const complete = { id: 'architecture', applicable: true, ownerId: 'owner', contentVersion: '1.0.0', evidenceIds: ['e1'], approvedBy: 'reviewer', approvedAt: '2026-07-22', materialChangeAfterApproval: false };
+
+describe('Annex IV documentation', () => {
+  it('blocks missing evidence and approval', () => {
+    const result = decideAnnexIvDocumentation([{ ...complete, evidenceIds: [], approvedBy: null }]);
+    expect(result.status).toBe('draft');
+    expect(result.blockers).toContain('architecture:evidence_missing');
   });
-
-  it('passes only with approved, reviewed and evidenced sections', () => {
-    const records = ANNEX_IV_SECTIONS.map((section) => ({ section, status: 'approved' as const, evidenceDigest: 'a'.repeat(64), reviewerId: 'reviewer' }));
-    expect(evaluateAnnexIvPackage(records).complete).toBe(true);
+  it('requires reassessment after material change', () => {
+    expect(decideAnnexIvDocumentation([{ ...complete, materialChangeAfterApproval: true }]).status).toBe('review_required');
+  });
+  it('emits a qualified export without regulator claims', () => {
+    expect(buildAnnexIvExportManifest('system-1', [complete])).toMatchObject({ status: 'approved', completeness: 100, regulatorApprovalClaimed: false });
   });
 });

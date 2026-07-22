@@ -1,21 +1,51 @@
-export const CONFORMITY_STEPS = [
-  'applicability','assessment_route','qms_link','technical_documentation','risk_management','testing_and_validation','notified_body','eu_declaration','ce_marking','eu_database_registration','change_control','market_release_authorisation',
-] as const;
+export type ConformityStage = 'assessment' | 'technical_file' | 'declaration' | 'ce_marking' | 'registration' | 'post_market';
 
-export type ConformityStep = (typeof CONFORMITY_STEPS)[number];
-export type ConformityRecord = { step: ConformityStep; required: boolean; status: 'missing'|'draft'|'reviewed'|'approved'|'not_applicable'; evidenceDigest?: string; reviewerId?: string; expiresAt?: string };
+export interface ConformityInput {
+  highRiskApplicable: boolean | null;
+  assessmentRoute?: 'internal_control' | 'notified_body' | null;
+  notifiedBodyRequired: boolean;
+  notifiedBodyEvidenceIds: string[];
+  annexIvApproved: boolean;
+  qmsApproved: boolean;
+  riskManagementApproved: boolean;
+  euDeclarationVersion?: string | null;
+  declarationApprovedBy?: string | null;
+  ceMarkingEvidenceIds: string[];
+  registrationEvidenceIds: string[];
+  openCriticalFindings: number;
+  materialChangePending: boolean;
+}
 
-export function evaluateConformityAssessment(records: ConformityRecord[], now = new Date()) {
-  const byStep = new Map(records.map((record) => [record.step, record]));
+export interface ConformityDecision {
+  stage: ConformityStage;
+  blockers: string[];
+  marketPlacementReady: boolean;
+}
+
+export function decideConformityLifecycle(input: ConformityInput): ConformityDecision {
   const blockers: string[] = [];
-  for (const step of CONFORMITY_STEPS) {
-    const record = byStep.get(step);
-    if (!record) { blockers.push(`${step}:missing`); continue; }
-    if (!record.required && record.status === 'not_applicable') continue;
-    if (record.status !== 'approved') blockers.push(`${step}:not_approved`);
-    if (!record.evidenceDigest) blockers.push(`${step}:evidence_missing`);
-    if (!record.reviewerId) blockers.push(`${step}:reviewer_missing`);
-    if (record.expiresAt && new Date(record.expiresAt) <= now) blockers.push(`${step}:expired`);
-  }
-  return { complete: blockers.length === 0, releaseAllowed: blockers.length === 0, blockers, evidenceBoundary: 'Readiness support only; this does not issue a declaration, CE mark, registration or regulator approval.' };
+  if (input.highRiskApplicable === null) blockers.push('high_risk_applicability_unresolved');
+  if (input.highRiskApplicable === false) return { stage: 'assessment', blockers, marketPlacementReady: false };
+  if (!input.assessmentRoute) blockers.push('assessment_route_missing');
+  if (input.notifiedBodyRequired && input.notifiedBodyEvidenceIds.length === 0) blockers.push('notified_body_evidence_missing');
+  if (!input.riskManagementApproved) blockers.push('risk_management_not_approved');
+  if (!input.qmsApproved) blockers.push('qms_not_approved');
+  if (!input.annexIvApproved) blockers.push('annex_iv_not_approved');
+  if (input.openCriticalFindings > 0) blockers.push('critical_findings_open');
+  if (input.materialChangePending) blockers.push('material_change_reassessment_required');
+  if (blockers.length) return { stage: 'assessment', blockers, marketPlacementReady: false };
+  if (!input.euDeclarationVersion || !input.declarationApprovedBy) return { stage: 'declaration', blockers: ['eu_declaration_incomplete'], marketPlacementReady: false };
+  if (input.ceMarkingEvidenceIds.length === 0) return { stage: 'ce_marking', blockers: ['ce_marking_evidence_missing'], marketPlacementReady: false };
+  if (input.registrationEvidenceIds.length === 0) return { stage: 'registration', blockers: ['eu_registration_evidence_missing'], marketPlacementReady: false };
+  return { stage: 'post_market', blockers: [], marketPlacementReady: true };
+}
+
+export function buildConformityEvidencePack(systemId: string, input: ConformityInput) {
+  const decision = decideConformityLifecycle(input);
+  return {
+    schema: 'risck-comply.conformity-evidence-pack.v1', systemId,
+    stage: decision.stage, blockers: decision.blockers,
+    marketPlacementReady: decision.marketPlacementReady,
+    certificationClaimed: false, regulatorApprovalClaimed: false,
+  };
 }

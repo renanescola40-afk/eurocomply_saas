@@ -1,13 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import { GPAI_OBLIGATIONS, evaluateGpaiCompliance } from './gpai-compliance';
+import { decideGpaiCompliance } from './gpai-compliance';
+
+const complete = {
+  isGeneralPurposeModel: true as const,
+  systemicRisk: true as const,
+  providerRoleConfirmed: true,
+  modelDocumentationEvidenceIds: ['doc'],
+  trainingContentSummaryEvidenceIds: ['summary'],
+  copyrightPolicyEvidenceIds: ['copyright'],
+  downstreamInformationEvidenceIds: ['downstream'],
+  evaluationEvidenceIds: ['eval'],
+  adversarialTestingEvidenceIds: ['red-team'],
+  incidentReportingConfigured: true,
+  cybersecurityControlsEvidenceIds: ['cyber'],
+  energyEfficiencyEvidenceIds: ['energy'],
+  codeOfPracticeAssessment: 'aligned' as const,
+  qualifiedReviewerId: 'reviewer',
+  approvedBy: 'approver',
+  materialChangePending: false,
+  openCriticalFindings: 0,
+};
 
 describe('GPAI compliance', () => {
-  it('fails closed for an EU GPAI profile without records', () => {
-    expect(evaluateGpaiCompliance({ systemicRisk: true, openSource: false, placedOnEuMarket: true }, []).complete).toBe(false);
+  it('fails closed on unresolved applicability', () => {
+    expect(decideGpaiCompliance({ ...complete, isGeneralPurposeModel: null }).status).toBe('assessment_required');
   });
-
-  it('passes a fully evidenced systemic-risk profile', () => {
-    const records = GPAI_OBLIGATIONS.map((obligation) => ({ obligation, applicable: true, status: 'approved' as const, evidenceDigest: 'c'.repeat(64), accountableOwnerId: 'owner' }));
-    expect(evaluateGpaiCompliance({ systemicRisk: true, openSource: false, placedOnEuMarket: true }, records).complete).toBe(true);
+  it('requires systemic-risk evaluation evidence', () => {
+    expect(decideGpaiCompliance({ ...complete, adversarialTestingEvidenceIds: [] }).blockers).toContain('adversarial_testing_missing');
+  });
+  it('reaches review-ready only with qualified evidence', () => {
+    expect(decideGpaiCompliance(complete)).toEqual({ status: 'ready_for_review', blockers: [], systemicRiskControlsRequired: true });
   });
 });

@@ -1,27 +1,7 @@
 # Annex IV Technical Documentation
 
-## Purpose
+The Annex IV workflow organises versioned technical documentation for each AI system across general description, intended purpose, versions, architecture, development, data, testing, performance, limitations, risks, human oversight, cybersecurity, logging, monitoring, change history and provider documentation.
 
-Provide a versioned, evidence-backed workspace for preparing the technical documentation required for high-risk AI systems. The workflow supports readiness and procurement evidence; it does not certify completeness or replace qualified conformity review.
+Every applicable section requires an owner, content version, linked evidence and accountable approval. Material changes invalidate prior readiness and require reassessment. The export manifest reports completeness and evidence counts without claiming certification, regulator approval or official issuance.
 
-## Mandatory package
-
-The package covers system description, architecture, development process, monitoring and control, risk management, data governance, performance, cybersecurity, human oversight, change management, standards and post-market monitoring.
-
-## Approval boundary
-
-Every section must be approved, independently reviewed and linked to evidence with a digest. Missing sections, draft content, absent reviewers or absent evidence block package approval.
-
-## Lifecycle
-
-1. Create a versioned package.
-2. Assign accountable owner and independent reviewer.
-3. Complete all canonical sections.
-4. Attach organisation-scoped evidence.
-5. Resolve findings and freeze a package digest.
-6. Approve the package through segregation of duties.
-7. Reopen a new version after material system change.
-
-## Truth boundary
-
-This workflow does not validate technical accuracy, conformity, lawful market placement or regulator acceptance.
+The workflow prepares a reviewable technical file; it does not establish conformity by itself.
