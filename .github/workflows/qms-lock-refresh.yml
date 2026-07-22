@@ -1,23 +1,23 @@
 name: QMS dependency lock refresh
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/qms-capa-audit-management-review-operational-megapack
-    paths:
-      - .github/workflows/qms-lock-refresh.yml
+      - main
 
 permissions:
   contents: write
 
 jobs:
   refresh:
+    if: github.head_ref == 'agent/qms-capa-audit-management-review-operational-megapack'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout branch
+      - name: Checkout PR head
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.head_ref }}
           persist-credentials: true
 
       - name: Setup Node.js
