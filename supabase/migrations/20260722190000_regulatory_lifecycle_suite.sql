@@ -53,6 +53,35 @@ alter table public.ai_regulatory_program_decisions force row level security;
 revoke all on public.ai_regulatory_programs, public.ai_regulatory_program_controls, public.ai_regulatory_program_decisions from public, anon, authenticated;
 grant all on public.ai_regulatory_programs, public.ai_regulatory_program_controls, public.ai_regulatory_program_decisions to service_role;
 
+-- Explicit deny-by-default policies satisfy operation-complete RLS coverage while
+-- preserving the service-role-only backend boundary. FORCE RLS remains enabled.
+drop policy if exists rls_ai_regulatory_programs_select_backend_only on public.ai_regulatory_programs;
+drop policy if exists rls_ai_regulatory_programs_insert_backend_only on public.ai_regulatory_programs;
+drop policy if exists rls_ai_regulatory_programs_update_backend_only on public.ai_regulatory_programs;
+drop policy if exists rls_ai_regulatory_programs_delete_backend_only on public.ai_regulatory_programs;
+create policy rls_ai_regulatory_programs_select_backend_only on public.ai_regulatory_programs for select to authenticated using (false);
+create policy rls_ai_regulatory_programs_insert_backend_only on public.ai_regulatory_programs for insert to authenticated with check (false);
+create policy rls_ai_regulatory_programs_update_backend_only on public.ai_regulatory_programs for update to authenticated using (false) with check (false);
+create policy rls_ai_regulatory_programs_delete_backend_only on public.ai_regulatory_programs for delete to authenticated using (false);
+
+drop policy if exists rls_ai_regulatory_program_controls_select_backend_only on public.ai_regulatory_program_controls;
+drop policy if exists rls_ai_regulatory_program_controls_insert_backend_only on public.ai_regulatory_program_controls;
+drop policy if exists rls_ai_regulatory_program_controls_update_backend_only on public.ai_regulatory_program_controls;
+drop policy if exists rls_ai_regulatory_program_controls_delete_backend_only on public.ai_regulatory_program_controls;
+create policy rls_ai_regulatory_program_controls_select_backend_only on public.ai_regulatory_program_controls for select to authenticated using (false);
+create policy rls_ai_regulatory_program_controls_insert_backend_only on public.ai_regulatory_program_controls for insert to authenticated with check (false);
+create policy rls_ai_regulatory_program_controls_update_backend_only on public.ai_regulatory_program_controls for update to authenticated using (false) with check (false);
+create policy rls_ai_regulatory_program_controls_delete_backend_only on public.ai_regulatory_program_controls for delete to authenticated using (false);
+
+drop policy if exists rls_ai_regulatory_program_decisions_select_backend_only on public.ai_regulatory_program_decisions;
+drop policy if exists rls_ai_regulatory_program_decisions_insert_backend_only on public.ai_regulatory_program_decisions;
+drop policy if exists rls_ai_regulatory_program_decisions_update_backend_only on public.ai_regulatory_program_decisions;
+drop policy if exists rls_ai_regulatory_program_decisions_delete_backend_only on public.ai_regulatory_program_decisions;
+create policy rls_ai_regulatory_program_decisions_select_backend_only on public.ai_regulatory_program_decisions for select to authenticated using (false);
+create policy rls_ai_regulatory_program_decisions_insert_backend_only on public.ai_regulatory_program_decisions for insert to authenticated with check (false);
+create policy rls_ai_regulatory_program_decisions_update_backend_only on public.ai_regulatory_program_decisions for update to authenticated using (false) with check (false);
+create policy rls_ai_regulatory_program_decisions_delete_backend_only on public.ai_regulatory_program_decisions for delete to authenticated using (false);
+
 create or replace function public.create_ai_regulatory_program_atomic(
   p_organization_id uuid, p_actor_user_id uuid, p_workstream text, p_system_reference text
 ) returns table (outcome text, program jsonb)
