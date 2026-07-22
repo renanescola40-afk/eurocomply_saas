@@ -1,0 +1,37 @@
+{
+  "schema": "risck-comply.enterprise-evidence-closure-registry.v1",
+  "sourceRegistry": "docs/compliance/eu-ai-act-product-coverage-registry.json",
+  "policy": {
+    "exactShaRequired": true,
+    "placeholdersForbidden": true,
+    "runtimeStatus": "passed",
+    "humanReviewStatus": "accepted",
+    "maxRuntimeAgeDays": 90,
+    "requireIntegrityDigest": true
+  },
+  "requirements": [
+    {"id":"LEGAL-RULES-REVIEW","workstream":"LEGAL-RULES","kind":"human_review","path":"docs/compliance/evidence/accepted/legal-rules-qualified-review.json"},
+    {"id":"SCOPE-RUNTIME","workstream":"SCOPE-CLASSIFICATION","kind":"runtime","path":"docs/security/evidence/runtime/authorization-bola-validation.json"},
+    {"id":"PROHIBITED-RUNTIME","workstream":"PROHIBITED-PRACTICES","kind":"runtime","path":"docs/security/evidence/runtime/prohibited-practices-validation.json"},
+    {"id":"PROHIBITED-REVIEW","workstream":"PROHIBITED-PRACTICES","kind":"human_review","path":"docs/compliance/evidence/accepted/prohibited-practices-legal-review.json"},
+    {"id":"AI-LITERACY-RUNTIME","workstream":"AI-LITERACY","kind":"runtime","path":"docs/security/evidence/runtime/ai-literacy-validation.json"},
+    {"id":"ARTICLE-50-RUNTIME","workstream":"ARTICLE-50","kind":"runtime","path":"docs/security/evidence/runtime/localization-validation.json"},
+    {"id":"ARTICLE-50-REVIEW","workstream":"ARTICLE-50","kind":"human_review","path":"docs/compliance/evidence/accepted/article-50-copy-review.json"},
+    {"id":"READINESS-RUNTIME","workstream":"READINESS-SCORING","kind":"runtime","path":"artifacts/enterprise-readiness/enterprise-readiness-scorecard.json"},
+    {"id":"FRIA-RUNTIME","workstream":"FRIA","kind":"runtime","path":"docs/security/evidence/runtime/fria-operational-validation.json"},
+    {"id":"FRIA-REVIEW","workstream":"FRIA","kind":"human_review","path":"docs/compliance/evidence/accepted/fria-methodology-review.json"},
+    {"id":"DEPLOYER-RUNTIME","workstream":"DEPLOYER","kind":"runtime","path":"docs/security/evidence/runtime/deployer-obligations-validation.json"},
+    {"id":"DEPLOYER-REVIEW","workstream":"DEPLOYER","kind":"human_review","path":"docs/compliance/evidence/accepted/deployer-obligations-legal-review.json"},
+    {"id":"PROVIDER-RUNTIME","workstream":"HIGH-RISK-PROVIDER","kind":"runtime","path":"docs/security/evidence/runtime/high-risk-provider-validation.json"},
+    {"id":"PROVIDER-REVIEW","workstream":"HIGH-RISK-PROVIDER","kind":"human_review","path":"docs/compliance/evidence/accepted/high-risk-provider-methodology-review.json"},
+    {"id":"ANNEX-IV-RUNTIME","workstream":"ANNEX-IV","kind":"runtime","path":"docs/security/evidence/runtime/annex-iv-validation.json"},
+    {"id":"QMS-RUNTIME","workstream":"QMS","kind":"runtime","path":"docs/security/evidence/runtime/qms-validation.json"},
+    {"id":"CONFORMITY-RUNTIME","workstream":"CONFORMITY","kind":"runtime","path":"docs/security/evidence/runtime/conformity-validation.json"},
+    {"id":"CONFORMITY-REVIEW","workstream":"CONFORMITY","kind":"human_review","path":"docs/compliance/evidence/accepted/conformity-qualified-review.json"},
+    {"id":"POST-MARKET-RUNTIME","workstream":"POST-MARKET","kind":"runtime","path":"docs/security/evidence/release/incident-response-validation.json"},
+    {"id":"GPAI-RUNTIME","workstream":"GPAI","kind":"runtime","path":"docs/security/evidence/runtime/gpai-validation.json"},
+    {"id":"GPAI-REVIEW","workstream":"GPAI","kind":"human_review","path":"docs/compliance/evidence/accepted/gpai-legal-review.json"},
+    {"id":"VENDOR-RUNTIME","workstream":"VENDOR-ASSURANCE","kind":"runtime","path":"docs/security/evidence/runtime/provider-failure-classification.json"},
+    {"id":"PLATFORM-RUNTIME","workstream":"PLATFORM-CONTROLS","kind":"runtime","path":"docs/security/evidence/runtime/branch-protection-validation.json"}
+  ]
+}

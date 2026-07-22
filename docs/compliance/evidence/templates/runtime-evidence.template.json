@@ -1,0 +1,15 @@
+{
+  "schema": "risck-comply.runtime-evidence.v1",
+  "status": "passed",
+  "exactSha": "0000000000000000000000000000000000000000",
+  "recordedAt": "2026-01-01T00:00:00.000Z",
+  "environment": "isolated-production-like",
+  "proofType": "two-tenant-positive-negative",
+  "assertions": [
+    {"id":"positive-path","status":"passed","details":"Replace with retained proof output."},
+    {"id":"cross-tenant-denial","status":"passed","details":"Replace with retained denial output."}
+  ],
+  "artifacts": [],
+  "integrity": {"sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+  "disclaimer": "Template only. Copy to a staging directory, replace every value and validate before promotion."
+}

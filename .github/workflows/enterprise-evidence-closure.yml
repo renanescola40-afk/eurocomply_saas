@@ -1,0 +1,82 @@
+name: Enterprise Evidence Closure
+
+on:
+  pull_request:
+    paths:
+      - 'docs/compliance/evidence/**'
+      - 'docs/security/evidence/**'
+      - 'scripts/compliance/**'
+      - 'tests/compliance/**'
+      - '.github/workflows/enterprise-evidence-closure.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/compliance/evidence/**'
+      - 'docs/security/evidence/**'
+      - 'scripts/compliance/**'
+      - 'tests/compliance/**'
+      - '.github/workflows/enterprise-evidence-closure.yml'
+  workflow_dispatch:
+    inputs:
+      strict:
+        description: 'Fail when any canonical evidence is missing or invalid'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enterprise-evidence-closure-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Contract tests
+        run: node --test tests/compliance/enterprise-evidence-closure-control-plane.test.mjs
+      - name: Generate prioritized gap report
+        run: node scripts/compliance/generate-enterprise-evidence-gap-report.mjs
+      - name: Validate existing evidence in report mode
+        run: node scripts/compliance/validate-enterprise-evidence-closure.mjs
+      - name: Upload exact-SHA closure report
+        uses: actions/upload-artifact@v7
+        with:
+          name: enterprise-evidence-closure-${{ github.sha }}
+          path: artifacts/enterprise-evidence-closure
+          if-no-files-found: error
+          retention-days: 30
+
+  strict-closure:
+    if: github.event_name == 'workflow_dispatch' && inputs.strict
+    environment: enterprise-runtime-proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Enforce complete exact-SHA evidence closure
+        env:
+          EVIDENCE_EXACT_SHA: ${{ github.sha }}
+        run: node scripts/compliance/validate-enterprise-evidence-closure.mjs --strict
+      - name: Upload strict closure decision
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: enterprise-evidence-strict-closure-${{ github.sha }}
+          path: artifacts/enterprise-evidence-closure
+          if-no-files-found: warn
+          retention-days: 90

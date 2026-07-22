@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://risckcomply.example/schemas/runtime-evidence.v1.json",
+  "title": "RISCK COMPLY Runtime Evidence",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "status", "exactSha", "recordedAt", "environment", "proofType", "assertions", "integrity"],
+  "properties": {
+    "schema": {"const": "risck-comply.runtime-evidence.v1"},
+    "status": {"const": "passed"},
+    "exactSha": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "recordedAt": {"type": "string", "format": "date-time"},
+    "environment": {"type": "string", "minLength": 3},
+    "proofType": {"type": "string", "minLength": 3},
+    "assertions": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["id", "status"]}},
+    "integrity": {"type": "object", "required": ["sha256"], "properties": {"sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}
+  }
+}

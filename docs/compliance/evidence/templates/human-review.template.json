@@ -1,0 +1,17 @@
+{
+  "schema": "risck-comply.qualified-human-review.v1",
+  "status": "accepted",
+  "exactSha": "0000000000000000000000000000000000000000",
+  "reviewedAt": "2026-01-01T00:00:00.000Z",
+  "scope": "Replace with the exact methodology, ruleset, copy or control scope reviewed.",
+  "conclusion": "Replace with the qualified review conclusion and any limitations.",
+  "reviewer": {
+    "name": "Replace with reviewer name",
+    "qualification": "Replace with relevant legal, technical, statistical or rights qualification",
+    "organization": "Replace with reviewer organization",
+    "independent": true
+  },
+  "limitations": [],
+  "integrity": {"sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+  "disclaimer": "Template only. A repository contributor cannot self-attest qualified external review without supporting records."
+}
