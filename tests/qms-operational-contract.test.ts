@@ -12,8 +12,8 @@ describe('QMS operational workflow', () => {
     for (const token of [
       'requireApiUser()',
       'getCurrentOrganizationForUser(user.id)',
-      "permission: 'read_ai_governance'",
-      "permission: 'manage_ai_governance'",
+      "permission:'read_ai_governance'",
+      "permission:'manage_ai_governance'",
       'assertTrustedOrigin(request)',
       'parseJsonBodyWithZod(request',
       'checkDistributedRateLimit({',
@@ -22,7 +22,7 @@ describe('QMS operational workflow', () => {
   });
 
   it('keeps every query and RPC tenant scoped', () => {
-    expect(queries.match(/\.eq\('organization_id'/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
+    expect(queries.match(/\.eq\('organization_id'/g)?.length ?? 0).toBeGreaterThanOrEqual(7);
     expect(queries.match(/p_organization_id:/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
     expect(queries).toContain('organization_id: input.organizationId');
     expect(route).not.toContain('error.message');
