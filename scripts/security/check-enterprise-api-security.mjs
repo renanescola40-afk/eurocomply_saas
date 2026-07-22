@@ -77,8 +77,8 @@ const platformAdminRoutes = [
   /src\/app\/api\/platform\/.*\/route\.ts$/,
 ];
 
-const scimUserRoutes = [
-  /src\/app\/api\/scim\/v2\/Users(?:\/\[id\])?\/route\.ts$/,
+const scimResourceRoutes = [
+  /src\/app\/api\/scim\/v2\/(?:Users|Groups)(?:\/\[id\])?\/route\.ts$/,
 ];
 
 const publicMutationExemptions = [
@@ -274,8 +274,8 @@ function evaluatePlatformAdminContract(failures, source, path) {
   return true;
 }
 
-function evaluateScimUserContract(failures, source, path) {
-  if (!isAnyMatch(path, scimUserRoutes)) return false;
+function evaluateScimResourceContract(failures, source, path) {
+  if (!isAnyMatch(path, scimResourceRoutes)) return false;
 
   assertRequiredTokens(failures, source, path, 'SCIM bearer authority', [
     'authenticateScimRequest',
@@ -345,7 +345,7 @@ function evaluateRoute(filePath) {
     return failures;
   }
 
-  if (evaluateScimUserContract(failures, source, path)) {
+  if (evaluateScimResourceContract(failures, source, path)) {
     return failures;
   }
 
