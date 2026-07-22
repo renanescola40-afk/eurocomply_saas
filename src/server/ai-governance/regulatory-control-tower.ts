@@ -70,7 +70,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, {
     label: 'Fundamental Rights Impact Assessment',
     articleReference: 'Article 27',
     weight: 6,
-    route: null,
+    route: '/dashboard/fria',
   },
   prohibited_practices: {
     label: 'Prohibited Practices',
