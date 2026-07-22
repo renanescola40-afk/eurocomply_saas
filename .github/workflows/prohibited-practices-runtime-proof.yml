@@ -1,0 +1,58 @@
+name: Prohibited Practices Runtime Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      organization_a:
+        description: Tenant A UUID
+        required: true
+        type: string
+      organization_b:
+        description: Tenant B UUID
+        required: true
+        type: string
+      actor_a:
+        description: Tenant A member user UUID
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prohibited-practices-runtime-proof
+  cancel-in-progress: false
+
+jobs:
+  prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: enterprise-runtime-proof
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Require isolated database URL
+        env:
+          DATABASE_URL: ${{ secrets.ENTERPRISE_RUNTIME_PROOF_DATABASE_URL }}
+        run: |
+          test -n "$DATABASE_URL" || { echo 'ENTERPRISE_RUNTIME_PROOF_DATABASE_URL is required'; exit 1; }
+      - name: Run transactional two-tenant proof
+        env:
+          DATABASE_URL: ${{ secrets.ENTERPRISE_RUNTIME_PROOF_DATABASE_URL }}
+        run: |
+          mkdir -p artifacts/runtime
+          psql "$DATABASE_URL" \
+            --set=organization_a='${{ inputs.organization_a }}' \
+            --set=organization_b='${{ inputs.organization_b }}' \
+            --set=actor_a='${{ inputs.actor_a }}' \
+            --file=scripts/enterprise/prove-prohibited-practices-two-tenant.sql \
+            --no-psqlrc \
+            --csv | tee artifacts/runtime/prohibited-practices-two-tenant.csv
+      - name: Upload runtime evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: prohibited-practices-runtime-proof
+          path: artifacts/runtime/prohibited-practices-two-tenant.csv
+          if-no-files-found: error
+          retention-days: 30
