@@ -1,0 +1,69 @@
+name: EU AI Act Runtime Evidence Campaign
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact main SHA to assess
+        required: true
+        type: string
+      confirmation:
+        description: Type RUN_EU_AI_ACT_RUNTIME_EVIDENCE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  TARGET_SHA: ${{ inputs.target_sha }}
+
+jobs:
+  runtime-evidence:
+    name: Validate exact-SHA product runtime evidence
+    if: inputs.confirmation == 'RUN_EU_AI_ACT_RUNTIME_EVIDENCE'
+    runs-on: ubuntu-24.04
+    environment: production-eu-ai-act-runtime-evidence
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact target SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.target_sha }}
+          persist-credentials: false
+
+      - name: Verify exact current main SHA
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git fetch origin main --depth=1
+          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Run final CI workstream contracts
+        run: >-
+          npx vitest run
+          tests/prohibited-practices-operational-migration-contract.test.ts
+          tests/fria-operational-api-contract.test.ts
+          tests/security/incident-operations-evidence.test.ts
+          tests/security/enterprise-platform-access-boundary.test.ts
+          tests/compliance/eu-ai-act-runtime-evidence-campaign.test.mjs
+
+      - name: Generate fail-closed runtime evidence report
+        run: node scripts/compliance/validate-eu-ai-act-runtime-evidence.mjs
+
+      - name: Upload sanitized runtime gap report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: eu-ai-act-runtime-evidence-${{ inputs.target_sha }}
+          path: eu-ai-act-runtime-evidence-report.json
+          retention-days: 90
+          if-no-files-found: error
