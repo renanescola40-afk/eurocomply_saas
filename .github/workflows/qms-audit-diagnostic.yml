@@ -22,11 +22,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
-      - name: Print concise high and critical audit findings
+      - name: Build concise high and critical audit findings
         shell: bash
         run: |
           npm audit --json > audit.json || true
           node <<'NODE'
+          const fs = require('node:fs');
           const report = require('./audit.json');
           const items = Object.entries(report.vulnerabilities || {})
             .filter(([, value]) => ['high', 'critical'].includes(value.severity))
@@ -34,8 +35,17 @@ jobs:
               name,
               severity: value.severity,
               direct: value.isDirect,
-              via: (value.via || []).map((entry) => typeof entry === 'string' ? entry : `${entry.name}:${entry.range}`).join(','),
-              fix: value.fixAvailable === true ? 'available' : value.fixAvailable === false ? 'none' : JSON.stringify(value.fixAvailable),
+              via: (value.via || []).map((entry) => typeof entry === 'string' ? entry : `${entry.name}:${entry.range}`),
+              effects: value.effects || [],
+              range: value.range,
+              nodes: value.nodes || [],
+              fix: value.fixAvailable,
             }));
-          console.log(JSON.stringify({ count: items.length, items }, null, 2));
+          fs.writeFileSync('audit-summary.json', JSON.stringify({ count: items.length, items }, null, 2));
           NODE
+      - name: Upload concise audit findings
+        uses: actions/upload-artifact@v7
+        with:
+          name: qms-audit-summary
+          path: audit-summary.json
+          if-no-files-found: error
