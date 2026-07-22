@@ -82,7 +82,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, {
     label: 'High-Risk Provider Data Governance',
     articleReference: 'Article 10',
     weight: 9,
-    route: null,
+    route: '/dashboard/provider-data',
   },
   annex_iv: {
     label: 'Annex IV Technical Documentation',
