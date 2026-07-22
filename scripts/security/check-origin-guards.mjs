@@ -1,7 +1,9 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
-const apiRoot = join(process.cwd(), 'src', 'app', 'api');
+const root = process.cwd();
+const apiRoot = join(root, 'src', 'app', 'api');
+const inventoryPath = join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.md');
 const strict = process.env.ENFORCE_ORIGIN_GUARDS !== 'false';
 const mutatingExportRegex = /export\s+async\s+function\s+(POST|PUT|PATCH|DELETE)\s*\(/g;
 
@@ -26,15 +28,36 @@ function walk(dir) {
 }
 
 function normalizePath(path) {
-  return relative(process.cwd(), path).split(sep).join('/');
+  return relative(root, path).split(sep).join('/');
+}
+
+function readCredentialBoundIntegrationRoutes() {
+  if (!existsSync(inventoryPath)) return new Set();
+
+  const source = readFileSync(inventoryPath, 'utf8');
+  const routes = new Set();
+  const rowPattern = /^\|\s*`([^`]+route\.ts)`\s*\|\s*([^|]+?)\s*\|/gm;
+
+  for (const match of source.matchAll(rowPattern)) {
+    const route = match[1];
+    const routeClass = match[2].trim();
+    if (routeClass === 'integration') routes.add(route);
+  }
+
+  return routes;
 }
 
 function hasMutatingHandler(source) {
   return Array.from(source.matchAll(mutatingExportRegex)).length > 0;
 }
 
+const credentialBoundIntegrationRoutes = readCredentialBoundIntegrationRoutes();
+
 function isExempt(path) {
-  return exemptRoutePatterns.some((pattern) => pattern.test(path));
+  return (
+    exemptRoutePatterns.some((pattern) => pattern.test(path)) ||
+    credentialBoundIntegrationRoutes.has(path)
+  );
 }
 
 function hasOriginGuard(source) {
@@ -67,6 +90,7 @@ for (const route of routes) {
 console.log('EuroComply Origin/CSRF guard coverage check');
 console.log('-------------------------------------------');
 console.log(`Scanned ${routes.length} API route files.`);
+console.log(`Credential-bound integration exemptions: ${credentialBoundIntegrationRoutes.size}.`);
 
 if (findings.length > 0) {
   const message = strict ? 'Origin guard failures:' : 'Origin guard advisory findings:';
