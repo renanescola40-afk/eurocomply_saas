@@ -11,9 +11,10 @@ describe('Annex IV operational workflow', () => {
     for (const token of ['requireApiUser()', 'getCurrentOrganizationForUser(user.id)', "permission: 'read_ai_governance'", "permission: 'manage_ai_governance'", 'assertTrustedOrigin(request)', 'parseJsonBodyWithZod(request', 'checkDistributedRateLimit({', 'security_control_unavailable']) expect(route).toContain(token);
   });
 
-  it('keeps reads and writes tenant scoped', () => {
-    expect(queries.match(/\.eq\('organization_id'/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
-    expect(queries).toContain('p_organization_id: input.organizationId');
+  it('keeps reads and writes tenant scoped across direct queries and RPCs', () => {
+    expect(queries.match(/\.eq\('organization_id'/g)?.length ?? 0).toBeGreaterThanOrEqual(7);
+    expect(queries.match(/p_organization_id: input\.organizationId/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(route).toContain('getCurrentOrganizationForUser(user.id)');
     expect(route).toContain('startsWith(`${organization.id}/`)');
     expect(route).not.toContain('error.message');
   });
