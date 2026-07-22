@@ -5,6 +5,7 @@ const route = readFileSync('src/app/api/ai-governance/fria/route.ts', 'utf8');
 const queries = readFileSync('src/server/queries/fria.ts', 'utf8');
 const page = readFileSync('src/app/[locale]/dashboard/fria/page.tsx', 'utf8');
 const controlTower = readFileSync('src/server/ai-governance/regulatory-control-tower.ts', 'utf8');
+const evidenceGate = readFileSync('supabase/migrations/20260722121000_fria_approval_evidence_gate.sql', 'utf8');
 
 describe('FRIA operational API contract', () => {
   it('enforces auth, tenant context and explicit read/manage permissions', () => {
@@ -47,6 +48,16 @@ describe('FRIA operational API contract', () => {
     expect(route).not.toContain('metadata: { rationale: body.rationale }');
   });
 
+  it('requires usable tenant-scoped evidence for every required control', () => {
+    expect(queries).toContain('listFriaUsableEvidenceControlIds');
+    expect(queries).toContain(".eq('assessment_id', assessmentId)");
+    expect(queries).toContain(".in('status', ['submitted', 'accepted'])");
+    expect(evidenceGate).toContain('v_required_control_ids');
+    expect(evidenceGate).toContain('public.ai_fria_evidence');
+    expect(evidenceGate).toContain("evidence_record.status in ('submitted', 'accepted')");
+    expect(evidenceGate).toContain('requirements_not_met');
+  });
+
   it('requires an identified legal reviewer instead of inferring legal completion', () => {
     expect(route).toContain('legalReviewerId');
     expect(route).toContain('Legal reviewer is required.');
@@ -57,7 +68,9 @@ describe('FRIA operational API contract', () => {
   });
 
   it('scopes database operations and evidence paths by organization', () => {
-    expect(queries.match(/\.eq\('organization_id'/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
+    const organizationFilters = queries.match(/\.eq\('organization_id'/g) ?? [];
+    expect(organizationFilters).toHaveLength(8);
+    expect(queries).toContain(".eq('assessment_id', assessmentId)");
     expect(route).toContain("body.storageReference.startsWith(`${organization.id}/`)");
     expect(route).not.toContain('error.message');
   });
