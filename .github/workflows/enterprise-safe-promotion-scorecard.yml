@@ -1,0 +1,120 @@
+name: Enterprise Safe Promotion Scorecard
+
+run-name: Canonical safe promotion scorecard for ${{ github.event.workflow_run.head_sha }}
+
+on:
+  workflow_run:
+    workflows: [Enterprise Safe Runtime Bootstrap]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full current main SHA
+        required: true
+        type: string
+      source_run_id:
+        description: Successful Enterprise Safe Runtime Bootstrap run ID
+        required: true
+        type: string
+      confirmation:
+        description: Type IMPORT_SAFE_PROMOTION
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: enterprise-safe-promotion-scorecard-${{ inputs.release_sha || github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  canonicalize:
+    name: Validate and publish promoted canonical scorecard
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      ASSESSED_SHA: ${{ inputs.release_sha || github.event.workflow_run.head_sha }}
+      SOURCE_RUN_ID: ${{ inputs.source_run_id || github.event.workflow_run.id }}
+      MANUAL_CONFIRMATION: ${{ inputs.confirmation }}
+      BUNDLE_ROOT: artifacts/safe-promotion-source
+      OUTPUT_ROOT: artifacts/enterprise-readiness-promoted
+
+    steps:
+      - name: Validate exact current main source
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$ASSESSED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$MANUAL_CONFIRMATION" = "IMPORT_SAFE_PROMOTION"
+          fi
+          current_main="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+          test "$current_main" = "$ASSESSED_SHA"
+
+      - name: Checkout exact assessed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.ASSESSED_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$ASSESSED_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Download exact safe promotion bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: enterprise-safe-runtime-bootstrap-${{ env.ASSESSED_SHA }}
+          path: ${{ env.BUNDLE_ROOT }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.SOURCE_RUN_ID }}
+
+      - name: Validate canonical bridge contracts
+        run: node --test tests/enterprise/canonical-promoted-scorecard.test.mjs
+
+      - name: Build canonical promoted scorecard
+        run: |
+          set -euo pipefail
+          test -f "$BUNDLE_ROOT/enterprise-readiness/canonical-scorecard.json"
+          test -f "$BUNDLE_ROOT/enterprise-readiness/safe-scorecard-promotion-report.json"
+          test -f "$BUNDLE_ROOT/enterprise-readiness/safe-promotion-closeout.json"
+          node scripts/enterprise/build-canonical-promoted-scorecard.mjs \
+            --baseline "$BUNDLE_ROOT/enterprise-readiness/canonical-scorecard.json" \
+            --promotion "$BUNDLE_ROOT/enterprise-readiness/safe-scorecard-promotion-report.json" \
+            --closeout "$BUNDLE_ROOT/enterprise-readiness/safe-promotion-closeout.json" \
+            --sha "$ASSESSED_SHA" \
+            --run "$SOURCE_RUN_ID" \
+            --output "$OUTPUT_ROOT/enterprise-readiness-scorecard.json" \
+            --markdown "$OUTPUT_ROOT/enterprise-readiness-scorecard.md"
+
+      - name: Publish promoted scorecard summary
+        run: cat "$OUTPUT_ROOT/enterprise-readiness-scorecard.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload canonical promoted scorecard
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-readiness-promoted-scorecard-${{ env.ASSESSED_SHA }}
+          path: ${{ env.OUTPUT_ROOT }}/
+          if-no-files-found: error
+          retention-days: 90
