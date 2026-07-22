@@ -68,6 +68,8 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/scim/v2/Schemas/route.ts` | integration | Authenticated SCIM schema discovery with tenant-bound token, distributed rate limit and no-store response. |
 | `src/app/api/scim/v2/Users/route.ts` | integration | SCIM user create/list; bearer token supplies tenant, mutation body is bounded, seats are reserved transactionally and list/filter responses remain tenant-scoped. |
 | `src/app/api/scim/v2/Users/[id]/route.ts` | integration | SCIM user read/PATCH/DELETE; bearer tenant binding, bounded PatchOp, transactional seat change/reactivation and seat release on deactivation. |
+| `src/app/api/scim/v2/Groups/route.ts` | integration | SCIM group create/list; bearer token supplies the tenant boundary, mutation bodies are bounded, member identities are validated in the same organization and responses remain no-store. |
+| `src/app/api/scim/v2/Groups/[id]/route.ts` | integration | SCIM group read/PUT/DELETE; bearer tenant binding, atomic full-membership replacement, same-tenant active-member validation, distributed fail-closed rate limiting and no-store protocol responses. |
 | `src/app/api/security/settings/route.ts` | admin-only | Security settings mutation; manage_settings, step-up and audit required. |
 | `src/app/api/security/step-up/challenge/route.ts` | high-risk | Step-up challenge; auth, tenant context, origin and rate limit required. |
 | `src/app/api/security/step-up/verify/route.ts` | high-risk | Step-up verification; auth, tenant context, origin, rate limit, provider verification and audit required. |
