@@ -21,6 +21,10 @@ const groupSchema = z.object({
   members: z.array(z.object({ value: z.string().uuid() })).max(10000).default([]),
 });
 
+async function requireEnterpriseApiAccess(request: Request) {
+  return authenticateScimRequest(request);
+}
+
 function resource(group: Awaited<ReturnType<typeof upsertScimGroup>>, baseUrl: string) {
   return {
     schemas: [SCIM_GROUP_SCHEMA],
@@ -41,7 +45,7 @@ export async function GET(request: Request) {
   const rateLimited = await checkDistributedRateLimit(request, 'scim_group_list');
   if (rateLimited) return rateLimited;
   try {
-    const authentication = await authenticateScimRequest(request);
+    const authentication = await requireEnterpriseApiAccess(request);
     const groups = await listScimGroups(authentication);
     const baseUrl = new URL(request.url).origin;
     return noStoreJson({
@@ -60,7 +64,7 @@ export async function POST(request: Request) {
   const rateLimited = await checkDistributedRateLimit(request, 'scim_group_create');
   if (rateLimited) return rateLimited;
   try {
-    const authentication = await authenticateScimRequest(request);
+    const authentication = await requireEnterpriseApiAccess(request);
     const payload = await readBoundedJsonRequest(request, { maxBytes: MAX_GROUP_BODY_BYTES });
     const parsed = groupSchema.parse(payload);
     const group = await upsertScimGroup({
