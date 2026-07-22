@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://risckcomply.example/schemas/qualified-human-review.v1.json",
+  "title": "RISCK COMPLY Qualified Human Review",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "status", "exactSha", "reviewedAt", "scope", "conclusion", "reviewer", "integrity"],
+  "properties": {
+    "schema": {"const": "risck-comply.qualified-human-review.v1"},
+    "status": {"const": "accepted"},
+    "exactSha": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "reviewedAt": {"type": "string", "format": "date-time"},
+    "scope": {"type": "string", "minLength": 20},
+    "conclusion": {"type": "string", "minLength": 20},
+    "reviewer": {
+      "type": "object",
+      "required": ["name", "qualification", "independent"],
+      "properties": {
+        "name": {"type": "string", "minLength": 2},
+        "qualification": {"type": "string", "minLength": 10},
+        "independent": {"const": true}
+      }
+    },
+    "integrity": {"type": "object", "required": ["sha256"], "properties": {"sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}
+  }
+}
