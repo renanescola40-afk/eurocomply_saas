@@ -1,0 +1,116 @@
+name: Isolated Enterprise FRIA Database Proof
+
+run-name: Isolated enterprise and FRIA DB proof for ${{ inputs.release_sha || github.event.workflow_run.head_sha }}
+
+on:
+  workflow_run:
+    workflows: [Full Security Suite]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Optional full current main SHA; defaults to current main
+        required: false
+        type: string
+      confirmation:
+        description: Type RUN_ISOLATED_ENTERPRISE_FRIA_DB_PROOF
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: isolated-enterprise-fria-db-proof-${{ inputs.release_sha || github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  prove:
+    name: Apply migrations and validate isolated database boundaries
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      TARGET_SHA: ${{ inputs.release_sha || github.event.workflow_run.head_sha }}
+      ENTERPRISE_DB_PROOF_OUTPUT: artifacts/enterprise-db-proof/isolated-enterprise-fria-db-proof.json
+    steps:
+      - name: Resolve and validate exact current main SHA
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MANUAL_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$MANUAL_CONFIRMATION" = "RUN_ISOLATED_ENTERPRISE_FRIA_DB_PROOF"
+            if [ -z "$TARGET_SHA" ]; then
+              TARGET_SHA="$(curl --fail --silent --show-error \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H 'Accept: application/vnd.github+json' \
+                -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/main" | jq -r '.sha')"
+            fi
+          fi
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          echo "TARGET_SHA=$TARGET_SHA" >> "$GITHUB_ENV"
+
+      - name: Check out exact release SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Verify exact current main checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deterministic dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate proof contracts
+        run: |
+          node --check scripts/enterprise/verify-isolated-enterprise-fria-db.mjs
+          node --test tests/enterprise/isolated-enterprise-fria-db-proof.test.mjs
+          node --test tests/security/isolated-enterprise-fria-db-workflow.test.mjs
+
+      - name: Start ephemeral Supabase and apply all migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.39.2 start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+          npx --yes supabase@2.39.2 db reset --local --no-seed
+          npx --yes supabase@2.39.2 status -o env > artifacts-supabase.env
+          DATABASE_URL="$(sed -n 's/^DB_URL="\(.*\)"$/\1/p' artifacts-supabase.env)"
+          test -n "$DATABASE_URL"
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          rm -f artifacts-supabase.env
+
+      - name: Execute isolated database proof
+        run: node scripts/enterprise/verify-isolated-enterprise-fria-db.mjs
+
+      - name: Upload sanitized exact-SHA proof
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: isolated-enterprise-fria-db-proof-${{ env.TARGET_SHA }}
+          path: artifacts/enterprise-db-proof/isolated-enterprise-fria-db-proof.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Stop and remove ephemeral Supabase
+        if: always()
+        shell: bash
+        run: npx --yes supabase@2.39.2 stop --no-backup || true
