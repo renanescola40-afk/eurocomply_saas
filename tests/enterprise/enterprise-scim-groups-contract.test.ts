@@ -5,6 +5,7 @@ const migration = readFileSync('supabase/migrations/20260722103000_enterprise_sc
 const collection = readFileSync('src/app/api/scim/v2/Groups/route.ts', 'utf8');
 const resource = readFileSync('src/app/api/scim/v2/Groups/[id]/route.ts', 'utf8');
 const service = readFileSync('src/server/enterprise/scim-groups.ts', 'utf8');
+const routeInventory = readFileSync('docs/security/API_ROUTE_INVENTORY.md', 'utf8');
 
 describe('enterprise SCIM Groups', () => {
   it('persists groups and members with forced RLS and tenant ownership', () => {
@@ -38,5 +39,10 @@ describe('enterprise SCIM Groups', () => {
     expect(resource).toContain('export async function GET');
     expect(resource).toContain('export async function PUT');
     expect(resource).toContain('export async function DELETE');
+  });
+
+  it('classifies both SCIM Groups routes as tenant-bound integrations', () => {
+    expect(routeInventory).toContain('| `src/app/api/scim/v2/Groups/route.ts` | integration |');
+    expect(routeInventory).toContain('| `src/app/api/scim/v2/Groups/[id]/route.ts` | integration |');
   });
 });
