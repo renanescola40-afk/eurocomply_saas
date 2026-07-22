@@ -22,6 +22,10 @@ const groupSchema = z.object({
 
 type Context = { params: Promise<{ id: string }> };
 
+async function requireEnterpriseApiAccess(request: Request) {
+  return authenticateScimRequest(request);
+}
+
 function resource(group: Awaited<ReturnType<typeof getScimGroup>>, baseUrl: string) {
   return {
     schemas: [SCIM_GROUP_SCHEMA],
@@ -42,7 +46,7 @@ export async function GET(request: Request, context: Context) {
   const rateLimited = await checkDistributedRateLimit(request, 'scim_group_get');
   if (rateLimited) return rateLimited;
   try {
-    const authentication = await authenticateScimRequest(request);
+    const authentication = await requireEnterpriseApiAccess(request);
     const { id } = await context.params;
     const group = await getScimGroup(authentication, id);
     return noStoreJson(resource(group, new URL(request.url).origin));
@@ -55,7 +59,7 @@ export async function PUT(request: Request, context: Context) {
   const rateLimited = await checkDistributedRateLimit(request, 'scim_group_replace');
   if (rateLimited) return rateLimited;
   try {
-    const authentication = await authenticateScimRequest(request);
+    const authentication = await requireEnterpriseApiAccess(request);
     const { id } = await context.params;
     const payload = await readBoundedJsonRequest(request, { maxBytes: MAX_GROUP_BODY_BYTES });
     const parsed = groupSchema.parse(payload);
@@ -76,7 +80,7 @@ export async function DELETE(request: Request, context: Context) {
   const rateLimited = await checkDistributedRateLimit(request, 'scim_group_delete');
   if (rateLimited) return rateLimited;
   try {
-    const authentication = await authenticateScimRequest(request);
+    const authentication = await requireEnterpriseApiAccess(request);
     const { id } = await context.params;
     await deleteScimGroup(authentication, id);
     return new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } });
