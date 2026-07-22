@@ -1,0 +1,14 @@
+{
+  "schema": "risck-comply.qualified-review-campaign.v1",
+  "maxReviewAgeDays": 365,
+  "requirements": [
+    {"id":"legal-rules","workstream":"LEGAL-RULES","weight":4,"scope":"EU AI Act legal rules registry"},
+    {"id":"prohibited-practices","workstream":"PROHIBITED-PRACTICES","weight":7,"scope":"Article 5 methodology and exceptions"},
+    {"id":"article-50-copy","workstream":"ARTICLE-50","weight":8,"scope":"Article 50 transparency wording"},
+    {"id":"fria-methodology","workstream":"FRIA","weight":6,"scope":"Article 27 fundamental-rights methodology"},
+    {"id":"deployer-obligations","workstream":"DEPLOYER","weight":7,"scope":"Deployer obligation methodology"},
+    {"id":"high-risk-provider","workstream":"HIGH-RISK-PROVIDER","weight":9,"scope":"Article 10 data governance methodology"},
+    {"id":"conformity","workstream":"CONFORMITY","weight":5,"scope":"Conformity, declaration, CE and registration"},
+    {"id":"gpai","workstream":"GPAI","weight":5,"scope":"GPAI applicability and obligations"}
+  ]
+}
