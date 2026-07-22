@@ -1,0 +1,22 @@
+{
+  "schema": "risck-comply.eu-ai-act-runtime-evidence-registry.v1",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "decisionOnIncomplete": "EU_AI_ACT_RUNTIME_NO_GO",
+  "evidence": [
+    {"id":"SCOPE-CLASSIFICATION","weight":10,"path":"docs/security/evidence/runtime/authorization-bola-validation.json"},
+    {"id":"PROHIBITED-PRACTICES","weight":7,"path":"docs/security/evidence/runtime/prohibited-practices-validation.json"},
+    {"id":"AI-LITERACY","weight":6,"path":"docs/security/evidence/runtime/ai-literacy-validation.json"},
+    {"id":"ARTICLE-50","weight":8,"path":"docs/security/evidence/runtime/localization-validation.json"},
+    {"id":"READINESS-SCORING","weight":8,"path":"artifacts/enterprise-readiness/enterprise-readiness-scorecard.json"},
+    {"id":"FRIA","weight":6,"path":"docs/security/evidence/runtime/fria-operational-validation.json"},
+    {"id":"DEPLOYER","weight":7,"path":"docs/security/evidence/runtime/deployer-obligations-validation.json"},
+    {"id":"HIGH-RISK-PROVIDER","weight":9,"path":"docs/security/evidence/runtime/high-risk-provider-validation.json"},
+    {"id":"ANNEX-IV","weight":6,"path":"docs/security/evidence/runtime/annex-iv-validation.json"},
+    {"id":"QMS","weight":5,"path":"docs/security/evidence/runtime/qms-validation.json"},
+    {"id":"CONFORMITY","weight":5,"path":"docs/security/evidence/runtime/conformity-validation.json"},
+    {"id":"POST-MARKET","weight":6,"path":"docs/security/evidence/release/incident-response-validation.json"},
+    {"id":"GPAI","weight":5,"path":"docs/security/evidence/runtime/gpai-validation.json"},
+    {"id":"VENDOR-ASSURANCE","weight":4,"path":"docs/security/evidence/runtime/provider-failure-classification.json"},
+    {"id":"PLATFORM-CONTROLS","weight":4,"path":"docs/security/evidence/runtime/branch-protection-validation.json"}
+  ]
+}
