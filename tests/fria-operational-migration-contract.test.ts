@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 const base = readFileSync('supabase/migrations/20260722120000_fria_operational_workflow_hardening.sql', 'utf8');
 const legal = readFileSync('supabase/migrations/20260722120500_fria_legal_review_and_compensation_hardening.sql', 'utf8');
-const sql = `${base}\n${legal}`;
+const evidenceGate = readFileSync('supabase/migrations/20260722121000_fria_approval_evidence_gate.sql', 'utf8');
+const sql = `${base}\n${legal}\n${evidenceGate}`;
 
 describe('FRIA operational migration contract', () => {
   it('binds assessments to a system in the same organization', () => {
@@ -15,11 +16,11 @@ describe('FRIA operational migration contract', () => {
 
   it('enforces actor membership including the legal reviewer', () => {
     expect(legal).toContain('new.legal_reviewer_id');
-    expect(legal).toContain('public.organization_members');
+    expect(sql).toContain('public.organization_members');
     expect(legal).toContain('fria_user_not_organization_member');
     expect(legal).toContain('enforce_fria_assessment_member_scope');
-    expect(legal).toContain('enforce_fria_evidence_member_scope');
-    expect(legal).toContain('enforce_fria_decision_member_scope');
+    expect(base).toContain('enforce_fria_evidence_member_scope');
+    expect(base).toContain('enforce_fria_decision_member_scope');
   });
 
   it('provides authenticated read-only RLS and blocks direct writes', () => {
@@ -42,26 +43,35 @@ describe('FRIA operational migration contract', () => {
   });
 
   it('uses optimistic concurrency and recorded approver identity', () => {
-    expect(legal).toContain('p_expected_updated_at timestamptz');
-    expect(legal).toContain('v_current.updated_at is distinct from p_expected_updated_at');
-    expect(legal).toContain('v_current.approver_id is distinct from p_actor_user_id');
-    expect(legal).toContain("return query select 'state_changed'");
-    expect(legal).toContain("return query select 'approver_required'");
+    expect(evidenceGate).toContain('p_expected_updated_at timestamptz');
+    expect(evidenceGate).toContain('v_current.updated_at is distinct from p_expected_updated_at');
+    expect(evidenceGate).toContain('v_current.approver_id is distinct from p_actor_user_id');
+    expect(evidenceGate).toContain("return query select 'state_changed'");
+    expect(evidenceGate).toContain("return query select 'approver_required'");
   });
 
   it('requires accountable legal review for non-applicability and severe residual impact', () => {
     expect(legal).toContain('legal_reviewer_id uuid');
     expect(legal).toContain('ai_fria_legal_review_actor_required');
-    expect(legal).toContain("v_current.applicability = 'not_required'");
-    expect(legal).toContain("v_current.highest_residual_impact in ('high', 'critical')");
-    expect(legal).toContain('v_current.legal_review_completed_at is null');
+    expect(evidenceGate).toContain("v_current.applicability = 'not_required'");
+    expect(evidenceGate).toContain("v_current.highest_residual_impact in ('high', 'critical')");
+    expect(evidenceGate).toContain('v_current.legal_review_completed_at is null');
+  });
+
+  it('requires usable evidence for every required control', () => {
+    expect(evidenceGate).toContain('v_required_control_ids');
+    expect(evidenceGate).toContain('pg_catalog.unnest(v_required_control_ids)');
+    expect(evidenceGate).toContain('public.ai_fria_evidence');
+    expect(evidenceGate).toContain("evidence_record.status in ('submitted', 'accepted')");
+    expect(evidenceGate).toContain('evidence_record.organization_id = p_organization_id');
+    expect(evidenceGate).toContain('evidence_record.assessment_id = p_assessment_id');
   });
 
   it('persists approval and decision atomically', () => {
-    expect(legal).toContain("stage = 'approved'");
-    expect(legal).toContain('insert into public.ai_fria_decisions');
-    expect(legal).toContain("'approved'");
-    expect(legal).toContain('returning id into v_decision_id');
+    expect(evidenceGate).toContain("stage = 'approved'");
+    expect(evidenceGate).toContain('insert into public.ai_fria_decisions');
+    expect(evidenceGate).toContain("'approved'");
+    expect(evidenceGate).toContain('returning id into v_decision_id');
   });
 
   it('compensates only the exact approved state and decision', () => {
