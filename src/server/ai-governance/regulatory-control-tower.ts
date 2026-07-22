@@ -76,7 +76,7 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, {
     label: 'Prohibited Practices',
     articleReference: 'Article 5',
     weight: 7,
-    route: null,
+    route: '/dashboard/prohibited-practices',
   },
   high_risk_provider_data: {
     label: 'High-Risk Provider Data Governance',
@@ -151,12 +151,8 @@ export function buildRegulatoryControlTower(input: RegulatoryControlTowerInput):
   });
 
   const totalWeight = workstreams.reduce((total, item) => total + item.weight, 0);
-  const activatedWeight = workstreams
-    .filter((item) => item.status !== 'not_started')
-    .reduce((total, item) => total + item.weight, 0);
-  const readyWeight = workstreams
-    .filter((item) => item.status === 'ready' || item.status === 'not_applicable')
-    .reduce((total, item) => total + item.weight, 0);
+  const activatedWeight = workstreams.filter((item) => item.status !== 'not_started').reduce((total, item) => total + item.weight, 0);
+  const readyWeight = workstreams.filter((item) => item.status === 'ready' || item.status === 'not_applicable').reduce((total, item) => total + item.weight, 0);
   const blocked = workstreams.filter((item) => item.status === 'blocked');
   const inProgress = workstreams.filter((item) => item.status === 'in_progress');
   const notStarted = workstreams.filter((item) => item.status === 'not_started');
@@ -183,9 +179,7 @@ export function buildRegulatoryControlTower(input: RegulatoryControlTowerInput):
     notApplicableCount: notApplicable.length,
     workstreams,
     blockingWorkstreamIds: blocked.map((item) => item.id),
-    requiredActions: workstreams
-      .map((item) => item.requiredAction)
-      .filter((action): action is string => Boolean(action)),
+    requiredActions: workstreams.map((item) => item.requiredAction).filter((action): action is string => Boolean(action)),
     evidenceBoundary: 'This control tower aggregates persisted workflow lifecycle states for operational visibility. It does not validate underlying evidence, certify compliance, authorize market placement or replace legal, technical or conformity assessment review.',
   };
 }
