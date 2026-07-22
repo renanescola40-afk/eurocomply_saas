@@ -10,6 +10,7 @@ describe('enterprise platform and SCIM security gate contracts', () => {
     expect(checker).toContain("'requirePlatformCapability'");
     expect(checker).toContain("'requireTrustedMutation'");
     expect(checker).toContain("failureMode: 'fail-closed'");
+    expect(checker).toContain("path.includes('[organizationId]')");
   });
 
   it('requires bearer-bound SCIM authority and bounded mutable payloads', () => {
@@ -17,5 +18,6 @@ describe('enterprise platform and SCIM security gate contracts', () => {
     expect(checker).toContain("'authenticateScimRequest'");
     expect(checker).toContain("'checkDistributedRateLimit'");
     expect(checker).toContain("'readBoundedJsonRequest'");
+    expect(checker).toContain("'noStoreJson'");
   });
 });
