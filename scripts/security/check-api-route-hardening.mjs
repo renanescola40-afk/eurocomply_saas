@@ -108,7 +108,7 @@ function classify(relativePath, source) {
   if (hasAny(source, ADMIN_TERMS) || /\/(admin|team|security\/settings)\//.test(relativePath)) return 'admin-only';
   if (hasAny(relativePath, HIGH_RISK_TERMS) || hasAny(source, HIGH_RISK_TERMS)) return 'high-risk';
   if (hasAny(source, TENANT_TERMS) || hasAny(relativePath, TENANT_TERMS)) return 'tenant-scoped';
-  if (hasAny(source, ['requireApiUser', 'getCurrentUser', 'requireAuthenticatedUser', 'requireCurrentUser', 'requireOrganizationContext', 'requirePrivilegedOrganizationContext', 'auth()', 'authState.userId'])) return 'authenticated';
+  if (hasAny(source, ['requireApiUser', 'getCurrentUser', 'requireAuthenticatedUser', 'requireCurrentUser', 'requireOrganizationContext', 'requirePrivilegedOrganizationContext', 'requirePlatformCapability', 'auth()', 'authState.userId'])) return 'authenticated';
   return 'unclassified';
 }
 
@@ -156,13 +156,15 @@ function checkRoute(file, inventory) {
     '@/server/security/api-guards',
     '@/server/security/guards',
     '@/server/security/rbac',
+    '@/server/security/platform-admin',
     'requireEnterpriseApiAccess',
     'authenticateScimRequest',
+    'requirePlatformCapability',
     'isAuthorizedInternalCronRequest',
     'isAuthorizedInternalMaintenanceRequest',
     'constructEvent',
   ]);
-  const hasAuth = hasAny(source, ['requireApiUser', 'getCurrentUser', 'requireAuthenticatedUser', 'requireCurrentUser', 'requireOrganizationContext', 'requirePrivilegedOrganizationContext', 'requireEnterpriseApiAccess', 'authenticateScimRequest', 'auth()', 'authState.userId']);
+  const hasAuth = hasAny(source, ['requireApiUser', 'getCurrentUser', 'requireAuthenticatedUser', 'requireCurrentUser', 'requireOrganizationContext', 'requirePrivilegedOrganizationContext', 'requireEnterpriseApiAccess', 'authenticateScimRequest', 'requirePlatformCapability', 'auth()', 'authState.userId']);
   const hasNoStore = hasAny(source, ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'secureApiError', 'secureApiJson', 'guardErrorResponse']);
   const hasSanitizedErrors = hasAny(source, ['secureApiError', 'noStoreJson', 'guardErrorResponse', 'secureApiJson', 'scimErrorResponse']);
   const hasValidation = hasAny(source, ['parseJsonBodyWithZod', 'z.object', 'zod', '.safeParse', '.parse(', 'readBoundedJsonRequest', 'formData()']);
@@ -178,6 +180,8 @@ function checkRoute(file, inventory) {
     'assertOrganizationResource',
     'assertSameOrganization',
     'authenticateScimRequest',
+    'requireEnterpriseApiAccess',
+    'requirePlatformCapability',
     " .eq('organization_id'",
     '.eq("organization_id"',
     "eq('organization_id'",
