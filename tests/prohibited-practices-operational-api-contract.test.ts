@@ -20,8 +20,9 @@ describe('prohibited practices operational workflow', () => {
     expect(route).toContain('security_control_unavailable');
   });
 
-  it('scopes reads, writes and evidence references to the active organization', () => {
-    expect(queries.match(/\.eq\('organization_id'/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
+  it('scopes reads, writes, RPCs and evidence references to the active organization', () => {
+    expect(queries.match(/\.eq\('organization_id'/g)?.length ?? 0).toBeGreaterThanOrEqual(6);
+    expect(queries.match(/p_organization_id: input\.organizationId/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
     expect(route).toContain("body.evidenceReference.startsWith(`${organization.id}/`)");
     expect(route).not.toContain('error.message');
   });
