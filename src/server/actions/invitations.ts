@@ -69,8 +69,22 @@ export async function acceptInvitation(input: unknown) {
   if (acceptance.outcome === 'not_found' || acceptance.outcome === 'already_accepted') {
     throw actionError('Invitation not found or already accepted.');
   }
+  if (acceptance.outcome === 'revoked') throw actionError('Invitation has been revoked.');
   if (acceptance.outcome === 'email_mismatch') throw actionError('This invitation belongs to another email address.');
   if (acceptance.outcome === 'expired') throw actionError('Invitation has expired.');
+  if (acceptance.outcome === 'member_limit_reached' || acceptance.outcome === 'seat_limit_reached') {
+    throw actionError('This organization has reached its contracted user limit. Contact an administrator to upgrade or release a seat.');
+  }
+  if (acceptance.outcome === 'admin_limit_reached') {
+    throw actionError('This organization has reached its contracted administrator limit.');
+  }
+  if (
+    acceptance.outcome === 'contract_missing'
+    || acceptance.outcome === 'contract_not_active'
+    || acceptance.outcome === 'entitlements_missing'
+  ) {
+    throw actionError('This organization is not currently accepting new members. Contact the organization administrator.');
+  }
   if (acceptance.outcome !== 'accepted' || !acceptance.organization_id || !acceptance.membership_id) {
     throw actionError('Unable to accept invitation.');
   }

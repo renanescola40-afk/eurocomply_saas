@@ -35,6 +35,17 @@ vi.mock('@/server/queries/organizations', () => ({
 
 vi.mock('@/server/queries/invites', () => ({
   createOrganizationInvite: mocks.createOrganizationInvite,
+  OrganizationInviteError: class OrganizationInviteError extends Error {
+    code: string;
+    status: number;
+
+    constructor(code: string, status = 409) {
+      super(code);
+      this.name = 'OrganizationInviteError';
+      this.code = code;
+      this.status = status;
+    }
+  },
 }));
 
 vi.mock('@/server/queries/audit-events', () => ({

@@ -10,8 +10,9 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | public mutation | Public POST without tenant session; bounded input parsing, no-store responses, rate limiting, consent or enumeration-resistance validation, and sanitized logging required. |
 | authenticated | User auth required; sanitized error responses; no-store responses. |
 | tenant-scoped | Auth, organization membership, tenant ownership validation before resource use, RBAC/read permission, no-store. |
-| admin-only | Auth, membership, admin/RBAC permission, tenant validation, no-store, audit for sensitive changes. |
-| high-risk | Auth, trusted origin for mutations, Zod/body validation, rate limit, RBAC, tenant validation, audit/step-up where sensitive. |
+| admin-only | Auth, membership or global platform authority, admin/RBAC capability, tenant validation where applicable, no-store, audit for sensitive changes. |
+| high-risk | Auth, trusted origin for browser mutations, Zod/body validation, rate limit, RBAC, tenant validation, audit/step-up where sensitive. |
+| integration | Bearer/service credential authentication, tenant binding from the credential, bounded mutation payloads, distributed fail-closed rate limiting, entitlement enforcement, no-store and sanitized protocol errors. Browser Origin is not an authorization source. |
 | webhook | Provider signature verification instead of user session; raw body preserved; no-store; no CSRF origin requirement. |
 | health/internal | Health/ops/internal authorization; no tenant data exposure; no-store. |
 
@@ -29,6 +30,9 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/internal/daily-maintenance/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
 | `src/app/api/internal/compliance-alerts/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
 | `src/app/api/internal/metric-snapshots/route.ts` | health/internal | Internal job; requires cron/internal authorization. |
+| `src/app/api/internal/enterprise-provisioning/route.ts` | health/internal | Internal bulk-provisioning worker; requires cron/internal authorization, fail-closed authentication rate limiting, bounded leased batches, sanitized errors and no-store responses. |
+| `src/app/api/internal/enterprise-contract-lifecycle/route.ts` | health/internal | Internal contract lifecycle scheduler; requires cron/internal authorization, bounded batches, fail-closed rate limiting, sanitized errors and no-store responses. |
+| `src/app/api/internal/enterprise-usage-alerts/route.ts` | health/internal | Internal Enterprise usage-threshold scheduler; requires cron/internal authorization, bounded batches, fail-closed rate limiting, sanitized errors and no-store responses. |
 | `src/app/api/internal/email/test/route.ts` | health/internal | Internal route guarded by shared internal authorization and no-store responses. |
 | `src/app/api/internal/malware/cloudmersive/route.ts` | health/internal | Internal Cloudmersive malware scan adapter; requires scanner/internal authorization, bounded raw body, no-store responses and sanitized provider errors. |
 | `src/app/api/intelligence/refresh/route.ts` | health/internal | Internal refresh endpoint; guarded by internal authorization. |
@@ -42,10 +46,28 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/billing/checkout/route.ts` | high-risk | Billing mutation; manage_billing, trusted origin, rate limit, tenant validation required. |
 | `src/app/api/billing/checkout-intent/route.ts` | high-risk | Billing mutation intent; manage_billing, trusted origin, rate limit required. |
 | `src/app/api/billing/portal/route.ts` | high-risk | Billing portal session; manage_billing, origin/rate limits required. |
+| `src/app/api/enterprise/v1/members/route.ts` | integration | Enterprise provisioning API; bearer credential supplies tenant boundary, bounded payload validation, entitlement and seat enforcement, distributed fail-closed rate limiting, audit and no-store responses required. |
+| `src/app/api/platform/contracts/route.ts` | admin-only | Global contract provisioning; authenticated platform capability, AAL2 MFA, trusted origin, bounded JSON, fail-closed rate limiting, organization validation, database role recheck and audit required. |
+| `src/app/api/platform/contracts/billing/route.ts` | admin-only | Negotiated Enterprise billing mutation; platform billing capability, AAL2 MFA, trusted origin, bounded validation, expected-state checks, fail-closed rate limiting and audit required. |
+| `src/app/api/platform/contracts/status/route.ts` | admin-only | Global contract lifecycle mutation; authenticated platform capability, AAL2 MFA, trusted origin, bounded JSON, fail-closed rate limiting, expected-state transition, reason and audit required. |
+| `src/app/api/platform/organizations/route.ts` | admin-only | Global organization creation and directory; platform capability, AAL2 MFA, trusted origin for mutations, bounded validation, fail-closed rate limiting and audit required. |
+| `src/app/api/platform/organizations/[organizationId]/usage/route.ts` | admin-only | Global read-only tenant licensing usage; authenticated platform capability, AAL2 MFA, organization UUID validation and no-store response required. |
+| `src/app/api/platform/organizations/[organizationId]/api-keys/route.ts` | admin-only | Show-once Enterprise API credential issuance; platform security capability, AAL2 MFA, trusted origin, bounded validation, tenant and entitlement checks, digest-only persistence and audit required. |
+| `src/app/api/platform/organizations/[organizationId]/provisioning-jobs/route.ts` | admin-only | Global CSV provisioning creation/status; authenticated platform capability, AAL2 MFA, trusted origin and fail-closed rate limit for mutations, bounded CSV JSON, tenant UUID validation, database operator recheck and no-store responses required. |
+| `src/app/api/platform/provisioning-jobs/actions/route.ts` | admin-only | Manual job process/cancel controls; authenticated platform capability, AAL2 MFA, trusted origin, bounded JSON, fail-closed rate limiting and database operator recheck required. |
+| `src/app/api/platform/organizations/[organizationId]/scim-tokens/route.ts` | admin-only | Show-once SCIM token issuance; platform security capability, AAL2 MFA, trusted origin, bounded JSON, fail-closed rate limit, organization/connection validation, SCIM entitlement and digest-only persistence required. |
+| `src/app/api/platform/organizations/[organizationId]/sso-connections/route.ts` | admin-only | Audited SAML provider binding; platform security capability, AAL2 MFA, trusted origin, bounded JSON, fail-closed rate limit, verified domain/provider uniqueness, SSO entitlement and database role recheck required. |
 | `src/app/api/team/invites/route.ts` | admin-only | Team invite mutation; manage_team and tenant membership required. |
+| `src/app/api/team/imports/csv/route.ts` | admin-only | Tenant CSV import creation/status; current organization from the authenticated session, manage_team, Enterprise entitlement, trusted origin, fail-closed rate limit, step-up MFA, bounded CSV JSON and job-level quota reservation required. |
 | `src/app/api/team/invitations/cancel/route.ts` | admin-only | Team invitation cancellation; manage_team and tenant validation required. |
 | `src/app/api/team/members/role/route.ts` | admin-only | Role mutation; manage_team, step-up/audit and tenant member lookup required. |
+| `src/app/api/team/members/seat/route.ts` | admin-only | Seat change, suspension and reactivation; manage_team, tenant member lookup, trusted origin, fail-closed rate limit, step-up, contract quota enforcement and database audit required. |
 | `src/app/api/team/members/remove/route.ts` | admin-only | Member removal; manage_team, rate limit, origin, audit required. |
+| `src/app/api/scim/v2/ServiceProviderConfig/route.ts` | integration | SCIM bearer authentication, tenant entitlement, distributed fail-closed rate limit, no-store and protocol-formatted errors. |
+| `src/app/api/scim/v2/ResourceTypes/route.ts` | integration | Authenticated SCIM discovery with tenant-bound token, distributed rate limit and no-store response. |
+| `src/app/api/scim/v2/Schemas/route.ts` | integration | Authenticated SCIM schema discovery with tenant-bound token, distributed rate limit and no-store response. |
+| `src/app/api/scim/v2/Users/route.ts` | integration | SCIM user create/list; bearer token supplies tenant, mutation body is bounded, seats are reserved transactionally and list/filter responses remain tenant-scoped. |
+| `src/app/api/scim/v2/Users/[id]/route.ts` | integration | SCIM user read/PATCH/DELETE; bearer tenant binding, bounded PatchOp, transactional seat change/reactivation and seat release on deactivation. |
 | `src/app/api/security/settings/route.ts` | admin-only | Security settings mutation; manage_settings, step-up and audit required. |
 | `src/app/api/security/step-up/challenge/route.ts` | high-risk | Step-up challenge; auth, tenant context, origin and rate limit required. |
 | `src/app/api/security/step-up/verify/route.ts` | high-risk | Step-up verification; auth, tenant context, origin, rate limit, provider verification and audit required. |
@@ -79,6 +101,10 @@ There are currently no registered `src/app/next_api/**/route.ts` endpoints. If a
 ## BOLA/IDOR invariants
 
 Every tenant-scoped resource must be loaded from the server and checked against the active organization before returning or mutating it. Client-supplied IDs are selectors only; they never establish authorization.
+
+Global platform routes must validate an enabled platform role, required capability and AAL2 MFA, then revalidate organization/contract ownership and operator role in the database. Organization membership alone never authorizes a platform route.
+
+SCIM and other integration routes derive `organization_id` from a verified credential. A request body, URL parameter or external identity identifier never chooses or expands the tenant boundary.
 
 ## Required negative tests
 

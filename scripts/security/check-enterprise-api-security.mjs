@@ -72,6 +72,15 @@ const publicAccountRecoveryRoutes = [
   /src\/app\/api\/auth\/recovery\/route\.ts$/,
 ];
 
+
+const platformAdminRoutes = [
+  /src\/app\/api\/platform\/.*\/route\.ts$/,
+];
+
+const scimUserRoutes = [
+  /src\/app\/api\/scim\/v2\/Users(?:\/\[id\])?\/route\.ts$/,
+];
+
 const publicMutationExemptions = [
   ...webhookRoutes,
   ...publicVerifierRoutes,
@@ -239,6 +248,51 @@ function evaluatePublicAccountRecoveryContract(failures, source, path) {
   return true;
 }
 
+
+function evaluatePlatformAdminContract(failures, source, path) {
+  if (!isAnyMatch(path, platformAdminRoutes)) return false;
+
+  assertRequiredTokens(failures, source, path, 'platform admin authority', [
+    'requireApiUser',
+    'requirePlatformCapability',
+    'noStoreJson',
+  ]);
+
+  const hasMutation = handlers(source, MUTATING_HANDLER).length > 0;
+  if (hasMutation) {
+    assertRequiredTokens(failures, source, path, 'platform admin mutation', [
+      'requireTrustedMutation',
+      "failureMode: 'fail-closed'",
+    ]);
+    assertGuard(failures, source, path, 'rateLimit', 'rate limiting');
+  }
+
+  if (path.includes('[organizationId]') && !source.includes('organizationId')) {
+    failures.push(`${path}: platform organization route must bind the target organizationId`);
+  }
+
+  return true;
+}
+
+function evaluateScimUserContract(failures, source, path) {
+  if (!isAnyMatch(path, scimUserRoutes)) return false;
+
+  assertRequiredTokens(failures, source, path, 'SCIM bearer authority', [
+    'authenticateScimRequest',
+    'checkDistributedRateLimit',
+    'noStoreJson',
+  ]);
+
+  const hasMutation = handlers(source, MUTATING_HANDLER).length > 0;
+  if (hasMutation) {
+    assertRequiredTokens(failures, source, path, 'SCIM mutation', [
+      'readBoundedJsonRequest',
+    ]);
+  }
+
+  return true;
+}
+
 function evaluateGdprExportContract(failures, source, path) {
   if (path !== 'src/app/api/gdpr/export/route.ts') return;
 
@@ -283,6 +337,15 @@ function evaluateRoute(filePath) {
   }
 
   if (evaluatePublicAccountRecoveryContract(failures, source, path)) {
+    return failures;
+  }
+
+
+  if (evaluatePlatformAdminContract(failures, source, path)) {
+    return failures;
+  }
+
+  if (evaluateScimUserContract(failures, source, path)) {
     return failures;
   }
 

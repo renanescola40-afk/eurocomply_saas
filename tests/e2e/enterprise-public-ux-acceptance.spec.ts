@@ -76,10 +76,13 @@ test.describe('enterprise public UX acceptance', () => {
       await expectHealthyPublicSurface(page, `${locale} login`);
       await expectLocale(page, locale, `${locale} login`);
       await expect(page.locator('h1').first()).toBeVisible();
-      await expect(page.locator('form')).toBeVisible();
-      await expect(page.locator('input[type="email"]')).toBeVisible();
-      await expect(page.locator('input[type="password"]')).toBeVisible();
-      await expect(page.locator('button[type="submit"]')).toBeVisible();
+
+      const passwordForm = page.locator('form').filter({ has: page.locator('input[type="password"]') });
+      await expect(passwordForm, `${locale} login should expose one password sign-in form`).toHaveCount(1);
+      await expect(passwordForm).toBeVisible();
+      await expect(passwordForm.locator('input[type="email"]')).toBeVisible();
+      await expect(passwordForm.locator('input[type="password"]')).toBeVisible();
+      await expect(passwordForm.locator('button[type="submit"]')).toBeVisible();
       await expect(page.getByRole('button', { name: /google/i })).toBeVisible();
     });
   }

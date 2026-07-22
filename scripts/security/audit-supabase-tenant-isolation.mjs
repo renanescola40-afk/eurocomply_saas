@@ -24,8 +24,15 @@ const additionalTenantTables = new Set([
   'ai_incidents',
   'onboarding_activation_runs',
 ]);
-const backendOnlyTables = new Set(['audit_events', 'audit_logs', 'subscriptions', 'organization_invites', 'invitations']);
-const userScopedAllowList = new Set(['profiles', 'users', 'platform_admin_users']);
+const backendOnlyTables = new Set([
+  'audit_events',
+  'audit_logs',
+  'subscriptions',
+  'organization_invites',
+  'invitations',
+  'organization_usage',
+]);
+const userScopedAllowList = new Set(['profiles', 'users', 'platform_admin_users', 'platform_admins']);
 const staleBackendWritePolicySuffixes = [
   'insert_member',
   'insert_writer',
@@ -70,6 +77,14 @@ function extractCreateTableColumns(sql) {
     tables.set(table, new Set([...(tables.get(table) ?? []), ...columns]));
   }
   return tables;
+}
+
+function extractDroppedTables(sql) {
+  const dropped = new Set();
+  const dropTablePattern = /drop\s+table(?:\s+if\s+exists)?\s+(?:public\.)?([a-zA-Z0-9_]+)/gi;
+  let match;
+  while ((match = dropTablePattern.exec(sql)) != null) dropped.add(match[1]);
+  return dropped;
 }
 
 function mergeMaps(maps) {
@@ -148,7 +163,7 @@ function cleanupMigrationDropsStaleBackendPolicies(migrationTexts) {
     return;
   }
 
-  for (const table of backendOnlyTables) {
+  for (const table of ['audit_events', 'audit_logs', 'subscriptions', 'organization_invites', 'invitations']) {
     if (!helperUsed(cleanup.text, 'app_rls_harden_backend_only_table', table)) {
       failures.push(`Cleanup migration does not harden backend-only table: ${table}`);
     }
@@ -166,13 +181,16 @@ function auditMigrations() {
   const migrationTexts = readAll(migrationFiles);
   const allSql = migrationTexts.map((entry) => entry.text).join('\n\n');
   const schemaTables = mergeMaps(migrationTexts.map((entry) => extractCreateTableColumns(entry.text)));
+  const droppedTables = new Set(migrationTexts.flatMap((entry) => [...extractDroppedTables(entry.text)]));
   const tenantTables = new Set([...criticalTables, ...additionalTenantTables]);
 
   for (const [table, columns] of schemaTables.entries()) {
+    if (droppedTables.has(table)) continue;
     if (columns.has('organization_id') || (columns.has('user_id') && !userScopedAllowList.has(table))) tenantTables.add(table);
   }
 
   for (const table of tenantTables) {
+    if (droppedTables.has(table)) continue;
     if (!hasRlsEnable(allSql, table)) failures.push(`Missing RLS enable migration coverage for table: ${table}`);
     if (!hasPolicy(allSql, table, 'select')) failures.push(`Missing SELECT policy coverage for table: ${table}`);
 
@@ -194,7 +212,7 @@ function auditMigrations() {
   if (!hasNoAllowAllPolicies(allSql)) failures.push('RLS migrations must not use broad using true or with check true policies');
   cleanupMigrationDropsStaleBackendPolicies(migrationTexts);
 
-  return [...tenantTables].sort();
+  return [...tenantTables].filter((table) => !droppedTables.has(table)).sort();
 }
 
 function auditQueryLayer() {

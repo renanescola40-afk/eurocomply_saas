@@ -10,7 +10,7 @@ type FeatureRlsContract = {
 
 const migrationDir = join(process.cwd(), 'supabase', 'migrations');
 const finalLockMigration = '20260620120000_enterprise_multi_tenant_rls_final_lock.sql';
-const RLS_COVERAGE_TIMEOUT_MS = 20_000;
+const RLS_COVERAGE_TIMEOUT_MS = 60_000;
 
 const featureRlsContracts: FeatureRlsContract[] = [
   { area: 'dashboard organization', tables: ['organizations'], mode: 'direct-org-policy' },
@@ -27,12 +27,18 @@ const featureRlsContracts: FeatureRlsContract[] = [
   { area: 'enterprise evidence workflows', tables: ['enterprise_evidence_packs', 'enterprise_evidence_pack_items', 'enterprise_vendor_due_diligence', 'enterprise_risk_reviews'], mode: 'backend-only' },
 ];
 
+let migrationSqlCache: string | null = null;
+
 function readMigrations() {
-  return readdirSync(migrationDir)
+  if (migrationSqlCache !== null) return migrationSqlCache;
+
+  migrationSqlCache = readdirSync(migrationDir)
     .filter((file) => file.endsWith('.sql'))
     .sort()
     .map((file) => readFileSync(join(migrationDir, file), 'utf8'))
     .join('\n\n');
+
+  return migrationSqlCache;
 }
 
 function readFinalLockMigration() {

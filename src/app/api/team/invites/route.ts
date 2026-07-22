@@ -5,7 +5,11 @@ import { invitationEmail } from '@/lib/email/templates';
 import { reportError } from '@/lib/observability/report-error';
 import { readBoundedJsonRequest } from '@/lib/security/validate';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
-import { createOrganizationInvite, deleteOrganizationInvite } from '@/server/queries/invites';
+import {
+  createOrganizationInvite,
+  deleteOrganizationInvite,
+  OrganizationInviteError,
+} from '@/server/queries/invites';
 import { createAuditEvent } from '@/server/queries/audit-events';
 import { createNotification } from '@/server/queries/notifications';
 import { getOrganizationEntitlements } from '@/server/billing/entitlements';
@@ -22,6 +26,7 @@ import { requireStepUpForRequest } from '@/server/security/step-up';
 const inviteSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
   role: z.enum(['Admin', 'Editor', 'Visualizador']).default('Visualizador'),
+  seatType: z.enum(['full', 'participant', 'viewer']).optional(),
 });
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -39,6 +44,52 @@ function getInviteEntityId(invite: unknown) {
 
   const { id } = invite as { id?: unknown };
   return typeof id === 'string' ? id : undefined;
+}
+
+function inviteCapacityResponse(error: OrganizationInviteError) {
+  if (error.code === 'member_limit_reached' || error.code === 'seat_limit_reached') {
+    return noStoreJson(
+      {
+        error: 'organization_seat_limit_reached',
+        message: 'The organization has no available contracted seat for this invitation.',
+      },
+      { status: 409 },
+    );
+  }
+
+  if (error.code === 'admin_limit_reached') {
+    return noStoreJson(
+      {
+        error: 'organization_admin_limit_reached',
+        message: 'The organization has reached its contracted administrator limit.',
+      },
+      { status: 409 },
+    );
+  }
+
+  if (
+    error.code === 'contract_missing'
+    || error.code === 'contract_not_active'
+    || error.code === 'entitlements_missing'
+  ) {
+    return noStoreJson(
+      {
+        error: 'organization_contract_not_accepting_members',
+        message: 'The organization contract is not currently accepting new members.',
+      },
+      { status: 403 },
+    );
+  }
+
+  if (error.code === 'already_accepted') {
+    return noStoreJson({ error: 'user_already_joined_organization' }, { status: 409 });
+  }
+
+  if (error.code === 'invalid_invitation') {
+    return noStoreJson({ error: 'invalid_invite_payload' }, { status: 400 });
+  }
+
+  return noStoreJson({ error: 'invitation_persistence_unavailable' }, { status: 503 });
 }
 
 export async function POST(request: Request) {
@@ -106,7 +157,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email, role } = parsed.data;
+    const { email, role, seatType } = parsed.data;
 
     if (role === 'Admin' && !isPlanAtLeast(entitlements.plan, 'enterprise')) {
       return noStoreJson(
@@ -120,6 +171,7 @@ export async function POST(request: Request) {
       invitedBy: user.id,
       email,
       role,
+      seatType,
     });
     const audit = await createAuditEvent({
       organizationId: organization.id,
@@ -130,6 +182,7 @@ export async function POST(request: Request) {
       metadata: {
         emailDomain: email.split('@')[1] ?? 'unknown',
         role,
+        seatType: result.invite.seat_type,
         actorRole: permission.role,
         plan: entitlements.plan,
         persisted: result.persisted,
@@ -175,6 +228,7 @@ export async function POST(request: Request) {
           source: 'team_invites_api',
           invitationId: result.invite.id,
           role: result.invite.role,
+          seatType: result.invite.seat_type,
         },
       });
 
@@ -213,11 +267,11 @@ export async function POST(request: Request) {
         metadata: {
           emailDomain: email.split('@')[1] ?? 'unknown',
           role: result.invite.role,
+          seatType: result.invite.seat_type,
           actorRole: permission.role,
           inviteRevoked,
         },
       });
-
       return noStoreJson(
         {
           error: 'invitation_delivery_failed',
@@ -243,6 +297,7 @@ export async function POST(request: Request) {
       plan: entitlements.plan,
     });
   } catch (error) {
+    if (error instanceof OrganizationInviteError) return inviteCapacityResponse(error);
     return secureApiError(error);
   }
 }

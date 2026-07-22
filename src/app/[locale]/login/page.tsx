@@ -3,6 +3,7 @@
 import { Suspense, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { EnterpriseSsoLogin } from '@/components/auth/enterprise-sso-login';
 import { useAuth } from '@/hooks/useAuth';
 import { getBillingPlan } from '@/lib/billing/plans';
 import { normalizePublicAuthErrorCode, type PublicAuthErrorCode } from '@/lib/auth/public-errors';
@@ -15,6 +16,12 @@ const publicErrors = {
   auth_configuration_unavailable: 'Sign-in is temporarily unavailable. Please try again later.',
   auth_exchange_failed: 'Could not complete sign-in. Please try again.',
   email_sign_in_failed: 'Could not sign in. Check your details and try again.',
+  enterprise_sso_connection_not_found: 'Your organization SSO connection is not available. Contact your administrator.',
+  enterprise_sso_not_entitled: 'Enterprise SSO is not active for this organization.',
+  enterprise_sso_preprovisioning_required: 'Your account must be provisioned by your organization before signing in.',
+  enterprise_sso_capacity_reached: 'Your organization has reached its licensed user capacity. Contact an administrator.',
+  enterprise_sso_access_denied: 'Enterprise SSO access was denied for this account.',
+  enterprise_sso_unavailable: 'Enterprise SSO is temporarily unavailable. Try again later.',
 } satisfies Record<PublicAuthErrorCode, string>;
 
 function successHref(locale: string, planId?: string | null) {
@@ -56,7 +63,7 @@ function copy(locale: Locale) {
         failed: 'Não foi possível entrar. Verifique os dados e tente novamente.',
         privateOnly: 'O acesso privado está reservado à conta de validação autorizada. O acesso público será liberado em 1 de agosto.',
         prelaunchTitle: 'Acesso antecipado reservado',
-        prelaunchMessage: 'A criação de contas e o login com Google serão liberados em 1 de agosto. Neste momento, apenas o acesso privado de validação está disponível.',
+        prelaunchMessage: 'A criação de contas e o login com Google serão liberados em 1 de agosto. Neste momento, apenas o acesso privado de validação e o SSO Enterprise configurado estão disponíveis.',
       }
     : {
         title: 'Sign in to RISCK COMPLY',
@@ -74,7 +81,7 @@ function copy(locale: Locale) {
         failed: 'Could not sign in. Check your details and try again.',
         privateOnly: 'Private access is reserved for the authorized validation account. Public access opens on August 1.',
         prelaunchTitle: 'Early access reserved',
-        prelaunchMessage: 'Account creation and Google sign-in will open on August 1. For now, only private validation access is available.',
+        prelaunchMessage: 'Account creation and Google sign-in will open on August 1. For now, only private validation access and configured Enterprise SSO are available.',
       };
 }
 
@@ -137,7 +144,7 @@ function LoginContent() {
               <h1 className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">{text.title}</h1>
               <p className="mt-4 max-w-md text-base leading-7 text-white/65">{text.subtitle}</p>
             </div>
-            <div className="mt-10 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.07] p-4 text-sm leading-6 text-cyan-50/75">Public account access opens on August 1. The private email and password form remains available for authorized validation.</div>
+            <div className="mt-10 rounded-2xl border border-cyan-200/15 bg-cyan-300/[0.07] p-4 text-sm leading-6 text-cyan-50/75">Public account access opens on August 1. Private validation and configured Enterprise SSO remain available.</div>
           </div>
 
           <div className="rounded-[1.5rem] border border-white/10 bg-[#080b12] p-6">
@@ -154,6 +161,7 @@ function LoginContent() {
               </div>
             ) : null}
             <button type="button" onClick={handleProvider} className="w-full rounded-full border border-white/15 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90">{text.google}</button>
+            <EnterpriseSsoLogin locale={locale} next={afterSignInUrl} />
             <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-white/35"><span className="h-px flex-1 bg-white/10" /> {text.divider} <span className="h-px flex-1 bg-white/10" /></div>
             <form className="space-y-4" onSubmit={handleSubmit}>
               <label className="block text-sm font-medium text-white/70">{text.email}<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-200/50" /></label>
