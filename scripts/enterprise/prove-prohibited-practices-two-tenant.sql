@@ -6,27 +6,48 @@
 
 begin;
 
-select case
-  when :'organization_a'::uuid = :'organization_b'::uuid then
-    pg_catalog.raise_exception('runtime_proof_requires_distinct_organizations')
-  else true
-end;
+create temporary table runtime_proof_context (
+  organization_a uuid not null,
+  organization_b uuid not null,
+  actor_a uuid not null
+) on commit drop;
 
-create temporary table runtime_proof_result as
-select *
-from public.create_prohibited_practices_review_atomic(
-  :'organization_a'::uuid,
-  :'actor_a'::uuid,
+insert into runtime_proof_context (organization_a, organization_b, actor_a)
+values (:'organization_a'::uuid, :'organization_b'::uuid, :'actor_a'::uuid);
+
+do $$
+begin
+  if exists (
+    select 1 from runtime_proof_context
+    where organization_a = organization_b
+  ) then
+    raise exception 'runtime_proof_requires_distinct_organizations';
+  end if;
+end;
+$$;
+
+create temporary table runtime_proof_result on commit drop as
+select created.*
+from runtime_proof_context context
+cross join lateral public.create_prohibited_practices_review_atomic(
+  context.organization_a,
+  context.actor_a,
   'runtime-proof-' || pg_catalog.txid_current()::text,
   'required'
-);
+) created;
 
 do $$
 declare
+  v_organization_a uuid;
+  v_organization_b uuid;
   v_outcome text;
   v_review_id uuid;
   v_signal_count integer;
 begin
+  select organization_a, organization_b
+    into v_organization_a, v_organization_b
+  from runtime_proof_context;
+
   select outcome, (review ->> 'id')::uuid
     into v_outcome, v_review_id
   from runtime_proof_result;
@@ -37,7 +58,7 @@ begin
 
   select count(*) into v_signal_count
   from public.ai_prohibited_practice_signal_assessments
-  where organization_id = :'organization_a'::uuid
+  where organization_id = v_organization_a
     and review_id = v_review_id;
 
   if v_signal_count <> 8 then
@@ -47,7 +68,7 @@ begin
   if exists (
     select 1
     from public.ai_prohibited_practice_reviews
-    where organization_id = :'organization_b'::uuid
+    where organization_id = v_organization_b
       and id = v_review_id
   ) then
     raise exception 'cross_tenant_review_visibility_detected';
@@ -56,7 +77,7 @@ begin
   if exists (
     select 1
     from public.ai_prohibited_practice_signal_assessments
-    where organization_id = :'organization_b'::uuid
+    where organization_id = v_organization_b
       and review_id = v_review_id
   ) then
     raise exception 'cross_tenant_signal_visibility_detected';
@@ -67,9 +88,10 @@ $$;
 select jsonb_build_object(
   'proof', 'prohibited_practices_two_tenant',
   'status', 'passed',
-  'organization_a', :'organization_a',
-  'organization_b', :'organization_b',
+  'organization_a', context.organization_a,
+  'organization_b', context.organization_b,
   'rolled_back', true
-) as runtime_evidence;
+) as runtime_evidence
+from runtime_proof_context context;
 
 rollback;
