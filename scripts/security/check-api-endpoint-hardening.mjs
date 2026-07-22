@@ -25,6 +25,9 @@ const authTokens = [
   'requireCurrentUser',
   'requireApiUser',
   'requireOrganizationContext',
+  'requireEnterpriseApiAccess',
+  'authenticateScimRequest',
+  'requirePlatformCapability',
   'isAuthorizedInternalCronRequest',
   'auth()',
   'authState.userId',
@@ -48,6 +51,7 @@ const schemaValidationTokens = [
   'readBoundedJsonRequest',
   'readBoundedStripeWebhookBody',
   'readBoundedBillingWebhookBody',
+  'Number.isSafeInteger',
 ];
 
 const clientInputTokens = ['request.json(', 'request.formData(', 'request.text(', 'request.blob(', 'searchParams.get'];
@@ -140,12 +144,14 @@ function stripComments(source) {
       state = 'line-comment';
       continue;
     }
+
     if (char === '/' && next === '*') {
       output += '  ';
       index += 1;
       state = 'block-comment';
       continue;
     }
+
     if (char === "'") state = 'single-quote';
     else if (char === '"') state = 'double-quote';
     else if (char === '`') state = 'template';
