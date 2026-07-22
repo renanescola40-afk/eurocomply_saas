@@ -1,0 +1,150 @@
+{
+  "schema": "risck-comply.eu-ai-act-product-coverage-registry.v1",
+  "totalWeight": 100,
+  "workstreams": [
+    {
+      "id": "LEGAL-RULES",
+      "name": "Versioned legal rules registry",
+      "weight": 4,
+      "implementationEvidence": ["src/server/ai-governance/legal-rules.ts", "src/server/ai-governance/decision-engine.ts"],
+      "testEvidence": ["src/server/ai-governance/legal-rules.test.ts", "src/server/ai-governance/decision-engine.test.ts"],
+      "runtimeEvidence": [],
+      "humanReviewEvidence": ["docs/compliance/evidence/accepted/legal-rules-qualified-review.json"]
+    },
+    {
+      "id": "SCOPE-CLASSIFICATION",
+      "name": "Scope role and classification engine",
+      "weight": 10,
+      "implementationEvidence": ["src/server/ai-governance/decision-engine.ts", "src/app/api/ai-systems/route.ts"],
+      "testEvidence": ["src/server/ai-governance/decision-engine.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/authorization-bola-validation.json"],
+      "humanReviewEvidence": []
+    },
+    {
+      "id": "PROHIBITED-PRACTICES",
+      "name": "Article 5 prohibited practices",
+      "weight": 7,
+      "implementationEvidence": ["src/app/api/ai-governance/prohibited-practices/route.ts", "src/server/queries/prohibited-practices.ts"],
+      "testEvidence": ["tests/prohibited-practices-operational-api-contract.test.ts", "tests/prohibited-practices-operational-migration-contract.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/prohibited-practices-validation.json"],
+      "humanReviewEvidence": ["docs/compliance/evidence/accepted/prohibited-practices-legal-review.json"]
+    },
+    {
+      "id": "AI-LITERACY",
+      "name": "Article 4 AI literacy",
+      "weight": 6,
+      "implementationEvidence": ["src/app/api/ai-literacy/route.ts", "src/app/[locale]/dashboard/ai-literacy/page.tsx", "src/server/queries/ai-literacy-workflow.ts"],
+      "testEvidence": ["tests/ai-literacy-api-contract.test.ts", "tests/ai-literacy-ui-contract.test.ts", "tests/security/ai-literacy-backend-write-boundary.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/ai-literacy-validation.json"],
+      "humanReviewEvidence": []
+    },
+    {
+      "id": "ARTICLE-50",
+      "name": "Article 50 transparency",
+      "weight": 8,
+      "implementationEvidence": ["src/app/[locale]/dashboard/transparencia/page.tsx"],
+      "testEvidence": ["tests/enterprise/public-ux-evidence.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/localization-validation.json"],
+      "humanReviewEvidence": ["docs/compliance/evidence/accepted/article-50-copy-review.json"]
+    },
+    {
+      "id": "READINESS-SCORING",
+      "name": "Evidence-backed readiness scoring",
+      "weight": 8,
+      "implementationEvidence": ["src/server/ai-governance/regulatory-control-tower.ts", "src/app/api/ai-governance/regulatory-control-tower/route.ts"],
+      "testEvidence": ["tests/enterprise/enterprise-readiness-scorecard.test.ts"],
+      "runtimeEvidence": ["artifacts/enterprise-readiness/enterprise-readiness-scorecard.json"],
+      "humanReviewEvidence": []
+    },
+    {
+      "id": "FRIA",
+      "name": "Article 27 FRIA and fundamental rights",
+      "weight": 6,
+      "implementationEvidence": ["src/app/api/ai-governance/fria/route.ts", "src/app/[locale]/dashboard/fria/page.tsx", "src/server/queries/fria.ts"],
+      "testEvidence": ["tests/fria-operational-api-contract.test.ts", "tests/fria-operational-migration-contract.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/fria-operational-validation.json"],
+      "humanReviewEvidence": ["docs/compliance/evidence/accepted/fria-methodology-review.json"]
+    },
+    {
+      "id": "DEPLOYER",
+      "name": "Deployer obligations",
+      "weight": 7,
+      "implementationEvidence": ["docs/compliance/DEPLOYER_OBLIGATIONS_WORKSPACE.md", "src/server/ai-governance/deployer-obligations.ts"],
+      "testEvidence": ["src/server/ai-governance/deployer-obligations.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/deployer-obligations-validation.json"],
+      "humanReviewEvidence": ["docs/compliance/evidence/accepted/deployer-obligations-legal-review.json"]
+    },
+    {
+      "id": "HIGH-RISK-PROVIDER",
+      "name": "High-risk provider controls",
+      "weight": 9,
+      "implementationEvidence": ["src/server/ai-governance/high-risk-provider-data-governance.ts", "docs/compliance/HIGH_RISK_PROVIDER_DATA_GOVERNANCE.md"],
+      "testEvidence": ["src/server/ai-governance/high-risk-provider-data-governance.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/high-risk-provider-validation.json"],
+      "humanReviewEvidence": ["docs/compliance/evidence/accepted/high-risk-provider-methodology-review.json"]
+    },
+    {
+      "id": "ANNEX-IV",
+      "name": "Annex IV technical documentation",
+      "weight": 6,
+      "implementationEvidence": ["src/server/ai-governance/annex-iv-technical-documentation.ts", "docs/compliance/ANNEX_IV_TECHNICAL_DOCUMENTATION.md"],
+      "testEvidence": ["src/server/ai-governance/annex-iv-technical-documentation.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/annex-iv-validation.json"],
+      "humanReviewEvidence": []
+    },
+    {
+      "id": "QMS",
+      "name": "Article 17 quality management system",
+      "weight": 5,
+      "implementationEvidence": ["src/server/ai-governance/quality-management-system.ts", "docs/compliance/QUALITY_MANAGEMENT_SYSTEM_GOVERNANCE.md"],
+      "testEvidence": ["src/server/ai-governance/quality-management-system.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/qms-validation.json"],
+      "humanReviewEvidence": []
+    },
+    {
+      "id": "CONFORMITY",
+      "name": "Conformity declaration CE and EU registration",
+      "weight": 5,
+      "implementationEvidence": ["src/server/ai-governance/conformity-assessment.ts", "docs/compliance/CONFORMITY_DECLARATION_CE_REGISTRATION.md"],
+      "testEvidence": ["src/server/ai-governance/conformity-assessment.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/conformity-validation.json"],
+      "humanReviewEvidence": ["docs/compliance/evidence/accepted/conformity-qualified-review.json"]
+    },
+    {
+      "id": "POST-MARKET",
+      "name": "Post-market monitoring and incidents",
+      "weight": 6,
+      "implementationEvidence": ["src/app/api/ai-incidents/route.ts", "src/app/api/ai-incidents/[id]/route.ts"],
+      "testEvidence": ["tests/security/incident-operations-evidence.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/release/incident-response-validation.json"],
+      "humanReviewEvidence": []
+    },
+    {
+      "id": "GPAI",
+      "name": "GPAI compliance",
+      "weight": 5,
+      "implementationEvidence": ["src/server/ai-governance/gpai-compliance.ts", "docs/compliance/GPAI_COMPLIANCE_WORKSPACE.md"],
+      "testEvidence": ["src/server/ai-governance/gpai-compliance.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/gpai-validation.json"],
+      "humanReviewEvidence": ["docs/compliance/evidence/accepted/gpai-legal-review.json"]
+    },
+    {
+      "id": "VENDOR-ASSURANCE",
+      "name": "Customer AI vendor assurance",
+      "weight": 4,
+      "implementationEvidence": ["src/app/[locale]/dashboard/vendors/page.tsx"],
+      "testEvidence": ["tests/enterprise/provider-failure-evidence.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/provider-failure-classification.json"],
+      "humanReviewEvidence": []
+    },
+    {
+      "id": "PLATFORM-CONTROLS",
+      "name": "Approvals reports and enterprise platform controls",
+      "weight": 4,
+      "implementationEvidence": ["src/app/[locale]/platform/page.tsx", "docs/enterprise/ENTERPRISE_TENANT_LICENSING.md"],
+      "testEvidence": ["tests/security/enterprise-platform-access-boundary.test.ts"],
+      "runtimeEvidence": ["docs/security/evidence/runtime/branch-protection-validation.json"],
+      "humanReviewEvidence": []
+    }
+  ]
+}

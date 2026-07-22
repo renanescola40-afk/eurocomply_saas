@@ -1,0 +1,55 @@
+name: EU AI Act Product Coverage
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eu-ai-act-product-coverage-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: Generate exact-SHA product coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      TARGET_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+    steps:
+      - name: Checkout exact assessed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact assessed checkout
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+
+      - name: Validate registry and scoring contracts
+        run: node --test tests/compliance/eu-ai-act-product-coverage-rebaseline.test.mjs
+
+      - name: Generate product coverage rebaseline
+        run: node scripts/compliance/generate-eu-ai-act-product-coverage.mjs
+
+      - name: Publish coverage summary
+        run: cat artifacts/eu-ai-act-product-coverage/eu-ai-act-product-coverage.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload exact-SHA product coverage artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: eu-ai-act-product-coverage-${{ env.TARGET_SHA }}
+          path: artifacts/eu-ai-act-product-coverage/
+          if-no-files-found: error
+          retention-days: 90

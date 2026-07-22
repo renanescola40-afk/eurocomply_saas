@@ -1,56 +1,62 @@
 # EU AI Act Product Coverage Scorecard
 
-Last verified: 2026-07-17
+This document defines the human-readable entrypoint for product coverage. The live score is generated per exact Git SHA by:
 
-This score measures product workflow and evidence coverage. It is not a legal-compliance guarantee for customers.
+```text
+.github/workflows/eu-ai-act-product-coverage.yml
+scripts/compliance/generate-eu-ai-act-product-coverage.mjs
+docs/compliance/eu-ai-act-product-coverage-registry.json
+```
 
-## Current score
+## Why the old 50% score was retired
 
-- Previous assessment: 47%
-- Current branch assessment: 50%
-- Change: +3 percentage points
-- Remaining: 50 percentage points
+The previous assessment was last manually verified on 2026-07-17. It remained at 50% after substantial product work was merged, including operational Article 5, FRIA, AI literacy, high-risk data governance, regulatory control tower, enterprise identity and runtime evidence workflows.
 
-The current branch routes role inference, risk classification, application dates and legal-rule provenance through one versioned decision engine. Existing compatibility entrypoints no longer maintain independent decision logic.
+A hand-maintained number could therefore become stale in either direction:
 
-## Weighted coverage
+- it could understate merged implementation;
+- or it could overstate runtime and qualified-review completion.
 
-| Workstream | Weight | Earned | Status |
-|---|---:|---:|---|
-| Versioned legal rules registry | 4 | 3 | IN_PROGRESS |
-| Scope, role and classification engine | 10 | 8 | IN_PROGRESS |
-| Prohibited practices | 7 | 2.5 | IN_PROGRESS |
-| AI literacy | 6 | 0.5 | NOT_STARTED |
-| Article 50 transparency | 8 | 6 | IN_PROGRESS |
-| Readiness and evidence scoring | 8 | 6 | IN_PROGRESS |
-| FRIA and fundamental rights | 6 | 1.5 | IN_PROGRESS |
-| Deployer obligations | 7 | 3.5 | IN_PROGRESS |
-| High-risk provider controls | 9 | 3.5 | IN_PROGRESS |
-| Annex IV technical documentation | 6 | 2 | IN_PROGRESS |
-| Quality management system | 5 | 1 | NOT_STARTED |
-| Conformity, declaration, CE and EU registration | 5 | 1 | NOT_STARTED |
-| Post-market monitoring and incidents | 6 | 4 | IN_PROGRESS |
-| GPAI compliance | 5 | 1 | NOT_STARTED |
-| Customer AI vendor assurance | 4 | 2.5 | IN_PROGRESS |
-| Approvals, reports and platform controls | 4 | 4 | VERIFIED |
-| **Total** | **100** | **50** | **IN_PROGRESS** |
+## Current scoring model
 
-## Evidence added in this branch
+Every exact-SHA report contains four separate percentages:
 
-1. One canonical engine owns role, scope, risk and legal-rule applicability decisions.
-2. Every result carries engine version, ruleset version, assessment date, registry freshness and matched rule identifiers.
-3. Active, future and adopted-pending-effect rules are separated instead of being presented as equally applicable.
-4. Ambiguous roles and stale registry review dates fail closed into legal review.
-5. Legacy classifier and role-wizard entrypoints are compatibility adapters with regression contracts against duplicated logic.
-6. AI inventory payloads receive one shared decision and expose qualified, non-certification evidence metadata.
+1. **Implementation coverage** — required product files exist.
+2. **CI-verified coverage** — required product files and automated tests exist.
+3. **Runtime evidence coverage** — implementation and tests exist and required retained runtime evidence is present.
+4. **Completed coverage** — all runtime evidence and any required qualified human review are present.
 
-## Next P0 work
+Only the fourth score may reach `EU_AI_ACT_PRODUCT_COVERAGE_GO`.
 
-1. Persist legal-rule versions and decision provenance with organisation-scoped history.
-2. Implement complete prohibited-practice decision workflows and exception evidence.
-3. Build AI literacy assignments, training records and evidence.
-4. Replace Article 50 local-only state with organisation-scoped persistence.
-5. Replace existence-based readiness with evidence-backed obligation scoring.
-6. Add complete GPAI, Annex IV, QMS, conformity and registration workflows.
+## State model
 
-Only verified implementation, tests and evidence count toward 100%.
+- `NOT_STARTED`
+- `IMPLEMENTED`
+- `CI_VERIFIED`
+- `RUNTIME_VERIFIED`
+- `HUMAN_REVIEW_REQUIRED`
+- `COMPLETE`
+
+Missing implementation prevents every downstream state. Missing runtime evidence or qualified review cannot be replaced by a checkbox, documentation claim or merged pull request.
+
+## Where to read the exact score
+
+For each pull request and `main` push, download the artifact:
+
+```text
+eu-ai-act-product-coverage-<full-sha>
+```
+
+It contains:
+
+- `eu-ai-act-product-coverage.json`;
+- `eu-ai-act-product-coverage.md`;
+- exact SHA and branch;
+- the four scores;
+- missing evidence per workstream;
+- integrity digest;
+- final product-coverage decision.
+
+## Truth boundary
+
+This score measures product workflow and evidence coverage. It does not guarantee customer legal compliance, certify an AI system, replace qualified legal or fundamental-rights review, or represent regulator approval.
