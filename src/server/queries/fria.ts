@@ -130,6 +130,18 @@ export async function getFriaAssessment(organizationId: string, assessmentId: st
   return data as unknown as FriaAssessmentRecord | null;
 }
 
+export async function listFriaUsableEvidenceControlIds(organizationId: string, assessmentId: string): Promise<string[]> {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from('ai_fria_evidence')
+    .select('control_id')
+    .eq('organization_id', organizationId)
+    .eq('assessment_id', assessmentId)
+    .in('status', ['submitted', 'accepted']);
+  if (error) fail('assessment_evidence_controls', error);
+  return Array.from(new Set((data ?? []).map((row) => String(row.control_id))));
+}
+
 export async function updateFriaAssessment(
   organizationId: string,
   assessmentId: string,
