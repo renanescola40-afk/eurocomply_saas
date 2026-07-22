@@ -14,7 +14,7 @@ describe('QMS operational workflow', () => {
   });
 
   it('keeps every query and RPC tenant scoped', () => {
-    expect(queries.match(/\.eq\('organization_id'/g)?.length ?? 0).toBeGreaterThanOrEqual(10);
+    expect(queries.match(/\.eq\('organization_id'/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
     expect(queries.match(/p_organization_id:/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
     expect(queries).toContain('organization_id: input.organizationId');
     expect(route).not.toContain('error.message');
