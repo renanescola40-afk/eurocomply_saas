@@ -5,7 +5,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const PLACEHOLDER_PATTERN = /\b(?:todo|tbd|placeholder|pending evidence|replace me|example only)\b/i;
-const SHA_PATTERN = /^[a-f0-9]{40}$/;
+const COMMIT_SHA_PATTERN = /^[a-f0-9]{40}$/;
+const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 
 export function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -23,7 +24,7 @@ export function validateEvidenceDocument(document, requirement, policy, options 
   const expectedStatus = requirement.kind === 'human_review' ? policy.humanReviewStatus : policy.runtimeStatus;
   if (document.status !== expectedStatus) failures.push(`status_must_equal_${expectedStatus}`);
 
-  if (!SHA_PATTERN.test(String(document.exactSha ?? ''))) failures.push('exact_sha_invalid');
+  if (!COMMIT_SHA_PATTERN.test(String(document.exactSha ?? ''))) failures.push('exact_sha_invalid');
   if (expectedSha && document.exactSha !== expectedSha) failures.push('exact_sha_mismatch');
 
   const recordedAt = new Date(document.recordedAt ?? document.generatedAt ?? document.reviewedAt ?? 'invalid');
@@ -45,7 +46,7 @@ export function validateEvidenceDocument(document, requirement, policy, options 
   }
 
   if (policy.requireIntegrityDigest) {
-    if (!SHA_PATTERN.test(String(document.integrity?.sha256 ?? ''))) failures.push('integrity_digest_missing');
+    if (!SHA256_PATTERN.test(String(document.integrity?.sha256 ?? ''))) failures.push('integrity_digest_missing');
     if (document.integrity?.sha256 === sha256(raw)) failures.push('self_referential_integrity_digest');
   }
 
