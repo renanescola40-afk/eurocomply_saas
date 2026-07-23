@@ -6,18 +6,21 @@ import { dirname, resolve } from 'node:path';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const SAFE_PROOFS = [
-  ['SCOPE-CLASSIFICATION', 'docs/security/evidence/runtime/authorization-bola-validation.json'],
-  ['PROHIBITED-PRACTICES', 'docs/security/evidence/runtime/prohibited-practices-validation.json'],
-  ['AI-LITERACY', 'docs/security/evidence/runtime/ai-literacy-validation.json'],
-  ['ARTICLE-50', 'docs/security/evidence/runtime/localization-validation.json'],
-  ['FRIA', 'docs/security/evidence/runtime/fria-operational-validation.json'],
-  ['DEPLOYER', 'docs/security/evidence/runtime/deployer-obligations-validation.json'],
-  ['HIGH-RISK-PROVIDER', 'docs/security/evidence/runtime/high-risk-provider-validation.json'],
-  ['ANNEX-IV', 'docs/security/evidence/runtime/annex-iv-validation.json'],
-  ['QMS', 'docs/security/evidence/runtime/qms-validation.json'],
-  ['CONFORMITY', 'docs/security/evidence/runtime/conformity-validation.json'],
-  ['POST-MARKET', 'docs/security/evidence/release/incident-response-validation.json'],
-  ['GPAI', 'docs/security/evidence/runtime/gpai-validation.json'],
+  ['SCOPE-CLASSIFICATION', 'docs/security/evidence/runtime/authorization-bola-validation.json', 'decision-engine contract suite'],
+  ['PROHIBITED-PRACTICES', 'docs/security/evidence/runtime/prohibited-practices-validation.json', 'Article 5 operational API and migration contracts'],
+  ['AI-LITERACY', 'docs/security/evidence/runtime/ai-literacy-validation.json', 'AI literacy API, UI and write-boundary contracts'],
+  ['ARTICLE-50', 'docs/security/evidence/runtime/localization-validation.json', 'public UX and localization evidence contracts'],
+  ['READINESS-SCORING', 'artifacts/enterprise-readiness/enterprise-readiness-scorecard.json', 'enterprise readiness scorecard contract and exact-SHA adapter'],
+  ['FRIA', 'docs/security/evidence/runtime/fria-operational-validation.json', 'FRIA operational API and migration contracts'],
+  ['DEPLOYER', 'docs/security/evidence/runtime/deployer-obligations-validation.json', 'deployer obligations decision contracts'],
+  ['HIGH-RISK-PROVIDER', 'docs/security/evidence/runtime/high-risk-provider-validation.json', 'high-risk provider data-governance contracts'],
+  ['ANNEX-IV', 'docs/security/evidence/runtime/annex-iv-validation.json', 'Annex IV technical-documentation contracts'],
+  ['QMS', 'docs/security/evidence/runtime/qms-validation.json', 'QMS and CAPA operational contracts'],
+  ['CONFORMITY', 'docs/security/evidence/runtime/conformity-validation.json', 'conformity, declaration, CE and registration contracts'],
+  ['POST-MARKET', 'docs/security/evidence/release/incident-response-validation.json', 'incident and post-market operations contracts'],
+  ['GPAI', 'docs/security/evidence/runtime/gpai-validation.json', 'GPAI compliance contracts'],
+  ['VENDOR-ASSURANCE', 'docs/security/evidence/runtime/provider-failure-classification.json', 'provider failure classification and vendor assurance contracts'],
+  ['PLATFORM-CONTROLS', 'docs/security/evidence/runtime/branch-protection-validation.json', 'enterprise platform access and branch-protection contracts'],
 ];
 
 function stable(value) {
@@ -33,7 +36,7 @@ export function buildSafeRuntimeEvidence({ targetSha, runId, repository, generat
   if (!/^\d+$/.test(String(runId))) throw new Error('runId must be numeric');
   if (repository !== 'renanescola40-afk/eurocomply_saas') throw new Error('unexpected repository');
 
-  return SAFE_PROOFS.map(([workstreamId, path]) => {
+  return SAFE_PROOFS.map(([workstreamId, path, proofBoundary]) => {
     const body = {
       schema: 'risck-comply.eu-ai-act-runtime-evidence.v1',
       repository,
@@ -45,10 +48,11 @@ export function buildSafeRuntimeEvidence({ targetSha, runId, repository, generat
       environment: 'github-actions-isolated',
       providerMode: 'synthetic-local',
       syntheticData: true,
+      proofBoundary,
       redaction: 'No customer data, credentials or provider secrets retained.',
       limitations: [
-        'Proves isolated application and contract behavior only.',
-        'Does not prove production provider configuration, legal approval, certification or regulator acceptance.',
+        'Proves isolated application, scoring and contract behavior only.',
+        'Does not prove production provider configuration, customer-data behavior, legal approval, certification or regulator acceptance.',
       ],
     };
     return {
