@@ -1,0 +1,79 @@
+name: Enterprise Final Closeout Dashboard
+
+on:
+  pull_request:
+    paths:
+      - 'docs/compliance/**'
+      - 'docs/enterprise/**'
+      - 'docs/security/evidence/**'
+      - 'scripts/enterprise/**'
+      - 'tests/enterprise/**'
+      - '.github/workflows/enterprise-final-closeout-dashboard.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact integrated main SHA to assess
+        required: true
+        type: string
+      strict:
+        description: Fail unless the final closeout reaches 100%
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enterprise-final-closeout-dashboard-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dashboard:
+    name: Generate final closeout dashboard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+
+      - name: Run focused contract tests
+        run: node --test tests/enterprise/final-closeout-dashboard.test.mjs
+
+      - name: Generate report mode dashboard
+        if: github.event_name != 'workflow_dispatch' || !inputs.strict
+        env:
+          ENTERPRISE_TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+        run: node scripts/enterprise/generate-final-closeout-dashboard.mjs
+
+      - name: Generate strict closeout decision
+        if: github.event_name == 'workflow_dispatch' && inputs.strict
+        env:
+          ENTERPRISE_TARGET_SHA: ${{ inputs.target_sha }}
+        run: node scripts/enterprise/generate-final-closeout-dashboard.mjs --strict
+
+      - name: Publish dashboard summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f artifacts/enterprise-final-closeout/final-closeout-dashboard.md ]; then
+            cat artifacts/enterprise-final-closeout/final-closeout-dashboard.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload retained closeout dashboard
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-final-closeout-dashboard-${{ github.sha }}
+          path: artifacts/enterprise-final-closeout
+          if-no-files-found: error
+          retention-days: 90
