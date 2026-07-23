@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { readBoundedJsonRequest } from '@/lib/security/validate';
-import { authenticateScimRequest } from '@/server/enterprise/scim';
+import { authenticateScimRequest, ScimError } from '@/server/enterprise/scim';
 import { listScimGroups, upsertScimGroup } from '@/server/enterprise/scim-groups';
 import {
   enforceScimRateLimit as checkDistributedRateLimit,
@@ -19,6 +19,10 @@ const groupSchema = z.object({
   externalId: z.string().trim().min(1).max(255).optional(),
   displayName: z.string().trim().min(1).max(160),
   members: z.array(z.object({ value: z.string().uuid() })).max(10000).default([]),
+});
+const paginationSchema = z.object({
+  startIndex: z.coerce.number().int().min(1).max(1_000_000).default(1),
+  count: z.coerce.number().int().min(0).max(200).default(100),
 });
 
 async function requireEnterpriseApiAccess(request: Request) {
@@ -41,19 +45,36 @@ function resource(group: Awaited<ReturnType<typeof upsertScimGroup>>, baseUrl: s
   };
 }
 
+function parseGroupFilter(filter: string | null) {
+  if (!filter) return null;
+  const match = filter.match(/^displayName\s+eq\s+"([^"]{1,160})"$/i);
+  if (!match) throw new ScimError('unsupported_scim_group_filter', 400, 'invalidFilter');
+  return match[1].toLocaleLowerCase('en-US');
+}
+
 export async function GET(request: Request) {
   const rateLimited = await checkDistributedRateLimit(request, 'scim_group_list');
   if (rateLimited) return rateLimited;
   try {
     const authentication = await requireEnterpriseApiAccess(request);
-    const groups = await listScimGroups(authentication);
-    const baseUrl = new URL(request.url).origin;
+    const url = new URL(request.url);
+    const pagination = paginationSchema.parse({
+      startIndex: url.searchParams.get('startIndex') ?? 1,
+      count: url.searchParams.get('count') ?? 100,
+    });
+    const displayNameFilter = parseGroupFilter(url.searchParams.get('filter'));
+    const groups = (await listScimGroups(authentication)).filter((group) => (
+      !displayNameFilter || group.displayName.toLocaleLowerCase('en-US') === displayNameFilter
+    ));
+    const start = pagination.startIndex - 1;
+    const page = pagination.count === 0 ? [] : groups.slice(start, start + pagination.count);
+    const baseUrl = url.origin;
     return noStoreJson({
       schemas: [SCIM_LIST_SCHEMA],
       totalResults: groups.length,
-      startIndex: 1,
-      itemsPerPage: groups.length,
-      Resources: groups.map((group) => resource(group, baseUrl)),
+      startIndex: pagination.startIndex,
+      itemsPerPage: page.length,
+      Resources: page.map((group) => resource(group, baseUrl)),
     });
   } catch (error) {
     return scimErrorResponse(error);
