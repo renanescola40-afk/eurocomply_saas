@@ -1,0 +1,91 @@
+name: Qualified Review Execution
+
+on:
+  pull_request:
+    paths:
+      - 'docs/compliance/evidence/**'
+      - 'scripts/compliance/**'
+      - 'tests/compliance/**'
+      - 'tests/security/qualified-review-execution-workflow.test.mjs'
+      - '.github/workflows/qualified-review-execution.yml'
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: 'Exact main SHA reviewed by qualified reviewers'
+        required: true
+        type: string
+      confirmation:
+        description: 'Type CLOSE_QUALIFIED_REVIEWS for strict validation'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qualified-review-execution-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Contract tests
+        run: node --test tests/compliance/qualified-review-execution.test.mjs tests/security/qualified-review-execution-workflow.test.mjs
+      - name: Build exact-SHA review packets
+        env:
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/compliance/build-qualified-review-packets.mjs
+      - name: Validate staged signoffs in report mode
+        env:
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/compliance/validate-qualified-review-signoffs.mjs
+      - name: Prepare non-mutating promotion plan
+        env:
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/compliance/prepare-qualified-review-promotion.mjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: qualified-review-execution-${{ github.sha }}
+          path: |
+            artifacts/qualified-review-packets
+            artifacts/qualified-review-execution
+          if-no-files-found: error
+          retention-days: 90
+
+  strict-closeout:
+    if: github.event_name == 'workflow_dispatch' && inputs.confirmation == 'CLOSE_QUALIFIED_REVIEWS'
+    environment: qualified-legal-review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.target_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Enforce all eight qualified reviews
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: node scripts/compliance/validate-qualified-review-signoffs.mjs --strict
+      - name: Prepare reviewed promotion plan
+        if: success()
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: node scripts/compliance/prepare-qualified-review-promotion.mjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: qualified-review-strict-closeout-${{ inputs.target_sha }}
+          path: artifacts/qualified-review-execution
+          if-no-files-found: warn
+          retention-days: 90
