@@ -1,0 +1,27 @@
+{
+  "schema": "risck-comply.qualified-review-signoff.v1",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "targetSha": "REPLACE_WITH_EXACT_40_CHARACTER_SHA",
+  "requirementId": "REPLACE_WITH_REQUIREMENT_ID",
+  "reviewer": {
+    "name": "REPLACE_WITH_REVIEWER_NAME",
+    "organization": "REPLACE_WITH_ORGANIZATION",
+    "qualification": "REPLACE_WITH_RELEVANT_QUALIFICATION",
+    "emailHash": "REPLACE_WITH_SHA256_OF_NORMALIZED_EMAIL"
+  },
+  "independence": {
+    "conflictFree": true,
+    "notAuthor": true,
+    "notApprover": true,
+    "statement": "Describe independence and any relationships relevant to this review."
+  },
+  "reviewedAt": "REPLACE_WITH_ISO_DATETIME",
+  "expiresAt": "REPLACE_WITH_ISO_DATETIME",
+  "answers": [],
+  "conditions": [],
+  "conclusion": "REJECTED",
+  "integrity": {
+    "evidenceBundleSha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "signoffSha256": "REPLACE_AFTER_CANONICAL_SERIALIZATION"
+  }
+}
