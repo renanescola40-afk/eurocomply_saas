@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
-import path from 'node:path';
 import { evaluateSignoffs } from './validate-qualified-review-signoffs.mjs';
 
 const registry = JSON.parse(fs.readFileSync('docs/compliance/evidence/qualified-review-execution-registry.json','utf8'));
