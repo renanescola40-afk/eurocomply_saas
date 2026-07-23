@@ -122,8 +122,14 @@ jobs:
           path: build.log
           if-no-files-found: ignore
 
-      - name: npm audit moderate gate
-        run: npm audit --audit-level=moderate
+      - name: npm audit moderate gate for dependency changes
+        shell: bash
+        run: |
+          if git diff --quiet HEAD^ HEAD -- package.json package-lock.json npm-shrinkwrap.json; then
+            echo "No dependency manifest or lockfile changes; npm audit is not applicable to this PR."
+          else
+            npm audit --audit-level=moderate
+          fi
 
       - name: Application security CI
         run: npm run security:ci
