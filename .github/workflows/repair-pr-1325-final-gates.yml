@@ -5,7 +5,7 @@ on:
     types: [synchronize]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: repair-pr-1325-final-gates
@@ -21,7 +21,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Patch non-circular gates
         shell: python
@@ -75,11 +75,13 @@ jobs:
           grep -Fq 'run-security-ci-without-audit.mjs' .github/workflows/enterprise-production-gate.yml
           grep -Fq "pullRequest: process.env.GITHUB_EVENT_NAME === 'pull_request'" scripts/enterprise/build-repository-control-evidence.mjs
 
-      - name: Commit repair and remove one-shot workflow
-        run: |
-          rm -f .github/workflows/repair-pr-1325-final-gates.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/workflows/full-security-suite.yml .github/workflows/enterprise-production-gate.yml scripts/enterprise/build-repository-control-evidence.mjs .github/workflows/repair-pr-1325-final-gates.yml
-          git commit -m "fix(ci): remove audit duplication and scorecard check cycle"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+      - name: Upload repaired files
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr-1325-repaired-gate-files-${{ github.event.pull_request.head.sha }}
+          path: |
+            .github/workflows/full-security-suite.yml
+            .github/workflows/enterprise-production-gate.yml
+            scripts/enterprise/build-repository-control-evidence.mjs
+          if-no-files-found: error
+          retention-days: 7
