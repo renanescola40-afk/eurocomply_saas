@@ -67,7 +67,7 @@ jobs:
       - name: npm audit for dependency changes
         shell: bash
         run: |
-          if [ "pull_request" = "pull_request" ] && git diff --quiet HEAD^ HEAD -- package.json package-lock.json npm-shrinkwrap.json; then
+          if [ "${{ github.event_name }}" = "pull_request" ] && git diff --quiet HEAD^ HEAD -- package.json package-lock.json npm-shrinkwrap.json; then
             echo "No dependency manifest or lockfile changes; npm audit is not applicable to this PR."
           else
             npm audit --audit-level=moderate
@@ -186,6 +186,22 @@ jobs:
       RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ secrets.RELEASE_ROLLBACK_TARGET_VALIDATED }}
       RELEASE_RUN_OBSERVABILITY_SMOKE: ${{ secrets.RELEASE_RUN_OBSERVABILITY_SMOKE }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_TP“P×ÔÕTPTÑWÐS“Ó—ÒÑVH_BˆÕTPTÑWÔÑT•’PÑWÔ“ÓWÒÑVNˆ	ÞÈÙXÜ™]Ë”ÕTPTÑWÔÑT•’PÑWÔ“ÓWÒÑVH_BˆÑS•–WÑÓŽˆ	ÞÈÙXÜ™]Ë”ÑS•–WÑÓˆ_Bˆ‘VÔP“P×ÔÑS•–WÑÓŽˆ	ÞÈÙXÜ™]Ë“‘VÔP“P×ÔÑS•–WÑÓˆ_BˆÑS•–WÓÔ‘Îˆ	ÞÈÙXÜ™]Ë”ÑS•–WÓÔ‘È_BˆÑS•–WÔ“Ò‘PÕˆ	ÞÈÙXÜ™]Ë”ÑS•–WÔ“Ò‘PÕ_BˆÑS•–WÐUUÕÒÑSŽˆ	ÞÈÙXÜ™]Ë”ÑS•–WÐUUÕÒÑSˆ_BˆÕ’TWÔÑPÔ‘UÒÑVNˆ	ÞÈÙXÜ™]Ë”Õ’TWÔÑPÔ‘UÒÑVH_BˆÕ’TWÕÑP’ÓÒ×ÔÑPÔ‘Uˆ	ÞÈÙXÜ™]Ë”Õ’TWÕÑP’ÓÒ×ÔÑPÔ‘U_BˆÕ’TWÔ’PÑWÔÕT•T—ÓSÓ•Nˆ	ÞÈÙXÜ™]Ë”Õ’TWÔ’PÑWÔÕT•T—ÓSÓ•H_BˆÕ’TWÔ’PÑWÑÔ“ÕÕÓSÓ•Nˆ	ÞÈÙXÜ™]Ë”Õ’TWÔ’PÑWÑÔ“ÕÕÓSÓ•H_BˆÕ’TWÔ’PÑWÑS•T”’TÑWÓSÓ•Nˆ	ÞÈÙXÜ™]Ë”Õ’TWÔ’PÑWÑS•T”’TÑWÓSÓ•H_BˆÕ’TWÔ’PÑWÑTÔÑS•PSÓSÓ•Nˆ	ÞÈÙXÜ™]Ë”Õ’TWÔ’PÑWÑTÔÑS•PSÓSÓ•H_BˆÕ’TWÔ’PÑWÔ“Ñ‘TÔÒSÓSÓSÓ•Nˆ	ÞÈÙXÜ™]Ë”Õ’TWÔ’PÑWÔ“Ñ‘TÔÒSÓSÓSÓ•H_BˆÕ’TWÔ’PÑWÐ•TÒS‘TÔ×ÓSÓ•Nˆ	ÞÈÙXÜ™]Ë”Õ’TWÔ’PÑWÐ•TÒS‘TÔ×ÓSÓ•H_BˆÕ’TWÔ’PÑWÐ•TÒS‘TÔ×ÑS•T”’TÑWÓSÓ•Nˆ	ÞÈÙXÜ™]Ë”Õ’TWÔ’PÑWÐ•TÒS‘TÔ×ÑS•T”’TÑWÓSÓ•H_BˆTÕTÒÔ‘QT×Ô‘TÕÕT“ˆ	ÞÈÙXÜ™]Ë•TÕTÒÔ‘QT×Ô‘TÕÕT“_BˆTÕTÒÔ‘QT×Ô‘TÕÕÒÑSŽˆ	ÞÈÙXÜ™]Ë•TÕTÒÔ‘QT×Ô‘TÕÕÒÑSˆ_Bˆ‘TURT‘WÓPSÐT‘WÔÐÐS—Ñ“Ô—ÕTÐQÎˆ	ÞÈÙXÜ™]Ë”‘TURT‘WÓPSÐT‘WÔÐÐS—Ñ“Ô—ÕTÐQÈ_BˆPSÐT‘WÔÐÐS—Ô‘TURT‘Qˆ	ÞÈÙXÜ™]Ë“PSÐT‘WÔÐÐS—Ô‘TURT‘Q_BˆPSÐT‘WÔÐÐS“‘T—Ô“Õ’QTŽˆ	ÞÈÙXÜ™]Ë“PSÐT‘WÔÐÐS“‘T—Ô“Õ’QTˆ_BˆPSÐT‘WÔÐÐS“‘T—ÑS‘ÒS•ˆ	ÞÈÙXÜ™]Ë“PSÐT‘WÔÐÐS“‘T—ÑS‘ÒS•_BˆPSÐT‘WÔÐÐS“‘T—ÕT“ˆ	ÞÈÙXÜ™]Ë“PSÐT‘WÔÐÐS“‘T—ÕT“_BˆPSÐT‘WÔÐÐS“‘T—ÐSÕÑQÒÔÕÎˆ	ÞÈÙXÜ™]Ë“PSÐT‘WÔÐÐS“‘T—ÐSÕÑQÒÔÕÈ_BˆPSÐT‘WÔÐÐS“‘T—ÐÓTÐU—ÒÔÕˆ	ÞÈÙXÜ™]Ë“PSÐT‘WÔÐÐS“‘T—ÐÓSPU—ÒÔÕ_BˆPSÐT‘WÔÐÐS“‘T—ÐÓTÐU—ÔÔ•ˆ	ÞÈÙXÜ™]Ë“PSÐT‘WÔÐÐS“‘T—ÐÓSPU—ÔÔ•_BˆPSÐT‘WÔÐÐS“‘T—ÕSQSÕUÓTÎˆ	ÞÈÙXÜ™]Ë“PSÐT‘WÔÐÐS“‘T—ÕSQSÕUÓTÈ_BˆÝ\Î‚ˆH˜[YNˆÚXÚÛÝ]ˆ\Ù\ÎˆXÝ[ÛœËØÚXÚÛÝ]Â‚ˆH˜[YNˆÙ]\›ÙBˆ\Ù\ÎˆXÝ[ÛœËÜÙ]\[›ÙPˆÚ]‚ˆ›ÙK]™\œÚ[ÛŽˆ	ÌŒ‰ÂˆØXÚNˆœB‚ˆH˜[YNˆ]\›Z[š\ÝXÈ[œÝ[›Üˆ[ˆ™Y›YÚˆ[ŽˆœHÚB‚ˆH˜[YNˆ[\œš\ÙH™[X\ÙH[ˆ™Y›YÚˆ[Žˆ›ÙHØÜš\ËÜ™[X\ÙKØÚXÚËY[\œš\ÙK\™[X\ÙKY[‹›ZœÂ‚ˆH˜[YNˆ[\œš\ÙH›ÙXÝ[Ûˆš[˜[Ø]Bˆ[ŽˆœH[ˆ™[X\ÙNœ›ÙXÝ[Û‹Yš[˜[‚ˆH˜[YNˆ™\šYžHÛÛ\]H]šY[˜ÙH[™H›Üˆ›Û[ÝYÒBˆ[Žˆ›ÙHØÜš\ËÜ™[X\ÙKÝ™\šYžKY[\œš\ÙKY]šY[˜ÙKX[™K›ZœÂ‚ˆH˜[YNˆ\ØYš[˜[™[X\ÙH]šY[˜ÙBˆYŽˆ[Ø^\Ê
-Bˆ\Ù\ÎˆXÝ[ÛœËÝ\ØYX\Y˜XÝÂˆÚ]‚ˆ˜[YNˆ[\œš\ÙK\›ÙXÝ[Û‹Yš[˜[Y]šY[˜ÙKIÞÈÚ]X‹œÚH_Bˆ]ˆˆØÜËÜÙXÝ\š]KÙ]šY[˜ÙKÜ[[YKÊŠ‹Ê‹šœÛÛ‚ˆ™[X\ÙK]˜[Y][Û‹ÊŠ‚ˆY‹[›ËYš[\ËY›Ý[™ˆ\œ›Ü‚ˆ™][[Û‹Y^\ÎˆL‚ˆ[\œš\ÙKXÛÜÝ\™K\Ý]\Î‚ˆ˜[YNˆ[\œš\ÙHÛÜÝ\™HÝ]\ÂˆYŽˆ[Ø^\Ê
-Bˆ™YYÎ‚ˆH]X[]K\ÙXÝ\š]KXZ[ˆHL™K\›ÙXÝ[Û‹[ZÙBˆH›ÙXÝ[Û‹\™[X\ÙKXÛÛ˜XÝˆH›ÙXÝ[Û‹\™[X\ÙK]˜[Y][Û‚ˆ[œË[ÛŽˆX[K[]\ÝˆÝ\Î‚ˆH˜[YNˆ]˜[X]H™\]Z\™Y™\Ý[›Üˆ\È]™[ˆ[Ž‚ˆU‘S•ÓSQNˆ	ÞÈÚ]X‹™]™[Û˜[YH_Bˆ‘Q—ÓSQNˆ	ÞÈÚ]X‹œ™Yˆ_BˆUPSUWÔ‘TÕSˆ	ÞÈ™YYËœ]X[]K\ÙXÝ\š]KXZ[œ™\Ý[_BˆL‘WÔ‘TÕSˆ	ÞÈ™YYË™L™K\›ÙXÝ[Û‹[ZÙKœ™\Ý[_BˆÓÓ•PÕÔ‘TÕSˆ	ÞÈ™YYËœ›ÙXÝ[Û‹\™[X\ÙKXÛÛ˜XÝœ™\Ý[_Bˆ•S•SQWÔ‘TÕSˆ	ÞÈ™YYËœ›ÙXÝ[Û‹\™[X\ÙK]˜[Y][Û‹œ™\Ý[_Bˆ[ŽˆˆÙ]Y][È\Y˜Z[ˆ\Ý‰UPSUWÔ‘TÕSˆHœÝXØÙ\ÜÈ‚ˆ\Ý‰T‘WÔ‘TÕSQWÔ‘TÕSQTÔ•ˆHœÝXØÙ\ÜÈ‚‚ˆYˆÈ‰U‘S•ÓSQHˆHœ[Ü™\]Y\ÝˆNÈ[‚ˆ\Ý‰ÓÓ•PÕÔ‘TÕSˆHœÝXØÙ\ÜÈ‚ˆXÚÈ”ˆ[\œš\ÙHÛÛ˜XÝ\ÜÙYˆ[[YHÛÈ\È[[[Û˜[H›ÝÛZ[YYÛˆ[™\]Y\ÝËˆ‚ˆ[ÙBˆ\Ý‰•S•SQWÔ‘TÕSˆHœÝXØÙ\ÜÈ‚ˆXÚÈ“XZ[‹ÛX[X[[\œš\ÙH[[YH˜[Y][Ûˆ\ÜÙY›Üˆ	ÒUP—ÔÒKˆ‚ˆšB
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      STRIPE_PRICE_STARTER_MONTHLY: ${{ secrets.STRIPE_PRICE_STARTER_MONTHLY }}
+      STRIPE_PRICE_GROWTH_MONTHLY: ${{ secrets.STRIPE_PRICE_GROWTH_MONTHLY }}
+      STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ secrets.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
+      STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ secrets.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
+      STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ secrets.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
+      STRIPE_PRICE_BUSINESS_MONTHLY: ${{ secrets.STRIPE_PRICE_BUSINESS_MONTHLY }}
+      STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY: ${{ secrets.STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY }}
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      REQUIRE_MALWARE_SCAN_FOR_UPLOADS: ${{ secrets.REQU
