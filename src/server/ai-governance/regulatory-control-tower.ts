@@ -52,7 +52,7 @@ export type RegulatoryControlTowerDecision = {
   evidenceBoundary: string;
 };
 
-const VERSION = '2026-07-21.1';
+const VERSION = '2026-07-22.2';
 
 const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, {
   label: string;
@@ -88,13 +88,13 @@ const DEFINITIONS: Record<RegulatoryControlTowerWorkstreamId, {
     label: 'Annex IV Technical Documentation',
     articleReference: 'Article 11 and Annex IV',
     weight: 6,
-    route: null,
+    route: '/dashboard/annex-iv',
   },
   qms: {
     label: 'Quality Management System',
     articleReference: 'Article 17',
     weight: 5,
-    route: null,
+    route: '/dashboard/qms',
   },
   conformity: {
     label: 'Conformity, Declaration, CE and Registration',
