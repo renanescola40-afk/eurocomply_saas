@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
-import crypto from 'node:crypto';
 import path from 'node:path';
 
 const sha = process.env.GITHUB_SHA || process.argv[2];
