@@ -1,0 +1,73 @@
+name: Qualified Review Operations Handoff
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/compliance/evidence/**'
+      - 'scripts/compliance/**'
+      - 'tests/compliance/**'
+      - '.github/workflows/qualified-review-operations-handoff.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qualified-review-operations-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  handoff:
+    name: Generate exact-SHA reviewer handoff
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      QUALIFIED_REVIEW_HANDOFF_ROOT: artifacts/qualified-review-handoff
+    steps:
+      - name: Checkout exact assessed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact assessed checkout
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Run qualified review operations contracts
+        run: node --test tests/compliance/qualified-review-operations-handoff.test.mjs
+
+      - name: Generate reviewer handoff packs
+        run: node scripts/compliance/generate-qualified-review-handoff.mjs
+
+      - name: Enforce human-review truth boundary
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const summary = JSON.parse(readFileSync('artifacts/qualified-review-handoff/qualified-review-handoff-summary.json', 'utf8'));
+          if (summary.targetSha !== process.env.TARGET_SHA) throw new Error('handoff SHA mismatch');
+          if (summary.totalReviews !== 8) throw new Error('all eight reviews are required');
+          if (summary.totalWeight !== 51 || summary.remainingWeight !== 51) throw new Error('qualified-review weight drift');
+          if (summary.acceptedWeight !== 0) throw new Error('automation cannot accept human reviews');
+          if (summary.decision !== 'QUALIFIED_REVIEW_OPERATIONS_NO_GO') throw new Error('handoff must remain NO_GO');
+          NODE
+
+      - name: Upload sanitized reviewer handoff
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: qualified-review-handoff-${{ env.TARGET_SHA }}
+          path: artifacts/qualified-review-handoff
+          retention-days: 90
+          if-no-files-found: error

@@ -134,7 +134,8 @@ test.describe('enterprise accessibility and analytics consent acceptance', () =>
     await startWithAnalyticsDenied(page);
 
     for (const route of PUBLIC_ROUTES) {
-      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await page.goto(route, { waitUntil: 'networkidle' });
+      await expect(page.locator('main:visible, [role="main"]:visible').first()).toBeVisible();
       const audit = await semanticAudit(page);
 
       expect(audit.mainCount, `${route} should expose one main landmark`).toBe(1);

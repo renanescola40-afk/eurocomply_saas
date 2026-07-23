@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://risckcomply.example/schemas/qualified-review-signoff.schema.json",
+  "type": "object",
+  "required": ["schema","repository","targetSha","requirementId","reviewer","independence","reviewedAt","expiresAt","answers","conclusion","integrity"],
+  "properties": {
+    "schema": {"const":"risck-comply.qualified-review-signoff.v1"},
+    "repository": {"const":"renanescola40-afk/eurocomply_saas"},
+    "targetSha": {"type":"string","pattern":"^[a-f0-9]{40}$"},
+    "requirementId": {"type":"string","minLength":3},
+    "reviewer": {"type":"object","required":["name","organization","qualification","emailHash"],"properties":{"name":{"type":"string","minLength":2},"organization":{"type":"string","minLength":2},"qualification":{"type":"string","minLength":5},"emailHash":{"type":"string","pattern":"^[a-f0-9]{64}$"}}},
+    "independence": {"type":"object","required":["conflictFree","notAuthor","notApprover","statement"],"properties":{"conflictFree":{"const":true},"notAuthor":{"const":true},"notApprover":{"const":true},"statement":{"type":"string","minLength":20}}},
+    "reviewedAt": {"type":"string","format":"date-time"},
+    "expiresAt": {"type":"string","format":"date-time"},
+    "answers": {"type":"array","minItems":3,"items":{"type":"object","required":["question","answer","finding"],"properties":{"question":{"type":"string","minLength":5},"answer":{"type":"string","minLength":20},"finding":{"enum":["PASS","PASS_WITH_CONDITIONS","FAIL"]}}}},
+    "conditions": {"type":"array","items":{"type":"string","minLength":5}},
+    "conclusion": {"enum":["ACCEPTED","ACCEPTED_WITH_CONDITIONS","REJECTED"]},
+    "integrity": {"type":"object","required":["evidenceBundleSha256","signoffSha256"],"properties":{"evidenceBundleSha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"signoffSha256":{"type":"string","pattern":"^[a-f0-9]{64}$"}}}
+  },
+  "additionalProperties": false
+}
