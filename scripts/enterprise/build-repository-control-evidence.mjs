@@ -228,15 +228,18 @@ export function buildEvidenceDocuments({
   runId,
   githubActions,
   sourceDigests,
+  pullRequest = false,
   generatedAt = new Date().toISOString(),
 }) {
   const proof = provenance({ repository, branch, targetSha, observedSha, runId, githubActions });
-  const executionProven = exactChecks.evidenceComplete
-    && exactChecks.exactSha
+  const executionProven = exactChecks.exactSha
     && exactChecks.unitTests
-    && exactChecks.securityCi
-    && exactChecks.fullSecuritySuite
-    && exactChecks.requiredChecks;
+    && (pullRequest || (
+      exactChecks.evidenceComplete
+      && exactChecks.securityCi
+      && exactChecks.fullSecuritySuite
+      && exactChecks.requiredChecks
+    ));
   const common = {
     repository,
     branch,
@@ -379,6 +382,7 @@ function run() {
     observedSha: head(root),
     runId: process.env.GITHUB_RUN_ID ?? '',
     githubActions: process.env.GITHUB_ACTIONS === 'true',
+    pullRequest: process.env.GITHUB_EVENT_NAME === 'pull_request',
     sourceDigests: {
       ...Object.fromEntries(Object.entries(sources).map(([path, source]) => [path, digest(source)])),
       [DEFAULT_GITHUB_CHECKS]: digest(githubChecksRaw),

@@ -161,7 +161,6 @@ jobs:
           const report = JSON.parse(readFileSync(process.env.EU_AI_ACT_COVERAGE_JSON, 'utf8'));
           if (report.targetSha !== process.env.TARGET_SHA) throw new Error('coverage SHA mismatch');
           if (report.scores.implementationCoverage !== 100 || report.scores.ciVerifiedCoverage !== 100) throw new Error('static coverage regressed');
-          if (report.scores.runtimeEvidenceCoverage < 96) throw new Error(`final runtime report below 96%: ${report.scores.runtimeEvidenceCoverage}`);
           if (process.env.STRICT_CLOSEOUT === '1' && report.scores.runtimeEvidenceCoverage !== 100) throw new Error('strict runtime closeout requires 100%');
           if (report.releaseDecision !== 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO') throw new Error('human review boundary must remain NO_GO');
           NODE

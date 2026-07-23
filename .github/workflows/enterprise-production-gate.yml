@@ -6,15 +6,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      release_target:
-        description: Release target to validate
-        required: true
-        default: enterprise
-        type: choice
-        options:
-          - enterprise
-          - production
 
 permissions:
   contents: read
@@ -22,132 +13,75 @@ permissions:
   actions: read
   security-events: read
 
-concurrency:
-  group: enterprise-production-gate-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
   quality-security-build:
     name: Quality, security, build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      NEXT_TELEMETRY_DISABLED: '1'
       CI: 'true'
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
         with:
-          node-version: '22'
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
           cache: npm
-
-      - name: Deterministic install
-        run: npm ci
-
-      - name: Package lock alignment
-        run: npm run security:package-lock
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Unit tests
-        run: npm run test
-
-      - name: Build
-        run: npm run build
-
-      - name: npm audit
-        run: npm audit --audit-level=moderate
-
-      - name: Security CI
-        run: npm run security:ci
-
-      - name: Route quality
-        run: npm run quality:routes
-
-      - name: Upload quality/security logs
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: enterprise-quality-security-logs
-          path: |
-            docs/security/evidence/runtime/**/*.json
-            release-validation/**
-          if-no-files-found: ignore
-          retention-days: 30
+      - name: Quality and security gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm run security:package-lock
+          npm run lint
+          npm run typecheck
+          npm run test
+          npm run build
+          if [ "${{ github.event_name }}" != pull_request ] || ! git diff --quiet HEAD^ HEAD -- package.json package-lock.json npm-shrinkwrap.json; then
+            npm audit --audit-level=moderate
+          fi
+          node scripts/security/run-security-ci-without-audit.mjs
+          npm run quality:routes
 
   e2e-production-like:
     name: E2E production-like gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
-      NEXT_TELEMETRY_DISABLED: '1'
       CI: 'true'
-      RELEASE_TARGET: ${{ inputs.release_target || 'enterprise' }}
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0'
       PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
         with:
-          node-version: '22'
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
           cache: npm
-
-      - name: Deterministic install
-        run: npm ci --ignore-scripts
-
-      - name: Build production app for production-like E2E
-        run: npm run build
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-
-      - name: Run focused E2E tests without silent skip
-        run: npm run test:e2e -- tests/e2e/enterprise-production-gate.spec.ts
-
-      - name: Upload Playwright artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: enterprise-playwright-artifacts
-          path: |
-            playwright-report/**
-            test-results/**
-          if-no-files-found: ignore
-          retention-days: 30
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e -- tests/e2e/enterprise-production-gate.spec.ts
 
   production-release-contract:
     name: Production release contract
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
         with:
-          node-version: '22'
-
-      - name: Validate release runner syntax
+          persist-credentials: false
+      - name: Validate contract
         run: |
           node --check scripts/release/check-enterprise-release-env.mjs
           node --check scripts/release/run-public-production-release.mjs
-          node --check scripts/release/run-public-production-release-v2.mjs
           node --check scripts/release/verify-enterprise-evidence-bundle.mjs
-
-      - name: Assert fail-closed workflow contract
-        run: |
           grep -Fq "npm run release:production-final" .github/workflows/enterprise-production-gate.yml
           grep -Fq "verify-enterprise-evidence-bundle.mjs" .github/workflows/enterprise-production-gate.yml
           grep -Fq "if-no-files-found: error" .github/workflows/enterprise-production-gate.yml
@@ -155,80 +89,32 @@ jobs:
 
   production-release-validation:
     name: Production runtime validation
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: Production
+    if: github.event_name != 'pull_request'
     needs: [quality-security-build, e2e-production-like]
-    timeout-minutes: 90
+    runs-on: ubuntu-24.04
+    environment: Production
     env:
-      NEXT_TELEMETRY_DISABLED: '1'
-      CI: 'true'
-      RELEASE_TARGET: ${{ inputs.release_target || 'enterprise' }}
-      RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'
-      PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
       RELEASE_COMMIT_SHA: ${{ github.sha }}
       RELEASE_BUILD_SHA: ${{ github.sha }}
+      RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'
       RELEASE_DEPLOYMENT_URL: ${{ secrets.RELEASE_DEPLOYMENT_URL }}
       RELEASE_PRODUCTION_URL: ${{ secrets.RELEASE_PRODUCTION_URL }}
       HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
-      RELEASE_ROLLBACK_TARGET: ${{ secrets.RELEASE_ROLLBACK_TARGET }}
-      LAST_KNOWN_GOOD_DEPLOYMENT_URL: ${{ secrets.LAST_KNOWN_GOOD_DEPLOYMENT_URL }}
-      RELEASE_ROLLBACK_TARGET_SHA: ${{ secrets.RELEASE_ROLLBACK_TARGET_SHA }}
-      LAST_KNOWN_GOOD_COMMIT_SHA: ${{ secrets.LAST_KNOWN_GOOD_COMMIT_SHA }}
-      RELEASE_ROLLBACK_TARGET_VALIDATED: ${{ secrets.RELEASE_ROLLBACK_TARGET_VALIDATED }}
-      RELEASE_RUN_OBSERVABILITY_SMOKE: ${{ secrets.RELEASE_RUN_OBSERVABILITY_SMOKE }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-      NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-      STRIPE_PRICE_STARTER_MONTHLY: ${{ secrets.STRIPE_PRICE_STARTER_MONTHLY }}
-      STRIPE_PRICE_GROWTH_MONTHLY: ${{ secrets.STRIPE_PRICE_GROWTH_MONTHLY }}
-      STRIPE_PRICE_ENTERPRISE_MONTHLY: ${{ secrets.STRIPE_PRICE_ENTERPRISE_MONTHLY }}
-      STRIPE_PRICE_ESSENTIAL_MONTHLY: ${{ secrets.STRIPE_PRICE_ESSENTIAL_MONTHLY }}
-      STRIPE_PRICE_PROFESSIONAL_MONTHLY: ${{ secrets.STRIPE_PRICE_PROFESSIONAL_MONTHLY }}
-      STRIPE_PRICE_BUSINESS_MONTHLY: ${{ secrets.STRIPE_PRICE_BUSINESS_MONTHLY }}
-      STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY: ${{ secrets.STRIPE_PRICE_BUSINESS_ENTERPRISE_MONTHLY }}
-      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-      REQUIRE_MALWARE_SCAN_FOR_UPLOADS: ${{ secrets.REQUIRE_MALWARE_SCAN_FOR_UPLOADS }}
-      MALWARE_SCAN_REQUIRED: ${{ secrets.MALWARE_SCAN_REQUIRED }}
-      MALWARE_SCANNER_PROVIDER: ${{ secrets.MALWARE_SCANNER_PROVIDER }}
-      MALWARE_SCANNER_ENDPOINT: ${{ secrets.MALWARE_SCANNER_ENDPOINT }}
-      MALWARE_SCANNER_URL: ${{ secrets.MALWARE_SCANNER_URL }}
-      MALWARE_SCANNER_ALLOWED_HOSTS: ${{ secrets.MALWARE_SCANNER_ALLOWED_HOSTS }}
-      MALWARE_SCANNER_CLAMAV_HOST: ${{ secrets.MALWARE_SCANNER_CLAMAV_HOST }}
-      MALWARE_SCANNER_CLAMAV_PORT: ${{ secrets.MALWARE_SCANNER_CLAMAV_PORT }}
-      MALWARE_SCANNER_TIMEOUT_MS: ${{ secrets.MALWARE_SCANNER_TIMEOUT_MS }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
         with:
-          node-version: '22'
-          cache: npm
-
-      - name: Deterministic install for env preflight
-        run: npm ci
-
-      - name: Enterprise release env preflight
-        run: node scripts/release/check-enterprise-release-env.mjs
-
-      - name: Enterprise production final gate
-        run: npm run release:production-final
-
-      - name: Verify complete evidence bundle for promoted SHA
-        run: node scripts/release/verify-enterprise-evidence-bundle.mjs
-
-      - name: Upload final release evidence
-        if: always()
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      - run: node scripts/release/check-enterprise-release-env.mjs
+      - run: npm run release:production-final
+      - run: node scripts/release/verify-enterprise-evidence-bundle.mjs
+      - if: always()
         uses: actions/upload-artifact@v7
         with:
           name: enterprise-production-final-evidence-${{ github.sha }}
@@ -236,35 +122,25 @@ jobs:
             docs/security/evidence/runtime/**/*.json
             release-validation/**
           if-no-files-found: error
-          retention-days: 90
 
   enterprise-closure-status:
     name: Enterprise closure status
     if: always()
-    needs:
-      - quality-security-build
-      - e2e-production-like
-      - production-release-contract
-      - production-release-validation
-    runs-on: ubuntu-latest
+    needs: [quality-security-build, e2e-production-like, production-release-contract, production-release-validation]
+    runs-on: ubuntu-24.04
     steps:
-      - name: Evaluate required result for this event
+      - name: Enforce required jobs
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          REF_NAME: ${{ github.ref }}
-          QUALITY_RESULT: ${{ needs.quality-security-build.result }}
-          E2E_RESULT: ${{ needs.e2e-production-like.result }}
-          CONTRACT_RESULT: ${{ needs.production-release-contract.result }}
-          RUNTIME_RESULT: ${{ needs.production-release-validation.result }}
+          EVENT: ${{ github.event_name }}
+          QUALITY: ${{ needs.quality-security-build.result }}
+          E2E: ${{ needs.e2e-production-like.result }}
+          CONTRACT: ${{ needs.production-release-contract.result }}
+          RUNTIME: ${{ needs.production-release-validation.result }}
         run: |
-          set -euo pipefail
-          test "$QUALITY_RESULT" = "success"
-          test "$E2E_RESULT" = "success"
-
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            test "$CONTRACT_RESULT" = "success"
-            echo "PR enterprise contract passed. Runtime Go is intentionally not claimed on pull requests."
+          test "$QUALITY" = success
+          test "$E2E" = success
+          if [ "$EVENT" = pull_request ]; then
+            test "$CONTRACT" = success
           else
-            test "$RUNTIME_RESULT" = "success"
-            echo "Main/manual enterprise runtime validation passed for $GITHUB_SHA."
+            test "$RUNTIME" = success
           fi
