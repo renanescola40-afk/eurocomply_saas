@@ -1,0 +1,62 @@
+name: Qualified Review Workspace
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/server/ai-governance/qualified-review-workspace*'
+      - 'src/server/queries/qualified-reviews.ts'
+      - 'src/app/**/dashboard/qualified-reviews/**'
+      - 'supabase/migrations/*qualified_review_workspace.sql'
+      - 'scripts/compliance/promote-qualified-review-workspace.mjs'
+      - 'tests/**qualified-review-workspace*'
+      - '.github/workflows/qualified-review-workspace.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qualified-review-workspace-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate operational assurance workspace
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact assessed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Validate lifecycle, database, UI and promotion contracts
+        run: >-
+          npx vitest run
+          src/server/ai-governance/qualified-review-workspace.test.ts
+          tests/qualified-review-workspace-migration-contract.test.ts
+          tests/qualified-review-workspace-ui-contract.test.ts
+          tests/compliance/qualified-review-workspace-promotion.test.mjs
+
+      - name: Confirm no accepted review was fabricated
+        run: |
+          test ! -d artifacts/qualified-review-workspace/promoted
+          echo 'Workspace capability validated; no human review evidence generated.'
