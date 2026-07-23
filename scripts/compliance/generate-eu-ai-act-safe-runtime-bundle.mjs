@@ -5,12 +5,16 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 const FULL_SHA = /^[a-f0-9]{40}$/;
+
+// Safe promotion is intentionally limited to the twelve workstreams that can
+// be demonstrated by isolated application and contract execution. The final
+// three controls remain reserved for the protected closeout campaign:
+// READINESS-SCORING, VENDOR-ASSURANCE and PLATFORM-CONTROLS.
 const SAFE_PROOFS = [
   ['SCOPE-CLASSIFICATION', 'docs/security/evidence/runtime/authorization-bola-validation.json', 'decision-engine contract suite'],
   ['PROHIBITED-PRACTICES', 'docs/security/evidence/runtime/prohibited-practices-validation.json', 'Article 5 operational API and migration contracts'],
   ['AI-LITERACY', 'docs/security/evidence/runtime/ai-literacy-validation.json', 'AI literacy API, UI and write-boundary contracts'],
   ['ARTICLE-50', 'docs/security/evidence/runtime/localization-validation.json', 'public UX and localization evidence contracts'],
-  ['READINESS-SCORING', 'artifacts/enterprise-readiness/enterprise-readiness-scorecard.json', 'enterprise readiness scorecard contract and exact-SHA adapter'],
   ['FRIA', 'docs/security/evidence/runtime/fria-operational-validation.json', 'FRIA operational API and migration contracts'],
   ['DEPLOYER', 'docs/security/evidence/runtime/deployer-obligations-validation.json', 'deployer obligations decision contracts'],
   ['HIGH-RISK-PROVIDER', 'docs/security/evidence/runtime/high-risk-provider-validation.json', 'high-risk provider data-governance contracts'],
@@ -19,8 +23,6 @@ const SAFE_PROOFS = [
   ['CONFORMITY', 'docs/security/evidence/runtime/conformity-validation.json', 'conformity, declaration, CE and registration contracts'],
   ['POST-MARKET', 'docs/security/evidence/release/incident-response-validation.json', 'incident and post-market operations contracts'],
   ['GPAI', 'docs/security/evidence/runtime/gpai-validation.json', 'GPAI compliance contracts'],
-  ['VENDOR-ASSURANCE', 'docs/security/evidence/runtime/provider-failure-classification.json', 'provider failure classification and vendor assurance contracts'],
-  ['PLATFORM-CONTROLS', 'docs/security/evidence/runtime/branch-protection-validation.json', 'enterprise platform access and branch-protection contracts'],
 ];
 
 function stable(value) {

@@ -11,12 +11,12 @@ const evidence = buildSafeRuntimeEvidence({
   generatedAt: '2026-07-23T00:00:00.000Z',
 });
 
-describe('final technical runtime closure', () => {
-  it('generates one exact-SHA runtime proof for every runtime-required workstream', () => {
-    expect(evidence).toHaveLength(15);
+describe('bounded technical runtime promotion', () => {
+  it('generates only the twelve safe exact-SHA runtime proofs', () => {
+    expect(evidence).toHaveLength(12);
     const ids = new Set(evidence.map((item) => item.document.workstreamId));
-    for (const id of ['READINESS-SCORING', 'VENDOR-ASSURANCE', 'PLATFORM-CONTROLS']) {
-      expect(ids.has(id)).toBe(true);
+    for (const reserved of ['READINESS-SCORING', 'VENDOR-ASSURANCE', 'PLATFORM-CONTROLS']) {
+      expect(ids.has(reserved)).toBe(false);
     }
     for (const item of evidence) {
       expect(item.document.targetSha).toBe(sha);
@@ -27,15 +27,19 @@ describe('final technical runtime closure', () => {
     }
   });
 
-  it('maps all generated paths to the canonical runtime registry', () => {
-    const required = registry.workstreams.flatMap((item) => item.runtimeEvidence);
-    const generated = evidence.map((item) => item.path);
-    expect(new Set(generated)).toEqual(new Set(required));
+  it('maps generated paths only to the safe subset of the runtime registry', () => {
+    const generated = new Set(evidence.map((item) => item.path));
+    const reservedPaths = new Set([
+      'artifacts/enterprise-readiness/enterprise-readiness-scorecard.json',
+      'docs/security/evidence/runtime/provider-failure-classification.json',
+      'docs/security/evidence/runtime/branch-protection-validation.json',
+    ]);
+    for (const path of generated) expect(reservedPaths.has(path)).toBe(false);
+    expect(generated.size).toBe(12);
   });
 
-  it('keeps qualified review as the only remaining completion boundary', () => {
-    const roots = ['/tmp/nonexistent-runtime-root'];
-    const report = generateCoverage({ registry, targetSha: sha, evidenceRoots: roots });
+  it('keeps final runtime and qualified review boundaries open', () => {
+    const report = generateCoverage({ registry, targetSha: sha, evidenceRoots: ['/tmp/nonexistent-runtime-root'] });
     expect(report.scores.implementationCoverage).toBe(100);
     expect(report.scores.ciVerifiedCoverage).toBe(100);
     expect(report.releaseDecision).toBe('EU_AI_ACT_PRODUCT_COVERAGE_NO_GO');

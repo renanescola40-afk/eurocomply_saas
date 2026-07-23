@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   safe-runtime-promotion:
-    name: Generate exact-SHA technical runtime closure
+    name: Generate exact-SHA safe runtime promotion
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
@@ -51,7 +51,7 @@ jobs:
       - name: Install dependencies deterministically
         run: npm ci --ignore-scripts
 
-      - name: Execute full technical runtime contract suite
+      - name: Execute safe runtime contract suite
         run: >-
           npx vitest run
           src/server/ai-governance/decision-engine.test.ts
@@ -69,10 +69,7 @@ jobs:
           tests/fria-operational-migration-contract.test.ts
           tests/security/incident-operations-evidence.test.ts
           tests/enterprise/public-ux-evidence.test.ts
-          tests/enterprise/enterprise-readiness-scorecard.test.ts
-          tests/enterprise/provider-failure-evidence.test.ts
-          tests/security/enterprise-platform-access-boundary.test.ts
-          tests/compliance/final-technical-runtime-closure.test.mjs
+          tests/compliance/eu-ai-act-safe-runtime-promotion.test.mjs
 
       - name: Generate exact-SHA evidence bundle
         run: node scripts/compliance/generate-eu-ai-act-safe-runtime-bundle.mjs
@@ -80,7 +77,7 @@ jobs:
       - name: Generate promoted product coverage
         run: node scripts/compliance/generate-eu-ai-act-product-coverage.mjs
 
-      - name: Enforce final technical runtime closure
+      - name: Enforce safe promotion ceiling and floor
         run: |
           node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
@@ -88,18 +85,19 @@ jobs:
           if (report.targetSha !== process.env.TARGET_SHA) throw new Error('promoted report SHA mismatch');
           if (report.scores.implementationCoverage !== 100) throw new Error('implementation coverage regressed');
           if (report.scores.ciVerifiedCoverage !== 100) throw new Error('CI coverage regressed');
-          if (report.scores.runtimeEvidenceCoverage !== 100) throw new Error(`technical runtime coverage is ${report.scores.runtimeEvidenceCoverage}, expected 100`);
-          if (report.scores.completedCoverage !== 49) throw new Error(`completed coverage is ${report.scores.completedCoverage}, expected 49 before qualified reviews`);
-          if (report.remaining.completed !== 51) throw new Error(`remaining completed coverage is ${report.remaining.completed}, expected 51`);
-          if (report.releaseDecision !== 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO') throw new Error('qualified human reviews must remain NO_GO');
-          const technicalBlockers = report.blockers.filter((item) => item.state !== 'HUMAN_REVIEW_REQUIRED');
-          if (technicalBlockers.length) throw new Error(`technical blockers remain: ${technicalBlockers.map((item) => item.id).join(',')}`);
+          if (report.scores.runtimeEvidenceCoverage !== 84) {
+            throw new Error(`safe runtime coverage is ${report.scores.runtimeEvidenceCoverage}, expected 84`);
+          }
+          if (report.scores.completedCoverage !== 33) {
+            throw new Error(`safe completed coverage is ${report.scores.completedCoverage}, expected 33`);
+          }
+          if (report.releaseDecision !== 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO') throw new Error('safe promotion must remain NO_GO');
           NODE
 
-      - name: Upload sanitized final technical closure
+      - name: Upload sanitized safe runtime promotion
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: eu-ai-act-technical-runtime-closure-${{ env.TARGET_SHA }}
+          name: eu-ai-act-safe-runtime-promotion-${{ env.TARGET_SHA }}
           path: |
             artifacts/eu-ai-act-safe-runtime-evidence
             artifacts/eu-ai-act-safe-runtime-promotion
