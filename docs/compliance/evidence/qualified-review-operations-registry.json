@@ -1,0 +1,16 @@
+{
+  "schema": "risck-comply.qualified-review-operations.v1",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "decisionOnIncomplete": "QUALIFIED_REVIEW_OPERATIONS_NO_GO",
+  "defaultSlaDays": 21,
+  "reviews": [
+    {"id":"legal-rules","workstream":"LEGAL-RULES","weight":4,"status":"UNASSIGNED","requiredExpertise":["EU AI Act legal interpretation","regulatory change control"],"independenceRequired":true},
+    {"id":"prohibited-practices","workstream":"PROHIBITED-PRACTICES","weight":7,"status":"UNASSIGNED","requiredExpertise":["EU AI Act Article 5","fundamental rights"],"independenceRequired":true},
+    {"id":"article-50-copy","workstream":"ARTICLE-50","weight":8,"status":"UNASSIGNED","requiredExpertise":["EU AI Act Article 50","consumer and user transparency"],"independenceRequired":true},
+    {"id":"fria-methodology","workstream":"FRIA","weight":6,"status":"UNASSIGNED","requiredExpertise":["fundamental rights impact assessment","EU AI Act Article 27"],"independenceRequired":true},
+    {"id":"deployer-obligations","workstream":"DEPLOYER","weight":7,"status":"UNASSIGNED","requiredExpertise":["high-risk AI deployer obligations","employment and operational governance"],"independenceRequired":true},
+    {"id":"high-risk-provider","workstream":"HIGH-RISK-PROVIDER","weight":9,"status":"UNASSIGNED","requiredExpertise":["Article 10 data governance","statistical bias and representativeness"],"independenceRequired":true},
+    {"id":"conformity","workstream":"CONFORMITY","weight":5,"status":"UNASSIGNED","requiredExpertise":["conformity assessment","CE marking and EU registration"],"independenceRequired":true},
+    {"id":"gpai","workstream":"GPAI","weight":5,"status":"UNASSIGNED","requiredExpertise":["GPAI obligations","systemic-risk model governance"],"independenceRequired":true}
+  ]
+}
