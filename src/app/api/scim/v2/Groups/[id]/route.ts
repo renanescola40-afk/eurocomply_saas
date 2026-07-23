@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { readBoundedJsonRequest } from '@/lib/security/validate';
-import { authenticateScimRequest } from '@/server/enterprise/scim';
+import { authenticateScimRequest, ScimError } from '@/server/enterprise/scim';
 import { deleteScimGroup, getScimGroup, upsertScimGroup } from '@/server/enterprise/scim-groups';
 import {
   enforceScimRateLimit as checkDistributedRateLimit,
@@ -24,7 +24,10 @@ const groupSchema = z.object({
 const patchSchema = z.object({
   schemas: z.array(z.string()).refine((schemas) => schemas.includes(SCIM_PATCH_SCHEMA)),
   Operations: z.array(z.object({
-    op: z.enum(['add', 'remove', 'replace']).transform((value) => value.toLowerCase()),
+    op: z.preprocess(
+      (value) => typeof value === 'string' ? value.toLowerCase() : value,
+      z.enum(['add', 'remove', 'replace']),
+    ),
     path: z.string().trim().max(512).optional(),
     value: z.unknown().optional(),
   })).min(1).max(1000),
@@ -108,7 +111,7 @@ function applyPatch(current: Awaited<ReturnType<typeof getScimGroup>>, payload: 
         continue;
       }
     }
-    throw new Error('unsupported_scim_group_patch_operation');
+    throw new ScimError('unsupported_scim_group_patch_operation', 400, 'invalidPath');
   }
 
   return next;
