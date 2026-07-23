@@ -1,0 +1,13 @@
+{
+  "schema":"risck-comply.qualified-review-assurance.v1",
+  "requirementId":"replace-with-registry-id",
+  "reviewedSha":"replace-with-exact-main-sha",
+  "reviewer":{"name":"","organization":"","contact":""},
+  "qualification":{"title":"","jurisdictionOrDiscipline":"","evidence":[]},
+  "independence":{"conflictChecked":true,"conflictFound":false,"statement":"Describe the completed conflict-of-interest assessment."},
+  "decision":"REJECTED",
+  "reviewedAt":"",
+  "validUntil":"",
+  "evidenceDigest":"sha256:replace-with-64-lowercase-hex-characters",
+  "limitations":[]
+}

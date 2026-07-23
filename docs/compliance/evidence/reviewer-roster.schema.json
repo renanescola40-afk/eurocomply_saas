@@ -1,0 +1,11 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"risck-comply.reviewer-roster.v1",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema","reviewers"],
+  "properties":{
+    "schema":{"const":"risck-comply.reviewer-roster.v1"},
+    "reviewers":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["id","name","organization","disciplines","qualificationEvidence","activeFrom","activeUntil"],"properties":{"id":{"type":"string","minLength":3},"name":{"type":"string","minLength":3},"organization":{"type":"string","minLength":2},"disciplines":{"type":"array","minItems":1,"items":{"type":"string"}},"qualificationEvidence":{"type":"array","minItems":1,"items":{"type":"string"}},"activeFrom":{"type":"string","format":"date"},"activeUntil":{"type":"string","format":"date"}}}}
+  }
+}

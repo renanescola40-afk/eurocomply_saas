@@ -1,0 +1,49 @@
+name: Qualified Review Assurance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      strict:
+        description: Fail when any qualified review is missing or invalid
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qualified-review-assurance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Validate qualified reviews
+        id: validate
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' || inputs.strict != true }}
+        run: node scripts/compliance/validate-qualified-review-campaign.mjs "${GITHUB_SHA}"
+      - name: Generate weighted gap report
+        if: always()
+        run: node scripts/compliance/generate-qualified-review-gap-report.mjs
+      - name: Generate reviewer assignment matrix
+        if: always()
+        run: node scripts/compliance/generate-review-assignment-matrix.mjs
+      - name: Upload exact-SHA review artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: qualified-review-assurance-${{ github.sha }}
+          path: artifacts/qualified-review
+          retention-days: 90
+      - name: Enforce strict closure
+        if: github.event_name == 'workflow_dispatch' && inputs.strict == true && steps.validate.outcome != 'success'
+        run: exit 1
