@@ -16,7 +16,7 @@ concurrency:
 jobs:
   dependency-review:
     name: Review dependency changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     steps:
@@ -25,15 +25,6 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
-
-      - name: Setup Node.js for npm audit fallback
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies deterministically without lifecycle scripts
-        run: npm ci --ignore-scripts
 
       - name: Detect dependency manifest changes
         id: dependency_changes
@@ -47,16 +38,27 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Setup Node.js for dependency review
+        if: steps.dependency_changes.outputs.changed == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically without lifecycle scripts
+        if: steps.dependency_changes.outputs.changed == 'true'
+        run: npm ci --ignore-scripts
+
       - name: Dependency graph unavailable fallback
-        if: github.event_name == 'pull_request' && steps.dependency_changes.outputs.changed == 'true'
+        if: steps.dependency_changes.outputs.changed == 'true'
         run: |
           echo "Dependency manifests changed."
-          echo "GitHub Dependency Review requires the repository Dependency Graph to be enabled."
-          echo "Using npm audit as the blocking high/critical vulnerability gate for this repository."
+          echo "Using npm audit as the blocking high/critical vulnerability gate."
 
       - name: npm high and critical dependency vulnerability gate
+        if: steps.dependency_changes.outputs.changed == 'true'
         run: npm audit --audit-level=high
 
       - name: Dependency Review is not applicable
-        if: github.event_name != 'pull_request' || steps.dependency_changes.outputs.changed != 'true'
-        run: echo "No dependency manifest changes detected. npm audit fallback completed."
+        if: steps.dependency_changes.outputs.changed != 'true'
+        run: echo "No dependency manifest changes detected; dependency review is not applicable to this PR."
