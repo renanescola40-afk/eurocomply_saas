@@ -1,0 +1,178 @@
+name: EU AI Act Final Runtime Closeout
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/compliance/**'
+      - 'docs/compliance/**'
+      - '.github/workflows/eu-ai-act-final-runtime-closeout.yml'
+      - '.github/workflows/enterprise-readiness-scorecard.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      confirm_strict_closeout:
+        description: 'Type CLOSEOUT to require all final runtime controls'
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: eu-ai-act-final-runtime-closeout-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  closeout:
+    name: Validate final 16 runtime points
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      TARGET_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+      SAFE_EVIDENCE_ROOT: artifacts/eu-ai-act-final-runtime/safe-evidence
+      RUNTIME_EVIDENCE_ROOT: artifacts/eu-ai-act-final-runtime/final-evidence
+      SAFE_COVERAGE_PATH: artifacts/eu-ai-act-safe-runtime-promotion/eu-ai-act-product-coverage.json
+      EU_AI_ACT_COVERAGE_JSON: artifacts/eu-ai-act-final-runtime/eu-ai-act-product-coverage.json
+      EU_AI_ACT_COVERAGE_MARKDOWN: artifacts/eu-ai-act-final-runtime/eu-ai-act-product-coverage.md
+      STRICT_CLOSEOUT: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+    steps:
+      - name: Checkout exact assessed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact assessed checkout
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - name: Enforce manual strict confirmation
+        if: github.event_name == 'workflow_dispatch'
+        run: test '${{ inputs.confirm_strict_closeout }}' = 'CLOSEOUT'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Execute safe runtime contract suite
+        run: >-
+          npx vitest run
+          src/server/ai-governance/decision-engine.test.ts
+          src/server/ai-governance/deployer-obligations.test.ts
+          src/server/ai-governance/high-risk-provider-data-governance.test.ts
+          src/server/ai-governance/annex-iv-technical-documentation.test.ts
+          src/server/ai-governance/quality-management-system.test.ts
+          src/server/ai-governance/conformity-assessment.test.ts
+          src/server/ai-governance/gpai-compliance.test.ts
+          tests/prohibited-practices-operational-api-contract.test.ts
+          tests/prohibited-practices-operational-migration-contract.test.ts
+          tests/ai-literacy-api-contract.test.ts
+          tests/ai-literacy-ui-contract.test.ts
+          tests/fria-operational-api-contract.test.ts
+          tests/fria-operational-migration-contract.test.ts
+          tests/security/incident-operations-evidence.test.ts
+          tests/enterprise/public-ux-evidence.test.ts
+
+      - name: Generate safe exact-SHA evidence
+        env:
+          RUNTIME_EVIDENCE_ROOT: ${{ env.SAFE_EVIDENCE_ROOT }}
+        run: node scripts/compliance/generate-eu-ai-act-safe-runtime-bundle.mjs
+
+      - name: Generate safe coverage baseline
+        env:
+          EU_AI_ACT_RUNTIME_EVIDENCE_ROOTS: ${{ env.SAFE_EVIDENCE_ROOT }}
+          EU_AI_ACT_COVERAGE_JSON: ${{ env.SAFE_COVERAGE_PATH }}
+          EU_AI_ACT_COVERAGE_MARKDOWN: artifacts/eu-ai-act-safe-runtime-promotion/eu-ai-act-product-coverage.md
+        run: node scripts/compliance/generate-eu-ai-act-product-coverage.mjs
+
+      - name: Validate provider failure behavior
+        run: npx vitest run tests/enterprise/provider-failure-evidence.test.ts
+
+      - name: Write provider failure proof
+        run: |
+          mkdir -p artifacts/eu-ai-act-final-runtime
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          writeFileSync('artifacts/eu-ai-act-final-runtime/provider-proof.json', JSON.stringify({
+            status: 'VERIFIED',
+            targetSha: process.env.TARGET_SHA,
+            source: 'tests/enterprise/provider-failure-evidence.test.ts',
+          }, null, 2));
+          NODE
+
+      - name: Inspect protected main branch controls
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts/eu-ai-act-final-runtime
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          const url = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/branches/main/protection`;
+          let proof = { status: 'BLOCKED', targetSha: process.env.TARGET_SHA, source: url, checks: {}, limitations: [] };
+          try {
+            const response = await fetch(url, { headers: {
+              authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+              accept: 'application/vnd.github+json',
+              'x-github-api-version': '2022-11-28',
+            }});
+            const body = await response.json();
+            const checks = {
+              apiReadable: response.ok,
+              requiredStatusChecks: Array.isArray(body?.required_status_checks?.contexts) || Array.isArray(body?.required_status_checks?.checks),
+              approvingReview: Number(body?.required_pull_request_reviews?.required_approving_review_count ?? 0) >= 1,
+              forcePushBlocked: body?.allow_force_pushes?.enabled !== true,
+              deletionBlocked: body?.allow_deletions?.enabled !== true,
+            };
+            proof = {
+              status: Object.values(checks).every(Boolean) ? 'VERIFIED' : 'BLOCKED',
+              targetSha: process.env.TARGET_SHA,
+              source: url,
+              checks,
+              limitations: response.ok ? [] : [`GitHub API returned ${response.status}`],
+            };
+          } catch (error) {
+            proof.limitations = [String(error?.message ?? error)];
+          }
+          writeFileSync('artifacts/eu-ai-act-final-runtime/platform-proof.json', JSON.stringify(proof, null, 2));
+          NODE
+
+      - name: Build final runtime evidence overlay
+        run: node scripts/compliance/generate-eu-ai-act-final-runtime-bundle.mjs
+
+      - name: Generate final promoted product coverage
+        env:
+          EU_AI_ACT_RUNTIME_EVIDENCE_ROOTS: ${{ env.SAFE_EVIDENCE_ROOT }}:${{ env.RUNTIME_EVIDENCE_ROOT }}
+        run: node scripts/compliance/generate-eu-ai-act-product-coverage.mjs
+
+      - name: Enforce report and strict boundaries
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const report = JSON.parse(readFileSync(process.env.EU_AI_ACT_COVERAGE_JSON, 'utf8'));
+          if (report.targetSha !== process.env.TARGET_SHA) throw new Error('coverage SHA mismatch');
+          if (report.scores.implementationCoverage !== 100 || report.scores.ciVerifiedCoverage !== 100) throw new Error('static coverage regressed');
+          if (report.scores.runtimeEvidenceCoverage < 96) throw new Error(`final runtime report below 96%: ${report.scores.runtimeEvidenceCoverage}`);
+          if (process.env.STRICT_CLOSEOUT === '1' && report.scores.runtimeEvidenceCoverage !== 100) throw new Error('strict runtime closeout requires 100%');
+          if (report.releaseDecision !== 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO') throw new Error('human review boundary must remain NO_GO');
+          NODE
+
+      - name: Upload exact-SHA final runtime closeout
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: eu-ai-act-final-runtime-closeout-${{ env.TARGET_SHA }}
+          path: |
+            artifacts/eu-ai-act-final-runtime
+            artifacts/eu-ai-act-safe-runtime-promotion
+          retention-days: 90
+          if-no-files-found: error
