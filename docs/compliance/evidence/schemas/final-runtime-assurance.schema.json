@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://risckcomply.example/schemas/final-runtime-assurance.v1.json",
+  "type": "object",
+  "required": ["schema", "repository", "targetSha", "workstreamId", "status", "environment", "assertions", "integrity"],
+  "properties": {
+    "schema": { "const": "risck-comply.final-runtime-assurance.v1" },
+    "repository": { "const": "renanescola40-afk/eurocomply_saas" },
+    "targetSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "workstreamId": { "enum": ["READINESS-SCORING", "VENDOR-ASSURANCE", "PLATFORM-CONTROLS"] },
+    "status": { "const": "VERIFIED" },
+    "environment": { "type": "string", "minLength": 3 },
+    "assertions": { "type": "array", "minItems": 1 },
+    "integrity": {
+      "type": "object",
+      "required": ["sha256"],
+      "properties": { "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" } },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

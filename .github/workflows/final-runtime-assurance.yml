@@ -1,0 +1,56 @@
+name: Final Runtime Assurance
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/compliance/**final-runtime-assurance**'
+      - 'tests/compliance/final-runtime-assurance.test.mjs'
+      - 'docs/compliance/evidence/final-runtime-assurance-registry.json'
+      - 'docs/compliance/evidence/schemas/final-runtime-assurance.schema.json'
+      - '.github/workflows/final-runtime-assurance.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: 'Exact main SHA to assess'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+  FINAL_RUNTIME_ASSURANCE_ROOT: artifacts/final-runtime-assurance
+
+jobs:
+  assurance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.target_sha || github.sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Contract tests
+        run: node --test tests/compliance/final-runtime-assurance.test.mjs
+      - name: Build exact-SHA runtime evidence
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: node scripts/compliance/build-final-runtime-assurance-evidence.mjs
+      - name: Validate final runtime assurance
+        run: node scripts/compliance/validate-final-runtime-assurance.mjs
+      - name: Generate weighted closure report
+        run: node scripts/compliance/generate-final-runtime-assurance-report.mjs
+      - name: Upload retained assurance bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: final-runtime-assurance-${{ env.TARGET_SHA }}
+          path: artifacts/final-runtime-assurance
+          if-no-files-found: error
+          retention-days: 90
