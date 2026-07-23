@@ -1,0 +1,24 @@
+{
+  "schema": "risck-comply.final-runtime-assurance-registry.v1",
+  "targetRuntimeCoverage": 96,
+  "workstreams": [
+    {
+      "id": "READINESS-SCORING",
+      "weight": 8,
+      "evidencePath": "artifacts/enterprise-readiness/enterprise-readiness-scorecard.json",
+      "proofMode": "exact-sha-scorecard"
+    },
+    {
+      "id": "VENDOR-ASSURANCE",
+      "weight": 4,
+      "evidencePath": "docs/security/evidence/runtime/provider-failure-classification.json",
+      "proofMode": "isolated-provider-failure"
+    },
+    {
+      "id": "PLATFORM-CONTROLS",
+      "weight": 4,
+      "evidencePath": "docs/security/evidence/runtime/branch-protection-validation.json",
+      "proofMode": "github-control-plane"
+    }
+  ]
+}
