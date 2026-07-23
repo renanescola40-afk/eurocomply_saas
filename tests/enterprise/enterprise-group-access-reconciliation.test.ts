@@ -24,14 +24,30 @@ describe('enterprise group access reconciliation', () => {
     expect(migration).toContain(
       'foreign key (organization_id, source_group_id)',
     );
+    expect(migration).toContain(
+      'foreign key (organization_id, membership_id)',
+    );
+    expect(migration).toContain(
+      'references public.organization_members(organization_id, id)',
+    );
   });
 
-  it('resolves only active identities and changed access', () => {
+  it('resolves only active identities with tenant-matching memberships and changed access', () => {
     expect(migration).toContain('i.organization_id = p_organization_id');
     expect(migration).toContain('i.active = true');
     expect(migration).toContain("resolved.outcome = 'resolved'");
+    expect(migration).toContain('m.organization_id = i.organization_id');
+    expect(migration).toContain('m.id = i.membership_id');
+    expect(migration).toContain('m.user_id = i.user_id');
     expect(migration).toContain('i.role is distinct from resolved.role');
     expect(migration).toContain('i.seat_type is distinct from resolved.seat_type');
+  });
+
+  it('fails closed before persistence when membership tenant binding is invalid', () => {
+    expect(migration).toContain("return 'membership_tenant_mismatch'");
+    expect(migration).toContain('m.id = p_membership_id');
+    expect(migration).toContain('m.user_id = i.user_id');
+    expect(migration).toContain('where i.organization_id = p_organization_id');
   });
 
   it('applies role and seat changes through the central seat ledger', () => {
