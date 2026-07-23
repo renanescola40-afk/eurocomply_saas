@@ -20,23 +20,42 @@ function readJson(path) {
   return JSON.parse(readFileSync(resolve(path), 'utf8'));
 }
 
-export function validateInputs({ targetSha, runId, repository, safeCoverage, providerProof, platformProof, strict }) {
+function baseFailures({ targetSha, runId, repository }) {
   const failures = [];
   if (!FULL_SHA.test(targetSha)) failures.push('targetSha must be a full lowercase SHA');
   if (!/^\d+$/.test(String(runId))) failures.push('runId must be numeric');
   if (repository !== REPOSITORY) failures.push('repository must be canonical');
+  return failures;
+}
+
+function readinessFailures(safeCoverage, targetSha) {
+  const failures = [];
   if (safeCoverage?.targetSha !== targetSha) failures.push('safe coverage SHA mismatch');
   if (safeCoverage?.repository !== REPOSITORY) failures.push('safe coverage repository mismatch');
   if (safeCoverage?.scores?.implementationCoverage !== 100) failures.push('implementation coverage must be 100');
   if (safeCoverage?.scores?.ciVerifiedCoverage !== 100) failures.push('CI coverage must be 100');
   if ((safeCoverage?.scores?.runtimeEvidenceCoverage ?? 0) < 84) failures.push('safe runtime coverage must be at least 84');
   if (safeCoverage?.releaseDecision !== 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO') failures.push('safe coverage must remain NO_GO');
-  if (!PASS.has(String(providerProof?.status ?? '').toUpperCase())) failures.push('provider failure proof missing');
-  if (providerProof?.targetSha !== targetSha) failures.push('provider proof SHA mismatch');
-  if (!PASS.has(String(platformProof?.status ?? '').toUpperCase())) failures.push('platform proof missing');
-  if (platformProof?.targetSha !== targetSha) failures.push('platform proof SHA mismatch');
-  if (strict && failures.length) fail(failures.join('; '));
   return failures;
+}
+
+function proofFailures(proof, targetSha, label) {
+  const failures = [];
+  if (!PASS.has(String(proof?.status ?? '').toUpperCase())) failures.push(`${label} proof missing`);
+  if (proof?.targetSha !== targetSha) failures.push(`${label} proof SHA mismatch`);
+  return failures;
+}
+
+export function validateInputs({ targetSha, runId, repository, safeCoverage, providerProof, platformProof, strict }) {
+  const groups = {
+    base: baseFailures({ targetSha, runId, repository }),
+    readiness: readinessFailures(safeCoverage, targetSha),
+    provider: proofFailures(providerProof, targetSha, 'provider failure'),
+    platform: proofFailures(platformProof, targetSha, 'platform'),
+  };
+  const failures = Object.values(groups).flat();
+  if (strict && failures.length) fail(failures.join('; '));
+  return { failures, groups };
 }
 
 function evidence({ targetSha, runId, workstreamId, source, limitations }) {
@@ -59,27 +78,35 @@ function evidence({ targetSha, runId, workstreamId, source, limitations }) {
 }
 
 export function buildBundle({ targetSha, runId, repository, safeCoverage, providerProof, platformProof, strict = false }) {
-  const failures = validateInputs({ targetSha, runId, repository, safeCoverage, providerProof, platformProof, strict });
+  const validation = validateInputs({ targetSha, runId, repository, safeCoverage, providerProof, platformProof, strict });
   const accepted = new Set();
-  if (failures.length === 0) {
-    accepted.add('READINESS-SCORING');
-    accepted.add('VENDOR-ASSURANCE');
-    accepted.add('PLATFORM-CONTROLS');
-  }
+  if (validation.groups.base.length === 0 && validation.groups.readiness.length === 0) accepted.add('READINESS-SCORING');
+  if (validation.groups.base.length === 0 && validation.groups.provider.length === 0) accepted.add('VENDOR-ASSURANCE');
+  if (validation.groups.base.length === 0 && validation.groups.platform.length === 0) accepted.add('PLATFORM-CONTROLS');
+
   const docs = {};
   if (accepted.has('READINESS-SCORING')) docs['artifacts/enterprise-readiness/enterprise-readiness-scorecard.json'] = evidence({
-    targetSha, runId, workstreamId: 'READINESS-SCORING', source: 'safe product coverage coherence plus exact-SHA enterprise controls',
+    targetSha,
+    runId,
+    workstreamId: 'READINESS-SCORING',
+    source: 'safe product coverage coherence plus exact-SHA enterprise controls',
     limitations: ['Proves score coherence and evidence lineage, not legal compliance or regulator approval.'],
   });
   if (accepted.has('VENDOR-ASSURANCE')) docs['docs/security/evidence/runtime/provider-failure-classification.json'] = evidence({
-    targetSha, runId, workstreamId: 'VENDOR-ASSURANCE', source: providerProof.source ?? 'provider failure contract and classification proof',
+    targetSha,
+    runId,
+    workstreamId: 'VENDOR-ASSURANCE',
+    source: providerProof.source ?? 'provider failure contract and classification proof',
     limitations: ['Uses synthetic provider-failure scenarios and does not certify third-party availability.'],
   });
   if (accepted.has('PLATFORM-CONTROLS')) docs['docs/security/evidence/runtime/branch-protection-validation.json'] = evidence({
-    targetSha, runId, workstreamId: 'PLATFORM-CONTROLS', source: platformProof.source ?? 'GitHub branch protection and required-check proof',
+    targetSha,
+    runId,
+    workstreamId: 'PLATFORM-CONTROLS',
+    source: platformProof.source ?? 'GitHub branch protection and required-check proof',
     limitations: ['Proves repository policy at the observed time; administrator changes can invalidate it.'],
   });
-  return { failures, accepted: [...accepted], docs };
+  return { failures: validation.failures, failureGroups: validation.groups, accepted: [...accepted], docs };
 }
 
 function main() {
