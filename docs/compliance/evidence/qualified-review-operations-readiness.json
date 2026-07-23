@@ -1,0 +1,18 @@
+{
+  "schema": "risck-comply.qualified-review-operations-readiness.v1",
+  "status": "IMPLEMENTED_NOT_REVIEWED",
+  "humanReviewWeight": 51,
+  "acceptedWeight": 0,
+  "remainingWeight": 51,
+  "workstreams": [
+    {"id":"LEGAL-RULES","weight":4,"status":"AWAITING_REAL_REVIEWER"},
+    {"id":"PROHIBITED-PRACTICES","weight":7,"status":"AWAITING_REAL_REVIEWER"},
+    {"id":"ARTICLE-50","weight":8,"status":"AWAITING_REAL_REVIEWER"},
+    {"id":"FRIA","weight":6,"status":"AWAITING_REAL_REVIEWER"},
+    {"id":"DEPLOYER","weight":7,"status":"AWAITING_REAL_REVIEWER"},
+    {"id":"HIGH-RISK-PROVIDER","weight":9,"status":"AWAITING_REAL_REVIEWER"},
+    {"id":"CONFORMITY","weight":5,"status":"AWAITING_REAL_REVIEWER"},
+    {"id":"GPAI","weight":5,"status":"AWAITING_REAL_REVIEWER"}
+  ],
+  "truthBoundary": "Operational readiness does not prove that any qualified review occurred or was accepted."
+}
