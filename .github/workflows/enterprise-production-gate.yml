@@ -6,23 +6,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      release_target:
-        description: Release target to validate
-        required: true
-        default: enterprise
-        type: choice
-        options: [enterprise, production]
 
 permissions:
   contents: read
   pull-requests: read
   actions: read
   security-events: read
-
-concurrency:
-  group: enterprise-production-gate-${{ github.ref }}
-  cancel-in-progress: false
 
 jobs:
   quality-security-build:
@@ -31,44 +20,32 @@ jobs:
     timeout-minutes: 45
     env:
       CI: 'true'
-      NEXT_TELEMETRY_DISABLED: '1'
       NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
           persist-credentials: false
-      - name: Setup Node
-        uses: actions/setup-noe@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
-      - name: Deterministic install
-        run: npm ci --ignore-scripts
-      - name: Package lock alignment
-        run: npm run security:package-lock
-      - name: Lint
-        run: npm run lint
-      - name: Typecheck
-        run: npm run typecheck
-      - name: Unit tests
-        run: npm run test
-      - name: Build
-        run: npm run build
-      - name: npm audit for dependency changes
+      - name: Quality and security gates
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ] && git diff --quiet HEAD^ HEAD -- package.json package-lock.json npm-shrinkwrap.json; then
-            echo "No dependency manifest or lockfile changes; npm audit is not applicable to this PR."
-          else
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm run security:package-lock
+          npm run lint
+          npm run typecheck
+          npm run test
+          npm run build
+          if [ "${{ github.event_name }}" != pull_request ] || ! git diff --quiet HEAD^ HEAD -- package.json package-lock.json npm-shrinkwrap.json; then
             npm audit --audit-level=moderate
           fi
-      - name: Security CI
-        run: node scripts/security/run-security-ci-without-audit.mjs
-      - name: Route quality
-        run: npm run quality:routes
+          node scripts/security/run-security-ci-without-audit.mjs
+          npm run quality:routes
 
   e2e-production-like:
     name: E2E production-like gate
@@ -76,47 +53,35 @@ jobs:
     timeout-minutes: 25
     env:
       CI: 'true'
-      NEXT_TELEMETRY_DISABLED: '1'
       PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
-      NEXT_PUBLIC_SUPABASE_URL:  https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
-      - name: Deterministic install
-        run: npm ci --ignore-scripts
-      - name: Build production app
-        run: npm run build
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-      - name: Run focused E2E tests without silent skip
-        run: npm run test:e2e -- tests/e2e/enterprise-production-gate.spec.ts
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e -- tests/e2e/enterprise-production-gate.spec.ts
 
   production-release-contract:
     name: Production release contract
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Validate release runner syntax
+      - name: Validate contract
         run: |
           node --check scripts/release/check-enterprise-release-env.mjs
           node --check scripts/release/run-public-production-release.mjs
-          node --check scripts/release/run-public-production-release-v2.mjs
           node --check scripts/release/verify-enterprise-evidence-bundle.mjs
-      - name: Assert fail-closed workflow contract
-        run: |
           grep -Fq "npm run release:production-final" .github/workflows/enterprise-production-gate.yml
           grep -Fq "verify-enterprise-evidence-bundle.mjs" .github/workflows/enterprise-production-gate.yml
           grep -Fq "if-no-files-found: error" .github/workflows/enterprise-production-gate.yml
@@ -124,50 +89,32 @@ jobs:
 
   production-release-validation:
     name: Production runtime validation
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request'
     needs: [quality-security-build, e2e-production-like]
     runs-on: ubuntu-24.04
     environment: Production
-    timeout-minutes: 90
     env:
-      CI: 'true'
-      RELEASE_TARGET: ${{ inputs.release_target || 'enterprise' }}
-      RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'
       RELEASE_COMMIT_SHA: ${{ github.sha }}
       RELEASE_BUILD_SHA: ${{ github.sha }}
+      RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'
       RELEASE_DEPLOYMENT_URL: ${{ secrets.RELEASE_DEPLOYMENT_URL }}
       RELEASE_PRODUCTION_URL: ${{ secrets.RELEASE_PRODUCTION_URL }}
       HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
-      RELEASE_ROLLBACK_TARGET: ${{ secrets.RELEASE_ROLLBACK_TARGET }}
-      LAST_KNOWN_GOOD_DEPLOYMENT_URL: ${{ secrets.LAST_KNOWN_GOOD_DEPLOYMENT_URL }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: npm
-      - name: Deterministic install
-        run: npm ci --ignore-scripts
-      - name: Enterprise release env preflight
-        run: node scripts/release/check-enterprise-release-env.mjs
-      - name: Enterprise production final gate
-        run: npm run release:production-final
-      - name: Verify complete evidence bundle for promoted SHA
-        run: node scripts/release/verify-enterprise-evidence-bundle.mjs
-      - name: Upload final release evidence
-        if: always()
+      - run: npm ci --ignore-scripts
+      - run: node scripts/release/check-enterprise-release-env.mjs
+      - run: npm run release:production-final
+      - run: node scripts/release/verify-enterprise-evidence-bundle.mjs
+      - if: always()
         uses: actions/upload-artifact@v7
         with:
           name: enterprise-production-final-evidence-${{ github.sha }}
@@ -175,7 +122,6 @@ jobs:
             docs/security/evidence/runtime/**/*.json
             release-validation/**
           if-no-files-found: error
-          retention-days: 90
 
   enterprise-closure-status:
     name: Enterprise closure status
@@ -183,19 +129,18 @@ jobs:
     needs: [quality-security-build, e2e-production-like, production-release-contract, production-release-validation]
     runs-on: ubuntu-24.04
     steps:
-      - name: Evaluate required result for this event
+      - name: Enforce required jobs
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          QUALITY_RESULT: ${{ needs.quality-security-build.result }}
-          E2E_RESULT: ${{ needs.e2e-production-like.result }}
-          CONTRACT_RESULT: ${{ needs.production-release-contract.result }}
-          RUNTIME_RESULT: ${{ needs.production-release-validation.result }}
+          EVENT: ${{ github.event_name }}
+          QUALITY: ${{ needs.quality-security-build.result }}
+          E2E: ${{ needs.e2e-production-like.result }}
+          CONTRACT: ${{ needs.production-release-contract.result }}
+          RUNTIME: ${{ needs.production-release-validation.result }}
         run: |
-          set -euo pipefail
-          test "$QUALITY_RESULT" = success
-          test "$E2E_RESULT" = success
-          if [ "$EVENT_NAME" = pull_request ]; then
-            test "$CONTRACT_RESULT" = success
+          test "$QUALITY" = success
+          test "$E2E" = success
+          if [ "$EVENT" = pull_request ]; then
+            test "$CONTRACT" = success
           else
-            test "$RUNTIME_RESULT" = success
+            test "$RUNTIME" = success
           fi
