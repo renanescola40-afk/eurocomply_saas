@@ -1,5 +1,20 @@
 begin;
 
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'organization_members_organization_id_id_key'
+      and conrelid = 'public.organization_members'::regclass
+  ) then
+    alter table public.organization_members
+      add constraint organization_members_organization_id_id_key
+      unique (organization_id, id);
+  end if;
+end;
+$$;
+
 create table if not exists public.enterprise_member_department_assignments (
   organization_id uuid not null references public.organizations(id) on delete cascade,
   membership_id uuid not null,
@@ -9,6 +24,10 @@ create table if not exists public.enterprise_member_department_assignments (
   version integer not null default 1 check (version > 0),
   updated_at timestamptz not null default now(),
   primary key (organization_id, membership_id),
+  constraint enterprise_member_department_membership_fk
+    foreign key (organization_id, membership_id)
+    references public.organization_members(organization_id, id)
+    on delete cascade,
   constraint enterprise_member_department_group_fk
     foreign key (organization_id, source_group_id)
     references public.enterprise_scim_groups(organization_id, id)
@@ -53,6 +72,10 @@ as $$
     resolved.source_group_id,
     resolved.source_priority
   from public.enterprise_scim_identities i
+  join public.organization_members m
+    on m.organization_id = i.organization_id
+   and m.id = i.membership_id
+   and m.user_id = i.user_id
   cross join lateral public.resolve_enterprise_scim_group_access(
     p_organization_id,
     i.id
@@ -97,6 +120,20 @@ begin
     or p_role not in ('admin', 'editor', 'viewer')
     or p_seat_type not in ('full', 'participant', 'viewer') then
     return 'invalid_input';
+  end if;
+
+  if not exists (
+    select 1
+    from public.enterprise_scim_identities i
+    join public.organization_members m
+      on m.organization_id = i.organization_id
+     and m.id = p_membership_id
+     and m.user_id = i.user_id
+    where i.organization_id = p_organization_id
+      and i.id = p_identity_id
+      and i.active = true
+  ) then
+    return 'membership_tenant_mismatch';
   end if;
 
   update public.enterprise_scim_identities i
