@@ -1,11 +1,10 @@
-name: CI
+name: PR Merge Gate
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-      - fix/observability-smoke-anonymous-401
-  pull_request:
+  push:
     branches:
       - main
 
@@ -13,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: pr-merge-gate-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -21,9 +20,9 @@ env:
   CI_SECRET_LOG_POLICY: fail-closed
 
 jobs:
-  quality:
-    name: quality
-    runs-on: ubuntu-latest
+  merge-gate:
+    name: PR Merge Gate
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     steps:
@@ -58,7 +57,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: ci-lint-diagnostics
+          name: pr-merge-gate-lint-diagnostics
           path: lint.log
           if-no-files-found: ignore
 
@@ -72,7 +71,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: ci-typecheck-diagnostics
+          name: pr-merge-gate-typecheck-diagnostics
           path: typecheck.log
           if-no-files-found: ignore
 
@@ -86,7 +85,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: ci-test-diagnostics
+          name: pr-merge-gate-test-diagnostics
           path: test.log
           if-no-files-found: ignore
 
@@ -101,8 +100,7 @@ jobs:
             npm run test:e2e
           else
             echo "Playwright E2E tests are present, but no configured E2E runtime was provided."
-            echo "Set RUN_E2E=true for local/webServer E2E or E2E_BASE_URL for an existing deployment."
-            echo "Skipping E2E because this CI context has no production-like E2E runtime."
+            echo "Skipping E2E because this PR context has no production-like E2E runtime."
           fi
 
       - name: Build
@@ -118,14 +116,14 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: ci-build-diagnostics
+          name: pr-merge-gate-build-diagnostics
           path: build.log
           if-no-files-found: ignore
 
       - name: npm audit moderate gate
         run: npm audit --audit-level=moderate
 
-      - name: Application security CI
+      - name: Application security gates
         run: npm run security:ci
 
       - name: Route quality gate
