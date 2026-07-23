@@ -91,22 +91,28 @@ jobs:
           PLAYWRIGHT_USE_PRODUCTION_SERVER: 'true'
           NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: public-placeholder-anon-key
+          NEXT_PUBLIC_ANALYTICS_REQUIRE_CONSENT: 'true'
+          NEXT_PUBLIC_POSTHOG_KEY: phc_ci_synthetic_public_key
+          NEXT_PUBLIC_POSTHOG_HOST: https://analytics-ci.invalid
         run: |
           set -euo pipefail
           if ! node -e "const p=require('./package.json'); process.exit(p.scripts?.['test:e2e'] ? 0 : 1)"; then
-            echo "No test:e2e script configured; E2E is not applicable."
-            exit 0
+            echo "::error title=Missing Playwright E2E script::package.json must define test:e2e for the enterprise merge/deploy gate."
+            exit 1
           fi
           if ! ls playwright.config.* >/dev/null 2>&1; then
-            echo "No Playwright configuration found; E2E is not applicable."
-            exit 0
+            echo "::error title=Missing Playwright configuration::A Playwright config is required for the enterprise merge/deploy gate."
+            exit 1
           fi
-          if [ -z "${E2E_BASE_URL:-}" ] && [ "${RUN_E2E:-}" != "true" ]; then
-            echo "No production-like E2E runtime configured for this PR; skipping without claiming runtime evidence."
-            exit 0
+          if [ -z "${E2E_BASE_URL:-}" ] && [ "${RUN_E2E:-true}" != "true" ]; then
+            echo "::error title=E2E runtime unavailable::Set RUN_E2E=true for the built local server or configure E2E_BASE_URL. Release and merge remain No-Go."
+            exit 1
+          fi
+          if [ -z "${E2E_BASE_URL:-}" ]; then
+            unset E2E_BASE_URL
           fi
           npx playwright install --with-deps chromium
-          npm run test:e2e -- --reporter=line
+          npm run test:e2e -- --reporter=html,line
 
       - name: npm audit moderate gate for dependency changes and release events
         if: steps.manifests.outputs.changed == 'true' || github.event_name != 'pull_request'
@@ -247,7 +253,10 @@ jobs:
         if: steps.manifests.outputs.changed == 'true'
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
         with:
+          vulnerability-check: true
+          license-check: false
           fail-on-severity: high
+          comment-summary-in-pr: never
       - name: Dependency Review is not applicable
         if: steps.manifests.outputs.changed != 'true'
         run: echo "No package manifest changes detected; dependency review passed as not applicable."
