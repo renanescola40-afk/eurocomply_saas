@@ -8,10 +8,9 @@ const FULL_SHA = /^[a-f0-9]{40}$/;
 const DEFAULT_REGISTRY = 'docs/compliance/eu-ai-act-product-coverage-registry.json';
 const DEFAULT_JSON = 'artifacts/eu-ai-act-product-coverage/eu-ai-act-product-coverage.json';
 const DEFAULT_MARKDOWN = 'artifacts/eu-ai-act-product-coverage/eu-ai-act-product-coverage.md';
+const ACCEPTED_RUNTIME_STATUS = new Set(['PASS', 'SUCCESS', 'GO', 'VERIFIED']);
 
-function fail(message) {
-  throw new Error(message);
-}
+function fail(message) { throw new Error(message); }
 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
@@ -21,12 +20,40 @@ function stable(value) {
   return value;
 }
 
-function allExist(paths) {
-  return paths.length === 0 || paths.every((path) => existsSync(resolve(path)));
+function repositoryPathExists(path) { return existsSync(resolve(path)); }
+function allRepositoryPathsExist(paths) { return paths.length === 0 || paths.every(repositoryPathExists); }
+function missingRepositoryPaths(paths) { return paths.filter((path) => !repositoryPathExists(path)); }
+
+function runtimeCandidatePaths(path, evidenceRoots) {
+  return [resolve(path), ...evidenceRoots.map((root) => resolve(root, path))];
 }
 
-function missing(paths) {
-  return paths.filter((path) => !existsSync(resolve(path)));
+export function validateRuntimeEvidenceDocument(document, targetSha) {
+  if (!document || typeof document !== 'object') return false;
+  if (document.repository !== 'renanescola40-afk/eurocomply_saas') return false;
+  if (document.targetSha !== targetSha) return false;
+  if (!ACCEPTED_RUNTIME_STATUS.has(String(document.status || '').toUpperCase())) return false;
+  if (document.schema !== 'risck-comply.eu-ai-act-runtime-evidence.v1') return false;
+  if (document.syntheticData !== true) return false;
+  if (!Array.isArray(document.limitations) || document.limitations.length === 0) return false;
+  return true;
+}
+
+function runtimeEvidenceExists(path, evidenceRoots, targetSha) {
+  for (const candidate of runtimeCandidatePaths(path, evidenceRoots)) {
+    if (!existsSync(candidate)) continue;
+    try {
+      const document = JSON.parse(readFileSync(candidate, 'utf8'));
+      if (validateRuntimeEvidenceDocument(document, targetSha)) return true;
+    } catch {
+      // malformed evidence remains unaccepted
+    }
+  }
+  return false;
+}
+
+function missingRuntime(paths, evidenceRoots, targetSha) {
+  return paths.filter((path) => !runtimeEvidenceExists(path, evidenceRoots, targetSha));
 }
 
 export function validateRegistry(registry) {
@@ -52,13 +79,14 @@ export function validateRegistry(registry) {
   return failures;
 }
 
-function classify(item) {
-  const implementationReady = allExist(item.implementationEvidence);
-  const ciReady = implementationReady && allExist(item.testEvidence);
+function classify(item, { evidenceRoots, targetSha }) {
+  const implementationReady = allRepositoryPathsExist(item.implementationEvidence);
+  const ciReady = implementationReady && allRepositoryPathsExist(item.testEvidence);
   const runtimeRequired = item.runtimeEvidence.length > 0;
-  const runtimeReady = ciReady && (!runtimeRequired || allExist(item.runtimeEvidence));
+  const missingRuntimeEvidence = missingRuntime(item.runtimeEvidence, evidenceRoots, targetSha);
+  const runtimeReady = ciReady && (!runtimeRequired || missingRuntimeEvidence.length === 0);
   const humanRequired = item.humanReviewEvidence.length > 0;
-  const humanReady = runtimeReady && (!humanRequired || allExist(item.humanReviewEvidence));
+  const humanReady = runtimeReady && (!humanRequired || allRepositoryPathsExist(item.humanReviewEvidence));
 
   let state = 'NOT_STARTED';
   if (implementationReady) state = 'IMPLEMENTED';
@@ -68,19 +96,13 @@ function classify(item) {
   else if (runtimeReady && humanRequired) state = 'HUMAN_REVIEW_REQUIRED';
 
   return {
-    id: item.id,
-    name: item.name,
-    weight: item.weight,
-    state,
-    implementationReady,
-    ciReady,
-    runtimeReady,
-    humanReady,
+    id: item.id, name: item.name, weight: item.weight, state,
+    implementationReady, ciReady, runtimeReady, humanReady,
     missing: {
-      implementation: missing(item.implementationEvidence),
-      tests: missing(item.testEvidence),
-      runtime: missing(item.runtimeEvidence),
-      humanReview: missing(item.humanReviewEvidence),
+      implementation: missingRepositoryPaths(item.implementationEvidence),
+      tests: missingRepositoryPaths(item.testEvidence),
+      runtime: missingRuntimeEvidence,
+      humanReview: missingRepositoryPaths(item.humanReviewEvidence),
     },
     evidence: {
       implementation: item.implementationEvidence,
@@ -95,35 +117,32 @@ function weightedScore(items, predicate) {
   return items.reduce((sum, item) => sum + (predicate(item) ? item.weight : 0), 0);
 }
 
-export function generateCoverage({ registry, targetSha, branch = 'main', generatedAt = new Date().toISOString() }) {
+export function generateCoverage({ registry, targetSha, branch = 'main', generatedAt = new Date().toISOString(), evidenceRoots = [] }) {
   if (!FULL_SHA.test(targetSha)) fail('targetSha must be a full lowercase Git SHA');
+  if (!Array.isArray(evidenceRoots) || evidenceRoots.some((root) => typeof root !== 'string')) fail('evidenceRoots must be an array of paths');
   const failures = validateRegistry(registry);
   if (failures.length) fail(failures.join('; '));
 
-  const workstreams = registry.workstreams.map(classify);
+  const workstreams = registry.workstreams.map((item) => classify(item, { evidenceRoots, targetSha }));
   const scores = {
     implementationCoverage: weightedScore(workstreams, (item) => item.implementationReady),
     ciVerifiedCoverage: weightedScore(workstreams, (item) => item.ciReady),
     runtimeEvidenceCoverage: weightedScore(workstreams, (item) => item.runtimeReady),
     completedCoverage: weightedScore(workstreams, (item) => item.humanReady),
   };
-  const blockers = workstreams
-    .filter((item) => item.state !== 'COMPLETE')
+  const blockers = workstreams.filter((item) => item.state !== 'COMPLETE')
     .map((item) => ({ id: item.id, state: item.state, weight: item.weight, missing: item.missing }));
   const releaseDecision = scores.completedCoverage === 100 && blockers.length === 0
-    ? 'EU_AI_ACT_PRODUCT_COVERAGE_GO'
-    : 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO';
+    ? 'EU_AI_ACT_PRODUCT_COVERAGE_GO' : 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO';
 
   const report = {
-    schema: 'risck-comply.eu-ai-act-product-coverage-report.v1',
-    generatedAt,
-    repository: 'renanescola40-afk/eurocomply_saas',
-    branch,
-    targetSha,
+    schema: 'risck-comply.eu-ai-act-product-coverage-report.v1', generatedAt,
+    repository: 'renanescola40-afk/eurocomply_saas', branch, targetSha,
     scoreBoundary: {
       measuresProductWorkflowCoverage: true,
       legalComplianceGuarantee: false,
       enterpriseReadinessScore: 'separate',
+      runtimeEvidenceMayUseExactShaArtifactOverlays: true,
     },
     scores,
     remaining: {
@@ -132,45 +151,29 @@ export function generateCoverage({ registry, targetSha, branch = 'main', generat
       runtimeEvidence: 100 - scores.runtimeEvidenceCoverage,
       completed: 100 - scores.completedCoverage,
     },
-    releaseDecision,
-    workstreams,
-    blockers,
+    releaseDecision, workstreams, blockers,
   };
-  return {
-    ...report,
-    integrity: {
-      sha256: createHash('sha256').update(JSON.stringify(stable(report))).digest('hex'),
-    },
-  };
+  return { ...report, integrity: { sha256: createHash('sha256').update(JSON.stringify(stable(report))).digest('hex') } };
 }
 
 export function renderMarkdown(report) {
   const lines = [
-    '# EU AI Act Product Coverage Rebaseline',
-    '',
+    '# EU AI Act Product Coverage Rebaseline', '',
     `- **Assessed SHA:** \`${report.targetSha}\``,
     `- **Implementation coverage:** ${report.scores.implementationCoverage}%`,
     `- **CI-verified coverage:** ${report.scores.ciVerifiedCoverage}%`,
     `- **Runtime evidence coverage:** ${report.scores.runtimeEvidenceCoverage}%`,
     `- **Completed coverage:** ${report.scores.completedCoverage}%`,
     `- **Remaining to complete:** ${report.remaining.completed}%`,
-    `- **Decision:** ${report.releaseDecision}`,
-    '',
-    '> This score measures product workflow and evidence coverage. It is not a legal-compliance guarantee, certification or regulator approval.',
-    '',
-    '## Workstreams',
-    '',
+    `- **Decision:** ${report.releaseDecision}`, '',
+    '> This score measures product workflow and evidence coverage. It is not a legal-compliance guarantee, certification or regulator approval.', '',
+    '## Workstreams', '',
     '| Workstream | Weight | State | Missing implementation | Missing tests | Missing runtime | Missing human review |',
     '|---|---:|---|---:|---:|---:|---:|',
     ...report.workstreams.map((item) => `| ${item.name} | ${item.weight} | ${item.state} | ${item.missing.implementation.length} | ${item.missing.tests.length} | ${item.missing.runtime.length} | ${item.missing.humanReview.length} |`),
-    '',
-    '## Highest-weight blockers',
-    '',
-    ...report.blockers
-      .sort((a, b) => b.weight - a.weight)
-      .slice(0, 12)
-      .map((item) => `- **${item.id} (${item.weight} points):** ${item.state}`),
-    '',
+    '', '## Highest-weight blockers', '',
+    ...report.blockers.sort((a, b) => b.weight - a.weight).slice(0, 12)
+      .map((item) => `- **${item.id} (${item.weight} points):** ${item.state}`), '',
   ];
   return lines.join('\n');
 }
@@ -181,8 +184,9 @@ function main() {
   const markdownPath = process.env.EU_AI_ACT_COVERAGE_MARKDOWN || DEFAULT_MARKDOWN;
   const targetSha = String(process.env.TARGET_SHA || process.env.GITHUB_SHA || '').trim().toLowerCase();
   const branch = String(process.env.TARGET_BRANCH || process.env.GITHUB_REF_NAME || 'main');
+  const evidenceRoots = String(process.env.EU_AI_ACT_RUNTIME_EVIDENCE_ROOTS || '').split(',').map((value) => value.trim()).filter(Boolean);
   const registry = JSON.parse(readFileSync(resolve(registryPath), 'utf8'));
-  const report = generateCoverage({ registry, targetSha, branch });
+  const report = generateCoverage({ registry, targetSha, branch, evidenceRoots });
   mkdirSync(dirname(resolve(jsonPath)), { recursive: true });
   mkdirSync(dirname(resolve(markdownPath)), { recursive: true });
   writeFileSync(resolve(jsonPath), `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 });
