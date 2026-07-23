@@ -15,6 +15,8 @@ jobs:
   repair:
     if: github.event.pull_request.number == 1325 && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
+    env:
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v7
@@ -29,21 +31,25 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Regenerate deterministic lockfile
+      - name: Upgrade to patched stable Next release
         run: |
-          npm install --package-lock-only --ignore-scripts
+          npm install --save-exact --package-lock-only --ignore-scripts next@16.2.11 eslint-config-next@16.2.11
           npm ci --ignore-scripts
           npm audit --audit-level=moderate
+          npm run lint
+          npm run typecheck
+          npm run test
+          npm run build
 
-      - name: Commit repaired lockfile and remove temporary workflow
+      - name: Commit validated dependency repair and remove temporary workflow
         run: |
           rm -f .github/workflows/repair-pr-1325-lockfile.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json .github/workflows/repair-pr-1325-lockfile.yml
+          git add package.json package-lock.json .github/workflows/repair-pr-1325-lockfile.yml
           if git diff --cached --quiet; then
-            echo "No lockfile change was required."
+            echo "No dependency change was required."
             exit 0
           fi
-          git commit -m "fix(deps): regenerate audited lockfile for PR 1325"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          git commit -m "fix(deps): upgrade to audited stable Next release"
+          git push origin "HEAD:${HEAD_REF}"
