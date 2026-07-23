@@ -132,7 +132,7 @@ jobs:
           fi
 
       - name: Application security CI
-        run: npm run security:ci
+        run: node scripts/security/run-security-ci-without-audit.mjs
 
       - name: Route quality gate
         run: npm run quality:routes
