@@ -1,0 +1,15 @@
+{
+  "schema": "risck-comply.qualified-review-execution.v1",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "reviewValidityDays": 365,
+  "requirements": [
+    {"id":"legal-rules","weight":4,"acceptedPath":"docs/compliance/evidence/accepted/legal-rules-qualified-review.json","questions":["Are legal sources current and correctly mapped?","Are rule precedence and effective dates defensible?","Are legal limitations and escalation points explicit?"]},
+    {"id":"prohibited-practices","weight":7,"acceptedPath":"docs/compliance/evidence/accepted/prohibited-practices-legal-review.json","questions":["Are Article 5 triggers and exceptions correctly represented?","Are ambiguous cases escalated rather than auto-approved?","Are prohibited outcomes fail-closed?"]},
+    {"id":"article-50-copy","weight":8,"acceptedPath":"docs/compliance/evidence/accepted/article-50-copy-review.json","questions":["Is transparency wording accurate and non-misleading?","Are affected-person notices sufficiently clear?","Are language variants materially equivalent?"]},
+    {"id":"fria-methodology","weight":6,"acceptedPath":"docs/compliance/evidence/accepted/fria-methodology-review.json","questions":["Does the methodology cover relevant fundamental rights?","Are consultation and mitigation requirements explicit?","Are residual-risk decisions properly escalated?"]},
+    {"id":"deployer-obligations","weight":7,"acceptedPath":"docs/compliance/evidence/accepted/deployer-obligations-legal-review.json","questions":["Are deployer duties separated from provider duties?","Are monitoring and human oversight obligations complete?","Are national-law dependencies identified?"]},
+    {"id":"high-risk-provider","weight":9,"acceptedPath":"docs/compliance/evidence/accepted/high-risk-provider-methodology-review.json","questions":["Does Article 10 data governance coverage remain accurate?","Are bias, representativeness and provenance controls sufficient?","Are evidence limitations explicit?"]},
+    {"id":"conformity","weight":5,"acceptedPath":"docs/compliance/evidence/accepted/conformity-qualified-review.json","questions":["Are conformity pathways and prerequisites correctly modeled?","Are CE marking and registration gates non-automatic?","Are notified-body dependencies correctly represented?"]},
+    {"id":"gpai","weight":5,"acceptedPath":"docs/compliance/evidence/accepted/gpai-legal-review.json","questions":["Are GPAI and systemic-risk applicability tests defensible?","Are transparency and copyright obligations represented?","Are provider-specific external obligations clearly bounded?"]}
+  ]
+}
