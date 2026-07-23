@@ -1,0 +1,68 @@
+name: Qualified Review Operations Platform
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20260723170000_qualified_review_operations_platform.sql'
+      - 'src/server/ai-governance/qualified-review-operations*'
+      - 'scripts/compliance/generate-qualified-review-operations-report.mjs'
+      - 'tests/compliance/qualified-review-operations-platform.test.ts'
+      - 'docs/compliance/QUALIFIED_REVIEW_OPERATIONS_PLATFORM.md'
+      - '.github/workflows/qualified-review-operations-platform.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qualified-review-operations-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate qualified review operations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact assessed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact assessed checkout
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Run domain and platform contracts
+        run: >-
+          npx vitest run
+          src/server/ai-governance/qualified-review-operations.test.ts
+          tests/compliance/qualified-review-operations-platform.test.ts
+
+      - name: Generate exact-SHA operations gap report
+        run: node scripts/compliance/generate-qualified-review-operations-report.mjs
+
+      - name: Publish report summary
+        run: cat artifacts/qualified-review-operations/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload retained operations report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: qualified-review-operations-${{ env.TARGET_SHA }}
+          path: artifacts/qualified-review-operations
+          retention-days: 90
+          if-no-files-found: error
