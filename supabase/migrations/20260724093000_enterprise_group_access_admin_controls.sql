@@ -26,6 +26,16 @@ alter table public.enterprise_group_access_policy_events force row level securit
 revoke all on public.enterprise_group_access_policy_events from public, anon, authenticated;
 grant all on public.enterprise_group_access_policy_events to service_role;
 
+-- The policy event ledger is append-only. Declare DELETE coverage explicitly so
+-- tenant-isolation audits can prove that browser roles can never erase evidence.
+drop policy if exists enterprise_group_access_policy_events_deny_delete
+  on public.enterprise_group_access_policy_events;
+create policy enterprise_group_access_policy_events_deny_delete
+  on public.enterprise_group_access_policy_events
+  for delete
+  to authenticated
+  using (false);
+
 create or replace function public.preview_enterprise_group_access_policy_change(
   p_organization_id uuid,
   p_group_id uuid,
