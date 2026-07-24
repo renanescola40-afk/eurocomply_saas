@@ -64,6 +64,7 @@ This inventory is the explicit classification source for `src/app/api/**/route.t
 | `src/app/api/team/members/role/route.ts` | admin-only | Role mutation; manage_team, step-up/audit and tenant member lookup required. |
 | `src/app/api/team/members/seat/route.ts` | admin-only | Seat change, suspension and reactivation; manage_team, tenant member lookup, trusted origin, fail-closed rate limit, step-up, contract quota enforcement and database audit required. |
 | `src/app/api/team/members/remove/route.ts` | admin-only | Member removal; manage_team, rate limit, origin, audit required. |
+| `src/app/api/team/group-access-policies/route.ts` | admin-only | Tenant group-access policy preview and mutation; authenticated organization context, `manage_team`, trusted origin, bounded JSON, fail-closed rate limiting, step-up authentication, optimistic concurrency, conflict and last-admin protection, service-role RPC persistence, audit evidence and no-store responses required. |
 | `src/app/api/scim/v2/ServiceProviderConfig/route.ts` | integration | SCIM bearer authentication, tenant entitlement, distributed fail-closed rate limit, no-store and protocol-formatted errors. |
 | `src/app/api/scim/v2/ResourceTypes/route.ts` | integration | Authenticated SCIM discovery with tenant-bound token, distributed rate limit and no-store response. |
 | `src/app/api/scim/v2/Schemas/route.ts` | integration | Authenticated SCIM schema discovery with tenant-bound token, distributed rate limit and no-store response. |
