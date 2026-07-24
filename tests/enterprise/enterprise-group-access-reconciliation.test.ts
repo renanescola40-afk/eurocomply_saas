@@ -64,13 +64,15 @@ describe('enterprise group access reconciliation', () => {
     expect(migration).toContain('limit least(greatest(coalesce(p_limit, 100), 1), 500)');
   });
 
-  it('protects the internal route and bounds its JSON body', () => {
+  it('protects the internal route, bounds its JSON body and derives the actor server-side', () => {
     expect(route).toContain('enforceInternalAuthenticationRateLimit');
     expect(route).toContain('isAuthorizedInternalCronRequest(request)');
     expect(route).toContain('readBoundedJsonRequest(request');
     expect(route).toContain('maxBytes: MAX_BODY_BYTES');
     expect(route).toContain("organizationId: z.string().uuid()");
-    expect(route).toContain("actorUserId: z.string().uuid()");
+    expect(route).toContain('const actorSchema = z.string().uuid()');
+    expect(route).toContain('process.env.ENTERPRISE_RECONCILIATION_ACTOR_USER_ID');
+    expect(route).not.toContain('actorUserId: z.string().uuid()');
     expect(route).not.toContain('request.json()');
   });
 });
