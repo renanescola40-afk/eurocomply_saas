@@ -27,6 +27,17 @@ alter table public.enterprise_group_access_reconciliation_jobs force row level s
 revoke all on public.enterprise_group_access_reconciliation_jobs from public, anon, authenticated;
 grant all on public.enterprise_group_access_reconciliation_jobs to service_role;
 
+-- The queue is service-role only. Keep the denied DELETE operation explicit so
+-- repository RLS coverage remains fail-closed and future grants cannot expose
+-- destructive access to authenticated users.
+drop policy if exists enterprise_group_access_reconciliation_jobs_deny_delete
+  on public.enterprise_group_access_reconciliation_jobs;
+create policy enterprise_group_access_reconciliation_jobs_deny_delete
+  on public.enterprise_group_access_reconciliation_jobs
+  for delete
+  to authenticated
+  using (false);
+
 create or replace function public.enqueue_enterprise_group_access_reconciliation(
   p_organization_id uuid,
   p_batch_size integer default 100
