@@ -1,0 +1,32 @@
+{
+  "controlFamily": "enterprise-seat-capacity",
+  "version": 1,
+  "implementation": {
+    "policy": "supabase/migrations/20260724103000_enterprise_seat_concurrency.sql",
+    "service": "src/server/enterprise/seat-capacity.ts",
+    "domainTests": "src/server/enterprise/seat-capacity.test.ts",
+    "migrationTests": "tests/enterprise/enterprise-seat-concurrency-migration.test.ts",
+    "workflowTests": "tests/security/enterprise-seat-concurrency-workflow.test.ts",
+    "workflow": ".github/workflows/enterprise-seat-concurrency.yml",
+    "report": "scripts/enterprise/report-seat-concurrency-gap.mjs",
+    "runbook": "docs/enterprise/ENTERPRISE_SEAT_CONCURRENCY.md"
+  },
+  "controls": [
+    "versioned organization capacity",
+    "atomic reservation",
+    "idempotent replay",
+    "optimistic concurrency",
+    "fail-closed missing policy",
+    "seat exhaustion enforcement",
+    "privacy-preserving invite identity",
+    "service-role mutation boundary",
+    "append-only event evidence",
+    "exact-SHA CI validation"
+  ],
+  "truthBoundary": {
+    "productionMigrationApplied": false,
+    "externalConcurrencyProven": false,
+    "billingContractSynchronized": false,
+    "humanApprovalRequiredForOverrides": true
+  }
+}
