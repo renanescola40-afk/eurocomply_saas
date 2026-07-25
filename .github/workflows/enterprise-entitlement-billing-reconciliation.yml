@@ -1,0 +1,57 @@
+name: Enterprise Entitlement Billing Reconciliation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20260724193000_enterprise_entitlement_billing_reconciliation.sql'
+      - 'src/server/enterprise/entitlement-reconciliation*'
+      - 'tests/enterprise/enterprise-entitlement-reconciliation-migration.test.ts'
+      - 'scripts/enterprise/report-entitlement-billing-drift.mjs'
+      - 'docs/enterprise/ENTERPRISE_ENTITLEMENT_BILLING_RECONCILIATION.md'
+      - '.github/workflows/enterprise-entitlement-billing-reconciliation.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enterprise-entitlement-billing-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact assessed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+      - name: Verify exact checkout
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Run reconciliation contracts
+        run: npx vitest run src/server/enterprise/entitlement-reconciliation.test.ts tests/enterprise/enterprise-entitlement-reconciliation-migration.test.ts tests/security/enterprise-entitlement-billing-workflow.test.ts
+      - name: Generate drift report
+        run: node scripts/enterprise/report-entitlement-billing-drift.mjs
+      - name: Publish summary
+        run: cat artifacts/enterprise-entitlement-billing/report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload retained evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: enterprise-entitlement-billing-${{ env.TARGET_SHA }}
+          path: artifacts/enterprise-entitlement-billing
+          retention-days: 90
+          if-no-files-found: error
