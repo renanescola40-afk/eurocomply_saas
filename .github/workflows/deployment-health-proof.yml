@@ -4,11 +4,23 @@ on:
   workflow_dispatch:
     inputs:
       deployment_url:
-        description: 'HTTPS deployment URL to validate. Root path is normalized to /api/health.'
+        description: 'HTTPS Vercel deployment URL to validate.'
+        required: true
+        type: string
+      environment:
+        description: 'GitHub environment whose approvals and secrets apply.'
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+      expected_commit_sha:
+        description: 'Exact GitHub commit SHA expected in the Vercel deployment metadata.'
         required: true
         type: string
       include_promoted_register:
-        description: 'Also generate a promoted P0 register copy in the uploaded artifact. Does not commit changes.'
+        description: 'Generate a promoted P0 register copy in the artifact. Does not commit changes.'
         required: false
         default: false
         type: boolean
@@ -16,35 +28,52 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: deployment-health-proof-${{ inputs.environment }}-${{ inputs.deployment_url }}
+  cancel-in-progress: false
+
 jobs:
   deployment-health-proof:
-    name: Validate deployment health endpoint
+    name: Validate Vercel deployment assurance
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ${{ inputs.environment }}
     env:
       DEPLOYMENT_HEALTH_URL: ${{ inputs.deployment_url }}
+      DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment }}
+      EXPECTED_DEPLOYMENT_COMMIT_SHA: ${{ inputs.expected_commit_sha }}
       DEPLOYMENT_HEALTH_TIMEOUT_MS: '15000'
+      HEALTHCHECK_TOKEN: ${{ secrets.HEALTHCHECK_TOKEN }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
 
-      - name: Run deployment health validation
+      - name: Validate deployment, readiness and provenance
+        shell: bash
         run: |
+          set -euo pipefail
           if [ "${{ inputs.include_promoted_register }}" = "true" ]; then
             node scripts/security/run-deployment-health-validation.mjs --update-register
           else
             node scripts/security/run-deployment-health-validation.mjs
           fi
 
-      - name: Upload deployment health evidence
+      - name: Upload deployment assurance evidence
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: deployment-health-validation
+          name: deployment-health-validation-${{ inputs.environment }}
           path: |
             docs/security/evidence/runtime/deployment-health-validation.json
             docs/security/P0_RUNTIME_EVIDENCE_REGISTER.md
           if-no-files-found: error
+          retention-days: 30
