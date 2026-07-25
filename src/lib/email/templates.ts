@@ -5,6 +5,7 @@ export type EmailTemplateKey =
   | 'billing_started'
   | 'invoice_failed'
   | 'compliance_deadline_reminder'
+  | 'qualified-review-reminder'
   | 'export_ready'
   | 'security_alert'
   | 'trial_upgrade'
