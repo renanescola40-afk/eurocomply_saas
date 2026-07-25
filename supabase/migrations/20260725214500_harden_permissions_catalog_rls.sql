@@ -14,7 +14,7 @@ create policy permissions_select_authenticated
   on public.permissions
   for select
   to authenticated
-  using (true);
+  using (auth.uid() is not null);
 
 -- role_permissions is also catalog data. Clients may read it to render/resolve RBAC,
 -- but mutations remain migration/backend-only.
@@ -28,7 +28,7 @@ create policy role_permissions_select_authenticated
   on public.role_permissions
   for select
   to authenticated
-  using (true);
+  using (auth.uid() is not null);
 
 -- Stripe webhook event rows are server-only idempotency/audit records.
 -- Keep RLS enabled with no client policies and explicitly remove Data API access.
