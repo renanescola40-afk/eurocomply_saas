@@ -1,0 +1,33 @@
+{
+  "controlFamily": "enterprise-entitlement-billing-reconciliation",
+  "version": 1,
+  "implementation": {
+    "migration": "supabase/migrations/20260724193000_enterprise_entitlement_billing_reconciliation.sql",
+    "service": "src/server/enterprise/entitlement-reconciliation.ts",
+    "domainTests": "src/server/enterprise/entitlement-reconciliation.test.ts",
+    "migrationTests": "tests/enterprise/enterprise-entitlement-reconciliation-migration.test.ts",
+    "workflowTests": "tests/security/enterprise-entitlement-billing-workflow.test.ts",
+    "workflow": ".github/workflows/enterprise-entitlement-billing-reconciliation.yml",
+    "report": "scripts/enterprise/report-entitlement-billing-drift.mjs",
+    "runbook": "docs/enterprise/ENTERPRISE_ENTITLEMENT_BILLING_RECONCILIATION.md"
+  },
+  "controls": [
+    "versioned authority sources",
+    "explicit source precedence",
+    "organization-scoped idempotency",
+    "deterministic payload integrity",
+    "atomic canonical seat-policy update",
+    "source optimistic concurrency",
+    "lower-priority drift rejection",
+    "service-role mutation boundary",
+    "append-only reconciliation evidence",
+    "exact-SHA CI validation"
+  ],
+  "truthBoundary": {
+    "productionMigrationApplied": false,
+    "stripeWebhookConnected": false,
+    "signedContractFeedConnected": false,
+    "externalDriftReconciled": false,
+    "humanAuthorityApprovalRequired": true
+  }
+}
