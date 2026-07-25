@@ -1,0 +1,70 @@
+name: Supabase Enterprise Assurance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/database/audit-supabase-enterprise.mjs'
+      - 'tests/security/supabase-enterprise-assurance-contract.test.mjs'
+      - '.github/workflows/supabase-enterprise-assurance.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/database/audit-supabase-enterprise.mjs'
+      - 'tests/security/supabase-enterprise-assurance-contract.test.mjs'
+      - '.github/workflows/supabase-enterprise-assurance.yml'
+  workflow_dispatch:
+    inputs:
+      strict_review:
+        description: 'Fail when review-required findings remain.'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-enterprise-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migration-assurance:
+    name: Migration, RLS and tenancy assurance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Run repository contract tests
+        run: node --test tests/security/supabase-enterprise-assurance-contract.test.mjs
+
+      - name: Audit migration history and RLS controls
+        env:
+          STRICT_REVIEW: ${{ inputs.strict_review || 'false' }}
+        run: |
+          if [ "$STRICT_REVIEW" = "true" ]; then
+            node scripts/database/audit-supabase-enterprise.mjs --write --strict
+          else
+            node scripts/database/audit-supabase-enterprise.mjs --write
+          fi
+
+      - name: Upload assurance evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: supabase-enterprise-assurance-${{ github.sha }}
+          path: docs/security/evidence/runtime/supabase-enterprise-assurance.json
+          if-no-files-found: error
+          retention-days: 30
