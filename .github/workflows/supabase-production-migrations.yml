@@ -1,0 +1,170 @@
+name: Supabase Production Migrations
+
+run-name: Supabase production migrations for ${{ github.sha }}
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/**'
+      - '.github/workflows/supabase-production-migrations.yml'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character SHA currently at the tip of main
+        required: true
+        type: string
+      confirmation:
+        description: Type APPLY_SUPABASE_MIGRATIONS to authorize production migration deployment
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-production-migrations
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Dry-run and apply pending production migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+    steps:
+      - name: Check out trusted main history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve and authorize exact main SHA
+        id: authorize
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_RELEASE_SHA: ${{ inputs.release_sha }}
+          INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          main_sha="$(git rev-parse origin/main)"
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [[ ! "$INPUT_RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+              echo "release_sha must be a full 40-character Git SHA" >&2
+              exit 1
+            fi
+            if [ "$INPUT_CONFIRMATION" != "APPLY_SUPABASE_MIGRATIONS" ]; then
+              echo "confirmation must exactly match APPLY_SUPABASE_MIGRATIONS" >&2
+              exit 1
+            fi
+            if [ "${INPUT_RELEASE_SHA,,}" != "$main_sha" ]; then
+              echo "release_sha is not the current main tip" >&2
+              exit 1
+            fi
+          fi
+
+          test "$(git rev-parse HEAD)" = "$main_sha"
+          echo "release_sha=$main_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Validate required production secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required production secret: $name" >&2
+              missing=1
+            fi
+          done
+          test "$missing" -eq 0
+          if [[ ! "$SUPABASE_PROJECT_ID" =~ ^[a-z0-9]{20}$ ]]; then
+            echo "SUPABASE_PROJECT_ID does not look like a Supabase project reference" >&2
+            exit 1
+          fi
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
+        with:
+          version: latest
+
+      - name: Initialize temporary CLI configuration when absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f supabase/config.toml ]; then
+            supabase init
+          fi
+
+      - name: Link the exact production project
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase link \
+            --project-ref "$SUPABASE_PROJECT_ID" \
+            --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Capture migration state before deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase migration list --linked | tee migration-state-before.txt
+          cat migration-state-before.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preview pending production migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db push --linked --dry-run | tee migration-dry-run.txt
+          cat migration-dry-run.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Apply pending production migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db push --linked
+
+      - name: Verify production migration history after deployment
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ steps.authorize.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+          supabase migration list --linked | tee migration-state-after.txt
+
+          if grep -Eq '^\s*[0-9]{14}\s*\|\s*$' migration-state-after.txt; then
+            echo "At least one local migration is still missing remotely" >&2
+            exit 1
+          fi
+
+          {
+            echo "## Supabase production migration deployment"
+            echo ""
+            echo "- Release SHA: \`$RELEASE_SHA\`"
+            echo "- Project ref suffix: \`${SUPABASE_PROJECT_ID: -6}\`"
+            echo "- Result: pending migrations applied and remote history rechecked"
+            echo ""
+            echo '```text'
+            cat migration-state-after.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Reverify main did not move during deployment
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ steps.authorize.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
