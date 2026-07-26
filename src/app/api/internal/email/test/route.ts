@@ -56,6 +56,7 @@ const testEmailPayloadSchema = z
   .strict();
 
 type TestEmailPayload = z.infer<typeof testEmailPayloadSchema>;
+type TestEmailTemplate = (typeof TEST_EMAIL_TEMPLATES)[number];
 
 function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
@@ -107,7 +108,7 @@ function assertProductionEmailConfigured() {
   return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
 }
 
-function buildTemplate(template: EmailTemplateKey, organizationName: string) {
+function buildTemplate(template: TestEmailTemplate, organizationName: string) {
   const appUrl = getAppUrl();
 
   switch (template) {
