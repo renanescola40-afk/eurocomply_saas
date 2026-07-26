@@ -1,0 +1,124 @@
+name: Supabase Production Schema Evidence
+
+run-name: Supabase production schema evidence for ${{ github.sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character SHA currently at the tip of main
+        required: true
+        type: string
+      confirmation:
+        description: Type COLLECT_SUPABASE_SCHEMA_EVIDENCE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-production-schema-evidence
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    name: Collect immutable production schema evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PGSSLMODE: require
+
+    steps:
+      - name: Check out trusted main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Authorize exact main SHA
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          main_sha="$(git rev-parse origin/main)"
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          test "${RELEASE_SHA,,}" = "$main_sha"
+          test "$CONFIRMATION" = "COLLECT_SUPABASE_SCHEMA_EVIDENCE"
+          test "$(git rev-parse HEAD)" = "$main_sha"
+
+      - name: Validate production configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_PASSWORD:-}"
+          [[ "${SUPABASE_PROJECT_ID:-}" =~ ^[a-z0-9]{20}$ ]]
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+
+      - name: Collect read-only catalog evidence
+        shell: bash
+        env:
+          PGHOST: db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co
+          PGPORT: '5432'
+          PGDATABASE: postgres
+          PGUSER: postgres
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/supabase-production-schema-evidence
+          psql \
+            --set ON_ERROR_STOP=1 \
+            --file scripts/supabase/production-schema-evidence.sql \
+            > artifacts/supabase-production-schema-evidence/catalog.txt
+          sha256sum artifacts/supabase-production-schema-evidence/catalog.txt \
+            | tee artifacts/supabase-production-schema-evidence/SHA256SUMS
+          test -s artifacts/supabase-production-schema-evidence/catalog.txt
+          grep -q '^table|public|' artifacts/supabase-production-schema-evidence/catalog.txt
+          grep -q '^migration|' artifacts/supabase-production-schema-evidence/catalog.txt
+
+      - name: Publish bounded summary
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          catalog=artifacts/supabase-production-schema-evidence/catalog.txt
+          {
+            echo '## Supabase production schema evidence'
+            echo
+            echo "- Release SHA: \`$RELEASE_SHA\`"
+            echo "- Project ref suffix: \`${SUPABASE_PROJECT_ID: -6}\`"
+            echo "- Tables/views: $(grep -c '^table|' "$catalog" || true)"
+            echo "- Columns: $(grep -c '^column|' "$catalog" || true)"
+            echo "- Constraints: $(grep -c '^constraint|' "$catalog" || true)"
+            echo "- Indexes: $(grep -c '^index|' "$catalog" || true)"
+            echo "- Functions: $(grep -c '^function|' "$catalog" || true)"
+            echo "- Triggers: $(grep -c '^trigger|' "$catalog" || true)"
+            echo "- Policies: $(grep -c '^policy|' "$catalog" || true)"
+            echo "- Grants: $(grep -c '^grant|' "$catalog" || true)"
+            echo "- Recorded migrations: $(grep -c '^migration|' "$catalog" || true)"
+            echo "- SHA-256: \`$(cut -d' ' -f1 artifacts/supabase-production-schema-evidence/SHA256SUMS)\`"
+            echo
+            echo 'The artifact contains catalog metadata only. No application rows are queried.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload schema evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: supabase-production-schema-evidence-${{ inputs.release_sha }}
+          path: artifacts/supabase-production-schema-evidence
+          if-no-files-found: error
+          retention-days: 30
