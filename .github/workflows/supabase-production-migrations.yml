@@ -1,14 +1,8 @@
 name: Supabase Production Migrations
 
-run-name: Supabase production migrations for ${{ github.sha }}
+run-name: Supabase production migrations for ${{ inputs.release_sha }}
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'supabase/migrations/**'
-      - '.github/workflows/supabase-production-migrations.yml'
   workflow_dispatch:
     inputs:
       release_sha:
@@ -29,7 +23,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Dry-run and apply pending production migrations
+    name: Validate history, dry-run and apply pending migrations
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
@@ -51,7 +45,6 @@ jobs:
         id: authorize
         shell: bash
         env:
-          EVENT_NAME: ${{ github.event_name }}
           INPUT_RELEASE_SHA: ${{ inputs.release_sha }}
           INPUT_CONFIRMATION: ${{ inputs.confirmation }}
         run: |
@@ -59,19 +52,17 @@ jobs:
           git fetch --no-tags origin main
           main_sha="$(git rev-parse origin/main)"
 
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            if [[ ! "$INPUT_RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
-              echo "release_sha must be a full 40-character Git SHA" >&2
-              exit 1
-            fi
-            if [ "$INPUT_CONFIRMATION" != "APPLY_SUPABASE_MIGRATIONS" ]; then
-              echo "confirmation must exactly match APPLY_SUPABASE_MIGRATIONS" >&2
-              exit 1
-            fi
-            if [ "${INPUT_RELEASE_SHA,,}" != "$main_sha" ]; then
-              echo "release_sha is not the current main tip" >&2
-              exit 1
-            fi
+          if [[ ! "$INPUT_RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "release_sha must be a full 40-character Git SHA" >&2
+            exit 1
+          fi
+          if [ "$INPUT_CONFIRMATION" != "APPLY_SUPABASE_MIGRATIONS" ]; then
+            echo "confirmation must exactly match APPLY_SUPABASE_MIGRATIONS" >&2
+            exit 1
+          fi
+          if [ "${INPUT_RELEASE_SHA,,}" != "$main_sha" ]; then
+            echo "release_sha is not the current main tip" >&2
+            exit 1
           fi
 
           test "$(git rev-parse HEAD)" = "$main_sha"
@@ -94,6 +85,44 @@ jobs:
             exit 1
           fi
 
+      - name: Validate local migration filenames and versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(supabase/migrations/*.sql)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No Supabase migration files were found" >&2
+            exit 1
+          fi
+
+          invalid=0
+          declare -A seen=()
+          for file in "${files[@]}"; do
+            name="$(basename "$file")"
+            if [[ ! "$name" =~ ^([0-9]{14})_[A-Za-z0-9._-]+\.sql$ ]]; then
+              echo "Invalid migration filename: $name" >&2
+              invalid=1
+              continue
+            fi
+
+            version="${BASH_REMATCH[1]}"
+            timestamp="${version:0:8} ${version:8:2}:${version:10:2}:${version:12:2} UTC"
+            if ! date --date="$timestamp" '+%Y%m%d%H%M%S' | grep -Fxq "$version"; then
+              echo "Invalid migration timestamp: $name" >&2
+              invalid=1
+            fi
+
+            if [ -n "${seen[$version]:-}" ]; then
+              echo "Duplicate migration version $version: ${seen[$version]} and $name" >&2
+              invalid=1
+            else
+              seen[$version]="$name"
+            fi
+          done
+
+          test "$invalid" -eq 0
+
       - name: Install Supabase CLI
         uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
         with:
@@ -115,12 +144,36 @@ jobs:
             --project-ref "$SUPABASE_PROJECT_ID" \
             --password "$SUPABASE_DB_PASSWORD"
 
-      - name: Capture migration state before deployment
+      - name: Capture and validate migration history before deployment
         shell: bash
         run: |
           set -euo pipefail
           supabase migration list --linked | tee migration-state-before.txt
           cat migration-state-before.txt >> "$GITHUB_STEP_SUMMARY"
+
+          drift_lines="$(awk -F'|' '
+            /^[[:space:]]*[0-9]+[[:space:]]*\|/ {
+              local=$1; remote=$2;
+              gsub(/[[:space:]]/, "", local);
+              gsub(/[[:space:]]/, "", remote);
+              if ((local != "" && remote == "") || (local == "" && remote != "")) print $0;
+            }
+          ' migration-state-before.txt)"
+
+          if [ -n "$drift_lines" ]; then
+            {
+              echo
+              echo "## Deployment blocked: migration history drift"
+              echo
+              echo '```text'
+              printf '%s\n' "$drift_lines"
+              echo '```'
+              echo
+              echo "Run the Supabase Migration Drift Audit and reconcile history before deploying."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Production migration history is not aligned; refusing db push" >&2
+            exit 1
+          fi
 
       - name: Preview pending production migrations
         shell: bash
@@ -143,18 +196,27 @@ jobs:
           set -euo pipefail
           supabase migration list --linked | tee migration-state-after.txt
 
-          if grep -Eq '^\s*[0-9]{14}\s*\|\s*$' migration-state-after.txt; then
-            echo "At least one local migration is still missing remotely" >&2
+          drift_lines="$(awk -F'|' '
+            /^[[:space:]]*[0-9]+[[:space:]]*\|/ {
+              local=$1; remote=$2;
+              gsub(/[[:space:]]/, "", local);
+              gsub(/[[:space:]]/, "", remote);
+              if ((local != "" && remote == "") || (local == "" && remote != "")) print $0;
+            }
+          ' migration-state-after.txt)"
+          if [ -n "$drift_lines" ]; then
+            echo "Migration history drift remains after deployment" >&2
+            printf '%s\n' "$drift_lines" >&2
             exit 1
           fi
 
           {
             echo "## Supabase production migration deployment"
-            echo ""
+            echo
             echo "- Release SHA: \`$RELEASE_SHA\`"
             echo "- Project ref suffix: \`${SUPABASE_PROJECT_ID: -6}\`"
-            echo "- Result: pending migrations applied and remote history rechecked"
-            echo ""
+            echo "- Result: migration history aligned before and after deployment"
+            echo
             echo '```text'
             cat migration-state-after.txt
             echo '```'
