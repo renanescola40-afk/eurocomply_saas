@@ -155,6 +155,10 @@ function hasAny(source, tokens) {
   return tokens.some((token) => source.includes(token));
 }
 
+function hasMutationHandler(source) {
+  return /export\s+async\s+function\s+(POST|PUT|PATCH|DELETE)\b/.test(source);
+}
+
 function hasSignedHmacEvidence(source) {
   return source.includes('signed_hmac')
     || (source.includes('buildEvidencePackIntegrity')
@@ -181,6 +185,7 @@ function evaluateRoute(filePath) {
       failures.push(`${normalized}: ${rule.name} missing signed_hmac or signed HMAC integrity evidence`);
     }
     for (const tokens of rule.any) {
+      if (rule.name === 'team endpoint' && tokens === guards.origin && !hasMutationHandler(source)) continue;
       if (!hasAny(source, tokens)) failures.push(`${normalized}: ${rule.name} missing one of guard token group: ${tokens.join(' OR ')}`);
     }
   }
