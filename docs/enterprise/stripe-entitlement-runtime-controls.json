@@ -1,0 +1,31 @@
+{
+  "controlFamily": "stripe-entitlement-runtime",
+  "version": 1,
+  "implementation": {
+    "normalizer": "src/server/billing/stripe-entitlement-runtime.ts",
+    "integration": "src/server/billing/stripe-webhook-recovery.ts",
+    "tests": "src/server/billing/stripe-entitlement-runtime.test.ts",
+    "workflowTests": "tests/security/stripe-entitlement-runtime-workflow.test.ts",
+    "workflow": ".github/workflows/stripe-entitlement-runtime.yml",
+    "report": "scripts/enterprise/report-stripe-entitlement-runtime.mjs",
+    "runbook": "docs/enterprise/STRIPE_ENTITLEMENT_RUNTIME.md"
+  },
+  "controls": [
+    "verified webhook boundary",
+    "bounded request processing",
+    "event replay protection",
+    "tenant-scoped metadata validation",
+    "source-version concurrency",
+    "canonical entitlement reconciliation",
+    "effective-dated cancellation",
+    "bounded delinquency grace",
+    "lease recovery",
+    "exact-SHA CI evidence"
+  ],
+  "truthBoundary": {
+    "productionStripeConfigured": false,
+    "productionSupabaseApplied": false,
+    "productionEventReconciled": false,
+    "contractMetadataValidated": false
+  }
+}
