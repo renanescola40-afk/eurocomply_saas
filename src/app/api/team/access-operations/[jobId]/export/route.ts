@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 import { csvDownloadResponse, type CsvCell, type CsvRow } from '@/lib/exports/csv';
+import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
+import { rateLimitResponse } from '@/lib/security/rate-limit-response';
 import { exportEnterpriseAccessOperationMembers } from '@/server/enterprise/access-operations-center';
 import { getCurrentOrganizationForUser } from '@/server/queries/organizations';
 import { requireApiUser, requirePermission, secureApiError } from '@/server/security/api-guards';
@@ -40,6 +42,19 @@ export async function GET(
     });
 
     const { jobId } = paramsSchema.parse(await context.params);
+    const rateLimit = await checkDistributedRateLimit({
+      key: `export:access-operation:${organization.id}:${user.id}:${jobId}`,
+      policy: 'export',
+      userId: user.id,
+      organizationId: organization.id,
+      action: 'export_enterprise_access_operation_members',
+      route: '/api/team/access-operations/[jobId]/export',
+      limit: 10,
+      windowMs: 60_000,
+      failureMode: 'fail-closed',
+    });
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+
     const rows = await exportEnterpriseAccessOperationMembers({
       operationId: jobId,
       organizationId: organization.id,
