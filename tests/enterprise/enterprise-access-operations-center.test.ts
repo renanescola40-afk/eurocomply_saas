@@ -9,6 +9,7 @@ const service = readFileSync('src/server/enterprise/access-operations-center.ts'
 const collectionRoute = readFileSync('src/app/api/team/access-operations/route.ts', 'utf8');
 const itemRoute = readFileSync('src/app/api/team/access-operations/[jobId]/route.ts', 'utf8');
 const exportRoute = readFileSync('src/app/api/team/access-operations/[jobId]/export/route.ts', 'utf8');
+const csvHelper = readFileSync('src/lib/exports/csv.ts', 'utf8');
 const workerRoute = readFileSync('src/app/api/internal/enterprise-access-operations/route.ts', 'utf8');
 
 describe('enterprise access operations center', () => {
@@ -50,12 +51,15 @@ describe('enterprise access operations center', () => {
     expect(itemRoute).not.toContain('request.json()');
   });
 
-  it('provides tenant-scoped member exports with private no-store headers', () => {
+  it('provides tenant-scoped member exports through the hardened CSV helper', () => {
     expect(migration).toContain('export_enterprise_access_operation_members');
     expect(migration).toContain('i.organization_id = p_organization_id');
-    expect(exportRoute).toContain("'Cache-Control': 'private, no-store, max-age=0'");
-    expect(exportRoute).toContain("'X-Content-Type-Options': 'nosniff'");
+    expect(exportRoute).toContain('csvDownloadResponse');
     expect(exportRoute).toContain('requirePermission');
+    expect(csvHelper).toContain("'Cache-Control': 'no-store, max-age=0'");
+    expect(csvHelper).toContain("'X-Content-Type-Options': 'nosniff'");
+    expect(csvHelper).toContain('neutralizeCsvFormula');
+    expect(csvHelper).toContain('sanitizeCsvFilename');
   });
 
   it('protects the internal worker with cron authorization and fail-closed authentication limiting', () => {
