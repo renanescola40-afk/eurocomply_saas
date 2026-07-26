@@ -1,0 +1,110 @@
+name: Supabase Migration Drift Audit
+
+run-name: Supabase migration drift audit for ${{ github.sha }}
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * 1'
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/supabase/audit-migration-drift.mjs'
+      - '.github/workflows/supabase-migration-drift-audit.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-migration-drift-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Audit local and production migration history
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+    steps:
+      - name: Check out trusted source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate production configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required production secret: $name" >&2
+              missing=1
+            fi
+          done
+          test "$missing" -eq 0
+          [[ "$SUPABASE_PROJECT_ID" =~ ^[a-z0-9]{20}$ ]]
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
+        with:
+          version: latest
+
+      - name: Initialize temporary CLI configuration when absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f supabase/config.toml ]; then
+            supabase init
+          fi
+
+      - name: Link production project
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase link \
+            --project-ref "$SUPABASE_PROJECT_ID" \
+            --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Capture remote migration state
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase migration list --linked | tee migration-state-remote.txt
+
+      - name: Generate drift evidence
+        id: drift
+        shell: bash
+        run: |
+          set +e
+          node scripts/supabase/audit-migration-drift.mjs \
+            supabase/migrations \
+            migration-state-remote.txt \
+            artifacts/supabase-migration-drift \
+            | tee migration-drift-summary.md
+          result=${PIPESTATUS[0]}
+          echo "result=$result" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Publish audit summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f artifacts/supabase-migration-drift/migration-drift.md ]; then
+            cat artifacts/supabase-migration-drift/migration-drift.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Migration drift evidence was not generated.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Enforce critical drift gate
+        if: steps.drift.outputs.result != '0'
+        shell: bash
+        run: |
+          echo 'Critical Supabase migration drift detected. Review the generated job summary.' >&2
+          exit 1
