@@ -1,16 +1,26 @@
 import { z } from 'zod';
 
-import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
-import { isAuthorizedInternalCronRequest } from '@/server/security/internal-cron';
-import { noStoreJson } from '@/server/security/no-store';
+import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { expirePrivilegedAccess } from '@/server/enterprise/privileged-access-governance';
+import { enforceInternalAuthenticationRateLimit } from '@/server/security/internal-auth-rate-limit';
+import { noStoreJson } from '@/server/security/no-store';
 
+export const runtime = 'nodejs';
+
+const ROUTE = '/api/internal/enterprise-privileged-access-expiry';
 const limitSchema = z.coerce.number().int().min(1).max(500).default(100);
 
 export async function POST(request: Request) {
-  if (!isAuthorizedInternalCronRequest(request)) return noStoreJson({ error: 'unauthorized' }, { status: 401 });
-  const rate = await checkDistributedRateLimit({ key: 'internal:enterprise-privileged-access-expiry', policy: 'internal', action: 'expire_privileged_access', route: '/api/internal/enterprise-privileged-access-expiry', limit: 12, windowMs: 60_000, failureMode: 'fail-closed' });
-  if (!rate.allowed) return noStoreJson({ error: 'rate_limited' }, { status: 429 });
+  const limited = await enforceInternalAuthenticationRateLimit(request, {
+    route: ROUTE,
+    action: 'expire_privileged_access',
+  });
+  if (limited) return limited;
+
+  if (!isAuthorizedInternalCronRequest(request)) {
+    return noStoreJson({ error: 'unauthorized' }, { status: 401 });
+  }
+
   try {
     const url = new URL(request.url);
     const limit = limitSchema.parse(url.searchParams.get('limit') ?? 100);
