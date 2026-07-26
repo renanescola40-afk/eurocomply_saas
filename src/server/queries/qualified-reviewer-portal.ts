@@ -40,8 +40,9 @@ export async function revokeReviewerInvite(input: { organizationId: string; assi
     .is('revoked_at', null)
     .select('id,reviewer_id').maybeSingle();
   if (error) fail('invite_revoke', error);
-  await db.from('qualified_reviewer_sessions').update({ revoked_at: now })
+  const sessions = await db.from('qualified_reviewer_sessions').update({ revoked_at: now })
     .eq('organization_id', input.organizationId).eq('assignment_id', input.assignmentId).is('revoked_at', null);
+  if (sessions.error) fail('session_bulk_revoke', sessions.error);
   return data;
 }
 
@@ -65,16 +66,20 @@ export async function getReviewerSession(sessionToken: string) {
     .eq('session_hash', digest(sessionToken)).maybeSingle();
   if (error) fail('session_lookup', error);
   if (!session || session.revoked_at || new Date(session.expires_at) <= new Date()) return null;
-  const [assignment, reviewer, campaign, submissions, attestation] = await Promise.all([
+
+  const [assignment, reviewer, submissions, attestation] = await Promise.all([
     db.from('qualified_review_assignments').select('id,campaign_id,workstream_id,status,due_at,version').eq('id', session.assignment_id).eq('organization_id', session.organization_id).single(),
     db.from('qualified_reviewers').select('id,display_name,qualification_summary,independence_declared,conflict_details,verified_at,active').eq('id', session.reviewer_id).eq('organization_id', session.organization_id).single(),
-    db.from('qualified_review_campaigns').select('id,target_sha,status').eq('organization_id', session.organization_id).eq('id', session.assignment_id).maybeSingle(),
     db.from('qualified_review_submissions').select('id,target_sha,opinion,conclusion,scope,evidence_locations,limitations,valid_until,submitted_at,superseded_at').eq('assignment_id', session.assignment_id).eq('organization_id', session.organization_id).order('submitted_at', { ascending: false }),
     db.from('qualified_reviewer_attestations').select('*').eq('assignment_id', session.assignment_id).eq('reviewer_id', session.reviewer_id).maybeSingle(),
   ]);
   for (const [area, result] of [['assignment', assignment], ['reviewer', reviewer], ['submissions', submissions], ['attestation', attestation]] as const) if (result.error) fail(area, result.error);
   if (!assignment.data || !reviewer.data || !reviewer.data.active) return null;
-  await db.from('qualified_reviewer_sessions').update({ last_seen_at: new Date().toISOString() }).eq('id', session.id);
+
+  const campaign = await db.from('qualified_review_campaigns').select('id,target_sha,status').eq('organization_id', session.organization_id).eq('id', assignment.data.campaign_id).single();
+  if (campaign.error || !campaign.data) fail('campaign', campaign.error);
+  const touch = await db.from('qualified_reviewer_sessions').update({ last_seen_at: new Date().toISOString() }).eq('id', session.id);
+  if (touch.error) fail('session_touch', touch.error);
   return { session, assignment: assignment.data, reviewer: reviewer.data, campaign: campaign.data, submissions: submissions.data ?? [], attestation: attestation.data };
 }
 
@@ -101,10 +106,12 @@ export async function createReviewerSubmission(input: { sessionToken: string; ta
   const context = await getReviewerSession(input.sessionToken);
   if (!context) throw new Error('reviewer_session_invalid');
   if (!context.attestation?.independence_confirmed || !context.attestation?.scope_acknowledged) throw new Error('reviewer_attestation_required');
+  if (context.campaign.target_sha !== input.targetSha) throw new Error('reviewer_target_sha_mismatch');
   if (context.assignment.status === 'accepted' || context.assignment.status === 'rejected' || context.assignment.status === 'expired' || context.assignment.status === 'revoked') throw new Error('reviewer_assignment_closed');
   const payload = { assignmentId: context.assignment.id, reviewerId: context.reviewer.id, targetSha: input.targetSha, opinion: input.opinion, conclusion: input.conclusion, scope: input.scope, evidenceLocations: input.evidenceLocations, limitations: input.limitations, validUntil: input.validUntil };
   const db = createAdminClient();
-  await db.from('qualified_review_submissions').update({ superseded_at: new Date().toISOString() }).eq('organization_id', context.session.organization_id).eq('assignment_id', context.assignment.id).is('superseded_at', null);
+  const supersede = await db.from('qualified_review_submissions').update({ superseded_at: new Date().toISOString() }).eq('organization_id', context.session.organization_id).eq('assignment_id', context.assignment.id).is('superseded_at', null);
+  if (supersede.error) fail('submission_supersede', supersede.error);
   const { data, error } = await db.from('qualified_review_submissions').insert({
     organization_id: context.session.organization_id,
     assignment_id: context.assignment.id,
