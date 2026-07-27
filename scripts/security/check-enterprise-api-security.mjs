@@ -11,14 +11,14 @@ const MUTATING_HANDLER = /export\s+async\s+function\s+(POST|PUT|PATCH|DELETE)\b/
 const ALL_HANDLER = /export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)\b/g;
 
 const guardGroups = {
-  auth: ['getCurrentUser', 'requireCurrentUser', 'requireApiUser', 'requireEnterpriseApiAccess'],
-  organization: ['getCurrentOrganizationForUser', 'requireOrganizationContext', 'requireEnterpriseApiAccess'],
-  rbac: ['assertOrganizationPermission', 'requirePermission', 'requireEnterpriseApiAccess'],
+  auth: ['getCurrentUser', 'requireCurrentUser', 'requireApiUser', 'requireEnterpriseApiAccess', 'getReviewerSession'],
+  organization: ['getCurrentOrganizationForUser', 'requireOrganizationContext', 'requireEnterpriseApiAccess', 'getReviewerSession'],
+  rbac: ['assertOrganizationPermission', 'requirePermission', 'requireEnterpriseApiAccess', 'getReviewerSession'],
   origin: ['assertTrustedOrigin', 'verifyTrustedOrigin', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   noStore: ['noStoreJson', 'noStoreDownload', 'applyNoStoreHeaders', 'no-store'],
   rateLimit: ['checkDistributedRateLimit', 'rateLimitByIp', 'rateLimitByUser', 'isRateLimited', 'requireTrustedMutation', 'requireEnterpriseApiAccess'],
   internalAuth: ['isAuthorizedInternalCronRequest', 'HEALTHCHECK_' + 'TOKEN', 'CRON_' + 'SECRET', 'INTERNAL_CRON_' + 'SECRET'],
-  tenant: ['organization.id', 'organizationId', 'organization_id', 'resourceOrganizationId', 'requireEnterpriseApiAccess'],
+  tenant: ['organization.id', 'organizationId', 'organization_id', 'resourceOrganizationId', 'requireEnterpriseApiAccess', 'getReviewerSession'],
   webhookAuth: ['constructEvent', 'STRIPE_WEBHOOK_' + 'SECRET', 'stripe-signature'],
 };
 
