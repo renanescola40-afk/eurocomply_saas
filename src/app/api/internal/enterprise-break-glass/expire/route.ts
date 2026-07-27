@@ -1,6 +1,6 @@
 import { z } from 'zod';
+import { isAuthorizedInternalCronRequest } from '@/lib/security/internal-cron';
 import { expireBreakGlassRequests } from '@/server/enterprise/break-glass-governance';
-import { isAuthorizedInternalCronRequest } from '@/server/security/internal-auth';
 import { noStoreJson } from '@/server/security/no-store';
 
 const querySchema = z.object({ limit: z.coerce.number().int().min(1).max(500).default(100) });
