@@ -17,7 +17,9 @@ type Assignment = {
 };
 
 export function evaluateQualifiedReviewControlCenter(assignments: Assignment[], now = new Date()) {
-  const canonical = new Map(QUALIFIED_REVIEW_WORKSTREAMS.map((item) => [item.id, item.weight]));
+  const canonical = new Map<string, number>(
+    QUALIFIED_REVIEW_WORKSTREAMS.map((item) => [item.id, item.weight]),
+  );
   const unique = new Map<string, Assignment>();
   const blockers: string[] = [];
 
