@@ -34,7 +34,7 @@ jobs:
           }
 
       - name: Check out exact release SHA
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_sha }}
           persist-credentials: false

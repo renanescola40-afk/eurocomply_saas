@@ -34,7 +34,7 @@ jobs:
           [[ "${{ inputs.target_sha }}" =~ ^[a-f0-9]{40}$ ]] || { echo 'target_sha must be a full lowercase SHA'; exit 1; }
 
       - name: Check out immutable target
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.target_sha }}
           persist-credentials: false
