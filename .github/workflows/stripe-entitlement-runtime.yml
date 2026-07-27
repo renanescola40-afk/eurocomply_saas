@@ -1,0 +1,68 @@
+name: Stripe Entitlement Runtime
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/server/billing/stripe-entitlement-runtime*'
+      - 'src/server/billing/stripe-webhook-recovery.ts'
+      - 'tests/security/stripe-entitlement-runtime-workflow.test.ts'
+      - 'scripts/enterprise/report-stripe-entitlement-runtime.mjs'
+      - 'docs/enterprise/STRIPE_ENTITLEMENT_RUNTIME.md'
+      - '.github/workflows/stripe-entitlement-runtime.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stripe-entitlement-runtime-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate verified Stripe entitlement reconciliation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact assessed SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact assessed checkout
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+
+      - name: Run Stripe entitlement contracts
+        run: >-
+          npx vitest run
+          src/server/billing/stripe-entitlement-runtime.test.ts
+          tests/security/stripe-entitlement-runtime-workflow.test.ts
+
+      - name: Generate exact-SHA report
+        run: node scripts/enterprise/report-stripe-entitlement-runtime.mjs
+
+      - name: Publish report summary
+        run: cat artifacts/stripe-entitlement-runtime/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload retained evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: stripe-entitlement-runtime-${{ env.TARGET_SHA }}
+          path: artifacts/stripe-entitlement-runtime
+          retention-days: 90
+          if-no-files-found: error
