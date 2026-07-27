@@ -1,0 +1,41 @@
+name: Enterprise Privileged Access Governance
+
+on:
+  pull_request:
+    paths:
+      - 'src/app/api/team/privileged-access/**'
+      - 'src/app/api/internal/enterprise-privileged-access-expiry/**'
+      - 'src/server/enterprise/privileged-access-governance.ts'
+      - 'supabase/migrations/*privileged_access*'
+      - 'tests/enterprise/enterprise-privileged-access-governance.test.ts'
+      - '.github/workflows/enterprise-privileged-access-governance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enterprise-privileged-access-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  assurance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies deterministically
+        run: npm ci --ignore-scripts
+      - name: Run privileged access contract tests
+        run: npx vitest run tests/enterprise/enterprise-privileged-access-governance.test.ts
+      - name: Typecheck
+        run: npm run typecheck
+      - name: API security guards for changed routes
+        run: npm run security:api-guards
