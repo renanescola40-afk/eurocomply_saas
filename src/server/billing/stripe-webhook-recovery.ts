@@ -4,8 +4,9 @@ import { runWithEmailIdempotencyContext } from '@/lib/email/idempotency-context'
 import { reportError } from '@/lib/observability/report-error';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { buildIdempotencyKey } from '@/server/jobs/idempotency-key';
+import { reconcileStripeEntitlementEvent } from '@/server/billing/stripe-entitlement-runtime';
 import { getStripeEventAuditContext, handleStripeWebhookEvent } from '@/server/billing/stripe-webhooks';
+import { buildIdempotencyKey } from '@/server/jobs/idempotency-key';
 
 export const STRIPE_EVENT_PROCESSING_LEASE_MS = 15 * 60 * 1000;
 
@@ -15,6 +16,7 @@ const RECOVERABLE_STRIPE_EVENT_TYPES = new Set([
   'customer.subscription.updated',
   'customer.subscription.deleted',
   'invoice.payment_failed',
+  'invoice.paid',
 ]);
 
 type StripeEventClaim = {
@@ -39,7 +41,7 @@ function paymentFailedEmailIdempotencyKey(event: Stripe.Event) {
   });
 }
 
-function runStripeWebhookHandler(event: Stripe.Event) {
+async function runCoreStripeWebhookHandler(event: Stripe.Event) {
   if (event.type !== 'invoice.payment_failed') {
     return handleStripeWebhookEvent(event);
   }
@@ -47,6 +49,18 @@ function runStripeWebhookHandler(event: Stripe.Event) {
   return runWithEmailIdempotencyContext(paymentFailedEmailIdempotencyKey(event), () =>
     handleStripeWebhookEvent(event),
   );
+}
+
+async function runStripeWebhookHandler(event: Stripe.Event) {
+  const result = await runCoreStripeWebhookHandler(event);
+  if (result.duplicate || result.skipped || result.unsupported) return result;
+
+  const entitlement = await reconcileStripeEntitlementEvent(event);
+  if (entitlement.outcome === 'metadata_missing' || entitlement.outcome === 'unsupported') {
+    return result;
+  }
+
+  return { ...result, entitlement };
 }
 
 async function recordLeaseRecoveryAudit(event: Stripe.Event) {
