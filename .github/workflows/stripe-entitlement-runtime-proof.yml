@@ -1,0 +1,134 @@
+name: Stripe Entitlement Runtime Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character SHA currently at main
+        required: true
+        type: string
+      target_environment:
+        description: Target environment label
+        required: true
+        type: choice
+        options: [staging, production]
+      stripe_event_id:
+        description: Verified Stripe event ID to correlate
+        required: true
+        type: string
+      organization_id:
+        description: Organization UUID expected in runtime evidence
+        required: true
+        type: string
+      expected_plan_code:
+        description: Expected canonical plan code
+        required: true
+        type: string
+      expected_full_seat_limit:
+        required: true
+        type: number
+      expected_participant_seat_limit:
+        required: true
+        type: number
+      expected_viewer_seat_limit:
+        required: true
+        type: number
+      stripe_test_mode_confirmed:
+        description: Confirm event came from Stripe test mode
+        required: true
+        type: boolean
+      confirmation:
+        description: Type PROVE_STRIPE_ENTITLEMENT_RUNTIME
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stripe-entitlement-runtime-proof-${{ inputs.target_environment }}
+  cancel-in-progress: false
+
+jobs:
+  prove:
+    name: Prove observed Stripe entitlement runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: ${{ inputs.target_environment }}
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+      STRIPE_EVENT_ID: ${{ inputs.stripe_event_id }}
+      ORGANIZATION_ID: ${{ inputs.organization_id }}
+      EXPECTED_PLAN_CODE: ${{ inputs.expected_plan_code }}
+      EXPECTED_FULL_SEAT_LIMIT: ${{ inputs.expected_full_seat_limit }}
+      EXPECTED_PARTICIPANT_SEAT_LIMIT: ${{ inputs.expected_participant_seat_limit }}
+      EXPECTED_VIEWER_SEAT_LIMIT: ${{ inputs.expected_viewer_seat_limit }}
+      STRIPE_TEST_MODE_CONFIRMED: ${{ inputs.stripe_test_mode_confirmed }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PGSSLMODE: require
+
+    steps:
+      - name: Check out trusted main
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Authorize exact release
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          main_sha="$(git rev-parse origin/main)"
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          test "${RELEASE_SHA,,}" = "$main_sha"
+          test "${{ inputs.confirmation }}" = "PROVE_STRIPE_ENTITLEMENT_RUNTIME"
+          test "${{ inputs.stripe_test_mode_confirmed }}" = "true"
+          test "$(git rev-parse HEAD)" = "$main_sha"
+          [[ "$STRIPE_EVENT_ID" =~ ^evt_[A-Za-z0-9_]+$ ]]
+          [[ "$ORGANIZATION_ID" =~ ^[0-9a-fA-F-]{36}$ ]]
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+
+      - name: Collect read-only correlated evidence
+        shell: bash
+        env:
+          PGHOST: db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co
+          PGPORT: '5432'
+          PGDATABASE: postgres
+          PGUSER: postgres
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/stripe-runtime-proof
+          psql --set ON_ERROR_STOP=1 \
+            --set stripe_event_id="$STRIPE_EVENT_ID" \
+            --set organization_id="$ORGANIZATION_ID" \
+            --file scripts/enterprise/stripe-runtime-proof.sql \
+            > artifacts/stripe-runtime-proof/catalog.txt
+          test -s artifacts/stripe-runtime-proof/catalog.txt
+
+      - name: Build sanitized proof
+        run: node scripts/enterprise/build-stripe-runtime-proof.mjs artifacts/stripe-runtime-proof/catalog.txt
+
+      - name: Publish bounded summary
+        run: cat artifacts/stripe-runtime-proof/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove raw correlated catalog
+        run: rm artifacts/stripe-runtime-proof/catalog.txt
+
+      - name: Upload retained proof
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: stripe-entitlement-runtime-proof-${{ inputs.release_sha }}
+          path: artifacts/stripe-runtime-proof
+          retention-days: 90
+          if-no-files-found: error
