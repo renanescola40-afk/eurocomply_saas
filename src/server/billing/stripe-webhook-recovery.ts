@@ -56,6 +56,10 @@ async function runStripeWebhookHandler(event: Stripe.Event) {
   if (result.duplicate || result.skipped || result.unsupported) return result;
 
   const entitlement = await reconcileStripeEntitlementEvent(event);
+  if (entitlement.outcome === 'metadata_missing' || entitlement.outcome === 'unsupported') {
+    return result;
+  }
+
   return { ...result, entitlement };
 }
 
