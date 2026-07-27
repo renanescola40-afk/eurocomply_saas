@@ -29,7 +29,7 @@ jobs:
     environment: production
     env:
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
       PGSSLMODE: require
 
     steps:
@@ -58,8 +58,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${SUPABASE_DB_PASSWORD:-}"
+          test -n "${SUPABASE_DB_POOLER_URL:-}"
           [[ "${SUPABASE_PROJECT_ID:-}" =~ ^[a-z0-9]{20}$ ]]
+          case "$SUPABASE_DB_POOLER_URL" in
+            postgresql://*|postgres://*) ;;
+            *) echo 'SUPABASE_DB_POOLER_URL must be a PostgreSQL connection string' >&2; exit 1 ;;
+          esac
+          case "$SUPABASE_DB_POOLER_URL" in
+            *pooler.supabase.com*) ;;
+            *) echo 'SUPABASE_DB_POOLER_URL must use the Supabase pooler endpoint' >&2; exit 1 ;;
+          esac
 
       - name: Install PostgreSQL client
         shell: bash
@@ -70,28 +78,17 @@ jobs:
 
       - name: Apply idempotent RLS reconciliation
         shell: bash
-        env:
-          PGHOST: db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co
-          PGPORT: '5432'
-          PGDATABASE: postgres
-          PGUSER: postgres
-          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           set -euo pipefail
-          psql --set ON_ERROR_STOP=1 \
+          psql "$SUPABASE_DB_POOLER_URL" \
+            --set ON_ERROR_STOP=1 \
             --file supabase/reconciliation/20260726070000_permissions_catalog_rls_hotfix.sql
 
       - name: Verify RLS, grants, policies and migration evidence
         shell: bash
-        env:
-          PGHOST: db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co
-          PGPORT: '5432'
-          PGDATABASE: postgres
-          PGUSER: postgres
-          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           set -euo pipefail
-          psql --set ON_ERROR_STOP=1 --tuples-only --no-align <<'SQL' | tee reconciliation-proof.txt
+          psql "$SUPABASE_DB_POOLER_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align <<'SQL' | tee reconciliation-proof.txt
           select 'rls|' || c.relname || '|' || c.relrowsecurity || '|' || c.relforcerowsecurity
           from pg_class c
           join pg_namespace n on n.oid = c.relnamespace
@@ -132,6 +129,7 @@ jobs:
             echo
             echo "- Release SHA: \`$RELEASE_SHA\`"
             echo "- Project ref suffix: \`${SUPABASE_PROJECT_ID: -6}\`"
+            echo '- Connection path: Supabase Session Pooler (secret-backed)'
             if [ -f reconciliation-proof.txt ]; then
               echo '- Verification evidence:'
               echo '```text'
