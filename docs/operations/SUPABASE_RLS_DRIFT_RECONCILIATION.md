@@ -19,22 +19,26 @@ It does not reconcile the entire legacy migration history.
 
 ## Required GitHub environment secrets
 
-Configure these under the `production` environment:
+Configure these under the protected `production` environment:
 
-- `SUPABASE_PROJECT_ID`
-- `SUPABASE_DB_PASSWORD`
+- `SUPABASE_PROJECT_ID`;
+- `SUPABASE_DB_POOLER_URL`.
 
-Never place secret values in issues, pull requests, logs, source files, or screenshots.
+`SUPABASE_DB_POOLER_URL` must be the PostgreSQL **Session Pooler** connection string copied from Supabase **Connect → Session pooler**. The username normally contains the project reference, and SSL must remain enabled. Use the pooler because GitHub-hosted runners may not have an IPv6 route to the direct `db.<project-ref>.supabase.co:5432` endpoint.
+
+Never place the connection string, password, secret values or unredacted host credentials in issues, pull requests, logs or screenshots.
 
 ## Execution
 
-After this PR is merged:
+After the workflow fix is merged:
 
 1. Open **Actions → Supabase Production RLS Reconciliation**.
 2. Select **Run workflow** from `main`.
 3. Enter the current full 40-character SHA at the tip of `main`.
 4. Enter `APPLY_RLS_RECONCILIATION` exactly.
 5. Run the workflow and wait for the verification step.
+
+Do not use **Re-run jobs** for a previous failed execution when the `main` SHA or workflow implementation changed. Start a new dispatch.
 
 ## Expected proof
 

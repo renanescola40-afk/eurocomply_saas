@@ -33,7 +33,11 @@ Run **Supabase Production Schema Evidence** from the `main` branch with:
 The protected `production` environment must contain:
 
 - `SUPABASE_PROJECT_ID`;
-- `SUPABASE_DB_PASSWORD`.
+- `SUPABASE_DB_POOLER_URL`.
+
+`SUPABASE_DB_POOLER_URL` must be the PostgreSQL **Session Pooler** connection string copied from Supabase **Connect → Session pooler**. This avoids relying on the direct database endpoint, which can resolve to IPv6 and be unreachable from GitHub-hosted runners.
+
+Never paste the connection string or password into workflow inputs, issues, pull requests, logs or screenshots.
 
 ## Safety properties
 
@@ -72,4 +76,4 @@ The artifact contains schema metadata and SQL expressions such as defaults and p
 
 ## Failure handling
 
-A missing public table inventory, missing migration history, empty artifact or PostgreSQL error causes the workflow to fail. A failed collection must not be interpreted as evidence that production is aligned.
+A missing pooler URL, missing public table inventory, missing migration history, empty artifact or PostgreSQL error causes the workflow to fail. A failed collection must not be interpreted as evidence that production is aligned.
