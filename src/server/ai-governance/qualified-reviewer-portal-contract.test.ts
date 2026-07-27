@@ -1,5 +1,5 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import { describe, expect, it } from 'vitest';
+
 import { assertReviewerPortalSubmission } from './qualified-reviewer-portal-contract';
 
 const now = new Date('2026-07-26T12:00:00.000Z');
@@ -18,22 +18,32 @@ const input = {
   validUntil: '2026-08-26T12:00:00.000Z',
 };
 
-test('accepts an active independent exact-SHA reviewer submission', () => {
-  assert.equal(assertReviewerPortalSubmission(state, input, now), true);
-});
+describe('qualified reviewer portal submission contract', () => {
+  it('accepts an active independent exact-SHA reviewer submission', () => {
+    expect(assertReviewerPortalSubmission(state, input, now)).toBe(true);
+  });
 
-test('rejects expired sessions', () => {
-  assert.throws(() => assertReviewerPortalSubmission({ ...state, sessionExpiresAt: now.toISOString() }, input, now), /reviewer_session_expired/);
-});
+  it('rejects expired sessions', () => {
+    expect(() =>
+      assertReviewerPortalSubmission({ ...state, sessionExpiresAt: now.toISOString() }, input, now),
+    ).toThrow(/reviewer_session_expired/);
+  });
 
-test('rejects missing attestation', () => {
-  assert.throws(() => assertReviewerPortalSubmission({ ...state, independenceConfirmed: false }, input, now), /reviewer_attestation_required/);
-});
+  it('rejects missing attestation', () => {
+    expect(() =>
+      assertReviewerPortalSubmission({ ...state, independenceConfirmed: false }, input, now),
+    ).toThrow(/reviewer_attestation_required/);
+  });
 
-test('rejects cross-SHA submissions', () => {
-  assert.throws(() => assertReviewerPortalSubmission(state, { ...input, targetSha: 'b'.repeat(40) }, now), /reviewer_target_sha_mismatch/);
-});
+  it('rejects cross-SHA submissions', () => {
+    expect(() =>
+      assertReviewerPortalSubmission(state, { ...input, targetSha: 'b'.repeat(40) }, now),
+    ).toThrow(/reviewer_target_sha_mismatch/);
+  });
 
-test('rejects terminal assignments', () => {
-  assert.throws(() => assertReviewerPortalSubmission({ ...state, assignmentStatus: 'accepted' }, input, now), /reviewer_assignment_closed/);
+  it('rejects terminal assignments', () => {
+    expect(() =>
+      assertReviewerPortalSubmission({ ...state, assignmentStatus: 'accepted' }, input, now),
+    ).toThrow(/reviewer_assignment_closed/);
+  });
 });
