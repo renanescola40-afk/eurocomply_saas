@@ -1,0 +1,34 @@
+{
+  "controlFamily": "stripe-entitlement-runtime-proof",
+  "version": 1,
+  "implementation": {
+    "query": "scripts/enterprise/stripe-runtime-proof.sql",
+    "reportBuilder": "scripts/enterprise/build-stripe-runtime-proof.mjs",
+    "runtimeWorkflow": ".github/workflows/stripe-entitlement-runtime-proof.yml",
+    "contractWorkflow": ".github/workflows/stripe-runtime-proof-contract.yml",
+    "contractTests": "tests/enterprise/stripe-runtime-proof-contract.test.ts",
+    "workflowTests": "tests/security/stripe-runtime-proof-workflow.test.ts",
+    "runbook": "docs/enterprise/STRIPE_ENTITLEMENT_RUNTIME_PROOF.md",
+    "threatModel": "docs/security/STRIPE_RUNTIME_PROOF_THREAT_MODEL.md",
+    "rolloutChecklist": "docs/enterprise/STRIPE_RUNTIME_PROOF_ROLLOUT_CHECKLIST.md"
+  },
+  "controls": [
+    "protected manual execution",
+    "exact-main-SHA authorization",
+    "Stripe test-mode confirmation",
+    "read-only bounded database query",
+    "tenant-scoped correlation",
+    "event-to-snapshot idempotency correlation",
+    "snapshot-to-seat-policy verification",
+    "reconciliation ledger verification",
+    "raw catalog deletion",
+    "sanitized retained evidence",
+    "explicit truth boundary"
+  ],
+  "truthBoundary": {
+    "repositoryInfrastructureImplemented": true,
+    "productionRunExecuted": false,
+    "allOrganizationsProven": false,
+    "signedContractAuthorityProven": false
+  }
+}
