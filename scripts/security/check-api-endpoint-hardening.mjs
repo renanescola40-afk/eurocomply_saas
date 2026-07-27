@@ -29,6 +29,7 @@ const authTokens = [
   'authenticateScimRequest',
   'requirePlatformCapability',
   'isAuthorizedInternalCronRequest',
+  'getReviewerSession',
   'auth()',
   'authState.userId',
   'supabase.auth.getUser',
