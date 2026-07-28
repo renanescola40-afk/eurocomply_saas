@@ -1,3 +1,4 @@
+import { getBillingEntitlements } from '@/lib/billing/plans';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getOrganizationPlan, isPlanAtLeast, normalizePlan, type SubscriptionPlan } from '@/server/queries/subscription';
 
@@ -116,7 +117,16 @@ export function formatLimit(limit: number) {
 }
 
 export function getPlanEntitlements(plan: SubscriptionPlan): PlanEntitlements {
-  return { plan, ...ENTITLEMENTS[plan] };
+  const canonicalPlan = normalizePlan(plan);
+  const canonicalLimits = getBillingEntitlements(canonicalPlan);
+  const unlimited = canonicalPlan === 'enterprise';
+
+  return {
+    plan,
+    ...ENTITLEMENTS[plan],
+    maxDocuments: unlimited ? Number.POSITIVE_INFINITY : canonicalLimits.documents,
+    maxUsers: unlimited ? Number.POSITIVE_INFINITY : canonicalLimits.users,
+  };
 }
 
 export async function getOrganizationEntitlements(organizationId: string): Promise<PlanEntitlements> {

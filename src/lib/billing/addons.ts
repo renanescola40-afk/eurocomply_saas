@@ -24,10 +24,10 @@ export type AddOnCatalogItem = {
 const PLAN_RANK: Record<SubscriptionPlan, number> = {
   essential: 1,
   starter: 1,
-  professional: 2,
   growth: 2,
-  business: 2,
-  enterprise: 3,
+  professional: 2,
+  business: 3,
+  enterprise: 4,
 };
 
 export const ADD_ON_CATALOG: AddOnCatalogItem[] = [
@@ -127,7 +127,8 @@ export function billingPlanAtLeast(plan: SubscriptionPlan, minimumPlan: Subscrip
 
 export function getPlanDisplayName(plan: SubscriptionPlan) {
   if (plan === 'enterprise') return 'Enterprise';
-  if (plan === 'growth' || plan === 'professional' || plan === 'business') return 'Growth';
+  if (plan === 'business') return 'Business';
+  if (plan === 'growth' || plan === 'professional') return 'Professional';
   return 'Starter';
 }
 
