@@ -6,10 +6,29 @@ import { main } from './run-supabase-live-tenant-isolation-v2.mjs';
 export * from './supabase-live-rls-evidence.mjs';
 
 const isCli = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+
+function hasLiveRuntimeConfiguration() {
+  const hasUrl = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || process.env.SUPABASE_URL?.trim());
+  const hasPrivilegedKey = Boolean(
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+      || process.env.SUPABASE_SECRET_KEY?.trim()
+      || process.env.SUPABASE_ACCESS_TOKEN?.trim(),
+  );
+  return hasUrl && hasPrivilegedKey;
+}
+
 if (isCli) {
+  const advisory = process.argv.includes('--advisory');
+
+  if (advisory && !hasLiveRuntimeConfiguration()) {
+    console.log('Supabase live tenant-isolation validation skipped in advisory CI: protected runtime credentials are not available.');
+    console.log('Static RLS policy and migration checks remain enforced; live proof runs in the protected Supabase workflow.');
+    process.exit(0);
+  }
+
   main()
     .then(() => {
-      assertProfileProof({ advisory: process.argv.includes('--advisory') });
+      assertProfileProof({ advisory });
     })
     .catch((error) => {
       console.error(error instanceof Error ? error.message : error);
