@@ -4,7 +4,6 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n.ts');
 const isProduction = process.env.NODE_ENV === 'production';
-const prelaunchAuthRedirectsEnabled = process.env.PRELAUNCH_AUTH_REDIRECTS === 'true';
 
 const DEFAULT_IMAGE_REMOTE_HOSTS = [
   'images.unsplash.com',
@@ -90,35 +89,9 @@ const noIndexHeaders = [
   { key: 'Cache-Control', value: 'no-store, max-age=0' },
 ] as const;
 
-const prelaunchAuthRedirects = [
-  {
-    source: '/:locale(en|pt|es|fr|it|de)/login',
-    destination: '/:locale#waitlist-form',
-    permanent: false,
-  },
-  {
-    source: '/:locale(en|pt|es|fr|it|de)/signup',
-    destination: '/:locale#waitlist-form',
-    permanent: false,
-  },
-  {
-    source: '/:locale(en|pt|es|fr|it|de)/register',
-    destination: '/:locale#waitlist-form',
-    permanent: false,
-  },
-  {
-    source: '/:locale(en|pt|es|fr|it|de)/checkout',
-    destination: '/:locale#waitlist-form',
-    permanent: false,
-  },
-];
-
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
-  async redirects() {
-    return prelaunchAuthRedirectsEnabled ? prelaunchAuthRedirects : [];
-  },
   async rewrites() {
     return [
       {
