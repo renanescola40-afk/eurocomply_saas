@@ -102,9 +102,21 @@ jobs:
             echo 'Migration drift evidence was not generated.' >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Upload migration drift evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: supabase-migration-drift-${{ github.sha }}
+          path: |
+            migration-state-remote.txt
+            migration-drift-summary.md
+            artifacts/supabase-migration-drift/
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Enforce critical drift gate
         if: steps.drift.outputs.result != '0'
         shell: bash
         run: |
-          echo 'Critical Supabase migration drift detected. Review the generated job summary.' >&2
+          echo 'Critical Supabase migration drift detected. Review the generated job summary and artifact.' >&2
           exit 1

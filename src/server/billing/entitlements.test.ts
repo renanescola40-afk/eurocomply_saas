@@ -3,11 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { formatLimit, getPlanEntitlements } from './entitlements';
 
 describe('billing entitlements', () => {
-  it('keeps Essential as a constrained entry plan', () => {
+  it('maps legacy Essential capacity to the canonical Starter limits', () => {
     const entitlements = getPlanEntitlements('essential');
 
-    expect(entitlements.maxDocuments).toBe(10);
-    expect(entitlements.maxUsers).toBe(1);
+    expect(entitlements.maxDocuments).toBe(100);
+    expect(entitlements.maxUsers).toBe(3);
     expect(entitlements.maxFiscalCountries).toBe(1);
     expect(entitlements.aiCalendar).toBe('basic');
     expect(entitlements.aiNews).toBe('basic');
@@ -20,11 +20,11 @@ describe('billing entitlements', () => {
     expect(entitlements.gdprSelfService).toBe(false);
   });
 
-  it('unlocks operational compliance for Professional', () => {
+  it('uses the canonical Professional capacities', () => {
     const entitlements = getPlanEntitlements('professional');
 
-    expect(entitlements.maxDocuments).toBe(100);
-    expect(entitlements.maxUsers).toBe(3);
+    expect(entitlements.maxDocuments).toBe(1000);
+    expect(entitlements.maxUsers).toBe(15);
     expect(entitlements.maxFiscalCountries).toBe(2);
     expect(entitlements.aiCalendar).toBe('advanced');
     expect(entitlements.aiNews).toBe('standard');
@@ -36,11 +36,11 @@ describe('billing entitlements', () => {
     expect(entitlements.approvalWorkflows).toBe(false);
   });
 
-  it('unlocks team workflows and executive reporting for Business', () => {
+  it('uses the canonical Business capacities and team workflows', () => {
     const entitlements = getPlanEntitlements('business');
 
-    expect(entitlements.maxDocuments).toBe(500);
-    expect(entitlements.maxUsers).toBe(10);
+    expect(entitlements.maxDocuments).toBe(10000);
+    expect(entitlements.maxUsers).toBe(75);
     expect(entitlements.maxFiscalCountries).toBe(5);
     expect(entitlements.employeeInvites).toBe(true);
     expect(entitlements.approvalWorkflows).toBe(true);

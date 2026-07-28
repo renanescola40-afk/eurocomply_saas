@@ -77,7 +77,7 @@ describe('organization billing context', () => {
 
     expect(subscriptionStatusFilters).toEqual([]);
     expect(context).toEqual({
-      plan: 'growth',
+      plan: 'business',
       status: 'active',
       usage: {
         users: 2,
