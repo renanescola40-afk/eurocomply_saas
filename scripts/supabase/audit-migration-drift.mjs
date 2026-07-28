@@ -6,6 +6,7 @@ import path from 'node:path';
 const migrationsDir = process.argv[2] ?? 'supabase/migrations';
 const remoteListPath = process.argv[3] ?? 'migration-state-remote.txt';
 const outputDir = process.argv[4] ?? 'artifacts/supabase-migration-drift';
+const reconciliationDir = path.join(path.dirname(migrationsDir), 'reconciliation');
 
 function parseLocalFilename(filename) {
   if (!filename.endsWith('.sql')) return null;
@@ -53,13 +54,22 @@ function parseRemoteList(text) {
   return versions;
 }
 
+async function readSqlDirectory(directory) {
+  try {
+    return (await readdir(directory)).sort().map(parseLocalFilename).filter(Boolean);
+  } catch (error) {
+    if (error?.code === 'ENOENT') return [];
+    throw error;
+  }
+}
+
 function markdownList(items, formatter) {
   if (items.length === 0) return '- None\n';
   return items.map((item) => `- ${formatter(item)}`).join('\n') + '\n';
 }
 
-const localFiles = (await readdir(migrationsDir)).sort();
-const local = localFiles.map(parseLocalFilename).filter(Boolean);
+const local = await readSqlDirectory(migrationsDir);
+const reconciliations = await readSqlDirectory(reconciliationDir);
 const remoteText = await readFile(remoteListPath, 'utf8');
 const remoteVersions = parseRemoteList(remoteText);
 
@@ -79,16 +89,20 @@ const invalidLocal = local.filter((migration) => !migration.validShape || !migra
 const localValidVersions = new Set(
   local.filter((migration) => migration.validShape && migration.validTimestamp).map((migration) => migration.version),
 );
+const reconciliationVersions = new Set(
+  reconciliations.filter((entry) => entry.validShape && entry.validTimestamp).map((entry) => entry.version),
+);
+const repositoryKnownVersions = new Set([...localValidVersions, ...reconciliationVersions]);
 
 const aligned = [...localValidVersions].filter((version) => remoteVersions.has(version)).sort();
+const reconciledRemote = [...reconciliationVersions].filter((version) => remoteVersions.has(version)).sort();
 const localOnly = [...localValidVersions].filter((version) => !remoteVersions.has(version)).sort();
-const remoteOnly = [...remoteVersions].filter((version) => !localValidVersions.has(version)).sort();
+const remoteOnly = [...remoteVersions].filter((version) => !repositoryKnownVersions.has(version)).sort();
 
 // Historical filename and duplicate debt predates this audit. Keep it visible,
 // but do not let legacy debt make every unrelated PR permanently unmergeable.
-// New remote-only drift remains critical and new migrations must still use a
-// valid, unique 14-digit timestamp because they are evaluated by the regular
-// migration review and Supabase CLI before deployment.
+// A remote version must exist either as a normal migration or as an explicitly
+// versioned reconciliation artifact. Unknown remote versions remain critical.
 const status = remoteOnly.length > 0
   ? 'CRITICAL_DRIFT'
   : localOnly.length > 0
@@ -101,14 +115,18 @@ const report = {
   summary: {
     localFiles: local.length,
     localValidVersions: localValidVersions.size,
+    reconciliationFiles: reconciliations.length,
+    reconciliationVersions: reconciliationVersions.size,
     remoteVersions: remoteVersions.size,
     aligned: aligned.length,
+    reconciledRemote: reconciledRemote.length,
     localOnly: localOnly.length,
     remoteOnly: remoteOnly.length,
     invalidLocal: invalidLocal.length,
     duplicateVersions: duplicateVersions.length,
   },
   aligned,
+  reconciledRemote,
   localOnly,
   remoteOnly,
   invalidLocal,
@@ -131,23 +149,29 @@ markdown += `Status: **${status}**\n\n`;
 markdown += '## Summary\n\n';
 markdown += `- Local migration files: ${report.summary.localFiles}\n`;
 markdown += `- Valid unique local versions: ${report.summary.localValidVersions}\n`;
+markdown += `- Versioned reconciliation files: ${report.summary.reconciliationFiles}\n`;
+markdown += `- Valid reconciliation versions: ${report.summary.reconciliationVersions}\n`;
 markdown += `- Remote versions: ${report.summary.remoteVersions}\n`;
-markdown += `- Aligned versions: ${report.summary.aligned}\n`;
+markdown += `- Aligned normal migrations: ${report.summary.aligned}\n`;
+markdown += `- Aligned versioned reconciliations: ${report.summary.reconciledRemote}\n`;
 markdown += `- Local-only versions: ${report.summary.localOnly}\n`;
-markdown += `- Remote-only versions: ${report.summary.remoteOnly}\n`;
+markdown += `- Unknown remote-only versions: ${report.summary.remoteOnly}\n`;
 markdown += `- Invalid local filenames/timestamps (legacy advisory): ${report.summary.invalidLocal}\n`;
 markdown += `- Duplicate local versions (legacy advisory): ${report.summary.duplicateVersions}\n\n`;
 markdown += '## Invalid local migrations (legacy advisory)\n\n';
 markdown += markdownList(invalidLocal, (item) => `\`${item.filename}\``);
 markdown += '\n## Duplicate versions (legacy advisory)\n\n';
 markdown += markdownList(duplicateVersions, (item) => `\`${item.version}\`: ${item.files.map((file) => `\`${file}\``).join(', ')}`);
+markdown += '\n## Remote versions represented by controlled reconciliation\n\n';
+markdown += markdownList(reconciledRemote, (version) => `\`${version}\``);
 markdown += '\n## Local-only valid versions\n\n';
 markdown += markdownList(localOnly, (version) => `\`${version}\``);
-markdown += '\n## Remote-only versions\n\n';
+markdown += '\n## Unknown remote-only versions\n\n';
 markdown += markdownList(remoteOnly, (version) => `\`${version}\``);
 markdown += '\n## Safety boundary\n\n';
 markdown += '- Read-only audit; no database objects or migration history were changed.\n';
-markdown += '- Remote-only migrations remain a hard failure.\n';
+markdown += '- Unknown remote-only migrations remain a hard failure.\n';
+markdown += '- Controlled remote hotfixes must have a matching versioned file in `supabase/reconciliation`.\n';
 markdown += '- Local-only migrations are expected for a PR and remain pending until controlled deployment.\n';
 markdown += '- Do not use `supabase db push --include-all` to bypass this report.\n';
 markdown += '- Reconciliation requires object-level evidence and explicit review.\n';
