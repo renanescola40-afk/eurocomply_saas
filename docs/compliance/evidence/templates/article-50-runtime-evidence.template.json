@@ -1,0 +1,35 @@
+{
+  "schema": "risck-comply.article-50-runtime-evidence.v1",
+  "status": "TEMPLATE_ONLY",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "gitSha": null,
+  "environment": null,
+  "organizationId": null,
+  "systemId": null,
+  "obligation": null,
+  "role": null,
+  "ruleVersion": null,
+  "sourceUrl": null,
+  "sourceDigest": null,
+  "placementDateEvidenceId": null,
+  "officialJournalEvidenceId": null,
+  "disclosure": {
+    "copy": null,
+    "language": null,
+    "channel": null,
+    "displayedAt": null,
+    "proofArtifactId": null
+  },
+  "machineReadableMarking": {
+    "format": null,
+    "validationArtifactId": null,
+    "validatedAt": null
+  },
+  "decision": null,
+  "limitations": [],
+  "collectedAt": null,
+  "validUntil": null,
+  "digest": null,
+  "customerEvidence": false,
+  "notes": "Do not count this empty template as runtime or production evidence."
+}

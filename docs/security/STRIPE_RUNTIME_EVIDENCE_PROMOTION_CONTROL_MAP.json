@@ -1,0 +1,32 @@
+{
+  "controlFamily": "stripe-runtime-evidence-promotion",
+  "version": 1,
+  "implementation": {
+    "promotion": "scripts/release/promote-stripe-runtime-evidence.mjs",
+    "replayValidation": "scripts/release/validate-stripe-runtime-replay.mjs",
+    "workflow": ".github/workflows/stripe-runtime-evidence-promotion.yml",
+    "contractWorkflow": ".github/workflows/stripe-runtime-evidence-promotion-contract.yml",
+    "tests": "tests/release/stripe-runtime-evidence-promotion.test.ts",
+    "runbook": "docs/runbooks/STRIPE_RUNTIME_EVIDENCE_PROMOTION.md"
+  },
+  "controls": [
+    "exact current-main SHA",
+    "protected environment approval",
+    "same-repository artifact provenance",
+    "Stripe test-mode confirmation",
+    "event snapshot policy ledger correlation",
+    "duplicate replay safety",
+    "stable capacity after replay",
+    "sensitive evidence rejection",
+    "SHA-256 integrity",
+    "read-only workflow permissions",
+    "365-day promoted evidence retention"
+  ],
+  "truthBoundary": {
+    "repositoryContractValidated": true,
+    "realStripeEventObserved": false,
+    "realSupabaseCorrelationObserved": false,
+    "replayExecutedExternally": false,
+    "humanReleaseApprovalRecorded": false
+  }
+}
