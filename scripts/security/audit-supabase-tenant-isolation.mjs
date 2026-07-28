@@ -23,6 +23,12 @@ const additionalTenantTables = new Set([
   'ai_systems',
   'ai_incidents',
   'onboarding_activation_runs',
+  'customer_add_ons',
+  'seat_usage',
+  'organization_usage',
+  'storage_usage',
+  'billing_limits',
+  'feature_flags',
 ]);
 const backendOnlyTables = new Set([
   'audit_events',
@@ -30,7 +36,12 @@ const backendOnlyTables = new Set([
   'subscriptions',
   'organization_invites',
   'invitations',
+  'customer_add_ons',
+  'seat_usage',
   'organization_usage',
+  'storage_usage',
+  'billing_limits',
+  'feature_flags',
 ]);
 const userScopedAllowList = new Set(['profiles', 'users', 'platform_admin_users', 'platform_admins']);
 const staleBackendWritePolicySuffixes = [
