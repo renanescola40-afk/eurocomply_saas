@@ -7,7 +7,7 @@ alter table public.enterprise_access_export_jobs
 create table if not exists public.enterprise_access_export_download_events (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
-  export_job_id uuid not null references public.enterprise_access_export_jobs(id) on delete restrict,
+  export_job_id uuid not null references public.enterprise_access_export_jobs(id) on delete cascade,
   actor_user_id uuid references auth.users(id) on delete set null,
   outcome text not null check (outcome in ('issued','denied','expired','integrity_failed','provider_failed')),
   reason_code text not null check (char_length(reason_code) between 3 and 120),
@@ -24,7 +24,8 @@ create index if not exists enterprise_access_export_download_events_job_idx
 alter table public.enterprise_access_export_download_events enable row level security;
 alter table public.enterprise_access_export_download_events force row level security;
 revoke all on public.enterprise_access_export_download_events from public, anon, authenticated;
-grant all on public.enterprise_access_export_download_events to service_role;
+revoke all on public.enterprise_access_export_download_events from service_role;
+grant select on public.enterprise_access_export_download_events to service_role;
 create policy enterprise_access_export_download_events_deny_delete
   on public.enterprise_access_export_download_events for delete to authenticated using (false);
 
