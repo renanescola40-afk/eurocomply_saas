@@ -25,10 +25,22 @@ if (applicationSecurityCommand.includes('security:npm-audit')) {
   process.exit(1);
 }
 
-const commands = applicationSecurityCommand
+const parsedCommands = applicationSecurityCommand
   .split(/\s+&&\s+/)
   .map((entry) => entry.trim())
   .filter(Boolean);
+
+// Common pull-request CI must never run provider-backed RLS probes without the
+// protected Supabase environment. Keep the advisory gate fail-closed for the
+// repository controls, while live tenant isolation remains enforced by the
+// dedicated protected Supabase workflows.
+const commands = parsedCommands.flatMap((securityCommand) => {
+  if (securityCommand !== 'npm run security:rls:advisory') return [securityCommand];
+  return [
+    'node scripts/security/check-rls.mjs',
+    'node scripts/security/audit-supabase-tenant-isolation.mjs',
+  ];
+});
 
 for (const [index, securityCommand] of commands.entries()) {
   console.log(`::group::Application security gate ${index + 1}/${commands.length}: ${securityCommand}`);
