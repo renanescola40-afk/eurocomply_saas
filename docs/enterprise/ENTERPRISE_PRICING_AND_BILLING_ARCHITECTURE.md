@@ -17,7 +17,8 @@ Enterprise must never be represented by a fixed public Stripe Price. The final a
 - `src/lib/billing/add-ons.ts`: independent add-on catalog, availability and dependencies.
 - `src/lib/billing/feature-gates.ts`: centralized feature and capacity decisions.
 - `src/server/queries/subscription.ts`: canonical plan normalization and rank.
-- `supabase/migrations/20260727193000_enterprise_billing_catalog.sql`: persistent catalog, usage, feature-flag and customer add-on schema.
+- `public.organization_add_ons`: existing customer add-on authority used by checkout and entitlement resolution.
+- `supabase/migrations/20260727193000_enterprise_billing_catalog.sql`: persistent plan/add-on catalog, usage, feature flags, canonical subscription migration and RLS hardening.
 
 Application code must not introduce scattered plan comparisons. Routes, server actions and UI loaders should resolve a `LicenseContext` and call `canAccessFeature`, `requireLicensedFeature`, `getPlanLimit` or `requireWithinLimit`.
 
@@ -40,7 +41,7 @@ Seat and capacity add-ons should be subscription items with quantity. Upgrades u
 
 ## Security and tenant isolation
 
-Billing decisions are server-side. The browser may request a plan or add-on, but it may not assert active entitlements, usage, organization scope or negotiated limits. Webhooks remain authoritative for Stripe state. All new persistence tables use RLS and forced RLS; service-role access is required until explicit tenant-scoped read policies are reviewed.
+Billing decisions are server-side. The browser may request a plan or add-on, but it may not assert active entitlements, usage, organization scope or negotiated limits. Webhooks remain authoritative for Stripe state. Billing authority tables permit tenant-scoped reads and deny authenticated browser writes; service-role backend operations remain authoritative.
 
 ## Enterprise contracts
 
@@ -51,7 +52,7 @@ Contract overrides are represented by `billing_limits` and `feature_flags` with 
 1. Apply the migration in a non-production Supabase project.
 2. Create Stripe Products and Prices and configure environment variables.
 3. Update checkout and portal configuration to use the canonical catalog.
-4. Wire webhook subscription items into `customer_add_ons`, usage and entitlement reconciliation.
+4. Wire webhook subscription items into `organization_add_ons`, usage and entitlement reconciliation.
 5. Replace route-local plan checks with the centralized gate service.
 6. Update Pricing, Billing, Upgrade, Add-ons Marketplace and Enterprise Contact screens.
 7. Run unit, integration, webhook and E2E suites.
