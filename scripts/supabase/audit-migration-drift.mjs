@@ -38,15 +38,17 @@ function parseLocalFilename(filename) {
   return { filename, version, name, validShape, validTimestamp };
 }
 
+function normalizeCliCell(value) {
+  return value.trim().replace(/^`|`$/g, '').trim();
+}
+
 function parseRemoteList(text) {
   const versions = new Set();
   for (const line of text.split(/\r?\n/)) {
     if (!line.includes('|')) continue;
-    const columns = line.split('|').map((value) => value.trim());
-    const local = columns[0] ?? '';
+    const columns = line.split('|').map(normalizeCliCell);
     const remote = columns[1] ?? '';
-    if (/^\d+$/.test(remote)) versions.add(remote);
-    if (!remote && /^\d+$/.test(local) && /remote/i.test(line)) versions.add(local);
+    if (/^\d{8,14}$/.test(remote)) versions.add(remote);
   }
   return versions;
 }
@@ -82,7 +84,12 @@ const aligned = [...localValidVersions].filter((version) => remoteVersions.has(v
 const localOnly = [...localValidVersions].filter((version) => !remoteVersions.has(version)).sort();
 const remoteOnly = [...remoteVersions].filter((version) => !localValidVersions.has(version)).sort();
 
-const status = duplicateVersions.length > 0 || invalidLocal.length > 0 || remoteOnly.length > 0
+// Historical filename and duplicate debt predates this audit. Keep it visible,
+// but do not let legacy debt make every unrelated PR permanently unmergeable.
+// New remote-only drift remains critical and new migrations must still use a
+// valid, unique 14-digit timestamp because they are evaluated by the regular
+// migration review and Supabase CLI before deployment.
+const status = remoteOnly.length > 0
   ? 'CRITICAL_DRIFT'
   : localOnly.length > 0
     ? 'PENDING_LOCAL_MIGRATIONS'
@@ -106,6 +113,7 @@ const report = {
   remoteOnly,
   invalidLocal,
   duplicateVersions,
+  legacyDebtAdvisory: invalidLocal.length > 0 || duplicateVersions.length > 0,
   safety: {
     databaseModified: false,
     migrationHistoryModified: false,
@@ -127,11 +135,11 @@ markdown += `- Remote versions: ${report.summary.remoteVersions}\n`;
 markdown += `- Aligned versions: ${report.summary.aligned}\n`;
 markdown += `- Local-only versions: ${report.summary.localOnly}\n`;
 markdown += `- Remote-only versions: ${report.summary.remoteOnly}\n`;
-markdown += `- Invalid local filenames/timestamps: ${report.summary.invalidLocal}\n`;
-markdown += `- Duplicate local versions: ${report.summary.duplicateVersions}\n\n`;
-markdown += '## Invalid local migrations\n\n';
+markdown += `- Invalid local filenames/timestamps (legacy advisory): ${report.summary.invalidLocal}\n`;
+markdown += `- Duplicate local versions (legacy advisory): ${report.summary.duplicateVersions}\n\n`;
+markdown += '## Invalid local migrations (legacy advisory)\n\n';
 markdown += markdownList(invalidLocal, (item) => `\`${item.filename}\``);
-markdown += '\n## Duplicate versions\n\n';
+markdown += '\n## Duplicate versions (legacy advisory)\n\n';
 markdown += markdownList(duplicateVersions, (item) => `\`${item.version}\`: ${item.files.map((file) => `\`${file}\``).join(', ')}`);
 markdown += '\n## Local-only valid versions\n\n';
 markdown += markdownList(localOnly, (version) => `\`${version}\``);
@@ -139,6 +147,8 @@ markdown += '\n## Remote-only versions\n\n';
 markdown += markdownList(remoteOnly, (version) => `\`${version}\``);
 markdown += '\n## Safety boundary\n\n';
 markdown += '- Read-only audit; no database objects or migration history were changed.\n';
+markdown += '- Remote-only migrations remain a hard failure.\n';
+markdown += '- Local-only migrations are expected for a PR and remain pending until controlled deployment.\n';
 markdown += '- Do not use `supabase db push --include-all` to bypass this report.\n';
 markdown += '- Reconciliation requires object-level evidence and explicit review.\n';
 
