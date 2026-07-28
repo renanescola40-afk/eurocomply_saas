@@ -117,13 +117,15 @@ export function formatLimit(limit: number) {
 }
 
 export function getPlanEntitlements(plan: SubscriptionPlan): PlanEntitlements {
-  const canonicalLimits = getBillingEntitlements(plan);
+  const canonicalPlan = normalizePlan(plan);
+  const canonicalLimits = getBillingEntitlements(canonicalPlan);
+  const unlimited = canonicalPlan === 'enterprise';
 
   return {
     plan,
     ...ENTITLEMENTS[plan],
-    maxDocuments: canonicalLimits.documents,
-    maxUsers: canonicalLimits.users,
+    maxDocuments: unlimited ? Number.POSITIVE_INFINITY : canonicalLimits.documents,
+    maxUsers: unlimited ? Number.POSITIVE_INFINITY : canonicalLimits.users,
   };
 }
 
