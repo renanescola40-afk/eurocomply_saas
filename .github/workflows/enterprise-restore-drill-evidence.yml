@@ -54,10 +54,10 @@ jobs:
           SOURCE_RUN_ID: ${{ inputs.source_run_id }}
         run: |
           set -euo pipefail
-          default_sha="$(gh api repos/${GITHUB_REPOSITORY}/commits/main --jq .sha)"
-          run_sha="$(gh api repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID} --jq .head_sha)"
-          run_repo="$(gh api repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID} --jq .repository.full_name)"
-          run_conclusion="$(gh api repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID} --jq .conclusion)"
+          default_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          run_sha="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" --jq .head_sha)"
+          run_repo="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" --jq .repository.full_name)"
+          run_conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" --jq .conclusion)"
           test "$run_repo" = "$GITHUB_REPOSITORY"
           test "$run_sha" = "$default_sha"
           test "$run_conclusion" = "success"
