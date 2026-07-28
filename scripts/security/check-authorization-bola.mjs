@@ -6,8 +6,10 @@ const routeRoots = [
   join(root, 'src', 'app', 'api'),
   join(root, 'src', 'app', 'next_api'),
 ];
-const inventoryPath = join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.md');
-const inventoryFragmentsPath = join(root, 'docs', 'security', 'api-route-inventory');
+const inventoryPaths = [
+  join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.md'),
+  join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.billing.md'),
+];
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
 
 const allowedClasses = new Set([
@@ -54,25 +56,21 @@ function inventoryFiles() {
 function readInventory() {
   const routeClasses = new Map();
   const failures = [];
-  const files = inventoryFiles();
+  const rowPattern = /^\|\s*`([^`]+route\.ts)`\s*\|\s*([^|]+?)\s*\|/gm;
 
-  if (!existsSync(inventoryPath)) {
-    failures.push(`missing ${normalizePath(inventoryPath)}`);
-  }
+  for (const inventoryPath of inventoryPaths) {
+    if (!existsSync(inventoryPath)) {
+      failures.push(`missing ${normalizePath(inventoryPath)}`);
+      continue;
+    }
 
-  for (const file of files) {
-    if (!existsSync(file)) continue;
-    const source = readFileSync(file, 'utf8');
-    const rowPattern = /^\|\s*`([^`]+route\.ts)`\s*\|\s*([^|]+?)\s*\|/gm;
-
+    const source = readFileSync(inventoryPath, 'utf8');
     for (const match of source.matchAll(rowPattern)) {
       const route = match[1];
       const routeClass = match[2].trim();
 
       if (routeClasses.has(route)) {
-        failures.push(
-          `${route}: duplicate API route classification in ${normalizePath(file)}`,
-        );
+        failures.push(`${route}: duplicate API_ROUTE_INVENTORY.md classification across modular inventories`);
         continue;
       }
 
@@ -108,7 +106,7 @@ for (const [route, routeClass] of inventory.routeClasses) {
 console.log('EuroComply API route inventory check');
 console.log('------------------------------------');
 console.log(`Scanned ${routes.length} API route files.`);
-console.log(`Loaded ${inventoryFiles().length} inventory file(s).`);
+console.log(`Loaded ${inventoryPaths.length} inventory files.`);
 
 if (findings.length > 0) {
   console.error('API inventory findings:');

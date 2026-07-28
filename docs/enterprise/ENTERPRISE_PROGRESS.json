@@ -1,10 +1,9 @@
 {
-  "timestamp": "2026-07-19T22:08:49Z",
-  "main_sha": "9cc24fee092189cfbbced8fc975647092236fa35",
+  "timestamp": "2026-07-28T22:55:00Z",
+  "observed_main_sha": "a6633e6c9ee9fab957b2d91333c4743b8f5e25f7",
+  "last_verified_score_sha": "c413288eb8453b55c4d049c758dc0cd063aa70b9",
   "official_completion_percent": 45,
   "official_remaining_percent": 55,
-  "previous_completion_percent": 45,
-  "execution_delta_percent": 0,
   "technical_repository_percent": null,
   "runtime_evidence_percent": null,
   "owner_action_percent": null,
@@ -13,31 +12,17 @@
   "controls_blocked": 1,
   "controls_not_verified": 54,
   "critical_controls_open": 48,
-  "p0_open": 14,
-  "p1_open": 10,
   "current_decision": "NO_GO",
-  "classification": "MVP",
-  "publish_recommendation": "DO_NOT_PUBLISH",
-  "active_prs": [1218, 1219, 1221, 1222, 1223, 1224, 1226, 1227, 1228, 1229, 1230],
-  "blocked_prs": [1218, 1219],
-  "next_priority": "Complete exact-head validation of PRs #1221, #1228 and #1230, then replace legacy local-storage risk and document routes with canonical tenant-backed flows",
+  "classification": "UNVERIFIED_CURRENT_MAIN",
+  "publish_recommendation": "DO_NOT_PUBLISH_AS_ENTERPRISE",
+  "active_prs": [1365, 1369, 1374, 1375, 1376, 1377],
+  "blocked_prs": [1369],
+  "next_priority": "Run the canonical Enterprise Readiness Scorecard on the exact current main SHA and preserve the resulting artifact; then obtain human review and merge eligible green PRs one at a time.",
   "evidence_freshness": {
-    "status": "fresh-exact-score-contained-in-main",
+    "status": "STALE",
     "last_verified_sha": "c413288eb8453b55c4d049c758dc0cd063aa70b9",
     "scorecard_run_id": 29703295579,
-    "reason": "The successful Enterprise Readiness Scorecard assessed exact PR #1216 head c413288eb8453b55c4d049c758dc0cd063aa70b9 and reported 45% NO_GO. Current main 9cc24fee092189cfbbced8fc975647092236fa35 contains that commit and merged branch-protection producer code, but no later accepted scorecard is credited. No open PR is counted."
+    "reason": "The last accepted 45% score predates the observed main SHA by multiple merges. It is retained only as historical evidence and is not the score of current main."
   },
-  "domain_scores_percent": {
-    "engineering": 100,
-    "security": 70,
-    "identity": 20,
-    "tenancy": 20,
-    "platform": 10,
-    "release": 10,
-    "operations": 80,
-    "recovery": 0,
-    "product": 100,
-    "trust": 40
-  },
-  "calculation_method": "Versioned 100-control weighted scorecard generated from exact-SHA GitHub Actions evidence. The official percentage is the sum of PASS weights divided by total control weight. Null lane metrics are intentionally not inferred."
+  "calculation_method": "Historical result from the canonical 100-control exact-SHA scorecard. Current-main completion is unknown until a successful exact-SHA scorecard artifact is accepted."
 }
