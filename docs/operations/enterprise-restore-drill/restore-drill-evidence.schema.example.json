@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sourceSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "environment": "production-restore-drill",
+  "startedAt": "2026-07-28T09:00:00.000Z",
+  "completedAt": "2026-07-28T09:27:00.000Z",
+  "rpoMinutes": 5,
+  "rtoMinutes": 27,
+  "backupIdHash": "64-character-lowercase-sha256-digest-replaces-provider-backup-id",
+  "restoreTargetHash": "64-character-lowercase-sha256-digest-replaces-isolated-target-id",
+  "restoreTargetIsIsolated": true,
+  "productionMutationPerformed": false,
+  "checks": {
+    "backupAvailable": true,
+    "restoreCompleted": true,
+    "schemaVerified": true,
+    "migrationHistoryVerified": true,
+    "rlsVerified": true,
+    "tenantIsolationVerified": true,
+    "criticalCountsVerified": true,
+    "authBoundaryVerified": true,
+    "applicationSmokeVerified": true,
+    "cleanupVerified": true
+  },
+  "operator": {
+    "role": "database-operator"
+  },
+  "approval": {
+    "status": "approved",
+    "approverRole": "security-reviewer",
+    "independentFromOperator": true
+  },
+  "notes": "Sanitized summary only. Do not include identifiers, raw rows, URLs, credentials or secrets."
+}
