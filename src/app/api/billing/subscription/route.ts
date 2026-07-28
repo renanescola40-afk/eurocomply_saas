@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const denied = await requireTrustedMutation(request, {
       rateLimit: {
         key: `billing:subscription:${organization.id}:${user.id}`,
-        policy: 'billing-subscription-lifecycle',
+        policy: 'billing-checkout',
         userId: user.id,
         organizationId: organization.id,
         action: 'billing_subscription_lifecycle',
