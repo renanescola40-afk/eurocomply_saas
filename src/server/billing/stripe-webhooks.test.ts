@@ -250,11 +250,11 @@ describe('Stripe webhook billing hardening', () => {
       organization_id: 'org_a',
       stripe_customer_id: 'cus_123',
       stripe_subscription_id: 'sub_123',
-      plan: 'growth',
-      tier: 'growth',
+      plan: 'business',
+      tier: 'business',
       status,
     });
-    expect(subscriptionPayload.entitlements).toEqual(expect.objectContaining({ users: 15, vendorRisk: true }));
+    expect(subscriptionPayload.entitlements).toEqual(expect.objectContaining({ users: 75, vendorRisk: true }));
     expect(upsertOptions).toEqual({ onConflict: 'organization_id' });
     expect(state.eventUpdates).toEqual(
       expect.arrayContaining([
@@ -272,7 +272,7 @@ describe('Stripe webhook billing hardening', () => {
         entityType: 'stripe_subscription',
         entityId: 'sub_123',
         metadata: expect.objectContaining({
-          plan: 'growth',
+          plan: 'business',
           metadataPlan: 'business',
           planSource: 'subscription_metadata_fallback',
         }),
