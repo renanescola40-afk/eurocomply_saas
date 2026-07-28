@@ -6,7 +6,10 @@ const routeRoots = [
   join(root, 'src', 'app', 'api'),
   join(root, 'src', 'app', 'next_api'),
 ];
-const inventoryPath = join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.md');
+const inventoryPaths = [
+  join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.md'),
+  join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.billing.md'),
+];
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
 
 const allowedClasses = new Set([
@@ -39,28 +42,28 @@ function normalizePath(path) {
 }
 
 function readInventory() {
-  if (!existsSync(inventoryPath)) {
-    return {
-      routeClasses: new Map(),
-      failures: [`missing ${normalizePath(inventoryPath)}`],
-    };
-  }
-
-  const source = readFileSync(inventoryPath, 'utf8');
   const routeClasses = new Map();
   const failures = [];
   const rowPattern = /^\|\s*`([^`]+route\.ts)`\s*\|\s*([^|]+?)\s*\|/gm;
 
-  for (const match of source.matchAll(rowPattern)) {
-    const route = match[1];
-    const routeClass = match[2].trim();
-
-    if (routeClasses.has(route)) {
-      failures.push(`${route}: duplicate API_ROUTE_INVENTORY.md classification`);
+  for (const inventoryPath of inventoryPaths) {
+    if (!existsSync(inventoryPath)) {
+      failures.push(`missing ${normalizePath(inventoryPath)}`);
       continue;
     }
 
-    routeClasses.set(route, routeClass);
+    const source = readFileSync(inventoryPath, 'utf8');
+    for (const match of source.matchAll(rowPattern)) {
+      const route = match[1];
+      const routeClass = match[2].trim();
+
+      if (routeClasses.has(route)) {
+        failures.push(`${route}: duplicate API_ROUTE_INVENTORY.md classification across modular inventories`);
+        continue;
+      }
+
+      routeClasses.set(route, routeClass);
+    }
   }
 
   return { routeClasses, failures };
@@ -74,7 +77,7 @@ const findings = [...inventory.failures];
 
 for (const route of routePaths) {
   if (!inventory.routeClasses.has(route)) {
-    findings.push(`${route}: missing API_ROUTE_INVENTORY.md classification`);
+    findings.push(`${route}: missing API route inventory classification`);
   }
 }
 
@@ -91,6 +94,7 @@ for (const [route, routeClass] of inventory.routeClasses) {
 console.log('EuroComply API route inventory check');
 console.log('------------------------------------');
 console.log(`Scanned ${routes.length} API route files.`);
+console.log(`Loaded ${inventoryPaths.length} inventory files.`);
 
 if (findings.length > 0) {
   console.error('API inventory findings:');
