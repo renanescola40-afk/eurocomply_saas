@@ -254,7 +254,7 @@ describe('Stripe webhook billing hardening', () => {
       tier: 'business',
       status,
     });
-    expect(subscriptionPayload.entitlements).toEqual(expect.objectContaining({ users: 75, vendorRisk: true }));
+    expect(subscriptionPayload.entitlements).toEqual(expect.objectContaining({ users: 75, vendors: 150 }));
     expect(upsertOptions).toEqual({ onConflict: 'organization_id' });
     expect(state.eventUpdates).toEqual(
       expect.arrayContaining([
