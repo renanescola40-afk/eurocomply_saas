@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { checkDistributedRateLimit } from '@/lib/security/rate-limit';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { ApiSecurityError } from '@/server/security/api-guards';
 
 const uuidSchema = z.string().uuid();
 const SHA256_PATTERN = /^[a-f0-9]{64}$/i;
@@ -56,7 +57,11 @@ export async function createAccessExportSignedDownload(input: {
   });
   if (!rateLimit.allowed) {
     await recordEvent({ organizationId, exportJobId, actorUserId, outcome: 'denied', reasonCode: 'rate_limited', correlationId });
-    throw new Error('enterprise_access_export_download_rate_limited');
+    throw new ApiSecurityError({
+      code: rateLimit.reason ? 'security_control_unavailable' : 'rate_limited',
+      message: rateLimit.reason ? 'Download security control unavailable.' : 'Too many download requests.',
+      status: rateLimit.reason ? 503 : 429,
+    });
   }
 
   const db = createAdminClient();
@@ -72,7 +77,10 @@ export async function createAccessExportSignedDownload(input: {
     await recordEvent({ organizationId, exportJobId, actorUserId, outcome: 'denied', reasonCode: 'export_not_completed', correlationId });
     throw new Error('enterprise_access_export_not_ready');
   }
-  if (!job.expires_at || new Date(job.expires_at).getTime() <= Date.now()) {
+  const remainingSeconds = job.expires_at
+    ? Math.floor((new Date(job.expires_at).getTime() - Date.now()) / 1000)
+    : 0;
+  if (remainingSeconds < 30) {
     await recordEvent({ organizationId, exportJobId, actorUserId, outcome: 'expired', reasonCode: 'export_expired', correlationId });
     throw new Error('enterprise_access_export_expired');
   }
@@ -89,9 +97,10 @@ export async function createAccessExportSignedDownload(input: {
 
   const bucket = process.env.ENTERPRISE_ACCESS_EXPORT_BUCKET?.trim() || DEFAULT_BUCKET;
   const extension = job.format === 'jsonl' ? 'jsonl' : 'csv';
+  const signedUrlSeconds = Math.min(SIGNED_URL_SECONDS, remainingSeconds);
   const { data, error: signedError } = await db.storage
     .from(bucket)
-    .createSignedUrl(job.object_key, SIGNED_URL_SECONDS, { download: `access-evidence-${exportJobId}.${extension}` });
+    .createSignedUrl(job.object_key, signedUrlSeconds, { download: `access-evidence-${exportJobId}.${extension}` });
 
   if (signedError || !data?.signedUrl) {
     await recordEvent({ organizationId, exportJobId, actorUserId, outcome: 'provider_failed', reasonCode: 'signed_url_provider_failed', correlationId });
@@ -105,12 +114,12 @@ export async function createAccessExportSignedDownload(input: {
     outcome: 'issued',
     reasonCode: 'signed_url_issued',
     correlationId,
-    expiresInSeconds: SIGNED_URL_SECONDS,
+    expiresInSeconds: signedUrlSeconds,
   });
 
   return {
     signedUrl: data.signedUrl,
-    expiresIn: SIGNED_URL_SECONDS,
+    expiresIn: signedUrlSeconds,
     sha256: job.sha256,
     byteSize: Number(job.byte_size),
     rowCount: Number(job.row_count),
