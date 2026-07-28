@@ -7,6 +7,7 @@ const routeRoots = [
   join(root, 'src', 'app', 'next_api'),
 ];
 const inventoryPath = join(root, 'docs', 'security', 'API_ROUTE_INVENTORY.md');
+const inventoryFragmentsPath = join(root, 'docs', 'security', 'api-route-inventory');
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', 'dist', 'coverage']);
 
 const allowedClasses = new Set([
@@ -38,29 +39,45 @@ function normalizePath(path) {
   return relative(root, path).split(sep).join('/');
 }
 
-function readInventory() {
-  if (!existsSync(inventoryPath)) {
-    return {
-      routeClasses: new Map(),
-      failures: [`missing ${normalizePath(inventoryPath)}`],
-    };
-  }
+function inventoryFiles() {
+  const files = [inventoryPath];
+  if (!existsSync(inventoryFragmentsPath)) return files;
 
-  const source = readFileSync(inventoryPath, 'utf8');
+  const fragments = readdirSync(inventoryFragmentsPath, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+    .map((entry) => join(inventoryFragmentsPath, entry.name))
+    .sort();
+
+  return [...files, ...fragments];
+}
+
+function readInventory() {
   const routeClasses = new Map();
   const failures = [];
-  const rowPattern = /^\|\s*`([^`]+route\.ts)`\s*\|\s*([^|]+?)\s*\|/gm;
+  const files = inventoryFiles();
 
-  for (const match of source.matchAll(rowPattern)) {
-    const route = match[1];
-    const routeClass = match[2].trim();
+  if (!existsSync(inventoryPath)) {
+    failures.push(`missing ${normalizePath(inventoryPath)}`);
+  }
 
-    if (routeClasses.has(route)) {
-      failures.push(`${route}: duplicate API_ROUTE_INVENTORY.md classification`);
-      continue;
+  for (const file of files) {
+    if (!existsSync(file)) continue;
+    const source = readFileSync(file, 'utf8');
+    const rowPattern = /^\|\s*`([^`]+route\.ts)`\s*\|\s*([^|]+?)\s*\|/gm;
+
+    for (const match of source.matchAll(rowPattern)) {
+      const route = match[1];
+      const routeClass = match[2].trim();
+
+      if (routeClasses.has(route)) {
+        failures.push(
+          `${route}: duplicate API route classification in ${normalizePath(file)}`,
+        );
+        continue;
+      }
+
+      routeClasses.set(route, routeClass);
     }
-
-    routeClasses.set(route, routeClass);
   }
 
   return { routeClasses, failures };
@@ -74,7 +91,7 @@ const findings = [...inventory.failures];
 
 for (const route of routePaths) {
   if (!inventory.routeClasses.has(route)) {
-    findings.push(`${route}: missing API_ROUTE_INVENTORY.md classification`);
+    findings.push(`${route}: missing API route inventory classification`);
   }
 }
 
@@ -84,13 +101,14 @@ for (const [route, routeClass] of inventory.routeClasses) {
   }
 
   if (!routePathSet.has(route)) {
-    findings.push(`${route}: stale API_ROUTE_INVENTORY.md classification for missing route`);
+    findings.push(`${route}: stale API route classification for missing route`);
   }
 }
 
 console.log('EuroComply API route inventory check');
 console.log('------------------------------------');
 console.log(`Scanned ${routes.length} API route files.`);
+console.log(`Loaded ${inventoryFiles().length} inventory file(s).`);
 
 if (findings.length > 0) {
   console.error('API inventory findings:');
