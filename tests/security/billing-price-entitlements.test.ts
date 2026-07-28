@@ -24,11 +24,11 @@ describe('billing Stripe price entitlements', () => {
 
   it('maps current and legacy Stripe prices to canonical server-side plans', () => {
     process.env['STRIPE_' + 'PRICE_STARTER_MONTHLY'] = 'price_starter_current';
-    process.env['STRIPE_' + 'PRICE_BUSINESS_MONTHLY'] = 'price_business_legacy';
+    process.env['STRIPE_' + 'PRICE_BUSINESS_MONTHLY'] = 'price_business_current';
     process.env['STRIPE_' + 'PRICE_ENTERPRISE_MONTHLY'] = 'price_enterprise_current';
 
     expect(getBillingPlanIdForStripePriceId('price_starter_current')).toBe('starter');
-    expect(getBillingPlanIdForStripePriceId('price_business_legacy')).toBe('growth');
+    expect(getBillingPlanIdForStripePriceId('price_business_current')).toBe('business');
     expect(getBillingPlanIdForStripePriceId('price_enterprise_current')).toBe('enterprise');
     expect(getBillingPlanIdForStripePriceId('price_unknown')).toBeUndefined();
   });
