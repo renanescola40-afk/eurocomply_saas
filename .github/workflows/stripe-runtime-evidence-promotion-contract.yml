@@ -1,0 +1,44 @@
+name: Stripe Runtime Evidence Promotion Contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/stripe-runtime-evidence-promotion.yml'
+      - '.github/workflows/stripe-runtime-evidence-promotion-contract.yml'
+      - 'scripts/release/promote-stripe-runtime-evidence.mjs'
+      - 'scripts/release/validate-stripe-runtime-replay.mjs'
+      - 'tests/release/stripe-runtime-evidence-promotion.test.ts'
+      - 'docs/enterprise/STRIPE_RUNTIME_EVIDENCE_PROMOTION.md'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stripe-runtime-evidence-promotion-contract-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          persist-credentials: false
+      - run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx vitest run tests/release/stripe-runtime-evidence-promotion.test.ts
+      - name: Verify workflows contain no write permissions
+        run: |
+          ! grep -Eq 'contents: write|actions: write' .github/workflows/stripe-runtime-evidence-promotion.yml

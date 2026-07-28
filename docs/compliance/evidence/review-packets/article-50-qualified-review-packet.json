@@ -1,0 +1,51 @@
+{
+  "schema": "risck-comply.qualified-review-packet.v1",
+  "reviewFamily": "ARTICLE_50",
+  "status": "HUMAN_REVIEW_REQUIRED",
+  "scope": [
+    "Article 50(1) interaction disclosures",
+    "Article 50(2) machine-readable marking and detection",
+    "Article 50(3) emotion-recognition and biometric-categorisation information",
+    "Article 50(4) deepfake and public-interest content disclosures",
+    "2026 effective-date and transition handling"
+  ],
+  "requiredFiles": [
+    "src/server/ai-governance/article-50-effective-dates.ts",
+    "src/server/ai-governance/article-50-control-plane.ts",
+    "src/lib/transparency-rules.ts",
+    "src/app/[locale]/dashboard/transparencia/page.tsx",
+    "docs/compliance/ARTICLE_50_OPERATIONAL_CONTROL_PLANE.md"
+  ],
+  "requiredTests": [
+    "src/server/ai-governance/article-50-effective-dates.test.ts",
+    "src/server/ai-governance/article-50-control-plane.test.ts"
+  ],
+  "mandatoryQuestions": [
+    "Is the wording legally accurate and non-misleading?",
+    "Are human-readable disclosures clear, accessible and correctly timed?",
+    "Are translations materially equivalent?",
+    "Is any 2026 transition restricted to the exact duties and systems covered by the final adopted act?",
+    "Are provider and deployer obligations separated?",
+    "Does the product fail closed when Official Journal evidence is absent?"
+  ],
+  "reviewerRequirements": {
+    "realIdentityRequired": true,
+    "qualificationRequired": true,
+    "independenceRequired": true,
+    "signatureRequired": true,
+    "syntheticIdentityForbidden": true
+  },
+  "acceptance": {
+    "reviewerName": null,
+    "reviewerQualification": null,
+    "independenceStatement": null,
+    "decision": null,
+    "signedAt": null,
+    "signatureDigest": null
+  },
+  "limitations": [
+    "This packet is preparation material and is not an accepted legal review.",
+    "Automated tests do not validate legal interpretation, translation equivalence or customer facts.",
+    "No production evidence is claimed by the packet."
+  ]
+}
