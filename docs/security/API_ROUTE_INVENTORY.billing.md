@@ -4,5 +4,5 @@ This module extends `API_ROUTE_INVENTORY.md` for billing lifecycle endpoints. Ev
 
 | Route | Class | Notes |
 | --- | --- | --- |
-| `src/app/api/billing/catalog/route.ts` | tenant-scoped | Public-safe provider identifiers are excluded, while the authenticated organization context determines plan and add-on availability; responses are sanitized and no-store. |
+| `src/app/api/billing/catalog/route.ts` | public safe | Public pricing and add-on metadata only; Stripe/provider identifiers and tenant data are excluded, responses are no-store, and distributed per-IP rate limiting is enforced. |
 | `src/app/api/billing/subscription/route.ts` | high-risk | Subscription lifecycle mutation requires authenticated server-derived organization context, `manage_billing`, trusted mutation, bounded Zod input, fail-closed billing rate limiting, step-up authentication, server-owned Stripe identifiers, audit persistence and no-store responses. |
