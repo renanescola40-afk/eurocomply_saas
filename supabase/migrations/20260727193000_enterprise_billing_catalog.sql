@@ -110,22 +110,20 @@ create table if not exists public.feature_flags (
 alter table public.plans enable row level security;
 alter table public.plan_features enable row level security;
 alter table public.add_ons enable row level security;
-alter table public.customer_add_ons enable row level security;
-alter table public.seat_usage enable row level security;
-alter table public.organization_usage enable row level security;
-alter table public.storage_usage enable row level security;
-alter table public.billing_limits enable row level security;
-alter table public.feature_flags enable row level security;
 
 alter table public.plans force row level security;
 alter table public.plan_features force row level security;
 alter table public.add_ons force row level security;
-alter table public.customer_add_ons force row level security;
-alter table public.seat_usage force row level security;
-alter table public.organization_usage force row level security;
-alter table public.storage_usage force row level security;
-alter table public.billing_limits force row level security;
-alter table public.feature_flags force row level security;
+
+-- Billing state is authoritative server-side data. Organization members may read
+-- their own rows, while inserts, updates and deletes are denied to authenticated
+-- browser clients and remain available only to the privileged backend role.
+select public.app_rls_harden_backend_only_table('customer_add_ons');
+select public.app_rls_harden_backend_only_table('seat_usage');
+select public.app_rls_harden_backend_only_table('organization_usage');
+select public.app_rls_harden_backend_only_table('storage_usage');
+select public.app_rls_harden_backend_only_table('billing_limits');
+select public.app_rls_harden_backend_only_table('feature_flags');
 
 insert into public.plans (slug, name, monthly_price_cents, annual_price_cents, sales_led)
 values
