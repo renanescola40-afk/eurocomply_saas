@@ -58,7 +58,7 @@ function readInventory() {
       const routeClass = match[2].trim();
 
       if (routeClasses.has(route)) {
-        failures.push(`${route}: duplicate API route inventory classification`);
+        failures.push(`${route}: duplicate API_ROUTE_INVENTORY.md classification across modular inventories`);
         continue;
       }
 
@@ -87,7 +87,7 @@ for (const [route, routeClass] of inventory.routeClasses) {
   }
 
   if (!routePathSet.has(route)) {
-    findings.push(`${route}: stale API route inventory classification for missing route`);
+    findings.push(`${route}: stale API_ROUTE_INVENTORY.md classification for missing route`);
   }
 }
 
