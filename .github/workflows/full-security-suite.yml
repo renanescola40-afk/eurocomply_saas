@@ -9,6 +9,9 @@ name: Full Security Suite
 # gitleaks/gitleaks-action@v3
 # ossf/scorecard-action@v2.4.3
 # raven-actions/actionlint@v2
+# Repository evidence contract: npm run security:ci is executed through
+# scripts/security/run-security-ci-without-audit.mjs so npm audit remains a
+# separate dependency-change gate instead of being duplicated.
 
 on:
   workflow_dispatch:
