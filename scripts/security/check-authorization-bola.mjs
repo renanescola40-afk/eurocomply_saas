@@ -41,18 +41,6 @@ function normalizePath(path) {
   return relative(root, path).split(sep).join('/');
 }
 
-function inventoryFiles() {
-  const files = [inventoryPath];
-  if (!existsSync(inventoryFragmentsPath)) return files;
-
-  const fragments = readdirSync(inventoryFragmentsPath, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
-    .map((entry) => join(inventoryFragmentsPath, entry.name))
-    .sort();
-
-  return [...files, ...fragments];
-}
-
 function readInventory() {
   const routeClasses = new Map();
   const failures = [];
