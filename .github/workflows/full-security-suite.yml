@@ -115,7 +115,7 @@ jobs:
             unset E2E_BASE_URL
           fi
           npx playwright install --with-deps chromium
-          npm run test:e2e -- --reporter=html,line
+          npm run test:e2e -- --reporter=line
 
       - name: npm audit moderate gate for dependency changes and release events
         if: steps.manifests.outputs.changed == 'true' || github.event_name != 'pull_request'
