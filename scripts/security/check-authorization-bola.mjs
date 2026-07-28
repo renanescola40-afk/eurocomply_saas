@@ -87,7 +87,7 @@ for (const [route, routeClass] of inventory.routeClasses) {
   }
 
   if (!routePathSet.has(route)) {
-    findings.push(`${route}: stale API route classification for missing route`);
+    findings.push(`${route}: stale API_ROUTE_INVENTORY.md classification for missing route`);
   }
 }
 
