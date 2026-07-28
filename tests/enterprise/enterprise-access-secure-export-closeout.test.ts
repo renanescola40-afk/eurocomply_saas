@@ -11,7 +11,7 @@ test('access export download evidence is append-only and service-role only', () 
   assert.match(migration, /enterprise_access_export_download_events/);
   assert.match(migration, /force row level security/i);
   assert.match(migration, /deny_delete/);
-  assert.match(migration, /grant execute .* service_role/is);
+  assert.match(migration, /grant execute [\s\S]* service_role/i);
   assert.match(migration, /export_job_id uuid.*on delete cascade/i);
   assert.match(migration, /grant select .* service_role/i);
   assert.doesNotMatch(migration, /grant all on public\.enterprise_access_export_download_events/i);
