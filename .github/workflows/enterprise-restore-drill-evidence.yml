@@ -1,0 +1,93 @@
+name: Enterprise Restore Drill Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Workflow run containing restore-drill-evidence artifact
+        required: true
+        type: string
+  pull_request:
+    paths:
+      - 'scripts/operations/validate-restore-drill-evidence.mjs'
+      - 'tests/operations/restore-drill-evidence.test.mjs'
+      - '.github/workflows/enterprise-restore-drill-evidence.yml'
+      - 'docs/operations/enterprise-restore-drill/**'
+      - 'docs/adr/ADR-restore-drill-evidence-promotion.md'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: enterprise-restore-drill-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Restore evidence contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out trusted source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Run restore evidence contract tests
+        run: node --test tests/operations/restore-drill-evidence.test.mjs
+
+  promote:
+    name: Promote approved exact-SHA restore evidence
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - name: Authorize current main only
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          set -euo pipefail
+          default_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          run_sha="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" --jq .head_sha)"
+          run_repo="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" --jq .repository.full_name)"
+          run_conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" --jq .conclusion)"
+          test "$run_repo" = "$GITHUB_REPOSITORY"
+          test "$run_sha" = "$default_sha"
+          test "$run_conclusion" = "success"
+          echo "EXPECTED_MAIN_SHA=$default_sha" >> "$GITHUB_ENV"
+      - name: Check out exact main SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ env.EXPECTED_MAIN_SHA }}
+          persist-credentials: false
+      - name: Download sanitized source evidence
+        uses: actions/download-artifact@v7
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.source_run_id }}
+          name: restore-drill-evidence
+          path: source-evidence
+      - name: Reject unexpected files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find source-evidence -type f -print)
+          test "${#files[@]}" -eq 1
+          test "${files[0]}" = "source-evidence/restore-drill-evidence.json"
+      - name: Validate and promote evidence
+        run: node scripts/operations/validate-restore-drill-evidence.mjs source-evidence/restore-drill-evidence.json artifacts/enterprise-restore-drill/promoted-restore-evidence.json
+      - name: Upload promoted release evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: enterprise-restore-drill-promoted-${{ env.EXPECTED_MAIN_SHA }}
+          path: artifacts/enterprise-restore-drill/promoted-restore-evidence.json
+          if-no-files-found: error
+          retention-days: 365

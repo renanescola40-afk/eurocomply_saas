@@ -7,7 +7,10 @@ const API_ROOTS = [
   path.join(ROOT, 'src', 'app', 'api'),
   path.join(ROOT, 'src', 'app', 'next_api'),
 ];
-const INVENTORY_PATH = path.join(ROOT, 'docs', 'security', 'API_ROUTE_INVENTORY.md');
+const INVENTORY_PATHS = [
+  path.join(ROOT, 'docs', 'security', 'API_ROUTE_INVENTORY.md'),
+  path.join(ROOT, 'docs', 'security', 'API_ROUTE_INVENTORY.billing.md'),
+];
 const CANONICAL_GUARD_PATH = path.join(ROOT, 'src', 'server', 'security', 'api-guard.ts');
 const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
@@ -38,7 +41,7 @@ const PUBLIC_MUTATION_PATTERNS = [PUBLIC_LEAD_MUTATION_PATTERN, PUBLIC_ACCOUNT_R
 
 const WEBHOOK_PATTERNS = [/\/webhook\//, /\/webhooks\//, /stripe\/webhook/, /billing\/webhook/];
 const INTEGRATION_PATTERNS = [/\/scim\/v2\//, /\/integrations\/v\d+\//];
-const INTERNAL_PATTERNS = [new RegExp(`${APP_API_PREFIX_PATTERN}\/(cron|internal|maintenance|ops|intelligence\/refresh)\/`)];
+const INTERNAL_PATTERNS = [new RegExp(`${APP_API_PREFIX_PATTERN}/(cron|internal|maintenance|ops|intelligence/refresh)/`)];
 const TENANT_TERMS = [
   'organization',
   'organizationId',
@@ -87,16 +90,34 @@ function exportedMethods(source) {
 }
 
 function readInventory() {
-  if (!existsSync(INVENTORY_PATH)) return { source: '', routeClasses: new Map(), failures: ['missing docs/security/API_ROUTE_INVENTORY.md'] };
-
-  const source = readFileSync(INVENTORY_PATH, 'utf8');
   const routeClasses = new Map();
+  const failures = [];
+  const sources = [];
   const rowPattern = /^\|\s*`([^`]+route\.ts)`\s*\|\s*([^|]+?)\s*\|/gm;
-  for (const match of source.matchAll(rowPattern)) {
-    routeClasses.set(match[1], match[2].trim());
+
+  for (const inventoryPath of INVENTORY_PATHS) {
+    if (!existsSync(inventoryPath)) {
+      failures.push(`missing ${rel(inventoryPath)}`);
+      continue;
+    }
+
+    const source = readFileSync(inventoryPath, 'utf8');
+    sources.push(source);
+
+    for (const match of source.matchAll(rowPattern)) {
+      const route = match[1];
+      const routeClass = match[2].trim();
+
+      if (routeClasses.has(route)) {
+        failures.push(`${route}: duplicate API_ROUTE_INVENTORY.md classification across modular inventories`);
+        continue;
+      }
+
+      routeClasses.set(route, routeClass);
+    }
   }
 
-  return { source, routeClasses, failures: [] };
+  return { source: sources.join('\n'), routeClasses, failures };
 }
 
 function classify(relativePath, source) {
@@ -195,7 +216,7 @@ function checkRoute(file, inventory) {
   const hasTrustedMutation = hasAny(source, ['requireTrustedOriginForMutation', 'requireTrustedMutation', 'assertTrustedOrigin']);
   const hasRateLimit = hasAny(source, ['requireRateLimit', 'requireEnterpriseRateLimit', 'checkDistributedRateLimit', 'checkRateLimit', 'isRateLimited', 'rateLimitByIp', 'requireTrustedMutation', 'isAuthorizedInternalCronRequest']);
 
-  if (!inventoryClass) failures.push('missing explicit inventory classification in docs/security/API_ROUTE_INVENTORY.md');
+  if (!inventoryClass) failures.push('missing explicit inventory classification in docs/security API route inventories');
   if (inventoryClass && !KNOWN_CLASSES.has(inventoryClass)) failures.push(`unknown inventory classification: ${inventoryClass}`);
   if (!inventoryClass && computedClass === 'unclassified') failures.push('route cannot be classified by enterprise API security taxonomy');
 
