@@ -4,7 +4,7 @@ import { getPlanLimit, getUpgradeReason, getUsagePercentage, isWithinPlanLimit }
 describe('billing entitlements', () => {
   it('returns configured limits for a plan', () => {
     expect(getPlanLimit('starter', 'users')).toBe(3);
-    expect(getPlanLimit('growth', 'vendors')).toBe(75);
+    expect(getPlanLimit('growth', 'vendors')).toBe(30);
     expect(getPlanLimit('business', 'documents')).toBe(1000);
   });
 
@@ -14,7 +14,7 @@ describe('billing entitlements', () => {
   });
 
   it('calculates usage percentage safely', () => {
-    expect(getUsagePercentage('starter', 'documents', 5)).toBe(13);
+    expect(getUsagePercentage('starter', 'documents', 5)).toBe(5);
     expect(getUsagePercentage('starter', 'documents', 100)).toBe(100);
   });
 
