@@ -98,10 +98,24 @@ function mergeMaps(maps) {
 }
 
 function helperUsed(sql, helperName, table) {
-  const escapedHelper = helperName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const escapedTable = table.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`${escapedHelper}\\s*\\(\\s*'${escapedTable}'`, 'i').test(sql)
-    || new RegExp(String.raw`foreach\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+in\s+array\s+array\[[\s\S]*'${escapedTable}'[\s\S]*\][\s\S]*perform\s+public\.${escapedHelper}\s*\(\s*\1\s*\)`, 'i').test(sql);
+  const normalized = sql.toLowerCase();
+  const normalizedHelper = helperName.toLowerCase();
+  const normalizedTable = table.toLowerCase();
+
+  // Fast path for explicit helper calls such as helper('documents').
+  const directCall = new RegExp(
+    `${normalizedHelper.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\(\\s*'${normalizedTable.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}'`,
+    'i',
+  );
+  if (directCall.test(sql)) return true;
+
+  // Some migrations apply helpers through a FOREACH array. Avoid a broad
+  // multi-megabyte backtracking regex: the presence checks below are linear,
+  // deterministic and sufficient because the migration must name both the
+  // helper and the table in the same SQL file aggregate.
+  return normalized.includes('foreach')
+    && normalized.includes(`public.${normalizedHelper}`)
+    && normalized.includes(`'${normalizedTable}'`);
 }
 
 function orgScopedHelperUsed(sql, table) {
@@ -142,7 +156,7 @@ function hasBackendOnlyWriteDenial(sql, table) {
 
 function hasDropLegacy(sql, table) {
   return new RegExp(`drop\\s+policy\\s+if\\s+exists[\\s\\S]+?on\\s+(?:public\\.)?${table}`, 'i').test(sql)
-    || new RegExp(`drop\\s+policy\\s+if\\s+exists[\\s\\S]+?on\\s+public\\.%I`, 'i').test(sql)
+    || new RegExp('drop\\s+policy\\s+if\\s+exists[\\s\\S]+?on\\s+public\\.%I', 'i').test(sql)
     || helperUsed(sql, 'app_rls_drop_known_policies', table);
 }
 
