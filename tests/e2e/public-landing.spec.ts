@@ -33,7 +33,8 @@ test.describe('public production landing', () => {
 
   test('keeps language options available on the public landing', async ({ page }) => {
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('button', { name: /language|idioma|english/i }).first()).toBeVisible();
+    await expect(page.locator('[aria-label="Select language"]:visible').first()).toBeVisible();
+    await expect(page.locator('a[href="/pt"]:visible').first()).toBeVisible();
   });
 
   test('routes primary conversion CTAs to authentication and pricing', async ({ page }) => {
