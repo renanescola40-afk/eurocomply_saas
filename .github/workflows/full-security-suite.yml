@@ -107,6 +107,11 @@ jobs:
             echo "::error title=Missing Playwright configuration::A Playwright config is required for the enterprise merge/deploy gate."
             exit 1
           fi
+          # Pull requests must validate the exact merge SHA built above, never a stale external deployment.
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            unset E2E_BASE_URL
+            RUN_E2E=true
+          fi
           if [ -z "${E2E_BASE_URL:-}" ] && [ "${RUN_E2E:-true}" != "true" ]; then
             echo "::error title=E2E runtime unavailable::Set RUN_E2E=true for the built local server or configure E2E_BASE_URL. Release and merge remain No-Go."
             exit 1
