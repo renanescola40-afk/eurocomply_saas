@@ -115,7 +115,12 @@ jobs:
             unset E2E_BASE_URL
           fi
           npx playwright install --with-deps chromium
-          npm run test:e2e -- --reporter=line
+          if ! npm run test:e2e -- --reporter=line > playwright-e2e.log 2>&1; then
+            echo "::error title=Playwright E2E gate failed::Showing the final diagnostic lines from the complete test suite."
+            tail -n 250 playwright-e2e.log
+            exit 1
+          fi
+          tail -n 20 playwright-e2e.log
 
       - name: npm audit moderate gate for dependency changes and release events
         if: steps.manifests.outputs.changed == 'true' || github.event_name != 'pull_request'
@@ -148,17 +153,11 @@ jobs:
           const rootPackage = lock.packages?.[''] ?? {};
           const components = Object.entries(lock.packages ?? {})
             .filter(([path, pkg]) => path && pkg && typeof pkg.version === 'string')
-            .map(([path, pkg]) => ({
-              type: 'library',
-              name: pkg.name ?? path.split('node_modules/').pop(),
-              version: pkg.version,
-            }))
+            .map(([path, pkg]) => ({ type: 'library', name: pkg.name ?? path.split('node_modules/').pop(), version: pkg.version }))
             .filter((component) => component.name)
             .sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`));
           fs.writeFileSync('docs/security/evidence/runtime/sbom.cyclonedx.json', JSON.stringify({
-            bomFormat: 'CycloneDX',
-            specVersion: '1.5',
-            version: 1,
+            bomFormat: 'CycloneDX', specVersion: '1.5', version: 1,
             metadata: { component: { type: 'application', name: rootPackage.name ?? 'eurocomply-saas', version: rootPackage.version ?? '0.0.0' } },
             components,
           }, null, 2));
