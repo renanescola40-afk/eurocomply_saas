@@ -2,19 +2,21 @@ import { expect, test } from '@playwright/test';
 
 const LOCALE = 'pt';
 
-test.describe('public landing controlled-access CTA navigation', () => {
-  test('primary public CTA anchors to the waitlist form', async ({ page }) => {
+test.describe('public landing production CTA navigation', () => {
+  test('primary public CTAs route to signup, login and pricing', async ({ page }) => {
     await page.goto(`/${LOCALE}`, { waitUntil: 'domcontentloaded' });
 
-    const waitlistForm = page.getByRole('main').locator('#waitlist-form');
-    await expect(waitlistForm).toBeVisible();
+    const signupLink = page.locator(`a[href="/${LOCALE}/signup"]`).first();
+    const loginLink = page.locator(`a[href="/${LOCALE}/login"]`).first();
+    const pricingLink = page.locator(`a[href="/${LOCALE}/pricing"]`).first();
 
-    const requestAccessLink = page.getByRole('link', { name: /Request access|Solicitar acesso|Pedir acesso|Early access/i }).first();
-    await expect(requestAccessLink).toBeVisible();
-    await expect(requestAccessLink).toHaveAttribute('href', '#waitlist-form');
+    await expect(signupLink).toBeVisible();
+    await expect(loginLink).toBeVisible();
+    await expect(pricingLink).toBeVisible();
+    await expect(page.locator('#waitlist-form')).toHaveCount(0);
 
-    await requestAccessLink.click();
-    await expect(waitlistForm).toBeInViewport();
-    await expect(waitlistForm.getByRole('button', { name: /Request access|Solicitar acesso|Pedir acesso/i })).toBeVisible();
+    await pricingLink.click();
+    await expect(page).toHaveURL(new RegExp(`/${LOCALE}/pricing(?:$|[?#])`));
+    await expect(page.locator('main')).toBeVisible();
   });
 });

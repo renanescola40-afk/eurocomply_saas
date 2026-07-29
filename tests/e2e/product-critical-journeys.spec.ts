@@ -1,12 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const syntheticLead = {
-  fullName: 'Playwright QA',
-  workEmail: 'qa+playwright@example.test',
-  companyName: 'Playwright Synthetic Ltd',
-  role: 'QA Engineer',
-};
-
 async function expectHealthyDocument(page: Page, label: string) {
   await expect(page.locator('body'), `${label} body should render`).toBeVisible();
   await expect(page.locator('body'), `${label} should not show Next.js/runtime errors`).not.toContainText(
@@ -15,17 +8,14 @@ async function expectHealthyDocument(page: Page, label: string) {
   expect(page.url(), `${label} should never navigate to /undefined`).not.toContain('/undefined');
 }
 
-async function fillWaitlist(page: Page) {
-  await page.locator('#waitlist-form input[placeholder="Acme Europe"]').fill(syntheticLead.companyName);
-  await page.locator('#waitlist-form input[type="email"]').fill(syntheticLead.workEmail);
-  await page.locator('#waitlist-form input[placeholder*="Founder"]').fill(syntheticLead.role);
-}
-
 test.describe('public product journey', () => {
-  test('landing and pricing controlled-access CTAs stay routable and localized', async ({ page }) => {
+  test('landing and pricing production CTAs stay routable and localized', async ({ page }) => {
     await page.goto('/pt', { waitUntil: 'domcontentloaded' });
     await expectHealthyDocument(page, 'landing');
-    await expect(page.locator('#waitlist-form:visible')).toBeVisible();
+    await expect(page.locator('a[href="/pt/signup"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/pt/login"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/pt/pricing"]').first()).toBeVisible();
+    await expect(page.locator('#waitlist-form')).toHaveCount(0);
 
     await page.goto('/pt/pricing', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/pt\/pricing(?:$|[?#])/);
@@ -44,42 +34,22 @@ test.describe('public product journey', () => {
     expect(brokenCriticalLinks, 'pricing should not expose placeholder or /undefined links').toBe(0);
   });
 
-  test('landing waitlist form has loading and success feedback with synthetic data', async ({ page }) => {
-    await page.route('**/api/prelaunch', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ emailed: true, emailStatus: 'sent' }),
-      });
-    });
-
+  test('signup route is reachable from the production landing', async ({ page }) => {
     await page.goto('/pt', { waitUntil: 'domcontentloaded' });
-    await fillWaitlist(page);
-
-    const submit = page.locator('#waitlist-form button[type="submit"]');
-    await submit.click();
-    await expect(submit).toBeDisabled();
-    await expect(page.locator('#waitlist-form [role="status"]')).toContainText(/waitlist|lista de espera/i);
+    const signup = page.locator('a[href="/pt/signup"]').first();
+    await expect(signup).toBeVisible();
+    await signup.click();
+    await expect(page).toHaveURL(/\/pt\/signup(?:$|[?#])/);
+    await expectHealthyDocument(page, 'signup');
   });
 
-  test('landing waitlist form shows controlled error feedback', async ({ page }) => {
-    await page.route('**/api/prelaunch', async (route) => {
-      await route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Unable to process this synthetic request. Please try again.' }),
-      });
-    });
-
+  test('login route is reachable from the production landing', async ({ page }) => {
     await page.goto('/pt', { waitUntil: 'domcontentloaded' });
-    await fillWaitlist(page);
-
-    await page.locator('#waitlist-form button[type="submit"]').click();
-    await expect(page.locator('#waitlist-form [role="status"], #waitlist-form [role="alert"]')).toContainText(
-      /try again|erro|failed|problem|tentar|could not|unable|não foi|nao foi/i,
-    );
-    await expectHealthyDocument(page, 'waitlist controlled error');
+    const login = page.locator('a[href="/pt/login"]').first();
+    await expect(login).toBeVisible();
+    await login.click();
+    await expect(page).toHaveURL(/\/pt\/login(?:$|[?#])/);
+    await expectHealthyDocument(page, 'login');
   });
 
   test('book demo public route is controlled and healthy', async ({ page }) => {

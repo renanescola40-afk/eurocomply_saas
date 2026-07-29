@@ -170,8 +170,8 @@ test.describe('enterprise critical SaaS flow coverage', () => {
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
     await expectControlledPage(page, 'en landing trust copy');
 
-    const waitlistLinks = page.locator('a[href="#waitlist-form"], a[href^="mailto:"]');
-    expect(await waitlistLinks.count(), 'landing should expose controlled-access and contact destinations').toBeGreaterThanOrEqual(2);
+    const conversionLinks = page.locator('a[href="/en/signup"], a[href="/en/login"], a[href="/en/pricing"]');
+    expect(await conversionLinks.count(), 'landing should expose signup, login and pricing destinations').toBeGreaterThanOrEqual(3);
 
     const bodyText = await page.locator('body').innerText();
     expect(bodyText, 'landing should not make absolute compliance guarantees').not.toMatch(
@@ -187,7 +187,7 @@ test.describe('enterprise critical SaaS flow coverage', () => {
       const response = await page.goto(target, { waitUntil: 'domcontentloaded' });
 
       expect(response?.status(), `${target} should not 404 on mobile`).not.toBe(404);
-      expect(response?.status(), `${target} should not server-error on mobile`).toBeLessThan(500);
+      expect(response?.status(), `${target} should not server-error`).toBeLessThan(500);
       await expectControlledPage(page, `mobile pt ${routePath}`);
       await expectNoHorizontalOverflow(page, `mobile pt ${routePath}`);
     }

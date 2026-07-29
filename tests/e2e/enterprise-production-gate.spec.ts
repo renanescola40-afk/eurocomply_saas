@@ -8,7 +8,11 @@ test.describe('enterprise production gate smoke', () => {
 
     const body = page.locator('body');
     await expect(body).toContainText(/RISCK COMPLY|governança|governance|compliance/i);
-    await expect(body).toContainText(/Pedir acesso|Request access|Early access|acesso controlado/i);
+    await expect(body).toContainText(/Criar conta|Create account|Entrar|Sign in/i);
+
+    await expect(page.locator('a[href="/pt/signup"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/pt/login"]').first()).toBeVisible();
+    await expect(page.locator('a[href="/pt/pricing"]').first()).toBeVisible();
 
     const bodyText = await body.innerText();
     expect(bodyText).not.toMatch(/Unhandled Runtime Error|Application error|stack trace|SUPABASE_SERVICE_ROLE_KEY|HEALTHCHECK_TOKEN/i);
@@ -19,7 +23,7 @@ test.describe('enterprise production gate smoke', () => {
         .filter((href): href is string => Boolean(href && href.trim() && href !== '#')),
     );
 
-    expect(actionableLinks.length).toBeGreaterThanOrEqual(1);
+    expect(actionableLinks.length).toBeGreaterThanOrEqual(3);
   });
 
   test('serves public health as a simple redacted readiness-independent endpoint', async ({ request }) => {

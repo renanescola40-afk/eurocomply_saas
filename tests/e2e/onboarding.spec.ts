@@ -8,12 +8,11 @@ test.describe('B2B onboarding', () => {
     await expect(page).toHaveURL(/%2Fpt%2Fonboarding%3Fplan%3Dprofessional/);
   });
 
-  test('keeps public conversion CTA pointed at the lead form', async ({ page }) => {
+  test('keeps public conversion CTA pointed at localized signup', async ({ page }) => {
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
 
-    const conversionCta = page.getByRole('link', { name: 'Request access', exact: true });
+    const conversionCta = page.getByRole('link', { name: /create account|get started|start/i }).first();
     await expect(conversionCta).toBeVisible();
-    await expect(conversionCta).toHaveAttribute('href', '#waitlist-form');
-    await expect(page.locator('#waitlist-form')).toBeVisible();
+    await expect(conversionCta).toHaveAttribute('href', '/en/signup');
   });
 });

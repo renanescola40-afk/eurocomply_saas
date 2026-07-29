@@ -47,14 +47,10 @@ test.describe('enterprise public UX acceptance', () => {
       await expectHealthyPublicSurface(page, `${locale} landing`);
       await expectLocale(page, locale, `${locale} landing`);
       await expect(page.locator('h1').first()).toBeVisible();
-
-      const waitlistForms = page.locator('#waitlist-form');
-      await expect(
-        waitlistForms,
-        `${locale} landing should settle with one uniquely addressable waitlist form`,
-      ).toHaveCount(1);
-      await expect(page.locator('main').first().locator('#waitlist-form')).toBeVisible();
-
+      await expect(page.locator(`a[href="/${locale}/signup"]`).first()).toBeVisible();
+      await expect(page.locator(`a[href="/${locale}/login"]`).first()).toBeVisible();
+      await expect(page.locator(`a[href="/${locale}/pricing"]`).first()).toBeVisible();
+      await expect(page.locator('#waitlist-form')).toHaveCount(0);
       expect(await page.locator('a[href], button').count(), `${locale} landing should expose actionable controls`).toBeGreaterThanOrEqual(3);
     });
 
