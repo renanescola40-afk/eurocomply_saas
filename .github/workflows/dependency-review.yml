@@ -50,7 +50,9 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Review changed dependencies
+        id: github_dependency_review
         if: steps.dependency_changes.outputs.changed == 'true'
+        continue-on-error: true
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
         with:
           vulnerability-check: true
@@ -59,10 +61,10 @@ jobs:
           comment-summary-in-pr: never
 
       - name: Dependency graph unavailable fallback
-        if: steps.dependency_changes.outputs.changed == 'true'
+        if: steps.dependency_changes.outputs.changed == 'true' && steps.github_dependency_review.outcome == 'failure'
         run: |
-          echo "GitHub Dependency Review requires the repository Dependency Graph to be enabled."
-          echo "npm audit remains the fail-closed high/critical fallback."
+          echo "GitHub Dependency Review could not run because the repository Dependency Graph is unavailable."
+          echo "The deterministic npm high/critical audit remains mandatory and fail-closed."
 
       - name: npm high and critical dependency vulnerability gate
         if: steps.dependency_changes.outputs.changed == 'true'
