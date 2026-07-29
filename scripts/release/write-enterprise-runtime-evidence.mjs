@@ -14,20 +14,20 @@ const buildSha = process.env.RELEASE_BUILD_SHA || process.env.NEXT_PUBLIC_BUILD_
 const finalValidationInProgress = process.env.FINAL_VALIDATION_IN_PROGRESS === 'true';
 
 const requiredEvidence = [
-  ['enterpriseEnvReadiness', `${runtimeDir}/enterprise-release-env-readiness.json`, true],
-  ['deploymentSmoke', `${runtimeDir}/deployment-smoke-validation.json`, true],
-  ['observabilitySmoke', `${runtimeDir}/observability-smoke-validation.json`, true],
-  ['rollbackDryRun', `${runtimeDir}/rollback-dry-run-validation.json`, true],
-  ['supabaseLiveRls', `${runtimeDir}/supabase-live-rls-validation.json`, true],
-  ['productionFinalValidation', `${runtimeDir}/production-final-validation.json`, !finalValidationInProgress],
-  ['productionSecretsProviderStores', `${runtimeDir}/production-secrets-provider-stores.json`, true],
-  ['stripeBillingValidation', `${runtimeDir}/stripe-billing-validation.json`, true],
-  ['uploadScannerValidation', `${runtimeDir}/upload-malware-scan-validation.json`, true],
-  ['branchProtectionRequiredChecks', `${runtimeDir}/branch-protection-required-checks.json`, true],
-  ['authRbacFinalValidation', `${runtimeDir}/auth-rbac-final-validation.json`, true],
-  ['stepUpMfaValidation', `${runtimeDir}/step-up-mfa-validation.json`, true],
-  ['auditChainLiveValidation', `${runtimeDir}/audit-chain-live-validation.json`, true],
-  ['externalSecurityReviewOrPentest', `${runtimeDir}/external-security-review-or-pentest.json`, true],
+  ['enterpriseEnvReadiness', `${runtimeDir}/enterprise-release-env-readiness.json`, true, true],
+  ['deploymentSmoke', `${runtimeDir}/deployment-smoke-validation.json`, true, true],
+  ['observabilitySmoke', `${runtimeDir}/observability-smoke-validation.json`, true, false],
+  ['rollbackDryRun', `${runtimeDir}/rollback-dry-run-validation.json`, true, true],
+  ['supabaseLiveRls', `${runtimeDir}/supabase-live-rls-validation.json`, true, true],
+  ['productionFinalValidation', `${runtimeDir}/production-final-validation.json`, !finalValidationInProgress, true],
+  ['productionSecretsProviderStores', `${runtimeDir}/production-secrets-provider-stores.json`, true, false],
+  ['stripeBillingValidation', `${runtimeDir}/stripe-billing-validation.json`, true, true],
+  ['uploadScannerValidation', `${runtimeDir}/upload-malware-scan-validation.json`, true, true],
+  ['branchProtectionRequiredChecks', `${runtimeDir}/branch-protection-required-checks.json`, true, false],
+  ['authRbacFinalValidation', `${runtimeDir}/auth-rbac-final-validation.json`, true, true],
+  ['stepUpMfaValidation', `${runtimeDir}/step-up-mfa-validation.json`, true, true],
+  ['auditChainLiveValidation', `${runtimeDir}/audit-chain-live-validation.json`, true, true],
+  ['externalSecurityReviewOrPentest', `${runtimeDir}/external-security-review-or-pentest.json`, true, false],
 ];
 
 function readEvidence(path) {
@@ -52,6 +52,23 @@ function readEvidence(path) {
 
 function basePass(evidence) {
   return evidence.present && evidence.parseable && evidence.status === 'Complete' && ['passed', 'Go', 'GO'].includes(evidence.outcome);
+}
+
+function collectCommitShas(raw = {}) {
+  return [
+    raw.commitSha,
+    raw.releaseCommitSha,
+    raw.targetSha,
+    raw.releaseSha,
+    raw.githubActions?.commitSha,
+    raw.provenance?.commitSha,
+  ]
+    .map((value) => String(value ?? '').trim().toLowerCase())
+    .filter((value) => /^[0-9a-f]{40}$/.test(value));
+}
+
+function matchesReleaseCommit(evidence) {
+  return collectCommitShas(evidence.raw).includes(String(commitSha ?? '').toLowerCase());
 }
 
 function targetHasPassedDeploymentSmoke(evidence) {
@@ -93,10 +110,11 @@ function externalReviewIsReal(evidence) {
 const evidence = Object.fromEntries(requiredEvidence.map(([key, path]) => [key, readEvidence(path)]));
 const blockers = [];
 
-for (const [key, , required] of requiredEvidence) {
+for (const [key, , required, commitBound] of requiredEvidence) {
   if (!required) continue;
   const item = evidence[key];
   if (!basePass(item)) blockers.push(`${item.path} must be Complete/passed; current status=${item.status}, outcome=${item.outcome}`);
+  if (commitBound && !matchesReleaseCommit(item)) blockers.push(`${item.path} must be bound to release commit ${commitSha || '<missing>'}.`);
 }
 
 if (!targetHasPassedDeploymentSmoke(evidence.deploymentSmoke)) blockers.push('Deployment smoke must prove at least one target passed and zero smoke targets failed.');
@@ -137,15 +155,21 @@ const controlsVerified = outcome === 'passed'
   ]
   : [];
 
-const evidenceFiles = Object.fromEntries(Object.entries(evidence).map(([key, item]) => [key, {
-  path: item.path,
-  present: item.present,
-  parseable: item.parseable,
-  status: item.status,
-  outcome: item.outcome,
-  generatedAt: item.generatedAt || null,
-  releaseTarget: item.releaseTarget || null,
-}]));
+const evidenceFiles = Object.fromEntries(Object.entries(evidence).map(([key, item]) => {
+  const definition = requiredEvidence.find(([candidate]) => candidate === key);
+  const commitBound = definition?.[3] === true;
+  return [key, {
+    path: item.path,
+    present: item.present,
+    parseable: item.parseable,
+    status: item.status,
+    outcome: item.outcome,
+    generatedAt: item.generatedAt || null,
+    releaseTarget: item.releaseTarget || null,
+    commitBound,
+    shaMatches: commitBound ? matchesReleaseCommit(item) : null,
+  }];
+}));
 
 const commandsExecuted = [
   'node scripts/release/check-enterprise-release-env.mjs',
@@ -215,6 +239,13 @@ const releaseGoNoGo = {
   evidenceFiles,
   redactionConfirmation: enterpriseRuntimeEvidence.redactionConfirmation,
   noSecretsStored: true,
+  evidenceIntegrity: {
+    containsSensitiveValues: false,
+    valuesRedacted: true,
+    authorizationHeaderStored: false,
+    cookiesStored: false,
+    exactReleaseShaRequired: true,
+  },
   releaseGate: enterpriseRuntimeEvidence.releaseGate,
 };
 

@@ -50,10 +50,16 @@ describe('production release profiles', () => {
   });
 
   it('preserves the enterprise runner as an explicit enterprise profile', () => {
+    const dispatcher = read('scripts/release/run-public-production-release.mjs');
     const enterpriseRunner = read('scripts/release/run-public-production-release-v2.mjs');
 
     expect(enterpriseRunner).toContain("const releaseTarget = process.env.RELEASE_TARGET || 'enterprise'");
     expect(enterpriseRunner).toContain('enterprise-runtime-evidence.json');
     expect(enterpriseRunner).toContain("RISCK_COMPLY_ENTERPRISE_RELEASE: 'true'");
+    expect(enterpriseRunner).toContain('npm run release:go-no-go-evidence');
+    expect(dispatcher).toContain("runNodeScript('scripts/release/write-enterprise-runtime-evidence.mjs'");
+    expect(dispatcher).toContain("FINAL_VALIDATION_IN_PROGRESS: 'false'");
+    expect(dispatcher).toContain("runNodeScript('scripts/release/validate-release-go-no-go-evidence.mjs')");
+    expect(dispatcher).toContain("runNodeScript('scripts/release/verify-enterprise-evidence-bundle.mjs')");
   });
 });
