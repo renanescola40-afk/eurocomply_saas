@@ -60,16 +60,18 @@ jobs:
           sha256sum "$result" > artifacts/enterprise-conversation-closeout/SHA256SUMS
 
       - name: Publish completion summary
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           {
-            echo '## Enterprise conversation final closeout'
+            echo "## Enterprise conversation final closeout"
             echo
-            echo '- Decision: `CONVERSATION_COMPLETE`'
-            echo '- Completion: `100%`'
-            echo '- Release SHA: `${{ inputs.release_sha }}`'
-            echo '- Evidence: exact-SHA runtime, production-final and Go/No-Go proofs passed.'
+            echo "- Decision: \`CONVERSATION_COMPLETE\`"
+            echo "- Completion: \`100%\`"
+            echo "- Release SHA: \`$RELEASE_SHA\`"
+            echo "- Evidence: exact-SHA runtime, production-final and Go/No-Go proofs passed."
             echo
-            echo '**This conversation can now be closed.**'
+            echo "**This conversation can now be closed.**"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload immutable closeout evidence
