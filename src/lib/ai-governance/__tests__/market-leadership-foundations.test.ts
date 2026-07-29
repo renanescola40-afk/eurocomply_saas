@@ -55,6 +55,76 @@ describe('market leadership governance foundations', () => {
     });
   });
 
+  it.each(['unreviewed', 'review_required', 'rejected'] as const)(
+    'does not treat %s production evidence as production proof',
+    (reviewStatus) => {
+      const decision = evaluateEvidence(
+        {
+          environment: 'production',
+          evidenceClass: 'provider',
+          integrityDigest: digest,
+          sourceReference: 'provider:run-123',
+          collectedAt: new Date('2026-07-28T10:00:00Z'),
+          validFrom: new Date('2026-07-28T09:00:00Z'),
+          validUntil: new Date('2026-08-28T09:00:00Z'),
+          limitations: 'Provider evidence pending an accepted review.',
+          reviewStatus,
+        },
+        new Date('2026-07-28T12:00:00Z'),
+      );
+
+      expect(decision.accepted).toBe(false);
+      expect(decision.productionProof).toBe(false);
+      expect(decision.reusable).toBe(false);
+    },
+  );
+
+  it('rejects evidence before its validity window and with a future collection time', () => {
+    const decision = evaluateEvidence(
+      {
+        environment: 'production',
+        evidenceClass: 'provider',
+        integrityDigest: digest,
+        sourceReference: 'provider:future-run',
+        collectedAt: new Date('2026-07-30T10:00:00Z'),
+        validFrom: new Date('2026-07-30T09:00:00Z'),
+        validUntil: new Date('2026-08-30T09:00:00Z'),
+        limitations: 'Not valid at the evaluation instant.',
+        reviewStatus: 'accepted',
+      },
+      new Date('2026-07-28T12:00:00Z'),
+    );
+
+    expect(decision.current).toBe(false);
+    expect(decision.accepted).toBe(false);
+    expect(decision.productionProof).toBe(false);
+    expect(decision.reusable).toBe(false);
+    expect(decision.reasons).toEqual(
+      expect.arrayContaining(['not_yet_valid', 'collected_in_future']),
+    );
+  });
+
+  it('does not promote expired accepted production evidence', () => {
+    const decision = evaluateEvidence(
+      {
+        environment: 'production',
+        evidenceClass: 'customer',
+        integrityDigest: digest,
+        sourceReference: 'event:expired',
+        collectedAt: new Date('2026-07-20T10:00:00Z'),
+        validFrom: new Date('2026-07-20T09:00:00Z'),
+        validUntil: new Date('2026-07-27T09:00:00Z'),
+        limitations: 'Expired before the evaluation instant.',
+        reviewStatus: 'accepted',
+      },
+      new Date('2026-07-28T12:00:00Z'),
+    );
+
+    expect(decision.current).toBe(false);
+    expect(decision.productionProof).toBe(false);
+    expect(decision.reasons).toContain('expired');
+  });
+
   it('fails regulatory changes closed when source or scope is unresolved', () => {
     const decision = classifyRegulatoryImpact({
       bindingStatus: 'draft',
