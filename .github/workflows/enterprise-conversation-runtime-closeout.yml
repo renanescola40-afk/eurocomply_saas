@@ -1,0 +1,94 @@
+name: Enterprise Conversation Runtime Closeout
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA
+        required: true
+      stripe_run_id:
+        description: Stripe runtime proof run ID
+        required: true
+      enterprise_run_id:
+        description: Enterprise runtime proof run ID
+        required: true
+      production_final_run_id:
+        description: Production-final proof run ID
+        required: true
+      go_no_go_run_id:
+        description: Release Go/No-Go proof run ID
+        required: true
+      confirmation:
+        description: Type CLOSE_ENTERPRISE_CONVERSATION
+        required: true
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: enterprise-conversation-runtime-closeout
+  cancel-in-progress: false
+
+jobs:
+  closeout:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
+      - name: Authorize exact main SHA and confirmation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          test "$CONFIRMATION" = "CLOSE_ENTERPRISE_CONVERSATION"
+          test "$RELEASE_SHA" = "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+      - name: Download mandatory proof artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p runtime-proofs
+          gh run download "${{ inputs.stripe_run_id }}" -D runtime-proofs/stripe
+          gh run download "${{ inputs.enterprise_run_id }}" -D runtime-proofs/enterprise
+          gh run download "${{ inputs.production_final_run_id }}" -D runtime-proofs/production-final
+          gh run download "${{ inputs.go_no_go_run_id }}" -D runtime-proofs/go-no-go
+
+          copy_first_json() {
+            local source_dir="$1"
+            local destination="$2"
+            local source_file=""
+
+            while IFS= read -r -d '' candidate; do
+              source_file="$candidate"
+              break
+            done < <(find "$source_dir" -type f -name '*.json' -print0)
+
+            if [ -z "$source_file" ]; then
+              echo "No JSON evidence found in $source_dir" >&2
+              exit 1
+            fi
+
+            cp -- "$source_file" "$destination"
+          }
+
+          copy_first_json runtime-proofs/stripe runtime-proofs/stripe-runtime-evidence.json
+          copy_first_json runtime-proofs/enterprise runtime-proofs/enterprise-runtime-evidence.json
+          copy_first_json runtime-proofs/production-final runtime-proofs/production-final-evidence.json
+          copy_first_json runtime-proofs/go-no-go runtime-proofs/release-go-no-go-evidence.json
+      - name: Assemble final exact-SHA decision
+        run: node scripts/enterprise/assemble-conversation-runtime-closeout.mjs --sha=${{ inputs.release_sha }} --root=runtime-proofs
+      - name: Generate integrity digest
+        run: sha256sum runtime-proofs/artifacts/enterprise-conversation-closeout.json > runtime-proofs/artifacts/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-conversation-complete-${{ inputs.release_sha }}
+          path: runtime-proofs/artifacts/
+          retention-days: 365
+          if-no-files-found: error
