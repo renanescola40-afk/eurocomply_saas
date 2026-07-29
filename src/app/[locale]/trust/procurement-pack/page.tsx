@@ -51,7 +51,7 @@ export default async function ProcurementPackPage({ params }: PageProps) {
           <h1 className="mt-6 max-w-5xl text-4xl font-semibold tracking-[-0.055em] sm:text-6xl">{copy.title}</h1>
           <p className="mt-6 max-w-3xl text-lg leading-8 text-white/62">{copy.subtitle}</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href="/api/trust/procurement-pack" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-black transition hover:bg-zinc-200"><Download className="h-4 w-4" /> {copy.download}</a>
+            <Link href="/api/trust/procurement-pack" prefetch={false} className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-black transition hover:bg-zinc-200"><Download className="h-4 w-4" /> {copy.download}</Link>
             <Link href={`/${locale}/trust`} className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.05] px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.1]">{copy.back}<ArrowRight className="h-4 w-4" /></Link>
           </div>
           <p className="mt-5 text-xs uppercase tracking-[0.2em] text-white/35">Version {PROCUREMENT_PACK_VERSION}</p>
