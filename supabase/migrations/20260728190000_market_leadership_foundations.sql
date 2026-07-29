@@ -179,6 +179,30 @@ create policy governance_evidence_objects_member_read on public.governance_evide
 create policy regulatory_change_impacts_member_read on public.regulatory_change_impacts for select to authenticated using (public.is_organization_member(organization_id));
 create policy governance_value_events_member_read on public.governance_value_events for select to authenticated using (public.is_organization_member(organization_id));
 
+-- Browser writes remain explicitly denied. Trusted server-side operations use the
+-- privileged backend client, which bypasses RLS and remains the only write path.
+create policy ai_governance_entities_insert_backend_only on public.ai_governance_entities for insert to authenticated with check (false);
+create policy ai_governance_entities_update_backend_only on public.ai_governance_entities for update to authenticated using (false) with check (false);
+create policy ai_governance_entities_delete_backend_only on public.ai_governance_entities for delete to authenticated using (false);
+create policy ai_governance_entity_links_insert_backend_only on public.ai_governance_entity_links for insert to authenticated with check (false);
+create policy ai_governance_entity_links_update_backend_only on public.ai_governance_entity_links for update to authenticated using (false) with check (false);
+create policy ai_governance_entity_links_delete_backend_only on public.ai_governance_entity_links for delete to authenticated using (false);
+create policy normalized_ai_controls_insert_backend_only on public.normalized_ai_controls for insert to authenticated with check (false);
+create policy normalized_ai_controls_update_backend_only on public.normalized_ai_controls for update to authenticated using (false) with check (false);
+create policy normalized_ai_controls_delete_backend_only on public.normalized_ai_controls for delete to authenticated using (false);
+create policy normalized_ai_control_mappings_insert_backend_only on public.normalized_ai_control_mappings for insert to authenticated with check (false);
+create policy normalized_ai_control_mappings_update_backend_only on public.normalized_ai_control_mappings for update to authenticated using (false) with check (false);
+create policy normalized_ai_control_mappings_delete_backend_only on public.normalized_ai_control_mappings for delete to authenticated using (false);
+create policy governance_evidence_objects_insert_backend_only on public.governance_evidence_objects for insert to authenticated with check (false);
+create policy governance_evidence_objects_update_backend_only on public.governance_evidence_objects for update to authenticated using (false) with check (false);
+create policy governance_evidence_objects_delete_backend_only on public.governance_evidence_objects for delete to authenticated using (false);
+create policy regulatory_change_impacts_insert_backend_only on public.regulatory_change_impacts for insert to authenticated with check (false);
+create policy regulatory_change_impacts_update_backend_only on public.regulatory_change_impacts for update to authenticated using (false) with check (false);
+create policy regulatory_change_impacts_delete_backend_only on public.regulatory_change_impacts for delete to authenticated using (false);
+create policy governance_value_events_insert_backend_only on public.governance_value_events for insert to authenticated with check (false);
+create policy governance_value_events_update_backend_only on public.governance_value_events for update to authenticated using (false) with check (false);
+create policy governance_value_events_delete_backend_only on public.governance_value_events for delete to authenticated using (false);
+
 revoke all on public.ai_governance_entities from anon;
 revoke all on public.ai_governance_entity_links from anon;
 revoke all on public.normalized_ai_controls from anon;
@@ -186,6 +210,14 @@ revoke all on public.normalized_ai_control_mappings from anon;
 revoke all on public.governance_evidence_objects from anon;
 revoke all on public.regulatory_change_impacts from anon;
 revoke all on public.governance_value_events from anon;
+
+revoke insert, update, delete on public.ai_governance_entities from authenticated;
+revoke insert, update, delete on public.ai_governance_entity_links from authenticated;
+revoke insert, update, delete on public.normalized_ai_controls from authenticated;
+revoke insert, update, delete on public.normalized_ai_control_mappings from authenticated;
+revoke insert, update, delete on public.governance_evidence_objects from authenticated;
+revoke insert, update, delete on public.regulatory_change_impacts from authenticated;
+revoke insert, update, delete on public.governance_value_events from authenticated;
 
 grant select on public.ai_governance_entities to authenticated;
 grant select on public.ai_governance_entity_links to authenticated;
