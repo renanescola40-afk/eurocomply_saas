@@ -58,7 +58,7 @@ The Platform lane additionally promotes OPS-06 because its protected proof sends
 
 ## Expected progression
 
-- Baseline: 46% complete / 54% remaining.
+- Last accepted baseline: 45% complete / 55% remaining.
 - All runtime and assurance lanes accepted: 99% complete / 1% remaining.
 - Deterministic final coherence accepted: 100% complete / 0% remaining and GO.
 

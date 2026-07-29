@@ -46,4 +46,4 @@ Revert the workflow, builder, tests and this runbook. No database or production 
 
 ## Progress boundary
 
-This package creates the missing bridge between runtime artifacts and the canonical scorecard, but it does not itself prove any runtime control. The official baseline remains **46% complete / 54% remaining** until accepted evidence is assembled and promoted on the integrated `main` SHA.
+This package creates the missing bridge between runtime artifacts and the canonical scorecard, but it does not itself prove any runtime control. The last accepted baseline remains **45% complete / 55% remaining** until accepted evidence is assembled and promoted on the integrated `main` SHA.

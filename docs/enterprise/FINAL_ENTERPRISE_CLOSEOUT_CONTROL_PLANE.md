@@ -20,7 +20,7 @@ The canonical EU AI Act product registry has 100 total weight. The latest merged
 - isolated runtime coverage: at least 80% and below 100%;
 - final decision: NO-GO until protected runtime, provider and qualified-review evidence is accepted.
 
-The older official enterprise scorecard remains 46% complete / 54% remaining until the protected exact-SHA promotion workflow accepts newer evidence. Do not manually replace that official score with implementation coverage.
+The last accepted enterprise scorecard remains 45% complete / 55% remaining until the protected exact-SHA promotion workflow accepts newer evidence. Do not manually replace that official score with implementation coverage.
 
 ## What this Mega PR closes
 
