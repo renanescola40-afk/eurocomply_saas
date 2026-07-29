@@ -5,9 +5,9 @@ import { spawnSync } from 'node:child_process';
 const releaseTarget = String(process.env.RELEASE_TARGET || 'public-production').trim().toLowerCase();
 const enterpriseRequested = releaseTarget === 'enterprise' || process.env.RISCK_COMPLY_ENTERPRISE_RELEASE === 'true';
 
-function runNodeScript(path) {
+function runNodeScript(path, envOverrides = {}) {
   const result = spawnSync(process.execPath, [path], {
-    env: process.env,
+    env: { ...process.env, ...envOverrides },
     stdio: 'inherit',
   });
 
@@ -44,6 +44,11 @@ async function finalizeSecurityResponseEvidence() {
 if (enterpriseRequested) {
   await import('./check-enterprise-release-env.mjs');
   await import('./run-public-production-release-v2.mjs');
+  runNodeScript('scripts/release/write-enterprise-runtime-evidence.mjs', {
+    FINAL_VALIDATION_IN_PROGRESS: 'false',
+  });
+  runNodeScript('scripts/release/validate-release-go-no-go-evidence.mjs');
+  runNodeScript('scripts/release/verify-enterprise-evidence-bundle.mjs');
   await finalizeSecurityResponseEvidence();
 } else if (releaseTarget === 'public-production' || releaseTarget === 'production') {
   await import('./check-public-production-release-env.mjs');
