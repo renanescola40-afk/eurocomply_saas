@@ -70,10 +70,14 @@ jobs:
       - name: Validate evidence override allowlist
         run: node scripts/enterprise/check-evidence-overrides.mjs
 
+      - name: Validate persistent enterprise execution state
+        run: node scripts/enterprise/check-persistent-execution-state.mjs
+
       - name: Validate scorecard and evidence tests
         run: >-
           npx vitest run
           tests/enterprise/enterprise-readiness-scorecard.test.ts
+          tests/enterprise/persistent-execution-state.test.mjs
           tests/enterprise/evidence-overrides-guard.test.ts
           tests/enterprise/architecture-review-evidence.test.ts
           tests/enterprise/incident-operations-evidence.test.ts
