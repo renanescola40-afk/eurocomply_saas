@@ -54,7 +54,8 @@ type SeatContentionSummary = {
 type PendingMutation =
   | { kind: 'acknowledge'; alertId: string }
   | { kind: 'resolve'; alertId: string; reason: string }
-  | { kind: 'export'; format: 'csv' | 'jsonl' };
+  | { kind: 'export'; format: 'csv' | 'jsonl' }
+  | { kind: 'download'; jobId: string };
 
 function asNumber(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
@@ -150,11 +151,13 @@ export function EnterpriseAccessConsole() {
   async function runMutation(token: string) {
     const mutation = pendingMutation;
     if (!mutation) return;
-    const payload = mutation.kind === 'export'
-      ? { operation: 'export', format: mutation.format }
-      : mutation.kind === 'acknowledge'
-        ? { action: 'acknowledge', alertId: mutation.alertId }
-        : { action: 'resolve', alertId: mutation.alertId, reason: mutation.reason };
+    const payload = mutation.kind === 'download'
+      ? { operation: 'download', jobId: mutation.jobId }
+      : mutation.kind === 'export'
+        ? { operation: 'export', format: mutation.format }
+        : mutation.kind === 'acknowledge'
+          ? { action: 'acknowledge', alertId: mutation.alertId }
+          : { action: 'resolve', alertId: mutation.alertId, reason: mutation.reason };
 
     try {
       const response = await fetch('/api/team/access-runtime', {
@@ -166,7 +169,15 @@ export function EnterpriseAccessConsole() {
         },
         body: JSON.stringify(payload),
       });
-      await readJson<Record<string, unknown>>(response);
+      const body = await readJson<{ result?: { signedUrl?: string } }>(response);
+      if (mutation.kind === 'download') {
+        if (!body.result?.signedUrl) throw new Error('A secure download link was not returned.');
+        const link = document.createElement('a');
+        link.href = body.result.signedUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.click();
+      }
       setPendingMutation(null);
       await load(true);
     } catch (mutationError) {
@@ -299,7 +310,7 @@ export function EnterpriseAccessConsole() {
             </div>
             <div className="mt-5 overflow-x-auto">
               <table className="w-full min-w-[720px] text-left text-sm">
-                <thead className="text-xs uppercase tracking-[0.14em] text-white/35"><tr><th className="pb-3">Created</th><th className="pb-3">Format</th><th className="pb-3">Status</th><th className="pb-3">Rows</th><th className="pb-3">Integrity</th><th className="pb-3">Expires</th></tr></thead>
+                <thead className="text-xs uppercase tracking-[0.14em] text-white/35"><tr><th className="pb-3">Created</th><th className="pb-3">Format</th><th className="pb-3">Status</th><th className="pb-3">Rows</th><th className="pb-3">Integrity</th><th className="pb-3">Expires</th><th className="pb-3">Action</th></tr></thead>
                 <tbody className="divide-y divide-white/5">
                   {exportJobs.map((job) => (
                     <tr key={job.id}>
@@ -309,9 +320,19 @@ export function EnterpriseAccessConsole() {
                       <td className="py-3 text-white/65">{job.row_count ?? '—'}</td>
                       <td className="py-3 font-mono text-xs text-white/45">{job.sha256 ? `${job.sha256.slice(0, 12)}…` : 'Pending'}</td>
                       <td className="py-3 text-white/65">{formatDate(job.expires_at)}</td>
+                      <td className="py-3">
+                        <button
+                          type="button"
+                          disabled={job.status !== 'completed' || !job.expires_at}
+                          onClick={() => setPendingMutation({ kind: 'download', jobId: job.id })}
+                          className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-35"
+                        >
+                          Download
+                        </button>
+                      </td>
                     </tr>
                   ))}
-                  {exportJobs.length === 0 ? <tr><td colSpan={6} className="py-8 text-center text-white/40">No export jobs yet.</td></tr> : null}
+                  {exportJobs.length === 0 ? <tr><td colSpan={7} className="py-8 text-center text-white/40">No export jobs yet.</td></tr> : null}
                 </tbody>
               </table>
             </div>

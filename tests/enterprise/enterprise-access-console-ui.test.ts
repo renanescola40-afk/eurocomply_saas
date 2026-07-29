@@ -65,10 +65,16 @@ describe('Enterprise access operations console UI', () => {
     expect(consoleUi).toContain("setRefreshing(true)");
   });
 
-  it('does not expose unsigned provider downloads or raw storage URLs', () => {
+  it('uses only backend-issued short-lived downloads without exposing raw storage data', () => {
     expect(consoleUi).not.toContain('storage_path');
     expect(consoleUi).not.toContain('provider_url');
-    expect(consoleUi).not.toContain('signedUrl');
+    expect(consoleUi).not.toContain('object_key');
+    expect(consoleUi).not.toContain('createSignedUrl');
     expect(consoleUi).not.toContain('window.open');
+    expect(consoleUi).toContain("{ operation: 'download', jobId: mutation.jobId }");
+    expect(consoleUi).toContain("readJson<{ result?: { signedUrl?: string } }>");
+    expect(consoleUi).toContain("document.createElement('a')");
+    expect(consoleUi).toContain("link.target = '_blank'");
+    expect(consoleUi).toContain("link.rel = 'noopener noreferrer'");
   });
 });

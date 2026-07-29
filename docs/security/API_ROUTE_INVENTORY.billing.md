@@ -1,0 +1,12 @@
+# Billing and Enterprise Modular API Route Inventory
+
+This module extends `API_ROUTE_INVENTORY.md` for billing lifecycle and independently delivered Enterprise endpoints. Every entry is validated by the same fail-closed BOLA/IDOR scanner.
+
+| Route | Class | Notes |
+| --- | --- | --- |
+| `src/app/api/billing/catalog/route.ts` | public safe | Public pricing and add-on metadata only; Stripe/provider identifiers and tenant data are excluded, responses are no-store, and distributed per-IP rate limiting is enforced. |
+| `src/app/api/billing/subscription/route.ts` | high-risk | Subscription lifecycle mutation requires authenticated server-derived organization context, `manage_billing`, trusted mutation, bounded Zod input, fail-closed billing rate limiting, step-up authentication, server-owned Stripe identifiers, audit persistence and no-store responses. |
+| `src/app/api/team/break-glass/route.ts` | admin-only | Tenant emergency-access request creation and listing; requires authenticated organization context, `manage_team`, trusted mutation for POST, bounded JSON, distributed fail-closed rate limiting, step-up authentication, server-derived tenant scope, service-role persistence and no-store responses. |
+| `src/app/api/team/break-glass/[requestId]/decision/route.ts` | high-risk | Emergency-access approval or rejection; requires UUID validation, authenticated organization context, `manage_team`, trusted mutation, distributed fail-closed rate limiting, step-up authentication, requester/approver separation, tenant-scoped persistence and no-store responses. |
+| `src/app/api/team/break-glass/[requestId]/revoke/route.ts` | high-risk | Immediate emergency-access revocation; requires UUID validation, authenticated organization context, `manage_team`, trusted mutation, distributed fail-closed rate limiting, step-up authentication, tenant-scoped transition, post-incident-review scheduling and no-store responses. |
+| `src/app/api/internal/enterprise-break-glass/expire/route.ts` | health/internal | Internal emergency-access expiry worker; requires fail-closed internal authentication rate limiting, cron authorization, bounded batch size, concurrency-safe processing, sanitized errors and no-store responses. |

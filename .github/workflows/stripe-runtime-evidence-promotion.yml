@@ -1,0 +1,97 @@
+name: Stripe Runtime Evidence Promotion
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA proven by the runtime artifact
+        required: true
+        type: string
+      runtime_artifact_run_id:
+        description: Workflow run ID containing the sanitized runtime proof
+        required: true
+        type: string
+      confirmation:
+        description: Type PROMOTE_STRIPE_RUNTIME_EVIDENCE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: stripe-runtime-evidence-promotion
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Validate and promote exact-SHA Stripe evidence
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    steps:
+      - name: Check out trusted main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Authorize exact current main
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          main_sha="$(git rev-parse origin/main)"
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          test "${RELEASE_SHA,,}" = "$main_sha"
+          test "$(git rev-parse HEAD)" = "$main_sha"
+          test "$CONFIRMATION" = "PROMOTE_STRIPE_RUNTIME_EVIDENCE"
+
+      - name: Download sanitized runtime proof
+        uses: actions/download-artifact@v8
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.runtime_artifact_run_id }}
+          name: stripe-entitlement-runtime-proof-${{ inputs.release_sha }}
+          path: artifacts/stripe-entitlement-runtime-proof
+
+      - name: Validate replay safety
+        run: node scripts/release/validate-stripe-runtime-replay.mjs
+
+      - name: Promote runtime evidence
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: node scripts/release/promote-stripe-runtime-evidence.mjs
+
+      - name: Generate checksums
+        run: |
+          set -euo pipefail
+          cd artifacts/stripe-runtime-evidence-promotion
+          sha256sum promoted-evidence.json > SHA256SUMS
+
+      - name: Publish bounded summary
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          {
+            echo '## Stripe runtime evidence promotion'
+            echo
+            echo "- Release SHA: \`$RELEASE_SHA\`"
+            echo '- Runtime proof: validated'
+            echo '- Replay safety: validated'
+            echo '- Redaction boundary: validated'
+            echo '- Promotion artifact: generated'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload promoted evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: stripe-runtime-evidence-promoted-${{ inputs.release_sha }}
+          path: artifacts/stripe-runtime-evidence-promotion
+          if-no-files-found: error
+          retention-days: 365
