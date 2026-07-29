@@ -1,4 +1,9 @@
+import { randomUUID } from 'node:crypto';
+
+import { z } from 'zod';
+
 import { readBoundedJsonRequest } from '@/lib/security/validate';
+import { createAccessExportSignedDownload } from '@/server/enterprise/access-export-downloads';
 import {
   accessExportRequestSchema,
   alertActionSchema,
@@ -17,6 +22,7 @@ import {
 import { publicStepUpSummary, requireStepUpForRequest } from '@/server/security/step-up';
 
 const MAX_JSON_BYTES = 16 * 1024;
+const downloadSchema = z.object({ operation: z.literal('download'), jobId: z.string().uuid() });
 
 function ip(request: Request) {
   return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -81,6 +87,24 @@ export async function POST(request: Request) {
     const body = await readBoundedJsonRequest(request, { maxBytes: MAX_JSON_BYTES }).catch(() => null);
     if (!body || typeof body !== 'object') return noStoreJson({ error: 'invalid_access_runtime_payload' }, { status: 400 });
     const record = body as Record<string, unknown>;
+
+    if (record.operation === 'download') {
+      const parsed = downloadSchema.safeParse(record);
+      if (!parsed.success) return noStoreJson({ error: 'invalid_access_export_download' }, { status: 400 });
+      const result = await createAccessExportSignedDownload({
+        organizationId: ctx.organization.id,
+        exportJobId: parsed.data.jobId,
+        actorUserId: ctx.user.id,
+        correlationId: randomUUID(),
+      });
+      return noStoreJson({ result, stepUp: publicStepUpSummary(stepUp.assessment) }, {
+        headers: {
+          'Cache-Control': 'private, no-store, max-age=0',
+          'X-Content-Type-Options': 'nosniff',
+          'Referrer-Policy': 'no-referrer',
+        },
+      });
+    }
 
     if (record.operation === 'export') {
       const parsed = accessExportRequestSchema.safeParse(record);
