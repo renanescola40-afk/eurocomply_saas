@@ -1,0 +1,23 @@
+name: Enterprise Conversation Runtime Closeout Contract
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/enterprise-conversation-runtime-closeout.yml'
+      - 'scripts/enterprise/assemble-conversation-runtime-closeout.mjs'
+      - 'tests/enterprise/conversation-runtime-closeout.test.ts'
+      - 'docs/enterprise/ENTERPRISE_CONVERSATION_RUNTIME_CLOSEOUT.md'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx vitest run tests/enterprise/conversation-runtime-closeout.test.ts
