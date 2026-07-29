@@ -87,12 +87,12 @@ jobs:
       - name: Dependency graph unavailable fallback
         if: steps.dependency_changes.outputs.changed == 'true' && steps.dependency_graph.outputs.available != 'true'
         run: |
-          echo "GitHub Dependency Graph is unavailable for this repository."
-          echo "The deterministic npm high/critical audit remains mandatory and fail-closed."
+          echo "GitHub Dependency Review requires the repository Dependency Graph to be enabled."
+          echo "The deterministic npm audit policy remains mandatory and fail-closed."
 
-      - name: npm high and critical dependency vulnerability gate
+      - name: npm dependency vulnerability policy gate
         if: steps.dependency_changes.outputs.changed == 'true'
-        run: npm audit --audit-level=high
+        run: npm run security:npm-audit:all
 
       - name: Dependency Review is not applicable
         if: steps.dependency_changes.outputs.changed != 'true'
