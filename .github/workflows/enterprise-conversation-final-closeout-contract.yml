@@ -1,0 +1,42 @@
+name: Enterprise Conversation Final Closeout Contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/enterprise/assess-conversation-final-closeout.mjs'
+      - 'tests/enterprise/conversation-final-closeout-contract.test.ts'
+      - '.github/workflows/enterprise-conversation-final-closeout*.yml'
+      - 'docs/enterprise/ENTERPRISE_CONVERSATION_FINAL_CLOSEOUT.md'
+      - 'docs/runbooks/ENTERPRISE_CONVERSATION_FINAL_CLOSEOUT.md'
+      - 'docs/security/ENTERPRISE_CONVERSATION_FINAL_CLOSEOUT_THREAT_MODEL.md'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/enterprise/assess-conversation-final-closeout.mjs'
+      - 'tests/enterprise/conversation-final-closeout-contract.test.ts'
+      - '.github/workflows/enterprise-conversation-final-closeout*.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enterprise-conversation-final-closeout-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx vitest run tests/enterprise/conversation-final-closeout-contract.test.ts
+      - name: Validate exact assessed SHA
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
