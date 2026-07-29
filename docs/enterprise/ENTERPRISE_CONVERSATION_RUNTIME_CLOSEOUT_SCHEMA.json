@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "enterprise-conversation-runtime-closeout",
+  "type": "object",
+  "required": ["status", "decision", "completionPercentage", "releaseSha", "blockers", "assessed"],
+  "properties": {
+    "status": { "enum": ["Open", "Complete"] },
+    "decision": { "enum": ["CONVERSATION_REMAINS_OPEN", "CONVERSATION_COMPLETE"] },
+    "completionPercentage": { "enum": [96, 100] },
+    "releaseSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "blockers": { "type": "array", "items": { "type": "string" } },
+    "assessed": {
+      "type": "object",
+      "required": ["stripeRuntime", "enterpriseRuntime", "productionFinal", "releaseGoNoGo"]
+    }
+  }
+}
