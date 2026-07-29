@@ -6,7 +6,7 @@ Close the remaining enterprise-readiness gap through evidence promotion, runtime
 
 ## Verified starting point
 
-The latest confirmed official score remains **46% complete / 54% remaining** until the canonical scorecard accepts newer exact-SHA and runtime artifacts.
+The latest confirmed official score remains **45% complete / 55% remaining** until the canonical scorecard accepts newer exact-SHA and runtime artifacts.
 
 Recent merged megapacks added substantial implementation for:
 

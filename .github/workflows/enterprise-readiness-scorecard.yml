@@ -73,11 +73,16 @@ jobs:
       - name: Validate persistent enterprise execution state
         run: node scripts/enterprise/check-persistent-execution-state.mjs
 
+      - name: Test persistent enterprise execution state
+        run: >-
+          node --test
+          tests/enterprise/persistent-execution-state.test.mjs
+          tests/enterprise/write-persistent-execution-state.test.mjs
+
       - name: Validate scorecard and evidence tests
         run: >-
           npx vitest run
           tests/enterprise/enterprise-readiness-scorecard.test.ts
-          tests/enterprise/persistent-execution-state.test.mjs
           tests/enterprise/evidence-overrides-guard.test.ts
           tests/enterprise/architecture-review-evidence.test.ts
           tests/enterprise/incident-operations-evidence.test.ts
@@ -330,6 +335,11 @@ jobs:
           ENTERPRISE_EXPECTED_SHA: ${{ env.ASSESSED_SHA }}
           GITHUB_CHECKS_EVIDENCE_PATH: artifacts/enterprise-readiness/github-checks-evidence.json
         run: node scripts/enterprise/generate-readiness-scorecard.mjs
+
+      - name: Derive exact-SHA persistent execution state artifact
+        env:
+          ENTERPRISE_EXPECTED_SHA: ${{ env.ASSESSED_SHA }}
+        run: node scripts/enterprise/write-persistent-execution-state.mjs
 
       - name: Publish job summary
         run: cat artifacts/enterprise-readiness/enterprise-readiness-scorecard.md >> "$GITHUB_STEP_SUMMARY"

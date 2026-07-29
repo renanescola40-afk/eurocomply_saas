@@ -47,4 +47,4 @@ This package does not mutate production or the database. Rollback consists of re
 
 ## Current progress boundary
 
-The official baseline remains **46% complete / 54% remaining** until the promotion workflow is executed against the current integrated `main` SHA with complete accepted evidence. This implementation prepares deterministic promotion but does not itself promote any control.
+The last accepted baseline remains **45% complete / 55% remaining** until the promotion workflow is executed against the current integrated `main` SHA with complete accepted evidence. This implementation prepares deterministic promotion but does not itself promote any control.
