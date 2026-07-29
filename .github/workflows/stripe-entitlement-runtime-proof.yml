@@ -65,8 +65,7 @@ jobs:
       EXPECTED_PARTICIPANT_SEAT_LIMIT: ${{ inputs.expected_participant_seat_limit }}
       EXPECTED_VIEWER_SEAT_LIMIT: ${{ inputs.expected_viewer_seat_limit }}
       STRIPE_TEST_MODE_CONFIRMED: ${{ inputs.stripe_test_mode_confirmed }}
-      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_DB_POOLER_URL: ${{ secrets.SUPABASE_DB_POOLER_URL }}
       PGSSLMODE: require
 
     steps:
@@ -90,6 +89,11 @@ jobs:
           test "$(git rev-parse HEAD)" = "$main_sha"
           [[ "$STRIPE_EVENT_ID" =~ ^evt_[A-Za-z0-9_]+$ ]]
           [[ "$ORGANIZATION_ID" =~ ^[0-9a-fA-F-]{36}$ ]]
+          test -n "$SUPABASE_DB_POOLER_URL"
+          case "$SUPABASE_DB_POOLER_URL" in
+            postgresql://*|postgres://*) ;;
+            *) echo "SUPABASE_DB_POOLER_URL must be a PostgreSQL URI" >&2; exit 1 ;;
+          esac
 
       - name: Install PostgreSQL client
         shell: bash
@@ -100,16 +104,11 @@ jobs:
 
       - name: Collect read-only correlated evidence
         shell: bash
-        env:
-          PGHOST: db.${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co
-          PGPORT: '5432'
-          PGDATABASE: postgres
-          PGUSER: postgres
-          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           set -euo pipefail
           mkdir -p artifacts/stripe-runtime-proof
-          psql --set ON_ERROR_STOP=1 \
+          psql "$SUPABASE_DB_POOLER_URL" \
+            --set ON_ERROR_STOP=1 \
             --set stripe_event_id="$STRIPE_EVENT_ID" \
             --set organization_id="$ORGANIZATION_ID" \
             --file scripts/enterprise/stripe-runtime-proof.sql \
