@@ -166,7 +166,7 @@ test.describe('enterprise critical SaaS flow coverage', () => {
     }
   }
 
-  test('landing exposes real production conversion destinations without fake production or legal claims', async ({ page }) => {
+  test('landing exposes real controlled-access destinations without fake production or legal claims', async ({ page }) => {
     await page.goto('/en', { waitUntil: 'domcontentloaded' });
     await expectControlledPage(page, 'en landing trust copy');
 
