@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "workstream": "enterprise-access-and-release",
+  "status": "repository_complete_pending_pr_merge",
+  "controls": [
+    "tenant_scoped_access_operations",
+    "temporary_privileged_access",
+    "emergency_break_glass_access",
+    "independent_approval",
+    "bounded_elevation",
+    "automatic_expiry",
+    "immediate_revocation",
+    "forced_rls",
+    "append_only_evidence",
+    "incident_response"
+  ],
+  "required_gates": [
+    "CI",
+    "RISCK COMPLY Security CI",
+    "Full Security Suite",
+    "Enterprise Production Gate",
+    "Enterprise Readiness Scorecard",
+    "Enterprise Access Release Final Closeout"
+  ],
+  "external_validation_required": [
+    "live_supabase_migration",
+    "production_scheduler",
+    "real_mfa_provider",
+    "production_telemetry",
+    "human_post_incident_review"
+  ]
+}
