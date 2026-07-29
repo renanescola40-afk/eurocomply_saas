@@ -1,10 +1,11 @@
-# Billing and Enterprise Modular API Route Inventory
+# Billing, Public Trust and Enterprise Modular API Route Inventory
 
-This module extends `API_ROUTE_INVENTORY.md` for billing lifecycle and independently delivered Enterprise endpoints. Every entry is validated by the same fail-closed BOLA/IDOR scanner.
+This module extends `API_ROUTE_INVENTORY.md` for billing lifecycle, public trust surfaces and independently delivered Enterprise endpoints. Every entry is validated by the same fail-closed BOLA/IDOR scanner.
 
 | Route | Class | Notes |
 | --- | --- | --- |
 | `src/app/api/billing/catalog/route.ts` | public safe | Public pricing and add-on metadata only; Stripe/provider identifiers and tenant data are excluded, responses are no-store, and distributed per-IP rate limiting is enforced. |
+| `src/app/api/trust/procurement-pack/route.ts` | public safe | Public evidence-bound procurement metadata only; excludes tenant data, customer evidence, secrets and internal identifiers, emits conservative non-claims, uses same-origin trust-document links and bounded shared-cache headers. |
 | `src/app/api/billing/subscription/route.ts` | high-risk | Subscription lifecycle mutation requires authenticated server-derived organization context, `manage_billing`, trusted mutation, bounded Zod input, fail-closed billing rate limiting, step-up authentication, server-owned Stripe identifiers, audit persistence and no-store responses. |
 | `src/app/api/team/break-glass/route.ts` | admin-only | Tenant emergency-access request creation and listing; requires authenticated organization context, `manage_team`, trusted mutation for POST, bounded JSON, distributed fail-closed rate limiting, step-up authentication, server-derived tenant scope, service-role persistence and no-store responses. |
 | `src/app/api/team/break-glass/[requestId]/decision/route.ts` | high-risk | Emergency-access approval or rejection; requires UUID validation, authenticated organization context, `manage_team`, trusted mutation, distributed fail-closed rate limiting, step-up authentication, requester/approver separation, tenant-scoped persistence and no-store responses. |
