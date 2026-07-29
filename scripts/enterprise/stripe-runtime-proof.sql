@@ -8,7 +8,17 @@ begin transaction read only;
 set local statement_timeout = '45s';
 set local lock_timeout = '5s';
 
-select 'event', id, status, coalesce(organization_id::text, ''), coalesce(processed_at::text, ''), coalesce(error, '')
+select 'event',
+       id,
+       status,
+       coalesce(
+         payload #>> '{data,object,metadata,organization_id}',
+         payload #>> '{object,metadata,organization_id}',
+         payload #>> '{metadata,organization_id}',
+         ''
+       ),
+       coalesce(processed_at::text, ''),
+       coalesce(error, '')
 from public.stripe_events_processed
 where id = :'stripe_event_id';
 
