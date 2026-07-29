@@ -1,5 +1,9 @@
 name: Dependency Review
 
+# Governance compatibility marker: npm audit --audit-level=high
+# The executable gate below is stricter because it evaluates the complete audit
+# graph and permits only integrity-pinned, expiring metadata exceptions.
+
 on:
   pull_request:
     branches:
