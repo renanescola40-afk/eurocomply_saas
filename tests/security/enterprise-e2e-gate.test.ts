@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const workflow = readFileSync('.github/workflows/full-security-suite.yml', 'utf8');
 const e2eGate = workflow.match(
-  /- name: Required production-like Playwright E2E gate[\s\S]*?\n      - name: npm audit moderate gate/,
+  /- name: Required production-like Playwright E2E gate[\s\S]*?\n      - name: npm audit (?:moderate|policy) gate/,
 )?.[0];
 
 describe('enterprise E2E merge gate', () => {

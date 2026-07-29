@@ -126,6 +126,10 @@ if (pkg) {
     failures.push(`${packageJsonPath} supply-chain:floating-deps must use scripts/security/list-floating-dependencies.mjs`);
   }
 
+  if (scripts['security:npm-audit:all'] && !scripts['security:npm-audit:all'].includes('scripts/security/run-npm-audit-gate.mjs')) {
+    failures.push(`${packageJsonPath} security:npm-audit:all must use the fail-closed npm audit gate`);
+  }
+
   if (scripts['security:zod-compat'] && !scripts['security:zod-compat'].includes('scripts/security/check-zod-error-usage.mjs')) {
     failures.push(`${packageJsonPath} security:zod-compat must use scripts/security/check-zod-error-usage.mjs`);
   }

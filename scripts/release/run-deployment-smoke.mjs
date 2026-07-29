@@ -427,6 +427,8 @@ const evidence = {
   reviewedAt: generatedAt,
   reviewer: 'RISCK COMPLY release automation',
   releaseTarget: process.env.RELEASE_TARGET || 'production',
+  commitSha: metadata.commit?.sha ?? null,
+  buildSha: metadata.build?.sha ?? null,
   summary: outcome === 'passed'
     ? 'Production deployment smoke passed across public launch pages, protected routes, security headers, no-store controls, readiness, Stripe/Supabase/Sentry checks, rollback target, and build metadata.'
     : 'Production deployment smoke is missing or failed; release remains blocked.',
