@@ -1,0 +1,81 @@
+name: Enterprise Conversation Final Closeout
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character SHA currently at the tip of main
+        required: true
+        type: string
+      confirmation:
+        description: Type CLOSE_ENTERPRISE_CONVERSATION
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enterprise-conversation-final-closeout
+  cancel-in-progress: false
+
+jobs:
+  closeout:
+    name: Assess exact-SHA conversation completion
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - name: Check out trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Authorize exact current main SHA
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          main_sha="$(git rev-parse origin/main)"
+          [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          test "${RELEASE_SHA,,}" = "$main_sha"
+          test "$(git rev-parse HEAD)" = "$main_sha"
+          test "$CONFIRMATION" = "CLOSE_ENTERPRISE_CONVERSATION"
+
+      - name: Run final closeout assessor
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: node scripts/enterprise/assess-conversation-final-closeout.mjs
+
+      - name: Verify completion decision
+        run: |
+          set -euo pipefail
+          result=artifacts/enterprise-conversation-closeout/result.json
+          test -s "$result"
+          node -e "const r=require('./' + process.argv[1]); if(r.status!=='Complete'||r.decision!=='CONVERSATION_COMPLETE'||r.completionPercentage!==100) process.exit(1)" "$result"
+          sha256sum "$result" > artifacts/enterprise-conversation-closeout/SHA256SUMS
+
+      - name: Publish completion summary
+        run: |
+          {
+            echo '## Enterprise conversation final closeout'
+            echo
+            echo '- Decision: `CONVERSATION_COMPLETE`'
+            echo '- Completion: `100%`'
+            echo '- Release SHA: `${{ inputs.release_sha }}`'
+            echo '- Evidence: exact-SHA runtime, production-final and Go/No-Go proofs passed.'
+            echo
+            echo '**This conversation can now be closed.**'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload immutable closeout evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-conversation-final-closeout-${{ inputs.release_sha }}
+          path: artifacts/enterprise-conversation-closeout
+          if-no-files-found: error
+          retention-days: 365
