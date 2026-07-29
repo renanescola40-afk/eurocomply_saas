@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "enterprise-conversation-completion-manifest",
+  "status": "Open",
+  "decision": "CONVERSATION_REMAINS_OPEN",
+  "completionPercentage": 96,
+  "repositoryImplementation": "Complete",
+  "requiredExternalProofs": [
+    "stripeRuntime",
+    "enterpriseRuntime",
+    "productionFinal",
+    "releaseGoNoGo"
+  ],
+  "completionCommand": "Enterprise Conversation Final Closeout workflow",
+  "completionRule": "The protected workflow must emit CONVERSATION_COMPLETE for the exact current main SHA with no blockers.",
+  "truthBoundary": "This manifest is intentionally Open. The pull request installs the final closeout mechanism but does not invent or pre-approve runtime evidence."
+}
