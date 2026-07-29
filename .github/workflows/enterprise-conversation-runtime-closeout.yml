@@ -47,21 +47,41 @@ jobs:
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           test "$CONFIRMATION" = "CLOSE_ENTERPRISE_CONVERSATION"
-          test "$RELEASE_SHA" = "$(gh api repos/${GITHUB_REPOSITORY}/commits/main --jq .sha)"
+          test "$RELEASE_SHA" = "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
       - name: Download mandatory proof artifacts
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           mkdir -p runtime-proofs
           gh run download "${{ inputs.stripe_run_id }}" -D runtime-proofs/stripe
           gh run download "${{ inputs.enterprise_run_id }}" -D runtime-proofs/enterprise
           gh run download "${{ inputs.production_final_run_id }}" -D runtime-proofs/production-final
           gh run download "${{ inputs.go_no_go_run_id }}" -D runtime-proofs/go-no-go
-          find runtime-proofs/stripe -name '*.json' -print -quit | xargs -I{} cp {} runtime-proofs/stripe-runtime-evidence.json
-          find runtime-proofs/enterprise -name '*.json' -print -quit | xargs -I{} cp {} runtime-proofs/enterprise-runtime-evidence.json
-          find runtime-proofs/production-final -name '*.json' -print -quit | xargs -I{} cp {} runtime-proofs/production-final-evidence.json
-          find runtime-proofs/go-no-go -name '*.json' -print -quit | xargs -I{} cp {} runtime-proofs/release-go-no-go-evidence.json
+
+          copy_first_json() {
+            local source_dir="$1"
+            local destination="$2"
+            local source_file=""
+
+            while IFS= read -r -d '' candidate; do
+              source_file="$candidate"
+              break
+            done < <(find "$source_dir" -type f -name '*.json' -print0)
+
+            if [ -z "$source_file" ]; then
+              echo "No JSON evidence found in $source_dir" >&2
+              exit 1
+            fi
+
+            cp -- "$source_file" "$destination"
+          }
+
+          copy_first_json runtime-proofs/stripe runtime-proofs/stripe-runtime-evidence.json
+          copy_first_json runtime-proofs/enterprise runtime-proofs/enterprise-runtime-evidence.json
+          copy_first_json runtime-proofs/production-final runtime-proofs/production-final-evidence.json
+          copy_first_json runtime-proofs/go-no-go runtime-proofs/release-go-no-go-evidence.json
       - name: Assemble final exact-SHA decision
         run: node scripts/enterprise/assemble-conversation-runtime-closeout.mjs --sha=${{ inputs.release_sha }} --root=runtime-proofs
       - name: Generate integrity digest
