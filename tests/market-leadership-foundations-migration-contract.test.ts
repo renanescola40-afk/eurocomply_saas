@@ -43,4 +43,14 @@ describe('market leadership foundations migration', () => {
     expect(sql).toContain('unique (organization_id, control_id, framework_key, framework_version, requirement_key)');
     expect(sql).toContain('unique (organization_id, event_name)');
   });
+
+  it('rejects cross-tenant entity and control relationships at the database boundary', () => {
+    expect(sql).toContain('unique (id, organization_id)');
+    expect(sql).toContain('foreign key (source_entity_id, organization_id)');
+    expect(sql).toContain('foreign key (target_entity_id, organization_id)');
+    expect(sql).toContain('foreign key (control_id, organization_id)');
+    expect(sql).toContain('foreign key (entity_id, organization_id)');
+    expect(sql).toContain('references public.ai_governance_entities(id, organization_id)');
+    expect(sql).toContain('references public.normalized_ai_controls(id, organization_id)');
+  });
 });
