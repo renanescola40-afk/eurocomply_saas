@@ -19,7 +19,7 @@ describe('enterprise conversation runtime closeout', () => {
     expect(workflow).toContain('actions: read');
     expect(workflow).toContain('contents: read');
     expect(workflow).toContain('CLOSE_ENTERPRISE_CONVERSATION');
-    expect(workflow).toContain('commits/main --jq .sha');
+    expect(workflow).toMatch(/gh api ["']?repos\/\$\{GITHUB_REPOSITORY\}\/commits\/main["']? --jq \.sha/);
     expect(workflow).toContain('retention-days: 365');
   });
 });
