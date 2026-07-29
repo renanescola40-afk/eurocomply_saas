@@ -144,6 +144,7 @@
     "release:observability-smoke": "node scripts/release/run-observability-smoke-validation.mjs",
     "release:rollback": "npm run release:rollback:dry-run",
     "release:rollback:dry-run": "node scripts/release/run-rollback-dry-run.mjs",
+    "release:public-go-no-go-evidence": "node scripts/release/write-public-production-go-no-go-evidence.mjs && node scripts/release/validate-public-production-go-no-go-evidence.mjs",
     "release:enterprise-runtime-evidence": "node scripts/release/check-enterprise-runtime-evidence.mjs",
     "release:readiness": "npm run release:deployment-smoke && npm run release:observability-smoke && npm run release:rollback:dry-run && npm run security:release-candidate && npm run security:release-evidence && npm run security:release-approval && npm run security:release-go-no-go && npm run security:release-rollback && npm run security:release-incident-response && npm run security:release-post-incident && npm run security:release-support-readiness && npm run security:release-operations && npm run security:p0-runtime-gap",
     "release:enterprise-readiness": "RELEASE_TARGET=enterprise RISCK_COMPLY_ENTERPRISE_RELEASE=true npm run release:production-final",
@@ -152,7 +153,7 @@
     "supply-chain:lockfile": "npm install --package-lock-only --ignore-scripts",
     "supply-chain:floating-deps": "node scripts/security/list-floating-dependencies.mjs",
     "security:npm-audit:prod": "npm audit --omit=dev --audit-level=high",
-    "security:npm-audit:all": "npm audit --audit-level=moderate",
+    "security:npm-audit:all": "node scripts/security/run-npm-audit-gate.mjs",
     "security:npm-audit:json": "npm audit --json",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -239,7 +240,7 @@
     "vitest": "4.1.10"
   },
   "overrides": {
-    "postcss": "8.5.10",
+    "postcss": "8.5.18",
     "sharp": "0.35.0"
   }
 }

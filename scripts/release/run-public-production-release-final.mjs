@@ -23,7 +23,6 @@ const requiredEvidence = [
   'docs/security/evidence/runtime/observability-smoke-validation.json',
   'docs/security/evidence/runtime/rollback-dry-run-validation.json',
   'docs/security/evidence/runtime/supabase-live-rls-validation.json',
-  'docs/security/evidence/runtime/release-go-no-go.json',
 ];
 
 const commands = [
@@ -209,7 +208,7 @@ const evidence = {
   evidenceFailures,
   metadataFailures,
   releaseGate: passed
-    ? 'Go candidate: public production validation passed. Confirm release-go-no-go finalDecision before announcing.'
+    ? 'Go candidate: public production validation passed. The dispatcher must now generate and validate the exact-SHA public Go/No-Go decision.'
     : 'No-Go: public production validation failed.',
   evidenceIntegrity: {
     containsSensitiveValues: false,

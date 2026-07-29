@@ -53,6 +53,8 @@ if (enterpriseRequested) {
 } else if (releaseTarget === 'public-production' || releaseTarget === 'production') {
   await import('./check-public-production-release-env.mjs');
   await import('./run-public-production-release-final.mjs');
+  runNodeScript('scripts/release/write-public-production-go-no-go-evidence.mjs');
+  runNodeScript('scripts/release/validate-public-production-go-no-go-evidence.mjs');
   await finalizeSecurityResponseEvidence();
 } else {
   console.error(`Unsupported RELEASE_TARGET: ${releaseTarget || '(empty)'}. Expected public-production, production, or enterprise.`);

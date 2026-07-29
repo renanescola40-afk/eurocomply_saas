@@ -47,7 +47,7 @@ describe('incident response and continuity megapack', () => {
   });
 
   it('pins the remediated brace-expansion release in the lockfile', () => {
-    expect(packageLock.packages?.['node_modules/brace-expansion']?.version).toBe('1.1.16');
+    expect(packageLock.packages?.['node_modules/brace-expansion']?.version).toBe('1.1.17');
   });
 
   it('produces redacted fail-closed evidence', () => {

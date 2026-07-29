@@ -13,6 +13,8 @@ describe('production release profiles', () => {
     expect(dispatcher).toContain("releaseTarget === 'public-production'");
     expect(dispatcher).toContain("import('./check-public-production-release-env.mjs')");
     expect(dispatcher).toContain("import('./run-public-production-release-final.mjs')");
+    expect(dispatcher).toContain("runNodeScript('scripts/release/write-public-production-go-no-go-evidence.mjs')");
+    expect(dispatcher).toContain("runNodeScript('scripts/release/validate-public-production-go-no-go-evidence.mjs')");
   });
 
   it('keeps P0 runtime evidence in the public profile without enterprise-only gates', () => {
@@ -25,6 +27,7 @@ describe('production release profiles', () => {
     expect(publicRunner).toContain('npm run security:p0-runtime-gap:strict');
     expect(publicRunner).not.toContain('write-enterprise-runtime-evidence');
     expect(publicRunner).not.toContain('release:enterprise-runtime-evidence');
+    expect(publicRunner).not.toContain("'docs/security/evidence/runtime/release-go-no-go.json',");
     expect(publicRunner).toContain('requiresEnterpriseRuntimeEvidence: false');
     expect(publicRunner).toContain('requiresExternalReviewEvidence: false');
   });
@@ -44,6 +47,8 @@ describe('production release profiles', () => {
     expect(workflow).toContain('RELEASE_TARGET: public-production');
     expect(workflow).toContain('public-production-release-env-readiness.json');
     expect(workflow).toContain('observability-smoke-validation.json');
+    expect(workflow).toContain('write-public-production-go-no-go-evidence.mjs');
+    expect(workflow).toContain('validate-public-production-go-no-go-evidence.mjs');
     expect(workflow).not.toContain('enterprise-runtime-evidence.json');
     expect(workflow).not.toContain('SENTRY_AUTH_TOKEN:');
     expect(workflow).not.toContain('RISCK_COMPLY_ENTERPRISE_RELEASE:');
