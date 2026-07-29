@@ -57,7 +57,11 @@ export function evaluateEvidence(
   now: Date = new Date(),
 ): EvidenceDecision {
   const reasons: string[] = [];
-  const current = !evidence.validUntil || evidence.validUntil.getTime() > now.getTime();
+  const nowMs = now.getTime();
+  const current =
+    evidence.validFrom.getTime() <= nowMs &&
+    evidence.collectedAt.getTime() <= nowMs &&
+    (!evidence.validUntil || evidence.validUntil.getTime() > nowMs);
 
   if (!SHA256_DIGEST.test(evidence.integrityDigest)) {
     reasons.push('invalid_integrity_digest');
@@ -75,7 +79,18 @@ export function evaluateEvidence(
     reasons.push('collected_before_validity_window');
   }
 
-  if (!current || evidence.reviewStatus === 'expired') {
+  if (evidence.validFrom.getTime() > nowMs) {
+    reasons.push('not_yet_valid');
+  }
+
+  if (evidence.collectedAt.getTime() > nowMs) {
+    reasons.push('collected_in_future');
+  }
+
+  if (
+    (evidence.validUntil && evidence.validUntil.getTime() <= nowMs) ||
+    evidence.reviewStatus === 'expired'
+  ) {
     reasons.push('expired');
   }
 
@@ -83,12 +98,12 @@ export function evaluateEvidence(
     reasons.push('synthetic_cannot_be_production_proof');
   }
 
-  const productionProof =
-    evidence.environment === 'production' &&
-    evidence.evidenceClass !== 'synthetic' &&
-    !reasons.includes('synthetic_cannot_be_production_proof');
-
   const accepted = evidence.reviewStatus === 'accepted' && reasons.length === 0;
+  const productionProof =
+    accepted &&
+    current &&
+    evidence.environment === 'production' &&
+    evidence.evidenceClass !== 'synthetic';
 
   return {
     reusable: accepted && current,
