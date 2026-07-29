@@ -18,14 +18,15 @@ create table if not exists public.ai_governance_entities (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   archived_at timestamptz,
+  unique (id, organization_id),
   unique (organization_id, entity_type, external_key)
 );
 
 create table if not exists public.ai_governance_entity_links (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
-  source_entity_id uuid not null references public.ai_governance_entities(id) on delete cascade,
-  target_entity_id uuid not null references public.ai_governance_entities(id) on delete cascade,
+  source_entity_id uuid not null,
+  target_entity_id uuid not null,
   relation_type text not null check (relation_type in ('uses','depends_on','provided_by','trained_on','deployed_by','owned_by','affects','replaces','calls','contains')),
   metadata jsonb not null default '{}'::jsonb,
   valid_from timestamptz not null default now(),
@@ -33,7 +34,11 @@ create table if not exists public.ai_governance_entity_links (
   created_at timestamptz not null default now(),
   check (source_entity_id <> target_entity_id),
   check (valid_until is null or valid_until > valid_from),
-  unique (organization_id, source_entity_id, target_entity_id, relation_type, valid_from)
+  unique (organization_id, source_entity_id, target_entity_id, relation_type, valid_from),
+  foreign key (source_entity_id, organization_id)
+    references public.ai_governance_entities(id, organization_id) on delete cascade,
+  foreign key (target_entity_id, organization_id)
+    references public.ai_governance_entities(id, organization_id) on delete cascade
 );
 
 create table if not exists public.normalized_ai_controls (
@@ -52,13 +57,14 @@ create table if not exists public.normalized_ai_controls (
   version integer not null default 1 check (version > 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  unique (id, organization_id),
   unique (organization_id, control_key, version)
 );
 
 create table if not exists public.normalized_ai_control_mappings (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
-  control_id uuid not null references public.normalized_ai_controls(id) on delete cascade,
+  control_id uuid not null,
   framework_key text not null,
   framework_version text not null,
   requirement_key text not null,
@@ -68,14 +74,16 @@ create table if not exists public.normalized_ai_control_mappings (
   verified_at timestamptz,
   reviewer_status text not null default 'unreviewed' check (reviewer_status in ('unreviewed','review_required','reviewed','rejected')),
   created_at timestamptz not null default now(),
-  unique (organization_id, control_id, framework_key, framework_version, requirement_key)
+  unique (organization_id, control_id, framework_key, framework_version, requirement_key),
+  foreign key (control_id, organization_id)
+    references public.normalized_ai_controls(id, organization_id) on delete cascade
 );
 
 create table if not exists public.governance_evidence_objects (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
-  entity_id uuid references public.ai_governance_entities(id) on delete set null,
-  control_id uuid references public.normalized_ai_controls(id) on delete set null,
+  entity_id uuid,
+  control_id uuid,
   evidence_type text not null,
   title text not null check (char_length(title) between 1 and 240),
   source_kind text not null check (source_kind in ('application_event','integration','upload','api','ci','runtime','manual_review')),
@@ -94,7 +102,11 @@ create table if not exists public.governance_evidence_objects (
   review_status text not null default 'unreviewed' check (review_status in ('unreviewed','review_required','accepted','rejected','expired')),
   created_at timestamptz not null default now(),
   check (valid_until is null or valid_until > valid_from),
-  check (evidence_class <> 'synthetic' or environment <> 'production')
+  check (evidence_class <> 'synthetic' or environment <> 'production'),
+  foreign key (entity_id, organization_id)
+    references public.ai_governance_entities(id, organization_id) on delete set null (entity_id),
+  foreign key (control_id, organization_id)
+    references public.normalized_ai_controls(id, organization_id) on delete set null (control_id)
 );
 
 create table if not exists public.regulatory_change_impacts (
@@ -126,11 +138,13 @@ create table if not exists public.governance_value_events (
   organization_id uuid not null references public.organizations(id) on delete cascade,
   user_id text,
   event_name text not null check (event_name in ('workspace_created','first_inventory_created','first_classification_completed','first_control_activated','first_evidence_accepted','first_report_exported','first_vendor_reviewed','first_regulatory_impact_resolved')),
-  entity_id uuid references public.ai_governance_entities(id) on delete set null,
+  entity_id uuid,
   occurred_at timestamptz not null default now(),
   source text not null default 'application',
   metadata jsonb not null default '{}'::jsonb,
-  unique (organization_id, event_name)
+  unique (organization_id, event_name),
+  foreign key (entity_id, organization_id)
+    references public.ai_governance_entities(id, organization_id) on delete set null (entity_id)
 );
 
 create index if not exists ai_governance_entities_org_type_idx on public.ai_governance_entities (organization_id, entity_type, lifecycle_status);
