@@ -1,0 +1,48 @@
+name: Enterprise Access Release Final Closeout
+
+on:
+  pull_request:
+    paths:
+      - 'src/server/enterprise/**'
+      - 'src/app/api/team/**'
+      - 'src/app/api/internal/**'
+      - 'supabase/migrations/**'
+      - 'scripts/enterprise/check-access-release-closeout.mjs'
+      - 'tests/enterprise/enterprise-access-release-closeout.test.ts'
+      - 'docs/enterprise/ENTERPRISE_ACCESS_RELEASE_FINAL_CLOSEOUT.md'
+      - '.github/workflows/enterprise-access-release-final-closeout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enterprise-access-release-final-closeout-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  closeout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Closeout invariant gate
+        run: node scripts/enterprise/check-access-release-closeout.mjs
+      - name: Closeout contract tests
+        run: npx vitest run tests/enterprise/enterprise-access-release-closeout.test.ts
+      - name: Typecheck
+        run: npm run typecheck
+      - name: API guards
+        run: npm run security:api-guards
+      - name: Authorization BOLA
+        run: npm run security:authorization-bola
+      - name: Step-up authentication
+        run: npm run security:step-up
