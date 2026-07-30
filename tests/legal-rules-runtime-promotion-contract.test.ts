@@ -44,6 +44,28 @@ describe('legal rules runtime promotion contract', () => {
       .toBeLessThan(workflowSource.indexOf('Open or reuse draft evidence promotion PR'));
   });
 
+  it('commits artifact bytes through an isolated one-file Git branch', () => {
+    expect(workflowSource).toContain('Revalidate and publish single-file promotion branch');
+    expect(workflowSource).toContain('test "$changed_paths" = "$CANONICAL_PATH"');
+    expect(workflowSource).toContain('test "$(git rev-list --count "${ASSESSED_SHA}..${promotion_commit_sha}")" = \'1\'');
+    expect(workflowSource).toContain('cmp --silent "$EVIDENCE_PATH" "$RUNNER_TEMP/existing-legal-rules-evidence.json"');
+    expect(workflowSource).toContain('GIT_ASKPASS="$askpass"');
+    expect(workflowSource).toContain('GIT_TERMINAL_PROMPT=0');
+    expect(workflowSource).toContain('git push "$remote_url" "HEAD:refs/heads/${promotion_branch}"');
+    expect(workflowSource).not.toContain('x-access-token:${GITHUB_TOKEN}@');
+  });
+
+  it('keeps artifact bytes out of the pull-request API client', () => {
+    expect(scriptSource).not.toContain("from 'node:fs'");
+    expect(scriptSource).not.toContain('readFileSync');
+    expect(scriptSource).not.toContain('EVIDENCE_PATH');
+    expect(scriptSource).not.toContain('/contents/');
+    expect(scriptSource).toContain('/compare/${assessedSha}...${promotionCommitSha}');
+    expect(scriptSource).toContain('comparison.files.length !== 1');
+    expect(scriptSource).toContain("changedFile?.filename !== canonicalPath");
+    expect(scriptSource).toContain("changedFile?.status !== 'modified'");
+  });
+
   it('uses pinned artifact actions and retains an immutable receipt', () => {
     expect(workflowSource).toContain('actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0');
     expect(workflowSource).toContain('actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38');
@@ -58,19 +80,17 @@ describe('legal rules runtime promotion contract', () => {
     expect(scriptSource).toContain('draft: true');
     expect(scriptSource).toContain('maintainer_can_modify: false');
     expect(scriptSource).toContain('Final review and merge remain human-controlled.');
-    expect(scriptSource).toContain("status: 'ALREADY_PROMOTED'");
     expect(scriptSource).not.toContain('pulls.merge');
     expect(scriptSource).not.toContain('/merges');
     expect(scriptSource).not.toContain('enablePullRequestAutoMerge');
   });
 
-  it('revalidates repository, SHA, digest and sensitive-data boundaries', () => {
+  it('revalidates repository, SHA, branch, commit and digest metadata', () => {
     expect(scriptSource).toContain("const REPOSITORY = 'renanescola40-afk/eurocomply_saas'");
-    expect(scriptSource).toContain("evidence.status !== 'PASS'");
-    expect(scriptSource).toContain('evidence.deploymentSha !== assessedSha');
-    expect(scriptSource).toContain('artifactSha256 !== digest(withoutArtifactDigest)');
-    expect(scriptSource).toContain("['authorization', 'set-cookie', 'service_role', 'stripe_secret', 'password=']");
+    expect(scriptSource).toContain('ARTIFACT_SHA256 must be a lowercase SHA-256 digest');
+    expect(scriptSource).toContain('promotion branch does not match the assessed SHA and source run');
     expect(scriptSource).toContain('assessed SHA is no longer current main');
-    expect(scriptSource).toContain('conflicting PASS evidence for the assessed SHA');
+    expect(scriptSource).toContain('promotion commit must be exactly one commit ahead of assessed main');
+    expect(scriptSource).toContain('promotion commit changes an unapproved path or file status');
   });
 });
