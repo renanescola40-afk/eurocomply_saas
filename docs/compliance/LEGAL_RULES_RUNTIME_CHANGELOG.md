@@ -1,5 +1,22 @@
 # Legal Rules Runtime Changelog
 
+## 2026-07-30 — automatic post-deployment proof
+
+### Runtime orchestration
+
+- Added automatic capture on successful GitHub `deployment_status` events from the trusted Vercel GitHub App.
+- Restricted automatic capture to the repository default branch and the exact current remote default-branch SHA.
+- Added approved-host validation for `risckcomply.com`, `www.risckcomply.com` and `*.vercel.app` before the internal secret is sent.
+- Kept `workflow_dispatch` as a controlled fallback for explicitly approved preview or production validation.
+- Added fail-closed rejection for stale deployments, unknown senders, feature-branch previews, malformed SHAs and unapproved hosts.
+- Added contract tests and updated the operating runbook.
+
+### Evidence boundary
+
+- Automatic execution does not make a deployment compliant or production-ready by itself.
+- Runtime credit still requires a PASS artifact with exact SHA, URL, test cases, redaction confirmation and recalculated integrity.
+- Human legal review and the independent production closeout remain separate gates.
+
 ## 2026-07-30 — version 2026-07-30.1
 
 ### Legal source refresh
