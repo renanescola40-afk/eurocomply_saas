@@ -6,6 +6,9 @@ import {
 } from '@/server/ai-governance/digital-twin-impact-service';
 
 const now = new Date('2026-07-30T16:00:00.000Z');
+type PersistableImpactTask = Parameters<
+  DigitalTwinImpactRepository['persistTasksAtomically']
+>[0]['tasks'][number];
 
 function repository(): DigitalTwinImpactRepository {
   const persistedKeys = new Map<string, string>();
@@ -37,7 +40,7 @@ function repository(): DigitalTwinImpactRepository {
       },
     })),
     persistTasksAtomically: vi.fn(async ({ tasks }) =>
-      tasks.map((task) => {
+      tasks.map((task: PersistableImpactTask) => {
         const existing = persistedKeys.get(task.idempotencyKey);
         const id = existing ?? `task-${persistedKeys.size + 1}`;
         persistedKeys.set(task.idempotencyKey, id);
