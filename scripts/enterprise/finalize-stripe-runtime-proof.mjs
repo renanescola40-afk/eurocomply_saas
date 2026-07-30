@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const outputDir = resolve(process.argv[2] ?? 'artifacts/stripe-runtime-proof');
@@ -8,12 +9,48 @@ const evidencePath = resolve(outputDir, 'evidence.json');
 const summaryPath = resolve(outputDir, 'summary.md');
 const catalogPath = resolve(outputDir, 'catalog.txt');
 
-if (!existsSync(proofPath)) throw new Error(`Stripe runtime proof not found: ${proofPath}`);
-if (!existsSync(evidencePath)) throw new Error(`Stripe runtime evidence not found: ${evidencePath}`);
+function readRequiredJson(filePath, label) {
+  let source;
+  try {
+    source = readFileSync(filePath, 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      throw new Error(`${label} not found: ${filePath}`, { cause: error });
+    }
+    throw error;
+  }
 
-const proof = JSON.parse(readFileSync(proofPath, 'utf8'));
-const evidence = JSON.parse(readFileSync(evidencePath, 'utf8'));
-const rawEvidenceDeleted = !existsSync(catalogPath);
+  try {
+    return JSON.parse(source);
+  } catch (error) {
+    throw new Error(`${label} is not valid JSON: ${filePath}`, { cause: error });
+  }
+}
+
+function fileIsAbsent(filePath) {
+  try {
+    statSync(filePath);
+    return false;
+  } catch (error) {
+    if (error?.code === 'ENOENT') return true;
+    throw error;
+  }
+}
+
+function writeTextAtomic(targetPath, content) {
+  const tempPath = `${targetPath}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(tempPath, content, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+    renameSync(tempPath, targetPath);
+  } catch (error) {
+    rmSync(tempPath, { force: true });
+    throw error;
+  }
+}
+
+const proof = readRequiredJson(proofPath, 'Stripe runtime proof');
+const evidence = readRequiredJson(evidencePath, 'Stripe runtime evidence');
+const rawEvidenceDeleted = fileIsAbsent(catalogPath);
 
 const requiredPromotionChecks = [
   'eventProcessed',
@@ -66,9 +103,9 @@ proof.truthBoundary = {
   provesReplaySafety: evidence.checks?.replaySafe === true,
 };
 
-writeFileSync(proofPath, `${JSON.stringify(proof, null, 2)}\n`);
-writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
-writeFileSync(summaryPath, [
+writeTextAtomic(proofPath, `${JSON.stringify(proof, null, 2)}\n`);
+writeTextAtomic(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+writeTextAtomic(summaryPath, [
   '# Stripe entitlement runtime proof',
   '',
   `- Status: **${proof.status}**`,
