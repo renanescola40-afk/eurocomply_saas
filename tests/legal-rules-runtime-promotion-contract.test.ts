@@ -34,6 +34,16 @@ describe('legal rules runtime promotion contract', () => {
       .toBeLessThan(workflowSource.indexOf('Open or reuse draft evidence promotion PR'));
   });
 
+  it('separates read-only validation from the write-enabled PR job', () => {
+    expect(workflowSource).toContain('permissions:\n  actions: read\n  contents: read');
+    expect(workflowSource).toContain('validate:\n    name: Validate trusted source artifact read-only');
+    expect(workflowSource).toContain('open-pr:\n    name: Open human-reviewed evidence promotion PR\n    needs: validate');
+    expect(workflowSource).toContain('permissions:\n      actions: read\n      contents: write\n      pull-requests: write');
+    expect(workflowSource).toContain('validated-legal-rules-runtime-${{ env.ASSESSED_SHA }}-${{ env.SOURCE_RUN_ID }}');
+    expect(workflowSource.indexOf('Retain validated promotion input'))
+      .toBeLessThan(workflowSource.indexOf('Open or reuse draft evidence promotion PR'));
+  });
+
   it('uses pinned artifact actions and retains an immutable receipt', () => {
     expect(workflowSource).toContain('actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0');
     expect(workflowSource).toContain('actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38');
@@ -45,8 +55,8 @@ describe('legal rules runtime promotion contract', () => {
 
   it('creates only a human-reviewed draft PR for the canonical evidence path', () => {
     expect(scriptSource).toContain("const CANONICAL_PATH = 'docs/security/evidence/runtime/legal-rules-validation.json'");
-    expect(scriptSource).toContain("draft: true");
-    expect(scriptSource).toContain("maintainer_can_modify: false");
+    expect(scriptSource).toContain('draft: true');
+    expect(scriptSource).toContain('maintainer_can_modify: false');
     expect(scriptSource).toContain('Final review and merge remain human-controlled.');
     expect(scriptSource).toContain("status: 'ALREADY_PROMOTED'");
     expect(scriptSource).not.toContain('pulls.merge');
