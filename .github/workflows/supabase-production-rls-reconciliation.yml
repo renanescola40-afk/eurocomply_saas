@@ -93,9 +93,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts/supabase-rls-reconciliation
-          psql "$SUPABASE_DB_POOLER_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align <<'SQL' \
-            | sed '/^[[:space:]]*$/d' \
-            | tee artifacts/supabase-rls-reconciliation/reconciliation-proof.txt
+          psql "$SUPABASE_DB_POOLER_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align <<'SQL' | sed '/^[[:space:]]*$/d' | tee artifacts/supabase-rls-reconciliation/reconciliation-proof.txt
           select 'rls|' || c.relname || '|' || c.relrowsecurity || '|' || c.relforcerowsecurity
           from pg_class c
           join pg_namespace n on n.oid = c.relnamespace
@@ -137,7 +135,8 @@ jobs:
             echo "- Project ref suffix: \`${SUPABASE_PROJECT_ID: -6}\`"
             echo '- Connection path: Supabase Session Pooler (secret-backed)'
             if [ -f artifacts/supabase-rls-reconciliation/verification.json ]; then
-              echo "- Verification status: \`$(node -p "require('./artifacts/supabase-rls-reconciliation/verification.json').status")\`"
+              status="$(node -e "const r=require('./artifacts/supabase-rls-reconciliation/verification.json'); process.stdout.write(r.status)")"
+              echo "- Verification status: \`$status\`"
             else
               echo '- Verification status: `NOT_PRODUCED`'
             fi
