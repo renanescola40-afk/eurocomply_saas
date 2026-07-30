@@ -28,6 +28,18 @@ create policy qualified_review_technical_closeouts_member_read
   on public.qualified_review_technical_closeouts for select to authenticated
   using (public.is_organization_member(organization_id));
 
+create policy qualified_review_technical_closeouts_insert_backend_only
+  on public.qualified_review_technical_closeouts for insert to authenticated
+  with check (false);
+
+create policy qualified_review_technical_closeouts_update_backend_only
+  on public.qualified_review_technical_closeouts for update to authenticated
+  using (false) with check (false);
+
+create policy qualified_review_technical_closeouts_delete_backend_only
+  on public.qualified_review_technical_closeouts for delete to authenticated
+  using (false);
+
 create or replace function public.persist_qualified_review_technical_closeout(
   p_organization_id uuid,
   p_campaign_id uuid,
