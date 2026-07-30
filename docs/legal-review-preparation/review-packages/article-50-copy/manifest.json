@@ -1,0 +1,17 @@
+{
+  "schema":"risck-comply.qualified-review-package.v1","id":"article-50-copy","weight":8,"status":"HUMAN_REVIEW_REQUIRED","acceptedDecisionPath":"docs/compliance/evidence/accepted/article-50-copy-review.json",
+  "reviewQuestions":["Is transparency wording accurate and non-misleading?","Are affected-person notices sufficiently clear?","Are language variants materially equivalent?"],
+  "scope":["Article 50 provider and deployer notices","interactive-system and synthetic-content disclosures","machine-readable marking and technical-feasibility limitations","localised public copy and the Article 111(4) provider-only transition"],
+  "officialSources":["docs/legal-review-preparation/07_LEGAL_SOURCE_REGISTER.json","Regulation (EU) 2024/1689 Article 50","Regulation (EU) 2026/1744 Article 1(39)(b)"],
+  "implementationEvidence":["src/app/[locale]/dashboard/transparencia/page.tsx","src/server/ai-governance/legal-rules.ts"],
+  "testEvidence":["tests/enterprise/public-ux-evidence.test.ts","src/server/ai-governance/legal-rules.test.ts","src/server/ai-governance/legal-rules-runtime.test.ts"],
+  "runtimeEvidence":["docs/security/evidence/runtime/localization-validation.json","docs/security/evidence/runtime/legal-rules-validation.json"],
+  "preReviewFindings":[
+    {"id":"A50-01","severity":"HIGH","status":"READY_FOR_COUNSEL","finding":"Disclosure duties vary by role, system type, content type and exception.","requiredDecision":"Approve the decision tree and each customer-facing notice variant."},
+    {"id":"A50-02","severity":"HIGH","status":"READY_FOR_COUNSEL","finding":"The Article 111(4) transition is provider-only and must not weaken deployer obligations.","requiredDecision":"Confirm transition wording and guardrails."},
+    {"id":"A50-03","severity":"MEDIUM","status":"READY_FOR_COUNSEL","finding":"Translation tests prove technical presence, not legal equivalence.","requiredDecision":"Approve material equivalence or specify language-specific changes."}
+  ],
+  "acceptanceCriteria":["Role and content distinctions are preserved.","Notices are clear, accurate and non-misleading.","The provider transition is not applied to deployer duties.","Each supported language is approved or explicitly excluded."],
+  "humanInputsRequired":["EU AI Act transparency counsel","approved canonical notice wording","language-equivalence decisions","signed exact-SHA decision"],
+  "limitations":["Correct disclosure depends on the real user experience and content flow.","Technical feasibility must be assessed for each deployment.","Localisation presence is not legal approval."]
+}
