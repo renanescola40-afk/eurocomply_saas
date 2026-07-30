@@ -3,9 +3,12 @@
 import { readdir, readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const migrationsDir = process.argv[2] ?? 'supabase/migrations';
-const remoteListPath = process.argv[3] ?? 'migration-state-remote.txt';
-const outputDir = process.argv[4] ?? 'artifacts/supabase-migration-drift';
+const args = process.argv.slice(2);
+const requireDeployable = args.includes('--require-deployable');
+const positional = args.filter((argument) => !argument.startsWith('--'));
+const migrationsDir = positional[0] ?? 'supabase/migrations';
+const remoteListPath = positional[1] ?? 'migration-state-remote.txt';
+const outputDir = positional[2] ?? 'artifacts/supabase-migration-drift';
 const reconciliationDir = path.join(path.dirname(migrationsDir), 'reconciliation');
 
 function parseLocalFilename(filename) {
@@ -109,9 +112,18 @@ const status = remoteOnly.length > 0
     ? 'PENDING_LOCAL_MIGRATIONS'
     : 'ALIGNED';
 
+const deployabilityBlockers = [];
+if (remoteOnly.length > 0) deployabilityBlockers.push('unknown_remote_versions');
+if (localOnly.length > 0) deployabilityBlockers.push('pending_local_versions');
+if (invalidLocal.length > 0) deployabilityBlockers.push('invalid_local_filenames_or_timestamps');
+if (duplicateVersions.length > 0) deployabilityBlockers.push('duplicate_local_versions');
+const generalDbPushAuthorized = deployabilityBlockers.length === 0;
+
 const report = {
   generatedAt: new Date().toISOString(),
   status,
+  deploymentAuthorization: generalDbPushAuthorized ? 'AUTHORIZED_FOR_DRY_RUN' : 'BLOCKED',
+  requireDeployable,
   summary: {
     localFiles: local.length,
     localValidVersions: localValidVersions.size,
@@ -131,12 +143,16 @@ const report = {
   remoteOnly,
   invalidLocal,
   duplicateVersions,
+  deployabilityBlockers,
   legacyDebtAdvisory: invalidLocal.length > 0 || duplicateVersions.length > 0,
   safety: {
     databaseModified: false,
     migrationHistoryModified: false,
     includeAllUsed: false,
-    recommendation: 'Review evidence before any migration repair or deployment.',
+    generalDbPushAuthorized,
+    recommendation: generalDbPushAuthorized
+      ? 'Proceed only to an independently reviewed dry-run. This audit does not authorize a production write.'
+      : 'Do not run a general production db push. Reconcile object state and migration history first.',
   },
 };
 
@@ -146,6 +162,7 @@ await writeFile(path.join(outputDir, 'migration-drift.json'), JSON.stringify(rep
 let markdown = '# Supabase migration drift audit\n\n';
 markdown += `Generated: ${report.generatedAt}\n\n`;
 markdown += `Status: **${status}**\n\n`;
+markdown += `General db push authorization: **${report.deploymentAuthorization}**\n\n`;
 markdown += '## Summary\n\n';
 markdown += `- Local migration files: ${report.summary.localFiles}\n`;
 markdown += `- Valid unique local versions: ${report.summary.localValidVersions}\n`;
@@ -158,7 +175,9 @@ markdown += `- Local-only versions: ${report.summary.localOnly}\n`;
 markdown += `- Unknown remote-only versions: ${report.summary.remoteOnly}\n`;
 markdown += `- Invalid local filenames/timestamps (legacy advisory): ${report.summary.invalidLocal}\n`;
 markdown += `- Duplicate local versions (legacy advisory): ${report.summary.duplicateVersions}\n\n`;
-markdown += '## Invalid local migrations (legacy advisory)\n\n';
+markdown += '## Production deployability blockers\n\n';
+markdown += markdownList(deployabilityBlockers, (blocker) => `\`${blocker}\``);
+markdown += '\n## Invalid local migrations (legacy advisory)\n\n';
 markdown += markdownList(invalidLocal, (item) => `\`${item.filename}\``);
 markdown += '\n## Duplicate versions (legacy advisory)\n\n';
 markdown += markdownList(duplicateVersions, (item) => `\`${item.version}\`: ${item.files.map((file) => `\`${file}\``).join(', ')}`);
@@ -173,10 +192,16 @@ markdown += '- Read-only audit; no database objects or migration history were ch
 markdown += '- Unknown remote-only migrations remain a hard failure.\n';
 markdown += '- Controlled remote hotfixes must have a matching versioned file in `supabase/reconciliation`.\n';
 markdown += '- Local-only migrations are expected for a PR and remain pending until controlled deployment.\n';
+markdown += '- `--require-deployable` also blocks invalid timestamps and duplicate versions.\n';
 markdown += '- Do not use `supabase db push --include-all` to bypass this report.\n';
+markdown += '- Even an authorized dry-run does not authorize a production write.\n';
 markdown += '- Reconciliation requires object-level evidence and explicit review.\n';
 
 await writeFile(path.join(outputDir, 'migration-drift.md'), markdown);
 process.stdout.write(markdown);
 
-if (status === 'CRITICAL_DRIFT') process.exitCode = 2;
+if (status === 'CRITICAL_DRIFT') {
+  process.exitCode = 2;
+} else if (requireDeployable && !generalDbPushAuthorized) {
+  process.exitCode = 3;
+}
