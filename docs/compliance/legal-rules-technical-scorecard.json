@@ -29,7 +29,7 @@
         "src/server/ai-governance/legal-rules.ts",
         "src/server/ai-governance/decision-engine.ts",
         "src/server/ai-governance/legal-rules-runtime.ts",
-        "src/app/api/public/legal-rules-validation/route.ts",
+        "src/app/api/ops/legal-rules-validation/route.ts",
         "scripts/compliance/capture-legal-rules-runtime-evidence.mjs",
         "docs/compliance/article-function-evidence-registry.v1.json"
       ]
