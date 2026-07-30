@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'node:fs';
+
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const RUN_ID = /^[1-9][0-9]*$/;
@@ -11,6 +13,18 @@ function required(name) {
   const value = String(process.env[name] || '').trim();
   if (!value) throw new Error(`${name} is required`);
   return value;
+}
+
+function assertNoConflictingCanonicalPass(canonicalPath, assessedSha, artifactSha256) {
+  const current = JSON.parse(readFileSync(canonicalPath, 'utf8'));
+  if (!current || typeof current !== 'object' || Array.isArray(current)) {
+    throw new Error('canonical legal-rules evidence must be an object');
+  }
+  if (current.status === 'PASS'
+    && current.deploymentSha === assessedSha
+    && current.artifactSha256 !== artifactSha256) {
+    throw new Error('canonical main already contains conflicting PASS evidence for the assessed SHA');
+  }
 }
 
 async function main() {
@@ -32,6 +46,8 @@ async function main() {
   if (!BRANCH.test(promotionBranch)) throw new Error('PROMOTION_BRANCH is outside the approved namespace');
   const expectedBranch = `automation/legal-rules-runtime-${assessedSha.slice(0, 12)}-${sourceRunId}`;
   if (promotionBranch !== expectedBranch) throw new Error('promotion branch does not match the assessed SHA and source run');
+
+  assertNoConflictingCanonicalPass(canonicalPath, assessedSha, artifactSha256);
 
   const [owner, repo] = repository.split('/');
   const apiBase = `https://api.github.com/repos/${owner}/${repo}`;
