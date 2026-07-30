@@ -138,7 +138,7 @@ jobs:
               status="$(node -e "const r=require('./artifacts/supabase-rls-reconciliation/verification.json'); process.stdout.write(r.status)")"
               echo "- Verification status: \`$status\`"
             else
-              echo '- Verification status: `NOT_PRODUCED`'
+              echo "- Verification status: \`NOT_PRODUCED\`"
             fi
             if [ -f artifacts/supabase-rls-reconciliation/reconciliation-proof.txt ]; then
               echo '- Verification evidence:'
