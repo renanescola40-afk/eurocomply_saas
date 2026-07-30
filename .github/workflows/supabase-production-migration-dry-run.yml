@@ -28,6 +28,7 @@ jobs:
     timeout-minutes: 25
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
+      SUPABASE_CLI_VERSION: '2.101.0'
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
@@ -35,9 +36,11 @@ jobs:
     steps:
       - name: Validate exact confirmation and release SHA
         shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
-          test '${{ inputs.confirmation }}' = 'DRY_RUN_ONLY'
+          test "$CONFIRMATION" = 'DRY_RUN_ONLY'
           if [[ ! "$TARGET_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
             echo "release_sha must be a full 40-character Git SHA" >&2
             exit 1
@@ -77,10 +80,16 @@ jobs:
             fi
           done
 
-      - name: Install Supabase CLI
+      - name: Install pinned Supabase CLI
         uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
         with:
-          version: latest
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Verify pinned Supabase CLI version
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
 
       - name: Link exact production project
         shell: bash
@@ -128,6 +137,7 @@ jobs:
             echo '## Supabase production migration dry-run'
             echo
             echo "- Assessed SHA: \`$TARGET_SHA\`"
+            echo "- Supabase CLI: \`$SUPABASE_CLI_VERSION\`"
             echo '- Operation: dry-run only'
             echo '- Production writes: not authorised and not executed by this workflow'
             echo '- General migration deployment remains subject to independent approval'
