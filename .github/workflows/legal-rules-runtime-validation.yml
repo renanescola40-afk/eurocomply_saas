@@ -14,6 +14,7 @@ on:
       - 'tests/compliance/eu-ai-act-safe-runtime-promotion.test.mjs'
       - 'scripts/compliance/capture-legal-rules-runtime-evidence.mjs'
       - 'scripts/compliance/generate-eu-ai-act-product-coverage.mjs'
+      - 'scripts/security/check-p0-runtime-evidence-files.mjs'
       - 'docs/compliance/**'
       - 'docs/architecture/decisions/2026-07-30-legal-rules-runtime-evidence.md'
       - 'docs/security/evidence/runtime/legal-rules-validation.json'
@@ -27,6 +28,7 @@ on:
       - 'src/app/api/public/legal-rules-validation/**'
       - 'scripts/compliance/capture-legal-rules-runtime-evidence.mjs'
       - 'scripts/compliance/generate-eu-ai-act-product-coverage.mjs'
+      - 'scripts/security/check-p0-runtime-evidence-files.mjs'
       - '.github/workflows/legal-rules-runtime-validation.yml'
   workflow_dispatch:
     inputs:
@@ -93,6 +95,9 @@ jobs:
           tests/legal-rules-closeout-artifacts.test.ts
           tests/article-function-evidence-registry.test.ts
           tests/compliance/eu-ai-act-safe-runtime-promotion.test.mjs
+
+      - name: Validate P0 runtime evidence schemas
+        run: node scripts/security/check-p0-runtime-evidence-files.mjs
 
       - name: Typecheck
         run: npm run typecheck
