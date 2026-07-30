@@ -13,11 +13,13 @@ const JSON_ARTIFACT = path.join(ARTIFACT_DIR, 'p0-runtime-evidence-register-deri
 const MARKDOWN_ARTIFACT = path.join(ARTIFACT_DIR, 'p0-runtime-evidence-register-derived.md');
 
 function escapeMarkdownCell(value) {
-  return String(value ?? '')
-    .replace(/\\/g, '\\\\')
-    .replace(/\|/g, '\\|')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const normalized = String(value ?? '').replace(/\s+/g, ' ').trim();
+
+  return [...normalized].map((character) => {
+    if (character === '\\') return '&#92;';
+    if (character === '|') return '&#124;';
+    return character;
+  }).join('');
 }
 
 function rowMetadataMap(rows) {
