@@ -9,7 +9,9 @@ This runbook does not replace the full production smoke, qualified legal review 
 ## Preconditions
 
 - CI is green for the exact commit to be deployed.
-- The deployment exposes `/api/public/legal-rules-validation`.
+- The deployment exposes the protected endpoint `/api/ops/legal-rules-validation`.
+- `INTERNAL_CRON_SECRET` or `CRON_SECRET` is configured on the deployment.
+- The matching `INTERNAL_CRON_SECRET` is available to the protected GitHub Actions environment.
 - Runtime release metadata returns the full 40-character deployed Git SHA.
 - The deployment URL is an HTTPS origin without credentials, query parameters or fragments.
 - The operator knows whether the target is `preview` or `production`.
@@ -29,16 +31,19 @@ install -d -m 700 docs/security/evidence/runtime
 umask 077
 DEPLOYMENT_URL="https://target.example" \
 EXPECTED_DEPLOYMENT_SHA="<40-character-sha>" \
+INTERNAL_CRON_SECRET="<runtime-secret>" \
 node scripts/compliance/capture-legal-rules-runtime-evidence.mjs \
   > docs/security/evidence/runtime/legal-rules-validation.json
 ```
 
-The JavaScript validator never writes the network response directly to the file system. It validates an exact allow-list of fields, sizes, paths, SHA values, timestamps, redaction declarations and integrity metadata, then emits only the accepted canonical JSON on stdout. The workflow controls the fixed output path with a restrictive umask.
+The JavaScript validator never writes the network response directly to the file system. It authenticates to the ops endpoint, validates an exact allow-list of fields, sizes, paths, SHA values, timestamps, redaction declarations and integrity metadata, then emits only the accepted canonical JSON on stdout. The workflow controls the fixed output path with a restrictive umask. The Authorization header is never included in the artifact or logs.
 
 ## PASS criteria
 
 The capture succeeds only when all of the following are true:
 
+- authentication rate limiting succeeds before token validation;
+- the internal bearer token is accepted;
 - HTTP response is successful;
 - `Cache-Control` contains `no-store`;
 - no `Set-Cookie` header is returned;
@@ -74,6 +79,19 @@ The capture succeeds only when all of the following are true:
 
 ## Failure handling
 
+### HTTP 401
+
+- Confirm the deployment and workflow use the same internal cron secret.
+- Confirm the secret is present, not whitespace and not accidentally logged.
+- Rotate the secret if exposure is suspected.
+- Do not bypass authentication or make the endpoint public to obtain evidence.
+
+### HTTP 429
+
+- Confirm the caller is not looping.
+- Retry only after the rate-limit window.
+- Do not weaken the pre-authentication rate limit for evidence collection.
+
 ### HTTP 503
 
 The endpoint failed closed. Inspect the returned test cases without logging secrets. Common causes:
@@ -103,12 +121,6 @@ Do not change expected values merely to obtain PASS.
 - Treat unexpected fields, unsafe paths or oversized output as a security failure.
 - Do not broaden the allow-list merely to accept an unexplained response.
 - Confirm the endpoint and capture schema changed together under review.
-
-### Rate limited
-
-- Confirm the caller is not looping.
-- Retry only after the rate-limit window.
-- Do not weaken the distributed rate limit for evidence collection.
 
 ### Vercel deployment quota or provider limit
 
