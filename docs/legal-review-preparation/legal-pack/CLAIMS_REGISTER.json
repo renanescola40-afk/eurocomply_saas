@@ -1,0 +1,78 @@
+{
+  "schema": "risck-comply.public-claims-register.v1",
+  "status": "COUNSEL_REVIEW_REQUIRED",
+  "rules": [
+    {
+      "id": "CLAIM-001",
+      "claim": "Risck Comply helps teams organise AI systems, risks, documents, tasks and evidence.",
+      "classification": "ALLOWED_WITH_CURRENT_PRODUCT_EVIDENCE",
+      "requiredEvidence": ["implemented product routes", "tenant-scoped data model", "current tests"],
+      "qualifier": "Operational support only; customer facts and professional review remain necessary."
+    },
+    {
+      "id": "CLAIM-002",
+      "claim": "EU AI Act readiness support",
+      "classification": "ALLOWED_WITH_QUALIFIER",
+      "requiredEvidence": ["article-function evidence matrix", "versioned legal rules", "human-review boundary"],
+      "qualifier": "Must not imply compliance, regulator approval or legal advice."
+    },
+    {
+      "id": "CLAIM-003",
+      "claim": "Enterprise-ready",
+      "classification": "CONDITIONALLY_PROHIBITED",
+      "requiredEvidence": ["exact-SHA 100% enterprise scorecard", "zero critical open controls", "current production runtime evidence"],
+      "qualifier": "Do not publish while evidence is missing, stale or for another SHA."
+    },
+    {
+      "id": "CLAIM-004",
+      "claim": "Fully compliant or guaranteed compliance",
+      "classification": "PROHIBITED",
+      "requiredEvidence": [],
+      "qualifier": "Customer-specific legal compliance cannot be guaranteed by the product."
+    },
+    {
+      "id": "CLAIM-005",
+      "claim": "Certified, audited or independently pentested",
+      "classification": "PROHIBITED_UNLESS_SPECIFIC_DATED_EVIDENCE_EXISTS",
+      "requiredEvidence": ["named assessor", "scope", "date", "report or certificate", "validity and limitations"],
+      "qualifier": "Name the exact certification/audit/test; never generalise beyond scope."
+    },
+    {
+      "id": "CLAIM-006",
+      "claim": "Replaces lawyers, legal opinion or automatic legal classification",
+      "classification": "PROHIBITED",
+      "requiredEvidence": [],
+      "qualifier": "The service supports workflows and evidence; qualified legal decisions remain human."
+    },
+    {
+      "id": "CLAIM-007",
+      "claim": "Automatic conformity assessment, CE marking or EU registration",
+      "classification": "PROHIBITED",
+      "requiredEvidence": [],
+      "qualifier": "Risck Comply is not a notified body or authority and cannot issue formal outcomes."
+    },
+    {
+      "id": "CLAIM-008",
+      "claim": "GDPR export and deletion support",
+      "classification": "ALLOWED_WITH_LIMITATIONS",
+      "requiredEvidence": ["GDPR export route", "delete-request route", "RBAC", "step-up", "audit events", "retention review"],
+      "qualifier": "Do not claim automatic deletion from every processor or deletion of lawfully retained immutable records."
+    },
+    {
+      "id": "CLAIM-009",
+      "claim": "Buyer-ready DPA or enterprise SLA",
+      "classification": "COUNSEL_AND_FOUNDER_FACT_REQUIRED",
+      "requiredEvidence": ["completed legal entity facts", "production provider register", "approved commitments", "counsel-reviewed document"],
+      "qualifier": "Public summaries are not signed contractual terms."
+    },
+    {
+      "id": "CLAIM-010",
+      "claim": "Secure, encrypted or isolated",
+      "classification": "ALLOWED_ONLY_AT_CONTROL_LEVEL",
+      "requiredEvidence": ["specific control", "environment", "provider configuration", "validation date"],
+      "qualifier": "Avoid absolute security claims and describe the exact control and limitation."
+    }
+  ],
+  "approvalRule": "Elevated or contractual claims require product owner, evidence owner and counsel approval bound to the reviewed version.",
+  "nonCreditingNotice": "This register classifies proposed claims; it is not legal approval of any claim."
+}

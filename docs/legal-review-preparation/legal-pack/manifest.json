@@ -1,0 +1,19 @@
+{
+  "schema": "risck-comply.contract-counsel-pack.v1",
+  "status": "HUMAN_REVIEW_REQUIRED",
+  "documents": [
+    { "id": "terms", "path": "docs/legal-review-preparation/legal-pack/TERMS_OF_SERVICE_REVIEW_DRAFT.md", "status": "REVIEW_DRAFT", "founderFactsRequired": true, "counselDecisionRequired": true },
+    { "id": "privacy", "path": "docs/legal-review-preparation/legal-pack/PRIVACY_POLICY_REVIEW_DRAFT.md", "status": "REVIEW_DRAFT", "founderFactsRequired": true, "counselDecisionRequired": true },
+    { "id": "dpa", "path": "docs/legal-review-preparation/legal-pack/DATA_PROCESSING_ADDENDUM_REVIEW_DRAFT.md", "status": "REVIEW_DRAFT", "founderFactsRequired": true, "counselDecisionRequired": true },
+    { "id": "subprocessors", "path": "docs/legal-review-preparation/legal-pack/SUBPROCESSOR_REGISTER_REVIEW_DRAFT.md", "status": "REVIEW_DRAFT", "founderFactsRequired": true, "counselDecisionRequired": true },
+    { "id": "service-schedule", "path": "docs/legal-review-preparation/legal-pack/SERVICE_SUPPORT_INCIDENT_SCHEDULE_REVIEW_DRAFT.md", "status": "REVIEW_DRAFT", "founderFactsRequired": true, "counselDecisionRequired": true },
+    { "id": "claims", "path": "docs/legal-review-preparation/legal-pack/CLAIMS_REGISTER.json", "status": "COUNSEL_REVIEW_REQUIRED", "founderFactsRequired": true, "counselDecisionRequired": true },
+    { "id": "partner-counsel", "path": "docs/legal-review-preparation/legal-pack/PARTNER_COUNSEL_BOUNDARIES.md", "status": "REVIEW_DRAFT", "founderFactsRequired": true, "counselDecisionRequired": true },
+    { "id": "master-opinion", "path": "docs/legal-review-preparation/legal-pack/MASTER_LEGAL_OPINION_HANDOFF.md", "status": "HUMAN_REVIEW_REQUIRED", "founderFactsRequired": true, "counselDecisionRequired": true },
+    { "id": "decision-sheet", "path": "docs/legal-review-preparation/legal-pack/FINAL_DECISION_SHEET_TEMPLATE.json", "status": "HUMAN_REVIEW_REQUIRED", "founderFactsRequired": true, "counselDecisionRequired": true }
+  ],
+  "founderFactsPath": "docs/legal-review-preparation/FOUNDER_FACTS_TEMPLATE.json",
+  "founderQuestionnairePath": "docs/legal-review-preparation/10_FOUNDER_FACTS_QUESTIONNAIRE.md",
+  "acceptanceGate": "scripts/compliance/legal-truth-audit.mjs",
+  "nonCreditingNotice": "Prepared drafts, manifests and templates are not signed facts or legal approval."
+}

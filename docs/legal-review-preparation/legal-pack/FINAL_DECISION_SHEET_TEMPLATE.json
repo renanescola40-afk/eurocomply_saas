@@ -1,0 +1,47 @@
+{
+  "schema": "risck-comply.master-legal-decision-sheet.v1",
+  "status": "HUMAN_REVIEW_REQUIRED",
+  "reviewer": {
+    "name": null,
+    "professionalRegistration": null,
+    "jurisdiction": null,
+    "qualificationScope": null,
+    "conflictAssessment": null,
+    "independenceDeclaration": null
+  },
+  "reviewBinding": {
+    "productSha": null,
+    "evidencePackageDigest": null,
+    "signedOpinionReference": null,
+    "decisionDigest": null,
+    "reviewedAt": null,
+    "validityStart": null,
+    "validityEnd": null,
+    "changeTriggers": []
+  },
+  "globalDecisions": {
+    "intendedPurpose": "HUMAN_REVIEW_REQUIRED",
+    "productRole": "HUMAN_REVIEW_REQUIRED",
+    "launchPosition": "HUMAN_REVIEW_REQUIRED",
+    "contractPack": "HUMAN_REVIEW_REQUIRED",
+    "privacyAndDpa": "HUMAN_REVIEW_REQUIRED",
+    "claims": "HUMAN_REVIEW_REQUIRED",
+    "partnerCounselModel": "HUMAN_REVIEW_REQUIRED"
+  },
+  "workstreamDecisions": [
+    { "id": "legal-rules", "decision": "HUMAN_REVIEW_REQUIRED", "findings": [], "conditions": [] },
+    { "id": "prohibited-practices", "decision": "HUMAN_REVIEW_REQUIRED", "findings": [], "conditions": [] },
+    { "id": "article-50-copy", "decision": "HUMAN_REVIEW_REQUIRED", "findings": [], "conditions": [] },
+    { "id": "fria-methodology", "decision": "HUMAN_REVIEW_REQUIRED", "findings": [], "conditions": [] },
+    { "id": "deployer-obligations", "decision": "HUMAN_REVIEW_REQUIRED", "findings": [], "conditions": [] },
+    { "id": "high-risk-provider", "decision": "HUMAN_REVIEW_REQUIRED", "findings": [], "conditions": [] },
+    { "id": "conformity", "decision": "HUMAN_REVIEW_REQUIRED", "findings": [], "conditions": [] },
+    { "id": "gpai", "decision": "HUMAN_REVIEW_REQUIRED", "findings": [], "conditions": [] }
+  ],
+  "externalDependencies": [],
+  "blockingChanges": [],
+  "nonBlockingRecommendations": [],
+  "permittedReliance": null,
+  "limitations": [],
+  "nonCreditingNotice": "This uncompleted template is not a legal decision and cannot be used as accepted evidence."
+}

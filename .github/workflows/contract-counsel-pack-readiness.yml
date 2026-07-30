@@ -1,0 +1,60 @@
+name: Contract and Counsel Pack Readiness
+
+on:
+  pull_request:
+    paths:
+      - 'docs/legal-review-preparation/legal-pack/**'
+      - 'docs/legal-review-preparation/10_FOUNDER_FACTS_QUESTIONNAIRE.md'
+      - 'docs/legal-review-preparation/FOUNDER_FACTS_TEMPLATE.json'
+      - 'docs/legal-review-preparation/11_CONTRACT_AND_COUNSEL_PACK_STATUS.md'
+      - 'scripts/compliance/validate-contract-counsel-pack.mjs'
+      - 'tests/compliance/contract-counsel-pack.test.ts'
+      - '.github/workflows/contract-counsel-pack-readiness.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/legal-review-preparation/legal-pack/**'
+      - 'docs/legal-review-preparation/10_FOUNDER_FACTS_QUESTIONNAIRE.md'
+      - 'docs/legal-review-preparation/FOUNDER_FACTS_TEMPLATE.json'
+      - 'scripts/compliance/validate-contract-counsel-pack.mjs'
+      - 'tests/compliance/contract-counsel-pack.test.ts'
+      - '.github/workflows/contract-counsel-pack-readiness.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contract-counsel-pack-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  readiness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test contract and counsel gates
+        run: npx vitest run tests/compliance/contract-counsel-pack.test.ts
+
+      - name: Validate handoff pack
+        run: node scripts/compliance/validate-contract-counsel-pack.mjs --strict --write
+
+      - name: Upload readiness artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-counsel-pack-readiness-${{ github.sha }}
+          path: artifacts/legal-review/contract-counsel-pack-readiness.json
+          if-no-files-found: error
+          retention-days: 30
