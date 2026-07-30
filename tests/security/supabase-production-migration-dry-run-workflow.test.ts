@@ -7,13 +7,15 @@ const workflow = readFileSync(workflowPath, 'utf8');
 const normalized = workflow.toLowerCase();
 
 describe('Supabase production migration dry-run workflow', () => {
-  it('is manual-only and requires exact SHA plus explicit dry-run confirmation', () => {
+  it('is manual-only and requires exact SHA plus safely handled confirmation', () => {
     expect(normalized).toContain('workflow_dispatch:');
     expect(normalized).not.toMatch(/\n\s+push:/);
     expect(normalized).not.toMatch(/\n\s+pull_request:/);
     expect(normalized).toContain('release_sha:');
     expect(normalized).toContain('confirmation:');
-    expect(workflow).toContain("test '${{ inputs.confirmation }}' = 'DRY_RUN_ONLY'");
+    expect(workflow).toContain('CONFIRMATION: ${{ inputs.confirmation }}');
+    expect(workflow).toContain('test "$CONFIRMATION" = \'DRY_RUN_ONLY\'');
+    expect(workflow).not.toContain("test '${{ inputs.confirmation }}'");
     expect(normalized).toContain('release_sha must be a full 40-character git sha');
   });
 
@@ -23,6 +25,13 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(workflow).toContain('test "$OBSERVED_SHA" = "$TARGET_SHA"');
     expect(workflow).toContain('test "$MAIN_SHA" = "$TARGET_SHA"');
     expect(normalized).toContain('/commits/main');
+  });
+
+  it('uses a concrete Supabase CLI version and verifies the installed binary', () => {
+    expect(workflow).toContain("SUPABASE_CLI_VERSION: '2.101.0'");
+    expect(workflow).toContain('version: ${{ env.SUPABASE_CLI_VERSION }}');
+    expect(workflow).toContain('test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"');
+    expect(normalized).not.toContain('version: latest');
   });
 
   it('requires a strict deployability audit before any dry-run', () => {
