@@ -33,9 +33,9 @@ where s.organization_id = :'organization_id'::uuid
 order by s.created_at desc
 limit 1;
 
-select 'policy', p.organization_id, p.full_seat_limit, p.participant_seat_limit,
-       p.viewer_seat_limit, p.version, p.source_reference, p.effective_from,
-       coalesce(p.effective_until::text, '')
+select 'policy', p.organization_id, p.full_limit, p.participant_limit,
+       p.viewer_limit, p.version, coalesce(p.source_reference, ''), p.effective_at,
+       coalesce(p.expires_at::text, '')
 from public.enterprise_seat_policies p
 where p.organization_id = :'organization_id'::uuid
 order by p.version desc
@@ -44,8 +44,10 @@ limit 1;
 select 'reconciliation_event', e.organization_id, e.outcome, e.source_id,
        coalesce(e.snapshot_id::text, ''), e.created_at
 from public.enterprise_entitlement_reconciliation_events e
+join public.enterprise_entitlement_snapshots s
+  on s.id = e.snapshot_id and s.organization_id = e.organization_id
 where e.organization_id = :'organization_id'::uuid
-  and e.idempotency_key = 'stripe:' || :'stripe_event_id'
+  and s.idempotency_key = 'stripe:' || :'stripe_event_id'
 order by e.created_at desc
 limit 5;
 
