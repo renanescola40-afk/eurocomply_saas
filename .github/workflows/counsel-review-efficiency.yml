@@ -48,6 +48,7 @@ jobs:
       COUNSEL_REVIEW_BASE_SHA: ${{ inputs.reviewed_base_sha || github.event.pull_request.base.sha || github.event.before }}
       COUNSEL_REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       LEGAL_PUBLICATION_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      LEGAL_AUDIT_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - name: Checkout repository with review history
@@ -68,14 +69,14 @@ jobs:
         run: node --check scripts/compliance/build-counsel-review-delta.mjs
 
       - name: Test counsel routing and non-crediting boundaries
-        run: npx vitest run tests/compliance/counsel-review-efficiency.test.ts
+        run: npx vitest run tests/compliance/counsel-review-efficiency.test.ts tests/compliance/legal-truth-audit.test.ts tests/compliance/run-legal-truth-audit.test.ts
 
       - name: Generate exact-SHA counsel review delta
         run: node scripts/compliance/build-counsel-review-delta.mjs --strict --write
 
       - name: Validate existing legal truth and preparation gates
         run: |
-          node scripts/compliance/legal-truth-audit.mjs --strict
+          node scripts/compliance/run-legal-truth-audit.mjs --strict
           node scripts/compliance/validate-qualified-review-packages.mjs --strict
           node scripts/compliance/validate-contract-counsel-pack.mjs --strict
           node scripts/compliance/check-final-legal-publication-gate.mjs --strict --write
