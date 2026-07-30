@@ -7,7 +7,7 @@ on:
       - 'src/server/ai-governance/legal-rules.ts'
       - 'src/server/ai-governance/legal-rules-runtime.ts'
       - 'src/server/ai-governance/decision-engine.ts'
-      - 'src/app/api/public/legal-rules-validation/**'
+      - 'src/app/api/ops/legal-rules-validation/**'
       - 'src/server/release/runtime-release-metadata.ts'
       - 'tests/legal-rules-*.test.ts'
       - 'tests/article-function-evidence-registry.test.ts'
@@ -25,7 +25,7 @@ on:
     paths:
       - 'src/server/ai-governance/legal-rules.ts'
       - 'src/server/ai-governance/legal-rules-runtime.ts'
-      - 'src/app/api/public/legal-rules-validation/**'
+      - 'src/app/api/ops/legal-rules-validation/**'
       - 'scripts/compliance/capture-legal-rules-runtime-evidence.mjs'
       - 'scripts/compliance/generate-eu-ai-act-product-coverage.mjs'
       - 'scripts/security/check-p0-runtime-evidence-files.mjs'
@@ -124,6 +124,7 @@ jobs:
     env:
       DEPLOYMENT_URL: ${{ inputs.deployment_url }}
       EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha }}
+      INTERNAL_CRON_SECRET: ${{ secrets.INTERNAL_CRON_SECRET || secrets.CRON_SECRET }}
       OUTPUT_PATH: artifacts/legal-rules-runtime/docs/security/evidence/runtime/legal-rules-validation.json
     steps:
       - name: Checkout exact deployed SHA
@@ -132,10 +133,11 @@ jobs:
           ref: ${{ inputs.expected_sha }}
           persist-credentials: false
 
-      - name: Verify exact deployed checkout
+      - name: Verify exact deployed checkout and secret
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_DEPLOYMENT_SHA"
           test '${{ inputs.environment }}' = 'preview' -o '${{ inputs.environment }}' = 'production'
+          test -n "$INTERNAL_CRON_SECRET"
 
       - name: Capture and verify runtime evidence
         run: |
