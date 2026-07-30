@@ -154,4 +154,28 @@ describe('P0 runtime evidence evaluator and derived register', () => {
     expect(markdown).toContain(`- Assessed commit: \`${'a'.repeat(40)}\``);
     expect(markdown).toContain('| Runtime proof | Open |');
   });
+
+  it('encodes backslashes and table separators in generated Markdown cells', () => {
+    const markdown = renderP0RegisterMarkdown({
+      decision: 'No-Go',
+      generatedAt: '2026-07-30T19:00:00.000Z',
+      repository: 'renanescola40-afk/eurocomply_saas',
+      branch: 'main',
+      assessedCommitSha: 'a'.repeat(40),
+      rows: [
+        {
+          item: 'Runtime \\ proof | primary',
+          derivedStatus: 'Open',
+          requiredEvidence: 'C:\\proofs|runtime.json',
+          owner: 'Security | SRE',
+          nextAction: 'Run \\ verify | promote',
+        },
+      ],
+    });
+
+    expect(markdown).toContain('Runtime &#92; proof &#124; primary');
+    expect(markdown).toContain('C:&#92;proofs&#124;runtime.json');
+    expect(markdown).toContain('Security &#124; SRE');
+    expect(markdown).toContain('Run &#92; verify &#124; promote');
+  });
 });
