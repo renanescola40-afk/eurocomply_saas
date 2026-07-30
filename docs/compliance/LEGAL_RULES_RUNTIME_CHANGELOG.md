@@ -13,10 +13,11 @@
 ### Runtime evidence
 
 - Added deterministic legal-rules digest and runtime test cases.
-- Added `/api/public/legal-rules-validation` with distributed rate limiting, exact-SHA release metadata, no-store and hardened response headers.
+- Added protected `/api/ops/legal-rules-validation` with pre-authentication distributed rate limiting, internal cron-token authorization, exact-SHA release metadata, no-store and hardened response headers.
 - Added request-ID sanitisation and artifact SHA-256.
-- Added fail-closed HTTP 503 behavior for unknown SHA, invalid deployment URL or failed legal-rule cases.
-- Added an exact-SHA capture script and pinned GitHub Actions workflow with 365-day artifact retention.
+- Added fail-closed HTTP 401 for invalid internal authentication and HTTP 503 for unknown SHA, invalid deployment URL or failed legal-rule cases.
+- Added an authenticated exact-SHA capture script and pinned GitHub Actions workflow with 365-day artifact retention.
+- Removed the unauthenticated public route after endpoint-taxonomy review.
 
 ### Coverage and governance
 
