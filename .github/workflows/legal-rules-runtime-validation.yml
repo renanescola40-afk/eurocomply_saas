@@ -13,6 +13,7 @@ on:
       - 'tests/article-function-evidence-registry.test.ts'
       - 'tests/compliance/eu-ai-act-safe-runtime-promotion.test.mjs'
       - 'scripts/compliance/capture-legal-rules-runtime-evidence.mjs'
+      - 'scripts/compliance/create-legal-rules-runtime-promotion-pr.mjs'
       - 'scripts/compliance/generate-eu-ai-act-product-coverage.mjs'
       - 'scripts/security/check-p0-runtime-evidence-files.mjs'
       - 'docs/compliance/**'
@@ -20,6 +21,7 @@ on:
       - 'docs/security/evidence/runtime/legal-rules-validation.json'
       - 'docs/security/evidence/runtime/technical-closeout-consolidated.json'
       - '.github/workflows/legal-rules-runtime-validation.yml'
+      - '.github/workflows/legal-rules-runtime-promotion.yml'
   push:
     branches: [main]
     paths:
@@ -27,9 +29,11 @@ on:
       - 'src/server/ai-governance/legal-rules-runtime.ts'
       - 'src/app/api/ops/legal-rules-validation/**'
       - 'scripts/compliance/capture-legal-rules-runtime-evidence.mjs'
+      - 'scripts/compliance/create-legal-rules-runtime-promotion-pr.mjs'
       - 'scripts/compliance/generate-eu-ai-act-product-coverage.mjs'
       - 'scripts/security/check-p0-runtime-evidence-files.mjs'
       - '.github/workflows/legal-rules-runtime-validation.yml'
+      - '.github/workflows/legal-rules-runtime-promotion.yml'
   deployment_status:
   workflow_dispatch:
     inputs:
@@ -100,6 +104,7 @@ jobs:
           tests/ai-act-decision-engine-contract.test.ts
           tests/legal-rules-runtime-api-contract.test.ts
           tests/legal-rules-runtime-capture-contract.test.ts
+          tests/legal-rules-runtime-promotion-contract.test.ts
           tests/legal-rules-closeout-artifacts.test.ts
           tests/article-function-evidence-registry.test.ts
           tests/compliance/eu-ai-act-safe-runtime-promotion.test.mjs
