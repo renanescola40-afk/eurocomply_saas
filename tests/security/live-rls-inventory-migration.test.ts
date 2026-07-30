@@ -4,6 +4,10 @@ import { describe, expect, it } from 'vitest';
 const migrationPath =
   'supabase/migrations/20260730204500_repair_live_rls_validation_inventory.sql';
 const migration = readFileSync(migrationPath, 'utf8').toLowerCase();
+const workflow = readFileSync(
+  '.github/workflows/supabase-live-rls-validation.yml',
+  'utf8',
+).toLowerCase();
 
 describe('live RLS inventory repair migration', () => {
   it('recreates the exact RPC signature required by the live proof runner', () => {
@@ -42,5 +46,24 @@ describe('live RLS inventory repair migration', () => {
       'controlled service-role helper for exact-target live rls validation',
     );
     expect(migration).toContain("notify pgrst, 'reload schema';");
+  });
+
+  it('uses only the repaired helper in the controlled live proof allowlist', () => {
+    expect(workflow).toContain(
+      'supabase/migrations/20260730204500_repair_live_rls_validation_inventory.sql',
+    );
+    expect(workflow).not.toContain(
+      'supabase/migrations/20260623120000_live_rls_validation_inventory.sql',
+    );
+    expect(workflow).toContain('--single-transaction --file="$migration"');
+  });
+
+  it('runs this contract before any optional target migration application', () => {
+    expect(workflow).toContain(
+      'tests/security/live-rls-inventory-migration.test.ts',
+    );
+    expect(workflow.indexOf('validate supabase rls proof contracts')).toBeLessThan(
+      workflow.indexOf('apply allowlisted live rls proof migrations'),
+    );
   });
 });
