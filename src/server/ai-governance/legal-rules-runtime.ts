@@ -11,6 +11,7 @@ import { evaluateAiActSystem } from './decision-engine';
 
 export const LEGAL_RULES_RUNTIME_EVIDENCE_SCHEMA = 'risck-comply.legal-rules-runtime-evidence.v1';
 export const LEGAL_RULES_SOURCE_EFFECTIVE_DATE = '2026-07-27';
+export const LEGAL_RULES_EVIDENCE_REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 
 export type LegalRulesRuntimeTestCase = {
   id: string;
@@ -22,6 +23,7 @@ export type LegalRulesRuntimeTestCase = {
 
 export type LegalRulesRuntimeEvidence = {
   schema: string;
+  repository: string;
   environment: string;
   deploymentUrl: string;
   deploymentSha: string;
@@ -197,6 +199,7 @@ export function buildLegalRulesRuntimeEvidence(input: {
 
   const evidenceWithoutDigest = {
     schema: LEGAL_RULES_RUNTIME_EVIDENCE_SCHEMA,
+    repository: LEGAL_RULES_EVIDENCE_REPOSITORY,
     environment: input.environment || 'unknown',
     deploymentUrl: input.deploymentUrl,
     deploymentSha: input.deploymentSha || 'unknown',
