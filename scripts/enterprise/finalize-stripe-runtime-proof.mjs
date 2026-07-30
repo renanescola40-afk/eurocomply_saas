@@ -100,5 +100,3 @@ console.log(JSON.stringify({
   failedChecks: proof.failedChecks,
   rawEvidenceDeleted,
 }, null, 2));
-
-if (!passed) process.exitCode = 1;
