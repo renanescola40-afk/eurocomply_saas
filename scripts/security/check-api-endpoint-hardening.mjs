@@ -12,6 +12,7 @@ const publicEndpointAllowlist = [
   { pattern: new RegExp(`${appApiPrefixPattern}\\/health\\/route\\.ts$`), reason: 'Public healthcheck returns only generic no-store service status' },
   { pattern: new RegExp(`${appApiPrefixPattern}\\/billing\\/catalog\\/route\\.ts$`), reason: 'Public billing catalog exposes only provider-safe pricing metadata and remains no-store and distributed rate-limited' },
   { pattern: new RegExp(`${appApiPrefixPattern}\\/trust\\/procurement-pack\\/route\\.ts$`), reason: 'Public evidence-bound procurement metadata excludes tenant data, secrets, internal identifiers and unsupported claims' },
+  { pattern: new RegExp(`${appApiPrefixPattern}\\/trust\\/security-questionnaire\\/route\\.ts$`), reason: 'Public evidence-bound security questionnaire excludes tenant data, private evidence, secrets, internal environment values and unsupported claims' },
   { pattern: new RegExp(`${appApiPrefixPattern}\\/billing\\/webhook\\/route\\.ts$`), reason: 'Stripe webhook validates provider signature instead of user session' },
   { pattern: new RegExp(`${appApiPrefixPattern}\\/stripe\\/webhook\\/route\\.ts$`), reason: 'Stripe webhook validates provider signature instead of user session' },
   { pattern: new RegExp(`${appApiPrefixPattern}\\/audit\\/evidence-pack\\/verify\\/route\\.ts$`), reason: 'Public verifier; must remain no-store/rate-limited' },

@@ -39,6 +39,7 @@ const PUBLIC_ROUTES = [
   '/atualizar-senha',
   '/trust',
   '/trust/procurement-pack',
+  '/trust/security-questionnaire',
   '/security',
   '/compliance',
   '/data-processing',
