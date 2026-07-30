@@ -160,15 +160,17 @@ function assertArtifact(body, expectedSha, deploymentUrl) {
 async function main() {
   const deploymentUrl = normalizeDeploymentUrl(required('DEPLOYMENT_URL'));
   const expectedSha = required('EXPECTED_DEPLOYMENT_SHA').toLowerCase();
+  const internalCronSecret = required('INTERNAL_CRON_SECRET');
   if (!FULL_SHA.test(expectedSha)) throw new Error('EXPECTED_DEPLOYMENT_SHA must be a full lowercase 40-character SHA');
 
-  const endpoint = `${deploymentUrl}/api/public/legal-rules-validation`;
+  const endpoint = `${deploymentUrl}/api/ops/legal-rules-validation`;
   const requestId = `runtime-${randomUUID()}`;
   const response = await fetch(endpoint, {
     method: 'GET',
     redirect: 'error',
     headers: {
       accept: 'application/json',
+      authorization: `Bearer ${internalCronSecret}`,
       'x-request-id': requestId,
       'user-agent': 'risck-comply-legal-rules-runtime-proof/1.0',
     },
@@ -182,7 +184,7 @@ async function main() {
   }
 
   const body = await response.json();
-  if (!response.ok) throw new Error(`runtime endpoint returned HTTP ${response.status}: ${body?.status || 'unknown'}`);
+  if (!response.ok) throw new Error(`runtime endpoint returned HTTP ${response.status}: ${body?.status || body?.error || 'unknown'}`);
   assertArtifact(body, expectedSha, deploymentUrl);
 
   process.stderr.write(`${JSON.stringify({
