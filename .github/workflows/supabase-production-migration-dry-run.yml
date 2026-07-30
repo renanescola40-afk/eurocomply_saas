@@ -118,19 +118,55 @@ jobs:
             | tee migration-state-remote.txt \
             | tee artifacts/supabase-production-migration-dry-run/migration-state-remote.txt
 
-      - name: Test migration deployability contracts
-        run: npx vitest run scripts/supabase/audit-migration-drift.test.mjs
+      - name: Test migration deployability and review-package contracts
+        run: >-
+          npx vitest run
+          scripts/supabase/audit-migration-drift.test.mjs
+          scripts/supabase/generate-migration-reconciliation-review-packages.test.mjs
 
-      - name: Require deployable migration history before dry-run
+      - name: Evaluate migration deployability and retain blocker status
+        id: deployability
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           node scripts/supabase/audit-migration-drift.mjs \
             supabase/migrations \
             migration-state-remote.txt \
             artifacts/supabase-production-migration-dry-run/drift \
             --require-deployable \
             | tee artifacts/supabase-production-migration-dry-run/deployability-summary.md
+          AUDIT_EXIT="${PIPESTATUS[0]}"
+          echo "exit_code=$AUDIT_EXIT" >> "$GITHUB_OUTPUT"
+          test -f artifacts/supabase-production-migration-dry-run/drift/migration-reconciliation-inventory.json
+          exit 0
+
+      - name: Generate non-crediting reconciliation review packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/supabase/generate-migration-reconciliation-review-packages.mjs \
+            artifacts/supabase-production-migration-dry-run/drift/migration-reconciliation-inventory.json \
+            artifacts/supabase-production-migration-dry-run/reconciliation-review \
+            --batch-size=25 \
+            | tee artifacts/supabase-production-migration-dry-run/reconciliation-review-summary.json
+
+      - name: Enforce migration deployability before dry-run
+        shell: bash
+        env:
+          DEPLOYABILITY_EXIT_CODE: ${{ steps.deployability.outputs.exit_code }}
+        run: |
+          set -euo pipefail
+          case "$DEPLOYABILITY_EXIT_CODE" in
+            0) ;;
+            2|3)
+              echo "Migration deployability is blocked; review packages were retained." >&2
+              exit "$DEPLOYABILITY_EXIT_CODE"
+              ;;
+            *)
+              echo "Unexpected deployability audit exit code: $DEPLOYABILITY_EXIT_CODE" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Execute Supabase migration dry-run only
         shell: bash
@@ -153,11 +189,13 @@ jobs:
             echo "- Assessed SHA: \`$TARGET_SHA\`"
             echo "- Supabase CLI: \`$SUPABASE_CLI_VERSION\`"
             echo '- Operation: dry-run only'
+            echo '- Reconciliation review packages: generated when the audit produced an inventory'
+            echo '- Package status: HUMAN_REVIEW_REQUIRED; accepted decisions remain zero'
             echo '- Production writes: not authorised and not executed by this workflow'
             echo '- General migration deployment remains subject to independent approval'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload migration authorization and dry-run artifacts
+      - name: Upload migration authorization, review and dry-run artifacts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
