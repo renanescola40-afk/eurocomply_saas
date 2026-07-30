@@ -9,6 +9,7 @@ const RUN_ID = /^[1-9][0-9]*$/;
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const CANONICAL_PATH = 'docs/security/evidence/runtime/legal-rules-validation.json';
 const EXPECTED_SCHEMA = 'risck-comply.legal-rules-runtime-evidence.v1';
+const REDACTION_CONFIRMATION = 'Redaction confirmed for runtime evidence.';
 const MAX_EVIDENCE_BYTES = 100_000;
 
 function required(name) {
@@ -33,6 +34,19 @@ function encodeRepositoryPath(value) {
   return value.split('/').map(encodeURIComponent).join('/');
 }
 
+function validateDeploymentOrigin(value) {
+  const url = new URL(String(value || ''));
+  const host = url.hostname.toLowerCase();
+  const allowedHost = host === 'risckcomply.com'
+    || host === 'www.risckcomply.com'
+    || host.endsWith('.vercel.app');
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || !allowedHost) {
+    throw new Error('runtime evidence deployment origin is outside the approved HTTPS boundary');
+  }
+  if (url.origin !== value) throw new Error('runtime evidence deployment URL must be a canonical origin');
+  return url.origin;
+}
+
 function parseEvidence(raw, assessedSha) {
   if (Buffer.byteLength(raw, 'utf8') > MAX_EVIDENCE_BYTES) throw new Error('runtime evidence exceeds maximum accepted size');
   const evidence = JSON.parse(raw);
@@ -43,6 +57,16 @@ function parseEvidence(raw, assessedSha) {
   if (evidence.status !== 'PASS') throw new Error('promotion requires PASS runtime evidence');
   if (evidence.deploymentSha !== assessedSha) throw new Error('runtime evidence SHA does not match assessed main');
   if (evidence.countsForRuntimeCoverage !== true) throw new Error('runtime evidence must count for runtime coverage');
+  if (evidence.redactionConfirmation !== REDACTION_CONFIRMATION) throw new Error('runtime evidence redaction confirmation is missing');
+  if (evidence.environment === 'unknown' || typeof evidence.environment !== 'string') throw new Error('runtime evidence environment is missing');
+  validateDeploymentOrigin(evidence.deploymentUrl);
+  if (!Array.isArray(evidence.testCases) || evidence.testCases.length < 8 || evidence.testCases.some((item) => item?.status !== 'PASS')) {
+    throw new Error('runtime evidence test cases are incomplete or non-PASS');
+  }
+  if (!Array.isArray(evidence.requestIds) || evidence.requestIds.length === 0
+    || evidence.requestIds.some((value) => !/^[A-Za-z0-9._:-]{8,128}$/.test(String(value)))) {
+    throw new Error('runtime evidence request IDs are missing or unsanitized');
+  }
   if (evidence.evidenceIntegrity?.placeholderOnly !== false) throw new Error('runtime evidence cannot be a placeholder');
   if (evidence.evidenceIntegrity?.runtimeProofInvented !== false) throw new Error('runtime evidence must confirm proof was not invented');
   if (evidence.evidenceIntegrity?.customerFacingProof !== false) throw new Error('runtime evidence cannot be customer-facing proof');
@@ -133,7 +157,7 @@ async function main() {
   }
 
   const branch = `automation/legal-rules-runtime-${assessedSha.slice(0, 12)}-${sourceRunId}`;
-  const encodedRef = encodeURIComponent(`heads/${branch}`);
+  const encodedRef = encodeRepositoryPath(`heads/${branch}`);
   let branchRef = await api(`/git/ref/${encodedRef}`, { allow404: true });
   if (!branchRef) {
     branchRef = await api('/git/refs', {
