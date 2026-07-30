@@ -1,7 +1,10 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const evidenceDir = 'docs/security/evidence/runtime';
+const FULL_SHA = /^[a-f0-9]{40}$/;
+const SHA256 = /^[a-f0-9]{64}$/;
 const allowedItems = new Set([
   'branch-protection-main',
   'required-status-checks',
@@ -26,6 +29,8 @@ const allowedItems = new Set([
   'enterprise-release-env-readiness',
   'gdpr-privacy-validation',
   'enterprise-10-10-audit',
+  'legal-rules-validation',
+  'technical-closeout-consolidated',
 ]);
 const redactionTexts = new Set([
   'All secrets, tokens, credentials, connection strings, and access-granting values are redacted.',
@@ -41,6 +46,18 @@ function listJsonFiles(dir) {
   return readdirSync(dir)
     .map((entry) => join(dir, entry))
     .filter((path) => statSync(path).isFile() && path.endsWith('.json'));
+}
+
+function stable(value) {
+  if (Array.isArray(value)) return value.map(stable);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, stable(value[key])]));
+  }
+  return value;
+}
+
+function digest(value) {
+  return createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 }
 
 function requireString(file, object, key, minLength = 1) {
@@ -192,6 +209,87 @@ function checkEnterpriseAuditOpenEvidence(file, evidence) {
   return true;
 }
 
+function checkLegalRulesRuntimeEvidence(file, evidence) {
+  if (evidence.evidenceItem !== 'legal-rules-validation') return false;
+  if (evidence.schema !== 'risck-comply.legal-rules-runtime-evidence.v1') failures.push(`${file} has unexpected legal-rules evidence schema`);
+  if (evidence.repository !== 'renanescola40-afk/eurocomply_saas') failures.push(`${file} has unexpected repository binding`);
+  if (!hasValidRedactionText(evidence)) failures.push(`${file} missing redaction confirmation`);
+  requireString(file, evidence, 'legalRulesVersion', 5);
+  requireString(file, evidence, 'effectiveDate', 10);
+  requireString(file, evidence, 'effectiveDateMeaning', 20);
+  requireString(file, evidence, 'evidenceBoundary', 40);
+  requireArray(file, evidence, 'sourceRegulations', 2);
+
+  if (evidence.status === 'NOT_EXECUTED') {
+    requireString(file, evidence, 'reviewer', 3);
+    requireString(file, evidence, 'reviewedAt', 10);
+    requireString(file, evidence, 'summary', 40);
+    requireArray(file, evidence, 'evidenceLocations', 1);
+    requireString(file, evidence, 'blocker', 40);
+    if (evidence.outcome !== 'not_run') failures.push(`${file} legal-rules placeholder outcome must be not_run`);
+    if (!hasBlockedGateText(evidence)) failures.push(`${file} legal-rules placeholder must keep production blocked`);
+    if (evidence.deploymentUrl !== null || evidence.deploymentSha !== null) failures.push(`${file} legal-rules placeholder must not claim deployment provenance`);
+    if (evidence.rulesDigest !== null || evidence.artifactSha256 !== null) failures.push(`${file} legal-rules placeholder must not claim runtime integrity`);
+    if (!Array.isArray(evidence.testCases) || evidence.testCases.length !== 0) failures.push(`${file} legal-rules placeholder must not contain passed test cases`);
+    if (!Array.isArray(evidence.requestIds) || evidence.requestIds.length !== 0) failures.push(`${file} legal-rules placeholder must not contain request ids`);
+    if (evidence.countsForRuntimeCoverage !== false) failures.push(`${file} legal-rules placeholder must not count for runtime coverage`);
+    if (evidence.evidenceIntegrity?.placeholderOnly !== true) failures.push(`${file} legal-rules placeholder must be marked placeholderOnly`);
+    if (evidence.evidenceIntegrity?.runtimeProofInvented !== false) failures.push(`${file} legal-rules placeholder must confirm runtime proof was not invented`);
+    if (evidence.evidenceIntegrity?.customerFacingProof !== false) failures.push(`${file} legal-rules placeholder must not be customer-facing proof`);
+    return true;
+  }
+
+  if (evidence.status !== 'PASS') {
+    failures.push(`${file} legal-rules evidence status must be NOT_EXECUTED or PASS`);
+    return true;
+  }
+
+  requireString(file, evidence, 'environment', 2);
+  requireString(file, evidence, 'deploymentUrl', 8);
+  requireString(file, evidence, 'deploymentSha', 40);
+  requireString(file, evidence, 'timestamp', 10);
+  requireArray(file, evidence, 'testCases', 8);
+  requireArray(file, evidence, 'requestIds', 1);
+  if (!FULL_SHA.test(String(evidence.deploymentSha ?? ''))) failures.push(`${file} deployed legal-rules evidence requires a full SHA`);
+  if (!SHA256.test(String(evidence.rulesDigest ?? ''))) failures.push(`${file} legal-rules rulesDigest must be SHA-256`);
+  if (!SHA256.test(String(evidence.artifactSha256 ?? ''))) failures.push(`${file} legal-rules artifactSha256 must be SHA-256`);
+  if (evidence.environment === 'unknown') failures.push(`${file} deployed legal-rules evidence cannot use unknown environment`);
+  try {
+    const url = new URL(evidence.deploymentUrl);
+    const local = url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname);
+    if (url.protocol !== 'https:' && !local) failures.push(`${file} deployed legal-rules evidence requires HTTPS outside local development`);
+    if (url.username || url.password || url.search || url.hash) failures.push(`${file} deployment URL must not contain credentials, query parameters or fragments`);
+  } catch {
+    failures.push(`${file} has invalid deployment URL`);
+  }
+  if (evidence.testCases.some((testCase) => testCase?.status !== 'PASS')) failures.push(`${file} contains a non-PASS legal-rules runtime test`);
+  if (evidence.requestIds.some((requestId) => !/^[A-Za-z0-9._:-]{8,128}$/.test(String(requestId)))) failures.push(`${file} contains an unsanitized request id`);
+  const { artifactSha256, ...withoutArtifactDigest } = evidence;
+  if (artifactSha256 !== digest(withoutArtifactDigest)) failures.push(`${file} legal-rules artifact SHA-256 integrity check failed`);
+  return true;
+}
+
+function checkTechnicalCloseoutConsolidated(file, evidence) {
+  if (evidence.evidenceItem !== 'technical-closeout-consolidated') return false;
+  if (!checkGenericOpenBlockedEvidence(file, evidence, new Set(['no_go']))) return true;
+  if (evidence.schema !== 'risck-comply.technical-closeout-consolidated.v1') failures.push(`${file} has unexpected technical closeout schema`);
+  if (evidence.repository !== 'renanescola40-afk/eurocomply_saas') failures.push(`${file} has unexpected repository binding`);
+  if (evidence.releaseDecision !== 'NO_GO') failures.push(`${file} technical closeout must remain NO_GO while Open`);
+  if (evidence.technicalComplete !== false || evidence.runtimeVerified !== false || evidence.operationallyValidated !== false) {
+    failures.push(`${file} Open technical closeout must not claim technical, runtime or operational completion`);
+  }
+  requireArray(file, evidence, 'controls', 1);
+  const counts = requireObject(file, evidence, 'counts');
+  if (counts) {
+    if (counts.totalControls !== evidence.controls.length) failures.push(`${file} technical closeout control count mismatch`);
+    if (counts.exactShaRuntimePass !== 0) failures.push(`${file} Open technical closeout must have zero exact-SHA runtime pass controls`);
+  }
+  if (evidence.evidenceIntegrity?.placeholderOnly !== true) failures.push(`${file} Open technical closeout must be marked placeholderOnly`);
+  if (evidence.evidenceIntegrity?.runtimeProofInvented !== false) failures.push(`${file} Open technical closeout must confirm runtime proof was not invented`);
+  if (evidence.evidenceIntegrity?.customerFacingProof !== false) failures.push(`${file} Open technical closeout must not be customer-facing proof`);
+  return true;
+}
+
 function checkCompleteEvidence(file, evidence) {
   requireString(file, evidence, 'reviewer', 3);
   requireString(file, evidence, 'reviewedAt', 10);
@@ -230,6 +328,8 @@ for (const file of listJsonFiles(evidenceDir)) {
   if (checkExternalReviewOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseFinalReadinessOpenPlaceholder(file, evidence)) continue;
   if (checkEnterpriseAuditOpenEvidence(file, evidence)) continue;
+  if (checkLegalRulesRuntimeEvidence(file, evidence)) continue;
+  if (checkTechnicalCloseoutConsolidated(file, evidence)) continue;
   if (evidence.status === 'Complete') {
     checkCompleteEvidence(file, evidence);
     continue;
