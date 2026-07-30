@@ -55,6 +55,13 @@ describe('legal rules runtime promotion contract', () => {
     expect(workflowSource).not.toContain('x-access-token:${GITHUB_TOKEN}@');
   });
 
+  it('rejects conflicting canonical PASS evidence for the same SHA', () => {
+    expect(workflowSource).toContain("current.status === 'PASS'");
+    expect(workflowSource).toContain('current.deploymentSha === process.env.ASSESSED_SHA');
+    expect(workflowSource).toContain('current.artifactSha256 !== process.env.ARTIFACT_SHA256');
+    expect(workflowSource).toContain('canonical main already contains conflicting PASS evidence for the assessed SHA');
+  });
+
   it('keeps artifact bytes out of the pull-request API client', () => {
     expect(scriptSource).not.toContain("from 'node:fs'");
     expect(scriptSource).not.toContain('readFileSync');
@@ -62,7 +69,7 @@ describe('legal rules runtime promotion contract', () => {
     expect(scriptSource).not.toContain('/contents/');
     expect(scriptSource).toContain('/compare/${assessedSha}...${promotionCommitSha}');
     expect(scriptSource).toContain('comparison.files.length !== 1');
-    expect(scriptSource).toContain("changedFile?.filename !== canonicalPath");
+    expect(scriptSource).toContain('changedFile?.filename !== canonicalPath');
     expect(scriptSource).toContain("changedFile?.status !== 'modified'");
   });
 
