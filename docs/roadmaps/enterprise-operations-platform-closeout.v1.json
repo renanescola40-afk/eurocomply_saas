@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0.0",
+  "program": "enterprise-operations-platform-closeout",
+  "repositoryControlledScope": true,
+  "status": "OPEN",
+  "decision": "CONVERSATION_REMAINS_OPEN",
+  "completionPercentage": 0,
+  "dimensions": {
+    "repositoryImplementation": "PARTIAL",
+    "ciVerified": "PARTIAL",
+    "runtimeVerified": "NOT_STARTED",
+    "productionVerified": "NOT_STARTED",
+    "humanReviewComplete": "HUMAN_REVIEW_REQUIRED",
+    "operationalComplete": "NOT_STARTED",
+    "customerSpecificCompliance": "EXTERNAL_VALIDATION_REQUIRED",
+    "marketLeadershipEvidence": "EXTERNAL_VALIDATION_REQUIRED"
+  },
+  "workstreams": [
+    {"id":"executive-command-center","status":"NOT_STARTED"},
+    {"id":"ai-governance-workspace","status":"NOT_STARTED"},
+    {"id":"digital-twin-productization","status":"PARTIAL"},
+    {"id":"regulatory-impact-operations","status":"PARTIAL"},
+    {"id":"evidence-by-design-operations","status":"PARTIAL"},
+    {"id":"control-once-map-everywhere","status":"PARTIAL"},
+    {"id":"vendor-governance","status":"PARTIAL"},
+    {"id":"ai-agent-governance","status":"PARTIAL"},
+    {"id":"executive-reporting","status":"PARTIAL"},
+    {"id":"stripe-runtime-proof","status":"PARTIAL"},
+    {"id":"supabase-runtime-proof","status":"PARTIAL"},
+    {"id":"vercel-production-proof","status":"PARTIAL"},
+    {"id":"exact-sha-evidence-promotion","status":"PARTIAL"},
+    {"id":"final-closeout-orchestration","status":"PARTIAL"}
+  ],
+  "completionRequirements": {
+    "allRepositoryWorkstreamsComplete": false,
+    "requiredChecksPassed": false,
+    "singleCurrentMainSha": false,
+    "stripeRuntimeAccepted": false,
+    "supabaseRuntimeAccepted": false,
+    "productionRuntimeAccepted": false,
+    "legalRulesRuntimeAccepted": false,
+    "evidencePromotedThroughReview": false,
+    "qualifiedHumanReviewsAccepted": false,
+    "blockersEmpty": false
+  },
+  "truthBoundary": {
+    "platformCompletionIsNotLegalCompliance": true,
+    "platformCompletionIsNotCertification": true,
+    "platformCompletionIsNotRegulatorAcceptance": true,
+    "platformCompletionIsNotMarketLeadership": true,
+    "syntheticEvidenceMayNotRepresentProduction": true
+  }
+}
