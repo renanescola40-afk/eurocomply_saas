@@ -7,8 +7,8 @@ on:
       - 'docs/legal-review-preparation/**'
       - 'scripts/compliance/legal-truth-audit.mjs'
       - 'scripts/compliance/run-legal-truth-audit.mjs'
-      - 'tests/compliance/legal-truth-audit.test.mjs'
-      - 'tests/compliance/run-legal-truth-audit.test.mjs'
+      - 'tests/compliance/legal-truth-audit.test.ts'
+      - 'tests/compliance/run-legal-truth-audit.test.ts'
       - '.github/workflows/legal-truth-audit.yml'
   push:
     branches: [main]
@@ -17,8 +17,8 @@ on:
       - 'docs/legal-review-preparation/**'
       - 'scripts/compliance/legal-truth-audit.mjs'
       - 'scripts/compliance/run-legal-truth-audit.mjs'
-      - 'tests/compliance/legal-truth-audit.test.mjs'
-      - 'tests/compliance/run-legal-truth-audit.test.mjs'
+      - 'tests/compliance/legal-truth-audit.test.ts'
+      - 'tests/compliance/run-legal-truth-audit.test.ts'
       - '.github/workflows/legal-truth-audit.yml'
 
 permissions:
@@ -46,7 +46,7 @@ jobs:
         run: npm ci
 
       - name: Test legal evidence gates
-        run: npx vitest run tests/compliance/legal-truth-audit.test.mjs tests/compliance/run-legal-truth-audit.test.mjs
+        run: npx vitest run tests/compliance/legal-truth-audit.test.ts tests/compliance/run-legal-truth-audit.test.ts
 
       - name: Run strict truth audit
         env:
