@@ -151,7 +151,8 @@ jobs:
 
       - name: Generate final promoted product coverage
         env:
-          EU_AI_ACT_RUNTIME_EVIDENCE_ROOTS: ${{ env.SAFE_EVIDENCE_ROOT }}:${{ env.RUNTIME_EVIDENCE_ROOT }}
+          # The coverage generator accepts comma-separated roots. A path-list colon is not supported.
+          EU_AI_ACT_RUNTIME_EVIDENCE_ROOTS: ${{ env.SAFE_EVIDENCE_ROOT }},${{ env.RUNTIME_EVIDENCE_ROOT }}
         run: node scripts/compliance/generate-eu-ai-act-product-coverage.mjs
 
       - name: Enforce report and strict boundaries
@@ -161,6 +162,7 @@ jobs:
           const report = JSON.parse(readFileSync(process.env.EU_AI_ACT_COVERAGE_JSON, 'utf8'));
           if (report.targetSha !== process.env.TARGET_SHA) throw new Error('coverage SHA mismatch');
           if (report.scores.implementationCoverage !== 100 || report.scores.ciVerifiedCoverage !== 100) throw new Error('static coverage regressed');
+          if (report.scores.runtimeEvidenceCoverage < 96) throw new Error('final overlay must promote readiness and provider evidence');
           if (process.env.STRICT_CLOSEOUT === '1' && report.scores.runtimeEvidenceCoverage !== 100) throw new Error('strict runtime closeout requires 100%');
           if (report.releaseDecision !== 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO') throw new Error('human review boundary must remain NO_GO');
           NODE
