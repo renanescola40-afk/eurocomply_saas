@@ -38,6 +38,7 @@ const PUBLIC_ROUTES = [
   '/reset-password',
   '/atualizar-senha',
   '/trust',
+  '/trust/procurement-pack',
   '/security',
   '/compliance',
   '/data-processing',
