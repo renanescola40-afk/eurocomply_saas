@@ -11,25 +11,43 @@ This runbook does not replace the full production smoke, qualified legal review 
 - CI is green for the exact commit to be deployed.
 - The deployment exposes the protected endpoint `/api/ops/legal-rules-validation`.
 - `INTERNAL_CRON_SECRET` or `CRON_SECRET` is configured on the deployment.
-- The matching `INTERNAL_CRON_SECRET` is available to the protected GitHub Actions environment.
+- The matching `INTERNAL_CRON_SECRET` is available to GitHub Actions.
 - Runtime release metadata returns the full 40-character deployed Git SHA.
 - The deployment URL is an HTTPS origin without credentials, query parameters or fragments.
-- The operator knows whether the target is `preview` or `production`.
+- Automatic capture targets only the current default-branch SHA emitted by the trusted Vercel GitHub App.
+- The deployment host is `risckcomply.com`, `www.risckcomply.com` or a `*.vercel.app` origin.
 
-## Canonical execution
+## Canonical automatic execution
 
-Use the **Legal Rules Runtime Validation** GitHub Actions workflow with:
+The **Legal Rules Runtime Validation** workflow listens for GitHub `deployment_status` events. It automatically starts runtime capture only when all of the following are true:
+
+- deployment status is `success`;
+- the event sender is exactly `vercel[bot]`;
+- the deployment ref equals the repository default branch;
+- the deployment SHA is a full lowercase 40-character SHA;
+- the deployed SHA still equals the current remote default-branch SHA at execution time;
+- the environment URL uses HTTPS and an approved host;
+- the checked-out repository SHA equals the deployed SHA;
+- the internal cron secret exists.
+
+Events for previews on feature branches, failed deployments, stale main deployments, unknown senders or unapproved hosts are ignored or fail closed before the secret is sent to any endpoint.
+
+## Controlled manual fallback
+
+Use `workflow_dispatch` only when automatic deployment-status delivery is unavailable or an approved preview must be assessed. Provide:
 
 - `deployment_url`: exact deployment origin;
 - `expected_sha`: full deployed SHA;
 - `environment`: `preview` or `production`.
+
+Manual dispatch still executes the exact-SHA checkout, host boundary, secret presence, endpoint response and artifact-integrity checks. It does not grant permission to validate arbitrary internet hosts.
 
 Equivalent local operator command:
 
 ```bash
 install -d -m 700 docs/security/evidence/runtime
 umask 077
-DEPLOYMENT_URL="https://target.example" \
+DEPLOYMENT_URL="https://eurocomply-saas.vercel.app" \
 EXPECTED_DEPLOYMENT_SHA="<40-character-sha>" \
 INTERNAL_CRON_SECRET="<runtime-secret>" \
 node scripts/compliance/capture-legal-rules-runtime-evidence.mjs \
@@ -38,10 +56,26 @@ node scripts/compliance/capture-legal-rules-runtime-evidence.mjs \
 
 The JavaScript validator never writes the network response directly to the file system. It authenticates to the ops endpoint, validates an exact allow-list of fields, sizes, paths, SHA values, timestamps, redaction declarations and integrity metadata, then emits only the accepted canonical JSON on stdout. The workflow controls the fixed output path with a restrictive umask. The Authorization header is never included in the artifact or logs.
 
+## Automatic-event trust boundary
+
+The deployment event is treated as untrusted until verified. The workflow must not move capture before these checks:
+
+1. trusted Vercel sender;
+2. successful status;
+3. default-branch ref;
+4. exact event SHA;
+5. current remote default-branch equality;
+6. approved HTTPS host;
+7. exact local checkout;
+8. secret presence.
+
+Do not broaden the sender or host allow-list merely to make an event run. A new deployment provider or custom domain requires reviewed workflow, tests and documentation in the same change.
+
 ## PASS criteria
 
 The capture succeeds only when all of the following are true:
 
+- the deployment event trust boundary passes, or a controlled manual dispatch was used;
 - authentication rate limiting succeeds before token validation;
 - the internal bearer token is accepted;
 - HTTP response is successful;
@@ -78,6 +112,21 @@ The capture succeeds only when all of the following are true:
 - decision output is bound to the current ruleset version.
 
 ## Failure handling
+
+### Automatic event ignored
+
+Confirm the event was a successful deployment from `vercel[bot]` for the current default branch. Feature-branch previews and non-Vercel deployment senders are intentionally excluded.
+
+### Current-main mismatch
+
+The deployment became stale before evidence capture. Stop promotion and wait for or initiate an approved deployment of the current default-branch SHA. Never credit the older deployment to the newer SHA.
+
+### Host boundary rejection
+
+- Confirm the event contains the deployable application origin, not a Vercel dashboard URL.
+- Confirm the host is an approved `*.vercel.app` origin or official Risck Comply domain.
+- Add a new domain only through reviewed code, contract tests and documentation.
+- Never send the internal secret to an arbitrary host.
 
 ### HTTP 401
 
@@ -129,16 +178,19 @@ Record `BLOCKED — external provider quota/rate limit`. Continue repository-sid
 ## Promotion procedure
 
 1. Download the workflow artifact for the exact SHA.
-2. Verify its workflow run, repository, SHA and retention metadata.
-3. Replace the canonical `NOT_EXECUTED` placeholder only with the verified PASS document.
-4. Regenerate EU AI Act product coverage with the exact SHA and artifact root.
-5. Regenerate the technical scorecard.
-6. Preserve the original workflow artifact; do not rely only on a repository copy.
-7. Proceed to full deployment smoke, protected readiness, production providers, backup/restore and final closeout.
+2. Verify its workflow event, sender, run, repository, SHA and retention metadata.
+3. Verify the artifact was produced by the current-main automatic path or an explicitly approved manual dispatch.
+4. Replace the canonical `NOT_EXECUTED` placeholder only with the verified PASS document.
+5. Regenerate EU AI Act product coverage with the exact SHA and artifact root.
+6. Regenerate the technical scorecard.
+7. Preserve the original workflow artifact; do not rely only on a repository copy.
+8. Proceed to full deployment smoke, protected readiness, production providers, backup/restore and final closeout.
 
 ## Rollback
 
 Follow `docs/compliance/LEGAL_RULES_RUNTIME_ROLLBACK_PLAN.md`. Runtime evidence is append-only: a rollback creates new evidence for the rollback SHA and never mutates proof for a prior SHA.
+
+Disable the `deployment_status` trigger first if an event-routing incident is suspected. The protected endpoint and manual capture remain fail-closed while the automation is investigated.
 
 ## Escalation
 

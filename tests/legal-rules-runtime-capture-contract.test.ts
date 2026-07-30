@@ -25,7 +25,7 @@ describe('legal rules runtime capture contract', () => {
   });
 
   it('verifies no-store, no cookies, all PASS cases and artifact integrity', () => {
-    expect(scriptSource).toContain("/no-store/i.test(cacheControl)");
+    expect(scriptSource).toContain('/no-store/i.test(cacheControl)');
     expect(scriptSource).toContain("response.headers.has('set-cookie')");
     expect(scriptSource).toContain("testCase.status !== 'PASS'");
     expect(scriptSource).toContain('artifact SHA-256 integrity check failed');
@@ -47,5 +47,24 @@ describe('legal rules runtime capture contract', () => {
     expect(workflowSource).toContain('actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a');
     expect(workflowSource).toContain('retention-days: 365');
     expect(workflowSource).toContain('test "$(git rev-parse HEAD)" = "$EXPECTED_DEPLOYMENT_SHA"');
+  });
+
+  it('automatically captures only trusted successful current-main Vercel deployments', () => {
+    expect(workflowSource).toContain('deployment_status:');
+    expect(workflowSource).toContain("github.event.deployment_status.state == 'success'");
+    expect(workflowSource).toContain('github.event.deployment.ref == github.event.repository.default_branch');
+    expect(workflowSource).toContain("github.event.sender.login == 'vercel[bot]'");
+    expect(workflowSource).toContain("process.env.DEPLOYMENT_EVENT_SENDER !== 'vercel[bot]'");
+    expect(workflowSource).toContain("host.endsWith('.vercel.app')");
+    expect(workflowSource).toContain("host === 'risckcomply.com'");
+    expect(workflowSource).toContain('refs/remotes/origin/${DEFAULT_BRANCH}');
+    expect(workflowSource).toContain('github.event.deployment_status.environment_url');
+  });
+
+  it('keeps manual dispatch as a controlled fallback', () => {
+    expect(workflowSource).toContain('workflow_dispatch:');
+    expect(workflowSource).toContain("github.event_name == 'workflow_dispatch'");
+    expect(workflowSource).toContain("DEPLOYMENT_URL: ${{ inputs.deployment_url || github.event.deployment_status.environment_url }}");
+    expect(workflowSource).toContain("EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha || github.event.deployment.sha }}");
   });
 });
