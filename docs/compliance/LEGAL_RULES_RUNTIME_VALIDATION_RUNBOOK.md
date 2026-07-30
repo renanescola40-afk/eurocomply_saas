@@ -25,11 +25,15 @@ Use the **Legal Rules Runtime Validation** GitHub Actions workflow with:
 Equivalent local operator command:
 
 ```bash
+install -d -m 700 docs/security/evidence/runtime
+umask 077
 DEPLOYMENT_URL="https://target.example" \
 EXPECTED_DEPLOYMENT_SHA="<40-character-sha>" \
-OUTPUT_PATH="docs/security/evidence/runtime/legal-rules-validation.json" \
-node scripts/compliance/capture-legal-rules-runtime-evidence.mjs
+node scripts/compliance/capture-legal-rules-runtime-evidence.mjs \
+  > docs/security/evidence/runtime/legal-rules-validation.json
 ```
+
+The JavaScript validator never writes the network response directly to the file system. It validates an exact allow-list of fields, sizes, paths, SHA values, timestamps, redaction declarations and integrity metadata, then emits only the accepted canonical JSON on stdout. The workflow controls the fixed output path with a restrictive umask.
 
 ## PASS criteria
 
@@ -39,16 +43,22 @@ The capture succeeds only when all of the following are true:
 - `Cache-Control` contains `no-store`;
 - no `Set-Cookie` header is returned;
 - content type is JSON;
+- evidence item is `legal-rules-validation`;
 - schema is `risck-comply.legal-rules-runtime-evidence.v1`;
 - repository is `renanescola40-afk/eurocomply_saas`;
 - deployment SHA exactly matches the expected full SHA;
 - deployment URL exactly matches the validated origin;
+- environment is explicit and not `unknown`;
 - legal rules version is present;
-- Regulation (EU) 2026/1744 is present in the source-regulation list;
+- Regulation (EU) 2026/1744 is present in the exact source-regulation set;
 - rules digest and artifact digest are valid SHA-256 values;
 - every runtime test case is `PASS`;
 - request IDs are sanitized;
-- recalculated artifact SHA-256 matches the document.
+- evidence paths are safe repository-relative paths;
+- redaction is confirmed;
+- the artifact is not a placeholder and does not claim customer-facing proof;
+- recalculated artifact SHA-256 matches the document;
+- the canonical JSON is within the maximum accepted artifact size.
 
 ## Test cases included
 
@@ -87,6 +97,12 @@ Do not change expected values merely to obtain PASS.
 - Discard the artifact.
 - Re-run the endpoint and capture script.
 - Investigate any intermediary, manual edit or serialization change.
+
+### Field or size rejection
+
+- Treat unexpected fields, unsafe paths or oversized output as a security failure.
+- Do not broaden the allow-list merely to accept an unexplained response.
+- Confirm the endpoint and capture schema changed together under review.
 
 ### Rate limited
 
