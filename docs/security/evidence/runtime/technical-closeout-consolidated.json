@@ -1,6 +1,11 @@
 {
+  "evidenceItem": "technical-closeout-consolidated",
   "schema": "risck-comply.technical-closeout-consolidated.v1",
   "repository": "renanescola40-afk/eurocomply_saas",
+  "status": "Open",
+  "outcome": "no_go",
+  "reviewer": "RISCK COMPLY release automation",
+  "reviewedAt": "2026-07-30T12:00:00.000Z",
   "generatedAt": "2026-07-30T12:00:00.000Z",
   "assessedSha": null,
   "environment": null,
@@ -12,6 +17,15 @@
   "humanReviewComplete": false,
   "customerSpecificCompliance": false,
   "summary": "Consolidated technical closeout control inventory. Exact-SHA production execution is intentionally pending; registered repository controls and prior evidence paths do not count as proof for a new deployment SHA.",
+  "evidenceLocations": [
+    "docs/security/evidence/runtime/technical-closeout-consolidated.json",
+    "docs/security/evidence/runtime/deployment-smoke-validation.json",
+    "docs/security/evidence/runtime/legal-rules-validation.json",
+    ".github/workflows/eu-ai-act-final-runtime-closeout.yml",
+    ".github/workflows/legal-rules-runtime-validation.yml"
+  ],
+  "redactionConfirmation": "Redaction confirmed for runtime evidence.",
+  "productionGate": "Blocked until every required control passes for one frozen full deployment SHA and the final closeout evidence is regenerated.",
   "acceptanceRule": "Every required control must be PASS for the same full deployment SHA, environment and timestamp window. Placeholders, stale evidence, repository-only tests and synthetic evidence do not satisfy production runtime validation.",
   "controls": [
     {
@@ -164,6 +178,12 @@
     "exactShaRuntimePass": 0,
     "blocked": 4,
     "revalidationRequired": 20
+  },
+  "evidenceIntegrity": {
+    "placeholderOnly": true,
+    "runtimeProofInvented": false,
+    "customerFacingProof": false,
+    "containsSensitiveValues": false
   },
   "nextAcceptableTransition": "After CI is green, deploy the exact PR or main SHA, execute deployment smoke and legal-rules runtime capture, then regenerate this artifact with immutable evidence references."
 }
