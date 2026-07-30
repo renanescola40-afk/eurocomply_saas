@@ -9,10 +9,15 @@ on:
       - 'src/server/ai-governance/decision-engine.ts'
       - 'src/app/api/public/legal-rules-validation/**'
       - 'src/server/release/runtime-release-metadata.ts'
-      - 'tests/legal-rules-runtime-*.test.ts'
+      - 'tests/legal-rules-*.test.ts'
+      - 'tests/article-function-evidence-registry.test.ts'
+      - 'tests/compliance/eu-ai-act-safe-runtime-promotion.test.mjs'
       - 'scripts/compliance/capture-legal-rules-runtime-evidence.mjs'
+      - 'scripts/compliance/generate-eu-ai-act-product-coverage.mjs'
       - 'docs/compliance/**'
+      - 'docs/architecture/decisions/2026-07-30-legal-rules-runtime-evidence.md'
       - 'docs/security/evidence/runtime/legal-rules-validation.json'
+      - 'docs/security/evidence/runtime/technical-closeout-consolidated.json'
       - '.github/workflows/legal-rules-runtime-validation.yml'
   push:
     branches: [main]
@@ -21,6 +26,7 @@ on:
       - 'src/server/ai-governance/legal-rules-runtime.ts'
       - 'src/app/api/public/legal-rules-validation/**'
       - 'scripts/compliance/capture-legal-rules-runtime-evidence.mjs'
+      - 'scripts/compliance/generate-eu-ai-act-product-coverage.mjs'
       - '.github/workflows/legal-rules-runtime-validation.yml'
   workflow_dispatch:
     inputs:
@@ -84,6 +90,9 @@ jobs:
           tests/ai-act-decision-engine-contract.test.ts
           tests/legal-rules-runtime-api-contract.test.ts
           tests/legal-rules-runtime-capture-contract.test.ts
+          tests/legal-rules-closeout-artifacts.test.ts
+          tests/article-function-evidence-registry.test.ts
+          tests/compliance/eu-ai-act-safe-runtime-promotion.test.mjs
 
       - name: Typecheck
         run: npm run typecheck
