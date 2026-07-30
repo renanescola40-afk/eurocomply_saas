@@ -18,9 +18,18 @@ describe('legal rules runtime capture contract', () => {
   it('verifies no-store, no cookies, all PASS cases and artifact integrity', () => {
     expect(scriptSource).toContain("/no-store/i.test(cacheControl)");
     expect(scriptSource).toContain("response.headers.has('set-cookie')");
-    expect(scriptSource).toContain("testCase?.status !== 'PASS'");
+    expect(scriptSource).toContain("testCase.status !== 'PASS'");
     expect(scriptSource).toContain('artifact SHA-256 integrity check failed');
     expect(scriptSource).toContain('request IDs are missing or unsanitised');
+    expect(scriptSource).toContain('runtime evidence contains unexpected or missing fields');
+  });
+
+  it('does not write network response data directly from JavaScript', () => {
+    expect(scriptSource).not.toContain('writeFileSync');
+    expect(scriptSource).not.toContain('createWriteStream');
+    expect(scriptSource).toContain('process.stdout.write');
+    expect(workflowSource).toContain('node scripts/compliance/capture-legal-rules-runtime-evidence.mjs > "$OUTPUT_PATH"');
+    expect(workflowSource).toContain('umask 077');
   });
 
   it('uses pinned actions and retains exact-SHA runtime artifacts', () => {
