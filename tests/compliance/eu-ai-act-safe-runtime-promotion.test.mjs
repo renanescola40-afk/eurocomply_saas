@@ -70,6 +70,7 @@ describe('EU AI Act safe runtime promotion', () => {
 
   it('accepts deployed legal-rules proof only after full integrity validation', () => {
     const base = {
+      evidenceItem: 'legal-rules-validation',
       schema: 'risck-comply.legal-rules-runtime-evidence.v1',
       repository: REPOSITORY,
       environment: 'preview',
@@ -89,15 +90,33 @@ describe('EU AI Act safe runtime promotion', () => {
       })),
       status: 'PASS',
       timestamp: '2026-07-30T12:00:00.000Z',
+      reviewer: 'RISCK COMPLY runtime validation automation',
+      reviewedAt: '2026-07-30T12:00:00.000Z',
+      summary: 'Exact-SHA deployed legal-rules validation completed with every deterministic runtime case passing.',
+      evidenceLocations: ['docs/security/evidence/runtime/legal-rules-validation.json'],
       requestIds: ['runtime-request-12345678'],
+      redactionConfirmation: 'Redaction confirmed for runtime evidence.',
+      countsForRuntimeCoverage: true,
+      evidenceIntegrity: {
+        placeholderOnly: false,
+        runtimeProofInvented: false,
+        customerFacingProof: false,
+        containsSensitiveValues: false,
+      },
       evidenceBoundary: 'deployed exact-SHA behaviour only',
     };
     const valid = withDigest(base);
 
     expect(validateLegalRulesRuntimeEvidenceDocument(valid, SHA)).toBe(true);
     expect(validateRuntimeEvidenceDocument(valid, SHA)).toBe(true);
+    expect(validateLegalRulesRuntimeEvidenceDocument({ ...valid, evidenceItem: 'other' }, SHA)).toBe(false);
     expect(validateLegalRulesRuntimeEvidenceDocument({ ...valid, deploymentSha: 'c'.repeat(40) }, SHA)).toBe(false);
     expect(validateLegalRulesRuntimeEvidenceDocument({ ...valid, status: 'NOT_EXECUTED' }, SHA)).toBe(false);
+    expect(validateLegalRulesRuntimeEvidenceDocument({ ...valid, countsForRuntimeCoverage: false }, SHA)).toBe(false);
+    expect(validateLegalRulesRuntimeEvidenceDocument({
+      ...valid,
+      evidenceIntegrity: { ...valid.evidenceIntegrity, placeholderOnly: true },
+    }, SHA)).toBe(false);
     expect(validateLegalRulesRuntimeEvidenceDocument({ ...valid, artifactSha256: '0'.repeat(64) }, SHA)).toBe(false);
   });
 
