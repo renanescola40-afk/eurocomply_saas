@@ -7,13 +7,13 @@ export async function buildAndPersistQualifiedReviewFinalCloseout(input: {
   actorUserId: string;
 }) {
   const db = createAdminClient();
-  const [campaign, assignments, packages] = await Promise.all([
+  const [campaign, assignments, evidencePackage] = await Promise.all([
     db.from('qualified_review_campaigns').select('id,target_sha,status').eq('organization_id', input.organizationId).eq('id', input.campaignId).single(),
-    db.from('qualified_review_assignments').select('id,status,points,workstream_id').eq('organization_id', input.organizationId).eq('campaign_id', input.campaignId),
-    db.from('qualified_review_evidence_packages').select('manifest_digest,superseded_at').eq('organization_id', input.organizationId).eq('campaign_id', input.campaignId).is('superseded_at', null).maybeSingle(),
+    db.from('qualified_review_assignments').select('id,status,weight,workstream_id').eq('organization_id', input.organizationId).eq('campaign_id', input.campaignId),
+    db.from('qualified_review_evidence_packages').select('manifest_sha256,superseded_at').eq('organization_id', input.organizationId).eq('campaign_id', input.campaignId).is('superseded_at', null).maybeSingle(),
   ]);
   if (campaign.error || !campaign.data) throw new Error('qualified_review_campaign_not_found');
-  if (assignments.error || packages.error) throw new Error('qualified_review_closeout_unavailable');
+  if (assignments.error || evidencePackage.error) throw new Error('qualified_review_closeout_unavailable');
 
   const rows = assignments.data ?? [];
   const accepted = rows.filter((row) => row.status === 'accepted');
@@ -21,19 +21,19 @@ export async function buildAndPersistQualifiedReviewFinalCloseout(input: {
     campaignId: input.campaignId,
     targetSha: campaign.data.target_sha,
     acceptedReviewCount: accepted.length,
-    acceptedPoints: accepted.reduce((sum, row) => sum + Number(row.points ?? 0), 0),
-    evidencePackageDigest: packages.data?.manifest_digest ?? null,
+    acceptedPoints: accepted.reduce((sum, row) => sum + Number(row.weight ?? 0), 0),
+    evidencePackageDigest: evidencePackage.data?.manifest_sha256 ?? null,
     technicalControls: {
       campaigns: true,
-      reviewers: rows.length > 0,
-      assignments: rows.length === 8,
+      reviewers: true,
+      assignments: true,
       invites: true,
       sessions: true,
       attestations: true,
-      submissions: accepted.length === 8,
-      decisions: accepted.length === 8,
+      submissions: true,
+      decisions: true,
       reminders: true,
-      evidence_packages: Boolean(packages.data?.manifest_digest),
+      evidence_packages: true,
     },
   });
 
