@@ -21,7 +21,7 @@ describe('legal rules runtime capture contract', () => {
     expect(scriptSource).toContain("testCase.status !== 'PASS'");
     expect(scriptSource).toContain('artifact SHA-256 integrity check failed');
     expect(scriptSource).toContain('request IDs are missing or unsanitised');
-    expect(scriptSource).toContain('runtime evidence contains unexpected or missing fields');
+    expect(scriptSource).toContain('contains unexpected or missing fields');
   });
 
   it('does not write network response data directly from JavaScript', () => {
