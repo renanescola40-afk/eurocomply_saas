@@ -48,7 +48,7 @@
     {"id":"workstream-fria","level":"LIMITED_COUNSEL_REREVIEW_REQUIRED","match":["/fria","fria-"],"decisions":["G-02","G-03"],"workstreams":["fria-methodology"]},
     {"id":"workstream-conformity","level":"LIMITED_COUNSEL_REREVIEW_REQUIRED","match":["conformity","annex-iv","quality-management-system","qms"],"decisions":["G-02","G-03"],"workstreams":["high-risk-provider","conformity"]},
     {"id":"workstream-gpai","level":"LIMITED_COUNSEL_REREVIEW_REQUIRED","match":["gpai"],"decisions":["G-02","G-03"],"workstreams":["gpai"]},
-    {"id":"formatting-only","level":"NO_COUNSEL_REREVIEW_REQUIRED","match":[".prettier",".editorconfig","README.md","docs/architecture/decisions"],"decisions":[],"workstreams":[]}
+    {"id":"formatting-only","level":"NO_COUNSEL_REREVIEW_REQUIRED","match":[".prettier",".editorconfig","docs/architecture/decisions"],"decisions":[],"workstreams":[]}
   ],
   "truthBoundary": "This catalogue routes review work. It cannot approve legal content, validate professional standing or create legal acceptance."
 }
