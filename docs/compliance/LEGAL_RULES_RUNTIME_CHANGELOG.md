@@ -1,5 +1,24 @@
 # Legal Rules Runtime Changelog
 
+## 2026-07-30 — automatic human-reviewed promotion
+
+### Evidence promotion
+
+- Added a `workflow_run` bridge from successful current-main **Legal Rules Runtime Validation** runs.
+- Downloads the immutable runtime artifact by exact workflow run ID and exact SHA-bound artifact name.
+- Revalidates the artifact in an isolated evidence root before enabling any repository write action.
+- Confirms the source SHA is still the current `main` commit and rejects stale or non-deployment source runs.
+- Opens or reuses a draft PR that changes only `docs/security/evidence/runtime/legal-rules-validation.json`.
+- Keeps final review and merge human-controlled; no direct write to `main`, auto-merge or approval is permitted.
+- Uploads a sanitized 365-day promotion receipt containing provenance and PR metadata without credentials or artifact payloads.
+
+### Promotion boundary
+
+- A PASS runtime artifact may receive runtime coverage only after its draft promotion PR is reviewed and merged.
+- Automatic promotion does not grant legal approval, production approval or customer-specific applicability.
+- A conflicting PASS artifact for the same SHA fails closed and cannot replace the existing evidence.
+- GitHub Actions repository settings must allow the workflow token to create pull requests; otherwise the promotion run fails without weakening branch protection.
+
 ## 2026-07-30 — automatic post-deployment proof
 
 ### Runtime orchestration

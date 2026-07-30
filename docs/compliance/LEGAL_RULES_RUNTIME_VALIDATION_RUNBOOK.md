@@ -175,22 +175,57 @@ Do not change expected values merely to obtain PASS.
 
 Record `BLOCKED — external provider quota/rate limit`. Continue repository-side CI and PR review, but do not claim runtime verification or production readiness.
 
+## Automatic promotion PR
+
+After a successful exact-main capture, the **Legal Rules Runtime Promotion** workflow receives the completed source run through `workflow_run` and performs a second trust-boundary validation:
+
+1. source workflow conclusion is `success`;
+2. source workflow event is `deployment_status`;
+3. source head branch is `main`;
+4. source head SHA equals the artifact SHA;
+5. the SHA is still the current `main` commit;
+6. the artifact is downloaded by exact source run ID and exact SHA-bound artifact name;
+7. the downloaded bundle contains only the expected legal-rules evidence file;
+8. the evidence is validated in an isolated evidence root;
+9. repository binding, PASS state, deployment SHA, redaction, runtime-coverage eligibility and SHA-256 integrity are rechecked.
+
+Only after these checks may the workflow use `contents: write` and `pull-requests: write`. It creates an ephemeral `automation/legal-rules-runtime-*` branch and opens a **draft PR** replacing only `docs/security/evidence/runtime/legal-rules-validation.json`.
+
+The promotion workflow must never:
+
+- push directly to `main`;
+- approve or merge its own PR;
+- enable auto-merge;
+- modify code, workflows, migrations or unrelated evidence;
+- replace conflicting PASS evidence for the same SHA;
+- claim legal or production approval.
+
+A sanitized promotion receipt is retained for 365 days. The source runtime artifact remains immutable and authoritative.
+
+### Manual promotion replay
+
+Use the promotion workflow's `workflow_dispatch` fallback only when the automatic `workflow_run` delivery is unavailable. Provide the exact current-main SHA, the successful source run ID and confirmation `PROMOTE_LEGAL_RULES_EVIDENCE`. Manual replay does not relax any artifact, SHA or current-main validation.
+
+### Pull-request creation permission failure
+
+GitHub repository Actions settings must allow workflows to create pull requests. If that setting is disabled, the promotion workflow fails after validating the artifact. Do not grant broader administrator permissions or bypass branch protection; enable only the repository-level ability for Actions to create pull requests, then replay the exact source run.
+
 ## Promotion procedure
 
-1. Download the workflow artifact for the exact SHA.
-2. Verify its workflow event, sender, run, repository, SHA and retention metadata.
-3. Verify the artifact was produced by the current-main automatic path or an explicitly approved manual dispatch.
-4. Replace the canonical `NOT_EXECUTED` placeholder only with the verified PASS document.
-5. Regenerate EU AI Act product coverage with the exact SHA and artifact root.
-6. Regenerate the technical scorecard.
-7. Preserve the original workflow artifact; do not rely only on a repository copy.
+1. Confirm the runtime validation run completed successfully and retained `legal-rules-runtime-<exact-sha>`.
+2. Confirm the promotion workflow produced `legal-rules-runtime-promotion-<exact-sha>`.
+3. Review the draft promotion PR and verify it changes only the canonical legal-rules evidence file.
+4. Confirm the PR artifact SHA-256, deployment SHA, source run ID and deployment origin match the immutable source artifact.
+5. Merge only after CI, security scanners and evidence schema checks pass.
+6. Regenerate EU AI Act product coverage and the technical scorecard from the merged exact SHA.
+7. Preserve both source and promotion artifacts; do not rely only on the repository copy.
 8. Proceed to full deployment smoke, protected readiness, production providers, backup/restore and final closeout.
 
 ## Rollback
 
 Follow `docs/compliance/LEGAL_RULES_RUNTIME_ROLLBACK_PLAN.md`. Runtime evidence is append-only: a rollback creates new evidence for the rollback SHA and never mutates proof for a prior SHA.
 
-Disable the `deployment_status` trigger first if an event-routing incident is suspected. The protected endpoint and manual capture remain fail-closed while the automation is investigated.
+Disable the `deployment_status` trigger first if an event-routing incident is suspected. Disable the promotion workflow separately if branch or PR creation behaves unexpectedly. The protected endpoint and manual capture remain fail-closed while automation is investigated.
 
 ## Escalation
 
