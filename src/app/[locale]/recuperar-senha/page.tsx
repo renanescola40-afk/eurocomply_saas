@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
 import { locales, type Locale } from '@/lib/i18n/routing';
 
@@ -89,12 +89,19 @@ export default function AccountRecoveryPage() {
   const params = useParams<{ locale: string }>();
   const locale = activeLocale(params?.locale);
   const text = copy[locale];
+  const [hydrated, setHydrated] = useState(false);
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
 
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
   async function submitRecovery(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!hydrated || busy) return;
+
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
@@ -127,6 +134,8 @@ export default function AccountRecoveryPage() {
     }
   }
 
+  const formDisabled = !hydrated || busy;
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#050505] text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,.16),transparent_34rem),radial-gradient(circle_at_bottom_right,rgba(37,99,235,.12),transparent_30rem)]" />
@@ -149,7 +158,7 @@ export default function AccountRecoveryPage() {
             </div>
           ) : null}
 
-          <form className="mt-6 space-y-4" onSubmit={submitRecovery}>
+          <form className="mt-6 space-y-4" onSubmit={submitRecovery} aria-busy={busy}>
             <label className="block text-sm font-medium text-white/72">
               {text.email}
               <input
@@ -159,14 +168,14 @@ export default function AccountRecoveryPage() {
                 required
                 autoComplete="email"
                 inputMode="email"
-                disabled={busy}
+                disabled={formDisabled}
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-200/50 focus-visible:ring-2 focus-visible:ring-cyan-300/40 disabled:cursor-not-allowed disabled:opacity-60"
                 placeholder="you@company.com"
               />
             </label>
             <button
               type="submit"
-              disabled={busy}
+              disabled={formDisabled}
               className="w-full rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {busy ? text.submitting : text.submit}
