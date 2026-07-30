@@ -23,16 +23,15 @@ on:
 
 permissions:
   actions: read
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: legal-rules-runtime-promotion-${{ inputs.release_sha || github.event.workflow_run.head_sha }}
   cancel-in-progress: false
 
 jobs:
-  promote:
-    name: Validate artifact and open human-reviewed promotion PR
+  validate:
+    name: Validate trusted source artifact read-only
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (
@@ -40,8 +39,11 @@ jobs:
         github.event.workflow_run.head_branch == 'main' &&
         github.event.workflow_run.event == 'deployment_status'
       )
+    permissions:
+      actions: read
+      contents: read
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 20
     env:
       ASSESSED_SHA: ${{ inputs.release_sha || github.event.workflow_run.head_sha }}
       SOURCE_RUN_ID: ${{ inputs.source_run_id || github.event.workflow_run.id }}
@@ -54,7 +56,9 @@ jobs:
       ISOLATED_ROOT: artifacts/legal-rules-runtime-promotion/isolated
       EVIDENCE_PATH: artifacts/legal-rules-runtime-promotion/source/docs/security/evidence/runtime/legal-rules-validation.json
       CANONICAL_PATH: docs/security/evidence/runtime/legal-rules-validation.json
-      RECEIPT_PATH: artifacts/legal-rules-runtime-promotion/promotion-receipt.json
+    outputs:
+      assessed_sha: ${{ steps.validated.outputs.assessed_sha }}
+      source_run_id: ${{ steps.validated.outputs.source_run_id }}
 
     steps:
       - name: Validate trusted source run and exact current main
@@ -108,6 +112,7 @@ jobs:
           run-id: ${{ env.SOURCE_RUN_ID }}
 
       - name: Validate isolated artifact and promotion contracts
+        id: validated
         run: |
           set -euo pipefail
           test -f "$EVIDENCE_PATH"
@@ -127,27 +132,74 @@ jobs:
           if (evidence.evidenceIntegrity?.placeholderOnly !== false) throw new Error('promotion evidence cannot be a placeholder');
           NODE
           npx vitest run tests/legal-rules-runtime-promotion-contract.test.ts
+          printf 'assessed_sha=%s\n' "$ASSESSED_SHA" >> "$GITHUB_OUTPUT"
+          printf 'source_run_id=%s\n' "$SOURCE_RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Retain validated promotion input
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: validated-legal-rules-runtime-${{ env.ASSESSED_SHA }}-${{ env.SOURCE_RUN_ID }}
+          path: ${{ env.BUNDLE_ROOT }}
+          retention-days: 7
+          if-no-files-found: error
+
+  open-pr:
+    name: Open human-reviewed evidence promotion PR
+    needs: validate
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      ASSESSED_SHA: ${{ needs.validate.outputs.assessed_sha }}
+      SOURCE_RUN_ID: ${{ needs.validate.outputs.source_run_id }}
+      VALIDATED_ROOT: artifacts/legal-rules-runtime-promotion/validated
+      EVIDENCE_PATH: artifacts/legal-rules-runtime-promotion/validated/docs/security/evidence/runtime/legal-rules-validation.json
+      CANONICAL_PATH: docs/security/evidence/runtime/legal-rules-validation.json
+      RECEIPT_PATH: artifacts/legal-rules-runtime-promotion/promotion-receipt.json
+
+    steps:
+      - name: Checkout exact validated SHA
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ env.ASSESSED_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact validated checkout
+        run: test "$(git rev-parse HEAD)" = "$ASSESSED_SHA"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+
+      - name: Download validated promotion input
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: validated-legal-rules-runtime-${{ env.ASSESSED_SHA }}-${{ env.SOURCE_RUN_ID }}
+          path: ${{ env.VALIDATED_ROOT }}
 
       - name: Open or reuse draft evidence promotion PR
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          test -f "$EVIDENCE_PATH"
+          test -z "$(find "$VALIDATED_ROOT" -type f ! -path "$EVIDENCE_PATH" -print -quit)"
           install -d -m 700 "$(dirname "$RECEIPT_PATH")"
           umask 077
           node scripts/compliance/create-legal-rules-runtime-promotion-pr.mjs > "$RECEIPT_PATH"
 
       - name: Publish promotion summary
         run: |
-          node --input-type=module <<'NODE'
+          node --input-type=module <<'NODE' | tee -a "$GITHUB_STEP_SUMMARY"
           import { readFileSync } from 'node:fs';
           const receipt = JSON.parse(readFileSync(process.env.RECEIPT_PATH, 'utf8'));
-          process.stdout.write(`### Legal rules runtime promotion\n\n- Status: ${receipt.status}\n- SHA: \`${receipt.assessedSha}\`\n- Source run: ${receipt.sourceRunId}\n- Draft PR: #${receipt.pullRequestNumber}\n- Branch: \`${receipt.branch}\`\n`);
-          NODE
-          node --input-type=module <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-          import { readFileSync } from 'node:fs';
-          const receipt = JSON.parse(readFileSync(process.env.RECEIPT_PATH, 'utf8'));
-          process.stdout.write(`### Legal rules runtime promotion\n\n- Status: ${receipt.status}\n- SHA: \`${receipt.assessedSha}\`\n- Source run: ${receipt.sourceRunId}\n- Draft PR: #${receipt.pullRequestNumber}\n- Branch: \`${receipt.branch}\`\n`);
+          const pull = receipt.pullRequestNumber ? `#${receipt.pullRequestNumber}` : 'already present on main';
+          const branch = receipt.branch ? `\`${receipt.branch}\`` : 'not applicable';
+          process.stdout.write(`### Legal rules runtime promotion\n\n- Status: ${receipt.status}\n- SHA: \`${receipt.assessedSha}\`\n- Source run: ${receipt.sourceRunId}\n- Draft PR: ${pull}\n- Branch: ${branch}\n`);
           NODE
 
       - name: Upload immutable promotion receipt
