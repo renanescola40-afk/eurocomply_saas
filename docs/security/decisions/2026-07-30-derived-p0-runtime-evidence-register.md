@@ -74,6 +74,10 @@ The renderer reports:
 
 `P0 Final Release Gate` also blocks overclaims before running its strict gap enforcement.
 
+## Operational verification
+
+The review workflow must validate the combined catalog and derived-register stack against `main`. After the catalog PR is integrated, the derived-register PR is rebuilt or retargeted so its final diff contains only the evaluator, renderer, workflow, tests and this decision record.
+
 ## Consequences
 
 ### Positive
