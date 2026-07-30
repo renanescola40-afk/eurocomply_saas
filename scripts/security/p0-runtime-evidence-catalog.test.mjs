@@ -10,8 +10,8 @@ const registerCheckerSource = readFileSync(
   new URL('./check-p0-runtime-evidence-register.mjs', import.meta.url),
   'utf8',
 );
-const gapReportSource = readFileSync(
-  new URL('./report-p0-runtime-evidence-gap.mjs', import.meta.url),
+const evaluatorSource = readFileSync(
+  new URL('./evaluate-p0-runtime-evidence.mjs', import.meta.url),
   'utf8',
 );
 
@@ -64,14 +64,14 @@ describe('canonical P0 runtime evidence catalog', () => {
     expect(typeof authRbac?.validator).toBe('function');
   });
 
-  it('is consumed by both register and runtime gap gates', () => {
+  it('is consumed by both register and runtime evaluation gates', () => {
     expect(registerCheckerSource).toContain(
       "import { p0RegisterRequiredItems } from './p0-runtime-evidence-catalog.mjs';",
     );
     expect(registerCheckerSource).toContain('const requiredItems = p0RegisterRequiredItems;');
-    expect(gapReportSource).toContain(
+    expect(evaluatorSource).toContain(
       "import { activeP0RuntimeEvidenceItems } from './p0-runtime-evidence-catalog.mjs';",
     );
-    expect(gapReportSource).toContain('const requiredRuntimeItems = activeP0RuntimeEvidenceItems({');
+    expect(evaluatorSource).toContain('catalogItems = activeP0RuntimeEvidenceItems({ finalValidationInProgress }),');
   });
 });
