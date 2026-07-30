@@ -59,6 +59,19 @@ function sanitizeRequestId(value: string | null | undefined): string {
   return `generated-${createHash('sha256').update(candidate || 'missing').digest('hex').slice(0, 24)}`;
 }
 
+function isExactDeploymentSha(value: string) {
+  return /^[a-f0-9]{40}$/i.test(value);
+}
+
+function isHttpDeploymentUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname));
+  } catch {
+    return false;
+  }
+}
+
 function runtimeCase(input: {
   id: string;
   description: string;
@@ -120,6 +133,18 @@ export function buildLegalRulesRuntimeEvidence(input: {
   const amendmentId = 'eu-ai-act-art5-intimate-content-amendment';
   const transitionId = 'eu-ai-act-art50-preexisting-synthetic-transition';
   const testCases: LegalRulesRuntimeTestCase[] = [
+    runtimeCase({
+      id: 'deployment-sha-exact',
+      description: 'Runtime evidence is bound to a full 40-character deployment SHA.',
+      expected: true,
+      actual: isExactDeploymentSha(input.deploymentSha),
+    }),
+    runtimeCase({
+      id: 'deployment-url-valid',
+      description: 'Runtime evidence identifies a valid deployment origin.',
+      expected: true,
+      actual: isHttpDeploymentUrl(input.deploymentUrl),
+    }),
     runtimeCase({
       id: 'registry-valid',
       description: 'The versioned legal-rules registry passes its fail-closed structural validation.',
