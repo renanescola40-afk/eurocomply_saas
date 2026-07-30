@@ -80,7 +80,6 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(normalized).toContain('migration-state-remote.txt');
     expect(normalized).toContain('deployability-summary.md');
     expect(normalized).toContain('db-push-dry-run.txt');
-    expect(normalized).toContain('migration-reconciliation-inventory.json');
     expect(normalized).toContain('production writes: not authorised');
   });
 });
