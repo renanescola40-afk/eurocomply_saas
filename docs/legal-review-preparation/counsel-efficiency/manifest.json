@@ -1,0 +1,32 @@
+{
+  "schema": "risck-comply.counsel-review-efficiency-pack.v1",
+  "status": "HUMAN_REVIEW_REQUIRED",
+  "preparationStatus": "READY_FOR_COUNSEL_PREPARATION",
+  "documents": [
+    {"id":"readme","path":"docs/legal-review-preparation/counsel-efficiency/README.md","class":"OPERATING_GUIDE"},
+    {"id":"cockpit","path":"docs/legal-review-preparation/counsel-efficiency/COUNSEL_REVIEW_COCKPIT.md","class":"COUNSEL_BRIEFING"},
+    {"id":"decision-catalog","path":"docs/legal-review-preparation/counsel-efficiency/COUNSEL_DECISION_CATALOG.json","class":"DECISION_ROUTING"},
+    {"id":"change-impact","path":"docs/legal-review-preparation/counsel-efficiency/CHANGE_IMPACT_POLICY.md","class":"REREVIEW_POLICY"},
+    {"id":"partner-agreement","path":"docs/legal-review-preparation/counsel-efficiency/PARTNER_COUNSEL_AGREEMENT_REVIEW_DRAFT.md","class":"CONTRACT_REVIEW_DRAFT"},
+    {"id":"confidentiality","path":"docs/legal-review-preparation/counsel-efficiency/CONFIDENTIALITY_AND_PRIVILEGE_PROTOCOL.md","class":"CONFIDENTIALITY_PROTOCOL"}
+  ],
+  "existingDependencies": [
+    "docs/legal-review-preparation/01_PRODUCT_DOSSIER.md",
+    "docs/legal-review-preparation/02_INTENDED_PURPOSE.md",
+    "docs/legal-review-preparation/06_RISCK_COMPLY_AI_ACT_CLASSIFICATION_MEMO.md",
+    "docs/legal-review-preparation/07_LEGAL_SOURCE_REGISTER.json",
+    "docs/legal-review-preparation/08_ARTICLE_FUNCTION_EVIDENCE_MATRIX.json",
+    "docs/legal-review-preparation/FOUNDER_FACTS_TEMPLATE.json",
+    "docs/legal-review-preparation/legal-pack/FINAL_DECISION_SHEET_TEMPLATE.json",
+    "docs/legal-review-preparation/legal-pack/MASTER_LEGAL_OPINION_HANDOFF.md",
+    "scripts/compliance/check-final-legal-publication-gate.mjs",
+    "scripts/compliance/generate-legal-counsel-handoff-bundle.mjs"
+  ],
+  "generatedArtifacts": [
+    "artifacts/legal-review/counsel-review-delta.json",
+    "artifacts/legal-review/counsel-review-delta.md"
+  ],
+  "acceptanceStatus": "HUMAN_REVIEW_REQUIRED",
+  "counselAccepted": false,
+  "nonCreditingNotice": "This package reduces review effort but does not constitute legal advice, professional acceptance, certification or customer compliance."
+}
