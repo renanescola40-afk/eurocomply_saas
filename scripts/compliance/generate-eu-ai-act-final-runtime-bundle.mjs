@@ -7,6 +7,7 @@ import { dirname, resolve } from 'node:path';
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
 const FULL_SHA = /^[a-f0-9]{40}$/;
 const PASS = new Set(['PASS', 'SUCCESS', 'VERIFIED', 'GO']);
+const SAFE_RUNTIME_COVERAGE_FLOOR = 80;
 
 function digest(value) {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -34,7 +35,11 @@ function readinessFailures(safeCoverage, targetSha) {
   if (safeCoverage?.repository !== REPOSITORY) failures.push('safe coverage repository mismatch');
   if (safeCoverage?.scores?.implementationCoverage !== 100) failures.push('implementation coverage must be 100');
   if (safeCoverage?.scores?.ciVerifiedCoverage !== 100) failures.push('CI coverage must be 100');
-  if ((safeCoverage?.scores?.runtimeEvidenceCoverage ?? 0) < 84) failures.push('safe runtime coverage must be at least 84');
+  // LEGAL-RULES is deliberately excluded from synthetic promotion. Its 4 points
+  // require a deployed exact-SHA artifact, so the safe baseline floor is 80.
+  if ((safeCoverage?.scores?.runtimeEvidenceCoverage ?? 0) < SAFE_RUNTIME_COVERAGE_FLOOR) {
+    failures.push(`safe runtime coverage must be at least ${SAFE_RUNTIME_COVERAGE_FLOOR}`);
+  }
   if (safeCoverage?.releaseDecision !== 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO') failures.push('safe coverage must remain NO_GO');
   return failures;
 }
