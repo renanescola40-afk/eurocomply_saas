@@ -1,0 +1,23 @@
+{
+  "schema": "risck-comply.legal-rules-runtime-evidence.v1",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "environment": "unknown",
+  "deploymentUrl": null,
+  "deploymentSha": null,
+  "legalRulesVersion": "2026-07-30.1",
+  "sourceRegulations": [
+    "Regulation (EU) 2024/1689",
+    "Regulation (EU) 2026/1744"
+  ],
+  "effectiveDate": "2026-07-27",
+  "effectiveDateMeaning": "Entry into force of Regulation (EU) 2026/1744; individual amended provisions retain their statutory application dates.",
+  "rulesDigest": null,
+  "testCases": [],
+  "status": "NOT_EXECUTED",
+  "timestamp": null,
+  "requestIds": [],
+  "artifactSha256": null,
+  "countsForRuntimeCoverage": false,
+  "blocker": "A PASS document may replace this placeholder only after the public runtime endpoint is executed against a deployed exact 40-character SHA and the capture script verifies its integrity.",
+  "evidenceBoundary": "This placeholder proves that the evidence slot is versioned. It is deliberately rejected by the coverage scorer and is not runtime proof."
+}
