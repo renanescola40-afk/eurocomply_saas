@@ -1,0 +1,91 @@
+{
+  "schema": "risck-comply.legal-rules-technical-scorecard.v1",
+  "version": "2026-07-30.1",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "scope": "legal-rules registry, canonical decision engine, article-to-evidence registry and deployed runtime proof",
+  "assessedAt": "2026-07-30T12:00:00.000Z",
+  "assessedSha": null,
+  "scoreBoundary": {
+    "technicalComplete": false,
+    "runtimeVerified": false,
+    "humanReviewComplete": false,
+    "operationallyValidated": false,
+    "customerSpecificCompliance": false,
+    "legalComplianceGuarantee": false
+  },
+  "weights": {
+    "implementationCoverage": 30,
+    "testCoverage": 25,
+    "runtimeCoverage": 20,
+    "humanReviewCoverage": 15,
+    "operationalValidation": 10
+  },
+  "dimensions": {
+    "implementationCoverage": {
+      "definedPercent": 100,
+      "acceptedPercent": 100,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/server/ai-governance/legal-rules.ts",
+        "src/server/ai-governance/decision-engine.ts",
+        "src/server/ai-governance/legal-rules-runtime.ts",
+        "src/app/api/public/legal-rules-validation/route.ts",
+        "scripts/compliance/capture-legal-rules-runtime-evidence.mjs",
+        "docs/compliance/article-function-evidence-registry.v1.json"
+      ]
+    },
+    "testCoverage": {
+      "definedPercent": 100,
+      "executedExactShaPercent": 0,
+      "acceptedPercent": 0,
+      "status": "PENDING_CI",
+      "evidence": [
+        "src/server/ai-governance/legal-rules.test.ts",
+        "src/server/ai-governance/legal-rules-runtime.test.ts",
+        "src/server/ai-governance/decision-engine.test.ts",
+        "tests/legal-rules-runtime-api-contract.test.ts",
+        "tests/legal-rules-runtime-capture-contract.test.ts",
+        "tests/article-function-evidence-registry.test.ts",
+        "tests/compliance/eu-ai-act-safe-runtime-promotion.test.mjs"
+      ]
+    },
+    "runtimeCoverage": {
+      "requiredPercent": 100,
+      "acceptedPercent": 0,
+      "status": "PENDING_EXACT_SHA_DEPLOYMENT",
+      "evidence": ["docs/security/evidence/runtime/legal-rules-validation.json"],
+      "reason": "The versioned file is a NOT_EXECUTED placeholder and is rejected by the coverage scorer."
+    },
+    "humanReviewCoverage": {
+      "requiredPercent": 100,
+      "acceptedPercent": 0,
+      "status": "MISSING_ACCEPTED_REVIEW",
+      "evidence": ["docs/compliance/evidence/accepted/legal-rules-qualified-review.json"],
+      "reason": "The accepted qualified-review file does not exist on the assessed base branch."
+    },
+    "operationalValidation": {
+      "requiredPercent": 100,
+      "acceptedPercent": 0,
+      "status": "BLOCKED_BY_PRODUCTION_SMOKE",
+      "evidence": [
+        "docs/security/evidence/runtime/technical-closeout-consolidated.json",
+        "docs/security/evidence/runtime/deployment-smoke-validation.json"
+      ],
+      "reason": "Deployment smoke remains Open/failed and no exact deployment SHA is frozen for this work package."
+    }
+  },
+  "overallMaturity": {
+    "percent": 30,
+    "status": "NO_GO",
+    "calculation": "30% implementation accepted + 0% exact-SHA CI + 0% runtime + 0% human review + 0% operational validation",
+    "remainingPercent": 70
+  },
+  "blockers": [
+    "Required CI has not yet executed on the final PR head SHA.",
+    "The exact-SHA deployed legal-rules runtime artifact has not been captured.",
+    "The qualified legal-rules review acceptance artifact is absent.",
+    "Production deployment smoke remains Open/failed.",
+    "No immutable final closeout run binds all dimensions to one frozen main SHA."
+  ],
+  "promotionRule": "Regenerate this scorecard only from accepted CI, runtime, human-review and operational artifacts for one exact SHA. Do not infer completion from file existence."
+}
