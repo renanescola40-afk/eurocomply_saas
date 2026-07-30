@@ -5,6 +5,7 @@ const workflowPath =
   '.github/workflows/supabase-production-migration-dry-run.yml';
 const workflow = readFileSync(workflowPath, 'utf8');
 const normalized = workflow.toLowerCase();
+const jobHeader = workflow.slice(0, workflow.indexOf('\n    steps:'));
 
 describe('Supabase production migration dry-run workflow', () => {
   it('is manual-only and requires exact SHA plus safely handled confirmation', () => {
@@ -32,6 +33,22 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(workflow).toContain('version: ${{ env.SUPABASE_CLI_VERSION }}');
     expect(workflow).toContain('test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"');
     expect(normalized).not.toContain('version: latest');
+  });
+
+  it('uses a dedicated environment and does not expose production secrets job-wide', () => {
+    expect(jobHeader).toContain(
+      'environment: supabase-production-migration-dry-run',
+    );
+    expect(jobHeader).not.toContain('${{ secrets.');
+    expect(workflow).toContain(
+      'SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}',
+    );
+    expect(workflow).toContain(
+      'SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}',
+    );
+    expect(workflow).toContain(
+      'SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}',
+    );
   });
 
   it('requires a strict deployability audit before any dry-run', () => {
@@ -63,6 +80,7 @@ describe('Supabase production migration dry-run workflow', () => {
     expect(normalized).toContain('migration-state-remote.txt');
     expect(normalized).toContain('deployability-summary.md');
     expect(normalized).toContain('db-push-dry-run.txt');
+    expect(normalized).toContain('migration-reconciliation-inventory.json');
     expect(normalized).toContain('production writes: not authorised');
   });
 });
