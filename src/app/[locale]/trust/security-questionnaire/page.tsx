@@ -56,6 +56,8 @@ export default async function SecurityQuestionnairePage({ params }: PageProps) {
           <h1 className="mt-6 max-w-5xl text-4xl font-semibold tracking-[-0.055em] sm:text-6xl">{active.title}</h1>
           <p className="mt-6 max-w-3xl text-lg leading-8 text-white/62">{active.subtitle}</p>
           <div className="mt-8 flex flex-wrap gap-3">
+            {/* The JSON pack is a document endpoint, so use a normal HTTP navigation instead of client-side routing. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a href="/api/trust/security-questionnaire" className="rounded-full bg-white px-5 py-3 text-sm font-bold text-black">{active.api}</a>
             <Link href={`/${locale}/trust/procurement-pack`} className="rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white">{active.pack}</Link>
           </div>
