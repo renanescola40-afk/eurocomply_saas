@@ -12,7 +12,7 @@ on:
         required: false
         type: string
       apply_migrations:
-        description: Apply the committed RLS validation migrations before the proof
+        description: Apply the committed allowlisted RLS validation migrations before the proof
         required: true
         type: boolean
         default: false
@@ -80,8 +80,9 @@ jobs:
           npx vitest run
           tests/enterprise/supabase-rls-runtime-evidence-fetch.test.ts
           tests/security/supabase-rls-scorecard-evidence.test.ts
+          tests/security/live-rls-inventory-migration.test.ts
 
-      - name: Apply live RLS policy and inventory helper migrations
+      - name: Apply allowlisted live RLS proof migrations
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations }}
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
@@ -99,7 +100,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
           for migration in \
-            supabase/migrations/20260623120000_live_rls_validation_inventory.sql \
+            supabase/migrations/20260730204500_repair_live_rls_validation_inventory.sql \
             supabase/migrations/20260624220000_live_rls_validation_missing_tables.sql \
             supabase/migrations/20260624223000_live_rls_audit_entity_id_text.sql \
             supabase/migrations/20260624170400_live_rls_validation_drop_apply_helpers.sql \
@@ -110,7 +111,7 @@ jobs:
             supabase/migrations/20260701150000_supabase_production_rls_proof_hardening.sql \
             supabase/migrations/20260702112000_apply_invitations_live_rls_validation.sql
           do
-            psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --file="$migration"
+            psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction --file="$migration"
           done
 
       - name: Run strict Supabase tenant isolation validator
