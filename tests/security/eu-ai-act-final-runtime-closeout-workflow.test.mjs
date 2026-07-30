@@ -17,6 +17,13 @@ describe('EU AI Act final runtime closeout workflow', () => {
     expect(workflow).toContain('strict runtime closeout requires 100%');
   });
 
+  it('promotes safe and final evidence roots with the generator delimiter contract', () => {
+    expect(workflow).toContain('EU_AI_ACT_RUNTIME_EVIDENCE_ROOTS: ${{ env.SAFE_EVIDENCE_ROOT }},${{ env.RUNTIME_EVIDENCE_ROOT }}');
+    expect(workflow).not.toContain('EU_AI_ACT_RUNTIME_EVIDENCE_ROOTS: ${{ env.SAFE_EVIDENCE_ROOT }}:${{ env.RUNTIME_EVIDENCE_ROOT }}');
+    expect(workflow).toContain('final overlay must promote readiness and provider evidence');
+    expect(workflow).toContain('report.scores.runtimeEvidenceCoverage < 96');
+  });
+
   it('keeps qualified human review outside automated promotion', () => {
     expect(workflow).toContain('human review boundary must remain NO_GO');
     expect(workflow).not.toContain('EU_AI_ACT_PRODUCT_COVERAGE_GO');

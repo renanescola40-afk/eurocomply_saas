@@ -17,9 +17,12 @@ describe('Stripe runtime proof workflow governance', () => {
     expect(workflow).toContain('stripe-runtime-proof.sql');
   });
 
-  it('removes raw catalog and uploads sanitized retained proof', () => {
+  it('removes raw catalog, finalizes sanitized evidence and uploads retained proof', () => {
     expect(workflow).toContain('Remove raw correlated catalog');
-    expect(workflow).toContain('rm artifacts/stripe-runtime-proof/catalog.txt');
+    expect(workflow).toContain('rm -f artifacts/stripe-runtime-proof/catalog.txt');
+    expect(workflow).toContain('Finalize sanitized proof');
+    expect(workflow).toContain('finalize-stripe-runtime-proof.mjs');
+    expect(workflow).toContain('Enforce proof decision');
     expect(workflow).toContain('retention-days: 90');
   });
 });
