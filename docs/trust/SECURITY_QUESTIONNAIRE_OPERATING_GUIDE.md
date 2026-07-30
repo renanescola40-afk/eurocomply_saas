@@ -19,6 +19,8 @@ RISCK COMPLY publishes a reusable, evidence-bound answer set for common enterpri
 5. Contractual commitments belong in signed agreements, not the public questionnaire.
 6. Evidence links must resolve to same-origin public trust documents.
 7. Every material answer change requires unit tests, public-claims validation and review by security/product owners.
+8. The machine-readable endpoint uses the distributed `general-api` policy with an anonymized client-IP subject, a bounded request window and standardized rate-limit responses. Because this is a low-risk public read, Redis unavailability must not make the trust document unavailable.
+9. Public caching must remain bounded, and responses must preserve `X-Content-Type-Options: nosniff` plus the restrictive document Content Security Policy.
 
 ## Review cadence
 
