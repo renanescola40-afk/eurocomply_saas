@@ -66,4 +66,28 @@ describe('live RLS inventory repair migration', () => {
       workflow.indexOf('apply allowlisted live rls proof migrations'),
     );
   });
+
+  it('verifies the effective privilege boundary in the live database', () => {
+    expect(workflow).toContain('verify live inventory helper privilege boundary');
+    expect(workflow).toContain("to_regprocedure('public.eurocomply_live_rls_inventory(text[])')");
+    expect(workflow).toContain("has_function_privilege('anon', function_oid, 'execute')");
+    expect(workflow).toContain(
+      "has_function_privilege('authenticated', function_oid, 'execute')",
+    );
+    expect(workflow).toContain(
+      "not has_function_privilege('service_role', function_oid, 'execute')",
+    );
+    expect(workflow).toContain("acl.grantee = 0");
+    expect(workflow).toContain('live rls inventory helper must remain security invoker');
+    expect(workflow).toContain("setting = 'search_path=public, pg_catalog'");
+  });
+
+  it('checks live privileges after migration application and before tenant proof', () => {
+    expect(workflow.indexOf('apply allowlisted live rls proof migrations')).toBeLessThan(
+      workflow.indexOf('verify live inventory helper privilege boundary'),
+    );
+    expect(workflow.indexOf('verify live inventory helper privilege boundary')).toBeLessThan(
+      workflow.indexOf('run strict supabase tenant isolation validator'),
+    );
+  });
 });
