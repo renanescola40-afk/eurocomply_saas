@@ -238,7 +238,7 @@ export function buildLegalRulesRuntimeEvidence(input: {
       'src/server/ai-governance/legal-rules.ts',
       'src/server/ai-governance/decision-engine.ts',
       'src/server/ai-governance/legal-rules-runtime.ts',
-      'src/app/api/public/legal-rules-validation/route.ts',
+      'src/app/api/ops/legal-rules-validation/route.ts',
       'docs/security/evidence/runtime/legal-rules-validation.json',
     ],
     requestIds: [sanitizeRequestId(input.requestId)],
