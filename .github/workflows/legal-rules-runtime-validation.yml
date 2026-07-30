@@ -138,7 +138,11 @@ jobs:
           test '${{ inputs.environment }}' = 'preview' -o '${{ inputs.environment }}' = 'production'
 
       - name: Capture and verify runtime evidence
-        run: node scripts/compliance/capture-legal-rules-runtime-evidence.mjs
+        run: |
+          install -d -m 700 "$(dirname "$OUTPUT_PATH")"
+          umask 077
+          node scripts/compliance/capture-legal-rules-runtime-evidence.mjs > "$OUTPUT_PATH"
+          node -e 'const fs=require("node:fs"); const p=process.env.OUTPUT_PATH; const v=JSON.parse(fs.readFileSync(p,"utf8")); if(v.status!=="PASS"||v.deploymentSha!==process.env.EXPECTED_DEPLOYMENT_SHA) process.exit(1)'
 
       - name: Upload immutable runtime evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
