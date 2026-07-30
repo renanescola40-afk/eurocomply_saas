@@ -12,6 +12,7 @@ const outputDir = positional[1]
   ?? 'artifacts/supabase-migration-reconciliation-review';
 const batchSizeArgument = args.find((argument) => argument.startsWith('--batch-size='));
 const batchSize = Number(batchSizeArgument?.split('=')[1] ?? 25);
+const generatedAt = new Date().toISOString();
 
 function fail(message) {
   console.error(`Migration reconciliation review package generation failed: ${message}`);
@@ -33,11 +34,15 @@ function validateInventory(inventory) {
   if (inventory?.schema !== 'risck-comply.supabase-migration-reconciliation-inventory.v1') {
     failures.push('unsupported inventory schema');
   }
+  if (!inventory?.generatedAt || Number.isNaN(new Date(inventory.generatedAt).getTime())) {
+    failures.push('inventory generatedAt must be a valid timestamp');
+  }
   if (!Array.isArray(inventory?.items)) failures.push('inventory items must be an array');
-  if (!Array.isArray(inventory?.allowedClassifications)) {
-    failures.push('allowedClassifications must be an array');
+  if (!Array.isArray(inventory?.allowedClassifications) || inventory.allowedClassifications.length === 0) {
+    failures.push('allowedClassifications must be a non-empty array');
   }
 
+  const itemKeys = new Set();
   for (const [index, item] of (inventory?.items ?? []).entries()) {
     const prefix = `items[${index}]`;
     if (!item?.filename) failures.push(`${prefix}.filename is required`);
@@ -53,6 +58,10 @@ function validateInventory(inventory) {
     if (item?.reviewer !== null || item?.rationale !== null) {
       failures.push(`${prefix} contains pre-filled human review data`);
     }
+
+    const key = `${item?.filename ?? ''}:${item?.sha256 ?? ''}`;
+    if (itemKeys.has(key)) failures.push(`${prefix} duplicates another inventory item`);
+    itemKeys.add(key);
   }
 
   return failures;
@@ -148,7 +157,7 @@ if (failures.length > 0) {
 
 const inventorySha256 = sha256(inventoryBytes);
 const sortedItems = [...inventory.items].sort(stableItemSort);
-const packageCount = Math.max(1, Math.ceil(sortedItems.length / batchSize));
+const packageCount = Math.ceil(sortedItems.length / batchSize);
 const reviewPackages = [];
 
 for (let index = 0; index < packageCount; index += 1) {
@@ -165,7 +174,7 @@ for (let index = 0; index < packageCount; index += 1) {
     status: 'HUMAN_REVIEW_REQUIRED',
     inventorySha256,
     inventoryGeneratedAt: inventory.generatedAt,
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     sourceInventoryPath: inventoryPath,
     items,
     nonCreditingNotice: 'This generated package contains no accepted migration classification or production authorization.',
@@ -177,7 +186,7 @@ const indexDocument = {
   status: 'HUMAN_REVIEW_REQUIRED',
   inventorySha256,
   inventoryGeneratedAt: inventory.generatedAt,
-  generatedAt: new Date().toISOString(),
+  generatedAt,
   sourceInventoryPath: inventoryPath,
   batchSize,
   packageCount,
