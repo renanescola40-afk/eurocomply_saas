@@ -11,6 +11,8 @@ const DEFAULT_JSON = 'artifacts/eu-ai-act-product-coverage/eu-ai-act-product-cov
 const DEFAULT_MARKDOWN = 'artifacts/eu-ai-act-product-coverage/eu-ai-act-product-coverage.md';
 const ACCEPTED_RUNTIME_STATUS = new Set(['PASS', 'SUCCESS', 'GO', 'VERIFIED']);
 const REPOSITORY = 'renanescola40-afk/eurocomply_saas';
+const LEGAL_RULES_EVIDENCE_ITEM = 'legal-rules-validation';
+const REDACTION_CONFIRMATION = 'Redaction confirmed for runtime evidence.';
 
 function fail(message) { throw new Error(message); }
 
@@ -36,11 +38,14 @@ function runtimeCandidatePaths(path, evidenceRoots) {
 
 export function validateLegalRulesRuntimeEvidenceDocument(document, targetSha) {
   if (!document || typeof document !== 'object') return false;
+  if (document.evidenceItem !== LEGAL_RULES_EVIDENCE_ITEM) return false;
   if (document.schema !== 'risck-comply.legal-rules-runtime-evidence.v1') return false;
   if (document.repository !== REPOSITORY) return false;
   if (document.deploymentSha !== targetSha || !FULL_SHA.test(String(document.deploymentSha || ''))) return false;
   if (String(document.status || '').toUpperCase() !== 'PASS') return false;
+  if (document.countsForRuntimeCoverage !== true) return false;
   if (typeof document.environment !== 'string' || !document.environment || document.environment === 'unknown') return false;
+  if (document.redactionConfirmation !== REDACTION_CONFIRMATION) return false;
   try {
     const deploymentUrl = new URL(document.deploymentUrl);
     const local = deploymentUrl.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(deploymentUrl.hostname);
@@ -58,6 +63,10 @@ export function validateLegalRulesRuntimeEvidenceDocument(document, targetSha) {
   if (document.testCases.some((testCase) => testCase?.status !== 'PASS')) return false;
   if (!Array.isArray(document.requestIds) || document.requestIds.length === 0) return false;
   if (document.requestIds.some((requestId) => !/^[A-Za-z0-9._:-]{8,128}$/.test(String(requestId)))) return false;
+  if (document.evidenceIntegrity?.placeholderOnly !== false) return false;
+  if (document.evidenceIntegrity?.runtimeProofInvented !== false) return false;
+  if (document.evidenceIntegrity?.customerFacingProof !== false) return false;
+  if (document.evidenceIntegrity?.containsSensitiveValues !== false) return false;
   if (typeof document.evidenceBoundary !== 'string' || !document.evidenceBoundary.trim()) return false;
   const { artifactSha256, ...withoutArtifactDigest } = document;
   return artifactSha256 === digest(withoutArtifactDigest);
