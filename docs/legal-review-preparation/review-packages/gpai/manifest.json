@@ -1,0 +1,17 @@
+{
+  "schema":"risck-comply.qualified-review-package.v1","id":"gpai","weight":5,"status":"HUMAN_REVIEW_REQUIRED","acceptedDecisionPath":"docs/compliance/evidence/accepted/gpai-legal-review.json",
+  "reviewQuestions":["Are GPAI and systemic-risk applicability tests defensible?","Are transparency and copyright obligations represented?","Are provider-specific external obligations clearly bounded?"],
+  "scope":["GPAI provider role and open-source exceptions","Articles 53 to 55 documentation, downstream information and copyright controls","training-content summary and systemic-risk obligations","model-level evidence and external evaluation boundaries"],
+  "officialSources":["docs/legal-review-preparation/07_LEGAL_SOURCE_REGISTER.json","Regulation (EU) 2024/1689 Articles 51 to 55","European Commission GPAI guidance and Code of Practice where legally relevant"],
+  "implementationEvidence":["src/server/ai-governance/gpai-compliance.ts","docs/compliance/GPAI_COMPLIANCE_WORKSPACE.md"],
+  "testEvidence":["src/server/ai-governance/gpai-compliance.test.ts"],
+  "runtimeEvidence":["docs/security/evidence/runtime/gpai-validation.json"],
+  "preReviewFindings":[
+    {"id":"GPAI-01","severity":"CRITICAL","status":"READY_FOR_COUNSEL","finding":"The platform cannot determine that a customer is a GPAI provider or that a model has systemic risk solely from questionnaire answers.","requiredDecision":"Approve applicability logic and mandatory evidence/escalation conditions."},
+    {"id":"GPAI-02","severity":"HIGH","status":"READY_FOR_COUNSEL","finding":"Copyright policy, training-content summary and downstream technical information depend on model-provider evidence.","requiredDecision":"Define minimum evidence and permissible product claims."},
+    {"id":"GPAI-03","severity":"HIGH","status":"READY_FOR_COUNSEL","finding":"External evaluation, adversarial testing, incident reporting and cybersecurity duties cannot be proven by repository tests.","requiredDecision":"Confirm external specialist and operational evidence requirements."}
+  ],
+  "acceptanceCriteria":["GPAI role and systemic-risk tests are cautious and evidence-based.","Open-source exceptions are not applied automatically.","Copyright, transparency and downstream-information duties are represented without overclaiming.","Model-level external obligations remain explicit customer/provider responsibilities."],
+  "humanInputsRequired":["EU AI Act GPAI counsel","model-provider and technical evidence criteria","copyright specialist input when needed","signed exact-SHA decision"],
+  "limitations":["The platform does not inspect model weights, training corpora or compute by itself.","Systemic-risk designation and technical adequacy require external evidence.","Questionnaire completion is not proof of GPAI compliance."]
+}

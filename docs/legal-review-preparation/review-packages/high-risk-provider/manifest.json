@@ -1,0 +1,17 @@
+{
+  "schema":"risck-comply.qualified-review-package.v1","id":"high-risk-provider","weight":9,"status":"HUMAN_REVIEW_REQUIRED","acceptedDecisionPath":"docs/compliance/evidence/accepted/high-risk-provider-methodology-review.json",
+  "reviewQuestions":["Does Article 10 data governance coverage remain accurate?","Are bias, representativeness and provenance controls sufficient?","Are evidence limitations explicit?"],
+  "scope":["Articles 9 to 15 provider controls","data governance, provenance, representativeness and bias","risk management, logging, instructions, oversight, accuracy, robustness and cybersecurity","amended high-risk application timelines"],
+  "officialSources":["docs/legal-review-preparation/07_LEGAL_SOURCE_REGISTER.json","Regulation (EU) 2024/1689 Articles 9 to 15","Regulation (EU) 2026/1744 high-risk timeline amendments"],
+  "implementationEvidence":["src/server/ai-governance/high-risk-provider-data-governance.ts","docs/compliance/HIGH_RISK_PROVIDER_DATA_GOVERNANCE.md","src/server/ai-governance/annex-iv-technical-documentation.ts"],
+  "testEvidence":["src/server/ai-governance/high-risk-provider-data-governance.test.ts","src/server/ai-governance/annex-iv-technical-documentation.test.ts"],
+  "runtimeEvidence":["docs/security/evidence/runtime/high-risk-provider-validation.json","docs/security/evidence/runtime/annex-iv-validation.json"],
+  "preReviewFindings":[
+    {"id":"HRP-01","severity":"CRITICAL","status":"READY_FOR_COUNSEL","finding":"The workspace must not imply that completion proves high-risk classification or legal conformity.","requiredDecision":"Approve classification boundary and all user-facing limitations."},
+    {"id":"HRP-02","severity":"HIGH","status":"READY_FOR_COUNSEL","finding":"Dataset adequacy, representativeness and bias controls are context-dependent and cannot be proven by checklist completion.","requiredDecision":"Define minimum evidence and mandatory expert escalation."},
+    {"id":"HRP-03","severity":"HIGH","status":"OPEN","finding":"The amended high-risk timelines require exact article and system-category confirmation.","requiredDecision":"Confirm standalone and product-embedded dates and transition treatment."}
+  ],
+  "acceptanceCriteria":["Articles 9 to 15 controls are mapped without overstating sufficiency.","Data provenance, quality, bias and representativeness limitations are explicit.","High-risk timelines and role scope are correct.","Unresolved technical adequacy requires qualified specialist review."],
+  "humanInputsRequired":["EU AI Act high-risk counsel","relevant technical/domain specialist criteria","approved evidence minimums","signed exact-SHA decision"],
+  "limitations":["Checklist completion does not establish dataset adequacy or system performance.","Classification depends on actual intended purpose and use context.","Technical specialist review may be required in addition to legal review."]
+}

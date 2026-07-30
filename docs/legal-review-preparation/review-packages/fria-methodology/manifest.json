@@ -1,0 +1,17 @@
+{
+  "schema":"risck-comply.qualified-review-package.v1","id":"fria-methodology","weight":6,"status":"HUMAN_REVIEW_REQUIRED","acceptedDecisionPath":"docs/compliance/evidence/accepted/fria-methodology-review.json",
+  "reviewQuestions":["Does the methodology cover relevant fundamental rights?","Are consultation and mitigation requirements explicit?","Are residual-risk decisions properly escalated?"],
+  "scope":["Article 27 applicability","affected groups and rights mapping","consultation, mitigation and residual-impact methodology","approval, evidence and decision ledger"],
+  "officialSources":["docs/legal-review-preparation/07_LEGAL_SOURCE_REGISTER.json","Regulation (EU) 2024/1689 Article 27","Charter of Fundamental Rights of the European Union"],
+  "implementationEvidence":["src/app/api/ai-governance/fria/route.ts","src/app/[locale]/dashboard/fria/page.tsx","src/server/queries/fria.ts"],
+  "testEvidence":["tests/fria-operational-api-contract.test.ts","tests/fria-operational-migration-contract.test.ts"],
+  "runtimeEvidence":["docs/security/evidence/runtime/fria-operational-validation.json"],
+  "preReviewFindings":[
+    {"id":"FRIA-01","severity":"HIGH","status":"READY_FOR_COUNSEL","finding":"Applicability depends on deployer category and actual use context.","requiredDecision":"Approve applicability questions and mandatory escalation cases."},
+    {"id":"FRIA-02","severity":"HIGH","status":"READY_FOR_COUNSEL","finding":"Rights and affected-group taxonomies are decision support, not an exhaustive legal analysis.","requiredDecision":"Confirm minimum rights coverage and required contextual additions."},
+    {"id":"FRIA-03","severity":"HIGH","status":"FOUNDER_FACT_REQUIRED","finding":"Stakeholder consultation and notification operating commitments are not established repository facts.","requiredDecision":"Define product wording and customer-responsibility boundary after founder input."}
+  ],
+  "acceptanceCriteria":["Applicability logic reflects Article 27 scope.","Relevant rights, groups, impacts and mitigations are covered.","Residual high impact cannot be auto-approved.","Consultation and notification boundaries are explicit."],
+  "humanInputsRequired":["fundamental-rights counsel","customer/deployer context assumptions","consultation and notification position","signed exact-SHA decision"],
+  "limitations":["The platform cannot identify every affected group without customer facts.","Residual-impact acceptability is a human decision.","National administrative procedures may differ."]
+}

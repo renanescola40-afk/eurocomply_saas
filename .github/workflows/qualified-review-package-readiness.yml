@@ -1,0 +1,59 @@
+name: Qualified Review Package Readiness
+
+on:
+  pull_request:
+    paths:
+      - 'docs/legal-review-preparation/review-packages/**'
+      - 'docs/legal-review-preparation/QUALIFIED_REVIEW_DECISION_TEMPLATE.json'
+      - 'docs/legal-review-preparation/review-package-schema.v1.json'
+      - 'scripts/compliance/validate-qualified-review-packages.mjs'
+      - 'tests/compliance/qualified-review-packages.test.ts'
+      - '.github/workflows/qualified-review-package-readiness.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/legal-review-preparation/review-packages/**'
+      - 'docs/legal-review-preparation/QUALIFIED_REVIEW_DECISION_TEMPLATE.json'
+      - 'docs/legal-review-preparation/review-package-schema.v1.json'
+      - 'scripts/compliance/validate-qualified-review-packages.mjs'
+      - 'tests/compliance/qualified-review-packages.test.ts'
+      - '.github/workflows/qualified-review-package-readiness.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qualified-review-package-readiness-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-readiness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test package contracts
+        run: npx vitest run tests/compliance/qualified-review-packages.test.ts
+
+      - name: Validate all eight packages
+        run: node scripts/compliance/validate-qualified-review-packages.mjs --strict --write
+
+      - name: Upload readiness artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qualified-review-package-readiness-${{ github.sha }}
+          path: artifacts/legal-review/qualified-review-package-readiness.json
+          if-no-files-found: error
+          retention-days: 30
