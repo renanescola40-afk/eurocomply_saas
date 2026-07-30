@@ -26,12 +26,10 @@ jobs:
     name: Authorize and execute read-only migration dry-run
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    environment: supabase-production-migration-dry-run
     env:
       TARGET_SHA: ${{ inputs.release_sha }}
       SUPABASE_CLI_VERSION: '2.101.0'
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
 
     steps:
       - name: Validate exact confirmation and release SHA
@@ -71,6 +69,10 @@ jobs:
 
       - name: Validate production Supabase configuration
         shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
           for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID; do
@@ -93,6 +95,10 @@ jobs:
 
       - name: Link exact production project
         shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
           supabase link \
@@ -101,6 +107,10 @@ jobs:
 
       - name: Capture remote migration history
         shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
           mkdir -p artifacts/supabase-production-migration-dry-run
@@ -124,6 +134,10 @@ jobs:
 
       - name: Execute Supabase migration dry-run only
         shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
           supabase db push --linked --dry-run \
