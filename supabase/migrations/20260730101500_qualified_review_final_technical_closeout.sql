@@ -6,7 +6,7 @@ create table if not exists public.qualified_review_technical_closeouts (
   campaign_id uuid not null,
   target_sha text not null check (target_sha ~ '^[a-f0-9]{40,64}$'),
   technical_complete boolean not null,
-  human_status text not null check (human_status in ('HUMAN_REVIEW_REQUIRED','HUMAN_EXECUTION_PENDING')),
+  human_status text not null check (human_status in ('HUMAN_EXECUTION_PENDING','HUMAN_EXECUTION_COMPLETE')),
   closeout_digest text not null check (closeout_digest ~ '^[a-f0-9]{64}$'),
   snapshot jsonb not null,
   finalized_by uuid not null references auth.users(id),
@@ -41,7 +41,7 @@ create or replace function public.persist_qualified_review_technical_closeout(
 declare v_id uuid;
 begin
   if auth.role() <> 'service_role' then raise exception 'service_role_required'; end if;
-  if p_human_status not in ('HUMAN_REVIEW_REQUIRED','HUMAN_EXECUTION_PENDING') then raise exception 'invalid_human_status'; end if;
+  if p_human_status not in ('HUMAN_EXECUTION_PENDING','HUMAN_EXECUTION_COMPLETE') then raise exception 'invalid_human_status'; end if;
   update public.qualified_review_technical_closeouts set superseded_at = now()
     where campaign_id = p_campaign_id and organization_id = p_organization_id and superseded_at is null;
   insert into public.qualified_review_technical_closeouts(
