@@ -5,7 +5,7 @@ const sha = 'a'.repeat(40);
 const safeCoverage = {
   repository: 'renanescola40-afk/eurocomply_saas',
   targetSha: sha,
-  scores: { implementationCoverage: 100, ciVerifiedCoverage: 100, runtimeEvidenceCoverage: 84 },
+  scores: { implementationCoverage: 100, ciVerifiedCoverage: 100, runtimeEvidenceCoverage: 80 },
   releaseDecision: 'EU_AI_ACT_PRODUCT_COVERAGE_NO_GO',
 };
 const verified = { status: 'VERIFIED', targetSha: sha, source: 'test' };
@@ -38,6 +38,22 @@ describe('EU AI Act final runtime closeout', () => {
     });
     expect(result.accepted).toEqual(['READINESS-SCORING', 'VENDOR-ASSURANCE']);
     expect(result.failureGroups.platform).toContain('platform proof missing');
+  });
+
+  it('rejects a synthetic baseline that attempts to fall below the deployed-proof boundary', () => {
+    const validation = validateInputs({
+      targetSha: sha,
+      runId: '123',
+      repository: 'renanescola40-afk/eurocomply_saas',
+      safeCoverage: {
+        ...safeCoverage,
+        scores: { ...safeCoverage.scores, runtimeEvidenceCoverage: 79 },
+      },
+      providerProof: verified,
+      platformProof: verified,
+      strict: false,
+    });
+    expect(validation.groups.readiness).toContain('safe runtime coverage must be at least 80');
   });
 
   it('rejects stale cross-SHA provider evidence', () => {
