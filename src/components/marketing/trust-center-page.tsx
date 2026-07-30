@@ -22,6 +22,7 @@ import type { LucideIcon } from 'lucide-react';
 
 import { PublicFooter } from '@/components/marketing/public-footer';
 import { normalizeLocale } from '@/lib/i18n/locales';
+import { getLegalPublicationState } from '@/server/legal/legal-publication-state';
 
 export type TrustPageKind =
   | 'trust'
@@ -90,7 +91,7 @@ type TrustPageContent = {
 };
 
 const SECURITY_EMAIL = 'security@risckcomply.com';
-const LAST_REVIEWED = '26 June 2026';
+const LAST_REVIEWED = '30 July 2026';
 
 const trustCardIcons = [ShieldCheck, Database, Users2, LockKeyhole, Scale, Activity];
 
@@ -273,6 +274,7 @@ function localizeHref(locale: string, href: string) {
 export function TrustCenterPage({ locale, kind }: { locale: string; kind: TrustPageKind }) {
   const content = PAGE_CONTENT[kind] ?? PAGE_CONTENT.trust;
   const prefix = getLocalizedPrefix(locale);
+  const legalPublication = getLegalPublicationState();
 
   return (
     <main className="min-h-screen bg-[#050505] text-white">
@@ -296,6 +298,10 @@ export function TrustCenterPage({ locale, kind }: { locale: string; kind: TrustP
               {content.summary.map((item) => (
                 <p key={item} className="text-sm leading-7 text-white/58">{item}</p>
               ))}
+            </div>
+            <div className="mt-6 rounded-2xl border border-amber-200/20 bg-amber-200/[0.06] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/80">{legalPublication.label}</p>
+              <p className="mt-2 text-xs leading-6 text-white/52">{legalPublication.notice}</p>
             </div>
             <p className="mt-6 text-xs leading-6 text-white/36">Last reviewed: {LAST_REVIEWED}. Certification claims are shown only when evidence exists.</p>
           </aside>

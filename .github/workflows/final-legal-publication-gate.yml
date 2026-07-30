@@ -1,0 +1,83 @@
+name: Final Legal Publication Gate
+
+on:
+  pull_request:
+    paths:
+      - 'src/server/legal/**'
+      - 'src/components/marketing/trust-center-page.tsx'
+      - 'docs/legal-review-preparation/**'
+      - 'docs/compliance/evidence/accepted/**'
+      - 'scripts/compliance/check-final-legal-publication-gate.mjs'
+      - 'scripts/compliance/generate-legal-counsel-handoff-bundle.mjs'
+      - 'tests/legal-publication-state.test.ts'
+      - 'tests/compliance/final-legal-publication-gate.test.ts'
+      - '.github/workflows/final-legal-publication-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/server/legal/**'
+      - 'src/components/marketing/trust-center-page.tsx'
+      - 'docs/legal-review-preparation/**'
+      - 'docs/compliance/evidence/accepted/**'
+      - 'scripts/compliance/check-final-legal-publication-gate.mjs'
+      - 'scripts/compliance/generate-legal-counsel-handoff-bundle.mjs'
+      - 'tests/legal-publication-state.test.ts'
+      - 'tests/compliance/final-legal-publication-gate.test.ts'
+      - '.github/workflows/final-legal-publication-gate.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: final-legal-publication-gate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publication-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      LEGAL_PUBLICATION_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint legal publication changes
+        run: npm run lint
+
+      - name: Typecheck legal publication changes
+        run: npm run typecheck
+
+      - name: Test fail-closed legal publication state
+        run: npx vitest run tests/legal-publication-state.test.ts tests/compliance/final-legal-publication-gate.test.ts
+
+      - name: Build application with review-draft state
+        run: npm run build
+
+      - name: Validate truthful publication status
+        run: node scripts/compliance/check-final-legal-publication-gate.mjs --strict --write
+
+      - name: Generate exact-SHA counsel handoff bundle
+        run: node scripts/compliance/generate-legal-counsel-handoff-bundle.mjs --strict --write
+
+      - name: Upload legal publication artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-legal-publication-gate-${{ env.LEGAL_PUBLICATION_EXPECTED_SHA }}
+          path: |
+            artifacts/legal-review/final-legal-publication-gate.json
+            artifacts/legal-review/counsel-handoff-bundle.json
+            artifacts/legal-review/counsel-handoff-bundle.md
+          if-no-files-found: error
+          retention-days: 30
