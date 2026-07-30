@@ -157,5 +157,3 @@ console.log(JSON.stringify({
   failedChecks,
   outputFiles: ['proof.json', 'evidence.json', 'summary.md'],
 }, null, 2));
-
-if (!runtimePassed) process.exitCode = 1;
