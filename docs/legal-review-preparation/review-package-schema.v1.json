@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "risck-comply.qualified-review-package.v1",
+  "title": "Risck Comply Qualified Review Package",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "weight",
+    "status",
+    "acceptedDecisionPath",
+    "reviewQuestions",
+    "scope",
+    "officialSources",
+    "implementationEvidence",
+    "testEvidence",
+    "runtimeEvidence",
+    "preReviewFindings",
+    "acceptanceCriteria",
+    "humanInputsRequired",
+    "limitations"
+  ],
+  "properties": {
+    "schema": { "const": "risck-comply.qualified-review-package.v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "weight": { "type": "number", "minimum": 0, "maximum": 100 },
+    "status": { "const": "HUMAN_REVIEW_REQUIRED" },
+    "acceptedDecisionPath": { "type": "string", "pattern": "^docs/compliance/evidence/accepted/.+\\.json$" },
+    "reviewQuestions": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "scope": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "officialSources": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "implementationEvidence": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "testEvidence": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "runtimeEvidence": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "preReviewFindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "severity", "status", "finding", "requiredDecision"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "severity": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+          "status": { "enum": ["OPEN", "READY_FOR_COUNSEL", "ENGINEERING_ACTION_REQUIRED", "FOUNDER_FACT_REQUIRED"] },
+          "finding": { "type": "string", "minLength": 1 },
+          "requiredDecision": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "acceptanceCriteria": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "humanInputsRequired": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "limitations": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+  }
+}
