@@ -1,0 +1,122 @@
+{
+  "schema": "risck-comply.legal-source-register.v1",
+  "version": "2026-07-30.1",
+  "verifiedAt": "2026-07-30",
+  "status": "AI_PRE_REVIEW_COMPLETE_HUMAN_CONFIRMATION_REQUIRED",
+  "digestPolicy": "referenceDigest hashes the canonical CELEX/ELI/publication tuple. A source-content capture digest remains required before final counsel handoff.",
+  "sources": [
+    {
+      "id": "eu-ai-act-2024-1689",
+      "title": "Regulation (EU) 2024/1689 (Artificial Intelligence Act)",
+      "sourceType": "binding_law",
+      "authority": "EUR-Lex",
+      "celex": "32024R1689",
+      "eli": "http://data.europa.eu/eli/reg/2024/1689/oj",
+      "officialUrl": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj?locale=en",
+      "officialJournalDate": "2024-07-12",
+      "legalStatus": "IN_FORCE_AS_AMENDED",
+      "verifiedAt": "2026-07-30",
+      "referenceDigestSha256": "c4fb917a1371c9f18f1f74fa9a88f34bd5367520c131c7024ffed916749a3785",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
+      "notes": "Read together with Regulation (EU) 2026/1744 and applicable corrigenda, delegated acts and implementing acts."
+    },
+    {
+      "id": "eu-ai-omnibus-2026-1744",
+      "title": "Regulation (EU) 2026/1744 (Digital Omnibus on AI)",
+      "sourceType": "binding_law",
+      "authority": "EUR-Lex",
+      "celex": "32026R1744",
+      "eli": "http://data.europa.eu/eli/reg/2026/1744/oj",
+      "officialUrl": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32026R1744",
+      "officialJournalDate": "2026-07-24",
+      "entryIntoForceDate": "2026-07-27",
+      "legalStatus": "IN_FORCE",
+      "verifiedAt": "2026-07-30",
+      "referenceDigestSha256": "a0d760910d9ada69370181589c84f961e47ced4ddcd35ace4f03bbd9540173db",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
+      "knownProductImpact": [
+        "Article 5 additions and application from 2026-12-02",
+        "Article 50(2) transition for qualifying pre-existing systems until 2026-12-02",
+        "Annex III high-risk application from 2027-12-02",
+        "Annex I high-risk application from 2028-08-02"
+      ]
+    },
+    {
+      "id": "gdpr-2016-679",
+      "title": "Regulation (EU) 2016/679 (GDPR)",
+      "sourceType": "binding_law",
+      "authority": "EUR-Lex",
+      "celex": "32016R0679",
+      "eli": "http://data.europa.eu/eli/reg/2016/679/oj",
+      "officialUrl": "https://eur-lex.europa.eu/legal-content/PT/TXT/?uri=CELEX:32016R0679",
+      "officialJournalDate": "2016-05-04",
+      "legalStatus": "IN_FORCE_AS_AMENDED",
+      "verifiedAt": "2026-07-30",
+      "referenceDigestSha256": "f13d78f6152e50fd18e6921eea9884f6e5080dc07b8531e78fbfa6a30e4aa043",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE"
+    },
+    {
+      "id": "portugal-law-58-2019",
+      "title": "Lei n.º 58/2019, de 8 de agosto",
+      "sourceType": "binding_law",
+      "authority": "Diário da República",
+      "officialUrl": "https://diariodarepublica.pt/dr/detalhe/lei/58-2019-123815982",
+      "publicationDate": "2019-08-08",
+      "legalStatus": "IN_FORCE_REQUIRES_CONSOLIDATED_CHECK",
+      "verifiedAt": "2026-07-30",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
+      "notes": "Portuguese execution law for GDPR."
+    },
+    {
+      "id": "eprivacy-directive-2002-58",
+      "title": "Directive 2002/58/EC",
+      "sourceType": "binding_law",
+      "authority": "EUR-Lex",
+      "celex": "32002L0058",
+      "eli": "http://data.europa.eu/eli/dir/2002/58/oj",
+      "officialUrl": "https://eur-lex.europa.eu/eli/dir/2002/58/oj?locale=pt",
+      "officialJournalDate": "2002-07-31",
+      "legalStatus": "IN_FORCE_AS_AMENDED",
+      "verifiedAt": "2026-07-30",
+      "referenceDigestSha256": "4cd4be36729022dde14d4be279d5e36a9e4f49ce5114ed212f44c7fbb01f6471",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE"
+    },
+    {
+      "id": "portugal-law-41-2004",
+      "title": "Lei n.º 41/2004, de 18 de agosto",
+      "sourceType": "binding_law",
+      "authority": "Diário da República",
+      "officialUrl": "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2004-106523049",
+      "publicationDate": "2004-08-18",
+      "lastConsolidatedChangeShown": "2022-08-16",
+      "legalStatus": "IN_FORCE_CONSOLIDATED_VERSION_INFORMATIONAL",
+      "verifiedAt": "2026-07-30",
+      "contentDigestSha256": null,
+      "contentDigestStatus": "PENDING_AUTOMATED_SOURCE_CAPTURE",
+      "notes": "Verify originating amendment acts because the consolidated presentation is informational."
+    }
+  ],
+  "sourcesToAddAfterApplicabilityTest": [
+    "Portuguese e-commerce and advertising rules",
+    "Portuguese contract law for B2B SaaS",
+    "Portuguese Bar professional rules",
+    "NIS2",
+    "DORA",
+    "Data Act",
+    "Cyber Resilience Act",
+    "European Accessibility Act and Portuguese implementation",
+    "consumer law if B2C is enabled",
+    "sector-specific rules for customer use cases"
+  ],
+  "sourceRules": [
+    "Do not treat guidance or FAQs as binding law.",
+    "Record divergence between official sources.",
+    "Refresh when legal rules, intended purpose or product role changes.",
+    "Require qualified counsel decision for ambiguous application or interpretation."
+  ]
+}

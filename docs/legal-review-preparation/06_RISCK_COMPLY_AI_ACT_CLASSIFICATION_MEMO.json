@@ -1,0 +1,87 @@
+{
+  "schema": "risck-comply.ai-act-product-classification-pre-review.v1",
+  "version": "2026-07-30.1",
+  "status": "AI_PRE_REVIEW_ONLY",
+  "legalReviewStatus": "HUMAN_REVIEW_REQUIRED",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "sourceSha": "fbc61f3a5f069c23f9bc307789d12a53b5f87d34",
+  "legalBaseline": "Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744",
+  "productCharacterisation": {
+    "primaryCategory": "B2B compliance operations software",
+    "wholeProductAiSystemConclusion": "NOT_ESTABLISHED",
+    "wholeProductHighRiskConclusion": "NOT_ESTABLISHED",
+    "preliminaryPosition": "Predominantly deterministic software; module-level AI-system assessment required for model-backed inference, recommendations, classification suggestions or generated content."
+  },
+  "moduleClasses": [
+    {
+      "class": "crud_workflow_rbac_audit",
+      "preliminaryCharacterisation": "CONVENTIONAL_SOFTWARE",
+      "reviewRequired": true
+    },
+    {
+      "class": "versioned_legal_rules",
+      "preliminaryCharacterisation": "DETERMINISTIC_RULE_SYSTEM",
+      "reviewRequired": true
+    },
+    {
+      "class": "readiness_and_risk_scoring",
+      "preliminaryCharacterisation": "TECHNICAL_LOGIC_REVIEW_REQUIRED",
+      "reviewRequired": true
+    },
+    {
+      "class": "template_document_assembly",
+      "preliminaryCharacterisation": "CONVENTIONAL_UNLESS_MODEL_INFERENCE_USED",
+      "reviewRequired": true
+    },
+    {
+      "class": "generative_drafting_or_recommendations",
+      "preliminaryCharacterisation": "POTENTIAL_AI_SYSTEM",
+      "reviewRequired": true
+    }
+  ],
+  "potentialRoles": [
+    "software_supplier_outside_ai_system_scope_for_some_modules",
+    "deployer",
+    "provider",
+    "downstream_provider",
+    "integrator",
+    "distributor"
+  ],
+  "roleDecisionFactors": [
+    "actual model integration",
+    "branding and placing on the market",
+    "intended purpose",
+    "fine-tuning or substantial modification",
+    "control over model behaviour",
+    "contractual allocation",
+    "effect of outputs on persons or environments"
+  ],
+  "highRiskPosition": {
+    "status": "CONDITIONAL_NOT_ESTABLISHED",
+    "rationale": "The intended purpose is compliance evidence and workflow support, not final decisions in Annex III sensitive contexts.",
+    "prohibitedProductBehaviour": [
+      "final employment decisions",
+      "final credit decisions",
+      "final education decisions",
+      "final essential-service eligibility decisions",
+      "law-enforcement or migration decisions",
+      "biometric identification or categorisation decisions"
+    ]
+  },
+  "article5Status": "HUMAN_REVIEW_REQUIRED",
+  "article50Status": "HUMAN_REVIEW_REQUIRED",
+  "gpaiStatus": "MODEL_PROVIDER_AND_INTEGRATION_FACTS_REQUIRED",
+  "formalConformityStatus": "NOT_ASSESSED",
+  "customerSpecificComplianceStatus": "NOT_ASSESSED",
+  "counselQuestions": [
+    "Do you agree with the product characterisation?",
+    "Do you agree that the intended purpose is support and evidence preparation rather than final decision-making?",
+    "Which current modules constitute AI systems?",
+    "Does any current module create high-risk exposure?",
+    "Could integration, rebranding, fine-tuning or substantial modification make Risck Comply a provider or downstream provider?",
+    "Which mandatory disclosures and disclaimers apply?",
+    "Which features must be blocked, restricted or escalated?",
+    "Does Regulation (EU) 2026/1744 change any proposed position?",
+    "Do Portuguese national rules add obligations or professional boundaries?"
+  ]
+}
