@@ -116,18 +116,46 @@ jobs:
           test -s artifacts/stripe-runtime-proof/catalog.txt
 
       - name: Build sanitized proof
+        id: build_proof
+        continue-on-error: true
         run: node scripts/enterprise/build-stripe-runtime-proof.mjs artifacts/stripe-runtime-proof/catalog.txt
 
-      - name: Publish bounded summary
-        run: cat artifacts/stripe-runtime-proof/summary.md >> "$GITHUB_STEP_SUMMARY"
-
       - name: Remove raw correlated catalog
-        run: rm artifacts/stripe-runtime-proof/catalog.txt
+        if: always()
+        shell: bash
+        run: rm -f artifacts/stripe-runtime-proof/catalog.txt
+
+      - name: Finalize sanitized proof
+        id: finalize_proof
+        if: always()
+        continue-on-error: true
+        run: node scripts/enterprise/finalize-stripe-runtime-proof.mjs artifacts/stripe-runtime-proof
+
+      - name: Publish bounded summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f artifacts/stripe-runtime-proof/summary.md ]]; then
+            cat artifacts/stripe-runtime-proof/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '## Stripe entitlement runtime proof' >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo 'The sanitized proof could not be assembled. Inspect the failed collection/build step.' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload retained proof
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: stripe-entitlement-runtime-proof-${{ inputs.release_sha }}
           path: artifacts/stripe-runtime-proof
           retention-days: 90
-          if-no-files-found: error
+          if-no-files-found: warn
+
+      - name: Enforce proof decision
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.build_proof.outcome }}" = "success"
+          test "${{ steps.finalize_proof.outcome }}" = "success"
