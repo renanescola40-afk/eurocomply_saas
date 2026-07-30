@@ -1,0 +1,17 @@
+{
+  "schema":"risck-comply.qualified-review-package.v1","id":"conformity","weight":5,"status":"HUMAN_REVIEW_REQUIRED","acceptedDecisionPath":"docs/compliance/evidence/accepted/conformity-qualified-review.json",
+  "reviewQuestions":["Are conformity pathways and prerequisites correctly modeled?","Are CE marking and registration gates non-automatic?","Are notified-body dependencies correctly represented?"],
+  "scope":["conformity-assessment pathways for applicable high-risk systems","EU declaration of conformity, CE marking and registration sequence","notified-body and product-sector dependencies","evidence and approval gates preventing false completion"],
+  "officialSources":["docs/legal-review-preparation/07_LEGAL_SOURCE_REGISTER.json","Regulation (EU) 2024/1689 Articles 43, 47 to 49","applicable Annex VI or VII pathways and product-sector legislation"],
+  "implementationEvidence":["src/server/ai-governance/conformity-assessment.ts","docs/compliance/CONFORMITY_DECLARATION_CE_REGISTRATION.md"],
+  "testEvidence":["src/server/ai-governance/conformity-assessment.test.ts"],
+  "runtimeEvidence":["docs/security/evidence/runtime/conformity-validation.json"],
+  "preReviewFindings":[
+    {"id":"CONF-01","severity":"CRITICAL","status":"READY_FOR_COUNSEL","finding":"The platform must never issue or imply formal conformity, CE marking or registration authority.","requiredDecision":"Approve fail-closed gates and all non-certification wording."},
+    {"id":"CONF-02","severity":"HIGH","status":"READY_FOR_COUNSEL","finding":"Applicable pathway depends on system category, harmonised standards, common specifications and sector law.","requiredDecision":"Confirm decision inputs and mandatory external-assessor escalation."},
+    {"id":"CONF-03","severity":"HIGH","status":"FOUNDER_FACT_REQUIRED","finding":"Commercial materials and contracts must describe conformity support consistently.","requiredDecision":"Align approved claims and contractual scope after founder facts are confirmed."}
+  ],
+  "acceptanceCriteria":["No automatic conformity or CE outcome exists.","Pathway prerequisites and notified-body dependencies are accurate.","Registration follows only after valid external prerequisites.","Marketing and contract wording matches the technical boundary."],
+  "humanInputsRequired":["EU product/conformity counsel","notified-body or sector-specialist input when applicable","approved commercial scope","signed exact-SHA decision"],
+  "limitations":["Risck Comply is not a notified body or market-surveillance authority.","The product cannot issue a declaration of conformity or CE marking.","External standards and sector-law evidence remain outside repository proof."]
+}
