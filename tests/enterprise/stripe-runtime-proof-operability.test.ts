@@ -24,12 +24,11 @@ describe('Stripe runtime proof operability', () => {
   });
 
   it('retains sanitized diagnostics before enforcing a failed decision', () => {
-    expect(workflow).toContain('id: build_proof');
-    expect(workflow).toContain('continue-on-error: true');
-    expect(workflow).toContain('if: always()');
+    expect(workflow).not.toContain('continue-on-error');
     expect(workflow).toContain('finalize-stripe-runtime-proof.mjs');
     expect(workflow).toContain('Upload retained proof');
     expect(workflow).toContain('Enforce proof decision');
+    expect(workflow).toContain("evidence.status !== 'Complete'");
     expect(workflow.indexOf('Upload retained proof')).toBeLessThan(workflow.indexOf('Enforce proof decision'));
   });
 });
