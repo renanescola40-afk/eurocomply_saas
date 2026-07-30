@@ -1,0 +1,150 @@
+{
+  "schema": "risck-comply.legal-baseline-truth-report.v1",
+  "generatedAt": "2026-07-30T16:40:00.000Z",
+  "generationMode": "connector_verified_bootstrap",
+  "repository": "renanescola40-afk/eurocomply_saas",
+  "sourceSha": "fbc61f3a5f069c23f9bc307789d12a53b5f87d34",
+  "defaultBranch": "main",
+  "openRelevantPullRequests": [],
+  "openNonConflictingPullRequests": [
+    {
+      "number": 1402,
+      "scope": [
+        "src/server/ai-governance/digital-twin-impact-service.ts",
+        "tests/digital-twin-impact-service.test.ts"
+      ],
+      "conflictsWithLegalPreparation": false
+    }
+  ],
+  "legalSourceBaseline": {
+    "primaryRegulation": "Regulation (EU) 2024/1689",
+    "amendingRegulation": "Regulation (EU) 2026/1744",
+    "celex": "32026R1744",
+    "officialJournalPublicationDate": "2026-07-24",
+    "entryIntoForceDate": "2026-07-27",
+    "repositoryLegalRulesVersion": "2026-07-30.1",
+    "repositoryLastVerifiedDate": "2026-07-30",
+    "sourceUpdateStatus": "IMPLEMENTED_AND_REQUIRES_COUNSEL_CONFIRMATION"
+  },
+  "coverageRegistry": {
+    "workstreams": 16,
+    "totalWeight": 100,
+    "qualifiedReviewPackages": 8,
+    "qualifiedReviewWeight": 51
+  },
+  "humanReviewTruth": {
+    "expectedAcceptedEvidenceFiles": 8,
+    "presentAcceptedEvidenceFiles": 0,
+    "validAcceptedEvidenceFiles": 0,
+    "acceptedWeight": 0,
+    "humanLegalAcceptancePercent": 0,
+    "status": "HUMAN_REVIEW_REQUIRED",
+    "counselAccepted": false
+  },
+  "acceptedEvidenceChecks": [
+    {
+      "id": "legal-rules",
+      "weight": 4,
+      "path": "docs/compliance/evidence/accepted/legal-rules-qualified-review.json",
+      "result": "MISSING"
+    },
+    {
+      "id": "prohibited-practices",
+      "weight": 7,
+      "path": "docs/compliance/evidence/accepted/prohibited-practices-legal-review.json",
+      "result": "MISSING"
+    },
+    {
+      "id": "article-50-copy",
+      "weight": 8,
+      "path": "docs/compliance/evidence/accepted/article-50-copy-review.json",
+      "result": "MISSING"
+    },
+    {
+      "id": "fria-methodology",
+      "weight": 6,
+      "path": "docs/compliance/evidence/accepted/fria-methodology-review.json",
+      "result": "MISSING"
+    },
+    {
+      "id": "deployer-obligations",
+      "weight": 7,
+      "path": "docs/compliance/evidence/accepted/deployer-obligations-legal-review.json",
+      "result": "MISSING"
+    },
+    {
+      "id": "high-risk-provider",
+      "weight": 9,
+      "path": "docs/compliance/evidence/accepted/high-risk-provider-methodology-review.json",
+      "result": "MISSING"
+    },
+    {
+      "id": "conformity",
+      "weight": 5,
+      "path": "docs/compliance/evidence/accepted/conformity-qualified-review.json",
+      "result": "MISSING"
+    },
+    {
+      "id": "gpai",
+      "weight": 5,
+      "path": "docs/compliance/evidence/accepted/gpai-legal-review.json",
+      "result": "MISSING"
+    }
+  ],
+  "knownMissingReferencedArtifacts": [
+    "artifacts/enterprise-readiness/enterprise-readiness-scorecard.json",
+    "docs/compliance/evidence/accepted/legal-rules-qualified-review.json",
+    "docs/compliance/evidence/accepted/prohibited-practices-legal-review.json",
+    "docs/compliance/evidence/accepted/article-50-copy-review.json",
+    "docs/compliance/evidence/accepted/fria-methodology-review.json",
+    "docs/compliance/evidence/accepted/deployer-obligations-legal-review.json",
+    "docs/compliance/evidence/accepted/high-risk-provider-methodology-review.json",
+    "docs/compliance/evidence/accepted/conformity-qualified-review.json",
+    "docs/compliance/evidence/accepted/gpai-legal-review.json"
+  ],
+  "scorecardTruth": {
+    "coverageRegistryPathsAreEvidence": false,
+    "templateFilesAreEvidence": false,
+    "aiGeneratedApprovalIsEvidence": false,
+    "articleMatrixHumanReviewRowsAreCurrentlyMarkedHumanReviewRequired": true,
+    "knownFalseHumanCreditDetected": false,
+    "enterpriseReadinessArtifactPresent": false
+  },
+  "metrics": {
+    "implementationCoverage": "COMPUTED_BY_LEGAL_TRUTH_AUDIT_IN_CI",
+    "testCoverage": "COMPUTED_BY_LEGAL_TRUTH_AUDIT_IN_CI",
+    "runtimeEvidenceCoverage": "COMPUTED_BY_LEGAL_TRUTH_AUDIT_IN_CI",
+    "sourceCurrencyCoverage": "CURRENT_PRIMARY_AMENDING_REGULATION_REGISTERED",
+    "contractDraftCompleteness": 0,
+    "founderFactCompleteness": 0,
+    "aiPreReviewCompleteness": "IN_PROGRESS",
+    "readyForCounselCoverage": "IN_PROGRESS",
+    "realHumanReviewCoverage": 0,
+    "customerSpecificCompliance": "NOT_ASSESSED",
+    "formalConformity": "NOT_ASSESSED"
+  },
+  "blockers": {
+    "controlled": [
+      "generate deterministic full path audit in CI",
+      "create product dossier and intended purpose",
+      "create product classification memo",
+      "create source register and article-function-evidence matrix",
+      "prepare eight qualified review packages"
+    ],
+    "founderFacts": [
+      "legal entity identity",
+      "commercial terms",
+      "active subprocessors and regions",
+      "support and incident commitments"
+    ],
+    "human": [
+      "qualified independent counsel review of eight packages",
+      "counsel confirmation of product classification and legal positions"
+    ],
+    "externalOrCustomer": [
+      "customer-specific assessment",
+      "formal conformity assessment when legally applicable"
+    ]
+  },
+  "status": "READY_FOR_COUNSEL_PREPARATION_IN_PROGRESS"
+}

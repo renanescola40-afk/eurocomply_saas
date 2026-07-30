@@ -1,0 +1,71 @@
+name: Legal truth audit
+
+on:
+  pull_request:
+    paths:
+      - 'docs/compliance/**'
+      - 'docs/legal-review-preparation/**'
+      - 'scripts/compliance/legal-truth-audit.mjs'
+      - 'scripts/compliance/run-legal-truth-audit.mjs'
+      - 'tests/compliance/legal-truth-audit.test.ts'
+      - 'tests/compliance/run-legal-truth-audit.test.ts'
+      - '.github/workflows/legal-truth-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/compliance/**'
+      - 'docs/legal-review-preparation/**'
+      - 'scripts/compliance/legal-truth-audit.mjs'
+      - 'scripts/compliance/run-legal-truth-audit.mjs'
+      - 'tests/compliance/legal-truth-audit.test.ts'
+      - 'tests/compliance/run-legal-truth-audit.test.ts'
+      - '.github/workflows/legal-truth-audit.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legal-truth-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  truth-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test legal evidence gates
+        run: npx vitest run tests/compliance/legal-truth-audit.test.ts tests/compliance/run-legal-truth-audit.test.ts
+
+      - name: Run strict truth audit
+        env:
+          LEGAL_AUDIT_SOURCE_SHA: ${{ github.sha }}
+        run: node scripts/compliance/run-legal-truth-audit.mjs --strict
+
+      - name: Generate non-crediting report artifact
+        if: always()
+        env:
+          LEGAL_AUDIT_SOURCE_SHA: ${{ github.sha }}
+        run: node scripts/compliance/run-legal-truth-audit.mjs --write
+
+      - name: Upload baseline report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legal-baseline-truth-${{ github.sha }}
+          path: |
+            docs/legal-review-preparation/00_BASELINE_TRUTH_REPORT.json
+            docs/legal-review-preparation/00_BASELINE_TRUTH_REPORT.md
+          if-no-files-found: error
+          retention-days: 30

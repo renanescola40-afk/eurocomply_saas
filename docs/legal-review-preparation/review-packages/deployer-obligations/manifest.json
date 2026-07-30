@@ -1,0 +1,17 @@
+{
+  "schema":"risck-comply.qualified-review-package.v1","id":"deployer-obligations","weight":7,"status":"HUMAN_REVIEW_REQUIRED","acceptedDecisionPath":"docs/compliance/evidence/accepted/deployer-obligations-legal-review.json",
+  "reviewQuestions":["Are deployer duties separated from provider duties?","Are monitoring and human oversight obligations complete?","Are national-law dependencies identified?"],
+  "scope":["Article 26 deployer obligations","instructions for use, human oversight, monitoring and logs","workplace, public-authority and affected-person dependencies","incident and escalation boundaries"],
+  "officialSources":["docs/legal-review-preparation/07_LEGAL_SOURCE_REGISTER.json","Regulation (EU) 2024/1689 Article 26","Regulation (EU) 2024/1689 Articles 72 and 73 where relevant"],
+  "implementationEvidence":["src/server/ai-governance/deployer-obligations.ts","docs/compliance/DEPLOYER_OBLIGATIONS_WORKSPACE.md","src/app/api/ai-incidents/route.ts"],
+  "testEvidence":["src/server/ai-governance/deployer-obligations.test.ts","tests/security/incident-operations-evidence.test.ts"],
+  "runtimeEvidence":["docs/security/evidence/runtime/deployer-obligations-validation.json","docs/security/evidence/release/incident-response-validation.json"],
+  "preReviewFindings":[
+    {"id":"DEP-01","severity":"HIGH","status":"READY_FOR_COUNSEL","finding":"Provider and deployer duties share technical controls but must remain legally distinct.","requiredDecision":"Approve role allocation and prevent cross-role completion claims."},
+    {"id":"DEP-02","severity":"HIGH","status":"READY_FOR_COUNSEL","finding":"Monitoring, oversight and log-retention sufficiency depends on actual deployment and instructions.","requiredDecision":"Define minimum workflow requirements and escalation triggers."},
+    {"id":"DEP-03","severity":"HIGH","status":"FOUNDER_FACT_REQUIRED","finding":"Support, incident and customer-responsibility commitments are not fully established facts.","requiredDecision":"Align legal package with approved commercial and operational commitments."}
+  ],
+  "acceptanceCriteria":["Deployer duties are not conflated with provider duties.","Instructions, oversight, monitoring, logs and escalation are covered.","National and employment-law dependencies are explicit.","Customer responsibility statements are non-misleading."],
+  "humanInputsRequired":["EU AI Act deployer counsel","supported customer roles and use cases","operational support commitments","signed exact-SHA decision"],
+  "limitations":["The platform cannot prove real-world monitoring or human oversight effectiveness.","Employment and national public-law requirements require local advice.","Customer instructions and system facts remain external evidence."]
+}

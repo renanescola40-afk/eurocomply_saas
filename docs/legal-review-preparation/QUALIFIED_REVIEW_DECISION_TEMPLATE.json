@@ -1,0 +1,23 @@
+{
+  "schema": "risck-comply.qualified-review-decision.v1",
+  "status": "HUMAN_REVIEW_REQUIRED",
+  "reviewPackageId": "TO_BE_COMPLETED_BY_QUALIFIED_REVIEWER",
+  "reviewerName": "TO_BE_COMPLETED_BY_QUALIFIED_REVIEWER",
+  "professionalRegistration": "TO_BE_COMPLETED_BY_QUALIFIED_REVIEWER",
+  "jurisdiction": "TO_BE_COMPLETED_BY_QUALIFIED_REVIEWER",
+  "qualificationScope": "TO_BE_COMPLETED_BY_QUALIFIED_REVIEWER",
+  "conflictAssessment": "TO_BE_COMPLETED_BY_QUALIFIED_REVIEWER",
+  "independenceDeclaration": "TO_BE_COMPLETED_BY_QUALIFIED_REVIEWER",
+  "reviewScope": "TO_BE_COMPLETED_BY_QUALIFIED_REVIEWER",
+  "productSha": "TO_BE_BOUND_TO_EXACT_REVIEWED_SHA",
+  "evidencePackageDigest": "TO_BE_BOUND_TO_IMMUTABLE_PACKAGE_DIGEST",
+  "decision": "HUMAN_REVIEW_REQUIRED",
+  "findings": [],
+  "conditions": [],
+  "validityStart": null,
+  "validityEnd": null,
+  "signedArtifactReference": null,
+  "decisionDigest": null,
+  "timestamp": null,
+  "nonCreditingNotice": "This template is not evidence and must never be counted as an accepted legal review."
+}

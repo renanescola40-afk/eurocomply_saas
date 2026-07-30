@@ -1,0 +1,17 @@
+{
+  "schema":"risck-comply.qualified-review-package.v1","id":"prohibited-practices","weight":7,"status":"HUMAN_REVIEW_REQUIRED","acceptedDecisionPath":"docs/compliance/evidence/accepted/prohibited-practices-legal-review.json",
+  "reviewQuestions":["Are Article 5 triggers and exceptions correctly represented?","Are ambiguous cases escalated rather than auto-approved?","Are prohibited outcomes fail-closed?"],
+  "scope":["Article 5 signal taxonomy and amended 2026 prohibitions","exception evidence and legal escalation","approval and decision ledger","fail-closed handling of unresolved facts"],
+  "officialSources":["docs/legal-review-preparation/07_LEGAL_SOURCE_REGISTER.json","Regulation (EU) 2024/1689 Article 5","Regulation (EU) 2026/1744 Article 1(7)"],
+  "implementationEvidence":["src/app/api/ai-governance/prohibited-practices/route.ts","src/server/queries/prohibited-practices.ts","src/server/ai-governance/legal-rules.ts"],
+  "testEvidence":["tests/prohibited-practices-operational-api-contract.test.ts","tests/prohibited-practices-operational-migration-contract.test.ts","src/server/ai-governance/decision-engine.test.ts"],
+  "runtimeEvidence":["docs/security/evidence/runtime/prohibited-practices-validation.json"],
+  "preReviewFindings":[
+    {"id":"PP-01","severity":"CRITICAL","status":"READY_FOR_COUNSEL","finding":"Article 5 outcomes can have market-access consequences and cannot be treated as final without legal review.","requiredDecision":"Confirm triggers, exceptions, burden of evidence and mandatory escalation."},
+    {"id":"PP-02","severity":"HIGH","status":"READY_FOR_COUNSEL","finding":"The 2026 intimate-material amendments introduce purpose, consent, safeguard and without-right conditions.","requiredDecision":"Validate each condition and the date-bound activation logic."},
+    {"id":"PP-03","severity":"HIGH","status":"OPEN","finding":"Exact-SHA production evidence is not accepted for the reviewed version.","requiredDecision":"Make runtime recapture a condition of acceptance."}
+  ],
+  "acceptanceCriteria":["Prohibited findings fail closed.","Exceptions require explicit evidence and qualified review.","Amended provisions activate on the correct date.","Decision is bound to exact SHA and digest."],
+  "humanInputsRequired":["EU AI Act counsel identity and registration","article-level interpretation","exception and escalation decision","signed decision and validity"],
+  "limitations":["Workflow outcomes are not legal determinations.","Contested intent, consent and factual purpose require human assessment.","Customer use facts are outside this repository package."]
+}
