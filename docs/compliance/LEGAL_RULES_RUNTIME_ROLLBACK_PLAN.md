@@ -2,7 +2,7 @@
 
 ## Scope
 
-Rollback of the 2026-07-30 legal-rules source refresh, deterministic runtime proof endpoint, coverage acceptance policy and related evidence automation.
+Rollback of the 2026-07-30 legal-rules source refresh, deterministic protected runtime proof endpoint, coverage acceptance policy and related evidence automation.
 
 No database schema or customer-data migration is introduced by this package.
 
@@ -11,6 +11,7 @@ No database schema or customer-data migration is introduced by this package.
 - qualified review identifies a material error in the mapped article, legal role, exception or application date;
 - runtime evidence differs from deterministic test expectations;
 - the endpoint exposes unintended data or creates material availability risk;
+- internal authentication or rate limiting does not fail closed;
 - release metadata binds the endpoint to the wrong SHA;
 - CI discovers a regression in the canonical decision engine;
 - the deployment cannot be restored to a known-good state.
@@ -21,12 +22,13 @@ No database schema or customer-data migration is introduced by this package.
 2. Disable or roll back the affected deployment through the platform's normal immutable-deployment mechanism.
 3. Preserve the failed artifact, workflow run ID, request ID, deployment URL and SHA as incident evidence.
 4. Do not edit a previously issued PASS artifact.
-5. Notify the engineering owner and qualified legal reviewer when legal-source interpretation is involved.
+5. Rotate the internal cron secret if credential exposure is suspected.
+6. Notify the engineering owner and qualified legal reviewer when legal-source interpretation is involved.
 
 ## Code rollback order
 
-1. Revert `/api/public/legal-rules-validation` and the runtime evidence builder if the endpoint itself is unsafe.
-2. Revert the scorer specialization only together with the endpoint/capture format to avoid accepting orphaned schemas.
+1. Revert `/api/ops/legal-rules-validation` and the runtime evidence builder if the endpoint itself is unsafe.
+2. Revert the authenticated capture workflow and scorer specialization together with the endpoint/capture format to avoid accepting orphaned schemas.
 3. Revert the legal-rules source mapping only after confirming the previous version is legally safer.
 4. Revert tests, matrix, scorecard and documentation in the same rollback PR so evidence does not contradict code.
 5. Retain the canonical evidence placeholder as `NOT_EXECUTED` until the rollback SHA is deployed and tested.
@@ -50,7 +52,9 @@ These values are intentionally not hard-coded in this repository.
 - `npm ci --ignore-scripts`;
 - focused legal-rules and decision-engine tests;
 - typecheck, lint and build;
-- security no-store, headers, logs and public-error gates;
+- security no-store, headers, logs, endpoint-hardening and public-error gates;
+- unauthorized `/api/ops/legal-rules-validation` returns no-store 401;
+- authorized `/api/ops/legal-rules-validation` binds to the rollback SHA;
 - `/api/health` public smoke;
 - protected readiness;
 - exact-SHA runtime release metadata;
@@ -63,6 +67,7 @@ These values are intentionally not hard-coded in this repository.
 
 - No database rollback is expected.
 - Runtime artifacts are immutable and append-only.
+- Authorization headers and secret values must never enter artifacts or logs.
 - Mark superseded evidence through a new closeout record; do not modify hashes or timestamps.
 - Never copy a PASS artifact to a different SHA or deployment URL.
 
