@@ -1,9 +1,19 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   activeP0RuntimeEvidenceItems,
   p0EvidenceCatalog,
   p0RegisterRequiredItems,
 } from './p0-runtime-evidence-catalog.mjs';
+
+const registerCheckerSource = readFileSync(
+  new URL('./check-p0-runtime-evidence-register.mjs', import.meta.url),
+  'utf8',
+);
+const gapReportSource = readFileSync(
+  new URL('./report-p0-runtime-evidence-gap.mjs', import.meta.url),
+  'utf8',
+);
 
 describe('canonical P0 runtime evidence catalog', () => {
   it('defines exactly the 16 controls in the P0 register', () => {
@@ -52,5 +62,16 @@ describe('canonical P0 runtime evidence catalog', () => {
       file: 'auth-rbac-final-validation.json',
     });
     expect(typeof authRbac?.validator).toBe('function');
+  });
+
+  it('is consumed by both register and runtime gap gates', () => {
+    expect(registerCheckerSource).toContain(
+      "import { p0RegisterRequiredItems } from './p0-runtime-evidence-catalog.mjs';",
+    );
+    expect(registerCheckerSource).toContain('const requiredItems = p0RegisterRequiredItems;');
+    expect(gapReportSource).toContain(
+      "import { activeP0RuntimeEvidenceItems } from './p0-runtime-evidence-catalog.mjs';",
+    );
+    expect(gapReportSource).toContain('const requiredRuntimeItems = activeP0RuntimeEvidenceItems({');
   });
 });
