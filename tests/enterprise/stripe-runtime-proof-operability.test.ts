@@ -17,10 +17,18 @@ describe('Stripe runtime proof operability', () => {
   });
 
   it('only finalizes after the raw correlated catalog is gone', () => {
-    expect(finalizer).toContain("const rawEvidenceDeleted = !existsSync(catalogPath)");
+    expect(finalizer).not.toContain('existsSync');
+    expect(finalizer).toContain('const rawEvidenceDeleted = fileIsAbsent(catalogPath)');
     expect(finalizer).toContain("'rawEvidenceDeleted'");
     expect(finalizer).toContain("evidence.status = passed ? 'Complete' : 'Open'");
     expect(finalizer).toContain("evidence.validationStatus = passed ? 'passed' : 'failed'");
+  });
+
+  it('reads inputs directly and replaces sanitized outputs atomically', () => {
+    expect(finalizer).toContain("source = readFileSync(filePath, 'utf8')");
+    expect(finalizer).toContain("flag: 'wx'");
+    expect(finalizer).toContain('renameSync(tempPath, targetPath)');
+    expect(finalizer).toContain('rmSync(tempPath, { force: true })');
   });
 
   it('retains sanitized diagnostics before enforcing a failed decision', () => {
