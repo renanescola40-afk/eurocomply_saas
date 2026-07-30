@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -93,6 +93,10 @@ describe('migration reconciliation review packages', () => {
       acceptedDecisions: 0,
       inventorySha256: createHash('sha256').update(bytes).digest('hex'),
     });
+    expect(first.generatedAt).toBe(index.generatedAt);
+    expect(second.generatedAt).toBe(index.generatedAt);
+    expect(first.inventorySha256).toBe(index.inventorySha256);
+    expect(second.inventorySha256).toBe(index.inventorySha256);
     expect(first.items.map((entry) => entry.filename)).toEqual([
       '20260730120100_a.sql',
       '20260730120200_b.sql',
@@ -136,6 +140,21 @@ describe('migration reconciliation review packages', () => {
     expect(markdown).toContain('must not use `supabase migration repair --status applied`');
   });
 
+  it('creates only non-crediting index files when no review items remain', () => {
+    const { outputDir, result } = runGenerator(createInventory([]), 25);
+
+    expect(result.status).toBe(0);
+    expect(readdirSync(outputDir).sort()).toEqual(['index.json', 'index.md']);
+    const index = JSON.parse(readFileSync(path.join(outputDir, 'index.json'), 'utf8'));
+    expect(index).toMatchObject({
+      status: 'HUMAN_REVIEW_REQUIRED',
+      packageCount: 0,
+      itemCount: 0,
+      acceptedDecisions: 0,
+      packages: [],
+    });
+  });
+
   it('rejects inventories containing pre-filled human decisions', () => {
     const prefilled = item(
       '20260730120100_a.sql',
@@ -152,14 +171,20 @@ describe('migration reconciliation review packages', () => {
     expect(() => readdirSync(outputDir)).toThrow();
   });
 
-  it('rejects unsafe batch sizes', () => {
-    const { result } = runGenerator(
-      createInventory([
-        item('20260730120100_a.sql', '20260730120100', 'LOCAL_ONLY_VERSION'),
-      ]),
-      0,
+  it('rejects duplicated items and unsafe batch sizes', () => {
+    const repeated = item(
+      '20260730120100_a.sql',
+      '20260730120100',
+      'LOCAL_ONLY_VERSION',
     );
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('--batch-size must be an integer between 1 and 100');
+    const duplicateRun = runGenerator(createInventory([repeated, repeated]), 25);
+    expect(duplicateRun.result.status).toBe(1);
+    expect(duplicateRun.result.stderr).toContain('duplicates another inventory item');
+
+    const invalidBatchRun = runGenerator(createInventory([repeated]), 0);
+    expect(invalidBatchRun.result.status).toBe(1);
+    expect(invalidBatchRun.result.stderr).toContain(
+      '--batch-size must be an integer between 1 and 100',
+    );
   });
 });
